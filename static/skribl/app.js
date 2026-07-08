@@ -2761,8 +2761,11 @@ document.getElementById('draftInput').addEventListener('change', (e) => {
 
 // ---------- Autosave wiring ----------
 (function initAutosave() {
-  // Player mode (#skribl=...) is read-only: no restore prompt, no autosave triggers.
-  if (/^#skribl=/.test(location.hash || '')) return;
+  // Player mode is read-only: no restore prompt, no autosave triggers. Covers
+  // both the Flask path player (SKRIBL_MODE==='player', no hash) and the local
+  // #skribl=<id> hash player.
+  if ((typeof window !== 'undefined' && window.SKRIBL_MODE === 'player') ||
+      /^#skribl=/.test(location.hash || '')) return;
   const banner = document.getElementById('restoreBanner');
   const sub = document.getElementById('restoreSub');
   const confirmBtn = document.getElementById('restoreConfirm');
@@ -3245,22 +3248,38 @@ if (typeof pendingMusicMeta !== 'undefined') {
   let posting = false;
 
   // ---- THE NETWORK SEAM ----
-  // Swap this body for a real request when the endpoint exists. The composer
-  // above doesn't care how the payload travels — only that this resolves on
-  // success and throws on failure. Real version, roughly:
-  //   const res = await fetch('/api/skribls', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify(payload)
-  //   });
-  //   if (!res.ok) throw new Error('Post failed');
-  //   return res.json();
+  // The ONE place a post leaves the app. When Flask serves the page the editor
+  // template sets window.SKRIBL_API_BASE ("/api/skribls"); we POST the authored
+  // serializeSkribl() payload there and return the server's { id, url } — url is
+  // a real /s/<id> path. If there's no API base, or the request fails for any
+  // reason, we fall back to the localStorage stub so a post never hard-fails in
+  // front of the user (a Render free-tier cold start can 502 on first hit; a
+  // transient failure shouldn't lose the user's work). Fallback url is a
+  // #skribl=<id> hash the in-page player opens on this device only.
   async function sendSkribl(payload) {
-    // LOCAL STUB: persist the post to localStorage under an id and hand back a
-    // player URL (#skribl=<id>). Swap this body for fetch('/api/skribls') later
-    // — nothing else in the composer changes. The wrapper keeps the authored
-    // serializeSkribl() object intact as `.skribl`, no second format invented.
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    const apiBase = (typeof window !== 'undefined' && window.SKRIBL_API_BASE) || null;
+
+    if (apiBase) {
+      try {
+        const res = await fetch(apiBase, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Post failed (' + res.status + ')');
+        const data = await res.json();
+        // Server returns { id, url:"/s/<id>" } — pass both straight through.
+        if (data && data.id && data.url) return { id: data.id, url: data.url };
+        throw new Error('Malformed server response');
+      } catch (err) {
+        // Fall through to the local stub so the user still gets a working link.
+        console.warn('sendSkribl: API post failed, falling back to local —', err);
+      }
+    }
+
+    // LOCAL STUB / FALLBACK: persist to localStorage under an id and hand back a
+    // #skribl=<id> hash URL the in-page player can open on this device.
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const id = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const post = {
       id,
@@ -3455,8 +3474,14 @@ if (typeof pendingMusicMeta !== 'undefined') {
   submitBtn.addEventListener('click', submit);
   if (watchBtn) watchBtn.addEventListener('click', () => {
     if (!lastPostUrl) return;
-    location.hash = lastPostUrl;
-    location.reload();   // reload boots straight into the player via the hash
+    if (lastPostUrl.charAt(0) === '#') {
+      // Local fallback: #skribl=<id> — boot the in-page player via the hash.
+      location.hash = lastPostUrl;
+      location.reload();
+    } else {
+      // Server post: a real /s/<id> path — navigate to the player route.
+      location.href = lastPostUrl;
+    }
   });
 
   // Recompute the keyboard lift when the viewport changes or a field is focused.
@@ -3486,22 +3511,46 @@ if (typeof pendingMusicMeta !== 'undefined') {
 })();
 
 // ==================== READ-ONLY PLAYER ====================
-// Soft-branch player: when the URL hash carries #skribl=<id>, load that post
-// from localStorage and replay it read-only. It reuses loadSkribl() to restore
-// state and the editor's existing Play path (which drives replayTimelineToCanvas
-// and composites background/photo/baseSnapshot), so the player is never a second
-// timeline loop or a second format. No hash → the editor runs untouched.
-(function initPlayer() {
-  const m = (location.hash || '').match(/^#skribl=(.+)$/);
-  if (!m) return;
-  const id = decodeURIComponent(m[1]);
+// Two ways to enter the read-only player, ONE code path once the post is in hand:
+//   (a) Flask path player — the /s/<id> template sets window.SKRIBL_MODE="player"
+//       and window.SKRIBL_PLAYER_ID. We fetch the post from SKRIBL_API_BASE.
+//   (b) Local hash player — a #skribl=<id> hash (from the localStorage fallback
+//       post). We read it back out of localStorage.
+// Neither present → this is the editor, so bail and leave it untouched. Both
+// sources yield the same wrapper shape { title, caption, hasAudio, skribl }, so
+// everything below (canvas sizing, loadSkribl, the playback orchestrator) is
+// identical regardless of source. It reuses loadSkribl() + the shared Play path
+// (replayTimelineToCanvas), so the player is never a second timeline loop.
+(async function initPlayer() {
+  const mode = (typeof window !== 'undefined' && window.SKRIBL_MODE) || null;
+  const hashMatch = (location.hash || '').match(/^#skribl=(.+)$/);
 
   let post;
-  try {
-    const raw = localStorage.getItem('skribl_post_' + id);
-    if (!raw) { showToast('Skribl not found on this device', null); return; }
-    post = JSON.parse(raw);
-  } catch (e) { showToast('Could not load that Skribl', null); return; }
+  if (mode === 'player' && window.SKRIBL_PLAYER_ID) {
+    // Flask path player. Enter player-mode immediately so the editor chrome
+    // never flashes while the fetch is in flight.
+    document.body.classList.add('player-mode');
+    const apiBase = window.SKRIBL_API_BASE || '/api/skribls';
+    const pid = window.SKRIBL_PLAYER_ID;
+    try {
+      const res = await fetch(apiBase + '/' + encodeURIComponent(pid));
+      if (!res.ok) {
+        showToast(res.status === 404 ? 'Skribl not found' : 'Could not load that Skribl', null);
+        return;
+      }
+      // Server envelope: { id, title, caption, hasAudio, createdAt, author, skribl }
+      post = await res.json();
+    } catch (e) { showToast('Could not load that Skribl', null); return; }
+  } else if (hashMatch) {
+    const id = decodeURIComponent(hashMatch[1]);
+    try {
+      const raw = localStorage.getItem('skribl_post_' + id);
+      if (!raw) { showToast('Skribl not found on this device', null); return; }
+      post = JSON.parse(raw);
+    } catch (e) { showToast('Could not load that Skribl', null); return; }
+  } else {
+    return;   // editor mode — leave the app untouched
+  }
 
   // Accept the wrapper { ..., skribl } or a bare serializeSkribl() object.
   const data = post && post.skribl ? post.skribl : post;
