@@ -794,6 +794,7 @@ function stopPlayback() {
   playBtn.disabled = false;
   playBtn.classList.remove('playing');
   if (audioEl) audioEl.pause();
+  if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
 }
 
 // Cache the decoded base snapshot so repeated redraws (rapid player scrubbing,
@@ -1799,6 +1800,7 @@ function stopLoopPreview() {
   stopSeamTest();
   stopBuiltLoopPreview();
   stopPreviewLoopAudio();
+  if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
   previewLoopTimer = null;
   if (playhead) playhead.hidden = true;
   if (zoomPlayhead) zoomPlayhead.hidden = true;
@@ -1811,10 +1813,25 @@ function startLoopPreview() {
   previewLoopBtn.textContent = 'Stop Preview';
   try { audioEl.pause(); } catch (e) {}   // keep the raw source from playing underneath
 
-  // Primary path: play the exact baked loop clip (same one Test Seam / posting
-  // use), looped natively. Sample-accurate wrap → no intermittent click, and it
-  // reflects the crossfade. The clip's currentTime runs 0..clipDuration, so we
-  // map it back onto the song timeline (trimStart + clipTime) for the playhead.
+  // Primary path: sample-accurate Web Audio loop of the exact posted clip.
+  // Gapless + drift-free. Playhead reads the audio clock, mapped to song time.
+  if (startWebAudioLoop()) {
+    previewLoopTimer = setInterval(() => {
+      if (!previewingLoop || !_waLoopSource) return;
+      const songTime = webAudioLoopSongTime();
+      const pct = (songTime / audioDuration) * 100;
+      if (playhead) { playhead.hidden = false; playhead.style.left = pct + '%'; }
+      if (zoomPlayhead && currentAudioBuffer) {
+        const zw = getZoomWindow();
+        const zoomPct = ((songTime - zw.start) / zw.duration) * 100;
+        zoomPlayhead.hidden = false;
+        zoomPlayhead.style.left = Math.max(0, Math.min(100, zoomPct)) + '%';
+      }
+    }, 30);
+    return;
+  }
+
+  // Fallback A: baked clip via native <audio> loop (if Web Audio unavailable).
   const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
   if (built) {
     stopPreviewLoopAudio();
@@ -1912,6 +1929,24 @@ function playMusicLooped(totalDurationMs, onStarted) {
     return;
   }
   if (playhead) playhead.hidden = false;
+
+  // Primary: sample-accurate Web Audio loop (gapless, drift-free) — the same
+  // clip the post uses. The drawing replay (onStarted) starts immediately in
+  // lockstep. The interval only drives the playhead + the total-time stop.
+  if (startWebAudioLoop()) {
+    if (onStarted) onStarted();
+    let elapsedWA = 0;
+    const loopCheckWA = setInterval(() => {
+      if (!playing) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); return; }
+      elapsedWA += 100;
+      const songTime = webAudioLoopSongTime();
+      if (playhead) playhead.style.left = (songTime / audioDuration * 100) + '%';
+      if (elapsedWA >= totalDurationMs) { stopWebAudioLoop(); if (playhead) playhead.hidden = true; clearInterval(loopCheckWA); }
+    }, 100);
+    return;
+  }
+
+  // Fallback: original timer-wrapped source loop (if Web Audio unavailable).
   audioEl.currentTime = trimStart;
 
   const playPromise = audioEl.play();
@@ -2889,7 +2924,68 @@ function buildTrimmedLoopWav() {
   return { dataUrl: audioBufferToWavDataURL(currentAudioBuffer, startFrame, frames), duration: frames / sr };
 }
 
-// Guards Save Draft while media files are still being read into base64, so a
+// --- Sample-accurate live loop engine (Web Audio) ---------------------------
+// The live monitors (Preview Loop, editor Play) used timer-wrapped <audio>,
+// which drifts (the wrap is caught up to a timer-tick late, variably) and can
+// click. This plays the SAME loop the post uses, but as an AudioBufferSourceNode
+// with loop=true — scheduled in the audio hardware clock, so it's gapless and
+// drift-free forever. Reuses buildLoopChannels for the crossfaded fold, so no
+// WAV round-trip: we build the AudioBuffer directly.
+let _waLoopSource = null;
+let _waLoopStartCtx = 0;   // audioCtx.currentTime when the loop started
+let _waLoopDuration = 0;   // loop clip length (seconds)
+function buildLoopAudioBuffer() {
+  if (!currentAudioBuffer || !audioCtx) return null;
+  const sr = currentAudioBuffer.sampleRate;
+  const ls = Math.max(0, trimStart || 0);
+  const le = Math.min(currentAudioBuffer.duration, (trimEnd != null ? trimEnd : currentAudioBuffer.duration));
+  if (le - ls < 0.05) return null;
+  const startFrame = Math.floor(ls * sr);
+  const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
+  const frames = endFrame - startFrame;
+  if (frames <= 0) return null;
+  const numCh = currentAudioBuffer.numberOfChannels;
+  const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
+  let channels, outLen;
+  if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
+    const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
+    channels = built.channels; outLen = built.frames;
+  } else {
+    outLen = frames;
+    channels = [];
+    for (let c = 0; c < numCh; c++) channels.push(currentAudioBuffer.getChannelData(c).subarray(startFrame, startFrame + frames));
+  }
+  const out = audioCtx.createBuffer(numCh, outLen, sr);
+  for (let c = 0; c < numCh; c++) out.getChannelData(c).set(channels[c]);
+  return out;
+}
+function stopWebAudioLoop() {
+  if (_waLoopSource) { try { _waLoopSource.stop(); } catch (e) {} try { _waLoopSource.disconnect(); } catch (e) {} _waLoopSource = null; }
+}
+function startWebAudioLoop() {
+  if (!audioCtx || !currentAudioBuffer) return false;
+  const buf = buildLoopAudioBuffer();
+  if (!buf) return false;
+  stopWebAudioLoop();
+  if (audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  src.loopStart = 0;
+  src.loopEnd = buf.duration;
+  src.connect(audioCtx.destination);
+  try { src.start(); } catch (e) { return false; }
+  _waLoopSource = src;
+  _waLoopStartCtx = audioCtx.currentTime;
+  _waLoopDuration = buf.duration;
+  return true;
+}
+// Current position within the looping clip, mapped onto the song timeline.
+function webAudioLoopSongTime() {
+  if (!audioCtx || _waLoopDuration <= 0) return trimStart || 0;
+  const el = audioCtx.currentTime - _waLoopStartCtx;
+  return (trimStart || 0) + (el % _waLoopDuration);
+}
 // draft saved immediately after adding a big song/photo doesn't omit the bytes.
 let mediaBusy = 0;
 function beginMediaRead() {
