@@ -32,6 +32,20 @@ function getCanvasCssSize() {
   return { width: rect.width, height: rect.height };
 }
 
+// The canvas's logical drawing size (the coordinate space strokes replay in).
+// In the editor this equals the CSS display size. In player mode the canvas is
+// shrunk to fit the viewport (CSS size < authored size) while the backing store
+// stays at authored size × dpr, so drawing/clearing/restoring must use the
+// authored logical size — otherwise the base snapshot paints at the small
+// display size while strokes replay at authored coords and they don't line up.
+function getCanvasLogicalSize() {
+  if (document.body.classList.contains('player-mode')) {
+    const dpr = window.devicePixelRatio || 1;
+    return { width: canvas.width / dpr, height: canvas.height / dpr };
+  }
+  return getCanvasCssSize();
+}
+
 function resizeCanvas() {
   // Player mode sizes the canvas to the authored dimensions itself; don't let a
   // window resize re-fit it to the container and break stroke coordinates.
@@ -766,7 +780,7 @@ recordBtn.addEventListener('click', () => {
 function clearCanvas() {
   stopPlayback();
   stopLoopPreview();
-  const { width: cw, height: ch } = getCanvasCssSize(); ctx.clearRect(0, 0, cw, ch);
+  const { width: cw, height: ch } = getCanvasLogicalSize(); ctx.clearRect(0, 0, cw, ch);
   canvasWrap.style.backgroundColor = bgColor;
   strokes = []; strokeGroups = [];
   recorded = false;
@@ -806,7 +820,7 @@ let _baseImgCache = null;   // { src, img }
 let restoreSeq = 0;         // monotonic — only the newest call's async paint wins
 function clearAndRestore(callback) {
   const seq = ++restoreSeq;
-  const { width: cw, height: ch } = getCanvasCssSize();
+  const { width: cw, height: ch } = getCanvasLogicalSize();
   ctx.clearRect(0, 0, cw, ch);
   if (preRecordSnapshot) {
     if (_baseImgCache && _baseImgCache.src === preRecordSnapshot && _baseImgCache.img.complete) {
@@ -970,7 +984,7 @@ document.addEventListener('keydown', (e) => {
 
 undoBtn.addEventListener('click', () => {
   if (undoStack.length === 0) return;
-  const { width: cw, height: ch } = getCanvasCssSize();
+  const { width: cw, height: ch } = getCanvasLogicalSize();
   redoStack.push(makeHistoryState());
   redoBtn.disabled = false;
   const prev = undoStack.pop();
@@ -988,7 +1002,7 @@ undoBtn.addEventListener('click', () => {
 
 redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) return;
-  const { width: cw, height: ch } = getCanvasCssSize();
+  const { width: cw, height: ch } = getCanvasLogicalSize();
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
   const next = redoStack.pop();
@@ -2646,7 +2660,7 @@ function restoreAutosave(data) {
       else { const prev = strokes[i - 1]; drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
     }
   };
-  const { width: cw, height: ch } = getCanvasCssSize();
+  const { width: cw, height: ch } = getCanvasLogicalSize();
   if (data.baseSnapshot) {
     preRecordSnapshot = strokes.length ? data.baseSnapshot : null;
     const baseImg = new Image();
@@ -3105,7 +3119,7 @@ function loadSkribl(data) {
     }
   };
 
-  const { width: cw, height: ch } = getCanvasCssSize();
+  const { width: cw, height: ch } = getCanvasLogicalSize();
 
   if (data.baseSnapshot) {
     // Draw the base layer (pre-record or un-recorded drawing) first,
@@ -3741,25 +3755,45 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const apiBase = (typeof window !== 'undefined' && window.SKRIBL_API_BASE) || null;
 
     if (apiBase) {
+      let res;
       try {
-        const res = await fetch(apiBase, {
+        res = await fetch(apiBase, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) throw new Error('Post failed (' + res.status + ')');
-        const data = await res.json();
-        // Server returns { id, url:"/s/<id>" } — pass both straight through.
-        if (data && data.id && data.url) return { id: data.id, url: data.url };
-        throw new Error('Malformed server response');
-      } catch (err) {
-        // Fall through to the local stub so the user still gets a working link.
-        console.warn('sendSkribl: API post failed, falling back to local —', err);
+      } catch (netErr) {
+        // Network failure (offline / DNS / CORS) — temporary. Save locally so
+        // the user's work isn't lost, but flag it so the UI won't claim "Posted".
+        console.warn('sendSkribl: network error, saving locally —', netErr);
+        return saveLocalFallback(payload);
       }
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        // Server returns { id, url:"/s/<id>" } — a real, shared post.
+        if (data && data.id && data.url) return { id: data.id, url: data.url, local: false };
+        throw new Error('The server returned an unexpected response.');
+      }
+      // Server errors ≥500 are temporary → local fallback (flagged). But a 4xx
+      // means the post was REJECTED (bad/oversized payload, auth, etc.) — never
+      // fake success; surface the real error so the user knows it wasn't shared.
+      if (res.status >= 500) {
+        console.warn('sendSkribl: server ' + res.status + ', saving locally');
+        return saveLocalFallback(payload);
+      }
+      let msg = 'Post rejected by the server (' + res.status + ').';
+      try { const e = await res.json(); if (e && e.error) msg = e.error; } catch (e) {}
+      throw new Error(msg);
     }
 
-    // LOCAL STUB / FALLBACK: persist to localStorage under an id and hand back a
-    // #skribl=<id> hash URL the in-page player can open on this device.
+    // No API base at all (pure standalone build) — local-only by design.
+    return saveLocalFallback(payload);
+  }
+
+  // Persist to localStorage under an id; hand back a #skribl=<id> hash URL the
+  // in-page player opens on THIS device only. `local:true` tells the composer to
+  // say "saved locally" rather than "posted/shared".
+  async function saveLocalFallback(payload) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const id = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const post = {
@@ -3775,7 +3809,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     } catch (e) {
       throw new Error('Local storage full — could not save Skribl');
     }
-    return { id, url: '#skribl=' + id };
+    return { id, url: '#skribl=' + id, local: true };
   }
 
   // Flatten bg + photo + drawing into a small preview image. Kept local (a few
@@ -3940,14 +3974,23 @@ if (typeof pendingMusicMeta !== 'undefined') {
     try {
       const res = await sendSkribl(payload);
       lastPostUrl = (res && res.url) || null;
+      const localOnly = !!(res && res.local);
       titleInput.value = '';
       captionInput.value = '';
       updateCharCount();
       setState('success');
-      showToast('Posted! 🎨', null);
+      if (localOnly) {
+        // Saved to this device only (no server, or a temporary server/network
+        // failure). Be honest — this is NOT a shared post.
+        statusLabel.textContent = 'Saved on this device only';
+        showToast('Saved locally only — link works on this device', null);
+      } else {
+        showToast('Posted! 🎨', null);
+      }
       if (watchBtn && lastPostUrl) watchBtn.hidden = false;
     } catch (e) {
       setState('error');
+      if (e && e.message) statusLabel.textContent = e.message;
     }
   }
 
