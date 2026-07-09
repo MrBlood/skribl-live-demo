@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 
 
 db = SQLAlchemy()
@@ -25,7 +26,16 @@ class SkriblPost(db.Model):
 def create_app():
     app = Flask(__name__)
 
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+    # SECRET_KEY: never fall back to a shared, guessable constant. Require it in
+    # production (Render sets RENDER=true); in local/dev generate a strong random
+    # per-process key so `flask run` still works without configuration.
+    secret_key = os.environ.get("SECRET_KEY")
+    if not secret_key:
+        in_production = bool(os.environ.get("RENDER")) or os.environ.get("FLASK_ENV") == "production"
+        if in_production:
+            raise RuntimeError("SECRET_KEY must be set in production.")
+        secret_key = secrets.token_urlsafe(32)
+    app.config["SECRET_KEY"] = secret_key
 
     database_url = os.environ.get("DATABASE_URL", "sqlite:///skribl_demo.db")
 
@@ -36,6 +46,9 @@ def create_app():
 
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    # Free-tier Postgres drops idle connections; pre_ping checks liveness and
+    # transparently reconnects instead of erroring on the first stale request.
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
     app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 25_000_000))
 
     db.init_app(app)
@@ -54,24 +67,50 @@ def create_app():
 
     @app.post("/api/skribls")
     def create_skribl():
-        payload = request.get_json(silent=True) or {}
+        payload = request.get_json(silent=True)
+
+        # Permissive shape validation: the frontend contract is a JSON object
+        # (see serializeSkribl). Reject only gross type violations so version
+        # bumps and unknown keys keep working; the request body size is already
+        # capped by MAX_CONTENT_LENGTH.
+        if not isinstance(payload, dict):
+            return jsonify({"error": "Body must be a JSON object."}), 400
+        for key in ("strokes", "strokeGroups"):
+            if key in payload and not isinstance(payload[key], list):
+                return jsonify({"error": f"'{key}' must be a list."}), 400
+        for key in ("photo", "music", "background", "canvasSize"):
+            if key in payload and payload[key] is not None and not isinstance(payload[key], dict):
+                return jsonify({"error": f"'{key}' must be an object or null."}), 400
+        if payload.get("baseSnapshot") is not None and not isinstance(payload.get("baseSnapshot"), str):
+            return jsonify({"error": "'baseSnapshot' must be a string or null."}), 400
 
         title = (payload.get("title") or "Untitled Skribl").strip()[:80]
         caption = (payload.get("caption") or "").strip()[:300]
+        has_audio = bool(payload.get("music"))
 
-        public_id = secrets.token_urlsafe(8)
+        # Retry on the rare public_id collision instead of 500-ing.
+        public_id = None
+        for _attempt in range(5):
+            candidate = secrets.token_urlsafe(8)
+            post = SkriblPost(
+                public_id=candidate,
+                user_id=1,  # TODO: real current_user once auth lands (roadmap #5)
+                title=title,
+                caption=caption,
+                payload_json=payload,
+                has_audio=has_audio,
+            )
+            db.session.add(post)
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                continue
+            public_id = candidate
+            break
 
-        post = SkriblPost(
-            public_id=public_id,
-            user_id=1,
-            title=title,
-            caption=caption,
-            payload_json=payload,
-            has_audio=bool(payload.get("music")),
-        )
-
-        db.session.add(post)
-        db.session.commit()
+        if public_id is None:
+            return jsonify({"error": "Could not allocate a unique id; please retry."}), 503
 
         return jsonify({
             "id": public_id,
@@ -82,7 +121,9 @@ def create_app():
     def get_skribl(public_id):
         post = SkriblPost.query.filter_by(public_id=public_id).first_or_404()
 
-        payload = post.payload_json or {}
+        # Shallow-copy so we don't mutate the SQLAlchemy-tracked JSON column
+        # (which could otherwise be flushed back to the DB on this GET).
+        payload = dict(post.payload_json or {})
         payload["title"] = post.title
         payload["caption"] = post.caption
 
