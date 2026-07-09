@@ -1725,6 +1725,9 @@ nudgeStepCoarserBtn.addEventListener('click', () => {
 
 function nudgeTrim(which, direction) {
   if (!audioEl) return;
+  // Guard against a stray caller (e.g. a button without data-which/amount):
+  // a NaN amount would corrupt trimEnd and make updateTrimUI reset the loop.
+  if ((which !== 'start' && which !== 'end') || !Number.isFinite(direction)) return;
   const amount = direction * nudgeSteps[nudgeStepIdx];
   if (which === 'start') {
     trimStart = Math.max(0, Math.min(trimStart + amount, trimEnd - 0.5));
@@ -1736,7 +1739,9 @@ function nudgeTrim(which, direction) {
   updateTrimUI();
 }
 
-document.querySelectorAll('.nudge-btn').forEach(btn => {
+// Only the loop-edge nudgers carry data-which; scope to them so the step-size
+// +/- buttons (which share the .nudge-btn class) can't trigger a trim nudge.
+document.querySelectorAll('.nudge-btn[data-which]').forEach(btn => {
   btn.addEventListener('click', () => {
     nudgeTrim(btn.dataset.which, parseFloat(btn.dataset.amount));
   });
@@ -1780,12 +1785,20 @@ function playBuiltLoopPreview() {
   return true;
 }
 
+// Preview Loop plays the baked loop clip (below) via native loop=true, so it
+// wraps sample-accurately with no timer-cut click. Its own element, stopped here.
+let _previewLoopAudio = null;
+function stopPreviewLoopAudio() {
+  if (_previewLoopAudio) { try { _previewLoopAudio.pause(); } catch (e) {} _previewLoopAudio = null; }
+}
+
 function stopLoopPreview() {
   previewingLoop = false;
   if (audioEl) audioEl.pause();
   if (previewLoopTimer) clearInterval(previewLoopTimer);
   stopSeamTest();
   stopBuiltLoopPreview();
+  stopPreviewLoopAudio();
   previewLoopTimer = null;
   if (playhead) playhead.hidden = true;
   if (zoomPlayhead) zoomPlayhead.hidden = true;
@@ -1795,9 +1808,38 @@ function stopLoopPreview() {
 function startLoopPreview() {
   if (!audioEl) return;
   previewingLoop = true;
+  previewLoopBtn.textContent = 'Stop Preview';
+  try { audioEl.pause(); } catch (e) {}   // keep the raw source from playing underneath
+
+  // Primary path: play the exact baked loop clip (same one Test Seam / posting
+  // use), looped natively. Sample-accurate wrap → no intermittent click, and it
+  // reflects the crossfade. The clip's currentTime runs 0..clipDuration, so we
+  // map it back onto the song timeline (trimStart + clipTime) for the playhead.
+  const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
+  if (built) {
+    stopPreviewLoopAudio();
+    const a = new Audio(built.dataUrl);
+    a.loop = true;
+    _previewLoopAudio = a;
+    a.play().catch(() => {});
+    previewLoopTimer = setInterval(() => {
+      if (!previewingLoop || !_previewLoopAudio) return;
+      const songTime = (trimStart || 0) + _previewLoopAudio.currentTime;
+      const pct = (songTime / audioDuration) * 100;
+      if (playhead) { playhead.hidden = false; playhead.style.left = pct + '%'; }
+      if (zoomPlayhead && currentAudioBuffer) {
+        const zw = getZoomWindow();
+        const zoomPct = ((songTime - zw.start) / zw.duration) * 100;
+        zoomPlayhead.hidden = false;
+        zoomPlayhead.style.left = Math.max(0, Math.min(100, zoomPct)) + '%';
+      }
+    }, 30);
+    return;
+  }
+
+  // Fallback (decoded buffer not ready): original hand-wrapped source preview.
   audioEl.currentTime = trimStart;
   audioEl.play();
-  previewLoopBtn.textContent = 'Stop Preview';
   previewLoopTimer = setInterval(() => {
     if (!previewingLoop || !audioEl) return;
     if (audioEl.currentTime >= trimEnd - 0.05) {
