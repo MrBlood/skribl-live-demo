@@ -1270,6 +1270,7 @@ const bubbleStart = document.getElementById('bubbleStart');
 const bubbleEnd = document.getElementById('bubbleEnd');
 let audioCtx = null;
 let currentAudioBuffer = null;
+let loopCrossfadeMs = 0;   // loop crossfade length in ms (0 = off); see buildTrimmedLoopWav
 
 let zoomDrawPending = false;
 
@@ -2757,7 +2758,8 @@ function audioBufferToWavDataURL(buffer, startFrame, frames) {
 // hear. A crossfade folds the loop's tail over its head so the wrap becomes two
 // originally-adjacent samples (smooth). It's applied only to the rendered clip
 // at post/preview time — live playback of the source is untouched. Default off.
-let loopCrossfadeMs = 0;
+// (State `loopCrossfadeMs` is declared with the other audio state near the top,
+//  so it exists before initSliderExtras / setCrossfadeUI run.)
 
 // Build the crossfaded loop as raw channel arrays. Output length = frames - X.
 // For the first X output samples we equal-power blend the head (fading in) with
