@@ -1372,12 +1372,40 @@ function drawZoomWaveform() {
   zoomWaveformCtx.fillRect(loopStartX, 0, 2, h);
   zoomWaveformCtx.fillRect(loopEndX - 2, 0, 2, h);
 
+  // Crossfade region (bake-only). The posted/exported loop folds its TAIL over
+  // its HEAD (equal-power), so the last `xfade` of the loop is blended into the
+  // first `xfade`. Shade both bands in amber and dash their inner edges, using
+  // the SAME xfadeFrames clamp as bake time (see buildTrimmedLoopWav) so the
+  // picture matches exactly what gets posted — including the "can't exceed half
+  // the loop" cap.
+  if (loopCrossfadeMs > 0 && loopDuration > 0) {
+    const loopFrames = Math.floor(loopDuration * sampleRate);
+    const xfadeFrames = Math.min(
+      Math.floor((loopCrossfadeMs / 1000) * sampleRate),
+      Math.floor(loopFrames / 2)
+    );
+    const xfadeW = ((xfadeFrames / sampleRate) / zoomDuration) * w;
+    if (xfadeW > 0) {
+      const headX = loopStartX;          // fade-in: the loop tail is mixed in here
+      const tailX = loopEndX - xfadeW;    // folded over the head / trimmed from the end
+      zoomWaveformCtx.fillStyle = 'rgba(255, 176, 32, 0.22)';
+      zoomWaveformCtx.fillRect(headX, 0, xfadeW, h);
+      zoomWaveformCtx.fillRect(tailX, 0, xfadeW, h);
+      zoomWaveformCtx.fillStyle = 'rgba(255, 176, 32, 0.9)';
+      for (let yy = 0; yy < h; yy += 9) {
+        zoomWaveformCtx.fillRect(headX + xfadeW - 1, yy, 1.5, 5);
+        zoomWaveformCtx.fillRect(tailX, yy, 1.5, 5);
+      }
+    }
+  }
+
   // Center line
   zoomWaveformCtx.fillStyle = '#2e3340';
   zoomWaveformCtx.fillRect(0, mid, w, 1);
 
   if (loopZoomLabel) {
-    loopZoomLabel.textContent = `${formatTimeH(trimStart)} → ${formatTimeH(trimEnd)} [${loopDuration.toFixed(2)}s]`;
+    const xfLabel = loopCrossfadeMs > 0 ? `  ·  xfade ${loopCrossfadeMs}ms` : '';
+    loopZoomLabel.textContent = `${formatTimeH(trimStart)} → ${formatTimeH(trimEnd)} [${loopDuration.toFixed(2)}s]${xfLabel}`;
   }
 }
 
@@ -2532,6 +2560,8 @@ function dragZoomPan(wrap) {
     cf.addEventListener('input', () => {
       loopCrossfadeMs = parseInt(cf.value, 10) || 0;
       setCrossfadeUI();
+      // Refresh the loop waveform so the amber crossfade bands track the slider.
+      if (typeof updateTrimUI === 'function') updateTrimUI();
       if (typeof scheduleAutosave === 'function') scheduleAutosave();
     });
     addSliderNudgers(cf, { step: 5 });
@@ -4098,26 +4128,45 @@ if (typeof pendingMusicMeta !== 'undefined') {
   const cs = data.canvasSize || {};
   const authorW = Math.round(cs.cssWidth || canvas.getBoundingClientRect().width || 320);
   const authorH = Math.round(cs.cssHeight || canvas.getBoundingClientRect().height || 320);
-  (function sizePlayerCanvas() {
-    const dpr = window.devicePixelRatio || 1;
-    // Fit the authored dimensions into the viewport with ONE uniform scale
-    // (aspect locked, never stretched, never upscaled past 1:1). The backing
-    // store stays at author size × dpr, so ctx.scale(dpr) keeps recorded
-    // CSS-pixel stroke coords 1:1 — only the CSS display size shrinks.
-    const maxW = Math.min(authorW, window.innerWidth - 40);
-    const maxH = Math.min(authorH, window.innerHeight - 220);
-    const scale = Math.min(1, maxW / authorW, maxH / authorH);
+  // Fit the authored dimensions into the viewport with ONE uniform scale
+  // (aspect locked, never stretched, never upscaled past 1:1). Split in two:
+  //   layoutPlayerCanvas() — sets only the CSS *display* size. Safe to re-run;
+  //     it never touches the backing store, so it never clears the canvas.
+  //   sizePlayerCanvas()   — display size + backing store + transform. The
+  //     backing-store write clears pixels, so this runs once, before the poster
+  //     frame is painted.
+  // The backing store stays at author size × dpr, so ctx.scale(dpr) keeps
+  // recorded CSS-pixel stroke coords 1:1 — only the CSS display size shrinks.
+  function playerFitScale() {
+    // Clamp the viewport budget so a short viewport (or an on-screen keyboard)
+    // can't drive the available height ≤ 0 and flip the scale negative.
+    const availW = Math.max(120, window.innerWidth - 40);
+    const availH = Math.max(120, window.innerHeight - 220);
+    return Math.min(1, availW / authorW, availH / authorH);
+  }
+  function layoutPlayerCanvas() {
+    const scale = playerFitScale();
     const dispW = Math.round(authorW * scale);
     const dispH = Math.round(authorH * scale);
     canvasWrap.style.width = dispW + 'px';
     canvasWrap.style.height = dispH + 'px';
     canvas.style.width = dispW + 'px';
     canvas.style.height = dispH + 'px';
+  }
+  function sizePlayerCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    layoutPlayerCanvas();
     canvas.width = Math.round(authorW * dpr);
     canvas.height = Math.round(authorH * dpr);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
-  })();
+  }
+  sizePlayerCanvas();
+  // Rotate/resize should refit the display size without clearing the frame the
+  // player has already painted — so re-layout CSS only. The backing store is
+  // dpr-invariant here, so the existing pixels stay valid at the new CSS size.
+  window.addEventListener('resize', layoutPlayerCanvas);
+  window.addEventListener('orientationchange', layoutPlayerCanvas);
 
   // Restore all state and paint the finished drawing as the poster frame.
   loadSkribl(data);
