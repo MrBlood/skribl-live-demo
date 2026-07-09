@@ -1114,6 +1114,7 @@ function updateTrimUI() {
   // Update zoom waveform (throttled)
   requestZoomWaveformDraw();
   updateZoomHandles();
+  if (typeof updateZoomPanSlider === 'function') updateZoomPanSlider();
 }
 
 const waveformCanvas = document.getElementById('waveformCanvas');
@@ -1135,19 +1136,35 @@ const zoomTrackWrap = document.getElementById('zoomTrackWrap');
 // edge, or the end edge; zoomMag tightens it so a boundary can be pushed right
 // up against the waveform (down to a few ms per pixel at 8x).
 let zoomMag = 1;
-let zoomFocus = 'loop';   // 'loop' | 'start' | 'end'
+let zoomFocus = 'loop';   // 'loop' | 'start' | 'end' | 'free'
+let zoomCenter = null;    // explicit pan center (seconds); null = derive from focus
 function getZoomWindow() {
   const loopDuration = Math.max(0, trimEnd - trimStart);
   const contextSeconds = Math.max(1, Math.min(4, loopDuration * 0.25));
+  const halfSpan = (loopDuration / 2 + contextSeconds) / zoomMag;
+  // Panning (drag / slider) sets an explicit center; otherwise the focus anchor
+  // (whole loop / start edge / end edge) decides it. Either way the center is
+  // clamped so the window never runs off the ends of the song.
   let center;
-  if (zoomFocus === 'start') center = trimStart;
+  if (zoomCenter != null) center = zoomCenter;
+  else if (zoomFocus === 'start') center = trimStart;
   else if (zoomFocus === 'end') center = trimEnd;
   else center = (trimStart + trimEnd) / 2;
-  const halfSpan = (loopDuration / 2 + contextSeconds) / zoomMag;
+  const lo = halfSpan;
+  const hi = Math.max(halfSpan, audioDuration - halfSpan);
+  center = Math.max(lo, Math.min(center, hi));
   let start = Math.max(0, center - halfSpan);
   let end = Math.min(audioDuration, center + halfSpan);
   if (end - start < 0.001) end = Math.min(audioDuration, start + 0.001);
   return { start, end, duration: Math.max(0.001, end - start) };
+}
+
+// Reflect the active focus anchor on the Loop/Start/End buttons; nothing is
+// highlighted while free-panning ('free'). Called when panning takes over.
+function syncZoomFocusButtons() {
+  document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b => {
+    b.classList.toggle('active', zoomFocus !== 'free' && b.dataset.focus === zoomFocus);
+  });
 }
 
 function updateZoomHandles() {
@@ -1236,7 +1253,7 @@ dragZoomHandle(zoomHandleEnd, false);
     if (!b) return;
     b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
-    if (b.dataset.focus) zoomFocus = b.dataset.focus;
+    if (b.dataset.focus) { zoomFocus = b.dataset.focus; zoomCenter = null; }
     if (b.dataset.mag) zoomMag = parseFloat(b.dataset.mag) || 1;
     updateTrimUI();   // recomputes the window, redraws waveform + handles
   });
@@ -1587,6 +1604,7 @@ musicRemove.addEventListener('click', (e) => {
   waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
   zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
   currentAudioBuffer = null;
+  loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
   if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
 });
 
@@ -1738,11 +1756,35 @@ function stopSeamTest() {
   seamStopTimer = null;
 }
 
+// Audition the exact clip that will be posted — the built (optionally
+// crossfaded) loop WAV, played on repeat — so Test Seam can prove the seam is
+// smooth. Used only when a crossfade is set; the hard-cut case keeps the
+// original source-seam behavior below. Auto-stops after a few loops.
+let _builtLoopPreviewAudio = null;
+let _builtLoopPreviewTimer = null;
+function stopBuiltLoopPreview() {
+  if (_builtLoopPreviewAudio) { try { _builtLoopPreviewAudio.pause(); } catch (e) {} _builtLoopPreviewAudio = null; }
+  if (_builtLoopPreviewTimer) { clearTimeout(_builtLoopPreviewTimer); _builtLoopPreviewTimer = null; }
+}
+function playBuiltLoopPreview() {
+  stopBuiltLoopPreview();
+  const built = buildTrimmedLoopWav();
+  if (!built) return false;
+  const a = new Audio(built.dataUrl);
+  a.loop = true;
+  _builtLoopPreviewAudio = a;
+  a.play().catch(() => {});
+  const ms = Math.max(2000, built.duration * 1000 * 3);
+  _builtLoopPreviewTimer = setTimeout(() => { if (_builtLoopPreviewAudio === a) stopBuiltLoopPreview(); }, ms);
+  return true;
+}
+
 function stopLoopPreview() {
   previewingLoop = false;
   if (audioEl) audioEl.pause();
   if (previewLoopTimer) clearInterval(previewLoopTimer);
   stopSeamTest();
+  stopBuiltLoopPreview();
   previewLoopTimer = null;
   if (playhead) playhead.hidden = true;
   if (zoomPlayhead) zoomPlayhead.hidden = true;
@@ -1784,6 +1826,15 @@ previewLoopBtn.addEventListener('click', () => {
 testSeamBtn.addEventListener('click', () => {
   if (!audioEl) return;
   stopLoopPreview();
+  // With a crossfade set, the raw source has no smoothed seam to hear — audition
+  // the actual built (folded) clip on repeat instead. Hard-cut case falls
+  // through to the original source-seam test below.
+  if (loopCrossfadeMs > 0 && currentAudioBuffer) {
+    if (playBuiltLoopPreview()) {
+      showToast('Previewing crossfaded loop', testSeamBtn);
+      return;
+    }
+  }
   const seamStart = Math.max(trimStart, trimEnd - 1.25);
   audioEl.currentTime = seamStart;
   audioEl.play();
@@ -2189,6 +2240,213 @@ photoBlurEl.addEventListener('input', (e) => {
 updateSliderFill(photoOpacityEl);
 updateSliderFill(photoBlurEl);
 
+// ===== Slider nudgers + Loop Detail pan + crossfade control =================
+// Three related additions, all self-contained (DOM + CSS injected here so the
+// whole feature lives in this file and neither HTML template needs editing):
+//   (1) +/- buttons on every range slider, for exact incremental control since
+//       a slider alone can't land on a precise value on a phone.
+//   (2) Scroll the Loop Detail window anywhere along the song — drag the
+//       waveform or use a scroll slider — instead of only the Loop/Start/End
+//       anchors. Adds a pan center to getZoomWindow (already wired above).
+//   (3) A loop crossfade length control (bake-only — see buildTrimmedLoopWav).
+
+// Wrap an existing <input type=range> with - / + buttons. Each press steps the
+// value (press-and-hold repeats) and dispatches a native 'input' event so every
+// existing listener (value label, track fill, autosave) fires unchanged. Pass
+// opts.step for a fixed step, or opts.nudgeFn(dir) for custom behavior (pan).
+function addSliderNudgers(input, opts) {
+  opts = opts || {};
+  if (!input || input.dataset.nudged) return;
+  input.dataset.nudged = '1';
+  const parent = input.parentNode;
+  const wrap = document.createElement('div');
+  wrap.className = 'slider-nudge-wrap';
+  parent.insertBefore(wrap, input);
+  const minus = document.createElement('button');
+  const plus = document.createElement('button');
+  minus.type = plus.type = 'button';
+  minus.className = 'slider-nudge-btn';
+  plus.className = 'slider-nudge-btn';
+  minus.textContent = '\u2212';
+  plus.textContent = '+';
+  minus.setAttribute('aria-label', 'Decrease');
+  plus.setAttribute('aria-label', 'Increase');
+  wrap.appendChild(minus);
+  wrap.appendChild(input);   // move the slider between the buttons
+  wrap.appendChild(plus);
+  const step = opts.step != null ? opts.step : (parseFloat(input.step) || 1);
+  function apply(dir) {
+    if (opts.nudgeFn) { opts.nudgeFn(dir); return; }
+    const min = parseFloat(input.min) || 0;
+    const maxRaw = parseFloat(input.max);
+    const max = Number.isFinite(maxRaw) ? maxRaw : Infinity;
+    let next = (parseFloat(input.value) || 0) + dir * step;
+    next = Math.max(min, Math.min(next, max));
+    next = Math.round(next / step) * step;
+    input.value = next;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function bind(btn, dir) {
+    let holdTimer = null, repeat = null;
+    const start = (e) => {
+      e.preventDefault();
+      apply(dir);
+      holdTimer = setTimeout(() => { repeat = setInterval(() => apply(dir), 90); }, 350);
+    };
+    const end = () => { clearTimeout(holdTimer); if (repeat) clearInterval(repeat); repeat = null; };
+    btn.addEventListener('mousedown', start);
+    btn.addEventListener('touchstart', start, { passive: false });
+    btn.addEventListener('mouseup', end);
+    btn.addEventListener('mouseleave', end);
+    btn.addEventListener('touchend', end);
+    btn.addEventListener('touchcancel', end);
+  }
+  bind(minus, -1);
+  bind(plus, 1);
+}
+
+// Sync the crossfade slider + label from loopCrossfadeMs (load / re-add / reset).
+function setCrossfadeUI() {
+  const s = document.getElementById('crossfadeSlider');
+  const v = document.getElementById('crossfadeVal');
+  if (s) { s.value = loopCrossfadeMs; if (typeof updateSliderFill === 'function') updateSliderFill(s); }
+  if (v) v.textContent = loopCrossfadeMs > 0 ? loopCrossfadeMs + ' ms' : 'Off';
+}
+
+// Reflect the current zoom-window center onto the pan slider (called from
+// updateTrimUI). No-op until the slider is injected.
+function updateZoomPanSlider() {
+  const s = document.getElementById('zoomPanSlider');
+  if (!s) return;
+  if (!Number.isFinite(audioDuration) || audioDuration <= 0) { s.value = 500; return; }
+  const zw = getZoomWindow();
+  const center = (zw.start + zw.end) / 2;
+  const frac = Math.max(0, Math.min(1, center / audioDuration));
+  s.value = Math.round(frac * 1000);
+  if (typeof updateSliderFill === 'function') updateSliderFill(s);
+}
+
+// Drag the Loop Detail waveform to pan the window. Ignores drags that start on
+// an edge handle (those resize the loop) so the two never fight.
+function dragZoomPan(wrap) {
+  if (!wrap) return;
+  const cx = (e) => (e.touches ? e.touches[0].clientX : e.clientX);
+  function onStart(e) {
+    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;
+    if (e.target.closest('.zoom-handle')) return;   // let the handle drag win
+    e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    const zw = getZoomWindow();
+    const startCenter = (zw.start + zw.end) / 2;
+    const winDur = zw.duration;
+    const startX = cx(e);
+    wrap.classList.add('panning');
+    function onMove(ev) {
+      const dx = cx(ev) - startX;
+      // Drag right → reveal earlier audio → center moves earlier.
+      const deltaT = -(dx / rect.width) * winDur;
+      const half = winDur / 2;
+      const lo = half, hi = Math.max(half, audioDuration - half);
+      zoomCenter = Math.max(lo, Math.min(startCenter + deltaT, hi));
+      zoomFocus = 'free';
+      syncZoomFocusButtons();
+      updateTrimUI();
+    }
+    function onEnd() {
+      wrap.classList.remove('panning');
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+  }
+  wrap.addEventListener('mousedown', onStart);
+  wrap.addEventListener('touchstart', onStart, { passive: false });
+}
+
+(function initSliderExtras() {
+  // ---- CSS (injected once) ----
+  const style = document.createElement('style');
+  style.textContent =
+    '.slider-nudge-wrap{display:flex;align-items:center;gap:6px;flex:1;min-width:0}' +
+    '.slider-nudge-wrap input[type=range]{flex:1;min-width:0}' +
+    '.slider-nudge-btn{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:#232734;color:#c8cede;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:background .12s}' +
+    '.slider-nudge-btn:hover{background:#2c3140}' +
+    '.slider-nudge-btn:active{background:#7c5cff;color:#fff}' +
+    '.zoom-pan-row,.crossfade-row{display:flex;align-items:center;gap:10px;margin:8px 0 2px}' +
+    '.zoom-pan-label,.crossfade-label{font-size:12px;color:#8a93a6;flex:none;min-width:64px}' +
+    '.crossfade-val{font-size:12px;color:#c8cede;flex:none;min-width:38px;text-align:right}' +
+    '#zoomTrackWrap{cursor:grab}#zoomTrackWrap.panning{cursor:grabbing}';
+  document.head.appendChild(style);
+
+  // ---- (1) Nudgers on existing sliders ----
+  ['photoOpacity', 'photoBlur', 'photoZoom', 'opacitySlider'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) addSliderNudgers(el, { step: parseFloat(el.step) || 1 });
+  });
+
+  // ---- (2) Loop Detail pan: scroll slider + waveform drag ----
+  const zoomWrap = document.getElementById('zoomTrackWrap');
+  if (zoomWrap) {
+    const panRow = document.createElement('div');
+    panRow.className = 'zoom-pan-row';
+    panRow.innerHTML =
+      '<span class="zoom-pan-label">Scroll</span>' +
+      '<input type="range" id="zoomPanSlider" class="prop-slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">';
+    zoomWrap.insertAdjacentElement('afterend', panRow);
+    const panSlider = document.getElementById('zoomPanSlider');
+    panSlider.addEventListener('input', () => {
+      if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
+      zoomCenter = (parseInt(panSlider.value, 10) / 1000) * audioDuration;
+      zoomFocus = 'free';
+      syncZoomFocusButtons();
+      updateTrimUI();
+    });
+    addSliderNudgers(panSlider, {
+      nudgeFn: (dir) => {
+        if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
+        const zw = getZoomWindow();
+        const center = (zw.start + zw.end) / 2;
+        const half = zw.duration / 2;
+        const lo = half, hi = Math.max(half, audioDuration - half);
+        zoomCenter = Math.max(lo, Math.min(center + dir * zw.duration * 0.1, hi));
+        zoomFocus = 'free';
+        syncZoomFocusButtons();
+        updateTrimUI();
+      }
+    });
+    dragZoomPan(zoomWrap);
+  }
+
+  // ---- (3) Crossfade control (bake-only; default Off) ----
+  const finePanel = document.querySelector('.finetune-panel');
+  const cfRow = document.createElement('div');
+  cfRow.className = 'crossfade-row';
+  cfRow.innerHTML =
+    '<span class="crossfade-label">Crossfade</span>' +
+    '<input type="range" id="crossfadeSlider" class="prop-slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length">' +
+    '<span class="crossfade-val" id="crossfadeVal">Off</span>';
+  if (finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
+  else {
+    const preRow = document.querySelector('.loop-preview-row');
+    if (preRow) preRow.parentNode.insertBefore(cfRow, preRow);
+  }
+  const cf = document.getElementById('crossfadeSlider');
+  if (cf) {
+    cf.addEventListener('input', () => {
+      loopCrossfadeMs = parseInt(cf.value, 10) || 0;
+      setCrossfadeUI();
+      if (typeof scheduleAutosave === 'function') scheduleAutosave();
+    });
+    addSliderNudgers(cf, { step: 5 });
+    setCrossfadeUI();
+  }
+})();
+
 
 
 
@@ -2227,7 +2485,7 @@ function serializeAutosave() {
       ? { name: photoBgImg._fileName, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : (typeof pendingPhotoMeta !== 'undefined' ? pendingPhotoMeta : null),
     musicMeta: (audioEl && audioEl._fileName)
-      ? { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd }
+      ? { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
       : (typeof pendingMusicMeta !== 'undefined' ? pendingMusicMeta : null)
   };
 }
@@ -2355,6 +2613,7 @@ function applyPendingMusicSettings(meta) {
   if (meta.trimEnd != null) trimEnd = Math.min(meta.trimEnd, audioDuration);
   // Keep a sane minimum loop length.
   trimEnd = Math.max(trimStart + 0.5, Math.min(trimEnd, audioDuration));
+  if (meta.crossfadeMs != null) { loopCrossfadeMs = meta.crossfadeMs; if (typeof setCrossfadeUI === 'function') setCrossfadeUI(); }
   updateTrimUI();
 }
 
@@ -2446,7 +2705,7 @@ function serializeSkribl() {
       ? { data: photoBgImg._draftData, name: photoBgImg._fileName || null, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : null,
     music: audioEl && audioEl._objectUrl
-      ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd }
+      ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
       : null
   };
 }
@@ -2492,8 +2751,81 @@ function audioBufferToWavDataURL(buffer, startFrame, frames) {
   return 'data:audio/wav;base64,' + btoa(binary);
 }
 
+// --- Loop crossfade (bake-only) --------------------------------------------
+// The posted/exported loop is a hard cut at the seam (le → ls). If those points
+// don't line up you get a click every wrap — that's what Test Seam lets you
+// hear. A crossfade folds the loop's tail over its head so the wrap becomes two
+// originally-adjacent samples (smooth). It's applied only to the rendered clip
+// at post/preview time — live playback of the source is untouched. Default off.
+let loopCrossfadeMs = 0;
+
+// Build the crossfaded loop as raw channel arrays. Output length = frames - X.
+// For the first X output samples we equal-power blend the head (fading in) with
+// the loop's tail (fading out); the rest is the loop body verbatim. When this
+// clip loops, its last sample and out[0] are contiguous in the source, so there
+// is no discontinuity at the seam.
+function buildLoopChannels(buffer, startFrame, frames, xfadeFrames) {
+  const numCh = buffer.numberOfChannels;
+  const outLen = frames - xfadeFrames;
+  const channels = [];
+  for (let c = 0; c < numCh; c++) {
+    const src = buffer.getChannelData(c);
+    const o = new Float32Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      let s = src[startFrame + i] || 0;
+      if (i < xfadeFrames) {
+        const t = i / xfadeFrames;                 // 0 → 1
+        const wIn = Math.sin(t * Math.PI / 2);     // head fades in
+        const wOut = Math.cos(t * Math.PI / 2);    // tail fades out
+        const tail = src[startFrame + i + outLen] || 0;  // = source[le - X + i]
+        s = s * wIn + tail * wOut;
+      }
+      o[i] = s;
+    }
+    channels.push(o);
+  }
+  return { channels, frames: outLen };
+}
+
+// Encode raw Float32 channel arrays (all same length) to a 16-bit PCM WAV data
+// URL. Mirrors audioBufferToWavDataURL's writer but reads from provided arrays,
+// so the crossfade path can encode samples that don't exist in the source
+// buffer. Kept separate so the untouched no-crossfade path stays byte-for-byte.
+function encodeWavFromChannels(channels, sampleRate) {
+  const numCh = channels.length;
+  const frames = channels[0] ? channels[0].length : 0;
+  const blockAlign = numCh * 2;
+  const dataSize = frames * blockAlign;
+  const ab = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(ab);
+  let p = 0;
+  const wStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(p++, s.charCodeAt(i)); };
+  const wU32 = (v) => { view.setUint32(p, v, true); p += 4; };
+  const wU16 = (v) => { view.setUint16(p, v, true); p += 2; };
+  wStr('RIFF'); wU32(36 + dataSize); wStr('WAVE');
+  wStr('fmt '); wU32(16); wU16(1); wU16(numCh);
+  wU32(sampleRate); wU32(sampleRate * blockAlign); wU16(blockAlign); wU16(16);
+  wStr('data'); wU32(dataSize);
+  for (let i = 0; i < frames; i++) {
+    for (let c = 0; c < numCh; c++) {
+      let s = Math.max(-1, Math.min(1, channels[c][i] || 0));
+      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      view.setInt16(p, s, true); p += 2;
+    }
+  }
+  const bytes = new Uint8Array(ab);
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return 'data:audio/wav;base64,' + btoa(binary);
+}
+
 // Slice currentAudioBuffer to the [trimStart, trimEnd] loop and return a small
-// WAV data URL + its duration, or null if the decoded buffer isn't usable.
+// WAV data URL + its duration, or null if the decoded buffer isn't usable. When
+// a crossfade is set, the tail is folded over the head so the clip loops
+// seamlessly (the clip is then shorter by the crossfade length).
 function buildTrimmedLoopWav() {
   if (!currentAudioBuffer) return null;
   const sr = currentAudioBuffer.sampleRate;
@@ -2504,6 +2836,12 @@ function buildTrimmedLoopWav() {
   const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
   const frames = endFrame - startFrame;
   if (frames <= 0) return null;
+  // Crossfade can't exceed half the loop, or the fold would overlap itself.
+  const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
+  if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
+    const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
+    return { dataUrl: encodeWavFromChannels(built.channels, sr), duration: built.frames / sr };
+  }
   return { dataUrl: audioBufferToWavDataURL(currentAudioBuffer, startFrame, frames), duration: frames / sr };
 }
 
@@ -2559,6 +2897,7 @@ function resetMediaForLoad() {
   trimStart = 0;
   trimEnd = 0;
   currentAudioBuffer = null;
+  loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
   musicDetail.hidden = true;
   musicInput.value = '';
   musicUploadBtn.classList.remove('loaded');
@@ -2719,6 +3058,8 @@ function loadSkribl(data) {
         audioDuration = audioEl.duration;
         trimStart = data.music.trimStart != null ? data.music.trimStart : 0;
         trimEnd = data.music.trimEnd != null ? data.music.trimEnd : Math.min(audioDuration, 20);
+        loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
+        if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
         musicDetail.hidden = false;
         musicUploadBtn.classList.add('loaded');
         musicBtnLabel.textContent = 'Loaded from draft';
