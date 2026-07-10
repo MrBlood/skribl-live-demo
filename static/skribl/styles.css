@@ -2725,6 +2725,28 @@ body.player-mode #canvas {
   max-height: none;
 }
 
+/* The replay nib: a soft glowing dot that rides the current stroke point while
+   the drawing plays back, so watching reads as a hand drawing. Centered on its
+   point via the negative margin; positioned in display px by the player JS. */
+.player-nib {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 6;
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0 30%, rgba(255,255,255,0.25) 60%, transparent 70%);
+  box-shadow: 0 0 10px 2px var(--accent-glow);
+  transition: opacity 0.12s ease;
+}
+.player-nib[hidden] { display: none; }
+/* While erasing, show a hollow ring instead of a bright dot. */
+.player-nib.erase {
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0 55%, transparent 60%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+}
+
 .player-shell {
   display: flex;
   flex-direction: column;
