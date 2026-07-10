@@ -613,6 +613,7 @@ function stopPicking() {
       smoothingAlpha = lvl === 'high' ? 0.25 : lvl === 'low' ? 0.5 : 1;
       smoothSeg.querySelectorAll('.smooth-btn').forEach(b => b.classList.toggle('active', b === btn));
     });
+    attachSegSlider(smoothSeg);
   }
 
   const eyedropperBtn = document.getElementById('eyedropperBtn');
@@ -1279,6 +1280,61 @@ function dragZoomHandle(handle, isStart) {
 dragZoomHandle(zoomHandleStart, true);
 dragZoomHandle(zoomHandleEnd, false);
 
+// Sliding-pill highlight for segmented button groups — the same affordance as
+// the draw/eraser tool slider, generalized so it can be attached to any group.
+// It injects an absolutely-positioned pill as the group's first child and slides
+// it under whichever button carries `.active`. A group with NO active button
+// (e.g. the Loop/Start/End focus row while free-panning) hides the pill. It
+// repositions on active-state changes (MutationObserver) and when the group
+// resizes or first becomes visible from a hidden tab/drawer (ResizeObserver);
+// both are feature-detected so the headless harness — which stubs neither — runs
+// this file top-level without throwing.
+function positionSegSlider(group) {
+  if (!group) return;
+  const pill = group.__segPill;
+  if (!pill) return;
+  const btns = Array.prototype.slice.call(group.querySelectorAll('button'));
+  let idx = -1;
+  for (let i = 0; i < btns.length; i++) {
+    if (btns[i].classList.contains('active')) idx = i;
+  }
+  const activeBtn = idx >= 0 ? btns[idx] : null;
+  // No selection, or the group is still collapsed (zero-width) — keep it hidden
+  // and let the next reflow place it once it has real layout.
+  if (!activeBtn || !activeBtn.offsetWidth) { pill.style.opacity = '0'; return; }
+  let offset = 0;
+  for (let i = 0; i < idx; i++) offset += btns[i].offsetWidth;
+  pill.style.width = activeBtn.offsetWidth + 'px';
+  pill.style.transform = 'translateX(' + offset + 'px)';
+  pill.style.opacity = '1';
+}
+
+function attachSegSlider(group) {
+  if (!group || group.__segAttached) return;
+  group.__segAttached = true;
+  const pill = document.createElement('div');
+  pill.className = 'seg-slider';
+  group.insertBefore(pill, group.firstChild);
+  group.__segPill = pill;
+  const reflow = () => positionSegSlider(group);
+  // Active-state changes (clicks, syncZoomFocusButtons, the programmatic 'free'
+  // state) all flip the `active` class — observing it keeps the pill in sync
+  // without threading a call through every one of those code paths.
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(reflow).observe(group, {
+      subtree: true, attributes: true, attributeFilter: ['class'],
+    });
+  }
+  // Fires when the group gains size (revealed from a hidden panel) and on
+  // viewport resize, so the pill lands correctly the first time it's seen.
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(reflow).observe(group);
+  } else if (window.addEventListener) {
+    window.addEventListener('resize', reflow);
+  }
+  reflow();
+}
+
 // Focus + magnification control for the Loop Detail view. Built in JS (styles
 // injected once) so the whole feature lives in this one file. Focus centers the
 // zoom window on the loop / start edge / end edge; the multiplier tightens it.
@@ -1299,6 +1355,8 @@ dragZoomHandle(zoomHandleEnd, false);
       '<button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button>' +
     '</div>';
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
+  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="focus"]'));
+  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="mag"]'));
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('.zoom-mag-btn');
     if (!b) return;
@@ -1311,10 +1369,10 @@ dragZoomHandle(zoomHandleEnd, false);
   const style = document.createElement('style');
   style.textContent =
     '.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}' +
-    '.zoom-mag-group{display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:2px}' +
-    '.zoom-mag-btn{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:background .12s,color .12s}' +
-    '.zoom-mag-btn:hover{background:#1c212c;color:#c8cede}' +
-    '.zoom-mag-btn.active{background:#7c5cff;color:#fff;box-shadow:0 0 0 1px rgba(124,92,255,.4)}';
+    '.zoom-mag-group{position:relative;overflow:hidden;display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:3px}' +
+    '.zoom-mag-btn{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:color .12s}' +
+    '.zoom-mag-btn:hover{color:#c8cede}' +
+    '.zoom-mag-btn.active{color:#fff}';
   document.head.appendChild(style);
 })();
 const bubbleStart = document.getElementById('bubbleStart');
