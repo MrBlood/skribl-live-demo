@@ -4372,6 +4372,35 @@ if (typeof pendingMusicMeta !== 'undefined') {
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
   }
+  // A small nib that rides the current replay point so watching reads as a hand
+  // drawing rather than lines appearing. Player-only; positioned in display px
+  // inside canvasWrap (which loadSkribl/sizePlayerCanvas size to the fitted
+  // display rect). It reads the same timeline points the replay draws — no new
+  // timing loop, no effect on the drawing itself.
+  const nib = document.createElement('div');
+  nib.className = 'player-nib';
+  nib.hidden = true;
+  if (canvasWrap) canvasWrap.appendChild(nib);
+  function nibScale() {
+    // Authored CSS px -> current display px. canvasWrap is the fitted rect, so
+    // its width over the authored width is the live scale (handles rotate/resize).
+    const dispW = (canvasWrap && canvasWrap.clientWidth) || authorW;
+    return authorW ? dispW / authorW : 1;
+  }
+  function showNibAtIndex(nextIdx) {
+    // replayTimelineToCanvas returns the NEXT index, so the point just drawn is
+    // nextIdx - 1. Nothing drawn yet (index 0) -> keep the nib hidden.
+    const p = nextIdx > 0 ? timeline[nextIdx - 1] : null;
+    if (!p) { nib.hidden = true; return; }
+    const s = nibScale();
+    nib.style.left = (p.x * s) + 'px';
+    nib.style.top = (p.y * s) + 'px';
+    nib.classList.toggle('erase', !!p.erase);
+    nib.hidden = false;
+  }
+  function hideNib() { nib.hidden = true; }
+  // Keep a paused/idle nib aligned if the viewport changes scale under it.
+  window.addEventListener('resize', () => { if (!nib.hidden) showNibAtIndex(idx); });
   // ---- Player audio: gapless Web Audio loop bed --------------------------
   // Play the SAME loop the post bakes instead of the raw <audio>:
   // buildLoopAudioBuffer() folds the crossfade and slices [trimStart,trimEnd]
@@ -4435,6 +4464,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
       idx = replayTimelineToCanvas(timeline, 0, targetMs, drawDot, drawLine);
       elapsedBase = targetMs;
       setProgress(frac);
+      showNibAtIndex(idx);
       // Audio alignment is handled on resume: elapsedBase (= targetMs) drives the
       // loop-bed phase offset in audioStart(), so there's no per-seek audio work.
       // (Playback is paused during a scrub; the bed restarts aligned on release.)
@@ -4451,6 +4481,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const elapsed = elapsedBase + (performance.now() - segStart);
     idx = replayTimelineToCanvas(timeline, idx, elapsed, drawDot, drawLine);
     setProgress(totalMs ? elapsed / totalMs : 1);
+    showNibAtIndex(idx);
     if (idx < timeline.length) rafId = requestAnimationFrame(frame);
     else onEnded();
   }
@@ -4472,6 +4503,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     if (fresh) {
       elapsedBase = 0;
       setProgress(0);
+      hideNib();                // clear any nib left from a prior paused run
       clearAndRestore(begin);   // clear + redraw baseSnapshot, then start
     } else {
       begin();                  // resume: keep the partial drawing on canvas
@@ -4500,6 +4532,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     running = false;
     audioPause();
     setProgress(1);
+    hideNib();   // finished poster shows without the nib
     // Reset so the next Play restarts cleanly rather than resuming at the end.
     elapsedBase = 0;
     idx = 0;
