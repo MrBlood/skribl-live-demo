@@ -50,13 +50,25 @@ function resizeCanvas() {
   // Player mode sizes the canvas to the authored dimensions itself; don't let a
   // window resize re-fit it to the container and break stroke coordinates.
   if (document.body.classList.contains('player-mode')) return;
-  const { width, height } = getCanvasCssSize();
+  // Measure the CONTAINER, not the canvas. resizeCanvas() writes an inline
+  // width/height onto the canvas, so measuring the canvas here reads back the
+  // stale pre-rotation size (the inline width overrides the CSS width:100%) —
+  // leaving the canvas frozen at the portrait width, occupying only the left
+  // part of a rotated landscape viewport. The wrap reflects the real area.
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  const width = wrapRect.width, height = wrapRect.height;
   const dpr = window.devicePixelRatio || 1;
   const snapshot = canvas.width > 0 && canvas.height > 0 ? canvas.toDataURL() : null;
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
   canvas.style.width = width + 'px';
   canvas.style.height = height + 'px';
+  // JS owns the size here, so neutralize the CSS min-height floor
+  // (#canvas { min-height:400px }, and 50vh under the ≤640px query — which a
+  // wide landscape phone doesn't even match). In a short landscape editor the
+  // wrap can be under that floor; without this the canvas would be forced taller
+  // than its wrap and clipped / misaligned against the backing store.
+  canvas.style.minHeight = '0';
   ctx.scale(dpr, dpr);
   canvasWrap.style.backgroundColor = bgColor;
   if (snapshot) {
