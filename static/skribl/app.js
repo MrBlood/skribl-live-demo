@@ -28,11 +28,6 @@ let photoOffsetX = 0.5, photoOffsetY = 0.5; // Fill-mode crop position (0..1 eac
 let photoZoom = 1;                          // Fill-mode zoom multiplier (1..3)
 let repositioning = false;                  // photo-drag mode; suspends drawing
 
-function getCanvasCssSize() {
-  const rect = canvas.getBoundingClientRect();
-  return { width: rect.width, height: rect.height };
-}
-
 // The canvas's logical drawing size (the coordinate space strokes replay in).
 // In the editor this equals the CSS display size. In player mode the canvas is
 // shrunk to fit the viewport (CSS size < authored size) while the backing store
