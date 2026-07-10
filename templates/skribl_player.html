@@ -3,7 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Skribl Player</title>
+  <title>{% if og_title and og_title != 'Skribl Pad' %}{{ og_title }} · {% endif %}Skribl Pad</title>
+  <meta name="description" content="{{ og_description }}">
+
+  {# Open Graph / Twitter card — server-rendered so shared links unfurl with a
+     preview. Values are provided by the /s/<id> route (best-effort lookup). #}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Skribl Pad">
+  <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:description" content="{{ og_description }}">
+  {% if og_url %}<meta property="og:url" content="{{ og_url }}">{% endif %}
+  {% if og_image %}<meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">{% endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ og_title }}">
+  <meta name="twitter:description" content="{{ og_description }}">
+  {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
+
   <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css') }}">
 </head>
 <body>
