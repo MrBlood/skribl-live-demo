@@ -2,7 +2,7 @@ import os
 import secrets
 from datetime import datetime, timezone
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
@@ -21,6 +21,19 @@ class SkriblPost(db.Model):
     payload_json = db.Column(db.JSON, nullable=False)
     has_audio = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+# Open Graph title/description for a shared Skribl, with generic fallbacks.
+# Kept pure and import-free (no DB, no Flask context) so it can be unit-tested
+# headless — the route feeds it the post's fields (or None on a miss/error).
+OG_DEFAULT_TITLE = "Skribl Pad"
+OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."
+
+
+def _og_meta(title, caption):
+    og_title = (title or "").strip() or OG_DEFAULT_TITLE
+    og_description = (caption or "").strip() or OG_DEFAULT_DESCRIPTION
+    return og_title, og_description
 
 
 def create_app():
@@ -63,7 +76,31 @@ def create_app():
 
     @app.get("/s/<public_id>")
     def skribl_player(public_id):
-        return render_template("skribl_player.html", public_id=public_id)
+        # Server-render Open Graph / Twitter card metadata so shared links unfurl
+        # with the Skribl's title + caption — social scrapers don't run the client
+        # JS that fills those in. The lookup is best-effort: on a missing post or a
+        # transient DB error we fall back to generic tags and still render the same
+        # shell, so the existing client flow (which handles missing/invalid) is
+        # unchanged. This route stays render-always; it never 404s the page.
+        title = caption = None
+        try:
+            post = SkriblPost.query.filter_by(public_id=public_id).first()
+            if post is not None:
+                title, caption = post.title, post.caption
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+        og_title, og_description = _og_meta(title, caption)
+        return render_template(
+            "skribl_player.html",
+            public_id=public_id,
+            og_title=og_title,
+            og_description=og_description,
+            og_image=url_for("static", filename="skribl/og-card.png", _external=True),
+            og_url=url_for("skribl_player", public_id=public_id, _external=True),
+        )
 
     @app.post("/api/skribls")
     def create_skribl():
