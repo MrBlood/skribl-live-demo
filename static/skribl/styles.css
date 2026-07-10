@@ -285,6 +285,16 @@ body:not(.player-mode) .canvas-wrap {
   opacity: 0.9;
 }
 
+.canvas-empty-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(246,247,249,0.20);
+  letter-spacing: 0;
+  max-width: 240px;
+  text-align: center;
+  line-height: 1.35;
+}
+
 .canvas-empty-hint.hidden {
   opacity: 0;
 }
@@ -2833,6 +2843,33 @@ body.player-mode #canvas {
   border-color: transparent;
   color: #fff;
 }
+
+.player-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: -0.1px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 6px 20px var(--accent-glow);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.player-cta svg { width: 16px; height: 16px; }
+.player-cta:hover {
+  background: var(--accent-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px var(--accent-glow);
+}
+.player-cta:active { transform: translateY(0); }
 
 .player-brand {
   font-size: 11px;
