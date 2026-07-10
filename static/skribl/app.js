@@ -291,6 +291,15 @@ function startDraw(e) {
     }
     return;
   }
+  // Auto-arm: on a blank, unlocked canvas the first stroke starts recording on
+  // its own, so a first-time user who "just draws" still gets a replay to post
+  // without knowing to press Record first. Only fires when nothing is drawn yet
+  // and no take is in progress or finished; every other entry path is unchanged.
+  // beginRecording captures the (blank) base and flips `recording` true before we
+  // read `t` below, so this first point lands at t≈0 like a normal take start.
+  if (!recording && !finishedRecording && !hasContent) {
+    beginRecording(false);
+  }
   const pos = getPos(e);
   drawing = true;
   lastPos = pos;
@@ -761,55 +770,87 @@ function updateDrawingTimeLabels() {
 
 let recTimerInterval = null;
 
-recordBtn.addEventListener('click', () => {
-  if (!recording) {
+// Recording is split into begin/end helpers so the Record button, the auto-arm
+// path (first stroke on a blank canvas), and a continue-take all share one code
+// path. Multi-take needs NO change to the replay timeline: buildPlaybackTimeline()
+// sums only capped, positive gaps between consecutive points, so appending a
+// take strings it together seamlessly — the cross-take seam is a non-positive
+// gap (each take restarts startTime, so the new take's first t is < the prior
+// take's last t) which contributes 0ms, i.e. no dead air. Each take's first
+// point keeps start:true, so on replay it draws as a fresh pen-down dot rather
+// than a line connecting from wherever the previous take ended.
+function beginRecording(continueTake) {
+  if (!continueTake) {
+    // Fresh Skribl: snapshot whatever is already on the canvas as the static
+    // base image, and start the stroke list empty.
     preRecordSnapshot = canvas.toDataURL();
     strokes = []; strokeGroups = [];
-    startTime = Date.now();
-    recording = true;
-    recorded = false;
-    finishedRecording = false;   // unlock: a fresh recording is starting
-    updateCanvasLockCue();
-    if (typeof exitReposition === 'function') { exitReposition(); updateRepositionUI(); }
-    if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
-    recordBtn.innerHTML = ICON_STOP + LABEL_STOP;
-    recordBtn.classList.add('active');
-    canvasWrap.classList.add('recording');
-    document.querySelector('.header').classList.add('compact');
-    recIndicator.hidden = false;
-    playWrap.hidden = true;
-    playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
-    postBtn.hidden = true;
-    durationBadge.hidden = true;
+  }
+  // continueTake: keep existing strokes/strokeGroups AND the original base so the
+  // new take appends on top. Never re-snapshot the base mid-Skribl, or the prior
+  // takes would bake into the base and also replay (drawn twice).
+  startTime = Date.now();
+  recording = true;
+  recorded = false;
+  finishedRecording = false;   // unlock: recording is active
+  updateCanvasLockCue();
+  if (typeof exitReposition === 'function') { exitReposition(); updateRepositionUI(); }
+  if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
+  recordBtn.innerHTML = ICON_STOP + LABEL_STOP;
+  recordBtn.classList.add('active');
+  canvasWrap.classList.add('recording');
+  document.querySelector('.header').classList.add('compact');
+  recIndicator.hidden = false;
+  playWrap.hidden = true;
+  playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
+  postBtn.hidden = true;
+  durationBadge.hidden = true;
 
-    recTimer.textContent = '0:00';
-    recTimerInterval = setInterval(() => {
-      const wall = formatDuration(Date.now() - startTime);
-      const play = formatDuration(getPlaybackDuration());
-      recTimer.textContent = wall + ' · ' + play + ' play';
-    }, 200);
+  recTimer.textContent = '0:00';
+  clearInterval(recTimerInterval);   // defensive: never stack intervals
+  recTimerInterval = setInterval(() => {
+    const wall = formatDuration(Date.now() - startTime);
+    // getPlaybackDuration() sums across ALL strokes, so on a continue-take the
+    // "play" readout keeps counting up from the previous takes' total.
+    const play = formatDuration(getPlaybackDuration());
+    recTimer.textContent = wall + ' · ' + play + ' play';
+  }, 200);
+}
+
+function endRecordingTake() {
+  commitActiveStroke();   // capture a stroke still in progress when Stop is hit
+  recording = false;
+  recorded = strokes.length > 0;
+  // Lock the canvas only if we actually captured a replay.
+  finishedRecording = recorded;
+  updateCanvasLockCue();
+  if (typeof updateRepositionUI === 'function') updateRepositionUI();
+  recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
+  recordBtn.classList.remove('active');
+  canvasWrap.classList.remove('recording');
+  recIndicator.hidden = true;
+  playWrap.hidden = !recorded;
+  postBtn.hidden = !recorded;
+  if (!recorded) document.querySelector('.header').classList.remove('compact');
+
+  clearInterval(recTimerInterval);
+  if (recorded) {
+    updateDrawingTimeLabels();
+    durationBadge.hidden = false;
+    // Confirm the capture and surface multi-take: the canvas is now locked on
+    // this take; pressing Record again appends another take to the same Skribl.
+    showToast('Take saved — hit Record to add another, or Play to preview', recordBtn);
+  }
+  updateClearVisibility();
+}
+
+recordBtn.addEventListener('click', () => {
+  if (!recording) {
+    // If a completed take is already on the canvas, continue it as another take
+    // (append) instead of wiping and starting over.
+    beginRecording(strokes.length > 0);
   } else {
-    commitActiveStroke();   // capture a stroke still in progress when Stop is hit
-    recording = false;
-    recorded = strokes.length > 0;
-    // Lock the canvas only if we actually captured a replay.
-    finishedRecording = recorded;
-    updateCanvasLockCue();
-    if (typeof updateRepositionUI === 'function') updateRepositionUI();
-    recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
-    recordBtn.classList.remove('active');
-    canvasWrap.classList.remove('recording');
-    recIndicator.hidden = true;
-    playWrap.hidden = !recorded;
-    postBtn.hidden = !recorded;
-    if (!recorded) document.querySelector('.header').classList.remove('compact');
-
-    clearInterval(recTimerInterval);
-    if (recorded) {
-      updateDrawingTimeLabels();
-      durationBadge.hidden = false;
-    }
-    updateClearVisibility();
+    endRecordingTake();
   }
 });
 
@@ -4006,9 +4047,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
     return { id, url: '#skribl=' + id, local: true };
   }
 
-  // Flatten bg + photo + drawing into a small preview image. Kept local (a few
-  // lines duplicated from export) so the delicate export IIFE stays untouched.
-  function buildPreviewDataURL() {
+  // Flatten bg + photo + drawing into a single opaque canvas at native size.
+  // Kept local (a few lines duplicated from export) so the delicate export IIFE
+  // stays untouched. Returns a <canvas>, or null on failure.
+  function buildPreviewCanvas() {
     try {
       const w = canvas.width, h = canvas.height;
       const out = document.createElement('canvas');
@@ -4034,7 +4076,104 @@ if (typeof pendingMusicMeta !== 'undefined') {
         octx.restore();
       }
       octx.drawImage(canvas, 0, 0, w, h);
-      return out.toDataURL('image/png');
+      return out;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function buildPreviewDataURL() {
+    const out = buildPreviewCanvas();
+    return out ? out.toDataURL('image/png') : null;
+  }
+
+  // Render the finished drawing onto a 1200×630 branded share card (the Open
+  // Graph aspect) so a shared /s/<id> link unfurls with the actual drawing
+  // instead of the generic card. Composited client-side at post time and sent as
+  // payload.thumbnail (a PNG data URL); the /s/<id>/card.png route serves it.
+  function buildShareCardDataURL() {
+    try {
+      const flat = buildPreviewCanvas();
+      const CARD_W = 1200, CARD_H = 630;
+      const card = document.createElement('canvas');
+      card.width = CARD_W; card.height = CARD_H;
+      const c = card.getContext('2d');
+
+      // Ground + soft accent wash (echoes the static og-card).
+      c.fillStyle = '#0b0d12';
+      c.fillRect(0, 0, CARD_W, CARD_H);
+      const wash = c.createRadialGradient(CARD_W*0.5, CARD_H*0.28, 40, CARD_W*0.5, CARD_H*0.28, CARD_W*0.7);
+      wash.addColorStop(0, 'rgba(124,92,255,0.16)');
+      wash.addColorStop(1, 'rgba(124,92,255,0)');
+      c.fillStyle = wash;
+      c.fillRect(0, 0, CARD_W, CARD_H);
+
+      const roundRect = (x, y, w, h, r) => {
+        c.beginPath();
+        c.moveTo(x+r, y);
+        c.arcTo(x+w, y, x+w, y+h, r);
+        c.arcTo(x+w, y+h, x, y+h, r);
+        c.arcTo(x, y+h, x, y, r);
+        c.arcTo(x, y, x+w, y, r);
+        c.closePath();
+      };
+
+      // Contain the drawing centered, leaving a strip at the bottom for the mark.
+      const footer = 84;
+      const pad = 54;
+      if (flat && flat.width && flat.height) {
+        const areaW = CARD_W - pad*2;
+        const areaH = CARD_H - pad - footer;
+        const scale = Math.min(areaW / flat.width, areaH / flat.height);
+        const dw = Math.round(flat.width * scale);
+        const dh = Math.round(flat.height * scale);
+        const dx = Math.round((CARD_W - dw) / 2);
+        const dy = Math.round((CARD_H - footer - dh) / 2);
+        c.save();
+        roundRect(dx, dy, dw, dh, 18);
+        c.clip();
+        c.drawImage(flat, dx, dy, dw, dh);   // flat is already opaque (bg baked in)
+        c.restore();
+        c.lineWidth = 2;
+        c.strokeStyle = 'rgba(124,92,255,0.45)';
+        roundRect(dx, dy, dw, dh, 18);
+        c.stroke();
+      }
+
+      // Brand mark: 6-point star + wordmark, centered in the footer strip.
+      const cy = CARD_H - footer/2 + 6;
+      const label = 'Skribl Pad';
+      c.font = '700 30px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+      c.textBaseline = 'middle';
+      const tw = c.measureText(label).width;
+      const starR = 13;
+      const gap = 14;
+      const totalW = starR*2 + gap + tw;
+      let x = (CARD_W - totalW) / 2;
+      // star
+      const scx = x + starR, scy = cy;
+      c.save();
+      c.translate(scx, scy);
+      c.beginPath();
+      for (let i = 0; i < 12; i++) {
+        const ang = (Math.PI / 6) * i - Math.PI/2;
+        const rr = (i % 2 === 0) ? starR : starR * 0.42;
+        const px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
+        i === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
+      }
+      c.closePath();
+      const sg = c.createLinearGradient(-starR, -starR, starR, starR);
+      sg.addColorStop(0, '#7c5cff');
+      sg.addColorStop(1, '#5b8cff');
+      c.fillStyle = sg;
+      c.fill();
+      c.restore();
+      // wordmark
+      c.fillStyle = 'rgba(246,247,249,0.94)';
+      c.textAlign = 'left';
+      c.fillText(label, x + starR*2 + gap, cy);
+
+      return card.toDataURL('image/png');
     } catch (e) {
       return null;
     }
@@ -4153,6 +4292,12 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const payload = serializeSkribl();
     payload.title = (titleInput.value || '').trim() || 'Untitled Skribl';
     payload.caption = (captionInput.value || '').trim();
+    // Per-Skribl share card for link unfurls. Post-only (kept out of
+    // serializeSkribl so drafts stay lean); the server serves it at
+    // /s/<id>/card.png and drops it from the player GET envelope. Best-effort —
+    // a null card just falls back to the static branded image server-side.
+    const card = buildShareCardDataURL();
+    if (card) payload.thumbnail = card;
     // Crop music down to just the loop for posting. Post-only — drafts keep the
     // full sample so they can be re-trimmed. The trimmed clip IS the loop, so
     // trimStart/trimEnd become 0..loopLen. Falls back to the full sample if the
