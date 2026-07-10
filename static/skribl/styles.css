@@ -694,17 +694,35 @@ body:not(.player-mode) .canvas-wrap {
 }
 
 .smooth-seg {
+  position: relative; overflow: hidden;
   display: flex; margin-left: auto;
   background: #171b23; border: 1px solid var(--hairline);
   border-radius: 999px; padding: 3px;
 }
 .smooth-btn {
+  position: relative; z-index: 1;
   border: 0; background: transparent; color: #8a93a6;
   font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 999px;
-  cursor: pointer; transition: background .15s ease, color .15s ease;
+  cursor: pointer; transition: color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.smooth-btn.active { background: var(--accent); color: #fff; }
+.smooth-btn.active { color: #fff; }
+
+/* Shared sliding-pill highlight for segmented controls (smoothing off/low/high,
+   the Loop/Start/End focus row, and the 1x-8x magnifier) — the same affordance
+   as the draw/eraser tool slider. Inserted as the group's first child and
+   positioned in JS by attachSegSlider(); its radius follows the parent group. */
+.seg-slider {
+  position: absolute;
+  top: 3px; left: 3px; bottom: 3px;
+  background: var(--accent);
+  border-radius: inherit;
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+}
 
 .drawer-actions { display: flex; }
 .clear-drawer-btn {
