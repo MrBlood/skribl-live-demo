@@ -3562,6 +3562,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
     progressLabel.textContent = 'Preparing…';
 
     try {
+    // Clear any export-audio globals from a prior run so a stale loop buffer
+    // can't be picked up by an export that has no audio this time.
+    window._exportAudioSrc = null; window._exportAudioNode = null;
+    window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
     const w = canvas.width, h = canvas.height;
     const rec = document.createElement('canvas');
     rec.width = w; rec.height = h;
@@ -3591,27 +3595,53 @@ if (typeof pendingMusicMeta !== 'undefined') {
           await audioContextForExport.resume().catch(()=>{});
         }
         mixDest = audioContextForExport.createMediaStreamDestination();
-        const srcEl = new Audio();
-        srcEl.src = audioEl._draftData || audioEl.src;
-        srcEl.crossOrigin = 'anonymous';
-        srcEl.loop = false;
-        srcEl.preload = 'auto';
-        // Wait until the audio is actually ready to play through.
-        await new Promise((resolve) => {
-          let done = false;
-          const finish = () => { if (!done) { done = true; resolve(); } };
-          if (srcEl.readyState >= 3) finish();
-          srcEl.addEventListener('canplaythrough', finish, { once: true });
-          srcEl.addEventListener('loadeddata', finish, { once: true });
-          setTimeout(finish, 1500); // safety timeout
-          srcEl.load();
-        });
-        srcEl.currentTime = trimStart;
-        const track = audioContextForExport.createMediaElementSource(srcEl);
-        track.connect(mixDest);
-        stream.getAudioTracks().forEach(t => t.stop());
-        mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-        window._exportAudioSrc = srcEl;
+
+        // Prefer the SAME baked loop the post uses: buildTrimmedLoopWav() folds
+        // the crossfade and slices [trimStart,trimEnd] into one clip, so the
+        // exported audio loops seamlessly (no hard-cut seam click) and matches
+        // the posted Skribl exactly. Decode it into the export context and play
+        // it as a gapless looping AudioBufferSourceNode (started in runTimeline).
+        let loopBuf = null;
+        try {
+          const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
+          if (built && built.dataUrl) {
+            const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
+            loopBuf = await audioContextForExport.decodeAudioData(ab);
+          }
+        } catch (e) { loopBuf = null; }
+
+        if (loopBuf) {
+          stream.getAudioTracks().forEach(t => t.stop());
+          mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+          window._exportAudioBuf = loopBuf;
+          window._exportAudioCtx = audioContextForExport;
+          window._exportAudioDest = mixDest;
+          window._exportAudioSrc = null;
+        } else {
+          // Fallback (baked loop unavailable, e.g. source not decoded): raw
+          // <audio> region loop — the previous hard-cut behavior, wrap in frame().
+          const srcEl = new Audio();
+          srcEl.src = audioEl._draftData || audioEl.src;
+          srcEl.crossOrigin = 'anonymous';
+          srcEl.loop = false;
+          srcEl.preload = 'auto';
+          // Wait until the audio is actually ready to play through.
+          await new Promise((resolve) => {
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            if (srcEl.readyState >= 3) finish();
+            srcEl.addEventListener('canplaythrough', finish, { once: true });
+            srcEl.addEventListener('loadeddata', finish, { once: true });
+            setTimeout(finish, 1500); // safety timeout
+            srcEl.load();
+          });
+          srcEl.currentTime = trimStart;
+          const track = audioContextForExport.createMediaElementSource(srcEl);
+          track.connect(mixDest);
+          stream.getAudioTracks().forEach(t => t.stop());
+          mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+          window._exportAudioSrc = srcEl;
+        }
       } catch (e) { audioContextForExport = null; }
     }
 
@@ -3628,6 +3658,8 @@ if (typeof pendingMusicMeta !== 'undefined') {
       showToast('Video exported', null);
       videoBtn.disabled = false; pngBtn.disabled = false;
       if (audioContextForExport) { try { audioContextForExport.close(); } catch(e){} }
+      if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} try { window._exportAudioNode.disconnect(); } catch(e){} window._exportAudioNode = null; }
+      window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
       if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
       setTimeout(closeExport, 800);
     };
@@ -3678,7 +3710,20 @@ if (typeof pendingMusicMeta !== 'undefined') {
       //    on the same tick — so they're in sync and the recorder is already
       //    running when audio begins (no early clipped blip).
       function runTimeline() {
-        if (window._exportAudioSrc) {
+        // Start audio in sync with the timeline: the gapless crossfaded loop
+        // buffer (preferred) or the raw <audio> region-loop fallback.
+        if (window._exportAudioBuf && window._exportAudioCtx && window._exportAudioDest) {
+          try {
+            const node = window._exportAudioCtx.createBufferSource();
+            node.buffer = window._exportAudioBuf;
+            node.loop = true;
+            node.loopStart = 0;
+            node.loopEnd = window._exportAudioBuf.duration;
+            node.connect(window._exportAudioDest);
+            node.start();
+            window._exportAudioNode = node;
+          } catch (e) {}
+        } else if (window._exportAudioSrc) {
           const a = window._exportAudioSrc;
           try { a.currentTime = trimStart; a.play().catch(()=>{}); } catch(e){}
         }
@@ -3706,6 +3751,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
               if (performance.now() - holdStart < 700) {
                 requestAnimationFrame(holdFrame);
               } else {
+                if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} }
                 if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} }
                 try { recorder.stop(); } catch(e){}
               }
@@ -3735,6 +3781,8 @@ if (typeof pendingMusicMeta !== 'undefined') {
       showToast('Video export failed', null);
       videoBtn.disabled = false; pngBtn.disabled = false;
       progress.hidden = true;
+      if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} window._exportAudioNode = null; }
+      window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
       if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
     }
   });
@@ -4208,13 +4256,51 @@ if (typeof pendingMusicMeta !== 'undefined') {
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
   }
-  function audioStart(fresh) {
-    if (!audioEl) return;
-    // Apply the mute state here too: audioEl is created async by loadSkribl(),
-    // so it may not have existed when the user first toggled mute.
-    try { audioEl.muted = muted; if (fresh) audioEl.currentTime = trimStart || 0; audioEl.play().catch(() => {}); } catch (e) {}
+  // ---- Player audio: gapless Web Audio loop bed --------------------------
+  // Play the SAME loop the post bakes instead of the raw <audio>:
+  // buildLoopAudioBuffer() folds the crossfade and slices [trimStart,trimEnd]
+  // into one AudioBuffer, played on an AudioBufferSourceNode with loop=true so
+  // the wrap is sample-accurate — gapless and drift-free, matching the editor's
+  // live monitor. We own a GainNode (mute) and start the source at a phase
+  // offset from the drawing clock so play/resume/seek stay aligned under the
+  // replay. The decoded source + trim/crossfade state are set by loadSkribl().
+  let paSource = null, paGain = null, paBuffer = null;
+  function paLoopBuffer() {
+    // Build once and cache — the player's trims/crossfade don't change post-load.
+    if (!paBuffer) { try { paBuffer = buildLoopAudioBuffer(); } catch (e) { paBuffer = null; } }
+    return paBuffer;
   }
-  function audioPause() { if (audioEl) { try { audioEl.pause(); } catch (e) {} } }
+  function paStop() {
+    if (paSource) {
+      try { paSource.stop(); } catch (e) {}
+      try { paSource.disconnect(); } catch (e) {}
+      paSource = null;
+    }
+  }
+  // Start the loop bed aligned to a drawing-elapsed position (ms). Returns false
+  // (a no-op) if audio isn't decoded yet — the drawing still plays and a later
+  // start (next play/seek) picks the audio up once the buffer is ready.
+  function paStartAtElapsed(elapsedMs) {
+    if (!audioCtx) return false;
+    const buf = paLoopBuffer();
+    if (!buf) return false;
+    paStop();
+    if (audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
+    if (!paGain) { paGain = audioCtx.createGain(); paGain.connect(audioCtx.destination); }
+    paGain.gain.value = muted ? 0 : 1;
+    const dur = buf.duration;
+    const offset = dur > 0 ? (((elapsedMs / 1000) % dur) + dur) % dur : 0;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = dur;
+    src.connect(paGain);
+    try { src.start(0, offset); } catch (e) { return false; }
+    paSource = src;
+    return true;
+  }
+  // Loop bed replaces <audio>; the gapless source loops itself, so frame() no
+  // longer wraps the audio. elapsedBase carries the aligned position on resume.
+  function audioStart() { paStartAtElapsed(elapsedBase); }
+  function audioPause() { paStop(); }
 
   // ---- Scrubbing ----
   // Seek to a fraction of the timeline: recomposite the base frame, then replay
@@ -4233,18 +4319,9 @@ if (typeof pendingMusicMeta !== 'undefined') {
       idx = replayTimelineToCanvas(timeline, 0, targetMs, drawDot, drawLine);
       elapsedBase = targetMs;
       setProgress(frac);
-      // Music is a loop over [trimStart, trimEnd] running as a bed under the
-      // drawing, so at drawing-elapsed targetMs the bed sits at
-      // trimStart + (elapsed mod loopLen). Set that here; a resuming play()
-      // (fresh === false after a seek) keeps this position rather than overriding.
-      if (audioEl) {
-        try {
-          const ls = trimStart || 0;
-          const le = (trimEnd && trimEnd > ls) ? trimEnd : (audioEl.duration || ls);
-          const loopLen = le - ls;
-          audioEl.currentTime = loopLen > 0 ? ls + ((targetMs / 1000) % loopLen) : ls;
-        } catch (e) {}
-      }
+      // Audio alignment is handled on resume: elapsedBase (= targetMs) drives the
+      // loop-bed phase offset in audioStart(), so there's no per-seek audio work.
+      // (Playback is paused during a scrub; the bed restarts aligned on release.)
     };
     clearAndRestore(paint);   // clear + redraw baseSnapshot, then replay to target
   }
@@ -4258,20 +4335,21 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const elapsed = elapsedBase + (performance.now() - segStart);
     idx = replayTimelineToCanvas(timeline, idx, elapsed, drawDot, drawLine);
     setProgress(totalMs ? elapsed / totalMs : 1);
-    if (audioEl && trimEnd && audioEl.currentTime >= trimEnd - 0.05) {
-      try { audioEl.currentTime = trimStart || 0; } catch (e) {}
-    }
     if (idx < timeline.length) rafId = requestAnimationFrame(frame);
     else onEnded();
   }
 
   function play() {
     if (running || !timeline.length) return;
+    // Unlock the AudioContext inside the click gesture: begin() below can run in
+    // an async image onload on the first fresh play, which is outside the gesture
+    // and would leave the context suspended on stricter browsers (iOS Safari).
+    if (audioCtx && audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
     const fresh = idx === 0;
     const begin = () => {
       running = true;
       segStart = performance.now();
-      audioStart(fresh);
+      audioStart();
       rafId = requestAnimationFrame(frame);
       setPlayIcon();
     };
@@ -4328,7 +4406,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
       pMute.hidden = false;
       pMute.addEventListener('click', () => {
         muted = !muted;
-        if (audioEl) audioEl.muted = muted;
+        if (paGain) paGain.gain.value = muted ? 0 : 1;
         pMute.classList.toggle('active', muted);
         pMute.innerHTML = muted ? ICON_MUTED_P : ICON_SOUND_P;
         pMute.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
