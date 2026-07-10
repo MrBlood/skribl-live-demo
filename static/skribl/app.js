@@ -1,6 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const canvasWrap = document.querySelector('.canvas-wrap');
+const canvasArea = document.querySelector('.canvas-area') || (canvasWrap && canvasWrap.parentElement);
 const toolSlider = document.getElementById('toolSlider');
 
 // Create eraser cursor early so setTool() can reference it safely
@@ -39,43 +40,61 @@ function getCanvasCssSize() {
 // authored logical size — otherwise the base snapshot paints at the small
 // display size while strokes replay at authored coords and they don't line up.
 function getCanvasLogicalSize() {
-  if (document.body.classList.contains('player-mode')) {
-    const dpr = window.devicePixelRatio || 1;
-    return { width: canvas.width / dpr, height: canvas.height / dpr };
-  }
-  return getCanvasCssSize();
+  // Both editor and player now use a FIXED authored backing store and only scale
+  // the CSS display size to fit (letterbox). The logical drawing space is always
+  // the backing store in CSS px, so strokes / replay / clear never distort.
+  const dpr = window.devicePixelRatio || 1;
+  return { width: canvas.width / dpr, height: canvas.height / dpr };
+}
+
+// The editor authors at a FIXED logical size (like the player) and scales the
+// display to fit the available area, letterboxing when the viewport aspect
+// differs — so rotating never stretches or reflows the drawing. The authored
+// size is established once from the initial available area, or from a restored
+// draft's canvasSize.
+let authoredW = 0, authoredH = 0;
+function establishEditorCanvas(w, h) {
+  const dpr = window.devicePixelRatio || 1;
+  authoredW = Math.max(1, Math.round(w));
+  authoredH = Math.max(1, Math.round(h));
+  canvas.width = Math.round(authoredW * dpr);
+  canvas.height = Math.round(authoredH * dpr);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+}
+// Fit the fixed authored size into the available area with ONE uniform scale
+// (aspect locked, never upscaled past 1:1) and center it via .canvas-area. The
+// backing store is untouched here, so this never clears the canvas or distorts
+// the drawing — rotating just re-fits the display.
+function layoutEditorCanvas() {
+  if (!authoredW || !authoredH) return;
+  const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
+  const availW = Math.max(1, area.width);
+  const availH = Math.max(1, area.height);
+  const scale = Math.min(1, availW / authoredW, availH / authoredH);
+  const dispW = Math.round(authoredW * scale);
+  const dispH = Math.round(authoredH * scale);
+  canvasWrap.style.width = dispW + 'px';
+  canvasWrap.style.height = dispH + 'px';
+  canvas.style.width = dispW + 'px';
+  canvas.style.height = dispH + 'px';
+  canvas.style.minHeight = '0';
+  canvasWrap.style.backgroundColor = bgColor;
 }
 
 function resizeCanvas() {
-  // Player mode sizes the canvas to the authored dimensions itself; don't let a
-  // window resize re-fit it to the container and break stroke coordinates.
+  // Player mode sizes its canvas from the authored dimensions itself.
   if (document.body.classList.contains('player-mode')) return;
-  // Measure the CONTAINER, not the canvas. resizeCanvas() writes an inline
-  // width/height onto the canvas, so measuring the canvas here reads back the
-  // stale pre-rotation size (the inline width overrides the CSS width:100%) —
-  // leaving the canvas frozen at the portrait width, occupying only the left
-  // part of a rotated landscape viewport. The wrap reflects the real area.
-  const wrapRect = canvasWrap.getBoundingClientRect();
-  const width = wrapRect.width, height = wrapRect.height;
-  const dpr = window.devicePixelRatio || 1;
-  const snapshot = canvas.width > 0 && canvas.height > 0 ? canvas.toDataURL() : null;
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  canvas.style.width = width + 'px';
-  canvas.style.height = height + 'px';
-  // JS owns the size here, so neutralize the CSS min-height floor
-  // (#canvas { min-height:400px }, and 50vh under the ≤640px query — which a
-  // wide landscape phone doesn't even match). In a short landscape editor the
-  // wrap can be under that floor; without this the canvas would be forced taller
-  // than its wrap and clipped / misaligned against the backing store.
-  canvas.style.minHeight = '0';
-  ctx.scale(dpr, dpr);
-  canvasWrap.style.backgroundColor = bgColor;
-  if (snapshot) {
-    const img = new Image();
-    img.onload = () => ctx.drawImage(img, 0, 0, width, height);
-    img.src = snapshot;
+  // Establish the authored space once, from the initial available area. After
+  // that only the DISPLAY is re-fit on resize/rotate — the backing store (and
+  // therefore the drawing and every stroke coordinate) stays fixed, so rotating
+  // letterboxes instead of stretching. A restored draft re-establishes it from
+  // its own canvasSize (see loadSkribl).
+  if (!authoredW || !authoredH) {
+    const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
+    establishEditorCanvas(area.width || 320, area.height || 320);
   }
+  layoutEditorCanvas();
 }
 resizeCanvas();
 window.addEventListener('resize', () => {
@@ -90,6 +109,11 @@ window.addEventListener('resize', () => {
     photoFitSlider.style.transform = `translateX(${offset}px)`;
   }
   initToolSlider();
+});
+// Some mobile browsers fire orientationchange without a paired resize; re-fit the
+// letterbox display (backing store untouched, so the drawing is preserved).
+window.addEventListener('orientationchange', () => {
+  if (!document.body.classList.contains('player-mode')) layoutEditorCanvas();
 });
 
 let drawing = false;
@@ -194,9 +218,14 @@ function makeHistoryState() {
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
   const src = e.touches ? e.touches[0] : e;
+  // The canvas may be displayed smaller than its authored size (letterbox fit),
+  // so map the CSS-pixel pointer position back into the fixed logical space.
+  const lg = getCanvasLogicalSize();
+  const sx = rect.width ? lg.width / rect.width : 1;
+  const sy = rect.height ? lg.height / rect.height : 1;
   return {
-    x: src.clientX - rect.left,
-    y: src.clientY - rect.top,
+    x: (src.clientX - rect.left) * sx,
+    y: (src.clientY - rect.top) * sy,
   };
 }
 
@@ -2039,7 +2068,12 @@ function playMusicLooped(totalDurationMs, onStarted) {
 
 // --- Eraser cursor ---
 function updateEraserCursor(x, y) {
-  const cursorSize = size * 3;
+  // size is in authored (logical) px; the canvas may be displayed smaller, so
+  // scale the on-screen cursor to match the real erased footprint.
+  const rect = canvas.getBoundingClientRect();
+  const lg = getCanvasLogicalSize();
+  const scale = lg.width > 0 && rect.width > 0 ? rect.width / lg.width : 1;
+  const cursorSize = size * 3 * scale;
   eraserCursor.style.width = cursorSize + 'px';
   eraserCursor.style.height = cursorSize + 'px';
   eraserCursor.style.left = x + 'px';
@@ -2290,7 +2324,9 @@ function setZoomSliderUI() {
 function beginPhotoDrag(e) {
   const start = getPos(e);
   const startOX = photoOffsetX, startOY = photoOffsetY;
-  const { width: w, height: h } = getCanvasCssSize();
+  // Use the authored logical size (matches getPos above and the export path's
+  // drawPhotoFitted); getPos now returns authored px, so overflow must too.
+  const { width: w, height: h } = getCanvasLogicalSize();
   const iw = photoBgImg.naturalWidth || w, ih = photoBgImg.naturalHeight || h;
   const scale = Math.max(w / iw, h / ih) * photoZoom;   // cover scale × zoom
   const overflowX = iw * scale - w;              // cropped-off width  (>0 if cropped)
@@ -2832,8 +2868,11 @@ function serializeSkribl() {
     strokeGroups: strokeGroups.slice(),
     background: { color: bgColor },
     canvasSize: (() => {
-      const r = canvas.getBoundingClientRect();
-      return { cssWidth: Math.round(r.width), cssHeight: Math.round(r.height), dpr: window.devicePixelRatio || 1 };
+      // The authored logical size (backing store in CSS px), NOT the fitted
+      // display rect — otherwise a post made while rotated would record the
+      // shrunken display size and the player would misplace the strokes.
+      const lg = getCanvasLogicalSize();
+      return { cssWidth: Math.round(lg.width), cssHeight: Math.round(lg.height), dpr: window.devicePixelRatio || 1 };
     })(),
     photo: photoBgImg && photoBgImg._draftData && photoBgImg.style.display !== 'none'
       ? { data: photoBgImg._draftData, name: photoBgImg._fileName || null, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
@@ -3136,6 +3175,16 @@ function loadSkribl(data) {
   if (!data || data.version == null) { showToast('That file isn\'t a valid draft', menuBtn); return; }
   clearCanvas();
   resetMediaForLoad();
+
+  // In the editor, adopt the draft's authored logical size so its strokes (which
+  // live in that space) map 1:1 — even if the current viewport orientation
+  // differs from when it was drawn. The player sizes its own canvas separately
+  // (see initPlayer) before calling loadSkribl, so skip there.
+  if (!document.body.classList.contains('player-mode') && data.canvasSize
+      && data.canvasSize.cssWidth && data.canvasSize.cssHeight) {
+    establishEditorCanvas(data.canvasSize.cssWidth, data.canvasSize.cssHeight);
+    layoutEditorCanvas();
+  }
 
   // Background
   if (data.background && data.background.color) {
