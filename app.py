@@ -1,8 +1,10 @@
+import base64
 import os
+import re
 import secrets
 from datetime import datetime, timezone
 
-from flask import Flask, jsonify, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
@@ -34,6 +36,26 @@ def _og_meta(title, caption):
     og_title = (title or "").strip() or OG_DEFAULT_TITLE
     og_description = (caption or "").strip() or OG_DEFAULT_DESCRIPTION
     return og_title, og_description
+
+
+# Decode a client-generated share-card thumbnail stored in the payload as a PNG
+# data URL ("data:image/png;base64,...") back into raw bytes for the card route.
+# Kept pure and import-light (base64 + re only, no DB/Flask) so it can be unit-
+# tested headless. Returns None on anything malformed so the caller can fall back
+# to the static branded card instead of erroring.
+_DATA_URL_PNG_RE = re.compile(r"^data:image/png;base64,(.+)$", re.DOTALL)
+
+
+def _decode_data_url_png(data_url):
+    if not isinstance(data_url, str):
+        return None
+    m = _DATA_URL_PNG_RE.match(data_url.strip())
+    if not m:
+        return None
+    try:
+        return base64.b64decode(m.group(1), validate=True)
+    except Exception:
+        return None
 
 
 def create_app():
@@ -98,9 +120,37 @@ def create_app():
             public_id=public_id,
             og_title=og_title,
             og_description=og_description,
-            og_image=url_for("static", filename="skribl/og-card.png", _external=True),
+            # Per-Skribl card: the card route serves the drawing's own thumbnail
+            # (stored at post time) and falls back to the static branded card on a
+            # miss, so this URL always resolves — and being unique per id, it also
+            # stops every shared link from unfurling with the same generic image.
+            og_image=url_for("skribl_card", public_id=public_id, _external=True),
             og_url=url_for("skribl_player", public_id=public_id, _external=True),
         )
+
+    @app.get("/s/<public_id>/card.png")
+    def skribl_card(public_id):
+        # Serve the per-Skribl share-card thumbnail generated client-side at post
+        # time and stored in the payload. Best-effort and render-always: on a
+        # missing post, missing/'malformed thumbnail, or a transient DB error we
+        # redirect to the static branded card so the og:image never 404s.
+        try:
+            post = SkriblPost.query.filter_by(public_id=public_id).first()
+            if post is not None:
+                payload = post.payload_json or {}
+                thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
+                data = _decode_data_url_png(thumb)
+                if data is not None:
+                    resp = app.response_class(data, mimetype="image/png")
+                    # Immutable once posted; let scrapers/CDNs cache by URL.
+                    resp.headers["Cache-Control"] = "public, max-age=86400"
+                    return resp
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+        return redirect(url_for("static", filename="skribl/og-card.png"))
 
     @app.post("/api/skribls")
     def create_skribl():
@@ -163,6 +213,9 @@ def create_app():
         payload = dict(post.payload_json or {})
         payload["title"] = post.title
         payload["caption"] = post.caption
+        # The share-card thumbnail is served by /s/<id>/card.png, so the player
+        # doesn't need it in the envelope — drop it to keep the GET lean.
+        payload.pop("thumbnail", None)
 
         return jsonify({
             "id": post.public_id,
