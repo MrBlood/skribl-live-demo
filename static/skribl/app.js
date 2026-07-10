@@ -1302,8 +1302,10 @@ function positionSegSlider(group) {
   // No selection, or the group is still collapsed (zero-width) — keep it hidden
   // and let the next reflow place it once it has real layout.
   if (!activeBtn || !activeBtn.offsetWidth) { pill.style.opacity = '0'; return; }
-  let offset = 0;
-  for (let i = 0; i < idx; i++) offset += btns[i].offsetWidth;
+  // Measure from the first button via offsetLeft so any inter-button `gap`
+  // (the zoom groups use gap:2px) is included. Summing widths alone drifts the
+  // pill left by one gap per button. The pill at translateX(0) sits under btn 0.
+  const offset = activeBtn.offsetLeft - btns[0].offsetLeft;
   pill.style.width = activeBtn.offsetWidth + 'px';
   pill.style.transform = 'translateX(' + offset + 'px)';
   pill.style.opacity = '1';
