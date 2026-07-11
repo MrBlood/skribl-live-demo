@@ -610,7 +610,9 @@ function stopPicking() {
       const v = parseInt(opacitySlider.value, 10);
       strokeOpacity = v / 100;
       if (opacityVal) opacityVal.textContent = v + '%';
+      if (typeof updateSliderFill === 'function') updateSliderFill(opacitySlider);
     });
+    if (typeof updateSliderFill === 'function') updateSliderFill(opacitySlider);
   }
 
   const smoothSeg = document.getElementById('smoothSeg');
@@ -1418,7 +1420,31 @@ function attachSegSlider(group) {
     '.zoom-mag-btn.active{color:#fff}';
   document.head.appendChild(style);
 })();
-const bubbleStart = document.getElementById('bubbleStart');
+
+// Fine-tune disclosure: the Music panel opens to essentials (waveform + trim +
+// Match/Preview); the deep Loop Detail (zoom, focus/magnifier, nudgers) lives
+// behind this toggle so all three tab panels share the same "essentials shown,
+// depth one tap away" rhythm. Null-guarded — the player shell has no toggle.
+(function initFineTuneToggle() {
+  const toggle = document.getElementById('fineTuneToggle');
+  const body = document.getElementById('fineTuneBody');
+  if (!toggle || !body) return;
+  toggle.addEventListener('click', () => {
+    const open = body.hidden;
+    body.hidden = !open;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      // First reveal: the zoom canvas and the two seg-pills were laid out at
+      // zero size while hidden. Redraw and re-home them now that they have a box.
+      requestAnimationFrame(() => {
+        if (typeof updateTrimUI === 'function') updateTrimUI();
+        if (typeof positionSegSlider === 'function') {
+          body.querySelectorAll('.zoom-mag-group').forEach(g => positionSegSlider(g));
+        }
+      });
+    }
+  });
+})();
 const bubbleEnd = document.getElementById('bubbleEnd');
 let audioCtx = null;
 let currentAudioBuffer = null;
@@ -2660,7 +2686,7 @@ function dragZoomPan(wrap) {
     panRow.className = 'zoom-pan-row';
     panRow.innerHTML =
       '<span class="zoom-pan-label">Scroll</span>' +
-      '<input type="range" id="zoomPanSlider" class="prop-slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">';
+      '<input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">';
     zoomWrap.insertAdjacentElement('afterend', panRow);
     const panSlider = document.getElementById('zoomPanSlider');
     panSlider.addEventListener('input', () => {
@@ -2692,7 +2718,7 @@ function dragZoomPan(wrap) {
   cfRow.className = 'crossfade-row';
   cfRow.innerHTML =
     '<span class="crossfade-label">Crossfade</span>' +
-    '<input type="range" id="crossfadeSlider" class="prop-slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length">' +
+    '<input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length">' +
     '<span class="crossfade-val" id="crossfadeVal">Off</span>';
   if (finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
   else {
