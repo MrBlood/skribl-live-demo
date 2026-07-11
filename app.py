@@ -84,7 +84,7 @@ def create_app():
     # Free-tier Postgres drops idle connections; pre_ping checks liveness and
     # transparently reconnects instead of erroring on the first stale request.
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
-    app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 25_000_000))
+    app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 500_000))
 
     db.init_app(app)
 
