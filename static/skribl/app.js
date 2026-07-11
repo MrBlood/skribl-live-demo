@@ -2330,12 +2330,13 @@ function photoTargetDims(w, h, maxEdge) {
   return { w: Math.round(w * scale), h: Math.round(h * scale) };
 }
 
-// Decode → (optionally) downscale → re-encode as JPEG, flattened onto the current
-// background color. Returns a smaller data URL, or the original untouched if the
+// Decode → (optionally) downscale → re-encode. Opaque images re-encode as JPEG
+// (the size win); images with any transparency re-encode as PNG so alpha is
+// preserved. Returns a smaller data URL, or the original untouched if the
 // re-encode isn't actually smaller or anything fails (so a photo is never lost).
-// On-device only: createImageBitmap, the canvas encode, and EXIF orientation
-// can't be exercised headless — this function is never called at load time (only
-// from the import handler), so the harness only *defines* it, never runs it.
+// On-device only: createImageBitmap, the canvas encode/inspect, and EXIF
+// orientation can't be exercised headless — this function is never called at load
+// time (only from the import handler), so the harness only *defines* it.
 async function normalizePhotoDataURL(file, originalDataUrl) {
   try {
     if (typeof createImageBitmap !== 'function' ||
@@ -2357,20 +2358,36 @@ async function normalizePhotoDataURL(file, originalDataUrl) {
     const cv = document.createElement('canvas');
     cv.width = t.w; cv.height = t.h;
     const c = cv.getContext('2d');
-    // JPEG has no alpha: flatten transparency onto the current bg color, matching
-    // how the photo sits behind the canvas. Edge case: if bgColor is changed
-    // later, once-transparent regions keep this color — fine for a background.
-    c.fillStyle = (typeof bgColor === 'string' && bgColor) ? bgColor : '#0d0f14';
-    c.fillRect(0, 0, t.w, t.h);
     if ('imageSmoothingQuality' in c) c.imageSmoothingQuality = 'high';
-    c.drawImage(bmp, 0, 0, t.w, t.h);
+    c.drawImage(bmp, 0, 0, t.w, t.h);   // no bg fill — keep any transparency intact
     if (bmp.close) bmp.close();
-    const out = cv.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
+    // A background photo can be a truly transparent PNG (sticker / line-art).
+    // JPEG has no alpha, so flattening it here would freeze the transparent
+    // regions to a single color and they'd stop tracking the live canvas
+    // background — editor vs player, or a later bg change, then disagree. So keep
+    // alpha as PNG and only re-encode opaque images as JPEG (where the size win
+    // matters and there's no transparency to lose). JPEG inputs are always opaque,
+    // so skip the pixel scan for them.
+    let hasAlpha = false;
+    if (file.type !== 'image/jpeg' && file.type !== 'image/jpg') {
+      try {
+        const px = c.getImageData(0, 0, t.w, t.h).data;
+        for (let i = 3; i < px.length; i += 4) {
+          if (px[i] !== 255) { hasAlpha = true; break; }
+        }
+      } catch (readErr) {
+        hasAlpha = true;   // couldn't inspect — assume alpha, prefer lossless PNG
+      }
+    }
+    const out = hasAlpha
+      ? cv.toDataURL('image/png')
+      : cv.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
     const smaller = !!(out && originalDataUrl && out.length < originalDataUrl.length);
     if (typeof window !== 'undefined' && window.__SKRIBL_PHOTO_DEBUG) {
       try {
         console.log('[photo] normalize', {
           srcW: srcW, srcH: srcH, outW: t.w, outH: t.h,
+          format: hasAlpha ? 'png' : 'jpeg',
           origBytes: originalDataUrl ? originalDataUrl.length : null,
           outBytes: out ? out.length : null,
           kept: smaller ? 'downscaled' : 'original'
