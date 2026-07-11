@@ -525,19 +525,19 @@
       </svg>
       Draw
     </button>
-    <button type="button" class="tab-btn" data-tab="music">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-      </svg>
-      Music
-      <span id="musicTabDot" class="tab-dot" hidden></span>
-    </button>
     <button type="button" class="tab-btn" data-tab="photo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
       </svg>
       Photo
       <span id="photoTabDot" class="tab-dot" hidden></span>
+    </button>
+    <button type="button" class="tab-btn" data-tab="music">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      Music
+      <span id="musicTabDot" class="tab-dot" hidden></span>
     </button>
   </div>
 
@@ -630,7 +630,7 @@
 
         <div class="prop-row">
           <span class="draw-section-label">Opacity</span>
-          <input type="range" id="opacitySlider" class="prop-slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
+          <input type="range" id="opacitySlider" class="slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
           <span class="prop-val" id="opacityVal">100%</span>
         </div>
 
@@ -702,6 +702,19 @@
           <span id="trimDurLabel">0:00 selected</span>
           <span id="trimEndLabel">0:00</span>
         </div>
+        <div class="loop-preview-row">
+          <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s <span id="matchDrawingLabel" class="match-drawing-label"></span></span>
+          <div class="loop-actions">
+            <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
+            <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>
+            <button type="button" id="previewLoopBtn" class="loop-btn">Preview Loop</button>
+          </div>
+        </div>
+        <button type="button" id="fineTuneToggle" class="fine-tune-toggle panel-btn" aria-expanded="false" aria-controls="fineTuneBody">
+          <span>Fine-tune loop</span>
+          <svg class="fine-tune-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="fine-tune-body" id="fineTuneBody" hidden>
         <div class="loop-zoom">
           <div class="loop-zoom-head">
             <span>Loop Detail</span>
@@ -750,13 +763,6 @@
             </div>
           </div>
         </div>
-        <div class="loop-preview-row">
-          <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s <span id="matchDrawingLabel" class="match-drawing-label"></span></span>
-          <div class="loop-actions">
-            <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
-            <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>
-            <button type="button" id="previewLoopBtn" class="loop-btn">Preview Loop</button>
-          </div>
         </div>
       </div>
     </div>
@@ -813,7 +819,7 @@
         <input type="range" id="photoBlur" min="0" max="20" value="0" class="slider">
         <span id="photoBlurVal" class="size-label slider-val">0px</span>
       </div>
-      <button type="button" id="resetPhotoBtn" class="loop-btn subtle" style="margin-top:8px;width:100%">Reset adjustments</button>
+      <button type="button" id="resetPhotoBtn" class="panel-btn" style="margin-top:8px;width:100%">Reset adjustments</button>
     </div>
   </div>
 </div>
