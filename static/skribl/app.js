@@ -2310,6 +2310,79 @@ photoUploadBtn.addEventListener('drop', (e) => {
   photoInput.dispatchEvent(new Event('change'));
 });
 
+// ── Photo import / normalization ────────────────────────────────────────────
+// A freshly imported photo is downscaled + recompressed to JPEG right here, at
+// the import boundary, so drafts/posts stay small. This is the ONLY place a
+// photo is normalized; everything downstream (serializeSkribl, saveDraft, the
+// player, export) keeps consuming the same photo.data data-URL shape unchanged.
+// loadSkribl does NOT re-normalize — the data it loads is already normalized,
+// and re-encoding would compound JPEG loss on every open.
+const PHOTO_MAX_EDGE = 2048;       // cap the longest edge (px); never upscales
+const PHOTO_JPEG_QUALITY = 0.85;   // quality-first baseline; tune after on-device bytes
+
+// Pure geometry: target draw size preserving aspect ratio, never upscaling.
+// Mirrored by tooling/photo_resize_test.js — keep that copy in sync if you edit.
+function photoTargetDims(w, h, maxEdge) {
+  if (!w || !h) return { w: w || 0, h: h || 0 };
+  const longest = Math.max(w, h);
+  if (longest <= maxEdge) return { w: w, h: h };   // already small — no upscale
+  const scale = maxEdge / longest;
+  return { w: Math.round(w * scale), h: Math.round(h * scale) };
+}
+
+// Decode → (optionally) downscale → re-encode as JPEG, flattened onto the current
+// background color. Returns a smaller data URL, or the original untouched if the
+// re-encode isn't actually smaller or anything fails (so a photo is never lost).
+// On-device only: createImageBitmap, the canvas encode, and EXIF orientation
+// can't be exercised headless — this function is never called at load time (only
+// from the import handler), so the harness only *defines* it, never runs it.
+async function normalizePhotoDataURL(file, originalDataUrl) {
+  try {
+    if (typeof createImageBitmap !== 'function' ||
+        typeof document === 'undefined' || !document.createElement) {
+      return originalDataUrl;   // no decode path available — keep the original
+    }
+    // imageOrientation:'from-image' bakes EXIF rotation into the pixels so the
+    // stored image matches what the <img> preview shows; toDataURL then drops the
+    // EXIF tag, so no downstream viewer double-rotates. Fall back to the no-option
+    // form on engines that reject the options bag.
+    let bmp;
+    try {
+      bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (optErr) {
+      bmp = await createImageBitmap(file);
+    }
+    const srcW = bmp.width, srcH = bmp.height;
+    const t = photoTargetDims(srcW, srcH, PHOTO_MAX_EDGE);
+    const cv = document.createElement('canvas');
+    cv.width = t.w; cv.height = t.h;
+    const c = cv.getContext('2d');
+    // JPEG has no alpha: flatten transparency onto the current bg color, matching
+    // how the photo sits behind the canvas. Edge case: if bgColor is changed
+    // later, once-transparent regions keep this color — fine for a background.
+    c.fillStyle = (typeof bgColor === 'string' && bgColor) ? bgColor : '#0d0f14';
+    c.fillRect(0, 0, t.w, t.h);
+    if ('imageSmoothingQuality' in c) c.imageSmoothingQuality = 'high';
+    c.drawImage(bmp, 0, 0, t.w, t.h);
+    if (bmp.close) bmp.close();
+    const out = cv.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
+    const smaller = !!(out && originalDataUrl && out.length < originalDataUrl.length);
+    if (typeof window !== 'undefined' && window.__SKRIBL_PHOTO_DEBUG) {
+      try {
+        console.log('[photo] normalize', {
+          srcW: srcW, srcH: srcH, outW: t.w, outH: t.h,
+          origBytes: originalDataUrl ? originalDataUrl.length : null,
+          outBytes: out ? out.length : null,
+          kept: smaller ? 'downscaled' : 'original'
+        });
+      } catch (logErr) { /* debug only */ }
+    }
+    return smaller ? out : originalDataUrl;
+  } catch (e) {
+    return originalDataUrl;   // any failure → keep the original, never lose it
+  }
+}
+
 photoInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -2329,14 +2402,22 @@ photoInput.addEventListener('change', (e) => {
   const photoDraftReader = new FileReader();
   beginMediaRead();
   photoDraftReader.onload = () => {
-    try {
-      // Only attach if this is still the same photo (guards fast remove/replace).
+    const original = photoDraftReader.result;
+    // Downscale/recompress before storing so drafts + posts stay small. Keep the
+    // media-read open until normalization settles, so a post fired mid-import
+    // waits for the final bytes rather than grabbing the full-size original. The
+    // readToken guard still applies — a fast remove/replace must never let a
+    // stale photo's normalized result win. On any failure, fall back to the
+    // original so the photo is never dropped.
+    const attach = (data) => {
       if (photoBgImg._readToken === readToken && photoBgImg.style.display !== 'none') {
-        photoBgImg._draftData = photoDraftReader.result;
+        photoBgImg._draftData = data;
       }
-    } finally {
-      endMediaRead();
-    }
+    };
+    Promise.resolve(normalizePhotoDataURL(file, original))
+      .then((finalData) => { attach(finalData); })
+      .catch(() => { attach(original); })
+      .finally(() => { endMediaRead(); });
   };
   photoDraftReader.onerror = () => { endMediaRead(); };
   photoDraftReader.onabort = () => { endMediaRead(); };
