@@ -400,9 +400,9 @@ body:not(.player-mode) .canvas-wrap {
 }
 
 .size-label {
-  font-size: 12px;
-  color: #5f6675;
-  font-weight: 600;
+  font-size: 11px;
+  color: #8a93a6;
+  font-weight: 500;
 }
 
 .tool-row {
@@ -549,11 +549,11 @@ body:not(.player-mode) .canvas-wrap {
 #drawPanel { gap: 13px; }
 
 .draw-section-label {
-  font-size: 10px;
-  color: #5f6675;
+  font-size: 11px;
+  color: #8a93a6;
   font-weight: 500;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .color-group {
@@ -610,9 +610,9 @@ body:not(.player-mode) .canvas-wrap {
 /* --- Photo reposition (Fill mode) --- */
 .reposition-btn {
   display: flex; align-items: center; justify-content: center; gap: 7px;
-  width: 100%; margin-top: 8px; padding: 8px;
+  width: 100%; margin-top: 8px; padding: 9px;
   border: 1px solid var(--hairline); border-radius: 10px;
-  background: #13161c; color: #a8b2c1;
+  background: #13161c; color: #8a93a6;
   font-size: 12px; font-weight: 500; cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
@@ -683,20 +683,6 @@ body:not(.player-mode) .canvas-wrap {
 
 .prop-row { display: flex; align-items: center; gap: 12px; }
 .prop-row .draw-section-label { width: 66px; flex-shrink: 0; }
-.prop-slider {
-  flex: 1; height: 5px; -webkit-appearance: none; appearance: none;
-  background: #1c212c; border-radius: 999px; outline: none;
-  accent-color: var(--accent); cursor: pointer;
-}
-.prop-slider::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 16px; height: 16px; border-radius: 50%; background: #fff;
-  border: 0; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.5);
-}
-.prop-slider::-moz-range-thumb {
-  width: 16px; height: 16px; border-radius: 50%; background: #fff;
-  border: 0; cursor: pointer;
-}
 .prop-val {
   font-size: 12px; color: #c8cede; font-weight: 500;
   width: 40px; text-align: right; flex-shrink: 0;
@@ -737,8 +723,8 @@ body:not(.player-mode) .canvas-wrap {
 .drawer-actions { display: flex; }
 .clear-drawer-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  border: 1px solid var(--hairline); background: transparent; color: #8a93a6;
-  font-size: 12px; font-weight: 500; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
+  font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
@@ -746,6 +732,24 @@ body:not(.player-mode) .canvas-wrap {
 .clear-drawer-btn svg { width: 15px; height: 15px; }
 .clear-drawer-btn:hover { background: rgba(244,50,111,.08); color: #f4326f; border-color: rgba(244,50,111,.3); }
 .clear-drawer-btn.armed { background: rgba(244,50,111,.14); color: #f4326f; border-color: rgba(244,50,111,.5); }
+
+/* Shared secondary button for panel actions (reset, and any future ones) so
+   every drawer's buttons speak one language. */
+.panel-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
+  font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.panel-btn:hover { background: #1c212c; color: #c8cede; }
+
+.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; }
+.fine-tune-chevron { width: 15px; height: 15px; transition: transform .25s var(--spring); flex-shrink: 0; }
+.fine-tune-toggle[aria-expanded="true"] .fine-tune-chevron { transform: rotate(180deg); }
+.fine-tune-body { margin-top: 12px; }
+.fine-tune-body[hidden] { display: none; }
 
 @media (max-width: 640px) {
   /* Extra room so the eyedropper (9th item) fits the color row cleanly. */
@@ -1433,20 +1437,20 @@ body:not(.player-mode) .canvas-wrap {
 /* ---------- Photo tab ---------- */
 .photo-fit-group {
   position: relative;
-  background: #161a22;
+  background: #171b23;
   border-radius: 999px;
-  padding: 4px;
+  padding: 3px;
   display: inline-flex;
   overflow: hidden;
-  border: 1px solid #2e3340;
+  border: 1px solid var(--hairline);
   width: 100%;
 }
 
 .photo-fit-slider {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  height: calc(100% - 8px);
+  top: 3px;
+  left: 3px;
+  height: calc(100% - 6px);
   background: var(--accent);
   border-radius: var(--r-pill);
   box-shadow: 0 2px 8px var(--accent-glow);
@@ -1466,11 +1470,11 @@ body:not(.player-mode) .canvas-wrap {
   box-shadow: none !important;
   -webkit-appearance: none;
   appearance: none;
-  padding: 8px 0;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  color: #a8b2c1;
+  color: #8a93a6;
   transition: color 0.2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
