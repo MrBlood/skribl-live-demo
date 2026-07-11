@@ -4163,12 +4163,29 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const apiBase = (typeof window !== 'undefined' && window.SKRIBL_API_BASE) || null;
 
     if (apiBase) {
+      // Serialize once so the size-check and the request send the exact same bytes.
+      const body = JSON.stringify(payload);
+
+      // Client-side size guard: the server caps the request body at
+      // MAX_CONTENT_LENGTH (25 MB via a Render env var) and raises a 413 that the
+      // composer would otherwise only discover after uploading the whole payload.
+      // Measure the true UTF-8 byte length up front and reject instantly with the
+      // same wording the server's 413 handler uses, so an oversized post fails
+      // immediately instead of stalling on the way up. Keep MAX_POST_BYTES a little
+      // under the server cap for HTTP/proxy overhead beyond the body; if the Render
+      // env var changes, keep this roughly in step with it.
+      const MAX_POST_BYTES = 24_000_000;
+      const bodyBytes = (typeof Blob !== 'undefined') ? new Blob([body]).size : body.length;
+      if (bodyBytes > MAX_POST_BYTES) {
+        throw new Error('This Skribl is too large to post. Try a smaller photo or a shorter audio loop.');
+      }
+
       let res;
       try {
         res = await fetch(apiBase, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: body
         });
       } catch (netErr) {
         // Network failure (offline / DNS / CORS) — temporary. Save locally so
