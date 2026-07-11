@@ -1676,6 +1676,17 @@ musicInput.addEventListener('change', (e) => {
     musicTabDot.hidden = false;
     document.getElementById('musicRemove').hidden = false;
     updateTrimUI();
+    // "Just works" default: if a recording already exists, size the loop to the
+    // drawing's length so the music and the replay finish together — no manual
+    // trimming for the common case. Fine-tune stays one tap away. Reuses the
+    // tested match-drawing logic (keeps start at 0, clamps to song + 20s cap).
+    // Skipped while restoring saved trim from an autosave/draft, so a user's
+    // chosen loop is never overwritten.
+    const _restoringTrim = (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta);
+    if (!_restoringTrim && strokes.length) {
+      setLoopToDrawingLength();
+      showToast('Loop set to your drawing length — fine-tune anytime', musicUploadBtn);
+    }
     // Reapply any pending trim from an autosave restore, from THIS path so it
     // can't race a separately-attached listener.
     if (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta) {
