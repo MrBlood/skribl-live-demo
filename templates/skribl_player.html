@@ -21,7 +21,7 @@
   <meta name="twitter:description" content="{{ og_description }}">
   {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='2') }}">
 </head>
 <body>
 
@@ -838,6 +838,6 @@
     window.SKRIBL_PLAYER_ID = "{{ public_id }}";
     window.SKRIBL_API_BASE = "/api/skribls";
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='2') }}" defer></script>
 </body>
 </html>
