@@ -1843,6 +1843,8 @@ body:not(.player-mode) .canvas-wrap {
 .menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .menu-item.danger { color: #f4326f; }
 .menu-item.danger svg { color: #f4326f; }
+.menu-item.armed { background: rgba(244,50,111,.14); color: #f4326f; font-weight: 600; }
+.menu-item.armed svg { color: #f4326f; }
 .menu-item:disabled { opacity: 0.45; cursor: default; }
 .menu-item.busy { position: relative; }
 
