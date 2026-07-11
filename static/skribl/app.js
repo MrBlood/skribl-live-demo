@@ -650,13 +650,13 @@ function stopPicking() {
   if (clearDrawerBtn) {
     let armed = false, armTimer = null;
     const label = clearDrawerBtn.querySelector('span');
-    const disarm = () => { armed = false; clearDrawerBtn.classList.remove('armed'); if (label) label.textContent = 'Clear canvas'; };
+    const disarm = () => { armed = false; clearDrawerBtn.classList.remove('armed'); if (label) label.textContent = 'Clear drawing'; };
     clearDrawerBtn.addEventListener('click', () => {
       if (recording) { showToast('Stop recording before clearing', clearDrawerBtn); return; }
       if (!armed) {
         armed = true;
         clearDrawerBtn.classList.add('armed');
-        if (label) label.textContent = 'Tap again to clear';
+        if (label) label.textContent = 'Tap again to clear drawing';
         clearTimeout(armTimer);
         armTimer = setTimeout(disarm, 3000);
         return;
@@ -991,11 +991,49 @@ menuOverlay.addEventListener('click', (e) => {
   if (!e.target.closest('.menu-sheet')) closeMenu();
 });
 
-document.getElementById('clearMenuItem').addEventListener('click', () => {
+// Full reset for the overflow menu's "Clear all": the drawing AND the music,
+// photo, and background all back to a fresh start. Reuses each item's existing
+// removal (via its own control) so behavior can't drift from the single-item
+// remove buttons. clearCanvas() intentionally keeps media, so we clear those
+// explicitly here, then return the background to the default swatch.
+function resetAll() {
   clearCanvas();
+  const mr = document.getElementById('musicRemove');
+  if (mr && !mr.hidden) mr.click();
+  const pr = document.getElementById('photoRemove');
+  if (pr && !pr.hidden) pr.click();
+  bgColor = '#0d0f14';
+  document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === '#0d0f14'));
+  canvasWrap.style.backgroundColor = bgColor;
+  if (typeof updateVignette === 'function') updateVignette();
   if (typeof clearAutosave === 'function') clearAutosave();
-  closeMenu();
-});
+}
+
+// "Clear all" wipes music/photo too, so it's the most destructive action —
+// guarded with the same two-tap arm as the drawer's Clear drawing. The first tap
+// arms (menu stays open for the confirm); the second clears everything.
+(function initClearAllMenu() {
+  const item = document.getElementById('clearMenuItem');
+  if (!item) return;
+  let armed = false, armTimer = null;
+  const label = item.querySelector('span');
+  const disarm = () => { armed = false; item.classList.remove('armed'); if (label) label.textContent = 'Clear all'; };
+  item.addEventListener('click', () => {
+    if (recording) { showToast('Stop recording before clearing', item); return; }
+    if (!armed) {
+      armed = true;
+      item.classList.add('armed');
+      if (label) label.textContent = 'Tap again to clear all';
+      clearTimeout(armTimer);
+      armTimer = setTimeout(disarm, 3000);
+      return;   // keep the menu open for the confirm tap
+    }
+    clearTimeout(armTimer);
+    disarm();
+    resetAll();
+    closeMenu();
+  });
+})();
 
 document.getElementById('saveDraftItem').addEventListener('click', () => {
   saveDraft();
