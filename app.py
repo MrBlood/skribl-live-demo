@@ -88,6 +88,17 @@ def create_app():
 
     db.init_app(app)
 
+    # A payload over MAX_CONTENT_LENGTH makes Flask raise 413 before the view
+    # runs. Return JSON (not Flask's raw HTML page) so the post composer's error
+    # path — which reads {error} off a 4xx body — can show an actionable message
+    # instead of a bare "rejected (413)". The composer stays open on error, so
+    # the user can drop the photo / shorten the loop and retry.
+    @app.errorhandler(413)
+    def _payload_too_large(_error):
+        return jsonify({
+            "error": "This Skribl is too large to post. Try a smaller photo or a shorter audio loop."
+        }), 413
+
     @app.get("/")
     def home():
         return render_template("skribl_editor.html")
