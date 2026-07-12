@@ -395,6 +395,29 @@ function makeStrokeCompositor(visCtx, visCanvas) {
   };
 }
 
+// Static (non-timed) paint of a full strokes array — the poster/recovery render
+// used by loadSkribl and restoreAutosave. Routes through the wet/dry compositor
+// when the flag is on (low-opacity strokes match playback), else the direct path.
+// Uses the same start/continuation dispatch as replayTimelineToCanvas.
+function paintStrokesStatic(strokeArr) {
+  if (strokeLayersOn()) {
+    const comp = makeStrokeCompositor(ctx, canvas);
+    for (let i = 0; i < strokeArr.length; i++) {
+      const p = strokeArr[i];
+      if (p.start || i === 0) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
+      else { const prev = strokeArr[i - 1]; comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+    }
+    comp.finish();
+    comp.present();
+  } else {
+    for (let i = 0; i < strokeArr.length; i++) {
+      const p = strokeArr[i];
+      if (p.start || i === 0) drawDot(p.x, p.y, p.color, p.size, p.erase);
+      else { const prev = strokeArr[i - 1]; drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+    }
+  }
+}
+
 // Pure replay core shared by preview playback and video export, so stroke
 // timing can never diverge between them. Draws every timeline point whose
 // playT has elapsed, using the supplied dot/line fns (main canvas vs the
@@ -3210,13 +3233,7 @@ function restoreAutosave(data) {
   strokes = (data.strokes || []).slice();
   strokeGroups = (data.strokeGroups || []).slice();
 
-  const renderStrokes = () => {
-    for (let i = 0; i < strokes.length; i++) {
-      const p = strokes[i];
-      if (p.start || i === 0) drawDot(p.x, p.y, p.color, p.size, p.erase);
-      else { const prev = strokes[i - 1]; drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
-    }
-  };
+  const renderStrokes = () => paintStrokesStatic(strokes);
   const { width: cw, height: ch } = getCanvasLogicalSize();
   if (data.baseSnapshot) {
     preRecordSnapshot = strokes.length ? data.baseSnapshot : null;
@@ -3677,17 +3694,7 @@ function loadSkribl(data) {
   strokes = (data.strokes || []).slice();
   strokeGroups = (data.strokeGroups || []).slice();
 
-  const renderStrokes = () => {
-    for (let i = 0; i < strokes.length; i++) {
-      const p = strokes[i];
-      if (p.start || i === 0) {
-        drawDot(p.x, p.y, p.color, p.size, p.erase);
-      } else {
-        const prev = strokes[i - 1];
-        drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
-      }
-    }
-  };
+  const renderStrokes = () => paintStrokesStatic(strokes);
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
 
@@ -4907,6 +4914,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
   let segStart = 0;      // performance.now() at the current segment's start
   let idx = 0;           // next timeline index to draw
   let loop = false;
+  let strokeComp = null; // wet/dry stroke compositor for low-opacity replay (flag-gated)
   let muted = false;
 
   function setPlayIcon() {
@@ -5006,7 +5014,14 @@ if (typeof pendingMusicMeta !== 'undefined') {
     running = false;
     setPlayIcon();
     const paint = () => {
-      idx = replayTimelineToCanvas(timeline, 0, targetMs, drawDot, drawLine);
+      if (strokeLayersOn()) {
+        strokeComp = makeStrokeCompositor(ctx, canvas);
+        idx = replayTimelineToCanvas(timeline, 0, targetMs, strokeComp.dotFn, strokeComp.lineFn);
+        strokeComp.present();   // no finish(): the stroke at the playhead stays mid-draw
+      } else {
+        strokeComp = null;
+        idx = replayTimelineToCanvas(timeline, 0, targetMs, drawDot, drawLine);
+      }
       elapsedBase = targetMs;
       setProgress(frac);
       showNibAtIndex(idx);
@@ -5024,11 +5039,16 @@ if (typeof pendingMusicMeta !== 'undefined') {
 
   function frame() {
     const elapsed = elapsedBase + (performance.now() - segStart);
-    idx = replayTimelineToCanvas(timeline, idx, elapsed, drawDot, drawLine);
+    if (strokeComp) {
+      idx = replayTimelineToCanvas(timeline, idx, elapsed, strokeComp.dotFn, strokeComp.lineFn);
+      strokeComp.present();
+    } else {
+      idx = replayTimelineToCanvas(timeline, idx, elapsed, drawDot, drawLine);
+    }
     setProgress(totalMs ? elapsed / totalMs : 1);
     showNibAtIndex(idx);
     if (idx < timeline.length) rafId = requestAnimationFrame(frame);
-    else onEnded();
+    else { if (strokeComp) { strokeComp.finish(); strokeComp.present(); showNibAtIndex(idx); } onEnded(); }
   }
 
   function play() {
@@ -5040,6 +5060,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const fresh = idx === 0;
     const begin = () => {
       running = true;
+      if (fresh) strokeComp = strokeLayersOn() ? makeStrokeCompositor(ctx, canvas) : null;
       segStart = performance.now();
       audioStart();
       rafId = requestAnimationFrame(frame);
