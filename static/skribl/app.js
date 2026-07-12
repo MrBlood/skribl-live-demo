@@ -246,6 +246,81 @@ function drawLine(x1, y1, x2, y2, c, s, erase) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
+// --- Low-opacity stroke compositing (wet/dry layers) -------------------------
+// A stroke drawn as many overlapping semi-transparent stamps compounds at the
+// overlaps into dark "beads". Fix: draw the whole stroke OPAQUE on an offscreen
+// "wet" layer, keep finished work on the "dry" layer (a copy of the canvas as it
+// was when the stroke began), and show dry + wet×alpha. One composite per stroke
+// instead of per-stamp → uniform translucency, no beads. Opacity is read back
+// from the point color's rgba alpha, so NO data/serialize/timeline change is
+// needed. Gated behind window.SKRIBL_STROKE_LAYERS while it's wired through every
+// consumer (live path first, replay next); flipping it on is the last step. Only
+// non-eraser, sub-100% strokes take this path — everything else is byte-identical.
+function strokeLayersOn() {
+  return typeof window !== 'undefined' && window.SKRIBL_STROKE_LAYERS === true;
+}
+function parseStrokeAlpha(c) {
+  if (typeof c !== 'string') return 1;
+  const m = c.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i);
+  return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : 1;
+}
+function solidStrokeColor(c) {
+  if (typeof c !== 'string') return c;
+  const m = c.match(/^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*[\d.]+\s*\)$/i);
+  return m ? `rgb(${m[1]}, ${m[2]}, ${m[3]})` : c;
+}
+
+let _dryCanvas = null, _wetCanvas = null, _dryCtx = null, _wetCtx = null;
+let _wetAlpha = 1, _slActive = false;
+function ensureStrokeLayers() {
+  const dpr = window.devicePixelRatio || 1;
+  if (!_dryCanvas) { _dryCanvas = document.createElement('canvas'); _dryCtx = _dryCanvas.getContext('2d'); }
+  if (!_wetCanvas) { _wetCanvas = document.createElement('canvas'); _wetCtx = _wetCanvas.getContext('2d'); }
+  if (_dryCanvas.width !== canvas.width || _dryCanvas.height !== canvas.height) {
+    _dryCanvas.width = canvas.width; _dryCanvas.height = canvas.height;
+    _dryCtx.setTransform(1, 0, 0, 1, 0, 0);            // dry: identity (blit target)
+  }
+  if (_wetCanvas.width !== canvas.width || _wetCanvas.height !== canvas.height) {
+    _wetCanvas.width = canvas.width; _wetCanvas.height = canvas.height;
+    _wetCtx.setTransform(1, 0, 0, 1, 0, 0); _wetCtx.scale(dpr, dpr);  // wet: logical coords
+  }
+}
+// Opaque primitives targeting an arbitrary context (the wet layer).
+function drawDotOn(c2, x, y, color, s) {
+  c2.globalCompositeOperation = 'source-over';
+  c2.beginPath(); c2.arc(x, y, s / 2, 0, Math.PI * 2);
+  c2.fillStyle = color; c2.fill();
+}
+function drawLineOn(c2, x1, y1, x2, y2, color, s) {
+  c2.globalCompositeOperation = 'source-over';
+  c2.beginPath(); c2.moveTo(x1, y1); c2.lineTo(x2, y2);
+  c2.strokeStyle = color; c2.lineWidth = s; c2.lineCap = 'round'; c2.lineJoin = 'round'; c2.stroke();
+}
+// Present dry + wet×alpha onto the visible canvas. Blits at identity (backing-
+// store pixels), then restores the main ctx's dpr transform + alpha.
+function presentWet() {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(_dryCanvas, 0, 0);
+  ctx.globalAlpha = _wetAlpha;
+  ctx.drawImage(_wetCanvas, 0, 0);
+  ctx.restore();
+}
+// Begin a wet/dry stroke: snapshot the canvas as "dry", clear "wet", stamp the
+// first dot opaque. Returns true if this stroke is taking the layered path.
+function beginWetStroke(x, y, drawColor, drawSize) {
+  ensureStrokeLayers();
+  _wetAlpha = parseStrokeAlpha(drawColor);
+  _dryCtx.clearRect(0, 0, _dryCanvas.width, _dryCanvas.height);
+  _dryCtx.drawImage(canvas, 0, 0);                       // 1:1 copy of current canvas
+  const lg = getCanvasLogicalSize();
+  _wetCtx.clearRect(0, 0, lg.width, lg.height);          // dpr-scaled → clears full layer
+  drawDotOn(_wetCtx, x, y, solidStrokeColor(drawColor), drawSize);
+  presentWet();
+}
+
 // Pure replay core shared by preview playback and video export, so stroke
 // timing can never diverge between them. Draws every timeline point whose
 // playT has elapsed, using the supplied dot/line fns (main canvas vs the
@@ -317,7 +392,12 @@ function startDraw(e) {
   const drawSize = erase ? size * 3 : size;
   const point = { x: pos.x, y: pos.y, color: drawColor, size: drawSize, t, start: true, erase };
   currentStroke.push(point);
-  drawDot(pos.x, pos.y, drawColor, drawSize, erase);
+  _slActive = strokeLayersOn() && !erase && parseStrokeAlpha(drawColor) < 1;
+  if (_slActive) {
+    beginWetStroke(pos.x, pos.y, drawColor, drawSize);
+  } else {
+    drawDot(pos.x, pos.y, drawColor, drawSize, erase);
+  }
   hasContent = true;
   updateClearVisibility();
   updateEmptyHint();
@@ -343,7 +423,12 @@ function continueDraw(e) {
   const drawSize = erase ? size * 3 : size;
   const point = { x: dp.x, y: dp.y, color: drawColor, size: drawSize, t, erase };
   currentStroke.push(point);
-  drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, drawSize, erase);
+  if (_slActive) {
+    drawLineOn(_wetCtx, lastPos.x, lastPos.y, dp.x, dp.y, solidStrokeColor(drawColor), drawSize);
+    presentWet();
+  } else {
+    drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, drawSize, erase);
+  }
   lastPos = dp;
 }
 
@@ -361,7 +446,12 @@ function snapStrokeToFinal() {
   const drawColor = erase ? bgColor : penColorFor(color);
   const drawSize = erase ? size * 3 : size;
   currentStroke.push({ x: lastRawPos.x, y: lastRawPos.y, color: drawColor, size: drawSize, t, erase });
-  drawLine(lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, drawColor, drawSize, erase);
+  if (_slActive) {
+    drawLineOn(_wetCtx, lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, solidStrokeColor(drawColor), drawSize);
+    presentWet();
+  } else {
+    drawLine(lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, drawColor, drawSize, erase);
+  }
   lastPos = lastRawPos;
 }
 
@@ -369,6 +459,7 @@ function endDraw() {
   if (!drawing) return;
   snapStrokeToFinal();
   drawing = false;
+  _slActive = false;
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
     strokeGroups.push(currentStroke.length);
@@ -384,6 +475,7 @@ function commitActiveStroke() {
   if (!drawing) return;
   snapStrokeToFinal();
   drawing = false;
+  _slActive = false;
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
     strokeGroups.push(currentStroke.length);
