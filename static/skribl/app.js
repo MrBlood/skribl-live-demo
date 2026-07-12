@@ -321,6 +321,80 @@ function beginWetStroke(x, y, drawColor, drawSize) {
   presentWet();
 }
 
+// Replay compositor: the same wet/dry idea as live drawing, but driven by
+// replayTimelineToCanvas's own dot/line callbacks — so the ONE timing loop is
+// reused UNCHANGED. dotFn fires exactly at stroke starts, which is the boundary
+// to bake the previous stroke. Low-opacity non-eraser strokes go wet→bake; opaque
+// and eraser strokes draw straight onto dry (byte-identical to drawDot/drawLine).
+// Consumers: build one after the base is on `visCanvas`, pass its dotFn/lineFn to
+// the loop, call present() each frame, and finish() at the end.
+function makeStrokeCompositor(visCtx, visCanvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const dry = document.createElement('canvas');
+  const wet = document.createElement('canvas');
+  dry.width = wet.width = visCanvas.width;
+  dry.height = wet.height = visCanvas.height;
+  const dctx = dry.getContext('2d');
+  const wctx = wet.getContext('2d');
+  // Seed dry with the base already on the visible canvas (photo/bg + snapshot).
+  dctx.setTransform(1, 0, 0, 1, 0, 0);
+  dctx.drawImage(visCanvas, 0, 0);
+  dctx.scale(dpr, dpr);                                  // dry now draws in logical coords
+  wctx.setTransform(1, 0, 0, 1, 0, 0); wctx.scale(dpr, dpr);
+  const lgW = visCanvas.width / dpr, lgH = visCanvas.height / dpr;
+  let wetActive = false, wetAlpha = 1;
+
+  function bakeWet() {
+    dctx.save();
+    dctx.setTransform(1, 0, 0, 1, 0, 0);
+    dctx.globalAlpha = wetAlpha;
+    dctx.drawImage(wet, 0, 0);
+    dctx.restore();
+    wctx.clearRect(0, 0, lgW, lgH);
+    wetActive = false; wetAlpha = 1;
+  }
+  function dryDot(x, y, color, size, erase) {
+    dctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+    dctx.beginPath(); dctx.arc(x, y, size / 2, 0, Math.PI * 2);
+    dctx.fillStyle = erase ? 'rgba(0,0,0,1)' : color; dctx.fill();
+    dctx.globalCompositeOperation = 'source-over';
+  }
+  function dryLine(x1, y1, x2, y2, color, size, erase) {
+    dctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+    dctx.beginPath(); dctx.moveTo(x1, y1); dctx.lineTo(x2, y2);
+    dctx.strokeStyle = erase ? 'rgba(0,0,0,1)' : color;
+    dctx.lineWidth = size; dctx.lineCap = 'round'; dctx.lineJoin = 'round'; dctx.stroke();
+    dctx.globalCompositeOperation = 'source-over';
+  }
+  return {
+    dotFn(x, y, color, size, erase) {
+      if (wetActive) bakeWet();                          // close out the previous stroke
+      const a = erase ? 1 : parseStrokeAlpha(color);
+      if (!erase && a < 1) {
+        wetActive = true; wetAlpha = a;
+        wctx.clearRect(0, 0, lgW, lgH);
+        drawDotOn(wctx, x, y, solidStrokeColor(color), size);
+      } else {
+        dryDot(x, y, color, size, erase);
+      }
+    },
+    lineFn(x1, y1, x2, y2, color, size, erase) {
+      if (wetActive) drawLineOn(wctx, x1, y1, x2, y2, solidStrokeColor(color), size);
+      else dryLine(x1, y1, x2, y2, color, size, erase);
+    },
+    present() {
+      visCtx.save();
+      visCtx.setTransform(1, 0, 0, 1, 0, 0);
+      visCtx.globalAlpha = 1;
+      visCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
+      visCtx.drawImage(dry, 0, 0);
+      if (wetActive) { visCtx.globalAlpha = wetAlpha; visCtx.drawImage(wet, 0, 0); }
+      visCtx.restore();
+    },
+    finish() { if (wetActive) bakeWet(); }
+  };
+}
+
 // Pure replay core shared by preview playback and video export, so stroke
 // timing can never diverge between them. Draws every timeline point whose
 // playT has elapsed, using the supplied dot/line fns (main canvas vs the
@@ -1032,13 +1106,20 @@ playBtn.addEventListener('click', () => {
   function startDrawing() {
     let i = 0;
     const start = performance.now();
+    const comp = strokeLayersOn() ? makeStrokeCompositor(ctx, canvas) : null;
     function frame() {
       if (!playing) return;
       const elapsed = performance.now() - start;
-      i = replayTimelineToCanvas(timeline, i, elapsed, drawDot, drawLine);
+      if (comp) {
+        i = replayTimelineToCanvas(timeline, i, elapsed, comp.dotFn, comp.lineFn);
+        comp.present();
+      } else {
+        i = replayTimelineToCanvas(timeline, i, elapsed, drawDot, drawLine);
+      }
       if (i < timeline.length) {
         requestAnimationFrame(frame);
       } else {
+        if (comp) { comp.finish(); comp.present(); }
         stopPlayback();
       }
     }
