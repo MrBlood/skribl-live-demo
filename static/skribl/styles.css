@@ -20,7 +20,7 @@
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #8f72ff;
-  --accent-glow: rgba(124,92,255,0.4);
+  --accent-glow: rgba(124,92,255,0.28);
 
   /* Radii */
   --r-control: 12px;
@@ -620,7 +620,7 @@ body:not(.player-mode) .canvas-wrap {
 }
 .reposition-btn svg { width: 15px; height: 15px; }
 .reposition-btn:hover { background: #1c212c; color: #e7e9ea; }
-.reposition-btn.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: 0 0 20px rgba(124,92,255,0.4); }
+.reposition-btn.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: 0 0 12px rgba(124,92,255,0.28); }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
@@ -2895,7 +2895,7 @@ body.player-mode #canvas {
   letter-spacing: -0.1px;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 6px 20px var(--accent-glow);
+  box-shadow: 0 6px 14px var(--accent-glow);
   transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2903,7 +2903,7 @@ body.player-mode #canvas {
 .player-cta:hover {
   background: var(--accent-bright);
   transform: translateY(-1px);
-  box-shadow: 0 8px 26px var(--accent-glow);
+  box-shadow: 0 8px 18px var(--accent-glow);
 }
 .player-cta:active { transform: translateY(0); }
 
