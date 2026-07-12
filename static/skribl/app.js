@@ -253,11 +253,12 @@ function drawLine(x1, y1, x2, y2, c, s, erase) {
 // was when the stroke began), and show dry + wet×alpha. One composite per stroke
 // instead of per-stamp → uniform translucency, no beads. Opacity is read back
 // from the point color's rgba alpha, so NO data/serialize/timeline change is
-// needed. Gated behind window.SKRIBL_STROKE_LAYERS while it's wired through every
-// consumer (live path first, replay next); flipping it on is the last step. Only
-// non-eraser, sub-100% strokes take this path — everything else is byte-identical.
+// needed. ON by default across all consumers (live drawing, preview, player,
+// export); set window.SKRIBL_STROKE_LAYERS = false as an instant kill switch if a
+// problem ever surfaces. Only non-eraser, sub-100% strokes take this path —
+// everything else is byte-identical to the old direct drawing.
 function strokeLayersOn() {
-  return typeof window !== 'undefined' && window.SKRIBL_STROKE_LAYERS === true;
+  return typeof window === 'undefined' ? false : window.SKRIBL_STROKE_LAYERS !== false;
 }
 function parseStrokeAlpha(c) {
   if (typeof c !== 'string') return 1;
