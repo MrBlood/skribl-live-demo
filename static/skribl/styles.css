@@ -1617,7 +1617,10 @@ body:not(.player-mode) .canvas-wrap {
   font-weight: 600;
   padding: 10px 18px;
   border-radius: var(--r-pill);
-  white-space: nowrap;
+  white-space: normal;
+  max-width: min(92vw, 420px);
+  text-align: center;
+  box-sizing: border-box;
   z-index: 200;
   opacity: 0;
   pointer-events: none;
