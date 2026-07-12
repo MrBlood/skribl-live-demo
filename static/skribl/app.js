@@ -4244,6 +4244,9 @@ if (typeof pendingMusicMeta !== 'undefined') {
     function startRecording() {
       progressLabel.textContent = 'Recording…';
       renderFrameUpTo(0);
+      // Wet/dry compositor for low-opacity strokes, targeting the export stroke
+      // layer. Seeds dry from strokeCanvas (base already painted). Flag-gated.
+      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
 
       const pushFrame = () => { if (manualCapture && videoTrack && videoTrack.requestFrame) { try { videoTrack.requestFrame(); } catch(e){} } };
 
@@ -4279,7 +4282,12 @@ if (typeof pendingMusicMeta !== 'undefined') {
         let finished = false;
         function frame() {
           const elapsed = performance.now() - startTime;
-          i = replayTimelineToCanvas(timeline, i, elapsed, sDot, sLine);
+          if (comp) {
+            i = replayTimelineToCanvas(timeline, i, elapsed, comp.dotFn, comp.lineFn);
+            comp.present();
+          } else {
+            i = replayTimelineToCanvas(timeline, i, elapsed, sDot, sLine);
+          }
           renderFrameUpTo(i);
           pushFrame();
           if (window._exportAudioSrc) {
@@ -4291,6 +4299,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
             requestAnimationFrame(frame);
           } else if (!finished) {
             finished = true;
+            if (comp) { comp.finish(); comp.present(); }
             const holdStart = performance.now();
             function holdFrame() {
               renderFrameUpTo(timeline.length);
