@@ -18,6 +18,7 @@
 
   /* Accent */
   --accent: #7c5cff;
+  --accent-2: #5b8cff;
   --accent-bright: #8f72ff;
   --accent-glow: rgba(124,92,255,0.4);
 
@@ -2085,6 +2086,29 @@ body:not(.player-mode) .canvas-wrap {
 .post-submit:active:not(:disabled) { transform: scale(0.98); }
 .post-submit:disabled { opacity: 0.5; cursor: default; }
 .post-submit[hidden] { display: none; }
+
+/* The post-success "Watch your Skribl" button. A soft accent-tinted chip drops
+   its emphasis below the bold "Post to Skribl" CTA (posting is the action,
+   watching is the follow-up), and a gradient play badge keeps a brand pop and
+   reads unmistakably as a "watch" control. */
+.post-watch {
+  gap: 10px;
+  background: rgba(124, 92, 255, 0.16);
+  border: 1px solid rgba(124, 92, 255, 0.42);
+  color: #b7a9ff;
+}
+.post-watch .play-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+}
+.post-watch .play-badge svg { width: 12px; height: 12px; }
 
 .post-status { padding: 4px 14px 8px; }
 .post-status[hidden] { display: none; }
