@@ -2319,6 +2319,31 @@ photoUploadBtn.addEventListener('drop', (e) => {
 // and re-encoding would compound JPEG loss on every open.
 const PHOTO_MAX_EDGE = 2048;       // cap the longest edge (px); never upscales
 const PHOTO_JPEG_QUALITY = 0.85;   // quality-first baseline; tune after on-device bytes
+// WebP beats JPEG ~25-30% at the same quality and — unlike JPEG — keeps alpha,
+// so transparent backgrounds no longer fall back to (potentially huge) lossless
+// PNG. Used only when the browser can actually encode WebP (see canEncodeWebP);
+// otherwise we keep the JPEG/PNG path. The alpha branch runs a touch higher
+// because canvas WebP is lossy even near 1.0, and hard sticker/line-art edges
+// soften at lower quality.
+const PHOTO_WEBP_QUALITY = 0.85;        // opaque photos
+const PHOTO_WEBP_ALPHA_QUALITY = 0.92;  // transparent images — protect crisp edges
+
+// Feature-detect WebP *encoding* once (decoding support is broader). Per the
+// canvas spec, toDataURL silently returns PNG for any unsupported type, so we
+// ask a 1x1 canvas for WebP and check the prefix: a 'data:image/webp' answer
+// means real support. Cached — the answer can't change within a session.
+let _webpEncodeSupported = null;
+function canEncodeWebP() {
+  if (_webpEncodeSupported !== null) return _webpEncodeSupported;
+  try {
+    const c = document.createElement('canvas');
+    c.width = 1; c.height = 1;
+    _webpEncodeSupported = c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  } catch (e) {
+    _webpEncodeSupported = false;
+  }
+  return _webpEncodeSupported;
+}
 
 // Pure geometry: target draw size preserving aspect ratio, never upscaling.
 // Mirrored by tooling/photo_resize_test.js — keep that copy in sync if you edit.
@@ -2379,15 +2404,27 @@ async function normalizePhotoDataURL(file, originalDataUrl) {
         hasAlpha = true;   // couldn't inspect — assume alpha, prefer lossless PNG
       }
     }
-    const out = hasAlpha
-      ? cv.toDataURL('image/png')
-      : cv.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
+    // Prefer WebP when the browser can encode it: it keeps alpha (so transparent
+    // images stay transparent instead of falling back to bulky lossless PNG) and
+    // beats JPEG on opaque photos. When WebP isn't available, keep the original
+    // behaviour exactly — PNG for alpha, JPEG for opaque. The alpha detect and the
+    // "only keep it if smaller" guard below both still apply, so a see-through
+    // background still tracks the live canvas colour and nothing ever gets larger.
+    const webpOK = canEncodeWebP();
+    let out, outFormat;
+    if (hasAlpha) {
+      if (webpOK) { out = cv.toDataURL('image/webp', PHOTO_WEBP_ALPHA_QUALITY); outFormat = 'webp-alpha'; }
+      else        { out = cv.toDataURL('image/png');                            outFormat = 'png'; }
+    } else {
+      if (webpOK) { out = cv.toDataURL('image/webp', PHOTO_WEBP_QUALITY);       outFormat = 'webp'; }
+      else        { out = cv.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);       outFormat = 'jpeg'; }
+    }
     const smaller = !!(out && originalDataUrl && out.length < originalDataUrl.length);
     if (typeof window !== 'undefined' && window.__SKRIBL_PHOTO_DEBUG) {
       try {
         console.log('[photo] normalize', {
           srcW: srcW, srcH: srcH, outW: t.w, outH: t.h,
-          format: hasAlpha ? 'png' : 'jpeg',
+          format: outFormat,
           origBytes: originalDataUrl ? originalDataUrl.length : null,
           outBytes: out ? out.length : null,
           kept: smaller ? 'downscaled' : 'original'
