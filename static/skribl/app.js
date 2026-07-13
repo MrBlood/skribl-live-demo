@@ -4824,13 +4824,13 @@ if (typeof pendingMusicMeta !== 'undefined') {
     if (card) payload.thumbnail = card;
     // Crop music down to just the loop for posting. Post-only — drafts keep the
     // full sample so they can be re-trimmed. The trimmed clip IS the loop, so
-    // trimStart/trimEnd become 0..loopLen. Prefer FLAC when enabled
-    // (window.SKRIBL_FLAC) — lossless, ~2× smaller stereo, decodes bit-identical;
-    // on any failure (lib load, encode) fall through to WAV so a post never
-    // breaks here. Falls back to the full sample if the buffer isn't ready.
+    // trimStart/trimEnd become 0..loopLen. FLAC by default — lossless, ~2× smaller
+    // stereo, decodes bit-identical; kill switch: window.SKRIBL_FLAC = false. On
+    // any failure (lib load, encode) fall through to WAV so a post never breaks
+    // here. Falls back to the full sample if the buffer isn't ready.
     if (payload.music && payload.music.data && currentAudioBuffer) {
       let encoded = false;
-      if (window.SKRIBL_FLAC === true) {
+      if (window.SKRIBL_FLAC !== false) {
         try {
           await ensureFlacReady();
           const flac = buildTrimmedLoopFlac();
