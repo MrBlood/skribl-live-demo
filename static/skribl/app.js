@@ -202,8 +202,21 @@ redoBtn.disabled = true;
 
 
 function makeHistoryState() {
+  // Snapshot into an offscreen canvas via drawImage instead of toDataURL():
+  // toDataURL PNG-encodes the whole canvas synchronously on EVERY stroke start
+  // (main-thread jank, worst on mobile/large canvases) and kept up to 30
+  // multi-MB base64 strings alive in the undo stack. A canvas-to-canvas
+  // drawImage is cheap, and restore becomes synchronous drawImage too (no
+  // async <img> decode). Nothing serializes these states, so the shape change
+  // (string -> canvas) is safe: undo/redo below are the only consumers.
+  const snap = document.createElement('canvas');
+  snap.width = Math.max(1, canvas.width);
+  snap.height = Math.max(1, canvas.height);
+  if (canvas.width > 0 && canvas.height > 0) {
+    snap.getContext('2d').drawImage(canvas, 0, 0);
+  }
   return {
-    image: canvas.toDataURL(),
+    image: snap,
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
     hasContent: hasContent
@@ -1303,12 +1316,16 @@ undoBtn.addEventListener('click', () => {
   redoStack.push(makeHistoryState());
   redoBtn.disabled = false;
   const prev = undoStack.pop();
-  const img = new Image();
-  img.onload = () => {
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, 0, 0, cw, ch);
-  };
-  img.src = prev.image;
+  // Synchronous restore from the snapshot canvas (see makeHistoryState).
+  // save/restore + explicit source-over/alpha guards against a stale
+  // 'destination-out' left on the ctx by a just-finished eraser stroke,
+  // which would make this drawImage erase instead of paint.
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.drawImage(prev.image, 0, 0, cw, ch);
+  ctx.restore();
   strokes = prev.strokes.slice();
   strokeGroups = prev.strokeGroups.slice();
   syncStateAfterHistoryChange(prev.hasContent === undefined ? strokes.length > 0 : prev.hasContent);
@@ -1321,12 +1338,13 @@ redoBtn.addEventListener('click', () => {
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
   const next = redoStack.pop();
-  const img = new Image();
-  img.onload = () => {
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, 0, 0, cw, ch);
-  };
-  img.src = next.image;
+  // Synchronous restore from the snapshot canvas — same pattern as undo.
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, cw, ch);
+  ctx.drawImage(next.image, 0, 0, cw, ch);
+  ctx.restore();
   strokes = next.strokes.slice();
   strokeGroups = next.strokeGroups.slice();
   syncStateAfterHistoryChange(next.hasContent === undefined ? strokes.length > 0 : next.hasContent);
