@@ -4525,8 +4525,9 @@ if (typeof pendingMusicMeta !== 'undefined') {
   // Render the finished drawing onto a 1200×630 branded share card (the Open
   // Graph aspect) so a shared /s/<id> link unfurls with the actual drawing
   // instead of the generic card. Composited client-side at post time and sent as
-  // payload.thumbnail (a JPEG data URL, q0.85 — opaque, so no alpha lost); the
-  // /s/<id>/card.png route serves it (route accepts both JPEG and legacy PNG).
+  // payload.thumbnail; encoded per-content — JPEG q0.85 when a photo is present
+  // (~6x smaller, artifacts hidden), PNG for line-art cards (smaller AND crisp as
+  // PNG). The /s/<id>/card.png route serves either format (also legacy PNG posts).
   function buildShareCardDataURL() {
     try {
       const flat = buildPreviewCanvas();
@@ -4609,12 +4610,14 @@ if (typeof pendingMusicMeta !== 'undefined') {
       c.textAlign = 'left';
       c.fillText(label, x + starR*2 + gap, cy);
 
-      // JPEG (not PNG): the card is fully opaque (bg baked in above), so there's
-      // no alpha to lose, and JPEG q0.85 is ~5x smaller — the thumbnail drops
-      // from the #2 payload term (~1 MB) to a couple hundred KB. JPEG (not WebP)
-      // because social crawlers fetch this and JPEG is universal. The server's
-      // card route accepts both PNG and JPEG, so old posts keep unfurling.
-      return card.toDataURL('image/jpeg', 0.85);
+      // Encode by content. A photo card compresses ~6x smaller as JPEG (the whole
+      // point of this change) and the photo detail hides JPEG's edge artifacts. A
+      // line-art card is the opposite: PNG is both SMALLER and crisp, while JPEG
+      // bloats it AND rings the sharp white-on-dark edges (visible mosquito noise).
+      // So pick per-card; the /s/<id>/card.png route serves either format. The
+      // photo-present test mirrors buildPreviewCanvas exactly.
+      const hasPhoto = !!(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src);
+      return hasPhoto ? card.toDataURL('image/jpeg', 0.85) : card.toDataURL('image/png');
     } catch (e) {
       return null;
     }
