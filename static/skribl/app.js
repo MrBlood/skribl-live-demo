@@ -4525,7 +4525,8 @@ if (typeof pendingMusicMeta !== 'undefined') {
   // Render the finished drawing onto a 1200×630 branded share card (the Open
   // Graph aspect) so a shared /s/<id> link unfurls with the actual drawing
   // instead of the generic card. Composited client-side at post time and sent as
-  // payload.thumbnail (a PNG data URL); the /s/<id>/card.png route serves it.
+  // payload.thumbnail (a JPEG data URL, q0.85 — opaque, so no alpha lost); the
+  // /s/<id>/card.png route serves it (route accepts both JPEG and legacy PNG).
   function buildShareCardDataURL() {
     try {
       const flat = buildPreviewCanvas();
@@ -4608,7 +4609,12 @@ if (typeof pendingMusicMeta !== 'undefined') {
       c.textAlign = 'left';
       c.fillText(label, x + starR*2 + gap, cy);
 
-      return card.toDataURL('image/png');
+      // JPEG (not PNG): the card is fully opaque (bg baked in above), so there's
+      // no alpha to lose, and JPEG q0.85 is ~5x smaller — the thumbnail drops
+      // from the #2 payload term (~1 MB) to a couple hundred KB. JPEG (not WebP)
+      // because social crawlers fetch this and JPEG is universal. The server's
+      // card route accepts both PNG and JPEG, so old posts keep unfurling.
+      return card.toDataURL('image/jpeg', 0.85);
     } catch (e) {
       return null;
     }
