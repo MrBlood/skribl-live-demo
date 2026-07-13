@@ -2,7 +2,10 @@ import base64
 import os
 import re
 import secrets
+import time
+from collections import deque
 from datetime import datetime, timezone
+from threading import Lock
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -44,6 +47,63 @@ def _og_meta(title, caption):
 # tested headless. Returns None on anything malformed so the caller can fall back
 # to the static branded card instead of erroring.
 _DATA_URL_PNG_RE = re.compile(r"^data:image/png;base64,(.+)$", re.DOTALL)
+
+# public_id slugs come from secrets.token_urlsafe(8) → 11 chars of [A-Za-z0-9_-].
+# Checking the format up front (range is generous for future length changes)
+# keeps junk out of DB lookups and template injection surface entirely. Routes
+# keep their existing render-always / fallback contracts on a mismatch — this
+# only short-circuits the lookup, it never changes what a URL renders.
+_PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
+
+
+def _valid_public_id(public_id):
+    return isinstance(public_id, str) and bool(_PUBLIC_ID_RE.match(public_id))
+
+
+# Hard ceiling for the share-card image served by /s/<id>/card.png. A real
+# 1200x630 thumbnail is a few hundred KB; anything much larger in the payload
+# is malformed or hostile, and serving (and CDN-caching) it on every unfurl
+# would be a cheap amplification. Oversize falls back to the static card.
+MAX_CARD_BYTES = 2_000_000
+
+# Naive in-memory per-IP rate limit for POST /api/skribls: N posts per rolling
+# window, per process. Not distributed, resets on deploy — deliberately minimal.
+# It exists to stop the trivial abuse case (one client looping max-size posts
+# until free-tier Postgres fills), not to be real infrastructure; replace with
+# proper limiting when auth lands (roadmap #5).
+_RATE_WINDOW_SECONDS = 3600
+_RATE_MAX_POSTS = int(os.environ.get("SKRIBL_RATE_MAX_POSTS", 20))
+_rate_buckets = {}
+_rate_lock = Lock()
+
+
+def _client_ip():
+    # On Render the app sits behind a proxy: remote_addr is the proxy, and the
+    # real client is the first entry of X-Forwarded-For.
+    fwd = request.headers.get("X-Forwarded-For", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _rate_limited(ip):
+    now = time.monotonic()
+    with _rate_lock:
+        bucket = _rate_buckets.setdefault(ip, deque())
+        while bucket and now - bucket[0] > _RATE_WINDOW_SECONDS:
+            bucket.popleft()
+        if len(bucket) >= _RATE_MAX_POSTS:
+            return True
+        bucket.append(now)
+        # Opportunistic cleanup so the dict can't grow without bound: expire
+        # aged entries in every bucket, then drop the empty buckets.
+        if len(_rate_buckets) > 1000:
+            for key, q in list(_rate_buckets.items()):
+                while q and now - q[0] > _RATE_WINDOW_SECONDS:
+                    q.popleft()
+                if not q:
+                    del _rate_buckets[key]
+        return False
 
 
 def _decode_data_url_png(data_url):
@@ -117,7 +177,9 @@ def create_app():
         # unchanged. This route stays render-always; it never 404s the page.
         title = caption = None
         try:
-            post = SkriblPost.query.filter_by(public_id=public_id).first()
+            post = None
+            if _valid_public_id(public_id):
+                post = SkriblPost.query.filter_by(public_id=public_id).first()
             if post is not None:
                 title, caption = post.title, post.caption
         except Exception:
@@ -146,11 +208,16 @@ def create_app():
         # missing post, missing/'malformed thumbnail, or a transient DB error we
         # redirect to the static branded card so the og:image never 404s.
         try:
-            post = SkriblPost.query.filter_by(public_id=public_id).first()
+            post = None
+            if _valid_public_id(public_id):
+                post = SkriblPost.query.filter_by(public_id=public_id).first()
             if post is not None:
                 payload = post.payload_json or {}
                 thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
                 data = _decode_data_url_png(thumb)
+                # Size cap: see MAX_CARD_BYTES. Oversize → static fallback below.
+                if data is not None and len(data) > MAX_CARD_BYTES:
+                    data = None
                 if data is not None:
                     resp = app.response_class(data, mimetype="image/png")
                     # Immutable once posted; let scrapers/CDNs cache by URL.
@@ -165,6 +232,14 @@ def create_app():
 
     @app.post("/api/skribls")
     def create_skribl():
+        # Rate limit first, before any body parsing. 429 is a 4xx, so the
+        # composer's existing error path surfaces this message verbatim and
+        # correctly refuses to fake a success (see sendSkribl).
+        if _rate_limited(_client_ip()):
+            return jsonify({
+                "error": "You're posting too fast — please wait a while and try again."
+            }), 429
+
         payload = request.get_json(silent=True)
 
         # Permissive shape validation: the frontend contract is a JSON object
@@ -184,7 +259,10 @@ def create_app():
 
         title = (payload.get("title") or "Untitled Skribl").strip()[:80]
         caption = (payload.get("caption") or "").strip()[:300]
-        has_audio = bool(payload.get("music"))
+        # True only when there are actual audio bytes; a settings-only or empty
+        # music dict (e.g. {}) doesn't count. music's dict-or-null shape is
+        # already validated above, so .get is safe here.
+        has_audio = bool((payload.get("music") or {}).get("data"))
 
         # Retry on the rare public_id collision instead of 500-ing.
         public_id = None
@@ -215,8 +293,22 @@ def create_app():
             "url": f"/s/{public_id}"
         }), 201
 
+    # Conservative security headers. Deliberately NO X-Frame-Options / CSP
+    # frame-ancestors: the roadmap embeds the player in an iframe on
+    # skribls.net, and a blanket deny here would break that. A CSP is also
+    # deferred: the app relies on inline scripts (template config), inline
+    # styles, data:/blob: URLs — a policy loose enough to allow all that adds
+    # ~nothing today. Revisit both alongside the embed work.
+    @app.after_request
+    def _security_headers(resp):
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        return resp
+
     @app.get("/api/skribls/<public_id>")
     def get_skribl(public_id):
+        if not _valid_public_id(public_id):
+            return jsonify({"error": "Skribl not found."}), 404
         post = SkriblPost.query.filter_by(public_id=public_id).first_or_404()
 
         # Shallow-copy so we don't mutate the SQLAlchemy-tracked JSON column
