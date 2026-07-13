@@ -3534,6 +3534,85 @@ function buildTrimmedLoopWav() {
   return { dataUrl: audioBufferToWavDataURL(currentAudioBuffer, startFrame, frames), duration: frames / sr };
 }
 
+// --- Optional FLAC loop encoding (roadmap: shrink posted audio) --------------
+// Lossless FLAC of the SAME crossfaded/trimmed loop buildLoopAudioBuffer() makes,
+// so it decodes bit-identical and the gapless seam is untouched (verified: FLAC
+// round-trips to the same buffer WAV decodes to, exact rate+frames, desktop+iOS).
+// Stereo, no downmix. Flag-gated (window.SKRIBL_FLAC); on any failure the caller
+// falls back to WAV, so a post never breaks. Player/server need no change — the
+// player decodes music.data via decodeAudioData either way, the server just
+// stores the string. libflac.js is loaded lazily (post time only), from the
+// vendored copy by default, or window.SKRIBL_FLAC_URL for testing pre-vendor.
+let _flacLoadPromise = null;
+function ensureFlacReady() {
+  if (window.Flac && window.Flac.isReady && window.Flac.isReady()) return Promise.resolve();
+  if (_flacLoadPromise) return _flacLoadPromise;
+  _flacLoadPromise = new Promise(function(resolve, reject) {
+    const settle = function() {
+      if (window.Flac && window.Flac.isReady && window.Flac.isReady()) resolve();
+      else if (window.Flac && window.Flac.on) window.Flac.on('ready', function(){ resolve(); });
+      else reject(new Error('Flac global missing after load'));
+    };
+    const s = document.createElement('script');
+    s.src = window.SKRIBL_FLAC_URL || '/static/skribl/libflac.js';
+    s.onload = settle;
+    s.onerror = function(){ _flacLoadPromise = null; reject(new Error('failed to load libflac.js')); };
+    document.head.appendChild(s);
+  });
+  return _flacLoadPromise;
+}
+
+function bytesToBase64(bytes) {
+  let bin = '';
+  const chunk = 0x8000;   // chunk to avoid String.fromCharCode arg-count overflow on big buffers
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+// Encode an AudioBuffer to FLAC bytes via libflac (must be loaded+ready). 16-bit,
+// compression 8, all channels. Returns Uint8Array, or null on any encoder error.
+function encodeFlacFromBuffer(buf) {
+  if (!window.Flac || !buf) return null;
+  const sr = buf.sampleRate, numCh = buf.numberOfChannels, frames = buf.length;
+  const chans = [];
+  for (let c = 0; c < numCh; c++) {
+    const f = buf.getChannelData(c);
+    const out = new Int32Array(frames);
+    for (let i = 0; i < frames; i++) {
+      let s = f[i];
+      if (s > 1) s = 1; else if (s < -1) s = -1;
+      out[i] = s < 0 ? Math.round(s * 32768) : Math.round(s * 32767);
+    }
+    chans.push(out);
+  }
+  const enc = Flac.create_libflac_encoder(sr, numCh, 16, 8, frames, false, 0);
+  if (!enc) return null;
+  const pieces = [];
+  const initStatus = Flac.init_encoder_stream(enc, function(chunk){ pieces.push(new Uint8Array(chunk)); });
+  if (initStatus !== 0) { try { Flac.FLAC__stream_encoder_delete(enc); } catch (e) {} return null; }
+  const ok = Flac.FLAC__stream_encoder_process(enc, chans, frames);
+  try { Flac.FLAC__stream_encoder_finish(enc); } catch (e) {}
+  try { Flac.FLAC__stream_encoder_delete(enc); } catch (e) {}
+  if (!ok) return null;
+  let total = 0;
+  for (const p of pieces) total += p.length;
+  const bytes = new Uint8Array(total);
+  let off = 0;
+  for (const p of pieces) { bytes.set(p, off); off += p.length; }
+  return bytes;
+}
+
+// Mirror of buildTrimmedLoopWav's { dataUrl, duration } shape, as data:audio/flac.
+function buildTrimmedLoopFlac() {
+  const buf = buildLoopAudioBuffer();
+  if (!buf) return null;
+  const bytes = encodeFlacFromBuffer(buf);
+  if (!bytes || !bytes.length) return null;
+  return { dataUrl: 'data:audio/flac;base64,' + bytesToBase64(bytes), duration: buf.duration };
+}
+
 // --- Sample-accurate live loop engine (Web Audio) ---------------------------
 // The live monitors (Preview Loop, editor Play) used timer-wrapped <audio>,
 // which drifts (the wrap is caught up to a timer-tick late, variably) and can
@@ -4745,15 +4824,30 @@ if (typeof pendingMusicMeta !== 'undefined') {
     if (card) payload.thumbnail = card;
     // Crop music down to just the loop for posting. Post-only — drafts keep the
     // full sample so they can be re-trimmed. The trimmed clip IS the loop, so
-    // trimStart/trimEnd become 0..loopLen. Falls back to the full sample if the
-    // decoded buffer isn't ready or encoding fails, so a post never breaks here.
+    // trimStart/trimEnd become 0..loopLen. Prefer FLAC when enabled
+    // (window.SKRIBL_FLAC) — lossless, ~2× smaller stereo, decodes bit-identical;
+    // on any failure (lib load, encode) fall through to WAV so a post never
+    // breaks here. Falls back to the full sample if the buffer isn't ready.
     if (payload.music && payload.music.data && currentAudioBuffer) {
-      try {
-        const cropped = buildTrimmedLoopWav();
-        if (cropped) {
-          payload.music = { data: cropped.dataUrl, name: payload.music.name, trimStart: 0, trimEnd: cropped.duration };
-        }
-      } catch (e) { /* keep the full-sample payload.music */ }
+      let encoded = false;
+      if (window.SKRIBL_FLAC === true) {
+        try {
+          await ensureFlacReady();
+          const flac = buildTrimmedLoopFlac();
+          if (flac) {
+            payload.music = { data: flac.dataUrl, name: payload.music.name, trimStart: 0, trimEnd: flac.duration };
+            encoded = true;
+          }
+        } catch (e) { /* fall through to WAV below */ }
+      }
+      if (!encoded) {
+        try {
+          const cropped = buildTrimmedLoopWav();
+          if (cropped) {
+            payload.music = { data: cropped.dataUrl, name: payload.music.name, trimStart: 0, trimEnd: cropped.duration };
+          }
+        } catch (e) { /* keep the full-sample payload.music */ }
+      }
     }
     try {
       const res = await sendSkribl(payload);
