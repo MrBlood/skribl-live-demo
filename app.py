@@ -41,12 +41,15 @@ def _og_meta(title, caption):
     return og_title, og_description
 
 
-# Decode a client-generated share-card thumbnail stored in the payload as a PNG
-# data URL ("data:image/png;base64,...") back into raw bytes for the card route.
-# Kept pure and import-light (base64 + re only, no DB/Flask) so it can be unit-
-# tested headless. Returns None on anything malformed so the caller can fall back
-# to the static branded card instead of erroring.
-_DATA_URL_PNG_RE = re.compile(r"^data:image/png;base64,(.+)$", re.DOTALL)
+# Decode a client-generated share-card thumbnail stored in the payload as an
+# image data URL back into raw bytes for the card route. Accepts PNG or JPEG:
+# the card was historically PNG and is JPEG now (opaque 1200x630, no alpha to
+# lose — ~5x smaller), and old PNG posts must keep unfurling, so both are served.
+# The subtype is captured so the route can send a matching Content-Type. Kept
+# pure and import-light (base64 + re only, no DB/Flask) so it can be unit-tested
+# headless. Returns None on anything malformed so the caller can fall back to the
+# static branded card instead of erroring.
+_DATA_URL_IMAGE_RE = re.compile(r"^data:image/(png|jpeg);base64,(.+)$", re.DOTALL)
 
 # public_id slugs come from secrets.token_urlsafe(8) → 11 chars of [A-Za-z0-9_-].
 # Checking the format up front (range is generous for future length changes)
@@ -106,16 +109,20 @@ def _rate_limited(ip):
         return False
 
 
-def _decode_data_url_png(data_url):
+def _decode_data_url_image(data_url):
+    # Returns (raw_bytes, mimetype) for a PNG or JPEG data URL, or None if the
+    # value is missing/malformed/an unsupported type (webp, gif, svg, …) so the
+    # caller falls back to the static card.
     if not isinstance(data_url, str):
         return None
-    m = _DATA_URL_PNG_RE.match(data_url.strip())
+    m = _DATA_URL_IMAGE_RE.match(data_url.strip())
     if not m:
         return None
     try:
-        return base64.b64decode(m.group(1), validate=True)
+        raw = base64.b64decode(m.group(2), validate=True)
     except Exception:
         return None
+    return raw, "image/" + m.group(1)
 
 
 def create_app():
@@ -214,12 +221,13 @@ def create_app():
             if post is not None:
                 payload = post.payload_json or {}
                 thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
-                data = _decode_data_url_png(thumb)
+                decoded = _decode_data_url_image(thumb)
                 # Size cap: see MAX_CARD_BYTES. Oversize → static fallback below.
-                if data is not None and len(data) > MAX_CARD_BYTES:
-                    data = None
-                if data is not None:
-                    resp = app.response_class(data, mimetype="image/png")
+                if decoded is not None and len(decoded[0]) > MAX_CARD_BYTES:
+                    decoded = None
+                if decoded is not None:
+                    data, mimetype = decoded
+                    resp = app.response_class(data, mimetype=mimetype)
                     # Immutable once posted; let scrapers/CDNs cache by URL.
                     resp.headers["Cache-Control"] = "public, max-age=86400"
                     return resp
