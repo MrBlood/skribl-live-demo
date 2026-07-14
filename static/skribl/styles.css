@@ -1804,6 +1804,27 @@ body:not(.player-mode) .canvas-wrap {
 }
 .btn.play.btn-icon .btn-label { display: none; }
 
+/* Desktop: once the header condenses (recording, or a finished take exists) the
+   Play / Post / timer controls appear and the bar gets tight. Stack the wordmark
+   onto two lines — the same trick the mobile layout uses — and spend the freed
+   width giving Play a text label, so it reads as a pill peer of Record/Post
+   instead of a recessed icon. Empty state keeps "Skribl Pad" on one line. */
+@media (min-width: 641px) {
+  .header.compact .brand > span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.05;
+  }
+  .header.compact .brand-word { display: block; }
+
+  .header.compact .btn.play.btn-icon {
+    width: auto;
+    height: auto;
+    padding: 10px 18px;
+  }
+  .header.compact .btn.play.btn-icon .btn-label { display: inline; }
+}
+
 /* ---------- Overflow menu ---------- */
 .menu-overlay {
   position: fixed;
