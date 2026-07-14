@@ -2782,8 +2782,11 @@ body.player-mode #canvas {
   border-radius: 50%;
   pointer-events: none;
   z-index: 6;
-  background: radial-gradient(circle, rgba(255,255,255,0.95) 0 30%, rgba(255,255,255,0.25) 60%, transparent 70%);
-  box-shadow: 0 0 10px 2px var(--accent-glow);
+  /* Nib color follows the ink being drawn; JS sets --nib-rgb per replay point.
+     Defaults to white so an unset nib matches the original hardcoded look. */
+  --nib-rgb: 255,255,255;
+  background: radial-gradient(circle, rgba(var(--nib-rgb),0.95) 0 30%, rgba(var(--nib-rgb),0.25) 60%, transparent 70%);
+  box-shadow: 0 0 10px 2px rgba(var(--nib-rgb),0.45);
   transition: opacity 0.12s ease;
 }
 .player-nib[hidden] { display: none; }
