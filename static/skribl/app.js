@@ -730,6 +730,24 @@ function penColorFor(hex) {
   return `rgba(${r}, ${g}, ${b}, ${strokeOpacity})`;
 }
 
+// The replay nib is tinted to match the ink at the current point. Stored colors
+// are either '#rrggbb' or 'rgba(r,g,b,a)' (low-opacity strokes), so pull the RGB
+// out of both and return an "r,g,b" string for the nib's --nib-rgb variable.
+// Any stroke alpha is dropped: the nib keeps its own opacity so a faint stroke
+// still gets a clearly visible bead. Falls back to white if the color is odd.
+function nibRGB(color) {
+  if (typeof color === 'string') {
+    const hex = color.match(/^#([0-9a-fA-F]{6})$/);
+    if (hex) {
+      const h = hex[1];
+      return parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16);
+    }
+    const rgb = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (rgb) return rgb[1] + ',' + rgb[2] + ',' + rgb[3];
+  }
+  return '255,255,255';
+}
+
 function setPenColor(hex) {
   if (!/^#[0-9a-fA-F]{6}$/.test(hex || '')) return;
   hex = hex.toLowerCase();
@@ -1092,7 +1110,37 @@ function stopPlayback() {
   playBtn.classList.remove('playing');
   if (audioEl) audioEl.pause();
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
+  hideEditorNib();
 }
+
+// The editor Play preview mirrors the posted player's replay bead so what you
+// see before posting matches what viewers get. Reuses the player's .player-nib
+// styling; positioned over the editor canvas with the same author->display
+// mapping getPos uses (independent x/y so it lands exactly on the stroke).
+let editorNib = null;
+function ensureEditorNib() {
+  if (!editorNib) {
+    editorNib = document.createElement('div');
+    editorNib.className = 'player-nib';
+    editorNib.hidden = true;
+    canvasWrap.appendChild(editorNib);
+  }
+  return editorNib;
+}
+function positionEditorNib(p) {
+  const nib = ensureEditorNib();
+  if (!p) { nib.hidden = true; return; }
+  const rect = canvas.getBoundingClientRect();
+  const lg = getCanvasLogicalSize();
+  const sx = lg.width > 0 && rect.width > 0 ? rect.width / lg.width : 1;
+  const sy = lg.height > 0 && rect.height > 0 ? rect.height / lg.height : 1;
+  nib.style.left = (p.x * sx) + 'px';
+  nib.style.top = (p.y * sy) + 'px';
+  nib.classList.toggle('erase', !!p.erase);
+  if (!p.erase) nib.style.setProperty('--nib-rgb', nibRGB(p.color));
+  nib.hidden = false;
+}
+function hideEditorNib() { if (editorNib) editorNib.hidden = true; }
 
 // Cache the decoded base snapshot so repeated redraws (rapid player scrubbing,
 // preview restarts) are synchronous. Without this, each call spun up a fresh
@@ -1153,6 +1201,7 @@ playBtn.addEventListener('click', () => {
       } else {
         i = replayTimelineToCanvas(timeline, i, elapsed, drawDot, drawLine);
       }
+      positionEditorNib(i > 0 ? timeline[i - 1] : null);
       if (i < timeline.length) {
         requestAnimationFrame(frame);
       } else {
@@ -4987,6 +5036,8 @@ if (typeof pendingMusicMeta !== 'undefined') {
     nib.style.left = (p.x * s) + 'px';
     nib.style.top = (p.y * s) + 'px';
     nib.classList.toggle('erase', !!p.erase);
+    // Tint the bead to the ink; erasing keeps the neutral hollow ring.
+    if (!p.erase) nib.style.setProperty('--nib-rgb', nibRGB(p.color));
     nib.hidden = false;
   }
   function hideNib() { nib.hidden = true; }
