@@ -369,11 +369,24 @@ body:not(.player-mode) .canvas-wrap {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #1bcf8f;
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(124, 92, 255, 0.55);
   flex-shrink: 0;
 }
 
 .tab-dot[hidden] { display: none; }
+
+/* Empty Photo/Music tabs show a faint "+" inviting you to add something; it
+   auto-hides the moment the tab's dot appears (i.e. once a file is added), so
+   this needs no JS beyond the existing dot show/hide. */
+.tab-plus {
+  display: inline-block;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.tab-btn:has(.tab-dot:not([hidden])) .tab-plus { display: none; }
 
 .tab-panel {
   padding: 18px;
