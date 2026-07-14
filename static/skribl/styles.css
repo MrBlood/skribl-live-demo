@@ -376,22 +376,19 @@ body:not(.player-mode) .canvas-wrap {
 
 .tab-dot[hidden] { display: none; }
 
-/* Empty Photo/Music tabs show a faint "+" inviting you to add something; it
-   auto-hides the moment the tab's dot appears (i.e. once a file is added), so
-   this needs no JS beyond the existing dot show/hide. */
-.tab-plus {
+/* Photo/Music tabs show a small status circle: grey when the tab is empty,
+   swapped for the purple .tab-dot once a file is added. Both are the same size
+   and sit in the same spot, so it reads as one dot changing colour. The swap is
+   pure CSS via :has() — no JS beyond the existing dot show/hide. */
+.tab-dot-empty {
   display: inline-block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  line-height: 1;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--hairline);
-  border-radius: 5px;
-  padding: 2px 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
   flex-shrink: 0;
 }
-.tab-btn:has(.tab-dot:not([hidden])) .tab-plus { display: none; }
+.tab-btn:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
 
 .tab-panel {
   padding: 18px;
