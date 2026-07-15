@@ -956,6 +956,7 @@ body.replaying .tab-panel { opacity: 0; pointer-events: none; }
 }
 
 .music-dropzone.loaded {
+  height: auto;
   border-style: solid;
   border-color: rgba(27, 207, 143, 0.4);
   border-radius: 12px;
@@ -3068,3 +3069,25 @@ body.player-mode #canvas {
   color: var(--text-dim);
   letter-spacing: 0.03em;
 }
+
+
+/* ---------- Pass 2: toolbar undo/redo (icon-only) ---------- */
+.toolbar .undo-btn {
+  width: 40px; height: 44px; padding: 0; border-radius: 12px;
+  background: none; border: none; color: #aeb6c4; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex: none;
+  transition: background .15s ease, color .15s ease;
+}
+.toolbar .undo-btn .undo-label { display: none; }
+.toolbar .undo-btn svg { width: 20px; height: 20px; }
+.toolbar .undo-btn:disabled { opacity: .32; cursor: default; }
+.toolbar .undo-btn:not(:disabled):hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+
+/* ---------- Pass 2: brush sizes read as one labeled control ---------- */
+#drawPanel .tool-row { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+#drawPanel .size-group {
+  width: fit-content; justify-content: flex-start; gap: 12px;
+  padding: 7px 12px; border-radius: 12px; background: rgba(255,255,255,.035);
+}
+.size-btn span { background: #cdd3de; }              /* brighter dots so the small one reads */
+.size-btn.active span { background: #fff; }
