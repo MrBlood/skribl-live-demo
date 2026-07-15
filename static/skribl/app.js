@@ -930,12 +930,6 @@ function openDrawer(name) {                      // name = 'draw'|'photo'|'music
   if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
   if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
   if (name === 'music') updateDrawingTimeLabels();
-  if (name === 'draw') {                          // colors live behind "More tools" — reveal them
-    const md = document.getElementById('moreDrawer');
-    const mt = document.getElementById('moreToggle');
-    if (md) md.hidden = false;
-    if (mt) { mt.classList.add('open'); mt.setAttribute('aria-expanded', 'true'); }
-  }
 }
 document.getElementById('toolBar').addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
