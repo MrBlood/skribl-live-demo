@@ -442,6 +442,13 @@ body:not(.player-mode) .canvas-wrap {
 
 .tab-panel[hidden] { display: none; }
 
+/* Replay auto-hide: while a preview replays, fade the bottom tool island out so
+   the drawing is the show. The header stays (it holds Stop). Opacity only — the
+   island keeps its space, so the canvas never resizes mid-playback. */
+.tabs, .tab-panel { transition: opacity 0.3s ease; }
+body.replaying .tabs,
+body.replaying .tab-panel { opacity: 0; pointer-events: none; }
+
 /* ---------- Draw panel ---------- */
 .brush-size-inline {
   font-size: 10px;
