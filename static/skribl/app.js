@@ -921,6 +921,7 @@ setTimeout(() => {
 // Toolbar drawers: each .tool-open button toggles its panel open as a drawer
 // above the bar; only one open at a time; tapping the open one closes it.
 function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
+  const idMap = { draw: 'drawPanel', photo: 'photoPanel', music: 'musicPanel' };
   document.getElementById('drawPanel').hidden  = name !== 'draw';
   document.getElementById('musicPanel').hidden = name !== 'music';
   document.getElementById('photoPanel').hidden = name !== 'photo';
@@ -930,6 +931,14 @@ function openDrawer(name) {                      // name = 'draw'|'photo'|'music
   if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
   if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
   if (name === 'music') updateDrawingTimeLabels();
+  // Drawer opens below the bar; scroll just enough to reveal it (keeps max canvas
+  // in frame), and scroll back to rest when everything closes.
+  if (name && idMap[name]) {
+    const panel = document.getElementById(idMap[name]);
+    requestAnimationFrame(() => panel.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 document.getElementById('toolBar').addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
