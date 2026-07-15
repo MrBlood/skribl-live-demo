@@ -658,6 +658,8 @@ document.getElementById('colorGroup').addEventListener('click', (e) => {
 function updateCurrentColorChip() {
   const chip = document.getElementById('currentColorChip');
   if (chip) chip.style.background = color;
+  const toolChip = document.getElementById('toolColorChip');
+  if (toolChip) toolChip.style.background = color;
 }
 updateCurrentColorChip();
 
@@ -916,19 +918,30 @@ setTimeout(() => {
   updateTabSlider(document.querySelector('.tab-btn.active'));
 }, 50);
 
-document.getElementById('tabBar').addEventListener('click', (e) => {
-  const btn = e.target.closest('.tab-btn');
-  if (!btn) return;
-  const tabName = btn.dataset.tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
-  updateTabSlider(btn);
-  document.getElementById('drawPanel').hidden = tabName !== 'draw';
-  document.getElementById('musicPanel').hidden = tabName !== 'music';
-  document.getElementById('photoPanel').hidden = tabName !== 'photo';
-  if (tabName !== 'photo' && typeof exitReposition === 'function') exitReposition();
+// Toolbar drawers: each .tool-open button toggles its panel open as a drawer
+// above the bar; only one open at a time; tapping the open one closes it.
+function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
+  document.getElementById('drawPanel').hidden  = name !== 'draw';
+  document.getElementById('musicPanel').hidden = name !== 'music';
+  document.getElementById('photoPanel').hidden = name !== 'photo';
+  document.querySelectorAll('#toolBar .tool-open').forEach(b =>
+    b.classList.toggle('open', b.dataset.drawer === name));
+  if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
   if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
-  if (tabName === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
-  if (tabName === 'music') updateDrawingTimeLabels();
+  if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
+  if (name === 'music') updateDrawingTimeLabels();
+  if (name === 'draw') {                          // colors live behind "More tools" — reveal them
+    const md = document.getElementById('moreDrawer');
+    const mt = document.getElementById('moreToggle');
+    if (md) md.hidden = false;
+    if (mt) { mt.classList.add('open'); mt.setAttribute('aria-expanded', 'true'); }
+  }
+}
+document.getElementById('toolBar').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tool-open');
+  if (!btn) return;                              // pen/eraser use their own setTool binding
+  const name = btn.dataset.drawer;
+  openDrawer(btn.classList.contains('open') ? null : name);
 });
 
 const recordBtn = document.getElementById('recordBtn');
