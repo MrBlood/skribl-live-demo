@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='21') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='22') }}">
 </head>
 <body>
 
@@ -208,8 +208,8 @@
               <div class="help-step">
                 <span class="help-num">4</span>
                 <div>
-                  <div class="help-title">Add a background photo (optional)</div>
-                  <div class="help-desc">Open the <strong>Photo</strong> tab to place an image behind your drawing, then frame it with Fill / Fit / Stretch, reposition, zoom, opacity, and blur. Clearing the canvas never removes the photo.</div>
+                  <div class="help-title">Add a background image (optional)</div>
+                  <div class="help-desc">Open the <strong>Image</strong> tab to place an image behind your drawing, then frame it with Fill / Fit / Stretch, reposition, zoom, opacity, and blur. Clearing the canvas never removes the image.</div>
                 </div>
               </div>
               <div class="help-step">
@@ -371,7 +371,7 @@
             <span class="accordion-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
             </span>
-            <span class="accordion-title">Background photo</span>
+            <span class="accordion-title">Background image</span>
             <span class="accordion-count">7 tips</span>
             <span class="accordion-chevron">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -380,8 +380,8 @@
           <div class="accordion-body">
             <div class="accordion-inner">
               <div class="help-tip">
-                <span class="help-pill">Add a photo</span>
-                <div class="help-desc">Tap the Photo dropzone to browse, or drag an image onto it. JPG, PNG, GIF, and WebP are supported. The photo sits behind your drawing on its own layer &#8212; strokes and the eraser never touch it.</div>
+                <span class="help-pill">Add an image</span>
+                <div class="help-desc">Tap the Image dropzone to browse, or drag an image onto it. JPG, PNG, GIF, and WebP are supported. The image sits behind your drawing on its own layer &#8212; strokes and the eraser never touch it.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Fill / Fit / Stretch</span>
@@ -389,23 +389,23 @@
               </div>
               <div class="help-tip">
                 <span class="help-pill">Reposition</span>
-                <div class="help-desc">In <strong>Fill</strong>, part of your photo is cropped. Tap <strong>Reposition photo</strong>, then drag the image to choose which part shows behind your drawing &#8212; the drag moves the photo, never draws.</div>
+                <div class="help-desc">In <strong>Fill</strong>, part of your image is cropped. Tap <strong>Reposition image</strong>, then drag the image to choose which part shows behind your drawing &#8212; the drag moves the image, never draws.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Zoom</span>
-                <div class="help-desc">Also in <strong>Fill</strong>, the <strong>Zoom</strong> slider enlarges the photo inside the canvas &#8212; then reposition to frame exactly the part you want.</div>
+                <div class="help-desc">Also in <strong>Fill</strong>, the <strong>Zoom</strong> slider enlarges the image inside the canvas &#8212; then reposition to frame exactly the part you want.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Opacity</span>
-                <div class="help-desc">Fades the photo back so your drawing stands out on top of it.</div>
+                <div class="help-desc">Fades the image back so your drawing stands out on top of it.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Blur</span>
-                <div class="help-desc">Softens the photo so it reads as a backdrop and your strokes pop. Slide back to zero for a sharp image.</div>
+                <div class="help-desc">Softens the image so it reads as a backdrop and your strokes pop. Slide back to zero for a sharp image.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Reset adjustments</span>
-                <div class="help-desc">Puts fit, opacity, blur, position, and zoom back to their defaults without removing the photo.</div>
+                <div class="help-desc">Puts fit, opacity, blur, position, and zoom back to their defaults without removing the image.</div>
               </div>
             </div>
           </div>
@@ -435,12 +435,12 @@
                 <div class="help-desc">Reopen the editor after a reload and a banner offers your last session back, with when it was saved and what it contains. <strong>Restore</strong> brings it back; <strong>Discard</strong> starts fresh.</div>
               </div>
               <div class="help-tip">
-                <span class="help-pill">Re-adding photo &amp; music</span>
-                <div class="help-desc">Autosave keeps your drawing plus every setting &#8212; loop points, crossfade, photo framing, filenames &#8212; but not the photo and music files themselves (browser storage is too small for them). The restore banner lists what to re-add; drop the same files back in and your saved settings, including the loop trim, reapply automatically. To save everything in one piece, use <strong>Save draft</strong>.</div>
+                <span class="help-pill">Re-adding image &amp; music</span>
+                <div class="help-desc">Autosave keeps your drawing plus every setting &#8212; loop points, crossfade, image framing, filenames &#8212; but not the image and music files themselves (browser storage is too small for them). The restore banner lists what to re-add; drop the same files back in and your saved settings, including the loop trim, reapply automatically. To save everything in one piece, use <strong>Save draft</strong>.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Save draft</span>
-                <div class="help-desc">Saves the complete Skribl &#8212; drawing, replay, background, photo, and music with its loop points &#8212; as a <strong>.skribl</strong> file on your device that you can reopen and keep editing later. Nothing needs re-adding.</div>
+                <div class="help-desc">Saves the complete Skribl &#8212; drawing, replay, background, image, and music with its loop points &#8212; as a <strong>.skribl</strong> file on your device that you can reopen and keep editing later. Nothing needs re-adding.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Load draft</span>
@@ -452,7 +452,7 @@
               </div>
               <div class="help-tip">
                 <span class="help-pill">Clear canvas</span>
-                <div class="help-desc">Wipes the drawing and its recording so you can start over. Your background photo stays put. This can't be undone, so save a draft first if you might want it back.</div>
+                <div class="help-desc">Wipes the drawing and its recording so you can start over. Your background image stays put. This can't be undone, so save a draft first if you might want it back.</div>
               </div>
             </div>
           </div>
@@ -809,7 +809,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
       </svg>
-      <span>Add a photo</span>
+      <span>Add an image</span>
       <button type="button" id="photoRemove" class="dropzone-remove" hidden>Remove</button>
     </div>
     <input type="file" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
@@ -834,9 +834,9 @@
 
       <button type="button" id="repositionBtn" class="reposition-btn" hidden aria-pressed="false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
-        <span>Reposition photo</span>
+        <span>Reposition image</span>
       </button>
-      <p class="reposition-hint" id="repositionHint" hidden>In Fill, parts of your photo may be cropped. Drag the image to choose which part shows behind your drawing.</p>
+      <p class="reposition-hint" id="repositionHint" hidden>In Fill, parts of your image may be cropped. Drag the image to choose which part shows behind your drawing.</p>
 
       <div class="photo-opacity-row" id="photoZoomRow" hidden>
         <span class="size-label slider-label">Zoom</span>
