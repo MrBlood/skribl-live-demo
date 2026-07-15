@@ -232,7 +232,7 @@ body {
 .duration-badge[hidden] { display: none; }
 
 .canvas-area {
-  flex: 1;
+  flex: 1 0 0%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -422,10 +422,7 @@ body:not(.player-mode) .canvas-wrap {
 .tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
 
 .tab-panel {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 84px;
+  margin: 0 12px 12px;
   padding: 16px;
   border: 1px solid var(--hairline);
   border-radius: 16px;
@@ -436,11 +433,7 @@ body:not(.player-mode) .canvas-wrap {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 62vh;
-  overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
   z-index: 39;
 }
 
