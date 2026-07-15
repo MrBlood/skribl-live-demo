@@ -369,8 +369,8 @@ body:not(.player-mode) .canvas-wrap {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 3px rgba(124, 92, 255, 0.35);
+  background: #1bcf8f;
+  box-shadow: 0 0 3px rgba(27, 207, 143, 0.35);
   flex-shrink: 0;
 }
 
