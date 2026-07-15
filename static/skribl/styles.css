@@ -158,17 +158,21 @@ body {
   box-shadow: 0 3px 12px var(--accent-glow);
 }
 
-/* Crisper labels on the solid-purple (accent-filled) buttons: a tight dark
-   text-shadow separates the white text from the purple so the letters read
-   sharper. Dark-fill buttons are left out (the shadow is invisible there), and
-   the softer .post-watch chip is excluded so its light-purple text stays clean. */
+/* Crisper labels on the solid-purple (accent-filled) buttons — plus the ACTIVE
+   segmented-control buttons (pen/eraser, Fill/Fit/Stretch) whose white label
+   rides on the purple sliding pill. A tight dark text-shadow separates the white
+   text from the purple. Inactive/dark-fill buttons are left out (the shadow is
+   invisible there); the softer .post-watch chip is excluded so its light text
+   stays clean; tabs use a purple underline (text on dark), so they're out too. */
 .btn.post,
 .post-submit:not(.post-watch),
 .btn.play.playing,
 .player-cta,
 .reposition-btn.active,
 .pending-btn,
-.restore-btn.confirm {
+.restore-btn.confirm,
+.tool-btn.active,
+.photo-fit-btn.active {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
