@@ -4812,6 +4812,11 @@ if (typeof pendingMusicMeta !== 'undefined') {
       captionInput.value = '';
       updateCharCount();
       setState('success');
+      // A posted (or locally-saved) Skribl is finished, so drop the crash-recovery
+      // autosave — otherwise returning to the editor (e.g. via "Make your own
+      // Skribl") offers to restore the drawing you just posted. Recovery turns
+      // back on by itself as soon as you start a new drawing (scheduleAutosave).
+      if (typeof clearAutosave === 'function') clearAutosave();
       if (localOnly) {
         // Saved to this device only (no server, or a temporary server/network
         // failure). Be honest — this is NOT a shared post.
