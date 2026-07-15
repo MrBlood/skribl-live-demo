@@ -19,8 +19,8 @@
   /* Accent */
   --accent: #7c5cff;
   --accent-2: #5b8cff;
-  --accent-bright: #8f72ff;
-  --accent-glow: rgba(124,92,255,0.28);
+  --accent-bright: #9179ff;
+  --accent-glow: rgba(124,92,255,0.4);
 
   /* Radii */
   --r-control: 12px;
@@ -46,7 +46,9 @@ body {
 }
 
 .app {
-  background: var(--surface-raised);
+  background:
+    radial-gradient(115% 62% at 50% -6%, rgba(124,92,255,0.10) 0%, transparent 55%),
+    var(--surface-raised);
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
