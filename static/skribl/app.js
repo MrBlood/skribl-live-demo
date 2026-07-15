@@ -1111,6 +1111,7 @@ function stopPlayback() {
   if (audioEl) audioEl.pause();
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
   hideEditorNib();
+  document.body.classList.remove('replaying');
 }
 
 // The editor Play preview mirrors the posted player's replay bead so what you
@@ -1184,6 +1185,7 @@ playBtn.addEventListener('click', () => {
   playing = true;
   playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
   playBtn.classList.add('playing');
+  document.body.classList.add('replaying');
 
   // Compressed playback duration (same timeline the export uses).
   const totalDuration = timeline[timeline.length - 1].playT;
