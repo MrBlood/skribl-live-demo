@@ -669,10 +669,10 @@ body:not(.player-mode) .canvas-wrap {
 /* --- More tools drawer (Draw tab) --- */
 .more-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  width: 100%; padding: 9px; border: 1px solid var(--hairline);
-  border-radius: 10px; background: #13161c; color: #8a93a6;
+  width: 100%; padding: 9px; border: 1px solid rgba(124, 92, 255, 0.32);
+  border-radius: 10px; background: rgba(124, 92, 255, 0.08); color: #c8cede;
   font-size: 12px; font-weight: 500; cursor: pointer;
-  transition: background .15s ease, color .15s ease;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .more-toggle-main { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
@@ -685,9 +685,9 @@ body:not(.player-mode) .canvas-wrap {
     0 0 0 1.5px var(--surface-panel),
     0 0 0 3px rgba(255,255,255,0.85);
 }
-.more-toggle:hover { background: #1c212c; color: #c8cede; }
+.more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: #e6e9f0; }
 .more-toggle.open { color: #c8cede; }
-.more-chevron { width: 15px; height: 15px; transition: transform .25s var(--spring); }
+.more-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); }
 .more-toggle.open .more-chevron { transform: rotate(180deg); }
 
 .more-drawer { display: flex; flex-direction: column; gap: 12px; }
@@ -782,8 +782,9 @@ body:not(.player-mode) .canvas-wrap {
 }
 .panel-btn:hover { background: #1c212c; color: #c8cede; }
 
-.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; }
-.fine-tune-chevron { width: 15px; height: 15px; transition: transform .25s var(--spring); flex-shrink: 0; }
+.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; background: rgba(124, 92, 255, 0.08); border-color: rgba(124, 92, 255, 0.32); color: #c8cede; }
+.fine-tune-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: #e6e9f0; }
+.fine-tune-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); flex-shrink: 0; }
 .fine-tune-toggle[aria-expanded="true"] .fine-tune-chevron { transform: rotate(180deg); }
 .fine-tune-body { margin-top: 12px; }
 .fine-tune-body[hidden] { display: none; }
