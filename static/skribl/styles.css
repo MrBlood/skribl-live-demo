@@ -415,7 +415,15 @@ body:not(.player-mode) .canvas-wrap {
   flex-direction: column;
   gap: 16px;
   min-height: 190px;
-  overflow: hidden;
+  /* Cap the panel and let it scroll internally so an expanded drawer (More tools
+     / Fine-tune loop) is always reachable — the old `overflow: hidden` + only a
+     min-height clipped the bottom of a tall drawer with no way to scroll to it.
+     overflow-x stays hidden so wide rows still clip horizontally as before. */
+  max-height: 62dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   position: relative;
   z-index: 30;
 }
