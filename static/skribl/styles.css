@@ -419,25 +419,64 @@ body:not(.player-mode) .canvas-wrap {
   background: #3a3f4d;
   flex-shrink: 0;
 }
-.tab-btn:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
+.tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
 
 .tab-panel {
-  padding: 18px;
-  margin: 0 12px 12px;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 84px;
+  padding: 16px;
   border: 1px solid var(--hairline);
-  border-top: none;
-  border-radius: 0 0 16px 16px;
-  background: rgba(23, 26, 34, 0.78);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42);
+  border-radius: 16px;
+  background: rgba(23, 26, 34, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 190px;
-  overflow: hidden;
+  max-height: 62vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  z-index: 39;
+}
+
+/* ---------- Floating tool bar (resting) ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px;
+  margin: 12px auto;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: rgba(23, 26, 34, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
   position: relative;
-  z-index: 30;
+  z-index: 41;
+}
+.tool-sep { width: 1px; height: 26px; background: var(--hairline); margin: 0 5px; align-self: center; flex: none; }
+.tool-open {
+  width: 44px; height: 44px; border-radius: 12px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #aeb6c4; cursor: pointer; position: relative;
+  flex: none; -webkit-tap-highlight-color: transparent;
+  transition: background .15s ease, color .15s ease;
+}
+.tool-open svg { width: 21px; height: 21px; }
+.tool-open:hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+.tool-open.open { background: var(--accent); color: #fff; }
+.tool-chip { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
+.tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
+@media (max-width: 640px) {
+  .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
 }
 
 .tab-panel[hidden] { display: none; }
@@ -445,8 +484,8 @@ body:not(.player-mode) .canvas-wrap {
 /* Replay auto-hide: while a preview replays, fade the bottom tool island out so
    the drawing is the show. The header stays (it holds Stop). Opacity only — the
    island keeps its space, so the canvas never resizes mid-playback. */
-.tabs, .tab-panel { transition: opacity 0.3s ease; }
-body.replaying .tabs,
+.toolbar, .tab-panel { transition: opacity 0.3s ease; }
+body.replaying .toolbar,
 body.replaying .tab-panel { opacity: 0; pointer-events: none; }
 
 /* ---------- Draw panel ---------- */
