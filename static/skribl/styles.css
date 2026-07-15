@@ -67,8 +67,13 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--hairline);
-  background: var(--surface-panel);
+  margin: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  background: rgba(23, 26, 34, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
   flex-wrap: nowrap;
   gap: 10px;
   position: relative;
