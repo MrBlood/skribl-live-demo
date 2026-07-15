@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='37') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='38') }}">
 </head>
 <body>
 
@@ -560,6 +560,14 @@
             Eraser
           </button>
         </div>
+    <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
+          <span class="undo-label">Undo</span>
+        </button>
+    <button type="button" id="redoBtn" class="undo-btn bar-undo" title="Redo last stroke">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
+          <span class="undo-label">Redo</span>
+        </button>
     <span class="tool-sep"></span>
     <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colors & brush">
       <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
@@ -582,40 +590,7 @@
   </div>
 
   <div class="tab-panel" id="drawPanel" hidden>
-
-      <div class="tool-row">
-        
-
-        <button type="button" id="undoBtn" class="undo-btn" title="Undo last stroke">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
-          <span class="undo-label">Undo</span>
-        </button>
-
-        <button type="button" id="redoBtn" class="undo-btn" title="Redo last stroke">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
-          <span class="undo-label">Redo</span>
-        </button>
-
-        <span class="brush-size-inline" id="brushSizeLabel">Brush Size</span>
-        <div class="size-group" id="sizeGroup">
-          <button type="button" class="size-btn" data-size="2" aria-label="Brush size extra small"><span style="width:4px;height:4px"></span></button>
-          <button type="button" class="size-btn active" data-size="5" aria-label="Brush size small"><span style="width:8px;height:8px"></span></button>
-          <button type="button" class="size-btn" data-size="10" aria-label="Brush size medium"><span style="width:12px;height:12px"></span></button>
-          <button type="button" class="size-btn" data-size="20" aria-label="Brush size large"><span style="width:18px;height:18px"></span></button>
-        </div>
-      </div>
-
-      <button type="button" id="moreToggle" class="more-toggle" aria-expanded="false" aria-controls="moreDrawer">
-        <span class="more-toggle-main">
-          <span class="current-color-chip" id="currentColorChip" title="Current color" aria-hidden="true"></span>
-          <span class="more-toggle-label">More tools</span>
-        </span>
-        <svg class="more-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-
-      <div id="moreDrawer" class="more-drawer" hidden>
-
-        <div class="color-section">
+      <div class="color-section">
           <span class="draw-section-label">Color</span>
           <div class="color-group" id="colorGroup">
             <button type="button" class="color-dot active" style="background:#ffffff" data-color="#ffffff" aria-label="White"></button>
@@ -639,6 +614,28 @@
             <div class="recent-colors" id="recentColors"></div>
           </div>
         </div>
+
+      <div class="tool-row">
+        
+
+        
+
+        
+
+        <span class="draw-section-label" id="brushSizeLabel">Brush sizes</span>
+        <div class="size-group" id="sizeGroup">
+          <button type="button" class="size-btn" data-size="2" aria-label="Brush size extra small"><span style="width:7px;height:7px"></span></button>
+          <button type="button" class="size-btn active" data-size="5" aria-label="Brush size small"><span style="width:11px;height:11px"></span></button>
+          <button type="button" class="size-btn" data-size="10" aria-label="Brush size medium"><span style="width:15px;height:15px"></span></button>
+          <button type="button" class="size-btn" data-size="20" aria-label="Brush size large"><span style="width:20px;height:20px"></span></button>
+        </div>
+      </div>
+
+      
+
+      <div id="moreDrawer" class="more-drawer">
+
+        
 
         <div class="bg-section">
           <span class="draw-section-label">Background</span>
@@ -859,6 +856,6 @@
     window.SKRIBL_MODE = "editor";
     window.SKRIBL_API_BASE = "/api/skribls";
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='37') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='38') }}" defer></script>
 </body>
 </html>
