@@ -385,7 +385,7 @@ body:not(.player-mode) .canvas-wrap {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--text-dim);
+  background: #3a3f4d;
   flex-shrink: 0;
 }
 .tab-btn:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
@@ -2132,6 +2132,16 @@ body:not(.player-mode) .canvas-wrap {
   background: rgba(124, 92, 255, 0.16);
   border: 1px solid rgba(124, 92, 255, 0.42);
   color: #b7a9ff;
+}
+
+/* Desktop only: the soft accent chip reads a touch dark on larger screens, so
+   brighten fill/border/text there. Mobile keeps its (already-good) look. */
+@media (min-width: 641px) {
+  .post-watch {
+    background: rgba(124, 92, 255, 0.26);
+    border-color: rgba(124, 92, 255, 0.6);
+    color: #d4ccff;
+  }
 }
 .post-watch .play-badge {
   display: inline-flex;
