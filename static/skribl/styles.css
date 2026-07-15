@@ -2150,17 +2150,23 @@ body:not(.player-mode) .canvas-wrap {
   background: rgba(124, 92, 255, 0.28);
   border: 1px solid rgba(124, 92, 255, 0.62);
   color: #d6ccff;
-  /* Pulse ONCE when this button appears. It sits where "Post to Skribl" was but
-     now watches instead of posts, so a single pulse flags the changed function.
-     The button is display:none until revealed, so the animation fires on reveal
-     and, at iteration-count 1, plays exactly once (not looping). */
-  animation: watchPulse 0.7s ease-out 1;
+  /* When this button appears it sits where "Post to Skribl" was but now watches
+     instead of posts. After a short delay (so the pulse reads as a separate
+     "notice me" beat rather than part of the reveal), the BORDER pulses once —
+     the button itself doesn't move. display:none until revealed, so it fires on
+     reveal; iteration-count 1 = exactly once. */
+  animation: watchBorderPulse 0.7s ease-in-out 0.45s 1;
 }
 
-@keyframes watchPulse {
-  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(124, 92, 255, 0.55); }
-  45%  { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(124, 92, 255, 0); }
-  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(124, 92, 255, 0); }
+/* Border-only pulse: brighten the border + a soft edge glow, then back. Only the
+   50% keyframe is defined, so the implicit 0%/100% use the element's own base
+   border (0.62 mobile / 0.74 desktop) — it returns cleanly at either breakpoint,
+   with no transform on the button. */
+@keyframes watchBorderPulse {
+  50% {
+    border-color: #9179ff;
+    box-shadow: 0 0 9px 1px rgba(124, 92, 255, 0.55);
+  }
 }
 
 /* Respect reduced-motion: keep the brighter styling, drop the pulse. */
