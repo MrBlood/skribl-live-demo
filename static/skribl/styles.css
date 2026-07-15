@@ -158,6 +158,20 @@ body {
   box-shadow: 0 3px 12px var(--accent-glow);
 }
 
+/* Crisper labels on the solid-purple (accent-filled) buttons: a tight dark
+   text-shadow separates the white text from the purple so the letters read
+   sharper. Dark-fill buttons are left out (the shadow is invisible there), and
+   the softer .post-watch chip is excluded so its light-purple text stays clean. */
+.btn.post,
+.post-submit:not(.post-watch),
+.btn.play.playing,
+.player-cta,
+.reposition-btn.active,
+.pending-btn,
+.restore-btn.confirm {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
 .rec-indicator[hidden] { display: none; }
 
 .rec-indicator {
