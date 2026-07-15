@@ -2966,7 +2966,7 @@ body.player-mode #canvas {
   transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.player-cta svg { width: 16px; height: 16px; }
+.player-cta .cta-star { font-size: 17px; line-height: 1; }
 .player-cta:hover {
   background: var(--accent-bright);
   transform: translateY(-1px);
