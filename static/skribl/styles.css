@@ -328,8 +328,14 @@ body:not(.player-mode) .canvas-wrap {
 /* ---------- Tabs ---------- */
 .tabs {
   display: flex;
-  border-top: 1px solid var(--hairline);
-  background: var(--surface-base);
+  margin: 12px 12px 0;
+  border: 1px solid var(--hairline);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  background: rgba(23, 26, 34, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow: hidden;
   position: relative;
   z-index: 30;
 }
@@ -417,7 +423,14 @@ body:not(.player-mode) .canvas-wrap {
 
 .tab-panel {
   padding: 18px;
-  background: var(--surface-raised);
+  margin: 0 12px 12px;
+  border: 1px solid var(--hairline);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  background: rgba(23, 26, 34, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.42);
   display: flex;
   flex-direction: column;
   gap: 16px;
