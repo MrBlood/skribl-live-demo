@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='53') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='54') }}">
 </head>
 <body>
 
@@ -105,6 +105,21 @@
           <span class="export-opt-desc" id="exportVideoDesc">Replay of your drawing with music</span>
         </div>
       </button>
+      <button type="button" class="export-opt" id="exportGif">
+        <div class="export-opt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+        </div>
+        <div class="export-opt-text">
+          <span class="export-opt-title">GIF (looping)</span>
+          <span class="export-opt-desc" id="exportGifDesc">Just the strokes, animated · silent</span>
+        </div>
+      </button>
+      <div class="export-gif-toggle" id="exportGifToggle">
+        <div class="gif-seg" role="group" aria-label="GIF background">
+          <button type="button" class="gif-seg-btn active" data-gif-bg="color">Background color</button>
+          <button type="button" class="gif-seg-btn" data-gif-bg="transparent">Transparent</button>
+        </div>
+      </div>
       <div class="export-progress" id="exportProgress" hidden>
         <div class="export-progress-bar"><div class="export-progress-fill" id="exportProgressFill"></div></div>
         <span class="export-progress-label" id="exportProgressLabel">Recording…</span>
@@ -884,6 +899,9 @@
        file is present the MP4 path stays dormant and video export falls back to
        the MediaRecorder (WebM/MP4) path — so a missing file never breaks export. -->
   <script src="{{ url_for('static', filename='skribl/mp4-muxer.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='53') }}" defer></script>
+  <!-- gifenc (vendored) enables the looping GIF export. Dormant until present:
+       the GIF option disables itself with a hint if this file is missing. -->
+  <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='54') }}" defer></script>
 </body>
 </html>
