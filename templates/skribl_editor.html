@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='51') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='52') }}">
 </head>
 <body>
 
@@ -880,6 +880,10 @@
     window.SKRIBL_MODE = "editor";
     window.SKRIBL_API_BASE = "/api/skribls";
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='51') }}" defer></script>
+  <!-- mp4-muxer (vendored) enables the WebCodecs H.264/AAC MP4 export. Until this
+       file is present the MP4 path stays dormant and video export falls back to
+       the MediaRecorder (WebM/MP4) path — so a missing file never breaks export. -->
+  <script src="{{ url_for('static', filename='skribl/mp4-muxer.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='52') }}" defer></script>
 </body>
 </html>
