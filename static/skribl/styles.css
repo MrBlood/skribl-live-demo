@@ -2122,7 +2122,10 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .export-sheet { gap: 4px; }
 
 @media (min-width: 641px) {
-  .export-sheet { width: 340px; }
+  /* Higher specificity than the generic `.menu-sheet { width: 220px }` (which
+     comes later in the file and would otherwise win at equal specificity) so the
+     export sheet is wide enough for its option text and the GIF toggle labels. */
+  .menu-sheet.export-sheet { width: 340px; }
 }
 
 .export-head {
