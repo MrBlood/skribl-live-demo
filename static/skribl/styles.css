@@ -381,9 +381,12 @@ body.stroking .zoom-hud { pointer-events: none; }
 }
 .zoom-hud .zoom-val:hover { background: var(--surface-control-hover); color: var(--text-primary); }
 .zoom-hud .zoom-val-input {
-  width: 40px;
+  width: 42px;
   text-align: center;
-  font-size: 11px;
+  /* 16px is the threshold below which iOS Safari zooms the whole PAGE on focus
+     (and doesn't reliably zoom back, stranding the user at a magnified screen).
+     Keep it exactly 16px — do NOT lower this. */
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   background: var(--surface-control);
@@ -411,6 +414,15 @@ body.stroking .zoom-hud { pointer-events: none; }
 .zoom-hud .zoom-fit svg { width: 17px; height: 17px; }
 /* At 100% the fit button is redundant — dim it so the pill reads as "no zoom". */
 .zoom-hud:not(.zoomed) .zoom-fit { opacity: 0.4; }
+
+/* Transparent tap-catcher shown while the zoom % is being typed — commits on
+   any tap outside the field (above the canvas so it never draws a stroke). */
+.zoom-edit-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: transparent;
+}
 
 /* Dashed snap-target ghost shown in the corner the pill will dock to. */
 .zoom-snap {
