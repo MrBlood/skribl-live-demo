@@ -4138,6 +4138,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
   const progressFill = document.getElementById('exportProgressFill');
   const progressLabel = document.getElementById('exportProgressLabel');
   const videoDesc = document.getElementById('exportVideoDesc');
+  const gifBtn = document.getElementById('exportGif');
+  const gifDesc = document.getElementById('exportGifDesc');
+  const gifToggle = document.getElementById('exportGifToggle');
+  let gifBgMode = 'color';   // 'color' | 'transparent'
   let closeTimer = null;
 
   function openExport() {
@@ -4158,6 +4162,23 @@ if (typeof pendingMusicMeta !== 'undefined') {
       }
     }
     pngBtn.disabled = !hasContent;
+    // GIF option: needs strokes AND the vendored gifenc library.
+    if (gifBtn) {
+      const gifReady = typeof window.gifenc !== 'undefined' && window.gifenc.GIFEncoder;
+      if (!strokes.length) {
+        gifBtn.disabled = true;
+        if (gifDesc) gifDesc.textContent = 'Record a drawing first to export a GIF';
+        if (gifToggle) gifToggle.hidden = true;
+      } else if (!gifReady) {
+        gifBtn.disabled = true;
+        if (gifDesc) gifDesc.textContent = 'Add gifenc.min.js to enable GIF export';
+        if (gifToggle) gifToggle.hidden = true;
+      } else {
+        gifBtn.disabled = false;
+        if (gifDesc) gifDesc.textContent = 'Just the strokes, animated · silent · loops';
+        if (gifToggle) gifToggle.hidden = false;
+      }
+    }
     progress.hidden = true;
     clearTimeout(closeTimer);
     overlay.hidden = false;
@@ -4182,6 +4203,108 @@ if (typeof pendingMusicMeta !== 'undefined') {
   // Mobile sheet handle closes too.
   const exportHandle = sheet ? sheet.querySelector('.menu-handle') : null;
   if (exportHandle) exportHandle.addEventListener('click', (e) => { e.stopPropagation(); closeExport(); });
+
+  // GIF background toggle (Background color | Transparent)
+  if (gifToggle) {
+    gifToggle.querySelectorAll('.gif-seg-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        gifBgMode = btn.getAttribute('data-gif-bg') || 'color';
+        gifToggle.querySelectorAll('.gif-seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
+      });
+    });
+  }
+
+  // ---- GIF export (strokes only; looping; silent) ------------------------
+  // Renders the SAME replay frames as the video path, but strokes-only (no
+  // photo) at a capped size/framerate, and encodes an animated GIF via the
+  // vendored `gifenc` global. Transparent mode keys out the background (GIF's
+  // 1-bit alpha → crisp for bold line art); color mode paints the pad's solid
+  // background (no fringe). Gated on gifenc; dormant/handled if absent.
+  async function exportGif() {
+    const G = window.gifenc;
+    if (!(G && G.GIFEncoder && G.quantize && G.applyPalette)) {
+      showToast('GIF export needs gifenc.min.js', null);
+      return;
+    }
+    const timeline = buildPlaybackTimeline();
+    if (!timeline.length) return;
+    const transparent = (gifBgMode === 'transparent');
+
+    // Cap output size so GIFs stay a sane weight (256-color, no inter-frame delta).
+    const dpr = window.devicePixelRatio || 1;
+    const logicalW = canvas.width / dpr, logicalH = canvas.height / dpr;
+    const MAX_EDGE = 480;
+    const scale = Math.min(1, MAX_EDGE / Math.max(logicalW, logicalH));
+    const outW = Math.max(2, Math.round(logicalW * scale));
+    const outH = Math.max(2, Math.round(logicalH * scale));
+
+    videoBtn.disabled = true; pngBtn.disabled = true; gifBtn.disabled = true;
+    progress.hidden = false; progressFill.style.width = '0%'; progressLabel.textContent = 'Rendering GIF…';
+
+    try {
+      // Strokes accumulate on a transparent canvas (the live canvas is already
+      // transparent — bg color/photo live behind it — so this is strokes-only).
+      const strokeCanvas = document.createElement('canvas'); strokeCanvas.width = canvas.width; strokeCanvas.height = canvas.height;
+      const sctx = strokeCanvas.getContext('2d'); sctx.scale(dpr, dpr);
+      const sDot = (x, y, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.arc(x, y, s / 2, 0, Math.PI * 2); sctx.fillStyle = er ? 'rgba(0,0,0,1)' : c; sctx.fill(); sctx.globalCompositeOperation = 'source-over'; };
+      const sLine = (x1, y1, x2, y2, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.moveTo(x1, y1); sctx.lineTo(x2, y2); sctx.strokeStyle = er ? 'rgba(0,0,0,1)' : c; sctx.lineWidth = s; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.stroke(); sctx.globalCompositeOperation = 'source-over'; };
+      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
+
+      // Seed prior strokes (pre-record snapshot is drawing-only on transparent).
+      if (preRecordSnapshot) {
+        await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, logicalW, logicalH); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
+      }
+
+      const out = document.createElement('canvas'); out.width = outW; out.height = outH;
+      const octx = out.getContext('2d');
+      function frameData() {
+        octx.clearRect(0, 0, outW, outH);
+        if (!transparent) { octx.fillStyle = bgColor || '#0d0f14'; octx.fillRect(0, 0, outW, outH); }
+        octx.drawImage(strokeCanvas, 0, 0, outW, outH);
+        return octx.getImageData(0, 0, outW, outH);
+      }
+
+      const enc = G.GIFEncoder();
+      const fps = 15, delay = Math.round(1000 / fps);
+      const totalMs = timeline[timeline.length - 1].playT || 0;
+      const holdMs = 600;
+      const totalFrames = Math.max(1, Math.ceil(((totalMs + holdMs) / 1000) * fps));
+      const fmt = transparent ? 'rgba4444' : 'rgb565';
+      let ti = 0;
+      for (let f = 0; f < totalFrames; f++) {
+        const elapsed = f * (1000 / fps);
+        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
+        else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
+        if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
+        const img = frameData();
+        const palette = G.quantize(img.data, 256, { format: fmt, oneBitAlpha: transparent });
+        const index = G.applyPalette(img.data, palette, fmt);
+        const opts = { palette, delay };
+        if (f === 0) opts.repeat = 0;                 // loop forever
+        if (transparent) {
+          let tIdx = palette.findIndex((c) => c.length > 3 && c[3] === 0);
+          if (tIdx < 0) tIdx = 0;
+          opts.transparent = true; opts.transparentIndex = tIdx; opts.dispose = 2;
+        }
+        enc.writeFrame(index, outW, outH, opts);
+        if ((f & 3) === 0) { progressFill.style.width = Math.min(95, (f / totalFrames) * 95) + '%'; await new Promise((r) => setTimeout(r, 0)); }
+      }
+      enc.finish();
+      const bytes = enc.bytes();
+      downloadBlob(new Blob([bytes], { type: 'image/gif' }), 'skribl.gif');
+      progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
+      showToast('GIF exported', null);
+      videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
+      setTimeout(closeExport, 800);
+    } catch (err) {
+      console.error('GIF export failed:', err);
+      showToast('GIF export failed', null);
+      progress.hidden = true;
+      videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
+    }
+  }
+
+  if (gifBtn) gifBtn.addEventListener('click', () => { exportGif(); });
 
   // ---- Build a flattened composite of bg color + photo + drawing ----
   function drawComposite(targetCtx, w, h) {
