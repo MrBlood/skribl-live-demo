@@ -5857,6 +5857,7 @@ window.addEventListener('touchcancel', _pinchEnd);
     if (zin) zin.disabled = zoom >= MAX - 0.001;
     if (zout) zout.disabled = zoom <= MIN + 0.001;
     if (animate) setTimeout(function () { layer.classList.remove('zoom-anim'); }, 200);
+    if (typeof maybePanHint === 'function') maybePanHint();
   }
 
   ZoomView = {
@@ -6041,6 +6042,56 @@ window.addEventListener('touchcancel', _pinchEnd);
   }
   grip.addEventListener('mousedown', gripStart);
   grip.addEventListener('touchstart', gripStart, { passive: false });
+
+  // --- Desktop pan (touch already pans with two fingers) --------------------
+  // Both paths only act while zoomed, so at 100% nothing changes.
+  const finePointer = !!(window.matchMedia && window.matchMedia('(pointer: fine)').matches);
+  let panHintShown = false;
+  function maybePanHint() {
+    if (panHintShown || !finePointer || zoom <= 1.001) return;
+    panHintShown = true;
+    if (typeof showToast === 'function') showToast('Scroll — or hold Space and drag — to move around', null);
+  }
+
+  // Scroll wheel pans the magnified view (Shift+wheel → horizontal).
+  canvasWrap.addEventListener('wheel', function (e) {
+    if (zoom <= 1) return;
+    e.preventDefault();
+    let dx = e.deltaX, dy = e.deltaY;
+    if (e.shiftKey && dx === 0) { dx = dy; dy = 0; }
+    panX -= dx; panY -= dy;
+    render(false);
+  }, { passive: false });
+
+  // Hold Space and drag to grab-pan.
+  let spaceHeld = false, spaceDragging = false, lastX = 0, lastY = 0;
+  function typingTarget(el) { return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable); }
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && !typingTarget(e.target)) {
+      spaceHeld = true;
+      if (zoom > 1) { e.preventDefault(); canvasWrap.style.cursor = spaceDragging ? 'grabbing' : 'grab'; }
+    }
+  });
+  window.addEventListener('keyup', function (e) {
+    if (e.code === 'Space') { spaceHeld = false; spaceDragging = false; canvasWrap.style.cursor = ''; }
+  });
+  // Capture phase so a Space-drag claims the mousedown before startDraw fires.
+  canvasWrap.addEventListener('mousedown', function (e) {
+    if (spaceHeld && zoom > 1) {
+      spaceDragging = true; lastX = e.clientX; lastY = e.clientY;
+      canvasWrap.style.cursor = 'grabbing';
+      e.preventDefault(); e.stopPropagation();
+    }
+  }, true);
+  window.addEventListener('mousemove', function (e) {
+    if (!spaceDragging) return;
+    panX += e.clientX - lastX; panY += e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    render(false);
+  });
+  window.addEventListener('mouseup', function () {
+    if (spaceDragging) { spaceDragging = false; canvasWrap.style.cursor = spaceHeld ? 'grab' : ''; }
+  });
 
   render(false);
 })();
