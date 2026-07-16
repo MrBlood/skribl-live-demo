@@ -2179,10 +2179,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .export-opt-desc { font-size: 11.5px; color: var(--text-muted); }
 
-/* GIF background toggle (segmented) — sits under the GIF option, full width */
+/* GIF background toggle (segmented) — uses the shared sliding-pill highlight
+   (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
+   controls. Full width so both labels fit. */
 .export-gif-toggle { padding: 2px 14px 10px; }
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
+  position: relative;
+  overflow: hidden;
   display: flex;
   width: 100%;
   gap: 2px;
@@ -2192,6 +2196,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 999px;
 }
 .gif-seg-btn {
+  position: relative;
+  z-index: 1;
   flex: 1 1 0;
   min-width: 0;
   text-align: center;
@@ -2205,9 +2211,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
 }
-.gif-seg-btn.active { background: var(--accent); color: #fff; }
+.gif-seg-btn.active { color: #fff; }
 
 .export-progress { padding: 8px 14px 4px; }
 .export-progress[hidden] { display: none; }
