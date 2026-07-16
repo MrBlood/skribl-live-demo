@@ -5564,16 +5564,25 @@ window.addEventListener('touchcancel', _pinchEnd);
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.inputMode = 'numeric';
+    inp.setAttribute('enterkeyhint', 'done');
     inp.maxLength = 4;
     inp.className = 'zoom-val-input';
     inp.value = String(cur);
     valEl.appendChild(inp);
+    // Transparent backdrop over the canvas: guarantees a tap anywhere else
+    // commits and dismisses the keypad WITHOUT starting a stroke. Needed because
+    // the canvas's touchstart preventDefault (iOS especially) otherwise swallows
+    // the input's blur, stranding the field open.
+    const backdrop = document.createElement('div');
+    backdrop.className = 'zoom-edit-backdrop';
+    canvasWrap.appendChild(backdrop);
     inp.focus();
     inp.select();
     let done = false;
     function commit(apply) {
       if (done) return;
       done = true;
+      if (backdrop.parentNode) backdrop.remove();
       const n = apply ? parseInt(inp.value, 10) : NaN;
       if (!isNaN(n)) {
         ZoomView.setPct(n);        // render() inside rewrites the label (drops input)
@@ -5582,6 +5591,7 @@ window.addEventListener('touchcancel', _pinchEnd);
         render(false);             // restore the "N%" label unchanged
       }
     }
+    backdrop.addEventListener('pointerdown', function (e) { e.preventDefault(); commit(true); });
     inp.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); commit(true); }
       else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
