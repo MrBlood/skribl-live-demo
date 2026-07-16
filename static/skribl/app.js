@@ -22,6 +22,8 @@ canvasWrap.appendChild(eraserCursor);
 let bgColor = '#0d0f14';
 let photoBg = null;
 let photoFit = 'cover';
+let photoEnabled = true;   // Image on/off toggle
+let musicEnabled = true;   // Music on/off toggle
 let photoOpacityVal_ = 1;
 let photoBlur_ = 0;
 let photoOffsetX = 0.5, photoOffsetY = 0.5; // Fill-mode crop position (0..1 each)
@@ -468,6 +470,14 @@ function startDraw(e) {
   // fire the lock toast, or create an undo entry. Ignored during recording so a
   // take is never blocked.
   if (repositioning && !recording) { beginPhotoDrag(e); return; }
+  // Tapping the canvas while a drawer is open just dismisses it (no stray dot).
+  // After the eyedropper/reposition checks so those keep working.
+  if (!document.getElementById('drawPanel').hidden ||
+      !document.getElementById('musicPanel').hidden ||
+      !document.getElementById('photoPanel').hidden) {
+    openDrawer(null);
+    return;
+  }
   // Post-record lock: the completed replay can't be drawn over.
   if (finishedRecording && !recording) {
     if (!lockToastShown) {
@@ -940,7 +950,8 @@ function openDrawer(name) {                      // name = 'draw'|'photo'|'music
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
-document.getElementById('toolBar').addEventListener('click', (e) => {
+const toolBarEl = document.getElementById('toolBar');
+if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
   if (!btn) return;                              // pen/eraser use their own setTool binding
   const name = btn.dataset.drawer;
@@ -1231,7 +1242,7 @@ playBtn.addEventListener('click', () => {
   }
 
   clearAndRestore(() => {
-    if (audioEl) {
+    if (audioEl && musicEnabled) {
       playMusicLooped(totalDuration, startDrawing);
     } else {
       startDrawing();
@@ -1993,6 +2004,7 @@ musicInput.addEventListener('change', (e) => {
     musicDetail.hidden = false;
     musicUploadBtn.classList.add('loaded');
     musicBtnLabel.textContent = file.name;
+    resetMusicToggle();
     musicTabDot.hidden = false;
     document.getElementById('musicRemove').hidden = false;
     updateTrimUI();
@@ -2771,6 +2783,7 @@ photoInput.addEventListener('change', (e) => {
   photoBgImg._fileName = file.name;
   document.getElementById('photoDetail').hidden = false;
   photoUploadBtn.classList.add('loaded');
+  resetPhotoToggle();
   document.getElementById('photoTabDot').hidden = false;
   document.getElementById('photoRemove').hidden = false;
   setTimeout(initPhotoFitSlider, 50);
@@ -3468,7 +3481,7 @@ function serializeSkribl() {
     photo: photoBgImg && photoBgImg._draftData && photoBgImg.style.display !== 'none'
       ? { data: photoBgImg._draftData, name: photoBgImg._fileName || null, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : null,
-    music: audioEl && audioEl._objectUrl
+    music: audioEl && audioEl._objectUrl && musicEnabled
       ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
       : null
   };
@@ -5298,4 +5311,30 @@ if (typeof pendingMusicMeta !== 'undefined') {
 
   setPlayIcon();
   setProgress(0);
+})();
+
+// ---------- Image / Music on-off toggles ----------
+function syncLayerToggle(el, on) {
+  if (!el) return;
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-checked', String(on));
+}
+function resetPhotoToggle() { photoEnabled = true; syncLayerToggle(document.getElementById('photoToggle'), true); }
+function resetMusicToggle() { musicEnabled = true; syncLayerToggle(document.getElementById('musicToggle'), true); }
+(function initLayerToggles() {
+  const pt = document.getElementById('photoToggle');
+  if (pt) pt.addEventListener('click', (e) => {
+    e.stopPropagation();
+    photoEnabled = !photoEnabled;
+    syncLayerToggle(pt, photoEnabled);
+    if (photoBgImg) photoBgImg.style.display = (photoEnabled && photoBgImg.src) ? 'block' : 'none';
+    if (typeof updateRepositionUI === 'function') updateRepositionUI();
+  });
+  const mt = document.getElementById('musicToggle');
+  if (mt) mt.addEventListener('click', (e) => {
+    e.stopPropagation();
+    musicEnabled = !musicEnabled;
+    syncLayerToggle(mt, musicEnabled);
+    if (!musicEnabled && audioEl) audioEl.pause();
+  });
 })();
