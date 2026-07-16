@@ -377,6 +377,22 @@ body.stroking .zoom-hud { pointer-events: none; }
   font-variant-numeric: tabular-nums;
   border-top: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
+  cursor: text;
+}
+.zoom-hud .zoom-val:hover { background: var(--surface-control-hover); color: var(--text-primary); }
+.zoom-hud .zoom-val-input {
+  width: 40px;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background: var(--surface-control);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  outline: none;
+  padding: 1px 0;
+  margin: 0;
+  -moz-appearance: textfield;
 }
 
 .zoom-hud .zoom-fit {
