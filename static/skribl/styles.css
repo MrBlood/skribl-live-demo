@@ -2179,6 +2179,31 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .export-opt-desc { font-size: 11.5px; color: var(--text-muted); }
 
+/* GIF background toggle (segmented) — sits under the GIF option */
+.export-gif-toggle { padding: 2px 4px 8px 64px; }
+.export-gif-toggle[hidden] { display: none; }
+.gif-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgb(23, 27, 35);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+.gif-seg-btn {
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.gif-seg-btn.active { background: var(--accent); color: #fff; }
+
 .export-progress { padding: 8px 14px 4px; }
 .export-progress[hidden] { display: none; }
 
