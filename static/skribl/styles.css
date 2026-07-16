@@ -3122,3 +3122,12 @@ body.player-mode #canvas {
 .music-dropzone.loaded #musicBtnLabel, .music-dropzone.loaded > span { flex: 1 1 auto; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .layer-toggle[aria-checked="false"] { opacity: 1; }
+
+
+/* ---------- Brush size slider (inline with Smoothing) ---------- */
+.brush-slider-line { display: flex; align-items: center; gap: 10px; width: 100%; }
+.brush-slider-line .slider-nudge-wrap { flex: 1; min-width: 0; }
+/* smoothing pill: buttons fill the container so it isn't stretched with empty space */
+.draw-inline .smooth-seg { width: 100%; margin-left: 0; }
+.draw-inline .smooth-seg .smooth-btn { flex: 1; }
+@media (max-width: 560px) { .draw-inline { flex-direction: column; gap: 14px; } .draw-inline > * { width: 100%; } }
