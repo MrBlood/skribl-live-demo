@@ -4171,7 +4171,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
         if (gifToggle) gifToggle.hidden = true;
       } else if (!gifReady) {
         gifBtn.disabled = true;
-        if (gifDesc) gifDesc.textContent = 'Add gifenc.min.js to enable GIF export';
+        if (gifDesc) gifDesc.textContent = 'GIF encoder didn’t load — check your connection';
         if (gifToggle) gifToggle.hidden = true;
       } else {
         gifBtn.disabled = false;
