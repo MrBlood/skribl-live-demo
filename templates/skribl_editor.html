@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='45') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='46') }}">
 </head>
 <body>
 
@@ -644,12 +644,10 @@
 
         
 
-        <span class="draw-section-label" id="brushSizeLabel">Brush sizes</span>
-        <div class="size-group" id="sizeGroup">
-          <button type="button" class="size-btn" data-size="2" aria-label="Brush size extra small"><span style="width:7px;height:7px"></span></button>
-          <button type="button" class="size-btn active" data-size="5" aria-label="Brush size small"><span style="width:11px;height:11px"></span></button>
-          <button type="button" class="size-btn" data-size="10" aria-label="Brush size medium"><span style="width:15px;height:15px"></span></button>
-          <button type="button" class="size-btn" data-size="20" aria-label="Brush size large"><span style="width:20px;height:20px"></span></button>
+        <span class="draw-section-label" id="brushSizeLabel">Brush size</span>
+        <div class="brush-slider-line">
+          <input type="range" id="brushSizeRange" class="slider" min="1" max="30" value="5" step="1" aria-label="Brush size">
+          <span class="prop-val" id="brushSizeVal">5px</span>
         </div>
       </div>
         <div class="prop-row">
@@ -865,6 +863,6 @@
     window.SKRIBL_MODE = "editor";
     window.SKRIBL_API_BASE = "/api/skribls";
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='45') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='46') }}" defer></script>
 </body>
 </html>
