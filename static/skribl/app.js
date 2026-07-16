@@ -673,15 +673,19 @@ function updateCurrentColorChip() {
 }
 updateCurrentColorChip();
 
-document.getElementById('sizeGroup').addEventListener('click', (e) => {
-  const btn = e.target.closest('.size-btn');
-  if (!btn) return;
-  size = parseInt(btn.dataset.size, 10);
-  document.querySelectorAll('.size-btn').forEach(b => {
-    b.classList.toggle('active', b === btn);
-    b.style.background = '';
-  });
-});
+(function initBrushSize() {
+  const range = document.getElementById('brushSizeRange');
+  const val = document.getElementById('brushSizeVal');
+  if (!range) return;
+  if (typeof addSliderNudgers === 'function') addSliderNudgers(range, { step: 1 });
+  const apply = () => {
+    size = parseInt(range.value, 10) || 1;
+    if (val) val.textContent = size + 'px';
+    if (typeof updateSliderFill === 'function') updateSliderFill(range);
+  };
+  range.addEventListener('input', apply);
+  apply();
+})();
 
 document.getElementById('bgGroup').addEventListener('click', (e) => {
   const btn = e.target.closest('.bg-swatch');
