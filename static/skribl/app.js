@@ -5538,12 +5538,56 @@ window.addEventListener('touchcancel', _pinchEnd);
       this.zoomAt(nz / zoom, w / 2, h / 2);
       render(true);
     },
-    fit: function () { zoom = 1; panX = 0; panY = 0; render(true); }
+    fit: function () { zoom = 1; panX = 0; panY = 0; render(true); },
+    // Set an exact zoom percentage (from the type-in field), about the viewport
+    // center, clamped to the allowed range.
+    setPct: function (pct) {
+      const s = wrapSize();
+      const target = Math.min(MAX, Math.max(MIN, (pct || 0) / 100));
+      this.zoomAt(target / zoom, s.w / 2, s.h / 2);
+      render(true);
+    }
   };
 
   document.getElementById('zoomInBtn').addEventListener('click', function () { ZoomView.step(1); });
   document.getElementById('zoomOutBtn').addEventListener('click', function () { ZoomView.step(-1); });
   document.getElementById('zoomFitBtn').addEventListener('click', function () { ZoomView.fit(); });
+
+  // Click the % to type an exact zoom — the precise path for desktop (no pinch),
+  // and a numeric-keypad shortcut on touch. Enter/blur commits, Escape cancels.
+  const valEl = document.getElementById('zoomVal');
+  valEl.title = 'Click to type a zoom %';
+  valEl.addEventListener('click', function () {
+    if (valEl.querySelector('input')) return;               // already editing
+    const cur = Math.round(ZoomView.get().zoom * 100);
+    valEl.textContent = '';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = 'numeric';
+    inp.maxLength = 4;
+    inp.className = 'zoom-val-input';
+    inp.value = String(cur);
+    valEl.appendChild(inp);
+    inp.focus();
+    inp.select();
+    let done = false;
+    function commit(apply) {
+      if (done) return;
+      done = true;
+      const n = apply ? parseInt(inp.value, 10) : NaN;
+      if (!isNaN(n)) {
+        ZoomView.setPct(n);        // render() inside rewrites the label (drops input)
+      } else {
+        if (inp.parentNode) inp.remove();
+        render(false);             // restore the "N%" label unchanged
+      }
+    }
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+    });
+    inp.addEventListener('blur', function () { commit(true); });
+  });
 
   // Re-clamp on resize/rotate (viewport bounds change under a live zoom).
   window.addEventListener('resize', function () { if (zoom > 1) render(false); });
