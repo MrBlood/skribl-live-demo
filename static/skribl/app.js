@@ -2880,13 +2880,22 @@ function updateRepositionUI() {
   const btn = document.getElementById('repositionBtn');
   if (!btn) return;
   const loaded = photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src;
-  const ok = !!loaded && photoFit === 'cover' && !recording;
-  btn.hidden = !ok;
-  const hint = document.getElementById('repositionHint');
-  if (hint) hint.hidden = !ok;
+  const available = !!loaded && photoFit === 'cover';   // show whenever Fill + image loaded
+  const enabled = available && !recording;              // interactive only before you draw
+  btn.hidden = !available;
+  btn.disabled = !enabled;
   const zoomRow = document.getElementById('photoZoomRow');
-  if (zoomRow) zoomRow.hidden = !ok;
-  if (!ok && repositioning) exitReposition();
+  if (zoomRow) zoomRow.hidden = !available;
+  const zoom = document.getElementById('photoZoom');
+  if (zoom) zoom.disabled = !enabled;
+  const hint = document.getElementById('repositionHint');
+  if (hint) {
+    hint.hidden = !available;
+    hint.textContent = enabled
+      ? 'In Fill, parts of your image may be cropped. Drag the image to choose which part shows behind your drawing.'
+      : 'Stop recording to reposition the image.';
+  }
+  if (!enabled && repositioning) exitReposition();
 }
 
 // Clamp a restored zoom to the valid 1..3 range — a bad/hand-edited draft or
