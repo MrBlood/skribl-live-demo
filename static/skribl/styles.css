@@ -288,6 +288,125 @@ body:not(.player-mode) .canvas-wrap {
   z-index: 1;
 }
 
+/* ===== Canvas magnify (editor only) =========================================
+   The zoom-layer wraps the photo + drawing and is the ONLY thing transformed
+   (scale + pan). .canvas-wrap stays fixed-size with overflow:hidden as the
+   viewport clip, so strokes/replay never distort — the drawing's coordinate
+   space is untouched, only the display magnifies. */
+.zoom-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  /* no transition: pinch/pan must track the finger 1:1. Button/fit steps get a
+     short transition via .zoom-anim below. */
+}
+.zoom-layer.zoom-anim { transition: transform 0.16s var(--ease); }
+
+/* While a stroke is active, let mouse events fall through the pill to the
+   canvas underneath (touch already stays captured on the canvas). */
+body.stroking .zoom-hud { pointer-events: none; }
+
+.zoom-hud {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: 46px;
+  background: rgba(19, 22, 28, 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  opacity: 1;
+  transition: opacity 0.25s var(--ease), box-shadow 0.15s var(--ease);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Corner docking — JS sets data-corner; inline left/top override while dragging. */
+.zoom-hud[data-corner="br"] { right: 12px;  bottom: 12px; }
+.zoom-hud[data-corner="bl"] { left: 12px;   bottom: 12px; }
+.zoom-hud[data-corner="tr"] { right: 12px;  top: 12px; }
+.zoom-hud[data-corner="tl"] { left: 12px;   top: 12px; }
+.zoom-hud.dragging {
+  opacity: 0.9;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--accent);
+  transition: box-shadow 0.15s var(--ease);
+}
+
+.zoom-hud .zoom-grip {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.14), rgba(124, 92, 255, 0));
+  border-bottom: 1px solid var(--hairline);
+  cursor: grab;
+  touch-action: none;
+}
+.zoom-hud.dragging .zoom-grip { cursor: grabbing; }
+.zoom-hud .zoom-grip svg { width: 19px; height: 19px; }
+
+.zoom-hud .zoom-btn {
+  height: 44px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.zoom-hud .zoom-btn:active { background: var(--surface-control-hover); }
+.zoom-hud .zoom-btn:disabled { color: var(--text-dim); cursor: default; }
+.zoom-hud .zoom-btn:disabled:active { background: none; }
+
+.zoom-hud .zoom-val {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.zoom-hud .zoom-fit {
+  height: 44px;
+  border: none;
+  background: none;
+  color: var(--accent-bright);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--hairline);
+  padding: 0;
+}
+.zoom-hud .zoom-fit:active { background: var(--surface-control-hover); }
+.zoom-hud .zoom-fit svg { width: 17px; height: 17px; }
+/* At 100% the fit button is redundant — dim it so the pill reads as "no zoom". */
+.zoom-hud:not(.zoomed) .zoom-fit { opacity: 0.4; }
+
+/* Dashed snap-target ghost shown in the corner the pill will dock to. */
+.zoom-snap {
+  position: absolute;
+  z-index: 5;
+  width: 46px;
+  border-radius: 16px;
+  border: 2px dashed rgba(124, 92, 255, 0.55);
+  background: rgba(124, 92, 255, 0.06);
+  pointer-events: none;
+}
+
 .canvas-empty-hint {
   position: absolute;
   inset: 0;
@@ -479,7 +598,8 @@ body:not(.player-mode) .canvas-wrap {
    island keeps its space, so the canvas never resizes mid-playback. */
 .toolbar, .tab-panel { transition: opacity 0.3s ease; }
 body.replaying .toolbar,
-body.replaying .tab-panel { opacity: 0; pointer-events: none; }
+body.replaying .tab-panel,
+body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 /* ---------- Draw panel ---------- */
 .brush-size-inline {
