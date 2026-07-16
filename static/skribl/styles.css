@@ -3084,3 +3084,17 @@ body.player-mode #canvas {
 }
 .size-btn span { background: #cdd3de; }              /* brighter dots so the small one reads */
 .size-btn.active span { background: #fff; }
+
+
+/* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
+@media (max-width: 640px) {
+  .toolbar { gap: 2px; padding: 6px; }
+  .tool-btn-label { display: none; }               /* pen/eraser become icon-only */
+  #toolGroup .tool-btn { padding: 8px 10px; }
+  .tool-open, .toolbar .undo-btn { width: 38px; }
+  .tool-sep { margin: 0 2px; }
+}
+
+/* ---------- Reposition: visible-but-locked after you draw ---------- */
+.reposition-btn:disabled { opacity: .45; cursor: default; }
+.photo-opacity-row input:disabled { opacity: .4; cursor: default; }
