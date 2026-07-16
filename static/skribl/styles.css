@@ -3131,3 +3131,15 @@ body.player-mode #canvas {
 .draw-inline .smooth-seg { width: 100%; margin-left: 0; }
 .draw-inline .smooth-seg .smooth-btn { flex: 1; }
 @media (max-width: 560px) { .draw-inline { flex-direction: column; gap: 14px; } .draw-inline > * { width: 100%; } }
+
+
+/* ---------- Brush size: rounded tray + snug value + preview dot ---------- */
+.brush-slider-line {
+  background: rgba(255,255,255,.045);
+  border: 1px solid var(--hairline);
+  border-radius: 13px;
+  padding: 9px 12px;
+}
+.brush-slider-line .prop-val { width: auto; text-align: left; flex: none; }
+.brush-dot-cell { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; }
+.brush-dot { background: #fff; border-radius: 50%; flex: none; }
