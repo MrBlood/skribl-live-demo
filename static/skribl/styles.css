@@ -2179,11 +2179,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .export-opt-desc { font-size: 11.5px; color: var(--text-muted); }
 
-/* GIF background toggle (segmented) — sits under the GIF option */
-.export-gif-toggle { padding: 2px 4px 8px 64px; }
+/* GIF background toggle (segmented) — sits under the GIF option, full width */
+.export-gif-toggle { padding: 2px 14px 10px; }
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   gap: 2px;
   padding: 3px;
   background: rgb(23, 27, 35);
@@ -2191,12 +2192,16 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 999px;
 }
 .gif-seg-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
   border: none;
   background: none;
   color: var(--text-secondary);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 6px 8px;
   border-radius: 999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
