@@ -4212,6 +4212,9 @@ if (typeof pendingMusicMeta !== 'undefined') {
         gifToggle.querySelectorAll('.gif-seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
       });
     });
+    // Same sliding-pill highlight as the smoothing/focus/magnifier segments.
+    const gifSeg = gifToggle.querySelector('.gif-seg');
+    if (gifSeg && typeof attachSegSlider === 'function') attachSegSlider(gifSeg);
   }
 
   // ---- GIF export (strokes only; looping; silent) ------------------------
