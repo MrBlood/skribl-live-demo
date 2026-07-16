@@ -4182,7 +4182,18 @@ if (typeof pendingMusicMeta !== 'undefined') {
     progress.hidden = true;
     clearTimeout(closeTimer);
     overlay.hidden = false;
-    requestAnimationFrame(() => overlay.classList.add('open'));
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+      // Re-measure the GIF toggle's sliding pill now that the sheet has real
+      // layout — the observers can miss this on reopen, leaving the pill wrongly
+      // sized. A rAF after reveal guarantees correct button widths.
+      if (gifToggle && !gifToggle.hidden) {
+        const seg = gifToggle.querySelector('.gif-seg');
+        if (seg && typeof positionSegSlider === 'function') {
+          requestAnimationFrame(() => positionSegSlider(seg));
+        }
+      }
+    });
   }
   function closeExport() {
     overlay.classList.remove('open');
