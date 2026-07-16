@@ -2182,7 +2182,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 /* GIF background toggle (segmented) — uses the shared sliding-pill highlight
    (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
    controls. Full width so both labels fit. */
-.export-gif-toggle { padding: 2px 14px 10px; }
+.export-gif-toggle { width: 100%; padding: 2px 14px 10px; }
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
   position: relative;
