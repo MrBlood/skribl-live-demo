@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='54') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='55') }}">
 </head>
 <body>
 
@@ -899,9 +899,14 @@
        file is present the MP4 path stays dormant and video export falls back to
        the MediaRecorder (WebM/MP4) path — so a missing file never breaks export. -->
   <script src="{{ url_for('static', filename='skribl/mp4-muxer.min.js') }}" defer></script>
-  <!-- gifenc (vendored) enables the looping GIF export. Dormant until present:
-       the GIF option disables itself with a hint if this file is missing. -->
-  <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='54') }}" defer></script>
+  <!-- gifenc (GIF encoder) is ESM-only, so load it as a module from the CDN and
+       expose its named exports as a global for app.js. No file to vendor. If the
+       load fails (offline/CDN down), window.gifenc stays undefined and the GIF
+       option simply disables itself with a hint — nothing else breaks. -->
+  <script type="module">
+    import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
+    window.gifenc = { GIFEncoder, quantize, applyPalette };
+  </script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='55') }}" defer></script>
 </body>
 </html>
