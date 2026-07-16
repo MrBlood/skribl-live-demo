@@ -682,7 +682,7 @@ updateCurrentColorChip();
     size = parseInt(range.value, 10) || 1;
     if (val) val.textContent = size + 'px';
     const dot = document.getElementById('brushSizeDot');
-    if (dot) { dot.style.width = size + 'px'; dot.style.height = size + 'px'; }
+    if (dot) { const d = Math.min(size, 22); dot.style.width = d + 'px'; dot.style.height = d + 'px'; }
     if (typeof updateSliderFill === 'function') updateSliderFill(range);
   };
   range.addEventListener('input', apply);
