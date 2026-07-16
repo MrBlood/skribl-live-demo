@@ -4219,6 +4219,170 @@ if (typeof pendingMusicMeta !== 'undefined') {
     }, 'image/png');
   });
 
+  // ---- MP4 export via WebCodecs + mp4-muxer (Route A) --------------------
+  // Produces a real H.264/AAC MP4 by stepping the SAME replay core frame-by-
+  // frame into a VideoEncoder and looping the baked WAV into an AudioEncoder,
+  // muxed by the vendored `Mp4Muxer` global. Everything is capability-gated:
+  // if WebCodecs, the codecs, or the muxer aren't present it returns false and
+  // the caller falls back to the MediaRecorder path — so this is never worse
+  // than today, and stays dormant until mp4-muxer is deployed.
+  async function pickAvcCodec(w, h) {
+    if (typeof VideoEncoder === 'undefined' || !VideoEncoder.isConfigSupported) return null;
+    const cands = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.42e01e'];
+    for (const c of cands) {
+      try {
+        const r = await VideoEncoder.isConfigSupported({ codec: c, width: w, height: h, bitrate: 6000000, framerate: 30 });
+        if (r && r.supported) return c;
+      } catch (e) {}
+    }
+    return null;
+  }
+  async function aacSupported(sr, ch) {
+    if (typeof AudioEncoder === 'undefined' || !AudioEncoder.isConfigSupported) return false;
+    try {
+      const r = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: sr, numberOfChannels: ch, bitrate: 128000 });
+      return !!(r && r.supported);
+    } catch (e) { return false; }
+  }
+
+  async function exportViaWebCodecsMp4() {
+    // ---- capability pre-check (NO UI side effects; false ⇒ clean fallback) ----
+    const MM = window.Mp4Muxer;
+    if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
+    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
+    const w = canvas.width & ~1, h = canvas.height & ~1;   // encoders want even dims
+    if (w < 2 || h < 2) return false;
+    const avcCodec = await pickAvcCodec(w, h);
+    if (!avcCodec) return false;
+    const timeline = buildPlaybackTimeline();
+    if (!timeline.length) return false;
+
+    // Audio: only if the Skribl has enabled music. If it does but we can't
+    // AAC-encode, decline so the MediaRecorder fallback keeps the audio rather
+    // than us shipping a silent MP4.
+    const hasAudio = !!(audioEl && (audioEl._objectUrl || audioEl.src)) &&
+                     (typeof musicEnabled === 'undefined' ? true : musicEnabled);
+    let audioBuf = null, useAudio = false;
+    if (hasAudio) {
+      try {
+        const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
+        if (built && built.dataUrl) {
+          const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
+          audioBuf = await tmpCtx.decodeAudioData(ab);
+          try { tmpCtx.close(); } catch (e) {}
+          useAudio = await aacSupported(audioBuf.sampleRate, audioBuf.numberOfChannels);
+        }
+      } catch (e) { audioBuf = null; useAudio = false; }
+      if (!useAudio) return false;
+    }
+
+    // ---- commit: from here we own the export UI ----
+    videoBtn.disabled = true; pngBtn.disabled = true;
+    progress.hidden = false; progressFill.style.width = '0%'; progressLabel.textContent = 'Preparing…';
+    const cleanup = () => { videoBtn.disabled = false; pngBtn.disabled = false; };
+
+    try {
+      const muxer = new MM.Muxer({
+        target: new MM.ArrayBufferTarget(),
+        video: { codec: 'avc', width: w, height: h },
+        audio: useAudio ? { codec: 'aac', numberOfChannels: audioBuf.numberOfChannels, sampleRate: audioBuf.sampleRate } : undefined,
+        fastStart: 'in-memory'    // moov at front → immediately playable file
+      });
+      let encErr = null;
+      const vEnc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { encErr = e; } });
+      vEnc.configure({ codec: avcCodec, width: w, height: h, bitrate: 6000000, framerate: 30 });
+      let aEnc = null;
+      if (useAudio) {
+        aEnc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { encErr = e; } });
+        aEnc.configure({ codec: 'mp4a.40.2', numberOfChannels: audioBuf.numberOfChannels, sampleRate: audioBuf.sampleRate, bitrate: 128000 });
+      }
+
+      // Offscreen frame renderer (mirrors renderFrameUpTo in the MediaRecorder path).
+      const rec = document.createElement('canvas'); rec.width = w; rec.height = h;
+      const rctx = rec.getContext('2d');
+      const strokeCanvas = document.createElement('canvas'); strokeCanvas.width = w; strokeCanvas.height = h;
+      const sctx = strokeCanvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1; sctx.scale(dpr, dpr);
+      const sDot = (x, y, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.arc(x, y, s / 2, 0, Math.PI * 2); sctx.fillStyle = er ? 'rgba(0,0,0,1)' : c; sctx.fill(); sctx.globalCompositeOperation = 'source-over'; };
+      const sLine = (x1, y1, x2, y2, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.moveTo(x1, y1); sctx.lineTo(x2, y2); sctx.strokeStyle = er ? 'rgba(0,0,0,1)' : c; sctx.lineWidth = s; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.stroke(); sctx.globalCompositeOperation = 'source-over'; };
+      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
+      function composite() {
+        rctx.fillStyle = bgColor || '#0d0f14'; rctx.fillRect(0, 0, w, h);
+        if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
+          rctx.save(); rctx.globalAlpha = (photoOpacityVal_ != null ? photoOpacityVal_ : 1);
+          if (photoBlur_ > 0 && 'filter' in rctx) rctx.filter = 'blur(' + photoBlur_ + 'px)';
+          drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
+          rctx.restore();
+        }
+        rctx.drawImage(strokeCanvas, 0, 0, w, h);
+      }
+
+      // Seed the pre-record base drawing, if any.
+      if (preRecordSnapshot) {
+        await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, w / dpr, h / dpr); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
+      }
+
+      const fps = 30, frameDurUs = 1000000 / fps;
+      const totalMs = timeline[timeline.length - 1].playT || 0;
+      const holdMs = 700;
+      const totalFrames = Math.max(1, Math.ceil(((totalMs + holdMs) / 1000) * fps));
+      progressLabel.textContent = 'Encoding…';
+      let ti = 0;
+      for (let f = 0; f < totalFrames; f++) {
+        const elapsed = f * (1000 / fps);
+        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
+        else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
+        if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
+        composite();
+        const vf = new VideoFrame(rec, { timestamp: Math.round(f * frameDurUs), duration: Math.round(frameDurUs) });
+        vEnc.encode(vf, { keyFrame: (f % (fps * 2)) === 0 });
+        vf.close();
+        if (encErr) throw encErr;
+        if (vEnc.encodeQueueSize > 8) { await new Promise(r => setTimeout(r, 0)); }
+        if ((f & 7) === 0) { progressFill.style.width = Math.min(85, (f / totalFrames) * 85) + '%'; await new Promise(r => setTimeout(r, 0)); }
+      }
+      await vEnc.flush();
+
+      // Audio: tile the baked loop across the full duration, encode in blocks.
+      if (useAudio && aEnc) {
+        progressLabel.textContent = 'Encoding audio…';
+        const sr = audioBuf.sampleRate, ch = audioBuf.numberOfChannels, loopLen = audioBuf.length;
+        const chans = []; for (let c = 0; c < ch; c++) chans.push(audioBuf.getChannelData(c));
+        const totalSamples = Math.ceil(((totalMs + holdMs) / 1000) * sr);
+        const blk = 1024; let pos = 0;
+        while (pos < totalSamples) {
+          const n = Math.min(blk, totalSamples - pos);
+          const data = new Float32Array(n * ch);         // f32-planar: [ch0…, ch1…]
+          for (let c = 0; c < ch; c++) { const src = chans[c]; const off = c * n; for (let k = 0; k < n; k++) { data[off + k] = src[(pos + k) % loopLen]; } }
+          const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round((pos / sr) * 1000000), data });
+          aEnc.encode(ad); ad.close();
+          if (encErr) throw encErr;
+          pos += n;
+          if ((pos % (blk * 32)) === 0) { await new Promise(r => setTimeout(r, 0)); }
+        }
+        await aEnc.flush();
+      }
+      if (encErr) throw encErr;
+
+      muxer.finalize();
+      const buffer = muxer.target.buffer;
+      progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
+      downloadBlob(new Blob([buffer], { type: 'video/mp4' }), 'skribl.mp4');
+      showToast('MP4 exported', null);
+      try { vEnc.close(); } catch (e) {} try { if (aEnc) aEnc.close(); } catch (e) {}
+      cleanup();
+      setTimeout(closeExport, 800);
+      return true;
+    } catch (err) {
+      console.error('WebCodecs MP4 export failed:', err);
+      showToast('MP4 export failed — using standard video instead', null);
+      progress.hidden = true;
+      cleanup();
+      return false;    // let the caller fall back to the MediaRecorder export
+    }
+  }
+
   // ---- Video export ----
   videoBtn.addEventListener('click', async () => {
     if (!strokes.length) return;
@@ -4230,6 +4394,14 @@ if (typeof pendingMusicMeta !== 'undefined') {
     stopPlayback();
     stopLoopPreview();
     stopSeamTest();
+
+    // Prefer a real MP4 (H.264/AAC) via WebCodecs + muxer when available. Returns
+    // false (cleanly, no UI left dangling) if unsupported or on failure, so we
+    // fall through to the MediaRecorder path below — never worse than today.
+    try {
+      const okMp4 = await exportViaWebCodecsMp4();
+      if (okMp4) return;
+    } catch (e) { /* fall through to MediaRecorder */ }
 
     // Pick a supported mime type
     const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
