@@ -4142,12 +4142,20 @@ if (typeof pendingMusicMeta !== 'undefined') {
 
   function openExport() {
     // Update the video option description based on what's available
+    const videoTitle = videoBtn.querySelector('.export-opt-title');
     if (!strokes.length) {
       videoDesc.textContent = 'Record a drawing first to export video';
       videoBtn.disabled = true;
     } else {
       videoDesc.textContent = audioEl ? 'Replay of your drawing with music' : 'Replay of your drawing';
       videoBtn.disabled = false;
+      // Label the button with the format this browser will actually output.
+      if (videoTitle) {
+        expectedVideoFormat().then((fmt) => {
+          videoTitle.textContent = 'Video (' + fmt + ')';
+          if (fmt === 'MP4') videoDesc.textContent = audioEl ? 'Replay with music · MP4 (H.264)' : 'Replay · MP4 (H.264)';
+        }).catch(() => { videoTitle.textContent = 'Video'; });
+      }
     }
     pngBtn.disabled = !hasContent;
     progress.hidden = true;
@@ -4243,6 +4251,31 @@ if (typeof pendingMusicMeta !== 'undefined') {
       const r = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: sr, numberOfChannels: ch, bitrate: 128000 });
       return !!(r && r.supported);
     } catch (e) { return false; }
+  }
+
+  // What format will the Video button actually produce in THIS browser? Used to
+  // label the export option honestly (MP4 vs WebM).
+  function mediaRecorderFormat() {
+    if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return null;
+    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) return t.indexOf('mp4') >= 0 ? 'mp4' : 'webm'; }
+    return null;
+  }
+  async function webcodecsMp4Ready() {
+    const MM = window.Mp4Muxer;
+    if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
+    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
+    const w = canvas.width & ~1, h = canvas.height & ~1;
+    if (!(await pickAvcCodec(w, h))) return false;
+    // If the Skribl has music, MP4 needs AAC too — else the export falls back to
+    // MediaRecorder, so don't promise MP4 in the label.
+    const hasAudio = !!(audioEl && (audioEl._objectUrl || audioEl.src)) && (typeof musicEnabled === 'undefined' ? true : musicEnabled);
+    if (hasAudio && !(await aacSupported(44100, 2))) return false;
+    return true;
+  }
+  async function expectedVideoFormat() {
+    if (await webcodecsMp4Ready()) return 'MP4';
+    return mediaRecorderFormat() === 'mp4' ? 'MP4' : 'WebM';
   }
 
   async function exportViaWebCodecsMp4() {
