@@ -114,6 +114,14 @@ window.addEventListener('orientationchange', () => {
 });
 
 let drawing = false;
+// Canvas magnify (editor only). ZoomView is assigned by initCanvasZoom() near
+// the bottom; it stays null on the player (no #zoomLayer), so every zoom/pinch
+// path below no-ops there. `pinching` suspends drawing during a 2-finger
+// gesture; `_autoArmedThisStroke` lets a pinch-aborted first stroke also unwind
+// the recording it auto-started.
+let ZoomView = null;
+let pinching = false;
+let _autoArmedThisStroke = false;
 let recording = false;
 let playing = false;
 let recorded = false;
@@ -455,7 +463,13 @@ function replayTimelineToCanvas(timeline, startIndex, elapsedMs, dotFn, lineFn) 
 }
 let lockToastShown = false;
 function startDraw(e) {
+  // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
+  // preventDefault/anything else so it can cleanly abort a nascent 1-finger
+  // stroke that the first finger just began. Guarded on ZoomView so the player
+  // (no zoom) behaves exactly as before.
+  if (ZoomView && e.touches && e.touches.length >= 2) { beginPinch(e); return; }
   e.preventDefault();
+  _autoArmedThisStroke = false;
   // Ignore non-primary mouse buttons (right/middle click). A right-click
   // mousedown would otherwise enter here mid-stroke and reset currentStroke,
   // wiping the in-progress stroke from the replay array (still painted live,
@@ -495,9 +509,11 @@ function startDraw(e) {
   // read `t` below, so this first point lands at t≈0 like a normal take start.
   if (!recording && !finishedRecording && !hasContent) {
     beginRecording(false);
+    _autoArmedThisStroke = true;
   }
   const pos = getPos(e);
   drawing = true;
+  document.body.classList.add('stroking');
   lastPos = pos;
   smoothPt = { x: pos.x, y: pos.y };
   lastRawPos = { x: pos.x, y: pos.y };
@@ -526,6 +542,7 @@ function startDraw(e) {
 
 function continueDraw(e) {
   e.preventDefault();
+  if (pinching) return;
   if (!drawing) return;
   const pos = getPos(e);
   lastRawPos = pos;
@@ -580,6 +597,7 @@ function endDraw() {
   if (!drawing) return;
   snapStrokeToFinal();
   drawing = false;
+  document.body.classList.remove('stroking');
   _slActive = false;
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
@@ -596,6 +614,7 @@ function commitActiveStroke() {
   if (!drawing) return;
   snapStrokeToFinal();
   drawing = false;
+  document.body.classList.remove('stroking');
   _slActive = false;
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
@@ -1134,6 +1153,7 @@ function clearCanvas() {
   updateClearVisibility();
   const matchLabel = document.getElementById('matchDrawingLabel');
   if (matchLabel) matchLabel.textContent = '';
+  if (ZoomView) ZoomView.fit();
 }
 
 function stopPlayback() {
@@ -5343,4 +5363,288 @@ function resetMusicToggle() { musicEnabled = true; syncLayerToggle(document.getE
     syncLayerToggle(mt, musicEnabled);
     if (!musicEnabled && audioEl) audioEl.pause();
   });
+})();
+
+
+// ===========================================================================
+// Canvas magnify (editor only) — zoom + pan of the display, never the drawing.
+//
+// Mechanic: only #zoomLayer is CSS-transformed (translate + scale). The
+// drawing's backing store and every stroke coordinate stay in the fixed
+// authored space, so getPos()/eraser-cursor/eyedropper/replay/serialize are all
+// untouched — they read canvas.getBoundingClientRect(), which already reflects
+// the transform, so they self-correct. .canvas-wrap (overflow:hidden) is the
+// fixed viewport clip. Controls (#zoomHud) are a SIBLING of the layer, so they
+// stay put while the content magnifies.
+//
+// The whole module is guarded on #zoomLayer, which the player template does not
+// have, so ZoomView stays null there and nothing below runs.
+// ===========================================================================
+
+// --- pinch gesture (called from startDraw when a 2nd finger lands) ----------
+let _pinch = null;   // { startDist, lastDist, lastMid }
+
+function _touchMid(t0, t1) {
+  const r = canvasWrap.getBoundingClientRect();
+  return { x: (t0.clientX + t1.clientX) / 2 - r.left,
+           y: (t0.clientY + t1.clientY) / 2 - r.top };
+}
+function _touchDist(t0, t1) {
+  return Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+}
+
+// Undo the nascent 1-finger stroke the first finger began just before the
+// second landed — restore the pre-stroke snapshot startDraw pushed, and if that
+// stroke had auto-armed a fresh recording, unwind it too. So a pinch never
+// leaves a stray dot or a phantom take.
+function abortStrokeForPinch() {
+  const wasAutoArmed = _autoArmedThisStroke;
+  if (drawing) {
+    const snap = undoStack.pop();
+    if (snap) {
+      const { width: cw, height: ch } = getCanvasLogicalSize();
+      ctx.save();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, cw, ch);
+      if (snap.image) ctx.drawImage(snap.image, 0, 0, cw, ch);
+      ctx.restore();
+      strokes = snap.strokes.slice();
+      strokeGroups = snap.strokeGroups.slice();
+      hasContent = snap.hasContent;
+    }
+    drawing = false;
+    _slActive = false;
+    currentStroke = [];
+    document.body.classList.remove('stroking');
+    if (undoStack.length === 0) undoBtn.disabled = true;
+    updateClearVisibility();
+    updateEmptyHint();
+  }
+  // Roll back an auto-armed recording that captured nothing (blank-canvas pinch).
+  if (wasAutoArmed && recording && strokes.length === 0) {
+    clearInterval(recTimerInterval);
+    recording = false;
+    recorded = false;
+    finishedRecording = false;
+    startTime = null;
+    preRecordSnapshot = null;
+    recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
+    recordBtn.classList.remove('active');
+    canvasWrap.classList.remove('recording');
+    recIndicator.hidden = true;
+    document.querySelector('.header').classList.remove('compact');
+    updateCanvasLockCue();
+    updateClearVisibility();
+  }
+  _autoArmedThisStroke = false;
+}
+
+function beginPinch(e) {
+  // Image reposition owns its own gestures; leave it alone.
+  if (typeof repositioning !== 'undefined' && repositioning) return;
+  if (!ZoomView) return;
+  if (!e.touches || e.touches.length < 2) return;
+  if (typeof e.preventDefault === 'function') e.preventDefault();
+  abortStrokeForPinch();
+  pinching = true;
+  const t0 = e.touches[0], t1 = e.touches[1];
+  _pinch = { startDist: _touchDist(t0, t1), lastDist: _touchDist(t0, t1), lastMid: _touchMid(t0, t1) };
+}
+
+function _pinchMove(e) {
+  if (!pinching || !_pinch) return;
+  if (!e.touches || e.touches.length < 2) return;
+  e.preventDefault();
+  const t0 = e.touches[0], t1 = e.touches[1];
+  const dist = _touchDist(t0, t1);
+  const mid = _touchMid(t0, t1);
+  if (_pinch.lastDist > 0) {
+    const factor = dist / _pinch.lastDist;
+    ZoomView.zoomAt(factor, mid.x, mid.y);       // scale about the pinch midpoint
+  }
+  ZoomView.panBy(mid.x - _pinch.lastMid.x, mid.y - _pinch.lastMid.y);  // two-finger pan
+  _pinch.lastDist = dist;
+  _pinch.lastMid = mid;
+}
+
+function _pinchEnd(e) {
+  if (!pinching) return;
+  // End the pinch as soon as we drop below two fingers. A single remaining
+  // finger will NOT resume drawing (it never fired a fresh touchstart); the user
+  // lifts and taps again to draw — standard, and avoids a stray line.
+  if (e.touches && e.touches.length >= 2) return;
+  pinching = false;
+  _pinch = null;
+}
+
+window.addEventListener('touchmove', _pinchMove, { passive: false });
+window.addEventListener('touchend', _pinchEnd);
+window.addEventListener('touchcancel', _pinchEnd);
+
+// --- zoom controller + pill -------------------------------------------------
+(function initCanvasZoom() {
+  const layer = document.getElementById('zoomLayer');
+  const hud = document.getElementById('zoomHud');
+  if (!layer || !hud) return;                                  // player: no-op
+  if (document.body.classList.contains('player-mode')) return;
+
+  const MIN = 1, MAX = 4, STEP = 0.5;
+  let zoom = 1, panX = 0, panY = 0;
+
+  function wrapSize() {
+    const r = canvasWrap.getBoundingClientRect();
+    return { w: r.width || 1, h: r.height || 1 };
+  }
+  function clampPan() {
+    const { w, h } = wrapSize();
+    // Keep the magnified content covering the viewport (no empty gaps).
+    panX = Math.min(0, Math.max(w * (1 - zoom), panX));
+    panY = Math.min(0, Math.max(h * (1 - zoom), panY));
+    if (zoom <= 1) { panX = 0; panY = 0; }
+  }
+  function render(animate) {
+    clampPan();
+    layer.classList.toggle('zoom-anim', !!animate);
+    layer.style.transform = zoom === 1 ? '' : 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')';
+    const val = document.getElementById('zoomVal');
+    if (val) val.textContent = Math.round(zoom * 100) + '%';
+    hud.classList.toggle('zoomed', zoom > 1.001);
+    const zin = document.getElementById('zoomInBtn');
+    const zout = document.getElementById('zoomOutBtn');
+    if (zin) zin.disabled = zoom >= MAX - 0.001;
+    if (zout) zout.disabled = zoom <= MIN + 0.001;
+    if (animate) setTimeout(function () { layer.classList.remove('zoom-anim'); }, 200);
+  }
+
+  ZoomView = {
+    isZoomed: function () { return zoom > 1.001; },
+    get: function () { return { zoom: zoom, panX: panX, panY: panY }; },
+    // Scale by `factor` about viewport point (cx,cy), keeping the content under
+    // that point fixed. Used by both pinch and the +/- buttons.
+    zoomAt: function (factor, cx, cy) {
+      const nz = Math.min(MAX, Math.max(MIN, zoom * factor));
+      if (nz === zoom) return;
+      const coordX = (cx - panX) / zoom, coordY = (cy - panY) / zoom;
+      panX = cx - coordX * nz;
+      panY = cy - coordY * nz;
+      zoom = nz;
+      render(false);
+    },
+    panBy: function (dx, dy) { panX += dx; panY += dy; render(false); },
+    step: function (dir) {
+      const { w, h } = wrapSize();
+      const nz = Math.min(MAX, Math.max(MIN, zoom + dir * STEP));
+      this.zoomAt(nz / zoom, w / 2, h / 2);
+      render(true);
+    },
+    fit: function () { zoom = 1; panX = 0; panY = 0; render(true); }
+  };
+
+  document.getElementById('zoomInBtn').addEventListener('click', function () { ZoomView.step(1); });
+  document.getElementById('zoomOutBtn').addEventListener('click', function () { ZoomView.step(-1); });
+  document.getElementById('zoomFitBtn').addEventListener('click', function () { ZoomView.fit(); });
+
+  // Re-clamp on resize/rotate (viewport bounds change under a live zoom).
+  window.addEventListener('resize', function () { if (zoom > 1) render(false); });
+
+  // --- grip: drag the pill, dock to the nearest corner ----------------------
+  const grip = document.getElementById('zoomGrip');
+  let snapEl = null, dragging = false, grabDX = 0, grabDY = 0;
+
+  function corners() {
+    const r = canvasWrap.getBoundingClientRect();
+    const pw = hud.offsetWidth, ph = hud.offsetHeight, m = 12;
+    return {
+      tl: { key: 'tl', x: m,               y: m },
+      tr: { key: 'tr', x: r.width - pw - m, y: m },
+      bl: { key: 'bl', x: m,               y: r.height - ph - m },
+      br: { key: 'br', x: r.width - pw - m, y: r.height - ph - m }
+    };
+  }
+  function nearestCorner(x, y) {
+    const c = corners();
+    let best = null, bd = Infinity;
+    for (const k in c) {
+      const d = Math.hypot(x - c[k].x, y - c[k].y);
+      if (d < bd) { bd = d; best = c[k]; }
+    }
+    return best;
+  }
+  function pointer(ev) {
+    const t = ev.touches ? ev.touches[0] : ev;
+    return { x: t.clientX, y: t.clientY };
+  }
+  function gripStart(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const r = hud.getBoundingClientRect();
+    const wrapR = canvasWrap.getBoundingClientRect();
+    const p = pointer(ev);
+    grabDX = p.x - r.left;
+    grabDY = p.y - r.top;
+    dragging = true;
+    hud.classList.add('dragging');
+    // switch from corner-anchoring to free left/top positioning
+    hud.style.right = 'auto';
+    hud.style.bottom = 'auto';
+    hud.style.left = (r.left - wrapR.left) + 'px';
+    hud.style.top = (r.top - wrapR.top) + 'px';
+    // snap ghost
+    snapEl = document.createElement('div');
+    snapEl.className = 'zoom-snap';
+    snapEl.style.height = hud.offsetHeight + 'px';
+    canvasWrap.appendChild(snapEl);
+    if (ev.type === 'mousedown') {
+      window.addEventListener('mousemove', gripMove);
+      window.addEventListener('mouseup', gripEnd);
+    } else {
+      window.addEventListener('touchmove', gripMove, { passive: false });
+      window.addEventListener('touchend', gripEnd);
+      window.addEventListener('touchcancel', gripEnd);
+    }
+  }
+  function gripMove(ev) {
+    if (!dragging) return;
+    ev.preventDefault();
+    const wrapR = canvasWrap.getBoundingClientRect();
+    const p = pointer(ev);
+    let x = p.x - wrapR.left - grabDX;
+    let y = p.y - wrapR.top - grabDY;
+    // keep within the wrap
+    x = Math.max(0, Math.min(wrapR.width - hud.offsetWidth, x));
+    y = Math.max(0, Math.min(wrapR.height - hud.offsetHeight, y));
+    hud.style.left = x + 'px';
+    hud.style.top = y + 'px';
+    const near = nearestCorner(x, y);
+    if (snapEl) {
+      snapEl.style.left = near.x + 'px';
+      snapEl.style.top = near.y + 'px';
+    }
+  }
+  function gripEnd(ev) {
+    if (!dragging) return;
+    dragging = false;
+    hud.classList.remove('dragging');
+    const wrapR = canvasWrap.getBoundingClientRect();
+    const x = parseFloat(hud.style.left) || 0;
+    const y = parseFloat(hud.style.top) || 0;
+    const near = nearestCorner(x, y);
+    // clear inline positioning and re-anchor to the chosen corner via CSS
+    hud.style.left = '';
+    hud.style.top = '';
+    hud.style.right = '';
+    hud.style.bottom = '';
+    hud.setAttribute('data-corner', near.key);
+    if (snapEl) { snapEl.remove(); snapEl = null; }
+    window.removeEventListener('mousemove', gripMove);
+    window.removeEventListener('mouseup', gripEnd);
+    window.removeEventListener('touchmove', gripMove);
+    window.removeEventListener('touchend', gripEnd);
+    window.removeEventListener('touchcancel', gripEnd);
+  }
+  grip.addEventListener('mousedown', gripStart);
+  grip.addEventListener('touchstart', gripStart, { passive: false });
+
+  render(false);
 })();
