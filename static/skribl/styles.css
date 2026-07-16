@@ -3098,3 +3098,27 @@ body.player-mode #canvas {
 /* ---------- Reposition: visible-but-locked after you draw ---------- */
 .reposition-btn:disabled { opacity: .45; cursor: default; }
 .photo-opacity-row input:disabled { opacity: .4; cursor: default; }
+
+
+/* ---------- Brush sizes + Smoothing on one line ---------- */
+.draw-inline { display: flex; gap: 18px; align-items: flex-start; }
+.draw-inline > * { flex: 1 1 0; min-width: 0; }
+.draw-inline .prop-row { flex-direction: column; align-items: flex-start; gap: 9px; }
+.draw-inline .smooth-seg { width: 100%; }
+@media (max-width: 480px) { .draw-inline { gap: 12px; } }
+
+
+/* ---------- Image / Music on-off toggle ---------- */
+.layer-toggle { display: none; width: 42px; height: 25px; flex: none; padding: 0; border: none;
+  border-radius: 13px; background: rgba(255,255,255,.16); position: relative; cursor: pointer;
+  transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
+.music-dropzone.loaded .layer-toggle { display: inline-block; }   /* appears with the loaded box */
+.layer-toggle.on { background: var(--accent); }
+.layer-toggle-knob { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%;
+  background: #fff; transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.layer-toggle.on .layer-toggle-knob { transform: translateX(17px); }
+/* keep the loaded row tidy so filename + toggle + Remove all fit */
+.music-dropzone.loaded { gap: 10px; }
+.music-dropzone.loaded #musicBtnLabel, .music-dropzone.loaded > span { flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-toggle[aria-checked="false"] { opacity: 1; }
