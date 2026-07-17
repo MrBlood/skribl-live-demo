@@ -1417,6 +1417,19 @@ document.getElementById('loadDraftItem').addEventListener('click', () => {
 // Close menu on Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !menuOverlay.hidden) closeMenu();
+  if (e.key === 'Escape' && helpDrawer && !helpDrawer.hidden) closeHelpDrawer();
+
+  // Undo / redo shortcuts (desktop). Ignore while typing in a field.
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') ||
+                 (e.target && e.target.isContentEditable);
+  if (!typing && (e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault();
+    if (e.shiftKey) { if (!redoBtn.disabled) redoBtn.click(); }
+    else { if (!undoBtn.disabled) undoBtn.click(); }
+  } else if (!typing && (e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
+    e.preventDefault();
+    if (!redoBtn.disabled) redoBtn.click();
+  }
 });
 
 undoBtn.addEventListener('click', () => {
@@ -4148,6 +4161,12 @@ if (typeof pendingMusicMeta !== 'undefined') {
   const progress = document.getElementById('exportProgress');
   const progressFill = document.getElementById('exportProgressFill');
   const progressLabel = document.getElementById('exportProgressLabel');
+  const exportCancel = document.getElementById('exportCancel');
+  let _exportAbort = false;
+  if (exportCancel) exportCancel.addEventListener('click', () => {
+    _exportAbort = true;
+    if (progressLabel) progressLabel.textContent = 'Cancelling…';
+  });
   const videoDesc = document.getElementById('exportVideoDesc');
   const gifBtn = document.getElementById('exportGif');
   const gifDesc = document.getElementById('exportGifDesc');
@@ -4186,7 +4205,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
         if (gifToggle) gifToggle.hidden = true;
       } else {
         gifBtn.disabled = false;
-        if (gifDesc) gifDesc.textContent = 'Just the strokes, animated · silent · loops';
+        const hasPhoto = photoBgImg && photoBgImg.src && photoBgImg.style.display !== 'none';
+        if (gifDesc) gifDesc.textContent = hasPhoto
+          ? 'Strokes only · your photo won’t be included (use Video for that)'
+          : 'Just the strokes, animated · silent · loops';
         if (gifToggle) gifToggle.hidden = false;
       }
     }
@@ -4263,6 +4285,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const outW = Math.max(2, Math.round(logicalW * scale));
     const outH = Math.max(2, Math.round(logicalH * scale));
 
+    _exportAbort = false;
     videoBtn.disabled = true; pngBtn.disabled = true; gifBtn.disabled = true;
     progress.hidden = false; progressFill.style.width = '0%'; progressLabel.textContent = 'Rendering GIF…';
 
@@ -4297,6 +4320,11 @@ if (typeof pendingMusicMeta !== 'undefined') {
       const fmt = transparent ? 'rgba4444' : 'rgb565';
       let ti = 0;
       for (let f = 0; f < totalFrames; f++) {
+        if (_exportAbort) {
+          videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
+          progress.hidden = true; showToast('Export cancelled', null);
+          return;
+        }
         const elapsed = f * (1000 / fps);
         if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
         else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
@@ -4459,6 +4487,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
     }
 
     // ---- commit: from here we own the export UI ----
+    _exportAbort = false;
     videoBtn.disabled = true; pngBtn.disabled = true;
     progress.hidden = false; progressFill.style.width = '0%'; progressLabel.textContent = 'Preparing…';
     const cleanup = () => { videoBtn.disabled = false; pngBtn.disabled = false; };
@@ -4511,6 +4540,12 @@ if (typeof pendingMusicMeta !== 'undefined') {
       progressLabel.textContent = 'Encoding…';
       let ti = 0;
       for (let f = 0; f < totalFrames; f++) {
+        if (_exportAbort) {
+          try { vEnc.close(); } catch (e) {}
+          try { if (aEnc) aEnc.close(); } catch (e) {}
+          progress.hidden = true; cleanup(); showToast('Export cancelled', null);
+          return true;
+        }
         const elapsed = f * (1000 / fps);
         if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
         else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
@@ -5797,7 +5832,10 @@ function beginPinch(e) {
   // Image reposition owns its own gestures; leave it alone.
   if (typeof repositioning !== 'undefined' && repositioning) return;
   if (!ZoomView) return;
-  if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) return;  // magnifier off → no pinch-zoom
+  // A pinch turns the magnifier on if it's off — pinching should never feel dead.
+  if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) {
+    if (typeof ZoomView.enable === 'function') ZoomView.enable();
+  }
   if (!e.touches || e.touches.length < 2) return;
   if (typeof e.preventDefault === 'function') e.preventDefault();
   abortStrokeForPinch();
@@ -5876,6 +5914,7 @@ window.addEventListener('touchcancel', _pinchEnd);
   ZoomView = {
     isZoomed: function () { return zoom > 1.001; },
     enabled: function () { return magnifyOn; },
+    enable: function () { if (!magnifyOn) setMagnify(true); },
     get: function () { return { zoom: zoom, panX: panX, panY: panY }; },
     // Scale by `factor` about viewport point (cx,cy), keeping the content under
     // that point fixed. Used by both pinch and the +/- buttons.
