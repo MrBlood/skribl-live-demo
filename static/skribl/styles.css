@@ -3451,3 +3451,31 @@ body.player-mode #canvas {
   .header  { margin: 12px 6px; }
   .toolbar { margin: 12px 6px; max-width: calc(100% - 12px); gap: 1px; }
 }
+
+/* ===================================================================
+   Apple header polish (v75): Record keeps its label (sheds when tight),
+   even glyph sizes on one centerline, and spacing that groups Record+Play
+   vs Post vs ⋯. Mobile only.
+   =================================================================== */
+@media (max-width: 640px) {
+  /* Record: accent dot + label. Label shows by default, hidden only when the
+     header genuinely can't fit it (JS toggles .rec-collapsed). */
+  .btn.record { width: auto; padding: 0 4px; gap: 7px; }
+  .btn.record .btn-label { display: inline; font-size: 13px; font-weight: 700; }
+  .header.rec-collapsed .btn.record { width: 40px; padding: 0; }
+  .header.rec-collapsed .btn.record .btn-label { display: none; }
+  .btn.record svg { width: 16px; height: 16px; }        /* ~11px accent dot */
+
+  /* Even, larger glyphs for Play and ⋯, aligned with the pill's centerline. */
+  .btn.play svg { width: 22px; height: 22px; }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  /* Grouping via spacing: Record+Play stay a tight pair (actions gap); a bigger
+     gap sets off Post (the commit) and then ⋯ (overflow). */
+  .actions { gap: 3px; }
+  .btn.post { margin-left: 11px; }
+  #menuBtn  { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room */
+
+  /* Toolbar magnify sized to match Pen/Eraser. */
+  .magnify-tool svg { width: 23px; height: 23px; }
+}
