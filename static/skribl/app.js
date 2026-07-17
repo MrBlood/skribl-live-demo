@@ -1167,6 +1167,7 @@ function stopPlayback() {
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
   hideEditorNib();
   document.body.classList.remove('replaying');
+  updateDrawingTimeLabels();   // restore the duration badge to the total length
 }
 
 // The editor Play preview mirrors the posted player's replay bead so what you
@@ -1252,6 +1253,10 @@ playBtn.addEventListener('click', () => {
     function frame() {
       if (!playing) return;
       const elapsed = performance.now() - start;
+      // Count the duration badge up as the replay plays.
+      if (durationBadge && !durationBadge.hidden) {
+        durationBadge.textContent = formatDuration(Math.min(elapsed, totalDuration));
+      }
       if (comp) {
         i = replayTimelineToCanvas(timeline, i, elapsed, comp.dotFn, comp.lineFn);
         comp.present();
