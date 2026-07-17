@@ -1455,21 +1455,25 @@ redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) redoBtn.disabled = true;
 });
 
-const helpBtn = document.getElementById('helpBtn');
+const helpBtn = document.getElementById('helpBtn');       // legacy header button (now null in editor)
+const helpItem = document.getElementById('helpItem');     // "How it works" — moved into the ⋯ menu
 const helpDrawer = document.getElementById('helpDrawer');
 const helpClose = document.getElementById('helpClose');
 const helpBackdrop = document.getElementById('helpBackdrop');
 
 let helpCloseTimer = null;
 
-helpBtn.addEventListener('click', () => {
+function openHelpDrawer() {
   clearTimeout(helpCloseTimer);
   helpDrawer.hidden = false;
   helpDrawer.classList.remove('closing');
   requestAnimationFrame(() => {
     helpDrawer.classList.add('open');
   });
-});
+}
+
+if (helpBtn) helpBtn.addEventListener('click', openHelpDrawer);
+if (helpItem) helpItem.addEventListener('click', () => { closeMenu(); openHelpDrawer(); });
 
 function closeHelpDrawer() {
   clearTimeout(helpCloseTimer);
@@ -5786,6 +5790,7 @@ function beginPinch(e) {
   // Image reposition owns its own gestures; leave it alone.
   if (typeof repositioning !== 'undefined' && repositioning) return;
   if (!ZoomView) return;
+  if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) return;  // magnifier off → no pinch-zoom
   if (!e.touches || e.touches.length < 2) return;
   if (typeof e.preventDefault === 'function') e.preventDefault();
   abortStrokeForPinch();
@@ -5833,6 +5838,7 @@ window.addEventListener('touchcancel', _pinchEnd);
 
   const MIN = 1, MAX = 4, STEP = 0.5;
   let zoom = 1, panX = 0, panY = 0;
+  let magnifyOn = false;   // the header magnifier toggle gates the whole feature
 
   function wrapSize() {
     const r = canvasWrap.getBoundingClientRect();
@@ -5862,6 +5868,7 @@ window.addEventListener('touchcancel', _pinchEnd);
 
   ZoomView = {
     isZoomed: function () { return zoom > 1.001; },
+    enabled: function () { return magnifyOn; },
     get: function () { return { zoom: zoom, panX: panX, panY: panY }; },
     // Scale by `factor` about viewport point (cx,cy), keeping the content under
     // that point fixed. Used by both pinch and the +/- buttons.
@@ -5895,6 +5902,21 @@ window.addEventListener('touchcancel', _pinchEnd);
   document.getElementById('zoomInBtn').addEventListener('click', function () { ZoomView.step(1); });
   document.getElementById('zoomOutBtn').addEventListener('click', function () { ZoomView.step(-1); });
   document.getElementById('zoomFitBtn').addEventListener('click', function () { ZoomView.fit(); });
+
+  // Header magnifier: a toggle that shows/hides the zoom pill. Turning it OFF
+  // also resets to 100% so you're never left magnified with no controls. While
+  // off, pinch / wheel / Space-drag all no-op (they check ZoomView.enabled()).
+  const magnifyBtn = document.getElementById('magnifyBtn');
+  function setMagnify(on) {
+    magnifyOn = on;
+    hud.hidden = !on;
+    if (magnifyBtn) {
+      magnifyBtn.classList.toggle('active', on);
+      magnifyBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    if (!on) ZoomView.fit();     // return the canvas to 100% when hiding controls
+  }
+  if (magnifyBtn) magnifyBtn.addEventListener('click', function () { setMagnify(!magnifyOn); });
 
   // Click the % to type an exact zoom — the precise path for desktop (no pinch),
   // and a numeric-keypad shortcut on touch. Enter/blur commits, Escape cancels.
