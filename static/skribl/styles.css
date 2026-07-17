@@ -2574,6 +2574,10 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .help-drawer[hidden] { display: none; }
 
+/* While the help drawer is open, lock the page scroll so only the drawer's own
+   scrollbar shows (otherwise the app's scrollbar sits alongside it). */
+html.help-open, html.help-open body { overflow: hidden; }
+
 .help-drawer.open {
   pointer-events: auto;
   opacity: 1;
