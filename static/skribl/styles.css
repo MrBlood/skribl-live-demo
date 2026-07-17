@@ -2025,14 +2025,16 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .icon-btn:hover { background: rgba(124, 92, 255, 0.12); color: var(--accent-bright); }
 .icon-btn:active { transform: scale(0.94); }
 
-/* Magnifier toggle — lit when the zoom controls are showing. */
+/* Magnifier toggle — lit when the zoom controls are showing. Uses the same
+   purple ring as the record button (subtle border + glow + accent icon). */
 .magnify-btn.active {
-  border-color: var(--accent);
-  background: rgba(124, 92, 255, 0.18);
-  color: var(--accent-bright);
-  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.14);
+  background: var(--surface-control);
+  border-color: rgba(124, 92, 255, 0.3);
+  box-shadow: 0 0 8px rgba(124, 92, 255, 0.12);
+  color: var(--accent);
 }
-.magnify-btn.active:hover { background: rgba(124, 92, 255, 0.24); }
+.magnify-btn.active svg { filter: drop-shadow(0 0 2px rgba(124, 92, 255, 0.5)); }
+.magnify-btn.active:hover { background: var(--surface-control-hover); }
 
 /* Play as icon-only on desktop */
 .btn.play.btn-icon {
