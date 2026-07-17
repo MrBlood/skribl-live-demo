@@ -2618,6 +2618,24 @@ html.help-open, html.help-open body { overflow: hidden; }
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Sleek skinny scrollbar for the help drawer (desktop pointers only; mobile
+   keeps its native auto-hiding overlay bar). */
+@media (min-width: 641px) {
+  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.16) transparent; }
+  .help-drawer-inner::-webkit-scrollbar { width: 10px; }
+  .help-drawer-inner::-webkit-scrollbar-track { background: transparent; }
+  .help-drawer-inner::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    border: 3px solid transparent;      /* inset → a slim ~4px thumb with breathing room */
+    background-clip: padding-box;
+  }
+  .help-drawer-inner::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 92, 255, 0.55);
+    background-clip: padding-box;
+  }
+}
+
 .help-drawer.open .help-drawer-inner { transform: translateX(0); }
 
 .help-drawer-head {
