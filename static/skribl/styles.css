@@ -2965,19 +2965,16 @@ input:focus-visible {
   }
 
   .brand svg {
-    width: 20px;
-    height: 20px;
-    border-radius: 7px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
   }
 
-  .header.compact .brand > span {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.1;
-    font-size: 11px;
-  }
-
-  .header.compact .brand-word { display: block; }
+  /* Logo-only on mobile in every state — the compact (recording) header no
+     longer re-shows the "Skribl Pad" text. */
+  .brand > span,
+  .header.compact .brand > span { display: none; }
+  .header.compact .brand-word { display: none; }
 
   .actions {
     flex: 1;
