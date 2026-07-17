@@ -495,7 +495,7 @@ function startDraw(e) {
   // Post-record lock: the completed replay can't be drawn over.
   if (finishedRecording && !recording) {
     if (!lockToastShown) {
-      showToast('Recording done — Record for a new take, or Clear', recordBtn);
+      showToast('Recording done — Record again to add another take, or Clear to restart', recordBtn);
       lockToastShown = true;
       setTimeout(() => { lockToastShown = false; }, 3000);
     }
@@ -1116,7 +1116,7 @@ function endRecordingTake() {
     durationBadge.hidden = false;
     // Confirm the capture and surface multi-take: the canvas is now locked on
     // this take; pressing Record again appends another take to the same Skribl.
-    showToast('Take saved — Record for another, or Play', recordBtn);
+    showToast('Take saved — Record again to add more to this Skribl, or Play to preview', recordBtn);
   }
   updateClearVisibility();
 }
