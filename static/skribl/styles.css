@@ -2022,8 +2022,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .icon-btn svg { width: 18px; height: 18px; }
-.icon-btn:hover { background: rgba(124, 92, 255, 0.12); color: var(--accent-bright); }
 .icon-btn:active { transform: scale(0.94); }
+/* Hover tint only on devices that actually hover. On touch, the :hover state
+   sticks after a tap, which made the magnifier look stuck "on" (purple). */
+@media (hover: hover) {
+  .icon-btn:hover { background: rgba(124, 92, 255, 0.12); color: var(--accent-bright); }
+}
 
 /* Magnifier toggle — lit when the zoom controls are showing. Uses the same
    purple ring as the record button (subtle border + glow + accent icon). */
@@ -2034,7 +2038,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   color: var(--accent);
 }
 .magnify-btn.active svg { filter: drop-shadow(0 0 2px rgba(124, 92, 255, 0.5)); }
-.magnify-btn.active:hover { background: var(--surface-control-hover); }
+@media (hover: hover) {
+  .magnify-btn.active:hover { background: var(--surface-control-hover); }
+}
 
 /* Play as icon-only on desktop */
 .btn.play.btn-icon {
