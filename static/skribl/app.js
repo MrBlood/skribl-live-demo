@@ -1512,6 +1512,41 @@ function closeHelpDrawer() {
 helpClose.addEventListener('click', closeHelpDrawer);
 helpBackdrop.addEventListener('click', closeHelpDrawer);
 
+// Show the "Skribl Pad" wordmark whenever the header has room for it, and drop
+// to logo-only when it doesn't (after a take, while recording, on tiny screens)
+// — measured, not a fixed breakpoint, so it adapts to every state and width.
+(function initBrandFit() {
+  const brand = document.querySelector('.brand');
+  const brandText = brand && brand.querySelector(':scope > span');
+  const actions = document.getElementById('actions');
+  const header = document.querySelector('.header');
+  if (!brand || !brandText || !actions || !header) return;
+  function fit() {
+    brand.classList.remove('brand-collapsed');           // reveal, then measure
+    // If showing the wordmark makes the header content overflow, collapse it.
+    // The flex spacer absorbs slack, so overflow only appears when it truly
+    // doesn't fit — at which point the nowrap wordmark pushes scrollWidth past
+    // clientWidth.
+    if (header.scrollWidth > header.clientWidth + 1) brand.classList.add('brand-collapsed');
+  }
+  const refit = () => requestAnimationFrame(fit);   // measure after layout settles
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(refit);
+    ro.observe(actions);          // record→stop, post/play appearing, etc.
+    ro.observe(header);           // viewport / layout changes
+  } else {
+    window.addEventListener('resize', refit);
+  }
+  // Buttons appear/disappear by toggling `hidden` — catch those too.
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(refit).observe(actions, {
+      subtree: true, childList: true, attributes: true,
+      attributeFilter: ['hidden', 'class', 'style'],
+    });
+  }
+  requestAnimationFrame(fit);
+})();
+
 // Help drawer accordions — tap a section header to expand/collapse it.
 // Multiple sections can be open at once (it's a reference, not a wizard).
 document.querySelectorAll('.accordion-header').forEach(header => {
