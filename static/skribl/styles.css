@@ -212,7 +212,7 @@ body {
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.5; }
 }
 
 .rec-timer {
@@ -2481,7 +2481,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 @keyframes watchBorderPulse {
   50% {
     border-color: #9179ff;
-    box-shadow: 0 0 9px 1px rgba(124, 92, 255, 0.55);
+    box-shadow: 0 0 6px 1px rgba(124, 92, 255, 0.4);
   }
 }
 
@@ -2953,16 +2953,33 @@ input:focus-visible {
 }
 
 @keyframes playGlow {
-  0%   { box-shadow: 0 0 0 2px rgba(124,92,255,0.30); }
-  50%  { box-shadow: 0 0 0 5px rgba(124,92,255,0.55); }
-  100% { box-shadow: 0 0 0 2px rgba(124,92,255,0.30); }
+  0%   { box-shadow: 0 0 0 2px rgba(124,92,255,0.20); }
+  50%  { box-shadow: 0 0 0 4px rgba(124,92,255,0.36); }
+  100% { box-shadow: 0 0 0 2px rgba(124,92,255,0.20); }
 }
 
 .btn.play.playing {
   background: var(--accent);
   border-color: transparent;
   color: #fff;
-  animation: playGlow 1.5s ease-in-out infinite;
+  animation: playGlow 1.8s ease-in-out infinite;
+}
+/* Desktop: the whole "Play · 0:05" pill pulses as one rounded unit, so the ring
+   follows the pill (not an oval on just the button that clipped the divider). */
+@media (min-width: 641px) {
+  .play-wrap:has(.btn.play.playing) {
+    background: var(--accent);
+    border-color: transparent;
+    animation: playGlow 1.8s ease-in-out infinite;
+  }
+  .play-wrap:has(.btn.play.playing) > #playBtn.btn.play {
+    background: transparent;
+    animation: none;                 /* the wrap pulses, not the button */
+  }
+  .play-wrap:has(.btn.play.playing) .duration-badge {
+    color: rgba(255,255,255,0.85);
+    border-left-color: rgba(255,255,255,0.28);
+  }
 }
 
 /* ---------- Mobile ---------- */
@@ -3478,4 +3495,35 @@ body.player-mode #canvas {
 
   /* Toolbar magnify sized to match Pen/Eraser. */
   .magnify-tool svg { width: 23px; height: 23px; }
+}
+
+/* ===================================================================
+   Header spacing + recording fixes (v76)
+   =================================================================== */
+@media (max-width: 640px) {
+  /* Stop (recording) is a proper pill again — the bare-Record padding was
+     bleeding into it and clipping the word. */
+  .btn.record.active { width: auto; padding: 0 15px; gap: 7px; }
+  .btn.record.active .btn-label { display: inline; }
+
+  /* While recording, collapse the wordmark so the timer + Stop have room and
+     the logo keeps clear space to its right. Same once a take exists — logo +
+     a generous gap + the control cluster reads best. At idle rest (no take) the
+     wordmark shows, since there's only Record + ⋯. */
+  body.recording .brand > span,
+  .header:has(#playWrap:not([hidden])) .brand > span { display: none; }
+
+  /* Uniform spacing between controls; cluster them to the right so there's a
+     generous gap between the logo and the first control (instead of spreading
+     edge-to-edge, which pinned Record against the logo). */
+  .actions,
+  .header.compact .actions { gap: 9px; justify-content: flex-end; }
+  .btn.post { margin-left: 0; }
+  #menuBtn  { margin-left: 0; margin-right: 2px; }
+
+  /* After a take (Play visible), Record drops to a bare dot — grouped beside
+     Play so it still reads as a control — which pulls the cluster further right
+     of the logo. Record keeps its label at rest (when it's the only action). */
+  .actions:has(#playWrap:not([hidden])) .btn.record { width: 40px; padding: 0; }
+  .actions:has(#playWrap:not([hidden])) .btn.record .btn-label { display: none; }
 }
