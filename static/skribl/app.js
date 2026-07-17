@@ -1074,6 +1074,7 @@ function beginRecording(continueTake) {
   recordBtn.innerHTML = ICON_STOP + LABEL_STOP;
   recordBtn.classList.add('active');
   canvasWrap.classList.add('recording');
+  document.body.classList.add('recording');
   document.querySelector('.header').classList.add('compact');
   recIndicator.hidden = false;
   playWrap.hidden = true;
@@ -1103,6 +1104,7 @@ function endRecordingTake() {
   recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
   recordBtn.classList.remove('active');
   canvasWrap.classList.remove('recording');
+  document.body.classList.remove('recording');
   recIndicator.hidden = true;
   playWrap.hidden = !recorded;
   postBtn.hidden = !recorded;
@@ -1496,6 +1498,8 @@ if (helpItem) helpItem.addEventListener('click', () => { closeMenu(true); openHe
 
 function closeHelpDrawer() {
   clearTimeout(helpCloseTimer);
+  // Drop focus off the trigger so its :focus-visible ring doesn't linger (Escape).
+  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
   helpDrawer.classList.add('closing');
   helpDrawer.classList.remove('open');
   helpCloseTimer = setTimeout(() => {
@@ -5820,6 +5824,7 @@ function abortStrokeForPinch() {
     recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
     recordBtn.classList.remove('active');
     canvasWrap.classList.remove('recording');
+  document.body.classList.remove('recording');
     recIndicator.hidden = true;
     document.querySelector('.header').classList.remove('compact');
     updateCanvasLockCue();
