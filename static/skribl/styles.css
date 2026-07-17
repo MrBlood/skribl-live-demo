@@ -151,7 +151,7 @@ body {
 }
 
 .btn.play {
-  background: var(--surface-control);
+  background: rgba(255, 255, 255, 0.045);
   color: var(--text-primary);
   border: 1px solid var(--hairline-strong);
 }
@@ -1862,7 +1862,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 10px 18px;
   border-radius: var(--r-pill);
   white-space: normal;
-  max-width: min(92vw, 420px);
+  width: max-content;
+  max-width: min(94vw, 520px);
   text-align: center;
   box-sizing: border-box;
   z-index: 200;
@@ -3021,8 +3022,8 @@ input:focus-visible {
      .btn.play.btn-icon has higher specificity than .btn, so without this
      it would stay 40px and look oversized next to its neighbors. */
   .btn.play.btn-icon {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
   }
 
   .icon-btn {
