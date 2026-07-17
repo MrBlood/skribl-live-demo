@@ -89,6 +89,9 @@ body {
   align-items: center;
   gap: 10px;
 }
+/* JS (fitBrand) adds this when the "Skribl Pad" text won't fit → logo only. */
+.brand > span { white-space: nowrap; }
+.brand.brand-collapsed > span { display: none; }
 
 .brand svg {
   width: 34px;
@@ -220,13 +223,13 @@ body {
 .duration-badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #1c212c;
-  color: #a8b2c1;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 0 15px 0 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  border-left: 1px solid var(--hairline-strong);
+  align-self: stretch;
 }
 
 .duration-badge[hidden] { display: none; }
@@ -2934,6 +2937,15 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+}
+/* Inside the merged pill the button is borderless; the wrap provides the shell. */
+.play-wrap > #playBtn.btn.play {
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 @keyframes playGlow {
@@ -2972,9 +2984,8 @@ input:focus-visible {
 
   /* Logo-only on mobile in every state — the compact (recording) header no
      longer re-shows the "Skribl Pad" text. */
-  .brand > span,
-  .header.compact .brand > span { display: none; }
-  .header.compact .brand-word { display: none; }
+  .brand > span { font-size: 15px; white-space: nowrap; }
+  .header.compact .brand-word { display: inline; }
 
   .actions {
     flex: 1;
@@ -3336,8 +3347,17 @@ body.player-mode #canvas {
   .tool-open, .toolbar .undo-btn { width: 36px; }
   .tool-sep { margin: 0 1px; }
 
-  /* D — logo-only branding: drop the "Skribl Pad" text to free header width. */
-  .brand > span { display: none; }
+  /* D — brand text visibility is decided by fitBrand() (JS), not a fixed rule,
+     so "Skribl Pad" shows whenever there's room and drops to logo-only when not. */
+
+  /* Mobile: no merged Play pill — the button keeps its own round shape and the
+     duration is dropped entirely (no room). */
+  .play-wrap { background: transparent; border: none; }
+  .play-wrap > #playBtn.btn.play {
+    border: 1px solid var(--hairline-strong);
+    background: rgba(255, 255, 255, 0.045);
+  }
+  .duration-badge { display: none !important; }
 
   /* A — while recording, hide Help + ⋯ so the timer/stop never overflow the
      header. They return the moment recording stops. Magnifier stays. */
