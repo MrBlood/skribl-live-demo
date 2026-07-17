@@ -1470,6 +1470,7 @@ let helpCloseTimer = null;
 
 function openHelpDrawer() {
   clearTimeout(helpCloseTimer);
+  document.documentElement.classList.add('help-open');   // lock page scroll (one scrollbar)
   helpDrawer.hidden = false;
   helpDrawer.classList.remove('closing');
   requestAnimationFrame(() => {
@@ -1487,6 +1488,7 @@ function closeHelpDrawer() {
   helpCloseTimer = setTimeout(() => {
     helpDrawer.hidden = true;
     helpDrawer.classList.remove('closing');
+    document.documentElement.classList.remove('help-open');   // restore page scroll after it's gone
   }, 250);
 }
 
