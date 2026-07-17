@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='60') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='61') }}">
 </head>
 <body>
 
@@ -46,11 +46,8 @@
       <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       </button>
-      <button type="button" id="helpBtn" class="help-btn" title="How it works" aria-label="How it works">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/>
-          <text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text>
-        </svg>
+      <button type="button" id="magnifyBtn" class="icon-btn magnify-btn" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
       </button>
     </div>
   </div>
@@ -70,6 +67,10 @@
       <button type="button" class="menu-item" id="exportItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export
+      </button>
+      <button type="button" class="menu-item" id="helpItem">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg>
+        How it works
       </button>
       <div class="menu-divider"></div>
       <button type="button" class="menu-item danger" id="clearMenuItem">
@@ -178,7 +179,7 @@
     <!-- Zoom pill (editor only). Grip = drag-only (move to any corner); the
          four buttons below are pure taps. Guarded in app.js so the player,
          which has no #zoomLayer, is unaffected. -->
-    <div id="zoomHud" class="zoom-hud" data-corner="br">
+    <div id="zoomHud" class="zoom-hud" data-corner="br" hidden>
       <div id="zoomGrip" class="zoom-grip" title="Drag to move" aria-label="Move zoom controls">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
       </div>
@@ -304,6 +305,45 @@
               <div class="help-tip">
                 <span class="help-pill">Undo / Redo</span>
                 <div class="help-desc">Step back and forward stroke by stroke, up to 30 steps. Both work while recording &#8212; the take captures the drawing as corrected. Redo history clears the moment you draw something new.</div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="accordion-header" aria-expanded="false">
+            <span class="accordion-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+            </span>
+            <span class="accordion-title">Zoom &amp; pan</span>
+            <span class="accordion-count">6 tips</span>
+            <span class="accordion-chevron">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </span>
+          </button>
+          <div class="accordion-body">
+            <div class="accordion-inner">
+              <div class="help-tip">
+                <span class="help-pill">Magnifier</span>
+                <div class="help-desc">Tap the <strong>magnifying glass</strong> in the top bar to show the zoom controls on the canvas &#8212; tap again to hide them and snap back to 100%. Zooming lets you work on fine detail; strokes always record and replay at their true position, so magnifying never changes your Skribl.</div>
+              </div>
+              <div class="help-tip">
+                <span class="help-pill">Zoom in / out</span>
+                <div class="help-desc">Use <strong>+</strong> / <strong>&minus;</strong> on the pill to step between 100% and 400%, or the <strong>fit</strong> button to jump back to the whole canvas.</div>
+              </div>
+              <div class="help-tip">
+                <span class="help-pill">Type a %</span>
+                <div class="help-desc">Tap the percentage to type an exact zoom &#8212; handy on desktop where there's no pinch. Press Enter or tap away to apply.</div>
+              </div>
+              <div class="help-tip">
+                <span class="help-pill">Pinch</span>
+                <div class="help-desc">On a touch screen, pinch to zoom and drag with two fingers to move around. One finger still draws as normal.</div>
+              </div>
+              <div class="help-tip">
+                <span class="help-pill">Pan (desktop)</span>
+                <div class="help-desc">While zoomed on a computer, <strong>scroll</strong> to move around (Shift+scroll goes sideways), or hold <strong>Space</strong> and drag to grab the canvas.</div>
+              </div>
+              <div class="help-tip">
+                <span class="help-pill">Move the controls</span>
+                <div class="help-desc">Drag the pill by its grip (the move handle at the top) to park it in any corner, so it's never in the way of what you're drawing.</div>
               </div>
             </div>
           </div>
@@ -479,7 +519,7 @@
               </div>
               <div class="help-tip">
                 <span class="help-pill">Export</span>
-                <div class="help-desc">Save your Skribl as a <strong>PNG</strong> image of the finished drawing, or a <strong>WebM</strong> video of the stroke replay with your looped music &#8212; for sharing outside the app.</div>
+                <div class="help-desc">Save your Skribl to share outside the app, in three formats: a <strong>PNG</strong> still of the finished drawing; an <strong>MP4</strong> video (H.264) of the stroke replay with your looped music &#8212; which plays and uploads anywhere; or a looping <strong>GIF</strong> of just the strokes (silent), with a choice of a solid <strong>Background color</strong> or a <strong>Transparent</strong> background for stickers and overlays.</div>
               </div>
               <div class="help-tip">
                 <span class="help-pill">Clear canvas</span>
@@ -907,6 +947,6 @@
     import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='60') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='61') }}" defer></script>
 </body>
 </html>
