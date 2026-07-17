@@ -1523,11 +1523,13 @@ helpBackdrop.addEventListener('click', closeHelpDrawer);
   if (!brand || !brandText || !actions || !header) return;
   function fit() {
     brand.classList.remove('brand-collapsed');           // reveal, then measure
-    // If showing the wordmark makes the header content overflow, collapse it.
-    // The flex spacer absorbs slack, so overflow only appears when it truly
-    // doesn't fit — at which point the nowrap wordmark pushes scrollWidth past
-    // clientWidth.
+    header.classList.remove('rec-collapsed');
+    // Step 1: if the wordmark makes it overflow, drop the wordmark.
     if (header.scrollWidth > header.clientWidth + 1) brand.classList.add('brand-collapsed');
+    // Step 2: if it's STILL tight, shed Record's label (keep the function-critical
+    // controls over decoration). The flex spacer absorbs slack, so overflow only
+    // appears when it genuinely doesn't fit.
+    if (header.scrollWidth > header.clientWidth + 1) header.classList.add('rec-collapsed');
   }
   const refit = () => requestAnimationFrame(fit);   // measure after layout settles
   if (typeof ResizeObserver !== 'undefined') {
