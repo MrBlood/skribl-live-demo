@@ -325,6 +325,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   user-select: none;
   -webkit-user-select: none;
 }
+.zoom-hud[hidden] { display: none; }
 /* Corner docking — JS sets data-corner; inline left/top override while dragging. */
 .zoom-hud[data-corner="br"] { right: 12px;  bottom: 12px; }
 .zoom-hud[data-corner="bl"] { left: 12px;   bottom: 12px; }
@@ -2023,6 +2024,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .icon-btn svg { width: 18px; height: 18px; }
 .icon-btn:hover { background: rgba(124, 92, 255, 0.12); color: var(--accent-bright); }
 .icon-btn:active { transform: scale(0.94); }
+
+/* Magnifier toggle — lit when the zoom controls are showing. */
+.magnify-btn.active {
+  border-color: var(--accent);
+  background: rgba(124, 92, 255, 0.18);
+  color: var(--accent-bright);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.14);
+}
+.magnify-btn.active:hover { background: rgba(124, 92, 255, 0.24); }
 
 /* Play as icon-only on desktop */
 .btn.play.btn-icon {
