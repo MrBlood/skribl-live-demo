@@ -495,7 +495,7 @@ function startDraw(e) {
   // Post-record lock: the completed replay can't be drawn over.
   if (finishedRecording && !recording) {
     if (!lockToastShown) {
-      showToast('Recording finished — hit Record for a new take from here, or Clear to start over', recordBtn);
+      showToast('Recording done — Record for a new take, or Clear', recordBtn);
       lockToastShown = true;
       setTimeout(() => { lockToastShown = false; }, 3000);
     }
@@ -1116,7 +1116,7 @@ function endRecordingTake() {
     durationBadge.hidden = false;
     // Confirm the capture and surface multi-take: the canvas is now locked on
     // this take; pressing Record again appends another take to the same Skribl.
-    showToast('Take saved — hit Record to add another, or Play to preview', recordBtn);
+    showToast('Take saved — Record for another, or Play', recordBtn);
   }
   updateClearVisibility();
 }
@@ -2071,7 +2071,7 @@ musicInput.addEventListener('change', (e) => {
     const _restoringTrim = (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta);
     if (!_restoringTrim && strokes.length) {
       setLoopToDrawingLength();
-      showToast('Loop set to your drawing length — fine-tune anytime', musicUploadBtn);
+      showToast('Loop set to your drawing length', musicUploadBtn);
     }
     // Reapply any pending trim from an autosave restore, from THIS path so it
     // can't race a separately-attached listener.
@@ -3427,7 +3427,7 @@ function restoreAutosave(data) {
   refreshPendingCards();
 
   const hadMedia = pendingMusicMeta || pendingPhotoMeta;
-  showToast(hadMedia ? 'Drawing restored — re-add your media below' : 'Drawing restored', null);
+  showToast(hadMedia ? 'Restored — re-add your media below' : 'Drawing restored', null);
 }
 
 // When the user re-adds media after a restore, reapply the saved settings.
@@ -4596,7 +4596,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
       return true;
     } catch (err) {
       console.error('WebCodecs MP4 export failed:', err);
-      showToast('MP4 export failed — using standard video instead', null);
+      showToast('MP4 failed — using standard video', null);
       progress.hidden = true;
       cleanup();
       return false;    // let the caller fall back to the MediaRecorder export
@@ -5279,7 +5279,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
         // Saved to this device only (no server, or a temporary server/network
         // failure). Be honest — this is NOT a shared post.
         statusLabel.textContent = 'Saved on this device only';
-        showToast('Saved locally only — link works on this device', null);
+        showToast('Saved locally — works on this device', null);
       } else {
         showToast('Posted! 🎨', null);
       }
@@ -5723,7 +5723,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
       await navigator.clipboard.writeText(location.href);
       showToast('Link copied', null);
     } catch (e) {
-      showToast('Couldn\u2019t copy — long-press the address bar instead', null);
+      showToast('Couldn\u2019t copy — long-press the address bar', null);
     }
   });
 
@@ -6123,7 +6123,7 @@ window.addEventListener('touchcancel', _pinchEnd);
   function maybePanHint() {
     if (panHintShown || !finePointer || zoom <= 1.001) return;
     panHintShown = true;
-    if (typeof showToast === 'function') showToast('Scroll — or hold Space and drag — to move around', null);
+    if (typeof showToast === 'function') showToast('Scroll or Space-drag to move around', null);
   }
 
   // Scroll wheel pans the magnified view (Shift+wheel → horizontal).
