@@ -1290,9 +1290,14 @@ function openMenu() {
   requestAnimationFrame(() => menuOverlay.classList.add('open'));
 }
 
-function closeMenu() {
+function closeMenu(instant) {
   menuOverlay.classList.remove('open');
-  menuCloseTimer = setTimeout(() => { menuOverlay.hidden = true; }, 350);
+  clearTimeout(menuCloseTimer);
+  if (instant) {
+    menuOverlay.hidden = true;   // dismiss with no slide (e.g. when opening another panel)
+  } else {
+    menuCloseTimer = setTimeout(() => { menuOverlay.hidden = true; }, 350);
+  }
 }
 
 menuBtn.addEventListener('click', (e) => {
@@ -1473,7 +1478,7 @@ function openHelpDrawer() {
 }
 
 if (helpBtn) helpBtn.addEventListener('click', openHelpDrawer);
-if (helpItem) helpItem.addEventListener('click', () => { closeMenu(); openHelpDrawer(); });
+if (helpItem) helpItem.addEventListener('click', () => { closeMenu(true); openHelpDrawer(); });
 
 function closeHelpDrawer() {
   clearTimeout(helpCloseTimer);
