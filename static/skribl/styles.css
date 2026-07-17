@@ -616,6 +616,10 @@ body.stroking .zoom-hud { pointer-events: none; }
 }
 .tool-open svg { width: 21px; height: 21px; }
 .tool-open:hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+
+/* Magnify tool — lit (accent) when its zoom pill is showing. */
+.magnify-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.14); }
+.magnify-tool.active svg { filter: drop-shadow(0 0 3px rgba(124, 92, 255, 0.45)); }
 .tool-open.open { background: var(--accent); color: #fff; }
 .tool-chip { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
 .tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
@@ -3415,3 +3419,35 @@ body.player-mode #canvas {
 .brush-dot-cell { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; }
 .brush-dot { background: #fff; border-radius: 50%; flex: none; }
 .brush-slider-line .slider-nudge-btn { width: 24px; height: 24px; }
+
+/* ===================================================================
+   Apple-style mobile header (v74): bare glyphs, one filled Post pill,
+   magnify moved to the toolbar, help moved to the ⋯ menu. Plus a wider
+   tray so the standalone magnify fits down to 360px.
+   =================================================================== */
+@media (max-width: 640px) {
+  /* Bare glyphs — drop the circle chrome from Record / Play / ⋯. */
+  .btn.record,
+  .play-wrap,
+  .play-wrap > #playBtn.btn.play,
+  .icon-btn {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .btn.record svg { filter: none; }               /* clean accent dot, no glow */
+
+  /* Post is the single filled element — with its label, now there's room. */
+  .btn.post {
+    width: auto;
+    padding: 0 15px;
+    gap: 6px;
+  }
+  .btn.post .btn-label { display: inline; }
+  .btn.post .post-long { display: none; }          /* "Post", not "Post to Skribl" */
+
+  /* Wider tray (header + toolbar kept aligned at 6px) so the standalone
+     magnify fits even at 360px; tighter gap does the last few pixels. */
+  .header  { margin: 12px 6px; }
+  .toolbar { margin: 12px 6px; max-width: calc(100% - 12px); gap: 1px; }
+}
