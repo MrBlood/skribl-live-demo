@@ -2953,32 +2953,24 @@ input:focus-visible {
 }
 
 @keyframes playGlow {
-  0%   { box-shadow: 0 0 0 2px rgba(124,92,255,0.20); }
-  50%  { box-shadow: 0 0 0 4px rgba(124,92,255,0.36); }
-  100% { box-shadow: 0 0 0 2px rgba(124,92,255,0.20); }
+  0%   { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
+  50%  { box-shadow: 0 0 0 3px rgba(124,92,255,0.55); }
+  100% { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
 }
 
 .btn.play.playing {
-  background: var(--accent);
-  border-color: transparent;
-  color: #fff;
+  /* Stays dark — a pulsing purple border signals playback (ring lives on the
+     whole pill on desktop via the rule below). */
   animation: playGlow 1.8s ease-in-out infinite;
 }
-/* Desktop: the whole "Play · 0:05" pill pulses as one rounded unit, so the ring
-   follows the pill (not an oval on just the button that clipped the divider). */
+/* Desktop: the ring wraps the whole "Play · 0:05" pill (rounded), not an oval on
+   just the button. The pill keeps its dark fill so the border/divider stay visible. */
 @media (min-width: 641px) {
   .play-wrap:has(.btn.play.playing) {
-    background: var(--accent);
-    border-color: transparent;
     animation: playGlow 1.8s ease-in-out infinite;
   }
   .play-wrap:has(.btn.play.playing) > #playBtn.btn.play {
-    background: transparent;
     animation: none;                 /* the wrap pulses, not the button */
-  }
-  .play-wrap:has(.btn.play.playing) .duration-badge {
-    color: rgba(255,255,255,0.85);
-    border-left-color: rgba(255,255,255,0.28);
   }
 }
 
