@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='73') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='74') }}">
 </head>
 <body>
 
@@ -43,12 +43,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span class="btn-label">Post<span class="post-long"> to Skribl</span></span>
       </button>
-      <button type="button" id="magnifyBtn" class="icon-btn magnify-btn" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-      </button>
-      <button type="button" id="helpBtn" class="icon-btn help-btn" title="How it works" aria-label="How it works">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg>
-      </button>
       <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       </button>
@@ -71,12 +65,16 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export
       </button>
+      <button type="button" class="menu-item" id="helpItem">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg>
+        How it works
+      </button>
       <div class="menu-divider"></div>
       <button type="button" class="menu-item danger" id="clearMenuItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         <span>Clear all</span>
       </button>
-      <div class="menu-version">Skribl Pad · v73</div>
+      <div class="menu-version">Skribl Pad · v74</div>
     </div>
   </div>
 
@@ -642,6 +640,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
+    <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
     <span class="tool-sep"></span>
     <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colors & brush">
       <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
@@ -950,6 +951,6 @@
     import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='73') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='74') }}" defer></script>
 </body>
 </html>
