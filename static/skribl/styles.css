@@ -3519,3 +3519,27 @@ body.player-mode #canvas {
   .actions:has(#playWrap:not([hidden])) .btn.record { width: 40px; padding: 0; }
   .actions:has(#playWrap:not([hidden])) .btn.record .btn-label { display: none; }
 }
+
+/* ===================================================================
+   Sleeker desktop header (v79) — Option 1: thinner pills, lighter
+   hairlines, and a ⋯ matched in height & centered with the pills.
+   Desktop only; mobile (max-width:640px) is unaffected.
+   =================================================================== */
+@media (min-width: 641px) {
+  .btn { padding: 7px 14px; }                          /* ~32px tall vs 37 */
+  .btn svg { width: 14px; height: 14px; }
+  .btn.record { border-color: rgba(124,92,255,0.26); box-shadow: 0 0 6px rgba(124,92,255,0.10); }
+  .btn.post   { box-shadow: 0 2px 10px rgba(124,92,255,0.30); }
+
+  /* Merged Play pill: lighter shell + divider to match. */
+  .play-wrap { border-color: var(--hairline); }
+  .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
+
+  /* ⋯ — same height as the pills, lighter hairline, dead-centered. */
+  .icon-btn { width: 32px; height: 32px; border-color: var(--hairline); }
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  /* Keep the merged Play pill slim after a take (the compact rule otherwise
+     restores 10px padding, making Play taller than Record/Post). */
+  .header.compact .btn.play.btn-icon { padding: 7px 14px; }
+}
