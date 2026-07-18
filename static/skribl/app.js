@@ -967,12 +967,16 @@ function openDrawer(name) {                      // name = 'draw'|'photo'|'music
   if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
   if (name === 'music') updateDrawingTimeLabels();
   // Drawer opens below the bar; scroll just enough to reveal it (keeps max canvas
-  // in frame), and scroll back to rest when everything closes.
+  // in frame), and scroll back to rest when everything closes. Honor the user's
+  // reduced-motion preference — the CSS sets scroll-behavior:auto for them, but a
+  // JS-requested 'smooth' scroll would override that intent, so mirror it here.
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const scrollBehavior = reduceMotion ? 'auto' : 'smooth';
   if (name && idMap[name]) {
     const panel = document.getElementById(idMap[name]);
-    requestAnimationFrame(() => panel.scrollIntoView({ behavior: 'smooth', block: 'end' }));
+    requestAnimationFrame(() => panel.scrollIntoView({ behavior: scrollBehavior, block: 'end' }));
   } else {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: scrollBehavior });
   }
 }
 const toolBarEl = document.getElementById('toolBar');
@@ -1624,8 +1628,8 @@ function updateTrimUI() {
   trimEndLabel.textContent = formatTime(audioDuration);
   trimDurLabel.textContent = formatTimeH(trimEnd - trimStart) + ' selected';
   // Update bubbles — hundredths, since these mark exact cut points
-  bubbleStart.textContent = formatTimeH(trimStart);
-  bubbleEnd.textContent = formatTimeH(trimEnd);
+  if (bubbleStart) bubbleStart.textContent = formatTimeH(trimStart);
+  if (bubbleEnd) bubbleEnd.textContent = formatTimeH(trimEnd);
   // Fine-tune panel readouts — 2 decimals so even a 0.01s nudge is visible
   if (startReadout) startReadout.textContent = trimStart.toFixed(2) + 's';
   if (endReadout) endReadout.textContent = trimEnd.toFixed(2) + 's';
@@ -1872,6 +1876,7 @@ function attachSegSlider(group) {
     }
   });
 })();
+const bubbleStart = document.getElementById('bubbleStart');
 const bubbleEnd = document.getElementById('bubbleEnd');
 let audioCtx = null;
 let currentAudioBuffer = null;
@@ -5383,6 +5388,27 @@ if (typeof pendingMusicMeta !== 'undefined') {
 // everything below (canvas sizing, loadSkribl, the playback orchestrator) is
 // identical regardless of source. It reuses loadSkribl() + the shared Play path
 // (replayTimelineToCanvas), so the player is never a second timeline loop.
+// A load failure used to show a transient toast and return, leaving the visitor
+// on a blank dark page once the toast faded (the player shell stays hidden until
+// a load succeeds). Instead, surface a persistent error panel with a retry and a
+// link to the editor. Enters player-mode and hides the shell so the panel is the
+// only thing shown.
+function showPlayerError(msg) {
+  document.body.classList.add('player-mode');
+  const shell = document.getElementById('playerShell');
+  if (shell) shell.hidden = true;
+  const err = document.getElementById('playerError');
+  if (!err) { showToast(msg, null); return; }   // fallback if markup is absent
+  const m = document.getElementById('playerErrorMsg');
+  if (m && msg) m.textContent = msg;
+  err.hidden = false;
+  const retry = document.getElementById('playerRetryBtn');
+  if (retry && !retry._wired) {
+    retry._wired = true;
+    retry.addEventListener('click', () => location.reload());
+  }
+}
+
 (async function initPlayer() {
   const mode = (typeof window !== 'undefined' && window.SKRIBL_MODE) || null;
   const hashMatch = (location.hash || '').match(/^#skribl=(.+)$/);
@@ -5397,26 +5423,26 @@ if (typeof pendingMusicMeta !== 'undefined') {
     try {
       const res = await fetch(apiBase + '/' + encodeURIComponent(pid));
       if (!res.ok) {
-        showToast(res.status === 404 ? 'Skribl not found' : 'Could not load that Skribl', null);
+        showPlayerError(res.status === 404 ? "This Skribl couldn't be found." : "Couldn't load this Skribl.");
         return;
       }
       // Server envelope: { id, title, caption, hasAudio, createdAt, author, skribl }
       post = await res.json();
-    } catch (e) { showToast('Could not load that Skribl', null); return; }
+    } catch (e) { showPlayerError("Couldn't load this Skribl."); return; }
   } else if (hashMatch) {
     const id = decodeURIComponent(hashMatch[1]);
     try {
       const raw = localStorage.getItem('skribl_post_' + id);
-      if (!raw) { showToast('Skribl not found on this device', null); return; }
+      if (!raw) { showPlayerError("This Skribl isn't saved on this device."); return; }
       post = JSON.parse(raw);
-    } catch (e) { showToast('Could not load that Skribl', null); return; }
+    } catch (e) { showPlayerError("Couldn't load this Skribl."); return; }
   } else {
     return;   // editor mode — leave the app untouched
   }
 
   // Accept the wrapper { ..., skribl } or a bare serializeSkribl() object.
   const data = post && post.skribl ? post.skribl : post;
-  if (!data || data.version == null) { showToast('That Skribl looks invalid', null); return; }
+  if (!data || data.version == null) { showPlayerError('This Skribl looks invalid.'); return; }
 
   document.body.classList.add('player-mode');
 
@@ -5445,11 +5471,27 @@ if (typeof pendingMusicMeta !== 'undefined') {
   //     frame is painted.
   // The backing store stays at author size × dpr, so ctx.scale(dpr) keeps
   // recorded CSS-pixel stroke coords 1:1 — only the CSS display size shrinks.
+  // The player app is a centered flex column: [canvas-wrap] — gap — [player
+  // shell]. To fit the canvas without the page scrolling, reserve the ACTUAL
+  // vertical space taken by the shell + the app's top/bottom padding + the column
+  // gap, measured live. A hardcoded reserve (was 220px) underestimated the shell
+  // — it measures ~243px bare and ~267px with a caption, and with the 40px app
+  // padding + 20px gap on top, that produced 80–100px of overflow and vertical
+  // scroll. Falls back to a safe constant if the shell can't be measured yet.
+  function playerReservedV() {
+    const shellEl = document.getElementById('playerShell');
+    const appEl = document.querySelector('.app');
+    if (!shellEl || shellEl.hidden || !appEl) return 300;
+    const cs = getComputedStyle(appEl);
+    const padV = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    const gap = (parseFloat(cs.rowGap) || parseFloat(cs.gap) || 0);
+    return shellEl.getBoundingClientRect().height + padV + gap;
+  }
   function playerFitScale() {
     // Clamp the viewport budget so a short viewport (or an on-screen keyboard)
     // can't drive the available height ≤ 0 and flip the scale negative.
     const availW = Math.max(120, window.innerWidth - 40);
-    const availH = Math.max(120, window.innerHeight - 220);
+    const availH = Math.max(120, window.innerHeight - playerReservedV());
     return Math.min(1, availW / authorW, availH / authorH);
   }
   function layoutPlayerCanvas() {
@@ -5475,6 +5517,13 @@ if (typeof pendingMusicMeta !== 'undefined') {
   // dpr-invariant here, so the existing pixels stay valid at the new CSS size.
   window.addEventListener('resize', layoutPlayerCanvas);
   window.addEventListener('orientationchange', layoutPlayerCanvas);
+  // Caption wrapping or responsive control layout can change the shell height
+  // without a window resize; re-fit (CSS display size only — never clears) when
+  // it does. Observing the shell and mutating the sibling wrap can't loop.
+  if (window.ResizeObserver) {
+    const shellEl = document.getElementById('playerShell');
+    if (shellEl) new ResizeObserver(() => layoutPlayerCanvas()).observe(shellEl);
+  }
 
   // Restore all state and paint the finished drawing as the poster frame.
   loadSkribl(data);
