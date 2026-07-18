@@ -3532,6 +3532,68 @@ function readAutosave() {
   }
 }
 
+// Reconstruct the per-stroke undo history for a restored drawing. The autosave
+// persists only the drawing (base + strokes + per-stroke lengths), not the undo
+// stack — that's a pile of full-canvas snapshots, far too big to store. So we
+// rebuild it here: walk the strokes and snapshot the canvas *before* each one,
+// exactly as startDraw does live. Result — a restored Skribl can be undone stroke
+// by stroke, identical to one drawn this session. Bounded to the last 30 strokes
+// (the in-session cap). Renders the full drawing on the main canvas as it goes,
+// so it doubles as the restore render. Fully guarded: any failure falls back to
+// just showing the finished drawing with no undo, never a broken stack.
+function rebuildUndoForRestore(baseHasContent) {
+  undoStack = [];
+  redoStack = [];
+  redoBtn.disabled = true;
+  const groups = (strokeGroups || []).slice();
+  const allStrokes = strokes.slice();
+  if (!groups.length) {
+    // No stroke boundaries: just render whatever we have; nothing to undo.
+    clearAndRestore(() => paintStrokesStatic(allStrokes));
+    undoBtn.disabled = true;
+    return;
+  }
+  const starts = [];
+  let acc = 0;
+  for (let k = 0; k < groups.length; k++) { starts.push(acc); acc += groups[k]; }
+  const total = groups.length;
+  const firstK = Math.max(0, total - 30);   // in-session keeps at most 30 entries
+
+  const snapshotMain = () => {
+    const s = document.createElement('canvas');
+    s.width = Math.max(1, canvas.width);
+    s.height = Math.max(1, canvas.height);
+    if (canvas.width > 0 && canvas.height > 0) s.getContext('2d').drawImage(canvas, 0, 0);
+    return s;
+  };
+
+  const build = () => {
+    try {
+      for (let k = firstK; k < total; k++) {
+        const prefixPts = allStrokes.slice(0, starts[k]);   // everything before stroke k
+        // clearAndRestore is synchronous now that the base image is cached, so the
+        // canvas is fully painted before we snapshot it.
+        clearAndRestore(() => paintStrokesStatic(prefixPts));
+        undoStack.push({
+          image: snapshotMain(),
+          strokes: prefixPts,
+          strokeGroups: groups.slice(0, k),
+          hasContent: (k === 0) ? baseHasContent : true
+        });
+      }
+    } catch (e) {
+      undoStack = [];   // on any failure, prefer no undo over a corrupt stack
+    }
+    // Leave the complete drawing on the canvas as the live state.
+    clearAndRestore(() => paintStrokesStatic(allStrokes));
+    undoBtn.disabled = undoStack.length === 0;
+  };
+
+  // Warm the base-image cache once (async only on the first load), then build the
+  // snapshots synchronously inside the callback.
+  clearAndRestore(build);
+}
+
 function restoreAutosave(data) {
   clearCanvas();
   if (data.background && data.background.color) {
@@ -3543,16 +3605,23 @@ function restoreAutosave(data) {
   strokes = (data.strokes || []).slice();
   strokeGroups = (data.strokeGroups || []).slice();
 
-  const renderStrokes = () => paintStrokesStatic(strokes);
   const { width: cw, height: ch } = getCanvasLogicalSize();
-  if (data.baseSnapshot) {
-    preRecordSnapshot = strokes.length ? data.baseSnapshot : null;
+  if (strokes.length) {
+    // Base (if any) is applied inside rebuildUndoForRestore via preRecordSnapshot;
+    // it renders base + strokes AND reconstructs the per-stroke undo history, so a
+    // restored drawing undoes exactly like one drawn this session.
+    preRecordSnapshot = data.baseSnapshot || null;
+    hasContent = true;
+    // The pre-stroke base only counts as content if a photo was baked into it —
+    // so undoing every stroke lands on the photo (content) or a blank pad (empty).
+    rebuildUndoForRestore(!!(data.photoMeta && data.photoMeta.name));
+  } else if (data.baseSnapshot) {
+    // Base image with no strokes (e.g. a saved photo background): just draw it.
+    preRecordSnapshot = null;
     const baseImg = new Image();
-    baseImg.onload = () => { ctx.drawImage(baseImg, 0, 0, cw, ch); renderStrokes(); };
+    baseImg.onload = () => { ctx.drawImage(baseImg, 0, 0, cw, ch); };
     baseImg.src = data.baseSnapshot;
     hasContent = true;
-  } else if (strokes.length) {
-    renderStrokes();
   }
   if (strokes.length) {
     hasContent = true;
