@@ -21,9 +21,9 @@
   <meta name="twitter:description" content="{{ og_description }}">
   {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='81') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='82') }}">
 </head>
-<body>
+<body class="player-mode">
 
   <div class="app">
   <div class="header">
@@ -54,20 +54,14 @@
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
           <span class="btn-label">Play</span>
         </button>
+        <span id="durationBadge" class="duration-badge" hidden>0:00</span>
       </div>
       <button type="button" id="postBtn" class="btn post" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span class="btn-label">Post<span class="post-long"> to Skribl</span></span>
       </button>
-      <span id="durationBadge" class="duration-badge" hidden>0:00</span>
       <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-      </button>
-      <button type="button" id="helpBtn" class="help-btn" title="How it works" aria-label="How it works">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/>
-          <text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text>
-        </svg>
       </button>
     </div>
   </div>
@@ -533,6 +527,19 @@
     </div>
   </div>
 
+  <!-- Persistent load-failure panel (shown instead of a transient toast, so a
+       failed load never leaves a blank page). -->
+  <div class="player-error" id="playerError" hidden>
+    <div class="player-error-icon" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="player-error-title" id="playerErrorMsg">Couldn't load this Skribl.</div>
+    <div class="player-error-actions">
+      <button type="button" id="playerRetryBtn" class="player-error-btn primary">Try again</button>
+      <a href="/" class="player-error-btn">Make your own Skribl</a>
+    </div>
+  </div>
+
   <!-- Read-only player shell (shown only in player-mode) -->
   <div class="player-shell" id="playerShell" hidden>
     <div class="player-meta">
@@ -871,6 +878,6 @@
     window.SKRIBL_PLAYER_ID = {{ public_id | tojson }};
     window.SKRIBL_API_BASE = "/api/skribls";
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='81') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='82') }}" defer></script>
 </body>
 </html>
