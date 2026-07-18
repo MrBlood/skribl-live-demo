@@ -124,6 +124,7 @@ let pinching = false;
 let _autoArmedThisStroke = false;
 let recording = false;
 let playing = false;
+let scrubbing = false, lastTargetMs = 0;   // v84 scrub state (used by stopPlayback)
 let recorded = false;
 let hasContent = false;
 // Post-record rule (Option B): once a recording is finished, the canvas is
@@ -476,6 +477,11 @@ function startDraw(e) {
   // but gone on playback). Touch events have no .button, so guard on != null
   // so touch drawing still works.
   if (e.button != null && e.button !== 0) return;
+  // A preview is playing (or being scrubbed): the canvas is a playback surface,
+  // not a drawing surface. Block every pointer-initiated action so a stray tap
+  // can't start a stroke, sample, or reposition mid-replay. (Record/Play/Stop
+  // still work via their own buttons.)
+  if (playing) return;
   // Eyedropper (fallback path): consume this tap to sample a pixel instead of
   // starting a stroke. Allowed even on a locked canvas — it only reads.
   if (pickingColor) { const p = getPos(e); sampleColorAt(p.x, p.y); return; }
@@ -1126,13 +1132,14 @@ function endRecordingTake() {
 }
 
 recordBtn.addEventListener('click', () => {
-  if (!recording) {
-    // If a completed take is already on the canvas, continue it as another take
-    // (append) instead of wiping and starting over.
-    beginRecording(strokes.length > 0);
-  } else {
-    endRecordingTake();
-  }
+  if (recording) { endRecordingTake(); return; }
+  // Leaving a preview to record: stop the preview first. stopPlayback restores
+  // the complete drawing, so the new take appends onto the finished frame — not
+  // a half-replayed one — and `playing` + `recording` are never both true.
+  if (playing) stopPlayback();
+  // If a completed take is already on the canvas, continue it as another take
+  // (append) instead of wiping and starting over.
+  beginRecording(strokes.length > 0);
 });
 
 
@@ -1164,6 +1171,7 @@ function clearCanvas() {
 
 function stopPlayback() {
   playing = false;
+  scrubbing = false;
   playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
   playBtn.disabled = false;
   playBtn.classList.remove('playing');
@@ -1172,6 +1180,12 @@ function stopPlayback() {
   hideEditorNib();
   hideScrub();
   document.body.classList.remove('replaying');
+  // A preview stopped part-way leaves the canvas half-redrawn. Restore the whole
+  // finished drawing so Record (append), Post, and undo all act on the complete
+  // frame — never a partial one. (At a natural end the frame is already complete,
+  // so this just repaints the same pixels; the base image is cached, so it's a
+  // synchronous, flicker-free redraw.)
+  if (strokes.length) clearAndRestore(() => paintStrokesStatic(strokes));
   updateDrawingTimeLabels();   // restore the duration badge to the total length
 }
 
@@ -1238,7 +1252,6 @@ function clearAndRestore(callback) {
 // ---- Editor replay + scrubbable play bar ----
 // Hoisted state so the seek + scrub handlers (outside the click closure) share it.
 let playTimeline = null, playTotal = 0, playStart = 0, playIndex = 0, playComp = null;
-let scrubbing = false, lastTargetMs = 0;
 const playScrub = document.getElementById('playScrub');
 const playScrubFill = document.getElementById('playScrubFill');
 
@@ -1319,6 +1332,7 @@ function editorSeek(frac) {
 }
 
 playBtn.addEventListener('click', () => {
+  if (recording) return;   // can't preview mid-take (Play is hidden while recording; guard anyway)
   stopLoopPreview();
   if (playing) { stopPlayback(); return; }
   playTimeline = buildPlaybackTimeline();
