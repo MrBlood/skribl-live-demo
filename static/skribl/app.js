@@ -3454,12 +3454,25 @@ function serializeAutosave() {
   } catch (e) {
     baseSnapshot = null;
   }
+  // Persist the deepest undone state too — redoStack[0] is the maximal drawing
+  // (most strokes). With it plus the applied strokes above, a refresh can rebuild
+  // the redo stack, so undone strokes aren't lost on reload.
+  let redoStrokes = null, redoStrokeGroups = null;
+  if (redoStack.length) {
+    const deepest = redoStack[0];
+    if (deepest && deepest.strokes) {
+      redoStrokes = deepest.strokes.slice();
+      redoStrokeGroups = (deepest.strokeGroups || []).slice();
+    }
+  }
   return {
     version: 1,
     savedAt: new Date().toISOString(),
     baseSnapshot: baseSnapshot,
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
+    redoStrokes: redoStrokes,
+    redoStrokeGroups: redoStrokeGroups,
     background: { color: bgColor },
     // Metadata only — no bytes. Prefer live media; fall back to pending meta
     // (from a restore where the user hasn't re-added the file yet) so it persists.
@@ -3495,8 +3508,10 @@ function showAutosaveStatus(state) {
 function writeAutosave() {
   // Player mode is read-only — never mutate the editor's autosave.
   if (document.body.classList.contains('player-mode')) return;
-  // Nothing meaningful on the canvas → clear any stale save instead of writing.
-  if (!hasContent && strokes.length === 0) {
+  // Nothing meaningful on the canvas AND nothing undone to preserve → clear any
+  // stale save. (Keep it when redo is pending, so undoing to blank then reloading
+  // can still redo the undone strokes.)
+  if (!hasContent && strokes.length === 0 && redoStack.length === 0) {
     try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) {}
     return;
   }
@@ -3532,32 +3547,28 @@ function readAutosave() {
   }
 }
 
-// Reconstruct the per-stroke undo history for a restored drawing. The autosave
-// persists only the drawing (base + strokes + per-stroke lengths), not the undo
-// stack — that's a pile of full-canvas snapshots, far too big to store. So we
-// rebuild it here: walk the strokes and snapshot the canvas *before* each one,
-// exactly as startDraw does live. Result — a restored Skribl can be undone stroke
-// by stroke, identical to one drawn this session. Bounded to the last 30 strokes
-// (the in-session cap). Renders the full drawing on the main canvas as it goes,
-// so it doubles as the restore render. Fully guarded: any failure falls back to
-// just showing the finished drawing with no undo, never a broken stack.
-function rebuildUndoForRestore(baseHasContent) {
+// Reconstruct the per-stroke undo AND redo history for a restored drawing. The
+// autosave persists the drawing plus the deepest undone state (the maximal stroke
+// set) and how many strokes are currently applied — not the stacks themselves,
+// which are piles of full-canvas snapshots far too big to store. So we rebuild
+// them here: snapshot the canvas at each stroke boundary of the maximal drawing,
+// exactly as startDraw does live. States before the applied cut become the undo
+// stack; states after it become the redo stack. Result — a restored Skribl undoes
+// AND redoes stroke by stroke, identical to one edited this session. Undo is
+// bounded to the last 30 (the in-session cap). Renders the applied state on the
+// canvas as it goes. Fully guarded: any failure falls back to the applied drawing
+// with no history, never a broken stack.
+//   maxStrokes/maxGroups — the maximal drawing (applied + undone strokes)
+//   appliedCount         — how many strokes are currently on the canvas (prefix)
+function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasContent) {
   undoStack = [];
   redoStack = [];
-  redoBtn.disabled = true;
-  const groups = (strokeGroups || []).slice();
-  const allStrokes = strokes.slice();
-  if (!groups.length) {
-    // No stroke boundaries: just render whatever we have; nothing to undo.
-    clearAndRestore(() => paintStrokesStatic(allStrokes));
-    undoBtn.disabled = true;
-    return;
-  }
+  const total = maxGroups.length;
+  appliedCount = Math.max(0, Math.min(appliedCount, total));
+  // starts[k] = point index where stroke k begins; starts[total] = all points.
   const starts = [];
   let acc = 0;
-  for (let k = 0; k < groups.length; k++) { starts.push(acc); acc += groups[k]; }
-  const total = groups.length;
-  const firstK = Math.max(0, total - 30);   // in-session keeps at most 30 entries
+  for (let k = 0; k <= total; k++) { starts.push(acc); if (k < total) acc += maxGroups[k]; }
 
   const snapshotMain = () => {
     const s = document.createElement('canvas');
@@ -3566,27 +3577,36 @@ function rebuildUndoForRestore(baseHasContent) {
     if (canvas.width > 0 && canvas.height > 0) s.getContext('2d').drawImage(canvas, 0, 0);
     return s;
   };
+  // Render base + the first k strokes. clearAndRestore is synchronous once the
+  // base image is cached, so the canvas is fully painted before we snapshot.
+  const renderPrefix = (k) => clearAndRestore(() => paintStrokesStatic(maxStrokes.slice(0, starts[k])));
+  const stateAt = (k) => {
+    renderPrefix(k);
+    return {
+      image: snapshotMain(),
+      strokes: maxStrokes.slice(0, starts[k]),
+      strokeGroups: maxGroups.slice(0, k),
+      hasContent: (k === 0) ? baseHasContent : true
+    };
+  };
 
   const build = () => {
     try {
-      for (let k = firstK; k < total; k++) {
-        const prefixPts = allStrokes.slice(0, starts[k]);   // everything before stroke k
-        // clearAndRestore is synchronous now that the base image is cached, so the
-        // canvas is fully painted before we snapshot it.
-        clearAndRestore(() => paintStrokesStatic(prefixPts));
-        undoStack.push({
-          image: snapshotMain(),
-          strokes: prefixPts,
-          strokeGroups: groups.slice(0, k),
-          hasContent: (k === 0) ? baseHasContent : true
-        });
-      }
+      // Undo: the state before each applied stroke = state(0)..state(appliedCount-1),
+      // capped to the most recent 30.
+      const undoFirst = Math.max(0, appliedCount - 30);
+      for (let k = undoFirst; k < appliedCount; k++) undoStack.push(stateAt(k));
+      // Redo: the undone future states = state(appliedCount+1)..state(total), pushed
+      // deepest-first so pop() yields the next redo (appliedCount+1) first.
+      for (let k = total; k > appliedCount; k--) redoStack.push(stateAt(k));
     } catch (e) {
-      undoStack = [];   // on any failure, prefer no undo over a corrupt stack
+      undoStack = [];
+      redoStack = [];
     }
-    // Leave the complete drawing on the canvas as the live state.
-    clearAndRestore(() => paintStrokesStatic(allStrokes));
+    // Leave the applied state on the canvas as the live drawing.
+    renderPrefix(appliedCount);
     undoBtn.disabled = undoStack.length === 0;
+    redoBtn.disabled = redoStack.length === 0;
   };
 
   // Warm the base-image cache once (async only on the first load), then build the
@@ -3606,15 +3626,19 @@ function restoreAutosave(data) {
   strokeGroups = (data.strokeGroups || []).slice();
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
-  if (strokes.length) {
-    // Base (if any) is applied inside rebuildUndoForRestore via preRecordSnapshot;
-    // it renders base + strokes AND reconstructs the per-stroke undo history, so a
-    // restored drawing undoes exactly like one drawn this session.
+  // The autosave stores the *applied* strokes in strokes/strokeGroups and, if any
+  // strokes were undone (redo pending), the *maximal* drawing in redoStrokes/
+  // redoStrokeGroups. Rebuild both stacks around the applied cut so undo AND redo
+  // survive the refresh.
+  const hasRedo = !!(data.redoStrokes && data.redoStrokes.length);
+  const maxStrokes = hasRedo ? data.redoStrokes.slice() : strokes.slice();
+  const maxGroups = (hasRedo && data.redoStrokeGroups) ? data.redoStrokeGroups.slice() : strokeGroups.slice();
+  const appliedCount = strokeGroups.length;   // strokes currently on canvas (a prefix of maximal)
+  if (strokes.length || hasRedo) {
     preRecordSnapshot = data.baseSnapshot || null;
-    hasContent = true;
-    // The pre-stroke base only counts as content if a photo was baked into it —
-    // so undoing every stroke lands on the photo (content) or a blank pad (empty).
-    rebuildUndoForRestore(!!(data.photoMeta && data.photoMeta.name));
+    hasContent = strokes.length > 0 || !!preRecordSnapshot;
+    // The pre-stroke base only counts as content if a photo was baked into it.
+    rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, !!(data.photoMeta && data.photoMeta.name));
   } else if (data.baseSnapshot) {
     // Base image with no strokes (e.g. a saved photo background): just draw it.
     preRecordSnapshot = null;
