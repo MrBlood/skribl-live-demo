@@ -2080,28 +2080,21 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .icon-btn svg { width: 18px; height: 18px; }
 .icon-btn:active { transform: scale(0.94); }
-/* ---- Unified header-button hover (v88) --------------------------------------
-   Every header control lifts the same way on hover: a translucent white film
-   laid over its own base — the dark Record pill, the ghost Play shell, the ghost
-   ⋯ circle, and the solid-purple Post. Same amount everywhere, so they finally
-   read as one family. Replaces the old inconsistent mix (Record/Post brightened
-   invisibly, Play did nothing, ⋯ flashed purple). The accent colour is now
-   reserved for state — recording, active toggles — not hover. Hover-capable
-   devices only, so a tap never leaves a stuck highlight on touch. */
+/* ---- Unified header-button hover (v90) --------------------------------------
+   Goal: every header button lifts by the SAME subtle amount as Record always did,
+   while keeping its own character.
+   • Record & Post (coloured): keep their original brightness hover via the generic
+     .btn:hover — brightness preserves the dark-pill/purple colour (no grey film).
+   • Play shell & ⋯ (neutral ghosts): brightness barely moves a faint base, so they
+     instead get a whisper-thin neutral film tuned to the same visible strength
+     (~matches Record's lift). ⋯ also drops its old purple tint.
+   Hover-capable devices only, so a tap never leaves a stuck highlight. */
 @media (hover: hover) {
-  .btn.record:hover:not(:disabled),
   .play-wrap:hover,
   .icon-btn:hover {
-    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.09);
-    filter: none;
+    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.02);
   }
-  /* ⋯ also drops its old purple tint/icon, back to a neutral glyph. */
-  .icon-btn:hover { color: var(--text-primary); }
-  /* Post keeps its drop shadow and gains the same film. */
-  .btn.post:hover:not(:disabled) {
-    box-shadow: 0 3px 12px var(--accent-glow), inset 0 0 0 100px rgba(255, 255, 255, 0.09);
-    filter: none;
-  }
+  .icon-btn:hover { color: var(--text-primary); }   /* neutral ⋯, no purple */
 }
 
 /* Magnifier toggle — lit when the zoom controls are showing. Uses the same
