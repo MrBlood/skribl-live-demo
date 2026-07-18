@@ -1170,6 +1170,7 @@ function stopPlayback() {
   if (audioEl) audioEl.pause();
   if (typeof stopWebAudioLoop === 'function') stopWebAudioLoop();
   hideEditorNib();
+  hideScrub();
   document.body.classList.remove('replaying');
   updateDrawingTimeLabels();   // restore the duration badge to the total length
 }
@@ -1234,58 +1235,144 @@ function clearAndRestore(callback) {
   }
 }
 
+// ---- Editor replay + scrubbable play bar ----
+// Hoisted state so the seek + scrub handlers (outside the click closure) share it.
+let playTimeline = null, playTotal = 0, playStart = 0, playIndex = 0, playComp = null;
+let scrubbing = false, lastTargetMs = 0;
+const playScrub = document.getElementById('playScrub');
+const playScrubFill = document.getElementById('playScrubFill');
+
+function setScrubProgress(frac) {
+  if (playScrubFill) playScrubFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+}
+function positionScrub() {
+  // Hang the bar just below the canvas, matched to its width — flush to the
+  // bottom edge so it reads as dropping down from the canvas frame.
+  if (!playScrub || playScrub.hidden || !canvasArea) return;
+  const a = canvasArea.getBoundingClientRect();
+  const w = canvasWrap.getBoundingClientRect();
+  playScrub.style.left = (w.left - a.left) + 'px';
+  playScrub.style.width = w.width + 'px';
+  playScrub.style.top = (w.bottom - a.top) + 'px';
+}
+function showScrub() {
+  if (!playScrub) return;
+  playScrub.hidden = false;
+  setScrubProgress(0);
+  positionScrub();
+  requestAnimationFrame(() => playScrub.classList.add('show'));
+}
+function hideScrub() {
+  if (!playScrub) return;
+  playScrub.classList.remove('show');
+  playScrub.hidden = true;
+  setScrubProgress(0);
+}
+
+function editorReplayFrame() {
+  if (!playing) return;
+  if (scrubbing) { requestAnimationFrame(editorReplayFrame); return; }  // frozen at the scrub position
+  const elapsed = performance.now() - playStart;
+  if (durationBadge && !durationBadge.hidden) {
+    durationBadge.textContent = formatDuration(Math.min(elapsed, playTotal));
+  }
+  setScrubProgress(playTotal ? elapsed / playTotal : 1);
+  if (playComp) {
+    playIndex = replayTimelineToCanvas(playTimeline, playIndex, elapsed, playComp.dotFn, playComp.lineFn);
+    playComp.present();
+  } else {
+    playIndex = replayTimelineToCanvas(playTimeline, playIndex, elapsed, drawDot, drawLine);
+  }
+  positionEditorNib(playIndex > 0 ? playTimeline[playIndex - 1] : null);
+  if (playIndex < playTimeline.length) {
+    requestAnimationFrame(editorReplayFrame);
+  } else {
+    if (playComp) { playComp.finish(); playComp.present(); }
+    stopPlayback();
+  }
+}
+
+// Seek to a fraction of the replay: recomposite the base, then replay 0->target
+// via the shared helper (no second loop). lastTargetMs carries the position so
+// the running loop resumes from there on scrub release. clearAndRestore's
+// restoreSeq guard drops any stale paint from a superseded scrub.
+function editorSeek(frac) {
+  if (!playing || !playTimeline) return;
+  frac = Math.max(0, Math.min(1, frac));
+  lastTargetMs = playTotal * frac;
+  const paint = () => {
+    if (strokeLayersOn()) {
+      playComp = makeStrokeCompositor(ctx, canvas);
+      playIndex = replayTimelineToCanvas(playTimeline, 0, lastTargetMs, playComp.dotFn, playComp.lineFn);
+      playComp.present();
+    } else {
+      playComp = null;
+      playIndex = replayTimelineToCanvas(playTimeline, 0, lastTargetMs, drawDot, drawLine);
+    }
+    setScrubProgress(frac);
+    if (durationBadge && !durationBadge.hidden) {
+      durationBadge.textContent = formatDuration(Math.min(lastTargetMs, playTotal));
+    }
+    positionEditorNib(playIndex > 0 ? playTimeline[playIndex - 1] : null);
+  };
+  clearAndRestore(paint);
+}
+
 playBtn.addEventListener('click', () => {
   stopLoopPreview();
-  if (playing) {
-    stopPlayback();
-    return;
-  }
-  const timeline = buildPlaybackTimeline();
-  if (!timeline.length) return;
+  if (playing) { stopPlayback(); return; }
+  playTimeline = buildPlaybackTimeline();
+  if (!playTimeline.length) return;
   playing = true;
   playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
   playBtn.classList.add('playing');
   document.body.classList.add('replaying');
-
-  // Compressed playback duration (same timeline the export uses).
-  const totalDuration = timeline[timeline.length - 1].playT;
-
-  function startDrawing() {
-    let i = 0;
-    const start = performance.now();
-    const comp = strokeLayersOn() ? makeStrokeCompositor(ctx, canvas) : null;
-    function frame() {
-      if (!playing) return;
-      const elapsed = performance.now() - start;
-      // Count the duration badge up as the replay plays.
-      if (durationBadge && !durationBadge.hidden) {
-        durationBadge.textContent = formatDuration(Math.min(elapsed, totalDuration));
-      }
-      if (comp) {
-        i = replayTimelineToCanvas(timeline, i, elapsed, comp.dotFn, comp.lineFn);
-        comp.present();
-      } else {
-        i = replayTimelineToCanvas(timeline, i, elapsed, drawDot, drawLine);
-      }
-      positionEditorNib(i > 0 ? timeline[i - 1] : null);
-      if (i < timeline.length) {
-        requestAnimationFrame(frame);
-      } else {
-        if (comp) { comp.finish(); comp.present(); }
-        stopPlayback();
-      }
-    }
-    requestAnimationFrame(frame);
-  }
+  playTotal = playTimeline[playTimeline.length - 1].playT;
+  showScrub();
 
   clearAndRestore(() => {
+    playIndex = 0;
+    const beginFrames = () => {
+      playComp = strokeLayersOn() ? makeStrokeCompositor(ctx, canvas) : null;
+      playStart = performance.now();
+      requestAnimationFrame(editorReplayFrame);
+    };
     if (audioEl && musicEnabled) {
-      playMusicLooped(totalDuration, startDrawing);
+      playMusicLooped(playTotal, beginFrames);
     } else {
-      startDrawing();
+      beginFrames();
     }
   });
 });
+
+// Scrub interactions (pointer events cover mouse + touch). Freeze the loop while
+// dragging; resume from the released position.
+if (playScrub) {
+  const scrubFrac = (e) => {
+    const r = playScrub.getBoundingClientRect();
+    const x = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+    return (x - r.left) / r.width;
+  };
+  playScrub.addEventListener('pointerdown', (e) => {
+    if (!playing) return;
+    scrubbing = true;
+    try { playScrub.setPointerCapture(e.pointerId); } catch (_) {}
+    editorSeek(scrubFrac(e));
+    e.preventDefault();
+  });
+  playScrub.addEventListener('pointermove', (e) => {
+    if (!scrubbing) return;
+    editorSeek(scrubFrac(e));
+  });
+  const endScrub = () => {
+    if (!scrubbing) return;
+    scrubbing = false;
+    playStart = performance.now() - lastTargetMs;   // resume from the released position
+  };
+  playScrub.addEventListener('pointerup', endScrub);
+  playScrub.addEventListener('pointercancel', endScrub);
+  window.addEventListener('resize', () => { if (playing) positionScrub(); });
+}
 
 // The Post button opens the composer sheet — wired in initPostComposer() below.
 
@@ -5491,7 +5578,7 @@ function showPlayerError(msg) {
     // Clamp the viewport budget so a short viewport (or an on-screen keyboard)
     // can't drive the available height ≤ 0 and flip the scale negative.
     const availW = Math.max(120, window.innerWidth - 40);
-    const availH = Math.max(120, window.innerHeight - playerReservedV());
+    const availH = Math.max(96, window.innerHeight - playerReservedV());
     return Math.min(1, availW / authorW, availH / authorH);
   }
   function layoutPlayerCanvas() {
