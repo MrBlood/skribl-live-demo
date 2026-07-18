@@ -290,6 +290,45 @@ body:not(.player-mode) .canvas-wrap {
   cursor: not-allowed;
 }
 
+/* Editor scrubbable play bar: a thin track that hangs flush from the bottom edge
+   of the canvas (square top, rounded bottom) so it reads as dropping down from
+   the canvas frame. Absolutely positioned inside the (relative) canvas-area and
+   sized to the canvas by JS. Only visible during replay; the accent fill tracks
+   progress and the whole bar is draggable to seek. */
+body:not(.player-mode) .canvas-area { position: relative; }
+.play-scrub {
+  position: absolute;
+  z-index: 7;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 0 0 5px 5px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+}
+.play-scrub[hidden] { display: none; }
+.play-scrub.show { opacity: 1; }
+/* Invisible grab margin so the 5px bar is comfortably draggable (incl. touch). */
+.play-scrub::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -11px; bottom: -11px;
+}
+.play-scrub-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 8px rgba(124, 92, 255, 0.55);
+  border-radius: 0 0 0 5px;
+}
+/* Reduced motion: don't fade, just show/hide. */
+@media (prefers-reduced-motion: reduce) {
+  .play-scrub { transition: none; }
+}
+
 #canvas {
   display: block;
   width: 100%;
@@ -3375,6 +3414,21 @@ body.player-mode #canvas {
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.03em;
+}
+
+/* Short viewports (landscape phones, ~360–414px tall): the metadata shell is a
+   fixed ~267px, which — with the canvas floor + app padding — overflowed and
+   forced vertical scroll. Compact the shell (tighter gaps, smaller type, drop
+   the decorative "Made with" line) and shrink the app padding/gap. Because the
+   player fit-scale MEASURES the shell live (playerReservedV), reducing its height
+   here automatically frees vertical budget for the canvas — no JS change needed. */
+@media (max-height: 480px) {
+  body.player-mode .app { gap: 10px; padding: 10px 0; }
+  .player-shell { gap: 8px; }
+  .player-title { font-size: 15px; }
+  .player-caption { font-size: 12px; margin-top: 2px; }
+  .player-controls { gap: 8px; }
+  .player-brand { display: none; }
 }
 
 
