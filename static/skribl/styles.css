@@ -34,6 +34,16 @@
 
 * { box-sizing: border-box; }
 
+/* Opening a tool panel (Image / Music / Colors) makes the page taller than the
+   viewport, so a vertical scrollbar appears; dismissing the panel — which is
+   exactly what the first draw-tap does (openDrawer(null)) — removes it again.
+   Because the app is a centered flex column, that appearing/disappearing
+   scrollbar changes the usable width and slides the whole canvas sideways, then
+   jerks it back on the next stroke. Reserving the gutter up front keeps the
+   layout width constant in every state, so the canvas never moves. Scoped to the
+   editor (player left untouched); no-op on overlay-scrollbar platforms/mobile. */
+html:has(body:not(.player-mode)) { scrollbar-gutter: stable both-edges; }
+
 body {
   margin: 0;
   background: #06070a;
