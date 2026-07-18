@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='82') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='84') }}">
 </head>
 <body>
 
@@ -74,7 +74,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         <span>Clear all</span>
       </button>
-      <div class="menu-version">Skribl Pad · v82</div>
+      <div class="menu-version">Skribl Pad · v84</div>
     </div>
   </div>
 
@@ -192,6 +192,7 @@
       </button>
     </div>
   </div>
+  <div class="play-scrub" id="playScrub" hidden aria-label="Playback scrubber" role="slider" aria-valuemin="0" aria-valuemax="100"><div class="play-scrub-fill" id="playScrubFill"></div></div>
   </div>
 
   <!-- Help drawer -->
@@ -951,6 +952,6 @@
     import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='82') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='84') }}" defer></script>
 </body>
 </html>
