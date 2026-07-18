@@ -40,9 +40,11 @@
    Because the app is a centered flex column, that appearing/disappearing
    scrollbar changes the usable width and slides the whole canvas sideways, then
    jerks it back on the next stroke. Reserving the gutter up front keeps the
-   layout width constant in every state, so the canvas never moves. Scoped to the
-   editor (player left untouched); no-op on overlay-scrollbar platforms/mobile. */
-html:has(body:not(.player-mode)) { scrollbar-gutter: stable both-edges; }
+   layout width constant in every state, so the canvas never moves. Applied to
+   both editor and player (both are centered full-height apps); no-op on
+   overlay-scrollbar platforms and mobile. Unconditional (was scoped away from
+   the player in v81) so there's no gutter toggle during the player's startup. */
+html { scrollbar-gutter: stable both-edges; }
 
 body {
   margin: 0;
@@ -3223,6 +3225,48 @@ body.player-mode #canvas {
   padding: 0 20px;
   box-sizing: border-box;
 }
+
+/* Persistent player load-failure panel (replaces the old toast-then-blank-page).
+   Shown centered in place of the shell when a Skribl can't be loaded. */
+.player-error[hidden] { display: none; }
+.player-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  max-width: 340px;
+  padding: 8px 20px;
+}
+.player-error-icon {
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--hairline);
+}
+.player-error-title { font-size: 16px; font-weight: 650; color: var(--text-primary); }
+.player-error-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 2px; }
+.player-error-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  font-size: 14px; font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid var(--hairline);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  transition: background .15s ease, border-color .15s ease;
+}
+.player-error-btn:hover { background: rgba(255,255,255,0.08); }
+.player-error-btn.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.player-error-btn.primary:hover { background: var(--accent-bright); }
 
 .player-meta { text-align: center; max-width: 460px; }
 .player-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
