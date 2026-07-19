@@ -135,6 +135,17 @@
     padding: 9px 14px; border-radius: 10px; cursor: pointer; box-shadow: 0 3px 12px var(--accent-glow); }
   .flip-upload:hover { filter: brightness(1.06); }
   .flip-drawer-note { margin: 10px 2px 2px; color: var(--text-dim); font-size: 12px; line-height: 1.4; }
+  /* Fine-tune loop rows */
+  .ft-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .ft-name { color: var(--text-secondary); font-size: 12.5px; }
+  .ft-ctrl { display: inline-flex; align-items: center; gap: 8px; }
+  .ft-read { min-width: 58px; text-align: center; font-size: 12.5px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .ft-nudge { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--hairline); background: #13161c; color: var(--text-primary);
+    font-size: 16px; line-height: 1; cursor: pointer; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
+  .ft-nudge:hover { background: #1c212c; }
+  .ft-nudge:disabled { opacity: .4; cursor: default; }
+  #fineTuneChevron { transition: transform .2s ease; }
+  #fineTuneToggle[aria-expanded="true"] #fineTuneChevron { transform: rotate(180deg); }
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
   /* image/music use the Pad's .tool-open + green .tab-dot; keep them sized like the row */
   .flip-tools .tool-open { width: 40px; height: 40px; border-radius: 12px; }
@@ -426,6 +437,15 @@
           <div class="media-actions" style="margin-top:2px">
             <button type="button" id="previewLoopBtn" class="panel-btn" style="flex:1 1 0"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:2px"><path d="M8 5v14l11-7z"/></svg><span id="previewLoopLabel">Preview loop</span></button>
             <button type="button" id="matchDrawingBtn" class="panel-btn" style="flex:1 1 0">Match drawing time</button>
+          </div>
+          <button type="button" id="fineTuneToggle" class="panel-btn" aria-expanded="false" style="width:100%;margin-top:8px;justify-content:space-between">
+            <span>Fine-tune loop</span>
+            <svg id="fineTuneChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div id="fineTuneBody" hidden style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
+            <div class="ft-row"><span class="ft-name">Loop start</span><span class="ft-ctrl"><button type="button" class="ft-nudge" data-edge="start" data-dir="-1">−</button><span class="ft-read" id="startReadout">0.00s</span><button type="button" class="ft-nudge" data-edge="start" data-dir="1">+</button></span></div>
+            <div class="ft-row"><span class="ft-name">Loop end</span><span class="ft-ctrl"><button type="button" class="ft-nudge" data-edge="end" data-dir="-1">−</button><span class="ft-read" id="endReadout">0.00s</span><button type="button" class="ft-nudge" data-edge="end" data-dir="1">+</button></span></div>
+            <div class="ft-row"><span class="ft-name">Step size</span><span class="ft-ctrl"><button type="button" class="ft-nudge" id="stepFiner">−</button><span class="ft-read" id="stepLabel">0.10s</span><button type="button" class="ft-nudge" id="stepCoarser">+</button></span></div>
           </div>
         </div>
         <p class="flip-drawer-note" id="musicNote">Loops while you Flip — one track for the whole animation.</p>
@@ -1134,17 +1154,20 @@ function syncMusicUI(){
   musicToggle.hidden=!hasMus; musicRemoveBtn.hidden=!hasMus; musicNote.hidden=hasMus;   // detail stays visible
   musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
   musicTabDot.hidden = !hasMus;                                                          // green dot when a track is set
-  [trimStartRange, trimEndRange, matchDrawingBtn, previewLoopBtn].forEach(el=>{ el.disabled=!hasMus; });
-  musicDetailBox.style.opacity = hasMus ? '' : '.5';
-  if(hasMus && audioDuration>0){
+  const active = hasMus && audioDuration>0;
+  [trimStartRange, trimEndRange, matchDrawingBtn, previewLoopBtn, fineTuneToggle,
+   stepFiner, stepCoarser, ...document.querySelectorAll('.ft-nudge[data-edge]')].forEach(el=>{ el.disabled=!active; });
+  stepLabel.textContent = nudgeStep().toFixed(2)+'s';
+  if(active){
     const end = trimEnd!=null?trimEnd:audioDuration;
     trimStartRange.max=audioDuration.toFixed(2); trimEndRange.max=audioDuration.toFixed(2);
     trimStartRange.value=trimStart; trimEndRange.value=end;
     setFill(trimStartRange); setFill(trimEndRange);
     trimStartVal.textContent=fmtTime(trimStart); trimEndVal.textContent=fmtTime(end);
+    startReadout.textContent=trimStart.toFixed(2)+'s'; endReadout.textContent=end.toFixed(2)+'s';
     loopSummary.textContent='Loop: '+fmtTime(trimStart)+' → '+fmtTime(end)+' · '+Math.max(0,end-trimStart).toFixed(1)+'s (plays while you Flip)';
   } else if(hasMus){ loopSummary.textContent='Reading audio…'; }
-  else { loopSummary.textContent='Add a track, then set where the loop starts and ends.'; trimStartVal.textContent='0:00'; trimEndVal.textContent='0:00'; setFill(trimStartRange); setFill(trimEndRange); }
+  else { loopSummary.textContent='Add a track, then set where the loop starts and ends.'; trimStartVal.textContent='0:00'; trimEndVal.textContent='0:00'; startReadout.textContent='0.00s'; endReadout.textContent='0.00s'; setFill(trimStartRange); setFill(trimEndRange); }
 }
 function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); }
 
@@ -1177,6 +1200,23 @@ previewLoopBtn.addEventListener('click',()=>{
   clearTimeout(previewTimer);
   previewTimer=setTimeout(stopPreview, Math.min(len*2, 15)*1000);   // ~2 loops (capped)
 });
+
+// fine-tune loop: nudge start/end by an adjustable step
+const fineTuneToggle=document.getElementById('fineTuneToggle'), fineTuneBody=document.getElementById('fineTuneBody');
+const startReadout=document.getElementById('startReadout'), endReadout=document.getElementById('endReadout'), stepLabel=document.getElementById('stepLabel');
+const stepFiner=document.getElementById('stepFiner'), stepCoarser=document.getElementById('stepCoarser');
+const NUDGE_STEPS=[0.01,0.02,0.05,0.1,0.25,0.5]; let nudgeStepIdx=3;   // default 0.1s
+function nudgeStep(){ return NUDGE_STEPS[nudgeStepIdx]; }
+fineTuneToggle.addEventListener('click',()=>{ const open=fineTuneBody.hidden; fineTuneBody.hidden=!open; fineTuneToggle.setAttribute('aria-expanded', String(open)); });
+[...document.querySelectorAll('.ft-nudge[data-edge]')].forEach(b=>b.addEventListener('click',()=>{
+  if(!musicData || !audioDuration) return;
+  const step=nudgeStep()*(+b.dataset.dir);
+  if(b.dataset.edge==='start'){ trimStart=Math.max(0, Math.min((trimEnd!=null?trimEnd:audioDuration)-0.2, trimStart+step)); }
+  else { const e=(trimEnd!=null?trimEnd:audioDuration)+step; trimEnd=Math.max(trimStart+0.2, Math.min(audioDuration, e)); }
+  syncMusicUI(); scheduleSave();
+}));
+stepFiner.addEventListener('click',()=>{ nudgeStepIdx=Math.max(0,nudgeStepIdx-1); syncMusicUI(); });
+stepCoarser.addEventListener('click',()=>{ nudgeStepIdx=Math.min(NUDGE_STEPS.length-1,nudgeStepIdx+1); syncMusicUI(); });
 
 // overflow menu (save/load/export)
 function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
