@@ -154,6 +154,19 @@
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
   .flip-hint { color: var(--text-dim); font-size: 12px; text-align: center; padding: 0 16px 12px; }
   .flip-hint b { color: var(--text-secondary); font-weight: 600; }
+  /* "More" popover menu (image / music / save / export). */
+  .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; min-width: 232px;
+    background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55); padding: 6px; }
+  .flip-menu[hidden] { display: none; }
+  .flip-menu-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 14px;
+    padding: 10px 12px; border-radius: 9px; cursor: pointer; }
+  .flip-menu-item:hover { background: var(--surface-control); }
+  .flip-menu-item .mi-ic { width: 18px; text-align: center; opacity: .85; font-size: 14px; }
+  .flip-menu-item.busy { opacity: .55; pointer-events: none; }
+  .flip-menu-sep { height: 1px; background: var(--hairline); margin: 5px 8px; }
+  #moreBtn.on { color: var(--accent-bright); background: rgba(124,92,255,.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,.45); }
 
 
   /* Destructive delete uses the editor's two-tap "armed" pattern (red). */
@@ -226,6 +239,7 @@
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
         <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><button type="button" id="gridBtn" class="tool-open grid-tool" role="switch" aria-checked="false" title="Grid overlay" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button>
+        <button type="button" id="moreBtn" class="tool-open" title="More — image, music, save, export" aria-label="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
         <button type="button" class="btn flip-play" id="play">
           <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
           <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
@@ -336,6 +350,25 @@
 
     <div class="flip-chip" id="flipChip"></div>
     <div class="strip-wrap"><div class="strip" id="strip"></div></div>
+
+    <!-- "More" menu: image, music, save/load draft, export — the Pad's extra
+         functions, folded into one popover so Flip stays uncluttered. -->
+    <div class="flip-menu" id="moreMenu" role="menu" hidden>
+      <button type="button" class="flip-menu-item" id="miImage" role="menuitem"><span class="mi-ic">🖼</span><span class="mi-tx">Add background image</span></button>
+      <button type="button" class="flip-menu-item" id="miImageRemove" role="menuitem" hidden><span class="mi-ic">🖼</span><span class="mi-tx">Remove background image</span></button>
+      <button type="button" class="flip-menu-item" id="miMusic" role="menuitem"><span class="mi-ic">♪</span><span class="mi-tx">Add music loop</span></button>
+      <button type="button" class="flip-menu-item" id="miMusicMute" role="menuitem" hidden><span class="mi-ic">♪</span><span class="mi-tx">Mute music</span></button>
+      <button type="button" class="flip-menu-item" id="miMusicRemove" role="menuitem" hidden><span class="mi-ic">♪</span><span class="mi-tx">Remove music</span></button>
+      <div class="flip-menu-sep"></div>
+      <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic">💾</span><span class="mi-tx">Save draft (.skribl)</span></button>
+      <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic">📂</span><span class="mi-tx">Load draft (.skribl)</span></button>
+      <div class="flip-menu-sep"></div>
+      <button type="button" class="flip-menu-item" id="miPng" role="menuitem"><span class="mi-ic">⬇</span><span class="mi-tx">Export frame (PNG)</span></button>
+      <button type="button" class="flip-menu-item" id="miWebm" role="menuitem"><span class="mi-ic">▶</span><span class="mi-tx">Export animation (WebM)</span></button>
+    </div>
+    <input type="file" id="imageInput" accept="image/*" hidden>
+    <input type="file" id="musicInput" accept="audio/*" hidden>
+    <input type="file" id="draftInput" accept=".skribl,application/json" hidden>
     <div class="flip-info-overlay" id="infoOverlay">
       <div class="flip-info" role="dialog" aria-modal="true" aria-label="How Flip Mode works">
         <button class="flip-info-close icon-btn" id="infoClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -350,6 +383,7 @@
           <dt>Move around</dt><dd>Tap a page in the strip, or use <b>&#8592;</b> / <b>&#8594;</b> to step between pages.</dd>
           <dt>Undo</dt><dd><b>Ctrl/&#8984; + Z</b> or the undo button removes your last stroke.</dd>
           <dt>Delete</dt><dd>A page's &#10005; removes that page; <b>Clear animation</b> (in the draw menu) wipes the whole thing. Both need a second tap (they turn red) to confirm.</dd>
+          <dt>More (⋯)</dt><dd>The <b>⋯</b> menu holds a background <b>image</b> and a <b>music</b> loop (one of each, for the whole animation), <b>Save</b> / <b>Load</b> a draft as a <b>.skribl</b> file, and <b>Export</b> — a PNG of the current page or a WebM of the animation.</dd>
           <dt>Autosave</dt><dd>Your animation is saved in this browser and restored when you come back.</dd>
         </dl>
       </div>
@@ -400,6 +434,8 @@ let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
 let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
+let bgImage = null, bgImageObj = null;                            // one background image per animation
+let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
 let drawing = false, curCount = 0, playing = false, playTimer = null;
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
@@ -417,45 +453,51 @@ function serializeFlip(){
     canvasSize: { cssWidth: CW, cssHeight: CH, dpr: 1 },
     savedAt: new Date().toISOString(),
     editIdx: idx,
+    bgImage: bgImage || null,
+    music: musicData || null,
     frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor }))
   };
 }
 function saveNow(){
   try {
-    const empty = frames.length === 1 && frames[0].strokes.length === 0;
+    const empty = frames.length === 1 && frames[0].strokes.length === 0 && !bgImage && !musicData;
     if (empty) { localStorage.removeItem(AUTOSAVE_KEY); return; }
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
   } catch (e) { /* storage unavailable — draw on */ }
+}
+function applyPayload(d){
+  if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
+  frames = d.frames.map(f => {
+    if (Array.isArray(f.strokeGroups)) {
+      // current pad-format frame
+      return { strokes: Array.isArray(f.strokes) ? f.strokes : [], strokeGroups: f.strokeGroups };
+    }
+    // migrate the old prototype shape: [{color,size,erase,pts:[{x,y}]}]
+    const flat = [], groups = [];
+    (Array.isArray(f.strokes) ? f.strokes : []).forEach(st => {
+      const pts = st.pts || [];
+      pts.forEach((p, i) => flat.push({ x: p.x, y: p.y, color: st.color, size: st.size,
+        t: 0, erase: !!st.erase, start: i === 0 }));
+      if (pts.length) groups.push(pts.length);
+    });
+    return { strokes: flat, strokeGroups: groups };
+  });
+  idx = Math.min(d.editIdx != null ? d.editIdx : (d.idx || 0), frames.length - 1);
+  const savedBg = (d.frames[0] && d.frames[0].background) || d.background;
+  if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
+  bgImage  = (typeof d.bgImage === 'string' && d.bgImage.slice(0,10) === 'data:image') ? d.bgImage : null;
+  musicData = (typeof d.music === 'string' && d.music.slice(0,10) === 'data:audio') ? d.music : null;
+  if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
+    fps = d.fps;
+    [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
+  }
+  return frames.some(f => f.strokes.length);
 }
 function tryRestore(){
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
     if (!raw) return false;
-    const d = JSON.parse(raw);
-    if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
-    frames = d.frames.map(f => {
-      if (Array.isArray(f.strokeGroups)) {
-        // current pad-format frame
-        return { strokes: Array.isArray(f.strokes) ? f.strokes : [], strokeGroups: f.strokeGroups };
-      }
-      // migrate the old prototype shape: [{color,size,erase,pts:[{x,y}]}]
-      const flat = [], groups = [];
-      (Array.isArray(f.strokes) ? f.strokes : []).forEach(st => {
-        const pts = st.pts || [];
-        pts.forEach((p, i) => flat.push({ x: p.x, y: p.y, color: st.color, size: st.size,
-          t: 0, erase: !!st.erase, start: i === 0 }));
-        if (pts.length) groups.push(pts.length);
-      });
-      return { strokes: flat, strokeGroups: groups };
-    });
-    idx = Math.min(d.editIdx != null ? d.editIdx : (d.idx || 0), frames.length - 1);
-    const savedBg = (d.frames[0] && d.frames[0].background) || d.background;
-    if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
-    if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
-      fps = d.fps;
-      [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
-    }
-    return frames.some(f => f.strokes.length);
+    return applyPayload(JSON.parse(raw));
   } catch (e) { return false; }
 }
 function chip(msg){
@@ -633,7 +675,8 @@ function buildStrip(){
   col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
   updateToolState();
 }
-function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background=bgColor; const c=cv.getContext('2d');
+function applyThumbBackdrop(cv){ cv.style.backgroundColor=bgColor; cv.style.backgroundImage = bgImage ? 'url("'+bgImage+'")' : 'none'; cv.style.backgroundSize='cover'; cv.style.backgroundPosition='center'; }
+function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; applyThumbBackdrop(cv); const c=cv.getContext('2d');
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); paintStatic(c,f.strokes); }
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
 function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice() }; }
@@ -662,6 +705,7 @@ function play(){
   disarmAll(); editIdx = idx;
   playing=true; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
+  startMusic();
   let i=0;
   const step=()=>{ idx=i%frames.length; render(); liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; i++; };
   step(); playTimer=setInterval(step, 1000/fps);
@@ -670,6 +714,7 @@ function stop(){
   playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
   clearInterval(playTimer);
+  stopMusic();
   idx = Math.min(editIdx, frames.length-1);
   buildStrip(); render();
 }
@@ -771,7 +816,12 @@ opacityFill();
 /* ---- background: a CSS backdrop the eraser reveals; saved per frame for the Pad ---- */
 const bgGroup=document.getElementById('bgGroup');
 const customBgInput=document.getElementById('customBgInput'), customBgBtn=document.getElementById('customBgBtn');
-function applyBg(){ pad.style.background=bgColor; [...strip.querySelectorAll('.frame canvas')].forEach(cv=>cv.style.background=bgColor); }
+function applyBg(){
+  pad.style.backgroundColor = bgColor;
+  pad.style.backgroundImage = bgImage ? 'url("'+bgImage+'")' : 'none';
+  pad.style.backgroundSize = 'cover'; pad.style.backgroundPosition = 'center';
+  [...strip.querySelectorAll('.frame canvas')].forEach(applyThumbBackdrop);
+}
 function setBg(hex, fromCustom){
   if(!/^#[0-9a-f]{6}$/i.test(hex||'')) return;
   bgColor=hex; applyBg();
@@ -795,6 +845,126 @@ function positionSmoothSeg(){ const active=smoothSeg.querySelector('.smooth-btn.
 smoothSeg.addEventListener('click',e=>{ const b=e.target.closest('.smooth-btn'); if(!b) return;
   const lvl=b.dataset.smooth; smoothingAlpha = lvl==='high' ? 0.25 : lvl==='low' ? 0.5 : 1;
   smoothSeg.querySelectorAll('.smooth-btn').forEach(x=>x.classList.toggle('active', x===b)); positionSmoothSeg(); });
+
+/* =====================================================================
+   "More" menu: background image, music loop, save/load draft, export.
+   One background and one music loop per animation (both stored in the
+   draft/autosave so they round-trip). Kept self-contained and lean.
+   ===================================================================== */
+
+/* Render a full composited frame (bg colour, bg image cover-fit, strokes) onto an
+   arbitrary CW×CH context — the single source of truth for PNG + WebM export. */
+function coverRect(iw, ih){ const s=Math.max(CW/iw, CH/ih); const w=iw*s, h=ih*s; return { x:(CW-w)/2, y:(CH-h)/2, w, h }; }
+const _expLayer=document.createElement('canvas'); _expLayer.width=CW; _expLayer.height=CH; const _expCtx=_expLayer.getContext('2d');
+function drawFrameTo(c, f){
+  c.save(); c.fillStyle=bgColor; c.fillRect(0,0,CW,CH);
+  if(bgImageObj && bgImageObj.complete && bgImageObj.naturalWidth){
+    const r=coverRect(bgImageObj.naturalWidth, bgImageObj.naturalHeight);
+    c.drawImage(bgImageObj, r.x, r.y, r.w, r.h);
+  }
+  c.restore();
+  // strokes on their own transparent layer so the eraser reveals the backdrop
+  // (destination-out) instead of punching a hole through the exported frame.
+  _expCtx.clearRect(0,0,CW,CH);
+  paintStatic(_expCtx, f.strokes);
+  c.drawImage(_expLayer, 0, 0, CW, CH);
+}
+
+/* ---- background image ---- */
+const imageInput=document.getElementById('imageInput');
+function loadBgImageObj(cb){ if(!bgImage){ bgImageObj=null; if(cb)cb(); return; } const im=new Image(); im.onload=()=>{ bgImageObj=im; if(cb)cb(); }; im.onerror=()=>{ bgImageObj=null; if(cb)cb(); }; im.src=bgImage; }
+function setBgImage(dataURL){ bgImage=dataURL; loadBgImageObj(()=>{ applyBg(); render(); }); syncMenuState(); scheduleSave(); }
+function removeBgImage(){ bgImage=null; bgImageObj=null; applyBg(); render(); syncMenuState(); scheduleSave(); }
+imageInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
+  const r=new FileReader(); r.onload=()=>setBgImage(String(r.result)); r.readAsDataURL(file); });
+
+/* ---- music loop ---- */
+const musicInput=document.getElementById('musicInput');
+function ensureAudio(){ if(musicData && !audioEl){ audioEl=new Audio(musicData); audioEl.loop=true; } if(audioEl) audioEl.muted=musicMuted; }
+function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; ensureAudio(); syncMenuState(); scheduleSave(); }
+function removeMusic(){ if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicData=null; syncMenuState(); scheduleSave(); }
+function startMusic(){ ensureAudio(); if(audioEl && !musicMuted){ try{ audioEl.currentTime=0; audioEl.play().catch(()=>{}); }catch(_){}} }
+function stopMusic(){ if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
+musicInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
+  const r=new FileReader(); r.onload=()=>setMusic(String(r.result)); r.readAsDataURL(file); });
+
+/* ---- save / load draft as a .skribl file (same format the Pad reads) ---- */
+function saveDraft(){
+  const data=serializeFlip();
+  const blob=new Blob([JSON.stringify(data)], { type:'application/json' });
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='skribl-flip-'+new Date().toISOString().slice(0,10)+'.skribl';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  chip('Draft saved');
+}
+const draftInput=document.getElementById('draftInput');
+function loadDraftFile(file){
+  const r=new FileReader();
+  r.onload=()=>{ try{
+      const d=JSON.parse(String(r.result));
+      if(!d || !Array.isArray(d.frames) || !d.frames.length){ chip('Not a valid Skribl'); return; }
+      if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
+      const ok=applyPayload(d);            // sets frames/bgColor/bgImage/musicData/fps directly
+      loadBgImageObj(()=>{ applyBg(); render(); });
+      ensureAudio();
+      fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMenuState();
+      try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip())); }catch(_){ }  // best-effort
+      chip(ok?'Draft loaded':'Loaded');
+    }catch(err){ chip('Could not read file'); }
+  };
+  r.readAsText(file);
+}
+draftInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(file) loadDraftFile(file); });
+
+/* ---- export: PNG (current frame) + WebM (the loop) ---- */
+function download(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }
+function exportPNG(){
+  const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
+  drawFrameTo(c, frame());
+  cv.toBlob(b=>{ if(b) download(b, 'skribl-frame-'+(idx+1)+'.png'); }, 'image/png');
+}
+let exporting=false;
+function exportWebM(){
+  if(exporting) return;
+  if(frames.length<2){ chip('Add a page or two first'); return; }
+  if(typeof MediaRecorder==='undefined' || !HTMLCanvasElement.prototype.captureStream){ chip('Video export not supported here'); return; }
+  exporting=true; chip('Recording…');
+  const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
+  const stream=cv.captureStream(fps);
+  const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
+  let rec; try{ rec=new MediaRecorder(stream,{mimeType:mime}); }catch(_){ exporting=false; chip('Video export failed'); return; }
+  const chunks=[]; rec.ondataavailable=ev=>{ if(ev.data && ev.data.size) chunks.push(ev.data); };
+  rec.onstop=()=>{ exporting=false; const blob=new Blob(chunks,{type:'video/webm'}); download(blob,'skribl-animation.webm'); chip('Animation exported'); };
+  drawFrameTo(c, frames[0]); rec.start();
+  const loops=2, total=frames.length*loops; let n=0;   // a couple of loops so short clips aren't trivially short
+  const iv=setInterval(()=>{ drawFrameTo(c, frames[n%frames.length]); n++; if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
+}
+
+/* ---- menu open/close + item wiring + state sync ---- */
+const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
+function syncMenuState(){
+  document.getElementById('miImage').hidden = !!bgImage;
+  document.getElementById('miImageRemove').hidden = !bgImage;
+  document.getElementById('miMusic').hidden = !!musicData;
+  document.getElementById('miMusicMute').hidden = !musicData;
+  document.getElementById('miMusicRemove').hidden = !musicData;
+  document.querySelector('#miMusicMute .mi-tx').textContent = musicMuted ? 'Unmute music' : 'Mute music';
+}
+function openMenu(){ syncMenuState(); moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
+function closeMenu(){ moreMenu.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
+moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
+document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
+document.getElementById('miImage').addEventListener('click',()=>{ closeMenu(); imageInput.click(); });
+document.getElementById('miImageRemove').addEventListener('click',()=>{ closeMenu(); removeBgImage(); });
+document.getElementById('miMusic').addEventListener('click',()=>{ closeMenu(); musicInput.click(); });
+document.getElementById('miMusicMute').addEventListener('click',()=>{ musicMuted=!musicMuted; if(audioEl) audioEl.muted=musicMuted; if(musicMuted) stopMusic(); else if(playing) startMusic(); syncMenuState(); });
+document.getElementById('miMusicRemove').addEventListener('click',()=>{ closeMenu(); removeMusic(); });
+document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
+document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
+document.getElementById('miPng').addEventListener('click',()=>{ closeMenu(); exportPNG(); });
+document.getElementById('miWebm').addEventListener('click',()=>{ closeMenu(); exportWebM(); });
+
 function undoStroke(){
   if(playing) return;
   const f = frame(); if(!f.strokeGroups.length) return;
@@ -863,6 +1033,8 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !infoOverlay.hidde
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
 fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor);
+loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
+ensureAudio(); syncMenuState();
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
 window.addEventListener('load', ()=>{ fitPad(); positionSeg(); positionToolSlider(); });
