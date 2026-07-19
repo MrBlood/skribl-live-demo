@@ -125,6 +125,27 @@ def _decode_data_url_image(data_url):
     return raw, "image/" + m.group(1)
 
 
+def _payload_has_audio(payload):
+    # Whether a posted Skribl carries actual audio bytes. Frame-aware: audio lives
+    # at the top level on a legacy Skribl, or inside a frame on a frame-format one
+    # (a classic Skribl is a 1-frame Skribl). A settings-only/empty music dict
+    # ({}) doesn't count. Pure + import-light so it can be unit-tested headless.
+    if not isinstance(payload, dict):
+        return False
+    music = payload.get("music")
+    if not isinstance(music, dict) or not music.get("data"):
+        music = None
+        frames = payload.get("frames")
+        if isinstance(frames, list):
+            for frame in frames:
+                if isinstance(frame, dict):
+                    m = frame.get("music")
+                    if isinstance(m, dict) and m.get("data"):
+                        music = m
+                        break
+    return bool((music or {}).get("data"))
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -173,6 +194,12 @@ def create_app():
     @app.get("/skribl-pad")
     def skribl_editor():
         return render_template("skribl_editor.html")
+
+    @app.get("/flip")
+    def skribl_flip():
+        # Flip Mode — the frame-by-frame animation editor (standalone page for now;
+        # folds into the pad as an in-app mode in a later phase).
+        return render_template("skribl_flip.html")
 
     @app.get("/s/<public_id>")
     def skribl_player(public_id):
@@ -264,13 +291,16 @@ def create_app():
                 return jsonify({"error": f"'{key}' must be an object or null."}), 400
         if payload.get("baseSnapshot") is not None and not isinstance(payload.get("baseSnapshot"), str):
             return jsonify({"error": "'baseSnapshot' must be a string or null."}), 400
+        # Frame-format Skribls carry the drawing under frames[] (a classic Skribl
+        # is a 1-frame Skribl). Only a gross type check — keep unknown keys working.
+        if "frames" in payload and not isinstance(payload["frames"], list):
+            return jsonify({"error": "'frames' must be a list."}), 400
 
         title = (payload.get("title") or "Untitled Skribl").strip()[:80]
         caption = (payload.get("caption") or "").strip()[:300]
-        # True only when there are actual audio bytes; a settings-only or empty
-        # music dict (e.g. {}) doesn't count. music's dict-or-null shape is
-        # already validated above, so .get is safe here.
-        has_audio = bool((payload.get("music") or {}).get("data"))
+        # True only when there are actual audio bytes, whether stored top-level
+        # (legacy) or inside a frame (frame-format). See _payload_has_audio.
+        has_audio = _payload_has_audio(payload)
 
         # Retry on the rare public_id collision instead of 500-ing.
         public_id = None
