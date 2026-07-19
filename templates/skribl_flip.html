@@ -43,13 +43,17 @@
      first so its lines win where all three coincide. */
   .flip-grid { position: absolute; inset: 0; pointer-events: none; display: none; border-radius: var(--r-frame); overflow: hidden;
     background-image:
-      linear-gradient(rgba(255,255,255,.17) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.17) 1px, transparent 1px),
-      linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px),
-      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+      linear-gradient(to left, rgba(255,255,255,.22) 1px, transparent 1px),
+      linear-gradient(to top,  rgba(255,255,255,.22) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
     background-size:
+      100% 100%, 100% 100%,
       12.5% 16.6667%, 12.5% 16.6667%,
       6.25% 8.3333%,  6.25% 8.3333%,
-      3.125% 4.1667%, 3.125% 4.1667%; }
+      3.125% 4.1667%, 3.125% 4.1667%;
+    background-repeat: no-repeat, no-repeat, repeat, repeat, repeat, repeat, repeat, repeat; }
   .flip-grid.on { display: block; }
   body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
@@ -118,7 +122,10 @@
   /* The shared .tab-panel drawer opens upward over the lower canvas, spanning the
      tools row (bounded by left/right insets so it can never overflow the viewport,
      and floating so it never resizes the canvas). Same margins as the Pad drawer. */
-  .draw-popout.tab-panel { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 10px); margin: 0; z-index: 40; }
+  .draw-popout.tab-panel { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 10px); margin: 0; z-index: 40;
+    max-height: calc(100dvh - 130px); overflow-y: auto; overflow-x: hidden; }
+  /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
+  .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-control);
     border: 1px solid var(--hairline-strong); color: var(--text-secondary); cursor: pointer; transition: filter .15s ease, color .15s ease; }
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
@@ -242,9 +249,8 @@
       <button class="t-btn" id="erase" title="Eraser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 010-3l9-9a2 2 0 013 0l5 5a2 2 0 010 3l-8 8"/><path d="M9 13l5 5"/></svg></button>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
-      <button class="t-btn" id="clear" title="Delete whole animation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-      <!-- The Pad editor's exact Draw menu, reusing the shared design-system classes.
-           Floats up over the canvas, spanning the tools row. -->
+      <!-- The Pad editor's Draw menu, in full, reusing the shared design-system
+           classes. Floats up over the canvas, spanning the tools row. -->
       <div class="tab-panel draw-popout" id="drawPanel" role="dialog" aria-label="Colors and brush" hidden>
           <div class="color-section">
             <span class="draw-section-label">Color</span>
@@ -263,6 +269,24 @@
               <div class="recent-colors" id="recentColors"></div>
             </div>
           </div>
+
+          <div class="bg-section">
+            <span class="draw-section-label">Background</span>
+            <div class="bg-group" id="bgGroup">
+              <button type="button" class="bg-swatch active" data-bg="#0d0f14" style="background:#0d0f14;" aria-label="Background dark"></button>
+              <button type="button" class="bg-swatch" data-bg="#ffffff" style="background:#ffffff;" aria-label="Background white"></button>
+              <button type="button" class="bg-swatch" data-bg="#1a1a2e" style="background:#1a1a2e;" aria-label="Background navy"></button>
+              <button type="button" class="bg-swatch" data-bg="#0a1628" style="background:#0a1628;" aria-label="Background midnight blue"></button>
+              <button type="button" class="bg-swatch" data-bg="#1a0a0a" style="background:#1a0a0a;" aria-label="Background dark red"></button>
+              <button type="button" class="bg-swatch" data-bg="#2d1b4e" style="background:#2d1b4e;" aria-label="Background dark purple"></button>
+              <label class="bg-custom-wrap" title="Custom background">
+                <span class="bg-swatch bg-custom" id="customBgBtn" style="background:#2d1b4e;"></span>
+                <span class="color-custom-badge">+</span>
+                <input type="color" id="customBgInput" value="#2d1b4e" aria-label="Custom canvas background">
+              </label>
+            </div>
+          </div>
+
           <div class="draw-inline">
             <div class="tool-row">
               <span class="draw-section-label" id="brushSizeLabel">Brush size</span>
@@ -271,6 +295,32 @@
                 <span class="prop-val" id="sizeVal">7px</span>
                 <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:7px;height:7px"></span></span>
               </div>
+            </div>
+            <div class="prop-row">
+              <span class="draw-section-label">Smoothing</span>
+              <div class="smooth-seg" id="smoothSeg">
+                <span class="seg-slider"></span>
+                <button type="button" class="smooth-btn active" data-smooth="off">Off</button>
+                <button type="button" class="smooth-btn" data-smooth="low">Low</button>
+                <button type="button" class="smooth-btn" data-smooth="high">High</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawer-divider"></div>
+
+          <div class="more-drawer">
+            <div class="prop-row">
+              <span class="draw-section-label">Opacity</span>
+              <input type="range" id="opacitySlider" class="slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
+              <span class="prop-val" id="opacityVal">100%</span>
+            </div>
+            <div class="drawer-divider"></div>
+            <div class="drawer-actions">
+              <button type="button" id="clear" class="clear-drawer-btn" title="Delete the whole animation">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span id="clearLabel">Clear animation</span>
+              </button>
             </div>
           </div>
         </div>
@@ -284,14 +334,14 @@
         <h2>How Flip Mode works</h2>
         <p class="fi-sub">Draw a frame-by-frame animation, then flip through the pages.</p>
         <dl>
-          <dt>Draw</dt><dd>Sketch on the page. Tap the color dot to open the palette — presets, a <b>+</b> custom picker, an <b>eyedropper</b> to sample a colour from the canvas, your recent colours (shared with the Pad), and the <b>brush size</b> slider. The eraser is on the tool row.</dd>
+          <dt>Draw</dt><dd>Sketch on the page. The colour dot opens the full draw menu — the same one as the Skribl Pad: colour presets, a <b>+</b> custom picker, an <b>eyedropper</b>, recent colours, <b>brush size</b>, <b>background</b>, <b>smoothing</b>, and <b>opacity</b>. The eraser is on the tool row.</dd>
           <dt>Add pages</dt><dd><b>&#65291; Page</b> copies the current page so you can tweak it; <b>&#65291; Blank</b> starts empty.</dd>
-          <dt>Grid</dt><dd>The grid button overlays alignment guides on the canvas — a drawing aid only (never saved, hidden while flipping).</dd>
+          <dt>Grid</dt><dd>The grid button overlays fine / medium / coarse alignment guides across the whole canvas — a drawing aid only (never saved, hidden while flipping).</dd>
           <dt>Onion skin</dt><dd>The onion toggle shows the previous page faintly underneath, so you can trace the motion.</dd>
           <dt>Flip it</dt><dd>Plays the pages in a loop at your chosen speed — <b>6 / 12 / 24</b> frames per second.</dd>
           <dt>Move around</dt><dd>Tap a page in the strip, or use <b>&#8592;</b> / <b>&#8594;</b> to step between pages.</dd>
           <dt>Undo</dt><dd><b>Ctrl/&#8984; + Z</b> or the undo button removes your last stroke.</dd>
-          <dt>Delete</dt><dd>A page's &#10005; removes that page; the <b>trash</b> button clears the whole animation. Both need a second tap (they turn red) to confirm.</dd>
+          <dt>Delete</dt><dd>A page's &#10005; removes that page; <b>Clear animation</b> (in the draw menu) wipes the whole thing. Both need a second tap (they turn red) to confirm.</dd>
           <dt>Autosave</dt><dd>Your animation is saved in this browser and restored when you come back.</dd>
         </dl>
       </div>
@@ -330,6 +380,8 @@ window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); });
 let frames = [ newFrame() ];
 let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
+let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
 let drawing = false, curCount = 0, playing = false, playTimer = null;
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
@@ -347,7 +399,7 @@ function serializeFlip(){
     canvasSize: { cssWidth: CW, cssHeight: CH, dpr: 1 },
     savedAt: new Date().toISOString(),
     editIdx: idx,
-    frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice() }))
+    frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor }))
   };
 }
 function saveNow(){
@@ -379,6 +431,8 @@ function tryRestore(){
       return { strokes: flat, strokeGroups: groups };
     });
     idx = Math.min(d.editIdx != null ? d.editIdx : (d.idx || 0), frames.length - 1);
+    const savedBg = (d.frames[0] && d.frames[0].background) || d.background;
+    if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
     if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
       fps = d.fps;
       [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
@@ -404,11 +458,32 @@ function drawLine(c, x1,y1,x2,y2, col, s, erase){
   c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
   c.globalCompositeOperation = 'source-over';
 }
+// Alpha helpers: opacity rides inside the per-point color as rgba(). A stroke with
+// alpha < 1 is drawn SOLID onto a temp layer, then composited ONCE at that alpha, so
+// overlapping dots/joints within the stroke don't stack into darker blobs (the pad's
+// wet/dry idea). Fully-opaque and erase strokes draw straight through as before.
+function alphaOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)/i); if(m) return parseFloat(m[1]); } return 1; }
+function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
+function paintSeg(c, seg, solid){
+  for (let i = 0; i < seg.length; i++) {
+    const p = seg[i]; const col = solid ? solidOf(p.color) : p.color;
+    if (i === 0) drawDot(c, p.x, p.y, col, p.size, p.erase);
+    else { const pv = seg[i-1]; drawLine(c, pv.x, pv.y, p.x, p.y, col, p.size, p.erase); }
+  }
+}
 function paintStatic(c, strokeArr){
-  for (let i = 0; i < strokeArr.length; i++) {
-    const p = strokeArr[i];
-    if (p.start || i === 0) drawDot(c, p.x, p.y, p.color, p.size, p.erase);
-    else { const prev = strokeArr[i-1]; drawLine(c, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+  let i = 0;
+  while (i < strokeArr.length) {
+    let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
+    const seg = strokeArr.slice(i, j);
+    const a = seg[0].erase ? 1 : alphaOf(seg[0].color);
+    if (a >= 1) { paintSeg(c, seg, false); }
+    else {
+      tctx.clearRect(0,0,CW,CH);
+      paintSeg(tctx, seg, true);                                    // solid on the temp layer
+      c.globalAlpha = a; c.drawImage(tmpCv, 0, 0, CW, CH); c.globalAlpha = 1;
+    }
+    i = j;
   }
 }
 
@@ -418,6 +493,11 @@ function paintStatic(c, strokeArr){
 const onionCv = document.createElement('canvas');
 onionCv.width = CW*DPR; onionCv.height = CH*DPR;
 const octx = onionCv.getContext('2d'); octx.scale(DPR,DPR);
+// Separate temp layer for per-stroke opacity compositing (kept distinct from the
+// onion layer so the two never draw onto each other).
+const tmpCv = document.createElement('canvas');
+tmpCv.width = CW*DPR; tmpCv.height = CH*DPR;
+const tctx = tmpCv.getContext('2d'); tctx.scale(DPR,DPR);
 function render(){
   ctx.clearRect(0,0,CW,CH);
   if(onion && !playing && idx>0){
@@ -437,15 +517,29 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault();
   if(picking){ sampleColorAt(e); return; }   // eyedropper: pick, don't draw
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; curCount=1; redoStack.length=0;
-  const p=pos(e); const dsize = erasing ? size*3 : size;
-  frame().strokes.push({ x:p.x, y:p.y, color, size: dsize, t: performance.now(), erase: erasing, start: true });
+  const p=pos(e); smoothPt={x:p.x,y:p.y}; lastRaw={x:p.x,y:p.y};
+  const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
+  frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(!drawing) return; e.preventDefault();
-  const p=pos(e); curCount++; const dsize = erasing ? size*3 : size;
-  frame().strokes.push({ x:p.x, y:p.y, color, size: dsize, t: performance.now(), erase: erasing });
+  const raw=pos(e); lastRaw={x:raw.x,y:raw.y};
+  let px, py;
+  if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
+  else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
+  curCount++; const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
+  frame().strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
   render(); });
-function endStroke(){ if(!drawing) return; drawing=false;
+function endStroke(){ if(!drawing) return;
+  // Settle: with smoothing on, the drawn point lags the finger — walk it to the real
+  // release point so the stroke actually ends where the pen lifted.
+  if(smoothingAlpha<1 && !erasing && smoothPt && lastRaw){
+    const dsize=size, pcol=penColorFor(color);
+    for(let k=0;k<6;k++){ smoothPt={x: smoothPt.x+(lastRaw.x-smoothPt.x)*0.5, y: smoothPt.y+(lastRaw.y-smoothPt.y)*0.5};
+      curCount++; frame().strokes.push({ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false }); }
+    render();
+  }
+  drawing=false; smoothPt=null; lastRaw=null;
   frame().strokeGroups.push(curCount); curCount=0;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 window.addEventListener('pointerup', endStroke);
@@ -491,7 +585,7 @@ const strip = document.getElementById('strip');
 const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function disarmAll(){
   if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
-  if(armedClear){ armedClear=false; document.getElementById('clear').classList.remove('armed'); }
+  if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete the whole animation'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear animation'; } }
 }
 function buildStrip(){
   armedDel = -1;
@@ -521,7 +615,7 @@ function buildStrip(){
   col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
   updateToolState();
 }
-function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; const c=cv.getContext('2d');
+function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background=bgColor; const c=cv.getContext('2d');
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); paintStatic(c,f.strokes); }
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
 function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice() }; }
@@ -610,22 +704,63 @@ function sampleColorAt(e){
   try{
     const p=pos(e); const dx=Math.round(p.x*DPR), dy=Math.round(p.y*DPR);
     const d=ctx.getImageData(dx,dy,1,1).data;
-    if(d[3]>0){ const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''); setColor(hex); addRecent(hex); }
+    const hex = d[3] < 10 ? bgColor
+      : '#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+    setColor(hex); addRecent(hex);
   }catch(_){ }
   setPicking(false); closePop();
 }
 eyedropperBtn.addEventListener('click',e=>{ e.stopPropagation(); setPicking(!picking); });
 
-function openPop(){ drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); }
+function openPop(){ drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); requestAnimationFrame(positionSmoothSeg); }
 function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (drawPanel.hidden?openPop:closePop)(); });
-document.addEventListener('click',e=>{ if(!drawPanel.hidden && !e.target.closest('.color-tool')) closePop(); });
+document.addEventListener('click',e=>{ if(!drawPanel.hidden && !e.target.closest('#drawPanel') && !e.target.closest('#colorCurrent')) closePop(); });
 renderRecent(); setColor(color);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');
   sizeVal.textContent=sizeEl.value+'px';
   const d=Math.min(+sizeEl.value,26); if(brushDot){ brushDot.style.width=d+'px'; brushDot.style.height=d+'px'; } }
 sizeEl.addEventListener('input',()=>{ size=+sizeEl.value; sizeFill(); });
+
+/* ---- opacity: rides inside the per-stroke color as rgba() (Pad parity) ---- */
+function penColorFor(hex){
+  if(strokeOpacity>=1) return hex;                 // 100% keeps the plain hex
+  const h=(hex||'#ffffff').replace('#',''); const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return 'rgba('+r+', '+g+', '+b+', '+strokeOpacity+')';
+}
+const opacitySlider=document.getElementById('opacitySlider'), opacityVal=document.getElementById('opacityVal');
+function opacityFill(){ const v=+opacitySlider.value; opacitySlider.style.setProperty('--slider-fill', ((v-10)/90*100)+'%'); opacityVal.textContent=v+'%'; }
+opacitySlider.addEventListener('input',()=>{ strokeOpacity=(+opacitySlider.value)/100; opacityFill(); });
+opacityFill();
+
+/* ---- background: a CSS backdrop the eraser reveals; saved per frame for the Pad ---- */
+const bgGroup=document.getElementById('bgGroup');
+const customBgInput=document.getElementById('customBgInput'), customBgBtn=document.getElementById('customBgBtn');
+function applyBg(){ pad.style.background=bgColor; [...strip.querySelectorAll('.frame canvas')].forEach(cv=>cv.style.background=bgColor); }
+function setBg(hex, fromCustom){
+  if(!/^#[0-9a-f]{6}$/i.test(hex||'')) return;
+  bgColor=hex; applyBg();
+  let matched=false;
+  [...bgGroup.querySelectorAll('.bg-swatch')].forEach(s=>{
+    if(s.classList.contains('bg-custom')) return;
+    const on = s.dataset.bg && s.dataset.bg.toLowerCase()===hex.toLowerCase();
+    s.classList.toggle('active', on); if(on) matched=true;
+  });
+  customBgBtn.classList.toggle('active', !matched);
+  if(fromCustom || !matched){ customBgBtn.style.background=hex; }
+  scheduleSave();
+}
+bgGroup.addEventListener('click',e=>{ const b=e.target.closest('.bg-swatch'); if(!b||b.classList.contains('bg-custom')) return; setBg(b.dataset.bg,false); });
+customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
+
+/* ---- smoothing: stabilizer strength baked into the captured points (Pad parity) ---- */
+const smoothSeg=document.getElementById('smoothSeg');
+function positionSmoothSeg(){ const active=smoothSeg.querySelector('.smooth-btn.active'), pill=smoothSeg.querySelector('.seg-slider');
+  if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
+smoothSeg.addEventListener('click',e=>{ const b=e.target.closest('.smooth-btn'); if(!b) return;
+  const lvl=b.dataset.smooth; smoothingAlpha = lvl==='high' ? 0.25 : lvl==='low' ? 0.5 : 1;
+  smoothSeg.querySelectorAll('.smooth-btn').forEach(x=>x.classList.toggle('active', x===b)); positionSmoothSeg(); });
 function undoStroke(){
   if(playing) return;
   const f = frame(); if(!f.strokeGroups.length) return;
@@ -645,14 +780,14 @@ document.getElementById('erase').addEventListener('click',e=>{ if(picking) setPi
   pad.style.cursor='none'; if(!erasing) eraserCursor.style.display='none'; else brushCursor.style.display='none'; });
 document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
 document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redoStroke(); });
-/* Clear is destructive → same two-tap armed pattern as frame delete. */
+/* Delete-all lives in the draw menu now; destructive → same two-tap arm as frame delete. */
 document.getElementById('clear').addEventListener('click',e=>{
   if(playing) return;
-  // Wipes the ENTIRE animation. (Individual frames are deleted from their own thumbnail.)
   const empty = frames.length===1 && frames[0].strokes.length===0;
   if(empty) return;                                  // nothing to delete
-  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); e.currentTarget.title='Tap again to delete the whole animation'; return; }
-  armedClear=false; e.currentTarget.classList.remove('armed'); e.currentTarget.title='Delete whole animation';
+  const lbl=document.getElementById('clearLabel');
+  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear all'; e.currentTarget.title='Tap again to delete the whole animation'; return; }
+  armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear animation'; e.currentTarget.title='Delete the whole animation';
   frames=[newFrame()]; idx=0; redoStack.length=0;
   try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){ }
   buildStrip(); render(); updateToolState();
@@ -694,7 +829,7 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !infoOverlay.hidde
 /* ---- boot ---- */
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
-fitPad(); buildStrip(); render(); sizeFill();
+fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
 window.addEventListener('load', ()=>{ fitPad(); positionSeg(); });
