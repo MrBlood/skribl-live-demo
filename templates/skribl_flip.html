@@ -72,9 +72,21 @@
   body.playing .flip-live { display: inline-flex; }
 
   .flip-tools { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; flex-wrap: wrap; }
-  .swatches { display: flex; gap: 7px; background: var(--surface-control); border: 1px solid var(--hairline-strong); padding: 6px; border-radius: var(--r-pill); }
-  .sw-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .12s var(--spring); }
-  .sw-dot:hover { transform: scale(1.1); } .sw-dot.on { border-color: #fff; }
+  /* Color = one current-color button that opens a popout (presets + custom picker +
+     recent). Reuses the pad's .color-dot / .color-custom-wrap / .recent-swatch styles. */
+  .color-tool { position: relative; display: inline-flex; }
+  .color-current { width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 2px solid var(--text-primary);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.15);
+    transition: transform .12s var(--spring); }
+  .color-current:hover { transform: scale(1.06); }
+  .color-popout { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+    background: var(--surface-panel); border: 1px solid var(--hairline-strong); border-radius: 16px; padding: 12px;
+    box-shadow: 0 16px 44px rgba(0,0,0,.55); z-index: 30; }
+  .color-popout[hidden] { display: none; }
+  .color-grid { display: grid; grid-template-columns: repeat(4, auto); gap: 10px; }
+  .color-recent { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); }
+  .color-recent[hidden] { display: none; }
   /* Size uses the editor's real .slider (fill via --slider-fill), wrapped in a pill. */
   .size-pill { display: flex; align-items: center; gap: 10px; background: var(--surface-control); border: 1px solid var(--hairline-strong);
     padding: 4px 14px; border-radius: var(--r-pill); color: var(--text-secondary); font-size: 12px; font-weight: 600; min-width: 150px; }
@@ -183,12 +195,18 @@
     </div>
 
     <div class="flip-tools">
-      <div class="swatches" id="swatches"></div>
+      <div class="color-tool">
+        <button type="button" class="color-current" id="colorCurrent" title="Color" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="color-popout" id="colorPop" hidden>
+          <div class="color-grid" id="colorGrid"></div>
+          <div class="color-recent" id="colorRecent" hidden></div>
+        </div>
+      </div>
       <div class="size-pill">Size <input id="size" class="slider" type="range" min="2" max="34" value="7"><span class="slider-val" id="sizeVal">7</span></div>
       <button class="t-btn" id="erase" title="Eraser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 010-3l9-9a2 2 0 013 0l5 5a2 2 0 010 3l-8 8"/><path d="M9 13l5 5"/></svg></button>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
-      <button class="t-btn" id="clear" title="Clear frame"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+      <button class="t-btn" id="clear" title="Delete whole animation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
     </div>
 
     <div class="flip-chip" id="flipChip"></div>
@@ -199,13 +217,13 @@
         <h2>How Flip Mode works</h2>
         <p class="fi-sub">Draw a frame-by-frame animation, then flip through the pages.</p>
         <dl>
-          <dt>Draw</dt><dd>Sketch on the page — pick a color and size below, or the eraser.</dd>
+          <dt>Draw</dt><dd>Sketch on the page. Tap the color dot to open the palette — presets, a <b>+</b> custom picker, and your recent colors (shared with the Pad). Set size with the slider, or use the eraser.</dd>
           <dt>Add pages</dt><dd><b>&#65291; Page</b> copies the current page so you can tweak it; <b>&#65291; Blank</b> starts empty.</dd>
           <dt>Onion skin</dt><dd>The onion toggle shows the previous page faintly underneath, so you can trace the motion.</dd>
           <dt>Flip it</dt><dd>Plays the pages in a loop at your chosen speed — <b>6 / 12 / 24</b> frames per second.</dd>
           <dt>Move around</dt><dd>Tap a page in the strip, or use <b>&#8592;</b> / <b>&#8594;</b> to step between pages.</dd>
           <dt>Undo</dt><dd><b>Ctrl/&#8984; + Z</b> or the undo button removes your last stroke.</dd>
-          <dt>Delete &amp; clear</dt><dd>Tap a page's &#10005; (or Clear) once to arm it red, again to confirm — nothing vanishes by accident.</dd>
+          <dt>Delete</dt><dd>A page's &#10005; removes that page; the <b>trash</b> button clears the whole animation. Both need a second tap (they turn red) to confirm.</dd>
           <dt>Autosave</dt><dd>Your animation is saved in this browser and restored when you come back.</dd>
         </dl>
       </div>
@@ -458,11 +476,48 @@ function stop(){
 playBtn.addEventListener('click',()=> playing?stop():play());
 
 /* ---- tools ---- */
-const sw=document.getElementById('swatches');
-COLORS.forEach(col=>{ const b=document.createElement('div'); b.className='sw-dot'+(col===color?' on':''); b.style.background=col;
-  if(col==='#0e1017') b.style.boxShadow='inset 0 0 0 1px rgba(255,255,255,.18)';
-  b.addEventListener('click',()=>{ color=col; erasing=false; document.getElementById('erase').classList.remove('on');
-    [...sw.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); }); sw.appendChild(b); });
+const colorCurrent=document.getElementById('colorCurrent');
+const colorPop=document.getElementById('colorPop');
+const colorGrid=document.getElementById('colorGrid');
+const colorRecentEl=document.getElementById('colorRecent');
+let recentColors=[];
+try{ const r=JSON.parse(localStorage.getItem('skribl_recent_colors')||'[]'); if(Array.isArray(r)) recentColors=r.filter(c=>/^#[0-9a-f]{6}$/i.test(c)).slice(0,6); }catch(_){ }
+
+function setColor(hex){
+  color=hex; erasing=false;
+  document.getElementById('erase').classList.remove('on');
+  pad.style.cursor='crosshair'; if(typeof eraserCursor!=='undefined') eraserCursor.style.display='none';
+  colorCurrent.style.background=hex;
+  [...colorGrid.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active', d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase()));
+}
+function addRecent(hex){
+  recentColors=[hex, ...recentColors.filter(c=>c.toLowerCase()!==hex.toLowerCase())].slice(0,6);
+  try{ localStorage.setItem('skribl_recent_colors', JSON.stringify(recentColors)); }catch(_){ }
+  renderRecent();
+}
+function renderRecent(){
+  colorRecentEl.innerHTML='';
+  recentColors.forEach(hex=>{ const b=document.createElement('button'); b.type='button'; b.className='recent-swatch'; b.style.background=hex;
+    b.title=hex; b.addEventListener('click',()=>{ setColor(hex); closePop(); }); colorRecentEl.appendChild(b); });
+  colorRecentEl.hidden = recentColors.length===0;
+}
+// preset dots
+COLORS.forEach(col=>{ const b=document.createElement('button'); b.type='button'; b.className='color-dot'; b.style.background=col; b.dataset.color=col;
+  if(col==='#0e1017'||col==='#ffffff') b.style.borderColor='rgba(255,255,255,.28)';
+  b.addEventListener('click',()=>{ setColor(col); closePop(); }); colorGrid.appendChild(b); });
+// custom color picker (pad's markup)
+const customWrap=document.createElement('label'); customWrap.className='color-custom-wrap'; customWrap.title='Custom color';
+customWrap.innerHTML='<span class="color-dot color-custom" id="customColorBtn" style="background:#ff6b6b;"></span><span class="color-custom-badge">+</span><input type="color" id="customColorInput" value="#ff6b6b" aria-label="Custom color">';
+colorGrid.appendChild(customWrap);
+const customInput=customWrap.querySelector('input'); const customBtn=customWrap.querySelector('#customColorBtn');
+customInput.addEventListener('input',e=>{ customBtn.style.background=e.target.value; setColor(e.target.value); });
+customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
+
+function openPop(){ colorPop.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); }
+function closePop(){ colorPop.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); }
+colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (colorPop.hidden?openPop:closePop)(); });
+document.addEventListener('click',e=>{ if(!colorPop.hidden && !e.target.closest('.color-tool')) closePop(); });
+renderRecent(); setColor(color);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal');
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%'); sizeVal.textContent=sizeEl.value; }
 sizeEl.addEventListener('input',()=>{ size=+sizeEl.value; sizeFill(); });
@@ -488,12 +543,14 @@ document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redo
 /* Clear is destructive → same two-tap armed pattern as frame delete. */
 document.getElementById('clear').addEventListener('click',e=>{
   if(playing) return;
-  const f = frame();
-  if(!f.strokes.length) return;
-  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); e.currentTarget.title='Tap again to clear this page'; return; }
-  armedClear=false; e.currentTarget.classList.remove('armed'); e.currentTarget.title='Clear frame';
-  f.strokes=[]; f.strokeGroups=[]; redoStack.length=0;
-  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+  // Wipes the ENTIRE animation. (Individual frames are deleted from their own thumbnail.)
+  const empty = frames.length===1 && frames[0].strokes.length===0;
+  if(empty) return;                                  // nothing to delete
+  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); e.currentTarget.title='Tap again to delete the whole animation'; return; }
+  armedClear=false; e.currentTarget.classList.remove('armed'); e.currentTarget.title='Delete whole animation';
+  frames=[newFrame()]; idx=0; redoStack.length=0;
+  try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){ }
+  buildStrip(); render(); updateToolState();
 });
 const onionEl=document.getElementById('onion');
 function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
