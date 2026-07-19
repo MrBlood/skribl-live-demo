@@ -3,36 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Skribl · Flip Mode</title>
-<!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn, logo. -->
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='93') }}">
+<title>Skribl · Flip</title>
+<!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='94') }}">
 <style>
-  /* Flip-only styling, built on the shared tokens from styles.css. */
   body.flip-app { overflow: hidden; }
   .flip-app .app { height: 100dvh; }
-  .flip-app .header { gap: 10px; }
-  .flip-badge {
-    font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--accent-bright);
-    border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); padding: 2px 8px; margin-left: 2px;
-  }
+  .flip-app .header { gap: 8px; }
+
+  /* Wordmark: just FLIP (logo/Skribl removed to free room on mobile). */
+  .flip-word { font-weight: 800; font-size: 17px; letter-spacing: .12em; color: var(--text-primary); padding-left: 2px; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
-  .seg { display: inline-flex; background: var(--surface-control); border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); padding: 3px; }
-  .seg button { border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-weight: 600; font-size: 13px;
-    padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; transition: background .15s var(--ease), color .15s var(--ease); }
-  .seg button.on { background: var(--surface-control-hover); color: var(--text-primary); }
+  /* fps: editor segmented control with the shared sliding accent pill (.seg-slider). */
+  .seg { position: relative; display: inline-flex; background: var(--surface-control); border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); padding: 3px; }
+  .seg button { position: relative; z-index: 1; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-weight: 600; font-size: 13px;
+    padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .2s var(--ease); }
+  .seg button.on { color: #fff; }
 
-  .onion { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 600;
-    cursor: pointer; user-select: none; padding: 6px 8px; }
-  .onion .sw { width: 34px; height: 20px; border-radius: var(--r-pill); background: var(--surface-control); border: 1px solid var(--hairline-strong); position: relative; transition: background .2s var(--ease); }
-  .onion .sw i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #8b93a3; transition: left .2s var(--spring), background .2s; }
-  .onion.on .sw { background: var(--accent); border-color: transparent; }
-  .onion.on .sw i { left: 16px; background: #fff; }
+  /* onion: pill toggle in the editor's control language (accent when on). */
+  .onion-btn { display: inline-flex; align-items: center; gap: 7px; background: var(--surface-control); border: 1px solid var(--hairline-strong);
+    color: var(--text-secondary); border-radius: var(--r-pill); padding: 6px 12px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
+    transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease); }
+  .onion-btn svg { width: 15px; height: 15px; }
+  .onion-btn.on { background: rgba(124,92,255,.14); border-color: var(--accent); color: var(--accent-bright); }
 
-  .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 96px; justify-content: center; }
+  .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 92px; justify-content: center; }
   .btn.flip-play.playing { background: var(--surface-control); color: var(--text-primary); box-shadow: none; }
 
-  /* Editor-style fitted canvas — no fixed size, so it never overflows. */
+  /* Editor-style fitted canvas — never overflows. */
   .flip-stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
   .flip-wrap { position: relative; line-height: 0; }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
@@ -47,12 +46,16 @@
   .swatches { display: flex; gap: 7px; background: var(--surface-control); border: 1px solid var(--hairline-strong); padding: 6px; border-radius: var(--r-pill); }
   .sw-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .12s var(--spring); }
   .sw-dot:hover { transform: scale(1.1); } .sw-dot.on { border-color: #fff; }
-  .size-ctl { display: flex; align-items: center; gap: 9px; background: var(--surface-control); border: 1px solid var(--hairline-strong); padding: 6px 14px; border-radius: var(--r-pill); color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-  .size-ctl input { accent-color: var(--accent); }
+  /* Size uses the editor's real .slider (fill via --slider-fill), wrapped in a pill. */
+  .size-pill { display: flex; align-items: center; gap: 10px; background: var(--surface-control); border: 1px solid var(--hairline-strong);
+    padding: 4px 14px; border-radius: var(--r-pill); color: var(--text-secondary); font-size: 12px; font-weight: 600; min-width: 150px; }
+  .size-pill .slider { flex: 1; }
+  .size-pill .slider-val { min-width: 26px; }
   .t-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-control);
     border: 1px solid var(--hairline-strong); color: var(--text-secondary); cursor: pointer; transition: filter .15s ease, color .15s ease; }
-  .t-btn:hover { filter: brightness(1.12); } .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
+  .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
   .t-btn svg { width: 19px; height: 19px; }
+  @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto; scrollbar-width: thin; }
@@ -76,7 +79,14 @@
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
   .flip-hint { color: var(--text-dim); font-size: 12px; text-align: center; padding: 0 16px 12px; }
   .flip-hint b { color: var(--text-secondary); font-weight: 600; }
-  @media (hover:hover) { .t-btn:hover, .addbtn:hover { filter: none; } }
+
+  /* Mobile: keep the header on one line — onion goes icon-only. */
+  @media (max-width: 560px) {
+    .onion-btn .onion-label { display: none; }
+    .onion-btn { padding: 8px; }
+    .flip-word { font-size: 15px; letter-spacing: .1em; }
+    .flip-hint { display: none; }
+  }
 </style>
 </head>
 <body class="flip-app">
@@ -85,22 +95,15 @@
       <a href="/" class="icon-btn" title="Back to Skribl Pad" aria-label="Back to Skribl Pad">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </a>
-      <div class="brand">
-        <svg viewBox="0 0 100 100">
-          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#5b8cff"/></linearGradient></defs>
-          <rect width="100" height="100" rx="28" fill="url(#g)"/>
-          <polygon fill="#fff" points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/>
-        </svg>
-        <span><span class="brand-word">Skribl</span></span>
-        <span class="flip-badge">FLIP</span>
-      </div>
+      <span class="flip-word">FLIP</span>
       <div class="actions flip-actions" id="actions">
-        <span class="seg" id="fps" title="Frames per second">
+        <span class="seg" id="fps" title="Frames per second"><span class="seg-slider"></span>
           <button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button>
         </span>
-        <span class="onion" id="onion" role="switch" aria-checked="false" title="Onion skin — show the frame beneath">
-          <span class="sw"><i></i></span>Onion
-        </span>
+        <button type="button" class="onion-btn" id="onion" role="switch" aria-checked="false" title="Onion skin — show the frame beneath">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="12" r="5" opacity=".55"/></svg>
+          <span class="onion-label">Onion</span>
+        </button>
         <button type="button" class="btn flip-play" id="play">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg><span>Flip it</span>
         </button>
@@ -116,7 +119,7 @@
 
     <div class="flip-tools">
       <div class="swatches" id="swatches"></div>
-      <div class="size-ctl">Size <input id="size" type="range" min="2" max="34" value="7"></div>
+      <div class="size-pill">Size <input id="size" class="slider" type="range" min="2" max="34" value="7"><span class="slider-val" id="sizeVal">7</span></div>
       <button class="t-btn" id="erase" title="Eraser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 010-3l9-9a2 2 0 013 0l5 5a2 2 0 010 3l-8 8"/><path d="M9 13l5 5"/></svg></button>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 015 5v0a5 5 0 01-5 5H8"/></svg></button>
       <button class="t-btn" id="clear" title="Clear frame"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
@@ -127,21 +130,14 @@
   </div>
 
 <script>
-/* Flip Mode — mirrors the pad's real render path: a frame is a strokes list;
-   drawDot/drawLine paint to the canvas; paintStatic rebuilds a whole frame;
-   onion skin = the previous frame painted faintly first (the pad's base-layer
-   idea). No stroke glow — same clean rendering as the editor. */
 const COLORS = ["#ffffff","#7c5cff","#5b8cff","#ff5c8a","#ffd15c","#4bd6a0","#0e1017"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
-const CW = 640, CH = 460;                 // authored logical size
+const CW = 640, CH = 460;
 
 const pad = document.getElementById('pad');
 const ctx = pad.getContext('2d');
 pad.width = CW*DPR; pad.height = CH*DPR; ctx.scale(DPR,DPR);
 
-// Fit the canvas into the available stage, preserving aspect — like the editor.
-// Backing store stays at CW×CH×DPR; only the display size changes. Pointer coords
-// are ratio-mapped, so drawing stays correct at any display size.
 function fitPad(){
   const stage = document.querySelector('.flip-stage');
   const availW = stage.clientWidth - 24, availH = stage.clientHeight - 6;
@@ -149,9 +145,9 @@ function fitPad(){
   pad.style.width = Math.round(CW*scale)+'px';
   pad.style.height = Math.round(CH*scale)+'px';
 }
-window.addEventListener('resize', fitPad);
+window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); });
 
-let frames = [ newFrame() ];              // frame = { strokes:[ {color,size,erase,pts:[{x,y}]} ] }
+let frames = [ newFrame() ];
 let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = false, fps = 12;
 let drawing = false, cur = null, playing = false, playTimer = null;
@@ -159,7 +155,6 @@ let drawing = false, cur = null, playing = false, playTimer = null;
 function newFrame(){ return { strokes: [] }; }
 function frame(){ return frames[idx]; }
 
-/* ---- render primitives (same shape as app.js, no glow) ---- */
 function drawDot(c, x, y, col, s, erase){
   c.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
   c.beginPath(); c.arc(x,y,s/2,0,Math.PI*2); c.fillStyle = erase ? '#000' : col; c.fill();
@@ -171,40 +166,26 @@ function drawLine(c, x1,y1,x2,y2, col, s, erase){
   c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
   c.globalCompositeOperation = 'source-over';
 }
-function paintStroke(c, st){
-  const p = st.pts; if(!p.length) return;
-  drawDot(c, p[0].x, p[0].y, st.color, st.size, st.erase);
-  for(let i=1;i<p.length;i++) drawLine(c, p[i-1].x,p[i-1].y, p[i].x,p[i].y, st.color, st.size, st.erase);
-}
+function paintStroke(c, st){ const p=st.pts; if(!p.length) return;
+  drawDot(c,p[0].x,p[0].y,st.color,st.size,st.erase);
+  for(let i=1;i<p.length;i++) drawLine(c,p[i-1].x,p[i-1].y,p[i].x,p[i].y,st.color,st.size,st.erase); }
 function paintStatic(c, strokes){ for(const st of strokes) paintStroke(c, st); }
 
 function render(){
   ctx.clearRect(0,0,CW,CH);
-  if(onion && !playing && idx>0){
-    ctx.globalAlpha = 0.25;
-    paintStatic(ctx, frames[idx-1].strokes);
-    ctx.globalAlpha = 1;
-  }
+  if(onion && !playing && idx>0){ ctx.globalAlpha=0.25; paintStatic(ctx, frames[idx-1].strokes); ctx.globalAlpha=1; }
   paintStatic(ctx, frame().strokes);
 }
 
-/* ---- drawing (pointer = mouse + touch) ---- */
-function pos(e){
-  const r = pad.getBoundingClientRect();
-  return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) };
-}
-pad.addEventListener('pointerdown', e=>{
-  if(playing) return; e.preventDefault();
+function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
+pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault();
   try{ pad.setPointerCapture(e.pointerId); }catch(_){}
-  drawing = true; cur = { color, size, erase:erasing, pts:[pos(e)] };
-  frame().strokes.push(cur); render();
-});
+  drawing=true; cur={ color, size, erase:erasing, pts:[pos(e)] }; frame().strokes.push(cur); render(); });
 pad.addEventListener('pointermove', e=>{ if(!drawing) return; e.preventDefault(); cur.pts.push(pos(e)); render(); });
 window.addEventListener('pointerup', ()=>{ if(!drawing) return; drawing=false; cur=null; refreshThumb(idx); });
 
-/* ---- frame strip ---- */
 const strip = document.getElementById('strip');
-const DEL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function buildStrip(){
   strip.innerHTML='';
   frames.forEach((f,i)=>{
@@ -219,62 +200,53 @@ function buildStrip(){
   col.querySelector('#addcopy').addEventListener('click',()=>addFrame(true));
   col.querySelector('#addblank').addEventListener('click',()=>addFrame(false));
 }
-function drawThumb(cv,f){
-  cv.width=88*DPR; cv.height=62*DPR; const c=cv.getContext('2d');
-  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0);
-  c.clearRect(0,0,CW,CH); paintStatic(c,f.strokes);
-}
+function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; const c=cv.getContext('2d');
+  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); paintStatic(c,f.strokes); }
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
 function deepCopy(f){ return { strokes: f.strokes.map(s=>({color:s.color,size:s.size,erase:s.erase,pts:s.pts.map(p=>({x:p.x,y:p.y}))})) }; }
-function addFrame(copy){
-  const f = copy ? deepCopy(frame()) : newFrame();
-  frames.splice(idx+1,0,f); idx++; buildStrip(); render();
-  const el = strip.children[idx]; if(el) el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-}
-function delFrame(i){
-  if(frames.length===1){ frames[0]=newFrame(); idx=0; }
+function addFrame(copy){ const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render();
+  const el=strip.children[idx]; if(el) el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
+function delFrame(i){ if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
-  buildStrip(); render();
-}
+  buildStrip(); render(); }
 function go(i){ idx=i; buildStrip(); render(); }
 
-/* ---- flip playback ---- */
 const playBtn=document.getElementById('play');
-function play(){
-  if(frames.length<2) return;
+function play(){ if(frames.length<2) return;
   playing=true; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
-  let i=0;
-  const step=()=>{ idx=i%frames.length; render(); i++; };
-  step(); playTimer=setInterval(step, 1000/fps);
-}
-function stop(){
-  playing=false; document.body.classList.remove('playing');
+  let i=0; const step=()=>{ idx=i%frames.length; render(); i++; }; step(); playTimer=setInterval(step, 1000/fps); }
+function stop(){ playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
-  clearInterval(playTimer); buildStrip(); render();
-}
+  clearInterval(playTimer); buildStrip(); render(); }
 playBtn.addEventListener('click',()=> playing?stop():play());
 
-/* ---- tools ---- */
+/* Tools */
 const sw=document.getElementById('swatches');
-COLORS.forEach(col=>{
-  const b=document.createElement('div'); b.className='sw-dot'+(col===color?' on':''); b.style.background=col;
+COLORS.forEach(col=>{ const b=document.createElement('div'); b.className='sw-dot'+(col===color?' on':''); b.style.background=col;
   if(col==='#0e1017') b.style.boxShadow='inset 0 0 0 1px rgba(255,255,255,.18)';
   b.addEventListener('click',()=>{ color=col; erasing=false; document.getElementById('erase').classList.remove('on');
-    [...sw.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); });
-  sw.appendChild(b);
-});
-document.getElementById('size').addEventListener('input',e=>size=+e.target.value);
+    [...sw.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); }); sw.appendChild(b); });
+const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal');
+function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%'); sizeVal.textContent=sizeEl.value; }
+sizeEl.addEventListener('input',()=>{ size=+sizeEl.value; sizeFill(); });
 document.getElementById('erase').addEventListener('click',e=>{ erasing=!erasing; e.currentTarget.classList.toggle('on',erasing); });
 document.getElementById('undo').addEventListener('click',()=>{ frame().strokes.pop(); render(); refreshThumb(idx); });
 document.getElementById('clear').addEventListener('click',()=>{ frame().strokes=[]; render(); refreshThumb(idx); });
 const onionEl=document.getElementById('onion');
 onionEl.addEventListener('click',()=>{ onion=!onion; onionEl.classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); });
-document.getElementById('fps').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
-  fps=+b.dataset.fps; [...e.currentTarget.children].forEach(x=>x.classList.remove('on')); b.classList.add('on'); if(playing){ stop(); play(); } });
 
-fitPad(); buildStrip(); render();
-window.addEventListener('load', fitPad);
+/* fps segmented control with the editor's sliding accent pill */
+const fpsGroup=document.getElementById('fps');
+function positionSeg(){ const active=fpsGroup.querySelector('button.on'); const pill=fpsGroup.querySelector('.seg-slider');
+  if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
+fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  fps=+b.dataset.fps; [...fpsGroup.querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  positionSeg(); if(playing){ stop(); play(); } });
+
+fitPad(); buildStrip(); render(); sizeFill();
+requestAnimationFrame(positionSeg);
+window.addEventListener('load', ()=>{ fitPad(); positionSeg(); });
 </script>
 </body>
 </html>
