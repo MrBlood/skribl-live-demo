@@ -21,12 +21,12 @@
     padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .2s var(--ease); }
   .seg button.on { color: #fff; }
 
-  /* onion: pill toggle in the editor's control language (accent when on). */
-  .onion-btn { display: inline-flex; align-items: center; gap: 7px; background: var(--surface-control); border: 1px solid var(--hairline-strong);
-    color: var(--text-secondary); border-radius: var(--r-pill); padding: 6px 12px; font: inherit; font-weight: 600; font-size: 13px; cursor: pointer;
-    transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease); }
-  .onion-btn svg { width: 17px; height: 17px; }
-  .onion-btn.on { background: rgba(124,92,255,.14); border-color: var(--accent); color: var(--accent-bright); }
+  /* Onion control = onion icon + the pad's photo/music on-off switch (.layer-toggle). */
+  .onion-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 4px; -webkit-tap-highlight-color: transparent; }
+  .onion-switch .onion-ico { width: 23px; height: 23px; color: var(--text-secondary); transition: color .2s ease; }
+  .onion-switch.on .onion-ico { color: var(--accent-bright); }
+  .onion-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-pill); }
+  .onion-switch .layer-toggle { display: inline-block; }   /* pad default is display:none */
 
   .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 92px; justify-content: center; }
   .btn.flip-play.playing { background: var(--surface-control); color: var(--text-primary); box-shadow: none; }
@@ -96,8 +96,6 @@
 
   /* Mobile: keep the header on one line — onion goes icon-only. */
   @media (max-width: 560px) {
-    .onion-btn .onion-label { display: none; }
-    .onion-btn { padding: 8px; }
     .flip-word { font-size: 15px; letter-spacing: .1em; }
     .flip-hint { display: none; }
   }
@@ -114,10 +112,7 @@
         <span class="seg" id="fps" title="Frames per second"><span class="seg-slider"></span>
           <button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button>
         </span>
-        <button type="button" class="onion-btn" id="onion" role="switch" aria-checked="false" title="Onion skin — show the frame beneath">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7.4C9 8.6 5.4 10.8 5.4 14.8a6.6 6.6 0 0013.2 0c0-4-3.6-6.2-6.6-7.4z"/><path d="M12 7.4v14"/><path d="M8.6 8.9c-1.5 2.5-1.6 8.2 0 11.5"/><path d="M15.4 8.9c1.5 2.5 1.6 8.2 0 11.5"/><path d="M10.3 8.1c-.8 3-.8 9.4 0 12.9"/><path d="M13.7 8.1c.8 3 .8 9.4 0 12.9"/><path d="M12 1.5c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.8 3.5c.2 1.5 1 2.9 2.2 3.9M14.2 3.5c-.2 1.5-1 2.9-2.2 3.9"/><path d="M10.7 21.6l-.5 1.3M12 21.8v1.4M13.3 21.6l.5 1.3"/></svg>
-          <span class="onion-label">Onion</span>
-        </button>
+        <span class="onion-switch" id="onion" role="switch" aria-checked="false" tabindex="0" title="Onion skin — show the frame beneath"><svg class="onion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg><span class="layer-toggle"><span class="layer-toggle-knob"></span></span></span>
         <button type="button" class="btn flip-play" id="play">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg><span>Flip it</span>
         </button>
@@ -384,7 +379,9 @@ document.getElementById('clear').addEventListener('click',e=>{
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 });
 const onionEl=document.getElementById('onion');
-onionEl.addEventListener('click',()=>{ onion=!onion; onionEl.classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); });
+function setOnion(v){ onion=v; onionEl.classList.toggle('on',onion); onionEl.querySelector('.layer-toggle').classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
+onionEl.addEventListener('click',()=>setOnion(!onion));
+onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
 /* ---- keyboard ---- */
 window.addEventListener('keydown', e=>{
