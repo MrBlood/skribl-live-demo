@@ -411,6 +411,7 @@
           <button type="button" id="musicRemoveBtn" class="clear-drawer-btn" hidden>Remove</button>
         </div>
         <div id="musicDetailBox">
+          <span class="draw-section-label" id="loopHeading">Loop</span>
           <div class="photo-opacity-row">
             <span class="size-label slider-label">Start</span>
             <input type="range" id="trimStartRange" min="0" max="100" value="0" step="0.05" class="slider" aria-label="Loop start">
@@ -421,8 +422,11 @@
             <input type="range" id="trimEndRange" min="0" max="100" value="100" step="0.05" class="slider" aria-label="Loop end">
             <span id="trimEndVal" class="size-label slider-val">0:00</span>
           </div>
-          <p class="flip-drawer-note" id="loopSummary">Loops the selected section while you Flip.</p>
-          <button type="button" id="matchDrawingBtn" class="panel-btn" style="width:100%">Match drawing time</button>
+          <p class="flip-drawer-note" id="loopSummary">Add a track, then set where the loop starts and ends.</p>
+          <div class="media-actions" style="margin-top:2px">
+            <button type="button" id="previewLoopBtn" class="panel-btn" style="flex:1 1 0"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:2px"><path d="M8 5v14l11-7z"/></svg><span id="previewLoopLabel">Preview loop</span></button>
+            <button type="button" id="matchDrawingBtn" class="panel-btn" style="flex:1 1 0">Match drawing time</button>
+          </div>
         </div>
         <p class="flip-drawer-note" id="musicNote">Loops while you Flip — one track for the whole animation.</p>
       </div>
@@ -1095,6 +1099,8 @@ const musicDetailBox=document.getElementById('musicDetailBox'), musicNote=docume
 const trimStartRange=document.getElementById('trimStartRange'), trimStartVal=document.getElementById('trimStartVal');
 const trimEndRange=document.getElementById('trimEndRange'), trimEndVal=document.getElementById('trimEndVal');
 const matchDrawingBtn=document.getElementById('matchDrawingBtn');
+const previewLoopBtn=document.getElementById('previewLoopBtn'), previewLoopLabel=document.getElementById('previewLoopLabel');
+let previewTimer=null;
 function fmtTime(s){ s=Math.max(0,s||0); const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
 function setFill(el){ const mn=+el.min,mx=+el.max; el.style.setProperty('--slider-fill', (mx>mn?((+el.value-mn)/(mx-mn)*100):0)+'%'); }
 function positionFitSlider(){ const btns=[...photoFitGroup.querySelectorAll('.photo-fit-btn')]; const a=photoFitGroup.querySelector('.photo-fit-btn.active');
@@ -1128,7 +1134,7 @@ function syncMusicUI(){
   musicToggle.hidden=!hasMus; musicRemoveBtn.hidden=!hasMus; musicNote.hidden=hasMus;   // detail stays visible
   musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
   musicTabDot.hidden = !hasMus;                                                          // green dot when a track is set
-  [trimStartRange, trimEndRange, matchDrawingBtn].forEach(el=>{ el.disabled=!hasMus; });
+  [trimStartRange, trimEndRange, matchDrawingBtn, previewLoopBtn].forEach(el=>{ el.disabled=!hasMus; });
   musicDetailBox.style.opacity = hasMus ? '' : '.5';
   if(hasMus && audioDuration>0){
     const end = trimEnd!=null?trimEnd:audioDuration;
@@ -1160,6 +1166,17 @@ musicToggle.addEventListener('click',()=>{ musicEnabled=!musicEnabled; if(!music
 trimStartRange.addEventListener('input',()=>{ let v=+trimStartRange.value; const end=trimEnd!=null?trimEnd:audioDuration; if(v>end-0.2) v=Math.max(0,end-0.2); trimStart=v; syncMusicUI(); scheduleSave(); });
 trimEndRange.addEventListener('input',()=>{ let v=+trimEndRange.value; if(v<trimStart+0.2) v=trimStart+0.2; trimEnd=v; syncMusicUI(); scheduleSave(); });
 matchDrawingBtn.addEventListener('click',()=>{ const dur=frames.length/fps; if(!audioDuration){ return; } if(trimStart+dur<=audioDuration){ trimEnd=trimStart+dur; } else { trimStart=Math.max(0,audioDuration-dur); trimEnd=audioDuration; } syncMusicUI(); scheduleSave(); });
+function stopPreview(){ clearTimeout(previewTimer); previewTimer=null; if(!playing) stopMusic(); previewLoopLabel.textContent='Preview loop'; }
+previewLoopBtn.addEventListener('click',()=>{
+  if(!musicData) return;
+  if(previewTimer){ stopPreview(); return; }                 // toggle off
+  ensureAudio(); if(!audioEl) return;
+  const end = trimEnd!=null?trimEnd:audioDuration; const len=Math.max(0.2, end-trimStart);
+  try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}
+  previewLoopLabel.textContent='Stop preview';
+  clearTimeout(previewTimer);
+  previewTimer=setTimeout(stopPreview, Math.min(len*2, 15)*1000);   // ~2 loops (capped)
+});
 
 // overflow menu (save/load/export)
 function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
