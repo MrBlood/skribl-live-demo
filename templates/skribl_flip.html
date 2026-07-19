@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='94') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='96') }}">
 <style>
   body.flip-app { overflow: hidden; }
   .flip-app .app { height: 100dvh; }
@@ -54,6 +54,7 @@
   .t-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-control);
     border: 1px solid var(--hairline-strong); color: var(--text-secondary); cursor: pointer; transition: filter .15s ease, color .15s ease; }
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
+  .t-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
 
@@ -114,7 +115,7 @@
           <button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button>
         </span>
         <button type="button" class="onion-btn" id="onion" role="switch" aria-checked="false" title="Onion skin — show the frame beneath">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18.8 4.6C13.6 3.7 6.6 6.1 5.3 12c-.9 4.4 2.6 8 6.7 7.7 4.5-.3 7.6-4 7-8.6-.2-1.9-.2-4.5-.2-6.5z"/><path d="M6.6 17.4C10 15 15 9.4 18.8 4.6"/><path d="M9.8 19.2c2.8-3 6.6-8.6 9-14.6"/><path d="M18.8 4.6l2.1-.9M18.8 4.6l1.9 1.2"/><path d="M6 18.4l-2.2 1.5M6.5 19.1l-1.6 2.1M7.3 19.6l-.9 2.1"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7.8C9.4 8.9 6.3 10.9 6.3 14.5a5.7 5.7 0 0011.4 0c0-3.6-3.1-5.6-5.7-6.7z"/><path d="M12 7.8v12.4"/><path d="M9.3 9.1c-1.2 2.2-1.3 7 0 9.9"/><path d="M14.7 9.1c1.2 2.2 1.3 7 0 9.9"/><path d="M12 1.7c-.8 2.1-.8 4.2 0 6.1.8-1.9.8-4 0-6.1z"/><path d="M9.7 3.7c.2 1.6 1 3 2.3 4.1M14.3 3.7c-.2 1.6-1 3-2.3 4.1"/><path d="M10.7 20.4l-.5 1.5M12 20.6V22.2M13.3 20.4l.5 1.5"/></svg>
           <span class="onion-label">Onion</span>
         </button>
         <button type="button" class="btn flip-play" id="play">
@@ -144,6 +145,15 @@
   </div>
 
 <script>
+/* =============================================================================
+   Flip Mode — now speaks the Pad's native data language.
+   A frame is { strokes, strokeGroups } in the PAD's exact shape: strokes is a
+   FLAT point array ({x, y, color, size, t, erase, start}) and strokeGroups holds
+   per-stroke point counts — identical to app.js. The autosave payload is a real
+   frame-format Skribl ({schemaVersion:2, playbackMode:'flip', fps, canvasSize,
+   frames}), directly consumable by the pad's normalizeSkribl()/loadSkribl().
+   That's the marriage: same data, two editors.
+   ========================================================================== */
 const COLORS = ["#ffffff","#7c5cff","#5b8cff","#ff5c8a","#ffd15c","#4bd6a0","#0e1017"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
 const CW = 640, CH = 460;
@@ -165,22 +175,31 @@ window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); });
 let frames = [ newFrame() ];
 let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = false, fps = 12;
-let drawing = false, cur = null, playing = false, playTimer = null;
-let editIdx = 0;              // the frame being edited before playback started
-let armedDel = -1;            // index of the delete button currently "armed"
+let drawing = false, curCount = 0, playing = false, playTimer = null;
+let editIdx = 0, armedDel = -1, armedClear = false;
 
-function newFrame(){ return { strokes: [] }; }
+function newFrame(){ return { strokes: [], strokeGroups: [] }; }
 function frame(){ return frames[idx]; }
 
-/* ---- autosave (frames survive refresh; Phase 3 folds this into the pad's system) ---- */
+/* ---- autosave: a real frame-format Skribl ---- */
 let _saveT = null;
 function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800); }
+function serializeFlip(){
+  return {
+    schemaVersion: 2, version: 2,
+    playbackMode: 'flip', fps: fps,
+    canvasSize: { cssWidth: CW, cssHeight: CH, dpr: 1 },
+    savedAt: new Date().toISOString(),
+    editIdx: idx,
+    frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice() }))
+  };
+}
 function saveNow(){
   try {
     const empty = frames.length === 1 && frames[0].strokes.length === 0;
     if (empty) { localStorage.removeItem(AUTOSAVE_KEY); return; }
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), frames, idx, fps }));
-  } catch (e) { /* storage full/unavailable — draw-on regardless */ }
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
+  } catch (e) { /* storage unavailable — draw on */ }
 }
 function tryRestore(){
   try {
@@ -188,8 +207,22 @@ function tryRestore(){
     if (!raw) return false;
     const d = JSON.parse(raw);
     if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
-    frames = d.frames.map(f => ({ strokes: Array.isArray(f.strokes) ? f.strokes : [] }));
-    idx = Math.min(d.idx || 0, frames.length - 1);
+    frames = d.frames.map(f => {
+      if (Array.isArray(f.strokeGroups)) {
+        // current pad-format frame
+        return { strokes: Array.isArray(f.strokes) ? f.strokes : [], strokeGroups: f.strokeGroups };
+      }
+      // migrate the old prototype shape: [{color,size,erase,pts:[{x,y}]}]
+      const flat = [], groups = [];
+      (Array.isArray(f.strokes) ? f.strokes : []).forEach(st => {
+        const pts = st.pts || [];
+        pts.forEach((p, i) => flat.push({ x: p.x, y: p.y, color: st.color, size: st.size,
+          t: 0, erase: !!st.erase, start: i === 0 }));
+        if (pts.length) groups.push(pts.length);
+      });
+      return { strokes: flat, strokeGroups: groups };
+    });
+    idx = Math.min(d.editIdx != null ? d.editIdx : (d.idx || 0), frames.length - 1);
     if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
       fps = d.fps;
       [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
@@ -203,7 +236,7 @@ function chip(msg){
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2200);
 }
 
-/* ---- render primitives (same shape as app.js) ---- */
+/* ---- render primitives — the pad's exact dispatch (start-flag on flat points) ---- */
 function drawDot(c, x, y, col, s, erase){
   c.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
   c.beginPath(); c.arc(x,y,s/2,0,Math.PI*2); c.fillStyle = erase ? '#000' : col; c.fill();
@@ -215,10 +248,13 @@ function drawLine(c, x1,y1,x2,y2, col, s, erase){
   c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
   c.globalCompositeOperation = 'source-over';
 }
-function paintStroke(c, st){ const p=st.pts; if(!p.length) return;
-  drawDot(c,p[0].x,p[0].y,st.color,st.size,st.erase);
-  for(let i=1;i<p.length;i++) drawLine(c,p[i-1].x,p[i-1].y,p[i].x,p[i].y,st.color,st.size,st.erase); }
-function paintStatic(c, strokes){ for(const st of strokes) paintStroke(c, st); }
+function paintStatic(c, strokeArr){
+  for (let i = 0; i < strokeArr.length; i++) {
+    const p = strokeArr[i];
+    if (p.start || i === 0) drawDot(c, p.x, p.y, p.color, p.size, p.erase);
+    else { const prev = strokeArr[i-1]; drawLine(c, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+  }
+}
 
 function render(){
   ctx.clearRect(0,0,CW,CH);
@@ -226,20 +262,32 @@ function render(){
   paintStatic(ctx, frame().strokes);
 }
 
-/* ---- drawing ---- */
+/* ---- drawing (pad-format points, with timestamps for future replay) ---- */
 function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
 pad.addEventListener('contextmenu', e=>e.preventDefault());
-pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault();
+pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault(); disarmAll();
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
-  drawing=true; cur={ color, size, erase:erasing, pts:[pos(e)] }; frame().strokes.push(cur); render(); });
-pad.addEventListener('pointermove', e=>{ if(!drawing) return; e.preventDefault(); cur.pts.push(pos(e)); render(); });
-function endStroke(){ if(!drawing) return; drawing=false; cur=null; refreshThumb(idx); updateToolState(); scheduleSave(); }
+  drawing=true; curCount=1;
+  const p=pos(e);
+  frame().strokes.push({ x:p.x, y:p.y, color, size, t: performance.now(), erase: erasing, start: true });
+  render(); });
+pad.addEventListener('pointermove', e=>{ if(!drawing) return; e.preventDefault();
+  const p=pos(e); curCount++;
+  frame().strokes.push({ x:p.x, y:p.y, color, size, t: performance.now(), erase: erasing });
+  render(); });
+function endStroke(){ if(!drawing) return; drawing=false;
+  frame().strokeGroups.push(curCount); curCount=0;
+  refreshThumb(idx); updateToolState(); scheduleSave(); }
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke);
 
 /* ---- frame strip ---- */
 const strip = document.getElementById('strip');
 const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function disarmAll(){
+  if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
+  if(armedClear){ armedClear=false; document.getElementById('clear').classList.remove('armed'); }
+}
 function buildStrip(){
   armedDel = -1;
   strip.innerHTML='';
@@ -247,19 +295,17 @@ function buildStrip(){
     const el=document.createElement('div'); el.className='frame'+(i===idx?' on':'');
     el.innerHTML='<div class="num">'+(i+1)+'</div><button class="del" title="Delete frame">'+DEL_SVG+'</button><canvas></canvas>';
     el.addEventListener('click',ev=>{
-      if(playing) return;                        // strip is inert during playback
+      if(playing) return;
       const del = ev.target.closest('.del');
       if(del){
-        // Two-tap delete on non-empty frames (editor's "armed" pattern); empty
-        // frames delete immediately — nothing to lose.
-        if(frames[i].strokes.length && armedDel !== i){
-          if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } }
+        if(f.strokes.length && armedDel !== i){
+          disarmAll();
           armedDel = i; del.classList.add('armed'); del.title='Tap again to delete';
           return;
         }
         delFrame(i); return;
       }
-      go(i);
+      disarmAll(); go(i);
     });
     strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
   });
@@ -273,8 +319,8 @@ function buildStrip(){
 function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; const c=cv.getContext('2d');
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); paintStatic(c,f.strokes); }
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
-function deepCopy(f){ return { strokes: f.strokes.map(s=>({color:s.color,size:s.size,erase:s.erase,pts:s.pts.map(p=>({x:p.x,y:p.y}))})) }; }
-function addFrame(copy){ const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
+function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice() }; }
+function addFrame(copy){ disarmAll(); const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   const el=strip.children[idx]; if(el) el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
 function delFrame(i){ if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
@@ -285,15 +331,15 @@ function go(i){ idx=i; buildStrip(); render(); }
 const playBtn=document.getElementById('play');
 const liveBadge=document.querySelector('.flip-live');
 function updateToolState(){
-  playBtn.disabled = frames.length < 2 || playing ? (frames.length < 2) : false;
+  playBtn.disabled = frames.length < 2;
   playBtn.title = frames.length < 2 ? 'Add a second page to flip' : 'Flip through the pages';
   const undoB=document.getElementById('undo');
-  undoB.disabled = frame().strokes.length === 0;
+  undoB.disabled = frame().strokeGroups.length === 0;
   undoB.style.opacity = undoB.disabled ? .38 : 1;
 }
 function play(){
   if(frames.length<2 || playing) return;
-  editIdx = idx;                              // remember where the user was editing
+  disarmAll(); editIdx = idx;
   playing=true; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
   let i=0;
@@ -304,7 +350,7 @@ function stop(){
   playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
   clearInterval(playTimer);
-  idx = Math.min(editIdx, frames.length-1);   // return to the frame being edited
+  idx = Math.min(editIdx, frames.length-1);
   buildStrip(); render();
 }
 playBtn.addEventListener('click',()=> playing?stop():play());
@@ -318,22 +364,37 @@ COLORS.forEach(col=>{ const b=document.createElement('div'); b.className='sw-dot
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal');
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%'); sizeVal.textContent=sizeEl.value; }
 sizeEl.addEventListener('input',()=>{ size=+sizeEl.value; sizeFill(); });
-function undoStroke(){ if(playing || !frame().strokes.length) return; frame().strokes.pop(); render(); refreshThumb(idx); updateToolState(); scheduleSave(); }
+function undoStroke(){
+  if(playing) return;
+  const f = frame(); if(!f.strokeGroups.length) return;
+  const n = f.strokeGroups.pop();
+  f.strokes.splice(f.strokes.length - n, n);
+  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+}
 document.getElementById('erase').addEventListener('click',e=>{ erasing=!erasing; e.currentTarget.classList.toggle('on',erasing); });
-document.getElementById('undo').addEventListener('click',undoStroke);
-document.getElementById('clear').addEventListener('click',()=>{ if(playing) return; frame().strokes=[]; render(); refreshThumb(idx); updateToolState(); scheduleSave(); });
+document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
+/* Clear is destructive → same two-tap armed pattern as frame delete. */
+document.getElementById('clear').addEventListener('click',e=>{
+  if(playing) return;
+  const f = frame();
+  if(!f.strokes.length) return;
+  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); e.currentTarget.title='Tap again to clear this page'; return; }
+  armedClear=false; e.currentTarget.classList.remove('armed'); e.currentTarget.title='Clear frame';
+  f.strokes=[]; f.strokeGroups=[];
+  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+});
 const onionEl=document.getElementById('onion');
 onionEl.addEventListener('click',()=>{ onion=!onion; onionEl.classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); });
 
-/* ---- keyboard: Ctrl/Cmd+Z undo stroke; arrows step frames (like turning pages) ---- */
+/* ---- keyboard ---- */
 window.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoStroke(); return; }
   if(playing) return;
-  if(e.key==='ArrowLeft'  && idx>0){ go(idx-1); }
-  if(e.key==='ArrowRight' && idx<frames.length-1){ go(idx+1); }
+  if(e.key==='ArrowLeft'  && idx>0){ disarmAll(); go(idx-1); }
+  if(e.key==='ArrowRight' && idx<frames.length-1){ disarmAll(); go(idx+1); }
 });
 
-/* ---- fps segmented control (editor's sliding accent pill) ---- */
+/* ---- fps segmented control ---- */
 const fpsGroup=document.getElementById('fps');
 function positionSeg(){ const active=fpsGroup.querySelector('button.on'); const pill=fpsGroup.querySelector('.seg-slider');
   if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
