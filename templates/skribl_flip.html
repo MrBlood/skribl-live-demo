@@ -135,17 +135,6 @@
     padding: 9px 14px; border-radius: 10px; cursor: pointer; box-shadow: 0 3px 12px var(--accent-glow); }
   .flip-upload:hover { filter: brightness(1.06); }
   .flip-drawer-note { margin: 10px 2px 2px; color: var(--text-dim); font-size: 12px; line-height: 1.4; }
-  /* Fine-tune loop rows */
-  .ft-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .ft-name { color: var(--text-secondary); font-size: 12.5px; }
-  .ft-ctrl { display: inline-flex; align-items: center; gap: 8px; }
-  .ft-read { min-width: 58px; text-align: center; font-size: 12.5px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-  .ft-nudge { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--hairline); background: #13161c; color: var(--text-primary);
-    font-size: 16px; line-height: 1; cursor: pointer; display: grid; place-items: center; -webkit-tap-highlight-color: transparent; }
-  .ft-nudge:hover { background: #1c212c; }
-  .ft-nudge:disabled { opacity: .4; cursor: default; }
-  #fineTuneChevron { transition: transform .2s ease; }
-  #fineTuneToggle[aria-expanded="true"] #fineTuneChevron { transform: rotate(180deg); }
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
   /* image/music use the Pad's .tool-open + green .tab-dot; keep them sized like the row */
   .flip-tools .tool-open { width: 40px; height: 40px; border-radius: 12px; }
@@ -413,39 +402,86 @@
         </div>
         <p class="flip-drawer-note" id="photoNote">Fills the canvas behind your drawing — one image for the whole animation.</p>
       </div>
-      <!-- Music drawer (drop-up). One loop per animation. -->
+      <!-- Music drawer (drop-up) — the Pad's full music component. One loop per animation. -->
       <div class="tab-panel draw-popout" id="musicPanel" role="dialog" aria-label="Music loop" hidden>
         <span class="draw-section-label">Music loop</span>
-        <div class="media-actions">
-          <button type="button" id="musicChoose" class="flip-upload">Choose audio…</button>
-          <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Turn music on or off" hidden><span class="layer-toggle-knob"></span></button>
-          <button type="button" id="musicRemoveBtn" class="clear-drawer-btn" hidden>Remove</button>
+        <div class="music-dropzone" id="musicUploadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <span id="musicBtnLabel">Add music</span>
+          <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle music on or off"><span class="layer-toggle-knob"></span></button>
+          <button type="button" id="musicRemove" class="dropzone-remove" hidden>Remove</button>
         </div>
-        <div id="musicDetailBox">
-          <span class="draw-section-label" id="loopHeading">Loop</span>
-          <div class="photo-opacity-row">
-            <span class="size-label slider-label">Start</span>
-            <input type="range" id="trimStartRange" min="0" max="100" value="0" step="0.05" class="slider" aria-label="Loop start">
-            <span id="trimStartVal" class="size-label slider-val">0:00</span>
-          </div>
-          <div class="photo-opacity-row">
-            <span class="size-label slider-label">End</span>
-            <input type="range" id="trimEndRange" min="0" max="100" value="100" step="0.05" class="slider" aria-label="Loop end">
-            <span id="trimEndVal" class="size-label slider-val">0:00</span>
-          </div>
-          <p class="flip-drawer-note" id="loopSummary">Add a track, then set where the loop starts and ends.</p>
-          <div class="media-actions" style="margin-top:2px">
-            <button type="button" id="previewLoopBtn" class="panel-btn" style="flex:1 1 0"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:2px"><path d="M8 5v14l11-7z"/></svg><span id="previewLoopLabel">Preview loop</span></button>
-            <button type="button" id="matchDrawingBtn" class="panel-btn" style="flex:1 1 0">Match drawing time</button>
-          </div>
-          <button type="button" id="fineTuneToggle" class="panel-btn" aria-expanded="false" style="width:100%;margin-top:8px;justify-content:space-between">
-            <span>Fine-tune loop</span>
-            <svg id="fineTuneChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div id="fineTuneBody" hidden style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
-            <div class="ft-row"><span class="ft-name">Loop start</span><span class="ft-ctrl"><button type="button" class="ft-nudge" data-edge="start" data-dir="-1">−</button><span class="ft-read" id="startReadout">0.00s</span><button type="button" class="ft-nudge" data-edge="start" data-dir="1">+</button></span></div>
-            <div class="ft-row"><span class="ft-name">Loop end</span><span class="ft-ctrl"><button type="button" class="ft-nudge" data-edge="end" data-dir="-1">−</button><span class="ft-read" id="endReadout">0.00s</span><button type="button" class="ft-nudge" data-edge="end" data-dir="1">+</button></span></div>
-            <div class="ft-row"><span class="ft-name">Step size</span><span class="ft-ctrl"><button type="button" class="ft-nudge" id="stepFiner">−</button><span class="ft-read" id="stepLabel">0.10s</span><button type="button" class="ft-nudge" id="stepCoarser">+</button></span></div>
+        <div id="musicDetail" class="music-detail" hidden>
+          <div class="music-trim">
+            <div class="music-trim-track" id="musicTrack">
+              <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+              <div class="music-trim-range" id="musicRange"></div>
+              <div class="music-playhead" id="playhead" hidden></div>
+              <div class="music-trim-handle left" id="handleStart">
+                <div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div>
+                <span class="trim-bubble" id="bubbleStart">0:00</span>
+              </div>
+              <div class="music-trim-handle right" id="handleEnd">
+                <div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div>
+                <span class="trim-bubble right" id="bubbleEnd">0:00</span>
+              </div>
+            </div>
+            <div class="music-trim-times">
+              <span id="trimStartLabel">0:00</span>
+              <span id="trimDurLabel">0:00 selected</span>
+              <span id="trimEndLabel">0:00</span>
+            </div>
+            <div class="loop-preview-row">
+              <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s</span>
+              <div class="loop-actions">
+                <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
+                <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>
+                <button type="button" id="previewLoopBtn" class="loop-btn">Preview Loop</button>
+              </div>
+            </div>
+            <button type="button" id="fineTuneToggle" class="fine-tune-toggle panel-btn" aria-expanded="false" aria-controls="fineTuneBody">
+              <span>Fine-tune loop</span>
+              <svg class="fine-tune-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="fine-tune-body" id="fineTuneBody" hidden>
+              <div class="loop-zoom">
+                <div class="loop-zoom-head"><span>Loop Detail</span><span id="loopZoomLabel">0:00.00 &rarr; 0:00.00 [0.00s]</span></div>
+                <div style="position:relative" id="zoomTrackWrap">
+                  <canvas id="zoomWaveformCanvas" class="zoom-waveform-canvas"></canvas>
+                  <div class="music-playhead" id="zoomPlayhead" hidden></div>
+                  <div class="zoom-handle" id="zoomHandleStart" data-which="start" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
+                  <div class="zoom-handle" id="zoomHandleEnd" data-which="end" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
+                </div>
+                <div class="finetune-panel">
+                  <div class="finetune-grid">
+                    <div class="edge-group">
+                      <span class="edge-name">Start of Loop</span>
+                      <div class="edge-controls">
+                        <button type="button" class="nudge-btn" data-which="start" data-amount="-1" aria-label="Nudge start earlier">−</button>
+                        <span class="edge-readout" id="startReadout">0.00s</span>
+                        <button type="button" class="nudge-btn" data-which="start" data-amount="1" aria-label="Nudge start later">+</button>
+                      </div>
+                    </div>
+                    <div class="edge-group">
+                      <span class="edge-name">End of Loop</span>
+                      <div class="edge-controls">
+                        <button type="button" class="nudge-btn" data-which="end" data-amount="-1" aria-label="Nudge end earlier">−</button>
+                        <span class="edge-readout" id="endReadout">0.00s</span>
+                        <button type="button" class="nudge-btn" data-which="end" data-amount="1" aria-label="Nudge end later">+</button>
+                      </div>
+                    </div>
+                    <div class="edge-group">
+                      <span class="edge-name">Step size</span>
+                      <div class="edge-controls">
+                        <button type="button" id="nudgeStepFiner" class="nudge-btn" aria-label="Finer step">−</button>
+                        <span id="nudgeStepLabel" class="edge-readout step-readout">0.1s</span>
+                        <button type="button" id="nudgeStepCoarser" class="nudge-btn" aria-label="Coarser step">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <p class="flip-drawer-note" id="musicNote">Loops while you Flip — one track for the whole animation.</p>
@@ -539,6 +575,9 @@ let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // ima
 let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
 let musicEnabled = true, trimStart = 0, trimEnd = null, audioDuration = 0;   // trim/loop
+let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // decoded buffer for the waveform
+let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
+let musicName = '';                                                          // track filename (shown in the dropzone)
 let drawing = false, curCount = 0, playing = false, playTimer = null;
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
@@ -559,7 +598,7 @@ function serializeFlip(){
     bgImage: bgImage || null,
     music: musicData || null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled } : null,
-    musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd } : null,
+    musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : null,
     frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor }))
   };
 }
@@ -604,6 +643,9 @@ function applyPayload(d){
   musicEnabled = mm.enabled!==false;
   trimStart = typeof mm.trimStart==='number' ? mm.trimStart : 0;
   trimEnd = typeof mm.trimEnd==='number' ? mm.trimEnd : null;
+  loopCrossfadeMs = typeof mm.crossfadeMs==='number' ? mm.crossfadeMs : 0;
+  musicName = typeof mm.name==='string' ? mm.name : '';
+  currentAudioBuffer = null; zoomMag = 1; zoomFocus = 'loop'; zoomCenter = null;
   if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
     fps = d.fps;
     [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
@@ -1029,26 +1071,43 @@ function removeBgImage(){ bgImage=null; bgImageObj=null; reposMode=false; redraw
 imageInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
   const r=new FileReader(); r.onload=()=>setBgImage(String(r.result)); r.readAsDataURL(file); });
 
-/* ---- music loop (one loop per animation, optional trim) ---- */
+/* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
 const musicInput=document.getElementById('musicInput');
+function dataURLToArrayBuffer(u){ const b64=(u||'').split(',')[1]||''; const bin=atob(b64); const n=bin.length; const a=new Uint8Array(n); for(let i=0;i<n;i++) a[i]=bin.charCodeAt(i); return a.buffer; }
+function decodeForWaveform(){
+  if(!musicData){ currentAudioBuffer=null; return; }
+  try{ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ return; }
+  try{
+    audioCtx.decodeAudioData(dataURLToArrayBuffer(musicData)).then(buf=>{
+      currentAudioBuffer=buf; audioDuration=buf.duration;
+      if(trimEnd==null || trimEnd>audioDuration) trimEnd=audioDuration;
+      drawWaveform(buf); requestZoomWaveformDraw(); updateZoomHandles(); updateTrimUI(); syncMusicUI();
+    }).catch(()=>{});
+  }catch(_){}
+}
 function ensureAudio(){
   if(musicData && !audioEl){
     audioEl=new Audio(musicData); audioEl.loop=false;
-    audioEl.addEventListener('loadedmetadata',()=>{ audioDuration = isFinite(audioEl.duration)?audioEl.duration:0;
-      if(trimEnd==null || trimEnd>audioDuration) trimEnd = audioDuration;
-      syncMusicUI(); });
-    audioEl.addEventListener('timeupdate',()=>{ const end = trimEnd!=null?trimEnd:audioDuration;
-      if(end && audioEl.currentTime >= end - 0.02){ audioEl.currentTime = trimStart; } });
+    audioEl.addEventListener('loadedmetadata',()=>{ if(!audioDuration && isFinite(audioEl.duration)) audioDuration=audioEl.duration;
+      if(trimEnd==null || trimEnd>audioDuration) trimEnd=audioDuration; updateTrimUI(); syncMusicUI(); });
+    audioEl.addEventListener('timeupdate',()=>{ const end=trimEnd!=null?trimEnd:audioDuration;
+      if(end && audioEl.currentTime >= end-0.02){ audioEl.currentTime=trimStart; } });
   }
-  if(audioEl) audioEl.muted = musicMuted;
+  if(audioEl) audioEl.muted=musicMuted;
 }
 function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
-  musicEnabled=true; musicMuted=false; trimStart=0; trimEnd=null; audioDuration=0; ensureAudio(); syncMediaUI(); scheduleSave(); }
-function removeMusic(){ if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicData=null; syncMediaUI(); scheduleSave(); }
+  musicEnabled=true; musicMuted=false; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null;
+  zoomMag=1; zoomFocus='loop'; zoomCenter=null;
+  ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
+function removeMusic(){ if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
+  musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0;
+  try{ waveformCtx.clearRect(0,0,waveformCanvas.width,waveformCanvas.height); zoomWaveformCtx.clearRect(0,0,zoomWaveformCanvas.width,zoomWaveformCanvas.height); }catch(_){}
+  if(typeof setCrossfadeUI==='function') setCrossfadeUI();
+  syncMediaUI(); scheduleSave(); }
 function startMusic(){ ensureAudio(); if(audioEl && musicEnabled && !musicMuted){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
 function stopMusic(){ if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
 musicInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
-  const r=new FileReader(); r.onload=()=>setMusic(String(r.result)); r.readAsDataURL(file); });
+  musicName=file.name||''; const r=new FileReader(); r.onload=()=>setMusic(String(r.result)); r.readAsDataURL(file); });
 
 /* ---- save / load draft as a .skribl file (same format the Pad reads) ---- */
 function saveDraft(){
@@ -1114,13 +1173,6 @@ const photoZoomRow=document.getElementById('photoZoomRow'), photoZoomEl=document
 const photoOpacityEl=document.getElementById('photoOpacity'), photoOpacityVal=document.getElementById('photoOpacityVal');
 const photoBlurEl=document.getElementById('photoBlur'), photoBlurVal=document.getElementById('photoBlurVal');
 const resetPhotoBtn=document.getElementById('resetPhotoBtn');
-const musicChoose=document.getElementById('musicChoose'), musicToggle=document.getElementById('musicToggle'), musicRemoveBtn=document.getElementById('musicRemoveBtn');
-const musicDetailBox=document.getElementById('musicDetailBox'), musicNote=document.getElementById('musicNote'), loopSummary=document.getElementById('loopSummary');
-const trimStartRange=document.getElementById('trimStartRange'), trimStartVal=document.getElementById('trimStartVal');
-const trimEndRange=document.getElementById('trimEndRange'), trimEndVal=document.getElementById('trimEndVal');
-const matchDrawingBtn=document.getElementById('matchDrawingBtn');
-const previewLoopBtn=document.getElementById('previewLoopBtn'), previewLoopLabel=document.getElementById('previewLoopLabel');
-let previewTimer=null;
 function fmtTime(s){ s=Math.max(0,s||0); const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
 function setFill(el){ const mn=+el.min,mx=+el.max; el.style.setProperty('--slider-fill', (mx>mn?((+el.value-mn)/(mx-mn)*100):0)+'%'); }
 function positionFitSlider(){ const btns=[...photoFitGroup.querySelectorAll('.photo-fit-btn')]; const a=photoFitGroup.querySelector('.photo-fit-btn.active');
@@ -1150,24 +1202,14 @@ function syncPhotoUI(){
 }
 function syncMusicUI(){
   const hasMus=!!musicData;
-  musicChoose.textContent = hasMus ? 'Replace audio…' : 'Choose audio…';
-  musicToggle.hidden=!hasMus; musicRemoveBtn.hidden=!hasMus; musicNote.hidden=hasMus;   // detail stays visible
+  musicUploadBtn.classList.toggle('loaded', hasMus);
+  musicBtnLabel.textContent = hasMus ? (musicName || 'Music loop') : 'Add music';
+  musicRemove.hidden = !hasMus;
   musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
-  musicTabDot.hidden = !hasMus;                                                          // green dot when a track is set
-  const active = hasMus && audioDuration>0;
-  [trimStartRange, trimEndRange, matchDrawingBtn, previewLoopBtn, fineTuneToggle,
-   stepFiner, stepCoarser, ...document.querySelectorAll('.ft-nudge[data-edge]')].forEach(el=>{ el.disabled=!active; });
-  stepLabel.textContent = nudgeStep().toFixed(2)+'s';
-  if(active){
-    const end = trimEnd!=null?trimEnd:audioDuration;
-    trimStartRange.max=audioDuration.toFixed(2); trimEndRange.max=audioDuration.toFixed(2);
-    trimStartRange.value=trimStart; trimEndRange.value=end;
-    setFill(trimStartRange); setFill(trimEndRange);
-    trimStartVal.textContent=fmtTime(trimStart); trimEndVal.textContent=fmtTime(end);
-    startReadout.textContent=trimStart.toFixed(2)+'s'; endReadout.textContent=end.toFixed(2)+'s';
-    loopSummary.textContent='Loop: '+fmtTime(trimStart)+' → '+fmtTime(end)+' · '+Math.max(0,end-trimStart).toFixed(1)+'s (plays while you Flip)';
-  } else if(hasMus){ loopSummary.textContent='Reading audio…'; }
-  else { loopSummary.textContent='Add a track, then set where the loop starts and ends.'; trimStartVal.textContent='0:00'; trimEndVal.textContent='0:00'; startReadout.textContent='0.00s'; endReadout.textContent='0.00s'; setFill(trimStartRange); setFill(trimEndRange); }
+  musicDetail.hidden = !hasMus;
+  musicNote.hidden = hasMus;
+  musicTabDot.hidden = !hasMus;
+  if(hasMus) updateTrimUI();
 }
 function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); }
 
@@ -1182,41 +1224,207 @@ photoOpacityEl.addEventListener('input',()=>{ photoOpacity=(+photoOpacityEl.valu
 photoBlurEl.addEventListener('input',()=>{ photoBlur=+photoBlurEl.value; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl); redrawAll(); scheduleSave(); });
 resetPhotoBtn.addEventListener('click',()=>{ photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false; photoEnabled=true; redrawAll(); syncPhotoUI(); scheduleSave(); });
 
-// music controls
-musicChoose.addEventListener('click',()=>musicInput.click());
-musicRemoveBtn.addEventListener('click',()=>removeMusic());
-musicToggle.addEventListener('click',()=>{ musicEnabled=!musicEnabled; if(!musicEnabled) stopMusic(); else if(playing) startMusic(); syncMusicUI(); scheduleSave(); });
-trimStartRange.addEventListener('input',()=>{ let v=+trimStartRange.value; const end=trimEnd!=null?trimEnd:audioDuration; if(v>end-0.2) v=Math.max(0,end-0.2); trimStart=v; syncMusicUI(); scheduleSave(); });
-trimEndRange.addEventListener('input',()=>{ let v=+trimEndRange.value; if(v<trimStart+0.2) v=trimStart+0.2; trimEnd=v; syncMusicUI(); scheduleSave(); });
-matchDrawingBtn.addEventListener('click',()=>{ const dur=frames.length/fps; if(!audioDuration){ return; } if(trimStart+dur<=audioDuration){ trimEnd=trimStart+dur; } else { trimStart=Math.max(0,audioDuration-dur); trimEnd=audioDuration; } syncMusicUI(); scheduleSave(); });
-function stopPreview(){ clearTimeout(previewTimer); previewTimer=null; if(!playing) stopMusic(); previewLoopLabel.textContent='Preview loop'; }
-previewLoopBtn.addEventListener('click',()=>{
-  if(!musicData) return;
-  if(previewTimer){ stopPreview(); return; }                 // toggle off
-  ensureAudio(); if(!audioEl) return;
-  const end = trimEnd!=null?trimEnd:audioDuration; const len=Math.max(0.2, end-trimStart);
-  try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}
-  previewLoopLabel.textContent='Stop preview';
-  clearTimeout(previewTimer);
-  previewTimer=setTimeout(stopPreview, Math.min(len*2, 15)*1000);   // ~2 loops (capped)
-});
+// ===== music component (ported from the Pad: waveform + trim + Loop Detail) =====
+const musicUploadBtn=document.getElementById('musicUploadBtn'), musicBtnLabel=document.getElementById('musicBtnLabel');
+const musicDetail=document.getElementById('musicDetail'), musicToggle=document.getElementById('musicToggle'), musicRemove=document.getElementById('musicRemove');
+const musicNote=document.getElementById('musicNote');
+const musicTrack=document.getElementById('musicTrack'), musicRange=document.getElementById('musicRange');
+const handleStart=document.getElementById('handleStart'), handleEnd=document.getElementById('handleEnd');
+const trimStartLabel=document.getElementById('trimStartLabel'), trimEndLabel=document.getElementById('trimEndLabel'), trimDurLabel=document.getElementById('trimDurLabel');
+const bubbleStart=document.getElementById('bubbleStart'), bubbleEnd=document.getElementById('bubbleEnd'), playhead=document.getElementById('playhead');
+const waveformCanvas=document.getElementById('waveformCanvas'), waveformCtx=waveformCanvas.getContext('2d');
+const zoomWaveformCanvas=document.getElementById('zoomWaveformCanvas'), zoomWaveformCtx=zoomWaveformCanvas.getContext('2d');
+const loopZoomLabel=document.getElementById('loopZoomLabel'), loopSummary=document.getElementById('loopSummary'), zoomPlayhead=document.getElementById('zoomPlayhead');
+const zoomHandleStart=document.getElementById('zoomHandleStart'), zoomHandleEnd=document.getElementById('zoomHandleEnd'), zoomTrackWrap=document.getElementById('zoomTrackWrap');
+const startReadout=document.getElementById('startReadout'), endReadout=document.getElementById('endReadout');
+const matchDrawingBtn=document.getElementById('matchDrawingBtn'), testSeamBtn=document.getElementById('testSeamBtn'), previewLoopBtn=document.getElementById('previewLoopBtn');
+const nudgeStepLabel=document.getElementById('nudgeStepLabel'), nudgeStepFinerBtn=document.getElementById('nudgeStepFiner'), nudgeStepCoarserBtn=document.getElementById('nudgeStepCoarser');
+const updateSliderFill = setFill;
+function formatTimeH(sec){ let total=Math.round(sec*100); const hh=total%100; total=(total-hh)/100; const s=total%60; const m=Math.floor(total/60); return m+':'+String(s).padStart(2,'0')+'.'+String(hh).padStart(2,'0'); }
 
-// fine-tune loop: nudge start/end by an adjustable step
-const fineTuneToggle=document.getElementById('fineTuneToggle'), fineTuneBody=document.getElementById('fineTuneBody');
-const startReadout=document.getElementById('startReadout'), endReadout=document.getElementById('endReadout'), stepLabel=document.getElementById('stepLabel');
-const stepFiner=document.getElementById('stepFiner'), stepCoarser=document.getElementById('stepCoarser');
-const NUDGE_STEPS=[0.01,0.02,0.05,0.1,0.25,0.5]; let nudgeStepIdx=3;   // default 0.1s
-function nudgeStep(){ return NUDGE_STEPS[nudgeStepIdx]; }
-fineTuneToggle.addEventListener('click',()=>{ const open=fineTuneBody.hidden; fineTuneBody.hidden=!open; fineTuneToggle.setAttribute('aria-expanded', String(open)); });
-[...document.querySelectorAll('.ft-nudge[data-edge]')].forEach(b=>b.addEventListener('click',()=>{
-  if(!musicData || !audioDuration) return;
-  const step=nudgeStep()*(+b.dataset.dir);
-  if(b.dataset.edge==='start'){ trimStart=Math.max(0, Math.min((trimEnd!=null?trimEnd:audioDuration)-0.2, trimStart+step)); }
-  else { const e=(trimEnd!=null?trimEnd:audioDuration)+step; trimEnd=Math.max(trimStart+0.2, Math.min(audioDuration, e)); }
-  syncMusicUI(); scheduleSave();
-}));
-stepFiner.addEventListener('click',()=>{ nudgeStepIdx=Math.max(0,nudgeStepIdx-1); syncMusicUI(); });
-stepCoarser.addEventListener('click',()=>{ nudgeStepIdx=Math.min(NUDGE_STEPS.length-1,nudgeStepIdx+1); syncMusicUI(); });
+function updateTrimUI(){
+  if(!Number.isFinite(audioDuration) || audioDuration<=0) return;
+  if(!Number.isFinite(trimStart)) trimStart=0;
+  if(trimEnd==null || !Number.isFinite(trimEnd)) trimEnd=Math.min(audioDuration, trimStart+Math.min(20,audioDuration));
+  const minLoop=0.01;
+  trimStart=Math.max(0, Math.min(trimStart, Math.max(0,audioDuration-minLoop)));
+  trimEnd=Math.max(trimStart+minLoop, Math.min(trimEnd, audioDuration));
+  const startPct=(trimStart/audioDuration)*100, endPct=(trimEnd/audioDuration)*100;
+  handleStart.style.left=startPct+'%'; handleEnd.style.left=endPct+'%';
+  musicRange.style.left=startPct+'%'; musicRange.style.width=(endPct-startPct)+'%';
+  const rangePx=((endPct-startPct)/100)*musicTrack.getBoundingClientRect().width;
+  musicRange.classList.toggle('narrow', rangePx<40);
+  trimStartLabel.textContent=fmtTime(0); trimEndLabel.textContent=fmtTime(audioDuration);
+  trimDurLabel.textContent=formatTimeH(trimEnd-trimStart)+' selected';
+  if(bubbleStart) bubbleStart.textContent=formatTimeH(trimStart);
+  if(bubbleEnd) bubbleEnd.textContent=formatTimeH(trimEnd);
+  if(startReadout) startReadout.textContent=trimStart.toFixed(2)+'s';
+  if(endReadout) endReadout.textContent=trimEnd.toFixed(2)+'s';
+  const dur=trimEnd-trimStart;
+  if(loopSummary) loopSummary.textContent='Loop: '+formatTimeH(trimStart)+' \u2192 '+formatTimeH(trimEnd)+' [' + dur.toFixed(2)+'s]';
+  requestZoomWaveformDraw(); updateZoomHandles(); if(typeof updateZoomPanSlider==='function') updateZoomPanSlider();
+}
+
+function getZoomWindow(){
+  const loopDuration=Math.max(0, trimEnd-trimStart);
+  const contextSeconds=Math.max(1, Math.min(4, loopDuration*0.25));
+  const halfSpan=(loopDuration/2+contextSeconds)/zoomMag;
+  let center;
+  if(zoomCenter!=null) center=zoomCenter;
+  else if(zoomFocus==='start') center=trimStart;
+  else if(zoomFocus==='end') center=trimEnd;
+  else center=(trimStart+trimEnd)/2;
+  const lo=halfSpan, hi=Math.max(halfSpan, audioDuration-halfSpan);
+  center=Math.max(lo, Math.min(center, hi));
+  let start=Math.max(0, center-halfSpan), end=Math.min(audioDuration, center+halfSpan);
+  if(end-start<0.001) end=Math.min(audioDuration, start+0.001);
+  return { start, end, duration: Math.max(0.001, end-start) };
+}
+function syncZoomFocusButtons(){ document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b=>{ b.classList.toggle('active', zoomFocus!=='free' && b.dataset.focus===zoomFocus); }); }
+function updateZoomHandles(){
+  if(!zoomTrackWrap||!zoomHandleStart||!zoomHandleEnd) return;
+  if(!Number.isFinite(audioDuration)||audioDuration<=0) return;
+  const zw=getZoomWindow(), startPct=((trimStart-zw.start)/zw.duration)*100, endPct=((trimEnd-zw.start)/zw.duration)*100;
+  zoomHandleStart.style.left=startPct+'%'; zoomHandleEnd.style.left=endPct+'%';
+  zoomHandleStart.hidden=!(startPct>=-2&&startPct<=102); zoomHandleEnd.hidden=!(endPct>=-2&&endPct<=102);
+}
+let zoomDrawPending=false;
+function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; drawZoomWaveform(); }); }
+function drawWaveform(audioBuffer){
+  const rect=musicTrack.getBoundingClientRect(); waveformCanvas.width=rect.width; waveformCanvas.height=rect.height;
+  const data=audioBuffer.getChannelData(0); const samples=waveformCanvas.width||1; const blockSize=Math.max(1,Math.floor(data.length/samples));
+  const h=waveformCanvas.height, mid=h/2; waveformCtx.clearRect(0,0,waveformCanvas.width,h); waveformCtx.fillStyle='#3a4150';
+  for(let i=0;i<samples;i++){ const s=i*blockSize; let mn=1,mx=-1; for(let j=0;j<blockSize;j++){ const v=data[s+j]||0; if(v<mn)mn=v; if(v>mx)mx=v; } const y1=mid+mn*mid*0.85, y2=mid+mx*mid*0.85; waveformCtx.fillRect(i,y1,1,Math.max(1,y2-y1)); }
+}
+function drawZoomWaveform(){
+  if(!currentAudioBuffer||!zoomWaveformCanvas) return;
+  const rect=zoomWaveformCanvas.getBoundingClientRect(); if(!rect.width) return;
+  const dpr=window.devicePixelRatio||1; zoomWaveformCanvas.width=Math.round(rect.width*dpr); zoomWaveformCanvas.height=Math.round(rect.height*dpr);
+  zoomWaveformCtx.setTransform(dpr,0,0,dpr,0,0); const w=rect.width, h=rect.height, mid=h/2;
+  const loopDuration=trimEnd-trimStart, zw=getZoomWindow(), zst=zw.start, zdur=zw.duration;
+  zoomWaveformCtx.fillStyle='#161a22'; zoomWaveformCtx.fillRect(0,0,w,h);
+  const data=currentAudioBuffer.getChannelData(0), sr=currentAudioBuffer.sampleRate;
+  const startSample=Math.max(0,Math.floor(zst*sr)), endSample=Math.min(data.length,Math.floor(zw.end*sr));
+  const totalSamples=Math.max(1,endSample-startSample), spp=Math.max(1,Math.floor(totalSamples/w));
+  zoomWaveformCtx.fillStyle='#3a4150';
+  for(let x=0;x<w;x++){ const a=startSample+x*spp, b=Math.min(a+spp,endSample); let mn=1,mx=-1; for(let i=a;i<b;i++){ const v=data[i]||0; if(v<mn)mn=v; if(v>mx)mx=v; } zoomWaveformCtx.fillRect(x, mid+mn*mid*0.9, 1, Math.max(1,(mid+mx*mid*0.9)-(mid+mn*mid*0.9))); }
+  const lsX=((trimStart-zst)/zdur)*w, leX=((trimEnd-zst)/zdur)*w;
+  zoomWaveformCtx.fillStyle='rgba(124,92,255,0.2)'; zoomWaveformCtx.fillRect(lsX,0,leX-lsX,h);
+  zoomWaveformCtx.fillStyle='#7c5cff';
+  for(let x=Math.floor(lsX);x<Math.ceil(leX);x++){ const a=startSample+x*spp, b=Math.min(a+spp,endSample); let mn=1,mx=-1; for(let i=a;i<b;i++){ const v=data[i]||0; if(v<mn)mn=v; if(v>mx)mx=v; } zoomWaveformCtx.fillRect(x, mid+mn*mid*0.9, 1, Math.max(1,(mid+mx*mid*0.9)-(mid+mn*mid*0.9))); }
+  zoomWaveformCtx.fillStyle='#7c5cff'; zoomWaveformCtx.fillRect(lsX,0,2,h); zoomWaveformCtx.fillRect(leX-2,0,2,h);
+  if(loopCrossfadeMs>0 && loopDuration>0){ const loopFrames=Math.floor(loopDuration*sr); const xf=Math.min(Math.floor((loopCrossfadeMs/1000)*sr), Math.floor(loopFrames/2)); const xfW=((xf/sr)/zdur)*w;
+    if(xfW>0){ const headX=lsX, tailX=leX-xfW; zoomWaveformCtx.fillStyle='rgba(255,176,32,0.22)'; zoomWaveformCtx.fillRect(headX,0,xfW,h); zoomWaveformCtx.fillRect(tailX,0,xfW,h); zoomWaveformCtx.fillStyle='rgba(255,176,32,0.9)'; for(let yy=0;yy<h;yy+=9){ zoomWaveformCtx.fillRect(headX+xfW-1,yy,1.5,5); zoomWaveformCtx.fillRect(tailX,yy,1.5,5); } } }
+  zoomWaveformCtx.fillStyle='#2e3340'; zoomWaveformCtx.fillRect(0,mid,w,1);
+  if(loopZoomLabel){ const xfL=loopCrossfadeMs>0?('  \u00b7  xfade '+loopCrossfadeMs+'ms'):''; loopZoomLabel.textContent=formatTimeH(trimStart)+' \u2192 '+formatTimeH(trimEnd)+' ['+loopDuration.toFixed(2)+'s]'+xfL; }
+}
+
+function dragHandle(handle, isStart){
+  function cx(e){ return e.touches?e.touches[0].clientX:e.clientX; }
+  function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
+    function onMove(ev){ const rect=musicTrack.getBoundingClientRect(); let pct=(cx(ev)-rect.left)/rect.width; pct=Math.max(0,Math.min(1,pct)); const time=pct*audioDuration;
+      if(isStart){ trimStart=Math.min(time,trimEnd-0.5); trimStart=Math.max(0,trimStart); if(trimEnd-trimStart>20) trimStart=trimEnd-20; }
+      else { trimEnd=Math.max(time,trimStart+0.5); trimEnd=Math.min(audioDuration,trimEnd); if(trimEnd-trimStart>20) trimEnd=trimStart+20; }
+      updateTrimUI(); scheduleSave(); }
+    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
+  }
+  handle.addEventListener('mousedown',onStart); handle.addEventListener('touchstart',onStart,{passive:false});
+}
+dragHandle(handleStart,true); dragHandle(handleEnd,false);
+function dragRangeWindow(rangeEl){
+  function cx(e){ return e.touches?e.touches[0].clientX:e.clientX; }
+  function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(rangeEl.classList.contains('narrow')) return; e.preventDefault(); e.stopPropagation(); rangeEl.classList.add('dragging');
+    const rect=musicTrack.getBoundingClientRect(); const loopLength=trimEnd-trimStart; const grabTime=(cx(e)-rect.left)/rect.width*audioDuration; const grabOffset=grabTime-trimStart;
+    function onMove(ev){ const time=(cx(ev)-rect.left)/rect.width*audioDuration; let ns=time-grabOffset; ns=Math.max(0,Math.min(ns,audioDuration-loopLength)); trimStart=ns; trimEnd=ns+loopLength; updateTrimUI(); }
+    function onEnd(){ rangeEl.classList.remove('dragging'); scheduleSave(); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
+  }
+  rangeEl.addEventListener('mousedown',onStart); rangeEl.addEventListener('touchstart',onStart,{passive:false});
+}
+dragRangeWindow(musicRange);
+function dragZoomHandle(handle, isStart){
+  function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
+    function onMove(ev){ const clientX=ev.touches?ev.touches[0].clientX:ev.clientX; const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
+      if(isStart){ trimStart=Math.max(0,Math.min(time,trimEnd-0.5)); if(trimEnd-trimStart>20) trimEnd=trimStart+20; }
+      else { trimEnd=Math.min(audioDuration,Math.max(time,trimStart+0.5)); if(trimEnd-trimStart>20) trimStart=trimEnd-20; }
+      updateTrimUI(); scheduleSave(); }
+    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
+  }
+  handle.addEventListener('mousedown',onStart); handle.addEventListener('touchstart',onStart,{passive:false});
+}
+dragZoomHandle(zoomHandleStart,true); dragZoomHandle(zoomHandleEnd,false);
+
+// seg-slider pill for the zoom mag/focus groups
+function positionSegSlider(group){ if(!group) return; const pill=group.__segPill; if(!pill) return; const btns=[].slice.call(group.querySelectorAll('button')); let idx=-1; for(let i=0;i<btns.length;i++){ if(btns[i].classList.contains('active')) idx=i; } const a=idx>=0?btns[idx]:null; if(!a||!a.offsetWidth){ pill.style.opacity='0'; return; } const off=a.offsetLeft-btns[0].offsetLeft; pill.style.width=a.offsetWidth+'px'; pill.style.transform='translateX('+off+'px)'; pill.style.opacity='1'; }
+function attachSegSlider(group){ if(!group||group.__segAttached) return; group.__segAttached=true; const pill=document.createElement('div'); pill.className='seg-slider'; group.insertBefore(pill, group.firstChild); group.__segPill=pill; const reflow=()=>positionSegSlider(group); if(typeof MutationObserver!=='undefined'){ new MutationObserver(reflow).observe(group,{subtree:true,attributes:true,attributeFilter:['class']}); } if(typeof ResizeObserver!=='undefined'){ new ResizeObserver(reflow).observe(group); } else if(window.addEventListener){ window.addEventListener('resize',reflow); } reflow(); }
+(function initZoomMagControl(){ if(!zoomTrackWrap||!zoomTrackWrap.parentNode) return;
+  const bar=document.createElement('div'); bar.className='zoom-mag-bar';
+  bar.innerHTML='<div class="zoom-mag-group" data-role="focus"><button type="button" class="zoom-mag-btn active" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></div>'+
+    '<div class="zoom-mag-group" data-role="mag"><button type="button" class="zoom-mag-btn active" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></div>';
+  zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
+  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="focus"]')); attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="mag"]'));
+  bar.addEventListener('click',(e)=>{ const b=e.target.closest('.zoom-mag-btn'); if(!b) return; b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; } if(b.dataset.mag) zoomMag=parseFloat(b.dataset.mag)||1; updateTrimUI(); });
+  const style=document.createElement('style'); style.textContent='.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}.zoom-mag-group{position:relative;overflow:hidden;display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:3px}.zoom-mag-btn{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:color .12s}.zoom-mag-btn:hover{color:#c8cede}.zoom-mag-btn.active{color:#fff}'; document.head.appendChild(style);
+})();
+document.getElementById('fineTuneToggle').addEventListener('click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-mag-group').forEach(g=>positionSegSlider(g)); }); } });
+
+// nudge fine-tune
+const nudgeSteps=[0.01,0.02,0.05,0.1]; let nudgeStepIdx=3;
+function updateNudgeStepLabel(){ nudgeStepLabel.textContent=nudgeSteps[nudgeStepIdx]+'s'; nudgeStepFinerBtn.disabled=nudgeStepIdx===0; nudgeStepCoarserBtn.disabled=nudgeStepIdx===nudgeSteps.length-1; }
+nudgeStepFinerBtn.addEventListener('click',()=>{ nudgeStepIdx=Math.max(0,nudgeStepIdx-1); updateNudgeStepLabel(); });
+nudgeStepCoarserBtn.addEventListener('click',()=>{ nudgeStepIdx=Math.min(nudgeSteps.length-1,nudgeStepIdx+1); updateNudgeStepLabel(); });
+function nudgeTrim(which, direction){ if(!audioEl) return; if((which!=='start'&&which!=='end')||!Number.isFinite(direction)) return; const amount=direction*nudgeSteps[nudgeStepIdx];
+  if(which==='start'){ trimStart=Math.max(0,Math.min(trimStart+amount,trimEnd-0.5)); if(trimEnd-trimStart>20) trimEnd=trimStart+20; } else { trimEnd=Math.min(audioDuration,Math.max(trimEnd+amount,trimStart+0.5)); if(trimEnd-trimStart>20) trimStart=trimEnd-20; } updateTrimUI(); scheduleSave(); }
+document.querySelectorAll('.nudge-btn[data-which]').forEach(btn=>{ btn.addEventListener('click',()=>nudgeTrim(btn.dataset.which, parseFloat(btn.dataset.amount))); });
+updateNudgeStepLabel();
+
+// Match Drawing Time — set loop length to the animation runtime
+function setLoopToDrawingLength(){ if(!audioEl || !(audioDuration>0)) return; const drawingSeconds=frames.length/fps; const loopLength=Math.min(20,Math.max(0.5,Math.min(drawingSeconds,audioDuration))); trimEnd=trimStart+loopLength; if(trimEnd>audioDuration){ trimEnd=audioDuration; trimStart=Math.max(0,trimEnd-loopLength); } updateTrimUI(); scheduleSave(); }
+matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
+
+// preview loop + test seam (seek-based on the <audio> element)
+let previewingLoop=false, previewLoopTimer=null, seamStopTimer=null;
+function stopLoopPreview(){ previewingLoop=false; if(audioEl && !playing){ try{audioEl.pause();}catch(_){}} if(previewLoopTimer) clearInterval(previewLoopTimer); if(seamStopTimer) clearTimeout(seamStopTimer); previewLoopTimer=null; seamStopTimer=null; if(playhead) playhead.hidden=true; if(zoomPlayhead) zoomPlayhead.hidden=true; if(previewLoopBtn) previewLoopBtn.textContent='Preview Loop'; }
+function previewTick(){ if(!previewingLoop||!audioEl) return; if(audioEl.currentTime>=trimEnd-0.05){ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); } const st=audioEl.currentTime;
+  const pct=(st/audioDuration)*100; if(playhead){ playhead.hidden=false; playhead.style.left=pct+'%'; }
+  if(zoomPlayhead && currentAudioBuffer){ const zw=getZoomWindow(); const zp=((st-zw.start)/zw.duration)*100; zoomPlayhead.hidden=false; zoomPlayhead.style.left=Math.max(0,Math.min(100,zp))+'%'; } }
+function startLoopPreview(){ ensureAudio(); if(!audioEl) return; previewingLoop=true; previewLoopBtn.textContent='Stop Preview'; try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} previewLoopTimer=setInterval(previewTick,30); }
+previewLoopBtn.addEventListener('click',()=>{ if(previewingLoop) stopLoopPreview(); else startLoopPreview(); });
+testSeamBtn.addEventListener('click',()=>{ ensureAudio(); if(!audioEl) return; stopLoopPreview(); previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
+  const seamStart=Math.max(trimStart, trimEnd-1.25); try{ audioEl.muted=false; audioEl.currentTime=seamStart; audioEl.play().catch(()=>{}); }catch(_){} previewLoopTimer=setInterval(previewTick,30);
+  const runFor=(trimEnd-seamStart)+Math.min(1.25, trimEnd-trimStart)+0.4; seamStopTimer=setTimeout(stopLoopPreview, runFor*1000); });
+
+// Loop Detail scroll + crossfade (injected, like the Pad)
+function updateZoomPanSlider(){ const s=document.getElementById('zoomPanSlider'); if(!s) return; if(!(audioDuration>0)){ s.value=500; return; } const zw=getZoomWindow(); const c=(zw.start+zw.end)/2; s.value=Math.round(Math.max(0,Math.min(1,c/audioDuration))*1000); updateSliderFill(s); }
+function dragZoomPan(wrap){ if(!wrap) return; const cx=(e)=>(e.touches?e.touches[0].clientX:e.clientX);
+  function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(e.target.closest('.zoom-handle')) return; e.preventDefault(); const rect=wrap.getBoundingClientRect(); const zw=getZoomWindow(); const sc=(zw.start+zw.end)/2; const winDur=zw.duration; const sx=cx(e); wrap.classList.add('panning');
+    function onMove(ev){ const dx=cx(ev)-sx; const dt=-(dx/rect.width)*winDur; const half=winDur/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(sc+dt,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); }
+    function onEnd(){ wrap.classList.remove('panning'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); }
+  wrap.addEventListener('mousedown',onStart); wrap.addEventListener('touchstart',onStart,{passive:false});
+}
+function addSliderNudgers(el, opts){ opts=opts||{}; const wrap=document.createElement('span'); wrap.className='slider-nudge-wrap'; el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
+  const mk=(txt,dir)=>{ const b=document.createElement('button'); b.type='button'; b.className='slider-nudge-btn'; b.textContent=txt; b.addEventListener('click',()=>{ if(opts.nudgeFn){ opts.nudgeFn(dir); } else { const step=opts.step||1; el.value=(+el.value)+dir*step; el.dispatchEvent(new Event('input',{bubbles:true})); } }); return b; };
+  wrap.insertBefore(mk('\u2212',-1), el); wrap.appendChild(mk('+',1)); }
+function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v=document.getElementById('crossfadeVal'); if(s){ s.value=loopCrossfadeMs; updateSliderFill(s); } if(v) v.textContent=loopCrossfadeMs>0?(loopCrossfadeMs+' ms'):'Off'; }
+(function initSliderExtras(){
+  const style=document.createElement('style'); style.textContent='.slider-nudge-wrap{display:flex;align-items:center;gap:6px;flex:1;min-width:0}.slider-nudge-wrap input[type=range]{flex:1;min-width:0}.slider-nudge-btn{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:#232734;color:#c8cede;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;transition:background .12s}.slider-nudge-btn:hover{background:#2c3140}.slider-nudge-btn:active{background:#7c5cff;color:#fff}.zoom-pan-row,.crossfade-row{display:flex;align-items:center;gap:10px;margin:8px 0 2px}.zoom-pan-label,.crossfade-label{font-size:12px;color:#8a93a6;flex:none;min-width:64px}.crossfade-val{font-size:12px;color:#c8cede;flex:none;min-width:38px;text-align:right}#zoomTrackWrap{cursor:grab}#zoomTrackWrap.panning{cursor:grabbing}'; document.head.appendChild(style);
+  const zoomWrap=document.getElementById('zoomTrackWrap');
+  if(zoomWrap){ const panRow=document.createElement('div'); panRow.className='zoom-pan-row'; panRow.innerHTML='<span class="zoom-pan-label">Scroll</span><input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">'; zoomWrap.insertAdjacentElement('afterend', panRow);
+    const ps=document.getElementById('zoomPanSlider'); ps.addEventListener('input',()=>{ if(!(audioDuration>0)) return; zoomCenter=(parseInt(ps.value,10)/1000)*audioDuration; zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); });
+    addSliderNudgers(ps,{ nudgeFn:(dir)=>{ if(!(audioDuration>0)) return; const zw=getZoomWindow(); const c=(zw.start+zw.end)/2; const half=zw.duration/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(c+dir*zw.duration*0.1,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); } });
+    dragZoomPan(zoomWrap); }
+  const finePanel=document.querySelector('.finetune-panel'); const cfRow=document.createElement('div'); cfRow.className='crossfade-row'; cfRow.innerHTML='<span class="crossfade-label">Crossfade</span><input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length"><span class="crossfade-val" id="crossfadeVal">Off</span>';
+  if(finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
+  const cf=document.getElementById('crossfadeSlider'); if(cf){ cf.addEventListener('input',()=>{ loopCrossfadeMs=parseInt(cf.value,10)||0; setCrossfadeUI(); updateTrimUI(); scheduleSave(); }); addSliderNudgers(cf,{step:5}); setCrossfadeUI(); }
+})();
+
+// upload / toggle / remove
+musicUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!musicUploadBtn.classList.contains('loaded')) musicInput.click(); });
+musicToggle.addEventListener('click',(e)=>{ e.stopPropagation(); musicEnabled=!musicEnabled; if(!musicEnabled) stopMusic(); else if(playing) startMusic(); syncMusicUI(); scheduleSave(); });
+musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); });
 
 // overflow menu (save/load/export)
 function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
@@ -1298,6 +1506,7 @@ onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', 
 fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();
+if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') setCrossfadeUI(); }
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
 window.addEventListener('load', ()=>{ fitPad(); positionSeg(); positionToolSlider(); });
