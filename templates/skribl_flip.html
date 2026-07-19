@@ -163,7 +163,8 @@
     background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 14px;
     padding: 10px 12px; border-radius: 9px; cursor: pointer; }
   .flip-menu-item:hover { background: var(--surface-control); }
-  .flip-menu-item .mi-ic { width: 18px; text-align: center; opacity: .85; font-size: 14px; }
+  .flip-menu-item .mi-ic { width: 18px; display: inline-flex; align-items: center; justify-content: center; opacity: .82; }
+  .flip-menu-item .mi-ic svg { width: 17px; height: 17px; display: block; }
   .flip-menu-item.busy { opacity: .55; pointer-events: none; }
   .flip-menu-sep { height: 1px; background: var(--hairline); margin: 5px 8px; }
   #moreBtn.on { color: var(--accent-bright); background: rgba(124,92,255,.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,.45); }
@@ -354,17 +355,17 @@
     <!-- "More" menu: image, music, save/load draft, export — the Pad's extra
          functions, folded into one popover so Flip stays uncluttered. -->
     <div class="flip-menu" id="moreMenu" role="menu" hidden>
-      <button type="button" class="flip-menu-item" id="miImage" role="menuitem"><span class="mi-ic">🖼</span><span class="mi-tx">Add background image</span></button>
-      <button type="button" class="flip-menu-item" id="miImageRemove" role="menuitem" hidden><span class="mi-ic">🖼</span><span class="mi-tx">Remove background image</span></button>
-      <button type="button" class="flip-menu-item" id="miMusic" role="menuitem"><span class="mi-ic">♪</span><span class="mi-tx">Add music loop</span></button>
-      <button type="button" class="flip-menu-item" id="miMusicMute" role="menuitem" hidden><span class="mi-ic">♪</span><span class="mi-tx">Mute music</span></button>
-      <button type="button" class="flip-menu-item" id="miMusicRemove" role="menuitem" hidden><span class="mi-ic">♪</span><span class="mi-tx">Remove music</span></button>
+      <button type="button" class="flip-menu-item" id="miImage" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><span class="mi-tx">Add background image</span></button>
+      <button type="button" class="flip-menu-item" id="miImageRemove" role="menuitem" hidden><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><span class="mi-tx">Remove background image</span></button>
+      <button type="button" class="flip-menu-item" id="miMusic" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="mi-tx">Add music loop</span></button>
+      <button type="button" class="flip-menu-item" id="miMusicMute" role="menuitem" hidden><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="mi-tx">Mute music</span></button>
+      <button type="button" class="flip-menu-item" id="miMusicRemove" role="menuitem" hidden><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span class="mi-tx">Remove music</span></button>
       <div class="flip-menu-sep"></div>
-      <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic">💾</span><span class="mi-tx">Save draft (.skribl)</span></button>
-      <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic">📂</span><span class="mi-tx">Load draft (.skribl)</span></button>
+      <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
+      <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>
-      <button type="button" class="flip-menu-item" id="miPng" role="menuitem"><span class="mi-ic">⬇</span><span class="mi-tx">Export frame (PNG)</span></button>
-      <button type="button" class="flip-menu-item" id="miWebm" role="menuitem"><span class="mi-ic">▶</span><span class="mi-tx">Export animation (WebM)</span></button>
+      <button type="button" class="flip-menu-item" id="miPng" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export frame (PNG)</span></button>
+      <button type="button" class="flip-menu-item" id="miWebm" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="mi-tx">Export animation (WebM)</span></button>
     </div>
     <input type="file" id="imageInput" accept="image/*" hidden>
     <input type="file" id="musicInput" accept="audio/*" hidden>
