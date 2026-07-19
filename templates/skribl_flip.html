@@ -22,18 +22,18 @@
     padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .2s var(--ease); }
   .seg button.on { color: #fff; }
 
-  /* Onion lives INSIDE the switch: the knob slides across it. Off = dim onion + gray
-     knob left; On = purple knob slides under the onion, lighting it white. */
-  .onion-toggle { position: relative; width: 46px; height: 26px; border-radius: 13px; flex: none; cursor: pointer;
-    background: rgba(255,255,255,.14); transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
-  .onion-toggle.on { background: rgba(124,92,255,.22); }
-  .onion-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .onion-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; z-index: 1;
-    background: #cfd3dc; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .22s var(--spring), background .2s ease; }
-  .onion-toggle.on .onion-knob { transform: translateX(20px); background: var(--accent); }
-  .onion-ico { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); width: 21px; height: 21px; z-index: 2;
-    color: rgba(255,255,255,.5); pointer-events: none; transition: color .2s ease; }
-  .onion-toggle.on .onion-ico { color: #fff; }
+  /* Onion toggle — the pad's own icon-toggle (.tool-open + magnify active state). */
+  .onion-tool { width: 34px; height: 34px; flex: none; border-radius: 50%; }
+  .onion-tool { background: var(--surface-control); border: 1px solid var(--hairline-strong); }
+  .onion-tool svg { width: 23px; height: 23px; }
+  .onion-tool:hover { background: var(--surface-control-hover); color: var(--text-primary); }
+  /* Level the three action controls to one height so the row lines up. */
+  .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .btn.flip-play { height: 34px; box-sizing: border-box; }
+  .flip-actions .btn.flip-play { padding-top: 0; padding-bottom: 0; }
+  .onion-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+  /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
+  .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
+    pointer-events: none; display: none; transform: translate(-50%,-50%); z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
   /* Info button + Flip Mode guide overlay. */
   .flip-info-btn { width: 30px; height: 30px; }
   .flip-info-btn svg { width: 17px; height: 17px; }
@@ -51,6 +51,8 @@
   .flip-info dd { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
   .flip-info b { color: var(--text-primary); font-weight: 600; }
 
+  .fps-group { display: inline-flex; align-items: center; gap: 7px; }
+  .fps-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
   .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 92px; justify-content: center; }
   .btn.flip-play.playing { background: var(--surface-control); color: var(--text-primary); box-shadow: none; }
 
@@ -123,11 +125,18 @@
     .flip-play span { display: none; }
     .btn.flip-play { min-width: 0; padding: 9px 12px; }
     .flip-app .header { padding: 12px 12px; }
-    .flip-actions { gap: 6px; }
+    .flip-actions { gap: 5px; }
+    .flip-app .header { gap: 6px; }
     .flip-actions .seg button { padding: 5px 6px; }
+    .fps-label { font-size: 10px; }
+    .fps-group { gap: 5px; }
     .flip-app .header { padding: 11px 8px; margin: 7px; }
     .flip-lead { gap: 4px; }
-    .flip-info-btn { width: 28px; height: 28px; }
+    .flip-info-btn { width: 26px; height: 26px; }
+    .flip-lead .icon-btn { width: 32px; height: 32px; }
+    .flip-actions .seg button { padding: 5px 5px; }
+    .onion-tool { width: 36px; height: 36px; border-radius: 50%; }
+    .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .btn.flip-play { height: 36px; }
     .flip-hint { display: none; }
   }
 </style>
@@ -142,10 +151,8 @@
       <span class="flip-word">FLIP</span><button type="button" class="icon-btn flip-info-btn" id="infoBtn" title="How Flip Mode works" aria-label="How Flip Mode works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor" stroke="none"/></svg></button>
       </div>
       <div class="actions flip-actions" id="actions">
-        <span class="seg" id="fps" title="Frames per second"><span class="seg-slider"></span>
-          <button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button>
-        </span>
-        <span class="onion-toggle" id="onion" role="switch" aria-checked="false" tabindex="0" title="Onion skin — show the frame beneath"><span class="onion-knob"></span><svg class="onion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></span>
+        <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
+        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button>
         <button type="button" class="btn flip-play" id="play">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg><span>Flip it</span>
         </button>
@@ -169,7 +176,7 @@
 
     <div class="flip-chip" id="flipChip"></div>
     <div class="strip-wrap"><div class="strip" id="strip"></div></div>
-    <div class="flip-info-overlay" id="infoOverlay" hidden>
+    <div class="flip-info-overlay" id="infoOverlay">
       <div class="flip-info" role="dialog" aria-modal="true" aria-label="How Flip Mode works">
         <button class="flip-info-close icon-btn" id="infoClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         <h2>How Flip Mode works</h2>
@@ -301,9 +308,21 @@ function paintStatic(c, strokeArr){
   }
 }
 
+// Offscreen layer for onion skin: the previous frame is drawn at FULL opacity here,
+// then composited onto the canvas ONCE at the target alpha — so overlapping dots/joints
+// don't build up into dark blobs (the pad's wet/dry compositor idea, applied to onion).
+const onionCv = document.createElement('canvas');
+onionCv.width = CW*DPR; onionCv.height = CH*DPR;
+const octx = onionCv.getContext('2d'); octx.scale(DPR,DPR);
 function render(){
   ctx.clearRect(0,0,CW,CH);
-  if(onion && !playing && idx>0){ ctx.globalAlpha=0.25; paintStatic(ctx, frames[idx-1].strokes); ctx.globalAlpha=1; }
+  if(onion && !playing && idx>0){
+    octx.clearRect(0,0,CW,CH);
+    paintStatic(octx, frames[idx-1].strokes);     // full opacity on the layer
+    ctx.globalAlpha = 0.28;
+    ctx.drawImage(onionCv, 0, 0, CW, CH);          // one composite -> uniform ghost
+    ctx.globalAlpha = 1;
+  }
   paintStatic(ctx, frame().strokes);
 }
 
@@ -313,18 +332,35 @@ pad.addEventListener('contextmenu', e=>e.preventDefault());
 pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault(); disarmAll();
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; curCount=1;
-  const p=pos(e);
-  frame().strokes.push({ x:p.x, y:p.y, color, size, t: performance.now(), erase: erasing, start: true });
+  const p=pos(e); const dsize = erasing ? size*3 : size;
+  frame().strokes.push({ x:p.x, y:p.y, color, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
-pad.addEventListener('pointermove', e=>{ if(!drawing) return; e.preventDefault();
-  const p=pos(e); curCount++;
-  frame().strokes.push({ x:p.x, y:p.y, color, size, t: performance.now(), erase: erasing });
+pad.addEventListener('pointermove', e=>{ if(erasing && !playing) moveEraserCursor(e);
+  if(!drawing) return; e.preventDefault();
+  const p=pos(e); curCount++; const dsize = erasing ? size*3 : size;
+  frame().strokes.push({ x:p.x, y:p.y, color, size: dsize, t: performance.now(), erase: erasing });
   render(); });
 function endStroke(){ if(!drawing) return; drawing=false;
   frame().strokeGroups.push(curCount); curCount=0;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke);
+
+/* Eraser circle cursor (pad-style): shows the exact 3x footprint under the pointer. */
+const eraserCursor = document.createElement('div');
+eraserCursor.className = 'flip-eraser-cursor';
+document.querySelector('.flip-wrap').appendChild(eraserCursor);
+function moveEraserCursor(e){
+  const r = pad.getBoundingClientRect();
+  const scale = r.width / CW;
+  const sz = size * 3 * scale;
+  eraserCursor.style.width = sz + 'px'; eraserCursor.style.height = sz + 'px';
+  eraserCursor.style.left = (e.clientX - r.left) + 'px';
+  eraserCursor.style.top  = (e.clientY - r.top) + 'px';
+  eraserCursor.style.display = 'block';
+}
+pad.addEventListener('pointermove', e=>{ if(erasing && !playing) moveEraserCursor(e); else eraserCursor.style.display='none'; });
+pad.addEventListener('pointerleave', ()=>{ eraserCursor.style.display='none'; });
 
 /* ---- frame strip ---- */
 const strip = document.getElementById('strip');
@@ -416,7 +452,8 @@ function undoStroke(){
   f.strokes.splice(f.strokes.length - n, n);
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
-document.getElementById('erase').addEventListener('click',e=>{ erasing=!erasing; e.currentTarget.classList.toggle('on',erasing); });
+document.getElementById('erase').addEventListener('click',e=>{ erasing=!erasing; e.currentTarget.classList.toggle('on',erasing);
+  pad.style.cursor = erasing ? 'none' : 'crosshair'; if(!erasing) eraserCursor.style.display='none'; });
 document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
 /* Clear is destructive → same two-tap armed pattern as frame delete. */
 document.getElementById('clear').addEventListener('click',e=>{
@@ -429,7 +466,7 @@ document.getElementById('clear').addEventListener('click',e=>{
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 });
 const onionEl=document.getElementById('onion');
-function setOnion(v){ onion=v; onionEl.classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
+function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
