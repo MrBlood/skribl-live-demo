@@ -9,11 +9,12 @@
 <style>
   body.flip-app { overflow: hidden; }
   .flip-app .app { height: 100dvh; }
-  .flip-app .header { gap: 8px; }
+  .flip-app .header { gap: 8px; justify-content: flex-start; }
 
   /* Wordmark: just FLIP (logo/Skribl removed to free room on mobile). */
   .flip-word { font-weight: 800; font-size: 17px; letter-spacing: .12em; color: var(--text-primary); padding-left: 2px; }
-  .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
+  .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
 
   /* fps: editor segmented control with the shared sliding accent pill (.seg-slider). */
   .seg { position: relative; display: inline-flex; background: var(--surface-control); border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); padding: 3px; }
@@ -21,12 +22,34 @@
     padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .2s var(--ease); }
   .seg button.on { color: #fff; }
 
-  /* Onion control = onion icon + the pad's photo/music on-off switch (.layer-toggle). */
-  .onion-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 4px; -webkit-tap-highlight-color: transparent; }
-  .onion-switch .onion-ico { width: 23px; height: 23px; color: var(--text-secondary); transition: color .2s ease; }
-  .onion-switch.on .onion-ico { color: var(--accent-bright); }
-  .onion-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-pill); }
-  .onion-switch .layer-toggle { display: inline-block; }   /* pad default is display:none */
+  /* Onion lives INSIDE the switch: the knob slides across it. Off = dim onion + gray
+     knob left; On = purple knob slides under the onion, lighting it white. */
+  .onion-toggle { position: relative; width: 46px; height: 26px; border-radius: 13px; flex: none; cursor: pointer;
+    background: rgba(255,255,255,.14); transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
+  .onion-toggle.on { background: rgba(124,92,255,.22); }
+  .onion-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .onion-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; z-index: 1;
+    background: #cfd3dc; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .22s var(--spring), background .2s ease; }
+  .onion-toggle.on .onion-knob { transform: translateX(20px); background: var(--accent); }
+  .onion-ico { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); width: 21px; height: 21px; z-index: 2;
+    color: rgba(255,255,255,.5); pointer-events: none; transition: color .2s ease; }
+  .onion-toggle.on .onion-ico { color: #fff; }
+  /* Info button + Flip Mode guide overlay. */
+  .flip-info-btn { width: 30px; height: 30px; }
+  .flip-info-btn svg { width: 17px; height: 17px; }
+  .flip-info-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    background: rgba(4,5,8,.6); backdrop-filter: blur(4px); padding: 20px; }
+  .flip-info-overlay[hidden] { display: none; }
+  .flip-info { position: relative; width: 100%; max-width: 420px; max-height: 84vh; overflow-y: auto;
+    background: var(--surface-panel); border: 1px solid var(--hairline-strong); border-radius: var(--r-frame);
+    padding: 22px 22px 24px; box-shadow: 0 24px 70px rgba(0,0,0,.6); }
+  .flip-info-close { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; }
+  .flip-info h2 { margin: 0 0 4px; font-size: 18px; color: var(--text-primary); letter-spacing: -.01em; }
+  .flip-info .fi-sub { margin: 0 0 16px; color: var(--text-secondary); font-size: 13.5px; }
+  .flip-info dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: baseline; }
+  .flip-info dt { color: var(--accent-bright); font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .flip-info dd { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
+  .flip-info b { color: var(--text-primary); font-weight: 600; }
 
   .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 92px; justify-content: center; }
   .btn.flip-play.playing { background: var(--surface-control); color: var(--text-primary); box-shadow: none; }
@@ -96,7 +119,15 @@
 
   /* Mobile: keep the header on one line — onion goes icon-only. */
   @media (max-width: 560px) {
-    .flip-word { font-size: 15px; letter-spacing: .1em; }
+    .flip-word { font-size: 15px; letter-spacing: .08em; }
+    .flip-play span { display: none; }
+    .btn.flip-play { min-width: 0; padding: 9px 12px; }
+    .flip-app .header { padding: 12px 12px; }
+    .flip-actions { gap: 6px; }
+    .flip-actions .seg button { padding: 5px 6px; }
+    .flip-app .header { padding: 11px 8px; margin: 7px; }
+    .flip-lead { gap: 4px; }
+    .flip-info-btn { width: 28px; height: 28px; }
     .flip-hint { display: none; }
   }
 </style>
@@ -104,15 +135,17 @@
 <body class="flip-app">
   <div class="app">
     <div class="header">
+      <div class="flip-lead">
       <a href="/" class="icon-btn" title="Back to Skribl Pad" aria-label="Back to Skribl Pad">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </a>
-      <span class="flip-word">FLIP</span>
+      <span class="flip-word">FLIP</span><button type="button" class="icon-btn flip-info-btn" id="infoBtn" title="How Flip Mode works" aria-label="How Flip Mode works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor" stroke="none"/></svg></button>
+      </div>
       <div class="actions flip-actions" id="actions">
         <span class="seg" id="fps" title="Frames per second"><span class="seg-slider"></span>
           <button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button>
         </span>
-        <span class="onion-switch" id="onion" role="switch" aria-checked="false" tabindex="0" title="Onion skin — show the frame beneath"><svg class="onion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg><span class="layer-toggle"><span class="layer-toggle-knob"></span></span></span>
+        <span class="onion-toggle" id="onion" role="switch" aria-checked="false" tabindex="0" title="Onion skin — show the frame beneath"><span class="onion-knob"></span><svg class="onion-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></span>
         <button type="button" class="btn flip-play" id="play">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg><span>Flip it</span>
         </button>
@@ -136,6 +169,23 @@
 
     <div class="flip-chip" id="flipChip"></div>
     <div class="strip-wrap"><div class="strip" id="strip"></div></div>
+    <div class="flip-info-overlay" id="infoOverlay" hidden>
+      <div class="flip-info" role="dialog" aria-modal="true" aria-label="How Flip Mode works">
+        <button class="flip-info-close icon-btn" id="infoClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <h2>How Flip Mode works</h2>
+        <p class="fi-sub">Draw a frame-by-frame animation, then flip through the pages.</p>
+        <dl>
+          <dt>Draw</dt><dd>Sketch on the page — pick a color and size below, or the eraser.</dd>
+          <dt>Add pages</dt><dd><b>&#65291; Page</b> copies the current page so you can tweak it; <b>&#65291; Blank</b> starts empty.</dd>
+          <dt>Onion skin</dt><dd>The onion toggle shows the previous page faintly underneath, so you can trace the motion.</dd>
+          <dt>Flip it</dt><dd>Plays the pages in a loop at your chosen speed — <b>6 / 12 / 24</b> frames per second.</dd>
+          <dt>Move around</dt><dd>Tap a page in the strip, or use <b>&#8592;</b> / <b>&#8594;</b> to step between pages.</dd>
+          <dt>Undo</dt><dd><b>Ctrl/&#8984; + Z</b> or the undo button removes your last stroke.</dd>
+          <dt>Delete &amp; clear</dt><dd>Tap a page's &#10005; (or Clear) once to arm it red, again to confirm — nothing vanishes by accident.</dd>
+          <dt>Autosave</dt><dd>Your animation is saved in this browser and restored when you come back.</dd>
+        </dl>
+      </div>
+    </div>
     <div class="flip-hint">Each new page is a <b>copy of the current one</b> — nudge, erase, redraw to animate. Toggle <b>Onion</b> to see the frame beneath. Then hit <b>Flip it</b>.</div>
   </div>
 
@@ -379,7 +429,7 @@ document.getElementById('clear').addEventListener('click',e=>{
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 });
 const onionEl=document.getElementById('onion');
-function setOnion(v){ onion=v; onionEl.classList.toggle('on',onion); onionEl.querySelector('.layer-toggle').classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
+function setOnion(v){ onion=v; onionEl.classList.toggle('on',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
@@ -398,6 +448,15 @@ function positionSeg(){ const active=fpsGroup.querySelector('button.on'); const 
 fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
   fps=+b.dataset.fps; [...fpsGroup.querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on');
   positionSeg(); scheduleSave(); if(playing){ stop(); play(); } });
+
+
+/* ---- info overlay ---- */
+const infoOverlay=document.getElementById('infoOverlay');
+function closeInfo(){ infoOverlay.hidden=true; }
+document.getElementById('infoBtn').addEventListener('click',()=>{ infoOverlay.hidden=false; });
+document.getElementById('infoClose').addEventListener('click',closeInfo);
+infoOverlay.addEventListener('click',e=>{ if(e.target===infoOverlay) closeInfo(); });
+window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !infoOverlay.hidden) closeInfo(); });
 
 /* ---- boot ---- */
 const restored = tryRestore();
