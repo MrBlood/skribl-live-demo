@@ -41,19 +41,15 @@
      as before), a medium split (16x12), and a fine small split (32x24), each
      fainter than the level above so the hierarchy reads at a glance. Big is listed
      first so its lines win where all three coincide. */
-  .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; border-radius: var(--r-frame); overflow: hidden;
+  .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; border-radius: calc(var(--r-frame) - 1px); overflow: hidden;
     background-image:
-      linear-gradient(to left, rgba(255,255,255,.22) 1px, transparent 1px),
-      linear-gradient(to top,  rgba(255,255,255,.22) 1px, transparent 1px),
       linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px),
       linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px),
       linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
     background-size:
-      100% 100%, 100% 100%,
       12.5% 16.6667%, 12.5% 16.6667%,
       6.25% 8.3333%,  6.25% 8.3333%,
-      3.125% 4.1667%, 3.125% 4.1667%;
-    background-repeat: no-repeat, no-repeat, repeat, repeat, repeat, repeat, repeat, repeat; }
+      3.125% 4.1667%, 3.125% 4.1667%; }
   .flip-grid.on { display: block; }
   body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
@@ -132,6 +128,9 @@
   .t-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
+  /* Pad's pen/eraser toggle, sized to sit in Flip's 40px tool row. */
+  .flip-tools .tool-group { height: 40px; box-sizing: border-box; align-items: center; }
+  .flip-tools .tool-btn { padding: 6px 14px; }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto; scrollbar-width: thin; }
@@ -246,7 +245,16 @@
       <div class="color-tool">
         <button type="button" class="color-current" id="colorCurrent" title="Colors &amp; brush" aria-haspopup="true" aria-expanded="false"></button>
       </div>
-      <button class="t-btn" id="erase" title="Eraser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 010-3l9-9a2 2 0 013 0l5 5a2 2 0 010 3l-8 8"/><path d="M9 13l5 5"/></svg></button>
+      <div class="tool-group" id="toolGroup" title="Pen / Eraser">
+        <div class="tool-slider" id="toolSlider"></div>
+        <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          <span class="tool-btn-label">Pen</span>
+        </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+          <span class="tool-btn-label">Eraser</span>
+        </button>
+      </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
       <!-- The Pad editor's Draw menu, in full, reusing the shared design-system
@@ -334,7 +342,7 @@
         <h2>How Flip Mode works</h2>
         <p class="fi-sub">Draw a frame-by-frame animation, then flip through the pages.</p>
         <dl>
-          <dt>Draw</dt><dd>Sketch on the page. The colour dot opens the full draw menu — the same one as the Skribl Pad: colour presets, a <b>+</b> custom picker, an <b>eyedropper</b>, recent colours, <b>brush size</b>, <b>background</b>, <b>smoothing</b>, and <b>opacity</b>. The eraser is on the tool row.</dd>
+          <dt>Draw</dt><dd>Sketch on the page. The colour dot opens the full draw menu — the same one as the Skribl Pad: colour presets, a <b>+</b> custom picker, an <b>eyedropper</b>, recent colours, <b>brush size</b>, <b>background</b>, <b>smoothing</b>, and <b>opacity</b>. Switch between <b>Pen</b> and <b>Eraser</b> on the tool row.</dd>
           <dt>Add pages</dt><dd><b>&#65291; Page</b> copies the current page so you can tweak it; <b>&#65291; Blank</b> starts empty.</dd>
           <dt>Grid</dt><dd>The grid button overlays fine / medium / coarse alignment guides across the whole canvas — a drawing aid only (never saved, hidden while flipping).</dd>
           <dt>Onion skin</dt><dd>The onion toggle shows the previous page faintly underneath, so you can trace the motion.</dd>
@@ -381,10 +389,11 @@ function fitPad(){
 // covers the whole canvas edge-to-edge no matter how the flex wrapper sizes.
 function syncGrid(){
   const g = document.getElementById('flipGrid'); if(!g) return;
-  g.style.left = pad.offsetLeft + 'px'; g.style.top = pad.offsetTop + 'px';
-  g.style.width = pad.offsetWidth + 'px'; g.style.height = pad.offsetHeight + 'px';
+  const b = 1;  // pad border width — sit the grid inside it so corners follow the rounded frame
+  g.style.left = (pad.offsetLeft + b) + 'px'; g.style.top = (pad.offsetTop + b) + 'px';
+  g.style.width = (pad.offsetWidth - 2*b) + 'px'; g.style.height = (pad.offsetHeight - 2*b) + 'px';
 }
-window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); });
+window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); positionToolSlider(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
@@ -680,11 +689,27 @@ let recentColors=[], picking=false;
 try{ const r=JSON.parse(localStorage.getItem('skribl_recent_colors')||'[]'); if(Array.isArray(r)) recentColors=r.filter(c=>/^#[0-9a-f]{6}$/i.test(c)).slice(0,6); }catch(_){ }
 
 function setColor(hex){
-  color=hex; erasing=false;
-  document.getElementById('erase').classList.remove('on');
-  pad.style.cursor='none'; if(typeof eraserCursor!=='undefined') eraserCursor.style.display='none';
+  color=hex;
   colorCurrent.style.background=hex;
   [...colorGroup.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active', d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase()));
+  setTool('pen');   // picking a colour returns you to the pen, like the Pad
+}
+/* Pen / eraser toggle — the Pad's segmented control with the sliding accent pill. */
+function positionToolSlider(){
+  const pen=document.getElementById('penToolBtn'), er=document.getElementById('eraserToolBtn'), sl=document.getElementById('toolSlider');
+  if(!pen||!er||!sl) return; const active = erasing ? er : pen;
+  sl.style.width = active.offsetWidth+'px';
+  sl.style.transform = erasing ? 'translateX('+pen.offsetWidth+'px)' : 'translateX(0)';
+}
+function setTool(t){
+  erasing = (t === 'eraser');
+  const pen=document.getElementById('penToolBtn'), er=document.getElementById('eraserToolBtn');
+  if(pen&&er){ pen.classList.toggle('active', !erasing); er.classList.toggle('active', erasing); }
+  positionToolSlider();
+  pad.style.cursor='none';
+  if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
+  if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
+  if(picking) setPicking(false);
 }
 function addRecent(hex){
   recentColors=[hex, ...recentColors.filter(c=>c.toLowerCase()!==hex.toLowerCase())].slice(0,6);
@@ -785,8 +810,7 @@ function redoStroke(){
   f.strokeGroups.push(item.count);
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
-document.getElementById('erase').addEventListener('click',e=>{ if(picking) setPicking(false); erasing=!erasing; e.currentTarget.classList.toggle('on',erasing);
-  pad.style.cursor='none'; if(!erasing) eraserCursor.style.display='none'; else brushCursor.style.display='none'; });
+document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener('click',()=>{ if(!playing) setTool(b.dataset.tool); }));
 document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
 document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redoStroke(); });
 /* Delete-all lives in the draw menu now; destructive → same two-tap arm as frame delete. */
@@ -841,7 +865,7 @@ onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', 
 fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
-window.addEventListener('load', ()=>{ fitPad(); positionSeg(); });
+window.addEventListener('load', ()=>{ fitPad(); positionSeg(); positionToolSlider(); });
 </script>
 </body>
 </html>
