@@ -36,15 +36,34 @@
   .grid-tool svg { width: 20px; height: 20px; }
   .grid-tool:hover { background: var(--surface-control-hover); color: var(--text-primary); }
   .grid-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
-  /* Grid overlay — a non-destructive alignment guide over the canvas (not saved, hidden while flipping). */
+  /* Grid overlay — a non-destructive alignment guide over the whole canvas (not
+     saved, hidden while flipping). Three nested levels fill the canvas: big (8x6,
+     as before), a medium split (16x12), and a fine small split (32x24), each
+     fainter than the level above so the hierarchy reads at a glance. Big is listed
+     first so its lines win where all three coincide. */
   .flip-grid { position: absolute; inset: 0; pointer-events: none; display: none; border-radius: var(--r-frame); overflow: hidden;
-    background-image: linear-gradient(rgba(255,255,255,.13) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.13) 1px, transparent 1px);
-    background-size: 12.5% 16.667%; }
+    background-image:
+      linear-gradient(rgba(255,255,255,.17) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.17) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size:
+      12.5% 16.6667%, 12.5% 16.6667%,
+      6.25% 8.3333%,  6.25% 8.3333%,
+      3.125% 4.1667%, 3.125% 4.1667%; }
   .flip-grid.on { display: block; }
   body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
   .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
     pointer-events: none; display: none; transform: translate(-50%,-50%); z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
+  /* Pen brush cursor — a ring the size of the brush footprint with a little
+     crosshair at its centre for precise aiming (crosshair stays a fixed small
+     size so it's still usable when the brush ring is tiny or large). */
+  .flip-brush-cursor { position: absolute; border: 1.5px solid rgba(255,255,255,0.7); border-radius: 50%;
+    pointer-events: none; display: none; transform: translate(-50%,-50%); z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
+  .flip-brush-cursor::before, .flip-brush-cursor::after { content: ''; position: absolute; top: 50%; left: 50%;
+    background: rgba(255,255,255,0.85); box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
+  .flip-brush-cursor::before { width: 11px; height: 1px; transform: translate(-50%,-50%); }
+  .flip-brush-cursor::after  { width: 1px; height: 11px; transform: translate(-50%,-50%); }
   /* Info button + Flip Mode guide overlay. */
   .flip-info-btn { width: 30px; height: 30px; }
   .flip-info-btn svg { width: 17px; height: 17px; }
@@ -74,34 +93,32 @@
   .flip-stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
   .flip-wrap { position: relative; line-height: 0; }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
-    border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: crosshair; }
+    border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
   .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
     background: rgba(9,11,16,.72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 4px 11px;
     font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--accent-bright); }
   body.playing .flip-live { display: inline-flex; }
 
-  .flip-tools { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; flex-wrap: wrap; }
-  /* Color = one current-color button that opens a popout (presets + custom picker +
-     recent). Reuses the pad's .color-dot / .color-custom-wrap / .recent-swatch styles. */
+  .flip-tools { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; flex-wrap: wrap; }
+  /* Colors & brush = the Pad editor's exact Draw menu (Color palette + custom
+     picker + eyedropper + recent + Brush size). It reuses the shared design-system
+     classes (.tab-panel, .color-group, .color-dot, .color-custom-wrap,
+     .eyedropper-btn, .recent-row, .brush-slider-line, .slider …) so it is visually
+     identical to the Pad. Here it opens as a popout anchored above its trigger,
+     which keeps Flip's flex layout from reflowing. Moving Brush size in here frees
+     the bottom row of its old size pill. */
   .color-tool { position: relative; display: inline-flex; }
   .color-current { width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
     border: 2px solid var(--text-primary);
     box-shadow: 0 0 0 1px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.15);
     transition: transform .12s var(--spring); }
   .color-current:hover { transform: scale(1.06); }
-  .color-popout { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
-    background: var(--surface-panel); border: 1px solid var(--hairline-strong); border-radius: 16px; padding: 12px;
-    box-shadow: 0 16px 44px rgba(0,0,0,.55); z-index: 30; }
-  .color-popout[hidden] { display: none; }
-  .color-grid { display: grid; grid-template-columns: repeat(4, auto); gap: 10px; }
-  .color-recent { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); }
-  .color-recent[hidden] { display: none; }
-  /* Size uses the editor's real .slider (fill via --slider-fill), wrapped in a pill. */
-  .size-pill { display: flex; align-items: center; gap: 10px; background: var(--surface-control); border: 1px solid var(--hairline-strong);
-    padding: 4px 14px; border-radius: var(--r-pill); color: var(--text-secondary); font-size: 12px; font-weight: 600; min-width: 150px; }
-  .size-pill .slider { flex: 1; }
-  .size-pill .slider-val { min-width: 26px; }
+  .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent); }
+  /* The shared .tab-panel drawer opens upward over the lower canvas, spanning the
+     tools row (bounded by left/right insets so it can never overflow the viewport,
+     and floating so it never resizes the canvas). Same margins as the Pad drawer. */
+  .draw-popout.tab-panel { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 10px); margin: 0; z-index: 40; }
   .t-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-control);
     border: 1px solid var(--hairline-strong); color: var(--text-secondary); cursor: pointer; transition: filter .15s ease, color .15s ease; }
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
@@ -220,17 +237,43 @@
 
     <div class="flip-tools">
       <div class="color-tool">
-        <button type="button" class="color-current" id="colorCurrent" title="Color" aria-haspopup="true" aria-expanded="false"></button>
-        <div class="color-popout" id="colorPop" hidden>
-          <div class="color-grid" id="colorGrid"></div>
-          <div class="color-recent" id="colorRecent" hidden></div>
-        </div>
+        <button type="button" class="color-current" id="colorCurrent" title="Colors &amp; brush" aria-haspopup="true" aria-expanded="false"></button>
       </div>
-      <div class="size-pill">Size <input id="size" class="slider" type="range" min="2" max="34" value="7"><span class="slider-val" id="sizeVal">7</span></div>
       <button class="t-btn" id="erase" title="Eraser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16a2 2 0 010-3l9-9a2 2 0 013 0l5 5a2 2 0 010 3l-8 8"/><path d="M9 13l5 5"/></svg></button>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
       <button class="t-btn" id="clear" title="Delete whole animation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      <!-- The Pad editor's exact Draw menu, reusing the shared design-system classes.
+           Floats up over the canvas, spanning the tools row. -->
+      <div class="tab-panel draw-popout" id="drawPanel" role="dialog" aria-label="Colors and brush" hidden>
+          <div class="color-section">
+            <span class="draw-section-label">Color</span>
+            <div class="color-group" id="colorGroup">
+              <label class="color-custom-wrap" title="Custom color">
+                <span class="color-dot color-custom" id="customColorBtn" style="background:#ff6b6b;"></span>
+                <span class="color-custom-badge">+</span>
+                <input type="color" id="customColorInput" value="#ff6b6b" aria-label="Custom drawing color">
+              </label>
+              <button type="button" id="eyedropperBtn" class="eyedropper-btn" title="Pick a color from the canvas" aria-label="Pick a color from the canvas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 7l6 6"/><path d="M4 20l4.5-1L18 9.5a2.12 2.12 0 0 0-3-3L5.5 16 4 20z"/></svg>
+              </button>
+            </div>
+            <div class="recent-row" id="recentRow" hidden>
+              <span class="draw-section-label recent-label">Recent</span>
+              <div class="recent-colors" id="recentColors"></div>
+            </div>
+          </div>
+          <div class="draw-inline">
+            <div class="tool-row">
+              <span class="draw-section-label" id="brushSizeLabel">Brush size</span>
+              <div class="brush-slider-line">
+                <input type="range" id="size" class="slider" min="2" max="34" value="7" step="1" aria-label="Brush size">
+                <span class="prop-val" id="sizeVal">7px</span>
+                <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:7px;height:7px"></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
 
     <div class="flip-chip" id="flipChip"></div>
@@ -241,7 +284,7 @@
         <h2>How Flip Mode works</h2>
         <p class="fi-sub">Draw a frame-by-frame animation, then flip through the pages.</p>
         <dl>
-          <dt>Draw</dt><dd>Sketch on the page. Tap the color dot to open the palette — presets, a <b>+</b> custom picker, and your recent colors (shared with the Pad). Set size with the slider, or use the eraser.</dd>
+          <dt>Draw</dt><dd>Sketch on the page. Tap the color dot to open the palette — presets, a <b>+</b> custom picker, an <b>eyedropper</b> to sample a colour from the canvas, your recent colours (shared with the Pad), and the <b>brush size</b> slider. The eraser is on the tool row.</dd>
           <dt>Add pages</dt><dd><b>&#65291; Page</b> copies the current page so you can tweak it; <b>&#65291; Blank</b> starts empty.</dd>
           <dt>Grid</dt><dd>The grid button overlays alignment guides on the canvas — a drawing aid only (never saved, hidden while flipping).</dd>
           <dt>Onion skin</dt><dd>The onion toggle shows the previous page faintly underneath, so you can trace the motion.</dd>
@@ -266,7 +309,7 @@
    frames}), directly consumable by the pad's normalizeSkribl()/loadSkribl().
    That's the marriage: same data, two editors.
    ========================================================================== */
-const COLORS = ["#ffffff","#7c5cff","#5b8cff","#ff5c8a","#ffd15c","#4bd6a0","#0e1017"];
+const COLORS = ["#ffffff","#7c5cff","#5b8cff","#f4326f","#1bcf8f","#ffae42","#000000"]; // Pad editor palette
 const DPR = Math.min(window.devicePixelRatio||1, 2);
 const CW = 640, CH = 460;
 const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
@@ -391,12 +434,13 @@ function render(){
 function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
 pad.addEventListener('contextmenu', e=>e.preventDefault());
 pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault(); disarmAll();
+  if(picking){ sampleColorAt(e); return; }   // eyedropper: pick, don't draw
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; curCount=1; redoStack.length=0;
   const p=pos(e); const dsize = erasing ? size*3 : size;
   frame().strokes.push({ x:p.x, y:p.y, color, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
-pad.addEventListener('pointermove', e=>{ if(erasing && !playing) moveEraserCursor(e);
+pad.addEventListener('pointermove', e=>{
   if(!drawing) return; e.preventDefault();
   const p=pos(e); curCount++; const dsize = erasing ? size*3 : size;
   frame().strokes.push({ x:p.x, y:p.y, color, size: dsize, t: performance.now(), erase: erasing });
@@ -407,10 +451,15 @@ function endStroke(){ if(!drawing) return; drawing=false;
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke);
 
-/* Eraser circle cursor (pad-style): shows the exact 3x footprint under the pointer. */
+/* Custom canvas cursors (pad-style). Eraser = a ring at the 3x footprint; pen = a
+   ring at the brush footprint with a little crosshair. One handler swaps them; both
+   hide while playing or while the eyedropper is active (which uses the OS crosshair). */
 const eraserCursor = document.createElement('div');
 eraserCursor.className = 'flip-eraser-cursor';
 document.querySelector('.flip-wrap').appendChild(eraserCursor);
+const brushCursor = document.createElement('div');
+brushCursor.className = 'flip-brush-cursor';
+document.querySelector('.flip-wrap').appendChild(brushCursor);
 function moveEraserCursor(e){
   const r = pad.getBoundingClientRect();
   const scale = r.width / CW;
@@ -420,8 +469,22 @@ function moveEraserCursor(e){
   eraserCursor.style.top  = (e.clientY - r.top) + 'px';
   eraserCursor.style.display = 'block';
 }
-pad.addEventListener('pointermove', e=>{ if(erasing && !playing) moveEraserCursor(e); else eraserCursor.style.display='none'; });
-pad.addEventListener('pointerleave', ()=>{ eraserCursor.style.display='none'; });
+function moveBrushCursor(e){
+  const r = pad.getBoundingClientRect();
+  const scale = r.width / CW;
+  const sz = Math.max(2, size * scale);
+  brushCursor.style.width = sz + 'px'; brushCursor.style.height = sz + 'px';
+  brushCursor.style.left = (e.clientX - r.left) + 'px';
+  brushCursor.style.top  = (e.clientY - r.top) + 'px';
+  brushCursor.style.display = 'block';
+}
+function hideCursors(){ eraserCursor.style.display='none'; brushCursor.style.display='none'; }
+pad.addEventListener('pointermove', e=>{
+  if(playing || picking){ hideCursors(); return; }
+  if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; }
+  else { moveBrushCursor(e); eraserCursor.style.display='none'; }
+});
+pad.addEventListener('pointerleave', hideCursors);
 
 /* ---- frame strip ---- */
 const strip = document.getElementById('strip');
@@ -500,20 +563,25 @@ function stop(){
 }
 playBtn.addEventListener('click',()=> playing?stop():play());
 
-/* ---- tools ---- */
+/* ---- tools: the Pad editor's Draw menu (colors + brush), wired to Flip state ---- */
 const colorCurrent=document.getElementById('colorCurrent');
-const colorPop=document.getElementById('colorPop');
-const colorGrid=document.getElementById('colorGrid');
-const colorRecentEl=document.getElementById('colorRecent');
-let recentColors=[];
+const drawPanel=document.getElementById('drawPanel');   // the shared .tab-panel drawer
+const colorGroup=document.getElementById('colorGroup');
+const recentRow=document.getElementById('recentRow');
+const recentColorsEl=document.getElementById('recentColors');
+const customWrap=colorGroup.querySelector('.color-custom-wrap');
+const customInput=document.getElementById('customColorInput');
+const customBtn=document.getElementById('customColorBtn');
+const eyedropperBtn=document.getElementById('eyedropperBtn');
+let recentColors=[], picking=false;
 try{ const r=JSON.parse(localStorage.getItem('skribl_recent_colors')||'[]'); if(Array.isArray(r)) recentColors=r.filter(c=>/^#[0-9a-f]{6}$/i.test(c)).slice(0,6); }catch(_){ }
 
 function setColor(hex){
   color=hex; erasing=false;
   document.getElementById('erase').classList.remove('on');
-  pad.style.cursor='crosshair'; if(typeof eraserCursor!=='undefined') eraserCursor.style.display='none';
+  pad.style.cursor='none'; if(typeof eraserCursor!=='undefined') eraserCursor.style.display='none';
   colorCurrent.style.background=hex;
-  [...colorGrid.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active', d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase()));
+  [...colorGroup.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active', d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase()));
 }
 function addRecent(hex){
   recentColors=[hex, ...recentColors.filter(c=>c.toLowerCase()!==hex.toLowerCase())].slice(0,6);
@@ -521,30 +589,42 @@ function addRecent(hex){
   renderRecent();
 }
 function renderRecent(){
-  colorRecentEl.innerHTML='';
+  recentColorsEl.innerHTML='';
   recentColors.forEach(hex=>{ const b=document.createElement('button'); b.type='button'; b.className='recent-swatch'; b.style.background=hex;
-    b.title=hex; b.addEventListener('click',()=>{ setColor(hex); closePop(); }); colorRecentEl.appendChild(b); });
-  colorRecentEl.hidden = recentColors.length===0;
+    b.title=hex; b.addEventListener('click',()=>{ setColor(hex); closePop(); }); recentColorsEl.appendChild(b); });
+  recentRow.hidden = recentColors.length===0;
 }
-// preset dots
+// preset dots — inserted before the static custom picker + eyedropper (Pad order)
 COLORS.forEach(col=>{ const b=document.createElement('button'); b.type='button'; b.className='color-dot'; b.style.background=col; b.dataset.color=col;
-  if(col==='#0e1017'||col==='#ffffff') b.style.borderColor='rgba(255,255,255,.28)';
-  b.addEventListener('click',()=>{ setColor(col); closePop(); }); colorGrid.appendChild(b); });
-// custom color picker (pad's markup)
-const customWrap=document.createElement('label'); customWrap.className='color-custom-wrap'; customWrap.title='Custom color';
-customWrap.innerHTML='<span class="color-dot color-custom" id="customColorBtn" style="background:#ff6b6b;"></span><span class="color-custom-badge">+</span><input type="color" id="customColorInput" value="#ff6b6b" aria-label="Custom color">';
-colorGrid.appendChild(customWrap);
-const customInput=customWrap.querySelector('input'); const customBtn=customWrap.querySelector('#customColorBtn');
+  if(col==='#000000') b.style.borderColor='#3a4150';
+  b.setAttribute('aria-label', col);
+  b.addEventListener('click',()=>{ setColor(col); closePop(); }); colorGroup.insertBefore(b, customWrap); });
+// custom color picker (static markup)
 customInput.addEventListener('input',e=>{ customBtn.style.background=e.target.value; setColor(e.target.value); });
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
 
-function openPop(){ colorPop.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); }
-function closePop(){ colorPop.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); }
-colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (colorPop.hidden?openPop:closePop)(); });
-document.addEventListener('click',e=>{ if(!colorPop.hidden && !e.target.closest('.color-tool')) closePop(); });
+// eyedropper — click to arm, then click the canvas to sample a pixel's colour
+function setPicking(v){ picking=v; eyedropperBtn.classList.toggle('picking',picking); pad.style.cursor = picking ? 'crosshair' : 'none';
+  if(picking) hideCursors(); }
+function sampleColorAt(e){
+  try{
+    const p=pos(e); const dx=Math.round(p.x*DPR), dy=Math.round(p.y*DPR);
+    const d=ctx.getImageData(dx,dy,1,1).data;
+    if(d[3]>0){ const hex='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''); setColor(hex); addRecent(hex); }
+  }catch(_){ }
+  setPicking(false); closePop();
+}
+eyedropperBtn.addEventListener('click',e=>{ e.stopPropagation(); setPicking(!picking); });
+
+function openPop(){ drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); }
+function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); }
+colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (drawPanel.hidden?openPop:closePop)(); });
+document.addEventListener('click',e=>{ if(!drawPanel.hidden && !e.target.closest('.color-tool')) closePop(); });
 renderRecent(); setColor(color);
-const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal');
-function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%'); sizeVal.textContent=sizeEl.value; }
+const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
+function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');
+  sizeVal.textContent=sizeEl.value+'px';
+  const d=Math.min(+sizeEl.value,26); if(brushDot){ brushDot.style.width=d+'px'; brushDot.style.height=d+'px'; } }
 sizeEl.addEventListener('input',()=>{ size=+sizeEl.value; sizeFill(); });
 function undoStroke(){
   if(playing) return;
@@ -561,8 +641,8 @@ function redoStroke(){
   f.strokeGroups.push(item.count);
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
-document.getElementById('erase').addEventListener('click',e=>{ erasing=!erasing; e.currentTarget.classList.toggle('on',erasing);
-  pad.style.cursor = erasing ? 'none' : 'crosshair'; if(!erasing) eraserCursor.style.display='none'; });
+document.getElementById('erase').addEventListener('click',e=>{ if(picking) setPicking(false); erasing=!erasing; e.currentTarget.classList.toggle('on',erasing);
+  pad.style.cursor='none'; if(!erasing) eraserCursor.style.display='none'; else brushCursor.style.display='none'; });
 document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
 document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redoStroke(); });
 /* Clear is destructive → same two-tap armed pattern as frame delete. */
