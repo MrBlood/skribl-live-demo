@@ -29,9 +29,19 @@
   .onion-tool svg { width: 23px; height: 23px; }
   .onion-tool:hover { background: var(--surface-control-hover); color: var(--text-primary); }
   /* Level the three action controls to one height so the row lines up. */
-  .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .btn.flip-play { height: 34px; box-sizing: border-box; }
+  .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool, .flip-actions .btn.flip-play { height: 34px; box-sizing: border-box; }
   .flip-actions .btn.flip-play { padding-top: 0; padding-bottom: 0; }
   .onion-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+  .grid-tool { width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--surface-control); border: 1px solid var(--hairline-strong); }
+  .grid-tool svg { width: 20px; height: 20px; }
+  .grid-tool:hover { background: var(--surface-control-hover); color: var(--text-primary); }
+  .grid-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+  /* Grid overlay — a non-destructive alignment guide over the canvas (not saved, hidden while flipping). */
+  .flip-grid { position: absolute; inset: 0; pointer-events: none; display: none; border-radius: var(--r-frame); overflow: hidden;
+    background-image: linear-gradient(rgba(255,255,255,.13) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.13) 1px, transparent 1px);
+    background-size: 12.5% 16.667%; }
+  .flip-grid.on { display: block; }
+  body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
   .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
     pointer-events: none; display: none; transform: translate(-50%,-50%); z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
@@ -135,35 +145,49 @@
     opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
   .flip-chip.show { opacity: 1; }
 
-  /* Mobile: keep the header on one line — onion goes icon-only. */
-  @media (max-width: 560px) {
+  /* ---------- Responsive header ----------
+     Two circle toggles + fps + Flip-it + back + info + wordmark is a lot for a
+     phone, so tiers shed width progressively. */
+  /* Wordmark: FLIP MODE only with real room, else FLIP, else FM. */
+  @media (max-width: 640px) {
+    .flip-word .fw-full { display: none; }
+    .flip-word .fw-mid { display: inline; }
     .flip-word { font-size: 15px; letter-spacing: .08em; }
-    .fw-full { display: none; } .fw-mid { display: inline; }
+  }
+  /* Mobile chrome: Flip-it collapses to its icon; tighter header. */
+  @media (max-width: 560px) {
     .flip-play span { display: none; }
     .btn.flip-play { min-width: 0; padding: 9px 12px; }
-    .flip-app .header { padding: 12px 12px; }
-    .flip-actions { gap: 5px; }
-    .flip-app .header { gap: 6px; }
-    .flip-actions .seg button { padding: 5px 6px; }
-    .fps-label { font-size: 10px; }
-    .fps-group { gap: 5px; }
-    .flip-app .header { padding: 11px 8px; margin: 7px; }
+    .flip-app .header { padding: 11px 8px; margin: 7px; gap: 6px; }
     .flip-lead { gap: 4px; }
-    .flip-info-btn { width: 26px; height: 26px; }
     .flip-lead .icon-btn { width: 32px; height: 32px; }
+    .flip-info-btn { width: 26px; height: 26px; }
+    .flip-actions { gap: 5px; }
+    .fps-group { gap: 5px; }
     .flip-actions .seg button { padding: 5px 5px; }
-    .onion-tool { width: 36px; height: 36px; border-radius: 50%; }
-    .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .btn.flip-play { height: 36px; }
+    .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool, .flip-actions .btn.flip-play { height: 33px; }
+    .onion-tool, .grid-tool { width: 33px; }
+    .onion-tool svg, .grid-tool svg { width: 20px; height: 20px; }
     .flip-hint { display: none; }
   }
-  /* Narrowest tier — FM. Placed last so it overrides the FLIP rule at <=360. */
-  @media (max-width: 360px) {
-    .flip-word .fw-full, .flip-word .fw-mid { display: none; }
-    .flip-word .fw-min { display: inline; }
+  /* Tight controls + drop the fps LABEL (info panel + tooltip still explain it)
+     so FLIP plus both toggles fit down to ~361px. */
+  @media (max-width: 440px) {
+    .fps-label { display: none; }
+    .fps-group { gap: 0; }
+    .flip-actions .onion-tool, .flip-actions .grid-tool { width: 31px; height: 31px; }
+    .flip-actions .seg, .flip-actions .btn.flip-play { height: 31px; }
+    .onion-tool svg, .grid-tool svg { width: 19px; height: 19px; }
     .flip-actions .seg button { padding: 5px 4px; }
     .flip-actions { gap: 4px; }
     .flip-app .header { gap: 5px; padding: 11px 7px; }
-    .fps-group { gap: 4px; }
+  }
+  /* Narrowest — FM wordmark + extra squeeze for ~320px phones. */
+  @media (max-width: 360px) {
+    .flip-word .fw-mid { display: none; }
+    .flip-word .fw-min { display: inline; }
+    .flip-actions { gap: 3px; }
+    .flip-app .header { padding: 11px 6px; gap: 4px; }
   }
 </style>
 </head>
@@ -178,7 +202,7 @@
       </div>
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
-        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button>
+        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><button type="button" id="gridBtn" class="tool-open grid-tool" role="switch" aria-checked="false" title="Grid overlay" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button>
         <button type="button" class="btn flip-play" id="play">
           <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
           <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
@@ -190,7 +214,7 @@
     <div class="flip-stage">
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
-        <canvas id="pad"></canvas>
+        <canvas id="pad"></canvas><div class="flip-grid" id="flipGrid"></div>
       </div>
     </div>
 
@@ -219,6 +243,7 @@
         <dl>
           <dt>Draw</dt><dd>Sketch on the page. Tap the color dot to open the palette — presets, a <b>+</b> custom picker, and your recent colors (shared with the Pad). Set size with the slider, or use the eraser.</dd>
           <dt>Add pages</dt><dd><b>&#65291; Page</b> copies the current page so you can tweak it; <b>&#65291; Blank</b> starts empty.</dd>
+          <dt>Grid</dt><dd>The grid button overlays alignment guides on the canvas — a drawing aid only (never saved, hidden while flipping).</dd>
           <dt>Onion skin</dt><dd>The onion toggle shows the previous page faintly underneath, so you can trace the motion.</dd>
           <dt>Flip it</dt><dd>Plays the pages in a loop at your chosen speed — <b>6 / 12 / 24</b> frames per second.</dd>
           <dt>Move around</dt><dd>Tap a page in the strip, or use <b>&#8592;</b> / <b>&#8594;</b> to step between pages.</dd>
@@ -552,6 +577,9 @@ document.getElementById('clear').addEventListener('click',e=>{
   try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){ }
   buildStrip(); render(); updateToolState();
 });
+const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
+let grid=false;
+gridBtn.addEventListener('click',()=>{ grid=!grid; gridBtn.classList.toggle('active',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); });
 const onionEl=document.getElementById('onion');
 function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
