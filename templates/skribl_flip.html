@@ -55,6 +55,9 @@
   .fps-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
   .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 92px; justify-content: center; }
   .btn.flip-play.playing { background: var(--surface-control); color: var(--text-primary); box-shadow: none; }
+  .flip-play .ico-stop { display: none; }
+  .flip-play.playing .ico-play { display: none; }
+  .flip-play.playing .ico-stop { display: inline-block; }
 
   /* Editor-style fitted canvas — never overflows. */
   .flip-stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
@@ -154,7 +157,9 @@
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
         <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button>
         <button type="button" class="btn flip-play" id="play">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg><span>Flip it</span>
+          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+          <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+          <span>Flip it</span>
         </button>
       </div>
     </div>
@@ -226,7 +231,7 @@ window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
-let color = "#ffffff", size = 7, erasing = false, onion = false, fps = 12;
+let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 let drawing = false, curCount = 0, playing = false, playTimer = null;
 let editIdx = 0, armedDel = -1, armedClear = false;
 
@@ -497,6 +502,7 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !infoOverlay.hidde
 
 /* ---- boot ---- */
 const restored = tryRestore();
+onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
 fitPad(); buildStrip(); render(); sizeFill();
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
