@@ -125,6 +125,7 @@ let _autoArmedThisStroke = false;
 let recording = false;
 let playing = false;
 let scrubbing = false, lastTargetMs = 0;   // v84 scrub state (used by stopPlayback)
+let frameIndex = 0;   // Phase 1: current frame. Always 0 until Flip Mode adds frames.
 let recorded = false;
 let hasContent = false;
 // Post-record rule (Option B): once a recording is finished, the canvas is
@@ -3738,47 +3739,101 @@ function refreshPendingCards() {
   }
 }
 
-function serializeSkribl() {
-  // Snapshot whatever is currently on the canvas as the base layer.
-  // This captures drawing done before recording, and drawing that was
-  // never recorded at all — the strokes array only holds recorded strokes.
+// ===========================================================================
+// Frame model (Phase 1: frame-aware core)
+// A Skribl is a list of frames; a classic record/replay Skribl is a 1-frame
+// Skribl. Phase 1 lands the model + a single normalize-on-read canonicalizer so
+// every past Skribl stays valid, with NO change to the pad's behaviour. Live
+// editing still runs on the existing globals (= the current frame); multi-frame
+// editing arrives in Phase 2 using these same capture/load paths.
+// ===========================================================================
+
+// Build a Frame object from whatever is live on the canvas right now. (Same field
+// logic serializeSkribl has always used — a frame IS the pad's drawing state.)
+function captureCurrentFrame() {
   let baseSnapshot = null;
   try {
-    if (hasContent && strokes.length === 0) {
-      // Un-recorded drawing: the canvas pixels are the only record of it
-      baseSnapshot = canvas.toDataURL();
-    } else if (preRecordSnapshot) {
-      // Recorded on top of earlier drawing: keep that earlier layer
-      baseSnapshot = preRecordSnapshot;
-    }
-  } catch (e) {
-    baseSnapshot = null;
-  }
-
+    if (hasContent && strokes.length === 0) baseSnapshot = canvas.toDataURL();
+    else if (preRecordSnapshot) baseSnapshot = preRecordSnapshot;
+  } catch (e) { baseSnapshot = null; }
   return {
-    version: 1,
-    draftId: 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-    userId: null,               // server stamps this later
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    title: 'Untitled Skribl',
-    baseSnapshot: baseSnapshot,
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
+    baseSnapshot: baseSnapshot,
     background: { color: bgColor },
-    canvasSize: (() => {
-      // The authored logical size (backing store in CSS px), NOT the fitted
-      // display rect — otherwise a post made while rotated would record the
-      // shrunken display size and the player would misplace the strokes.
-      const lg = getCanvasLogicalSize();
-      return { cssWidth: Math.round(lg.width), cssHeight: Math.round(lg.height), dpr: window.devicePixelRatio || 1 };
-    })(),
     photo: photoBgImg && photoBgImg._draftData && photoBgImg.style.display !== 'none'
       ? { data: photoBgImg._draftData, name: photoBgImg._fileName || null, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : null,
     music: audioEl && audioEl._objectUrl && musicEnabled
       ? { data: audioEl._draftData || null, name: audioEl._fileName || null, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
       : null
+  };
+}
+
+// Canonicalize ANY Skribl payload — legacy (frame-less) or new (frames[]) — into
+// one shape that always has frames[] AND mirrors the current frame's drawing
+// fields to the top level, so every existing reader keeps working untouched.
+// This is the single upgrade-on-read that sits in front of every deserialize.
+function normalizeSkribl(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+  let frames, playbackMode, fps;
+  if (Array.isArray(payload.frames) && payload.frames.length) {
+    frames = payload.frames;
+    playbackMode = payload.playbackMode || (frames.length > 1 ? 'flip' : 'replay');
+    fps = payload.fps || 12;
+  } else {
+    // Legacy Skribl: wrap the top-level drawing into a single frame.
+    frames = [{
+      strokes: payload.strokes || [],
+      strokeGroups: payload.strokeGroups || [],
+      baseSnapshot: payload.baseSnapshot || null,
+      background: payload.background || { color: bgColor },
+      photo: payload.photo || null,
+      music: payload.music || null
+    }];
+    playbackMode = 'replay';
+    fps = payload.fps || 12;
+  }
+  const f0 = frames[Math.min(frameIndex, frames.length - 1)] || frames[0];
+  return Object.assign({}, payload, {
+    schemaVersion: payload.schemaVersion || 2,
+    playbackMode: playbackMode,
+    fps: fps,
+    frames: frames,
+    // legacy top-level mirror of the current frame (keeps loadSkribl et al. intact)
+    strokes: f0.strokes || [],
+    strokeGroups: f0.strokeGroups || [],
+    baseSnapshot: f0.baseSnapshot != null ? f0.baseSnapshot : (payload.baseSnapshot || null),
+    background: f0.background || payload.background || { color: bgColor },
+    photo: f0.photo != null ? f0.photo : (payload.photo || null),
+    music: f0.music != null ? f0.music : (payload.music || null)
+  });
+}
+
+function serializeSkribl() {
+  // A frame captures the live drawing (base layer + recorded strokes + media).
+  // Frame-format: the drawing lives under frames[] only — no legacy top-level
+  // mirror — so the payload stays lean (no duplicated photo/audio blobs). Every
+  // reader goes through normalizeSkribl(), which surfaces frame 0 on read.
+  const frame = captureCurrentFrame();
+  return {
+    version: 2,             // format marker: drawing lives under frames[]
+    schemaVersion: 2,
+    playbackMode: 'replay', // 1 frame ⇒ timed replay
+    fps: null,              // replay Skribls don't use fps
+    frames: [ frame ],
+    draftId: 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    userId: null,               // server stamps this later
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    title: 'Untitled Skribl',
+    canvasSize: (() => {
+      // The authored logical size (backing store in CSS px), NOT the fitted
+      // display rect — otherwise a post made while rotated would record the
+      // shrunken display size and the player would misplace the strokes.
+      const lg = getCanvasLogicalSize();
+      return { cssWidth: Math.round(lg.width), cssHeight: Math.round(lg.height), dpr: window.devicePixelRatio || 1 };
+    })()
   };
 }
 
@@ -4071,7 +4126,9 @@ function resetMediaForLoad() {
 }
 
 function loadSkribl(data) {
-  if (!data || data.version == null) { showToast('That file isn\'t a valid draft', menuBtn); return; }
+  // Validate the raw payload has a recognizable format marker, THEN canonicalize.
+  if (!data || (data.version == null && data.schemaVersion == null && !data.frames)) { showToast('That file isn\'t a valid draft', menuBtn); return; }
+  data = normalizeSkribl(data);
   clearCanvas();
   resetMediaForLoad();
 
@@ -5219,7 +5276,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
       createdAt: new Date().toISOString(),
       title: payload.title,
       caption: payload.caption,
-      hasAudio: !!(payload.music && payload.music.data),
+      hasAudio: !!((normalizeSkribl(payload).music) || {}).data,
       skribl: payload
     };
     try {
@@ -5635,8 +5692,13 @@ function showPlayerError(msg) {
   }
 
   // Accept the wrapper { ..., skribl } or a bare serializeSkribl() object.
-  const data = post && post.skribl ? post.skribl : post;
-  if (!data || data.version == null) { showPlayerError('This Skribl looks invalid.'); return; }
+  const raw = post && post.skribl ? post.skribl : post;
+  // Valid if it carries a format marker: legacy (version) or frame-format (schemaVersion/frames).
+  if (!raw || (raw.version == null && raw.schemaVersion == null && !raw.frames)) { showPlayerError('This Skribl looks invalid.'); return; }
+  // Canonicalize so every downstream read is uniform.
+  const data = normalizeSkribl(raw);
+  // Valid if it's a legacy Skribl (version) OR a frame-format one (schemaVersion/frames).
+  if (!data || (data.version == null && data.schemaVersion == null && !data.frames)) { showPlayerError('This Skribl looks invalid.'); return; }
 
   document.body.classList.add('player-mode');
 
