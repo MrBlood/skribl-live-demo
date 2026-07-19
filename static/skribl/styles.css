@@ -2079,6 +2079,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .icon-btn svg { width: 18px; height: 18px; }
+/* Flip Mode entry point — an <a> styled as an icon button. */
+.flip-btn { text-decoration: none; }
+.flip-btn svg { width: 19px; height: 19px; }
 .icon-btn:active { transform: scale(0.94); }
 /* ---- Unified header-button hover (v90) --------------------------------------
    Goal: every header button lifts by the SAME subtle amount as Record always did,
