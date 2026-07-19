@@ -364,19 +364,61 @@
         <span class="draw-section-label">Background image</span>
         <div class="media-actions">
           <button type="button" id="photoChoose" class="flip-upload">Choose image…</button>
+          <button type="button" id="photoToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Show or hide image" hidden><span class="layer-toggle-knob"></span></button>
           <button type="button" id="photoRemove" class="clear-drawer-btn" hidden>Remove</button>
         </div>
-        <p class="flip-drawer-note">Fills the canvas behind your drawing — one image for the whole animation.</p>
+        <div id="photoDetail" hidden>
+          <div class="photo-fit-group" id="photoFitGroup">
+            <div class="photo-fit-slider" id="photoFitSlider"></div>
+            <button type="button" class="photo-fit-btn active" data-fit="cover">Fill</button><button type="button" class="photo-fit-btn" data-fit="contain">Fit</button><button type="button" class="photo-fit-btn" data-fit="fill">Stretch</button>
+          </div>
+          <button type="button" id="repositionBtn" class="reposition-btn" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+            <span>Reposition image</span>
+          </button>
+          <p class="reposition-hint" id="repositionHint" hidden>In Fill, drag the image on the canvas to choose which part shows behind your drawing.</p>
+          <div class="photo-opacity-row" id="photoZoomRow">
+            <span class="size-label slider-label">Zoom</span>
+            <input type="range" id="photoZoom" min="100" max="300" value="100" class="slider" aria-label="Image zoom">
+            <span id="photoZoomVal" class="size-label slider-val">100%</span>
+          </div>
+          <div class="photo-opacity-row">
+            <span class="size-label slider-label">Opacity</span>
+            <input type="range" id="photoOpacity" min="10" max="100" value="100" class="slider" aria-label="Image opacity">
+            <span id="photoOpacityVal" class="size-label slider-val">100%</span>
+          </div>
+          <div class="photo-opacity-row">
+            <span class="size-label slider-label">Blur</span>
+            <input type="range" id="photoBlur" min="0" max="20" value="0" class="slider" aria-label="Image blur">
+            <span id="photoBlurVal" class="size-label slider-val">0px</span>
+          </div>
+          <button type="button" id="resetPhotoBtn" class="panel-btn" style="margin-top:8px;width:100%">Reset adjustments</button>
+        </div>
+        <p class="flip-drawer-note" id="photoNote">Fills the canvas behind your drawing — one image for the whole animation.</p>
       </div>
       <!-- Music drawer (drop-up). One loop per animation. -->
       <div class="tab-panel draw-popout" id="musicPanel" role="dialog" aria-label="Music loop" hidden>
         <span class="draw-section-label">Music loop</span>
         <div class="media-actions">
           <button type="button" id="musicChoose" class="flip-upload">Choose audio…</button>
-          <button type="button" id="musicMuteBtn" class="clear-drawer-btn" hidden>Mute</button>
+          <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Turn music on or off" hidden><span class="layer-toggle-knob"></span></button>
           <button type="button" id="musicRemoveBtn" class="clear-drawer-btn" hidden>Remove</button>
         </div>
-        <p class="flip-drawer-note">Loops while you Flip — one track for the whole animation.</p>
+        <div id="musicDetailBox" hidden>
+          <div class="photo-opacity-row">
+            <span class="size-label slider-label">Start</span>
+            <input type="range" id="trimStartRange" min="0" max="100" value="0" step="0.05" class="slider" aria-label="Loop start">
+            <span id="trimStartVal" class="size-label slider-val">0:00</span>
+          </div>
+          <div class="photo-opacity-row">
+            <span class="size-label slider-label">End</span>
+            <input type="range" id="trimEndRange" min="0" max="100" value="100" step="0.05" class="slider" aria-label="Loop end">
+            <span id="trimEndVal" class="size-label slider-val">0:00</span>
+          </div>
+          <p class="flip-drawer-note" id="loopSummary">Loops the selected section while you Flip.</p>
+          <button type="button" id="matchDrawingBtn" class="panel-btn" style="width:100%">Match drawing time</button>
+        </div>
+        <p class="flip-drawer-note" id="musicNote">Loops while you Flip — one track for the whole animation.</p>
       </div>
     </div>
 
@@ -453,7 +495,7 @@ function syncGrid(){
   g.style.left = (pad.offsetLeft + b) + 'px'; g.style.top = (pad.offsetTop + b) + 'px';
   g.style.width = (pad.offsetWidth - 2*b) + 'px'; g.style.height = (pad.offsetHeight - 2*b) + 'px';
 }
-window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); positionToolSlider(); });
+window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); positionToolSlider(); if(!photoPanel.hidden) positionFitSlider(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
@@ -461,7 +503,10 @@ let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
 let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
 let bgImage = null, bgImageObj = null;                            // one background image per animation
+let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
+let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
+let musicEnabled = true, trimStart = 0, trimEnd = null, audioDuration = 0;   // trim/loop
 let drawing = false, curCount = 0, playing = false, playTimer = null;
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
@@ -481,6 +526,8 @@ function serializeFlip(){
     editIdx: idx,
     bgImage: bgImage || null,
     music: musicData || null,
+    photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled } : null,
+    musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd } : null,
     frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor }))
   };
 }
@@ -513,6 +560,18 @@ function applyPayload(d){
   if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
   bgImage  = (typeof d.bgImage === 'string' && d.bgImage.slice(0,10) === 'data:image') ? d.bgImage : null;
   musicData = (typeof d.music === 'string' && d.music.slice(0,10) === 'data:audio') ? d.music : null;
+  const ph = d.photo || {};
+  photoFit = ['cover','contain','fill'].includes(ph.fit) ? ph.fit : 'cover';
+  photoOpacity = typeof ph.opacity==='number' ? ph.opacity : 1;
+  photoBlur = typeof ph.blur==='number' ? ph.blur : 0;
+  photoZoom = typeof ph.zoom==='number' ? ph.zoom : 1;
+  photoOffX = typeof ph.offX==='number' ? ph.offX : 0.5;
+  photoOffY = typeof ph.offY==='number' ? ph.offY : 0.5;
+  photoEnabled = ph.enabled!==false; reposMode=false;
+  const mm = d.musicMeta || {};
+  musicEnabled = mm.enabled!==false;
+  trimStart = typeof mm.trimStart==='number' ? mm.trimStart : 0;
+  trimEnd = typeof mm.trimEnd==='number' ? mm.trimEnd : null;
   if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
     fps = d.fps;
     [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
@@ -584,22 +643,54 @@ const octx = onionCv.getContext('2d'); octx.scale(DPR,DPR);
 const tmpCv = document.createElement('canvas');
 tmpCv.width = CW*DPR; tmpCv.height = CH*DPR;
 const tctx = tmpCv.getContext('2d'); tctx.scale(DPR,DPR);
+// Frame layer: a frame's strokes are drawn here (transparent), then composited over
+// the backdrop — so the eraser (destination-out) reveals the background image/colour
+// instead of punching a hole. Shared by the live canvas, thumbnails, and export.
+const frameCv = document.createElement('canvas');
+frameCv.width = CW*DPR; frameCv.height = CH*DPR;
+const fctx = frameCv.getContext('2d'); fctx.scale(DPR,DPR);
+
+// Where the background image lands, honouring fit + zoom + reposition.
+function photoRect(iw, ih){
+  if (photoFit === 'fill') return { x:0, y:0, w:CW, h:CH };
+  let s = photoFit === 'contain' ? Math.min(CW/iw, CH/ih) : Math.max(CW/iw, CH/ih) * photoZoom;
+  const w = iw*s, h = ih*s;
+  const x = photoFit === 'contain' ? (CW-w)/2 : (CW-w)*photoOffX;
+  const y = photoFit === 'contain' ? (CH-h)/2 : (CH-h)*photoOffY;
+  return { x, y, w, h };
+}
+function drawBackdrop(c){
+  c.save();
+  c.fillStyle = bgColor; c.fillRect(0,0,CW,CH);
+  if (photoEnabled && bgImageObj && bgImageObj.complete && bgImageObj.naturalWidth){
+    const r = photoRect(bgImageObj.naturalWidth, bgImageObj.naturalHeight);
+    c.globalAlpha = photoOpacity;
+    if (photoBlur > 0) c.filter = 'blur(' + photoBlur + 'px)';
+    c.drawImage(bgImageObj, r.x, r.y, r.w, r.h);
+    c.filter = 'none'; c.globalAlpha = 1;
+  }
+  c.restore();
+}
+function paintFrame(c, strokes){ fctx.clearRect(0,0,CW,CH); paintStatic(fctx, strokes); c.drawImage(frameCv, 0, 0, CW, CH); }
 function render(){
   ctx.clearRect(0,0,CW,CH);
+  drawBackdrop(ctx);
   if(onion && !playing && idx>0){
-    octx.clearRect(0,0,CW,CH);
-    paintStatic(octx, frames[idx-1].strokes);     // full opacity on the layer
-    ctx.globalAlpha = 0.28;
-    ctx.drawImage(onionCv, 0, 0, CW, CH);          // one composite -> uniform ghost
-    ctx.globalAlpha = 1;
+    fctx.clearRect(0,0,CW,CH);
+    paintStatic(fctx, frames[idx-1].strokes);
+    ctx.globalAlpha = 0.28; ctx.drawImage(frameCv, 0, 0, CW, CH); ctx.globalAlpha = 1;
   }
-  paintStatic(ctx, frame().strokes);
+  paintFrame(ctx, frame().strokes);
 }
 
 /* ---- drawing (pad-format points, with timestamps for future replay) ---- */
 function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
+let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
 pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault(); disarmAll();
+  if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
+    reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
   if(picking){ sampleColorAt(e); return; }   // eyedropper: pick, don't draw
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; curCount=1; redoStack.length=0;
@@ -608,6 +699,10 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault();
   frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
+  if(reposActive){ e.preventDefault(); const r=pad.getBoundingClientRect();
+    photoOffX=Math.max(0,Math.min(1, reposStart.ox - (e.clientX-reposStart.x)/r.width));
+    photoOffY=Math.max(0,Math.min(1, reposStart.oy - (e.clientY-reposStart.y)/r.height));
+    render(); return; }
   if(!drawing) return; e.preventDefault();
   const raw=pos(e); lastRaw={x:raw.x,y:raw.y};
   let px, py;
@@ -616,7 +711,9 @@ pad.addEventListener('pointermove', e=>{
   curCount++; const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
   frame().strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
   render(); });
-function endStroke(){ if(!drawing) return;
+function endStroke(){
+  if(reposActive){ reposActive=false; refreshAllThumbs(); scheduleSave(); return; }
+  if(!drawing) return;
   // Settle: with smoothing on, the drawn point lags the finger — walk it to the real
   // release point so the stroke actually ends where the pen lifted.
   if(smoothingAlpha<1 && !erasing && smoothPt && lastRaw){
@@ -701,9 +798,9 @@ function buildStrip(){
   col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
   updateToolState();
 }
-function applyThumbBackdrop(cv){ cv.style.backgroundColor=bgColor; cv.style.backgroundImage = bgImage ? 'url("'+bgImage+'")' : 'none'; cv.style.backgroundSize='cover'; cv.style.backgroundPosition='center'; }
-function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; applyThumbBackdrop(cv); const c=cv.getContext('2d');
-  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); paintStatic(c,f.strokes); }
+function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent'; const c=cv.getContext('2d');
+  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); drawBackdrop(c); paintFrame(c, f.strokes); }
+function refreshAllThumbs(){ [...strip.children].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
 function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice() }; }
 function addFrame(copy){ disarmAll(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
@@ -824,8 +921,8 @@ function hideMusic(){ musicPanel.hidden=true; musicBtn.setAttribute('aria-expand
 function closeMediaDrawers(){ hidePhoto(); hideMusic(); }
 function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); requestAnimationFrame(positionSmoothSeg); }
 function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); }
-function openPhoto(){ closePop(); hideMusic(); syncMediaUI(); photoPanel.hidden=false; imageBtn.setAttribute('aria-expanded','true'); }
-function openMusic(){ closePop(); hidePhoto(); syncMediaUI(); musicPanel.hidden=false; musicBtn.setAttribute('aria-expanded','true'); }
+function openPhoto(){ closePop(); hideMusic(); photoPanel.hidden=false; imageBtn.setAttribute('aria-expanded','true'); syncMediaUI(); requestAnimationFrame(positionFitSlider); }
+function openMusic(){ closePop(); hidePhoto(); musicPanel.hidden=false; musicBtn.setAttribute('aria-expanded','true'); syncMediaUI(); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (drawPanel.hidden?openPop:closePop)(); });
 imageBtn.addEventListener('click',e=>{ e.stopPropagation(); (photoPanel.hidden?openPhoto:hidePhoto)(); });
 musicBtn.addEventListener('click',e=>{ e.stopPropagation(); (musicPanel.hidden?openMusic:hideMusic)(); });
@@ -852,15 +949,10 @@ function opacityFill(){ const v=+opacitySlider.value; opacitySlider.style.setPro
 opacitySlider.addEventListener('input',()=>{ strokeOpacity=(+opacitySlider.value)/100; opacityFill(); });
 opacityFill();
 
-/* ---- background: a CSS backdrop the eraser reveals; saved per frame for the Pad ---- */
+/* ---- background: painted into the canvas backdrop; the eraser reveals it ---- */
 const bgGroup=document.getElementById('bgGroup');
 const customBgInput=document.getElementById('customBgInput'), customBgBtn=document.getElementById('customBgBtn');
-function applyBg(){
-  pad.style.backgroundColor = bgColor;
-  pad.style.backgroundImage = bgImage ? 'url("'+bgImage+'")' : 'none';
-  pad.style.backgroundSize = 'cover'; pad.style.backgroundPosition = 'center';
-  [...strip.querySelectorAll('.frame canvas')].forEach(applyThumbBackdrop);
-}
+function applyBg(){ pad.style.backgroundColor = bgColor; pad.style.backgroundImage = 'none'; render(); refreshAllThumbs(); }
 function setBg(hex, fromCustom){
   if(!/^#[0-9a-f]{6}$/i.test(hex||'')) return;
   bgColor=hex; applyBg();
@@ -891,38 +983,37 @@ smoothSeg.addEventListener('click',e=>{ const b=e.target.closest('.smooth-btn');
    draft/autosave so they round-trip). Kept self-contained and lean.
    ===================================================================== */
 
-/* Render a full composited frame (bg colour, bg image cover-fit, strokes) onto an
-   arbitrary CW×CH context — the single source of truth for PNG + WebM export. */
-function coverRect(iw, ih){ const s=Math.max(CW/iw, CH/ih); const w=iw*s, h=ih*s; return { x:(CW-w)/2, y:(CH-h)/2, w, h }; }
-const _expLayer=document.createElement('canvas'); _expLayer.width=CW; _expLayer.height=CH; const _expCtx=_expLayer.getContext('2d');
-function drawFrameTo(c, f){
-  c.save(); c.fillStyle=bgColor; c.fillRect(0,0,CW,CH);
-  if(bgImageObj && bgImageObj.complete && bgImageObj.naturalWidth){
-    const r=coverRect(bgImageObj.naturalWidth, bgImageObj.naturalHeight);
-    c.drawImage(bgImageObj, r.x, r.y, r.w, r.h);
-  }
-  c.restore();
-  // strokes on their own transparent layer so the eraser reveals the backdrop
-  // (destination-out) instead of punching a hole through the exported frame.
-  _expCtx.clearRect(0,0,CW,CH);
-  paintStatic(_expCtx, f.strokes);
-  c.drawImage(_expLayer, 0, 0, CW, CH);
-}
+/* Composite a full frame (backdrop + strokes) onto a CW×CH context — used by both
+   PNG and WebM export. Same path as the live canvas and thumbnails. */
+function drawFrameTo(c, f){ drawBackdrop(c); paintFrame(c, f.strokes); }
 
 /* ---- background image ---- */
 const imageInput=document.getElementById('imageInput');
 function loadBgImageObj(cb){ if(!bgImage){ bgImageObj=null; if(cb)cb(); return; } const im=new Image(); im.onload=()=>{ bgImageObj=im; if(cb)cb(); }; im.onerror=()=>{ bgImageObj=null; if(cb)cb(); }; im.src=bgImage; }
-function setBgImage(dataURL){ bgImage=dataURL; loadBgImageObj(()=>{ applyBg(); render(); }); syncMediaUI(); scheduleSave(); }
-function removeBgImage(){ bgImage=null; bgImageObj=null; applyBg(); render(); syncMediaUI(); scheduleSave(); }
+function redrawAll(){ render(); refreshAllThumbs(); }
+function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false;
+  loadBgImageObj(()=>{ redrawAll(); }); syncMediaUI(); scheduleSave(); }
+function removeBgImage(){ bgImage=null; bgImageObj=null; reposMode=false; redrawAll(); syncMediaUI(); scheduleSave(); }
 imageInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
   const r=new FileReader(); r.onload=()=>setBgImage(String(r.result)); r.readAsDataURL(file); });
 
-/* ---- music loop ---- */
+/* ---- music loop (one loop per animation, optional trim) ---- */
 const musicInput=document.getElementById('musicInput');
-function ensureAudio(){ if(musicData && !audioEl){ audioEl=new Audio(musicData); audioEl.loop=true; } if(audioEl) audioEl.muted=musicMuted; }
-function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; ensureAudio(); syncMediaUI(); scheduleSave(); }
+function ensureAudio(){
+  if(musicData && !audioEl){
+    audioEl=new Audio(musicData); audioEl.loop=false;
+    audioEl.addEventListener('loadedmetadata',()=>{ audioDuration = isFinite(audioEl.duration)?audioEl.duration:0;
+      if(trimEnd==null || trimEnd>audioDuration) trimEnd = audioDuration;
+      syncMusicUI(); });
+    audioEl.addEventListener('timeupdate',()=>{ const end = trimEnd!=null?trimEnd:audioDuration;
+      if(end && audioEl.currentTime >= end - 0.02){ audioEl.currentTime = trimStart; } });
+  }
+  if(audioEl) audioEl.muted = musicMuted;
+}
+function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
+  musicEnabled=true; musicMuted=false; trimStart=0; trimEnd=null; audioDuration=0; ensureAudio(); syncMediaUI(); scheduleSave(); }
 function removeMusic(){ if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicData=null; syncMediaUI(); scheduleSave(); }
-function startMusic(){ ensureAudio(); if(audioEl && !musicMuted){ try{ audioEl.currentTime=0; audioEl.play().catch(()=>{}); }catch(_){}} }
+function startMusic(){ ensureAudio(); if(audioEl && musicEnabled && !musicMuted){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
 function stopMusic(){ if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
 musicInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
   const r=new FileReader(); r.onload=()=>setMusic(String(r.result)); r.readAsDataURL(file); });
@@ -982,27 +1073,83 @@ function exportWebM(){
 
 /* ---- menu open/close + item wiring + state sync ---- */
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
-const photoChoose=document.getElementById('photoChoose'), photoRemove=document.getElementById('photoRemove');
-const musicChoose=document.getElementById('musicChoose'), musicMuteBtn=document.getElementById('musicMuteBtn'), musicRemoveBtn=document.getElementById('musicRemoveBtn');
-function syncMediaUI(){
-  const hasImg=!!bgImage, hasMus=!!musicData;
-  photoRemove.hidden = !hasImg;
-  musicMuteBtn.hidden = !hasMus; musicRemoveBtn.hidden = !hasMus;
-  musicMuteBtn.textContent = musicMuted ? 'Unmute' : 'Mute';
+// --- media drawer controls ---
+const photoChoose=document.getElementById('photoChoose'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
+const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
+const photoFitGroup=document.getElementById('photoFitGroup'), photoFitSlider=document.getElementById('photoFitSlider');
+const repositionBtn=document.getElementById('repositionBtn'), repositionHint=document.getElementById('repositionHint');
+const photoZoomRow=document.getElementById('photoZoomRow'), photoZoomEl=document.getElementById('photoZoom'), photoZoomVal=document.getElementById('photoZoomVal');
+const photoOpacityEl=document.getElementById('photoOpacity'), photoOpacityVal=document.getElementById('photoOpacityVal');
+const photoBlurEl=document.getElementById('photoBlur'), photoBlurVal=document.getElementById('photoBlurVal');
+const resetPhotoBtn=document.getElementById('resetPhotoBtn');
+const musicChoose=document.getElementById('musicChoose'), musicToggle=document.getElementById('musicToggle'), musicRemoveBtn=document.getElementById('musicRemoveBtn');
+const musicDetailBox=document.getElementById('musicDetailBox'), musicNote=document.getElementById('musicNote'), loopSummary=document.getElementById('loopSummary');
+const trimStartRange=document.getElementById('trimStartRange'), trimStartVal=document.getElementById('trimStartVal');
+const trimEndRange=document.getElementById('trimEndRange'), trimEndVal=document.getElementById('trimEndVal');
+const matchDrawingBtn=document.getElementById('matchDrawingBtn');
+function fmtTime(s){ s=Math.max(0,s||0); const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
+function setFill(el){ const mn=+el.min,mx=+el.max; el.style.setProperty('--slider-fill', (mx>mn?((+el.value-mn)/(mx-mn)*100):0)+'%'); }
+function positionFitSlider(){ const a=photoFitGroup.querySelector('.photo-fit-btn.active'); if(!a||!photoFitSlider) return; photoFitSlider.style.width=a.offsetWidth+'px'; photoFitSlider.style.transform='translateX('+(a.offsetLeft-3)+'px)'; }
+
+function syncPhotoUI(){
+  const hasImg=!!bgImage;
   photoChoose.textContent = hasImg ? 'Replace image…' : 'Choose image…';
-  musicChoose.textContent = hasMus ? 'Replace audio…' : 'Choose audio…';
+  photoToggle.hidden=!hasImg; photoRemove.hidden=!hasImg; photoDetail.hidden=!hasImg; photoNote.hidden=hasImg;
+  photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   imageBtn.classList.toggle('has-media', hasImg);
-  musicBtn.classList.toggle('has-media', hasMus);
+  [...photoFitGroup.querySelectorAll('.photo-fit-btn')].forEach(b=>b.classList.toggle('active', b.dataset.fit===photoFit));
+  const isCover = photoFit==='cover';
+  photoZoomRow.style.display = isCover ? '' : 'none';
+  repositionBtn.style.display = isCover ? '' : 'none';
+  if(!isCover){ reposMode=false; }
+  repositionBtn.classList.toggle('active', reposMode); repositionBtn.setAttribute('aria-pressed', String(reposMode));
+  repositionHint.hidden = !reposMode;
+  photoZoomEl.value=Math.round(photoZoom*100); photoZoomVal.textContent=Math.round(photoZoom*100)+'%'; setFill(photoZoomEl);
+  photoOpacityEl.value=Math.round(photoOpacity*100); photoOpacityVal.textContent=Math.round(photoOpacity*100)+'%'; setFill(photoOpacityEl);
+  photoBlurEl.value=photoBlur; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl);
+  positionFitSlider();
 }
+function syncMusicUI(){
+  const hasMus=!!musicData;
+  musicChoose.textContent = hasMus ? 'Replace audio…' : 'Choose audio…';
+  musicToggle.hidden=!hasMus; musicRemoveBtn.hidden=!hasMus; musicDetailBox.hidden=!hasMus; musicNote.hidden=hasMus;
+  musicToggle.classList.toggle('on', musicEnabled); musicToggle.setAttribute('aria-checked', String(musicEnabled));
+  musicBtn.classList.toggle('has-media', hasMus);
+  if(hasMus && audioDuration>0){
+    const end = trimEnd!=null?trimEnd:audioDuration;
+    trimStartRange.max=audioDuration.toFixed(2); trimEndRange.max=audioDuration.toFixed(2);
+    trimStartRange.value=trimStart; trimEndRange.value=end;
+    setFill(trimStartRange); setFill(trimEndRange);
+    trimStartVal.textContent=fmtTime(trimStart); trimEndVal.textContent=fmtTime(end);
+    loopSummary.textContent='Loop: '+fmtTime(trimStart)+' → '+fmtTime(end)+' · '+Math.max(0,end-trimStart).toFixed(1)+'s (plays while you Flip)';
+  } else if(hasMus){ loopSummary.textContent='Reading audio…'; }
+}
+function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); }
+
+// image controls
+photoChoose.addEventListener('click',()=>imageInput.click());
+photoRemove.addEventListener('click',()=>removeBgImage());
+photoToggle.addEventListener('click',()=>{ photoEnabled=!photoEnabled; redrawAll(); syncPhotoUI(); scheduleSave(); });
+photoFitGroup.addEventListener('click',e=>{ const b=e.target.closest('.photo-fit-btn'); if(!b) return; photoFit=b.dataset.fit; redrawAll(); syncPhotoUI(); scheduleSave(); });
+repositionBtn.addEventListener('click',()=>{ if(photoFit!=='cover') return; reposMode=!reposMode; syncPhotoUI(); });
+photoZoomEl.addEventListener('input',()=>{ photoZoom=(+photoZoomEl.value)/100; photoZoomVal.textContent=photoZoomEl.value+'%'; setFill(photoZoomEl); redrawAll(); scheduleSave(); });
+photoOpacityEl.addEventListener('input',()=>{ photoOpacity=(+photoOpacityEl.value)/100; photoOpacityVal.textContent=photoOpacityEl.value+'%'; setFill(photoOpacityEl); redrawAll(); scheduleSave(); });
+photoBlurEl.addEventListener('input',()=>{ photoBlur=+photoBlurEl.value; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl); redrawAll(); scheduleSave(); });
+resetPhotoBtn.addEventListener('click',()=>{ photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false; photoEnabled=true; redrawAll(); syncPhotoUI(); scheduleSave(); });
+
+// music controls
+musicChoose.addEventListener('click',()=>musicInput.click());
+musicRemoveBtn.addEventListener('click',()=>removeMusic());
+musicToggle.addEventListener('click',()=>{ musicEnabled=!musicEnabled; if(!musicEnabled) stopMusic(); else if(playing) startMusic(); syncMusicUI(); scheduleSave(); });
+trimStartRange.addEventListener('input',()=>{ let v=+trimStartRange.value; const end=trimEnd!=null?trimEnd:audioDuration; if(v>end-0.2) v=Math.max(0,end-0.2); trimStart=v; syncMusicUI(); scheduleSave(); });
+trimEndRange.addEventListener('input',()=>{ let v=+trimEndRange.value; if(v<trimStart+0.2) v=trimStart+0.2; trimEnd=v; syncMusicUI(); scheduleSave(); });
+matchDrawingBtn.addEventListener('click',()=>{ const dur=frames.length/fps; if(!audioDuration){ return; } if(trimStart+dur<=audioDuration){ trimEnd=trimStart+dur; } else { trimStart=Math.max(0,audioDuration-dur); trimEnd=audioDuration; } syncMusicUI(); scheduleSave(); });
+
+// overflow menu (save/load/export)
 function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
 function closeMenu(){ moreMenu.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
-photoChoose.addEventListener('click',()=>imageInput.click());
-photoRemove.addEventListener('click',()=>removeBgImage());
-musicChoose.addEventListener('click',()=>musicInput.click());
-musicMuteBtn.addEventListener('click',()=>{ musicMuted=!musicMuted; if(audioEl) audioEl.muted=musicMuted; if(musicMuted) stopMusic(); else if(playing) startMusic(); syncMediaUI(); });
-musicRemoveBtn.addEventListener('click',()=>removeMusic());
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
 document.getElementById('miPng').addEventListener('click',()=>{ closeMenu(); exportPNG(); });
