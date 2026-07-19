@@ -123,7 +123,13 @@
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   /* Image / music drop-up drawers. */
-  .media-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .media-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+  /* The shared .layer-toggle is display:none until it's inside a .music-dropzone.loaded
+     box (the Pad's markup). Flip puts it straight in the action row, so reveal it here. */
+  .media-actions .layer-toggle { display: inline-block; }
+  .media-actions .layer-toggle[hidden] { display: none; }
+  .media-actions .flip-upload { flex: 0 0 auto; }
+  .media-actions .clear-drawer-btn { margin-left: auto; }
   .flip-upload { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     border: 1px solid transparent; background: var(--accent); color: #fff; font: inherit; font-size: 13px; font-weight: 600;
     padding: 9px 14px; border-radius: 10px; cursor: pointer; box-shadow: 0 3px 12px var(--accent-glow); }
@@ -1089,7 +1095,9 @@ const trimEndRange=document.getElementById('trimEndRange'), trimEndVal=document.
 const matchDrawingBtn=document.getElementById('matchDrawingBtn');
 function fmtTime(s){ s=Math.max(0,s||0); const m=Math.floor(s/60), ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
 function setFill(el){ const mn=+el.min,mx=+el.max; el.style.setProperty('--slider-fill', (mx>mn?((+el.value-mn)/(mx-mn)*100):0)+'%'); }
-function positionFitSlider(){ const a=photoFitGroup.querySelector('.photo-fit-btn.active'); if(!a||!photoFitSlider) return; photoFitSlider.style.width=a.offsetWidth+'px'; photoFitSlider.style.transform='translateX('+(a.offsetLeft-3)+'px)'; }
+function positionFitSlider(){ const btns=[...photoFitGroup.querySelectorAll('.photo-fit-btn')]; const a=photoFitGroup.querySelector('.photo-fit-btn.active');
+  if(!a||!btns.length||!photoFitSlider||!a.offsetWidth) return;
+  photoFitSlider.style.width=a.offsetWidth+'px'; photoFitSlider.style.transform='translateX('+(a.offsetLeft-btns[0].offsetLeft)+'px)'; }
 
 function syncPhotoUI(){
   const hasImg=!!bgImage;
