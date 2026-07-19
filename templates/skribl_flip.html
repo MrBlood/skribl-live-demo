@@ -41,7 +41,7 @@
      as before), a medium split (16x12), and a fine small split (32x24), each
      fainter than the level above so the hierarchy reads at a glance. Big is listed
      first so its lines win where all three coincide. */
-  .flip-grid { position: absolute; inset: 0; pointer-events: none; display: none; border-radius: var(--r-frame); overflow: hidden;
+  .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; border-radius: var(--r-frame); overflow: hidden;
     background-image:
       linear-gradient(to left, rgba(255,255,255,.22) 1px, transparent 1px),
       linear-gradient(to top,  rgba(255,255,255,.22) 1px, transparent 1px),
@@ -374,6 +374,15 @@ function fitPad(){
   const scale = Math.max(0.1, Math.min(availW/CW, availH/CH, 1.4));
   pad.style.width = Math.round(CW*scale)+'px';
   pad.style.height = Math.round(CH*scale)+'px';
+  syncGrid();
+}
+// Pin the grid overlay to the canvas's actual rendered box (offsetWidth/Height
+// include the 1px border) instead of trusting the wrapper's size, so it always
+// covers the whole canvas edge-to-edge no matter how the flex wrapper sizes.
+function syncGrid(){
+  const g = document.getElementById('flipGrid'); if(!g) return;
+  g.style.left = pad.offsetLeft + 'px'; g.style.top = pad.offsetTop + 'px';
+  g.style.width = pad.offsetWidth + 'px'; g.style.height = pad.offsetHeight + 'px';
 }
 window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); });
 
@@ -794,7 +803,7 @@ document.getElementById('clear').addEventListener('click',e=>{
 });
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
-gridBtn.addEventListener('click',()=>{ grid=!grid; gridBtn.classList.toggle('active',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); });
+gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.classList.toggle('active',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); });
 const onionEl=document.getElementById('onion');
 function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
