@@ -7,7 +7,7 @@
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='96') }}">
 <style>
-  body.flip-app { overflow: hidden; }
+  body.flip-app { overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .vis-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   /* Kill double-tap-to-zoom on taps (iOS ignores user-scalable=no). "manipulation"
      keeps tap/scroll/pinch but drops the double-tap zoom + 300ms tap delay. The
@@ -17,7 +17,7 @@
   .flip-app .layer-toggle, .flip-app .color-current, .flip-app .tab-panel, .flip-app .strip,
   .flip-app .t-btn, .flip-app .tool-btn, .flip-app .nudge-btn, .flip-app .loop-btn,
   .flip-app .zoom-mag-btn, .flip-app .slider-nudge-btn { touch-action: manipulation; }
-  .flip-app .app { height: 100dvh; }
+  .flip-app .app { min-height: 100dvh; height: auto; }
   .flip-app .header { gap: 8px; justify-content: flex-start; }
 
   /* Wordmark: just FLIP (logo/Skribl removed to free room on mobile). */
@@ -99,7 +99,7 @@
   .flip-play.playing .ico-stop { display: inline-block; }
 
   /* Editor-style fitted canvas — never overflows. */
-  .flip-stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
+  .flip-stage { flex: 0 0 auto; height: 52vh; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
   .flip-wrap { position: relative; line-height: 0; }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
     border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
@@ -124,19 +124,11 @@
     transition: transform .12s var(--spring); }
   .color-current:hover { transform: scale(1.06); }
   .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent); }
-  /* Drawers are bottom sheets: pinned to the bottom edge of the screen, sliding up
-     from below, full-width (capped + centered), scrollable, with a grabber. Same
-     idea as the Pad's docked panels, but anchored to the very bottom on mobile. */
-  .draw-popout.tab-panel { position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; z-index: 60;
-    width: 100%; max-width: 680px; box-sizing: border-box; max-height: 72vh; overflow-y: auto; overflow-x: hidden;
-    border-radius: 20px 20px 0 0; border-bottom: 0;
-    padding-top: 26px; padding-bottom: max(16px, env(safe-area-inset-bottom));
-    box-shadow: 0 -18px 46px rgba(0,0,0,.55); }
-  .draw-popout.tab-panel::before { content: ""; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    width: 40px; height: 4px; border-radius: 999px; background: var(--hairline-strong); }
-  /* Dimmed scrim behind an open sheet; tapping it closes (handled by outside-click). */
-  body.flip-app.drawer-open::after { content: ""; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.4);
-    -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
+  /* Drawers are normal in-flow blocks living in .flip-drawers, directly below the
+     toolbar. Opening one doesn't move or cover the canvas — the page just grows and
+     scrolls to reveal it, exactly like the Pad's docked tab panels. */
+  .flip-drawers { width: 100%; }
+  .draw-popout.tab-panel { position: static; box-sizing: border-box; }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   /* Image / music drop-up drawers. */
@@ -307,8 +299,12 @@
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
       <button class="tool-open" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
       <button class="tool-open" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
-      <!-- The Pad editor's Draw menu, in full, reusing the shared design-system
-           classes. Floats up over the canvas, spanning the tools row. -->
+    </div>
+
+    <!-- Drawers open BELOW the toolbar in normal flow: the canvas above stays
+         untouched at full size, and the page scrolls to reveal the opened drawer
+         (exactly like the Pad's docked tab panels). -->
+    <div class="flip-drawers" id="flipDrawers">
       <div class="tab-panel draw-popout" id="drawPanel" role="dialog" aria-label="Colors and brush" hidden>
           <div class="color-section">
             <span class="draw-section-label">Color</span>
@@ -572,6 +568,16 @@ function fitPad(){
   pad.style.height = Math.round(CH*scale)+'px';
   syncGrid();
 }
+// Give the canvas stage a stable height = viewport minus the fixed chrome (header,
+// toolbar, chip, strip). Drawers live in .flip-drawers (not measured here), so an
+// opened drawer never changes this — the canvas stays untouched and the page scrolls.
+function sizeStage(){
+  const stage = document.querySelector('.flip-stage');
+  const px = sel => { const el=document.querySelector(sel); return el?el.offsetHeight:0; };
+  const used = px('.header') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30;
+  stage.style.height = Math.max(220, window.innerHeight - used) + 'px';
+  fitPad();
+}
 // Pin the grid overlay to the canvas's actual rendered box (offsetWidth/Height
 // include the 1px border) instead of trusting the wrapper's size, so it always
 // covers the whole canvas edge-to-edge no matter how the flex wrapper sizes.
@@ -581,7 +587,7 @@ function syncGrid(){
   g.style.left = (pad.offsetLeft + b) + 'px'; g.style.top = (pad.offsetTop + b) + 'px';
   g.style.width = (pad.offsetWidth - 2*b) + 'px'; g.style.height = (pad.offsetHeight - 2*b) + 'px';
 }
-window.addEventListener('resize', ()=>{ fitPad(); positionSeg(); positionToolSlider(); if(!photoPanel.hidden) positionFitSlider(); });
+window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); if(!photoPanel.hidden) positionFitSlider(); });
 
 let frames = [ newFrame() ];
 let idx = 0;
@@ -1012,8 +1018,12 @@ const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElement
 function hidePhoto(){ photoPanel.hidden=true; imageBtn.classList.remove('open'); imageBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
 function hideMusic(){ musicPanel.hidden=true; musicBtn.classList.remove('open'); musicBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
 function closeMediaDrawers(){ hidePhoto(); hideMusic(); }
-function updateScrim(){ const anyOpen = !drawPanel.hidden || !photoPanel.hidden || !musicPanel.hidden; document.body.classList.toggle('drawer-open', anyOpen); }
-function refitDrawer(){ updateScrim(); requestAnimationFrame(()=>{ if(currentAudioBuffer && !musicPanel.hidden) requestZoomWaveformDraw(); }); }
+function refitDrawer(){
+  const open = !drawPanel.hidden ? drawPanel : (!photoPanel.hidden ? photoPanel : (!musicPanel.hidden ? musicPanel : null));
+  if(!open) return;
+  requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(_){ open.scrollIntoView(); }
+    if(currentAudioBuffer && open===musicPanel) requestZoomWaveformDraw(); });
+}
 function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); refitDrawer(); requestAnimationFrame(positionSmoothSeg); }
 function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); refitDrawer(); }
 function openPhoto(){ closePop(); hideMusic(); photoPanel.hidden=false; imageBtn.classList.add('open'); imageBtn.setAttribute('aria-expanded','true'); syncMediaUI(); refitDrawer(); requestAnimationFrame(positionFitSlider); }
@@ -1523,13 +1533,13 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !infoOverlay.hidde
 /* ---- boot ---- */
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
-fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor);
+sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();
 if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') setCrossfadeUI(); }
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
-window.addEventListener('load', ()=>{ fitPad(); positionSeg(); positionToolSlider(); });
+window.addEventListener('load', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); });
 </script>
 </body>
 </html>
