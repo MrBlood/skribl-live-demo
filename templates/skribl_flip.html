@@ -145,6 +145,10 @@
   .draw-popout.tab-panel { position: static; box-sizing: border-box; }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
+  .drawer-actions { gap: 8px; }
+  .clear-undo-btn { color: var(--accent-bright); border-color: rgba(124,92,255,.4); }
+  .clear-undo-btn[hidden] { display: none; }
+  @media (hover:hover) { .clear-undo-btn:hover { background: rgba(124,92,255,.14); border-color: var(--accent); } }
   /* Image / music drop-up drawers. */
   .media-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
   /* The shared .layer-toggle is display:none until it's inside a .music-dropzone.loaded
@@ -433,6 +437,10 @@
               <button type="button" id="clear" class="clear-drawer-btn" title="Delete the whole animation">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 <span id="clearLabel">Clear animation</span>
+              </button>
+              <button type="button" id="clearUndo" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
+                <span>Undo</span>
               </button>
             </div>
           </div>
@@ -1536,6 +1544,7 @@ function loadDraftFile(file){
       if(!d || !Array.isArray(d.frames) || !d.frames.length){ chip('Not a valid Skribl'); return; }
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       const ok=applyPayload(d);            // sets frames/bgColor/bgImage/musicData/fps directly
+      clearBackup=null; const _cu=document.getElementById('clearUndo'); if(_cu) _cu.hidden=true;
       loadBgImageObj(()=>{ applyBg(); render(); });
       ensureAudio();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
@@ -2034,6 +2043,7 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
 document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
 document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redoStroke(); });
 /* Delete-all lives in the draw menu now; destructive → same two-tap arm as frame delete. */
+let clearBackup=null;   // full-animation snapshot so a Clear-all can be undone
 document.getElementById('clear').addEventListener('click',e=>{
   if(playing) return;
   const empty = frames.length===1 && frames[0].strokes.length===0;
@@ -2041,9 +2051,21 @@ document.getElementById('clear').addEventListener('click',e=>{
   const lbl=document.getElementById('clearLabel');
   if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear all'; e.currentTarget.title='Tap again to delete the whole animation'; return; }
   armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear animation'; e.currentTarget.title='Delete the whole animation';
+  clearBackup = { frames: frames.map(deepCopy), idx: idx };   // remember everything for undo
   frames=[newFrame()]; idx=0; redoStack.length=0;
   try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){ }
   buildStrip(); render(); updateToolState();
+  const cu=document.getElementById('clearUndo'); if(cu) cu.hidden=false;
+});
+document.getElementById('clearUndo').addEventListener('click',()=>{
+  if(!clearBackup) return;
+  disarmAll();
+  frames = clearBackup.frames.map(deepCopy);
+  idx = Math.min(clearBackup.idx, frames.length-1);
+  clearBackup=null; redoStack.length=0;
+  document.getElementById('clearUndo').hidden=true;
+  buildStrip(); render(); updateToolState(); scheduleSave();
+  chip('Animation restored');
 });
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
