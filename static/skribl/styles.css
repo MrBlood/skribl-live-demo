@@ -1035,7 +1035,10 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   opacity: 0;
 }
 
-.drawer-actions { display: flex; }
+.drawer-actions { display: flex; gap: 8px; }
+.clear-undo-btn { color: var(--accent-bright); border-color: rgba(124, 92, 255, 0.4); }
+.clear-undo-btn:disabled { opacity: 0.4; cursor: default; color: var(--text-dim); border-color: var(--hairline); }
+.clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--accent); }
 .clear-drawer-btn {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
