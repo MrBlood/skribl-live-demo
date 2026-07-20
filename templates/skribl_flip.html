@@ -104,6 +104,22 @@
   .zoom-layer { position: relative; line-height: 0; transform-origin: 0 0; will-change: transform; }
   .zoom-layer.zoom-anim { transition: transform .18s cubic-bezier(.22,.61,.36,1); }
   body.playing .zoom-hud { display: none; }
+  /* Playback control bar (Pad player controls): appears over the canvas bottom while flipping */
+  .flip-player { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 7;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 11px 15px;
+    background: rgba(9,11,16,.74); border: 1px solid var(--hairline); border-radius: 18px;
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 34px rgba(0,0,0,.55);
+    opacity: 0; transition: opacity .2s var(--spring); pointer-events: none; }
+  .flip-player.show { opacity: 1; pointer-events: auto; }
+  .flip-player[hidden] { display: none; }
+  .flip-player .player-progress { width: 264px; max-width: 68vw; }
+  .flip-player .player-btn { width: 40px; height: 40px; }
+  .flip-player .player-btn svg { width: 18px; height: 18px; }
+  .flip-player .player-btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
+  .flip-player .player-btn.active { color: var(--accent-bright); border-color: var(--accent); background: rgba(124,92,255,.14); }
+  #flipPlayPause .ico-p-play { display: none; }
+  #flipPlayPause.paused .ico-p-pause { display: none; }
+  #flipPlayPause.paused .ico-p-play { display: block; }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
     border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
@@ -287,6 +303,15 @@
           <div id="zoomVal" class="zoom-val" aria-live="polite">100%</div>
           <button type="button" id="zoomOutBtn" class="zoom-btn" aria-label="Zoom out">&minus;</button>
           <button type="button" id="zoomFitBtn" class="zoom-fit" title="Fit to screen" aria-label="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+        </div>
+      </div>
+      <div class="flip-player" id="flipPlayer" hidden>
+        <div class="player-progress" id="flipProgress" role="slider" aria-label="Scrub frames" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" id="flipProgressFill"></div></div>
+        <div class="player-controls">
+          <button type="button" class="player-btn" id="flipRestartBtn" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+          <button type="button" class="player-btn primary" id="flipPlayPause" aria-label="Pause"><svg class="ico-p-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><svg class="ico-p-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+          <button type="button" class="player-btn" id="flipLoopBtn" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
+          <button type="button" class="player-btn" id="flipMuteBtn" aria-label="Mute" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
         </div>
       </div>
     </div>
@@ -1050,26 +1075,50 @@ function updateToolState(){
   redoB.disabled = redoStack.length === 0;
   redoB.style.opacity = redoB.disabled ? .38 : 1;
 }
+const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
+const flipRestartBtn=document.getElementById('flipRestartBtn'), flipPlayPause=document.getElementById('flipPlayPause'), flipLoopBtn=document.getElementById('flipLoopBtn'), flipMuteBtn=document.getElementById('flipMuteBtn');
+let looping=true, paused=false, scrubbingFrames=false, playI=0;
+function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%'; }
+function playStep(){ if(scrubbingFrames || paused) return;
+  if(!looping && playI>=frames.length){ stop(); return; }
+  idx=playI%frames.length; render(); updatePlayProgress();
+  liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; playI++;
+}
+function runPlayTimer(){ clearInterval(playTimer); playStep(); playTimer=setInterval(playStep, 1000/fps); }
 function play(){
   if(frames.length<2 || playing) return;
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
-  playing=true; document.body.classList.add('playing');
+  playing=true; paused=false; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
-  startMusic();
-  let i=0;
-  const step=()=>{ idx=i%frames.length; render(); liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; i++; };
-  step(); playTimer=setInterval(step, 1000/fps);
+  flipMuteBtn.hidden=!musicData; flipPlayPause.classList.remove('paused');
+  if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
+  startMusic(); playI=idx; runPlayTimer();
 }
 function stop(){
-  playing=false; document.body.classList.remove('playing');
+  playing=false; paused=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
-  clearInterval(playTimer);
-  stopMusic();
+  clearInterval(playTimer); playTimer=null; stopMusic(); scrubbingFrames=false;
+  if(flipPlayer){ flipPlayer.classList.remove('show'); flipPlayer.hidden=true; }
   idx = Math.min(editIdx, frames.length-1);
   buildStrip(); render();
 }
+function pausePlay(){ if(!playing || paused) return; paused=true; clearInterval(playTimer); playTimer=null; stopMusic(); flipPlayPause.classList.add('paused'); flipPlayPause.setAttribute('aria-label','Play'); }
+function resumePlay(){ if(!playing || !paused) return; paused=false; flipPlayPause.classList.remove('paused'); flipPlayPause.setAttribute('aria-label','Pause'); startMusic(); runPlayTimer(); }
 playBtn.addEventListener('click',()=> playing?stop():play());
+flipPlayPause.addEventListener('click',()=>{ paused ? resumePlay() : pausePlay(); });
+flipRestartBtn.addEventListener('click',()=>{ playI=0; idx=0; render(); updatePlayProgress(); liveBadge.textContent='\u25B6 1 / '+frames.length; });
+flipLoopBtn.classList.add('active'); flipLoopBtn.setAttribute('aria-pressed','true');   // loop on by default
+flipLoopBtn.addEventListener('click',()=>{ looping=!looping; flipLoopBtn.classList.toggle('active',looping); flipLoopBtn.setAttribute('aria-pressed',String(looping)); });
+flipMuteBtn.addEventListener('click',()=>{ musicMuted=!musicMuted; flipMuteBtn.classList.toggle('active',musicMuted); flipMuteBtn.setAttribute('aria-pressed',String(musicMuted));
+  if(musicMuted) stopMusic(); else if(playing && !paused) startMusic(); });
+// scrub through frames
+function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1))); playI=idx; render(); updatePlayProgress(); liveBadge.textContent='\u25B6 '+(idx+1)+' / '+n; }
+flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
+flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
+function endFrameScrub(){ scrubbingFrames=false; }
+flipProgress.addEventListener('pointerup',endFrameScrub);
+flipProgress.addEventListener('pointercancel',endFrameScrub);
 
 /* ---- tools: the Pad editor's Draw menu (colors + brush), wired to Flip state ---- */
 const colorCurrent=document.getElementById('colorCurrent');
