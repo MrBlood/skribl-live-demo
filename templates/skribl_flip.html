@@ -115,11 +115,11 @@
     transition: transform .12s var(--spring); }
   .color-current:hover { transform: scale(1.06); }
   .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent); }
-  /* The shared .tab-panel drawer opens upward over the lower canvas, spanning the
-     tools row (bounded by left/right insets so it can never overflow the viewport,
-     and floating so it never resizes the canvas). Same margins as the Pad drawer. */
-  .draw-popout.tab-panel { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 10px); margin: 0; z-index: 40;
-    max-height: calc(100dvh - 130px); overflow-y: auto; overflow-x: hidden; }
+  /* Drawers dock BELOW the toolbar (like the Pad) — a full-width row that wraps
+     under the tool buttons and pushes the canvas smaller, rather than floating up
+     over it. fitPad() re-runs on open/close so the canvas resizes to fit. */
+  .draw-popout.tab-panel { order: 9; flex: 0 0 100%; width: 100%; box-sizing: border-box; margin: 8px auto 0;
+    max-width: 640px; max-height: 42vh; overflow-y: auto; overflow-x: hidden; }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   /* Image / music drop-up drawers. */
@@ -990,13 +990,14 @@ eyedropperBtn.addEventListener('click',e=>{ e.stopPropagation(); setPicking(!pic
 
 const photoPanel=document.getElementById('photoPanel'), musicPanel=document.getElementById('musicPanel');
 const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElementById('musicBtn');
-function hidePhoto(){ photoPanel.hidden=true; imageBtn.classList.remove('open'); imageBtn.setAttribute('aria-expanded','false'); }
-function hideMusic(){ musicPanel.hidden=true; musicBtn.classList.remove('open'); musicBtn.setAttribute('aria-expanded','false'); }
+function hidePhoto(){ photoPanel.hidden=true; imageBtn.classList.remove('open'); imageBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
+function hideMusic(){ musicPanel.hidden=true; musicBtn.classList.remove('open'); musicBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
 function closeMediaDrawers(){ hidePhoto(); hideMusic(); }
-function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); requestAnimationFrame(positionSmoothSeg); }
-function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); }
-function openPhoto(){ closePop(); hideMusic(); photoPanel.hidden=false; imageBtn.classList.add('open'); imageBtn.setAttribute('aria-expanded','true'); syncMediaUI(); requestAnimationFrame(positionFitSlider); }
-function openMusic(){ closePop(); hidePhoto(); musicPanel.hidden=false; musicBtn.classList.add('open'); musicBtn.setAttribute('aria-expanded','true'); syncMediaUI(); }
+function refitDrawer(){ requestAnimationFrame(()=>{ fitPad(); if(currentAudioBuffer) requestZoomWaveformDraw(); }); }
+function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); refitDrawer(); requestAnimationFrame(positionSmoothSeg); }
+function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); refitDrawer(); }
+function openPhoto(){ closePop(); hideMusic(); photoPanel.hidden=false; imageBtn.classList.add('open'); imageBtn.setAttribute('aria-expanded','true'); syncMediaUI(); refitDrawer(); requestAnimationFrame(positionFitSlider); }
+function openMusic(){ closePop(); hidePhoto(); musicPanel.hidden=false; musicBtn.classList.add('open'); musicBtn.setAttribute('aria-expanded','true'); syncMediaUI(); refitDrawer(); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (drawPanel.hidden?openPop:closePop)(); });
 imageBtn.addEventListener('click',e=>{ e.stopPropagation(); (photoPanel.hidden?openPhoto:hidePhoto)(); });
 musicBtn.addEventListener('click',e=>{ e.stopPropagation(); (musicPanel.hidden?openMusic:hideMusic)(); });
@@ -1289,7 +1290,7 @@ function updateZoomHandles(){
   zoomHandleStart.hidden=!(startPct>=-2&&startPct<=102); zoomHandleEnd.hidden=!(endPct>=-2&&endPct<=102);
 }
 let zoomDrawPending=false;
-function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; drawZoomWaveform(); }); }
+function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; if(currentAudioBuffer) drawWaveform(currentAudioBuffer); drawZoomWaveform(); }); }
 function drawWaveform(audioBuffer){
   const rect=musicTrack.getBoundingClientRect(); waveformCanvas.width=rect.width; waveformCanvas.height=rect.height;
   const data=audioBuffer.getChannelData(0); const samples=waveformCanvas.width||1; const blockSize=Math.max(1,Math.floor(data.length/samples));
