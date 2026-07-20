@@ -198,6 +198,7 @@ let lastPos = null;
 let preRecordSnapshot = null;
 let undoStack = [];
 let redoStack = [];
+let clearBackup = null;   // snapshot so "Clear drawing" can be undone (the stack is wiped on clear)
 
 // --- More-tools state (opacity, smoothing, eyedropper, recent colors) ---
 let strokeOpacity = 1;    // 0.1..1 — baked into the pen color as rgba() per point
@@ -928,8 +929,10 @@ function stopPicking() {
       }
       clearTimeout(armTimer);
       disarm();
+      const _clearSnap = hasContent ? makeHistoryState() : null;
       clearCanvas();
       if (typeof clearAutosave === 'function') clearAutosave();
+      clearBackup = _clearSnap; updateClearUndoBtn();
     });
   }
 
@@ -1168,7 +1171,25 @@ function clearCanvas() {
   const matchLabel = document.getElementById('matchDrawingLabel');
   if (matchLabel) matchLabel.textContent = '';
   if (ZoomView) ZoomView.fit();
+  clearBackup = null;                       // a fresh clear/reset invalidates any prior undo snapshot
+  if (typeof updateClearUndoBtn === 'function') updateClearUndoBtn();
 }
+
+// "Clear drawing" wipes the undo stack, so a normal undo can't bring it back.
+// Snapshot before clearing (in the button handler) and let this restore it.
+function updateClearUndoBtn() { const b = document.getElementById('clearUndoBtn'); if (b) b.disabled = !clearBackup; }
+function restoreClear() {
+  if (!clearBackup) return;
+  const { width: cw, height: ch } = getCanvasLogicalSize();
+  ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, cw, ch); ctx.drawImage(clearBackup.image, 0, 0, cw, ch); ctx.restore();
+  strokes = clearBackup.strokes.slice();
+  strokeGroups = clearBackup.strokeGroups.slice();
+  syncStateAfterHistoryChange(clearBackup.hasContent);
+  clearBackup = null; updateClearUndoBtn();
+  if (typeof showToast === 'function') showToast('Drawing restored', null);
+}
+(function () { const b = document.getElementById('clearUndoBtn'); if (b) b.addEventListener('click', restoreClear); })();
 
 function stopPlayback() {
   playing = false;
