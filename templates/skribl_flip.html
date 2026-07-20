@@ -103,16 +103,6 @@
   .flip-wrap { position: relative; line-height: 0; overflow: hidden; border-radius: var(--r-frame); }
   .zoom-layer { position: relative; line-height: 0; transform-origin: 0 0; will-change: transform; }
   .zoom-layer.zoom-anim { transition: transform .18s cubic-bezier(.22,.61,.36,1); }
-  .zoom-hud { position: absolute; top: 12px; right: 18px; z-index: 6; display: inline-flex; align-items: center; gap: 2px;
-    background: rgba(9,11,16,.74); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 3px;
-    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
-  .zoom-hud .zh-btn { width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: transparent;
-    color: var(--text-secondary); border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .zoom-hud .zh-btn:hover { background: rgba(255,255,255,.06); color: var(--text-primary); }
-  .zoom-hud .zh-btn:disabled { opacity: .35; cursor: default; }
-  .zoom-hud .zh-val { min-width: 40px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-primary);
-    font-variant-numeric: tabular-nums; }
-  .zoom-hud .zh-fit { color: var(--accent-bright); }
   body.playing .zoom-hud { display: none; }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
     border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
@@ -291,12 +281,13 @@
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
         <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><div class="flip-grid" id="flipGrid"></div></div>
-      </div>
-      <div class="zoom-hud" id="zoomHud" aria-label="Zoom">
-        <button type="button" class="zh-btn" id="zoomOutBtn" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <span class="zh-val" id="zoomVal">100%</span>
-        <button type="button" class="zh-btn" id="zoomInBtn" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button type="button" class="zh-btn zh-fit" id="zoomFitBtn" aria-label="Fit to screen"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <div id="zoomHud" class="zoom-hud" data-corner="br" hidden>
+          <div id="zoomGrip" class="zoom-grip" title="Drag to move" aria-label="Move zoom controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg></div>
+          <button type="button" id="zoomInBtn" class="zoom-btn" aria-label="Zoom in">+</button>
+          <div id="zoomVal" class="zoom-val" aria-live="polite">100%</div>
+          <button type="button" id="zoomOutBtn" class="zoom-btn" aria-label="Zoom out">&minus;</button>
+          <button type="button" id="zoomFitBtn" class="zoom-fit" title="Fit to screen" aria-label="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+        </div>
       </div>
     </div>
 
@@ -316,6 +307,7 @@
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
+      <button type="button" class="tool-open magnify-tool" id="magnifyBtn" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
       <button class="tool-open" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
       <button class="tool-open" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
     </div>
@@ -899,6 +891,7 @@ function _touchMid(a,b){ const r=document.querySelector('.flip-wrap').getBoundin
   return { x:(a.clientX+b.clientX)/2 - r.left, y:(a.clientY+b.clientY)/2 - r.top }; }
 function beginPinch(e){
   if(playing || reposMode || !ZoomView) return;
+  if(ZoomView.enabled && !ZoomView.enabled()) ZoomView.enable();   // pinch turns the magnifier on
   if(!e.touches || e.touches.length<2) return;
   if(e.cancelable) e.preventDefault();
   abortStrokeForPinch(); pinching=true;
@@ -922,31 +915,78 @@ window.addEventListener('touchend', _pinchEnd);
 window.addEventListener('touchcancel', _pinchEnd);
 
 (function initCanvasZoom(){
-  const layer=document.getElementById('zoomLayer'), wrap=document.querySelector('.flip-wrap');
-  if(!layer || !wrap) return;
-  const MIN=1, MAX=4, STEP=0.5; let zoom=1, panX=0, panY=0;
-  function wrapSize(){ return { w: layer.offsetWidth||1, h: layer.offsetHeight||1 }; }
+  const layer=document.getElementById('zoomLayer'), hud=document.getElementById('zoomHud'), flipWrap=document.querySelector('.flip-wrap');
+  if(!layer || !hud || !flipWrap) return;
+  const MIN=1, MAX=4, STEP=0.5; let zoom=1, panX=0, panY=0, magnifyOn=false;
+  function wrapSize(){ const r=flipWrap.getBoundingClientRect(); return { w:r.width||1, h:r.height||1 }; }
   function clampPan(){ const {w,h}=wrapSize(); panX=Math.min(0,Math.max(w*(1-zoom),panX)); panY=Math.min(0,Math.max(h*(1-zoom),panY)); if(zoom<=1){panX=0;panY=0;} }
   function paint(animate){ clampPan(); layer.classList.toggle('zoom-anim',!!animate);
     layer.style.transform = zoom===1 ? '' : 'translate('+panX+'px,'+panY+'px) scale('+zoom+')';
-    const v=document.getElementById('zoomVal'); if(v) v.textContent=Math.round(zoom*100)+'%';
-    const zin=document.getElementById('zoomInBtn'), zout=document.getElementById('zoomOutBtn'), zfit=document.getElementById('zoomFitBtn');
-    if(zin) zin.disabled=zoom>=MAX-0.001; if(zout) zout.disabled=zoom<=MIN+0.001; if(zfit) zfit.disabled=zoom<=MIN+0.001;
+    const v=document.getElementById('zoomVal'); if(v && !v.querySelector('input')) v.textContent=Math.round(zoom*100)+'%';
+    hud.classList.toggle('zoomed', zoom>1.001);
+    const zin=document.getElementById('zoomInBtn'), zout=document.getElementById('zoomOutBtn');
+    if(zin) zin.disabled=zoom>=MAX-0.001; if(zout) zout.disabled=zoom<=MIN+0.001;
     pad.style.cursor = zoom>1.001 ? 'crosshair' : '';
     if(animate) setTimeout(()=>layer.classList.remove('zoom-anim'),200);
   }
   ZoomView={
-    isZoomed:()=>zoom>1.001,
+    isZoomed:()=>zoom>1.001, enabled:()=>magnifyOn, enable(){ if(!magnifyOn) setMagnify(true); },
+    get:()=>({zoom,panX,panY}),
     zoomAt(factor,cx,cy){ const nz=Math.min(MAX,Math.max(MIN,zoom*factor)); if(nz===zoom) return; const coordX=(cx-panX)/zoom, coordY=(cy-panY)/zoom; panX=cx-coordX*nz; panY=cy-coordY*nz; zoom=nz; paint(false); },
     panBy(dx,dy){ panX+=dx; panY+=dy; paint(false); },
     step(dir){ const {w,h}=wrapSize(); this.zoomAt((Math.min(MAX,Math.max(MIN,zoom+dir*STEP)))/zoom, w/2, h/2); paint(true); },
     fit(){ zoom=1; panX=0; panY=0; paint(true); },
+    setPct(pct){ const s=wrapSize(); const target=Math.min(MAX,Math.max(MIN,(pct||0)/100)); this.zoomAt(target/zoom, s.w/2, s.h/2); paint(true); },
     reclamp(){ paint(false); }
   };
   document.getElementById('zoomInBtn').addEventListener('click',()=>ZoomView.step(1));
   document.getElementById('zoomOutBtn').addEventListener('click',()=>ZoomView.step(-1));
   document.getElementById('zoomFitBtn').addEventListener('click',()=>ZoomView.fit());
-  wrap.addEventListener('wheel',(e)=>{ if(!(e.ctrlKey||e.metaKey)) return; e.preventDefault(); const r=wrap.getBoundingClientRect(); ZoomView.zoomAt(e.deltaY<0?1.12:0.89, e.clientX-r.left, e.clientY-r.top); }, {passive:false});
+  const magnifyBtn=document.getElementById('magnifyBtn');
+  function setMagnify(on){ magnifyOn=on; hud.hidden=!on; if(magnifyBtn){ magnifyBtn.classList.toggle('active',on); magnifyBtn.setAttribute('aria-pressed', on?'true':'false'); } if(!on) ZoomView.fit(); }
+  if(magnifyBtn) magnifyBtn.addEventListener('click',()=>setMagnify(!magnifyOn));
+  // click the % to type an exact zoom
+  const valEl=document.getElementById('zoomVal'); valEl.title='Click to type a zoom %';
+  valEl.addEventListener('click',()=>{ if(valEl.querySelector('input')) return; const cur=Math.round(zoom*100); valEl.textContent='';
+    const inp=document.createElement('input'); inp.type='text'; inp.inputMode='numeric'; inp.setAttribute('enterkeyhint','done'); inp.maxLength=4; inp.className='zoom-val-input'; inp.value=String(cur); valEl.appendChild(inp);
+    const backdrop=document.createElement('div'); backdrop.className='zoom-edit-backdrop'; flipWrap.appendChild(backdrop); inp.focus(); inp.select(); let done=false;
+    function commit(apply){ if(done) return; done=true; if(backdrop.parentNode) backdrop.remove(); const n=apply?parseInt(inp.value,10):NaN; if(!isNaN(n)){ ZoomView.setPct(n); } else { if(inp.parentNode) inp.remove(); paint(false); } }
+    backdrop.addEventListener('pointerdown',e=>{ e.preventDefault(); commit(true); });
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(true); } else if(e.key==='Escape'){ e.preventDefault(); commit(false); } });
+    inp.addEventListener('blur',()=>commit(true));
+  });
+  window.addEventListener('resize',()=>{ if(zoom>1) paint(false); });
+  // grip: drag the pill, dock to the nearest corner
+  const grip=document.getElementById('zoomGrip'); let snapEl=null, dragging=false, grabDX=0, grabDY=0;
+  function corners(){ const r=flipWrap.getBoundingClientRect(); const pw=hud.offsetWidth, ph=hud.offsetHeight, m=12;
+    return { tl:{key:'tl',x:m,y:m}, tr:{key:'tr',x:r.width-pw-m,y:m}, bl:{key:'bl',x:m,y:r.height-ph-m}, br:{key:'br',x:r.width-pw-m,y:r.height-ph-m} }; }
+  function nearestCorner(x,y){ const c=corners(); let best=null,bd=Infinity; for(const k in c){ const d=Math.hypot(x-c[k].x,y-c[k].y); if(d<bd){bd=d;best=c[k];} } return best; }
+  function ptr(ev){ const t=ev.touches?ev.touches[0]:ev; return {x:t.clientX,y:t.clientY}; }
+  function gripStart(ev){ ev.preventDefault(); ev.stopPropagation(); const r=hud.getBoundingClientRect(), wrapR=flipWrap.getBoundingClientRect(), p=ptr(ev);
+    grabDX=p.x-r.left; grabDY=p.y-r.top; dragging=true; hud.classList.add('dragging');
+    hud.style.right='auto'; hud.style.bottom='auto'; hud.style.left=(r.left-wrapR.left)+'px'; hud.style.top=(r.top-wrapR.top)+'px';
+    snapEl=document.createElement('div'); snapEl.className='zoom-snap'; snapEl.style.height=hud.offsetHeight+'px'; flipWrap.appendChild(snapEl);
+    if(ev.type==='mousedown'){ window.addEventListener('mousemove',gripMove); window.addEventListener('mouseup',gripEnd); }
+    else { window.addEventListener('touchmove',gripMove,{passive:false}); window.addEventListener('touchend',gripEnd); window.addEventListener('touchcancel',gripEnd); } }
+  function gripMove(ev){ if(!dragging) return; ev.preventDefault(); const wrapR=flipWrap.getBoundingClientRect(), p=ptr(ev);
+    let x=Math.max(0,Math.min(wrapR.width-hud.offsetWidth, p.x-wrapR.left-grabDX)), y=Math.max(0,Math.min(wrapR.height-hud.offsetHeight, p.y-wrapR.top-grabDY));
+    hud.style.left=x+'px'; hud.style.top=y+'px'; const near=nearestCorner(x,y); if(snapEl){ snapEl.style.left=near.x+'px'; snapEl.style.top=near.y+'px'; } }
+  function gripEnd(){ if(!dragging) return; dragging=false; hud.classList.remove('dragging');
+    const x=parseFloat(hud.style.left)||0, y=parseFloat(hud.style.top)||0, near=nearestCorner(x,y);
+    hud.style.left=''; hud.style.top=''; hud.style.right=''; hud.style.bottom=''; hud.setAttribute('data-corner',near.key);
+    if(snapEl){ snapEl.remove(); snapEl=null; }
+    window.removeEventListener('mousemove',gripMove); window.removeEventListener('mouseup',gripEnd); window.removeEventListener('touchmove',gripMove); window.removeEventListener('touchend',gripEnd); window.removeEventListener('touchcancel',gripEnd); }
+  grip.addEventListener('mousedown',gripStart); grip.addEventListener('touchstart',gripStart,{passive:false});
+  // wheel pans while zoomed (Shift → horizontal)
+  flipWrap.addEventListener('wheel',(e)=>{ if(zoom<=1) return; e.preventDefault(); let dx=e.deltaX, dy=e.deltaY; if(e.shiftKey && dx===0){ dx=dy; dy=0; } panX-=dx; panY-=dy; paint(false); }, {passive:false});
+  // hold Space and drag to grab-pan (desktop)
+  let spaceHeld=false, spaceDragging=false, lastX=0, lastY=0;
+  function typingTarget(el){ return el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.isContentEditable); }
+  window.addEventListener('keydown',(e)=>{ if(e.code==='Space' && !typingTarget(e.target)){ spaceHeld=true; if(zoom>1){ e.preventDefault(); flipWrap.style.cursor=spaceDragging?'grabbing':'grab'; } } });
+  window.addEventListener('keyup',(e)=>{ if(e.code==='Space'){ spaceHeld=false; spaceDragging=false; flipWrap.style.cursor=''; } });
+  flipWrap.addEventListener('mousedown',(e)=>{ if(spaceHeld && zoom>1){ spaceDragging=true; lastX=e.clientX; lastY=e.clientY; flipWrap.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
+  window.addEventListener('mousemove',(e)=>{ if(!spaceDragging) return; panX+=e.clientX-lastX; panY+=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; paint(false); });
+  window.addEventListener('mouseup',()=>{ if(spaceDragging){ spaceDragging=false; flipWrap.style.cursor=spaceHeld?'grab':''; } });
   paint(false);
 })();
 
@@ -1224,10 +1264,61 @@ function removeMusic(){ if(typeof stopLoopPreview==='function') stopLoopPreview(
   try{ waveformCtx.clearRect(0,0,waveformCanvas.width,waveformCanvas.height); zoomWaveformCtx.clearRect(0,0,zoomWaveformCanvas.width,zoomWaveformCanvas.height); }catch(_){}
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
   syncMediaUI(); scheduleSave(); }
-function startMusic(){ ensureAudio(); if(audioEl && musicEnabled && !musicMuted){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
-function stopMusic(){ if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
+function startMusic(){ if(!musicEnabled || musicMuted) return;
+  if(startWebAudioLoop()) return;                               // gapless path
+  ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
+function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
 musicInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
   musicName=file.name||''; const r=new FileReader(); r.onload=()=>setMusic(String(r.result)); r.readAsDataURL(file); });
+
+/* ---- gapless + crossfaded loop engine (Web Audio, ported from the Pad) --------
+   Plays the trimmed [trimStart,trimEnd] region as an AudioBufferSourceNode with
+   loop=true — scheduled on the audio hardware clock, so it's sample-accurate and
+   never clicks or drifts. With a crossfade set, the loop's tail is equal-power
+   folded over its head so the wrap is two originally-adjacent samples (smooth). */
+let _waLoopSource=null, _waLoopStartCtx=0, _waLoopDuration=0;
+function buildLoopChannels(buffer, startFrame, frames, xfadeFrames){
+  const numCh=buffer.numberOfChannels, outLen=frames-xfadeFrames, channels=[];
+  for(let c=0;c<numCh;c++){ const src=buffer.getChannelData(c), o=new Float32Array(outLen);
+    for(let i=0;i<outLen;i++){ let s=src[startFrame+i]||0;
+      if(i<xfadeFrames){ const t=i/xfadeFrames, wIn=Math.sin(t*Math.PI/2), wOut=Math.cos(t*Math.PI/2), tail=src[startFrame+i+outLen]||0; s=s*wIn+tail*wOut; }
+      o[i]=s; }
+    channels.push(o); }
+  return { channels, frames: outLen };
+}
+function buildLoopAudioBuffer(){
+  if(!currentAudioBuffer || !audioCtx) return null;
+  const sr=currentAudioBuffer.sampleRate;
+  const ls=Math.max(0, trimStart||0), le=Math.min(currentAudioBuffer.duration, (trimEnd!=null?trimEnd:currentAudioBuffer.duration));
+  if(le-ls<0.05) return null;
+  const startFrame=Math.floor(ls*sr), endFrame=Math.min(currentAudioBuffer.length, Math.floor(le*sr)), frames=endFrame-startFrame;
+  if(frames<=0) return null;
+  const numCh=currentAudioBuffer.numberOfChannels;
+  const xfadeFrames=Math.min(Math.floor((loopCrossfadeMs/1000)*sr), Math.floor(frames/2));
+  let channels, outLen;
+  if(loopCrossfadeMs>0 && xfadeFrames>0){ const built=buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames); channels=built.channels; outLen=built.frames; }
+  else { outLen=frames; channels=[]; for(let c=0;c<numCh;c++) channels.push(currentAudioBuffer.getChannelData(c).subarray(startFrame, startFrame+frames)); }
+  const out=audioCtx.createBuffer(numCh, outLen, sr);
+  for(let c=0;c<numCh;c++) out.getChannelData(c).set(channels[c]);
+  return out;
+}
+function stopWebAudioLoop(){ if(_waLoopSource){ try{_waLoopSource.stop();}catch(e){} try{_waLoopSource.disconnect();}catch(e){} _waLoopSource=null; } }
+function startWebAudioLoop(){
+  if(!audioCtx || !currentAudioBuffer) return false;
+  const buf=buildLoopAudioBuffer(); if(!buf) return false;
+  stopWebAudioLoop();
+  if(audioCtx.state==='suspended'){ try{ audioCtx.resume(); }catch(e){} }
+  const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true; src.loopStart=0; src.loopEnd=buf.duration;
+  src.connect(audioCtx.destination);
+  try{ src.start(); }catch(e){ return false; }
+  _waLoopSource=src; _waLoopStartCtx=audioCtx.currentTime; _waLoopDuration=buf.duration; return true;
+}
+// Current playback position inside [trimStart,trimEnd], whichever engine is live.
+function loopPosition(){
+  if(_waLoopSource && _waLoopDuration>0 && audioCtx){ const e=((audioCtx.currentTime-_waLoopStartCtx)%_waLoopDuration); return trimStart+e; }
+  if(audioEl) return audioEl.currentTime;
+  return trimStart;
+}
 
 /* ---- save / load draft as a .skribl file (same format the Pad reads) ---- */
 function saveDraft(){
@@ -1504,14 +1595,28 @@ function setLoopToDrawingLength(){ if(!audioEl || !(audioDuration>0)) return; co
 matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 
 // preview loop + test seam (seek-based on the <audio> element)
-let previewingLoop=false, previewLoopTimer=null, seamStopTimer=null;
-function stopLoopPreview(){ previewingLoop=false; if(audioEl && !playing){ try{audioEl.pause();}catch(_){}} if(previewLoopTimer) clearInterval(previewLoopTimer); if(seamStopTimer) clearTimeout(seamStopTimer); previewLoopTimer=null; seamStopTimer=null; if(playhead) playhead.hidden=true; if(zoomPlayhead) zoomPlayhead.hidden=true; if(previewLoopBtn) previewLoopBtn.textContent='Preview Loop'; }
-function previewTick(){ if(!previewingLoop||!audioEl) return; if(audioEl.currentTime>=trimEnd-0.05){ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); } const st=audioEl.currentTime;
+let previewingLoop=false, previewLoopTimer=null, seamStopTimer=null, _previewWA=false;
+function stopLoopPreview(){ previewingLoop=false; _previewWA=false;
+  if(!playing){ stopWebAudioLoop(); if(audioEl){ try{audioEl.pause();}catch(_){}} }
+  if(previewLoopTimer) clearInterval(previewLoopTimer); if(seamStopTimer) clearTimeout(seamStopTimer); previewLoopTimer=null; seamStopTimer=null;
+  if(playhead) playhead.hidden=true; if(zoomPlayhead) zoomPlayhead.hidden=true; if(previewLoopBtn) previewLoopBtn.textContent='Preview Loop'; }
+function previewTick(){ if(!previewingLoop) return;
+  if(!_previewWA){ if(!audioEl) return; if(audioEl.currentTime>=trimEnd-0.05){ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); } }
+  const st=loopPosition();
   const pct=(st/audioDuration)*100; if(playhead){ playhead.hidden=false; playhead.style.left=pct+'%'; }
   if(zoomPlayhead && currentAudioBuffer){ const zw=getZoomWindow(); const zp=((st-zw.start)/zw.duration)*100; zoomPlayhead.hidden=false; zoomPlayhead.style.left=Math.max(0,Math.min(100,zp))+'%'; } }
-function startLoopPreview(){ ensureAudio(); if(!audioEl) return; previewingLoop=true; previewLoopBtn.textContent='Stop Preview'; try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} previewLoopTimer=setInterval(previewTick,30); }
+function startLoopPreview(){
+  previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
+  if(startWebAudioLoop()){ _previewWA=true; }                                  // gapless, real crossfade
+  else { _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; } try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} }
+  previewLoopTimer=setInterval(previewTick,30);
+}
 previewLoopBtn.addEventListener('click',()=>{ if(previewingLoop) stopLoopPreview(); else startLoopPreview(); });
-testSeamBtn.addEventListener('click',()=>{ ensureAudio(); if(!audioEl) return; stopLoopPreview(); previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
+testSeamBtn.addEventListener('click',()=>{ stopLoopPreview(); previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
+  // The gapless engine already loops seamlessly; play ~2 loops so you can hear the wrap (and the crossfade, if set).
+  if(startWebAudioLoop()){ _previewWA=true; previewLoopTimer=setInterval(previewTick,30);
+    seamStopTimer=setTimeout(stopLoopPreview, Math.min((trimEnd-trimStart)*2+0.4, 12)*1000); return; }
+  _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; }
   const seamStart=Math.max(trimStart, trimEnd-1.25); try{ audioEl.muted=false; audioEl.currentTime=seamStart; audioEl.play().catch(()=>{}); }catch(_){} previewLoopTimer=setInterval(previewTick,30);
   const runFor=(trimEnd-seamStart)+Math.min(1.25, trimEnd-trimStart)+0.4; seamStopTimer=setTimeout(stopLoopPreview, runFor*1000); });
 
@@ -1537,7 +1642,7 @@ function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v
     dragZoomPan(zoomWrap); }
   const finePanel=document.querySelector('.finetune-panel'); const cfRow=document.createElement('div'); cfRow.className='crossfade-row'; cfRow.innerHTML='<span class="crossfade-label">Crossfade</span><input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length"><span class="crossfade-val" id="crossfadeVal">Off</span>';
   if(finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
-  const cf=document.getElementById('crossfadeSlider'); if(cf){ cf.addEventListener('input',()=>{ loopCrossfadeMs=parseInt(cf.value,10)||0; setCrossfadeUI(); updateTrimUI(); scheduleSave(); }); addSliderNudgers(cf,{step:5}); setCrossfadeUI(); }
+  const cf=document.getElementById('crossfadeSlider'); if(cf){ cf.addEventListener('input',()=>{ loopCrossfadeMs=parseInt(cf.value,10)||0; setCrossfadeUI(); updateTrimUI(); scheduleSave(); if((previewingLoop&&_previewWA)||_waLoopSource) startWebAudioLoop(); }); addSliderNudgers(cf,{step:5}); setCrossfadeUI(); }
 })();
 
 // upload / toggle / remove
