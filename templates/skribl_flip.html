@@ -9,6 +9,23 @@
 <style>
   body.flip-app { overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .vis-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .flip-export { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  .flip-export[hidden] { display: none; }
+  .flip-export-card { background: var(--surface-panel, #171a22); border: 1px solid var(--hairline); border-radius: 16px;
+    padding: 20px; width: min(320px, 84vw); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .flip-export-label { font-size: 13px; color: var(--text-primary); font-weight: 600; text-align: center; }
+  .flip-export-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .flip-export-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 999px; transition: width .12s linear; }
+  #flipExportCancel { align-self: center; min-width: 96px; }
+  .flip-share-card { position: relative; gap: 12px; text-align: center; }
+  .flip-share-close { position: absolute; top: 10px; right: 12px; background: none; border: 0; color: var(--text-secondary); cursor: pointer; font-size: 15px; }
+  .flip-share-sub { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
+  .flip-share-url { width: 100%; box-sizing: border-box; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--hairline-strong);
+    background: #13161c; color: var(--text-primary); font-size: 12.5px; text-align: center; }
+  .flip-share-actions { display: flex; gap: 8px; }
+  .flip-share-actions .panel-btn { flex: 1 1 0; text-align: center; text-decoration: none; }
+  .flip-share-open { background: var(--accent); border-color: transparent; color: #fff; display: flex; align-items: center; justify-content: center; }
   /* Kill double-tap-to-zoom on taps (iOS ignores user-scalable=no). "manipulation"
      keeps tap/scroll/pinch but drops the double-tap zoom + 300ms tap delay. The
      canvas keeps touch-action:none so drawing never scrolls or gesture-zooms. */
@@ -104,22 +121,14 @@
   .zoom-layer { position: relative; line-height: 0; transform-origin: 0 0; will-change: transform; }
   .zoom-layer.zoom-anim { transition: transform .18s cubic-bezier(.22,.61,.36,1); }
   body.playing .zoom-hud { display: none; }
-  /* Playback control bar (Pad player controls): appears over the canvas bottom while flipping */
-  .flip-player { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 7;
-    display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 11px 15px;
-    background: rgba(9,11,16,.74); border: 1px solid var(--hairline); border-radius: 18px;
-    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 34px rgba(0,0,0,.55);
-    opacity: 0; transition: opacity .2s var(--spring); pointer-events: none; }
+  /* Editor scrub bar: a slim progress bar over the canvas bottom while previewing.
+     Loop/mute/restart live in the posted player at /s/<id>, not the editor. */
+  .flip-player { position: absolute; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 7;
+    width: min(72%, 320px); opacity: 0; transition: opacity .2s var(--spring); pointer-events: none; }
   .flip-player.show { opacity: 1; pointer-events: auto; }
   .flip-player[hidden] { display: none; }
-  .flip-player .player-progress { width: 264px; max-width: 68vw; }
-  .flip-player .player-btn { width: 40px; height: 40px; }
-  .flip-player .player-btn svg { width: 18px; height: 18px; }
-  .flip-player .player-btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
-  .flip-player .player-btn.active { color: var(--accent-bright); border-color: var(--accent); background: rgba(124,92,255,.14); }
-  #flipPlayPause .ico-p-play { display: none; }
-  #flipPlayPause.paused .ico-p-pause { display: none; }
-  #flipPlayPause.paused .ico-p-play { display: block; }
+  .flip-player .player-progress { width: 100%; max-width: none; height: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.4); }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
     border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
@@ -307,12 +316,6 @@
       </div>
       <div class="flip-player" id="flipPlayer" hidden>
         <div class="player-progress" id="flipProgress" role="slider" aria-label="Scrub frames" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" id="flipProgressFill"></div></div>
-        <div class="player-controls">
-          <button type="button" class="player-btn" id="flipRestartBtn" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
-          <button type="button" class="player-btn primary" id="flipPlayPause" aria-label="Pause"><svg class="ico-p-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg><svg class="ico-p-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
-          <button type="button" class="player-btn" id="flipLoopBtn" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></button>
-          <button type="button" class="player-btn" id="flipMuteBtn" aria-label="Mute" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
-        </div>
       </div>
     </div>
 
@@ -543,6 +546,8 @@
 
     <!-- "More" menu: the Pad's overflow actions — save/load draft + export. -->
     <div class="flip-menu" id="moreMenu" role="menu" hidden>
+      <button type="button" class="flip-menu-item" id="miShare" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><span class="mi-tx">Share &mdash; get a link</span></button>
+      <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
       <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>
@@ -576,6 +581,28 @@
       </div>
     </div>
     <div class="flip-hint">Each new page is a <b>copy of the current one</b> — nudge, erase, redraw to animate. Toggle <b>Onion</b> to see the frame beneath. Then hit <b>Flip it</b>.</div>
+  </div>
+
+  <!-- Autosave status pill (Pad component) + export progress overlay -->
+  <div id="autosaveStatus" class="autosave-status" hidden><span class="autosave-dot"></span><span id="autosaveStatusText">Saved</span></div>
+  <div class="flip-export" id="flipExport" hidden>
+    <div class="flip-export-card">
+      <span class="flip-export-label" id="flipExportLabel">Exporting…</span>
+      <div class="flip-export-bar"><div class="flip-export-fill" id="flipExportFill"></div></div>
+      <button type="button" class="panel-btn" id="flipExportCancel">Cancel</button>
+    </div>
+  </div>
+  <div class="flip-export" id="flipShare" hidden>
+    <div class="flip-export-card flip-share-card">
+      <button type="button" class="flip-share-close" id="flipShareClose" aria-label="Close">&#x2715;</button>
+      <span class="flip-export-label">Your Skribl is live &#127881;</span>
+      <p class="flip-share-sub">Anyone with the link can watch it play — with your loop, image, and controls.</p>
+      <input type="text" id="flipShareUrl" class="flip-share-url" readonly>
+      <div class="flip-share-actions">
+        <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
+        <a id="flipShareOpen" class="panel-btn flip-share-open" target="_blank" rel="noopener">Open player</a>
+      </div>
+    </div>
   </div>
 
 <!-- gifenc (GIF encoder) is ESM-only — load it from the CDN and expose it on
@@ -657,14 +684,14 @@ let drawing = false, curCount = 0, playing = false, playTimer = null;
 let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
-let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0, dPausedElapsed = 0;   // "draw-on" replay
+let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0;   // "draw-on" replay
 
 function newFrame(){ return { strokes: [], strokeGroups: [] }; }
 function frame(){ return frames[idx]; }
 
 /* ---- autosave: a real frame-format Skribl ---- */
 let _saveT = null;
-function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800); }
+function scheduleSave(){ clearTimeout(_saveT); showAutosaveStatus('saving'); _saveT = setTimeout(saveNow, 800); }
 function serializeFlip(){
   return {
     schemaVersion: 2, version: 2,
@@ -684,8 +711,25 @@ function saveNow(){
     const empty = frames.length === 1 && frames[0].strokes.length === 0 && !bgImage && !musicData;
     if (empty) { localStorage.removeItem(AUTOSAVE_KEY); return; }
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
-  } catch (e) { /* storage unavailable — draw on */ }
+    showAutosaveStatus('saved');
+  } catch (e) { showAutosaveStatus('failed'); }
 }
+// Autosave status pill (ported from the Pad): "Saving…" while pending, then "Saved".
+function showAutosaveStatus(state){
+  const el=document.getElementById('autosaveStatus'), txt=document.getElementById('autosaveStatusText'); if(!el||!txt) return;
+  clearTimeout(el._hideTimer); el.hidden=false; el.classList.remove('saving','failed');
+  if(state==='saving'){ el.classList.add('saving'); txt.textContent='Saving…'; }
+  else if(state==='failed'){ el.classList.add('failed'); txt.textContent='Autosave failed'; }
+  else { txt.textContent='Saved'; }
+  requestAnimationFrame(()=>el.classList.add('show'));
+  if(state!=='saving'){ el._hideTimer=setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>{ el.hidden=true; }, 300); }, 1600); }
+}
+// Export progress overlay + cancel.
+let _exportAbort=false;
+function exportShow(label){ _exportAbort=false; const o=document.getElementById('flipExport'); if(!o) return;
+  document.getElementById('flipExportLabel').textContent=label||'Exporting…'; document.getElementById('flipExportFill').style.width='0%'; o.hidden=false; }
+function exportSet(frac, label){ const f=document.getElementById('flipExportFill'); if(f) f.style.width=(Math.max(0,Math.min(1,frac))*100)+'%'; if(label){ const l=document.getElementById('flipExportLabel'); if(l) l.textContent=label; } }
+function exportHide(){ const o=document.getElementById('flipExport'); if(o) o.hidden=true; }
 function applyPayload(d){
   if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
   frames = d.frames.map(f => {
@@ -1091,17 +1135,16 @@ function updateToolState(){
   redoB.style.opacity = redoB.disabled ? .38 : 1;
 }
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
-const flipRestartBtn=document.getElementById('flipRestartBtn'), flipPlayPause=document.getElementById('flipPlayPause'), flipLoopBtn=document.getElementById('flipLoopBtn'), flipMuteBtn=document.getElementById('flipMuteBtn');
 const drawOnBtn=document.getElementById('drawOnBtn');
-let looping=true, paused=false, scrubbingFrames=false, playI=0;
+let scrubbingFrames=false, playI=0;
 function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%'; }
 
 // --- draw-on replay: reveal each frame's strokes over their recorded timing ---
 function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); paintFrame(ctx, count>=f.strokes.length ? f.strokes : f.strokes.slice(0, Math.max(0,count))); }
 function drawOnParams(f){ const p=f.strokes; if(!p.length) return {span:0, dur:Math.max(160,1000/fps), t0:0}; const t0=p[0].t; const span=Math.max(1, p[p.length-1].t - t0); return {span, dur:Math.min(2200, Math.max(320, span)), t0}; }
-function startDrawOnFrame(){ dFrameStartPerf=performance.now(); dPausedElapsed=0; drawOnTick(); }
+function startDrawOnFrame(){ dFrameStartPerf=performance.now(); drawOnTick(); }
 function drawOnTick(){
-  if(!playing || paused || scrubbingFrames) return;
+  if(!playing || scrubbingFrames) return;
   const f=frames[dFrame]; if(!f){ stop(); return; }
   const {span,dur,t0}=drawOnParams(f);
   const e=performance.now()-dFrameStartPerf;
@@ -1112,14 +1155,9 @@ function drawOnTick(){
   if(e>=dur){ renderPartial(f, f.strokes.length); advanceDrawOn(); return; }
   drawOnRAF=requestAnimationFrame(drawOnTick);
 }
-function advanceDrawOn(){
-  dFrame++;
-  if(dFrame>=frames.length){ if(looping) dFrame=0; else { stop(); return; } }
-  idx=dFrame; startDrawOnFrame();
-}
+function advanceDrawOn(){ dFrame=(dFrame+1)%frames.length; idx=dFrame; startDrawOnFrame(); }   // preview loops
 
-function playStep(){ if(scrubbingFrames || paused) return;
-  if(!looping && playI>=frames.length){ stop(); return; }
+function playStep(){ if(scrubbingFrames) return;
   idx=playI%frames.length; render(); updatePlayProgress();
   liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; playI++;
 }
@@ -1129,16 +1167,15 @@ function play(){
   if(drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length<2) return;
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
-  playing=true; paused=false; document.body.classList.add('playing');
+  playing=true; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
-  flipMuteBtn.hidden=!musicData; flipPlayPause.classList.remove('paused');
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
   startMusic();
   if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); }
   else { playI=idx; runPlayTimer(); }
 }
 function stop(){
-  playing=false; paused=false; document.body.classList.remove('playing');
+  playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
   clearInterval(playTimer); playTimer=null; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null;
   stopMusic(); scrubbingFrames=false;
@@ -1146,28 +1183,16 @@ function stop(){
   idx = Math.min(editIdx, frames.length-1);
   buildStrip(); render();
 }
-function pausePlay(){ if(!playing || paused) return; paused=true; stopMusic(); flipPlayPause.classList.add('paused'); flipPlayPause.setAttribute('aria-label','Play');
-  if(drawOnMode){ dPausedElapsed=performance.now()-dFrameStartPerf; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null; }
-  else { clearInterval(playTimer); playTimer=null; } }
-function resumePlay(){ if(!playing || !paused) return; paused=false; flipPlayPause.classList.remove('paused'); flipPlayPause.setAttribute('aria-label','Pause'); startMusic();
-  if(drawOnMode){ dFrameStartPerf=performance.now()-dPausedElapsed; drawOnTick(); }
-  else { runPlayTimer(); } }
 playBtn.addEventListener('click',()=> playing?stop():play());
-flipPlayPause.addEventListener('click',()=>{ paused ? resumePlay() : pausePlay(); });
-flipRestartBtn.addEventListener('click',()=>{ if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); } else { playI=0; idx=0; render(); updatePlayProgress(); } liveBadge.textContent=(drawOnMode?'\u270E ':'\u25B6 ')+'1 / '+frames.length; });
-flipLoopBtn.classList.add('active'); flipLoopBtn.setAttribute('aria-pressed','true');   // loop on by default
-flipLoopBtn.addEventListener('click',()=>{ looping=!looping; flipLoopBtn.classList.toggle('active',looping); flipLoopBtn.setAttribute('aria-pressed',String(looping)); });
-flipMuteBtn.addEventListener('click',()=>{ musicMuted=!musicMuted; flipMuteBtn.classList.toggle('active',musicMuted); flipMuteBtn.setAttribute('aria-pressed',String(musicMuted));
-  if(musicMuted) stopMusic(); else if(playing && !paused) startMusic(); });
 drawOnBtn.addEventListener('click',()=>{ if(playing) stop(); drawOnMode=!drawOnMode; drawOnBtn.classList.toggle('active',drawOnMode); drawOnBtn.setAttribute('aria-checked',String(drawOnMode)); updateToolState(); chip(drawOnMode?'Draw-on playback: on':'Draw-on playback: off'); });
-// scrub through frames
+// scrub through frames (drag to preview any frame)
 function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1)));
-  if(drawOnMode){ dFrame=idx; renderPartial(frames[dFrame], frames[dFrame].strokes.length); dPausedElapsed=0; dFrameStartPerf=performance.now(); if(flipProgressFill) flipProgressFill.style.width=(((idx+1)/n)*100)+'%'; }
+  if(drawOnMode){ dFrame=idx; renderPartial(frames[dFrame], frames[dFrame].strokes.length); dFrameStartPerf=performance.now(); if(flipProgressFill) flipProgressFill.style.width=(((idx+1)/n)*100)+'%'; }
   else { playI=idx; render(); updatePlayProgress(); }
   liveBadge.textContent=(drawOnMode?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
 flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
-function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false; if(playing && !paused){ if(drawOnMode){ dFrameStartPerf=performance.now(); drawOnTick(); } } }
+function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false; if(playing && drawOnMode){ dFrameStartPerf=performance.now(); drawOnTick(); } }
 flipProgress.addEventListener('pointerup',endFrameScrub);
 flipProgress.addEventListener('pointercancel',endFrameScrub);
 
@@ -1450,6 +1475,43 @@ draftInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.fi
 
 /* ---- export: PNG (current frame) + WebM (the loop) ---- */
 function download(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000); }
+
+/* ---- Share: post the Skribl to /api/skribls (the Pad's endpoint) and open the
+   real player at /s/<id> — where loop / mute / restart / progress live. The post
+   body matches the Pad's frame-format (media on frame 0, one frame per page). ---- */
+let sharing=false;
+function buildSharePayload(){
+  const music0=(musicData && musicEnabled) ? { data:musicData, name:musicName||null, trimStart:trimStart, trimEnd:(trimEnd!=null?trimEnd:audioDuration), crossfadeMs:loopCrossfadeMs } : null;
+  const photo0=bgImage ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
+  const outFrames=frames.map((f,i)=>({ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null }));
+  return { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1}, title:'Flip animation' };
+}
+async function shareSkribl(){
+  if(sharing) return;
+  const empty = frames.length===1 && !frames[0].strokes.length && !bgImage;
+  if(empty){ chip('Draw something to share'); return; }
+  if(playing) stop();
+  sharing=true; chip('Posting…');
+  try{
+    const res=await fetch('/api/skribls',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(buildSharePayload()) });
+    let data={}; try{ data=await res.json(); }catch(_){}
+    if(!res.ok){ chip(data.error || ('Share failed ('+res.status+')')); sharing=false; return; }
+    const url=location.origin + (data.url || ('/s/'+data.id));
+    showShareResult(url);
+  }catch(err){ console.error('Share failed:', err); chip('Share failed — check your connection'); }
+  sharing=false;
+}
+function showShareResult(url){
+  const m=document.getElementById('flipShare'), inp=document.getElementById('flipShareUrl'), open=document.getElementById('flipShareOpen');
+  if(inp) inp.value=url; if(open) open.href=url; if(m) m.hidden=false;
+}
+document.getElementById('flipShareClose').addEventListener('click',()=>{ document.getElementById('flipShare').hidden=true; });
+document.getElementById('flipShare').addEventListener('click',e=>{ if(e.target.id==='flipShare') e.currentTarget.hidden=true; });
+document.getElementById('flipShareCopy').addEventListener('click',async()=>{
+  const url=document.getElementById('flipShareUrl').value;
+  try{ await navigator.clipboard.writeText(url); chip('Link copied'); }
+  catch(_){ const inp=document.getElementById('flipShareUrl'); inp.focus(); inp.select(); try{ document.execCommand('copy'); chip('Link copied'); }catch(e){ chip('Select the link and copy'); } }
+});
 function exportPNG(){
   const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
   drawFrameTo(c, frame());
@@ -1460,23 +1522,24 @@ function exportWebM(){
   if(exporting) return;
   if(frames.length<2){ chip('Add a page or two first'); return; }
   if(typeof MediaRecorder==='undefined' || !HTMLCanvasElement.prototype.captureStream){ chip('Video export not supported here'); return; }
-  exporting=true; chip('Recording…');
+  exporting=true; exportShow('Recording WebM…');
   const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
   const stream=cv.captureStream(fps);
   const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
-  let rec; try{ rec=new MediaRecorder(stream,{mimeType:mime}); }catch(_){ exporting=false; chip('Video export failed'); return; }
+  let rec; try{ rec=new MediaRecorder(stream,{mimeType:mime}); }catch(_){ exporting=false; exportHide(); chip('Video export failed'); return; }
   const chunks=[]; rec.ondataavailable=ev=>{ if(ev.data && ev.data.size) chunks.push(ev.data); };
-  rec.onstop=()=>{ exporting=false; const blob=new Blob(chunks,{type:'video/webm'}); download(blob,'skribl-animation.webm'); chip('Animation exported'); };
+  rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob,'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
   drawFrameTo(c, frames[0]); rec.start();
   const loops=2, total=frames.length*loops; let n=0;   // a couple of loops so short clips aren't trivially short
-  const iv=setInterval(()=>{ drawFrameTo(c, frames[n%frames.length]); n++; if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
+  const iv=setInterval(()=>{ if(_exportAbort){ clearInterval(iv); try{rec.stop();}catch(_){ exporting=false; exportHide(); } return; }
+    drawFrameTo(c, frames[n%frames.length]); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
 }
 async function exportGIF(){
   const G=window.gifenc;
   if(!(G && G.GIFEncoder && G.quantize && G.applyPalette)){ chip('GIF export needs an internet connection'); return; }
   if(exporting) return; if(!frames.length){ chip('Draw something first'); return; }
-  exporting=true; chip('Rendering GIF…');
+  exporting=true; exportShow('Rendering GIF…');
   try{
     const MAX_EDGE=480; const scale=Math.min(1, MAX_EDGE/Math.max(CW,CH));
     const outW=Math.max(2,Math.round(CW*scale)), outH=Math.max(2,Math.round(CH*scale));
@@ -1484,6 +1547,7 @@ async function exportGIF(){
     const out=document.createElement('canvas'); out.width=outW; out.height=outH; const octx=out.getContext('2d');
     const enc=G.GIFEncoder(); const delay=Math.round(1000/fps);
     for(let i=0;i<frames.length;i++){
+      if(_exportAbort){ exportHide(); chip('Export cancelled'); exporting=false; return; }
       drawFrameTo(fc, frames[i]);
       octx.clearRect(0,0,outW,outH); octx.drawImage(full,0,0,outW,outH);
       const img=octx.getImageData(0,0,outW,outH);
@@ -1491,12 +1555,13 @@ async function exportGIF(){
       const index=G.applyPalette(img.data,palette,'rgb565');
       const opts={palette,delay}; if(i===0) opts.repeat=0;              // loop forever
       enc.writeFrame(index,outW,outH,opts);
+      exportSet((i+1)/frames.length);
       if((i&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
     }
     enc.finish();
     download(new Blob([enc.bytes()],{type:'image/gif'}),'skribl-flip.gif');
-    chip('GIF exported');
-  }catch(err){ console.error('GIF export failed:', err); chip('GIF export failed'); }
+    exportSet(1,'Done!'); setTimeout(exportHide,500); chip('GIF exported');
+  }catch(err){ console.error('GIF export failed:', err); exportHide(); chip('GIF export failed'); }
   exporting=false;
 }
 
@@ -1530,7 +1595,7 @@ async function exportViaWebCodecsMp4(){
     catch(e){ audioBuf=null; useAudio=false; }
     if(!useAudio) return false;   // don't ship a silent MP4 — let WebM keep the audio
   }
-  if(exporting) return true; exporting=true; chip('Encoding MP4…');
+  if(exporting) return true; exporting=true; exportShow('Encoding video…');
   try{
     const muxer=new MM.Muxer({ target:new MM.ArrayBufferTarget(),
       video:{codec:'avc',width:w,height:h},
@@ -1548,17 +1613,18 @@ async function exportViaWebCodecsMp4(){
     const totalSec=(frames.length/fps)*loops;
     const totalFrames=Math.max(1, Math.ceil(totalSec*encFps));
     for(let f=0; f<totalFrames; f++){
+      if(_exportAbort){ try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){} exportHide(); chip('Export cancelled'); exporting=false; return true; }
       const animIdx=Math.floor((f/encFps)*fps)%frames.length;
       drawFrameTo(rctx, frames[animIdx]);
       const vf=new VideoFrame(rec, { timestamp:Math.round(f*frameDurUs), duration:Math.round(frameDurUs) });
       vEnc.encode(vf, { keyFrame:(f%(encFps*2))===0 }); vf.close();
       if(encErr) throw encErr;
       if(vEnc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,0));
-      else if((f&7)===0) await new Promise(r=>setTimeout(r,0));
+      else if((f&7)===0){ exportSet((f/totalFrames)*(useAudio?0.8:1)); await new Promise(r=>setTimeout(r,0)); }
     }
     await vEnc.flush();
     if(useAudio && aEnc){
-      chip('Encoding audio…');
+      exportSet(0.82,'Encoding audio…');
       const sr=audioBuf.sampleRate, ch=audioBuf.numberOfChannels, loopLen=audioBuf.length;
       const chans=[]; for(let c=0;c<ch;c++) chans.push(audioBuf.getChannelData(c));
       const totalSamples=Math.ceil(totalSec*sr), blk=1024; let pos=0;
@@ -1566,7 +1632,7 @@ async function exportViaWebCodecsMp4(){
         for(let c=0;c<ch;c++){ const src=chans[c], off=c*n; for(let k=0;k<n;k++){ data[off+k]=src[(pos+k)%loopLen]; } }
         const ad=new AudioData({ format:'f32-planar', sampleRate:sr, numberOfFrames:n, numberOfChannels:ch, timestamp:Math.round((pos/sr)*1000000), data });
         aEnc.encode(ad); ad.close(); if(encErr) throw encErr; pos+=n;
-        if((pos%(blk*32))===0) await new Promise(r=>setTimeout(r,0));
+        if((pos%(blk*32))===0){ exportSet(0.82+(pos/totalSamples)*0.16); await new Promise(r=>setTimeout(r,0)); }
       }
       await aEnc.flush();
     }
@@ -1574,8 +1640,8 @@ async function exportViaWebCodecsMp4(){
     muxer.finalize();
     download(new Blob([muxer.target.buffer],{type:'video/mp4'}),'skribl-flip.mp4');
     try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){}
-    chip('MP4 exported'); exporting=false; return true;
-  }catch(err){ console.error('WebCodecs MP4 export failed:', err); chip('MP4 failed — using WebM'); exporting=false; return false; }
+    exportSet(1,'Done!'); setTimeout(exportHide,500); chip('MP4 exported'); exporting=false; return true;
+  }catch(err){ console.error('WebCodecs MP4 export failed:', err); exportHide(); chip('MP4 failed — using WebM'); exporting=false; return false; }
 }
 // Video export entry: try a real MP4 (with audio) first, else the WebM fallback.
 async function exportVideo(){
@@ -1868,6 +1934,7 @@ function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn
 function closeMenu(){ moreMenu.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
+document.getElementById('miShare').addEventListener('click',()=>{ closeMenu(); shareSkribl(); });
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
 document.getElementById('miPng').addEventListener('click',()=>{ closeMenu(); exportPNG(); });
@@ -1913,13 +1980,20 @@ onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
 /* ---- keyboard ---- */
+function _typingEl(el){ return el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||'') || el.isContentEditable); }
 window.addEventListener('keydown', e=>{
+  if(_typingEl(e.target)) return;
   if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); redoStroke(); return; }
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoStroke(); return; }
+  // Space = play / stop (when not magnified — Space pans the zoomed canvas instead).
+  if((e.code==='Space' || e.key===' ') && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
   if(playing) return;
   if(e.key==='ArrowLeft'  && idx>0){ disarmAll(); go(idx-1); }
   if(e.key==='ArrowRight' && idx<frames.length-1){ disarmAll(); go(idx+1); }
+  if(e.key==='p' || e.key==='P'){ setTool('pen'); }
+  if(e.key==='e' || e.key==='E'){ setTool('eraser'); }
 });
+document.getElementById('flipExportCancel').addEventListener('click',()=>{ _exportAbort=true; });
 
 /* ---- fps segmented control ---- */
 const fpsGroup=document.getElementById('fps');
