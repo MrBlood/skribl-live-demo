@@ -5790,7 +5790,21 @@ function showPlayerError(msg) {
   // progress bar, and looping. Compositing reuses clearAndRestore (baseSnapshot);
   // the photo shows through from the DOM layer loadSkribl already positioned.
   const timeline = buildPlaybackTimeline();
-  const totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
+  // Flip playback (multi-frame): cycle whole frames at fps instead of replaying
+  // one frame's strokes. Gated on playbackMode/flip so single-frame replays are
+  // completely unaffected. Media (bg color + photo) sit behind the canvas from
+  // loadSkribl(frame 0), so clearing the canvas per frame shows them through.
+  const isFlip = data.playbackMode === 'flip' && Array.isArray(data.frames) && data.frames.length > 1;
+  const flipFrames = isFlip ? data.frames : null;
+  const flipFps = data.fps || 12;
+  const flipDurMs = isFlip ? Math.max(1, (flipFrames.length / flipFps) * 1000) : 0;
+  function drawFlipFrame(fi) {
+    const s = getCanvasLogicalSize();
+    ctx.clearRect(0, 0, s.width, s.height);
+    const fr = flipFrames[Math.max(0, Math.min(flipFrames.length - 1, fi))];
+    if (fr && Array.isArray(fr.strokes) && fr.strokes.length) paintStrokesStatic(fr.strokes);
+  }
+  const totalMs = isFlip ? flipDurMs : (timeline.length ? timeline[timeline.length - 1].playT : 0);
 
   const pPlay = document.getElementById('playerPlayBtn');
   const pRestart = document.getElementById('playerRestartBtn');
@@ -5912,6 +5926,12 @@ function showPlayerError(msg) {
     cancelAnimationFrame(rafId);
     running = false;
     setPlayIcon();
+    if (isFlip) {
+      const cycT = flipDurMs ? (targetMs % flipDurMs) : 0;
+      drawFlipFrame(Math.floor((cycT / 1000) * flipFps));
+      elapsedBase = targetMs; setProgress(frac); hideNib();
+      return;
+    }
     const paint = () => {
       if (strokeLayersOn()) {
         strokeComp = makeStrokeCompositor(ctx, canvas);
@@ -5938,6 +5958,15 @@ function showPlayerError(msg) {
 
   function frame() {
     const elapsed = elapsedBase + (performance.now() - segStart);
+    if (isFlip) {
+      const cycT = flipDurMs ? (elapsed % flipDurMs) : 0;
+      drawFlipFrame(Math.floor((cycT / 1000) * flipFps));
+      setProgress(flipDurMs ? cycT / flipDurMs : 1);
+      hideNib();
+      if (!loop && elapsed >= flipDurMs) { drawFlipFrame(flipFrames.length - 1); onEnded(); return; }
+      rafId = requestAnimationFrame(frame);
+      return;
+    }
     if (strokeComp) {
       idx = replayTimelineToCanvas(timeline, idx, elapsed, strokeComp.dotFn, strokeComp.lineFn);
       strokeComp.present();
@@ -5951,7 +5980,7 @@ function showPlayerError(msg) {
   }
 
   function play() {
-    if (running || !timeline.length) return;
+    if (running || (!timeline.length && !isFlip)) return;
     // Unlock the AudioContext inside the click gesture: begin() below can run in
     // an async image onload on the first fresh play, which is outside the gesture
     // and would leave the context suspended on stricter browsers (iOS Safari).
