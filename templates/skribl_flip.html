@@ -100,7 +100,20 @@
 
   /* Editor-style fitted canvas — never overflows. */
   .flip-stage { flex: 0 0 auto; height: 52vh; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
-  .flip-wrap { position: relative; line-height: 0; }
+  .flip-wrap { position: relative; line-height: 0; overflow: hidden; border-radius: var(--r-frame); }
+  .zoom-layer { position: relative; line-height: 0; transform-origin: 0 0; will-change: transform; }
+  .zoom-layer.zoom-anim { transition: transform .18s cubic-bezier(.22,.61,.36,1); }
+  .zoom-hud { position: absolute; top: 12px; right: 18px; z-index: 6; display: inline-flex; align-items: center; gap: 2px;
+    background: rgba(9,11,16,.74); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 3px;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .zoom-hud .zh-btn { width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: transparent;
+    color: var(--text-secondary); border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .zoom-hud .zh-btn:hover { background: rgba(255,255,255,.06); color: var(--text-primary); }
+  .zoom-hud .zh-btn:disabled { opacity: .35; cursor: default; }
+  .zoom-hud .zh-val { min-width: 40px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-primary);
+    font-variant-numeric: tabular-nums; }
+  .zoom-hud .zh-fit { color: var(--accent-bright); }
+  body.playing .zoom-hud { display: none; }
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
     border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
@@ -277,7 +290,13 @@
     <div class="flip-stage">
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
-        <canvas id="pad"></canvas><div class="flip-grid" id="flipGrid"></div>
+        <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><div class="flip-grid" id="flipGrid"></div></div>
+      </div>
+      <div class="zoom-hud" id="zoomHud" aria-label="Zoom">
+        <button type="button" class="zh-btn" id="zoomOutBtn" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <span class="zh-val" id="zoomVal">100%</span>
+        <button type="button" class="zh-btn" id="zoomInBtn" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button type="button" class="zh-btn zh-fit" id="zoomFitBtn" aria-label="Fit to screen"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       </div>
     </div>
 
@@ -567,6 +586,7 @@ function fitPad(){
   pad.style.width = Math.round(CW*scale)+'px';
   pad.style.height = Math.round(CH*scale)+'px';
   syncGrid();
+  if(ZoomView && ZoomView.isZoomed()) ZoomView.reclamp();
 }
 // Give the canvas stage a stable height = viewport minus the fixed chrome (header,
 // toolbar, chip, strip). Drawers live in .flip-drawers (not measured here), so an
@@ -603,6 +623,7 @@ let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // 
 let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
 let musicName = '';                                                          // track filename (shown in the dropzone)
 let drawing = false, curCount = 0, playing = false, playTimer = null;
+let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
 
@@ -786,7 +807,7 @@ function render(){
 function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
 let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
-pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault(); disarmAll();
+pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return; e.preventDefault(); disarmAll();
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
@@ -798,6 +819,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; e.preventDefault();
   frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
+  if(pinching){ return; }
   if(reposActive){ e.preventDefault(); const r=pad.getBoundingClientRect();
     photoOffX=Math.max(0,Math.min(1, reposStart.ox - (e.clientX-reposStart.x)/r.width));
     photoOffY=Math.max(0,Math.min(1, reposStart.oy - (e.clientY-reposStart.y)/r.height));
@@ -857,10 +879,76 @@ function moveBrushCursor(e){
 function hideCursors(){ eraserCursor.style.display='none'; brushCursor.style.display='none'; }
 pad.addEventListener('pointermove', e=>{
   if(playing || picking){ hideCursors(); return; }
+  if(ZoomView && ZoomView.isZoomed()){ hideCursors(); return; }   // use a normal cursor while magnified
   if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; }
   else { moveBrushCursor(e); eraserCursor.style.display='none'; }
 });
 pad.addEventListener('pointerleave', hideCursors);
+
+/* ---- canvas magnify: pinch-zoom + two-finger pan + a small HUD (ported from the
+   Pad). Only #zoomLayer is CSS-transformed, so pos()'s getBoundingClientRect math
+   keeps mapping touches correctly. Drawing is suspended during a pinch. ---- */
+function abortStrokeForPinch(){
+  if(reposActive){ reposActive=false; return; }
+  if(!drawing) return;
+  const s=frame().strokes; if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
+  drawing=false; curCount=0; smoothPt=null; lastRaw=null; render();
+}
+function _touchDist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+function _touchMid(a,b){ const r=document.querySelector('.flip-wrap').getBoundingClientRect();
+  return { x:(a.clientX+b.clientX)/2 - r.left, y:(a.clientY+b.clientY)/2 - r.top }; }
+function beginPinch(e){
+  if(playing || reposMode || !ZoomView) return;
+  if(!e.touches || e.touches.length<2) return;
+  if(e.cancelable) e.preventDefault();
+  abortStrokeForPinch(); pinching=true;
+  const t0=e.touches[0], t1=e.touches[1];
+  _pinch={ lastDist:_touchDist(t0,t1), lastMid:_touchMid(t0,t1) };
+}
+function _pinchMove(e){
+  if(!pinching || !_pinch || !ZoomView) return;
+  if(!e.touches || e.touches.length<2) return;
+  if(e.cancelable) e.preventDefault();
+  const t0=e.touches[0], t1=e.touches[1];
+  const dist=_touchDist(t0,t1), mid=_touchMid(t0,t1);
+  if(_pinch.lastDist>0) ZoomView.zoomAt(dist/_pinch.lastDist, mid.x, mid.y);
+  ZoomView.panBy(mid.x-_pinch.lastMid.x, mid.y-_pinch.lastMid.y);
+  _pinch.lastDist=dist; _pinch.lastMid=mid;
+}
+function _pinchEnd(e){ if(!pinching) return; if(e.touches && e.touches.length>=2) return; pinching=false; _pinch=null; }
+pad.addEventListener('touchstart', e=>{ if(e.touches && e.touches.length>=2) beginPinch(e); }, {passive:false});
+window.addEventListener('touchmove', _pinchMove, {passive:false});
+window.addEventListener('touchend', _pinchEnd);
+window.addEventListener('touchcancel', _pinchEnd);
+
+(function initCanvasZoom(){
+  const layer=document.getElementById('zoomLayer'), wrap=document.querySelector('.flip-wrap');
+  if(!layer || !wrap) return;
+  const MIN=1, MAX=4, STEP=0.5; let zoom=1, panX=0, panY=0;
+  function wrapSize(){ return { w: layer.offsetWidth||1, h: layer.offsetHeight||1 }; }
+  function clampPan(){ const {w,h}=wrapSize(); panX=Math.min(0,Math.max(w*(1-zoom),panX)); panY=Math.min(0,Math.max(h*(1-zoom),panY)); if(zoom<=1){panX=0;panY=0;} }
+  function paint(animate){ clampPan(); layer.classList.toggle('zoom-anim',!!animate);
+    layer.style.transform = zoom===1 ? '' : 'translate('+panX+'px,'+panY+'px) scale('+zoom+')';
+    const v=document.getElementById('zoomVal'); if(v) v.textContent=Math.round(zoom*100)+'%';
+    const zin=document.getElementById('zoomInBtn'), zout=document.getElementById('zoomOutBtn'), zfit=document.getElementById('zoomFitBtn');
+    if(zin) zin.disabled=zoom>=MAX-0.001; if(zout) zout.disabled=zoom<=MIN+0.001; if(zfit) zfit.disabled=zoom<=MIN+0.001;
+    pad.style.cursor = zoom>1.001 ? 'crosshair' : '';
+    if(animate) setTimeout(()=>layer.classList.remove('zoom-anim'),200);
+  }
+  ZoomView={
+    isZoomed:()=>zoom>1.001,
+    zoomAt(factor,cx,cy){ const nz=Math.min(MAX,Math.max(MIN,zoom*factor)); if(nz===zoom) return; const coordX=(cx-panX)/zoom, coordY=(cy-panY)/zoom; panX=cx-coordX*nz; panY=cy-coordY*nz; zoom=nz; paint(false); },
+    panBy(dx,dy){ panX+=dx; panY+=dy; paint(false); },
+    step(dir){ const {w,h}=wrapSize(); this.zoomAt((Math.min(MAX,Math.max(MIN,zoom+dir*STEP)))/zoom, w/2, h/2); paint(true); },
+    fit(){ zoom=1; panX=0; panY=0; paint(true); },
+    reclamp(){ paint(false); }
+  };
+  document.getElementById('zoomInBtn').addEventListener('click',()=>ZoomView.step(1));
+  document.getElementById('zoomOutBtn').addEventListener('click',()=>ZoomView.step(-1));
+  document.getElementById('zoomFitBtn').addEventListener('click',()=>ZoomView.fit());
+  wrap.addEventListener('wheel',(e)=>{ if(!(e.ctrlKey||e.metaKey)) return; e.preventDefault(); const r=wrap.getBoundingClientRect(); ZoomView.zoomAt(e.deltaY<0?1.12:0.89, e.clientX-r.left, e.clientY-r.top); }, {passive:false});
+  paint(false);
+})();
 
 /* ---- frame strip ---- */
 const strip = document.getElementById('strip');
@@ -925,6 +1013,7 @@ function updateToolState(){
 function play(){
   if(frames.length<2 || playing) return;
   disarmAll(); editIdx = idx;
+  if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
   startMusic();
