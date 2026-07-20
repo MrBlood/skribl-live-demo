@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='96') }}">
 <style>
   body.flip-app { overflow: hidden; }
+  .vis-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .flip-app .app { height: 100dvh; }
   .flip-app .header { gap: 8px; justify-content: flex-start; }
 
@@ -368,12 +369,13 @@
       <!-- Image drawer (drop-up, like the Draw menu). One image per animation. -->
       <div class="tab-panel draw-popout" id="photoPanel" role="dialog" aria-label="Background image" hidden>
         <span class="draw-section-label">Background image</span>
-        <div class="media-actions">
-          <button type="button" id="photoChoose" class="flip-upload">Choose image…</button>
-          <button type="button" id="photoToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Show or hide image" hidden><span class="layer-toggle-knob"></span></button>
-          <button type="button" id="photoRemove" class="clear-drawer-btn" hidden>Remove</button>
+        <div class="music-dropzone" id="photoUploadBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span id="photoBtnLabel">Add an image</span>
+          <button type="button" id="photoToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle image on or off"><span class="layer-toggle-knob"></span></button>
+          <button type="button" id="photoRemove" class="dropzone-remove" hidden>Remove</button>
         </div>
-        <div id="photoDetail">
+        <div id="photoDetail" hidden>
           <div class="photo-fit-group" id="photoFitGroup">
             <div class="photo-fit-slider" id="photoFitSlider"></div>
             <button type="button" class="photo-fit-btn active" data-fit="cover">Fill</button><button type="button" class="photo-fit-btn" data-fit="contain">Fit</button><button type="button" class="photo-fit-btn" data-fit="fill">Stretch</button>
@@ -501,9 +503,9 @@
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor" stroke="none"/></svg></span><span class="mi-tx">How Flip works</span></button>
     </div>
-    <input type="file" id="imageInput" accept="image/*" hidden>
-    <input type="file" id="musicInput" accept="audio/*" hidden>
-    <input type="file" id="draftInput" accept=".skribl,application/json" hidden>
+    <input type="file" id="imageInput" accept="image/*" class="vis-hidden">
+    <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff" class="vis-hidden">
+    <input type="file" id="draftInput" accept=".skribl,application/json" class="vis-hidden">
     <div class="flip-info-overlay" id="infoOverlay" hidden>
       <div class="flip-info" role="dialog" aria-modal="true" aria-label="How Flip Mode works">
         <button class="flip-info-close icon-btn" id="infoClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -570,7 +572,7 @@ let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
 let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
-let bgImage = null, bgImageObj = null;                            // one background image per animation
+let bgImage = null, bgImageObj = null, imageName = '';            // one background image per animation
 let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
 let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
@@ -597,7 +599,7 @@ function serializeFlip(){
     editIdx: idx,
     bgImage: bgImage || null,
     music: musicData || null,
-    photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled } : null,
+    photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : null,
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : null,
     frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor }))
   };
@@ -639,6 +641,7 @@ function applyPayload(d){
   photoOffX = typeof ph.offX==='number' ? ph.offX : 0.5;
   photoOffY = typeof ph.offY==='number' ? ph.offY : 0.5;
   photoEnabled = ph.enabled!==false; reposMode=false;
+  imageName = typeof ph.name==='string' ? ph.name : '';
   const mm = d.musicMeta || {};
   musicEnabled = mm.enabled!==false;
   trimStart = typeof mm.trimStart==='number' ? mm.trimStart : 0;
@@ -1068,9 +1071,9 @@ function loadBgImageObj(cb){ if(!bgImage){ bgImageObj=null; if(cb)cb(); return; 
 function redrawAll(){ render(); refreshAllThumbs(); }
 function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false;
   loadBgImageObj(()=>{ redrawAll(); }); syncMediaUI(); scheduleSave(); }
-function removeBgImage(){ bgImage=null; bgImageObj=null; reposMode=false; redrawAll(); syncMediaUI(); scheduleSave(); }
+function removeBgImage(){ bgImage=null; bgImageObj=null; imageName=''; reposMode=false; redrawAll(); syncMediaUI(); scheduleSave(); }
 imageInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
-  const r=new FileReader(); r.onload=()=>setBgImage(String(r.result)); r.readAsDataURL(file); });
+  imageName=file.name||''; const r=new FileReader(); r.onload=()=>setBgImage(String(r.result)); r.readAsDataURL(file); });
 
 /* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
 const musicInput=document.getElementById('musicInput');
@@ -1166,7 +1169,7 @@ function exportWebM(){
 /* ---- menu open/close + item wiring + state sync ---- */
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
 // --- media drawer controls ---
-const photoChoose=document.getElementById('photoChoose'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
+const photoUploadBtn=document.getElementById('photoUploadBtn'), photoBtnLabel=document.getElementById('photoBtnLabel'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
 const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
 const photoFitGroup=document.getElementById('photoFitGroup'), photoFitSlider=document.getElementById('photoFitSlider');
 const repositionBtn=document.getElementById('repositionBtn'), repositionHint=document.getElementById('repositionHint');
@@ -1183,8 +1186,9 @@ function positionFitSlider(){ const btns=[...photoFitGroup.querySelectorAll('.ph
 const photoTabDot=document.getElementById('photoTabDot'), musicTabDot=document.getElementById('musicTabDot');
 function syncPhotoUI(){
   const hasImg=!!bgImage;
-  photoChoose.textContent = hasImg ? 'Replace image…' : 'Choose image…';
-  photoToggle.hidden=!hasImg; photoRemove.hidden=!hasImg; photoNote.hidden=hasImg;   // detail stays visible
+  photoUploadBtn.classList.toggle('loaded', hasImg);
+  photoBtnLabel.textContent = hasImg ? (imageName || 'Background image') : 'Add an image';
+  photoRemove.hidden=!hasImg; photoNote.hidden=hasImg; photoDetail.hidden=!hasImg;
   photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   photoTabDot.hidden = !hasImg;                                                       // green dot when an image is set
   [...photoFitGroup.querySelectorAll('.photo-fit-btn')].forEach(b=>b.classList.toggle('active', b.dataset.fit===photoFit));
@@ -1197,8 +1201,6 @@ function syncPhotoUI(){
   photoZoomEl.value=Math.round(photoZoom*100); photoZoomVal.textContent=Math.round(photoZoom*100)+'%'; setFill(photoZoomEl);
   photoOpacityEl.value=Math.round(photoOpacity*100); photoOpacityVal.textContent=Math.round(photoOpacity*100)+'%'; setFill(photoOpacityEl);
   photoBlurEl.value=photoBlur; photoBlurVal.textContent=photoBlur+'px'; setFill(photoBlurEl);
-  [...photoFitGroup.querySelectorAll('.photo-fit-btn'), repositionBtn, photoZoomEl, photoOpacityEl, photoBlurEl, resetPhotoBtn].forEach(el=>{ el.disabled=!hasImg; });
-  photoDetail.style.opacity = hasImg ? '' : '.5';
   positionFitSlider();
 }
 function syncMusicUI(){
@@ -1215,9 +1217,9 @@ function syncMusicUI(){
 function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); }
 
 // image controls
-photoChoose.addEventListener('click',()=>imageInput.click());
-photoRemove.addEventListener('click',()=>removeBgImage());
-photoToggle.addEventListener('click',()=>{ photoEnabled=!photoEnabled; redrawAll(); syncPhotoUI(); scheduleSave(); });
+photoUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!photoUploadBtn.classList.contains('loaded')) imageInput.click(); });
+photoRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeBgImage(); });
+photoToggle.addEventListener('click',(e)=>{ e.stopPropagation(); photoEnabled=!photoEnabled; redrawAll(); syncPhotoUI(); scheduleSave(); });
 photoFitGroup.addEventListener('click',e=>{ const b=e.target.closest('.photo-fit-btn'); if(!b) return; photoFit=b.dataset.fit; redrawAll(); syncPhotoUI(); scheduleSave(); });
 repositionBtn.addEventListener('click',()=>{ if(photoFit!=='cover') return; reposMode=!reposMode; syncPhotoUI(); });
 photoZoomEl.addEventListener('input',()=>{ photoZoom=(+photoZoomEl.value)/100; photoZoomVal.textContent=photoZoomEl.value+'%'; setFill(photoZoomEl); redrawAll(); scheduleSave(); });
