@@ -283,7 +283,7 @@
       </div>
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
-        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><button type="button" id="gridBtn" class="tool-open grid-tool" role="switch" aria-checked="false" title="Grid overlay" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button>
+        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><button type="button" id="gridBtn" class="tool-open grid-tool" role="switch" aria-checked="false" title="Grid overlay" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg></button><button type="button" id="drawOnBtn" class="tool-open grid-tool" role="switch" aria-checked="false" title="Draw-on playback — watch each frame draw itself" aria-label="Draw-on playback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l4 4"/><path d="M4 20l3-1 9.6-9.6a2.1 2.1 0 0 0-3-3L4 16l-1 4z"/><path d="M3.5 22c2-1 4.5-1 6.5 0"/></svg></button>
         <button type="button" id="moreBtn" class="tool-open" title="More — image, music, save, export" aria-label="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
         <button type="button" class="btn flip-play" id="play">
           <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
@@ -657,6 +657,7 @@ let drawing = false, curCount = 0, playing = false, playTimer = null;
 let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
+let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0, dPausedElapsed = 0;   // "draw-on" replay
 
 function newFrame(){ return { strokes: [], strokeGroups: [] }; }
 function frame(){ return frames[idx]; }
@@ -1080,8 +1081,8 @@ function go(i){ idx=i; redoStack.length=0; buildStrip(); render(); }
 const playBtn=document.getElementById('play');
 const liveBadge=document.querySelector('.flip-live');
 function updateToolState(){
-  playBtn.disabled = frames.length < 2;
-  playBtn.title = frames.length < 2 ? 'Add a second page to flip' : 'Flip through the pages';
+  playBtn.disabled = drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length < 2;
+  playBtn.title = playBtn.disabled ? (drawOnMode ? 'Draw something to replay' : 'Add a second page to flip') : (drawOnMode ? 'Watch it draw itself' : 'Flip through the pages');
   const undoB=document.getElementById('undo');
   undoB.disabled = frame().strokeGroups.length === 0;
   undoB.style.opacity = undoB.disabled ? .38 : 1;
@@ -1091,8 +1092,32 @@ function updateToolState(){
 }
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
 const flipRestartBtn=document.getElementById('flipRestartBtn'), flipPlayPause=document.getElementById('flipPlayPause'), flipLoopBtn=document.getElementById('flipLoopBtn'), flipMuteBtn=document.getElementById('flipMuteBtn');
+const drawOnBtn=document.getElementById('drawOnBtn');
 let looping=true, paused=false, scrubbingFrames=false, playI=0;
 function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%'; }
+
+// --- draw-on replay: reveal each frame's strokes over their recorded timing ---
+function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); paintFrame(ctx, count>=f.strokes.length ? f.strokes : f.strokes.slice(0, Math.max(0,count))); }
+function drawOnParams(f){ const p=f.strokes; if(!p.length) return {span:0, dur:Math.max(160,1000/fps), t0:0}; const t0=p[0].t; const span=Math.max(1, p[p.length-1].t - t0); return {span, dur:Math.min(2200, Math.max(320, span)), t0}; }
+function startDrawOnFrame(){ dFrameStartPerf=performance.now(); dPausedElapsed=0; drawOnTick(); }
+function drawOnTick(){
+  if(!playing || paused || scrubbingFrames) return;
+  const f=frames[dFrame]; if(!f){ stop(); return; }
+  const {span,dur,t0}=drawOnParams(f);
+  const e=performance.now()-dFrameStartPerf;
+  if(!f.strokes.length){ renderPartial(f,0); }
+  else { const revealMs=(e/dur)*span; let count=0; while(count<f.strokes.length && (f.strokes[count].t - t0)<=revealMs) count++; renderPartial(f, count); }
+  liveBadge.textContent='\u270E '+(dFrame+1)+' / '+frames.length;
+  if(flipProgressFill && frames.length){ flipProgressFill.style.width=(((dFrame+Math.max(0,Math.min(1,e/dur)))/frames.length)*100)+'%'; }
+  if(e>=dur){ renderPartial(f, f.strokes.length); advanceDrawOn(); return; }
+  drawOnRAF=requestAnimationFrame(drawOnTick);
+}
+function advanceDrawOn(){
+  dFrame++;
+  if(dFrame>=frames.length){ if(looping) dFrame=0; else { stop(); return; } }
+  idx=dFrame; startDrawOnFrame();
+}
+
 function playStep(){ if(scrubbingFrames || paused) return;
   if(!looping && playI>=frames.length){ stop(); return; }
   idx=playI%frames.length; render(); updatePlayProgress();
@@ -1100,37 +1125,49 @@ function playStep(){ if(scrubbingFrames || paused) return;
 }
 function runPlayTimer(){ clearInterval(playTimer); playStep(); playTimer=setInterval(playStep, 1000/fps); }
 function play(){
-  if(frames.length<2 || playing) return;
+  if(playing) return;
+  if(drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length<2) return;
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; paused=false; document.body.classList.add('playing');
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
   flipMuteBtn.hidden=!musicData; flipPlayPause.classList.remove('paused');
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
-  startMusic(); playI=idx; runPlayTimer();
+  startMusic();
+  if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); }
+  else { playI=idx; runPlayTimer(); }
 }
 function stop(){
   playing=false; paused=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
-  clearInterval(playTimer); playTimer=null; stopMusic(); scrubbingFrames=false;
+  clearInterval(playTimer); playTimer=null; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null;
+  stopMusic(); scrubbingFrames=false;
   if(flipPlayer){ flipPlayer.classList.remove('show'); flipPlayer.hidden=true; }
   idx = Math.min(editIdx, frames.length-1);
   buildStrip(); render();
 }
-function pausePlay(){ if(!playing || paused) return; paused=true; clearInterval(playTimer); playTimer=null; stopMusic(); flipPlayPause.classList.add('paused'); flipPlayPause.setAttribute('aria-label','Play'); }
-function resumePlay(){ if(!playing || !paused) return; paused=false; flipPlayPause.classList.remove('paused'); flipPlayPause.setAttribute('aria-label','Pause'); startMusic(); runPlayTimer(); }
+function pausePlay(){ if(!playing || paused) return; paused=true; stopMusic(); flipPlayPause.classList.add('paused'); flipPlayPause.setAttribute('aria-label','Play');
+  if(drawOnMode){ dPausedElapsed=performance.now()-dFrameStartPerf; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null; }
+  else { clearInterval(playTimer); playTimer=null; } }
+function resumePlay(){ if(!playing || !paused) return; paused=false; flipPlayPause.classList.remove('paused'); flipPlayPause.setAttribute('aria-label','Pause'); startMusic();
+  if(drawOnMode){ dFrameStartPerf=performance.now()-dPausedElapsed; drawOnTick(); }
+  else { runPlayTimer(); } }
 playBtn.addEventListener('click',()=> playing?stop():play());
 flipPlayPause.addEventListener('click',()=>{ paused ? resumePlay() : pausePlay(); });
-flipRestartBtn.addEventListener('click',()=>{ playI=0; idx=0; render(); updatePlayProgress(); liveBadge.textContent='\u25B6 1 / '+frames.length; });
+flipRestartBtn.addEventListener('click',()=>{ if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); } else { playI=0; idx=0; render(); updatePlayProgress(); } liveBadge.textContent=(drawOnMode?'\u270E ':'\u25B6 ')+'1 / '+frames.length; });
 flipLoopBtn.classList.add('active'); flipLoopBtn.setAttribute('aria-pressed','true');   // loop on by default
 flipLoopBtn.addEventListener('click',()=>{ looping=!looping; flipLoopBtn.classList.toggle('active',looping); flipLoopBtn.setAttribute('aria-pressed',String(looping)); });
 flipMuteBtn.addEventListener('click',()=>{ musicMuted=!musicMuted; flipMuteBtn.classList.toggle('active',musicMuted); flipMuteBtn.setAttribute('aria-pressed',String(musicMuted));
   if(musicMuted) stopMusic(); else if(playing && !paused) startMusic(); });
+drawOnBtn.addEventListener('click',()=>{ if(playing) stop(); drawOnMode=!drawOnMode; drawOnBtn.classList.toggle('active',drawOnMode); drawOnBtn.setAttribute('aria-checked',String(drawOnMode)); updateToolState(); chip(drawOnMode?'Draw-on playback: on':'Draw-on playback: off'); });
 // scrub through frames
-function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1))); playI=idx; render(); updatePlayProgress(); liveBadge.textContent='\u25B6 '+(idx+1)+' / '+n; }
+function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1)));
+  if(drawOnMode){ dFrame=idx; renderPartial(frames[dFrame], frames[dFrame].strokes.length); dPausedElapsed=0; dFrameStartPerf=performance.now(); if(flipProgressFill) flipProgressFill.style.width=(((idx+1)/n)*100)+'%'; }
+  else { playI=idx; render(); updatePlayProgress(); }
+  liveBadge.textContent=(drawOnMode?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
 flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
-function endFrameScrub(){ scrubbingFrames=false; }
+function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false; if(playing && !paused){ if(drawOnMode){ dFrameStartPerf=performance.now(); drawOnTick(); } } }
 flipProgress.addEventListener('pointerup',endFrameScrub);
 flipProgress.addEventListener('pointercancel',endFrameScrub);
 
