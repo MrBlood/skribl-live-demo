@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='93') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='96') }}">
 </head>
 <body>
 
@@ -77,7 +77,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         <span>Clear all</span>
       </button>
-      <div class="menu-version">Skribl Pad · v93</div>
+      <div class="menu-version">Skribl Pad · v96</div>
     </div>
   </div>
 
@@ -763,6 +763,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             <span>Clear drawing</span>
           </button>
+          <button type="button" id="clearUndoBtn" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
+            <span>Undo</span>
+          </button>
         </div>
 
       </div>
@@ -955,6 +959,6 @@
     import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='93') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='96') }}" defer></script>
 </body>
 </html>
