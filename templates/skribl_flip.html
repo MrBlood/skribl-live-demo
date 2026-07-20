@@ -547,7 +547,7 @@
       <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miPng" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export frame (PNG)</span></button>
-      <button type="button" class="flip-menu-item" id="miWebm" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="mi-tx">Export animation (WebM)</span></button>
+      <button type="button" class="flip-menu-item" id="miWebm" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="mi-tx">Export animation (MP4)</span></button>
       <button type="button" class="flip-menu-item" id="miGif" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9.5H6.5A1.5 1.5 0 0 0 5 11v2a1.5 1.5 0 0 0 1.5 1.5H8V12"/><path d="M11 9.5v5"/><path d="M14 14.5v-5h3M14 12h2.2"/></svg></span><span class="mi-tx">Export animation (GIF)</span></button>
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor" stroke="none"/></svg></span><span class="mi-tx">How Flip works</span></button>
@@ -586,6 +586,10 @@
     const { GIFEncoder, quantize, applyPalette } = await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   } catch (e) { /* offline / blocked — GIF export will report it's unavailable */ }
+  try {
+    const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/+esm');
+    window.Mp4Muxer = { Muxer, ArrayBufferTarget };
+  } catch (e) { /* offline / blocked — video export falls back to WebM */ }
 </script>
 <script>
 /* =============================================================================
@@ -1459,6 +1463,92 @@ async function exportGIF(){
   exporting=false;
 }
 
+/* ---- MP4 export via WebCodecs + mp4-muxer (ported from the Pad). Real H.264/AAC,
+   with the trimmed/crossfaded music loop tiled across the clip. Capability-gated:
+   returns false (clean) if WebCodecs/muxer/codecs are missing, so exportVideo()
+   falls back to the WebM (MediaRecorder) path — never worse than before. ---- */
+async function pickAvcCodec(w,h){
+  if(typeof VideoEncoder==='undefined' || !VideoEncoder.isConfigSupported) return null;
+  for(const c of ['avc1.640028','avc1.4d0028','avc1.42001f','avc1.42e01e']){
+    try{ const r=await VideoEncoder.isConfigSupported({codec:c,width:w,height:h,bitrate:6000000,framerate:30}); if(r&&r.supported) return c; }catch(e){}
+  }
+  return null;
+}
+async function aacSupported(sr,ch){
+  if(typeof AudioEncoder==='undefined' || !AudioEncoder.isConfigSupported) return false;
+  try{ const r=await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:sr,numberOfChannels:ch,bitrate:128000}); return !!(r&&r.supported); }catch(e){ return false; }
+}
+async function exportViaWebCodecsMp4(){
+  const MM=window.Mp4Muxer;
+  if(!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
+  if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined') return false;
+  const w=CW&~1, h=CH&~1; if(w<2||h<2) return false;
+  const avcCodec=await pickAvcCodec(w,h); if(!avcCodec) return false;
+  if(frames.length<1) return false;
+  // Audio: the trimmed/crossfaded loop from the music engine, if music is on.
+  const hasAudio = !!musicData && musicEnabled && !musicMuted && !!currentAudioBuffer;
+  let audioBuf=null, useAudio=false;
+  if(hasAudio){
+    try{ audioBuf = buildLoopAudioBuffer(); if(audioBuf) useAudio = await aacSupported(audioBuf.sampleRate, audioBuf.numberOfChannels); }
+    catch(e){ audioBuf=null; useAudio=false; }
+    if(!useAudio) return false;   // don't ship a silent MP4 — let WebM keep the audio
+  }
+  if(exporting) return true; exporting=true; chip('Encoding MP4…');
+  try{
+    const muxer=new MM.Muxer({ target:new MM.ArrayBufferTarget(),
+      video:{codec:'avc',width:w,height:h},
+      audio: useAudio ? {codec:'aac',numberOfChannels:audioBuf.numberOfChannels,sampleRate:audioBuf.sampleRate} : undefined,
+      fastStart:'in-memory' });
+    let encErr=null;
+    const vEnc=new VideoEncoder({ output:(c,m)=>muxer.addVideoChunk(c,m), error:(e)=>{encErr=e;} });
+    vEnc.configure({ codec:avcCodec, width:w, height:h, bitrate:6000000, framerate:30 });
+    let aEnc=null;
+    if(useAudio){ aEnc=new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:(e)=>{encErr=e;} });
+      aEnc.configure({ codec:'mp4a.40.2', numberOfChannels:audioBuf.numberOfChannels, sampleRate:audioBuf.sampleRate, bitrate:128000 }); }
+    const rec=document.createElement('canvas'); rec.width=w; rec.height=h; const rctx=rec.getContext('2d');
+    const encFps=30, frameDurUs=1000000/encFps;
+    const loops = frames.length>1 ? 2 : 1;                    // a couple of loops so short clips aren't trivial
+    const totalSec=(frames.length/fps)*loops;
+    const totalFrames=Math.max(1, Math.ceil(totalSec*encFps));
+    for(let f=0; f<totalFrames; f++){
+      const animIdx=Math.floor((f/encFps)*fps)%frames.length;
+      drawFrameTo(rctx, frames[animIdx]);
+      const vf=new VideoFrame(rec, { timestamp:Math.round(f*frameDurUs), duration:Math.round(frameDurUs) });
+      vEnc.encode(vf, { keyFrame:(f%(encFps*2))===0 }); vf.close();
+      if(encErr) throw encErr;
+      if(vEnc.encodeQueueSize>8) await new Promise(r=>setTimeout(r,0));
+      else if((f&7)===0) await new Promise(r=>setTimeout(r,0));
+    }
+    await vEnc.flush();
+    if(useAudio && aEnc){
+      chip('Encoding audio…');
+      const sr=audioBuf.sampleRate, ch=audioBuf.numberOfChannels, loopLen=audioBuf.length;
+      const chans=[]; for(let c=0;c<ch;c++) chans.push(audioBuf.getChannelData(c));
+      const totalSamples=Math.ceil(totalSec*sr), blk=1024; let pos=0;
+      while(pos<totalSamples){ const n=Math.min(blk, totalSamples-pos); const data=new Float32Array(n*ch);
+        for(let c=0;c<ch;c++){ const src=chans[c], off=c*n; for(let k=0;k<n;k++){ data[off+k]=src[(pos+k)%loopLen]; } }
+        const ad=new AudioData({ format:'f32-planar', sampleRate:sr, numberOfFrames:n, numberOfChannels:ch, timestamp:Math.round((pos/sr)*1000000), data });
+        aEnc.encode(ad); ad.close(); if(encErr) throw encErr; pos+=n;
+        if((pos%(blk*32))===0) await new Promise(r=>setTimeout(r,0));
+      }
+      await aEnc.flush();
+    }
+    if(encErr) throw encErr;
+    muxer.finalize();
+    download(new Blob([muxer.target.buffer],{type:'video/mp4'}),'skribl-flip.mp4');
+    try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){}
+    chip('MP4 exported'); exporting=false; return true;
+  }catch(err){ console.error('WebCodecs MP4 export failed:', err); chip('MP4 failed — using WebM'); exporting=false; return false; }
+}
+// Video export entry: try a real MP4 (with audio) first, else the WebM fallback.
+async function exportVideo(){
+  if(exporting) return;
+  if(frames.length<2){ chip('Add a page or two first'); return; }
+  if(previewingLoop) stopLoopPreview();
+  const okMp4 = await exportViaWebCodecsMp4();
+  if(!okMp4) exportWebM();
+}
+
 /* ---- menu open/close + item wiring + state sync ---- */
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
 // --- media drawer controls ---
@@ -1744,7 +1834,7 @@ document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest(
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
 document.getElementById('miPng').addEventListener('click',()=>{ closeMenu(); exportPNG(); });
-document.getElementById('miWebm').addEventListener('click',()=>{ closeMenu(); exportWebM(); });
+document.getElementById('miWebm').addEventListener('click',()=>{ closeMenu(); exportVideo(); });
 document.getElementById('miGif').addEventListener('click',()=>{ closeMenu(); exportGIF(); });
 
 function undoStroke(){
