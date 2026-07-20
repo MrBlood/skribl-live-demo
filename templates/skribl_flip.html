@@ -124,11 +124,19 @@
     transition: transform .12s var(--spring); }
   .color-current:hover { transform: scale(1.06); }
   .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent); }
-  /* Drawers dock BELOW the toolbar (like the Pad) — a full-width row that wraps
-     under the tool buttons and pushes the canvas smaller, rather than floating up
-     over it. fitPad() re-runs on open/close so the canvas resizes to fit. */
-  .draw-popout.tab-panel { order: 9; flex: 0 0 100%; width: 100%; box-sizing: border-box; margin: 8px auto 0;
-    max-width: 640px; max-height: 42vh; overflow-y: auto; overflow-x: hidden; }
+  /* Drawers are bottom sheets: pinned to the bottom edge of the screen, sliding up
+     from below, full-width (capped + centered), scrollable, with a grabber. Same
+     idea as the Pad's docked panels, but anchored to the very bottom on mobile. */
+  .draw-popout.tab-panel { position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; z-index: 60;
+    width: 100%; max-width: 680px; box-sizing: border-box; max-height: 72vh; overflow-y: auto; overflow-x: hidden;
+    border-radius: 20px 20px 0 0; border-bottom: 0;
+    padding-top: 26px; padding-bottom: max(16px, env(safe-area-inset-bottom));
+    box-shadow: 0 -18px 46px rgba(0,0,0,.55); }
+  .draw-popout.tab-panel::before { content: ""; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 4px; border-radius: 999px; background: var(--hairline-strong); }
+  /* Dimmed scrim behind an open sheet; tapping it closes (handled by outside-click). */
+  body.flip-app.drawer-open::after { content: ""; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.4);
+    -webkit-backdrop-filter: blur(1px); backdrop-filter: blur(1px); }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   /* Image / music drop-up drawers. */
@@ -1004,7 +1012,8 @@ const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElement
 function hidePhoto(){ photoPanel.hidden=true; imageBtn.classList.remove('open'); imageBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
 function hideMusic(){ musicPanel.hidden=true; musicBtn.classList.remove('open'); musicBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
 function closeMediaDrawers(){ hidePhoto(); hideMusic(); }
-function refitDrawer(){ requestAnimationFrame(()=>{ fitPad(); if(currentAudioBuffer) requestZoomWaveformDraw(); }); }
+function updateScrim(){ const anyOpen = !drawPanel.hidden || !photoPanel.hidden || !musicPanel.hidden; document.body.classList.toggle('drawer-open', anyOpen); }
+function refitDrawer(){ updateScrim(); requestAnimationFrame(()=>{ if(currentAudioBuffer && !musicPanel.hidden) requestZoomWaveformDraw(); }); }
 function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); refitDrawer(); requestAnimationFrame(positionSmoothSeg); }
 function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); refitDrawer(); }
 function openPhoto(){ closePop(); hideMusic(); photoPanel.hidden=false; imageBtn.classList.add('open'); imageBtn.setAttribute('aria-expanded','true'); syncMediaUI(); refitDrawer(); requestAnimationFrame(positionFitSlider); }
