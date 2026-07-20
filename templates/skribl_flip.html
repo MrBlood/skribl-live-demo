@@ -299,6 +299,7 @@
           <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
           <span>Flip it</span>
         </button>
+        <button type="button" class="btn post" id="postBtn" title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
       </div>
     </div>
 
@@ -546,8 +547,6 @@
 
     <!-- "More" menu: the Pad's overflow actions — save/load draft + export. -->
     <div class="flip-menu" id="moreMenu" role="menu" hidden>
-      <button type="button" class="flip-menu-item" id="miShare" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><span class="mi-tx">Share &mdash; get a link</span></button>
-      <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
       <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>
@@ -1934,7 +1933,7 @@ function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn
 function closeMenu(){ moreMenu.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
-document.getElementById('miShare').addEventListener('click',()=>{ closeMenu(); shareSkribl(); });
+document.getElementById('postBtn').addEventListener('click', shareSkribl);
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
 document.getElementById('miPng').addEventListener('click',()=>{ closeMenu(); exportPNG(); });
