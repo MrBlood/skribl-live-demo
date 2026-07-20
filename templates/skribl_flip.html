@@ -39,7 +39,7 @@
 
   /* Wordmark: just FLIP (logo/Skribl removed to free room on mobile). */
   .flip-word { font-weight: 800; font-size: 17px; letter-spacing: .12em; color: var(--text-primary); padding-left: 2px; white-space: nowrap; }
-  .fw-mid, .fw-min { display: none; }
+  .fw-min { display: none; }
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
 
@@ -51,11 +51,13 @@
 
   /* Onion toggle — the pad's own icon-toggle (.tool-open + magnify active state). */
   .onion-tool { width: 34px; height: 34px; flex: none; border-radius: 50%; }
+  #moreBtn { width: 34px; height: 34px; border-radius: 50%; }
+  #moreBtn svg { width: 19px; height: 19px; }
   .onion-tool { background: var(--surface-control); border: 1px solid var(--hairline-strong); }
   .onion-tool svg { width: 23px; height: 23px; }
   .onion-tool:hover { background: var(--surface-control-hover); color: var(--text-primary); }
   /* Level the three action controls to one height so the row lines up. */
-  .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool, .flip-actions .btn.flip-play { height: 34px; box-sizing: border-box; }
+  .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 34px; box-sizing: border-box; }
   .flip-actions .btn.flip-play { padding-top: 0; padding-bottom: 0; }
   .onion-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
   .grid-tool { width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--surface-control); border: 1px solid var(--hairline-strong); }
@@ -240,14 +242,12 @@
      phone, so tiers shed width progressively. */
   /* Wordmark: FLIP MODE only with real room, else FLIP, else FM. */
   @media (max-width: 640px) {
-    .flip-word .fw-full { display: none; }
-    .flip-word .fw-mid { display: inline; }
     .flip-word { font-size: 15px; letter-spacing: .08em; }
   }
-  /* Mobile chrome: Flip-it collapses to its icon; tighter header. */
+  /* Mobile chrome: Flip-it AND Post collapse to their icons; tighter header. */
   @media (max-width: 560px) {
-    .flip-play span { display: none; }
-    .btn.flip-play { min-width: 0; padding: 9px 12px; }
+    .flip-play span, .btn.post .btn-label { display: none; }
+    .btn.flip-play, .btn.post { min-width: 0; padding: 9px 12px; }
     .flip-app .header { padding: 11px 8px; margin: 7px; gap: 6px; }
     .flip-lead { gap: 4px; }
     .flip-lead .icon-btn { width: 32px; height: 32px; }
@@ -255,28 +255,35 @@
     .flip-actions { gap: 5px; }
     .fps-group { gap: 5px; }
     .flip-actions .seg button { padding: 5px 5px; }
-    .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool, .flip-actions .btn.flip-play { height: 33px; }
+    .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 33px; }
     .onion-tool, .grid-tool { width: 33px; }
+    #moreBtn { width: 33px; height: 33px; }
     .onion-tool svg, .grid-tool svg { width: 20px; height: 20px; }
     .flip-hint { display: none; }
   }
-  /* Tight controls + drop the fps LABEL (info panel + tooltip still explain it)
-     so FLIP plus both toggles fit down to ~361px. */
+  /* Tight controls + drop the fps LABEL and switch the wordmark to FM so the whole
+     row (fps, onion, grid, draw-on, more, Flip it, Post) fits down to ~340px. */
   @media (max-width: 440px) {
     .fps-label { display: none; }
     .fps-group { gap: 0; }
+    .flip-word .fw-full { display: none; }
+    .flip-word .fw-min { display: inline; }
     .flip-actions .onion-tool, .flip-actions .grid-tool { width: 31px; height: 31px; }
-    .flip-actions .seg, .flip-actions .btn.flip-play { height: 31px; }
+    #moreBtn { width: 31px; height: 31px; }
+    .flip-actions .seg, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 31px; }
+    .btn.flip-play, .btn.post { padding: 8px 10px; }
     .onion-tool svg, .grid-tool svg { width: 19px; height: 19px; }
     .flip-actions .seg button { padding: 5px 4px; }
     .flip-actions { gap: 4px; }
     .flip-app .header { gap: 5px; padding: 11px 7px; }
   }
-  /* Narrowest — FM wordmark + extra squeeze for ~320px phones. */
+  /* Narrowest — extra squeeze for ~320px phones. */
   @media (max-width: 360px) {
-    .flip-word .fw-mid { display: none; }
-    .flip-word .fw-min { display: inline; }
     .flip-actions { gap: 3px; }
+    .flip-actions .onion-tool, .flip-actions .grid-tool, #moreBtn { width: 30px; height: 30px; }
+    .flip-actions .seg, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 30px; }
+    .btn.flip-play, .btn.post { padding: 7px 8px; }
+    .flip-lead .icon-btn { width: 30px; height: 30px; }
     .flip-app .header { padding: 11px 6px; gap: 4px; }
   }
 </style>
@@ -288,7 +295,7 @@
       <a href="/" class="icon-btn" title="Back to Skribl Pad" aria-label="Back to Skribl Pad">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </a>
-      <span class="flip-word"><span class="fw-full">FLIP MODE</span><span class="fw-mid">FLIP</span><span class="fw-min">FM</span></span>
+      <span class="flip-word"><span class="fw-full">FLIP</span><span class="fw-min">FM</span></span>
       </div>
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
