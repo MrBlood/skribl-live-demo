@@ -311,7 +311,7 @@
       </div>
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
-        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><button type="button" id="drawOnBtn" class="tool-open grid-tool" role="switch" aria-checked="false" title="Draw-on playback — watch each frame draw itself" aria-label="Draw-on playback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button>
         <button type="button" class="btn flip-play" id="play">
           <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
           <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
@@ -434,6 +434,11 @@
               <span class="draw-section-label">Grid</span>
               <button type="button" id="gridBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Grid overlay"><span class="layer-toggle-knob"></span></button>
               <span class="prop-val grid-hint">Alignment guides</span>
+            </div>
+            <div class="prop-row">
+              <span class="draw-section-label">Draw-on</span>
+              <button type="button" id="drawOnBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Draw-on replay"><span class="layer-toggle-knob"></span></button>
+              <span class="prop-val grid-hint">On playback, each frame draws itself on in stroke order</span>
             </div>
             <div class="drawer-divider"></div>
             <div class="drawer-actions">
@@ -588,83 +593,7 @@
     <input type="file" id="imageInput" accept="image/*" class="vis-hidden">
     <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff" class="vis-hidden">
     <input type="file" id="draftInput" accept=".skribl,application/json" class="vis-hidden">
-    <div id="helpDrawer" class="help-drawer" role="dialog" aria-modal="true" aria-label="How Flip works" hidden>
-      <div class="help-backdrop" id="helpBackdrop"></div>
-      <div class="help-drawer-inner">
-        <div class="help-drawer-head">
-          <span>How Flip works</span>
-          <button type="button" id="helpClose" class="help-close" aria-label="Close help drawer">&#x2715;</button>
-        </div>
-        <div class="help-steps">
-          <div class="help-intro">Flip is a frame-by-frame animator — draw a stack of pages, then flip through them. A one-page Flip is just a drawing; add pages to make it move. Tap a section to open it.</div>
-
-          <div class="accordion">
-            <button type="button" class="accordion-header open" aria-expanded="true">
-              <span class="accordion-icon"><svg viewBox="14 14 72 72" fill="currentColor"><polygon points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/></svg></span>
-              <span class="accordion-title">Make a Flip</span>
-              <span class="accordion-count">5 steps</span>
-              <span class="accordion-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
-            <div class="accordion-body open"><div class="accordion-inner">
-              <div class="help-step"><span class="help-num">1</span><div>
-                <div class="help-title">Draw a page</div>
-                <div class="help-desc">Pick a color and brush size and sketch. The color dot opens the full <strong>Draw</strong> menu &#8212; the same one as the Skribl Pad: presets, a <strong>+</strong> custom picker, an eyedropper, recent colors, brush size, background color, smoothing, and opacity.</div>
-              </div></div>
-              <div class="help-step"><span class="help-num">2</span><div>
-                <div class="help-title">Add pages to animate</div>
-                <div class="help-desc"><strong>&#65291; Page</strong> copies the current page so you can nudge, erase, and redraw the difference; <strong>&#65291; Blank</strong> starts empty. Turn on <strong>Onion skin</strong> to see the page beneath and trace the motion.</div>
-              </div></div>
-              <div class="help-step"><span class="help-num">3</span><div>
-                <div class="help-title">Set the speed</div>
-                <div class="help-desc">Choose <strong>6 / 12 / 24</strong> frames per second. Higher is smoother but eats through pages faster.</div>
-              </div></div>
-              <div class="help-step"><span class="help-num">4</span><div>
-                <div class="help-title">Music &amp; image (optional)</div>
-                <div class="help-desc">The <strong>Image</strong> and <strong>Music</strong> tools each open a drawer: place a background image behind the whole animation, or add a music loop &#8212; drag the markers to pick your loop, then <strong>Preview Loop</strong>, <strong>Test Seam</strong>, and <strong>Crossfade</strong> to smooth the join.</div>
-              </div></div>
-              <div class="help-step"><span class="help-num">5</span><div>
-                <div class="help-title">Flip it &amp; Post</div>
-                <div class="help-desc">Hit <strong>Flip it</strong> to preview the loop (drag the scrub bar to check any frame). When it looks right, tap <strong>Post</strong> &#8212; your Flip is saved on the server and the player link plays for <strong>anyone you share it with</strong>, on any device.</div>
-              </div></div>
-            </div></div>
-
-            <button type="button" class="accordion-header" aria-expanded="false">
-              <span class="accordion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>
-              <span class="accordion-title">Tools</span>
-              <span class="accordion-count">9 tips</span>
-              <span class="accordion-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
-            <div class="accordion-body"><div class="accordion-inner">
-              <div class="help-tip"><span class="help-pill">Pen</span><div class="help-desc">Your main tool. Picking any color switches you back to the Pen, so you never erase by accident. Shortcut: <strong>P</strong>.</div></div>
-              <div class="help-tip"><span class="help-pill">Eraser</span><div class="help-desc">Removes parts of the current page and reveals the background through it. A circle shows the exact area it clears. Shortcut: <strong>E</strong>.</div></div>
-              <div class="help-tip"><span class="help-pill">Brush &amp; color</span><div class="help-desc">Open the color dot for brush size, color swatches, a custom picker, recent colors, and opacity for translucent layering.</div></div>
-              <div class="help-tip"><span class="help-pill">Background</span><div class="help-desc">Set the color behind the whole drawing (not the strokes) &#8212; the eraser reveals it. Clearing a page never removes a background image.</div></div>
-              <div class="help-tip"><span class="help-pill">Magnify</span><div class="help-desc">The magnifier opens a movable zoom pill &#8212; drag its grip to any corner. Pinch, scroll, or Space-drag to pan; tap the % to type an exact zoom.</div></div>
-              <div class="help-tip"><span class="help-pill">Grid</span><div class="help-desc">Overlays fine / medium / coarse alignment guides across the canvas &#8212; a drawing aid only (never saved, hidden while flipping).</div></div>
-              <div class="help-tip"><span class="help-pill">Onion skin</span><div class="help-desc">Shows the previous page faintly underneath so you can line up the next frame.</div></div>
-              <div class="help-tip"><span class="help-pill">Image</span><div class="help-desc">Place an image behind the animation, then frame it with Fill / Fit / Stretch, reposition, zoom, opacity, and blur.</div></div>
-              <div class="help-tip"><span class="help-pill">Music</span><div class="help-desc">One looping track for the whole animation, with trim markers, a gapless loop, and an optional crossfade at the seam.</div></div>
-            </div></div>
-
-            <button type="button" class="accordion-header" aria-expanded="false">
-              <span class="accordion-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
-              <span class="accordion-title">Play, export &amp; save</span>
-              <span class="accordion-count">7 tips</span>
-              <span class="accordion-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
-            <div class="accordion-body"><div class="accordion-inner">
-              <div class="help-tip"><span class="help-pill">Flip it</span><div class="help-desc">Plays the pages in a loop. A scrub bar appears over the canvas &#8212; drag it to jump to any frame. Shortcut: <strong>Space</strong>.</div></div>
-              <div class="help-tip"><span class="help-pill">Draw-on</span><div class="help-desc">A playback style that redraws each page stroke-by-stroke, in the order you drew it, instead of snapping in &#8212; the Skribl Pad's signature replay.</div></div>
-              <div class="help-tip"><span class="help-pill">Move around</span><div class="help-desc">Tap a page in the strip, or use <strong>&#8592;</strong> / <strong>&#8594;</strong> to step between pages.</div></div>
-              <div class="help-tip"><span class="help-pill">Undo &amp; delete</span><div class="help-desc"><strong>Ctrl/&#8984;+Z</strong> undoes a stroke. A page's &#10005; removes that page; <strong>Clear animation</strong> (in the Draw menu) wipes everything &#8212; both confirm with a second tap.</div></div>
-              <div class="help-tip"><span class="help-pill">Export</span><div class="help-desc">The <strong>&#8943;</strong> menu exports a <strong>PNG</strong> of the current page, or the whole animation as an <strong>MP4</strong> (with your music), <strong>GIF</strong>, or <strong>WebM</strong>.</div></div>
-              <div class="help-tip"><span class="help-pill">Post</span><div class="help-desc"><strong>Post</strong> publishes to a shareable link that plays your animation &#8212; with loop, mute, and the music &#8212; for anyone, on any device.</div></div>
-              <div class="help-tip"><span class="help-pill">Autosave</span><div class="help-desc">Your animation is saved in this browser as you work and restored when you come back. Or use the <strong>&#8943;</strong> menu to Save / Load a <strong>.skribl</strong> file.</div></div>
-            </div></div>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% with kind='flip' %}{% include '_skribl_help.html' %}{% endwith %}
     <div class="flip-hint">Each new page is a <b>copy of the current one</b> — nudge, erase, redraw to animate. Toggle <b>Onion</b> to see the frame beneath. Then hit <b>Flip it</b>.</div>
   </div>
 
@@ -1269,7 +1198,7 @@ function stop(){
   buildStrip(); render();
 }
 playBtn.addEventListener('click',()=> playing?stop():play());
-drawOnBtn.addEventListener('click',()=>{ if(playing) stop(); drawOnMode=!drawOnMode; drawOnBtn.classList.toggle('active',drawOnMode); drawOnBtn.setAttribute('aria-checked',String(drawOnMode)); updateToolState(); chip(drawOnMode?'Draw-on playback: on':'Draw-on playback: off'); });
+drawOnBtn.addEventListener('click',()=>{ if(playing) stop(); drawOnMode=!drawOnMode; drawOnBtn.classList.toggle('on',drawOnMode); drawOnBtn.setAttribute('aria-checked',String(drawOnMode)); updateToolState(); chip(drawOnMode?'Draw-on replay: on':'Draw-on replay: off'); });
 // scrub through frames (drag to preview any frame)
 function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1)));
   if(drawOnMode){ dFrame=idx; renderPartial(frames[dFrame], frames[dFrame].strokes.length); dFrameStartPerf=performance.now(); if(flipProgressFill) flipProgressFill.style.width=(((idx+1)/n)*100)+'%'; }
