@@ -148,7 +148,8 @@
   .drawer-actions { gap: 8px; }
   .clear-undo-btn { color: var(--accent-bright); border-color: rgba(124,92,255,.4); }
   .clear-undo-btn[hidden] { display: none; }
-  @media (hover:hover) { .clear-undo-btn:hover { background: rgba(124,92,255,.14); border-color: var(--accent); } }
+  .clear-undo-btn:disabled { opacity: .4; cursor: default; color: var(--text-dim); border-color: var(--hairline); }
+  @media (hover:hover) { .clear-undo-btn:not(:disabled):hover { background: rgba(124,92,255,.14); border-color: var(--accent); } }
   /* Image / music drop-up drawers. */
   .media-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
   /* The shared .layer-toggle is display:none until it's inside a .music-dropzone.loaded
@@ -156,6 +157,7 @@
   .media-actions .layer-toggle { display: inline-block; }
   .media-actions .layer-toggle[hidden] { display: none; }
   .prop-row .layer-toggle { display: inline-block; flex: none; }   /* Grid toggle in the Draw drawer */
+  .grid-hint { margin-left: 12px; color: var(--text-secondary); font-size: 12.5px; text-align: left; flex: 1; }
   .media-actions .flip-upload { flex: 0 0 auto; }
   .media-actions .clear-drawer-btn { margin-left: auto; }
   .flip-upload { display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -430,8 +432,8 @@
             </div>
             <div class="prop-row">
               <span class="draw-section-label">Grid</span>
-              <span class="prop-val" style="flex:1;text-align:left;color:var(--text-secondary)">Alignment guides</span>
               <button type="button" id="gridBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Grid overlay"><span class="layer-toggle-knob"></span></button>
+              <span class="prop-val grid-hint">Alignment guides</span>
             </div>
             <div class="drawer-divider"></div>
             <div class="drawer-actions">
@@ -439,7 +441,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 <span id="clearLabel">Clear animation</span>
               </button>
-              <button type="button" id="clearUndo" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" hidden>
+              <button type="button" id="clearUndo" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
                 <span>Undo</span>
               </button>
@@ -1545,7 +1547,7 @@ function loadDraftFile(file){
       if(!d || !Array.isArray(d.frames) || !d.frames.length){ chip('Not a valid Skribl'); return; }
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       const ok=applyPayload(d);            // sets frames/bgColor/bgImage/musicData/fps directly
-      clearBackup=null; const _cu=document.getElementById('clearUndo'); if(_cu) _cu.hidden=true;
+      clearBackup=null; const _cu=document.getElementById('clearUndo'); if(_cu) _cu.disabled=true;
       loadBgImageObj(()=>{ applyBg(); render(); });
       ensureAudio();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
@@ -2056,7 +2058,7 @@ document.getElementById('clear').addEventListener('click',e=>{
   frames=[newFrame()]; idx=0; redoStack.length=0;
   try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){ }
   buildStrip(); render(); updateToolState();
-  const cu=document.getElementById('clearUndo'); if(cu) cu.hidden=false;
+  const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
 });
 document.getElementById('clearUndo').addEventListener('click',()=>{
   if(!clearBackup) return;
@@ -2064,7 +2066,7 @@ document.getElementById('clearUndo').addEventListener('click',()=>{
   frames = clearBackup.frames.map(deepCopy);
   idx = Math.min(clearBackup.idx, frames.length-1);
   clearBackup=null; redoStack.length=0;
-  document.getElementById('clearUndo').hidden=true;
+  document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
   chip('Animation restored');
 });
