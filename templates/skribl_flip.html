@@ -584,16 +584,15 @@
       <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
       <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>
-      <button type="button" class="flip-menu-item" id="miPng" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export frame (PNG)</span></button>
-      <button type="button" class="flip-menu-item" id="miWebm" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="mi-tx">Export animation (MP4)</span></button>
-      <button type="button" class="flip-menu-item" id="miGif" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9.5H6.5A1.5 1.5 0 0 0 5 11v2a1.5 1.5 0 0 0 1.5 1.5H8V12"/><path d="M11 9.5v5"/><path d="M14 14.5v-5h3M14 12h2.2"/></svg></span><span class="mi-tx">Export animation (GIF)</span></button>
+      <button type="button" class="flip-menu-item" id="miExport" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export…</span></button>
       <div class="flip-menu-sep"></div>
-      <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor" stroke="none"/></svg></span><span class="mi-tx">How Flip works</span></button>
+      <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg></span><span class="mi-tx">How Flip works</span></button>
     </div>
     <input type="file" id="imageInput" accept="image/*" class="vis-hidden">
     <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff" class="vis-hidden">
     <input type="file" id="draftInput" accept=".skribl,application/json" class="vis-hidden">
     {% with kind='flip' %}{% include '_skribl_help.html' %}{% endwith %}
+    {% with kind='flip' %}{% include '_skribl_export.html' %}{% endwith %}
     <div class="flip-hint">Each new page is a <b>copy of the current one</b> — nudge, erase, redraw to animate. Toggle <b>Onion</b> to see the frame beneath. Then hit <b>Flip it</b>.</div>
   </div>
 
@@ -1561,14 +1560,20 @@ async function exportGIF(){
     const full=document.createElement('canvas'); full.width=CW; full.height=CH; const fc=full.getContext('2d');
     const out=document.createElement('canvas'); out.width=outW; out.height=outH; const octx=out.getContext('2d');
     const enc=G.GIFEncoder(); const delay=Math.round(1000/fps);
+    // GIF background toggle (shared export sheet): 'transparent' keys out the bg
+    // for crisp 1-bit-alpha line art; 'color' bakes the pad background as before.
+    const transparent=(gifBgMode==='transparent');
+    const fmt=transparent?'rgba4444':'rgb565';
     for(let i=0;i<frames.length;i++){
       if(_exportAbort){ exportHide(); chip('Export cancelled'); exporting=false; return; }
-      drawFrameTo(fc, frames[i]);
+      if(transparent){ fc.clearRect(0,0,CW,CH); paintFrame(fc, frames[i].strokes); }  // strokes only, on transparent
+      else { drawFrameTo(fc, frames[i]); }
       octx.clearRect(0,0,outW,outH); octx.drawImage(full,0,0,outW,outH);
       const img=octx.getImageData(0,0,outW,outH);
-      const palette=G.quantize(img.data,256,{format:'rgb565'});
-      const index=G.applyPalette(img.data,palette,'rgb565');
+      const palette=G.quantize(img.data,256,{format:fmt, oneBitAlpha:transparent});
+      const index=G.applyPalette(img.data,palette,fmt);
       const opts={palette,delay}; if(i===0) opts.repeat=0;              // loop forever
+      if(transparent){ let tIdx=palette.findIndex(c=>c.length>3&&c[3]===0); if(tIdx<0) tIdx=0; opts.transparent=true; opts.transparentIndex=tIdx; opts.dispose=2; }
       enc.writeFrame(index,outW,outH,opts);
       exportSet((i+1)/frames.length);
       if((i&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
@@ -1952,9 +1957,46 @@ document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest(
 document.getElementById('postBtn').addEventListener('click', shareSkribl);
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
-document.getElementById('miPng').addEventListener('click',()=>{ closeMenu(); exportPNG(); });
-document.getElementById('miWebm').addEventListener('click',()=>{ closeMenu(); exportVideo(); });
-document.getElementById('miGif').addEventListener('click',()=>{ closeMenu(); exportGIF(); });
+/* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to
+   Flip's existing encoders. The menu's "Export…" opens it; each format runs the
+   same proven export fn (which keeps its own #flipExport progress overlay). The
+   GIF background segment (Background color | Transparent) sets gifBgMode, which
+   exportGIF() honours. Mirrors app.js's openExport/closeExport semantics. ---- */
+let gifBgMode='color';   // 'color' | 'transparent'
+const exportOverlay=document.getElementById('exportOverlay');
+const exportSheet=document.getElementById('exportSheet');
+let _exCloseT=null;
+function openExportSheet(){
+  closeMenu();
+  const single=frames.length<2;
+  const vBtn=document.getElementById('exportVideo'), vDesc=document.getElementById('exportVideoDesc');
+  if(vBtn){ vBtn.disabled=single; if(vDesc) vDesc.textContent = single ? 'Add a page or two to export a video' : ((musicData&&musicEnabled)?'Your animation, with music':'Your animation'); }
+  const gifBtn=document.getElementById('exportGif'), gifDesc=document.getElementById('exportGifDesc'), gifToggle=document.getElementById('exportGifToggle');
+  const gifReady=(typeof window.gifenc!=='undefined' && window.gifenc.GIFEncoder);
+  if(gifBtn){
+    if(single){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='Add a page or two to export a GIF'; if(gifToggle) gifToggle.hidden=true; }
+    else if(!gifReady){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='GIF encoder didn\u2019t load — check your connection'; if(gifToggle) gifToggle.hidden=true; }
+    else { gifBtn.disabled=false; if(gifDesc) gifDesc.textContent='Your animation, looping · silent'; if(gifToggle) gifToggle.hidden=false; }
+  }
+  clearTimeout(_exCloseT);
+  exportOverlay.hidden=false;
+  requestAnimationFrame(()=>{ exportOverlay.classList.add('open');
+    if(gifToggle && !gifToggle.hidden){ const seg=gifToggle.querySelector('.gif-seg'); if(seg) requestAnimationFrame(()=>positionSegSlider(seg)); }
+  });
+}
+function closeExportSheet(){ exportOverlay.classList.remove('open'); _exCloseT=setTimeout(()=>{ exportOverlay.hidden=true; },350); }
+document.getElementById('miExport').addEventListener('click', openExportSheet);
+exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')) closeExportSheet(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !exportOverlay.hidden) closeExportSheet(); });
+const _exHandle = exportSheet ? exportSheet.querySelector('.menu-handle') : null;
+if(_exHandle) _exHandle.addEventListener('click', e=>{ e.stopPropagation(); closeExportSheet(); });
+document.getElementById('exportPng').addEventListener('click',()=>{ closeExportSheet(); exportPNG(); });
+document.getElementById('exportVideo').addEventListener('click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportVideo(); });
+document.getElementById('exportGif').addEventListener('click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportGIF(); });
+(function(){ const gifToggle=document.getElementById('exportGifToggle'); if(!gifToggle) return;
+  gifToggle.querySelectorAll('.gif-seg-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ gifBgMode=btn.getAttribute('data-gif-bg')||'color'; gifToggle.querySelectorAll('.gif-seg-btn').forEach(b=>b.classList.toggle('active', b===btn)); }); });
+  const gifSeg=gifToggle.querySelector('.gif-seg'); if(gifSeg) attachSegSlider(gifSeg);
+})();
 
 function undoStroke(){
   if(playing) return;
