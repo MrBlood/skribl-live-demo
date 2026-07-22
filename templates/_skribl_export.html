@@ -31,19 +31,21 @@
         <span class="export-opt-desc" id="exportVideoDesc">{% if kind == 'flip' %}Your animation, with music{% else %}Replay of your drawing with music{% endif %}</span>
       </div>
     </button>
-    <button type="button" class="export-opt" id="exportGif">
-      <div class="export-opt-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-      </div>
-      <div class="export-opt-text">
-        <span class="export-opt-title">GIF (looping)</span>
-        <span class="export-opt-desc" id="exportGifDesc">{% if kind == 'flip' %}Your animation, looping · silent{% else %}Just the strokes, animated · silent{% endif %}</span>
-      </div>
-    </button>
-    <div class="export-gif-toggle" id="exportGifToggle">
-      <div class="gif-seg" role="group" aria-label="GIF background">
-        <button type="button" class="gif-seg-btn active" data-gif-bg="color">Background color</button>
-        <button type="button" class="gif-seg-btn" data-gif-bg="transparent">Transparent</button>
+    <div class="export-opt-group">
+      <button type="button" class="export-opt" id="exportGif">
+        <div class="export-opt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+        </div>
+        <div class="export-opt-text">
+          <span class="export-opt-title">GIF (looping)</span>
+          <span class="export-opt-desc" id="exportGifDesc">{% if kind == 'flip' %}Your animation, looping · silent{% else %}Just the strokes, animated · silent{% endif %}</span>
+        </div>
+      </button>
+      <div class="export-gif-toggle" id="exportGifToggle">
+        <div class="gif-seg" role="group" aria-label="GIF background">
+          <button type="button" class="gif-seg-btn active" data-gif-bg="color">Background color</button>
+          <button type="button" class="gif-seg-btn" data-gif-bg="transparent">Transparent</button>
+        </div>
       </div>
     </div>
     <div class="export-progress" id="exportProgress" hidden>
