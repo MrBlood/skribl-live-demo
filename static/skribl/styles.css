@@ -2333,6 +2333,23 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .export-opt-desc { font-size: 11.5px; color: var(--text-muted); }
 
+/* GIF is a grouped "tray": the option card and its Background/Transparent toggle
+   share one bordered box, so the toggle clearly belongs to GIF instead of reading
+   as a detached row below it. The inner card drops its own border/background/margin
+   and the toggle sits flush beneath, split by a hairline so the hierarchy reads.
+   When the toggle is hidden (GIF unavailable) the group looks like a normal card. */
+.export-opt-group {
+  border: 1px solid var(--hairline);
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.export-opt-group .export-opt { border: 0; background: none; border-radius: 0; margin-bottom: 0; }
+.export-opt-group:has(.export-opt:hover:not(:disabled)) { border-color: rgba(124,92,255,0.4); }
+.export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; }
+.export-opt-group .export-gif-toggle { border-top: 1px solid var(--hairline); padding-top: 10px; }
+
 /* GIF background toggle (segmented) — uses the shared sliding-pill highlight
    (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
    controls. Full width so both labels fit. */
