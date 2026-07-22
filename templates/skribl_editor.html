@@ -137,17 +137,9 @@
     <!-- Zoom pill (editor only). Grip = drag-only (move to any corner); the
          four buttons below are pure taps. Guarded in app.js so the player,
          which has no #zoomLayer, is unaffected. -->
-    <div id="zoomHud" class="zoom-hud" data-corner="br" hidden>
-      <div id="zoomGrip" class="zoom-grip" title="Drag to move" aria-label="Move zoom controls">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
-      </div>
-      <button type="button" id="zoomInBtn" class="zoom-btn" aria-label="Zoom in">+</button>
-      <div id="zoomVal" class="zoom-val" aria-live="polite">100%</div>
-      <button type="button" id="zoomOutBtn" class="zoom-btn" aria-label="Zoom out">&minus;</button>
-      <button type="button" id="zoomFitBtn" class="zoom-fit" title="Fit to screen" aria-label="Fit to screen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-      </button>
-    </div>
+    <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
+    {% include '_skribl_zoom_hud.html' %}
+
   </div>
   <div class="play-scrub" id="playScrub" hidden aria-label="Playback scrubber" role="slider" aria-valuemin="0" aria-valuemax="100"><div class="play-scrub-fill" id="playScrubFill"></div></div>
   </div>
@@ -174,36 +166,9 @@
   </div>
 
   <!-- Read-only player shell (shown only in player-mode) -->
-  <div class="player-shell" id="playerShell" hidden>
-    <div class="player-meta">
-      <div class="player-title" id="playerTitle">Untitled Skribl</div>
-      <div class="player-caption" id="playerCaption" hidden></div>
-    </div>
-    <div class="player-progress" id="playerProgress"><div class="player-progress-fill" id="playerProgressFill"></div></div>
-    <div class="player-controls">
-      <button type="button" class="player-btn" id="playerRestartBtn" aria-label="Restart">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-      </button>
-      <button type="button" class="player-btn primary" id="playerPlayBtn" aria-label="Play">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <button type="button" class="player-btn" id="playerLoopBtn" aria-label="Loop" aria-pressed="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
-      </button>
-      <button type="button" class="player-btn" id="playerMuteBtn" aria-label="Mute" aria-pressed="false" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      </button>
-    </div>
-    <button type="button" class="player-link" id="playerCopyBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-      Copy link
-    </button>
-    <a href="/" class="player-cta">
-      <span class="cta-star" aria-hidden="true">&#x2736;</span>
-      Make your own Skribl
-    </a>
-    <div class="player-brand">Made with Skribl Pad</div>
-  </div>
+  <!-- Player shell (shared partial — editor preview + public player) -->
+  {% include '_skribl_player_controls.html' %}
+
 
   <div class="toolbar" id="toolBar">
     <div class="tool-group" id="toolGroup">

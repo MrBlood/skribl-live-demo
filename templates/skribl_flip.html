@@ -326,13 +326,9 @@
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
         <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><div class="flip-grid" id="flipGrid"></div></div>
-        <div id="zoomHud" class="zoom-hud" data-corner="br" hidden>
-          <div id="zoomGrip" class="zoom-grip" title="Drag to move" aria-label="Move zoom controls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg></div>
-          <button type="button" id="zoomInBtn" class="zoom-btn" aria-label="Zoom in">+</button>
-          <div id="zoomVal" class="zoom-val" aria-live="polite">100%</div>
-          <button type="button" id="zoomOutBtn" class="zoom-btn" aria-label="Zoom out">&minus;</button>
-          <button type="button" id="zoomFitBtn" class="zoom-fit" title="Fit to screen" aria-label="Fit to screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-        </div>
+        <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
+        {% include '_skribl_zoom_hud.html' %}
+
       </div>
       <div class="flip-player" id="flipPlayer" hidden>
         <div class="player-progress" id="flipProgress" role="slider" aria-label="Scrub frames" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" id="flipProgressFill"></div></div>
