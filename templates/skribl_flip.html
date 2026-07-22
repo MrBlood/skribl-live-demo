@@ -178,6 +178,22 @@
   .flip-tools .tool-group { height: 40px; box-sizing: border-box; align-items: center; }
   .flip-tools .tool-btn { padding: 6px 14px; }
 
+  /* ---- Desktop parity with Skribl Pad (>640px) ---------------------------
+     On desktop, match the Pad's shared design-system sizes exactly so the two
+     apps read identically: header controls 36px tall, ⋯ 36x36, bottom-toolbar
+     tools + undo/redo 44x44. Scoped to min-width:641px (mirrors the Pad's own
+     640px breakpoint) so Flip's tighter <=640px sizing — hand-tuned to keep the
+     dense header on one line down to ~330px — is left completely untouched, i.e.
+     no wrap regression. The color swatch keeps its own size (distinct round-
+     swatch design, not the Pad's chip-in-square). */
+  @media (min-width: 641px) {
+    .flip-actions .seg, .flip-actions .onion-tool, .flip-actions .grid-tool,
+    .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; }
+    .onion-tool, .grid-tool, #moreBtn { width: 36px; height: 36px; }
+    .flip-tools .tool-open, .flip-tools .t-btn { width: 44px; height: 44px; }
+    .flip-tools .tool-group { height: 44px; }
+  }
+
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
     scrollbar-width: thin; scrollbar-color: var(--accent) rgba(255,255,255,.05); }
