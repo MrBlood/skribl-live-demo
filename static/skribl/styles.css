@@ -683,7 +683,11 @@ body.stroking .zoom-hud { pointer-events: none; }
 /* Magnify tool — lit (accent) when its zoom pill is showing. */
 .magnify-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 .magnify-tool.active svg { filter: none; }
-.tool-open.open { background: var(--accent); color: #fff; }
+/* Drawer-open toggles (color / image / music) light up with the same translucent
+   accent as the magnify + onion toggles — one consistent "lit" state across the
+   toolbar and across Pad + Flip (Flip's image/music already use these exact values
+   via .flip-tools .magnify-tool.open). */
+.tool-open.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 .tool-chip { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
 .tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
 @media (max-width: 640px) {
