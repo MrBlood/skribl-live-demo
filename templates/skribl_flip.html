@@ -124,6 +124,13 @@
     </div>
   </div>
 
+<!-- mp4-muxer (vendored) enables the WebCodecs H.264/AAC MP4 export — same file
+     and same `window.Mp4Muxer` global the Pad loads, so both surfaces run one
+     version. Until this file is present the MP4 path stays dormant and video
+     export falls back to MediaRecorder (WebM/MP4), so a missing file never
+     breaks export. Classic script: it must execute before flip.js below. -->
+<script src="{{ url_for('static', filename='skribl/mp4-muxer.min.js') }}"></script>
+
 <!-- gifenc (GIF encoder) is ESM-only — load it from the CDN and expose it on
      window.gifenc. If it fails (offline), window.gifenc stays undefined and GIF
      export shows a friendly message. Same source the Pad uses. -->
@@ -132,10 +139,6 @@
     const { GIFEncoder, quantize, applyPalette } = await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   } catch (e) { /* offline / blocked — GIF export will report it's unavailable */ }
-  try {
-    const { Muxer, ArrayBufferTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/+esm');
-    window.Mp4Muxer = { Muxer, ArrayBufferTarget };
-  } catch (e) { /* offline / blocked — video export falls back to WebM */ }
 </script>
 <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
 <script src="{{ url_for('static', filename='skribl/flip.js', v='102') }}"></script>
