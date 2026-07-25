@@ -980,7 +980,7 @@ function exportWebM(){
 }
 async function exportGIF(){
   const G=window.gifenc;
-  if(!(G && G.GIFEncoder && G.quantize && G.applyPalette)){ chip('GIF export needs an internet connection'); return; }
+  if(!(G && G.GIFEncoder && G.quantize && G.applyPalette)){ chip('GIF export needs gifenc.min.js'); return; }
   if(exporting) return; if(!frames.length){ chip('Draw something first'); return; }
   exporting=true; exportShow('Rendering GIF…');
   try{
@@ -1443,7 +1443,7 @@ function openExportSheet(){
   const gifReady=(typeof window.gifenc!=='undefined' && window.gifenc.GIFEncoder);
   if(gifBtn){
     if(single){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='Add a page or two to export a GIF'; if(gifToggle) gifToggle.hidden=true; }
-    else if(!gifReady){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='GIF encoder didn\u2019t load — check your connection'; if(gifToggle) gifToggle.hidden=true; }
+    else if(!gifReady){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='GIF encoder didn\u2019t load — try reloading'; if(gifToggle) gifToggle.hidden=true; }
     else { gifBtn.disabled=false; if(gifDesc) gifDesc.textContent='Your animation, looping · silent'; if(gifToggle) gifToggle.hidden=false; }
   }
   clearTimeout(_exCloseT);

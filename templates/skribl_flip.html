@@ -131,16 +131,14 @@
      breaks export. Classic script: it must execute before flip.js below. -->
 <script src="{{ url_for('static', filename='skribl/mp4-muxer.min.js') }}"></script>
 
-<!-- gifenc (GIF encoder) is ESM-only — load it from the CDN and expose it on
-     window.gifenc. If it fails (offline), window.gifenc stays undefined and GIF
-     export shows a friendly message. Same source the Pad uses. -->
-<script type="module">
-  try {
-    const { GIFEncoder, quantize, applyPalette } = await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
-    window.gifenc = { GIFEncoder, quantize, applyPalette };
-  } catch (e) { /* offline / blocked — GIF export will report it's unavailable */ }
-</script>
+<!-- gifenc (vendored) enables GIF export — same file and same `window.gifenc`
+     global the Pad loads, so both surfaces run one version. Upstream is ESM-only,
+     so this is a global-publishing IIFE build of gifenc 1.0.3 (the file's banner
+     has the exact reproduce command). Until this file is present GIF export shows
+     a friendly message, so a missing file never breaks anything else.
+     Classic script: it must execute before flip.js below. -->
+<script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}"></script>
 <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
-<script src="{{ url_for('static', filename='skribl/flip.js', v='102') }}"></script>
+<script src="{{ url_for('static', filename='skribl/flip.js', v='104') }}"></script>
 </body>
 </html>

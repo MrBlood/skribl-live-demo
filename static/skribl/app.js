@@ -4428,7 +4428,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
         if (gifToggle) gifToggle.hidden = true;
       } else if (!gifReady) {
         gifBtn.disabled = true;
-        if (gifDesc) gifDesc.textContent = 'GIF encoder didn’t load — check your connection';
+        if (gifDesc) gifDesc.textContent = 'GIF encoder didn’t load — try reloading';
         if (gifToggle) gifToggle.hidden = true;
       } else {
         gifBtn.disabled = false;

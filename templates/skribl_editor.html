@@ -234,15 +234,13 @@
        file is present the MP4 path stays dormant and video export falls back to
        the MediaRecorder (WebM/MP4) path — so a missing file never breaks export. -->
   <script src="{{ url_for('static', filename='skribl/mp4-muxer.min.js') }}" defer></script>
-  <!-- gifenc (GIF encoder) is ESM-only, so load it as a module from the CDN and
-       expose its named exports as a global for app.js. No file to vendor. If the
-       load fails (offline/CDN down), window.gifenc stays undefined and the GIF
-       option simply disables itself with a hint — nothing else breaks. -->
-  <script type="module">
-    import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
-    window.gifenc = { GIFEncoder, quantize, applyPalette };
-  </script>
+  <!-- gifenc (vendored) enables GIF export. Upstream is ESM-only, so this is a
+       global-publishing IIFE build of gifenc 1.0.3 (see the banner in the file for
+       the exact reproduce command) — same file and same `window.gifenc` global
+       Flip loads, so both surfaces run one version. Until this file is present the
+       GIF option simply disables itself with a hint — nothing else breaks. -->
+  <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}" defer></script>
   <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}" defer></script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='102') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='104') }}" defer></script>
 </body>
 </html>
