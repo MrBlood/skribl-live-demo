@@ -1149,8 +1149,9 @@ function refreshPendingCards(){
         meta='Loop '+fmtLoopTime(pendingMusicMeta.trimStart)+'–'+fmtLoopTime(pendingMusicMeta.trimEnd)+' · '+len.toFixed(1)+'s';
       }
       document.getElementById('musicPendingMeta').textContent=meta;
-      mCard.hidden=false; if(mUp) mUp.hidden=true; if(mDot) mDot.hidden=false;
-    } else { mCard.hidden=true; if(mUp) mUp.hidden=false; }
+      mCard.hidden=false; if(mUp) mUp.hidden=true;
+      if(mDot){ mDot.hidden=false; mDot.classList.add('pending'); }
+    } else { mCard.hidden=true; if(mUp) mUp.hidden=false; if(mDot) mDot.classList.remove('pending'); }
   }
   if(pCard){
     if(pendingPhotoMeta && !bgImage){
@@ -1161,8 +1162,9 @@ function refreshPendingCards(){
       if(pendingPhotoMeta.blur) parts.push(pendingPhotoMeta.blur+'px blur');
       if(pendingPhotoMeta.zoom && pendingPhotoMeta.zoom!==1) parts.push(Math.round(pendingPhotoMeta.zoom*100)+'% zoom');
       document.getElementById('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
-      pCard.hidden=false; if(pUp) pUp.hidden=true; if(pDot) pDot.hidden=false;
-    } else { pCard.hidden=true; if(pUp) pUp.hidden=false; }
+      pCard.hidden=false; if(pUp) pUp.hidden=true;
+      if(pDot){ pDot.hidden=false; pDot.classList.add('pending'); }
+    } else { pCard.hidden=true; if(pUp) pUp.hidden=false; if(pDot) pDot.classList.remove('pending'); }
   }
 }
 

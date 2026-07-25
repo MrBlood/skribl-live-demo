@@ -3740,9 +3740,11 @@ function refreshPendingCards() {
       mCard.hidden = false;
       musicUploadBtn.hidden = true;
       musicTabDot.hidden = false;
+      musicTabDot.classList.add('pending');
     } else {
       mCard.hidden = true;
       musicUploadBtn.hidden = false;
+      musicTabDot.classList.remove('pending');
     }
   }
 
@@ -3761,9 +3763,11 @@ function refreshPendingCards() {
       pCard.hidden = false;
       photoUploadBtn.hidden = true;
       document.getElementById('photoTabDot').hidden = false;
+      document.getElementById('photoTabDot').classList.add('pending');
     } else {
       pCard.hidden = true;
       photoUploadBtn.hidden = false;
+      { const d = document.getElementById('photoTabDot'); if (d) d.classList.remove('pending'); }
     }
   }
 }

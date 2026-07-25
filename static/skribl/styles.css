@@ -622,6 +622,14 @@ body.stroking .zoom-hud { pointer-events: none; }
 
 .tab-dot[hidden] { display: none; }
 
+/* Amber = the file is remembered but missing, and the user has to re-add it.
+   Same yellow as the autosave pill, so the toolbar dot, the status light and
+   the re-add card all say the same thing. */
+.tab-dot.pending {
+  background: #ffd23f;
+  box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
+}
+
 /* Photo/Music tabs show a small status circle: grey when the tab is empty,
    swapped for the purple .tab-dot once a file is added. Both are the same size
    and sit in the same spot, so it reads as one dot changing colour. The swap is
@@ -1231,9 +1239,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   gap: 12px;
   margin-top: 10px;
   padding: 12px 12px 12px 14px;
-  border: 1px solid rgba(124, 92, 255, 0.4);
+  border: 1px solid rgba(255, 210, 63, 0.4);
   border-radius: 12px;
-  background: rgba(124, 92, 255, 0.08);
+  background: rgba(255, 210, 63, 0.08);
 }
 
 .pending-card[hidden] { display: none; }
@@ -1242,8 +1250,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: rgba(124, 92, 255, 0.16);
-  color: var(--accent-bright);
+  background: rgba(255, 210, 63, 0.16);
+  color: #ffd23f;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1271,7 +1279,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .pending-meta {
   font-size: 11px;
-  color: var(--accent-bright);
+  color: #ffd23f;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -1283,8 +1291,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 8px 14px;
   border-radius: 999px;
   border: none;
-  background: var(--accent);
-  color: #fff;
+  background: #ffd23f;
+  color: #171a22;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
