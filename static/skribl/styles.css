@@ -463,6 +463,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   padding: 1px 0;
   margin: 0;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .zoom-hud .zoom-fit {
@@ -1996,6 +1997,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .autosave-status.saving .autosave-dot { background: #ffae42; animation: pulse 1s infinite; }
 .autosave-status.failed .autosave-dot { background: #f4326f; }
 .autosave-status.failed { color: #f4326f; }
+
+/* Saved, but the photo/music files were too big for browser storage — the
+   drawing and every setting persisted, the media bytes did not. Distinct from
+   green (all safe) and from red (nothing saved): a standing amber warning, not
+   the pulsing amber of an in-flight save. */
+.autosave-status.partial .autosave-dot { background: #ffd23f; }
+.autosave-status.partial { color: #ffd23f; }
 
 /* ---------- Autosave restore banner ---------- */
 .restore-banner {

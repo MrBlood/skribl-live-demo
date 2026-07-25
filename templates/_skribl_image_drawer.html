@@ -22,6 +22,7 @@
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+  {%- endif %}
 
   <div id="photoPending" class="pending-card" hidden>
     <div class="pending-icon">
@@ -34,7 +35,6 @@
     <button type="button" class="pending-btn" id="photoPendingBtn">Re-add</button>
     <button type="button" class="pending-dismiss" id="photoPendingDismiss" aria-label="Dismiss">&#x2715;</button>
   </div>
-  {%- endif %}
 
   <div id="photoDetail" hidden>
     <div class="photo-fit-group" id="photoFitGroup">

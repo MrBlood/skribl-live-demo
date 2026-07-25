@@ -22,6 +22,7 @@
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac" style="display:none">
+  {%- endif %}
 
   <div id="musicPending" class="pending-card" hidden>
     <div class="pending-icon">
@@ -34,7 +35,6 @@
     <button type="button" class="pending-btn" id="musicPendingBtn">Re-add</button>
     <button type="button" class="pending-dismiss" id="musicPendingDismiss" aria-label="Dismiss">&#x2715;</button>
   </div>
-  {%- endif %}
 
   <div id="musicDetail" class="music-detail" hidden>
     <div class="music-trim">

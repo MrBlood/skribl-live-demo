@@ -3513,9 +3513,13 @@ function showAutosaveStatus(state) {
   if (!el || !txt) return;
   clearTimeout(el._hideTimer);
   el.hidden = false;
-  el.classList.remove('saving', 'failed');
+  el.classList.remove('saving', 'failed', 'partial');
   if (state === 'saving') { el.classList.add('saving'); txt.textContent = 'Saving…'; }
   else if (state === 'failed') { el.classList.add('failed'); txt.textContent = 'Autosave failed'; }
+  // The Pad's autosave stores media METADATA only (bytes never fit in localStorage),
+  // so whenever a photo/track is attached the session is not fully recoverable.
+  // Amber says so up front instead of a green light the drawers quietly contradict.
+  else if (state === 'saved-no-media') { el.classList.add('partial'); txt.textContent = 'Saved without media'; }
   else { txt.textContent = 'Saved'; }
   requestAnimationFrame(() => el.classList.add('show'));
   // "Saved"/"failed" fade out after a moment; "saving" stays until resolved.
@@ -3539,7 +3543,11 @@ function writeAutosave() {
   }
   try {
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeAutosave()));
-    showAutosaveStatus('saved');
+    const hasPhoto = !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
+                        || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta));
+    const hasMusic = !!((audioEl && audioEl._fileName)
+                        || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
+    showAutosaveStatus((hasPhoto || hasMusic) ? 'saved-no-media' : 'saved');
   } catch (e) {
     // Quota or private-mode failure — fail silently in storage, but tell the user.
     showAutosaveStatus('failed');
@@ -3913,28 +3921,7 @@ function audioBufferToWavDataURL(buffer, startFrame, frames) {
 // the loop's tail (fading out); the rest is the loop body verbatim. When this
 // clip loops, its last sample and out[0] are contiguous in the source, so there
 // is no discontinuity at the seam.
-function buildLoopChannels(buffer, startFrame, frames, xfadeFrames) {
-  const numCh = buffer.numberOfChannels;
-  const outLen = frames - xfadeFrames;
-  const channels = [];
-  for (let c = 0; c < numCh; c++) {
-    const src = buffer.getChannelData(c);
-    const o = new Float32Array(outLen);
-    for (let i = 0; i < outLen; i++) {
-      let s = src[startFrame + i] || 0;
-      if (i < xfadeFrames) {
-        const t = i / xfadeFrames;                 // 0 → 1
-        const wIn = Math.sin(t * Math.PI / 2);     // head fades in
-        const wOut = Math.cos(t * Math.PI / 2);    // tail fades out
-        const tail = src[startFrame + i + outLen] || 0;  // = source[le - X + i]
-        s = s * wIn + tail * wOut;
-      }
-      o[i] = s;
-    }
-    channels.push(o);
-  }
-  return { channels, frames: outLen };
-}
+function buildLoopChannels(buffer, startFrame, frames, xfadeFrames) { return window.SkriblAudioLoop.buildLoopChannels(buffer, startFrame, frames, xfadeFrames); }
 
 // Encode raw Float32 channel arrays (all same length) to a 16-bit PCM WAV data
 // URL. Mirrors audioBufferToWavDataURL's writer but reads from provided arrays,
@@ -4004,31 +3991,7 @@ function buildTrimmedLoopWav() {
 let _waLoopSource = null;
 let _waLoopStartCtx = 0;   // audioCtx.currentTime when the loop started
 let _waLoopDuration = 0;   // loop clip length (seconds)
-function buildLoopAudioBuffer() {
-  if (!currentAudioBuffer || !audioCtx) return null;
-  const sr = currentAudioBuffer.sampleRate;
-  const ls = Math.max(0, trimStart || 0);
-  const le = Math.min(currentAudioBuffer.duration, (trimEnd != null ? trimEnd : currentAudioBuffer.duration));
-  if (le - ls < 0.05) return null;
-  const startFrame = Math.floor(ls * sr);
-  const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
-  const frames = endFrame - startFrame;
-  if (frames <= 0) return null;
-  const numCh = currentAudioBuffer.numberOfChannels;
-  const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
-  let channels, outLen;
-  if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
-    const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
-    channels = built.channels; outLen = built.frames;
-  } else {
-    outLen = frames;
-    channels = [];
-    for (let c = 0; c < numCh; c++) channels.push(currentAudioBuffer.getChannelData(c).subarray(startFrame, startFrame + frames));
-  }
-  const out = audioCtx.createBuffer(numCh, outLen, sr);
-  for (let c = 0; c < numCh; c++) out.getChannelData(c).set(channels[c]);
-  return out;
-}
+function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
 function stopWebAudioLoop() {
   if (_waLoopSource) { try { _waLoopSource.stop(); } catch (e) {} try { _waLoopSource.disconnect(); } catch (e) {} _waLoopSource = null; }
 }

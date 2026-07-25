@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='96') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='100') }}">
 </head>
 <body>
 
@@ -242,6 +242,7 @@
     import { GIFEncoder, quantize, applyPalette } from 'https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm';
     window.gifenc = { GIFEncoder, quantize, applyPalette };
   </script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='96') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='99') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='100') }}" defer></script>
 </body>
 </html>
