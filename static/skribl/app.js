@@ -3501,10 +3501,28 @@ function serializeAutosave() {
     photoMeta: (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
       ? { name: photoBgImg._fileName, fit: photoFit, opacity: photoOpacityVal_, blur: photoBlur_, offset: { x: photoOffsetX, y: photoOffsetY }, zoom: photoZoom }
       : (typeof pendingPhotoMeta !== 'undefined' ? pendingPhotoMeta : null),
-    musicMeta: (audioEl && audioEl._fileName)
-      ? { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs }
-      : (typeof pendingMusicMeta !== 'undefined' ? pendingMusicMeta : null)
+    musicMeta: currentMusicMeta()
   };
+}
+
+// The loop numbers only mean anything once loadedmetadata/decodeAudioData has
+// run. Before that `trimEnd` is still its initial 0, and an autosave landing in
+// that window used to persist a zero-length "loop" — which came back on re-add
+// as the 0.5s minimum-loop clamp in applyPendingMusicSettings, and rendered as
+// "Loop 0:00–0:00" on the pending card. While the duration is unknown we keep a
+// previously saved loop for the same file if there is one, and otherwise write
+// the name with null trim values so the load-time defaults apply instead of a
+// bogus loop. (Flip doesn't need this: decodeForWaveform installs its 20s
+// default BEFORE applying any saved meta, so a null never reaches the clamp.)
+function currentMusicMeta() {
+  const prev = (typeof pendingMusicMeta !== 'undefined') ? pendingMusicMeta : null;
+  if (!(audioEl && audioEl._fileName)) return prev;
+  const decoded = Number.isFinite(audioDuration) && audioDuration > 0 && trimEnd > trimStart;
+  if (!decoded) {
+    if (prev && prev.name === audioEl._fileName) return prev;
+    return { name: audioEl._fileName, trimStart: null, trimEnd: null, crossfadeMs: loopCrossfadeMs };
+  }
+  return { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs };
 }
 
 function showAutosaveStatus(state) {
@@ -3874,42 +3892,7 @@ function serializeSkribl() {
 // Encode a slice of a decoded AudioBuffer to a 16-bit PCM WAV data URL. Reads
 // straight from the buffer's channel data with a frame offset, so no temporary
 // AudioBuffer / AudioContext is needed. Synchronous and dependency-free.
-function audioBufferToWavDataURL(buffer, startFrame, frames) {
-  const numCh = buffer.numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  startFrame = startFrame || 0;
-  frames = frames != null ? frames : buffer.length - startFrame;
-  const blockAlign = numCh * 2;              // 16-bit
-  const dataSize = frames * blockAlign;
-  const ab = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(ab);
-  let p = 0;
-  const wStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(p++, s.charCodeAt(i)); };
-  const wU32 = (v) => { view.setUint32(p, v, true); p += 4; };
-  const wU16 = (v) => { view.setUint16(p, v, true); p += 2; };
-  wStr('RIFF'); wU32(36 + dataSize); wStr('WAVE');
-  wStr('fmt '); wU32(16); wU16(1); wU16(numCh);
-  wU32(sampleRate); wU32(sampleRate * blockAlign); wU16(blockAlign); wU16(16);
-  wStr('data'); wU32(dataSize);
-  const chans = [];
-  for (let c = 0; c < numCh; c++) chans.push(buffer.getChannelData(c));
-  for (let i = 0; i < frames; i++) {
-    const idx = startFrame + i;
-    for (let c = 0; c < numCh; c++) {
-      let s = Math.max(-1, Math.min(1, chans[c][idx] || 0));
-      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      view.setInt16(p, s, true); p += 2;
-    }
-  }
-  // Base64-encode in chunks to avoid call-stack limits on large buffers.
-  const bytes = new Uint8Array(ab);
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-  }
-  return 'data:audio/wav;base64,' + btoa(binary);
-}
+function audioBufferToWavDataURL(buffer, startFrame, frames) { return window.SkriblAudioLoop.audioBufferToWavDataURL(buffer, startFrame, frames); }
 
 // --- Loop crossfade (bake-only) --------------------------------------------
 // The posted/exported loop is a hard cut at the seam (le → ls). If those points
@@ -3931,59 +3914,13 @@ function buildLoopChannels(buffer, startFrame, frames, xfadeFrames) { return win
 // URL. Mirrors audioBufferToWavDataURL's writer but reads from provided arrays,
 // so the crossfade path can encode samples that don't exist in the source
 // buffer. Kept separate so the untouched no-crossfade path stays byte-for-byte.
-function encodeWavFromChannels(channels, sampleRate) {
-  const numCh = channels.length;
-  const frames = channels[0] ? channels[0].length : 0;
-  const blockAlign = numCh * 2;
-  const dataSize = frames * blockAlign;
-  const ab = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(ab);
-  let p = 0;
-  const wStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(p++, s.charCodeAt(i)); };
-  const wU32 = (v) => { view.setUint32(p, v, true); p += 4; };
-  const wU16 = (v) => { view.setUint16(p, v, true); p += 2; };
-  wStr('RIFF'); wU32(36 + dataSize); wStr('WAVE');
-  wStr('fmt '); wU32(16); wU16(1); wU16(numCh);
-  wU32(sampleRate); wU32(sampleRate * blockAlign); wU16(blockAlign); wU16(16);
-  wStr('data'); wU32(dataSize);
-  for (let i = 0; i < frames; i++) {
-    for (let c = 0; c < numCh; c++) {
-      let s = Math.max(-1, Math.min(1, channels[c][i] || 0));
-      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      view.setInt16(p, s, true); p += 2;
-    }
-  }
-  const bytes = new Uint8Array(ab);
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-  }
-  return 'data:audio/wav;base64,' + btoa(binary);
-}
+function encodeWavFromChannels(channels, sampleRate) { return window.SkriblAudioLoop.encodeWavFromChannels(channels, sampleRate); }
 
 // Slice currentAudioBuffer to the [trimStart, trimEnd] loop and return a small
 // WAV data URL + its duration, or null if the decoded buffer isn't usable. When
 // a crossfade is set, the tail is folded over the head so the clip loops
 // seamlessly (the clip is then shorter by the crossfade length).
-function buildTrimmedLoopWav() {
-  if (!currentAudioBuffer) return null;
-  const sr = currentAudioBuffer.sampleRate;
-  const ls = Math.max(0, trimStart || 0);
-  const le = Math.min(currentAudioBuffer.duration, (trimEnd != null ? trimEnd : currentAudioBuffer.duration));
-  if (le - ls < 0.05) return null;
-  const startFrame = Math.floor(ls * sr);
-  const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
-  const frames = endFrame - startFrame;
-  if (frames <= 0) return null;
-  // Crossfade can't exceed half the loop, or the fold would overlap itself.
-  const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
-  if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
-    const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
-    return { dataUrl: encodeWavFromChannels(built.channels, sr), duration: built.frames / sr };
-  }
-  return { dataUrl: audioBufferToWavDataURL(currentAudioBuffer, startFrame, frames), duration: frames / sr };
-}
+function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer, trimStart, trimEnd, loopCrossfadeMs }); }
 
 // --- Sample-accurate live loop engine (Web Audio) ---------------------------
 // The live monitors (Preview Loop, editor Play) used timer-wrapped <audio>,

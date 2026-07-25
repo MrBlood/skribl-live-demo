@@ -56,6 +56,7 @@ let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // ima
 let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
 let musicEnabled = true, trimStart = 0, trimEnd = null, audioDuration = 0;   // trim/loop
+const MAX_LOOP_SECONDS = 20;   // hard cap on loop length; enforced at load AND on every drag
 let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // decoded buffer for the waveform
 let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
 let musicName = '';                                                          // track filename (shown in the dropzone)
@@ -802,7 +803,10 @@ function decodeForWaveform(){
   try{
     audioCtx.decodeAudioData(dataURLToArrayBuffer(musicData)).then(buf=>{
       currentAudioBuffer=buf; audioDuration=buf.duration;
-      if(trimEnd==null || trimEnd>audioDuration) trimEnd=audioDuration;
+      // Default the loop to the FIRST 20s, not the whole file (matches the Pad's
+      // loadedmetadata handler and the cap every drag handler enforces). Setting
+      // audioDuration here was what made updateTrimUI's 20s default unreachable.
+      if(trimEnd==null || trimEnd>audioDuration) trimEnd=Math.min(audioDuration, trimStart+MAX_LOOP_SECONDS);
       // Re-adding a track the autosave had to drop — reapply its saved loop.
       if(pendingMusicMeta){ const m=pendingMusicMeta;
         if(typeof m.trimStart==='number') trimStart=Math.max(0, Math.min(m.trimStart, audioDuration));
@@ -820,7 +824,7 @@ function ensureAudio(){
   if(musicData && !audioEl){
     audioEl=new Audio(musicData); audioEl.loop=false;
     audioEl.addEventListener('loadedmetadata',()=>{ if(!audioDuration && isFinite(audioEl.duration)) audioDuration=audioEl.duration;
-      if(trimEnd==null || trimEnd>audioDuration) trimEnd=audioDuration; updateTrimUI(); syncMusicUI(); });
+      if(trimEnd==null || trimEnd>audioDuration) trimEnd=Math.min(audioDuration, trimStart+MAX_LOOP_SECONDS); updateTrimUI(); syncMusicUI(); });
     audioEl.addEventListener('timeupdate',()=>{ const end=trimEnd!=null?trimEnd:audioDuration;
       if(end && audioEl.currentTime >= end-0.02){ audioEl.currentTime=trimStart; } });
   }
@@ -850,6 +854,9 @@ musicInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.fi
 let _waLoopSource=null, _waLoopStartCtx=0, _waLoopDuration=0;
 function buildLoopChannels(buffer, startFrame, frames, xfadeFrames) { return window.SkriblAudioLoop.buildLoopChannels(buffer, startFrame, frames, xfadeFrames); }
 function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
+// Crop to the loop for posting (same encoder the Pad uses). Post-only — the
+// draft keeps the full sample so the loop can still be re-trimmed.
+function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer: currentAudioBuffer, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
 function stopWebAudioLoop(){ if(_waLoopSource){ try{_waLoopSource.stop();}catch(e){} try{_waLoopSource.disconnect();}catch(e){} _waLoopSource=null; } }
 function startWebAudioLoop(){
   if(!audioCtx || !currentAudioBuffer) return false;
@@ -905,7 +912,19 @@ function download(blob, name){ const a=document.createElement('a'); a.href=URL.c
    body matches the Pad's frame-format (media on frame 0, one frame per page). ---- */
 let sharing=false;
 function buildSharePayload(){
-  const music0=(musicData && musicEnabled) ? { data:musicData, name:musicName||null, trimStart:trimStart, trimEnd:(trimEnd!=null?trimEnd:audioDuration), crossfadeMs:loopCrossfadeMs } : null;
+  let music0=(musicData && musicEnabled) ? { data:musicData, name:musicName||null, trimStart:trimStart, trimEnd:(trimEnd!=null?trimEnd:audioDuration), crossfadeMs:loopCrossfadeMs } : null;
+  // Crop music down to just the loop for posting, exactly as the Pad does — a
+  // 42s file trimmed to an 8s loop was posting all 42s. The cropped clip IS the
+  // loop, so trimStart/trimEnd become 0..loopLen and crossfadeMs is dropped (the
+  // fold is already baked in; re-applying it at playback would double it).
+  // Falls back to the full sample if the decoded buffer isn't ready or encoding
+  // fails, so a post never breaks here.
+  if (music0 && music0.data && currentAudioBuffer) {
+    try {
+      const cropped = buildTrimmedLoopWav();
+      if (cropped) music0 = { data: cropped.dataUrl, name: music0.name, trimStart: 0, trimEnd: cropped.duration };
+    } catch (e) { /* keep the full-sample music0 */ }
+  }
   const photo0=bgImage ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
   const outFrames=frames.map((f,i)=>({ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null }));
   return { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1}, title:'Flip animation' };
@@ -1200,10 +1219,13 @@ function formatTimeH(sec){ let total=Math.round(sec*100); const hh=total%100; to
 function updateTrimUI(){
   if(!Number.isFinite(audioDuration) || audioDuration<=0) return;
   if(!Number.isFinite(trimStart)) trimStart=0;
-  if(trimEnd==null || !Number.isFinite(trimEnd)) trimEnd=Math.min(audioDuration, trimStart+Math.min(20,audioDuration));
+  if(trimEnd==null || !Number.isFinite(trimEnd)) trimEnd=Math.min(audioDuration, trimStart+Math.min(MAX_LOOP_SECONDS,audioDuration));
   const minLoop=0.01;
   trimStart=Math.max(0, Math.min(trimStart, Math.max(0,audioDuration-minLoop)));
   trimEnd=Math.max(trimStart+minLoop, Math.min(trimEnd, audioDuration));
+  // Single choke point for the cap: every path (load, draft restore, re-add,
+  // drag) lands here, so the <=20s invariant can't be bypassed by any of them.
+  if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS;
   const startPct=(trimStart/audioDuration)*100, endPct=(trimEnd/audioDuration)*100;
   handleStart.style.left=startPct+'%'; handleEnd.style.left=endPct+'%';
   musicRange.style.left=startPct+'%'; musicRange.style.width=(endPct-startPct)+'%';
@@ -1278,8 +1300,8 @@ function dragHandle(handle, isStart){
   function cx(e){ return e.touches?e.touches[0].clientX:e.clientX; }
   function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
     function onMove(ev){ const rect=musicTrack.getBoundingClientRect(); let pct=(cx(ev)-rect.left)/rect.width; pct=Math.max(0,Math.min(1,pct)); const time=pct*audioDuration;
-      if(isStart){ trimStart=Math.min(time,trimEnd-0.5); trimStart=Math.max(0,trimStart); if(trimEnd-trimStart>20) trimStart=trimEnd-20; }
-      else { trimEnd=Math.max(time,trimStart+0.5); trimEnd=Math.min(audioDuration,trimEnd); if(trimEnd-trimStart>20) trimEnd=trimStart+20; }
+      if(isStart){ trimStart=Math.min(time,trimEnd-0.5); trimStart=Math.max(0,trimStart); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimStart=trimEnd-MAX_LOOP_SECONDS; }
+      else { trimEnd=Math.max(time,trimStart+0.5); trimEnd=Math.min(audioDuration,trimEnd); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS; }
       updateTrimUI(); scheduleSave(); }
     function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
     window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
@@ -1301,8 +1323,8 @@ dragRangeWindow(musicRange);
 function dragZoomHandle(handle, isStart){
   function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
     function onMove(ev){ const clientX=ev.touches?ev.touches[0].clientX:ev.clientX; const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
-      if(isStart){ trimStart=Math.max(0,Math.min(time,trimEnd-0.5)); if(trimEnd-trimStart>20) trimEnd=trimStart+20; }
-      else { trimEnd=Math.min(audioDuration,Math.max(time,trimStart+0.5)); if(trimEnd-trimStart>20) trimStart=trimEnd-20; }
+      if(isStart){ trimStart=Math.max(0,Math.min(time,trimEnd-0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS; }
+      else { trimEnd=Math.min(audioDuration,Math.max(time,trimStart+0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimStart=trimEnd-MAX_LOOP_SECONDS; }
       updateTrimUI(); scheduleSave(); }
     function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
     window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
@@ -1331,12 +1353,12 @@ function updateNudgeStepLabel(){ nudgeStepLabel.textContent=nudgeSteps[nudgeStep
 nudgeStepFinerBtn.addEventListener('click',()=>{ nudgeStepIdx=Math.max(0,nudgeStepIdx-1); updateNudgeStepLabel(); });
 nudgeStepCoarserBtn.addEventListener('click',()=>{ nudgeStepIdx=Math.min(nudgeSteps.length-1,nudgeStepIdx+1); updateNudgeStepLabel(); });
 function nudgeTrim(which, direction){ if(!audioEl) return; if((which!=='start'&&which!=='end')||!Number.isFinite(direction)) return; const amount=direction*nudgeSteps[nudgeStepIdx];
-  if(which==='start'){ trimStart=Math.max(0,Math.min(trimStart+amount,trimEnd-0.5)); if(trimEnd-trimStart>20) trimEnd=trimStart+20; } else { trimEnd=Math.min(audioDuration,Math.max(trimEnd+amount,trimStart+0.5)); if(trimEnd-trimStart>20) trimStart=trimEnd-20; } updateTrimUI(); scheduleSave(); }
+  if(which==='start'){ trimStart=Math.max(0,Math.min(trimStart+amount,trimEnd-0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS; } else { trimEnd=Math.min(audioDuration,Math.max(trimEnd+amount,trimStart+0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimStart=trimEnd-MAX_LOOP_SECONDS; } updateTrimUI(); scheduleSave(); }
 document.querySelectorAll('.nudge-btn[data-which]').forEach(btn=>{ btn.addEventListener('click',()=>nudgeTrim(btn.dataset.which, parseFloat(btn.dataset.amount))); });
 updateNudgeStepLabel();
 
 // Match Drawing Time — set loop length to the animation runtime
-function setLoopToDrawingLength(){ if(!audioEl || !(audioDuration>0)) return; const drawingSeconds=frames.length/fps; const loopLength=Math.min(20,Math.max(0.5,Math.min(drawingSeconds,audioDuration))); trimEnd=trimStart+loopLength; if(trimEnd>audioDuration){ trimEnd=audioDuration; trimStart=Math.max(0,trimEnd-loopLength); } updateTrimUI(); scheduleSave(); }
+function setLoopToDrawingLength(){ if(!audioEl || !(audioDuration>0)) return; const drawingSeconds=frames.length/fps; const loopLength=Math.min(MAX_LOOP_SECONDS,Math.max(0.5,Math.min(drawingSeconds,audioDuration))); trimEnd=trimStart+loopLength; if(trimEnd>audioDuration){ trimEnd=audioDuration; trimStart=Math.max(0,trimEnd-loopLength); } updateTrimUI(); scheduleSave(); }
 matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 
 // preview loop + test seam (seek-based on the <audio> element)

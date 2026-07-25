@@ -65,8 +65,110 @@
     return out;
   }
 
+  // --- WAV encoders (pure) ---------------------------------------------------
+  // Bodies lifted verbatim from app.js so the Pad's posted bytes are unchanged.
+
+  function audioBufferToWavDataURL(buffer, startFrame, frames) {
+    const numCh = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    startFrame = startFrame || 0;
+    frames = frames != null ? frames : buffer.length - startFrame;
+    const blockAlign = numCh * 2;              // 16-bit
+    const dataSize = frames * blockAlign;
+    const ab = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(ab);
+    let p = 0;
+    const wStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(p++, s.charCodeAt(i)); };
+    const wU32 = (v) => { view.setUint32(p, v, true); p += 4; };
+    const wU16 = (v) => { view.setUint16(p, v, true); p += 2; };
+    wStr('RIFF'); wU32(36 + dataSize); wStr('WAVE');
+    wStr('fmt '); wU32(16); wU16(1); wU16(numCh);
+    wU32(sampleRate); wU32(sampleRate * blockAlign); wU16(blockAlign); wU16(16);
+    wStr('data'); wU32(dataSize);
+    const chans = [];
+    for (let c = 0; c < numCh; c++) chans.push(buffer.getChannelData(c));
+    for (let i = 0; i < frames; i++) {
+      const idx = startFrame + i;
+      for (let c = 0; c < numCh; c++) {
+        let s = Math.max(-1, Math.min(1, chans[c][idx] || 0));
+        s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        view.setInt16(p, s, true); p += 2;
+      }
+    }
+    // Base64-encode in chunks to avoid call-stack limits on large buffers.
+    const bytes = new Uint8Array(ab);
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return 'data:audio/wav;base64,' + btoa(binary);
+  }
+
+  function encodeWavFromChannels(channels, sampleRate) {
+    const numCh = channels.length;
+    const frames = channels[0] ? channels[0].length : 0;
+    const blockAlign = numCh * 2;
+    const dataSize = frames * blockAlign;
+    const ab = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(ab);
+    let p = 0;
+    const wStr = (s) => { for (let i = 0; i < s.length; i++) view.setUint8(p++, s.charCodeAt(i)); };
+    const wU32 = (v) => { view.setUint32(p, v, true); p += 4; };
+    const wU16 = (v) => { view.setUint16(p, v, true); p += 2; };
+    wStr('RIFF'); wU32(36 + dataSize); wStr('WAVE');
+    wStr('fmt '); wU32(16); wU16(1); wU16(numCh);
+    wU32(sampleRate); wU32(sampleRate * blockAlign); wU16(blockAlign); wU16(16);
+    wStr('data'); wU32(dataSize);
+    for (let i = 0; i < frames; i++) {
+      for (let c = 0; c < numCh; c++) {
+        let s = Math.max(-1, Math.min(1, channels[c][i] || 0));
+        s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        view.setInt16(p, s, true); p += 2;
+      }
+    }
+    const bytes = new Uint8Array(ab);
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return 'data:audio/wav;base64,' + btoa(binary);
+  }
+
+  // Slice the decoded buffer to [trimStart, trimEnd] and return a small WAV data
+  // URL + its duration, or null if the buffer isn't usable. Folds the crossfade
+  // in when one is set (the clip is then shorter by the crossfade length), so
+  // the posted clip IS the loop. Same state-object contract as
+  // buildLoopAudioBuffer, minus audioCtx: no Web Audio context needed.
+  function buildTrimmedLoopWav(state) {
+    const currentAudioBuffer = state.currentAudioBuffer;
+    const trimStart = state.trimStart;
+    const trimEnd = state.trimEnd;
+    const loopCrossfadeMs = state.loopCrossfadeMs;
+    if (!currentAudioBuffer) return null;
+    const sr = currentAudioBuffer.sampleRate;
+    const ls = Math.max(0, trimStart || 0);
+    const le = Math.min(currentAudioBuffer.duration, (trimEnd != null ? trimEnd : currentAudioBuffer.duration));
+    if (le - ls < 0.05) return null;
+    const startFrame = Math.floor(ls * sr);
+    const endFrame = Math.min(currentAudioBuffer.length, Math.floor(le * sr));
+    const frames = endFrame - startFrame;
+    if (frames <= 0) return null;
+    // Crossfade can't exceed half the loop, or the fold would overlap itself.
+    const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
+    if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
+      const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
+      return { dataUrl: encodeWavFromChannels(built.channels, sr), duration: built.frames / sr };
+    }
+    return { dataUrl: audioBufferToWavDataURL(currentAudioBuffer, startFrame, frames), duration: frames / sr };
+  }
+
   global.SkriblAudioLoop = {
     buildLoopChannels: buildLoopChannels,
-    buildLoopAudioBuffer: buildLoopAudioBuffer
+    buildLoopAudioBuffer: buildLoopAudioBuffer,
+    audioBufferToWavDataURL: audioBufferToWavDataURL,
+    encodeWavFromChannels: encodeWavFromChannels,
+    buildTrimmedLoopWav: buildTrimmedLoopWav
   };
 })(typeof window !== 'undefined' ? window : this);
