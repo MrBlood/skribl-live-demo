@@ -7,7 +7,7 @@ from collections import deque
 from datetime import datetime, timezone
 from threading import Lock
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, g, jsonify, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
@@ -144,6 +144,92 @@ def _payload_has_audio(payload):
                         music = m
                         break
     return bool((music or {}).get("data"))
+
+
+# --- Server-side media validation (INTEGRATION §7) ---------------------------
+# The post endpoint is public and unauthenticated, and every media item arrives as
+# a base64 data URL inside payload_json. Until now the only limit was
+# MAX_CONTENT_LENGTH on the whole request, so a single post could carry ~24 MB of
+# arbitrary blob — any type, valid base64 or not — straight into the JSON column.
+# At the current rate limit that is ~480 MB/hour/IP into a free-tier Postgres.
+#
+# These caps are per-item and deliberately generous: a trimmed loop is a couple of
+# MB (see the v102 note: a 42s WAV with an 8s loop posts 1.41 MB) and a background
+# photo is well under 8 MB. They are env-tunable so a deploy can tighten them
+# without a code change.
+#
+# Type handling is an ALLOW-LIST of top-level types (audio/*, image/*) with SVG
+# explicitly excluded — SVG is the one image type that carries script, and nothing
+# the client produces is SVG. Subtypes are otherwise left open on purpose: `music`
+# is whatever audio file the user picked (mpeg/wav/ogg/mp4/flac/…), and narrowing
+# that would reject legitimate uploads for no security gain.
+#
+# NOT covered here: dimensions and duration, which need real decoding (Pillow /
+# an audio decoder) and a dependency this app does not have. Bytes and type are
+# the cheap 90%.
+MAX_AUDIO_BYTES = int(os.environ.get("SKRIBL_MAX_AUDIO_BYTES", 12_000_000))
+MAX_IMAGE_BYTES = int(os.environ.get("SKRIBL_MAX_IMAGE_BYTES", 8_000_000))
+
+_MEDIA_DATA_URL_RE = re.compile(r"^data:([a-zA-Z]+)/([a-zA-Z0-9.+-]+);base64,(.*)$", re.DOTALL)
+
+
+def _validate_media_data_url(value, expected_type, max_bytes, label):
+    # Returns None if acceptable, else a human-readable error string. Pure and
+    # import-light (re + base64) so it can be unit-tested headless.
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return f"'{label}' must be a data URL string."
+    m = _MEDIA_DATA_URL_RE.match(value.strip())
+    if not m:
+        return f"'{label}' must be a base64 data URL."
+    top, sub, b64 = m.group(1).lower(), m.group(2).lower(), m.group(3)
+    if top != expected_type:
+        return f"'{label}' must be {expected_type}/*, got {top}/{sub}."
+    if top == "image" and sub in ("svg+xml", "svg"):
+        return f"'{label}' may not be SVG."
+    # Size from the base64 length before decoding, so an oversize payload is
+    # rejected without spending the CPU to decode it.
+    approx = (len(b64) * 3) // 4
+    if approx > max_bytes:
+        return f"'{label}' is too large ({approx // 1000} kB; limit {max_bytes // 1000} kB)."
+    try:
+        base64.b64decode(b64, validate=True)
+    except Exception:
+        return f"'{label}' is not valid base64."
+    return None
+
+
+def _iter_media_items(payload):
+    # Yields (value, expected_type, max_bytes, label) for every media item in a
+    # payload, top-level and per-frame. Frame-format Skribls carry media on their
+    # frames (a classic Skribl is a 1-frame Skribl), so both must be walked.
+    def scan(container, where):
+        if not isinstance(container, dict):
+            return
+        for key, kind, cap in (("music", "audio", MAX_AUDIO_BYTES),
+                               ("photo", "image", MAX_IMAGE_BYTES)):
+            item = container.get(key)
+            if isinstance(item, dict) and item.get("data") is not None:
+                yield item["data"], kind, cap, f"{where}{key}.data"
+
+    yield from scan(payload, "")
+    thumb = payload.get("thumbnail")
+    if thumb is not None:
+        yield thumb, "image", MAX_CARD_BYTES, "thumbnail"
+    frames = payload.get("frames")
+    if isinstance(frames, list):
+        for i, frame in enumerate(frames[:200]):   # bounded: don't walk forever
+            yield from scan(frame, f"frames[{i}].")
+
+
+def _validate_payload_media(payload):
+    # First error wins; returns None when everything is acceptable.
+    for value, kind, cap, label in _iter_media_items(payload):
+        err = _validate_media_data_url(value, kind, cap, label)
+        if err:
+            return err
+    return None
 
 
 def create_app():
@@ -291,6 +377,11 @@ def create_app():
                 return jsonify({"error": f"'{key}' must be an object or null."}), 400
         if payload.get("baseSnapshot") is not None and not isinstance(payload.get("baseSnapshot"), str):
             return jsonify({"error": "'baseSnapshot' must be a string or null."}), 400
+        # Media: type + per-item size caps. See _validate_payload_media. This is
+        # the only place a data URL is vetted before it lands in the JSON column.
+        media_error = _validate_payload_media(payload)
+        if media_error:
+            return jsonify({"error": media_error}), 400
         # Frame-format Skribls carry the drawing under frames[] (a classic Skribl
         # is a 1-frame Skribl). Only a gross type check — keep unknown keys working.
         if "frames" in payload and not isinstance(payload["frames"], list):
@@ -331,16 +422,77 @@ def create_app():
             "url": f"/s/{public_id}"
         }), 201
 
-    # Conservative security headers. Deliberately NO X-Frame-Options / CSP
-    # frame-ancestors: the roadmap embeds the player in an iframe on
-    # skribls.net, and a blanket deny here would break that. A CSP is also
-    # deferred: the app relies on inline scripts (template config), inline
-    # styles, data:/blob: URLs — a policy loose enough to allow all that adds
-    # ~nothing today. Revisit both alongside the embed work.
+    # --- Content Security Policy ---------------------------------------------
+    # Deferred until v105 for a good reason: while gifenc/mp4-muxer came from
+    # jsdelivr, any workable policy needed a third-party script-src, and the app
+    # also had inline <script type="module"> loaders. Vendoring both libraries
+    # (v103/v104) removed the last off-origin script AND the last inline module,
+    # so a genuinely strict script-src is now possible.
+    #
+    # What made this cheap: the templates have ZERO inline event handlers
+    # (onclick=...), zero javascript: URLs, and only two inline <script> blocks
+    # (the SKRIBL_MODE config in the editor and player). Those two get a
+    # per-request nonce. Note that a nonce DISABLES 'unsafe-inline' for scripts
+    # in CSP2+ browsers, which is exactly what we want — but it also means any
+    # inline handler added later will silently stop firing. verify_csp.py fails
+    # loudly if one appears.
+    #
+    # Deliberate looseness, each load-bearing:
+    #   style-src 'unsafe-inline'  — 51 style="..." attributes across the
+    #       templates. Style ATTRIBUTES cannot be nonced (a nonce only covers
+    #       <style> blocks), so this is required until they're refactored. Much
+    #       lower risk than inline script, and there is no user-controlled style
+    #       injection surface here.
+    #   connect-src data:          — NOT optional. app.js fetches data: URLs
+    #       directly (`fetch(data.music.data)`, `fetch(built.dataUrl)`) to get
+    #       audio into an ArrayBuffer. Omitting this breaks music loading on the
+    #       player and the WAV/MP4 build path, silently.
+    #   img-src/media-src data: blob: — canvas toDataURL, new Audio(dataUrl),
+    #       and createObjectURL for downloads and playback.
+    #
+    # NO frame-ancestors, on purpose. The roadmap embeds the player in an iframe
+    # on skribls.net, and the previous note here warned that a blanket deny would
+    # break that. Omitting the directive leaves framing unrestricted, matching the
+    # existing (deliberate) absence of X-Frame-Options. Do not "harden" this
+    # without checking the embed first.
+    #
+    # SKRIBL_CSP=off disables it; SKRIBL_CSP=report-only sends the policy as
+    # Content-Security-Policy-Report-Only, so a deploy can watch for violations
+    # before enforcing. Default is enforcing.
+    csp_mode = os.environ.get("SKRIBL_CSP", "on").strip().lower()
+
+    @app.before_request
+    def _make_csp_nonce():
+        # Per-request, per-response nonce. Generated for every request (not just
+        # rendered ones) so the header and the template can never disagree.
+        g.csp_nonce = secrets.token_urlsafe(16)
+
+    @app.context_processor
+    def _expose_csp_nonce():
+        return {"csp_nonce": getattr(g, "csp_nonce", "")}
+
     @app.after_request
     def _security_headers(resp):
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        if csp_mode != "off":
+            nonce = getattr(g, "csp_nonce", "")
+            policy = "; ".join([
+                "default-src 'self'",
+                f"script-src 'self' 'nonce-{nonce}'",
+                "style-src 'self' 'unsafe-inline'",
+                "img-src 'self' data: blob:",
+                "media-src 'self' data: blob:",
+                "connect-src 'self' data: blob:",
+                "font-src 'self'",
+                "worker-src 'self' blob:",
+                "base-uri 'self'",
+                "form-action 'self'",
+                "object-src 'none'",
+            ])
+            header = ("Content-Security-Policy-Report-Only"
+                      if csp_mode == "report-only" else "Content-Security-Policy")
+            resp.headers.setdefault(header, policy)
         return resp
 
     @app.get("/api/skribls/<public_id>")

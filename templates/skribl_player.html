@@ -846,7 +846,7 @@
     </div>
   </div>
 </div>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     window.SKRIBL_MODE = "player";
     window.SKRIBL_PLAYER_ID = {{ public_id | tojson }};
     window.SKRIBL_API_BASE = "/api/skribls";

@@ -1,0 +1,69 @@
+# Harness
+
+203 assertions across 11 suites. All green as of v105 — including the first run
+against the complete repo, where nothing SKIPs because `mp4-muxer.min.js` is
+present. From the repo root: `./harness/run_harness.sh verify_gifenc.py ...`
+
+This sandbox is not browser-gated: Flask runs, `flask_sqlalchemy` installs from
+PyPI, and Playwright's Chromium launches.
+
+    pip install flask_sqlalchemy --break-system-packages
+    python3 -c "from app import app, db; app.app_context().push(); db.create_all()"
+    python3 -m flask --app app run --port 5001 --no-reload
+
+Then, from `harness/`:
+
+    python3 verify_audio.py      #  9  post -> /s/<id> with sound + numeric seam check
+    python3 verify_lib.py        #  8  shared audioloop + load-order negative test
+    python3 verify_fix.py        # 18  autosave quota fallback + regressions
+    python3 verify_amber.py      # 15  amber media state + re-add cards
+    python3 verify_dots.py       # 10  amber toolbar dots + card colours
+    python3 verify_loopcap.py    # 18  20s loop cap + cropped post payload  (v102)
+    python3 verify_race.py       # 17  Pad pre-decode autosave race         (v102)
+    python3 verify_muxer.py      # 18  vendored mp4-muxer + MP4 gate        (v103)
+    python3 verify_gifenc.py     # 35  vendored gifenc + REAL GIF encode    (v104)
+    python3 verify_csp.py        # 31  CSP shape + enforcement + no breakage (v105)
+    python3 verify_media.py      # 24  server-side media validation (no browser) (v105)
+
+## Gotchas
+
+- **The rate limiter will bite you.** `POST /api/skribls` allows 20/hour/IP, and
+  the posting suites together sit just under it — so a few new posting assertions
+  anywhere produce mystery 429s that look like validation failures. `run_harness.sh`
+  exports `SKRIBL_RATE_MAX_POSTS=100000` to keep suites deterministic. The flip
+  side is that the limiter is not under test in the harness; check it by hand, or
+  run a suite with the variable set low.
+
+- **`app.py` must be present at the app root.** It was missing from the v101 zip,
+  which made every suite unrunnable. Check it survives the next zip.
+- **Background processes may not survive between tool calls.** If you're driving
+  this from an agent sandbox, start the server and run the suite in ONE shell
+  invocation, or use `run_harness.sh`.
+- `verify_amber.py` / `verify_dots.py` synthesize their over-quota WAV rather
+  than reading an uploaded file (the original boom-bap loop is gone). A 30s
+  stereo tone fills the same role: its base64 exceeds the ~4.5 MB localStorage
+  ceiling, which is what drives the amber state.
+- **Don't regenerate `requirements.txt` from the sandbox.** It has no
+  `DATABASE_URL`, so it never touches Postgres and never needs `gunicorn` — but
+  production needs both. `psycopg[binary]` in particular is required by the
+  `postgresql+psycopg://` rewrite in `app.py`.
+- **`verify_muxer.py` needs `static/skribl/mp4-muxer.min.js`**, which lives in the
+  repo and is not shipped in handoff zips. The suite exits with a readable SKIP
+  if it's missing.
+- **jsdelivr is blocked here — and as of v104 nothing needs it.** Both libraries
+  are vendored, so `verify_gifenc.py` can run the GIF encoder for real. If you add
+  a new third-party script, expect it to fail here and vendor it instead; the
+  "zero off-origin requests" assertion in `verify_gifenc.py` will catch it.
+- **`verify_gifenc.py` needs `static/skribl/gifenc.min.js`** and SKIPs readably
+  without it. Unlike the muxer this file ships in the v104 zip (the repo doesn't
+  have it yet); from v105 it is repo-resident. It is a build artifact — rebuild it
+  with the command in its own banner comment, don't hand-edit it.
+- **Downloads are how the GIF suite reads its output.** It drives the real export
+  UI and captures the download, so the browser context needs `accept_downloads`.
+  The Pad's export sheet also needs its `.open` class forced before the button is
+  hit-testable — `openExport()` is IIFE-scoped and can only be reached by click.
+- **Headless Chromium here has `VideoEncoder` but not avc1**, so no MP4 can
+  actually be encoded. `verify_muxer.py` tests the capability gate and the WebM
+  fallback, not the encoder. A real MP4 needs a real Chrome.
+- Drawing before adding music triggers `setLoopToDrawingLength()`, so the loop
+  will be the drawing's length, not 20s. That's intended; don't read it as a bug.
