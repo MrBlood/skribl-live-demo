@@ -1,6 +1,6 @@
 # Harness
 
-203 assertions across 11 suites. All green as of v105 — including the first run
+220 assertions across 12 suites. All green as of v105 — including the first run
 against the complete repo, where nothing SKIPs because `mp4-muxer.min.js` is
 present. From the repo root: `./harness/run_harness.sh verify_gifenc.py ...`
 
@@ -24,6 +24,7 @@ Then, from `harness/`:
     python3 verify_gifenc.py     # 35  vendored gifenc + REAL GIF encode    (v104)
     python3 verify_csp.py        # 31  CSP shape + enforcement + no breakage (v105)
     python3 verify_media.py      # 24  server-side media validation (no browser) (v105)
+    python3 verify_version.py    # 17  UI version label single-sourced       (v105)
 
 ## Gotchas
 

@@ -68,6 +68,20 @@ cheap 90%.
 matter more than the REJECT ones — a validator that breaks legitimate posts is
 worse than none.
 
+### 3. The version label in the UI had drifted nine releases
+The Pad's overflow menu read **"Skribl Pad · v96"** while the app was at v105 — a
+hardcoded literal in `skribl_editor.html:80` that nothing forced anyone to update.
+Cosmetic, but actively misleading: it is the one place you look to answer "what
+version is actually running?" while debugging a deploy, and it was answering wrong.
+
+Now single-sourced as `SKRIBL_VERSION` in `app.py`, injected via the same context
+processor that supplies the CSP nonce. **Bump that one line per release.**
+`verify_version.py` (17 assertions) fails if a version literal reappears as visible
+text in any template, which is the only way this can silently rot again.
+
+Note this is unrelated to the `?v=104` cache-busts, which are deliberately
+per-file and only change when that file changes.
+
 ### The rate limiter has been quietly throttling the harness
 Writing `verify_media.py` tripped `POST /api/skribls`'s 20/hour/IP limit: the suite
 posts 24 times, and four assertions failed with 429s that looked exactly like
@@ -364,7 +378,7 @@ both `gifenc` and `mp4-muxer` are vendored classic `<script src>` tags on both
 editing surfaces — **no ESM CDN loader, no inline `<script type="module">`, and no
 off-origin request anywhere in the app.**
 
-## Harness — 203 assertions, 11 suites
+## Harness — 220 assertions, 12 suites
 Processes do NOT survive between tool calls in a sandbox, so the server and the
 tests must run in one invocation. See `harness/README.md`.
 
@@ -381,6 +395,7 @@ tests must run in one invocation. See `harness/README.md`.
 | `verify_gifenc.py` | vendored gifenc + **real GIF encode**, both surfaces | 35 |
 | `verify_csp.py` | **NEW v105** CSP shape + enforcement + non-breaking | 31 |
 | `verify_media.py` | **NEW v105** server-side media type/size validation | 24 |
+| `verify_version.py` | **NEW v105** UI version label is single-sourced | 17 |
 
 The strongest single result: after moving the crossfade fold from playback-time
 (player) to post-time (Flip), `verify_audio` reports **exactly the same numbers as
@@ -414,7 +429,9 @@ files into the repo; never replace the tree with a zip's contents.
 
 ## Deploy checklist — v105 delta
 1. **CHANGED**: `app.py` only, plus a `nonce="{{ csp_nonce }}"` attribute on the
-   single inline `<script>` in `skribl_editor.html` and `skribl_player.html`.
+   single inline `<script>` in `skribl_editor.html` and `skribl_player.html`, and
+   the version label in `skribl_editor.html` (now `{{ skribl_version }}`).
+   **Release ritual: bump `SKRIBL_VERSION` in `app.py`.**
 2. **NO static changes.** `app.js`, `flip.js`, `lib/audioloop.js`, `styles.css`,
    `flip.css` are all untouched — **do not bump any cache-bust**. They stay at
    v104 / v102 / v101 / v98 respectively.

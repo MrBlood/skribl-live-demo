@@ -31,6 +31,13 @@ class SkriblPost(db.Model):
 # Open Graph title/description for a shared Skribl, with generic fallbacks.
 # Kept pure and import-free (no DB, no Flask context) so it can be unit-tested
 # headless — the route feeds it the post's fields (or None on a miss/error).
+# The version string shown in the Pad's overflow menu. Single-sourced HERE and
+# injected into the template, because the literal that used to live in
+# skribl_editor.html drifted nine versions (it still read v96 at v105) — nothing
+# forced anyone to touch it. Bump this one line per release; verify_version.py
+# fails if a hardcoded version reappears in a template.
+SKRIBL_VERSION = "v105"
+
 OG_DEFAULT_TITLE = "Skribl Pad"
 OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."
 
@@ -468,8 +475,9 @@ def create_app():
         g.csp_nonce = secrets.token_urlsafe(16)
 
     @app.context_processor
-    def _expose_csp_nonce():
-        return {"csp_nonce": getattr(g, "csp_nonce", "")}
+    def _expose_template_globals():
+        return {"csp_nonce": getattr(g, "csp_nonce", ""),
+                "skribl_version": SKRIBL_VERSION}
 
     @app.after_request
     def _security_headers(resp):
