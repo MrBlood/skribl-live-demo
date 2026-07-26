@@ -54,6 +54,17 @@ check("the label still reads 'Skribl Pad · <version>'",
       rendered == f"Skribl Pad · {version}", repr(rendered))
 check("the stale v96 string is gone from the served page", "v96" not in html)
 
+flip_html = urllib.request.urlopen(BASE + "/flip").read().decode("utf-8", "replace")
+flip_label = re.search(r'class="menu-version">([^<]*)</div>', flip_html)
+check("Flip renders a version label too (added v105)", bool(flip_label),
+      flip_label.group(1) if flip_label else "missing")
+flip_rendered = flip_label.group(1).strip() if flip_label else ""
+check("Flip's label reads 'Skribl Flip · <version>'",
+      flip_rendered == f"Skribl Flip · {version}", repr(flip_rendered))
+check("both surfaces report the SAME version",
+      flip_rendered.split("·")[-1].strip() == rendered.split("·")[-1].strip(),
+      f"pad {rendered!r} vs flip {flip_rendered!r}")
+
 print("\nANTI-DRIFT — the template is genuinely driven by the constant")
 tpl_src = (ROOT / "templates" / "skribl_editor.html").read_text(encoding="utf-8")
 check("skribl_editor.html interpolates skribl_version instead of a literal",

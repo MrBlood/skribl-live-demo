@@ -93,6 +93,10 @@
       <button type="button" class="flip-menu-item" id="miExport" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export…</span></button>
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg></span><span class="mi-tx">How Flip works</span></button>
+      <!-- Version footer, mirroring the Pad's. Driven by SKRIBL_VERSION in
+           app.py — never hardcode it here (the Pad's literal drifted from v96
+           to v105 unnoticed). .menu-version is shared styling from styles.css. -->
+      <div class="menu-version">Skribl Flip · {{ skribl_version }}</div>
     </div>
     <input type="file" id="imageInput" accept="image/*" class="vis-hidden">
     <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff" class="vis-hidden">
