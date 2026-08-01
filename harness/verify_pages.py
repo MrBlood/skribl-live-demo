@@ -60,14 +60,23 @@ with sync_playwright() as p:
         draw(flip, "#pad", 70 + i * 30, 90, n=10 + i * 6)
 
     print("\nONION — depth and tint")
-    check("the controls appear with onion on",
-          flip.evaluate("() => !document.getElementById('onionGroup').hidden"))
+    # v129: onion depth/tint moved out of the header into the settings drawer, so
+    # they are opened rather than revealed, and the row DIMS when onion is off
+    # instead of hiding (hiding made the panel jump height while toggling).
+    flip.click("#tuneBtn")
+    flip.wait_for_timeout(350)
+    check("the settings drawer opens", flip.evaluate("() => !document.getElementById('tunePanel').hidden"))
+    check("onion depth/tint live there and are reachable",
+          flip.evaluate("""() => document.getElementById('onionDepthSeg').getBoundingClientRect().width > 0
+                            && document.getElementById('onionTintBtn').getBoundingClientRect().width > 0"""))
     flip.evaluate("() => setOnion(false)")
     flip.wait_for_timeout(200)
-    check("and hide with onion off, so the toolbar isn't permanently crowded",
-          flip.evaluate("() => document.getElementById('onionGroup').hidden"))
+    check("the onion row dims when onion is off, without changing the panel height",
+          flip.evaluate("() => document.getElementById('tuneOnionRow').classList.contains('muted')"))
     flip.evaluate("() => setOnion(true)")
     flip.wait_for_timeout(200)
+    check("and undims when it is back on",
+          flip.evaluate("() => !document.getElementById('tuneOnionRow').classList.contains('muted')"))
 
     flip.click('#onionDepthSeg button[data-depth="1"]')
     flip.wait_for_timeout(250)
@@ -98,6 +107,14 @@ with sync_playwright() as p:
     flip.wait_for_timeout(250)
     check("depth clamps to the pages that exist (no onion on page 1)",
           flip.evaluate("() => idx") == 0 and not errs, "; ".join(errs[:1]))
+    # The header must keep its overflow menu reachable — the reason the drawer
+    # exists. Asserted at a phone width, where it used to be pushed off screen.
+    check("the more-menu stays on screen with the drawer open",
+          flip.evaluate("""() => document.getElementById('moreBtn').getBoundingClientRect().right
+                            <= innerWidth + 1"""))
+    flip.click("#tuneBtn")
+    flip.wait_for_timeout(300)
+    check("the drawer closes again", flip.evaluate("() => document.getElementById('tunePanel').hidden"))
     flip.evaluate("() => { go(frames.length-1); }")
     flip.wait_for_timeout(200)
 

@@ -1,35 +1,25 @@
 SKRIBL HARNESS — RECORDED RUN
-Split into two invocations because of a per-command time limit in the build
-environment. BOTH are recorded in full. Every hash on this page is a SOURCE-TREE
-hash of the repository contents. It is NOT the hash of the distributed ZIP — that
-is external by necessity and travels with the delivery.
+Split into two invocations because of a per-command time limit. BOTH are recorded
+in full. Every hash here is a SOURCE-TREE hash of the repository contents, NOT the
+hash of the distributed ZIP — that is external and travels with the delivery.
 
 Any "ERROR in app: Exception on /api/skribls" line is EXPECTED: the
 reservation-release test deliberately makes db.session.commit raise.
 
-SKIPPED SUITES contribute ZERO assertions and are listed by name. Nothing was
-skipped here: verify_postgres.py executed against a live PostgreSQL.
+SKIPPED SUITES contribute ZERO assertions. Nothing was skipped here.
 
 ##### POSTGRESQL CONCURRENCY — EXACT CONDITIONS OF THIS RUN #####
-PostgreSQL         : 16.14
-Workers            : 4 (gunicorn worker processes)
-Concurrent requests: 12 (released together through a threading.Barrier)
-Quota              : 2
-HTTP results       : 2 x 201, 10 x 429
-Post rows created  : 2
-Rate events        : committed=2, pending=0 (counted by THIS run's identity hash,
-                     not a whole-table delta — the cleanup sweep deletes expired
-                     rows mid-run, which made a table-wide delta go negative)
+PostgreSQL: 16.14 | Workers: 4 | Concurrent: 12 | Quota: 2
+HTTP: 2 x 201, 10 x 429 | Post rows: 2 | Rate events: committed=2, pending=0
+(counted by THIS run's identity hash, not a whole-table delta)
 
-WORKER LIVENESS: a surviving MASTER would not reveal a crashed worker, since the
-master silently respawns one. Workers are observed individually:
-  [PASS] all 4 workers were running before the burst  — [2874, 2875, 2876, 2877]
-  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2874, 2875, 2876, 2877] after=[2874, 2875, 2876, 2877]
+WORKER LIVENESS (a surviving master would not reveal a crashed-and-respawned worker):
+  [PASS] all 4 workers were running before the burst  — [5229, 5230, 5231, 5232]
+  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[5229, 5230, 5231, 5232] after=[5229, 5230, 5231, 5232]
   [PASS] gunicorn booted exactly 4 workers — no respawn was logged  — 4 'Booting worker' lines
   [PASS] gunicorn logged no worker exit, termination or boot failure DURING the burst  — 0 exit/termination lines before shutdown
   [PASS] recorded configuration is complete enough to interpret the result  — PostgreSQL 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1), 4 workers, 12 requests, quota 2
 
-Full recorded environment from the suite:
 ENVIRONMENT — recorded so the result can be interpreted
   PostgreSQL  : 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)
   gunicorn    : 26.0.0
@@ -42,8 +32,8 @@ ENVIRONMENT — recorded so the result can be interpreted
 
 CONCURRENCY — 12 processes-wide requests, quota 2
   [PASS] the gunicorn master stayed alive
-  [PASS] all 4 workers were running before the burst  — [2874, 2875, 2876, 2877]
-  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2874, 2875, 2876, 2877] after=[2874, 2875, 2876, 2877]
+  [PASS] all 4 workers were running before the burst  — [5229, 5230, 5231, 5232]
+  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[5229, 5230, 5231, 5232] after=[5229, 5230, 5231, 5232]
   [PASS] gunicorn booted exactly 4 workers — no respawn was logged  — 4 'Booting worker' lines
   [PASS] gunicorn logged no worker exit, termination or boot failure DURING the burst  — 0 exit/termination lines before shutdown
   [PASS] every response was 201 or 429 — no 500s, no transport errors  — [201, 429]
@@ -63,22 +53,20 @@ SCOPE — what this does and does not establish
         not establish behaviour under every isolation level, pooling
         arrangement, failure mode, or production load.
 
-SCOPE: closes multi-process over-admission for the TESTED configuration only.
-
 ##### INVOCATION 1 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-01T21:13:19Z
+UTC timestamp           : 2026-08-01T21:44:06Z
 Host                    : Linux x86_64
-Tree SHA-256            : c6293374bca1c180b13751a2629cd95f8128179d51cffc6a59a95a8c9fbe77ea
+Tree SHA-256            : 571e887a427262cbda5d6f3322cae09bd7b5511553c965bc8873406dc5a68159
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v128
+SKRIBL_VERSION          : v129
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.egAa3l38bF/harness.db)
+Database reset          : yes (fresh /tmp/tmp.hqrRozJxSA/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -106,18 +94,18 @@ RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### INVOCATION 2 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-01T21:17:23Z
+UTC timestamp           : 2026-08-01T21:48:10Z
 Host                    : Linux x86_64
-Tree SHA-256            : c6293374bca1c180b13751a2629cd95f8128179d51cffc6a59a95a8c9fbe77ea
+Tree SHA-256            : 571e887a427262cbda5d6f3322cae09bd7b5511553c965bc8873406dc5a68159
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v128
+SKRIBL_VERSION          : v129
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.cz8Ruo9Jse/harness.db)
+Database reset          : yes (fresh /tmp/tmp.kfstH6VKwm/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -133,21 +121,21 @@ suites requested : 10
   verify_media.py: ok — 24/24 passed
   verify_version.py: ok — 20/20 passed
   verify_ux.py: ok — 24/24 passed
-  verify_pages.py: ok — 32/32 passed
+  verify_pages.py: ok — 36/36 passed
   verify_exopts.py: ok — 23/23 passed
   verify_hold.py: ok — 26/26 passed
   verify_canvas.py: ok — 21/21 passed
   verify_postgres.py: ok — 14/14 passed
   verify_review.py: ok — 277/277 passed
-assertions passed: 492   (skipped suites contribute 0)
+assertions passed: 496   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
 RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### TREE-HASH COMPARISON #####
-Invocation 1 source-tree SHA-256: c6293374bca1c180b13751a2629cd95f8128179d51cffc6a59a95a8c9fbe77ea
-Invocation 2 source-tree SHA-256: c6293374bca1c180b13751a2629cd95f8128179d51cffc6a59a95a8c9fbe77ea
+Invocation 1 source-tree SHA-256: 571e887a427262cbda5d6f3322cae09bd7b5511553c965bc8873406dc5a68159
+Invocation 2 source-tree SHA-256: 571e887a427262cbda5d6f3322cae09bd7b5511553c965bc8873406dc5a68159
 MATCH — both invocations ran against an identical source tree.
 
 ##### COMBINED #####
-COMBINED    : 640 assertions across 19 suites, 0 skipped, 0 problems
+COMBINED    : 644 assertions across 19 suites, 0 skipped, 0 problems

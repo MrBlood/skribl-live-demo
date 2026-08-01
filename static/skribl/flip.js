@@ -73,7 +73,9 @@ function fitPad(){
 function sizeStage(){
   const stage = document.querySelector('.flip-stage');
   const px = sel => { const el=document.querySelector(sel); return el?el.offsetHeight:0; };
-  const used = px('.header') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30;
+  // The settings drawer takes real height when open; without it here the stage
+  // keeps its full size and pushes the strip off the bottom of the screen.
+  const used = px('.header') + px('.tune-panel') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30;
   stage.style.height = Math.max(220, window.innerHeight - used) + 'px';
   fitPad();
 }
@@ -1963,6 +1965,21 @@ document.getElementById('clearUndo').addEventListener('click',()=>{
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
 gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.classList.toggle('on',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); });
+// v129: the settings drawer. Kept deliberately dumb — it only shows/hides; every
+// control inside keeps its existing handler, so behaviour is unchanged.
+const tuneBtn=document.getElementById('tuneBtn'), tunePanel=document.getElementById('tunePanel');
+function setTune(open){
+  if(!tuneBtn||!tunePanel) return;
+  tunePanel.hidden=!open;
+  tuneBtn.classList.toggle('open', open);
+  tuneBtn.setAttribute('aria-expanded', String(open));
+  if(open){ requestAnimationFrame(()=>{ positionSeg(); positionOnionSeg(); }); }
+  sizeStage();                      // the stage must give back the drawer's height
+}
+if(tuneBtn) tuneBtn.addEventListener('click',()=>setTune(tunePanel.hidden));
+// Escape closes it, like every other transient surface here.
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && tunePanel && !tunePanel.hidden) setTune(false); });
+
 const onionEl=document.getElementById('onion');
 const onionGroup=document.getElementById('onionGroup');
 const onionSeg=document.getElementById('onionDepthSeg');
@@ -1988,7 +2005,12 @@ if(onionTintBtn) onionTintBtn.addEventListener('click',()=>{
   render();
 });
 function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion));
-  if(onionGroup){ onionGroup.hidden=!onion; if(onion) requestAnimationFrame(positionOnionSeg); }
+  // In the drawer the depth/tint controls stay put and the row dims when onion is
+  // off — hiding them would make the panel jump height as you toggle.
+  if(onionGroup) onionGroup.hidden=false;
+  const row=document.getElementById('tuneOnionRow');
+  if(row) row.classList.toggle('muted', !onion);
+  if(onion) requestAnimationFrame(positionOnionSeg);
   render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
@@ -2038,7 +2060,7 @@ document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
 /* ---- boot ---- */
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
-if(onionGroup){ onionGroup.hidden=!onion; requestAnimationFrame(positionOnionSeg); }
+if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
 syncCanvasSeg();
 sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image

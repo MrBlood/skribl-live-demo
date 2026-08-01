@@ -1434,3 +1434,57 @@ and draw-on replay mode ticking too.
 
 The duration formatter is now shared between the idle total and the live readout,
 so the two cannot drift apart.
+
+---
+
+# v129 — the header stopped being a settings panel
+
+**Build: v129.** 19 suites, **644 assertions**, 0 skipped, 0 problems.
+
+## The measurement
+
+At 360px the ⋯ menu sat at x=389 in a 360px window. At 768px it sat at 791. The
+overflow menu — the escape hatch for everything that does not fit — was itself
+off screen at two common widths.
+
+The cause was not the wordmark (it already shrinks FLIP -> FM). It was this: the
+fps segment (68px) plus the onion depth/tint group (108px) took **176px of a
+340px bar — 52% of the header** on a phone, permanently, for two things you set
+once per animation.
+
+## The principle applied
+
+A premium top bar carries identity, the primary action, an escape hatch, and only
+the controls you touch constantly. Everything else is a setting, and settings do
+not compete with the thing they configure.
+
+So the header keeps: back, wordmark, **onion on/off** (toggled constantly while
+drawing), **Flip it + elapsed time**, **Post**, **⋯**. Speed and onion depth/tint
+moved into a slide-down drawer behind one toggle.
+
+| | before | after |
+| --- | --- | --- |
+| Header items @390px | 6 | 5 |
+| Header content width | 340px | ~171px |
+| ⋯ at 360px | x=389 in 360 — **off screen** | x=346 — on screen |
+| ⋯ at 768px | x=791 in 768 — **off screen** | x=712 — on screen |
+
+## Details that make it feel considered rather than moved
+
+- The drawer is **dumb**: it shows and hides. Every control inside keeps its
+  existing handler, so behaviour is identical to before.
+- The onion row **dims** when onion skin is off rather than hiding — hiding made
+  the panel jump height as you toggled, which reads as a glitch.
+- `sizeStage()` now counts the panel, so the **canvas gives back exactly the
+  drawer's 94px** instead of pushing the tools off the bottom. Verified on a short
+  360x640 phone: everything still fits.
+- Escape closes it, like every other transient surface here.
+- Controls are re-measured on open, so the segmented sliders land correctly the
+  first time rather than after a resize.
+
+## The harness caught the fallout
+
+`verify_pages.py` drove `#onionDepthSeg` directly; with the controls behind a
+closed drawer it crashed, and the runner reported `ERROR — exit 1, NO assertion
+summary` rather than counting it green. Updated to open the drawer, and it now
+also asserts the thing this change exists for: **the ⋯ menu stays on screen**.
