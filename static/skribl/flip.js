@@ -75,7 +75,7 @@ function sizeStage(){
   const px = sel => { const el=document.querySelector(sel); return el?el.offsetHeight:0; };
   // The settings drawer takes real height when open; without it here the stage
   // keeps its full size and pushes the strip off the bottom of the screen.
-  const used = px('.header') + px('.tune-panel') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30;
+  const used = px('.header') + px('.tune-shell') + px('.flip-tools') + px('.flip-chip') + px('.strip-wrap') + 30;
   stage.style.height = Math.max(220, window.innerHeight - used) + 'px';
   fitPad();
 }
@@ -1968,17 +1968,25 @@ gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.
 // v129: the settings drawer. Kept deliberately dumb — it only shows/hides; every
 // control inside keeps its existing handler, so behaviour is unchanged.
 const tuneBtn=document.getElementById('tuneBtn'), tunePanel=document.getElementById('tunePanel');
+const tuneShell=document.getElementById('tuneShell');
+function tuneIsOpen(){ return !!tuneShell && tuneShell.classList.contains('open'); }
 function setTune(open){
-  if(!tuneBtn||!tunePanel) return;
-  tunePanel.hidden=!open;
+  if(!tuneBtn||!tuneShell) return;
+  tuneShell.classList.toggle('open', open);
+  tuneShell.setAttribute('aria-hidden', String(!open));
   tuneBtn.classList.toggle('open', open);
   tuneBtn.setAttribute('aria-expanded', String(open));
-  if(open){ requestAnimationFrame(()=>{ positionSeg(); positionOnionSeg(); }); }
-  sizeStage();                      // the stage must give back the drawer's height
+  if(open) requestAnimationFrame(()=>{ positionSeg(); positionOnionSeg(); });
+  // The stage must give back the drawer's height. Resize on every frame of the
+  // transition so the canvas shrinks WITH the reveal instead of snapping at the
+  // end — a mid-animation jump is what makes a drawer feel cheap.
+  const t0=performance.now();
+  const follow=()=>{ sizeStage(); if(performance.now()-t0 < 320) requestAnimationFrame(follow); };
+  requestAnimationFrame(follow);
 }
-if(tuneBtn) tuneBtn.addEventListener('click',()=>setTune(tunePanel.hidden));
+if(tuneBtn) tuneBtn.addEventListener('click',()=>setTune(!tuneIsOpen()));
 // Escape closes it, like every other transient surface here.
-document.addEventListener('keydown',e=>{ if(e.key==='Escape' && tunePanel && !tunePanel.hidden) setTune(false); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && tuneIsOpen()) setTune(false); });
 
 const onionEl=document.getElementById('onion');
 const onionGroup=document.getElementById('onionGroup');

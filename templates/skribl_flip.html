@@ -6,7 +6,7 @@
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='124') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='129') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='130') }}">
 </head>
 <body class="flip-app">
   <div class="app">
@@ -36,6 +36,20 @@
       </div>
     </div>
 
+    <!-- v130: attached directly under the header so it slides down FROM the bar
+         that opens it. v129 put it above the strip — visually orphaned at the
+         bottom of the screen, nowhere near its toggle. The outer element animates
+         grid-template-rows 0fr -> 1fr, which transitions to the content's natural
+         height without hardcoding one. -->
+    <div class="tune-shell" id="tuneShell" aria-hidden="true">
+      <div class="tune-clip">
+        <div class="tune-panel" id="tunePanel">
+    <div class="tune-row"><span class="tune-label">Speed</span><span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span></div>
+          <div class="tune-row" id="tuneOnionRow"><span class="tune-label">Onion</span><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
+        </div>
+      </div>
+    </div>
+
     <div class="flip-stage">
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
@@ -47,16 +61,6 @@
       <div class="flip-player" id="flipPlayer" hidden>
         <div class="player-progress" id="flipProgress" role="slider" aria-label="Scrub frames" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" id="flipProgressFill"></div></div>
       </div>
-    </div>
-
-    <!-- v129: playback settings drawer. fps + onion depth/tint sat in the header
-         permanently, taking 176px of a 340px bar on a phone — 52% of the top bar
-         spent on things you set once, which pushed the more menu off screen at
-         360px AND 768px. Same controls, more room, real labels; the header keeps
-         identity, the primary action, and the two things you touch constantly. -->
-    <div class="tune-panel" id="tunePanel" hidden>
-      <div class="tune-row"><span class="tune-label">Speed</span><span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span></div>
-      <div class="tune-row" id="tuneOnionRow"><span class="tune-label">Onion</span><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
     </div>
 
     <div class="strip-wrap">
@@ -180,6 +184,6 @@
 <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}"></script>
 <script src="{{ url_for('static', filename='skribl/lib/media_validation.js', v='121') }}"></script>
   <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
-<script src="{{ url_for('static', filename='skribl/flip.js', v='129') }}"></script>
+<script src="{{ url_for('static', filename='skribl/flip.js', v='130') }}"></script>
 </body>
 </html>

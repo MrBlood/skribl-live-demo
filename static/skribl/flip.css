@@ -474,26 +474,50 @@
 .canvas-seg { --seg-h: 26px; margin-left: auto; }
 .canvas-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 
-/* --- v129: playback settings drawer --------------------------------------- */
-/* The header now carries only identity, the primary action, and the controls you
-   touch constantly (onion on/off, Flip it, Post). Speed and onion depth/tint are
-   set once per animation, so they live behind a single toggle — which is what
-   freed the ⋯ menu that was being pushed off screen. */
+/* --- v130: playback settings drawer ---------------------------------------
+   Slides down from the header that opens it. The animation is on
+   grid-template-rows (0fr -> 1fr), which transitions to the content's OWN height
+   — no hardcoded max-height to guess at or drift. The clip element hides the
+   overflow while it moves, so the panel wipes down rather than popping. */
+.tune-shell {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+  /* The header is a floating card (margin: 7px), so a full-bleed drawer would
+     read as a different surface. Match its inset and tuck the panel up under the
+     card's rounded bottom so the two look like one object opening. */
+  margin: -10px 7px 0;
+  background: var(--surface-raised);
+  /* No border at all while closed: a transparent 1px border still occupies a
+     pixel row under the header. The border appears with .open. */
+  border: 0;
+  border-radius: 0 0 14px 14px;
+}
+.tune-shell.open {
+  grid-template-rows: 1fr;
+  border: 1px solid var(--hairline-strong);
+  border-top: 0;
+}
+/* overflow:hidden alone still reserves a hairline of height; clipping the
+   collapsed state outright keeps it at exactly 0. */
+.tune-clip { overflow: hidden; min-height: 0; }
+
 .tune-panel {
   display: grid;
   gap: 10px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--hairline);
-  background: rgba(14, 17, 24, 0.96);
-  animation: tuneDrop 0.18s ease-out;
+  padding: 16px 14px 12px;   /* extra top padding clears the header card above */
+  /* Content eases in slightly behind the height, so the reveal reads as one
+     motion instead of text appearing in an empty box. */
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease 0.06s, transform 0.2s ease 0.06s;
 }
-.tune-panel[hidden] { display: none; }
+.tune-shell.open .tune-panel { opacity: 1; transform: none; }
 
-@keyframes tuneDrop {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .tune-shell { transition: none; }
+  .tune-panel { transition: none; }
 }
-@media (prefers-reduced-motion: reduce) { .tune-panel { animation: none; } }
 
 .tune-row { display: flex; align-items: center; gap: 12px; }
 .tune-label {
@@ -503,14 +527,13 @@
   color: var(--text-secondary);
   min-width: 54px;
 }
-/* The rows own their layout now, so the header's cramped overrides do not apply. */
 .tune-row .fps-group { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
 .tune-row .onion-group { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
 .tune-row .onion-group[hidden] { display: none; }
 .tune-row .seg button { min-width: 34px; }
 
-/* Onion row dims when onion skin is off — the controls stay visible so the
-   relationship is legible, rather than vanishing and shifting the layout. */
+/* Onion row dims when onion skin is off — the controls stay put so the panel
+   never changes height mid-toggle. */
 #tuneOnionRow.muted { opacity: 0.4; }
 
 .tune-tool.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }

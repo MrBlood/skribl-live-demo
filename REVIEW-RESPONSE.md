@@ -1488,3 +1488,44 @@ moved into a slide-down drawer behind one toggle.
 closed drawer it crashed, and the runner reported `ERROR — exit 1, NO assertion
 summary` rather than counting it green. Updated to open the drawer, and it now
 also asserts the thing this change exists for: **the ⋯ menu stays on screen**.
+
+---
+
+# v130 — the drawer slides from the header
+
+**Build: v130.** 19 suites, **646 assertions**, 0 skipped, 0 problems.
+
+v129 moved the settings out of the header, which fixed the overflow — and then
+rendered the panel **above the strip**, at the bottom of the screen, nowhere near
+the button that opens it. Correct information architecture, wrong place. It looked
+like an unrelated bar had appeared.
+
+## Now
+
+The panel is re-parented directly under the header and animates
+`grid-template-rows: 0fr -> 1fr`, which transitions to the content's **own**
+height — no hardcoded max-height to guess at or drift out of date. A clip element
+hides the overflow so it wipes down rather than pops, and the content fades in
+60ms behind the height so the whole thing reads as one motion.
+
+Details that took a second pass:
+
+- **It tucks under the header card.** The header has `margin: 7px` — it floats.
+  A full-bleed drawer read as a different surface, so the shell matches the card's
+  inset, loses its top border, and overlaps 3px so the two look like one object
+  opening.
+- **Zero height when closed.** A transparent 1px border still occupies a pixel row
+  under the header; measured `shellH: 1` before, `0` now. The border only exists
+  in the open state.
+- **The stage follows the animation, not the endpoint.** `sizeStage()` runs every
+  frame for the transition's duration, so the canvas shrinks *with* the reveal
+  instead of snapping at the end — a mid-animation jump is what makes a drawer
+  feel cheap. Measured: 16 -> 62 -> 89 -> 96 -> 98px across frames, stage 524 ->
+  426, restored exactly on close.
+
+## Harness
+
+`verify_pages.py` asserted the drawer's state via the `hidden` attribute, which an
+animated panel no longer uses. Updated to the class, and it now also pins the two
+things that were actually wrong: **collapses to exactly zero height**, and **sits
+directly under the header** rather than adrift elsewhere on the page.

@@ -65,7 +65,8 @@ with sync_playwright() as p:
     # instead of hiding (hiding made the panel jump height while toggling).
     flip.click("#tuneBtn")
     flip.wait_for_timeout(350)
-    check("the settings drawer opens", flip.evaluate("() => !document.getElementById('tunePanel').hidden"))
+    check("the settings drawer opens",
+          flip.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
     check("onion depth/tint live there and are reachable",
           flip.evaluate("""() => document.getElementById('onionDepthSeg').getBoundingClientRect().width > 0
                             && document.getElementById('onionTintBtn').getBoundingClientRect().width > 0"""))
@@ -114,7 +115,17 @@ with sync_playwright() as p:
                             <= innerWidth + 1"""))
     flip.click("#tuneBtn")
     flip.wait_for_timeout(300)
-    check("the drawer closes again", flip.evaluate("() => document.getElementById('tunePanel').hidden"))
+    # v130: the drawer animates (grid-template-rows), so state is a CLASS, not the
+    # hidden attribute — and closed must mean zero height, not merely not-open.
+    check("the drawer closes again",
+          flip.evaluate("() => !document.getElementById('tuneShell').classList.contains('open')"))
+    check("and collapses to exactly zero height, leaving no sliver under the header",
+          flip.evaluate("() => document.getElementById('tuneShell').getBoundingClientRect().height") == 0,
+          str(flip.evaluate("() => document.getElementById('tuneShell').getBoundingClientRect().height")))
+    check("it sits directly under the header, not adrift elsewhere on the page",
+          flip.evaluate("""() => { const h=document.querySelector('.header').getBoundingClientRect();
+              const s=document.getElementById('tuneShell').getBoundingClientRect();
+              return Math.abs(s.top - h.bottom) < 12; }"""))
     flip.evaluate("() => { go(frames.length-1); }")
     flip.wait_for_timeout(200)
 
