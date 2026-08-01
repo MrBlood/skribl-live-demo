@@ -623,6 +623,37 @@ function disarmAll(){
   if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
   if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete all pages (keeps music and background)'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear all pages'; } }
 }
+/* ---- page toolbar (v124) --------------------------------------------------
+   Acts on the SELECTED page. syncPagebar() is called from buildStrip(), which
+   already runs after every mutation, so there is no second place to keep in
+   step. Disabled during playback for the same reason the strip is inert then. */
+const pagebar=document.getElementById('pagebar');
+const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pbLeft'),
+      pbRight=document.getElementById('pbRight'), pbCopy=document.getElementById('pbCopy'),
+      pbHold=document.getElementById('pbHold'), pbDel=document.getElementById('pbDel');
+function syncPagebar(){
+  if(!pagebar) return;
+  const f=frames[idx], n=frames.length;
+  if(pbWho) pbWho.textContent='Page '+(idx+1)+(n>1?' / '+n:'');
+  if(pbLeft) pbLeft.disabled = playing || idx===0;
+  if(pbRight) pbRight.disabled = playing || idx===n-1;
+  if(pbCopy) pbCopy.disabled = playing;
+  if(pbDel) pbDel.disabled = playing || n<=1;
+  if(pbHold){
+    pbHold.disabled = playing;
+    const ic=pbHold.querySelector('.pb-ic'); if(ic) ic.textContent='\u00d7'+frameHold(f);
+    pbHold.classList.toggle('on', frameHold(f)>1);
+  }
+}
+if(pbLeft) pbLeft.addEventListener('click',()=>{ if(!pbLeft.disabled) movePage(idx,-1); });
+if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) movePage(idx,1); });
+if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return;
+  pageClip=deepCopy(frames[idx]); buildStrip(); chip('Page copied — use ＋ Paste'); });
+if(pbHold) pbHold.addEventListener('click',()=>{ if(pbHold.disabled) return;
+  invalidateClearUndo(); frames[idx].hold=(frameHold(frames[idx]) % MAX_HOLD)+1;
+  buildStrip(); scheduleSave(); });
+if(pbDel) pbDel.addEventListener('click',()=>{ if(!pbDel.disabled) delFrame(idx); });
+
 function buildStrip(){
   armedDel = -1;
   strip.innerHTML='';
@@ -631,26 +662,15 @@ function buildStrip(){
     el.innerHTML='<div class="num">'+(i+1)+'</div>'
       +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
       + (frameHold(f)>1 ? '<div class="holdbadge">\u00d7'+frameHold(f)+'</div>' : '')
-      +'<div class="frame-ops">'
-        +'<button class="fop" data-mv="-1" title="Move page left" aria-label="Move page left"'+(i===0?' disabled':'')+'>\u25C0</button>'
-        +'<button class="fop" data-cp="1" title="Copy page" aria-label="Copy page">\u29C9</button>'
-        +'<button class="fop hold" data-hold="1" title="Hold this page longer" aria-label="Hold this page longer">\u00d7'+frameHold(f)+'</button>'
-        +'<button class="fop" data-mv="1" title="Move page right" aria-label="Move page right"'+(i===frames.length-1?' disabled':'')+'>\u25B6</button>'
-      +'</div><canvas></canvas>';
+      +'<canvas></canvas>';   // per-page controls now live in #pagebar (v124)
     el.addEventListener('pointerdown',ev=>{
       if(playing || frames.length<2) return;
-      if(ev.target.closest('.del,[data-mv],[data-cp]')) return;
+      if(ev.target.closest('.del')) return;
       _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false, centers:stripTileCenters() };
     });
     el.addEventListener('click',ev=>{
       if(playing) return;
       if(_pdragSuppressClick) return;
-      const mv = ev.target.closest('[data-mv]');
-      if(mv){ if(!mv.disabled) movePage(i, +mv.dataset.mv); return; }
-      const hb = ev.target.closest('[data-hold]');
-      if(hb){ invalidateClearUndo(); f.hold = (frameHold(f) % MAX_HOLD) + 1; buildStrip(); scheduleSave(); return; }
-      const cp = ev.target.closest('[data-cp]');
-      if(cp){ pageClip = deepCopy(f); buildStrip(); chip('Page copied'); return; }
       const del = ev.target.closest('.del');
       if(del){
         if(f.strokes.length && armedDel !== i){
@@ -670,6 +690,7 @@ function buildStrip(){
   strip.appendChild(col);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(!playing) addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
+  syncPagebar();
   const pasteBtn=col.querySelector('#addpaste');
   if(pasteBtn) pasteBtn.addEventListener('click',()=>{
     if(playing || !pageClip) return;

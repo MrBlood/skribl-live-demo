@@ -123,10 +123,10 @@ with sync_playwright() as p:
     pg.wait_for_timeout(200)
     seq = []
     for _ in range(5):
-        pg.locator(".frame.on [data-hold]").click(force=True)
+        pg.click("#pbHold")          # v124: hold moved to the page toolbar
         pg.wait_for_timeout(180)
         seq.append(pg.evaluate("() => frameHold(frames[0])"))
-    check("the button cycles 2,3,4 then wraps to 1", seq == [2, 3, 4, 1, 2], str(seq))
+    check("the toolbar Hold button cycles 2,3,4 then wraps to 1", seq == [2, 3, 4, 1, 2], str(seq))
     check("a held page shows a badge without hovering",
           pg.evaluate("() => !!strip.children[0].querySelector('.holdbadge')"))
     pg.evaluate("() => { frames[0].hold = 1; buildStrip(); }")

@@ -113,16 +113,35 @@ with sync_playwright() as p:
     check("the page you were on stays the page you're on",
           flip.evaluate("() => idx") == cur - 1, f"idx {cur} -> {flip.evaluate('() => idx')}")
 
-    check("move-left is disabled on the first page",
-          flip.evaluate("""() => strip.children[0].querySelector('[data-mv="-1"]').disabled"""))
-    check("move-right is disabled on the last page",
-          flip.evaluate("""() => { const n=frames.length;
-              return strip.children[n-1].querySelector('[data-mv="1"]').disabled; }"""))
+    # v124: per-page controls moved OUT of the tile into #pagebar, so the guards
+    # are asserted there. The thumbnail carries no controls at all now.
+    flip.evaluate("() => go(0)"); flip.wait_for_timeout(250)
+    check("Move-left is disabled on the first page",
+          flip.evaluate("() => document.getElementById('pbLeft').disabled"))
+    flip.evaluate("() => go(frames.length-1)"); flip.wait_for_timeout(250)
+    check("Move-right is disabled on the last page",
+          flip.evaluate("() => document.getElementById('pbRight').disabled"))
+    check("the toolbar names the selected page",
+          "Page " in flip.evaluate("() => document.getElementById('pbWho').textContent"),
+          flip.evaluate("() => document.getElementById('pbWho').textContent"))
+    check("no controls overlay the thumbnail any more",
+          flip.evaluate("() => !document.querySelector('.frame-ops')"))
+    check("toolbar targets are at least 38px (were 18px in-tile)",
+          flip.evaluate("""() => [...document.querySelectorAll('.pb')]
+              .every(b => b.getBoundingClientRect().height >= 38)"""))
+    # margin-left:auto resolves to a pixel value, so assert the OUTCOME — a real
+    # gap between Delete and its neighbour — rather than the declaration.
+    check("Delete is visually separated from the other actions",
+          flip.evaluate("""() => { const d=document.getElementById('pbDel').getBoundingClientRect();
+              const h=document.getElementById('pbHold').getBoundingClientRect();
+              return d.left - h.right > 16; }"""),
+          flip.evaluate("""() => Math.round(document.getElementById('pbDel').getBoundingClientRect().left
+              - document.getElementById('pbHold').getBoundingClientRect().right) + 'px gap'"""))
 
     flip.evaluate("() => { pageClip = null; buildStrip(); }")
     check("no paste button before anything is copied",
           flip.evaluate("() => !document.getElementById('addpaste')"))
-    flip.locator(".frame.on [data-cp]").click(force=True)
+    flip.click("#pbCopy")
     flip.wait_for_timeout(300)
     check("copy fills the clipboard", flip.evaluate("() => !!pageClip"))
     check("and the paste button appears", flip.evaluate("() => !!document.getElementById('addpaste')"))

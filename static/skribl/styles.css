@@ -203,7 +203,10 @@ body {
 .btn.play.playing,
 .player-cta,
 .reposition-btn.active,
-.pending-btn,
+/* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn is
+   dark #171a22 text on solid yellow, so the same shadow just smeared the glyph
+   edges and read as blurry — most visibly on "Re-add". Removed there; the other
+   three are white-on-colour and genuinely benefit. */
 .restore-btn.confirm,
 .tool-btn.active,
 .photo-fit-btn.active {
@@ -1288,6 +1291,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .pending-btn {
   flex-shrink: 0;
+  /* Dark-on-yellow: keep the glyphs crisp. */
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
   padding: 8px 14px;
   border-radius: 999px;
   border: none;

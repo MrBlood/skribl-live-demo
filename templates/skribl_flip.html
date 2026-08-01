@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='106') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='110') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='124') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='124') }}">
 </head>
 <body class="flip-app">
   <div class="app">
@@ -43,7 +43,22 @@
       </div>
     </div>
 
-    <div class="strip-wrap"><div class="strip" id="strip"></div></div>
+    <div class="strip-wrap">
+      <!-- Page toolbar (v124). Per-page controls used to overlay the thumbnail at
+           18px, covering ~36% of the preview and sitting a few pixels from the
+           delete button. They now act on the SELECTED page from here: full-size
+           targets, real labels at desktop width, and the destructive Delete kept
+           apart from everything else. -->
+      <div class="pagebar" id="pagebar" role="toolbar" aria-label="Page actions">
+        <span class="pb-who" id="pbWho">Page 1</span>
+        <button type="button" class="pb" id="pbLeft" title="Move page left" aria-label="Move page left"><span class="pb-ic">&#9664;</span><span class="pb-tx">Move</span></button>
+        <button type="button" class="pb" id="pbRight" title="Move page right" aria-label="Move page right"><span class="pb-tx">Move</span><span class="pb-ic">&#9654;</span></button>
+        <button type="button" class="pb" id="pbCopy" title="Copy this page" aria-label="Copy this page"><span class="pb-ic">&#10697;</span><span class="pb-tx">Copy</span></button>
+        <button type="button" class="pb" id="pbHold" title="Hold this page longer" aria-label="Hold this page longer"><span class="pb-ic">&#215;1</span><span class="pb-tx">Hold</span></button>
+        <button type="button" class="pb danger" id="pbDel" title="Delete this page" aria-label="Delete this page"><span class="pb-ic">&#10005;</span><span class="pb-tx">Delete</span></button>
+      </div>
+      <div class="strip" id="strip"></div>
+    </div>
 
     <div class="flip-tools">
       <div class="color-tool">

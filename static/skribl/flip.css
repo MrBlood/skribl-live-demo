@@ -209,16 +209,22 @@
     .flip-tools .tool-open, .flip-tools .t-btn { width: 34px; height: 34px; }
     .flip-tools .tool-group { height: 34px; }
   }
-  .frame { position: relative; flex: 0 0 auto; width: 88px; height: 62px; border-radius: 10px; overflow: hidden;
+  /* v124: 88x62 left the per-page controls at 18x18 — a third of the 44px touch
+     target both Apple and Google recommend, on a tile carrying five of them.
+     Widened so the controls can grow without covering the drawing. */
+  .frame { position: relative; flex: 0 0 auto; width: 104px; height: 72px; border-radius: 10px; overflow: hidden;
     border: 1px solid var(--hairline-strong); background: var(--surface-raised); cursor: pointer; transition: transform .12s var(--spring), border-color .15s ease; }
   .frame:hover { transform: translateY(-2px); }
-  .frame.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  /* Selected page: 1px border + a 1px ring = 2px of accent, down from 3px.
+     Still unmistakable at thumbnail size without the heavy slab look. */
+  .frame.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .frame canvas { width: 100%; height: 100%; display: block; }
-  .frame .num { position: absolute; top: 4px; left: 5px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
+  /* Top-left, with the hold badge to its right — the ops bar owns the bottom. */
+  .frame .num { position: absolute; top: 4px; left: 6px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
     background: rgba(9,11,16,.7); border-radius: 5px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
-  .frame .del { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 5px; border: 0;
+  .frame .del { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; border-radius: 7px; border: 0;
     background: rgba(9,11,16,.72); color: var(--text-secondary); display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-  .frame .del svg { width: 11px; height: 11px; }
+  .frame .del svg { width: 13px; height: 13px; }
   .frame .del:hover { color: #ff8a8a; }
   .frame:hover .del { display: flex; }
   .addcol { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
@@ -337,90 +343,71 @@
 .onion-tint svg { width: 15px; height: 15px; }
 .onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.55); background: rgba(255, 159, 67, 0.14); }
 
-/* --- v107: per-page ops in the strip (move / copy) ------------------------ */
-/* Revealed on hover or on the active page, so the strip stays clean while
-   drawing but the controls are reachable without a long-press gesture. */
-.frame-ops {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 3px;
+/* --- v124: page toolbar (replaces the in-tile ops bar) ---------------------
+   The old .frame-ops overlaid the thumbnail with 18px targets. Controls now act
+   on the selected page from a toolbar above the strip: full-size targets, the
+   preview never covered, and Delete pushed to the far end away from the rest.
+   Icon-only on narrow screens; labels appear once there is room. */
+.pagebar {
   display: flex;
-  justify-content: center;
-  gap: 3px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  pointer-events: none;
-  z-index: 3;
-}
-.frame:hover .frame-ops,
-.frame.on .frame-ops { opacity: 1; pointer-events: auto; }
-
-.frame-ops .fop {
-  width: 20px;
-  height: 18px;
-  padding: 0;
-  font-size: 10px;
-  line-height: 1;
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--hairline-strong);
-  border-radius: 5px;
-  background: rgba(18, 21, 27, 0.86);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-.frame-ops .fop:hover:not(:disabled) { background: rgba(52, 60, 74, 0.95); }
-.frame-ops .fop:disabled { opacity: 0.28; cursor: default; }
-
-
-/* --- v108: export size + page-range options (Flip only) ------------------- */
-.export-options {
-  display: flex;
-  flex-direction: column;
   gap: 8px;
-  margin: 4px 2px 2px;
-  padding: 10px 12px;
-  border: 1px solid var(--hairline-strong);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: rgba(14, 17, 24, 0.9);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.export-opt-row { display: flex; align-items: center; gap: 8px; }
-.export-optlbl {
+.pagebar::-webkit-scrollbar { display: none; }
+
+.pb-who {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
-  min-width: 42px;
+  white-space: nowrap;
+  margin-right: 2px;
 }
-.export-size-seg { --seg-h: 26px; margin-left: auto; }
-.export-size-seg button { padding: 0 10px; font-size: 12px; }
 
-.export-num {
-  width: 52px;
-  padding: 5px 7px;
-  font: inherit;
-  font-size: 12px;
-  text-align: center;
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.06);
+.pb {
+  flex: 0 0 auto;
+  height: 38px;
+  min-width: 38px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid var(--hairline-strong);
-  border-radius: 8px;
+  border-radius: 9px;
+  background: rgba(18, 21, 27, 0.9);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.export-num:focus { outline: none; border-color: var(--accent); }
-.export-dash { color: var(--text-secondary); font-size: 12px; }
-.export-rangenote { margin-left: auto; font-size: 11px; color: var(--text-secondary); }
+.pb .pb-ic { font-size: 13px; line-height: 1; }
+.pb:hover:not(:disabled) { background: rgba(124, 92, 255, 0.16); border-color: var(--accent); }
+.pb:active:not(:disabled) { transform: translateY(1px); }
+.pb:disabled { opacity: 0.3; cursor: default; }
+.pb.on { color: var(--accent-bright); border-color: rgba(124, 92, 255, 0.5); background: rgba(124, 92, 255, 0.14); }
 
-/* --- v109: drag-to-reorder ------------------------------------------------ */
-.frame.dragging {
-  z-index: 5;
-  cursor: grabbing;
-  opacity: 0.92;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
-  transform-origin: center;
-  transition: none;                 /* follow the finger exactly */
+/* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
+   land on Delete — which is exactly what the old 18px overlay allowed. */
+.pb.danger { margin-left: auto; color: #ff9d9d; border-color: rgba(244, 50, 111, 0.3); }
+.pb.danger:hover:not(:disabled) { background: rgba(244, 50, 111, 0.16); border-color: rgba(244, 50, 111, 0.55); }
+
+/* Labels only where they fit. Below 560px the toolbar is icons, which still
+   gives a 38px target — larger than the 26px the in-tile bar could manage. */
+.pb-tx { display: none; }
+@media (min-width: 560px) {
+  .pb-tx { display: inline; }
+  .pb { padding: 0 12px; }
 }
-.frame.dragging:hover { transform: none; }
+@media (max-width: 400px) {
+  .pagebar { gap: 6px; padding: 7px 10px; }
+  .pb { padding: 0 8px; }
+}
 
 /* --- v109: per-page hold ---------------------------------------------------- */
 /* The badge is always visible (unlike the ops bar) so the timing of an animation
@@ -428,7 +415,8 @@
 .frame .holdbadge {
   position: absolute;
   top: 4px;
-  right: 24px;
+  left: 30px;             /* was right:24px, which crowded the ✕. Sits after the
+                             page number instead, clear of both. */
   z-index: 2;
   padding: 1px 5px;
   font-size: 10px;
@@ -438,7 +426,6 @@
   color: #0d0f14;
   background: var(--accent);
 }
-.frame-ops .fop.hold { width: auto; min-width: 22px; padding: 0 4px; font-weight: 700; }
 
 /* --- v110: canvas size picker in the ⋯ menu -------------------------------- */
 .flip-menu-row {

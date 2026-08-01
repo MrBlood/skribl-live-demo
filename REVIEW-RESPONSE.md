@@ -1239,3 +1239,62 @@ proven: a crashing probe yields `ERROR ... RESULT: FAIL`, a skip yields
 **In the new suite.** It first counted *all* committed rate events rather than the
 delta, so rows from an earlier manual run made it report `committed=4` and fail.
 Every count is now a before/after delta.
+
+---
+
+# v124 — page controls moved out of the thumbnail
+
+**Build: v124.** 19 suites, **636 assertions**, 0 skipped, 0 problems.
+
+Three UI fixes, all from screenshots rather than the roadmap.
+
+## 1. "Re-add" was blurry — a text-shadow in the wrong place
+
+`.pending-btn` shared a rule with three other selectors:
+
+```css
+.pending-btn, .restore-btn.confirm, .tool-btn.active, .photo-fit-btn.active {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+```
+
+The other three are **white text on colour**, where a dark shadow lifts the
+glyphs. `.pending-btn` is dark `#171a22` **on yellow** — the same shadow just
+smeared the edges. Removed there only. Four instances, all the same button: the
+shared music and photo pending cards, plus two inlined in the player template.
+
+## 2. The selected-frame border drew 3px, not 2
+
+`.frame` has a 1px border and `.frame.on` added a 2px ring on top. Ring is now
+1px, so 2px total — unmistakable at thumbnail size without the slab look.
+
+## 3. Per-page controls left the thumbnail entirely
+
+Measured on the reported setup, every in-tile control was **18x18 px** — roughly
+a third of the 44px both Apple and Google recommend, five of them on an 88x62
+tile, with the hold badge immediately beside the delete button. A mis-tap there
+deleted a page.
+
+Worse: the strip had **no mobile rules at all**. `.frame` sits at brace depth 0,
+so a phone got byte-identical sizing to a 27-inch monitor.
+
+Controls now act on the **selected** page from a toolbar above the strip:
+
+| | before | after |
+| --- | --- | --- |
+| Target size | 18x18 | **38x38** (icons) / 38 tall with labels |
+| Thumbnail covered | ~36% | **0%** |
+| Delete adjacency | ~4px from Hold | **223px**, pushed to the far end |
+| Mobile rules | none | icons under 560px, labels above |
+
+Delete's separation is asserted by measuring the rendered gap, not the CSS
+declaration — `margin-left: auto` resolves to a pixel value, so the obvious
+assertion passed while proving nothing.
+
+## The harness caught both breakages
+
+Removing the in-tile controls broke `verify_pages.py` and `verify_hold.py`, which
+drove them. Both crashed before printing a summary, and both were reported as
+`ERROR — exit 1, NO assertion summary` rather than silently skipped — the
+machinery added in v118 doing exactly its job. Suites updated to drive the
+toolbar.

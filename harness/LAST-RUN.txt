@@ -9,9 +9,9 @@ Any "ERROR in app: Exception on /api/skribls" line is EXPECTED: the
 reservation-release test deliberately makes db.session.commit raise, to prove the
 rate-limit slot is returned on an unexpected database failure.
 
-SKIPPED SUITES contribute ZERO assertions and are listed by name in the aggregate.
-A skipped suite is NOT evidence that its subject was tested. In THIS run nothing
-was skipped: verify_postgres.py executed against a live PostgreSQL.
+SKIPPED SUITES contribute ZERO assertions and are listed by name. A skipped suite
+is NOT evidence its subject was tested. In THIS run nothing was skipped:
+verify_postgres.py executed against a live PostgreSQL.
 
 ##### POSTGRESQL CONCURRENCY — EXACT CONDITIONS OF THIS RUN #####
 PostgreSQL         : 16.14
@@ -41,7 +41,7 @@ CONCURRENCY — 12 processes-wide requests, quota 2
   [PASS] no OVER-admission: PostgreSQL holds exactly two new post rows  — 2 rows created
   [PASS] no UNDER-admission: the quota was actually used, not merely blocked
   [PASS] HTTP admissions match committed database rows  — 2 x 201 vs 2 rows
-  [PASS] exactly two rate events were promoted to committed  — committed delta=2 (before=6, after=8)
+  [PASS] exactly two rate events were promoted to committed  — committed delta=2 (before=10, after=12)
   [PASS] no reservation was stranded in pending  — pending delta=0 (after=0)
 
 SCOPE — what this does and does not establish
@@ -52,26 +52,24 @@ SCOPE — what this does and does not establish
         not establish behaviour under every isolation level, pooling
         arrangement, failure mode, or production load.
 
-SCOPE: this closes multi-process over-admission for the TESTED configuration only
-— this PostgreSQL version, default isolation level, gunicorn's default worker
-model, this connection setup, no induced failures, and a single 12-request burst.
-It does NOT establish behaviour under every isolation level, connection-pool
-configuration, failure mode, or production load.
+SCOPE: closes multi-process over-admission for the TESTED configuration only —
+this PostgreSQL version, default isolation, gunicorn's default worker model, no
+induced failures, a single 12-request burst.
 
 ##### INVOCATION 1 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-07-29T10:02:38Z
+UTC timestamp           : 2026-08-01T19:30:01Z
 Host                    : Linux x86_64
-Tree SHA-256            : a5f5c1dabff28b98f45366a4b819eb871acf6443917087b9105b3c0231af12b8
+Tree SHA-256            : 92445a01a1e281ee644c0f7fc5c5372d80b9edc82cce233b11f2a5f6689a6c21
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v123
+SKRIBL_VERSION          : v124
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.k3BllC84ZH/harness.db)
+Database reset          : yes (fresh /tmp/tmp.iuhRkjp580/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -99,18 +97,18 @@ RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### INVOCATION 2 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-07-29T10:06:38Z
+UTC timestamp           : 2026-08-01T19:27:29Z
 Host                    : Linux x86_64
-Tree SHA-256            : a5f5c1dabff28b98f45366a4b819eb871acf6443917087b9105b3c0231af12b8
+Tree SHA-256            : 92445a01a1e281ee644c0f7fc5c5372d80b9edc82cce233b11f2a5f6689a6c21
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v123
+SKRIBL_VERSION          : v124
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.in2EcAtQXb/harness.db)
+Database reset          : yes (fresh /tmp/tmp.ME4fb13e7B/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -126,24 +124,24 @@ suites requested : 10
   verify_media.py: ok — 24/24 passed
   verify_version.py: ok — 20/20 passed
   verify_ux.py: ok — 24/24 passed
-  verify_pages.py: ok — 28/28 passed
+  verify_pages.py: ok — 32/32 passed
   verify_exopts.py: ok — 23/23 passed
   verify_hold.py: ok — 26/26 passed
   verify_canvas.py: ok — 21/21 passed
   verify_postgres.py: ok — 10/10 passed
   verify_review.py: ok — 277/277 passed
-assertions passed: 484   (skipped suites contribute 0)
+assertions passed: 488   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
 RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### TREE-HASH COMPARISON #####
-Invocation 1 source-tree SHA-256: a5f5c1dabff28b98f45366a4b819eb871acf6443917087b9105b3c0231af12b8
-Invocation 2 source-tree SHA-256: a5f5c1dabff28b98f45366a4b819eb871acf6443917087b9105b3c0231af12b8
+Invocation 1 source-tree SHA-256: 92445a01a1e281ee644c0f7fc5c5372d80b9edc82cce233b11f2a5f6689a6c21
+Invocation 2 source-tree SHA-256: 92445a01a1e281ee644c0f7fc5c5372d80b9edc82cce233b11f2a5f6689a6c21
 MATCH — both invocations ran against an identical source tree.
 (Excludes harness/LAST-RUN.txt and SHA256SUMS, generated after the run.)
 
 ##### COMBINED #####
 Invocation 1: 148 assertions
-Invocation 2: 484 assertions
-COMBINED    : 632 assertions across 19 suites, 0 skipped, 0 problems
+Invocation 2: 488 assertions
+COMBINED    : 636 assertions across 19 suites, 0 skipped, 0 problems
