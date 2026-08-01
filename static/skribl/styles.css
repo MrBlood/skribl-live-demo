@@ -1966,6 +1966,26 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .toast[hidden] { display: none; }
 
+/* Tappable action inside a toast (e.g. "Undo" after Clear all). .toast itself is
+   pointer-events:none so it never blocks the canvas underneath — the button has
+   to opt back in explicitly, or it looks clickable and isn't. */
+.toast-action {
+  pointer-events: auto;
+  margin-left: 12px;
+  padding: 3px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: baseline;
+}
+
+.toast-action:hover { background: rgba(255, 255, 255, 0.16); }
+.toast-action:active { transform: translateY(1px); }
+
 /* ---------- Autosave status (quiet) ---------- */
 .autosave-status {
   position: fixed;

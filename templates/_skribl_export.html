@@ -48,6 +48,21 @@
         </div>
       </div>
     </div>
+{% if kind == 'flip' %}
+    <div class="export-options" id="exportOptions">
+      <div class="export-opt-row">
+        <span class="export-optlbl">Size</span>
+        <span class="seg export-size-seg" id="exportSizeSeg"><span class="seg-slider"></span><button type="button" data-size="full" class="on">Full</button><button type="button" data-size="medium">Medium</button><button type="button" data-size="small">Small</button></span>
+      </div>
+      <div class="export-opt-row">
+        <span class="export-optlbl">Pages</span>
+        <input type="number" id="exportFrom" class="export-num" min="1" step="1" value="1" aria-label="First page to export">
+        <span class="export-dash">–</span>
+        <input type="number" id="exportTo" class="export-num" min="1" step="1" aria-label="Last page to export">
+        <span class="export-rangenote" id="exportRangeNote"></span>
+      </div>
+    </div>
+{% endif %}
     <div class="export-progress" id="exportProgress" hidden>
       <div class="export-progress-bar"><div class="export-progress-fill" id="exportProgressFill"></div></div>
       <span class="export-progress-label" id="exportProgressLabel">Recording…</span>

@@ -165,9 +165,11 @@ so a strict policy needs nonces or hashes.
   across top-level, per-frame and thumbnail slots. **Dimensions and duration are
   still not checked** — they need real decoding and a dependency the app lacks.
   See `verify_media.py`.
-- [ ] Real rate limiting (Redis) replacing the in-memory per-IP counter. Note the
-  in-memory limiter is now raised to 100000 during harness runs for determinism,
-  so it is not covered by any suite.
+- [~] Rate limiting: v117 added a database-backed backend
+  (`SKRIBL_RATE_BACKEND=db`) that is shared across workers and survives restarts,
+  using the existing DB rather than new infrastructure. **Default is still
+  `memory` (per-process)** — set it on the deploy. Redis or edge limiting remains
+  preferable at scale. Covered by `verify_review.py` for both backends.
 
 ## Suggested sequence
 1. Blueprint wrapper (no behavior change) + template/static namespacing.

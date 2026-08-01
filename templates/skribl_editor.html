@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='101') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='106') }}">
 </head>
 <body>
 
@@ -240,7 +240,8 @@
        Flip loads, so both surfaces run one version. Until this file is present the
        GIF option simply disables itself with a hint — nothing else breaks. -->
   <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/lib/media_validation.js', v='121') }}" defer></script>
   <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}" defer></script>
-  <script src="{{ url_for('static', filename='skribl/app.js', v='104') }}" defer></script>
+  <script src="{{ url_for('static', filename='skribl/app.js', v='121') }}" defer></script>
 </body>
 </html>

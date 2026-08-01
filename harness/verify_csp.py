@@ -45,7 +45,7 @@ payload = {
     "title": "CSP probe",
     "frames": [{"strokes": [], "strokeGroups": [], "background": {"color": "#101418"},
                 "photo": None, "music": None}],
-    "canvasSize": {"w": 640, "h": 460},
+    "canvasSize": {"cssWidth": 640, "cssHeight": 460},
 }
 req = urllib.request.Request(BASE + "/api/skribls",
                              data=json.dumps(payload).encode(),
@@ -87,9 +87,11 @@ with sync_playwright() as p:
           "data:" in d.get("media-src", []) and "blob:" in d.get("media-src", [])) 
     check("img-src allows data: and blob:",
           "data:" in d.get("img-src", []) and "blob:" in d.get("img-src", []))
-    # Deliberate omission — the player is embedded in an iframe on skribls.net.
-    check("frame-ancestors is deliberately ABSENT (embedding must keep working)",
-          "frame-ancestors" not in d, str(d.get("frame-ancestors")))
+    # v111 (review #11): framing is now ROUTE-SPECIFIC. The editors and API are
+    # locked to 'self'; only the player stays permissive, and only while
+    # SKRIBL_EMBED_ORIGINS is unset. verify_review.py pins the player half.
+    check("editors are no longer framable by any origin",
+          d.get("frame-ancestors") == ["'self'"], str(d.get("frame-ancestors")))
     check("X-Frame-Options still absent for the same reason",
           "x-frame-options" not in {k.lower() for k in resp.headers})
     check("the API response carries the policy too",

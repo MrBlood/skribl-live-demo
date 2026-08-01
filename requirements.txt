@@ -1,5 +1,10 @@
-Flask
-gunicorn
-python-dotenv
-Flask-SQLAlchemy
-psycopg[binary]
+# Pinned to major versions tested against this app (review #14). Bare package
+# names allowed a future major release into production without a code change.
+# These are compatible-release bounds rather than exact pins because the exact
+# patch set has to be resolved and tested against the real deployment — generate
+# a lockfile there (pip freeze > constraints.txt) and install with -c.
+Flask>=3.0,<4.0
+gunicorn>=21.2,<24.0
+python-dotenv>=1.0,<2.0
+Flask-SQLAlchemy>=3.1,<4.0
+psycopg[binary]>=3.1,<4.0

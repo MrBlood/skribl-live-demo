@@ -16,10 +16,14 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
 - [ ] **DB durability**: posts are SQLAlchemy rows; confirm migrations + backups
       for production. Media are base64 data URLs inside `payload_json` — large.
       Consider object storage (S3/GCS) for audio/image blobs, store URLs instead.
-- [ ] **Rate limiting** is a naive in-memory per-IP counter — replace with Redis
-      or a real limiter for multi-process/serverless deploys. Note it is raised to
-      100000 during harness runs (it was silently throttling the posting suites at
-      20/hour), so no suite covers it.
+- [~] **Rate limiting** — a shared-store backend landed in v117. Set
+      `SKRIBL_RATE_BACKEND=db` and the quota is shared across gunicorn workers and
+      survives deploys, keyed by a salted hash of the client identity (never a raw
+      IP). **The default is still `memory`, which is per-process** — flip it on the
+      deploy or the production quota remains per-worker. Redis/edge limiting is
+      still the answer at real scale. The shared harness raises the cap to 100000,
+      but `verify_review.py` starts its own low-quota servers and covers both
+      backends, including that a restarted process still sees the quota spent.
 - [~] **Abuse/moderation**: posts are public + unauthenticated. **Media is now
       validated server-side (v105)** — type allow-list (SVG excluded), base64
       checked, per-item byte caps beyond the whole-request `MAX_CONTENT_LENGTH`.
@@ -30,11 +34,23 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
 
 ## Skribl Pad
 - [x] Undo next to "Clear drawing" (snapshot restore).
-- [ ] Make the ⋯ "Clear all" (resetAll, wipes media) undoable too, or add a
+- [x] **DONE (v106)** — the ⋯ "Clear all" (resetAll, wipes media) is now undoable:
+      snapshot via `serializeSkribl()`, restore via `loadSkribl()`, offered as an
+      Undo button in the toast. Media returns too. Superseded item:
+- [~] Make the ⋯ "Clear all" (resetAll, wipes media) undoable too, or add a
       confirm-with-preview.
-- [ ] Redo for the clear-undo (currently one-shot restore).
-- [ ] Multi-take editing UI polish (reorder/trim takes).
-- [ ] Export parity with Flip (GIF/MP4 of the replay) — currently PNG + WebM.
+- [x] **DONE (v107)** — Redo for the clear-undo. Undo offers Redo, Redo re-offers
+      Undo, so it toggles either way.
+- [ ] **Multi-take reorder/trim — RE-SCOPED (v110), not polish.** There is no takes
+      data model: `endRecordingTake()` appends into the same flat `strokes` /
+      `strokeGroups` arrays, so nothing addresses "a take". This needs (a) a takes
+      structure with segment boundaries and per-take timing, and (b) a product
+      decision on what reordering means for replay timing and recorded timestamps.
+      Design first, then build.
+- [x] **ALREADY DONE — the item was stale.** The export sheet is a shared partial,
+      so the Pad has offered PNG + Video (MP4/WebM) + GIF for several versions;
+      `exportGif()` (app.js) animates the replay and `verify_gifenc.py` has been
+      exporting a 19-frame Pad GIF since v104. Nothing was built for this.
 
 ## Flip
 - [x] Full parity build (zoom, audio loop, scrub, GIF, MP4, draw-on, sharing, polish).
@@ -49,11 +65,23 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
       (peak 0.4256 off an AnalyserNode), gapless Web Audio path in use, and the
       crossfade seam checked numerically via OfflineAudioContext (zero-run 0
       samples, seam delta 1.32x the mid-loop control).
-- [ ] Frame tools: duplicate/reorder pages (drag in the strip), copy/paste a page.
-- [ ] Per-frame duration (hold frames) instead of a single global fps.
-- [ ] Onion-skin depth (more than one frame back) + color-tinted onion.
-- [ ] Export options UI: size/quality + frame range (transparent GIF now done).
-- [ ] Bigger canvases / aspect-ratio choice (currently fixed 640x460).
+- [x] **DONE (v107 + v109)** — duplicate (already existed), reorder, copy/paste,
+      and **drag-to-reorder in the strip (v109)**, pointer-based so it works with
+      touch and pen. The button-based move remains for keyboard/test reach.
+- [x] **DONE (v109)** — per-page hold of 1–4 base-fps slots, cycled from the page
+      op bar with an always-visible badge. Additive to the payload: written only
+      when > 1, absent reads as 1, so old and new Skribls interoperate both ways.
+- [x] **DONE (v107)** — onion depth 1–3 at decreasing alpha, plus an optional
+      warm-to-cool tint by distance. Controls appear beside the onion switch only
+      while onion is on.
+- [x] **DONE (v108)** — export sheet now has Size (Full/Medium/Small) and a
+      first–last page range, shared by GIF, WebM and MP4 via `exDims()`/`exRange()`.
+      Note the GIF default changed from a forced 480px downscale to native; Medium
+      reproduces the old output exactly.
+- [x] **DONE (v110)** — 4:3 / 16:9 / 1:1 / 9:16 presets from the ⋯ menu. Needed no
+      format change: `canvasSize` was already in the payload and already honoured
+      by the player. Strokes keep their coordinates, so resizing crops the view
+      rather than distorting artwork, and switching back restores the framing.
 
 ## Audio payload bugs found during v101 QA — ALL FIXED (v102)
 - [x] **Flip ignores its own 20s loop cap on load.** Fixed: `MAX_LOOP_SECONDS`
@@ -80,8 +108,10 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
       for corruption again.
 
 ## Known caveats to close
-- [ ] WebCodecs MP4 unsupported browsers silently fall back to WebM — surface which
-      format the user will get before they export.
+- [x] **DONE (v106)** — WebCodecs-MP4-unsupported browsers no longer fall back to
+      WebM silently. Both surfaces label the export button with the container they
+      will actually produce ("Video (MP4)" / "Video (WebM)") and say it in the
+      description. Flip had no such label at all before; the Pad named only MP4.
 - [x] **GIF/MP4 no longer depend on CDN modules.** Both `mp4-muxer` (v103) and
       `gifenc` (v104) are vendored into `static/skribl/` and loaded as classic
       scripts. Offline-safe, no third-party runtime dependency, and **zero

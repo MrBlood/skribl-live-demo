@@ -1,35 +1,128 @@
 # Skribl Live Demo
 
-Server-backed Flask demo for Skribl Pad.
+Server-backed Flask app for **Skribl Pad** (record-and-replay drawing) and
+**Skribl Flip** (frame-by-frame animation), plus a public player for sharing.
+
+Current version: **v118** (`SKRIBL_VERSION` in `app.py`).
+
+## Verifying this archive
+
+```bash
+sha256sum -c SHA256SUMS      # every file in the archive, run from this directory
+```
+
+`SHA256SUMS` covers all 50 files and excludes itself. It does **not** cover the ZIP
+container — the archive's external SHA-256 travels with the delivery, because a
+file cannot contain its own digest.
+
+`harness/LAST-RUN.txt` records both harness invocations in full: context header
+(timestamp, versions, database reset, command), machine-generated aggregate, and a
+comparison of the two source-tree hashes. Every hash in that file and in
+`REVIEW-RESPONSE.md` is a **source-tree** hash and is labelled with the build it
+belongs to — none of them is an archive hash.
+
+## Reviewing this project — start here
+
+1. **`docs/HANDOFF.md`** — the most useful file. Reverse-chronological, one section
+   per version, covering what changed, why, and what was *deliberately not* done.
+   It also records retracted claims, so read a section fully before trusting an
+   older one.
+2. **`docs/ROADMAP.md`** — open items, and what's been closed.
+3. **`docs/INTEGRATION.md`** — how this gets embedded into a larger Flask app.
+4. **`harness/README.md`** — the test suites and how to run them.
+
+A note on the docs: several roadmap items have turned out to be **stale** — already
+done, or describing the code inaccurately. Four were found that way (`og-card.png`, export
+parity, the "identical" `startWebAudioLoop` copies, and multi-take "polish" that
+assumes a data model the code does not have). **Check the code
+before trusting a claim in these files.**
+
+## Layout
+
+```
+app.py                     Flask app: routes, model, validation, CSP
+templates/                 Jinja templates; the _skribl_*.html files are shared
+                           partials used by both editing surfaces
+static/skribl/
+  app.js                   Pad + player (largest file)
+  flip.js                  Flip
+  styles.css, flip.css     Pad/shared styles, Flip styles
+  lib/audioloop.js         Audio DSP shared by both surfaces
+  gifenc.min.js            Vendored GIF encoder (build command in its banner)
+  mp4-muxer.min.js         Vendored MP4 muxer
+docs/                      Handoff, roadmap, integration notes
+harness/                   Browser test suites (Playwright)
+```
 
 ## Routes
 
-- `/` - editor
-- `/skribl-pad` - editor
-- `/api/skribls` - create Skribl post
-- `/api/skribls/<id>` - fetch Skribl post JSON
-- `/s/<id>` - public player
+| Route | Purpose |
+| --- | --- |
+| `/` and `/skribl-pad` | Pad (record-and-replay editor) |
+| `/flip` | Flip (frame-by-frame animator) |
+| `/s/<id>` | Public player |
+| `/s/<id>/card.png` | Share-card image for link unfurls |
+| `POST /api/skribls` | Create a post |
+| `GET /api/skribls/<id>` | Fetch a post as JSON |
 
 ## Local setup
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt          # dev
+# reproducible/hash-checked install:
+# pip install -r constraints.txt --require-hashes
 flask --app app.py init-db
 flask --app app.py run
 ```
 
-Open:
+Then open <http://127.0.0.1:5000/> or <http://127.0.0.1:5000/flip>.
 
-```text
-http://127.0.0.1:5000/skribl-pad
+## Running the tests
+
+632 assertions across 19 suites, all green as of v123 (totals machine-generated). verify_postgres.py needs a live PostgreSQL and skips cleanly without one — a skip contributes zero assertions and is not evidence of coverage. See REVIEW-RESPONSE.md for
+the external review and what was fixed. They drive a real headless
+Chromium against a real server — several verify exported files at the byte level
+(GIF dimensions, frame counts, per-frame delays) rather than checking UI state.
+
+```bash
+pip install playwright flask_sqlalchemy
+python -m playwright install chromium
+./harness/run_harness.sh verify_gifenc.py verify_canvas.py    # or any subset
 ```
 
-## Deploy
+`run_harness.sh` starts its own server on port 5001 and raises the post rate limit
+so suites don't throttle each other. See `harness/README.md` for the full list and
+the known gotchas.
 
-Start command:
+Two things the sandbox **cannot** verify, so they need a real browser:
+
+- **MP4 export.** Headless Chromium has `VideoEncoder` but no avc1, so the H.264
+  path can't run. The capability gate and the WebM fallback are covered.
+- **CSP in Safari and Firefox.** Verified in Chromium only. Deploy once with
+  `SKRIBL_CSP=report-only` to check.
+
+## Configuration
+
+All optional, with safe defaults — see `.env.example`.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SECRET_KEY` | — | Flask secret |
+| `DATABASE_URL` | sqlite | Postgres in production |
+| `MAX_CONTENT_LENGTH` | 25000000 | Whole-request cap |
+| `SKRIBL_CSP` | `on` | `on` / `report-only` / `off` |
+| `SKRIBL_MAX_AUDIO_BYTES` | 12000000 | Per-item audio cap |
+| `SKRIBL_MAX_IMAGE_BYTES` | 8000000 | Per-item image cap |
+| `SKRIBL_RATE_MAX_POSTS` | 20 | Posts per IP per hour |
+
+## Deploy
 
 ```bash
 gunicorn app:app
 ```
+
+Templates and `app.py` must deploy together — the CSP nonce lives in both, and a
+header without the matching `nonce` attribute blocks the inline config script.
+Static files carry `?v=` cache-busts that are bumped only when that file changes.

@@ -9,13 +9,55 @@
    ========================================================================== */
 const COLORS = ["#ffffff","#7c5cff","#5b8cff","#f4326f","#1bcf8f","#ffae42","#000000"]; // Pad editor palette
 const DPR = Math.min(window.devicePixelRatio||1, 2);
-const CW = 640, CH = 460;
+let CW = 640, CH = 460;          // mutable since v110 — see setCanvasSize()
+// Canvas presets. The payload has ALWAYS carried canvasSize and the player has
+// always honoured it (app.js establishEditorCanvas), so this needed no format
+// change at all — Flip was simply hardcoded to one of the sizes it could already
+// describe.
+const FLIP_SIZES = [
+  { id:'classic', label:'4:3',  w:640, h:460 },
+  { id:'wide',    label:'16:9', w:720, h:405 },
+  { id:'square',  label:'1:1',  w:560, h:560 },
+  { id:'tall',    label:'9:16', w:420, h:640 }
+];
 const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
 
 const pad = document.getElementById('pad');
 const ctx = pad.getContext('2d');
 pad.width = CW*DPR; pad.height = CH*DPR; ctx.scale(DPR,DPR);
 
+// Resize every layer that is CW x CH at DPR. Stroke coordinates are deliberately
+// NOT rescaled: a drawing keeps its position and size on the page, and a smaller
+// canvas simply crops the view rather than silently distorting artwork. The
+// strokes themselves are never destroyed, so switching back restores the framing.
+const MAX_CANVAS_EDGE = 4096;
+function applyCanvasSize(w, h, opts){
+  // Review #8: this takes cssWidth/cssHeight straight off a payload, and the old
+  // guard was only `> 0`. A crafted or corrupt draft could ask for 30000x30000
+  // and we would allocate four canvases that size. Bound it, and require finite
+  // numbers — NaN passes every comparison silently.
+  // Whole pixels only, mirroring the server rule so an imported local draft and
+  // a public payload behave identically. (Review round 4, #6)
+  if(!(Number.isInteger(w) && Number.isInteger(h))) return false;
+  if(!(w > 0 && h > 0 && w <= MAX_CANVAS_EDGE && h <= MAX_CANVAS_EDGE)) return false;
+  if(w === CW && h === CH) return false;
+  CW = w; CH = h;
+  const layers = [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx]];
+  for(const pair of layers){
+    const cv = pair[0], c = pair[1];
+    if(!cv || !c) continue;
+    cv.width = CW * DPR; cv.height = CH * DPR;
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);      // resizing resets the transform
+  }
+  if(!opts || opts.silent !== true){
+    sizeStage(); buildStrip(); render(); scheduleSave();
+  }
+  return true;
+}
+function currentSizeId(){
+  const m = FLIP_SIZES.find(s => s.w === CW && s.h === CH);
+  return m ? m.id : 'custom';
+}
 function fitPad(){
   const stage = document.querySelector('.flip-stage');
   const availW = stage.clientWidth - 24, availH = stage.clientHeight - 6;
@@ -49,6 +91,37 @@ window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionTool
 let frames = [ newFrame() ];
 let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+// Onion skin depth/tint are view-only session state — deliberately NOT persisted
+// or posted, so they cannot affect the payload format or the player.
+let onionDepth = 1, onionTint = false;
+const ONION_ALPHAS = [0.30, 0.17, 0.10];          // nearer frame = more visible
+const ONION_TINTS  = ['#ff5f6d', '#ff9f43', '#ffd76a'];   // warmer = further back
+let pageClip = null;                              // copied page, for paste
+// Selection tokens — see the note in app.js. Flip is more exposed than the Pad
+// because it clears the input immediately, so a second pick during a slow decode
+// is easy. Bumped on selection AND removal. (Review round 9, #1)
+let musicSelectionSeq = 0;
+let imageSelectionSeq = 0;
+
+// Export options — session-only view state, like onion. NOT persisted or posted.
+// One pair of helpers feeds GIF, WebM and MP4 so the three can never disagree
+// about what "Medium" or "pages 2–5" means.
+const EX_SIZES = { full: 0, medium: 480, small: 320 };   // 0 = no cap (native)
+let exSize = 'full';
+let exFrom = 1, exTo = 0;        // exTo 0 means "through the last page"
+function exRange(){
+  const n = frames.length;
+  let a = Math.max(1, Math.min(parseInt(exFrom,10) || 1, n));
+  let b = exTo ? Math.max(1, Math.min(parseInt(exTo,10) || n, n)) : n;
+  if(b < a){ const t = a; a = b; b = t; }               // tolerate reversed input
+  return { from: a, to: b, count: b - a + 1 };
+}
+function exDims(){
+  const cap = EX_SIZES[exSize] || 0;
+  const scale = cap ? Math.min(1, cap / Math.max(CW, CH)) : 1;
+  return { w: Math.max(2, Math.round(CW * scale)),
+           h: Math.max(2, Math.round(CH * scale)), scale: scale };
+}
 let bgColor = '#0d0f14', strokeOpacity = 1, smoothingAlpha = 1;   // Pad-parity draw settings
 let smoothPt = null, lastRaw = null;                              // smoothing stabilizer runtime
 let bgImage = null, bgImageObj = null, imageName = '';            // one background image per animation
@@ -66,7 +139,20 @@ let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
 let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0;   // "draw-on" replay
 
-function newFrame(){ return { strokes: [], strokeGroups: [] }; }
+function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
+// Per-page hold: how many base-fps slots this page occupies. ALWAYS read through
+// this — never trust f.hold to exist. Pages loaded from a pre-v109 payload have no
+// hold field at all and must read as 1, which is what makes the change additive.
+const MAX_HOLD = 4;
+function frameHold(f){
+  const h = Math.round(Number(f && f.hold));
+  return (isFinite(h) && h >= 1) ? Math.min(h, MAX_HOLD) : 1;
+}
+function totalHoldUnits(from, to){
+  let u = 0;
+  for(let i=from; i<=to; i++) u += frameHold(frames[i]);
+  return u;
+}
 function frame(){ return frames[idx]; }
 
 /* ---- autosave: a real frame-format Skribl ---- */
@@ -89,7 +175,12 @@ function serializeFlip(opts){
     music: withMedia ? (musicData || null) : null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : (pendingMusicMeta || null),
-    frames: frames.map(f => ({ strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor }))
+    frames: frames.map(f => {
+      const o = { strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor };
+      const h = frameHold(f);
+      if(h > 1) o.hold = h;      // omitted at the default => payload unchanged
+      return o;
+    })
   };
 }
 // localStorage is capped at ~5 MB per origin. A background image and especially a
@@ -150,6 +241,11 @@ function exportShow(label){ _exportAbort=false; const o=document.getElementById(
 function exportSet(frac, label){ const f=document.getElementById('flipExportFill'); if(f) f.style.width=(Math.max(0,Math.min(1,frac))*100)+'%'; if(label){ const l=document.getElementById('flipExportLabel'); if(l) l.textContent=label; } }
 function exportHide(){ const o=document.getElementById('flipExport'); if(o) o.hidden=true; }
 function applyPayload(d){
+  // Restore the saved canvas size first, so frames/thumbs build at the right
+  // dimensions. silent: the boot path (and the caller) renders straight after.
+  if(d && d.canvasSize && d.canvasSize.cssWidth && d.canvasSize.cssHeight){
+    applyCanvasSize(d.canvasSize.cssWidth, d.canvasSize.cssHeight, {silent:true});
+  }
   if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
   frames = d.frames.map(f => {
     if (Array.isArray(f.strokeGroups)) {
@@ -299,9 +395,27 @@ function render(){
   ctx.clearRect(0,0,CW,CH);
   drawBackdrop(ctx);
   if(onion && !playing && idx>0){
-    fctx.clearRect(0,0,CW,CH);
-    paintStatic(fctx, frames[idx-1].strokes);
-    ctx.globalAlpha = 0.28; ctx.drawImage(frameCv, 0, 0, CW, CH); ctx.globalAlpha = 1;
+    // Furthest frame first so nearer ones layer on top. Uses onionCv/octx, which
+    // were scaffolded for exactly this in v98 and had sat unused ever since —
+    // keeping frameCv free for the current frame below.
+    const depth = Math.min(onionDepth, idx);
+    for(let k=depth; k>=1; k--){
+      const prev = frames[idx-k]; if(!prev) continue;
+      octx.clearRect(0,0,CW,CH);
+      paintStatic(octx, prev.strokes);
+      if(onionTint){
+        // source-in repaints the strokes' own pixels, leaving transparent areas
+        // untouched — a silhouette tint, which is what onion skinning wants.
+        octx.save();
+        octx.globalCompositeOperation='source-in';
+        octx.fillStyle = ONION_TINTS[k-1] || ONION_TINTS[ONION_TINTS.length-1];
+        octx.fillRect(0,0,CW,CH);
+        octx.restore();
+      }
+      ctx.globalAlpha = ONION_ALPHAS[k-1] || ONION_ALPHAS[ONION_ALPHAS.length-1];
+      ctx.drawImage(onionCv, 0, 0, CW, CH);
+      ctx.globalAlpha = 1;
+    }
   }
   paintFrame(ctx, frame().strokes);
 }
@@ -336,6 +450,7 @@ pad.addEventListener('pointermove', e=>{
   frame().strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
   render(); });
 function endStroke(){
+  invalidateClearUndo();   // review #4: new work invalidates a pending clear-undo
   if(reposActive){ reposActive=false; refreshAllThumbs(); scheduleSave(); return; }
   if(!drawing) return;
   // Settle: with smoothing on, the drawn point lags the finger — walk it to the real
@@ -506,16 +621,36 @@ const strip = document.getElementById('strip');
 const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function disarmAll(){
   if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
-  if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete the whole animation'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear animation'; } }
+  if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete all pages (keeps music and background)'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear all pages'; } }
 }
 function buildStrip(){
   armedDel = -1;
   strip.innerHTML='';
   frames.forEach((f,i)=>{
     const el=document.createElement('div'); el.className='frame'+(i===idx?' on':'');
-    el.innerHTML='<div class="num">'+(i+1)+'</div><button class="del" title="Delete frame">'+DEL_SVG+'</button><canvas></canvas>';
+    el.innerHTML='<div class="num">'+(i+1)+'</div>'
+      +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
+      + (frameHold(f)>1 ? '<div class="holdbadge">\u00d7'+frameHold(f)+'</div>' : '')
+      +'<div class="frame-ops">'
+        +'<button class="fop" data-mv="-1" title="Move page left" aria-label="Move page left"'+(i===0?' disabled':'')+'>\u25C0</button>'
+        +'<button class="fop" data-cp="1" title="Copy page" aria-label="Copy page">\u29C9</button>'
+        +'<button class="fop hold" data-hold="1" title="Hold this page longer" aria-label="Hold this page longer">\u00d7'+frameHold(f)+'</button>'
+        +'<button class="fop" data-mv="1" title="Move page right" aria-label="Move page right"'+(i===frames.length-1?' disabled':'')+'>\u25B6</button>'
+      +'</div><canvas></canvas>';
+    el.addEventListener('pointerdown',ev=>{
+      if(playing || frames.length<2) return;
+      if(ev.target.closest('.del,[data-mv],[data-cp]')) return;
+      _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false, centers:stripTileCenters() };
+    });
     el.addEventListener('click',ev=>{
       if(playing) return;
+      if(_pdragSuppressClick) return;
+      const mv = ev.target.closest('[data-mv]');
+      if(mv){ if(!mv.disabled) movePage(i, +mv.dataset.mv); return; }
+      const hb = ev.target.closest('[data-hold]');
+      if(hb){ invalidateClearUndo(); f.hold = (frameHold(f) % MAX_HOLD) + 1; buildStrip(); scheduleSave(); return; }
+      const cp = ev.target.closest('[data-cp]');
+      if(cp){ pageClip = deepCopy(f); buildStrip(); chip('Page copied'); return; }
       const del = ev.target.closest('.del');
       if(del){
         if(f.strokes.length && armedDel !== i){
@@ -530,20 +665,88 @@ function buildStrip(){
     strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
   });
   const col=document.createElement('div'); col.className='addcol';
-  col.innerHTML='<button class="addbtn" id="addcopy">＋ Page</button><button class="addbtn mini" id="addblank">＋ Blank</button>';
+  col.innerHTML='<button class="addbtn" id="addcopy">＋ Page</button><button class="addbtn mini" id="addblank">＋ Blank</button>'
+    + (pageClip ? '<button class="addbtn mini" id="addpaste">＋ Paste</button>' : '');
   strip.appendChild(col);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(!playing) addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
+  const pasteBtn=col.querySelector('#addpaste');
+  if(pasteBtn) pasteBtn.addEventListener('click',()=>{
+    if(playing || !pageClip) return;
+    invalidateClearUndo(); redoStack.length=0;
+    frames.splice(idx+1,0,deepCopy(pageClip)); idx++;
+    buildStrip(); render(); scheduleSave();
+  });
   updateToolState();
 }
 function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent'; const c=cv.getContext('2d');
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); drawBackdrop(c); paintFrame(c, f.strokes); }
 function refreshAllThumbs(){ [...strip.children].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
-function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice() }; }
-function addFrame(copy){ disarmAll(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
+// Reorder by one slot. Keeps `idx` pointing at the SAME page the user was on —
+// moving a page must never silently switch which page you're drawing on.
+function movePage(i,dir){ movePageTo(i, i+dir); }
+// Shared by the move buttons and by drag-to-reorder. Keeps `idx` on the SAME page
+// the user was on rather than the same slot — reordering must never silently
+// switch which page you're drawing on.
+function movePageTo(i,j){
+  if(i===j) return;
+  if(j<0 || j>=frames.length) return;
+  invalidateClearUndo(); redoStack.length=0;
+  const was=frames[idx];
+  const moved=frames.splice(i,1)[0];
+  frames.splice(j,0,moved);
+  const found=frames.indexOf(was);
+  if(found>=0) idx=found;
+  buildStrip(); render(); scheduleSave();
+}
+
+/* ---- drag-to-reorder ------------------------------------------------------
+   Pointer-based so it works with touch and pen, not just mouse. The strip is
+   NOT rebuilt mid-drag: rebuilding would destroy the element under the pointer
+   and drop the gesture, so the tile is translated visually and the actual
+   reorder happens once on release. A small threshold keeps ordinary taps
+   (select page) working. */
+let _pdrag=null, _pdragSuppressClick=false;
+function stripTileCenters(){
+  return [...strip.querySelectorAll('.frame')].map(el=>{
+    const r=el.getBoundingClientRect(); return r.left + r.width/2;
+  });
+}
+document.addEventListener('pointermove', ev=>{
+  if(!_pdrag) return;
+  const dx=ev.clientX-_pdrag.startX;
+  if(!_pdrag.moved && Math.abs(dx)<6) return;
+  if(!_pdrag.moved){ _pdrag.moved=true; _pdrag.el.classList.add('dragging'); }
+  ev.preventDefault();
+  _pdrag.el.style.transform='translateX('+dx+'px)';
+});
+document.addEventListener('pointerup', ()=>{
+  if(!_pdrag) return;
+  const d=_pdrag; _pdrag=null;
+  d.el.style.transform=''; d.el.classList.remove('dragging');
+  if(!d.moved) return;
+  _pdragSuppressClick=true;              // don't also "select" the tile we dropped
+  setTimeout(()=>{ _pdragSuppressClick=false; }, 0);
+  // Insertion index = how many tile centres sit left of the pointer. Then step
+  // back one if we're inserting after our own old slot, because movePageTo
+  // splices the dragged page OUT before it splices it back in.
+  const centers=d.centers, x=d.lastX;
+  let target=0;
+  for(let k=0;k<centers.length;k++){ if(x>centers[k]) target=k+1; }
+  if(target>d.i) target--;
+  target=Math.max(0, Math.min(frames.length-1, target));
+  movePageTo(d.i, target);
+});
+document.addEventListener('pointermove', ev=>{ if(_pdrag) _pdrag.lastX=ev.clientX; });
+document.addEventListener('pointercancel', ()=>{
+  if(!_pdrag) return;
+  _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
+});
+function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice(), hold: frameHold(f) }; }
+function addFrame(copy){ disarmAll(); invalidateClearUndo(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   const el=strip.children[idx]; if(el) el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
-function delFrame(i){ redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
+function delFrame(i){ invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
   buildStrip(); render(); scheduleSave(); }
 function go(i){ idx=i; redoStack.length=0; buildStrip(); render(); }
@@ -588,7 +791,17 @@ function playStep(){ if(scrubbingFrames) return;
   idx=playI%frames.length; render(); updatePlayProgress();
   liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; playI++;
 }
-function runPlayTimer(){ clearInterval(playTimer); playStep(); playTimer=setInterval(playStep, 1000/fps); }
+// Was a fixed setInterval. With per-page holds each step has its own delay, so it
+// re-schedules itself. playTimer holds a timeout id now — stop() clears both.
+function runPlayTimer(){
+  clearInterval(playTimer); clearTimeout(playTimer);
+  playStep();
+  const step = () => {
+    playStep();
+    playTimer = setTimeout(step, (1000/fps) * frameHold(frames[playI]));
+  };
+  playTimer = setTimeout(step, (1000/fps) * frameHold(frames[playI]));
+}
 function play(){
   if(playing) return;
   if(drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length<2) return;
@@ -791,8 +1004,19 @@ function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cove
     pendingPhotoMeta=null; }
   loadBgImageObj(()=>{ redrawAll(); }); syncMediaUI(); scheduleSave(); }
 function removeBgImage(){ bgImage=null; bgImageObj=null; imageName=''; reposMode=false; pendingPhotoMeta=null; redrawAll(); syncMediaUI(); scheduleSave(); }
-imageInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
-  imageName=file.name||''; const r=new FileReader(); r.onload=()=>setBgImage(String(r.result)); r.readAsDataURL(file); });
+imageInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
+  const _seq=++imageSelectionSeq; if(!file) return;
+  const _de=await skriblDecodeCheckImage(file);
+  if(_seq!==imageSelectionSeq) return;            // superseded or removed mid-decode
+  if(_de){ chip(_de); return; }
+  imageName=file.name||'';
+  // Round 10, #2: the token guard used to stop at the decode await, leaving
+  // FileReader unguarded — a slower read could still overwrite a newer choice,
+  // or restore an image after removal. Carried through every async stage now.
+  const r=new FileReader();
+  r.onload=()=>{ if(_seq!==imageSelectionSeq) return; setBgImage(String(r.result)); };
+  r.onerror=()=>{ if(_seq!==imageSelectionSeq) return; chip('That image could not be read.'); };
+  r.readAsDataURL(file); });
 
 /* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
 const musicInput=document.getElementById('musicInput');
@@ -834,7 +1058,7 @@ function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();
   musicEnabled=true; musicMuted=false; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null;
   zoomMag=1; zoomFocus='loop'; zoomCenter=null;
   ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
-function removeMusic(){ if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
+function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
   musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; pendingMusicMeta=null;
   try{ waveformCtx.clearRect(0,0,waveformCanvas.width,waveformCanvas.height); zoomWaveformCtx.clearRect(0,0,zoomWaveformCanvas.width,zoomWaveformCanvas.height); }catch(_){}
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
@@ -843,8 +1067,16 @@ function startMusic(){ if(!musicEnabled || musicMuted) return;
   if(startWebAudioLoop()) return;                               // gapless path
   ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
 function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
-musicInput.addEventListener('change',e=>{ const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
-  musicName=file.name||''; const r=new FileReader(); r.onload=()=>setMusic(String(r.result)); r.readAsDataURL(file); });
+musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
+  const _seq=++musicSelectionSeq; if(!file) return;
+  const _de=await skriblDecodeCheckAudio(file);
+  if(_seq!==musicSelectionSeq) return;            // superseded or removed mid-decode
+  if(_de){ chip(_de); return; }
+  musicName=file.name||'';
+  const r=new FileReader();
+  r.onload=()=>{ if(_seq!==musicSelectionSeq) return; setMusic(String(r.result)); };
+  r.onerror=()=>{ if(_seq!==musicSelectionSeq) return; chip('That audio could not be read.'); };
+  r.readAsDataURL(file); });
 
 /* ---- gapless + crossfaded loop engine (Web Audio, ported from the Pad) --------
    Plays the trimmed [trimStart,trimEnd] region as an AudioBufferSourceNode with
@@ -892,7 +1124,7 @@ function loadDraftFile(file){
       if(!d || !Array.isArray(d.frames) || !d.frames.length){ chip('Not a valid Skribl'); return; }
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
       const ok=applyPayload(d);            // sets frames/bgColor/bgImage/musicData/fps directly
-      clearBackup=null; const _cu=document.getElementById('clearUndo'); if(_cu) _cu.disabled=true;
+      invalidateClearUndo();
       loadBgImageObj(()=>{ applyBg(); render(); });
       ensureAudio();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
@@ -966,17 +1198,23 @@ function exportWebM(){
   if(frames.length<2){ chip('Add a page or two first'); return; }
   if(typeof MediaRecorder==='undefined' || !HTMLCanvasElement.prototype.captureStream){ chip('Video export not supported here'); return; }
   exporting=true; exportShow('Recording WebM…');
-  const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
+  const _d=exDims(), _r=exRange();
+  const cv=document.createElement('canvas'); cv.width=_d.w; cv.height=_d.h; const c=cv.getContext('2d');
+  // drawFrameTo paints in CW/CH coordinates, so scale the context once rather
+  // than touching every draw call.
+  c.setTransform(_d.w/CW, 0, 0, _d.h/CH, 0, 0);
   const stream=cv.captureStream(fps);
   const types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
   const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
   let rec; try{ rec=new MediaRecorder(stream,{mimeType:mime}); }catch(_){ exporting=false; exportHide(); chip('Video export failed'); return; }
   const chunks=[]; rec.ondataavailable=ev=>{ if(ev.data && ev.data.size) chunks.push(ev.data); };
   rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob,'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
-  drawFrameTo(c, frames[0]); rec.start();
-  const loops=2, total=frames.length*loops; let n=0;   // a couple of loops so short clips aren't trivially short
+  drawFrameTo(c, frames[_r.from-1]); rec.start();
+  // Tick in base-fps units, not pages, so a held page simply occupies more ticks.
+  const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
+  const loops=2, total=_units.length*loops; let n=0;   // a couple of loops so short clips aren't trivially short
   const iv=setInterval(()=>{ if(_exportAbort){ clearInterval(iv); try{rec.stop();}catch(_){ exporting=false; exportHide(); } return; }
-    drawFrameTo(c, frames[n%frames.length]); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
+    drawFrameTo(c, frames[_units[n%_units.length]]); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
 }
 async function exportGIF(){
   const G=window.gifenc;
@@ -984,16 +1222,23 @@ async function exportGIF(){
   if(exporting) return; if(!frames.length){ chip('Draw something first'); return; }
   exporting=true; exportShow('Rendering GIF…');
   try{
-    const MAX_EDGE=480; const scale=Math.min(1, MAX_EDGE/Math.max(CW,CH));
-    const outW=Math.max(2,Math.round(CW*scale)), outH=Math.max(2,Math.round(CH*scale));
+    // Size now comes from the export sheet. Before v108 this was a hardcoded
+    // 480px cap with no way out; 'full' is the new default, so a GIF is native
+    // resolution unless the user asks for smaller.
+    const _d=exDims(); const outW=_d.w, outH=_d.h;
+    const r=exRange();
     const full=document.createElement('canvas'); full.width=CW; full.height=CH; const fc=full.getContext('2d');
     const out=document.createElement('canvas'); out.width=outW; out.height=outH; const octx=out.getContext('2d');
-    const enc=G.GIFEncoder(); const delay=Math.round(1000/fps);
+    const enc=G.GIFEncoder();
+    // GIF stores delay in centiseconds. Rounding ms->cs per frame made a held
+    // page drift (3 x 83ms = 249ms -> 25cs, not 24), so quantise to whole
+    // centiseconds FIRST and multiply after. Identical output at hold 1.
+    const csBase=Math.max(1, Math.round(100/fps)); const delay=csBase*10;
     // GIF background toggle (shared export sheet): 'transparent' keys out the bg
     // for crisp 1-bit-alpha line art; 'color' bakes the pad background as before.
     const transparent=(gifBgMode==='transparent');
     const fmt=transparent?'rgba4444':'rgb565';
-    for(let i=0;i<frames.length;i++){
+    for(let i=r.from-1;i<=r.to-1;i++){
       if(_exportAbort){ exportHide(); chip('Export cancelled'); exporting=false; return; }
       if(transparent){ fc.clearRect(0,0,CW,CH); paintFrame(fc, frames[i].strokes); }  // strokes only, on transparent
       else { drawFrameTo(fc, frames[i]); }
@@ -1001,10 +1246,10 @@ async function exportGIF(){
       const img=octx.getImageData(0,0,outW,outH);
       const palette=G.quantize(img.data,256,{format:fmt, oneBitAlpha:transparent});
       const index=G.applyPalette(img.data,palette,fmt);
-      const opts={palette,delay}; if(i===0) opts.repeat=0;              // loop forever
+      const opts={palette,delay:delay*frameHold(frames[i])}; if(i===r.from-1) opts.repeat=0;   // loop forever
       if(transparent){ let tIdx=palette.findIndex(c=>c.length>3&&c[3]===0); if(tIdx<0) tIdx=0; opts.transparent=true; opts.transparentIndex=tIdx; opts.dispose=2; }
       enc.writeFrame(index,outW,outH,opts);
-      exportSet((i+1)/frames.length);
+      exportSet((i-(r.from-1)+1)/r.count);
       if((i&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
     }
     enc.finish();
@@ -1033,7 +1278,8 @@ async function exportViaWebCodecsMp4(){
   const MM=window.Mp4Muxer;
   if(!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
   if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined') return false;
-  const w=CW&~1, h=CH&~1; if(w<2||h<2) return false;
+  const _d=exDims(), _r=exRange();
+  const w=_d.w&~1, h=_d.h&~1; if(w<2||h<2) return false;   // encoders want even dims
   const avcCodec=await pickAvcCodec(w,h); if(!avcCodec) return false;
   if(frames.length<1) return false;
   // Audio: the trimmed/crossfaded loop from the music engine, if music is on.
@@ -1057,13 +1303,15 @@ async function exportViaWebCodecsMp4(){
     if(useAudio){ aEnc=new AudioEncoder({ output:(c,m)=>muxer.addAudioChunk(c,m), error:(e)=>{encErr=e;} });
       aEnc.configure({ codec:'mp4a.40.2', numberOfChannels:audioBuf.numberOfChannels, sampleRate:audioBuf.sampleRate, bitrate:128000 }); }
     const rec=document.createElement('canvas'); rec.width=w; rec.height=h; const rctx=rec.getContext('2d');
+    rctx.setTransform(w/CW, 0, 0, h/CH, 0, 0);   // same reason as the WebM path
     const encFps=30, frameDurUs=1000000/encFps;
     const loops = frames.length>1 ? 2 : 1;                    // a couple of loops so short clips aren't trivial
-    const totalSec=(frames.length/fps)*loops;
+    const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
+    const totalSec=(_units.length/fps)*loops;
     const totalFrames=Math.max(1, Math.ceil(totalSec*encFps));
     for(let f=0; f<totalFrames; f++){
       if(_exportAbort){ try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){} exportHide(); chip('Export cancelled'); exporting=false; return true; }
-      const animIdx=Math.floor((f/encFps)*fps)%frames.length;
+      const animIdx=_units[Math.floor((f/encFps)*fps)%_units.length];
       drawFrameTo(rctx, frames[animIdx]);
       const vf=new VideoFrame(rec, { timestamp:Math.round(f*frameDurUs), duration:Math.round(frameDurUs) });
       vEnc.encode(vf, { keyFrame:(f%(encFps*2))===0 }); vf.close();
@@ -1093,6 +1341,27 @@ async function exportViaWebCodecsMp4(){
   }catch(err){ console.error('WebCodecs MP4 export failed:', err); exportHide(); chip('MP4 failed — using WebM'); exporting=false; return false; }
 }
 // Video export entry: try a real MP4 (with audio) first, else the WebM fallback.
+// Mirrors exportVideo()'s decision WITHOUT side effects, so the export sheet can
+// name the format the user will actually receive. The Pad has had this since it
+// shipped; Flip did not, so "Video" silently produced WebM on any browser without
+// WebCodecs H.264 — the user picked one thing and got another.
+// Cheap on purpose: no loop buffer is built. aacSupported() only needs the sample
+// rate and channel count, which the trimmed loop inherits from currentAudioBuffer.
+async function expectedVideoFormat(){
+  try{
+    const MM=window.Mp4Muxer;
+    if(!(MM && MM.Muxer && MM.ArrayBufferTarget)) return 'WebM';
+    if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined') return 'WebM';
+    const w=CW&~1, h=CH&~1; if(w<2||h<2) return 'WebM';
+    if(!(await pickAvcCodec(w,h))) return 'WebM';
+    // Music on? MP4 needs AAC as well, or exportViaWebCodecsMp4 bails to WebM
+    // rather than ship a silent MP4 — so the label must bail the same way.
+    const hasAudio = !!musicData && musicEnabled && !musicMuted && !!currentAudioBuffer;
+    if(hasAudio && !(await aacSupported(currentAudioBuffer.sampleRate, currentAudioBuffer.numberOfChannels))) return 'WebM';
+    return 'MP4';
+  }catch(e){ return 'WebM'; }
+}
+
 async function exportVideo(){
   if(exporting) return;
   if(frames.length<2){ chip('Add a page or two first'); return; }
@@ -1103,6 +1372,30 @@ async function exportVideo(){
 
 /* ---- menu open/close + item wiring + state sync ---- */
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
+// Canvas size picker. Lives in the ⋯ menu because it is a document property, not
+// a tool. Disabled during playback so the stage can't resize mid-animation.
+const canvasSeg=document.getElementById('canvasSeg');
+function positionCanvasSeg(){
+  if(!canvasSeg) return;
+  const a=canvasSeg.querySelector('button.on'), pill=canvasSeg.querySelector('.seg-slider');
+  if(!a||!pill||!a.offsetWidth) return;
+  pill.style.width=a.offsetWidth+'px';
+  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
+  pill.style.opacity=1;
+}
+function syncCanvasSeg(){
+  if(!canvasSeg) return;
+  const id=currentSizeId();
+  [...canvasSeg.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.size===id));
+  requestAnimationFrame(positionCanvasSeg);
+}
+if(canvasSeg) canvasSeg.addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b || playing) return;
+  const preset=FLIP_SIZES.find(x=>x.id===b.dataset.size); if(!preset) return;
+  if(applyCanvasSize(preset.w, preset.h)) chip('Canvas '+preset.label+' \u00b7 drawings keep their position');
+  syncCanvasSeg();
+});
+if(moreBtn) moreBtn.addEventListener('click', ()=>requestAnimationFrame(syncCanvasSeg));
 // --- media drawer controls ---
 const photoUploadBtn=document.getElementById('photoUploadBtn'), photoBtnLabel=document.getElementById('photoBtnLabel'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
 const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
@@ -1189,7 +1482,7 @@ function refreshPendingCards(){
 
 // image controls
 photoUploadBtn.addEventListener('click',(e)=>{ if(e.target.closest('.dropzone-remove')||e.target.closest('.layer-toggle')) return; if(!photoUploadBtn.classList.contains('loaded')) imageInput.click(); });
-photoRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeBgImage(); });
+photoRemove.addEventListener('click',(e)=>{ e.stopPropagation(); imageSelectionSeq++; removeBgImage(); });
 photoToggle.addEventListener('click',(e)=>{ e.stopPropagation(); photoEnabled=!photoEnabled; redrawAll(); syncPhotoUI(); scheduleSave(); });
 photoFitGroup.addEventListener('click',e=>{ const b=e.target.closest('.photo-fit-btn'); if(!b) return; photoFit=b.dataset.fit; redrawAll(); syncPhotoUI(); scheduleSave(); });
 repositionBtn.addEventListener('click',()=>{ if(photoFit!=='cover') return; reposMode=!reposMode; syncPhotoUI(); });
@@ -1431,6 +1724,7 @@ document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); dr
    GIF background segment (Background color | Transparent) sets gifBgMode, which
    exportGIF() honours. Mirrors app.js's openExport/closeExport semantics. ---- */
 let gifBgMode='color';   // 'color' | 'transparent'
+let _exFmtToken=0;       // invalidates in-flight format probes when the sheet reopens
 const exportOverlay=document.getElementById('exportOverlay');
 const exportSheet=document.getElementById('exportSheet');
 let _exCloseT=null;
@@ -1438,7 +1732,23 @@ function openExportSheet(){
   closeMenu();
   const single=frames.length<2;
   const vBtn=document.getElementById('exportVideo'), vDesc=document.getElementById('exportVideoDesc');
-  if(vBtn){ vBtn.disabled=single; if(vDesc) vDesc.textContent = single ? 'Add a page or two to export a video' : ((musicData&&musicEnabled)?'Your animation, with music':'Your animation'); }
+  const vTitle=vBtn?vBtn.querySelector('.export-opt-title'):null;
+  if(vBtn){
+    vBtn.disabled=single;
+    const baseDesc = (musicData&&musicEnabled)?'Your animation, with music':'Your animation';
+    if(vDesc) vDesc.textContent = single ? 'Add a page or two to export a video' : baseDesc;
+    if(vTitle) vTitle.textContent='Video';
+    if(!single && vTitle){
+      // Async probe. _exFmtToken guards against a stale result landing after the
+      // sheet was closed and reopened in a different state.
+      const token = ++_exFmtToken;
+      expectedVideoFormat().then(fmt=>{
+        if(token!==_exFmtToken) return;
+        vTitle.textContent='Video ('+fmt+')';
+        if(vDesc) vDesc.textContent = baseDesc + (fmt==='MP4' ? ' · MP4 (H.264)' : ' · WebM');
+      }).catch(()=>{});
+    }
+  }
   const gifBtn=document.getElementById('exportGif'), gifDesc=document.getElementById('exportGifDesc'), gifToggle=document.getElementById('exportGifToggle');
   const gifReady=(typeof window.gifenc!=='undefined' && window.gifenc.GIFEncoder);
   if(gifBtn){
@@ -1446,12 +1756,57 @@ function openExportSheet(){
     else if(!gifReady){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='GIF encoder didn\u2019t load — try reloading'; if(gifToggle) gifToggle.hidden=true; }
     else { gifBtn.disabled=false; if(gifDesc) gifDesc.textContent='Your animation, looping · silent'; if(gifToggle) gifToggle.hidden=false; }
   }
+  syncExportOptions();
   clearTimeout(_exCloseT);
   exportOverlay.hidden=false;
   requestAnimationFrame(()=>{ exportOverlay.classList.add('open');
     if(gifToggle && !gifToggle.hidden){ const seg=gifToggle.querySelector('.gif-seg'); if(seg) requestAnimationFrame(()=>positionSegSlider(seg)); }
   });
 }
+// Export options UI. Page numbers are 1-based and clamped on every edit, so the
+// inputs can never hold a range the encoders would have to defend against —
+// exRange() still clamps as a backstop, since it is the shared contract.
+const exSizeSeg=document.getElementById('exportSizeSeg');
+const exFromEl=document.getElementById('exportFrom');
+const exToEl=document.getElementById('exportTo');
+const exNoteEl=document.getElementById('exportRangeNote');
+function positionExSeg(){
+  if(!exSizeSeg) return;
+  const a=exSizeSeg.querySelector('button.on'), pill=exSizeSeg.querySelector('.seg-slider');
+  if(!a||!pill||!a.offsetWidth) return;
+  pill.style.width=a.offsetWidth+'px';
+  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
+  pill.style.opacity=1;
+}
+function syncExportOptions(){
+  const n=frames.length;
+  if(!exToEl||!exFromEl) return;
+  if(!exTo || exTo>n) exTo=n;
+  const r=exRange();
+  exFrom=r.from; exTo=r.to;
+  exFromEl.max=n; exToEl.max=n;
+  exFromEl.value=r.from; exToEl.value=r.to;
+  if(exNoteEl){
+    const d=exDims();
+    exNoteEl.textContent = r.count+' of '+n+' \u00b7 '+d.w+'\u00d7'+d.h;
+  }
+  requestAnimationFrame(positionExSeg);
+}
+function onExRangeInput(){
+  exFrom=parseInt(exFromEl.value,10)||1;
+  exTo=parseInt(exToEl.value,10)||frames.length;
+  syncExportOptions();
+}
+if(exFromEl) exFromEl.addEventListener('change', onExRangeInput);
+if(exToEl) exToEl.addEventListener('change', onExRangeInput);
+if(exSizeSeg) exSizeSeg.addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  exSize=b.dataset.size;
+  [...exSizeSeg.querySelectorAll('button')].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  syncExportOptions();
+});
+
 function closeExportSheet(){ exportOverlay.classList.remove('open'); _exCloseT=setTimeout(()=>{ exportOverlay.hidden=true; },350); }
 document.getElementById('miExport').addEventListener('click', openExportSheet);
 exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')) closeExportSheet(); });
@@ -1467,6 +1822,7 @@ document.getElementById('exportGif').addEventListener('click',e=>{ if(e.currentT
 })();
 
 function undoStroke(){
+  invalidateClearUndo();
   if(playing) return;
   const f = frame(); if(!f.strokeGroups.length) return;
   const n = f.strokeGroups.pop();
@@ -1475,6 +1831,7 @@ function undoStroke(){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 function redoStroke(){
+  invalidateClearUndo();
   if(playing || !redoStack.length) return;
   const f = frame(); const item = redoStack.pop();
   for(const p of item.pts) f.strokes.push(p);
@@ -1485,26 +1842,42 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
 document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
 document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redoStroke(); });
 /* Delete-all lives in the draw menu now; destructive → same two-tap arm as frame delete. */
-let clearBackup=null;   // full-animation snapshot so a Clear-all can be undone
+// CLEAR SEMANTICS (review #5/#9), stated once here because the old code did
+// neither thing consistently: **Clear removes PAGES ONLY.** Music, background
+// image, colour, fps and all media settings are deliberately untouched, which is
+// what the live editor already did — the bug was that it then DELETED the
+// autosave, so a reload silently lost media that had visibly survived the clear.
+// Clear now rewrites the autosave instead, so persisted state always matches what
+// is on screen. The snapshot is therefore frames-only BY DESIGN, and named for
+// what it holds rather than "full animation", which it never was.
+let clearFramesBackup=null;
+// Review #4: the backup used to survive any amount of later work, so undoing a
+// clear could silently destroy a whole new animation. Every mutation that changes
+// page content or order now drops it.
+function invalidateClearUndo(){
+  if(!clearFramesBackup) return;
+  clearFramesBackup=null;
+  const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=true;
+}
 document.getElementById('clear').addEventListener('click',e=>{
   if(playing) return;
   const empty = frames.length===1 && frames[0].strokes.length===0;
   if(empty) return;                                  // nothing to delete
   const lbl=document.getElementById('clearLabel');
-  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear all'; e.currentTarget.title='Tap again to delete the whole animation'; return; }
-  armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear animation'; e.currentTarget.title='Delete the whole animation';
-  clearBackup = { frames: frames.map(deepCopy), idx: idx };   // remember everything for undo
+  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear pages'; e.currentTarget.title='Tap again to delete all pages'; return; }
+  armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear all pages'; e.currentTarget.title='Delete all pages (keeps music and background)';
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx };   // pages only — see note above
   frames=[newFrame()]; idx=0; redoStack.length=0;
-  try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(_){ }
   buildStrip(); render(); updateToolState();
+  scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
 });
 document.getElementById('clearUndo').addEventListener('click',()=>{
-  if(!clearBackup) return;
+  if(!clearFramesBackup) return;
   disarmAll();
-  frames = clearBackup.frames.map(deepCopy);
-  idx = Math.min(clearBackup.idx, frames.length-1);
-  clearBackup=null; redoStack.length=0;
+  frames = clearFramesBackup.frames.map(deepCopy);
+  idx = Math.min(clearFramesBackup.idx, frames.length-1);
+  clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
   chip('Animation restored');
@@ -1513,7 +1886,32 @@ const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementByI
 let grid=false;
 gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.classList.toggle('on',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); });
 const onionEl=document.getElementById('onion');
-function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion)); render(); }
+const onionGroup=document.getElementById('onionGroup');
+const onionSeg=document.getElementById('onionDepthSeg');
+const onionTintBtn=document.getElementById('onionTintBtn');
+function positionOnionSeg(){
+  if(!onionSeg) return;
+  const a=onionSeg.querySelector('button.on'), pill=onionSeg.querySelector('.seg-slider');
+  if(!a||!pill||!a.offsetWidth) return;
+  pill.style.width=a.offsetWidth+'px';
+  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
+  pill.style.opacity=1;
+}
+if(onionSeg) onionSeg.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  onionDepth=+b.dataset.depth;
+  [...onionSeg.querySelectorAll('button')].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); positionOnionSeg(); render();
+});
+if(onionTintBtn) onionTintBtn.addEventListener('click',()=>{
+  onionTint=!onionTint;
+  onionTintBtn.classList.toggle('active',onionTint);
+  onionTintBtn.setAttribute('aria-checked',String(onionTint));
+  render();
+});
+function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion));
+  if(onionGroup){ onionGroup.hidden=!onion; if(onion) requestAnimationFrame(positionOnionSeg); }
+  render(); }
 onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
@@ -1562,6 +1960,8 @@ document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
 /* ---- boot ---- */
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
+if(onionGroup){ onionGroup.hidden=!onion; requestAnimationFrame(positionOnionSeg); }
+syncCanvasSeg();
 sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();

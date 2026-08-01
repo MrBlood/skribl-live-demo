@@ -21,7 +21,7 @@
     <button type="button" id="musicRemove" class="dropzone-remove" hidden>Remove</button>
   </div>
   {% if kind != 'flip' -%}
-  <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac" style="display:none">
+  <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" style="display:none">
   {%- endif %}
 
   <div id="musicPending" class="pending-card" hidden>

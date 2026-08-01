@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='101') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='98') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='106') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='110') }}">
 </head>
 <body class="flip-app">
   <div class="app">
@@ -19,7 +19,7 @@
       </div>
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
-        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button>
+        <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span>
         <button type="button" class="btn flip-play" id="play">
           <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
           <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
@@ -93,13 +93,18 @@
       <button type="button" class="flip-menu-item" id="miExport" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export…</span></button>
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg></span><span class="mi-tx">How Flip works</span></button>
+      <div class="flip-menu-sep"></div>
+      <div class="flip-menu-row">
+        <span class="fm-label">Canvas</span>
+        <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic" class="on">4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>
+      </div>
       <!-- Version footer, mirroring the Pad's. Driven by SKRIBL_VERSION in
            app.py — never hardcode it here (the Pad's literal drifted from v96
            to v105 unnoticed). .menu-version is shared styling from styles.css. -->
       <div class="menu-version">Skribl Flip · {{ skribl_version }}</div>
     </div>
-    <input type="file" id="imageInput" accept="image/*" class="vis-hidden">
-    <input type="file" id="musicInput" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff" class="vis-hidden">
+    <input type="file" id="imageInput" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
+    <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
     <input type="file" id="draftInput" accept=".skribl,application/json" class="vis-hidden">
     {% with kind='flip' %}{% include '_skribl_help.html' %}{% endwith %}
     {% with kind='flip' %}{% include '_skribl_export.html' %}{% endwith %}
@@ -142,7 +147,8 @@
      a friendly message, so a missing file never breaks anything else.
      Classic script: it must execute before flip.js below. -->
 <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}"></script>
-<script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
-<script src="{{ url_for('static', filename='skribl/flip.js', v='104') }}"></script>
+<script src="{{ url_for('static', filename='skribl/lib/media_validation.js', v='121') }}"></script>
+  <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
+<script src="{{ url_for('static', filename='skribl/flip.js', v='121') }}"></script>
 </body>
 </html>

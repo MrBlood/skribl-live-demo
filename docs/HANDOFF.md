@@ -1,4 +1,224 @@
-# Skribl — Handoff (v105 — CSP enforced; media validated server-side)
+# Skribl — Handoff (v110 — canvas size, help text caught up, multi-take reassessed)
+
+## v110 — the last two feature items, and one that turned out not to exist
+### Variable canvas size — and it needed no format change
+Flip was hardcoded to 640x460. But the payload has **always** carried `canvasSize`,
+and the player has **always** honoured it (`establishEditorCanvas`, app.js:4129) —
+Flip was simply pinned to one of the sizes it could already describe. So unlike
+v109's `hold`, this needed no new field, no compat shim and no schema thought.
+`applyPayload()` now restores a saved size, which is the only piece that was
+actually missing.
+
+Presets: 4:3 (640x460), 16:9 (720x405), 1:1 (560x560), 9:16 (420x640), from the
+⋯ menu because it is a document property rather than a tool.
+
+**Stroke coordinates are deliberately NOT rescaled.** A drawing keeps its position
+and size on the page; a smaller canvas crops the view rather than silently
+distorting artwork, and because the strokes are never destroyed, switching back
+restores the framing exactly. That round-trip is asserted.
+
+`applyCanvasSize()` resizes all four layers (`pad`, `onionCv`, `tmpCv`, `frameCv`)
+and re-applies the DPR transform — **setting canvas.width resets the context
+transform**, so forgetting that half-scales everything. Pinned.
+
+### "How it works" now matches the app
+Deferred deliberately since v106 so it could be written once rather than five
+times. Both surfaces updated: Flip gains canvas shapes, onion depth/tint, page
+move/copy/hold and drag-reorder, per-page timing, and export Size/Pages; the Pad
+gains the undoable Clear all. Both now say the video button names the format the
+browser will actually produce. `verify_canvas.py` asserts the help text mentions
+each feature **and** that Flip-only copy doesn't leak into the Pad's help.
+
+### Multi-take reorder/trim — the item assumes a model that doesn't exist
+ROADMAP called this "UI polish". It isn't. There is no takes data structure: only
+`endRecordingTake()`, with takes appended into the same flat `strokes` /
+`strokeGroups` arrays. "Reorder or trim takes" means first building a takes model
+(segment boundaries, per-take timing), then deciding what reordering *means* for
+replay timing and for the recorded stroke timestamps — product design, not polish.
+**Left open and re-scoped in ROADMAP rather than half-built.** This is the fourth
+roadmap item found to misdescribe the code.
+
+## v109 — drag-to-reorder; per-page hold, the first payload change
+
+## v109 — per-page hold is the first new payload field since the frame format
+### Drag-to-reorder
+Pointer-based (touch and pen, not just mouse). The strip is **not** rebuilt
+mid-drag — rebuilding would destroy the element under the pointer and drop the
+gesture — so the tile is translated visually and the reorder happens once on
+release. A 6px threshold keeps ordinary taps selecting.
+
+`movePage()` is now a thin wrapper over `movePageTo(i,j)`, shared with the buttons.
+The drop index is *how many tile centres sit left of the pointer*, minus one if
+inserting after its own old slot, because `movePageTo` splices the page out before
+splicing it back in. Getting that off by one puts the page in the wrong slot in a
+way that looks almost right — it is pinned.
+
+### Per-page hold (`hold`)
+A page can now occupy 1–4 base-fps slots instead of always one. Cycled from a ×N
+button in the page's op bar; a held page shows an always-visible badge so the
+timing of an animation is readable without hovering every tile.
+
+**The compatibility rules, which are the whole point:**
+- `frameHold(f)` is the ONLY way hold is read. It never trusts `f.hold` to exist,
+  and clamps garbage/0/negative/999 to the 1..MAX_HOLD range. A pre-v109 page has
+  no field at all and reads as 1.
+- `hold` is **written only when > 1**. An animation with no holds serialises to
+  exactly the bytes it did before — asserted, not assumed.
+- A v109 payload in an older player degrades to uniform timing, because an
+  unknown field is ignored.
+
+Wired through five consumers: Flip's play loop (now self-scheduling timeouts
+rather than a fixed `setInterval`, since each step has its own delay), all three
+encoders, and the player in `app.js`, which maps elapsed time to a page through a
+cumulative hold table (`flipIndexAt`) instead of `floor(t * fps)`.
+
+**A rounding bug this surfaced.** GIF stores delay in centiseconds. Multiplying the
+millisecond delay by the hold and then rounding made held pages drift — 3 x 83ms =
+249ms rounds to 25cs, not the 24cs three base slots should be. Delay is now
+quantised to whole centiseconds *first* and multiplied after, so holds are exact
+multiples. Output at hold 1 is unchanged (8cs either way).
+
+Timing is verified off the exported GIF's per-frame delays, since a state check
+would prove nothing about what the encoders actually emit.
+
+## v108 — export size + page range; export parity was already done
+
+## v108 — export options, and a stale roadmap item corrected
+### Export parity was already achieved — the roadmap was wrong
+ROADMAP listed "Export parity with Flip (GIF/MP4 of the replay) — currently PNG +
+WebM" as open. It isn't: `_skribl_export.html` is a **shared partial**, so both
+surfaces already offer PNG + Video + GIF, the Pad's `exportGif()` (app.js:4563)
+animates the replay, and its MP4 path has existed since the WebCodecs work.
+`verify_gifenc.py` has been exporting a 19-frame GIF from the Pad since v104.
+Ticked off, nothing built. This is the third stale item found this way (after
+og-card.png and the "identical" startWebAudioLoop copies) — **check the code before
+building against this file.**
+
+### Export size + page range (Flip)
+GIF had a hardcoded 480px cap with no way out, and every export always covered
+every page. Both are now controls on the export sheet:
+- **Size**: Full (native 640x460) / Medium (480) / Small (320).
+- **Pages**: first–last, 1-based, clamped on every edit.
+
+**Behaviour change worth knowing:** the default is now **Full**, so GIFs export at
+native resolution rather than the old forced 480 downscale — better fidelity, but
+bigger files. **Medium reproduces the old output exactly** (480x345). This broke
+`verify_gifenc.py`'s size assertion, which had pinned the old constant; updated.
+
+The important structural bit: **one pair of helpers, `exDims()` and `exRange()`,
+feeds all three encoders** (GIF, WebM, MP4), so they cannot drift apart on what
+"Small" or "pages 2-4" means. `drawFrameTo()` paints in CW/CH coordinates, so the
+video paths scale via a single `setTransform` on the recording context rather than
+touching every draw call. `exRange()` clamps and swaps reversed input as a backstop
+even though the UI clamps too — it is the shared contract, not the UI, that the
+encoders rely on.
+
+Verification is byte-level: `verify_exopts.py` exports real GIFs and reads the
+dimensions and frame count out of the file, because a size control that only
+changes a label would pass any UI-state check. That is only possible because
+gifenc was vendored in v104.
+
+Still session-only state: nothing here reaches the payload.
+
+## v107 — onion depth/tint, page reorder + copy/paste, clear redo
+
+## v107 — three features off the UI/UX list
+**Nothing here touches the payload format.** Onion depth/tint are session-only view
+state; reorder and paste mutate the existing `frames` array. A v107 Skribl opens in
+an older player and vice versa — asserted in `verify_pages.py`, not assumed,
+because that assertion is the baseline the two REMAINING features (per-frame
+duration, variable canvas size) will have to preserve when they land.
+
+### 1. Onion skin: depth 1–3 + colour tint
+Was a single boolean showing `idx-1` at alpha 0.28. Now shows up to three pages
+back at decreasing alpha (0.30 / 0.17 / 0.10), optionally tinted warm-to-cool by
+distance (`#ff5f6d` / `#ff9f43` / `#ffd76a`).
+
+The tint uses `globalCompositeOperation='source-in'` on the offscreen layer, which
+repaints the strokes' own pixels and leaves transparent areas alone — a silhouette
+recolour rather than a wash over the whole frame. It renders into `onionCv`/`octx`,
+which had been **scaffolded in v98 and left unused ever since**, keeping `frameCv`
+free for the current frame.
+
+The controls live in a group beside the onion switch that is only present while
+onion is on, so the toolbar isn't permanently crowded on narrow screens.
+
+### 2. Pages: reorder + copy/paste
+Duplicate already existed (`#addcopy` -> `addFrame(true)`); reorder and copy/paste
+did not. Each strip tile now carries a move-left / copy / move-right bar, revealed
+on hover or on the active page. Copy fills a `pageClip`, which makes a "＋ Paste"
+button appear in the add column; paste inserts after the current page.
+
+Two details worth keeping if this is refactored: `movePage()` keeps `idx` pointing
+at the **same page** the user was on rather than the same index — moving a page must
+never silently switch which page you're drawing on — and paste goes through
+`deepCopy()`, so pasting twice yields independent pages instead of two references
+to one. Both are pinned.
+
+### 3. Clear all: Undo now offers Redo
+v106's restore was one-shot. Undo now shows a "Redo" that simply re-runs
+`clearAllWithUndo()`, which re-snapshots the restored document and re-offers Undo —
+so it toggles either way, with no second snapshot to fall out of sync.
+
+### A v106 bug this work surfaced
+`showToast()`'s action handler scheduled `hidden = true` 200ms after a click. When
+the action showed a *replacement* toast (Undo -> "Restored ... Redo"), that pending
+hide fired and hid the new toast almost immediately. v106's test missed it because
+`textContent` survives hiding, so a text assertion passed on an invisible element.
+Fixed with a single cancellable `toastHideTimer` that a new toast clears on its way
+in. If you add another toast-replacing flow, that timer is the thing to respect.
+
+## v106 — UX: honest export labels, undoable Clear all
+
+## v106 — two UX fixes, both about not lying to the user
+### 1. Flip now names the video format it will actually produce
+The Pad has always labelled its export button with the real container —
+"Video (MP4)" or "Video (WebM)" — by probing WebCodecs before rendering the sheet.
+**Flip never did.** It said "Video", and on any browser without WebCodecs H.264 it
+silently handed you a WebM. That was the last open item in ROADMAP's "Known
+caveats to close".
+
+`expectedVideoFormat()` in `flip.js` mirrors `exportVideo()`'s real decision path
+with no side effects, including the subtle case that makes this worth doing
+properly: when music is present but AAC is unavailable, `exportViaWebCodecsMp4()`
+deliberately bails to WebM rather than ship a silent MP4 — so the *label* has to
+bail the same way, or it promises MP4 and delivers WebM in exactly the situation
+the fallback exists for. It is cheap on purpose: no loop buffer is built, since
+`aacSupported()` only needs the sample rate and channel count, which the trimmed
+loop inherits from `currentAudioBuffer`. An `_exFmtToken` guard drops stale async
+results if the sheet is closed and reopened.
+
+The Pad got a smaller fix in the same spirit: its description named the container
+only when the answer was MP4, leaving WebM users with a generic string. Both
+surfaces now say it either way.
+
+### 2. "Clear all" is undoable
+`resetAll()` wiped strokes, music, photo and background, then called
+`clearAutosave()` — so the recovery copy went with it. The two-tap arm guarded the
+*accidental* tap; nothing could undo a deliberate one, and it is the single most
+destructive action in the app.
+
+It now snapshots through `serializeSkribl()` and restores through `loadSkribl()` —
+**the same pair the draft and autosave paths already use**, so media comes back
+too and there is no parallel restore logic to keep in sync. Skipped while
+`mediaBusy > 0` (same guard `saveDraft()` uses), because the snapshot would
+capture a half-loaded photo or track; the clear still happens, just without the
+undo offer.
+
+The affordance is new: `showToast()` takes an optional `{ label, onClick }` and
+renders a button. Watch out for one trap if you reuse it — `.toast` is
+`pointer-events: none` so it never blocks the canvas, which means the button must
+re-enable pointer events on itself or it looks clickable and isn't. Toasts with an
+action hold for 7s instead of 2.8s, since an offer to undo has to be read and
+reached.
+
+### Note for the next session
+`updateClearVisibility()` disables the Clear all menu item while `recording` is
+true, and drawing auto-starts recording — so a JS `.click()` on it silently does
+nothing. That made the first version of `verify_ux.py` look broken rather than
+blocked. The suite now stops the recording first and pins both states.
+
+## v105 — CSP enforced; media validated server-side
 
 ## v105 — the security half of the roadmap, now that vendoring unblocked it
 Two items shipped, both from INTEGRATION §7, both harness-verified. **No static
@@ -378,7 +598,7 @@ both `gifenc` and `mp4-muxer` are vendored classic `<script src>` tags on both
 editing surfaces — **no ESM CDN loader, no inline `<script type="module">`, and no
 off-origin request anywhere in the app.**
 
-## Harness — 220 assertions, 12 suites
+## Harness — 345 assertions, 17 suites
 Processes do NOT survive between tool calls in a sandbox, so the server and the
 tests must run in one invocation. See `harness/README.md`.
 
@@ -395,7 +615,12 @@ tests must run in one invocation. See `harness/README.md`.
 | `verify_gifenc.py` | vendored gifenc + **real GIF encode**, both surfaces | 35 |
 | `verify_csp.py` | **NEW v105** CSP shape + enforcement + non-breaking | 31 |
 | `verify_media.py` | **NEW v105** server-side media type/size validation | 24 |
-| `verify_version.py` | **NEW v105** UI version label is single-sourced | 17 |
+| `verify_version.py` | **NEW v105** UI version label is single-sourced | 20 |
+| `verify_ux.py` | **NEW v106** export format labels + undoable Clear all | 24 |
+| `verify_pages.py` | **NEW v107** onion depth/tint, page reorder/copy-paste, redo | 28 |
+| `verify_exopts.py` | **NEW v108** export size + page range, byte-verified | 23 |
+| `verify_hold.py` | **NEW v109** drag-reorder + per-page hold & payload compat | 26 |
+| `verify_canvas.py` | **NEW v110** canvas sizes, round-trip, help-text coverage | 21 |
 
 The strongest single result: after moving the crossfade fold from playback-time
 (player) to post-time (Flip), `verify_audio` reports **exactly the same numbers as
@@ -426,6 +651,66 @@ This is the general hazard: **the handoff zips are not mirrors of the repo.** Th
 repo also has `Procfile`, `.env.example`, `.gitignore`, `README.md` and the
 vendored muxer, none of which have been travelling in the zips. Copy changed
 files into the repo; never replace the tree with a zip's contents.
+
+## Deploy checklist — v110 delta
+1. **CHANGED static**: `flip.js`, `flip.css`. `app.js` and `styles.css` untouched.
+2. **CHANGED templates**: `skribl_flip.html` (canvas picker) and
+   `_skribl_help.html` (shared — affects BOTH surfaces' help), plus cache-busts.
+3. **Cache-busts**: `flip.js` -> **v110**, `flip.css` -> **v110**. `app.js` stays
+   v109, `styles.css` v106, `lib/audioloop.js` v102.
+4. **CHANGED**: `app.py` — `SKRIBL_VERSION` -> `"v110"`.
+5. **No payload change.** `canvasSize` was already in the format and already
+   honoured by the player, so old and new Skribls interoperate untouched.
+
+## Deploy checklist — v109 delta
+1. **CHANGED static**: `flip.js`, `flip.css`, and `app.js` (the player's flip
+   timing). `styles.css` and `lib/audioloop.js` untouched.
+2. **Cache-busts**: `app.js` -> **v109**, `flip.js` -> **v109**, `flip.css` ->
+   **v109**. `styles.css` stays v106.
+3. **CHANGED**: `app.py` — `SKRIBL_VERSION` -> `"v109"` only.
+4. **First payload change since the frame format**, but additive both ways: old
+   Skribls play unchanged in the new player, and new ones degrade to uniform
+   timing in an old player. **No migration, no version bump in the payload.**
+   `schemaVersion` deliberately stays 2 — bumping it would imply a breaking change
+   that hasn't happened.
+5. `app.js` and `flip.js` should deploy together: a held Skribl posted from a v109
+   Flip would play at uniform timing on a v108 player. Not broken, just not what
+   the author drew.
+
+## Deploy checklist — v108 delta
+1. **CHANGED static**: `flip.js` (exDims/exRange + all three encoders), `flip.css`
+   (options styling). `app.js` and `styles.css` are **untouched** this round.
+2. **CHANGED templates**: `_skribl_export.html` (Flip-only options block) and the
+   cache-bust bumps. Note the partial is shared — the block is inside
+   `{% if kind == 'flip' %}`, so the Pad's sheet is unchanged.
+3. **Cache-busts**: `flip.js` -> **v108**, `flip.css` -> **v108**. `app.js` stays
+   v107, `styles.css` stays v106, `lib/audioloop.js` stays v102.
+4. **CHANGED**: `app.py` — `SKRIBL_VERSION` -> `"v108"` only.
+5. **No payload change**, no new dependencies, no migrations.
+
+## Deploy checklist — v107 delta
+1. **CHANGED static**: `app.js` (clear redo + toast hide-timer fix), `flip.js`
+   (onion depth/tint, `movePage`, copy/paste), `flip.css` (new controls).
+   `styles.css`, `lib/audioloop.js` and the vendored libraries are untouched.
+2. **CHANGED template**: `skribl_flip.html` — the onion controls group, plus
+   cache-bust bumps. The editor and player templates change for cache-busts only.
+3. **Cache-busts**: `app.js` -> **v107**, `flip.js` -> **v107**, `flip.css` ->
+   **v107** (its first bump since v98). `styles.css` stays v106, `lib/audioloop.js`
+   stays v102.
+4. **CHANGED**: `app.py` — `SKRIBL_VERSION` -> `"v107"` only.
+5. No new dependencies, no migrations, **no payload change**.
+
+## Deploy checklist — v106 delta
+1. **CHANGED static**: `app.js` (toast action + undoable clear + WebM label),
+   `flip.js` (`expectedVideoFormat`), `styles.css` (`.toast-action`).
+   `lib/audioloop.js`, `flip.css` and the vendored libraries are untouched.
+2. **Cache-busts**: `app.js` -> **v106**, `flip.js` -> **v106**, `styles.css` ->
+   **v106** in all three templates. `flip.css` stays v98, `lib/audioloop.js` stays
+   v102 — bump only what changed.
+3. **CHANGED**: `app.py` — `SKRIBL_VERSION` -> `"v106"` only. No behaviour change.
+4. Templates change only for the cache-bust bumps, so the v105 rule still holds:
+   ship `app.py` and the templates together.
+5. No new dependencies, no migrations, no `requirements.txt` edit.
 
 ## Deploy checklist — v105 delta
 1. **CHANGED**: `app.py` only, plus a `nonce="{{ csp_nonce }}"` attribute on the

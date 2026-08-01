@@ -1462,6 +1462,32 @@ function resetAll() {
   if (typeof clearAutosave === 'function') clearAutosave();
 }
 
+// Clear everything, then offer a one-tap way back. Snapshotting goes through the
+// SAME serialize/apply pair the draft and autosave paths use (serializeSkribl /
+// loadSkribl), so media returns too and there is no parallel restore logic.
+// Skipped while mediaBusy > 0 — the same guard saveDraft() uses — because the
+// snapshot would capture a half-loaded photo or track. The clear still happens in
+// that case, just without the undo offer.
+function clearAllWithUndo() {
+  let snap = null;
+  if (mediaBusy === 0) {
+    try { snap = serializeSkribl(); } catch (err) { snap = null; }
+  }
+  resetAll();
+  if (!snap) return;
+  showToast('Cleared everything', null, {
+    label: 'Undo',
+    onClick: () => {
+      try {
+        loadSkribl(snap);
+        showToast('Restored', null, { label: 'Redo', onClick: clearAllWithUndo });
+      } catch (err) {
+        showToast('Couldn\u2019t restore that', null);
+      }
+    }
+  });
+}
+
 // "Clear all" wipes music/photo too, so it's the most destructive action —
 // guarded with the same two-tap arm as the drawer's Clear drawing. The first tap
 // arms (menu stays open for the confirm); the second clears everything.
@@ -1483,7 +1509,20 @@ function resetAll() {
     }
     clearTimeout(armTimer);
     disarm();
-    resetAll();
+    // "Clear all" wipes strokes, music, photo AND the background — then calls
+    // clearAutosave(), so even the recovery copy is gone. The two-tap arm above
+    // guards against the accidental tap, but nothing could undo a deliberate one.
+    // Snapshot the whole document first, through the SAME serialize the draft and
+    // autosave paths use, and offer a one-tap restore via loadSkribl(). Reusing
+    // that pair means media comes back too, with no parallel restore logic.
+    // Skipped while media is still being prepared (mediaBusy), because the
+    // snapshot would capture a half-loaded photo or track — same guard saveDraft
+    // uses. In that case the clear still happens, just without the undo offer.
+    // v107: Undo now offers Redo, and Redo re-offers Undo — so the clear becomes a
+    // toggle you can flip either way, rather than the one-shot restore v106 had.
+    // Redo simply re-runs this same function, which re-snapshots the restored
+    // document; no second snapshot is stored and the two can never fall out of sync.
+    clearAllWithUndo();
     closeMenu();
   });
 })();
@@ -1696,6 +1735,14 @@ document.querySelectorAll('.accordion-header').forEach(header => {
 
 // --- Music upload + trim ---
 const musicInput = document.getElementById('musicInput');
+// Selection tokens (review round 9, #1). Adding `await` to these handlers created
+// a race that did not exist when they were synchronous: a slow decode of file A
+// could finish AFTER the user picked B and overwrite it. Each slot has a counter
+// bumped on every selection AND every removal; a handler that returns from its
+// await with a stale token drops its result silently — including its toast, since
+// complaining about a file the user already replaced is noise.
+let musicSelectionSeq = 0;
+let photoSelectionSeq = 0;
 const musicPanel = document.getElementById('musicPanel');
 const musicRemove = document.getElementById('musicRemove');
 const musicTrack = document.getElementById('musicTrack');
@@ -2196,10 +2243,15 @@ musicUploadBtn.addEventListener('drop', (e) => {
   musicInput.dispatchEvent(new Event('change'));
 });
 
-musicInput.addEventListener('change', (e) => {
+musicInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
+  const seq = ++musicSelectionSeq;
   const err = validateMusicFile(file);
-  if (err) { showToast(err, musicUploadBtn); return; }
+  if (err) { if (seq === musicSelectionSeq) showToast(err, musicUploadBtn); return; }
+  // Bytes, not just the label. (Round 6, #7)
+  const decodeErr = await skriblDecodeCheckAudio(file);
+  if (seq !== musicSelectionSeq) return;          // superseded or removed mid-decode
+  if (decodeErr) { showToast(decodeErr, musicUploadBtn); musicInput.value = ''; return; }
   if (audioEl && audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
   const url = URL.createObjectURL(file);
   audioEl = new Audio(url);
@@ -2267,11 +2319,38 @@ musicInput.addEventListener('change', (e) => {
 });
 
 const toast = document.getElementById('toast');
-let toastTimer = null;
+// Media format policy + byte checks now live in lib/media_validation.js
+// (loaded before this file). Aliases there keep these call sites unchanged.
 
-function showToast(msg, anchorEl) {
+let toastTimer = null;
+let toastHideTimer = null;   // the 200ms post-fade hidden=true; must be cancellable
+
+function showToast(msg, anchorEl, action) {
+  // `action` is an optional { label, onClick } that renders a tappable button
+  // inside the toast — used for offering an undo on destructive actions. Note
+  // .toast is pointer-events:none so it never blocks the canvas; .toast-action
+  // re-enables pointer events on itself only.
+  clearTimeout(toastHideTimer);     // a replacement toast must survive the
+                                    // outgoing one's pending hide
   toast.hidden = false;
-  toast.textContent = msg;
+  toast.textContent = msg;          // also clears any previous action button
+  let holdMs = 2800;
+  if (action && action.label && typeof action.onClick === 'function') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => {
+      clearTimeout(toastTimer);
+      toast.classList.remove('show');
+      toastHideTimer = setTimeout(() => { toast.hidden = true; }, 200);
+      // Runs AFTER the hide is scheduled, so if it shows a follow-up toast
+      // (Undo -> Redo) that toast clears the pending hide on its way in.
+      action.onClick();
+    });
+    toast.appendChild(btn);
+    holdMs = 7000;                  // an offer to undo needs time to read and reach
+  }
   toast.style.bottom = '';
   toast.style.top = '';
 
@@ -2300,22 +2379,29 @@ function showToast(msg, anchorEl) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     toast.classList.remove('show');
-    setTimeout(() => { toast.hidden = true; }, 200);
-  }, 2800);
+    toastHideTimer = setTimeout(() => { toast.hidden = true; }, 200);
+  }, holdMs);
 }
+
 
 function validateMusicFile(file) {
   if (!file) return 'No file selected.';
-  const okType = file.type && file.type.startsWith('audio/');
-  const okExt = /\.(mp3|m4a|wav|ogg|aac)$/i.test(file.name || '');
-  if (!okType && !okExt) return 'Please choose an audio file (mp3, m4a, wav, etc).';
+  // Mirrors ALLOWED_AUDIO_SUBTYPES in app.py, so the editor refuses at selection
+  // time what the server would refuse at post time. (Review round 5, #3)
+  if (skriblHasUsableMime(file)) {
+    if (!SKRIBL_AUDIO_MIMES.has(file.type.toLowerCase())) {
+      return 'That file type is not supported for audio.';
+    }
+  } else if (!SKRIBL_AUDIO_EXTENSIONS.test(file.name || '')) {
+    return 'Please choose an audio file (mp3, m4a, wav, flac, ogg, webm).';
+  }
   return null;
 }
 
 function isImageFile(file) {
-  const okType = file.type && file.type.startsWith('image/');
-  const okExt = /\.(jpe?g|png|gif|webp)$/i.test(file.name || '');
-  return okType || okExt;
+  // Mirrors ALLOWED_IMAGE_SUBTYPES in app.py — see the note above.
+  if (skriblHasUsableMime(file)) return SKRIBL_IMAGE_MIMES.has(file.type.toLowerCase());
+  return SKRIBL_IMAGE_EXTENSIONS.test(file.name || '');
 }
 
 function setLoopToDrawingLength() {
@@ -2360,6 +2446,7 @@ function resetPhotoAdjustments() {
 }
 
 musicRemove.addEventListener('click', (e) => {
+  musicSelectionSeq++;   // a pending decode must not restore what was just removed
   e.stopPropagation();
   stopLoopPreview();
   if (typeof pendingMusicMeta !== 'undefined') pendingMusicMeta = null;
@@ -2955,14 +3042,18 @@ async function normalizePhotoDataURL(file, originalDataUrl) {
   }
 }
 
-photoInput.addEventListener('change', (e) => {
+photoInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
+  const seq = ++photoSelectionSeq;
   if (!file) return;
   if (!isImageFile(file)) {
-    showToast('Please choose an image file — jpg, png, gif, or webp', photoUploadBtn);
+    if (seq === photoSelectionSeq) showToast('Please choose an image file — jpg, png, gif, or webp', photoUploadBtn);
     photoInput.value = '';
     return;
   }
+  const decodeErr = await skriblDecodeCheckImage(file);
+  if (seq !== photoSelectionSeq) return;          // superseded or removed mid-decode
+  if (decodeErr) { showToast(decodeErr, photoUploadBtn); photoInput.value = ''; return; }
   resetPhotoAdjustments();
   if (photoBgImg._objectUrl) URL.revokeObjectURL(photoBgImg._objectUrl);
   const url = URL.createObjectURL(file);
@@ -3015,6 +3106,11 @@ photoInput.addEventListener('change', (e) => {
 });
 
 document.getElementById('photoRemove').addEventListener('click', (e) => {
+  // Review round 10, #1: this was missing, so a decode still running when the
+  // user hit Remove would finish with a CURRENT token and re-apply the photo
+  // that had just been removed. The old test incremented the counter by hand
+  // instead of clicking this control, which hid the gap.
+  photoSelectionSeq++;
   e.stopPropagation();
   if (typeof pendingPhotoMeta !== 'undefined') pendingPhotoMeta = null;
   { const c = document.getElementById('photoPending'); if (c) c.hidden = true; }
@@ -4414,7 +4510,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
       if (videoTitle) {
         expectedVideoFormat().then((fmt) => {
           videoTitle.textContent = 'Video (' + fmt + ')';
-          if (fmt === 'MP4') videoDesc.textContent = audioEl ? 'Replay with music · MP4 (H.264)' : 'Replay · MP4 (H.264)';
+          // Name the container in the description too, not just for MP4 — a user
+          // who is getting WebM should be told before they click, not after.
+          const base = audioEl ? 'Replay with music' : 'Replay';
+          videoDesc.textContent = base + (fmt === 'MP4' ? ' · MP4 (H.264)' : ' · WebM');
         }).catch(() => { videoTitle.textContent = 'Video'; });
       }
     }
@@ -5722,7 +5821,26 @@ function showPlayerError(msg) {
   const isFlip = data.playbackMode === 'flip' && Array.isArray(data.frames) && data.frames.length > 1;
   const flipFrames = isFlip ? data.frames : null;
   const flipFps = data.fps || 12;
-  const flipDurMs = isFlip ? Math.max(1, (flipFrames.length / flipFps) * 1000) : 0;
+  // Per-page hold (v109): a page occupies `hold` base-fps slots instead of one.
+  // Read defensively — a payload written before v109 has no hold field at all, so
+  // every page reads as 1 and playback is bit-for-bit what it always was.
+  const flipHolds = isFlip ? flipFrames.map(f => {
+    const h = Math.round(Number(f && f.hold));
+    return (isFinite(h) && h >= 1) ? Math.min(h, 4) : 1;
+  }) : null;
+  const flipUnits = isFlip ? flipHolds.reduce((a, b) => a + b, 0) : 0;
+  const flipDurMs = isFlip ? Math.max(1, (flipUnits / flipFps) * 1000) : 0;
+  // Map elapsed time -> page index through the cumulative hold table.
+  function flipIndexAt(cycT) {
+    let u = Math.floor((cycT / 1000) * flipFps);
+    if (!(u >= 0)) u = 0;
+    let acc = 0;
+    for (let i = 0; i < flipHolds.length; i++) {
+      acc += flipHolds[i];
+      if (u < acc) return i;
+    }
+    return flipHolds.length - 1;
+  }
   function drawFlipFrame(fi) {
     const s = getCanvasLogicalSize();
     ctx.clearRect(0, 0, s.width, s.height);
@@ -5853,7 +5971,7 @@ function showPlayerError(msg) {
     setPlayIcon();
     if (isFlip) {
       const cycT = flipDurMs ? (targetMs % flipDurMs) : 0;
-      drawFlipFrame(Math.floor((cycT / 1000) * flipFps));
+      drawFlipFrame(flipIndexAt(cycT));
       elapsedBase = targetMs; setProgress(frac); hideNib();
       return;
     }
@@ -5885,7 +6003,7 @@ function showPlayerError(msg) {
     const elapsed = elapsedBase + (performance.now() - segStart);
     if (isFlip) {
       const cycT = flipDurMs ? (elapsed % flipDurMs) : 0;
-      drawFlipFrame(Math.floor((cycT / 1000) * flipFps));
+      drawFlipFrame(flipIndexAt(cycT));
       setProgress(flipDurMs ? cycT / flipDurMs : 1);
       hideNib();
       if (!loop && elapsed >= flipDurMs) { drawFlipFrame(flipFrames.length - 1); onEnded(); return; }

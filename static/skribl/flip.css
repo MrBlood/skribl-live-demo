@@ -305,3 +305,152 @@
     .flip-lead .icon-btn { width: 30px; height: 30px; }
     .flip-app .header { padding: 11px 6px; gap: 4px; }
   }
+
+
+/* --- v107: onion skin depth + tint controls ------------------------------- */
+/* Sits beside the onion switch and only exists while onion is on, so the
+   toolbar isn't permanently crowded on narrow screens. */
+.onion-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.onion-group[hidden] { display: none; }
+
+.onion-seg { --seg-h: 26px; }
+.onion-seg button { min-width: 22px; padding: 0 7px; font-size: 12px; }
+
+.onion-tint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.onion-tint svg { width: 15px; height: 15px; }
+.onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.55); background: rgba(255, 159, 67, 0.14); }
+
+/* --- v107: per-page ops in the strip (move / copy) ------------------------ */
+/* Revealed on hover or on the active page, so the strip stays clean while
+   drawing but the controls are reachable without a long-press gesture. */
+.frame-ops {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+.frame:hover .frame-ops,
+.frame.on .frame-ops { opacity: 1; pointer-events: auto; }
+
+.frame-ops .fop {
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 5px;
+  background: rgba(18, 21, 27, 0.86);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.frame-ops .fop:hover:not(:disabled) { background: rgba(52, 60, 74, 0.95); }
+.frame-ops .fop:disabled { opacity: 0.28; cursor: default; }
+
+
+/* --- v108: export size + page-range options (Flip only) ------------------- */
+.export-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 2px 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.export-opt-row { display: flex; align-items: center; gap: 8px; }
+.export-optlbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 42px;
+}
+.export-size-seg { --seg-h: 26px; margin-left: auto; }
+.export-size-seg button { padding: 0 10px; font-size: 12px; }
+
+.export-num {
+  width: 52px;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+}
+.export-num:focus { outline: none; border-color: var(--accent); }
+.export-dash { color: var(--text-secondary); font-size: 12px; }
+.export-rangenote { margin-left: auto; font-size: 11px; color: var(--text-secondary); }
+
+/* --- v109: drag-to-reorder ------------------------------------------------ */
+.frame.dragging {
+  z-index: 5;
+  cursor: grabbing;
+  opacity: 0.92;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  transform-origin: center;
+  transition: none;                 /* follow the finger exactly */
+}
+.frame.dragging:hover { transform: none; }
+
+/* --- v109: per-page hold ---------------------------------------------------- */
+/* The badge is always visible (unlike the ops bar) so the timing of an animation
+   is readable at a glance without hovering every page. */
+.frame .holdbadge {
+  position: absolute;
+  top: 4px;
+  right: 24px;
+  z-index: 2;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  border-radius: 5px;
+  color: #0d0f14;
+  background: var(--accent);
+}
+.frame-ops .fop.hold { width: auto; min-width: 22px; padding: 0 4px; font-weight: 700; }
+
+/* --- v110: canvas size picker in the ⋯ menu -------------------------------- */
+.flip-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 4px;
+}
+.flip-menu-row .fm-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.canvas-seg { --seg-h: 26px; margin-left: auto; }
+.canvas-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }

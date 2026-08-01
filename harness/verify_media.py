@@ -43,8 +43,24 @@ def post(payload):
             return e.code, {"raw": body[:200].decode("utf-8", "replace")}
 
 
+# v111: the validator now checks magic numbers, so synthetic all-zero bytes are
+# (correctly) rejected. Fixtures carry a real signature for their declared type.
+_SIGS = {
+    "image/png": b"\x89PNG\r\n\x1a\n",
+    "image/jpeg": b"\xff\xd8\xff",
+    "image/gif": b"GIF89a",
+    "image/webp": b"RIFF\x00\x00\x00\x00WEBP",   # v111: fourcc at offset 8 now required
+    "image/bmp": b"BM",
+    # v114: audio is container-checked now, so fixtures need real headers.
+    "audio/wav": b"RIFF\x00\x00\x00\x00WAVE",
+    "audio/mpeg": b"ID3\x04\x00",
+}
+
+
 def durl(mime, nbytes=64):
-    return f"data:{mime};base64," + base64.b64encode(b"\x00" * nbytes).decode()
+    head = _SIGS.get(mime, b"")
+    body = head + b"\x00" * max(1, nbytes - len(head))
+    return f"data:{mime};base64," + base64.b64encode(body).decode()
 
 
 def frame(**kw):
