@@ -631,6 +631,26 @@ const pagebar=document.getElementById('pagebar');
 const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pbLeft'),
       pbRight=document.getElementById('pbRight'), pbCopy=document.getElementById('pbCopy'),
       pbHold=document.getElementById('pbHold'), pbDel=document.getElementById('pbDel');
+// The Pad shows the recorded length beside Play; Flip can state its animation
+// length exactly — total hold units over fps. Same badge, same m:ss format.
+const flipDurationEl=document.getElementById('flipDuration');
+function syncFlipDuration(){
+  if(!flipDurationEl) return;
+  const units=totalHoldUnits(0, frames.length-1);
+  const secs=units/(fps||12);
+  // m:ss is the Pad's format because a recording runs for seconds. A flipbook
+  // usually does not — 5 pages at 12fps is 0.42s, which m:ss renders as "0:00"
+  // and reads as broken. Sub-minute durations show one decimal instead.
+  if(secs < 60){
+    flipDurationEl.textContent = (secs < 9.95 ? secs.toFixed(1) : Math.round(secs)) + 's';
+  } else {
+    const m=Math.floor(secs/60), sRest=Math.round(secs%60);
+    const mm=(sRest===60)?m+1:m, ss=(sRest===60)?0:sRest;
+    flipDurationEl.textContent=mm+':'+String(ss).padStart(2,'0');
+  }
+  flipDurationEl.title=frames.length+' page'+(frames.length===1?'':'s')+' at '+(fps||12)+' fps';
+}
+
 function syncPagebar(){
   if(!pagebar) return;
   const f=frames[idx], n=frames.length;
@@ -691,6 +711,7 @@ function buildStrip(){
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(!playing) addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
   syncPagebar();
+  syncFlipDuration();
   const pasteBtn=col.querySelector('#addpaste');
   if(pasteBtn) pasteBtn.addEventListener('click',()=>{
     if(playing || !pageClip) return;
@@ -778,6 +799,15 @@ const liveBadge=document.querySelector('.flip-live');
 function updateToolState(){
   playBtn.disabled = drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length < 2;
   playBtn.title = playBtn.disabled ? (drawOnMode ? 'Draw something to replay' : 'Add a second page to flip') : (drawOnMode ? 'Watch it draw itself' : 'Flip through the pages');
+  // v126: hide the whole control until there is something to play, matching the
+  // Pad (playWrap.hidden = !recorded). Showing "Flip it · 0:00" on a one-page
+  // animation advertises an action that cannot run. Reuses playBtn.disabled
+  // rather than restating the condition, so the two can never disagree — but
+  // never hide it mid-playback, which would yank the Stop button out from under
+  // the user.
+  const _pw = document.getElementById('flipPlayWrap');
+  if(_pw) _pw.hidden = playBtn.disabled && !playing;
+  if(typeof syncFlipDuration==='function') syncFlipDuration();
   const undoB=document.getElementById('undo');
   undoB.disabled = frame().strokeGroups.length === 0;
   undoB.style.opacity = undoB.disabled ? .38 : 1;
@@ -1958,7 +1988,7 @@ function positionSeg(){ const active=fpsGroup.querySelector('button.on'); const 
   if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
 fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
   fps=+b.dataset.fps; [...fpsGroup.querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on');
-  positionSeg(); scheduleSave(); if(playing){ stop(); play(); } });
+  positionSeg(); scheduleSave(); syncFlipDuration(); if(playing){ stop(); play(); } });
 
 
 /* ---- help drawer (How Flip works) — same component as the Pad ---- */

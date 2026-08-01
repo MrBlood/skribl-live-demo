@@ -21,11 +21,10 @@ HTTP results       : 2 x 201, 10 x 429
 Post rows created  : 2
 Rate events        : committed=2, pending=0
 
-WORKER LIVENESS (v125): the previous run only established that the gunicorn
-MASTER survived, which a crashed-and-respawned worker would not disturb. Worker
-processes are now observed individually:
-  [PASS] all 4 workers were running before the burst  — [2881, 2882, 2883, 2884]
-  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2881, 2882, 2883, 2884] after=[2881, 2882, 2883, 2884]
+WORKER LIVENESS: the gunicorn MASTER surviving would not reveal a crashed worker,
+since the master silently respawns one. Workers are observed individually:
+  [PASS] all 4 workers were running before the burst  — [2820, 2821, 2822, 2823]
+  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2820, 2821, 2822, 2823] after=[2820, 2821, 2822, 2823]
   [PASS] gunicorn booted exactly 4 workers — no respawn was logged  — 4 'Booting worker' lines
   [PASS] gunicorn logged no worker exit, termination or boot failure DURING the burst  — 0 exit/termination lines before shutdown
   [PASS] recorded configuration is complete enough to interpret the result  — PostgreSQL 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1), 4 workers, 12 requests, quota 2
@@ -43,8 +42,8 @@ ENVIRONMENT — recorded so the result can be interpreted
 
 CONCURRENCY — 12 processes-wide requests, quota 2
   [PASS] the gunicorn master stayed alive
-  [PASS] all 4 workers were running before the burst  — [2881, 2882, 2883, 2884]
-  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2881, 2882, 2883, 2884] after=[2881, 2882, 2883, 2884]
+  [PASS] all 4 workers were running before the burst  — [2820, 2821, 2822, 2823]
+  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2820, 2821, 2822, 2823] after=[2820, 2821, 2822, 2823]
   [PASS] gunicorn booted exactly 4 workers — no respawn was logged  — 4 'Booting worker' lines
   [PASS] gunicorn logged no worker exit, termination or boot failure DURING the burst  — 0 exit/termination lines before shutdown
   [PASS] every response was 201 or 429 — no 500s, no transport errors  — [201, 429]
@@ -53,7 +52,7 @@ CONCURRENCY — 12 processes-wide requests, quota 2
   [PASS] no OVER-admission: PostgreSQL holds exactly two new post rows  — 2 rows created
   [PASS] no UNDER-admission: the quota was actually used, not merely blocked
   [PASS] HTTP admissions match committed database rows  — 2 x 201 vs 2 rows
-  [PASS] exactly two rate events were promoted to committed  — committed delta=2 (before=16, after=18)
+  [PASS] exactly two rate events were promoted to committed  — committed delta=2 (before=18, after=20)
   [PASS] no reservation was stranded in pending  — pending delta=0 (after=0)
 
 SCOPE — what this does and does not establish
@@ -70,18 +69,18 @@ induced failures, a single 12-request burst.
 
 ##### INVOCATION 1 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-01T19:48:10Z
+UTC timestamp           : 2026-08-01T20:35:57Z
 Host                    : Linux x86_64
-Tree SHA-256            : 39b60aff088f1bd95e59a18e37fbd2243b53a4b57955e9efcadcdca3ca5cfad2
+Tree SHA-256            : c0f6d23395fd4d112dd570bcc1af1c9b65a28a7d8c8e63730e80400abe1ce1f3
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v125
+SKRIBL_VERSION          : v126
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.U3FhxnOXsH/harness.db)
+Database reset          : yes (fresh /tmp/tmp.zrijw3UQdO/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -109,18 +108,18 @@ RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### INVOCATION 2 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-01T19:52:14Z
+UTC timestamp           : 2026-08-01T20:39:59Z
 Host                    : Linux x86_64
-Tree SHA-256            : 39b60aff088f1bd95e59a18e37fbd2243b53a4b57955e9efcadcdca3ca5cfad2
+Tree SHA-256            : c0f6d23395fd4d112dd570bcc1af1c9b65a28a7d8c8e63730e80400abe1ce1f3
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v125
+SKRIBL_VERSION          : v126
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.bBtxXG2H06/harness.db)
+Database reset          : yes (fresh /tmp/tmp.xoTy5nPMQO/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -148,8 +147,8 @@ suites with problems: 0
 RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### TREE-HASH COMPARISON #####
-Invocation 1 source-tree SHA-256: 39b60aff088f1bd95e59a18e37fbd2243b53a4b57955e9efcadcdca3ca5cfad2
-Invocation 2 source-tree SHA-256: 39b60aff088f1bd95e59a18e37fbd2243b53a4b57955e9efcadcdca3ca5cfad2
+Invocation 1 source-tree SHA-256: c0f6d23395fd4d112dd570bcc1af1c9b65a28a7d8c8e63730e80400abe1ce1f3
+Invocation 2 source-tree SHA-256: c0f6d23395fd4d112dd570bcc1af1c9b65a28a7d8c8e63730e80400abe1ce1f3
 MATCH — both invocations ran against an identical source tree.
 (Excludes harness/LAST-RUN.txt and SHA256SUMS, generated after the run.)
 

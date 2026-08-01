@@ -1333,3 +1333,39 @@ Sampling the log after `proc.terminate()` counted **4 exit lines** — our own
 shutdown, not crashes. The log is now snapshotted *before* termination, so the
 assertion sees only the burst window. Had that gone unnoticed the suite would
 have failed permanently on a healthy system, which is its own kind of wrong.
+
+---
+
+# v126 — Flip's preview control matches the Pad's
+
+**Build: v126.** 19 suites, **640 assertions**, 0 skipped, 0 problems.
+
+`styles.css` has carried the comment *"Post: the one bold purple moment"* since
+the Pad was built. Flip ignored it: "Flip it" had the same accent fill and glow as
+"Post to Skribl", so the surface had two primary buttons and the destination
+action did not stand out from the preview action.
+
+| | Pad Play | Flip before | Flip now |
+| --- | --- | --- | --- |
+| Background | white 4.5% | **accent** | white 4.3% |
+| Border | hairline | none | hairline |
+| Glow | none | **yes** | none |
+| Duration badge | yes | **absent** | yes |
+| Hidden until usable | yes | **always shown** | yes |
+
+Post keeps accent + glow on both surfaces, and is now the only thing that has it.
+
+**Duration.** Flip could not tell you how long an animation ran. It now computes
+exactly that from page count, per-page holds and fps, refreshing on any of the
+three. The Pad's `m:ss` format was wrong here: 5 pages at 12fps is 0.42s, which
+renders as "0:00" and reads as broken. Under a minute it shows one decimal —
+`0.2s`, `4.4s`, `8.8s` at 6fps — and switches to `m:ss` beyond that.
+
+**Hidden until usable.** The wrap now hides while the animation cannot play,
+reusing `playBtn.disabled` rather than restating the condition so the two cannot
+disagree. It deliberately stays visible mid-playback: hiding it then would pull
+the Stop button out from under the user.
+
+One trap worth recording: `.flip-play-wrap` is `display: inline-flex`, which
+overrides the `hidden` attribute. Without an explicit `[hidden] { display: none }`
+the JS would set `hidden` and nothing would happen.

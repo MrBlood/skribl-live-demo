@@ -6,7 +6,7 @@
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='124') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='124') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='126') }}">
 </head>
 <body class="flip-app">
   <div class="app">
@@ -20,11 +20,17 @@
       <div class="actions flip-actions" id="actions">
         <span class="fps-group" title="Playback speed — frames per second"><span class="fps-label">fps</span><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
         <button type="button" id="onion" class="tool-open onion-tool" role="switch" aria-checked="false" title="Onion skin — show the frame beneath" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7C8.3 8.2 4.3 10.6 4.3 15.3a7.7 7.7 0 0015.4 0C19.7 10.6 15.7 8.2 12 7z"/><path d="M12 7v15.1"/><path d="M10.1 7.7c-1.1 3.5-1.1 10.7 0 14.4"/><path d="M13.9 7.7c1.1 3.5 1.1 10.7 0 14.4"/><path d="M8.1 8.8c-2.5 3.2-2.5 9.9 0 13.1"/><path d="M15.9 8.8c2.5 3.2 2.5 9.9 0 13.1"/><path d="M12 1.1c-.8 2-.8 4.1 0 5.9.8-1.8.8-3.9 0-5.9z"/><path d="M9.7 3.1c.2 1.6 1 3 2.3 4.1M14.3 3.1c-.2 1.6-1 3-2.3 4.1"/><path d="M10.8 22.3l-.5 1.1M12 22.5v1.1M13.2 22.3l.5 1.1"/></svg></button><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span>
-        <button type="button" class="btn flip-play" id="play">
-          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
-          <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
-          <span>Flip it</span>
-        </button>
+        <!-- v126: mirrors the Pad's play-wrap — a subdued preview control paired
+             with a duration badge, so "Post to Skribl" stays the only bold purple
+             moment on the surface. -->
+        <div class="play-wrap flip-play-wrap" id="flipPlayWrap" hidden>
+          <button type="button" class="btn flip-play btn-icon" id="play" title="Flip it — preview the animation" aria-label="Flip it">
+            <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+            <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>
+            <span class="btn-label">Flip it</span>
+          </button>
+          <span id="flipDuration" class="duration-badge">0:00</span>
+        </div>
         <button type="button" class="btn post" id="postBtn" title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
         <button type="button" id="moreBtn" class="tool-open" title="More — save, export, help" aria-label="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       </div>
@@ -164,6 +170,6 @@
 <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}"></script>
 <script src="{{ url_for('static', filename='skribl/lib/media_validation.js', v='121') }}"></script>
   <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
-<script src="{{ url_for('static', filename='skribl/flip.js', v='121') }}"></script>
+<script src="{{ url_for('static', filename='skribl/flip.js', v='126') }}"></script>
 </body>
 </html>

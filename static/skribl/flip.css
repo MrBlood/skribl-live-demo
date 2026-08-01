@@ -86,8 +86,23 @@
 
   .fps-group { display: inline-flex; align-items: center; gap: 7px; }
   .fps-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
-  .btn.flip-play { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 3px 12px var(--accent-glow); min-width: 92px; justify-content: center; }
-  .btn.flip-play.playing { background: var(--surface-control); color: var(--text-primary); box-shadow: none; }
+  /* v126: was accent + glow — identical to .btn.post, so Flip had TWO primary
+     buttons and the eye had nowhere to land. styles.css calls Post "the one bold
+     purple moment"; this is a preview control, so it now matches the Pad's Play:
+     subtle fill, hairline border, no glow. */
+  .btn.flip-play { background: rgba(255, 255, 255, 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; min-width: 92px; justify-content: center; }
+  .btn.flip-play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
+  /* Playing = stop. Accent-tinted so the active state is unmistakable without
+     competing with Post. */
+  .btn.flip-play.playing { background: rgba(124, 92, 255, 0.16); border-color: rgba(124, 92, 255, 0.45); color: var(--accent-bright); box-shadow: none; }
+
+  /* The wrap keeps button + badge as one pill, exactly like the Pad's. */
+  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.045); border: 1px solid var(--hairline-strong); overflow: hidden; }
+  .flip-play-wrap .btn.flip-play { background: transparent; border: 0; }
+  /* display:inline-flex beats the hidden attribute — without this the wrap
+     stays visible no matter what the JS sets. */
+  .flip-play-wrap[hidden] { display: none; }
+  .flip-play-wrap .duration-badge { padding: 0 13px 0 11px; border-left: 1px solid var(--hairline-strong); }
   .flip-play .ico-stop { display: none; }
   .flip-play.playing .ico-play { display: none; }
   .flip-play.playing .ico-stop { display: inline-block; }
