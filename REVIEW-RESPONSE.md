@@ -1298,3 +1298,38 @@ drove them. Both crashed before printing a summary, and both were reported as
 `ERROR — exit 1, NO assertion summary` rather than silently skipped — the
 machinery added in v118 doing exactly its job. Suites updated to drive the
 toolbar.
+
+---
+
+# v125 — worker-level liveness, not just master survival
+
+**Build: v125.** 19 suites, **640 assertions**, 0 skipped, 0 problems.
+`verify_postgres.py` is now **14 assertions**.
+
+## The gap was real
+
+v124 asserted *"no gunicorn worker crashed during the burst"* from
+`proc.poll() is not None` — which watches the **master**. A worker that crashes is
+silently replaced by the master, leaving the master alive and the worker count
+unchanged. The assertion could not have observed the thing it claimed. The result
+was true; the evidence for it was not.
+
+## Now observed three independent ways
+
+- **PID set identity.** Worker PIDs are read from
+  `/proc/<master>/task/<master>/children` before and after the burst and compared
+  as a set. A crash-and-respawn changes a PID even though the count stays 4.
+  Recorded: `before=[792, 793, 794, 795] after=[792, 793, 794, 795]`.
+- **Boot count.** gunicorn runs at `--log-level info`, which announces every
+  worker boot. Exactly **4** `Booting worker` lines; a respawn would make 5.
+- **Exit log.** Zero `Worker exiting` / `was terminated` / `Worker failed to boot`
+  lines during the burst.
+
+The master check is kept as a separate, correctly-named assertion.
+
+## A trap in the first attempt
+
+Sampling the log after `proc.terminate()` counted **4 exit lines** — our own
+shutdown, not crashes. The log is now snapshotted *before* termination, so the
+assertion sees only the burst window. Had that gone unnoticed the suite would
+have failed permanently on a healthy system, which is its own kind of wrong.

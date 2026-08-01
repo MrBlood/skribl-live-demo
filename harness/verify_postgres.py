@@ -125,10 +125,24 @@ def _counts():
 posts_before, committed_before, pending_before = _counts()
 
 # --- server ------------------------------------------------------------------
+# --log-level info makes gunicorn announce every worker boot and exit, which is
+# how a crash-and-respawn becomes observable at all. Its stderr goes to a file
+# rather than a pipe so it can be read after the burst without deadlocking.
+GLOG = ROOT / "harness" / ".pg_gunicorn.log"
+_glog = open(GLOG, "w+")
 proc = subprocess.Popen(["gunicorn", "-w", str(WORKERS), "-b", f"127.0.0.1:{PORT}",
-                         "--timeout", "60", "app:app"],
+                         "--timeout", "60", "--log-level", "info", "app:app"],
                         cwd=str(ROOT), env=env,
-                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                        stdout=subprocess.DEVNULL, stderr=_glog)
+
+
+def worker_pids(master_pid):
+    """Live worker PIDs, straight from /proc — the master's own children."""
+    try:
+        with open(f"/proc/{master_pid}/task/{master_pid}/children") as fh:
+            return {int(x) for x in fh.read().split()}
+    except OSError:
+        return set()
 base = f"http://127.0.0.1:{PORT}"
 ready = False
 for _ in range(120):
@@ -144,6 +158,16 @@ for _ in range(120):
 if not ready:
     proc.terminate()
     skip("gunicorn never became ready")
+
+# Wait for the full complement, then record the exact PIDs. Comparing this SET
+# afterwards is what distinguishes "no worker died" from "the master survived" —
+# a crashed worker is silently replaced, leaving the master alive and the worker
+# count unchanged, which is precisely what the previous assertion could not see.
+for _ in range(40):
+    if len(worker_pids(proc.pid)) >= WORKERS:
+        break
+    time.sleep(0.25)
+pids_before = worker_pids(proc.pid)
 
 print("\nCONCURRENCY — 12 processes-wide requests, quota 2")
 payload = {"title": "pg concurrency",
@@ -172,7 +196,12 @@ for t in threads:
 for t in threads:
     t.join()
 
-worker_crashed = proc.poll() is not None
+pids_after = worker_pids(proc.pid)
+master_alive = proc.poll() is None
+# Snapshot the log BEFORE terminating: our own shutdown makes every worker log
+# "Worker exiting", which would otherwise read as four crashes.
+_glog.flush()
+glog_during = GLOG.read_text(errors="replace") if GLOG.exists() else ""
 proc.terminate()
 try:
     proc.wait(timeout=15)
@@ -183,7 +212,25 @@ posts_after, committed_after, pending_after = _counts()
 created = posts_after - posts_before
 committed = committed_after - committed_before
 pending = pending_after - pending_before
-check("no gunicorn worker crashed during the burst", not worker_crashed)
+booted = glog_during.count("Booting worker")
+exited = (glog_during.count("Worker exiting") + glog_during.count("was terminated")
+          + glog_during.count("Worker failed to boot"))
+try:
+    GLOG.unlink()
+except OSError:
+    pass
+
+check("the gunicorn master stayed alive", master_alive)
+check(f"all {WORKERS} workers were running before the burst",
+      len(pids_before) == WORKERS, f"{sorted(pids_before)}")
+# The three assertions that actually close the gap the master check left open.
+check("the SAME worker processes were alive afterwards — none died and respawned",
+      pids_after == pids_before and len(pids_after) == WORKERS,
+      f"before={sorted(pids_before)} after={sorted(pids_after)}")
+check(f"gunicorn booted exactly {WORKERS} workers — no respawn was logged",
+      booted == WORKERS, f"{booted} 'Booting worker' lines")
+check("gunicorn logged no worker exit, termination or boot failure DURING the burst",
+      exited == 0, f"{exited} exit/termination lines before shutdown")
 check("every response was 201 or 429 — no 500s, no transport errors",
       set(out) <= {201, 429}, str(sorted(set(out))))
 check(f"exactly {QUOTA} requests were admitted", out.count(201) == QUOTA, str(sorted(out)))
