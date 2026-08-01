@@ -1369,3 +1369,68 @@ the Stop button out from under the user.
 One trap worth recording: `.flip-play-wrap` is `display: inline-flex`, which
 overrides the `hidden` attribute. Without an explicit `[hidden] { display: none }`
 the JS would set `hidden` and nothing would happen.
+
+---
+
+# v127 — the pulse, which v126 missed
+
+**Build: v127.** 19 suites, **640 assertions**, 0 skipped, 0 problems.
+
+v126 matched the Pad's Play button on background, border, shadow, layout and the
+duration badge — and missed that it **animates**. `styles.css` pulses a purple
+ring (`playGlow`, 1.8s, infinite) for the whole time playback runs. Comparing
+static properties found every static difference and none of the moving one.
+
+Flip now uses the same keyframes and the same structure, which its v126 markup
+happened to make trivial:
+
+- under 641px the **button** pulses;
+- from 641px the **wrap** pulses and the button's animation is suppressed, so the
+  ring follows the whole "Stop · 4.4s" pill instead of drawing an oval around
+  half of it — the Pad's own comment says *"the wrap pulses, not the button"*;
+- `prefers-reduced-motion` keeps the accent tint and drops the animation.
+
+Verified by putting both surfaces in `.playing` and comparing computed styles:
+`playGlow 1.8s` on both wraps, `none` on both buttons. The ring was also sampled
+five times over ~1s to confirm it genuinely animates rather than merely being
+declared.
+
+## A flaky assertion this surfaced
+
+`verify_postgres.py` failed once with `committed delta=-16 (before=20, after=4)`.
+A **negative** delta: the opportunistic cleanup sweep deletes expired rate rows
+during a run, so a whole-table delta cannot distinguish cleanup from failure. It
+would have failed intermittently on a perfectly healthy system.
+
+Rate events are now counted by **this run's identity hash** — the suite already
+generates a fresh HMAC key per run, so its rows are unambiguous. Post rows stay a
+delta, since nothing else writes to that table during the run.
+
+---
+
+# v128 — elapsed time during playback
+
+**Build: v128.** 19 suites, **640 assertions**, 0 skipped, 0 problems.
+
+Third and last difference between Flip's preview control and the Pad's. The Pad
+counts UP in its badge while playing (`editorReplayFrame` ->
+`formatDuration(elapsed)`) and restores the total on stop. Flip showed a static
+total, so playback had no sense of progress.
+
+Flip now does the same, with two deliberate differences:
+
+- **Driven by `requestAnimationFrame`, not the play timer.** The play timer fires
+  once per page and re-schedules itself for per-page holds, so a badge driven from
+  it would stutter at low fps and freeze during a x4 hold. rAF is smooth
+  regardless of fps and unaffected by holds.
+- **Wraps at the total instead of pinning to it.** Flip loops; the Pad's replay
+  runs once. The badge tracks position within the loop, which is what a viewer is
+  actually watching.
+
+Verified across the cases that could have broken it: 8 distinct samples counting
+up during playback, the total restored on stop, the rAF cancelled (no orphan loop),
+an fps change mid-playback continuing to tick and updating the total afterwards,
+and draw-on replay mode ticking too.
+
+The duration formatter is now shared between the idle total and the live readout,
+so the two cannot drift apart.

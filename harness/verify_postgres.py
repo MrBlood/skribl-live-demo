@@ -114,15 +114,25 @@ if init.returncode != 0:
 # measures a DELTA rather than an absolute count — an absolute count silently
 # folds in unrelated rows and turns a passing system into a failing assertion
 # (or, worse, the reverse).
-def _counts():
-    with psycopg.connect(DSN) as c:
-        return (c.execute("select count(*) from skribl_posts").fetchone()[0],
-                c.execute("select count(*) from skribl_rate_events "
-                          "where bucket='posts' and state='committed'").fetchone()[0],
-                c.execute("select count(*) from skribl_rate_events "
-                          "where bucket='posts' and state='pending'").fetchone()[0])
+# Rate events are counted BY THIS RUN'S IDENTITY, not as a whole-table delta.
+# The opportunistic cleanup sweep deletes expired rows during the burst, so a
+# table-wide delta can legitimately go negative and fail a healthy system — it
+# did exactly that once. KEY is fresh per run, so these rows are unambiguously
+# ours. Posts have no identity column, so they stay a delta; nothing else is
+# writing to this database during the run.
+KEY_HASH = None
 
-posts_before, committed_before, pending_before = _counts()
+def _post_rows():
+    with psycopg.connect(DSN) as c:
+        return c.execute("select count(*) from skribl_posts").fetchone()[0]
+
+def _our_events(state):
+    with psycopg.connect(DSN) as c:
+        return c.execute("select count(*) from skribl_rate_events "
+                         "where bucket='posts' and state=%s and key_hash=%s",
+                         (state, KEY_HASH)).fetchone()[0]
+
+posts_before = _post_rows()
 
 # --- server ------------------------------------------------------------------
 # --log-level info makes gunicorn announce every worker boot and exit, which is
@@ -208,10 +218,15 @@ try:
 except Exception:
     proc.kill()
 
-posts_after, committed_after, pending_after = _counts()
+# Resolve the identity hash the workers used, from the app itself.
+_kh = subprocess.run([sys.executable, "-c",
+                      "import app; print(app._rate_key('127.0.0.1'))"],
+                     cwd=str(ROOT), env=env, capture_output=True, text=True)
+KEY_HASH = _kh.stdout.strip().splitlines()[-1] if _kh.returncode == 0 else ""
+posts_after = _post_rows()
 created = posts_after - posts_before
-committed = committed_after - committed_before
-pending = pending_after - pending_before
+committed = _our_events("committed")
+pending = _our_events("pending")
 booted = glog_during.count("Booting worker")
 exited = (glog_during.count("Worker exiting") + glog_during.count("was terminated")
           + glog_during.count("Worker failed to boot"))
@@ -243,9 +258,9 @@ check("no UNDER-admission: the quota was actually used, not merely blocked",
 check("HTTP admissions match committed database rows",
       out.count(201) == created, f"{out.count(201)} x 201 vs {created} rows")
 check("exactly two rate events were promoted to committed",
-      committed == QUOTA, f"committed delta={committed} (before={committed_before}, after={committed_after})")
+      committed == QUOTA, f"committed rows for THIS run's identity={committed}")
 check("no reservation was stranded in pending",
-      pending == 0, f"pending delta={pending} (after={pending_after})")
+      pending == 0, f"pending rows for THIS run's identity={pending}")
 
 print("\nSCOPE — what this does and does not establish")
 check("recorded configuration is complete enough to interpret the result",

@@ -634,20 +634,45 @@ const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pb
 // The Pad shows the recorded length beside Play; Flip can state its animation
 // length exactly — total hold units over fps. Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
+// v128: the Pad counts UP in its badge while playing (editorReplayFrame ->
+// formatDuration(elapsed)), then restores the total on stop. Flip showed a static
+// total, so during playback there was no sense of progress. Same behaviour here,
+// driven by rAF rather than the play timer so the readout is smooth regardless of
+// fps and unaffected by per-page holds.
+let flipElapsedRAF=null, flipPlayStart=0;
+function fmtFlipSecs(secs){
+  if(secs < 60) return (secs < 9.95 ? secs.toFixed(1) : Math.round(secs)) + 's';
+  const m=Math.floor(secs/60), r=Math.round(secs%60);
+  const mm=(r===60)?m+1:m, ss=(r===60)?0:r;
+  return mm+':'+String(ss).padStart(2,'0');
+}
+function flipTotalSecs(){ return totalHoldUnits(0, frames.length-1)/(fps||12); }
+function startFlipElapsed(){
+  if(!flipDurationEl) return;
+  flipPlayStart=performance.now();
+  const total=flipTotalSecs();
+  const tick=()=>{
+    if(!playing){ flipElapsedRAF=null; return; }
+    const el=(performance.now()-flipPlayStart)/1000;
+    // The animation loops, so wrap rather than pinning at the total — the badge
+    // tracks position within the loop, which is what a viewer is watching.
+    flipDurationEl.textContent=fmtFlipSecs(total>0 ? (el % total) : el);
+    flipElapsedRAF=requestAnimationFrame(tick);
+  };
+  flipElapsedRAF=requestAnimationFrame(tick);
+}
+function stopFlipElapsed(){
+  if(flipElapsedRAF){ cancelAnimationFrame(flipElapsedRAF); flipElapsedRAF=null; }
+  syncFlipDuration();                      // back to the total
+}
+
 function syncFlipDuration(){
   if(!flipDurationEl) return;
-  const units=totalHoldUnits(0, frames.length-1);
-  const secs=units/(fps||12);
+  if(playing) return;                      // the ticker owns the badge while playing
   // m:ss is the Pad's format because a recording runs for seconds. A flipbook
   // usually does not — 5 pages at 12fps is 0.42s, which m:ss renders as "0:00"
   // and reads as broken. Sub-minute durations show one decimal instead.
-  if(secs < 60){
-    flipDurationEl.textContent = (secs < 9.95 ? secs.toFixed(1) : Math.round(secs)) + 's';
-  } else {
-    const m=Math.floor(secs/60), sRest=Math.round(secs%60);
-    const mm=(sRest===60)?m+1:m, ss=(sRest===60)?0:sRest;
-    flipDurationEl.textContent=mm+':'+String(ss).padStart(2,'0');
-  }
+  flipDurationEl.textContent = fmtFlipSecs(flipTotalSecs());
   flipDurationEl.title=frames.length+' page'+(frames.length===1?'':'s')+' at '+(fps||12)+' fps';
 }
 
@@ -862,6 +887,7 @@ function play(){
   playBtn.classList.add('playing'); playBtn.querySelector('span').textContent='Stop';
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
   startMusic();
+  startFlipElapsed();
   if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); }
   else { playI=idx; runPlayTimer(); }
 }
@@ -870,6 +896,7 @@ function stop(){
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
   clearInterval(playTimer); playTimer=null; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null;
   stopMusic(); scrubbingFrames=false;
+  stopFlipElapsed();
   if(flipPlayer){ flipPlayer.classList.remove('show'); flipPlayer.hidden=true; }
   idx = Math.min(editIdx, frames.length-1);
   buildStrip(); render();

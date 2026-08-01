@@ -96,6 +96,23 @@
      competing with Post. */
   .btn.flip-play.playing { background: rgba(124, 92, 255, 0.16); border-color: rgba(124, 92, 255, 0.45); color: var(--accent-bright); box-shadow: none; }
 
+  /* v127: the Pad pulses a purple ring the whole time it is playing (playGlow in
+     styles.css). v126 matched the Pad's static styling but not this, so Flip's
+     playback had no ambient signal — you had to read the button to know. Same
+     keyframes, same 1.8s, same structure: on narrow screens the BUTTON pulses;
+     from 641px the WRAP pulses so the ring follows the whole "Stop · 4.4s" pill
+     instead of drawing an oval around half of it. */
+  .btn.flip-play.playing { animation: playGlow 1.8s ease-in-out infinite; }
+  @media (min-width: 641px) {
+    .flip-play-wrap:has(.btn.flip-play.playing) { animation: playGlow 1.8s ease-in-out infinite; }
+    .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { animation: none; }
+  }
+  /* Reduced motion: keep the accent tint, drop the pulse. */
+  @media (prefers-reduced-motion: reduce) {
+    .btn.flip-play.playing,
+    .flip-play-wrap:has(.btn.flip-play.playing) { animation: none; }
+  }
+
   /* The wrap keeps button + badge as one pill, exactly like the Pad's. */
   .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.045); border: 1px solid var(--hairline-strong); overflow: hidden; }
   .flip-play-wrap .btn.flip-play { background: transparent; border: 0; }
