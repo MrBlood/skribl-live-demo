@@ -1529,3 +1529,40 @@ Details that took a second pass:
 animated panel no longer uses. Updated to the class, and it now also pins the two
 things that were actually wrong: **collapses to exactly zero height**, and **sits
 directly under the header** rather than adrift elsewhere on the page.
+
+---
+
+# v131 — the drawer's contents explain themselves
+
+**Build: v131.** 19 suites, **646 assertions**, 0 skipped, 0 problems.
+
+Two faults, both visible the moment the panel was actually looked at.
+
+## 1. The controls were flung away from their labels
+
+`margin-left: auto` pushed each control to the far edge of a full-width row.
+Measured: **284px** between the word "Speed" and the numbers it names, on desktop.
+The row read as two unrelated columns.
+
+Fixed by pairing the control with its label in a fixed 150px label column, and
+capping the panel at 520px centred. Gap now **16px** on desktop, **10px** on a
+phone — and the two rows still align with each other.
+
+## 2. "6 12 24" and "1 2 3" meant nothing
+
+The units were invisible: fps was a tiny inline chip, and onion depth had no unit
+at all. Each row is now two lines — the name, and underneath, what the numbers
+are:
+
+| | before | after |
+| --- | --- | --- |
+| | `Speed        fps  6 12 24` | **Speed** / *frames per second* |
+| | `Onion            1 2 3` | **Onion skin** / *pages showing behind* |
+
+The redundant inline "fps" chip is gone — the caption is the unit now. A hairline
+divider separates the rows so they read as a settings list rather than floating
+text.
+
+Verified at 360 / 390 / 430 / 810px: rows fit, captions never clip, controls stay
+inside the panel. The label column narrows to 130px under 400px so the segments
+keep their touch size instead of being crushed.
