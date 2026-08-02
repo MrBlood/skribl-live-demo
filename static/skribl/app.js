@@ -250,6 +250,54 @@ function getPos(e) {
   };
 }
 
+// --- Stylus pressure ---------------------------------------------------------
+// A point may carry `p`: normalised pen pressure in 0..1. This is the first new
+// payload field since v109's `hold`, and it follows the same rules:
+//
+//   - pointWidth() is the ONLY way `p` is read. It never trusts the field to
+//     exist, and clamps garbage (NaN, negative, >1) back into range.
+//   - `p` is WRITTEN ONLY by a stylus reporting a force other than neutral. A
+//     mouse or finger drawing serialises to exactly the bytes it did before —
+//     asserted in verify_pressure.py, not assumed.
+//   - A pressure payload in an older player degrades to uniform width, because
+//     an unknown field is ignored.
+//
+// The multiplier is linear and centred so neutral pressure is a no-op:
+// 0.5 -> 1.0x, 1.0 -> 1.65x, 0.0 -> 0.35x. Width is floored so a near-zero
+// sample thins the line rather than making it vanish.
+const PRESSURE_NEUTRAL = 0.5;
+const PRESSURE_MIN_MUL = 0.35;
+const PRESSURE_MAX_MUL = 1.65;
+const MIN_STROKE_WIDTH = 0.5;
+
+function pressureMul(raw) {
+  if (typeof raw !== 'number' || !isFinite(raw)) return 1;
+  const v = raw < 0 ? 0 : raw > 1 ? 1 : raw;
+  return PRESSURE_MIN_MUL + (PRESSURE_MAX_MUL - PRESSURE_MIN_MUL) * v;
+}
+
+// Effective render width of a stored point. Every draw path goes through this,
+// so a point with no `p` is byte-for-byte the old behaviour.
+function pointWidth(pt) {
+  const base = pt.size;
+  if (pt.p === undefined || pt.p === null) return base;
+  const w = base * pressureMul(pt.p);
+  return w < MIN_STROKE_WIDTH ? MIN_STROKE_WIDTH : w;
+}
+
+// The Pad is bound to mouse/touch, not pointer events, so pressure arrives as
+// Touch.force and only from an Apple Pencil-class device (touchType 'stylus').
+// A finger reports force 0 and a mouse has no force at all; both return null so
+// their strokes record no `p` and their payloads are unchanged.
+let lastPressure = null;
+function readPressure(e) {
+  const t = e.touches && e.touches[0];
+  if (!t || t.touchType !== 'stylus') return null;
+  const f = t.force;
+  if (typeof f !== 'number' || !isFinite(f) || f <= 0) return null;
+  return f === PRESSURE_NEUTRAL ? null : f;
+}
+
 function drawDot(x, y, c, s, erase) {
   ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
   ctx.beginPath();
@@ -431,16 +479,16 @@ function paintStrokesStatic(strokeArr) {
     const comp = makeStrokeCompositor(ctx, canvas);
     for (let i = 0; i < strokeArr.length; i++) {
       const p = strokeArr[i];
-      if (p.start || i === 0) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
-      else { const prev = strokeArr[i - 1]; comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+      if (p.start || i === 0) comp.dotFn(p.x, p.y, p.color, pointWidth(p), p.erase);
+      else { const prev = strokeArr[i - 1]; comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, pointWidth(p), p.erase); }
     }
     comp.finish();
     comp.present();
   } else {
     for (let i = 0; i < strokeArr.length; i++) {
       const p = strokeArr[i];
-      if (p.start || i === 0) drawDot(p.x, p.y, p.color, p.size, p.erase);
-      else { const prev = strokeArr[i - 1]; drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+      if (p.start || i === 0) drawDot(p.x, p.y, p.color, pointWidth(p), p.erase);
+      else { const prev = strokeArr[i - 1]; drawLine(prev.x, prev.y, p.x, p.y, p.color, pointWidth(p), p.erase); }
     }
   }
 }
@@ -455,10 +503,10 @@ function replayTimelineToCanvas(timeline, startIndex, elapsedMs, dotFn, lineFn) 
   while (i < timeline.length && timeline[i].playT <= elapsedMs) {
     const p = timeline[i];
     if (p.start || i === 0) {
-      dotFn(p.x, p.y, p.color, p.size, p.erase);
+      dotFn(p.x, p.y, p.color, pointWidth(p), p.erase);
     } else {
       const prev = timeline[i - 1];
-      lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+      lineFn(prev.x, prev.y, p.x, p.y, p.color, pointWidth(p), p.erase);
     }
     i++;
   }
@@ -536,12 +584,19 @@ function startDraw(e) {
   const drawColor = erase ? bgColor : penColorFor(color);
   const drawSize = erase ? size * 3 : size;
   const point = { x: pos.x, y: pos.y, color: drawColor, size: drawSize, t, start: true, erase };
+  // The key is added only when a stylus reported one, so non-pen payloads keep
+  // exactly the shape (and bytes) they had before.
+  lastPressure = readPressure(e);
+  if (lastPressure !== null) point.p = lastPressure;
   currentStroke.push(point);
   _slActive = strokeLayersOn() && !erase && parseStrokeAlpha(drawColor) < 1;
+  // Live width must come from the same helper the replay uses, or the stroke
+  // you see while drawing won't be the stroke that plays back.
+  const w0 = pointWidth(point);
   if (_slActive) {
-    beginWetStroke(pos.x, pos.y, drawColor, drawSize);
+    beginWetStroke(pos.x, pos.y, drawColor, w0);
   } else {
-    drawDot(pos.x, pos.y, drawColor, drawSize, erase);
+    drawDot(pos.x, pos.y, drawColor, w0, erase);
   }
   hasContent = true;
   updateClearVisibility();
@@ -568,12 +623,15 @@ function continueDraw(e) {
   const drawColor = erase ? bgColor : penColorFor(color);
   const drawSize = erase ? size * 3 : size;
   const point = { x: dp.x, y: dp.y, color: drawColor, size: drawSize, t, erase };
+  lastPressure = readPressure(e);
+  if (lastPressure !== null) point.p = lastPressure;
   currentStroke.push(point);
+  const wN = pointWidth(point);
   if (_slActive) {
-    drawLineOn(_wetCtx, lastPos.x, lastPos.y, dp.x, dp.y, solidStrokeColor(drawColor), drawSize);
+    drawLineOn(_wetCtx, lastPos.x, lastPos.y, dp.x, dp.y, solidStrokeColor(drawColor), wN);
     presentWet();
   } else {
-    drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, drawSize, erase);
+    drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, wN, erase);
   }
   lastPos = dp;
 }
@@ -591,12 +649,17 @@ function snapStrokeToFinal() {
   const erase = tool === 'eraser';
   const drawColor = erase ? bgColor : penColorFor(color);
   const drawSize = erase ? size * 3 : size;
-  currentStroke.push({ x: lastRawPos.x, y: lastRawPos.y, color: drawColor, size: drawSize, t, erase });
+  // No event here — this point is synthesised on release, so it inherits the
+  // last sampled pressure rather than inventing one.
+  const snapPt = { x: lastRawPos.x, y: lastRawPos.y, color: drawColor, size: drawSize, t, erase };
+  if (lastPressure !== null) snapPt.p = lastPressure;
+  currentStroke.push(snapPt);
+  const wS = pointWidth(snapPt);
   if (_slActive) {
-    drawLineOn(_wetCtx, lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, solidStrokeColor(drawColor), drawSize);
+    drawLineOn(_wetCtx, lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, solidStrokeColor(drawColor), wS);
     presentWet();
   } else {
-    drawLine(lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, drawColor, drawSize, erase);
+    drawLine(lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, drawColor, wS, erase);
   }
   lastPos = lastRawPos;
 }
@@ -607,6 +670,8 @@ function endDraw() {
   drawing = false;
   document.body.classList.remove('stroking');
   _slActive = false;
+  // Reset per-stroke, so a pen sample can never leak into a later mouse stroke.
+  lastPressure = null;
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
     strokeGroups.push(currentStroke.length);
@@ -624,6 +689,7 @@ function commitActiveStroke() {
   drawing = false;
   document.body.classList.remove('stroking');
   _slActive = false;
+  lastPressure = null;
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
     strokeGroups.push(currentStroke.length);
@@ -1026,12 +1092,15 @@ function formatDuration(ms) {
 function buildPlaybackTimeline() {
   if (!strokes.length) return [];
   let playT = 0;
-  const timeline = [{ x: strokes[0].x, y: strokes[0].y, color: strokes[0].color, size: strokes[0].size, erase: strokes[0].erase, start: strokes[0].start, playT: 0, i: 0 }];
+  // `p` rides along so replay and video export get the same widths the editor
+  // drew. The timeline is internal and never serialised, so an undefined here
+  // costs nothing and pointWidth() treats it as neutral.
+  const timeline = [{ x: strokes[0].x, y: strokes[0].y, color: strokes[0].color, size: strokes[0].size, p: strokes[0].p, erase: strokes[0].erase, start: strokes[0].start, playT: 0, i: 0 }];
   for (let i = 1; i < strokes.length; i++) {
     const gap = strokes[i].t - strokes[i - 1].t;
     if (gap > 0) playT += Math.min(gap, 50);
     const s = strokes[i];
-    timeline.push({ x: s.x, y: s.y, color: s.color, size: s.size, erase: s.erase, start: s.start, playT: playT, i: i });
+    timeline.push({ x: s.x, y: s.y, color: s.color, size: s.size, p: s.p, erase: s.erase, start: s.start, playT: playT, i: i });
   }
   return timeline;
 }

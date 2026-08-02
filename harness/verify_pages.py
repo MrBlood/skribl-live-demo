@@ -79,6 +79,92 @@ with sync_playwright() as p:
     check("and undims when it is back on",
           flip.evaluate("() => !document.getElementById('tuneOnionRow').classList.contains('muted')"))
 
+    # --- v133: the drawer as a grouped settings list -------------------------
+    print("\nSETTINGS DRAWER (v133) — one place, one right edge")
+    check("the drawer carries its own onion switch, not just the header button",
+          flip.evaluate("() => !!document.getElementById('onionSwitch')"))
+    check("the switch reflects the current state rather than its own copy",
+          flip.evaluate("""() => document.getElementById('onionSwitch')
+                             .getAttribute('aria-checked') === String(onion)"""))
+    flip.click("#onionSwitch")
+    flip.wait_for_timeout(200)
+    check("tapping the drawer switch turns onion off",
+          flip.evaluate("() => onion") is False)
+    check("and the HEADER button follows it — one state, two views",
+          flip.evaluate("""() => document.getElementById('onion')
+                             .getAttribute('aria-checked') === 'false'"""))
+    check("both onion sub-rows dim together when it is off",
+          flip.evaluate("""() => document.getElementById('tuneOnionRow').classList.contains('muted')
+                            && document.getElementById('tuneTintRow').classList.contains('muted')"""))
+    flip.evaluate("() => setOnion(true)")
+    flip.wait_for_timeout(200)
+
+    # v134: dimming is not disabling. pointer-events:none blocks the mouse and
+    # nothing else, so a keyboard user could still reach and operate a control
+    # that looks switched off.
+    flip.evaluate("() => setOnion(false)")
+    flip.wait_for_timeout(200)
+    check("the depth buttons are properly DISABLED when onion is off, not just dim",
+          flip.evaluate("""() => [...document.querySelectorAll('#onionDepthSeg button')]
+                             .every(b => b.disabled === true)"""))
+    check("the tint switch is disabled too",
+          flip.evaluate("() => document.getElementById('onionTintBtn').disabled === true"))
+    check("and they are announced as disabled, not merely faded",
+          flip.evaluate("""() => document.getElementById('onionTintBtn')
+                             .getAttribute('aria-disabled') === 'true'"""))
+    # The name said "keyboard" while the body called .click(). Both are suppressed
+    # by native `disabled`, so the code was right and the assertion was loosely
+    # described. Do it properly: try to focus the control and press Enter and
+    # Space, which is what a keyboard user would actually do.
+    # Two failed attempts are worth recording here. Driving real Enter/Space
+    # through the page fails because the control correctly refuses focus, so the
+    # keys reach the document and fire Flip's own shortcuts, changing the page.
+    # Dispatching a synthetic keydown with bubbles:true fails the same way — and
+    # it models nothing real, because a native disabled button never emits that
+    # event in the first place. What `disabled` actually guarantees is that the
+    # control cannot be focused and cannot be activated; assert exactly that.
+    before = flip.evaluate("() => onionDepth")
+    flip.evaluate("""() => document.querySelector('#onionDepthSeg button[data-depth="3"]').focus()""")
+    check("a disabled control refuses focus, so the keyboard cannot reach it",
+          flip.evaluate("""() => document.activeElement
+                             !== document.querySelector('#onionDepthSeg button[data-depth="3"]')"""))
+    flip.evaluate("""() => document.querySelector('#onionDepthSeg button[data-depth="3"]').click()""")
+    flip.wait_for_timeout(150)
+    check("and activating it cannot change the depth",
+          flip.evaluate("() => onionDepth") == before,
+          f"{before} -> {flip.evaluate('() => onionDepth')}")
+    flip.evaluate("() => setOnion(true)")
+    flip.wait_for_timeout(200)
+    check("and every one is re-enabled when onion comes back",
+          flip.evaluate("""() => [...document.querySelectorAll('#onionDepthSeg button')]
+                             .every(b => b.disabled === false)
+                          && document.getElementById('onionTintBtn').disabled === false"""))
+
+    # Canvas moved out of the ⋯ menu; that menu now holds actions only.
+    check("canvas size is in the drawer as a dropdown",
+          flip.evaluate("() => !!document.getElementById('canvasSelect')"))
+    check("and is GONE from the more-menu, which now holds actions only",
+          flip.evaluate("() => !document.getElementById('canvasSeg')"))
+    flip.select_option("#canvasSelect", "square")
+    flip.wait_for_timeout(350)
+    check("choosing a shape actually resizes the canvas",
+          flip.evaluate("() => [CW, CH]") == [560, 560],
+          str(flip.evaluate("() => [CW,CH]")))
+    check("the dropdown reflects the applied size",
+          flip.evaluate("() => document.getElementById('canvasSelect').value") == "square")
+    flip.evaluate("() => { const s=FLIP_SIZES.find(x=>x.id==='classic'); applyCanvasSize(s.w,s.h); syncCanvasSeg(); }")
+    flip.wait_for_timeout(250)
+
+    # Measured, not eyeballed: a switch, a dropdown and two pills have different
+    # widths, so a fixed label column left them with three different right edges.
+    edges = flip.evaluate("""() => {
+        const ids = ['canvasSelect','onionSwitch','onionDepthSeg','onionTintBtn'];
+        const xs = ids.map(i => document.getElementById(i).getBoundingClientRect().right);
+        xs.push(document.querySelector('#tunePanel .fps-group').getBoundingClientRect().right);
+        return { spread: Math.max(...xs) - Math.min(...xs) }; }""")
+    check("every control in the drawer shares one right edge",
+          edges["spread"] < 1.0, f"spread {edges['spread']:.2f}px")
+
     flip.click('#onionDepthSeg button[data-depth="1"]')
     flip.wait_for_timeout(250)
     ink1 = flip.evaluate(INK)
@@ -113,8 +199,20 @@ with sync_playwright() as p:
     check("the more-menu stays on screen with the drawer open",
           flip.evaluate("""() => document.getElementById('moreBtn').getBoundingClientRect().right
                             <= innerWidth + 1"""))
+    # v132: the close was read after a flat 300ms wait, against a 260ms
+    # transition — 40ms of margin, which a loaded machine loses. The assertion
+    # below then reports a sub-pixel sliver (0.015625px, 0.375px) as a failure
+    # roughly three runs in four. That flake is present on v131 exactly as it is
+    # here, so the recorded 38/38 was a lucky run rather than a stable result.
+    # Wait for the transition itself to end; the assertions are unchanged.
+    flip.evaluate("""() => { window.__tuneSettled = false;
+        document.getElementById('tuneShell').addEventListener('transitionend',
+            () => { window.__tuneSettled = true; }, { once: true }); }""")
     flip.click("#tuneBtn")
-    flip.wait_for_timeout(300)
+    try:
+        flip.wait_for_function("() => window.__tuneSettled === true", timeout=5000)
+    except Exception:
+        flip.wait_for_timeout(600)   # never let a missed event mask the measurement
     # v130: the drawer animates (grid-template-rows), so state is a CLASS, not the
     # hidden attribute — and closed must mean zero height, not merely not-open.
     check("the drawer closes again",

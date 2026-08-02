@@ -6,7 +6,7 @@
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ url_for('static', filename='skribl/styles.css', v='124') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='131') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='skribl/flip.css', v='133') }}">
 </head>
 <body class="flip-app">
   <div class="app">
@@ -43,9 +43,61 @@
          height without hardcoding one. -->
     <div class="tune-shell" id="tuneShell" aria-hidden="true">
       <div class="tune-clip">
-        <div class="tune-panel" id="tunePanel">
-    <div class="tune-row"><span class="tune-label"><span class="tune-name">Speed</span><span class="tune-hint">frames per second</span></span><span class="fps-group" title="Playback speed — frames per second"><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span></div>
-          <div class="tune-row" id="tuneOnionRow"><span class="tune-label"><span class="tune-name">Onion skin</span><span class="tune-hint">pages showing behind</span></span><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
+        <div class="tune-panel" id="tunePanel" role="group" aria-label="Settings">
+
+          <!-- v133: an iOS-style grouped list. One row per setting: name and a
+               plain-language hint on the left, the control on the right. Booleans
+               are switches (.ios-switch), choices are a segmented pill or a
+               dropdown. Speed and Onion were already here; Canvas moved in from
+               the ⋯ menu, which now holds actions only. -->
+
+          <div class="tune-row">
+            <span class="tune-label"><span class="tune-name">Speed</span><span class="tune-hint">frames per second</span></span>
+            <span class="fps-group" title="Playback speed — frames per second"><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span>
+          </div>
+
+          <!-- Canvas: four presets read better as named options than as four
+               cramped pills at 360px, so this one is a dropdown. Disabled during
+               playback, same rule as before — the stage can't resize mid-flip. -->
+          <div class="tune-row">
+            <span class="tune-label"><span class="tune-name">Canvas</span><span class="tune-hint">shape of the page</span></span>
+            <span class="tune-control">
+              <select id="canvasSelect" class="ios-select" aria-label="Canvas shape">
+                <option value="classic">4:3 · Classic</option>
+                <option value="wide">16:9 · Wide</option>
+                <option value="square">1:1 · Square</option>
+                <option value="tall">9:16 · Tall</option>
+              </select>
+            </span>
+          </div>
+
+          <!-- The header keeps its onion shortcut (it gets toggled constantly
+               while animating), and this switch mirrors it, so the drawer is
+               self-contained either way. Both call the same setOnion(). -->
+          <div class="tune-row" id="tuneOnionSwitchRow">
+            <span class="tune-label"><span class="tune-name">Onion skin</span><span class="tune-hint">see the page beneath</span></span>
+            <span class="tune-control">
+              <button type="button" id="onionSwitch" class="ios-switch" role="switch" aria-checked="true" aria-label="Onion skin"><span class="ios-knob"></span></button>
+            </span>
+          </div>
+
+          <!-- v129 chose to DIM these rather than hide them: hiding made the
+               panel jump height as you toggled. Kept deliberately — they stay in
+               place, dim, and stop taking input when onion is off. -->
+          <div class="tune-row tune-sub" id="tuneOnionRow">
+            <span class="tune-label"><span class="tune-name">Pages behind</span><span class="tune-hint">how far back to show</span></span>
+            <span class="onion-group tune-control" id="onionGroup">
+              <span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span>
+            </span>
+          </div>
+
+          <div class="tune-row tune-sub" id="tuneTintRow">
+            <span class="tune-label"><span class="tune-name">Tint by distance</span><span class="tune-hint">colour older pages warmer</span></span>
+            <span class="tune-control">
+              <button type="button" id="onionTintBtn" class="ios-switch onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><span class="ios-knob"></span></button>
+            </span>
+          </div>
+
         </div>
       </div>
     </div>
@@ -128,11 +180,6 @@
       <button type="button" class="flip-menu-item" id="miExport" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export…</span></button>
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg></span><span class="mi-tx">How Flip works</span></button>
-      <div class="flip-menu-sep"></div>
-      <div class="flip-menu-row">
-        <span class="fm-label">Canvas</span>
-        <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic" class="on">4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>
-      </div>
       <!-- Version footer, mirroring the Pad's. Driven by SKRIBL_VERSION in
            app.py — never hardcode it here (the Pad's literal drifted from v96
            to v105 unnoticed). .menu-version is shared styling from styles.css. -->
@@ -184,6 +231,6 @@
 <script src="{{ url_for('static', filename='skribl/gifenc.min.js') }}"></script>
 <script src="{{ url_for('static', filename='skribl/lib/media_validation.js', v='121') }}"></script>
   <script src="{{ url_for('static', filename='skribl/lib/audioloop.js', v='102') }}"></script>
-<script src="{{ url_for('static', filename='skribl/flip.js', v='131') }}"></script>
+<script src="{{ url_for('static', filename='skribl/flip.js', v='134') }}"></script>
 </body>
 </html>

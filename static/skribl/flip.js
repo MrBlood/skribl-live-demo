@@ -330,11 +330,41 @@ function drawLine(c, x1,y1,x2,y2, col, s, erase){
 // wet/dry idea). Fully-opaque and erase strokes draw straight through as before.
 function alphaOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)/i); if(m) return parseFloat(m[1]); } return 1; }
 function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
+// --- Stylus pressure ---------------------------------------------------------
+// Mirrors app.js. A point may carry `p` (0..1); pointWidth() is the only reader,
+// it never trusts the field to exist, and a point without it renders exactly as
+// before. Flip is bound to POINTER events, so pressure is e.pressure directly —
+// but only from a pen: mouse and touch report a constant 0.5 and must not be
+// recorded, or every payload would grow and change bytes for no visual gain.
+const PRESSURE_NEUTRAL = 0.5;
+const PRESSURE_MIN_MUL = 0.35;
+const PRESSURE_MAX_MUL = 1.65;
+const MIN_STROKE_WIDTH = 0.5;
+
+function pressureMul(raw){
+  if (typeof raw !== 'number' || !isFinite(raw)) return 1;
+  const v = raw < 0 ? 0 : raw > 1 ? 1 : raw;
+  return PRESSURE_MIN_MUL + (PRESSURE_MAX_MUL - PRESSURE_MIN_MUL) * v;
+}
+function pointWidth(pt){
+  const base = pt.size;
+  if (pt.p === undefined || pt.p === null) return base;
+  const w = base * pressureMul(pt.p);
+  return w < MIN_STROKE_WIDTH ? MIN_STROKE_WIDTH : w;
+}
+let lastPressure = null;
+function readPressure(e){
+  if (!e || e.pointerType !== 'pen') return null;
+  const f = e.pressure;
+  if (typeof f !== 'number' || !isFinite(f) || f <= 0) return null;
+  return f === PRESSURE_NEUTRAL ? null : f;
+}
+
 function paintSeg(c, seg, solid){
   for (let i = 0; i < seg.length; i++) {
     const p = seg[i]; const col = solid ? solidOf(p.color) : p.color;
-    if (i === 0) drawDot(c, p.x, p.y, col, p.size, p.erase);
-    else { const pv = seg[i-1]; drawLine(c, pv.x, pv.y, p.x, p.y, col, p.size, p.erase); }
+    if (i === 0) drawDot(c, p.x, p.y, col, pointWidth(p), p.erase);
+    else { const pv = seg[i-1]; drawLine(c, pv.x, pv.y, p.x, p.y, col, pointWidth(p), p.erase); }
   }
 }
 function paintStatic(c, strokeArr){
@@ -435,7 +465,10 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   drawing=true; curCount=1; redoStack.length=0;
   const p=pos(e); smoothPt={x:p.x,y:p.y}; lastRaw={x:p.x,y:p.y};
   const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
-  frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
+  const pt0 = { x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true };
+  lastPressure = readPressure(e);
+  if (lastPressure !== null) pt0.p = lastPressure;   // key added only for a pen
+  frame().strokes.push(pt0);
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
@@ -449,7 +482,10 @@ pad.addEventListener('pointermove', e=>{
   if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
   else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
   curCount++; const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
-  frame().strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
+  const ptN = { x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing };
+  lastPressure = readPressure(e);
+  if (lastPressure !== null) ptN.p = lastPressure;
+  frame().strokes.push(ptN);
   render(); });
 function endStroke(){
   invalidateClearUndo();   // review #4: new work invalidates a pending clear-undo
@@ -460,10 +496,14 @@ function endStroke(){
   if(smoothingAlpha<1 && !erasing && smoothPt && lastRaw){
     const dsize=size, pcol=penColorFor(color);
     for(let k=0;k<6;k++){ smoothPt={x: smoothPt.x+(lastRaw.x-smoothPt.x)*0.5, y: smoothPt.y+(lastRaw.y-smoothPt.y)*0.5};
-      curCount++; frame().strokes.push({ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false }); }
+      curCount++;
+      // Synthesised on release: inherit the last sampled pressure, don't invent one.
+      const st={ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false };
+      if (lastPressure !== null) st.p = lastPressure;
+      frame().strokes.push(st); }
     render();
   }
-  drawing=false; smoothPt=null; lastRaw=null;
+  drawing=false; smoothPt=null; lastRaw=null; lastPressure=null;
   frame().strokeGroups.push(curCount); curCount=0;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 window.addEventListener('pointerup', endStroke);
@@ -1452,30 +1492,28 @@ async function exportVideo(){
 
 /* ---- menu open/close + item wiring + state sync ---- */
 const moreBtn=document.getElementById('moreBtn'), moreMenu=document.getElementById('moreMenu');
-// Canvas size picker. Lives in the ⋯ menu because it is a document property, not
-// a tool. Disabled during playback so the stage can't resize mid-animation.
-const canvasSeg=document.getElementById('canvasSeg');
-function positionCanvasSeg(){
-  if(!canvasSeg) return;
-  const a=canvasSeg.querySelector('button.on'), pill=canvasSeg.querySelector('.seg-slider');
-  if(!a||!pill||!a.offsetWidth) return;
-  pill.style.width=a.offsetWidth+'px';
-  pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
-  pill.style.opacity=1;
-}
+// Canvas size picker. v133: moved from the ⋯ menu into the settings drawer —
+// it is a document property, and the ⋯ menu now holds actions only. Four named
+// presets don't fit as pills at 360px, so this one is a dropdown; the phone
+// gives its own picker for a native <select>. Still disabled during playback so
+// the stage can't resize mid-animation.
+const canvasSelect=document.getElementById('canvasSelect');
 function syncCanvasSeg(){
-  if(!canvasSeg) return;
-  const id=currentSizeId();
-  [...canvasSeg.querySelectorAll('button')].forEach(b=>b.classList.toggle('on', b.dataset.size===id));
-  requestAnimationFrame(positionCanvasSeg);
+  if(!canvasSelect) return;
+  canvasSelect.value=currentSizeId();
+  canvasSelect.disabled=!!playing;
 }
-if(canvasSeg) canvasSeg.addEventListener('click', e=>{
-  const b=e.target.closest('button'); if(!b || playing) return;
-  const preset=FLIP_SIZES.find(x=>x.id===b.dataset.size); if(!preset) return;
+if(canvasSelect) canvasSelect.addEventListener('change', ()=>{
+  if(playing){ syncCanvasSeg(); return; }
+  const preset=FLIP_SIZES.find(x=>x.id===canvasSelect.value);
+  if(!preset){ syncCanvasSeg(); return; }
   if(applyCanvasSize(preset.w, preset.h)) chip('Canvas '+preset.label+' \u00b7 drawings keep their position');
   syncCanvasSeg();
 });
-if(moreBtn) moreBtn.addEventListener('click', ()=>requestAnimationFrame(syncCanvasSeg));
+// Resolved inline: `tuneBtn` is declared with `const` further down this file, so
+// referencing the binding here would hit the temporal dead zone and throw.
+const _tuneBtnForCanvas=document.getElementById('tuneBtn');
+if(_tuneBtnForCanvas) _tuneBtnForCanvas.addEventListener('click', ()=>requestAnimationFrame(syncCanvasSeg));
 // --- media drawer controls ---
 const photoUploadBtn=document.getElementById('photoUploadBtn'), photoBtnLabel=document.getElementById('photoBtnLabel'), photoToggle=document.getElementById('photoToggle'), photoRemove=document.getElementById('photoRemove');
 const photoDetail=document.getElementById('photoDetail'), photoNote=document.getElementById('photoNote');
@@ -2013,13 +2051,32 @@ if(onionTintBtn) onionTintBtn.addEventListener('click',()=>{
   render();
 });
 function setOnion(v){ onion=v; onionEl.classList.toggle('active',onion); onionEl.setAttribute('aria-checked',String(onion));
-  // In the drawer the depth/tint controls stay put and the row dims when onion is
-  // off — hiding them would make the panel jump height as you toggle.
+  // In the drawer the depth/tint controls stay put and the rows dim when onion is
+  // off — hiding them would make the panel jump height as you toggle (v129).
   if(onionGroup) onionGroup.hidden=false;
-  const row=document.getElementById('tuneOnionRow');
-  if(row) row.classList.toggle('muted', !onion);
+  // v133: the header button and the drawer switch are two views of one state.
+  // Both route here rather than each keeping their own, so they cannot drift.
+  const sw=document.getElementById('onionSwitch');
+  if(sw) sw.setAttribute('aria-checked',String(onion));
+  ['tuneOnionRow','tuneTintRow'].forEach(id=>{
+    const r=document.getElementById(id);
+    if(r) r.classList.toggle('muted', !onion);
+  });
+  // v134: dimming with pointer-events:none stops the mouse but NOT the keyboard —
+  // a control tabbed to before onion was switched off keeps focus and still
+  // responds to Enter/Space. Disable them properly so "off" means off on every
+  // input path, and so screen readers announce the state rather than reading an
+  // apparently live control.
+  ['onionDepthSeg','onionTintBtn'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const controls = el.tagName==='BUTTON' ? [el] : [...el.querySelectorAll('button')];
+    controls.forEach(c=>{ c.disabled=!onion; c.setAttribute('aria-disabled',String(!onion)); });
+  });
   if(onion) requestAnimationFrame(positionOnionSeg);
   render(); }
+const onionSwitchEl=document.getElementById('onionSwitch');
+if(onionSwitchEl) onionSwitchEl.addEventListener('click', ()=>setOnion(!onion));
 onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
@@ -2068,7 +2125,7 @@ document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
 /* ---- boot ---- */
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));
-if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
+if(onionGroup){ onionGroup.hidden=false; } setOnion(onion);
 syncCanvasSeg();
 sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image

@@ -37,9 +37,31 @@ class RateEvent(db.Model):
     biases towards over-rejection. **This is insert-then-count, not a database
     constraint** — there is no row lock or advisory lock enforcing "at most N
     active slots", and the exact behaviour under PostgreSQL depends on commit
-    order and isolation. Verified under SQLite and threads; NOT yet verified on
-    PostgreSQL across processes. Treat the guarantee as "biased safe", not proven.
-    (Review round 7, #5)
+    order and isolation. (Review round 7, #5)
+
+    THE CONTRACT IS "AT MOST N", NOT "EXACTLY N" (stated properly in v134).
+    reserve() is insert -> commit -> count -> delete-if-over. Two racers can each
+    commit before either counts, each then see a total above quota, and each
+    delete its own row — so a burst of 12 against a quota of 2 can legitimately
+    admit ONE. That is the algorithm being fail-closed, not a defect, and it is
+    the correct bias for abuse prevention: over-admitting is a security problem,
+    under-admitting costs one user one post.
+
+    Two harness suites asserted "exactly N" against this for several versions
+    (verify_review.py and, worse, verify_postgres.py, which also asserted "no
+    UNDER-admission"). Both were asserting a guarantee the code has never made
+    and both passed on luck; corrected in v134 to assert the real contract —
+    NEVER MORE than quota, at least one admitted, and no 5xx.
+
+    Making "exactly N" true needs serialized slot allocation — a transaction
+    -scoped advisory lock keyed on the bucket + key_hash, a counter row taken
+    with SELECT ... FOR UPDATE, or an atomic script in Redis. All of them
+    serialize every post for a given client to buy exactness nobody has asked
+    for. Left deliberately unbuilt; see ROADMAP.
+
+    Cross-process behaviour on PostgreSQL IS now exercised (verify_postgres.py,
+    4 gunicorn workers, since v123) — but what it demonstrates is the at-most-N
+    safety property, not exactness.
 
     Crash window (CLOSED in v122): the slot is still written before the post row,
     but as state='pending'. Pending rows only count while they are younger than
@@ -95,7 +117,7 @@ class SkriblPost(db.Model):
 # skribl_editor.html drifted nine versions (it still read v96 at v105) — nothing
 # forced anyone to touch it. Bump this one line per release; verify_version.py
 # fails if a hardcoded version reappears in a template.
-SKRIBL_VERSION = "v131"
+SKRIBL_VERSION = "v136"
 
 OG_DEFAULT_TITLE = "Skribl Pad"
 OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."
@@ -632,6 +654,15 @@ def _validate_points(points, label, budget):
         size = p.get("size")
         if size is not None and (not _finite(size) or size <= 0 or size > MAX_BRUSH):
             return f"'{label}' has an out-of-range brush size.", budget
+        # Optional stylus pressure (v132). Absent on every pre-v132 payload and
+        # on any mouse/finger stroke, so it is only checked when present. The
+        # client clamps too, but the same reasoning as `size` applies: a
+        # hand-built payload should be refused at the door rather than relied on
+        # to be sane downstream.
+        pressure = p.get("p")
+        if pressure is not None and (not _finite(pressure)
+                                     or pressure < 0 or pressure > 1):
+            return f"'{label}[{index}].p' must be between 0 and 1.", budget
     return None, budget
 
 

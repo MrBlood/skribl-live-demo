@@ -3,7 +3,7 @@
 Server-backed Flask app for **Skribl Pad** (record-and-replay drawing) and
 **Skribl Flip** (frame-by-frame animation), plus a public player for sharing.
 
-Current version: **v118** (`SKRIBL_VERSION` in `app.py`).
+Current version: **v136** (`SKRIBL_VERSION` in `app.py`).
 
 ## Verifying this archive
 
@@ -11,7 +11,7 @@ Current version: **v118** (`SKRIBL_VERSION` in `app.py`).
 sha256sum -c SHA256SUMS      # every file in the archive, run from this directory
 ```
 
-`SHA256SUMS` covers all 50 files and excludes itself. It does **not** cover the ZIP
+`SHA256SUMS` covers all 53 files and excludes itself. It does **not** cover the ZIP
 container — the archive's external SHA-256 travels with the delivery, because a
 file cannot contain its own digest.
 
@@ -32,9 +32,10 @@ belongs to — none of them is an archive hash.
 4. **`harness/README.md`** — the test suites and how to run them.
 
 A note on the docs: several roadmap items have turned out to be **stale** — already
-done, or describing the code inaccurately. Four were found that way (`og-card.png`, export
-parity, the "identical" `startWebAudioLoop` copies, and multi-take "polish" that
-assumes a data model the code does not have). **Check the code
+done, or describing the code inaccurately. Five were found that way (`og-card.png`, export
+parity, the "identical" `startWebAudioLoop` copies, multi-take "polish" that
+assumes a data model the code does not have, and this file's own stale version
+and file-count claims, which were wrong from v118 until v132). **Check the code
 before trusting a claim in these files.**
 
 ## Layout
@@ -81,7 +82,7 @@ Then open <http://127.0.0.1:5000/> or <http://127.0.0.1:5000/flip>.
 
 ## Running the tests
 
-646 assertions across 19 suites, all green as of v131 (totals machine-generated). verify_postgres.py needs a live PostgreSQL and skips cleanly without one — a skip contributes zero assertions and is not evidence of coverage. See REVIEW-RESPONSE.md for
+702 assertions across 20 suites, all green as of v136 (totals machine-generated). verify_postgres.py needs a live PostgreSQL and skips cleanly without one — a skip contributes zero assertions and is not evidence of coverage. See REVIEW-RESPONSE.md for
 the external review and what was fixed. They drive a real headless
 Chromium against a real server — several verify exported files at the byte level
 (GIF dimensions, frame counts, per-frame delays) rather than checking UI state.
@@ -96,12 +97,17 @@ python -m playwright install chromium
 so suites don't throttle each other. See `harness/README.md` for the full list and
 the known gotchas.
 
-Two things the sandbox **cannot** verify, so they need a real browser:
+Three things the sandbox **cannot** verify, so they need a real browser:
 
 - **MP4 export.** Headless Chromium has `VideoEncoder` but no avc1, so the H.264
   path can't run. The capability gate and the WebM fallback are covered.
 - **CSP in Safari and Firefox.** Verified in Chromium only. Deploy once with
   `SKRIBL_CSP=report-only` to check.
+- **Stylus pressure capture (v132).** There is no pen in the sandbox, so the
+  width maths, the clamping and the byte-identity rule are all asserted, but the
+  step that reads `Touch.force` / `PointerEvent.pressure` from real hardware is
+  not. This needs compatible physical input — an Apple Pencil or a drawing tablet
+  — not merely a non-headless browser. See `verify_pressure.py`.
 
 ## Configuration
 

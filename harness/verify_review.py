@@ -344,7 +344,13 @@ with sync_playwright() as p2:
           fa("/api/skribls/not-a-real-id") == "frame-ancestors 'self'", str(fa("/api/skribls/not-a-real-id")))
     br2.close()
 
-print("\nR2#2 — post quota is exact, and atomic under concurrency")
+print("\nR2#2 — post quota is exact SEQUENTIALLY, and bounded under concurrency")
+# The two halves prove different things and the old heading ("exact, and atomic
+# under concurrency") claimed the stronger one for both. Sequentially, requests
+# made one after another DO consume exactly the two available slots — that is
+# asserted just below. Concurrently, the limiter guarantees only that admission
+# never EXCEEDS the quota; it is insert -> commit -> count -> delete-if-over, with
+# no lock, so racers can all withdraw. Nothing is atomic here. (v136)
 with server(SKRIBL_RATE_MAX_POSTS=2, SKRIBL_RATE_MAX_ATTEMPTS=500) as base2:
     for _ in range(8):
         post_to(base2, {"title": 123})                       # invalid: must not spend a post
@@ -364,15 +370,32 @@ with server(SKRIBL_RATE_MAX_POSTS=2, SKRIBL_RATE_MAX_ATTEMPTS=500) as base3:
     threads = [threading.Thread(target=fire) for _ in range(12)]
     for t in threads: t.start()
     for t in threads: t.join()
-    # Round 3, #2: "at most 2" did not prove the claim we made. Assert the exact
-    # split AND the database row delta, since 201s are responses, not rows.
-    check("exactly two concurrent posts succeed", out.count(201) == 2, str(sorted(out)))
-    check("the other ten are rate-limited", out.count(429) == 10, str(sorted(out)))
-    check("no other status appeared", set(out) <= {201, 429}, str(sorted(set(out))))
+    # Round 3, #2 rejected a bare "at most 2" because it did not prove the claim
+    # being made then, and replaced it with an exact split plus the database row
+    # delta. The row delta was the valuable half and is KEPT below — 201s are
+    # responses, not rows, and tying them together is what catches a limiter that
+    # admits without persisting.
+    #
+    # The exact split was the wrong half, and v134 corrects it here as well as in
+    # the fresh-bucket burst further down. reserve() is insert -> commit -> count
+    # -> delete-if-over: concurrent racers can all withdraw, so admitting FEWER
+    # than the quota is legal. Asserting exactness made this pass on luck for ~10
+    # versions. What must hold is that it never admits MORE, that it does not
+    # block everything, and that responses and rows agree exactly.
+    won = out.count(201)
     with A.create_app().app_context():
         rows_after = A.SkriblPost.query.count()
-    check("exactly two rows were committed", rows_after - rows_before == 2,
-          f"delta {rows_after - rows_before}")
+    created = rows_after - rows_before
+    check("never more than the quota is admitted — the safety property",
+          won <= 2, str(sorted(out)))
+    check("the limiter does not block everything: at least one post wins",
+          won >= 1, str(sorted(out)))
+    check("every other request is refused, none lost",
+          out.count(429) == 12 - won, str(sorted(out)))
+    check("no other status appeared", set(out) <= {201, 429}, str(sorted(set(out))))
+    check("committed rows equal successful responses and stay within quota",
+          created == won and created <= 2,
+          f"{won} x 201 vs delta {created}")
 
 
 print("\nR3#1 — a failed commit must not strand the reservation")
@@ -735,9 +758,19 @@ with server(SKRIBL_RATE_BACKEND="db", SKRIBL_RATE_MAX_POSTS=2,
     ts = [threading.Thread(target=fire_fresh) for _ in range(12)]
     for t in ts: t.start()
     for t in ts: t.join()
-    check("exactly two of twelve concurrent posts win the fresh quota",
-          fresh_out.count(201) == 2, str(sorted(fresh_out)))
-    check("the other ten are refused", fresh_out.count(429) == 10, str(sorted(fresh_out)))
+    # v134: this asserted "exactly two" for several versions and passed on luck.
+    # The limiter is insert -> commit -> count -> delete-if-over, which guarantees
+    # AT MOST the quota and can legitimately admit fewer: two racers can each
+    # commit before either counts, both see a total over quota, and both delete
+    # themselves. One winner out of twelve is the algorithm being fail-closed.
+    # The safety property is what matters and it is asserted hard.
+    won = fresh_out.count(201)
+    check("NEVER more than the quota is admitted — the safety property",
+          won <= 2, f"{won} x 201 in {sorted(fresh_out)}")
+    check("the limiter does not block everything: at least one post wins",
+          won >= 1, str(sorted(fresh_out)))
+    check("every other request is refused, none lost",
+          fresh_out.count(429) == 12 - won, str(sorted(fresh_out)))
     check("no other status appeared", set(fresh_out) <= {201, 429}, str(sorted(set(fresh_out))))
 with A.create_app().app_context():
     rows = A.RateEvent.query.filter(A.RateEvent.bucket == "posts").count()

@@ -1,8 +1,12 @@
 # Harness
 
-615 assertions across 18 suites. All green as of v122 — including the first run
-against the complete repo, where nothing SKIPs because `mp4-muxer.min.js` is
-present. From the repo root: `./harness/run_harness.sh verify_gifenc.py ...`
+702 assertions across 20 suites. All green as of v136, with nothing skipped —
+`mp4-muxer.min.js` is present and PostgreSQL was live for `verify_postgres.py`.
+From the repo root: `./harness/run_harness.sh verify_gifenc.py ...`
+
+Per-suite counts below are the v136 run. They drift whenever assertions are
+added, so `harness/LAST-RUN.txt` and the machine-generated aggregate are the
+authority — this list is a map, not a total.
 
 This sandbox is not browser-gated: Flask runs, `flask_sqlalchemy` installs from
 PyPI, and Playwright's Chromium launches.
@@ -26,13 +30,25 @@ Then, from `harness/`:
     python3 verify_media.py      # 24  server-side media validation (no browser) (v105)
     python3 verify_version.py    # 20  UI version label single-sourced       (v105)
     python3 verify_ux.py         # 24  export format labels + undoable clear (v106)
-    python3 verify_pages.py      # 28  onion depth/tint, page ops, clear redo (v107)
+    python3 verify_pages.py      # 54  page ops, clear redo, settings drawer (v107)
     python3 verify_exopts.py     # 23  export size + page range, byte-verified (v108)
     python3 verify_hold.py       # 26  drag-reorder + per-page hold + compat  (v109)
     python3 verify_canvas.py     # 21  canvas sizes + round-trip + help text  (v110)
-    python3 verify_review.py     # 223 external review regressions      (v111-v117)
+    python3 verify_review.py     # 279 external review regressions      (v111-v122)
+    python3 verify_postgres.py   # 14  4-worker gunicorn vs live PostgreSQL   (v123)
+    python3 verify_pressure.py   # 38  stylus pressure: width, clamp, compat  (v132)
 
 ## Gotchas
+
+- **Don't wait a fixed number of milliseconds for a CSS transition.** The Flip
+  settings drawer transitions `grid-template-rows` over 260ms, and
+  `verify_pages.py` used to measure the collapsed height after a flat 300ms
+  wait. 40ms of margin is not enough on a loaded machine: the assertion reported
+  a sub-pixel sliver (0.015625px, 0.375px, 0.765625px) and failed roughly three
+  runs in four — **on v131 as well as v132**, which means v131's recorded 38/38
+  was a lucky run rather than a stable one. It now waits for `transitionend`.
+  Five consecutive green runs before and after the pressure work. If you add an
+  animated element, wait for the event, not the clock.
 
 - **The rate limiter will bite you.** `POST /api/skribls` allows 20/hour/IP, and
   the posting suites together sit just under it — so a few new posting assertions
@@ -72,5 +88,40 @@ Then, from `harness/`:
 - **Headless Chromium here has `VideoEncoder` but not avc1**, so no MP4 can
   actually be encoded. `verify_muxer.py` tests the capability gate and the WebM
   fallback, not the encoder. A real MP4 needs a real Chrome.
-- Drawing before adding music triggers `setLoopToDrawingLength()`, so the loop
+- **PostgreSQL installs here — don't assume otherwise.** `verify_postgres.py`
+  skips without a live server, and a skip contributes zero assertions. It is
+  three commands: `apt-get update && apt-get install -y postgresql`, then
+  `initdb`/`pg_ctl start` as the `postgres` user, then create a `skribl` role
+  and database (the default DSN is
+  `postgresql://skribl:skribl@127.0.0.1:5432/skribl`, overridable with
+  `SKRIBL_PG_DSN`). You also need `pip install "psycopg[binary]" gunicorn`. The
+  apt index in a fresh sandbox is usually stale, so `apt-get update` first or
+  every fetch 404s.
+
+- **No stylus exists in the sandbox.** `verify_pressure.py` asserts the width
+  maths, the clamping and the byte-identity rule by calling `pointWidth()`
+  against the real loaded modules, and it draws a mouse stroke through the true
+  event path to prove no `p` key is recorded. What it cannot reach is the line
+  that reads `Touch.force` or `PointerEvent.pressure` from hardware. That needs
+  a real pen on a real device.
+
+- **Drawing before adding music triggers `setLoopToDrawingLength()`**, so the loop
   will be the drawing's length, not 20s. That's intended; don't read it as a bug.
+
+- **The quota race was never a flake — RETRACTED in v134.** v133 recorded the
+  12-thread burst occasionally admitting 1 instead of 2 as "load-sensitive rather
+  than broken". That was wrong, and an external review caught it. `reserve()` is
+  insert -> commit -> count -> delete-if-over, so two racers can each commit
+  before either counts, both see a total over quota, and both withdraw. **One
+  winner is the algorithm working**, and load only changes how often you see it.
+  Two suites — `verify_review.py` and `verify_postgres.py`, the latter also
+  asserting "no UNDER-admission" — had been asserting a guarantee the code never
+  made, and passing on luck. A test barrier would have hidden this rather than
+  fixed it.
+
+  **`verify_review.py` has THREE concurrency bursts, and v134 fixed only one.**
+  A second reviewer caught that the base3 burst still asserted an exact split.
+  Fixed in v135. If you touch this area, the bursts are at roughly lines 364
+  (base3, SQLite threads), 725 (exhausted bucket, must admit zero) and 752
+  (fresh bucket). Grep for `threading.Thread` — do not assume the one you found
+  is the only one.
