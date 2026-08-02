@@ -326,6 +326,67 @@ with sync_playwright() as p:
     check("and Redo re-offers Undo, so it toggles either way", again == "Undo", repr(again))
     check("no Pad page errors", not pad_errs, "; ".join(pad_errs[:2]))
 
+    # --- v137: the thumbnail strip must follow the current page ---------------
+    # This bug survived 20 suites because every suite builds SHORT documents, and
+    # a strip that does not overflow cannot be scrolled to the wrong place. It
+    # only appears once there are more thumbnails than fit. Build 40 and check.
+    print("\nLONG DOCUMENTS (v137) — the strip follows the page you are on")
+    flip.evaluate("""() => { while (frames.length < 40) addFrame(false); go(0); }""")
+    flip.wait_for_timeout(400)
+    overflows = flip.evaluate("() => strip.scrollWidth > strip.clientWidth + 8")
+    check("40 pages actually overflow the strip, so this test can fail",
+          overflows, "strip does not overflow — test is vacuous")
+
+    # Navigation scrolls instantly (see scrollActiveIntoView), so there is nothing
+    # to wait out — but addFrame animates, so allow a short settle after any path
+    # that might. Stability poll, never a flat guess.
+    def settle_strip():
+        flip.wait_for_function("""() => { const x = Math.round(strip.scrollLeft);
+            const same = window.__lastX === x; window.__lastX = x; return same; }""",
+            timeout=4000)
+
+    def active_visible():
+        return flip.evaluate("""() => { const el = strip.children[idx];
+            if (!el) return false;
+            const s = strip.getBoundingClientRect(), e = el.getBoundingClientRect();
+            return e.left >= s.left - 1 && e.right <= s.right + 1; }""")
+
+    flip.evaluate("() => go(frames.length - 1)")
+    settle_strip()
+    check("jumping to the last page brings its thumbnail into view",
+          active_visible(), f"idx={flip.evaluate('() => idx')}")
+
+    flip.evaluate("() => go(0)")
+    settle_strip()
+    check("and jumping back to the first does too", active_visible())
+
+    # Arrow-key navigation used to walk the selection off-screen one thumbnail at
+    # a time, because go() never scrolled.
+    flip.evaluate("() => go(0)")
+    flip.wait_for_timeout(300)
+    for _ in range(12):
+        flip.keyboard.press("ArrowRight")
+    settle_strip()
+    check("walking right with the arrow keys keeps the active page on screen",
+          active_visible(), str(flip.evaluate("""() => { const el=strip.children[idx];
+              const s=strip.getBoundingClientRect(), e=el.getBoundingClientRect();
+              return {idx, n:frames.length, sl:Math.round(strip.scrollLeft),
+                      eL:Math.round(e.left), eR:Math.round(e.right),
+                      sL:Math.round(s.left), sR:Math.round(s.right),
+                      active:document.activeElement && document.activeElement.id}; }""")))
+
+    # The original symptom: restore puts the canvas on the last page while the
+    # strip sits at the first. Re-running the boot scroll is the closest the
+    # harness can get to a reload without losing the in-page state.
+    flip.evaluate("() => { go(frames.length - 1); strip.scrollLeft = 0; }")
+    flip.wait_for_timeout(300)
+    check("a strip stranded at page 1 while the canvas is on the last page is wrong",
+          not active_visible(), "precondition: the bug state must be reachable")
+    flip.evaluate("() => scrollActiveIntoView(true)")
+    settle_strip()
+    check("and the boot-time scroll recovers it",
+          active_visible(), f"idx={flip.evaluate('() => idx')}")
+
     br.close()
 
 ok = sum(1 for o, _ in results if o)

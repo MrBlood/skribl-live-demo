@@ -853,12 +853,34 @@ document.addEventListener('pointercancel', ()=>{
   _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
 });
 function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice(), hold: frameHold(f) }; }
+// v137: keep the thumbnail strip on the page you are actually on.
+//
+// Only addFrame() used to do this, so every OTHER way of moving landed the strip
+// somewhere else. On a 62-page flipbook that means restoring a document put the
+// canvas on page 62 while the strip sat at page 1, and arrow-key navigation
+// walked the selection off-screen a thumbnail at a time. Both were invisible on
+// the short documents the harness builds, which is why 20 suites never saw it.
+//
+// Navigation scrolls INSTANTLY, and that is not laziness. go() calls buildStrip(),
+// which replaces every thumbnail node, so a smooth scroll is animating an element
+// that is destroyed on the next keypress — hold ArrowRight and the strip crawls a
+// few pixels and gives up (measured: scrollLeft 40 after twelve presses). Only
+// addFrame() animates, because it is one deliberate action against a strip that
+// is not about to be rebuilt again.
+function scrollActiveIntoView(instant){
+  if(!strip) return;
+  const el=strip.children[idx];
+  if(!el) return;
+  try{ el.scrollIntoView({behavior: instant?'auto':'smooth', inline:'center', block:'nearest'}); }
+  catch(_){ el.scrollIntoView(); }
+}
+
 function addFrame(copy){ disarmAll(); invalidateClearUndo(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
-  const el=strip.children[idx]; if(el) el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
+  scrollActiveIntoView(); }
 function delFrame(i){ invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
-  buildStrip(); render(); scheduleSave(); }
-function go(i){ idx=i; redoStack.length=0; buildStrip(); render(); }
+  buildStrip(); render(); scheduleSave(); scrollActiveIntoView(true); }
+function go(i){ idx=i; redoStack.length=0; buildStrip(); render(); scrollActiveIntoView(true); }
 
 /* ---- flip playback ---- */
 const playBtn=document.getElementById('play');
@@ -2128,6 +2150,9 @@ onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', 
 if(onionGroup){ onionGroup.hidden=false; } setOnion(onion);
 syncCanvasSeg();
 sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
+// The strip has just been built, so wait a frame for it to have a layout before
+// asking it to scroll — otherwise the restored page is at offset 0 like the rest.
+requestAnimationFrame(()=>scrollActiveIntoView(true));
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();
 if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') setCrossfadeUI(); }

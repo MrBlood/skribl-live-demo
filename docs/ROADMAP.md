@@ -81,6 +81,10 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
       exporting a 19-frame Pad GIF since v104. Nothing was built for this.
 
 ## Flip
+- [x] **DONE (v137) — the thumbnail strip follows the current page.** Restore and
+      arrow-key navigation both used to leave it stranded. Only long documents
+      show this; the harness now builds 40 pages and checks the strip overflows
+      before asserting on it.
 - [x] **DONE (v133) — settings drawer reorganised.** Speed, Canvas, Onion skin,
       Pages behind and Tint are one grouped list; the ⋯ menu holds actions only.
       Canvas moved out of that menu and became a dropdown. Onion keeps its header

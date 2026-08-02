@@ -3,7 +3,7 @@
 Server-backed Flask app for **Skribl Pad** (record-and-replay drawing) and
 **Skribl Flip** (frame-by-frame animation), plus a public player for sharing.
 
-Current version: **v136** (`SKRIBL_VERSION` in `app.py`).
+Current version: **v137** (`SKRIBL_VERSION` in `app.py`).
 
 ## Verifying this archive
 
@@ -82,7 +82,7 @@ Then open <http://127.0.0.1:5000/> or <http://127.0.0.1:5000/flip>.
 
 ## Running the tests
 
-702 assertions across 20 suites, all green as of v136 (totals machine-generated). verify_postgres.py needs a live PostgreSQL and skips cleanly without one — a skip contributes zero assertions and is not evidence of coverage. See REVIEW-RESPONSE.md for
+708 assertions across 20 suites, all green as of v137 (totals machine-generated). verify_postgres.py needs a live PostgreSQL and skips cleanly without one — a skip contributes zero assertions and is not evidence of coverage. See REVIEW-RESPONSE.md for
 the external review and what was fixed. They drive a real headless
 Chromium against a real server — several verify exported files at the byte level
 (GIF dimensions, frame counts, per-frame delays) rather than checking UI state.

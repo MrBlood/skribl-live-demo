@@ -1,11 +1,11 @@
-# Skribl — Handoff (v136)
+# Skribl — Handoff (v137)
 
-> **v111–v136 are summarised below and documented in full in `REVIEW-RESPONSE.md`.**
+> **v111–v137 are summarised below and documented in full in `REVIEW-RESPONSE.md`.**
 > That file is the primary record for everything after v110: it was written round
 > by round against an external code review, so it carries the reasoning, the
 > measurements and the things that turned out to be wrong. Read it alongside this.
 
-## v111–v136 at a glance
+## v111–v137 at a glance
 
 **Security and correctness (v111–v122), driven by an external review.** Ten rounds.
 Payload validation (coordinates required, stroke groups must account for their
@@ -44,6 +44,10 @@ v129–v131 were judged entirely on measurement — gap distances, clipping, fit
 four widths. That caught every problem reported, but nobody has visually confirmed
 the final state.
 
+**Thumbnail strip follows the page (v137).** It never did — restore put the canvas
+on page 62 with the strip on page 1, and arrow keys walked off-screen. Invisible to
+the harness because every suite builds short documents. Found by looking at a real one.
+
 **Test heading corrected (v136).** "post quota is exact, and atomic under
 concurrency" described neither half of its own section after v135. A heading is a
 claim and goes stale like any other.
@@ -72,6 +76,52 @@ separate capture paths because they are bound to different event models, and the
 consequence is that the Pad covers Apple Pencil but not desktop tablets. Also
 fixed a `verify_pages.py` flake that predates this work: v131 fails it three runs
 in four, so that archive's recorded 38/38 was luck.
+
+## v137 — the bug that needed a long document, and a user to look at it
+
+### What was wrong
+The thumbnail strip never followed the current page. Only `addFrame()` scrolled
+it into view, so every other way of moving left the strip wherever it happened to
+be:
+
+- **Restoring a document** put the canvas on the last page while the strip sat at
+  page 1. On a 62-page flipbook that means opening your own work and being unable
+  to see where you are.
+- **Arrow-key navigation** walked the selection off-screen one thumbnail at a
+  time, because `go()` rebuilt the strip and never scrolled it.
+
+`scrollActiveIntoView()` is now the single place that does this, called from
+`go()`, `addFrame()`, `delFrame()` and boot.
+
+### Why 20 suites and ~700 assertions missed it
+**Every suite builds short documents.** A strip that does not overflow cannot be
+scrolled to the wrong place, so the bug was structurally invisible to the harness
+— not under-tested, but untestable at the sizes being tested. It took someone
+opening a real 62-page animation and noticing the strip was on page 1.
+
+The v137 block builds 40 pages and **asserts the strip overflows before asserting
+anything about it**. Without that guard the test would quietly become vacuous the
+moment thumbnails got smaller or the viewport got wider, which is the same failure
+as a skipped suite reporting green.
+
+### Instant, not smooth, and that is deliberate
+`go()` calls `buildStrip()`, which replaces every thumbnail node. A smooth
+`scrollIntoView` is therefore animating an element that is destroyed on the next
+keypress. Measured: twelve rapid ArrowRight presses left `scrollLeft` at **40px**
+— the strip crawls a few pixels and gives up. Navigation scrolls instantly. Only
+`addFrame()` animates, because it is one deliberate action with no rebuild coming.
+
+### Two wrong turns in the test, both worth recording
+The assertion first waited a flat 700ms, which failed; 800ms happened to pass.
+That is precisely the flat-timeout flake v133 was fixed for, so it was replaced
+with a `scrollend` wait — which *also* failed, consistently, and the diagnostics
+are what explained why: `scrollLeft` was 40, meaning the scroll had never
+happened, not that it had not finished. **The failing test was reporting a real
+bug in the implementation, and I nearly tuned the timeout until it went away.**
+Making navigation instant fixed both the bug and the test.
+
+The general lesson, again: when a test fails, get it to print the measurement
+before touching the wait.
 
 ## v136 — a test heading that claimed more than its test proved
 

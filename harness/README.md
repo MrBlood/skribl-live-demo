@@ -1,10 +1,10 @@
 # Harness
 
-702 assertions across 20 suites. All green as of v136, with nothing skipped —
+708 assertions across 20 suites. All green as of v137, with nothing skipped —
 `mp4-muxer.min.js` is present and PostgreSQL was live for `verify_postgres.py`.
 From the repo root: `./harness/run_harness.sh verify_gifenc.py ...`
 
-Per-suite counts below are the v136 run. They drift whenever assertions are
+Per-suite counts below are the v137 run. They drift whenever assertions are
 added, so `harness/LAST-RUN.txt` and the machine-generated aggregate are the
 authority — this list is a map, not a total.
 
@@ -30,7 +30,7 @@ Then, from `harness/`:
     python3 verify_media.py      # 24  server-side media validation (no browser) (v105)
     python3 verify_version.py    # 20  UI version label single-sourced       (v105)
     python3 verify_ux.py         # 24  export format labels + undoable clear (v106)
-    python3 verify_pages.py      # 54  page ops, clear redo, settings drawer (v107)
+    python3 verify_pages.py      # 60  page ops, settings drawer, long strips (v107)
     python3 verify_exopts.py     # 23  export size + page range, byte-verified (v108)
     python3 verify_hold.py       # 26  drag-reorder + per-page hold + compat  (v109)
     python3 verify_canvas.py     # 21  canvas sizes + round-trip + help text  (v110)
@@ -39,6 +39,22 @@ Then, from `harness/`:
     python3 verify_pressure.py   # 38  stylus pressure: width, clamp, compat  (v132)
 
 ## Gotchas
+
+- **Every suite builds SHORT documents, and that hides a whole class of bug.** The
+  thumbnail strip failed to follow the current page for its entire existence: on
+  a 62-page flipbook, restoring put the canvas on page 62 while the strip sat at
+  page 1, and arrow-key navigation walked the selection off-screen. A strip that
+  does not overflow cannot be scrolled to the wrong place, so 20 suites and ~700
+  assertions never saw it. Found by a user looking at a real document. The v137
+  block in `verify_pages.py` builds 40 pages and asserts the strip overflows
+  BEFORE asserting anything about it — an overflow check is what stops that test
+  from silently becoming vacuous again.
+
+- **Don't smooth-scroll something you are about to rebuild.** `go()` calls
+  `buildStrip()`, which replaces every thumbnail node, so a smooth `scrollIntoView`
+  animates an element that is destroyed on the next keypress. Twelve rapid presses
+  left `scrollLeft` at 40px. Navigation scrolls instantly; only `addFrame()`
+  animates, because nothing rebuilds under it.
 
 - **Don't wait a fixed number of milliseconds for a CSS transition.** The Flip
   settings drawer transitions `grid-template-rows` over 260ms, and
