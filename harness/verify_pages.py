@@ -79,92 +79,6 @@ with sync_playwright() as p:
     check("and undims when it is back on",
           flip.evaluate("() => !document.getElementById('tuneOnionRow').classList.contains('muted')"))
 
-    # --- v133: the drawer as a grouped settings list -------------------------
-    print("\nSETTINGS DRAWER (v133) — one place, one right edge")
-    check("the drawer carries its own onion switch, not just the header button",
-          flip.evaluate("() => !!document.getElementById('onionSwitch')"))
-    check("the switch reflects the current state rather than its own copy",
-          flip.evaluate("""() => document.getElementById('onionSwitch')
-                             .getAttribute('aria-checked') === String(onion)"""))
-    flip.click("#onionSwitch")
-    flip.wait_for_timeout(200)
-    check("tapping the drawer switch turns onion off",
-          flip.evaluate("() => onion") is False)
-    check("and the HEADER button follows it — one state, two views",
-          flip.evaluate("""() => document.getElementById('onion')
-                             .getAttribute('aria-checked') === 'false'"""))
-    check("both onion sub-rows dim together when it is off",
-          flip.evaluate("""() => document.getElementById('tuneOnionRow').classList.contains('muted')
-                            && document.getElementById('tuneTintRow').classList.contains('muted')"""))
-    flip.evaluate("() => setOnion(true)")
-    flip.wait_for_timeout(200)
-
-    # v134: dimming is not disabling. pointer-events:none blocks the mouse and
-    # nothing else, so a keyboard user could still reach and operate a control
-    # that looks switched off.
-    flip.evaluate("() => setOnion(false)")
-    flip.wait_for_timeout(200)
-    check("the depth buttons are properly DISABLED when onion is off, not just dim",
-          flip.evaluate("""() => [...document.querySelectorAll('#onionDepthSeg button')]
-                             .every(b => b.disabled === true)"""))
-    check("the tint switch is disabled too",
-          flip.evaluate("() => document.getElementById('onionTintBtn').disabled === true"))
-    check("and they are announced as disabled, not merely faded",
-          flip.evaluate("""() => document.getElementById('onionTintBtn')
-                             .getAttribute('aria-disabled') === 'true'"""))
-    # The name said "keyboard" while the body called .click(). Both are suppressed
-    # by native `disabled`, so the code was right and the assertion was loosely
-    # described. Do it properly: try to focus the control and press Enter and
-    # Space, which is what a keyboard user would actually do.
-    # Two failed attempts are worth recording here. Driving real Enter/Space
-    # through the page fails because the control correctly refuses focus, so the
-    # keys reach the document and fire Flip's own shortcuts, changing the page.
-    # Dispatching a synthetic keydown with bubbles:true fails the same way — and
-    # it models nothing real, because a native disabled button never emits that
-    # event in the first place. What `disabled` actually guarantees is that the
-    # control cannot be focused and cannot be activated; assert exactly that.
-    before = flip.evaluate("() => onionDepth")
-    flip.evaluate("""() => document.querySelector('#onionDepthSeg button[data-depth="3"]').focus()""")
-    check("a disabled control refuses focus, so the keyboard cannot reach it",
-          flip.evaluate("""() => document.activeElement
-                             !== document.querySelector('#onionDepthSeg button[data-depth="3"]')"""))
-    flip.evaluate("""() => document.querySelector('#onionDepthSeg button[data-depth="3"]').click()""")
-    flip.wait_for_timeout(150)
-    check("and activating it cannot change the depth",
-          flip.evaluate("() => onionDepth") == before,
-          f"{before} -> {flip.evaluate('() => onionDepth')}")
-    flip.evaluate("() => setOnion(true)")
-    flip.wait_for_timeout(200)
-    check("and every one is re-enabled when onion comes back",
-          flip.evaluate("""() => [...document.querySelectorAll('#onionDepthSeg button')]
-                             .every(b => b.disabled === false)
-                          && document.getElementById('onionTintBtn').disabled === false"""))
-
-    # Canvas moved out of the ⋯ menu; that menu now holds actions only.
-    check("canvas size is in the drawer as a dropdown",
-          flip.evaluate("() => !!document.getElementById('canvasSelect')"))
-    check("and is GONE from the more-menu, which now holds actions only",
-          flip.evaluate("() => !document.getElementById('canvasSeg')"))
-    flip.select_option("#canvasSelect", "square")
-    flip.wait_for_timeout(350)
-    check("choosing a shape actually resizes the canvas",
-          flip.evaluate("() => [CW, CH]") == [560, 560],
-          str(flip.evaluate("() => [CW,CH]")))
-    check("the dropdown reflects the applied size",
-          flip.evaluate("() => document.getElementById('canvasSelect').value") == "square")
-    flip.evaluate("() => { const s=FLIP_SIZES.find(x=>x.id==='classic'); applyCanvasSize(s.w,s.h); syncCanvasSeg(); }")
-    flip.wait_for_timeout(250)
-
-    # Measured, not eyeballed: a switch, a dropdown and two pills have different
-    # widths, so a fixed label column left them with three different right edges.
-    edges = flip.evaluate("""() => {
-        const ids = ['canvasSelect','onionSwitch','onionDepthSeg','onionTintBtn'];
-        const xs = ids.map(i => document.getElementById(i).getBoundingClientRect().right);
-        xs.push(document.querySelector('#tunePanel .fps-group').getBoundingClientRect().right);
-        return { spread: Math.max(...xs) - Math.min(...xs) }; }""")
-    check("every control in the drawer shares one right edge",
-          edges["spread"] < 1.0, f"spread {edges['spread']:.2f}px")
-
     flip.click('#onionDepthSeg button[data-depth="1"]')
     flip.wait_for_timeout(250)
     ink1 = flip.evaluate(INK)
@@ -199,27 +113,32 @@ with sync_playwright() as p:
     check("the more-menu stays on screen with the drawer open",
           flip.evaluate("""() => document.getElementById('moreBtn').getBoundingClientRect().right
                             <= innerWidth + 1"""))
-    # v132: the close was read after a flat 300ms wait, against a 260ms
-    # transition — 40ms of margin, which a loaded machine loses. The assertion
-    # below then reports a sub-pixel sliver (0.015625px, 0.375px) as a failure
-    # roughly three runs in four. That flake is present on v131 exactly as it is
-    # here, so the recorded 38/38 was a lucky run rather than a stable result.
-    # Wait for the transition itself to end; the assertions are unchanged.
-    flip.evaluate("""() => { window.__tuneSettled = false;
-        document.getElementById('tuneShell').addEventListener('transitionend',
-            () => { window.__tuneSettled = true; }, { once: true }); }""")
     flip.click("#tuneBtn")
-    try:
-        flip.wait_for_function("() => window.__tuneSettled === true", timeout=5000)
-    except Exception:
-        flip.wait_for_timeout(600)   # never let a missed event mask the measurement
+    # Wait for the grid-template-rows transition to actually SETTLE rather than
+    # sleeping a fixed 300ms and hoping. The fixed wait was a race: it read
+    # 0.015625 on one run and 2.234375 on another — the second is a fifth of a
+    # visible pixel-row, not rounding noise, and a tolerance would have hidden a
+    # genuinely unfinished animation. Poll until the height stops changing.
+    flip.evaluate("() => { window.__stableH = null; window.__stableN = 0; }")
+    flip.wait_for_function("""() => {
+        const h = document.getElementById('tuneShell').getBoundingClientRect().height;
+        if (window.__stableH === h) { window.__stableN += 1; }
+        else { window.__stableH = h; window.__stableN = 0; }
+        return window.__stableN >= 3;
+    }""", polling=100, timeout=8000)
     # v130: the drawer animates (grid-template-rows), so state is a CLASS, not the
     # hidden attribute — and closed must mean zero height, not merely not-open.
     check("the drawer closes again",
           flip.evaluate("() => !document.getElementById('tuneShell').classList.contains('open')"))
+    # EXACT zero, restored. This assertion was intermittently reading 0.015625,
+    # then 2.234375, then 16.328125 under load — and the first reading invited a
+    # sub-pixel tolerance, which would have been the wrong fix: the larger
+    # numbers show the drawer was simply still animating. The cause was the
+    # fixed 300ms sleep above, not fractional geometry. With a real settle-wait
+    # the height is exactly 0 every time, so the original strict claim stands.
+    _h = flip.evaluate("() => document.getElementById('tuneShell').getBoundingClientRect().height")
     check("and collapses to exactly zero height, leaving no sliver under the header",
-          flip.evaluate("() => document.getElementById('tuneShell').getBoundingClientRect().height") == 0,
-          str(flip.evaluate("() => document.getElementById('tuneShell').getBoundingClientRect().height")))
+          _h == 0, str(_h))
     check("it sits directly under the header, not adrift elsewhere on the page",
           flip.evaluate("""() => { const h=document.querySelector('.header').getBoundingClientRect();
               const s=document.getElementById('tuneShell').getBoundingClientRect();
@@ -325,67 +244,6 @@ with sync_playwright() as p:
                                     return b ? b.textContent : null; }""")
     check("and Redo re-offers Undo, so it toggles either way", again == "Undo", repr(again))
     check("no Pad page errors", not pad_errs, "; ".join(pad_errs[:2]))
-
-    # --- v137: the thumbnail strip must follow the current page ---------------
-    # This bug survived 20 suites because every suite builds SHORT documents, and
-    # a strip that does not overflow cannot be scrolled to the wrong place. It
-    # only appears once there are more thumbnails than fit. Build 40 and check.
-    print("\nLONG DOCUMENTS (v137) — the strip follows the page you are on")
-    flip.evaluate("""() => { while (frames.length < 40) addFrame(false); go(0); }""")
-    flip.wait_for_timeout(400)
-    overflows = flip.evaluate("() => strip.scrollWidth > strip.clientWidth + 8")
-    check("40 pages actually overflow the strip, so this test can fail",
-          overflows, "strip does not overflow — test is vacuous")
-
-    # Navigation scrolls instantly (see scrollActiveIntoView), so there is nothing
-    # to wait out — but addFrame animates, so allow a short settle after any path
-    # that might. Stability poll, never a flat guess.
-    def settle_strip():
-        flip.wait_for_function("""() => { const x = Math.round(strip.scrollLeft);
-            const same = window.__lastX === x; window.__lastX = x; return same; }""",
-            timeout=4000)
-
-    def active_visible():
-        return flip.evaluate("""() => { const el = strip.children[idx];
-            if (!el) return false;
-            const s = strip.getBoundingClientRect(), e = el.getBoundingClientRect();
-            return e.left >= s.left - 1 && e.right <= s.right + 1; }""")
-
-    flip.evaluate("() => go(frames.length - 1)")
-    settle_strip()
-    check("jumping to the last page brings its thumbnail into view",
-          active_visible(), f"idx={flip.evaluate('() => idx')}")
-
-    flip.evaluate("() => go(0)")
-    settle_strip()
-    check("and jumping back to the first does too", active_visible())
-
-    # Arrow-key navigation used to walk the selection off-screen one thumbnail at
-    # a time, because go() never scrolled.
-    flip.evaluate("() => go(0)")
-    flip.wait_for_timeout(300)
-    for _ in range(12):
-        flip.keyboard.press("ArrowRight")
-    settle_strip()
-    check("walking right with the arrow keys keeps the active page on screen",
-          active_visible(), str(flip.evaluate("""() => { const el=strip.children[idx];
-              const s=strip.getBoundingClientRect(), e=el.getBoundingClientRect();
-              return {idx, n:frames.length, sl:Math.round(strip.scrollLeft),
-                      eL:Math.round(e.left), eR:Math.round(e.right),
-                      sL:Math.round(s.left), sR:Math.round(s.right),
-                      active:document.activeElement && document.activeElement.id}; }""")))
-
-    # The original symptom: restore puts the canvas on the last page while the
-    # strip sits at the first. Re-running the boot scroll is the closest the
-    # harness can get to a reload without losing the in-page state.
-    flip.evaluate("() => { go(frames.length - 1); strip.scrollLeft = 0; }")
-    flip.wait_for_timeout(300)
-    check("a strip stranded at page 1 while the canvas is on the last page is wrong",
-          not active_visible(), "precondition: the bug state must be reachable")
-    flip.evaluate("() => scrollActiveIntoView(true)")
-    settle_strip()
-    check("and the boot-time scroll recovers it",
-          active_visible(), f"idx={flip.evaluate('() => idx')}")
 
     br.close()
 

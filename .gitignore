@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Skribl ---------------------------------------------------------------
+# SHA256SUMS is a DELIVERY artifact for zip archives, generated at release time.
+# git already content-hashes every file, so committing it is redundant, it churns
+# on every single commit, and it conflicts on every merge — and a stale manifest
+# asserting the wrong digests is worse than no manifest.
+SHA256SUMS
+
+# Harness scratch: gunicorn's log for verify_postgres.py.
+harness/.pg_gunicorn.log

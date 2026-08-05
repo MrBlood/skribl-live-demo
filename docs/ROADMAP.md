@@ -3,18 +3,6 @@
 Status legend: [ ] todo  ·  [~] partial  ·  [x] done
 
 ## Shared / platform
-- [ ] **Exact-quota rate limiting — OPEN, and a deliberate non-decision (v134).**
-      The limiter guarantees AT MOST `SKRIBL_RATE_MAX_POSTS`, not exactly it:
-      insert -> commit -> count -> delete-if-over means concurrent racers can all
-      withdraw and under-admit. Making it exact needs serialized slot allocation
-      (advisory lock on bucket+key_hash, a counter row with SELECT ... FOR UPDATE,
-      serializable + retry, or Redis with a Lua script). All serialize a client's
-      posting to buy exactness nothing requires. **Only build this if the product
-      decides the number must mean what it says**; the current fail-closed bias is
-      correct for abuse prevention. Two suites asserted exactness for ~10 versions
-      and passed on luck — corrected in v134, don't reintroduce that assertion.
-- [ ] **Edge rate limiting.** The source comments already note this is the better
-      answer for raw flood protection than anything in the app process.
 - [x] One shared data model (frame-format); player handles replay + flip.
 - [x] Shared "How it works" partial (`_skribl_help.html`).
 - [x] App-wide scrollbar + button styling in `styles.css`.
@@ -45,22 +33,6 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
       working. `SKRIBL_CSP=report-only|off` to stage or disable.
 
 ## Skribl Pad
-- [x] **DONE (v132) — stylus pressure.** Optional per-point `p` (0..1), read only
-      by `pointWidth()`, written only by a pen, byte-identical payloads for mouse
-      and finger. Width multiplier is centred so neutral pressure is a no-op.
-      Covered by `verify_pressure.py` (38 assertions).
-- [ ] **Migrate the Pad to pointer events — NEW, opened by v132.** The Pad is
-      bound to mouse/touch, so it reads pressure from `Touch.force` and gets
-      Apple Pencil on iOS but **not** desktop drawing tablets, which report
-      through `PointerEvent` only. Flip already uses pointer events and has no
-      such gap. The migration also touches pinch-to-zoom and the window-level
-      mouseup commit path, so it is a refactor with real regression surface, not
-      a one-liner. Do it deliberately or not at all.
-- [ ] **A control to disable pressure — NEW, opened by v132.** There is no way to
-      turn it off. The v133 drawer is now the obvious home for it: add a "Pen
-      pressure" switch under a Drawing group. Not built in v133 because the
-      pressure capture itself has still never touched real hardware, and a switch
-      for an unverified feature is premature.
 - [x] Undo next to "Clear drawing" (snapshot restore).
 - [x] **DONE (v106)** — the ⋯ "Clear all" (resetAll, wipes media) is now undoable:
       snapshot via `serializeSkribl()`, restore via `loadSkribl()`, offered as an
@@ -81,18 +53,6 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
       exporting a 19-frame Pad GIF since v104. Nothing was built for this.
 
 ## Flip
-- [x] **DONE (v137) — the thumbnail strip follows the current page.** Restore and
-      arrow-key navigation both used to leave it stranded. Only long documents
-      show this; the harness now builds 40 pages and checks the strip overflows
-      before asserting on it.
-- [x] **DONE (v133) — settings drawer reorganised.** Speed, Canvas, Onion skin,
-      Pages behind and Tint are one grouped list; the ⋯ menu holds actions only.
-      Canvas moved out of that menu and became a dropdown. Onion keeps its header
-      shortcut and gained a mirrored switch in the drawer.
-- [ ] **Tint row wraps at phone width — cosmetic, open.** "colour older pages
-      warmer" goes to two lines under 400px, making that row 59px against 46px
-      for every other row. Signed off as acceptable; shorten the hint if it starts
-      to read as lumpy.
 - [x] Full parity build (zoom, audio loop, scrub, GIF, MP4, draw-on, sharing, polish).
 - [x] Draw-on + Grid relocated to the Draw drawer as labeled switches.
 - [x] **Transparent GIF** — the export sheet's Background/Transparent toggle now
@@ -148,12 +108,6 @@ Status legend: [ ] todo  ·  [~] partial  ·  [x] done
       for corruption again.
 
 ## Known caveats to close
-- [ ] **Pressure has never touched real hardware (v132).** There is no stylus in
-      the sandbox, so `verify_pressure.py` covers the width maths, the clamping
-      and the byte-identity rule, but never the line that reads `Touch.force` or
-      `PointerEvent.pressure`. Needs an Apple Pencil (Pad, iOS Safari) and a pen
-      on a pointer-events device (Flip). Until then the feature is verified in
-      every respect except the one that made it worth building.
 - [x] **DONE (v106)** — WebCodecs-MP4-unsupported browsers no longer fall back to
       WebM silently. Both surfaces label the export button with the container they
       will actually produce ("Video (MP4)" / "Video (WebM)") and say it in the

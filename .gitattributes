@@ -1,0 +1,9 @@
+# Vendored third-party libraries. Marked so GitHub's language stats describe the
+# code actually written here rather than reporting the project as mostly
+# minified JavaScript, and so they stay out of diffs by default.
+skribl/static/gifenc.min.js    linguist-vendored
+skribl/static/mp4-muxer.min.js linguist-vendored
+
+# Keep shell scripts LF on every platform: run_harness.sh is executed directly,
+# and CRLF would break the shebang.
+*.sh text eol=lf

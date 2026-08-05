@@ -1,3 +1,4 @@
+import _layout
 """v104 — gifenc is VENDORED, so GIF export can finally be exercised in-sandbox.
 
 Both surfaces used to pull gifenc from jsdelivr as an ESM module. jsdelivr is
@@ -18,8 +19,8 @@ from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:5001"
 
-_GIFENC = os.path.join(os.path.dirname(__file__), "..", "static", "skribl", "gifenc.min.js")
-if not os.path.exists(_GIFENC):
+_GIFENC = _layout.vendored("gifenc.min.js")
+if _GIFENC is None:
     sys.exit("SKIP: static/skribl/gifenc.min.js not present.\n"
              "      Build it from npm — see harness/README.md, or the banner\n"
              "      comment in the file itself, for the reproduce command.")

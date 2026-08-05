@@ -1,0 +1,113 @@
+{# Shared "Music" drawer — loop: dropzone, waveform trim, loop summary/actions,
+   fine-tune loop (zoom waveform + nudge grid). Behavior-preserving: each surface
+   renders its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
+   Pad-only: #musicInput (Flip's is a wider-accept input outside the panel) + the
+   #musicPending re-add card + the #matchDrawingLabel span + "Use finer/coarser step"
+   aria text. Flip-only: .draw-popout dialog root, a section-label header, and a
+   .flip-drawer-note footer. Include with:
+     {% with kind='pad'  %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+     {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %} #}
+{% set kind = kind|default('pad') -%}
+{% if kind == 'flip' -%}
+<div class="tab-panel draw-popout" id="musicPanel" role="dialog" aria-label="Music loop" hidden>
+  <span class="draw-section-label">Music loop</span>
+{%- else -%}
+<div class="tab-panel" id="musicPanel" hidden>
+{%- endif %}
+  <div class="music-dropzone" id="musicUploadBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    <span id="musicBtnLabel">Add music</span>
+    <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle music on or off"><span class="layer-toggle-knob"></span></button>
+    <button type="button" id="musicRemove" class="dropzone-remove" hidden>Remove</button>
+  </div>
+  {% if kind != 'flip' -%}
+  <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" style="display:none">
+  {%- endif %}
+
+  <div id="musicPending" class="pending-card" hidden>
+    <div class="pending-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    </div>
+    <div class="pending-text">
+      <span class="pending-name" id="musicPendingName">song.mp3</span>
+      <span class="pending-meta" id="musicPendingMeta">Loop saved · tap to re-add</span>
+    </div>
+    <button type="button" class="pending-btn" id="musicPendingBtn">Re-add</button>
+    <button type="button" class="pending-dismiss" id="musicPendingDismiss" aria-label="Dismiss">&#x2715;</button>
+  </div>
+
+  <div id="musicDetail" class="music-detail" hidden>
+    <div class="music-trim">
+      <div class="music-trim-track" id="musicTrack">
+        <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+        <div class="music-trim-range" id="musicRange"></div>
+        <div class="music-playhead" id="playhead" hidden></div>
+        <div class="music-trim-handle left" id="handleStart">
+          <div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div>
+          <span class="trim-bubble" id="bubbleStart">0:00</span>
+        </div>
+        <div class="music-trim-handle right" id="handleEnd">
+          <div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div>
+          <span class="trim-bubble right" id="bubbleEnd">0:00</span>
+        </div>
+      </div>
+      <div class="music-trim-times">
+        <span id="trimStartLabel">0:00</span>
+        <span id="trimDurLabel">0:00 selected</span>
+        <span id="trimEndLabel">0:00</span>
+      </div>
+      <div class="loop-preview-row">
+        <span id="loopSummary" class="loop-summary">Loop: 0:00 &rarr; 0:00 &middot; 0.0s{% if kind != 'flip' %} <span id="matchDrawingLabel" class="match-drawing-label"></span>{% endif %}</span>
+        <div class="loop-actions">
+          <button type="button" id="matchDrawingBtn" class="loop-btn subtle">Match Drawing Time</button>
+          <button type="button" id="testSeamBtn" class="loop-btn subtle">Test Seam</button>
+          <button type="button" id="previewLoopBtn" class="loop-btn">Preview Loop</button>
+        </div>
+      </div>
+      <button type="button" id="fineTuneToggle" class="fine-tune-toggle panel-btn" aria-expanded="false" aria-controls="fineTuneBody">
+        <span>Fine-tune loop</span>
+        <svg class="fine-tune-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="fine-tune-body" id="fineTuneBody" hidden>
+        <div class="loop-zoom">
+          <div class="loop-zoom-head"><span>Loop Detail</span><span id="loopZoomLabel">0:00.00 &rarr; 0:00.00 [0.00s]</span></div>
+          <div style="position:relative" id="zoomTrackWrap">
+            <canvas id="zoomWaveformCanvas" class="zoom-waveform-canvas"></canvas>
+            <div class="music-playhead" id="zoomPlayhead" hidden></div>
+            <div class="zoom-handle" id="zoomHandleStart" data-which="start" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
+            <div class="zoom-handle" id="zoomHandleEnd" data-which="end" hidden><div class="zoom-handle-cap top"></div><div class="zoom-handle-line"></div><div class="zoom-handle-cap bottom"></div></div>
+          </div>
+          <div class="finetune-panel">
+            <div class="finetune-grid">
+              <div class="edge-group">
+                <span class="edge-name">Start of Loop</span>
+                <div class="edge-controls">
+                  <button type="button" class="nudge-btn" data-which="start" data-amount="-1" aria-label="Nudge start earlier">−</button>
+                  <span class="edge-readout" id="startReadout">0.00s</span>
+                  <button type="button" class="nudge-btn" data-which="start" data-amount="1" aria-label="Nudge start later">+</button>
+                </div>
+              </div>
+              <div class="edge-group">
+                <span class="edge-name">End of Loop</span>
+                <div class="edge-controls">
+                  <button type="button" class="nudge-btn" data-which="end" data-amount="-1" aria-label="Nudge end earlier">−</button>
+                  <span class="edge-readout" id="endReadout">0.00s</span>
+                  <button type="button" class="nudge-btn" data-which="end" data-amount="1" aria-label="Nudge end later">+</button>
+                </div>
+              </div>
+              <div class="edge-group">
+                <span class="edge-name">Step size</span>
+                <div class="edge-controls"{% if kind != 'flip' %} aria-label="Fine tune step size"{% endif %}>
+                  <button type="button" id="nudgeStepFiner" class="nudge-btn" aria-label="{{ 'Finer step' if kind == 'flip' else 'Use finer step' }}">−</button>
+                  <span id="nudgeStepLabel" class="edge-readout step-readout">0.1s</span>
+                  <button type="button" id="nudgeStepCoarser" class="nudge-btn" aria-label="{{ 'Coarser step' if kind == 'flip' else 'Use coarser step' }}">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% if kind == 'flip' %}<p class="flip-drawer-note" id="musicNote">Loops while you Flip — one track for the whole animation.</p>{% endif %}
+</div>

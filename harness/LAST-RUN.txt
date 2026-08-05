@@ -1,4 +1,4 @@
-SKRIBL HARNESS — RECORDED RUN (v137)
+SKRIBL HARNESS — RECORDED RUN
 Split into two invocations because of a per-command time limit. BOTH recorded in
 full. Every hash here is a SOURCE-TREE hash, NOT the distributed ZIP's hash.
 
@@ -7,52 +7,30 @@ test deliberately makes db.session.commit raise.
 
 SKIPPED SUITES contribute ZERO assertions. Nothing was skipped here.
 
-The docs are written BEFORE this run (v132 onward), so the only files that change
-after it are LAST-RUN.txt and SHA256SUMS — both excluded from the tree hash. The
-hash below reproduces from the shipped archive.
-
-THE LIMITER'S CONTRACT IS AT MOST N, NEVER EXACTLY N. All four concurrency
-bursts assert it consistently (v135); the section heading was corrected in v136.
-
-NEW IN v137: verify_pages.py now builds a 40-page document, because the harness
-had only ever built SHORT ones — and a thumbnail strip that does not overflow
-cannot be scrolled to the wrong place. That blind spot hid a bug for the entire
-life of the project. The new block asserts the strip OVERFLOWS before asserting
-anything about it, so it cannot silently become vacuous.
-
 ##### POSTGRESQL CONCURRENCY #####
 PostgreSQL 16.14 | 4 gunicorn workers | 12 concurrent | quota 2
-Contract asserted: NEVER MORE than quota, at least one admitted, none lost,
-committed rows == successful responses.
-Observed this run: 2 x 201, 10 x 429 | post rows: 2 | committed=2, pending=0
-  [PASS] all 4 workers were running before the burst  — [4663, 4664, 4665, 4666]
-  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[4663, 4664, 4665, 4666] after=[4663, 4664, 4665, 4666]
+HTTP: 2 x 201, 10 x 429 | post rows: 2 | rate events: committed=2, pending=0
+WORKER LIVENESS:
+  [PASS] all 4 workers were running before the burst  — [2978, 2979, 2980, 2981]
+  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2978, 2979, 2980, 2981] after=[2978, 2979, 2980, 2981]
   [PASS] gunicorn booted exactly 4 workers — no respawn was logged  — 4 'Booting worker' lines
   [PASS] gunicorn logged no worker exit, termination or boot failure DURING the burst  — 0 exit/termination lines before shutdown
-  [PASS] NEVER more than the quota is admitted across 4 processes  — 2 x 201 in [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
-  [PASS] the limiter does not block everything: at least one request wins  — [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
-  [PASS] every other request is refused, none lost  — [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
   [PASS] recorded configuration is complete enough to interpret the result  — PostgreSQL 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1), 4 workers, 12 requests, quota 2
-  [PASS] the limiter does not block everything: at least one post wins  — [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
-  [PASS] every other request is refused, none lost  — [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
-  [PASS] NEVER more than the quota is admitted — the safety property  — 2 x 201 in [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
-  [PASS] the limiter does not block everything: at least one post wins  — [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
-  [PASS] every other request is refused, none lost  — [201, 201, 429, 429, 429, 429, 429, 429, 429, 429, 429, 429]
 
 ##### INVOCATION 1 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-02T13:39:54Z
+UTC timestamp           : 2026-08-01T22:23:47Z
 Host                    : Linux x86_64
-Tree SHA-256            : 9f08ab6201e6e78b446322b07930f8aad272c73ef5885b8098556a915267a1ef
+Tree SHA-256            : 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v137
+SKRIBL_VERSION          : v131
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.Hvg4HE7bUt/harness.db)
+Database reset          : yes (fresh /tmp/tmp.ZQx9OOWMgn/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -80,49 +58,48 @@ RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### INVOCATION 2 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-02T13:44:05Z
+UTC timestamp           : 2026-08-01T22:27:52Z
 Host                    : Linux x86_64
-Tree SHA-256            : 9f08ab6201e6e78b446322b07930f8aad272c73ef5885b8098556a915267a1ef
+Tree SHA-256            : 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v137
+SKRIBL_VERSION          : v131
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.QXzw59QmY4/harness.db)
+Database reset          : yes (fresh /tmp/tmp.kKLCEOp1uH/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_csp.py verify_media.py verify_version.py verify_ux.py verify_pages.py verify_exopts.py verify_hold.py verify_canvas.py verify_postgres.py verify_review.py verify_pressure.py
+Command                 : ./harness/run_harness.sh verify_csp.py verify_media.py verify_version.py verify_ux.py verify_pages.py verify_exopts.py verify_hold.py verify_canvas.py verify_postgres.py verify_review.py
 ============================================
 
 ##### INVOCATION 2 — RESULTS #####
 ================ AGGREGATE (machine-generated) ================
-suites requested : 11
+suites requested : 10
   verify_csp.py: ok — 31/31 passed
   verify_media.py: ok — 24/24 passed
   verify_version.py: ok — 20/20 passed
   verify_ux.py: ok — 24/24 passed
-  verify_pages.py: ok — 60/60 passed
+  verify_pages.py: ok — 38/38 passed
   verify_exopts.py: ok — 23/23 passed
   verify_hold.py: ok — 26/26 passed
   verify_canvas.py: ok — 21/21 passed
   verify_postgres.py: ok — 14/14 passed
-  verify_review.py: ok — 279/279 passed
-  verify_pressure.py: ok — 38/38 passed
-assertions passed: 560   (skipped suites contribute 0)
+  verify_review.py: ok — 277/277 passed
+assertions passed: 498   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
 RESULT: PASS — every requested suite exited 0 and reported a summary.
 
 ##### TREE-HASH COMPARISON #####
-Invocation 1: 9f08ab6201e6e78b446322b07930f8aad272c73ef5885b8098556a915267a1ef
-Invocation 2: 9f08ab6201e6e78b446322b07930f8aad272c73ef5885b8098556a915267a1ef
+Invocation 1: 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
+Invocation 2: 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
 MATCH — identical source tree.
 
 ##### COMBINED #####
-708 assertions across 20 suites, 0 skipped, 0 problems
+646 assertions across 19 suites, 0 skipped, 0 problems

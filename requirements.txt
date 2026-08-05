@@ -7,4 +7,10 @@ Flask>=3.0,<4.0
 gunicorn>=21.2,<24.0
 python-dotenv>=1.0,<2.0
 Flask-SQLAlchemy>=3.1,<4.0
+# Declared directly, not left to resolve transitively through Flask-SQLAlchemy.
+# The skribl package imports sqlalchemy itself (DeclarativeBase, Column, or_) and
+# does NOT import flask_sqlalchemy at all — only the standalone host app.py does.
+# A host application on plain SQLAlchemy can therefore drop Flask-SQLAlchemy
+# entirely, which it cannot do while this dependency is undeclared.
+SQLAlchemy>=2.0,<3.0
 psycopg[binary]>=3.1,<4.0

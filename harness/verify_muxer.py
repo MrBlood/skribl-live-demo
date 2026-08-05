@@ -1,3 +1,4 @@
+import _layout
 """v103 — Flip loads the VENDORED mp4-muxer, and the MP4 capability gate degrades
 cleanly when the codec isn't available.
 
@@ -20,8 +21,8 @@ BASE = "http://127.0.0.1:5001"
 # This suite needs the vendored muxer, which lives in the REPO and is not shipped
 # in the handoff zip (the zip carries only changed files). Fail with something
 # readable rather than a wall of "Mp4Muxer is undefined".
-_MUXER = os.path.join(os.path.dirname(__file__), "..", "static", "skribl", "mp4-muxer.min.js")
-if not os.path.exists(_MUXER):
+_MUXER = _layout.vendored("mp4-muxer.min.js")
+if _MUXER is None:
     sys.exit("SKIP: static/skribl/mp4-muxer.min.js not present.\n"
              "      It is vendored in the repo but excluded from handoff zips.\n"
              "      Copy it in from the repo to run this suite.")

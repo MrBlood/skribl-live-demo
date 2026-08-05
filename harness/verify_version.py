@@ -1,3 +1,4 @@
+import _layout
 """v105 — the version label in the Pad's overflow menu is single-sourced.
 
 It read "Skribl Pad · v96" while the app was at v105: a hardcoded literal in
@@ -25,17 +26,22 @@ def check(name, ok, detail=""):
 
 # Read the constant from source rather than importing app.py, so the suite has no
 # import side effects (app.py builds a Flask app at module scope).
-src = (ROOT / "app.py").read_text(encoding="utf-8")
+# SKRIBL_VERSION moved from app.py into skribl/core.py when Skribl became a
+# blueprint. Read whichever exists, so this suite pins the CONSTANT rather than
+# the file it happens to live in.
+_SRC = next((p for p in (ROOT / "app.py", ROOT / "skribl" / "core.py")
+             if p.exists() and "SKRIBL_VERSION" in p.read_text(encoding="utf-8")), None)
+src = _SRC.read_text(encoding="utf-8") if _SRC else ""
 m = re.search(r'^SKRIBL_VERSION\s*=\s*"([^"]+)"', src, re.M)
 
 print("\nSOURCE — one constant, one place")
-check("app.py defines SKRIBL_VERSION", bool(m), m.group(1) if m else "not found")
+check("the tree defines SKRIBL_VERSION exactly once", bool(m), m.group(1) if m else "not found")
 version = m.group(1) if m else None
 check("it looks like a version string", bool(version and re.fullmatch(r"v\d+(\.\d+)*", version)),
       repr(version))
 
 print("\nTEMPLATES — no hardcoded version literals left to rot")
-for tpl in sorted((ROOT / "templates").glob("*.html")):
+for tpl in sorted(_layout.TEMPLATES_DIR.glob("*.html")):
     body = tpl.read_text(encoding="utf-8")
     # Ignore cache-busts (v='104') and prose inside comments; look for a version
     # literal rendered as visible text, which is what drifted.
@@ -66,7 +72,7 @@ check("both surfaces report the SAME version",
       f"pad {rendered!r} vs flip {flip_rendered!r}")
 
 print("\nANTI-DRIFT — the template is genuinely driven by the constant")
-tpl_src = (ROOT / "templates" / "skribl_editor.html").read_text(encoding="utf-8")
+tpl_src = _layout.template("skribl_editor.html").read_text(encoding="utf-8")
 check("skribl_editor.html interpolates skribl_version instead of a literal",
       "{{ skribl_version }}" in tpl_src)
 

@@ -1,0 +1,70 @@
+{# Shared "Image" drawer — background photo: dropzone, fit (Fill/Fit/Stretch),
+   reposition, zoom/opacity/blur, reset. Behavior-preserving: each surface renders
+   its EXACT current markup + IDs; only divergent pieces are gated on `kind`.
+   Pad-only: #photoInput (Flip's file input lives outside as #imageInput) and the
+   #photoPending re-add card. Flip-only: .draw-popout dialog root, a section-label
+   header, per-control aria-labels, an un-hidden reposition/zoom row, data-fit="fill"
+   on Stretch, and a .flip-drawer-note footer. Include with:
+     {% with kind='pad'  %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
+     {% with kind='flip' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %} #}
+{% set kind = kind|default('pad') -%}
+{% if kind == 'flip' -%}
+<div class="tab-panel draw-popout" id="photoPanel" role="dialog" aria-label="Background image" hidden>
+  <span class="draw-section-label">Background image</span>
+{%- else -%}
+<div class="tab-panel" id="photoPanel" hidden>
+{%- endif %}
+  <div class="music-dropzone" id="photoUploadBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    <span{% if kind == 'flip' %} id="photoBtnLabel"{% endif %}>Add an image</span>
+    <button type="button" id="photoToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle image on or off"><span class="layer-toggle-knob"></span></button>
+    <button type="button" id="photoRemove" class="dropzone-remove" hidden>Remove</button>
+  </div>
+  {% if kind != 'flip' -%}
+  <input type="file" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+  {%- endif %}
+
+  <div id="photoPending" class="pending-card" hidden>
+    <div class="pending-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </div>
+    <div class="pending-text">
+      <span class="pending-name" id="photoPendingName">photo.jpg</span>
+      <span class="pending-meta" id="photoPendingMeta">Adjustments saved · tap to re-add</span>
+    </div>
+    <button type="button" class="pending-btn" id="photoPendingBtn">Re-add</button>
+    <button type="button" class="pending-dismiss" id="photoPendingDismiss" aria-label="Dismiss">&#x2715;</button>
+  </div>
+
+  <div id="photoDetail" hidden>
+    <div class="photo-fit-group" id="photoFitGroup">
+      <div class="photo-fit-slider" id="photoFitSlider"></div>
+      <button type="button" class="photo-fit-btn active" data-fit="cover">Fill</button><button type="button" class="photo-fit-btn" data-fit="contain">Fit</button><button type="button" class="photo-fit-btn" data-fit="{{ 'fill' if kind == 'flip' else 'stretch' }}">Stretch</button>
+    </div>
+
+    <button type="button" id="repositionBtn" class="reposition-btn"{% if kind != 'flip' %} hidden{% endif %} aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>
+      <span>Reposition image</span>
+    </button>
+    <p class="reposition-hint" id="repositionHint" hidden>{% if kind == 'flip' %}In Fill, drag the image on the canvas to choose which part shows behind your drawing.{% else %}In Fill, parts of your image may be cropped. Drag the image to choose which part shows behind your drawing.{% endif %}</p>
+
+    <div class="photo-opacity-row" id="photoZoomRow"{% if kind != 'flip' %} hidden{% endif %}>
+      <span class="size-label slider-label">Zoom</span>
+      <input type="range" id="photoZoom" min="100" max="300" value="100" class="slider"{% if kind == 'flip' %} aria-label="Image zoom"{% endif %}>
+      <span id="photoZoomVal" class="size-label slider-val">100%</span>
+    </div>
+
+    <div class="photo-opacity-row">
+      <span class="size-label slider-label">Opacity</span>
+      <input type="range" id="photoOpacity" min="10" max="100" value="100" class="slider"{% if kind == 'flip' %} aria-label="Image opacity"{% endif %}>
+      <span id="photoOpacityVal" class="size-label slider-val">100%</span>
+    </div>
+    <div class="photo-opacity-row">
+      <span class="size-label slider-label">Blur</span>
+      <input type="range" id="photoBlur" min="0" max="20" value="0" class="slider"{% if kind == 'flip' %} aria-label="Image blur"{% endif %}>
+      <span id="photoBlurVal" class="size-label slider-val">0px</span>
+    </div>
+    <button type="button" id="resetPhotoBtn" class="panel-btn" style="margin-top:8px;width:100%">Reset adjustments</button>
+  </div>
+  {% if kind == 'flip' %}<p class="flip-drawer-note" id="photoNote">Fills the canvas behind your drawing — one image for the whole animation.</p>{% endif %}
+</div>

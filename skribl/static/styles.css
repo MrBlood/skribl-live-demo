@@ -1,0 +1,3745 @@
+:root {
+  /* Surface ramp */
+  --surface-base: #0b0d12;
+  --surface-raised: #0f1218;
+  --surface-panel: #13161c;
+  --surface-control: #171b23;
+  --surface-control-hover: #1c212c;
+
+  /* Hairlines */
+  --hairline: rgba(255,255,255,0.055);
+  --hairline-strong: rgba(255,255,255,0.09);
+
+  /* Text */
+  --text-primary: #f6f7f9;
+  --text-secondary: #9aa2b1;
+  --text-muted: #7d8496;
+  --text-dim: #575f6e;
+
+  /* Accent */
+  --accent: #7c5cff;
+  --accent-2: #5b8cff;
+  --accent-bright: #9179ff;
+  --accent-glow: rgba(0,0,0,0.32);
+
+  /* Radii */
+  --r-control: 12px;
+  --r-frame: 24px;
+  --r-pill: 999px;
+
+  /* Motion */
+  --spring: cubic-bezier(0.4, 0.0, 0.2, 1.1);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; }
+
+/* Opening a tool panel (Image / Music / Colors) makes the page taller than the
+   viewport, so a vertical scrollbar appears; dismissing the panel — which is
+   exactly what the first draw-tap does (openDrawer(null)) — removes it again.
+   Because the app is a centered flex column, that appearing/disappearing
+   scrollbar changes the usable width and slides the whole canvas sideways, then
+   jerks it back on the next stroke. Reserving the gutter up front keeps the
+   layout width constant in every state, so the canvas never moves. Applied to
+   both editor and player (both are centered full-height apps); no-op on
+   overlay-scrollbar platforms and mobile. Unconditional (was scoped away from
+   the player in v81) so there's no gutter toggle during the player's startup. */
+html { scrollbar-gutter: stable both-edges; }
+
+/* Skribl scrollbars — thin, purple thumb on carbon, everywhere (Pad, Flip, player).
+   Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
+* { scrollbar-width: thin; scrollbar-color: var(--accent) rgba(8, 10, 15, 0.5); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(8, 10, 15, 0.5); border-radius: 999px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), var(--accent-bright));
+  border-radius: 999px;
+  border: 2px solid transparent;      /* inset → slim thumb with carbon breathing room */
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--accent-bright); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+body {
+  margin: 0;
+  background: #06070a;
+  color: #e7e9ea;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+.app {
+  background:
+    radial-gradient(115% 62% at 50% -6%, rgba(124,92,255,0.10) 0%, transparent 55%),
+    var(--surface-raised);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: #e7e9ea;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  border-left: 1px solid var(--hairline);
+  border-right: 1px solid var(--hairline);
+  position: relative;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  margin: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  background: rgba(23, 26, 34, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
+  flex-wrap: nowrap;
+  gap: 10px;
+  position: relative;
+  z-index: 30;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.35px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* JS (fitBrand) adds this when the "Skribl Pad" text won't fit → logo only. */
+.brand > span { white-space: nowrap; }
+.brand.brand-collapsed > span { display: none; }
+
+.brand svg {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-control);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn[hidden] { display: none; }
+.play-wrap[hidden] { display: none; }
+
+.btn {
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: filter 0.15s ease, transform 0.18s var(--spring), background 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.1px;
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.btn:hover:not(:disabled) { filter: brightness(1.1); }
+.btn:active:not(:disabled) { transform: scale(0.94); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Record: subtle dark pill with a whisper of purple */
+.btn.record {
+  background: var(--surface-control);
+  color: var(--text-primary);
+  border: 1px solid rgba(124, 92, 255, 0.3);
+}
+
+.btn.record svg {
+  color: var(--accent);
+  filter: none;
+}
+
+.btn.record.active {
+  background: rgba(244, 50, 111, 0.14);
+  border-color: rgba(244, 50, 111, 0.5);
+  color: #f4326f;
+}
+
+.btn.play {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-primary);
+  border: 1px solid var(--hairline-strong);
+}
+.btn.play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
+.btn.clear { background: var(--surface-control); color: var(--text-secondary); border: 1px solid var(--hairline); }
+.btn.clear:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
+
+/* Post: the one bold purple moment */
+.btn.post {
+  background: var(--accent);
+  box-shadow: 0 3px 12px var(--accent-glow);
+}
+
+/* Crisper labels on the solid-purple (accent-filled) buttons — plus the ACTIVE
+   segmented-control buttons (pen/eraser, Fill/Fit/Stretch) whose white label
+   rides on the purple sliding pill. A tight dark text-shadow separates the white
+   text from the purple. Inactive/dark-fill buttons are left out (the shadow is
+   invisible there); the softer .post-watch chip is excluded so its light text
+   stays clean; tabs use a purple underline (text on dark), so they're out too. */
+.btn.post,
+.post-submit:not(.post-watch),
+.btn.play.playing,
+.player-cta,
+.reposition-btn.active,
+/* A dark text-shadow lifts LIGHT text off a busy background. .pending-btn is
+   dark #171a22 text on solid yellow, so the same shadow just smeared the glyph
+   edges and read as blurry — most visibly on "Re-add". Removed there; the other
+   three are white-on-colour and genuinely benefit. */
+.restore-btn.confirm,
+.tool-btn.active,
+.photo-fit-btn.active {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.rec-indicator[hidden] { display: none; }
+
+.rec-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(244, 50, 111, 0.12);
+  border: 1px solid rgba(244, 50, 111, 0.25);
+  font-size: 13px;
+  font-weight: 600;
+  color: #f4326f;
+}
+
+.rec-indicator .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f4326f;
+  display: inline-block;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.rec-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.duration-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 15px 0 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid var(--hairline-strong);
+  align-self: stretch;
+}
+
+.duration-badge[hidden] { display: none; }
+
+.canvas-area {
+  flex: 1 0 0%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+}
+/* In the player the wrap sizes/centers itself (see body.player-mode rules), so
+   make the area transparent to layout — the player layout is unchanged. */
+body.player-mode .canvas-area { display: contents; }
+/* Editor: the wrap is JS-sized to the fitted authored rectangle and centered by
+   .canvas-area (letterbox bars = the app surface behind it). Never exceed the
+   area. */
+body:not(.player-mode) .canvas-wrap {
+  flex: none;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.canvas-wrap {
+  flex: 1;
+  position: relative;
+  cursor: crosshair;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 70px rgba(0,0,0,0.4);
+  transition: box-shadow 0.3s ease;
+  background-color: #0d0f14;
+  overflow: hidden;
+}
+
+.canvas-wrap.eraser { cursor: cell; }
+
+/* Light/white canvas: swap the dark inset vignette for a soft light one so the
+   edges don't look muddy. Screen-only; export is unaffected. */
+.canvas-wrap.light-bg {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 70px rgba(0,0,0,0.06);
+}
+
+.canvas-wrap.recording {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 60px rgba(0,0,0,0.35);
+}
+
+.canvas-wrap.locked {
+  cursor: not-allowed;
+}
+
+/* Editor scrubbable play bar: a thin track that hangs flush from the bottom edge
+   of the canvas (square top, rounded bottom) so it reads as dropping down from
+   the canvas frame. Absolutely positioned inside the (relative) canvas-area and
+   sized to the canvas by JS. Only visible during replay; the accent fill tracks
+   progress and the whole bar is draggable to seek. */
+body:not(.player-mode) .canvas-area { position: relative; }
+.play-scrub {
+  position: absolute;
+  z-index: 7;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 0 0 5px 5px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+}
+.play-scrub[hidden] { display: none; }
+.play-scrub.show { opacity: 1; }
+/* Invisible grab margin so the 5px bar is comfortably draggable (incl. touch). */
+.play-scrub::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -11px; bottom: -11px;
+}
+.play-scrub-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 8px rgba(124, 92, 255, 0.55);
+  border-radius: 0 0 0 5px;
+}
+/* Reduced motion: don't fade, just show/hide. */
+@media (prefers-reduced-motion: reduce) {
+  .play-scrub { transition: none; }
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  touch-action: none;
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== Canvas magnify (editor only) =========================================
+   The zoom-layer wraps the photo + drawing and is the ONLY thing transformed
+   (scale + pan). .canvas-wrap stays fixed-size with overflow:hidden as the
+   viewport clip, so strokes/replay never distort — the drawing's coordinate
+   space is untouched, only the display magnifies. */
+.zoom-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  /* no transition: pinch/pan must track the finger 1:1. Button/fit steps get a
+     short transition via .zoom-anim below. */
+}
+.zoom-layer.zoom-anim { transition: transform 0.16s var(--ease); }
+
+/* While a stroke is active, let mouse events fall through the pill to the
+   canvas underneath (touch already stays captured on the canvas). */
+body.stroking .zoom-hud { pointer-events: none; }
+
+.zoom-hud {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  width: 46px;
+  background: rgba(19, 22, 28, 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  opacity: 1;
+  transition: opacity 0.25s var(--ease), box-shadow 0.15s var(--ease);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.zoom-hud[hidden] { display: none; }
+/* Corner docking — JS sets data-corner; inline left/top override while dragging. */
+.zoom-hud[data-corner="br"] { right: 12px;  bottom: 12px; }
+.zoom-hud[data-corner="bl"] { left: 12px;   bottom: 12px; }
+.zoom-hud[data-corner="tr"] { right: 12px;  top: 12px; }
+.zoom-hud[data-corner="tl"] { left: 12px;   top: 12px; }
+.zoom-hud.dragging {
+  opacity: 0.9;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--accent);
+  transition: box-shadow 0.15s var(--ease);
+}
+
+.zoom-hud .zoom-grip {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.14), rgba(124, 92, 255, 0));
+  border-bottom: 1px solid var(--hairline);
+  cursor: grab;
+  touch-action: none;
+}
+.zoom-hud.dragging .zoom-grip { cursor: grabbing; }
+.zoom-hud .zoom-grip svg { width: 19px; height: 19px; }
+
+.zoom-hud .zoom-btn {
+  height: 44px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.zoom-hud .zoom-btn:active { background: var(--surface-control-hover); }
+.zoom-hud .zoom-btn:disabled { color: var(--text-dim); cursor: default; }
+.zoom-hud .zoom-btn:disabled:active { background: none; }
+
+.zoom-hud .zoom-val {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  cursor: text;
+}
+.zoom-hud .zoom-val:hover { background: var(--surface-control-hover); color: var(--text-primary); }
+.zoom-hud .zoom-val-input {
+  width: 42px;
+  text-align: center;
+  /* 16px is the threshold below which iOS Safari zooms the whole PAGE on focus
+     (and doesn't reliably zoom back, stranding the user at a magnified screen).
+     Keep it exactly 16px — do NOT lower this. */
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background: var(--surface-control);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  outline: none;
+  padding: 1px 0;
+  margin: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.zoom-hud .zoom-fit {
+  height: 44px;
+  border: none;
+  background: none;
+  color: var(--accent-bright);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--hairline);
+  padding: 0;
+}
+.zoom-hud .zoom-fit:active { background: var(--surface-control-hover); }
+.zoom-hud .zoom-fit svg { width: 17px; height: 17px; }
+/* At 100% the fit button is redundant — dim it so the pill reads as "no zoom". */
+.zoom-hud:not(.zoomed) .zoom-fit { opacity: 0.4; }
+
+/* Transparent tap-catcher shown while the zoom % is being typed — commits on
+   any tap outside the field (above the canvas so it never draws a stroke). */
+.zoom-edit-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: transparent;
+}
+
+/* Dashed snap-target ghost shown in the corner the pill will dock to. */
+.zoom-snap {
+  position: absolute;
+  z-index: 5;
+  width: 46px;
+  border-radius: 16px;
+  border: 2px dashed rgba(124, 92, 255, 0.55);
+  background: rgba(124, 92, 255, 0.06);
+  pointer-events: none;
+}
+
+.canvas-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  color: rgba(246,247,249,0.28);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  z-index: 2;
+  transition: opacity 0.3s ease;
+}
+
+.canvas-empty-hint svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.9;
+}
+
+.canvas-empty-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(246,247,249,0.20);
+  letter-spacing: 0;
+  max-width: 240px;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.canvas-empty-hint.hidden {
+  opacity: 0;
+}
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  margin: 12px 12px 0;
+  border: 1px solid var(--hairline);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  background: rgba(23, 26, 34, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow: hidden;
+  position: relative;
+  z-index: 30;
+}
+
+.tab-bg-slider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 33.333%;
+  background: var(--surface-control);
+  transition: transform 0.42s var(--spring);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.tab-slider {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2.5px;
+  background: var(--accent);
+  border-radius: var(--r-pill);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.tab-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tab-btn:hover { color: var(--text-secondary); }
+
+.tab-btn.active {
+  color: var(--text-primary);
+  border-bottom-color: transparent;
+}
+
+.tab-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1bcf8f;
+  box-shadow: 0 0 3px rgba(27, 207, 143, 0.35);
+  flex-shrink: 0;
+}
+
+.tab-dot[hidden] { display: none; }
+
+/* Amber = the file is remembered but missing, and the user has to re-add it.
+   Same yellow as the autosave pill, so the toolbar dot, the status light and
+   the re-add card all say the same thing. */
+.tab-dot.pending {
+  background: #ffd23f;
+  box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
+}
+
+/* Photo/Music tabs show a small status circle: grey when the tab is empty,
+   swapped for the purple .tab-dot once a file is added. Both are the same size
+   and sit in the same spot, so it reads as one dot changing colour. The swap is
+   pure CSS via :has() — no JS beyond the existing dot show/hide. */
+.tab-dot-empty {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3a3f4d;
+  flex-shrink: 0;
+}
+.tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
+
+.tab-panel {
+  margin: 0 12px 12px;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: rgba(23, 26, 34, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-x: hidden;
+  z-index: 39;
+}
+
+/* ---------- Floating tool bar (resting) ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px;
+  margin: 12px auto;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: rgba(23, 26, 34, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 41;
+}
+.tool-sep { width: 1px; height: 26px; background: var(--hairline); margin: 0 5px; align-self: center; flex: none; }
+.tool-open {
+  width: 44px; height: 44px; border-radius: 12px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #aeb6c4; cursor: pointer; position: relative;
+  flex: none; -webkit-tap-highlight-color: transparent;
+  transition: background .15s ease, color .15s ease;
+}
+.tool-open svg { width: 21px; height: 21px; }
+.tool-open:hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+
+/* Magnify tool — lit (accent) when its zoom pill is showing. */
+.magnify-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.magnify-tool.active svg { filter: none; }
+/* Drawer-open toggles (color / image / music) light up with the same translucent
+   accent as the magnify + onion toggles — one consistent "lit" state across the
+   toolbar and across Pad + Flip (Flip's image/music already use these exact values
+   via .flip-tools .magnify-tool.open). */
+.tool-open.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.tool-chip { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
+.tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
+@media (max-width: 640px) {
+  .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
+}
+
+.tab-panel[hidden] { display: none; }
+
+/* Replay auto-hide: while a preview replays, fade the bottom tool island out so
+   the drawing is the show. The header stays (it holds Stop). Opacity only — the
+   island keeps its space, so the canvas never resizes mid-playback. */
+.toolbar, .tab-panel { transition: opacity 0.3s ease; }
+body.replaying .toolbar,
+body.replaying .tab-panel,
+body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
+
+/* ---------- Draw panel ---------- */
+.brush-size-inline {
+  font-size: 10px;
+  color: #5f6675;
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.size-label {
+  font-size: 11px;
+  color: #8a93a6;
+  font-weight: 500;
+}
+
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tool-group {
+  position: relative;
+  background: var(--surface-control);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  display: inline-flex;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--hairline);
+}
+
+.tool-slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  height: calc(100% - 8px);
+  background: var(--accent);
+  border-radius: var(--r-pill);
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.tool-btn {
+  position: relative;
+  z-index: 1;
+  border: 0 !important;
+  border-radius: 999px;
+  background: transparent !important;
+  outline: none;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #a8b2c1;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tool-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.tool-btn.active { color: #fff; }
+.tool-btn:hover { background: transparent !important; color: #a8b2c1; }
+
+.tool-btn:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 2px;
+}
+
+.undo-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: #5f6675;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.undo-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Icon-only at rest — Undo/Redo are secondary, and useless before the first
+   stroke, so they no longer carry a text label competing in the tool row. */
+.undo-label { display: none; }
+
+.undo-btn:hover { background: #1c212c; color: #e7e9ea; }
+.undo-btn:disabled { opacity: 0.3; cursor: default; }
+
+.size-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 160px;
+}
+
+.size-btn {
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: var(--surface-control-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.3s var(--spring);
+  flex-shrink: 0;
+}
+
+.size-btn[data-size="2"]  { width: 18px; height: 18px; }
+.size-btn[data-size="5"]  { width: 22px; height: 22px; }
+.size-btn[data-size="10"] { width: 28px; height: 28px; }
+.size-btn[data-size="20"] { width: 36px; height: 36px; }
+
+.size-btn:active { transform: scale(0.9); }
+.size-btn.active { background: var(--accent); }
+
+.size-btn span {
+  border-radius: 50%;
+  background: var(--text-muted);
+  display: block;
+  transition: background 0.15s ease;
+}
+
+.size-btn.active span { background: #fff; }
+
+.color-section, .bg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Tighten the space between the tool row, Color, and Canvas sections so the
+   panel reads as calmer groups instead of three full-height blocks. Scoped to
+   the Draw tab — Music/Photo keep the default .tab-panel gap. */
+#drawPanel { gap: 13px; }
+
+.draw-section-label {
+  font-size: 11px;
+  color: #8a93a6;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.color-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.color-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: transform 0.3s var(--spring), border-color 0.12s ease, box-shadow 0.2s ease;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+
+.color-dot:hover { transform: scale(1.12); }
+.color-dot:active { transform: scale(0.92); }
+.color-dot.active {
+  transform: scale(1.08);
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px #fff;
+}
+
+.bg-group {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.bg-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-control);
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+  transition: transform 0.3s var(--spring), border-color 0.12s ease;
+  flex-shrink: 0;
+}
+
+.bg-swatch:hover { transform: scale(1.08); }
+.bg-swatch:active { transform: scale(0.94); }
+.bg-swatch.active { border-color: var(--accent); }
+
+/* --- Photo reposition (Fill mode) --- */
+.reposition-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; margin-top: 8px; padding: 9px;
+  border: 1px solid var(--hairline); border-radius: 10px;
+  background: #13161c; color: #8a93a6;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.reposition-btn svg { width: 15px; height: 15px; }
+.reposition-btn:hover { background: #1c212c; color: #e7e9ea; }
+.reposition-btn.active { background: var(--accent); color: #fff; border-color: transparent; }
+.reposition-btn[hidden] { display: none; }
+#photoZoomRow[hidden] { display: none; }
+.reposition-hint {
+  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: #5f6675;
+}
+.reposition-hint[hidden] { display: none; }
+
+/* While repositioning, the canvas is a drag surface, not a draw surface. */
+.canvas-wrap.repositioning { cursor: grab; touch-action: none; }
+.canvas-wrap.repositioning:active { cursor: grabbing; }
+.canvas-wrap.repositioning canvas { cursor: inherit; pointer-events: auto; }
+
+/* --- More tools drawer (Draw tab) --- */
+.more-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  width: 100%; padding: 9px; border: 1px solid rgba(124, 92, 255, 0.32);
+  border-radius: 10px; background: rgba(124, 92, 255, 0.08); color: #c8cede;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.more-toggle-main { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.more-toggle-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.current-color-chip {
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  background: #ffffff;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.22),
+    0 0 0 1.5px var(--surface-panel),
+    0 0 0 3px rgba(255,255,255,0.85);
+}
+.more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: #e6e9f0; }
+.more-toggle.open { color: #c8cede; }
+.more-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); }
+.more-toggle.open .more-chevron { transform: rotate(180deg); }
+
+.more-drawer { display: flex; flex-direction: column; gap: 12px; }
+.more-drawer[hidden] { display: none; }
+
+.eyedropper-btn {
+  width: 30px; height: 30px; border-radius: 8px; padding: 0;
+  background: #171b23; border: 1px solid var(--hairline); color: #8a93a6;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  transition: background .15s ease, color .15s ease;
+}
+.eyedropper-btn svg { width: 16px; height: 16px; }
+.eyedropper-btn:hover { background: #1c212c; color: #c8cede; }
+.eyedropper-btn.picking { background: var(--accent); color: #fff; border-color: transparent; }
+
+.recent-row { display: flex; align-items: center; gap: 10px; }
+.recent-label { font-size: 10px; }
+.recent-colors { display: flex; align-items: center; gap: 7px; }
+.recent-swatch {
+  width: 22px; height: 22px; border-radius: 50%; padding: 0; border: 0;
+  cursor: pointer; flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  transition: transform .2s var(--spring);
+}
+.recent-swatch:hover { transform: scale(1.12); }
+.recent-swatch:active { transform: scale(0.92); }
+
+.drawer-divider { height: 1px; background: var(--hairline); }
+
+.prop-row { display: flex; align-items: center; gap: 12px; }
+.prop-row .draw-section-label { width: 66px; flex-shrink: 0; }
+.prop-val {
+  font-size: 12px; color: #c8cede; font-weight: 500;
+  width: 40px; text-align: right; flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.smooth-seg {
+  position: relative; overflow: hidden;
+  display: flex; margin-left: auto;
+  background: #171b23; border: 1px solid var(--hairline);
+  border-radius: 999px; padding: 3px;
+}
+.smooth-btn {
+  position: relative; z-index: 1;
+  border: 0; background: transparent; color: #8a93a6;
+  font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 999px;
+  cursor: pointer; transition: color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.smooth-btn.active { color: #fff; }
+
+/* Shared sliding-pill highlight for segmented controls (smoothing off/low/high,
+   the Loop/Start/End focus row, and the 1x-8x magnifier) — the same affordance
+   as the draw/eraser tool slider. Inserted as the group's first child and
+   positioned in JS by attachSegSlider(); its radius follows the parent group. */
+.seg-slider {
+  position: absolute;
+  top: 3px; left: 3px; bottom: 3px;
+  background: var(--accent);
+  border-radius: inherit;
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.drawer-actions { display: flex; gap: 8px; }
+.clear-undo-btn { color: var(--accent-bright); border-color: rgba(124, 92, 255, 0.4); }
+.clear-undo-btn:disabled { opacity: 0.4; cursor: default; color: var(--text-dim); border-color: var(--hairline); }
+.clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--accent); }
+.clear-drawer-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
+  font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.clear-drawer-btn svg { width: 15px; height: 15px; }
+.clear-drawer-btn:hover { background: rgba(244,50,111,.08); color: #f4326f; border-color: rgba(244,50,111,.3); }
+.clear-drawer-btn.armed { background: rgba(244,50,111,.14); color: #f4326f; border-color: rgba(244,50,111,.5); }
+
+/* Shared secondary button for panel actions (reset, and any future ones) so
+   every drawer's buttons speak one language. */
+.panel-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
+  font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.panel-btn:hover { background: #1c212c; color: #c8cede; }
+
+.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; background: rgba(124, 92, 255, 0.08); border-color: rgba(124, 92, 255, 0.32); color: #c8cede; }
+.fine-tune-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: #e6e9f0; }
+.fine-tune-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); flex-shrink: 0; }
+.fine-tune-toggle[aria-expanded="true"] .fine-tune-chevron { transform: rotate(180deg); }
+.fine-tune-body { margin-top: 12px; }
+.fine-tune-body[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  /* Extra room so the eyedropper (9th item) fits the color row cleanly. */
+  .color-dot, .bg-swatch { width: 28px; height: 28px; }
+  .smooth-btn { padding: 5px 10px; }
+  .prop-row .draw-section-label { width: 58px; }
+}
+
+.color-custom-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+
+.color-custom-wrap input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  z-index: 1;
+}
+
+.color-custom-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #161a22;
+  border: 1px solid #3a4150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  color: #a8b2c1;
+  pointer-events: none;
+}
+
+.bg-custom-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  cursor: pointer;
+}
+
+.bg-custom-wrap input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  z-index: 1;
+}
+
+/* ---------- Music tab ---------- */
+.music-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 80px;
+  border: 1px dashed #2a2f3d;
+  border-radius: 12px;
+  color: #5f6675;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.music-dropzone svg {
+  width: 22px;
+  height: 22px;
+}
+
+.music-dropzone:hover {
+  border-color: #7c5cff;
+  color: #a8b2c1;
+}
+
+.music-dropzone.drag-over {
+  border-color: #7c5cff;
+  background: rgba(124, 92, 255, 0.08);
+  color: #a8b2c1;
+}
+
+.music-dropzone.loaded {
+  height: auto;
+  border-style: solid;
+  border-color: rgba(27, 207, 143, 0.4);
+  border-radius: 12px;
+  background: rgba(27, 207, 143, 0.08);
+  color: #1bcf8f;
+  padding: 12px 16px;
+  flex-direction: row;
+}
+
+.music-dropzone.loaded svg {
+  width: 16px;
+  height: 16px;
+}
+
+.music-detail[hidden] { display: none; }
+
+.music-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #e7e9ea;
+}
+
+.dropzone-remove {
+  margin-left: auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 50, 111, 0.4);
+  background: rgba(244, 50, 111, 0.1);
+  color: #f4326f;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dropzone-remove:hover {
+  background: rgba(244, 50, 111, 0.2);
+  border-color: rgba(244, 50, 111, 0.7);
+}
+
+.dropzone-remove[hidden] { display: none; }
+
+/* ---------- Pending media placeholder (after autosave restore) ---------- */
+.pending-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid rgba(255, 210, 63, 0.4);
+  border-radius: 12px;
+  background: rgba(255, 210, 63, 0.08);
+}
+
+.pending-card[hidden] { display: none; }
+
+.pending-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(255, 210, 63, 0.16);
+  color: #ffd23f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pending-icon svg { width: 17px; height: 17px; }
+
+.pending-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pending-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-meta {
+  font-size: 11px;
+  color: #ffd23f;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-btn {
+  flex-shrink: 0;
+  /* Dark-on-yellow: keep the glyphs crisp. */
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #ffd23f;
+  color: #171a22;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pending-btn:hover { filter: brightness(1.1); }
+
+.pending-dismiss {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pending-dismiss:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+.music-trim-track {
+  position: relative;
+  height: 48px;
+  background: #161a22;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.waveform-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.music-trim-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(124, 92, 255, 0.22);
+  border-left: 2px solid #7c5cff;
+  border-right: 2px solid #7c5cff;
+  z-index: 1;
+  border-radius: 0;
+  cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Subtle grip in the center so it's discoverable that the whole loop drags */
+.music-trim-range::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+  background-position: center;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.music-trim-range:active,
+.music-trim-range.dragging {
+  cursor: grabbing;
+  background: rgba(124, 92, 255, 0.3);
+}
+
+.music-trim-range.narrow {
+  cursor: default;
+}
+
+.music-trim-range.narrow::after {
+  display: none;
+}
+
+.music-trim-handle {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 16px;
+  background: transparent;
+  cursor: ew-resize;
+  border-radius: 0;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.music-trim-handle .zoom-handle-line {
+  flex: 1;
+  width: 1px;
+  background: #7c5cff;
+  box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
+}
+
+.music-trim-handle .zoom-handle-cap {
+  width: 8px;
+  height: 5px;
+  background: #7c5cff;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.music-trim-handle:hover .zoom-handle-line,
+.music-trim-handle.dragging .zoom-handle-line { background: #9580ff; }
+
+.music-trim-handle:hover .zoom-handle-cap,
+.music-trim-handle.dragging .zoom-handle-cap { background: #9580ff; }
+
+.music-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #fff;
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+}
+
+.music-playhead[hidden] { display: none; }
+
+.music-trim-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #5f6675;
+  font-variant-numeric: tabular-nums;
+}
+
+#trimDurLabel {
+  color: #a8b2c1;
+  font-weight: 600;
+}
+
+.loop-zoom {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #252b37;
+  border-radius: 12px;
+  background: #0f1218;
+}
+
+.loop-zoom-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5f6675;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#loopZoomLabel {
+  color: #a8b2c1;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+
+.zoom-waveform-canvas {
+  width: 100%;
+  height: 72px;
+  display: block;
+  border-radius: 0;
+  background: #161a22;
+}
+
+.trim-bubble {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #7c5cff;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.trim-bubble.right {
+  left: auto;
+  right: 50%;
+  transform: translateX(50%);
+}
+
+.music-trim-handle:hover .trim-bubble,
+.music-trim-handle.dragging .trim-bubble {
+  opacity: 1;
+}
+
+.loop-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.match-drawing-label {
+  color: var(--accent-bright);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.loop-summary {
+  font-size: 12px;
+  color: #a8b2c1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.loop-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  justify-content: center;
+}
+
+.loop-actions .loop-btn {
+  flex: 1;
+  min-width: 90px;
+  text-align: center;
+  justify-content: center;
+}
+
+.loop-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #7c5cff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.loop-btn.subtle {
+  background: #1c212c;
+  color: #a8b2c1;
+}
+
+.loop-btn:hover { filter: brightness(1.08); }
+.loop-btn:disabled { opacity: 0.4; cursor: default; }
+
+.finetune-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #252b37;
+}
+
+.finetune-head {
+  font-size: 11px;
+  color: #5f6675;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.finetune-grid {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.edge-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 100px;
+}
+
+.edge-name {
+  font-size: 11px;
+  color: #a8b2c1;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.edge-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #161a22;
+  border: 1px solid #2e3340;
+  border-radius: 999px;
+  padding: 3px 4px;
+}
+
+.step-readout { color: #7c5cff; }
+
+.edge-readout {
+  min-width: 56px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e7e9ea;
+  font-variant-numeric: tabular-nums;
+  padding: 0 2px;
+}
+
+.finetune-divider {
+  height: 1px;
+  background: #252b37;
+  margin: 12px 0;
+}
+
+.finetune-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.step-name {
+  font-size: 11px;
+  color: #a8b2c1;
+  font-weight: 600;
+}
+
+.nudge-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 0;
+  background: #252b37;
+  color: #a8b2c1;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.nudge-btn:hover { background: #252b37; color: #e7e9ea; }
+.nudge-btn:active { background: #7c5cff; color: #fff; }
+
+.step-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  border: 1px solid #2e3340;
+  border-radius: 999px;
+  background: #161a22;
+}
+
+.step-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5f6675;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.step-value {
+  min-width: 34px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #7c5cff;
+  font-variant-numeric: tabular-nums;
+}
+
+.step-btn {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #252b37;
+  color: #a8b2c1;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.step-btn:hover {
+  background: #2e3340;
+  color: #fff;
+}
+
+.step-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.zoom-handle[hidden] { display: none; }
+
+.zoom-handle {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 16px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zoom-handle-line {
+  flex: 1;
+  width: 1px;
+  background: #7c5cff;
+  box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
+}
+
+.zoom-handle-cap {
+  width: 8px;
+  height: 5px;
+  background: #7c5cff;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.zoom-handle:hover .zoom-handle-line,
+.zoom-handle.dragging .zoom-handle-line {
+  background: #9580ff;
+}
+
+.zoom-handle:hover .zoom-handle-cap,
+.zoom-handle.dragging .zoom-handle-cap {
+  background: #9580ff;
+}
+
+/* ---------- Photo tab ---------- */
+.photo-fit-group {
+  position: relative;
+  background: #171b23;
+  border-radius: 999px;
+  padding: 3px;
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  width: 100%;
+}
+
+.photo-fit-slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: calc(100% - 6px);
+  background: var(--accent);
+  border-radius: var(--r-pill);
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.photo-fit-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  border: 0 !important;
+  border-radius: 999px;
+  background: transparent !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 7px 0;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #8a93a6;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  text-align: center;
+}
+
+.photo-fit-btn.active { color: #fff; }
+.photo-fit-btn:hover { background: transparent !important; }
+
+.photo-opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Breathing room only between stacked sliders (not above the first / below the last) */
+.photo-opacity-row + .photo-opacity-row {
+  margin-top: 12px;
+}
+
+/* Space between the Fill/Fit/Stretch capsule and the first slider */
+.photo-fit-group + .photo-opacity-row {
+  margin-top: 16px;
+}
+
+.slider-label {
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.slider-val {
+  min-width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared custom range slider — used by opacity, blur, and any future slider.
+   Thin track with a bright purple fill and a white thumb ringed in purple
+   with a soft halo. Both -webkit- and -moz- are styled for cross-browser. */
+.slider,
+.opacity-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+.slider:focus,
+.opacity-slider:focus { outline: none; }
+
+.slider:focus-visible,
+.opacity-slider:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* WebKit / Blink (Chrome, Safari, Edge) */
+.slider::-webkit-slider-runnable-track,
+.opacity-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c5cff 0 var(--slider-fill, 100%), #262c38 var(--slider-fill, 100%) 100%);
+}
+
+.slider::-webkit-slider-thumb,
+.opacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #12151b;
+  margin-top: -6px;
+  border: 2.5px solid #7c5cff;
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: box-shadow 0.15s ease;
+}
+
+.slider:active::-webkit-slider-thumb,
+.opacity-slider:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(124, 92, 255, 0.28), 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Firefox */
+.slider::-moz-range-track,
+.opacity-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #262c38;
+}
+
+.slider::-moz-range-progress,
+.opacity-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #7c5cff;
+}
+
+.slider::-moz-range-thumb,
+.opacity-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid #7c5cff;
+  border-radius: 50%;
+  background: #12151b;
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+}
+
+#photoDetail[hidden] { display: none; }
+
+.photo-bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  object-fit: cover;
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  background: rgba(37, 43, 55, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--hairline-strong);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--r-pill);
+  white-space: normal;
+  width: max-content;
+  max-width: min(94vw, 520px);
+  text-align: center;
+  box-sizing: border-box;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  transition: opacity 0.25s ease, transform 0.4s var(--spring);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast[hidden] { display: none; }
+
+/* Tappable action inside a toast (e.g. "Undo" after Clear all). .toast itself is
+   pointer-events:none so it never blocks the canvas underneath — the button has
+   to opt back in explicitly, or it looks clickable and isn't. */
+.toast-action {
+  pointer-events: auto;
+  margin-left: 12px;
+  padding: 3px 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  vertical-align: baseline;
+}
+
+.toast-action:hover { background: rgba(255, 255, 255, 0.16); }
+.toast-action:active { transform: translateY(1px); }
+
+/* ---------- Autosave status (quiet) ---------- */
+.autosave-status {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 180;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(23, 27, 35, 0.82);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--hairline);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.autosave-status.show { opacity: 1; }
+.autosave-status[hidden] { display: none; }
+
+.autosave-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1bcf8f;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.autosave-status.saving .autosave-dot { background: #ffae42; animation: pulse 1s infinite; }
+.autosave-status.failed .autosave-dot { background: #f4326f; }
+.autosave-status.failed { color: #f4326f; }
+
+/* Saved, but the photo/music files were too big for browser storage — the
+   drawing and every setting persisted, the media bytes did not. Distinct from
+   green (all safe) and from red (nothing saved): a standing amber warning, not
+   the pulsing amber of an in-flight save. */
+.autosave-status.partial .autosave-dot { background: #ffd23f; }
+.autosave-status.partial { color: #ffd23f; }
+
+/* ---------- Autosave restore banner ---------- */
+.restore-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(8px);
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 16px;
+  background: rgba(23, 27, 35, 0.92);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.4s var(--spring);
+  max-width: calc(100% - 32px);
+}
+
+.restore-banner.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.restore-banner[hidden] { display: none; }
+
+.restore-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.restore-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.restore-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.restore-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.restore-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.restore-btn.discard {
+  background: transparent;
+  border-color: var(--hairline-strong);
+  color: var(--text-secondary);
+}
+
+.restore-btn.discard:hover { background: rgba(255,255,255,0.05); }
+
+.restore-btn.confirm {
+  background: var(--accent);
+  color: #fff;
+}
+
+.restore-btn.confirm:hover { filter: brightness(1.1); }
+
+/* Icon-only header button */
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline-strong);
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.18s var(--spring);
+}
+
+.icon-btn svg { width: 18px; height: 18px; }
+/* Flip Mode entry point — an <a> styled as an icon button. */
+.flip-btn { text-decoration: none; }
+.flip-btn svg { width: 19px; height: 19px; }
+.icon-btn:active { transform: scale(0.94); }
+/* ---- Unified header-button hover (v90) --------------------------------------
+   Goal: every header button lifts by the SAME subtle amount as Record always did,
+   while keeping its own character.
+   • Record & Post (coloured): keep their original brightness hover via the generic
+     .btn:hover — brightness preserves the dark-pill/purple colour (no grey film).
+   • Play shell & ⋯ (neutral ghosts): brightness barely moves a faint base, so they
+     instead get a whisper-thin neutral film tuned to the same visible strength
+     (~matches Record's lift). ⋯ also drops its old purple tint.
+   Hover-capable devices only, so a tap never leaves a stuck highlight. */
+@media (hover: hover) {
+  .play-wrap:hover,
+  .icon-btn:hover {
+    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.02);
+  }
+  .icon-btn:hover { color: var(--text-primary); }   /* neutral ⋯, no purple */
+}
+
+/* Magnifier toggle — lit when the zoom controls are showing. Uses the same
+   purple ring as the record button (subtle border + glow + accent icon). */
+.magnify-btn.active {
+  background: var(--surface-control);
+  border-color: rgba(124, 92, 255, 0.3);
+  color: var(--accent);
+}
+.magnify-btn.active svg { filter: none; }
+@media (hover: hover) {
+  .magnify-btn.active:hover { background: var(--surface-control-hover); }
+}
+
+/* Player never shows the editor's "Start drawing" hint (leaked on not-found). */
+body.player-mode #canvasEmptyHint { display: none !important; }
+
+/* Export progress cancel button */
+.export-cancel {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+}
+.export-cancel svg { width: 15px; height: 15px; }
+@media (hover: hover) {
+  .export-cancel:hover { background: rgba(255, 90, 90, 0.16); color: #ff8f8f; }
+}
+
+/* Version footer in the ⋯ menu */
+.menu-version {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  padding: 8px 8px 4px;
+  letter-spacing: 0.3px;
+}
+
+/* Comprehensive reduced-motion: near-instant transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Play as icon-only on desktop */
+.btn.play.btn-icon {
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+}
+.btn.play.btn-icon .btn-label { display: none; }
+
+/* Desktop: once the header condenses (recording, or a finished take exists) the
+   Play / Post / timer controls appear and the bar gets tight. Stack the wordmark
+   onto two lines — the same trick the mobile layout uses — and spend the freed
+   width giving Play a text label, so it reads as a pill peer of Record/Post
+   instead of a recessed icon. Empty state keeps "Skribl Pad" on one line. */
+@media (min-width: 641px) {
+  .header.compact .brand > span {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.05;
+  }
+  .header.compact .brand-word { display: block; }
+
+  .header.compact .btn.play.btn-icon {
+    width: auto;
+    height: auto;
+    padding: 10px 18px;
+  }
+  .header.compact .btn.play.btn-icon .btn-label { display: inline; }
+}
+
+/* ---------- Overflow menu ---------- */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+}
+
+.menu-overlay[hidden] { display: none; }
+
+.menu-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.menu-overlay.open::before { opacity: 1; }
+
+.menu-sheet {
+  position: absolute;
+  background: rgba(23, 27, 35, 0.9);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.menu-handle { display: none; }
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menu-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-secondary); }
+.menu-item:hover { background: rgba(255, 255, 255, 0.06); }
+.menu-item.danger { color: #f4326f; }
+.menu-item.danger svg { color: #f4326f; }
+.menu-item.armed { background: rgba(244,50,111,.14); color: #f4326f; font-weight: 600; }
+.menu-item.armed svg { color: #f4326f; }
+.menu-item:disabled { opacity: 0.45; cursor: default; }
+.menu-item.busy { position: relative; }
+
+/* ---------- Export sheet ---------- */
+.export-sheet { gap: 4px; }
+
+@media (min-width: 641px) {
+  /* Higher specificity than the generic `.menu-sheet { width: 220px }` (which
+     comes later in the file and would otherwise win at equal specificity) so the
+     export sheet is wide enough for its option text and the GIF toggle labels. */
+  .menu-sheet.export-sheet { width: 340px; }
+}
+
+.export-head {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 6px 14px 2px;
+}
+
+.export-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 14px 10px;
+}
+
+.export-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.export-opt:hover:not(:disabled) {
+  background: rgba(124,92,255,0.08);
+  border-color: rgba(124,92,255,0.4);
+}
+
+.export-opt:disabled { opacity: 0.5; cursor: default; }
+
+.export-opt-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(124,92,255,0.14);
+  color: var(--accent-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.export-opt-icon svg { width: 19px; height: 19px; }
+
+.export-opt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.export-opt-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.export-opt-desc { font-size: 11.5px; color: var(--text-muted); }
+
+/* GIF is a grouped "tray": the option card and its Background/Transparent toggle
+   share one bordered box, so the toggle clearly belongs to GIF instead of reading
+   as a detached row below it. The inner card drops its own border/background/margin
+   and the toggle sits flush beneath, split by a hairline so the hierarchy reads.
+   When the toggle is hidden (GIF unavailable) the group looks like a normal card. */
+.export-opt-group {
+  border: 1px solid var(--hairline);
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.export-opt-group .export-opt { border: 0; background: none; border-radius: 0; margin-bottom: 0; }
+.export-opt-group:has(.export-opt:hover:not(:disabled)) { border-color: rgba(124,92,255,0.4); }
+.export-opt-group .export-opt:hover:not(:disabled) { background: rgba(124,92,255,0.08); border-color: transparent; }
+.export-opt-group .export-gif-toggle { border-top: 1px solid var(--hairline); padding-top: 10px; }
+
+/* GIF background toggle (segmented) — uses the shared sliding-pill highlight
+   (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
+   controls. Full width so both labels fit. */
+.export-gif-toggle { width: 100%; padding: 2px 14px 10px; }
+.export-gif-toggle[hidden] { display: none; }
+.gif-seg {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  width: 100%;
+  gap: 2px;
+  padding: 3px;
+  background: rgb(23, 27, 35);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+}
+.gif-seg-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease;
+}
+.gif-seg-btn.active { color: #fff; }
+
+.export-progress { padding: 8px 14px 4px; }
+.export-progress[hidden] { display: none; }
+
+.export-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #1c212c;
+  overflow: hidden;
+}
+
+.export-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.export-progress-label {
+  display: block;
+  font-size: 11px;
+  color: var(--accent-bright);
+  font-weight: 600;
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ---------- Post composer sheet ---------- */
+.post-sheet { gap: 4px; }
+
+/* Desktop: a centered modal with real presence, not a corner dropdown. ID
+   selectors so this always wins over the shared .menu-sheet dropdown rules
+   further down the file. Mobile keeps the inherited bottom-sheet treatment. */
+@media (min-width: 641px) {
+  #postOverlay { justify-content: center; align-items: center; }
+  #postSheet {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 460px;
+    max-width: calc(100vw - 48px);
+    border-radius: 20px;
+    padding: 10px;
+    transform-origin: center center;
+    transform: translateY(10px) scale(0.97);
+  }
+  #postOverlay.open #postSheet { transform: translateY(0) scale(1); }
+  #postSheet .export-head { font-size: 17px; padding: 8px 16px 4px; }
+  #postSheet .export-sub { padding: 0 16px 12px; }
+  #postSheet .post-body { padding: 4px 16px 12px; }
+  #postSheet .post-preview { max-height: 300px; }
+  #postSheet .post-submit { padding: 14px; font-size: 15px; margin: 4px 12px 8px; }
+}
+
+/* Mobile: cap height and allow internal scroll so the sheet stays usable when
+   the on-screen keyboard opens (JS also lifts it above the keyboard). */
+@media (max-width: 640px) {
+  .post-sheet {
+    max-height: calc(100dvh - 12px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.post-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 14px 10px;
+  transition: opacity 0.2s ease;
+}
+
+.post-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0d0f14;
+  border: 1px solid var(--hairline);
+}
+
+.post-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.post-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.post-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.post-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.post-field-optional {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.post-input {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 9px 11px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.post-input::placeholder { color: var(--text-dim); }
+
+.post-input:focus {
+  outline: none;
+  border-color: rgba(124,92,255,0.5);
+  background: rgba(124,92,255,0.05);
+}
+
+.post-input:disabled { opacity: 0.5; cursor: default; }
+
+.post-textarea { resize: none; line-height: 1.4; }
+
+.post-char-count {
+  align-self: flex-end;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.post-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 2px 10px 6px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.post-submit svg { width: 17px; height: 17px; }
+.post-submit:hover:not(:disabled) { filter: brightness(1.1); }
+.post-submit:active:not(:disabled) { transform: scale(0.98); }
+.post-submit:disabled { opacity: 0.5; cursor: default; }
+.post-submit[hidden] { display: none; }
+
+/* The post-success "Watch your Skribl" button. A soft accent-tinted chip drops
+   its emphasis below the bold "Post to Skribl" CTA (posting is the action,
+   watching is the follow-up), and a gradient play badge keeps a brand pop and
+   reads unmistakably as a "watch" control. */
+.post-watch {
+  gap: 10px;
+  background: rgba(124, 92, 255, 0.28);
+  border: 1px solid rgba(124, 92, 255, 0.62);
+  color: #d6ccff;
+  /* When this button appears it sits where "Post to Skribl" was but now watches
+     instead of posts. After a short delay (so the pulse reads as a separate
+     "notice me" beat rather than part of the reveal), the BORDER pulses once —
+     the button itself doesn't move. display:none until revealed, so it fires on
+     reveal; iteration-count 1 = exactly once. */
+  animation: watchBorderPulse 0.7s ease-in-out 0.45s 1;
+}
+
+/* Border-only pulse: brighten the border + a soft edge glow, then back. Only the
+   50% keyframe is defined, so the implicit 0%/100% use the element's own base
+   border (0.62 mobile / 0.74 desktop) — it returns cleanly at either breakpoint,
+   with no transform on the button. */
+@keyframes watchBorderPulse {
+  50% {
+    border-color: #9179ff;
+    box-shadow: 0 0 6px 1px rgba(124, 92, 255, 0.4);
+  }
+}
+
+/* Respect reduced-motion: keep the brighter styling, drop the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .post-watch { animation: none; }
+}
+
+/* Desktop only: the soft accent chip reads a touch dark on larger screens, so
+   brighten fill/border/text there. Mobile keeps its (already-good) look. */
+@media (min-width: 641px) {
+  .post-watch {
+    background: rgba(124, 92, 255, 0.36);
+    border-color: rgba(124, 92, 255, 0.74);
+    color: #ece8ff;
+  }
+}
+.post-watch .play-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+}
+.post-watch .play-badge svg { width: 12px; height: 12px; }
+
+.post-status { padding: 4px 14px 8px; }
+.post-status[hidden] { display: none; }
+.post-status.error .export-progress-fill { background: #f4326f; }
+.post-status.error .export-progress-label { color: #f4326f; }
+
+.menu-divider {
+  height: 1px;
+  background: var(--hairline);
+  margin: 6px 8px;
+}
+
+/* Desktop: dropdown anchored top-right */
+@media (min-width: 641px) {
+  .menu-overlay { justify-content: flex-end; align-items: flex-start; }
+  .menu-sheet {
+    top: 64px;
+    right: 18px;
+    width: 220px;
+    border-radius: 16px;
+    transform: translateY(-8px) scale(0.96);
+    opacity: 0;
+    transform-origin: top right;
+    transition: transform 0.28s var(--spring), opacity 0.2s ease;
+  }
+  .menu-overlay.open .menu-sheet { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 640px) {
+  .menu-overlay { align-items: flex-end; }
+  .menu-sheet {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 0.35s var(--spring);
+  }
+  .menu-overlay.open .menu-sheet { transform: translateY(0); }
+  .menu-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--hairline-strong);
+    margin: 4px auto 10px;
+    cursor: pointer;
+    position: relative;
+  }
+  .menu-handle::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    bottom: -12px;
+    left: -30px;
+    right: -30px;
+  }
+  .menu-item { padding: 15px 14px; }
+}
+
+/* ---------- Help button + drawer ---------- */
+.help-btn { position: relative; }
+
+.help-drawer {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.help-drawer-inner::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: block;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, rgba(19, 22, 28, 0.82));
+  pointer-events: none;
+  z-index: 11;
+}
+
+.help-drawer[hidden] { display: none; }
+
+/* While the help drawer is open, lock the page scroll so only the drawer's own
+   scrollbar shows (otherwise the app's scrollbar sits alongside it). */
+html.help-open, html.help-open body { overflow: hidden; }
+
+.help-drawer.open {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.help-drawer.closing {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.help-drawer.closing .help-drawer-inner {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.help-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  z-index: 1;
+}
+
+.help-drawer-inner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  background: rgba(19, 22, 28, 0.82);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  z-index: 2;
+  transform: translateX(100%);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Sleek skinny scrollbar for the help drawer (desktop pointers only; mobile
+   keeps its native auto-hiding overlay bar). */
+@media (min-width: 641px) {
+  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: var(--accent) rgba(8, 10, 15, 0.5); }
+  .help-drawer-inner::-webkit-scrollbar { width: 10px; }
+  .help-drawer-inner::-webkit-scrollbar-track { background: transparent; }
+  .help-drawer-inner::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--accent), var(--accent-bright));
+    border-radius: 999px;
+    border: 3px solid transparent;      /* inset → a slim thumb with breathing room */
+    background-clip: padding-box;
+  }
+  .help-drawer-inner::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-bright);
+    background-clip: padding-box;
+  }
+}
+
+.help-drawer.open .help-drawer-inner { transform: translateX(0); }
+
+.help-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 15px;
+  position: sticky;
+  top: 0;
+  background: rgba(19, 22, 28, 0.72);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  padding: 20px 32px 16px;
+  border-bottom: 1px solid var(--hairline);
+  z-index: 3;
+  margin-bottom: 0;
+}
+
+.help-close {
+  background: #252b37;
+  border: 1px solid #3a4150;
+  color: #a8b2c1;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-control);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.help-close:hover { background: #2e3340; color: #e7e9ea; }
+
+.help-steps {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 24px 40px;
+}
+
+.help-intro {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #8b97a8;
+  margin-bottom: 18px;
+}
+
+.help-note {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: rgba(124, 92, 255, 0.08);
+  border: 1px solid rgba(124, 92, 255, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+.help-note strong { color: var(--text-primary); font-weight: 600; }
+
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #232833;
+  border-radius: 14px;
+  background: #14171e;
+  color: #e7e9ea;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.18s ease, border-color 0.18s ease, border-radius 0.28s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.accordion-header:hover {
+  background: #171b23;
+  border-color: #2c333f;
+}
+
+.accordion-header.open {
+  background: #171b23;
+  border-color: rgba(124, 92, 255, 0.4);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.accordion-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(124, 92, 255, 0.12);
+  color: var(--accent-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+
+.accordion-header.open .accordion-icon {
+  background: rgba(124, 92, 255, 0.22);
+}
+
+.accordion-icon svg { width: 17px; height: 17px; }
+
+.accordion-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.accordion-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5f6675;
+  background: #1c212c;
+  border: 1px solid #262c38;
+  padding: 3px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.accordion-chevron {
+  width: 18px;
+  height: 18px;
+  color: #697080;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.3s var(--spring), color 0.18s ease;
+}
+
+.accordion-chevron svg { width: 16px; height: 16px; }
+
+.accordion-header.open .accordion-chevron {
+  transform: rotate(180deg);
+  color: var(--accent-bright);
+}
+
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  background: #0f1218;
+  border-radius: 0 0 14px 14px;
+  border: 1px solid transparent;
+  border-top: none;
+  margin-top: -1px;
+  transition: max-height 0.34s var(--ease), border-color 0.18s ease;
+}
+
+.accordion-body.open {
+  max-height: 1600px;
+  border-color: rgba(124, 92, 255, 0.24);
+  border-top: none;
+}
+
+.accordion-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 16px 16px 18px;
+}
+
+.help-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5f6675;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.help-divider {
+  height: 1px;
+  background: #1c212c;
+  margin: 8px 0 20px;
+}
+
+.help-tip {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.help-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a8b2c1;
+  background: #1c212c;
+  border: 1px solid #252b37;
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+.help-tip .help-desc strong {
+  color: #c8cdd6;
+  font-weight: 600;
+}
+
+.help-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #e7e9ea;
+}
+
+.help-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.help-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #7c5cff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.help-desc {
+  font-size: 12px;
+  color: #8b97a8;
+  line-height: 1.5;
+}
+
+/* ---------- Accessibility ---------- */
+button:focus-visible,
+.color-dot:focus-visible,
+.bg-swatch:focus-visible,
+input:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 3px;
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Play progress glow ---------- */
+.play-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  transition: box-shadow 0.2s ease;
+}
+/* Inside the merged pill the button is borderless; the wrap provides the shell. */
+.play-wrap > #playBtn.btn.play {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+@keyframes playGlow {
+  0%   { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
+  50%  { box-shadow: 0 0 0 3px rgba(124,92,255,0.55); }
+  100% { box-shadow: 0 0 0 1px rgba(124,92,255,0.32); }
+}
+
+.btn.play.playing {
+  /* Stays dark — a pulsing purple border signals playback (ring lives on the
+     whole pill on desktop via the rule below). */
+  animation: playGlow 1.8s ease-in-out infinite;
+}
+/* Desktop: the ring wraps the whole "Play · 0:05" pill (rounded), not an oval on
+   just the button. The pill keeps its dark fill so the border/divider stay visible. */
+@media (min-width: 641px) {
+  .play-wrap:has(.btn.play.playing) {
+    animation: playGlow 1.8s ease-in-out infinite;
+  }
+  .play-wrap:has(.btn.play.playing) > #playBtn.btn.play {
+    animation: none;                 /* the wrap pulses, not the button */
+  }
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+  .app {
+    border-left: none;
+    border-right: none;
+  }
+
+  .header { padding: 12px 14px; }
+
+  .brand {
+    font-size: 13px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .brand svg {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  /* Logo-only on mobile in every state — the compact (recording) header no
+     longer re-shows the "Skribl Pad" text. */
+  .brand > span { font-size: 15px; white-space: nowrap; }
+  .header.compact .brand-word { display: inline; }
+
+  .actions {
+    flex: 1;
+    justify-content: flex-end;
+    gap: 3px;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .header.compact .actions { justify-content: space-between; }
+
+  .btn-label { display: none; }
+
+  .btn {
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .duration-badge {
+    font-size: 10px;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  .help-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  /* Unify every round control in the header to one size (34px).
+     .btn.play.btn-icon has higher specificity than .btn, so without this
+     it would stay 40px and look oversized next to its neighbors. */
+  .btn.play.btn-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  /* Keep the duration badge the same height as the round controls and stop
+     it from squishing, so the pill sits in line instead of reading as odd. */
+  .duration-badge {
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .post-long { display: none; }
+
+  #canvas { min-height: 50vh; }
+
+  .tab-btn {
+    font-size: 12px;
+    padding: 11px 0;
+  }
+
+  .tab-panel {
+    padding: 14px 16px;
+    min-height: 240px;
+  }
+
+  .brush-size-inline { display: none; }
+
+  .undo-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+  }
+
+  .undo-label { display: none; }
+
+  .tool-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .tool-row { gap: 5px; }
+
+  .size-btn[data-size="20"] {
+    width: 30px;
+    height: 30px;
+  }
+
+  .size-group {
+    width: auto;
+    flex: 1;
+  }
+
+  .music-trim-handle,
+  .zoom-handle {
+    width: 44px;
+  }
+
+  .loop-summary { width: 100%; }
+
+  .loop-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #previewLoopBtn { grid-column: 1 / -1; }
+
+  .edge-group { min-width: 84px; gap: 6px; }
+
+  .finetune-grid { gap: 6px; }
+
+  /* Tighten the [− value +] pills so all three sit on one row without the
+     slight overlap that showed at narrow widths. */
+  .edge-controls { gap: 3px; padding: 3px 3px; }
+  .edge-readout { min-width: 46px; font-size: 11px; padding: 0 1px; }
+  .nudge-btn { width: 24px; height: 24px; font-size: 14px; }
+
+}
+
+.music-dropzone[hidden] { display: none; }
+
+.loop-summary { display: none; }
+
+/* ---------- Read-only player mode ---------- */
+.player-shell[hidden] { display: none; }
+.post-watch[hidden] { display: none; }
+/* .player-btn uses display:flex, which overrides the hidden attribute — this
+   keeps the mute button truly hidden for audio-less Skribls. */
+.player-btn[hidden] { display: none; }
+
+body.player-mode .header,
+body.player-mode .tabs,
+body.player-mode .tab-panel { display: none !important; }
+
+body.player-mode { overflow-x: hidden; }
+
+body.player-mode .app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px 0;
+  box-sizing: border-box;
+}
+
+body.player-mode .canvas-wrap {
+  flex: none;
+  max-width: 100%;
+  /* Square, to match the editor pad (which has no rounded corners). */
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The player fits the authored drawing into the (often short) landscape viewport
+   by setting explicit width/height on the wrap + canvas via JS. The editor's
+   #canvas min-height floor (400px, or 50vh under the ≤640px query) would
+   otherwise force the canvas taller than the fitted wrap and — with the wrap's
+   overflow:hidden — clip and vertically squish the drawing. Remove the floor and
+   any max caps in player mode so the JS-fitted, aspect-locked size wins. */
+body.player-mode #canvas {
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+}
+
+/* The replay nib: a soft glowing dot that rides the current stroke point while
+   the drawing plays back, so watching reads as a hand drawing. Centered on its
+   point via the negative margin; positioned in display px by the player JS. */
+.player-nib {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 6;
+  /* Nib color follows the ink being drawn; JS sets --nib-rgb per replay point.
+     Defaults to white so an unset nib matches the original hardcoded look. */
+  --nib-rgb: 255,255,255;
+  background: radial-gradient(circle, rgba(var(--nib-rgb),0.95) 0 30%, rgba(var(--nib-rgb),0.25) 60%, transparent 70%);
+  box-shadow: 0 0 10px 2px rgba(var(--nib-rgb),0.45);
+  transition: opacity 0.12s ease;
+}
+.player-nib[hidden] { display: none; }
+/* While erasing, show a hollow ring instead of a bright dot. */
+.player-nib.erase {
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0 55%, transparent 60%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+}
+
+.player-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 520px;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+/* Persistent player load-failure panel (replaces the old toast-then-blank-page).
+   Shown centered in place of the shell when a Skribl can't be loaded. */
+.player-error[hidden] { display: none; }
+.player-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  max-width: 340px;
+  padding: 8px 20px;
+}
+.player-error-icon {
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--hairline);
+}
+.player-error-title { font-size: 16px; font-weight: 650; color: var(--text-primary); }
+.player-error-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 2px; }
+.player-error-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  font-size: 14px; font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid var(--hairline);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  transition: background .15s ease, border-color .15s ease;
+}
+.player-error-btn:hover { background: rgba(255,255,255,0.08); }
+.player-error-btn.primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.player-error-btn.primary:hover { background: var(--accent-bright); }
+
+.player-meta { text-align: center; max-width: 460px; }
+.player-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.player-caption { font-size: 14px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
+.player-caption[hidden] { display: none; }
+
+.player-controls { display: flex; gap: 12px; align-items: center; }
+
+.player-progress {
+  width: 100%;
+  max-width: 340px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+.player-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.08s linear;
+}
+
+.player-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.player-link svg { width: 15px; height: 15px; }
+.player-link:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+
+.player-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: var(--surface-control);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.player-btn svg { width: 20px; height: 20px; }
+.player-btn:hover { background: var(--surface-control-hover); }
+.player-btn:active { transform: scale(0.94); }
+
+.player-btn.primary {
+  width: 58px;
+  height: 58px;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+}
+.player-btn.primary svg { width: 24px; height: 24px; }
+.player-btn.primary:hover { background: var(--accent-bright); }
+
+.player-btn.active {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.player-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 11px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: -0.1px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 6px 14px var(--accent-glow);
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.player-cta .cta-star { font-size: 17px; line-height: 1; }
+.player-cta:hover {
+  background: var(--accent-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px var(--accent-glow);
+}
+.player-cta:active { transform: translateY(0); }
+
+.player-brand {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+}
+
+/* Short viewports (landscape phones, ~360–414px tall): the metadata shell is a
+   fixed ~267px, which — with the canvas floor + app padding — overflowed and
+   forced vertical scroll. Compact the shell (tighter gaps, smaller type, drop
+   the decorative "Made with" line) and shrink the app padding/gap. Because the
+   player fit-scale MEASURES the shell live (playerReservedV), reducing its height
+   here automatically frees vertical budget for the canvas — no JS change needed. */
+@media (max-height: 480px) {
+  body.player-mode .app { gap: 10px; padding: 10px 0; }
+  .player-shell { gap: 8px; }
+  .player-title { font-size: 15px; }
+  .player-caption { font-size: 12px; margin-top: 2px; }
+  .player-controls { gap: 8px; }
+  .player-brand { display: none; }
+}
+
+
+/* ---------- Pass 2: toolbar undo/redo (icon-only) ---------- */
+.toolbar .undo-btn {
+  width: 40px; height: 44px; padding: 0; border-radius: 12px;
+  background: none; border: none; color: #aeb6c4; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex: none;
+  transition: background .15s ease, color .15s ease;
+}
+.toolbar .undo-btn .undo-label { display: none; }
+.toolbar .undo-btn svg { width: 20px; height: 20px; }
+.toolbar .undo-btn:disabled { opacity: .32; cursor: default; }
+.toolbar .undo-btn:not(:disabled):hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+
+/* ---------- Pass 2: brush sizes read as one labeled control ---------- */
+#drawPanel .tool-row { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+#drawPanel .size-group {
+  width: fit-content; justify-content: flex-start; gap: 12px;
+  padding: 7px 12px; border-radius: 12px; background: rgba(255,255,255,.035);
+}
+.size-btn span { background: #cdd3de; }              /* brighter dots so the small one reads */
+.size-btn.active span { background: #fff; }
+
+
+/* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
+@media (max-width: 640px) {
+  .toolbar { gap: 2px; padding: 6px; }
+  .tool-btn-label { display: none; }               /* pen/eraser become icon-only */
+  /* Bigger, clearer Pen/Eraser (the most-used tools). */
+  #toolGroup .tool-btn { padding: 9px 13px; min-height: 44px; }
+  #toolGroup .tool-btn svg { width: 23px; height: 23px; }
+  /* Pull the rest in tighter to make the room. */
+  .tool-open, .toolbar .undo-btn { width: 36px; }
+  .tool-sep { margin: 0 1px; }
+
+  /* D — brand text visibility is decided by fitBrand() (JS), not a fixed rule,
+     so "Skribl Pad" shows whenever there's room and drops to logo-only when not. */
+
+  /* Mobile: no merged Play pill — the button keeps its own round shape and the
+     duration is dropped entirely (no room). */
+  .play-wrap { background: transparent; border: none; }
+  .play-wrap > #playBtn.btn.play {
+    border: 1px solid var(--hairline-strong);
+    background: rgba(255, 255, 255, 0.045);
+  }
+  .duration-badge { display: none !important; }
+
+  /* A — while recording, hide Help + ⋯ so the timer/stop never overflow the
+     header. They return the moment recording stops. Magnifier stays. */
+  body.recording #helpBtn,
+  body.recording #menuBtn { display: none; }
+}
+
+/* ---------- Reposition: visible-but-locked after you draw ---------- */
+.reposition-btn:disabled { opacity: .45; cursor: default; }
+.photo-opacity-row input:disabled { opacity: .4; cursor: default; }
+
+
+/* ---------- Brush sizes + Smoothing on one line ---------- */
+.draw-inline { display: flex; gap: 18px; align-items: flex-start; }
+.draw-inline > * { flex: 1 1 0; min-width: 0; }
+.draw-inline .prop-row { flex-direction: column; align-items: flex-start; gap: 9px; }
+.draw-inline .smooth-seg { width: 100%; }
+@media (max-width: 480px) { .draw-inline { gap: 12px; } }
+
+
+/* ---------- Image / Music on-off toggle ---------- */
+.layer-toggle { display: none; width: 42px; height: 25px; flex: none; padding: 0; border: none;
+  border-radius: 13px; background: rgba(255,255,255,.16); position: relative; cursor: pointer;
+  transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
+.music-dropzone.loaded .layer-toggle { display: inline-block; }   /* appears with the loaded box */
+.layer-toggle.on { background: var(--accent); }
+.layer-toggle-knob { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%;
+  background: #fff; transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.layer-toggle.on .layer-toggle-knob { transform: translateX(17px); }
+/* keep the loaded row tidy so filename + toggle + Remove all fit */
+.music-dropzone.loaded { gap: 10px; }
+.music-dropzone.loaded #musicBtnLabel, .music-dropzone.loaded > span { flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-toggle[aria-checked="false"] { opacity: 1; }
+
+
+/* ---------- Brush size slider (inline with Smoothing) ---------- */
+.brush-slider-line { display: flex; align-items: center; gap: 10px; width: 100%; }
+.brush-slider-line .slider-nudge-wrap { flex: 1; min-width: 0; }
+/* smoothing pill: buttons fill the container so it isn't stretched with empty space */
+.draw-inline .smooth-seg { width: 100%; margin-left: 0; }
+.draw-inline .smooth-seg .smooth-btn { flex: 1; }
+@media (max-width: 560px) { .draw-inline { flex-direction: column; gap: 14px; } .draw-inline > * { width: 100%; } }
+
+
+/* ---------- Brush size: rounded tray + snug value + preview dot ---------- */
+.brush-slider-line {
+  background: rgb(23, 27, 35);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 3px 8px;
+  gap: 8px;
+}
+.brush-slider-line .prop-val { width: auto; text-align: left; flex: none; }
+.brush-dot-cell { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; }
+.brush-dot { background: #fff; border-radius: 50%; flex: none; }
+.brush-slider-line .slider-nudge-btn { width: 24px; height: 24px; }
+
+/* ===================================================================
+   Apple-style mobile header (v74): bare glyphs, one filled Post pill,
+   magnify moved to the toolbar, help moved to the ⋯ menu. Plus a wider
+   tray so the standalone magnify fits down to 360px.
+   =================================================================== */
+@media (max-width: 640px) {
+  /* Bare glyphs — drop the circle chrome from Record / Play / ⋯. */
+  .btn.record,
+  .play-wrap,
+  .play-wrap > #playBtn.btn.play,
+  .icon-btn {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .btn.record svg { filter: none; }               /* clean accent dot, no glow */
+
+  /* Post is the single filled element — with its label, now there's room. */
+  .btn.post {
+    width: auto;
+    padding: 0 15px;
+    gap: 6px;
+  }
+  .btn.post .btn-label { display: inline; }
+  .btn.post .post-long { display: none; }          /* "Post", not "Post to Skribl" */
+
+  /* Wider tray (header + toolbar kept aligned at 6px) so the standalone
+     magnify fits even at 360px; tighter gap does the last few pixels. */
+  .header  { margin: 12px 6px; }
+  .toolbar { margin: 12px 6px; max-width: calc(100% - 12px); gap: 1px; }
+}
+
+/* ===================================================================
+   Apple header polish (v75): Record keeps its label (sheds when tight),
+   even glyph sizes on one centerline, and spacing that groups Record+Play
+   vs Post vs ⋯. Mobile only.
+   =================================================================== */
+@media (max-width: 640px) {
+  /* Record: accent dot + label. Label shows by default, hidden only when the
+     header genuinely can't fit it (JS toggles .rec-collapsed). */
+  .btn.record { width: auto; padding: 0 4px; gap: 7px; }
+  .btn.record .btn-label { display: inline; font-size: 13px; font-weight: 700; }
+  .header.rec-collapsed .btn.record { width: 40px; padding: 0; }
+  .header.rec-collapsed .btn.record .btn-label { display: none; }
+  .btn.record svg { width: 16px; height: 16px; }        /* ~11px accent dot */
+
+  /* Even, larger glyphs for Play and ⋯, aligned with the pill's centerline. */
+  .btn.play svg { width: 22px; height: 22px; }
+  .icon-btn svg { width: 22px; height: 22px; }
+
+  /* Grouping via spacing: Record+Play stay a tight pair (actions gap); a bigger
+     gap sets off Post (the commit) and then ⋯ (overflow). */
+  .actions { gap: 3px; }
+  .btn.post { margin-left: 11px; }
+  #menuBtn  { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room */
+
+  /* Toolbar magnify sized to match Pen/Eraser. */
+  .magnify-tool svg { width: 23px; height: 23px; }
+}
+
+/* ===================================================================
+   Header spacing + recording fixes (v76)
+   =================================================================== */
+@media (max-width: 640px) {
+  /* Stop (recording) is a proper pill again — the bare-Record padding was
+     bleeding into it and clipping the word. */
+  .btn.record.active { width: auto; padding: 0 15px; gap: 7px; }
+  .btn.record.active .btn-label { display: inline; }
+
+  /* While recording, collapse the wordmark so the timer + Stop have room and
+     the logo keeps clear space to its right. Same once a take exists — logo +
+     a generous gap + the control cluster reads best. At idle rest (no take) the
+     wordmark shows, since there's only Record + ⋯. */
+  body.recording .brand > span,
+  .header:has(#playWrap:not([hidden])) .brand > span { display: none; }
+
+  /* Uniform spacing between controls; cluster them to the right so there's a
+     generous gap between the logo and the first control (instead of spreading
+     edge-to-edge, which pinned Record against the logo). */
+  .actions,
+  .header.compact .actions { gap: 9px; justify-content: flex-end; }
+  .btn.post { margin-left: 0; }
+  #menuBtn  { margin-left: 0; margin-right: 2px; }
+
+  /* After a take (Play visible), Record drops to a bare dot — grouped beside
+     Play so it still reads as a control — which pulls the cluster further right
+     of the logo. Record keeps its label at rest (when it's the only action). */
+  .actions:has(#playWrap:not([hidden])) .btn.record { width: 40px; padding: 0; }
+  .actions:has(#playWrap:not([hidden])) .btn.record .btn-label { display: none; }
+}
+
+/* ===================================================================
+   Sleeker desktop header (v79) — Option 1: thinner pills, lighter
+   hairlines, and a ⋯ matched in height & centered with the pills.
+   Desktop only; mobile (max-width:640px) is unaffected.
+   =================================================================== */
+@media (min-width: 641px) {
+  .btn { padding: 7px 14px; }                          /* ~32px tall vs 37 */
+  .btn svg { width: 14px; height: 14px; }
+  .btn.record { border-color: rgba(124,92,255,0.26); }
+  .btn.post   { box-shadow: 0 2px 6px rgba(0,0,0,0.35); }
+
+  /* Merged Play pill: lighter shell + divider to match. */
+  .play-wrap { border-color: var(--hairline); }
+  .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
+
+  /* ⋯ — same height as the pills, lighter hairline, dead-centered. */
+  .icon-btn { width: 32px; height: 32px; border-color: var(--hairline); }
+  .icon-btn svg { width: 17px; height: 17px; }
+
+  /* Keep the merged Play pill slim after a take (the compact rule otherwise
+     restores 10px padding, making Play taller than Record/Post). */
+  .header.compact .btn.play.btn-icon { padding: 7px 14px; }
+}

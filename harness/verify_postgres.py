@@ -219,10 +219,25 @@ except Exception:
     proc.kill()
 
 # Resolve the identity hash the workers used, from the app itself.
-_kh = subprocess.run([sys.executable, "-c",
-                      "import app; print(app._rate_key('127.0.0.1'))"],
+#
+# _rate_key moved from app.py into skribl.ratelimit when Skribl became a
+# blueprint, so this probe must try both. And it must FAIL LOUDLY: it used to
+# swallow a non-zero exit into KEY_HASH = "", which made both the committed and
+# pending queries match zero rows. "pending == 0" then passed VACUOUSLY while
+# "committed == QUOTA" failed — a result that looks like a rate-limiter bug and
+# is actually a broken probe. An identity we cannot resolve is not a result.
+_PROBE = ("import sys\n"
+          "try:\n"
+          "    from skribl.ratelimit import _rate_key\n"
+          "except ImportError:\n"
+          "    from app import _rate_key\n"
+          "print(_rate_key('127.0.0.1'))\n")
+_kh = subprocess.run([sys.executable, "-c", _PROBE],
                      cwd=str(ROOT), env=env, capture_output=True, text=True)
-KEY_HASH = _kh.stdout.strip().splitlines()[-1] if _kh.returncode == 0 else ""
+if _kh.returncode != 0 or not _kh.stdout.strip():
+    skip("could not resolve the rate-limit identity hash from the app "
+         f"({(_kh.stderr or '').strip().splitlines()[-1:] or ['no output']})")
+KEY_HASH = _kh.stdout.strip().splitlines()[-1]
 posts_after = _post_rows()
 created = posts_after - posts_before
 committed = _our_events("committed")
@@ -248,27 +263,17 @@ check("gunicorn logged no worker exit, termination or boot failure DURING the bu
       exited == 0, f"{exited} exit/termination lines before shutdown")
 check("every response was 201 or 429 — no 500s, no transport errors",
       set(out) <= {201, 429}, str(sorted(set(out))))
-# v134: these asserted "exactly QUOTA" — and one of them explicitly asserted "no
-# UNDER-admission" — against a limiter whose contract is AT MOST QUOTA. reserve()
-# is insert -> commit -> count -> delete-if-over, so two workers can each commit
-# before either counts, both see a total over quota, and both withdraw. Admitting
-# fewer than the quota is the algorithm being fail-closed, and across four
-# PROCESSES the window is wider than it is across threads. These passed on luck.
-# What actually matters — and is now asserted hard — is that it never admits MORE.
-won = out.count(201)
-check(f"NEVER more than the quota is admitted across {WORKERS} processes",
-      won <= QUOTA, f"{won} x 201 in {sorted(out)}")
-check("the limiter does not block everything: at least one request wins",
-      won >= 1, str(sorted(out)))
-check("every other request is refused, none lost",
-      out.count(429) == CONCURRENT - won, str(sorted(out)))
-check("no OVER-admission: PostgreSQL holds no more post rows than the quota",
-      created <= QUOTA, f"{created} rows created")
-check("HTTP admissions match committed database rows exactly",
+check(f"exactly {QUOTA} requests were admitted", out.count(201) == QUOTA, str(sorted(out)))
+check(f"exactly {CONCURRENT - QUOTA} were refused", out.count(429) == CONCURRENT - QUOTA,
+      str(sorted(out)))
+check("no OVER-admission: PostgreSQL holds exactly two new post rows",
+      created == QUOTA, f"{created} rows created")
+check("no UNDER-admission: the quota was actually used, not merely blocked",
+      created == QUOTA and out.count(201) == QUOTA)
+check("HTTP admissions match committed database rows",
       out.count(201) == created, f"{out.count(201)} x 201 vs {created} rows")
-check("every admission was promoted to committed, none over quota",
-      committed == won and committed <= QUOTA,
-      f"committed={committed} vs admitted={won}")
+check("exactly two rate events were promoted to committed",
+      committed == QUOTA, f"committed rows for THIS run's identity={committed}")
 check("no reservation was stranded in pending",
       pending == 0, f"pending rows for THIS run's identity={pending}")
 

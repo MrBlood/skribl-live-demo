@@ -12,16 +12,69 @@ cd "$ROOT" || exit 1
 # it, so the db-init process and the server cannot see different environments.
 export SKRIBL_RATE_MAX_POSTS="${SKRIBL_RATE_MAX_POSTS:-100000}"
 
+
+# --- provenance helpers -----------------------------------------------------
+# The tree hash previously had two branches that hashed DIFFERENT FILE SETS:
+# `git ls-files` lists tracked files INCLUDING harness/LAST-RUN.txt and
+# SHA256SUMS, while the find fallback excluded them. Inside a checkout the hash
+# therefore covered the very file this run is about to write, so it could never
+# be reproduced. Both paths now apply the same exclusions.
+_tree_files() {
+  if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$ROOT" ls-files
+  else
+    (cd "$ROOT" && find . -type f \
+        -not -path './.git/*' -not -path './instance/*' \
+        -not -path '*/__pycache__/*' -not -name '*.pyc' \
+        | sed 's|^\./||')
+  fi | grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' | LC_ALL=C sort
+}
+
+_tree_hash() {
+  _tree_files | (cd "$ROOT" && tr '\n' '\0' | xargs -0 sha256sum 2>/dev/null) \
+    | sha256sum | cut -d" " -f1
+}
+
+# A commit SHA describes the tree only if the working copy is clean. An
+# uncommitted edit reported under a clean-looking SHA is exactly the kind of
+# claim this banner exists to prevent.
+_git_commit() {
+  local c
+  c=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null) || {
+    echo "(not a git checkout)"; return; }
+  git -C "$ROOT" diff --quiet HEAD 2>/dev/null || c="$c-dirty"
+  echo "$c"
+}
+
 # Isolated database per run (round 4, #7). This previously reused the repository
 # instance/ DB, so row-delta assertions and "did this run start clean?" could not
 # be answered honestly. SKRIBL_KEEP_DB=1 restores the old behaviour.
-if [ "${SKRIBL_KEEP_DB:-0}" != "1" ]; then
+# A DATABASE_URL supplied by the caller used to be OVERWRITTEN unconditionally,
+# so the only way to run the harness against PostgreSQL was SKRIBL_KEEP_DB=1 —
+# which also gave up the fresh-database isolation. The banner then still printed
+# "sqlite", so a Postgres run silently was not one. Isolation and engine choice
+# are now independent: an explicit DATABASE_URL is honoured, and reset by
+# dropping and recreating Skribl's tables rather than by making a new file.
+if [ "${SKRIBL_KEEP_DB:-0}" = "1" ]; then
+  DB_RESET="no (reusing existing DATABASE_URL)"
+elif [ -n "${DATABASE_URL:-}" ]; then
+  DB_RESET="yes (dropped and recreated Skribl's tables in the supplied DATABASE_URL)"
+  python3 - <<'PYRESET' || exit 1
+from app import app, db
+try:
+    from skribl.models import SkriblBase as _B
+    md = _B.metadata
+except ImportError:
+    md = db.metadata
+with app.app_context():
+    md.drop_all(db.engine)
+    md.create_all(db.engine)
+PYRESET
+else
   HARNESS_TMP="$(mktemp -d)"
   HARNESS_DB="$HARNESS_TMP/harness.db"
   export DATABASE_URL="sqlite:///$HARNESS_DB"
   DB_RESET="yes (fresh $HARNESS_DB)"
-else
-  DB_RESET="no (reusing existing DATABASE_URL)"
 fi
 python3 -c "from app import app, db; app.app_context().push(); db.create_all()" || exit 1
 
@@ -41,9 +94,11 @@ python3 -c "from app import app, db; app.app_context().push(); db.create_all()" 
   echo "================ RUN CONTEXT ================"
   echo "UTC timestamp           : $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "Host                    : $(uname -sm)"
-  echo "Tree SHA-256            : $(cd "$ROOT" && { git ls-files -z 2>/dev/null || find . -type f -not -path './.git/*' -not -path './instance/*' -not -path './harness/LAST-RUN.txt' -not -path './SHA256SUMS' -not -path '*/__pycache__/*' -not -name '*.pyc' -print0; } | sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | cut -d" " -f1)"
-  echo "Git commit              : $(cd "$ROOT" && git rev-parse --short HEAD 2>/dev/null || echo "(not a git checkout)")"
-  echo "SKRIBL_VERSION          : $(grep -m1 "^SKRIBL_VERSION" "$ROOT/app.py" | cut -d'"' -f2)"
+  echo "Tree SHA-256            : $(_tree_hash)"
+  echo "Git commit              : $(_git_commit)"
+  # SKRIBL_VERSION moved from app.py into the package when Skribl became a
+  # blueprint. Look in both so the run header is never silently blank.
+  echo "SKRIBL_VERSION          : $(grep -h -m1 "^SKRIBL_VERSION" "$ROOT/app.py" "$ROOT/skribl/core.py" 2>/dev/null | head -1 | cut -d'"' -f2)"
   echo "Python                  : $(python3 -c "import sys;print(sys.version.split()[0])")"
   echo "Flask                   : $(python3 -c "from importlib.metadata import version;print(version(\"flask\"))" 2>/dev/null || echo missing)"
   echo "SQLAlchemy              : $(python3 -c "from importlib.metadata import version;print(version(\"sqlalchemy\"))" 2>/dev/null || echo missing)"
@@ -60,6 +115,22 @@ p=sync_playwright().start();b=p.chromium.launch();print(b.version);b.close();p.s
   echo "Command                 : $0 $*"
   echo "============================================"
 }
+
+# A timed-out or killed run leaves a server holding 5001. The next run then
+# binds nothing, silently tests against the STALE TREE, and reports green — this
+# cost a debugging cycle and produced three false failures. Refuse to proceed
+# unless the port is genuinely ours.
+if command -v fuser >/dev/null 2>&1; then
+  fuser -k 5001/tcp 2>/dev/null || true
+else
+  pkill -f "flask --app app run --port 5001" 2>/dev/null || true
+fi
+sleep 1
+if (command -v ss >/dev/null 2>&1 && ss -lnt 2>/dev/null | grep -q ":5001 "); then
+  echo "Port 5001 is still held by another process. Refusing to run against a" >&2
+  echo "server this script did not start — results would not describe this tree." >&2
+  exit 1
+fi
 
 python3 -m flask --app app run --port 5001 --no-reload > /tmp/flask.log 2>&1 &
 FLASK_PID=$!
