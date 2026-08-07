@@ -1,26 +1,26 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-07T17:38:09Z
+UTC timestamp           : 2026-08-07T19:39:10Z
 Host                    : Linux x86_64
-Tree SHA-256            : 6c4d1fe34702ae03c27337ddd77b3b6f04154b5d99166ada79abcb33231be63d
+Tree SHA-256            : 8a8e294c4a164fa7ebe5c3f7e836cc4021092e74981cbd07391b9025a30259a4
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v141
+SKRIBL_VERSION          : v142
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.kNKGv61XMm/harness.db)
+Database reset          : yes (fresh /tmp/tmp.BGnFMTCqXu/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_privacy.py verify_storage.py verify_feed.py verify_csrf.py verify_migrations.py verify_seam.py verify_prefix.py verify_csp.py verify_media.py verify_version.py verify_lib.py verify_audio.py verify_docs.py
+Command                 : ./harness/run_harness.sh verify_privacy.py verify_storage.py verify_feed.py verify_csrf.py verify_migrations.py verify_seam.py verify_prefix.py verify_csp.py verify_media.py verify_version.py verify_lib.py verify_audio.py verify_docs.py verify_flipmeta.py verify_pressure.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 13
+suites requested : 15
   verify_privacy.py: ok — 30/30 passed
   verify_storage.py: ok — 26/26 passed
   verify_feed.py: ok — 25/25 passed
@@ -34,6 +34,8 @@ suites requested : 13
   verify_lib.py: ok — 8/8 passed
   verify_audio.py: ok — 9/9 passed
   verify_docs.py: ok — 24/24 passed
-assertions passed: 334   (skipped suites contribute 0)
+  verify_flipmeta.py: ok — 24/24 passed
+  verify_pressure.py: ok — 27/27 passed
+assertions passed: 385   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

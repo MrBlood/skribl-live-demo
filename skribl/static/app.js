@@ -472,6 +472,49 @@ function replayTimelineToCanvas(timeline, startIndex, elapsedMs, dotFn, lineFn) 
   return i;
 }
 let lockToastShown = false;
+/* ---- stylus pressure ------------------------------------------------------
+   Pressure scales the existing per-point `size` rather than adding a field, so
+   the player, the replay path, every exporter and every already-released
+   client honour it without changing, and an old payload stays a valid new one.
+
+   PAD IS NOT FLIP. Flip binds Pointer Events and reads `e.pressure`. Pad binds
+   `mousedown`/`touchstart` (see the bindings below), where PointerEvent fields
+   do not exist — an `e.pointerType === 'pen'` check here is dead code that
+   silently never fires, which is exactly what the first draft of this was.
+   Migrating Pad to Pointer Events would touch the pinch handler, the
+   capture-phase space-drag and the mouse/touch split throughout, so the narrow
+   correct reader is `Touch.force`.
+
+   Gated on `touchType === 'stylus'` (iOS/iPadOS, i.e. Apple Pencil). Force is
+   also reported for FINGERS on force-capable screens, so an ungated read would
+   make ordinary touch drawing vary in width — a change to how every existing
+   user's lines look. Android touch events expose no touchType, so a stylus
+   there draws at constant width: narrower than ideal, and correct rather than
+   guessing.
+
+   PRESSURE_MIN keeps the lightest touch visible instead of vanishing. Erasing
+   is exempt — a variable-width eraser leaves streaks you cannot see. */
+const PRESSURE_MIN = 0.35;
+function pressureSize(e, base, erase) {
+  if (erase || !e) return base;
+  let raw = 0;
+  if (e.pointerType === 'pen' && typeof e.pressure === 'number') {
+    raw = e.pressure;                       // Pointer Events, if ever adopted here
+  } else if (e.touches && e.touches.length === 1) {
+    const t = e.touches[0];
+    if (t && t.touchType === 'stylus' && typeof t.force === 'number') raw = t.force;
+  }
+  // A stylus commonly reports 0 on the first event of a stroke. Treat that as
+  // "no reading yet" rather than as a feather touch, or every line would start
+  // at minimum width.
+  if (!(raw > 0)) return base;
+  return base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw));
+}
+// Exposed for the harness: the stylus path cannot be synthesised in Chromium
+// (touchType is an iOS extension with no constructor support), so the mapping
+// is asserted directly. This is a measurement seam, not an API.
+window.__skriblPressureSize = pressureSize;
+
 function startDraw(e) {
   // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
   // preventDefault/anything else so it can cleanly abort a nascent 1-finger
@@ -541,7 +584,7 @@ function startDraw(e) {
   const t = recording ? Date.now() - startTime : 0;
   const erase = tool === 'eraser';
   const drawColor = erase ? bgColor : penColorFor(color);
-  const drawSize = erase ? size * 3 : size;
+  const drawSize = pressureSize(e, erase ? size * 3 : size, erase);
   const point = { x: pos.x, y: pos.y, color: drawColor, size: drawSize, t, start: true, erase };
   currentStroke.push(point);
   _slActive = strokeLayersOn() && !erase && parseStrokeAlpha(drawColor) < 1;
@@ -573,7 +616,7 @@ function continueDraw(e) {
   const t = recording ? Date.now() - startTime : 0;
   const erase = tool === 'eraser';
   const drawColor = erase ? bgColor : penColorFor(color);
-  const drawSize = erase ? size * 3 : size;
+  const drawSize = pressureSize(e, erase ? size * 3 : size, erase);
   const point = { x: dp.x, y: dp.y, color: drawColor, size: drawSize, t, erase };
   currentStroke.push(point);
   if (_slActive) {
@@ -597,7 +640,11 @@ function snapStrokeToFinal() {
   const t = recording ? Date.now() - startTime : 0;
   const erase = tool === 'eraser';
   const drawColor = erase ? bgColor : penColorFor(color);
-  const drawSize = erase ? size * 3 : size;
+  // Carry the stroke's final captured width. This read the nominal slider value,
+  // which was invisible at constant width but with pressure would snap the last
+  // point back to full thickness — a blob on the end of every tapered stroke.
+  const _lastPt = currentStroke[currentStroke.length - 1];
+  const drawSize = (_lastPt && typeof _lastPt.size === 'number') ? _lastPt.size : (erase ? size * 3 : size);
   currentStroke.push({ x: lastRawPos.x, y: lastRawPos.y, color: drawColor, size: drawSize, t, erase });
   if (_slActive) {
     drawLineOn(_wetCtx, lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, solidStrokeColor(drawColor), drawSize);

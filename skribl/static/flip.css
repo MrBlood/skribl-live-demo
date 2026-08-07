@@ -14,6 +14,16 @@
   .flip-share-sub { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
   .flip-share-url { width: 100%; box-sizing: border-box; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--hairline-strong);
     background: #13161c; color: var(--text-primary); font-size: 12.5px; text-align: center; }
+  /* Compose step. Inherits .flip-share-url's box so the title, caption and the
+     result URL all read as one family; the caption relaxes text-align and
+     resize, which a single-line readonly URL does not want. */
+  /* [hidden] must win. An explicit `display` on the element overrides the UA's
+     `[hidden]{display:none}`, so setting .hidden=true in JS silently did
+     nothing and both panes rendered at once. Scope the display to :not([hidden])
+     rather than adding a second rule to undo the first. */
+  #flipShareCompose:not([hidden]), #flipShareResult:not([hidden]) { display: flex; flex-direction: column; gap: 12px; }
+  .flip-share-caption { text-align: left; resize: vertical; min-height: 62px; font-family: inherit; line-height: 1.45; }
+  .flip-share-count { font-size: 11px; color: var(--text-secondary); text-align: right; margin-top: -6px; }
   .flip-share-actions { display: flex; gap: 8px; }
   .flip-share-actions .panel-btn { flex: 1 1 0; text-align: center; text-decoration: none; }
   .flip-share-open { background: var(--accent); border-color: transparent; color: #fff; display: flex; align-items: center; justify-content: center; }

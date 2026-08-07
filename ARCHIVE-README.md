@@ -1,11 +1,12 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v141"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v142"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
-code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with six
-small enumerated edits listed below. If you have a later line of work (a v13x
-with newer editor/Flip/CSS changes), **this archive does not contain it**, and
+code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
+integration edits listed below plus the two v142 features. If you have a later
+line of work (a v13x with newer editor/Flip/CSS changes), **this archive does
+not contain it**, and
 merging means bringing those four files here rather than the reverse.
 
 The filename is DERIVED from `SKRIBL_VERSION`, not typed alongside it. Earlier
@@ -46,7 +47,8 @@ lines to 116 and now does only host work. Everything else moved into `skribl/`:
 * Media can live outside the database. Default is still `inline` (v131
   behaviour); `SKRIBL_MEDIA_BACKEND=local` externalises it.
 
-**Client edits — the only six.** Re-apply these if you merge newer client files:
+**Client edits — the six integration edits.** Re-apply these if you merge newer
+client files:
 
     flip.js    window.SKRIBL_API_BASE instead of a hardcoded '/api/skribls'
     flip.js    window.SKRIBL_PLAYER_BASE instead of a hardcoded '/s/'
@@ -56,6 +58,47 @@ lines to 116 and now does only host work. Everything else moved into `skribl/`:
     templates  skribl_asset() instead of url_for('skribl.static', …)
 
 `harness/verify_seam.py` fails loudly if any of these is missed.
+
+**Client changes added in v142.** These are features, not integration seams, so
+they are listed separately — a merge should take them or leave them as a unit,
+not re-apply them line by line:
+
+    flip.html  a compose step (title, caption, counter) before the share result
+    flip.js    buildSharePayload() sends the typed title/caption. It sent
+               title:'Flip animation' and no caption, so every Flip post
+               reached the platform with the same meaningless title
+    flip.css   the compose/result panes; scoped :not([hidden]) so an explicit
+               display does not defeat the hidden attribute
+    flip.js    sizeFor() — stylus pressure scales the per-point size
+    app.js     pressureSize() — the same, via Touch.force
+
+`harness/verify_flipmeta.py` (24) and `harness/verify_pressure.py` (27) cover
+these, both driving a real browser.
+
+**Pressure is stored as `size`, not as a new field.** A `pressure` key would
+have round-tripped — points are not shape-validated and POST preserves unknown
+fields — but the player renders from `size` alone, so the editor and the shared
+link would have disagreed about what a drawing looks like. Scaling `size` at
+capture time means the player, all three exporters, the thumbnail renderer and
+every already-released client honour it unchanged, and an old payload is still
+a valid new one. This is the same failure the v137 backfill made in the other
+direction: trusting a plausible field that nothing downstream reads.
+
+**The two editors gate pressure DIFFERENTLY, and must.** Flip binds Pointer
+Events and reads `e.pressure` where `pointerType === 'pen'`. Pad binds
+`mousedown`/`touchstart`, where PointerEvent fields do not exist at all — the
+first draft of this feature checked `pointerType` in `app.js` and was dead code
+that could never fire, which passed source review and was caught only by running
+it. Pad reads `Touch.force`, gated on `touchType === 'stylus'` so a finger on a
+force-capable screen is not treated as a stylus. Consequence: an Android stylus
+draws at constant width, because Android touch events expose no `touchType`.
+
+**Pad's stylus path is UNVERIFIED on a device.** `touchType` is an iOS extension
+with no `Touch` constructor support, so an Apple Pencil stroke cannot be
+synthesised in Chromium. `verify_pressure.py` asserts the mapping directly
+against the function and asserts that real mouse input is unchanged, then SKIPS
+the plumbing from `touchstart` into `pressureSize` with that reason printed.
+Needs a real iPad. The skip contributes zero assertions and is not coverage.
 
 ## Running it
 
@@ -127,7 +170,8 @@ backup; nothing in the chain can derive them.
 
 ## Known-open
 
-* `app.js` is still 6,596 lines and serves both the editor and the player. A
+* `app.js` is still 6,643 lines (6,596 at v141, plus the pressure reader) and
+  serves both the editor and the player. A
   split was attempted and REVERTED; see docs/REFACTOR-v132.md for why the
   regex-based call graph was the wrong tool and what to use instead.
 * The S3 media backend is a subclass hook, not an implementation.

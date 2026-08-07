@@ -155,15 +155,37 @@
       <button type="button" class="panel-btn" id="flipExportCancel">Cancel</button>
     </div>
   </div>
+  <!-- Two states in one sheet: COMPOSE (title + caption, before posting) and
+       RESULT (the link, after). Flip previously had only the result state and
+       hardcoded title:'Flip animation' with no caption at all, so every Flip
+       share landed in the platform indistinguishable from every other one.
+       Limits match the Pad's inputs (60/280); the server truncates at 80/300. -->
   <div class="flip-export" id="flipShare" hidden>
     <div class="flip-export-card flip-share-card">
       <button type="button" class="flip-share-close" id="flipShareClose" aria-label="Close">&#x2715;</button>
-      <span class="flip-export-label">Your Skribl is live &#127881;</span>
-      <p class="flip-share-sub">Anyone with the link can watch it play — with your loop, image, and controls.</p>
-      <input type="text" id="flipShareUrl" class="flip-share-url" readonly>
-      <div class="flip-share-actions">
-        <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
-        <a id="flipShareOpen" class="panel-btn flip-share-open" target="_blank" rel="noopener">Open player</a>
+
+      <div id="flipShareCompose">
+        <span class="flip-export-label">Share your Skribl</span>
+        <p class="flip-share-sub">Give it a name so you can find it again.</p>
+        <input type="text" id="flipShareTitle" class="flip-share-url" maxlength="60"
+               placeholder="Untitled Skribl" autocomplete="off">
+        <textarea id="flipShareCaption" class="flip-share-url flip-share-caption" maxlength="280"
+                  rows="3" placeholder="Say something about it…"></textarea>
+        <span class="flip-share-count" id="flipShareCount">0 / 280</span>
+        <div class="flip-share-actions">
+          <button type="button" class="panel-btn" id="flipShareCancel">Cancel</button>
+          <button type="button" class="panel-btn flip-share-open" id="flipShareSubmit">Share it</button>
+        </div>
+      </div>
+
+      <div id="flipShareResult" hidden>
+        <span class="flip-export-label">Your Skribl is live &#127881;</span>
+        <p class="flip-share-sub">Anyone with the link can watch it play — with your loop, image, and controls.</p>
+        <input type="text" id="flipShareUrl" class="flip-share-url" readonly>
+        <div class="flip-share-actions">
+          <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
+          <a id="flipShareOpen" class="panel-btn flip-share-open" target="_blank" rel="noopener">Open player</a>
+        </div>
       </div>
     </div>
   </div>

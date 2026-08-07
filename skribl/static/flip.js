@@ -431,6 +431,38 @@ function render(){
 
 /* ---- drawing (pad-format points, with timestamps for future replay) ---- */
 function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
+
+/* ---- stylus pressure ------------------------------------------------------
+   Pressure scales the EXISTING per-point `size`. It is deliberately NOT a new
+   field on the point.
+
+   A `pressure` key would have round-tripped — the server does not shape-check
+   points and POST preserves unknown fields — but the player renders posted
+   Skribls from `size` alone, so a pressure-aware Flip would have looked one way
+   in the editor and another to everybody who opened the link. Baking it into
+   `size` at capture time means the player, the GIF/MP4/WebM exporters, the
+   thumbnail renderer and every already-released client get it for free, and an
+   old payload is still a valid new payload.
+
+   Applied ONLY for pointerType 'pen'. Mouse reports a constant 0.5 while down
+   and most touchscreens report 0 or 0.5, so honouring those would either halve
+   every mouse stroke or make width depend on hardware that isn't measuring
+   anything. A device with no stylus draws exactly as it did before.
+
+   MIN keeps a feather-light touch visible: pressure 0 draws at 35% of the
+   nominal width rather than vanishing. Erasing ignores pressure — a variable
+   eraser is a way to leave streaks you cannot see. */
+const PRESSURE_MIN = 0.35;
+function sizeFor(e, base){
+  if(erasing) return base;
+  if(!e || e.pointerType !== 'pen') return base;
+  const raw = typeof e.pressure === 'number' ? e.pressure : 0;
+  // Chromium reports 0 on the first pen event of a stroke often enough that
+  // trusting it would start every line at minimum width. Treat 0 as "no
+  // reading yet" and fall through to the nominal size.
+  if(!(raw > 0)) return base;
+  return base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw));
+}
 let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
 pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return; e.preventDefault(); disarmAll();
@@ -441,7 +473,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; curCount=1; redoStack.length=0;
   const p=pos(e); smoothPt={x:p.x,y:p.y}; lastRaw={x:p.x,y:p.y};
-  const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
+  const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
   frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
@@ -455,7 +487,7 @@ pad.addEventListener('pointermove', e=>{
   let px, py;
   if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
   else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
-  curCount++; const dsize = erasing ? size*3 : size; const pcol = erasing ? color : penColorFor(color);
+  curCount++; const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
   frame().strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
   render(); });
 function endStroke(){
@@ -465,7 +497,12 @@ function endStroke(){
   // Settle: with smoothing on, the drawn point lags the finger — walk it to the real
   // release point so the stroke actually ends where the pen lifted.
   if(smoothingAlpha<1 && !erasing && smoothPt && lastRaw){
-    const dsize=size, pcol=penColorFor(color);
+    // Carry the last captured width into the settle points. This read `size`,
+    // the nominal slider value, which was invisible at constant width but with
+    // pressure would snap the final few points back to full thickness — a blob
+    // on the end of every tapered stroke.
+    const _pts=frame().strokes, _last=_pts.length ? _pts[_pts.length-1] : null;
+    const dsize=(_last && typeof _last.size==='number') ? _last.size : size, pcol=penColorFor(color);
     for(let k=0;k<6;k++){ smoothPt={x: smoothPt.x+(lastRaw.x-smoothPt.x)*0.5, y: smoothPt.y+(lastRaw.y-smoothPt.y)*0.5};
       curCount++; frame().strokes.push({ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false }); }
     render();
@@ -1260,7 +1297,14 @@ function buildSharePayload(){
   }
   const photo0=bgImage ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
   const outFrames=frames.map((f,i)=>({ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null }));
-  return { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1}, title:'Flip animation' };
+  // Title/caption come from the compose sheet. This was hardcoded to
+  // 'Flip animation' with no caption, so every Flip post arrived at the platform
+  // with an identical, meaningless title. The server truncates at 80/300 and
+  // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
+  const _t=document.getElementById('flipShareTitle');
+  const _c=document.getElementById('flipShareCaption');
+  return { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+           title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
 }
 async function shareSkribl(){
   if(sharing) return;
@@ -1279,8 +1323,43 @@ async function shareSkribl(){
 }
 function showShareResult(url){
   const m=document.getElementById('flipShare'), inp=document.getElementById('flipShareUrl'), open=document.getElementById('flipShareOpen');
+  const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
+  if(compose) compose.hidden=true;
+  if(result) result.hidden=false;
   if(inp) inp.value=url; if(open) open.href=url; if(m) m.hidden=false;
 }
+
+/* ---- compose step ---------------------------------------------------------
+   The emptiness check lives HERE, before the sheet opens, so a user is not
+   asked for a title and then told there is nothing to share. shareSkribl()
+   keeps its own check because it is still reachable directly. ---------------*/
+function openShareCompose(){
+  if(sharing) return;
+  const empty = frames.length===1 && !frames[0].strokes.length && !bgImage;
+  if(empty){ chip('Draw something to share'); return; }
+  if(playing) stop();
+  const m=document.getElementById('flipShare');
+  const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
+  if(compose) compose.hidden=false;
+  if(result) result.hidden=true;
+  if(m) m.hidden=false;
+  const t=document.getElementById('flipShareTitle');
+  if(t) setTimeout(()=>{ try{ t.focus(); }catch(_){ } }, 30);
+}
+const _shareCap=document.getElementById('flipShareCaption');
+const _shareCount=document.getElementById('flipShareCount');
+if(_shareCap && _shareCount){
+  const _sync=()=>{ _shareCount.textContent=_shareCap.value.length+' / 280'; };
+  _shareCap.addEventListener('input', _sync); _sync();
+}
+const _shareSubmit=document.getElementById('flipShareSubmit');
+if(_shareSubmit) _shareSubmit.addEventListener('click', shareSkribl);
+const _shareCancel=document.getElementById('flipShareCancel');
+if(_shareCancel) _shareCancel.addEventListener('click',()=>{ document.getElementById('flipShare').hidden=true; });
+// Enter in the title field submits; the caption is a textarea and keeps newlines.
+const _shareTitle=document.getElementById('flipShareTitle');
+if(_shareTitle) _shareTitle.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); shareSkribl(); } });
+
 document.getElementById('flipShareClose').addEventListener('click',()=>{ document.getElementById('flipShare').hidden=true; });
 document.getElementById('flipShare').addEventListener('click',e=>{ if(e.target.id==='flipShare') e.currentTarget.hidden=true; });
 document.getElementById('flipShareCopy').addEventListener('click',async()=>{
@@ -1816,7 +1895,7 @@ function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn
 function closeMenu(){ moreMenu.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
-document.getElementById('postBtn').addEventListener('click', shareSkribl);
+document.getElementById('postBtn').addEventListener('click', openShareCompose);
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
 /* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to
