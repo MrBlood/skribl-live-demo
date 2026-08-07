@@ -27,12 +27,12 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </span>
       <input type="search" id="helpSearch" class="help-search-input" autocomplete="off"
-             placeholder="Search &mdash; try loop, onion, pressure" aria-label="Search help">
+             placeholder="Search &mdash; try {% if is_flip %}loop, onion, pressure{% else %}loop, record, pressure{% endif %}" aria-label="Search help">
     </div>
     <div class="help-search-count" id="helpSearchCount" aria-live="polite"></div>
     <div class="help-empty" id="helpEmpty" hidden>
       <div class="help-empty-title">Nothing matches that</div>
-      <div class="help-empty-sub">Try <strong>loop</strong>, <strong>onion</strong>, <strong>pressure</strong> or <strong>export</strong>.</div>
+      <div class="help-empty-sub">Try <strong>loop</strong>, <strong>{% if is_flip %}onion{% else %}record{% endif %}</strong>, <strong>pressure</strong> or <strong>export</strong>.</div>
     </div>
     <div class="help-steps">
       <div class="help-intro">

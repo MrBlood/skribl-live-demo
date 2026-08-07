@@ -139,6 +139,29 @@ with sync_playwright() as p:
         check(f"{surface}: the search field is present",
               sp.is_visible("#helpSearch"))
 
+        # A global `input:focus-visible` rule draws a 2px outline at 3px offset.
+        # Inside a wrapper that already signals focus with :focus-within, that
+        # renders a SECOND ring outside the first — two concentric rounded
+        # rects, visible as a doubled right edge. Computed style is the only
+        # honest way to check it; the markup looks identical either way.
+        sp.focus("#helpSearch")
+        sp.wait_for_timeout(150)
+        outline = sp.evaluate(
+            "() => { const s = getComputedStyle("
+            "document.getElementById('helpSearch'));"
+            " return s.outlineStyle + ' ' + s.outlineWidth; }")
+        check(f"{surface}: the focused field draws no second outline",
+              outline.startswith("none") or outline.endswith("0px"),
+              f"computed outline is {outline!r} — the wrapper's :focus-within "
+              "border makes this a doubled ring")
+        ring = sp.evaluate(
+            "() => getComputedStyle(document.querySelector("
+            "'#helpDrawer .help-search')).borderTopColor")
+        check(f"{surface}: focus is still visible on the wrapper",
+              ring not in ("rgba(0, 0, 0, 0)", "transparent"),
+              f"border colour is {ring!r} — suppressing the inner outline must "
+              "not leave the field with no focus indication at all")
+
         base_count = sp.inner_text("#helpSearchCount")
         check(f"{surface}: the count states a total before any query",
               "entries" in base_count and "sections" in base_count,
@@ -148,9 +171,17 @@ with sync_playwright() as p:
         # sections is the thing an accordion structurally cannot do.
         sp.fill("#helpSearch", "loop")
         sp.wait_for_timeout(250)
-        open_sections = sp.evaluate(
-            "() => [...document.querySelectorAll('#helpDrawer .accordion-header')]"
-            ".filter(h => !h.hidden).length")
+        # RENDERED visibility, not the `hidden` PROPERTY. The first version of
+        # this assertion counted `!h.hidden` and passed while all seven
+        # sections were still on screen: `.accordion-header` is `display: flex`,
+        # which overrides the UA's `[hidden]{display:none}`. A test that reads
+        # the property confirms the JS did what it was told, not that anything
+        # disappeared. offsetParent is null only when something genuinely is
+        # not laid out.
+        VISIBLE = ("() => [...document.querySelectorAll("
+                   "'#helpDrawer .accordion-header')]"
+                   ".filter(h => h.offsetParent !== null).length")
+        open_sections = sp.evaluate(VISIBLE)
         check(f"{surface}: 'loop' reaches more than one section",
               open_sections > 1, f"{open_sections} section(s) matched")
         check(f"{surface}: matches are highlighted",
@@ -173,12 +204,28 @@ with sync_playwright() as p:
         sp.wait_for_timeout(250)
         check(f"{surface}: a no-match query shows the empty state",
               sp.is_visible("#helpEmpty"))
-        check(f"{surface}: no sections remain visible on no match",
-              sp.evaluate("() => [...document.querySelectorAll("
-                          "'#helpDrawer .accordion-header')].filter(h => !h.hidden).length") == 0)
+        still_shown = sp.evaluate(VISIBLE)
+        check(f"{surface}: no section is still RENDERED on no match",
+              still_shown == 0,
+              f"{still_shown} section(s) still on screen showing a 0 badge — "
+              "an explicit `display` is overriding the hidden attribute")
 
         sp.fill("#helpSearch", "")
         sp.wait_for_timeout(250)
+        # A placeholder that suggests a term this surface does not have sends
+        # the user straight into the empty state. "onion" is Flip-only.
+        placeholder = sp.get_attribute("#helpSearch", "placeholder")
+        suggested = [w.strip(" ,.") for w in placeholder.split("try")[-1].split(",")]
+        for term in [t for t in suggested if t]:
+            sp.fill("#helpSearch", term)
+            sp.wait_for_timeout(180)
+            hits = sp.evaluate(VISIBLE)
+            check(f"{surface}: the suggested term {term!r} finds something",
+                  hits > 0,
+                  "the placeholder points at a term this surface does not have")
+
+        sp.fill("#helpSearch", "")
+        sp.wait_for_timeout(200)
         check(f"{surface}: clearing restores every entry",
               sp.inner_text("#helpSearchCount") == base_count,
               f"{sp.inner_text('#helpSearchCount')!r} vs {base_count!r}")

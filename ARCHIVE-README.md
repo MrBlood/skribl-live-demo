@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v146"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v148"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -144,6 +144,41 @@ highlights do not nest under repeated keystrokes (the failure mode of rewriting
 innerHTML without caching the original), that clearing restores every entry and
 removes every mark, and that the empty state appears and retreats. On both
 surfaces, because "shared" is a claim until something checks both.
+
+**`[hidden]` was defeated by `display: flex`, for the SECOND time in this
+tree, and the test passed anyway.** `.accordion-header` is `display: flex`,
+which overrides the UA's `[hidden]{display:none}`, so a no-match search left all
+seven sections on screen each showing a "0" badge. The lesson had already been
+learned once on the Flip compose pane and written into the primer, and it was
+reintroduced regardless.
+
+The more useful finding is why the suite missed it. The assertion counted
+elements whose `hidden` PROPERTY was false — which is a check that the JS did
+what it was told, not that anything disappeared. It passed while the bug was
+plainly visible in a screenshot. It now counts elements with a non-null
+`offsetParent`, which is null only when something genuinely is not laid out.
+**A property assertion is not a rendering assertion.**
+
+**The search placeholder suggested a term that does not exist on Pad.**
+"onion" is Flip-only, so the Pad placeholder led straight into the empty state
+— which is what made a working search look broken. The suggestions are now
+gated on `is_flip`, and the suite reads the placeholder, searches every term it
+names, and asserts each one finds something. A suggestion that points at
+nothing is now a failure on whichever surface it points at.
+
+**The focus ring doubled, and the cause is worth recording.** A global
+`input:focus-visible` rule near the end of `styles.css` draws a 2px outline at
+3px offset on EVERY input. Inside a wrapper that already signals focus with
+`:focus-within`, that is a second purple ring 3px outside the first — two
+concentric rounded rects, most visible along the right edge. A plain
+`outline: none` on the input did not help: it sat earlier in the file and lost
+to the later rule at equal specificity. Suppressed with a matching selector
+instead, and the wrapper's ring softened to a border plus a low-alpha glow.
+`verify_help.py` asserts the computed outline is none AND that the wrapper still
+shows focus, because removing the ring entirely would trade a cosmetic flaw for
+an accessibility one.
+
+Any future control wrapping an `<input>` in this tree inherits the same trap.
 
 NOT built, and worth knowing: the two-tier split of "Getting started" from
 "Reference", and reordering the sections so Zoom and pan stops sitting between

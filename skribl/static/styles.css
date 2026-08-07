@@ -3766,15 +3766,27 @@ body.player-mode #canvas {
   border: 1px solid var(--hairline-strong);
   border-radius: 10px;
 }
-.help-search:focus-within { border-color: var(--accent); }
+.help-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.16);
+}
 .help-search-icon { display: flex; color: var(--text-secondary); }
 .help-search-icon svg { width: 15px; height: 15px; }
 .help-search-input {
   flex: 1 1 auto; min-width: 0;
   height: 38px; padding: 0;
-  background: transparent; border: 0; outline: none;
+  background: transparent; border: 0;
   color: var(--text-primary); font: inherit; font-size: 13px;
 }
+/* The global `input:focus-visible` rule near the end of this file draws a 2px
+   outline at 3px offset. Inside a wrapper that already shows focus via
+   :focus-within, that is a SECOND purple ring 3px outside the first — two
+   concentric rounded rects, visibly doubled along the right edge. The wrapper
+   is what the user perceives as the field, so the ring belongs there; the
+   input's own outline is suppressed with matching specificity, since a plain
+   `outline: none` earlier in the file loses to the later rule. */
+.help-search .help-search-input:focus,
+.help-search .help-search-input:focus-visible { outline: none; }
 .help-search-input::placeholder { color: var(--text-secondary); }
 /* Safari draws its own clear affordance; ours is Esc, which is discoverable
    from the keyboard and does not shift the layout. */
@@ -3794,5 +3806,11 @@ body.player-mode #canvas {
 .help-empty[hidden] { display: none; }
 .help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }
 .help-empty-sub { font-size: 12px; color: var(--text-secondary); }
-/* An item hidden by a search must not leave its border behind. */
-.help-tip[hidden], .help-step[hidden] { display: none; }
+/* [hidden] must win over the layout display. `.accordion-header` is
+   `display: flex` and `.accordion-body` has its own display, both of which
+   override the UA's `[hidden]{display:none}` — so setting .hidden in JS left
+   every section on screen showing a "0" badge during a no-match search. This is
+   the SECOND time this exact trap has been hit in this tree; scope layout
+   display with :not([hidden]) or pair it with a rule like this one. */
+.help-tip[hidden], .help-step[hidden],
+.accordion-header[hidden], .accordion-body[hidden] { display: none; }
