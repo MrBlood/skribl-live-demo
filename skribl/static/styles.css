@@ -2665,12 +2665,21 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   margin: 6px 8px;
 }
 
-/* Desktop: dropdown anchored top-right */
+/* Desktop: dropdown anchored to the APP COLUMN's top-right, not the viewport's.
+   `right: 18px` inside a `position: fixed; inset: 0` overlay pins the sheet to
+   the BROWSER WINDOW's edge. The app is a 720px column centred with
+   `margin: 0 auto`, so on any window wider than that the sheet detached from
+   the app and floated in the empty gutter beside it — at 1835px it landed some
+   550px clear of the UI it belongs to. It looked correct only at exactly
+   720-760px wide, which is the width a phone-first layout gets tested at.
+
+   The column's right edge sits at `50% + 360px`, clamped by `max()` so a window
+   narrower than the column falls back to an 18px inset from the viewport. */
 @media (min-width: 641px) {
   .menu-overlay { justify-content: flex-end; align-items: flex-start; }
   .menu-sheet {
     top: 64px;
-    right: 18px;
+    right: max(18px, calc(50% - 360px + 18px));
     width: 220px;
     border-radius: 16px;
     transform: translateY(-8px) scale(0.96);

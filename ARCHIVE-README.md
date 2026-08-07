@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v143"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v144"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -104,6 +104,18 @@ can report it.
 
 The output dimensions moved from the page-range readout to under Size, which is
 the control that changes them.
+
+**Every menu sheet was anchored to the browser window, not to the app.**
+`.menu-sheet` was `position: absolute; right: 18px` inside a
+`position: fixed; inset: 0` overlay, which pins to the VIEWPORT's edge. The app
+is a 720px column centred with `margin: 0 auto`, so on any wider window the
+sheet detached and floated in the empty gutter beside the UI — roughly 550px
+adrift at 1835px. It looked correct at about 720-760px and nowhere else, which
+is the width a phone-first layout gets checked at. `right` is now
+`max(18px, calc(50% - 360px + 18px))`, so the sheet tracks the column's right
+edge and falls back to a viewport inset when the window is narrower than the
+column. `verify_exportui.py` asserts the sheet stays inside the column at 760,
+1280 and 1900px — three widths, because testing one is exactly what missed it.
 
 **Pressure is stored as `size`, not as a new field.** A `pressure` key would
 have round-tripped — points are not shape-validated and POST preserves unknown

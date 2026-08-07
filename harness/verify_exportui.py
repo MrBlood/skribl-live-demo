@@ -160,4 +160,42 @@ with sync_playwright() as p:
 
     b.close()
 
+    # -----------------------------------------------------------------------
+    print("\nEXPORT SHEET — section 4: anchored to the app, at any window width")
+    #
+    # THE BUG. `.menu-sheet` was `position: absolute; right: 18px` inside a
+    # `position: fixed; inset: 0` overlay, which anchors it to the BROWSER
+    # WINDOW's right edge. The app is a 720px column centred with margin auto,
+    # so on a wide window every sheet detached from the app and floated in the
+    # empty gutter beside it. It looked correct at ~720px and nowhere else,
+    # which is why a phone-first layout never surfaced it.
+    #
+    # Asserted at three widths because a single viewport is exactly what missed
+    # it. The column edge is the contract, not a pixel value.
+    b2 = p.chromium.launch()
+    for width in (760, 1280, 1900):
+        w = b2.new_page(viewport={"width": width, "height": 900})
+        w.goto(f"{BASE}/flip", wait_until="load")
+        w.wait_for_timeout(1200)
+        w.evaluate("() => { const o = document.getElementById('exportOverlay');"
+                   " if (o) { o.hidden = false; o.classList.add('open'); } }")
+        w.wait_for_timeout(300)
+
+        sheet = w.locator("#exportSheet").bounding_box()
+        col = w.evaluate(
+            "() => { const el = document.querySelector('.flip-app') || document.body;"
+            " const r = el.getBoundingClientRect();"
+            " return { left: r.left, right: r.right }; }")
+
+        check(f"at {width}px the sheet's right edge is inside the app column",
+              sheet["x"] + sheet["width"] <= col["right"] + 1,
+              f"sheet ends at {round(sheet['x'] + sheet['width'])}, "
+              f"column ends at {round(col['right'])} — "
+              f"{round(sheet['x'] + sheet['width'] - col['right'])}px adrift")
+        check(f"at {width}px the sheet's left edge is inside the app column",
+              sheet["x"] >= col["left"] - 1,
+              f"sheet starts at {round(sheet['x'])}, column starts at {round(col['left'])}")
+        w.close()
+    b2.close()
+
 summarise_and_exit()
