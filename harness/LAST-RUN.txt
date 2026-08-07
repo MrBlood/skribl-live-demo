@@ -1,16 +1,16 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-07T20:50:26Z
+UTC timestamp           : 2026-08-07T21:14:23Z
 Host                    : Linux x86_64
-Tree SHA-256            : 175fe7db2a30f4b070816ea935d185c2d83771e620678d5670008a8afdafff4c
+Tree SHA-256            : f1e077345291629695090ae8b7742e7fdcc509d8b72189f83adea88d7b19f5fa
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v148
+SKRIBL_VERSION          : v149
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.MnL7LiS2CK/harness.db)
+Database reset          : yes (fresh /tmp/tmp.eN7iUV9p3v/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -37,7 +37,7 @@ suites requested : 17
   verify_flipmeta.py: ok — 24/24 passed
   verify_pressure.py: ok — 27/27 passed
   verify_exportui.py: ok — 29/29 passed
-  verify_help.py: ok — 59/59 passed
-assertions passed: 476   (skipped suites contribute 0)
+  verify_help.py: ok — 61/61 passed
+assertions passed: 478   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

@@ -154,6 +154,27 @@ with sync_playwright() as p:
               outline.startswith("none") or outline.endswith("0px"),
               f"computed outline is {outline!r} — the wrapper's :focus-within "
               "border makes this a doubled ring")
+        # The field must stay visually distinct from the drawer behind it. On
+        # --surface-raised it sat ~4% apart in lightness and read as a hairline
+        # rather than a control, which is a thing only a rendered comparison
+        # can catch — the markup was identical before and after.
+        contrast = sp.evaluate("""() => {
+          const f = document.querySelector('#helpDrawer .help-search');
+          const drawer = document.querySelector('#helpDrawer .help-drawer-inner')
+                       || document.getElementById('helpDrawer');
+          const lum = el => {
+            const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+            if (!m) return 0;
+            return (0.2126*+m[0] + 0.7152*+m[1] + 0.0722*+m[2]) / 255;
+          };
+          return { field: lum(f), drawer: lum(drawer) };
+        }""")
+        delta = abs(contrast["field"] - contrast["drawer"])
+        check(f"{surface}: the search field is distinguishable from the drawer",
+              delta > 0.008 or contrast["field"] == 0,
+              f"luminance delta {delta:.4f} — the field reads as a hairline, "
+              "not a control")
+
         ring = sp.evaluate(
             "() => getComputedStyle(document.querySelector("
             "'#helpDrawer .help-search')).borderTopColor")

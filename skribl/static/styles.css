@@ -3762,15 +3762,22 @@ body.player-mode #canvas {
   display: flex; align-items: center; gap: 8px;
   margin: 0 18px 6px;
   padding: 0 10px;
-  background: var(--surface-raised);
-  border: 1px solid var(--hairline-strong);
+  /* An accent wash rather than another neutral surface. On --surface-raised
+     the field sat about 4% from the drawer behind it and read as a hairline,
+     not a control. The tint also marks it as the one INTERACTIVE thing among
+     static section cards, and it means focus deepens a colour already present
+     instead of introducing one. Composited over --surface-raised rather than
+     layered with opacity, so it does not shift if the drawer's ground moves. */
+  background: #161528;
+  border: 1px solid rgba(124, 92, 255, 0.28);
   border-radius: 10px;
 }
 .help-search:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.16);
+  background: #1a1830;
 }
-.help-search-icon { display: flex; color: var(--text-secondary); }
+.help-search-icon { display: flex; color: var(--accent-bright); }
 .help-search-icon svg { width: 15px; height: 15px; }
 .help-search-input {
   flex: 1 1 auto; min-width: 0;
@@ -3787,7 +3794,7 @@ body.player-mode #canvas {
    `outline: none` earlier in the file loses to the later rule. */
 .help-search .help-search-input:focus,
 .help-search .help-search-input:focus-visible { outline: none; }
-.help-search-input::placeholder { color: var(--text-secondary); }
+.help-search-input::placeholder { color: #a8b0bf; }
 /* Safari draws its own clear affordance; ours is Esc, which is discoverable
    from the keyboard and does not shift the layout. */
 .help-search-input::-webkit-search-cancel-button { -webkit-appearance: none; }

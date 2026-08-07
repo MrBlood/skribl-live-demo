@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v148"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v149"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -165,6 +165,17 @@ plainly visible in a screenshot. It now counts elements with a non-null
 gated on `is_flip`, and the suite reads the placeholder, searches every term it
 names, and asserts each one finds something. A suggestion that points at
 nothing is now a failure on whichever surface it points at.
+
+**The search field carries an accent wash, not another neutral surface.** On
+`--surface-raised` it sat about 4% from the drawer behind it and read as a
+hairline rather than a control. `#161528` is that surface composited with a 6%
+accent — written as a flat value rather than an opacity layer so it does not
+shift if the drawer's ground moves. The tint also marks the field as the one
+INTERACTIVE element among static section cards, and it lets focus deepen a
+colour already present instead of introducing one. `verify_help.py` compares
+the computed luminance of the field against the drawer and fails if they
+converge, because the markup is identical either way and only a rendered
+comparison can see it.
 
 **The focus ring doubled, and the cause is worth recording.** A global
 `input:focus-visible` rule near the end of `styles.css` draws a 2px outline at
