@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v144"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v145"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -104,6 +104,22 @@ can report it.
 
 The output dimensions moved from the page-range readout to under Size, which is
 the control that changes them.
+
+**The help drawer described none of it.** Three user-visible changes shipped
+across v142-v144 and "How it works" still told Flip users that Post gives them
+"a link" — the sentence the Pad's copy had already outgrown, which is the same
+Pad/Flip asymmetry the title feature existed to close. The help now covers the
+compose step, stylus pressure (including that a mouse is unaffected, without
+which a mouse user reads the feature as broken), the GIF background choice, and
+that Size and Pages do not apply to PNG.
+
+`verify_help.py` guards it two ways. Each accordion's hand-typed "N tips" badge
+is compared against the number of items rendered inside it — in a BROWSER, on
+both surfaces, because the template carries both arms of every `{% raw %}{% if is_flip %}{% endraw %}`
+and a source-level count is wrong by construction. The Drawing tools badge had
+already drifted by one the moment the pressure tip was added. The second guard
+asserts a phrase per shipped feature, so a feature that lands without its
+documentation fails a suite.
 
 **Every menu sheet was anchored to the browser window, not to the app.**
 `.menu-sheet` was `position: absolute; right: 18px` inside a
