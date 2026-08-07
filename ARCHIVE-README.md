@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v142"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v143"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -74,6 +74,36 @@ not re-apply them line by line:
 
 `harness/verify_flipmeta.py` (24) and `harness/verify_pressure.py` (27) cover
 these, both driving a real browser.
+
+**Client changes added in v143 — the export sheet.**
+
+    _skribl_export.html   Size/Pages labels above their controls; a scope note
+                          ("Applies to video and GIF" — PNG honours neither);
+                          "to" instead of a bare en-dash; GIF background reads
+                          Solid | Transparent, data-gif-bg values UNCHANGED
+    flip.css              the rules for .export-optlbl, .export-num,
+                          .export-dash, .export-optblock, .export-optnote and
+                          .export-size-seg — see below
+    flip.js               two readouts instead of one combined string
+
+**Five export classes had no CSS anywhere in the tree.** `.export-opt-row`,
+`.export-optlbl`, `.export-num`, `.export-dash` and `.export-rangenote` were in
+the markup and in no stylesheet, so the browser fell back to defaults: bare
+number spinners, a raw en-dash, and a flex row that wrapped and left the readout
+"62 of 62 · 640×460" orphaned on a line of its own. A sixth, `.export-size-seg`,
+was a dead hook — the control is styled by `.seg` and the JS binds the id.
+
+Nothing caught this because nothing could: the harness asserted behaviour and
+source seams, and a class present in markup and absent from CSS is neither.
+`verify_exportui.py` now sweeps EVERY class in the export sheet against the
+stylesheets a page actually loads, so the next unstyled control fails a suite
+rather than appearing in a screenshot. It also asserts rendered geometry — both
+page fields on one line, equal width, readout below rather than beside, nothing
+overflowing the sheet — because "it wrapped" is a layout fact and only a browser
+can report it.
+
+The output dimensions moved from the page-range readout to under Size, which is
+the control that changes them.
 
 **Pressure is stored as `size`, not as a new field.** A `pressure` key would
 have round-tripped — points are not shape-validated and POST preserves unknown

@@ -1950,6 +1950,7 @@ const exSizeSeg=document.getElementById('exportSizeSeg');
 const exFromEl=document.getElementById('exportFrom');
 const exToEl=document.getElementById('exportTo');
 const exNoteEl=document.getElementById('exportRangeNote');
+const exDimEl=document.getElementById('exportDimNote');
 function positionExSeg(){
   if(!exSizeSeg) return;
   const a=exSizeSeg.querySelector('button.on'), pill=exSizeSeg.querySelector('.seg-slider');
@@ -1966,9 +1967,14 @@ function syncExportOptions(){
   exFrom=r.from; exTo=r.to;
   exFromEl.max=n; exToEl.max=n;
   exFromEl.value=r.from; exToEl.value=r.to;
+  // Two readouts, each under the control it describes. These were one combined
+  // string under Pages, which put the output dimensions — the thing Size
+  // changes — beneath the wrong control, and read as a fragment once it wrapped.
+  if(exDimEl){ const d=exDims(); exDimEl.textContent = d.w+' \u00d7 '+d.h; }
   if(exNoteEl){
-    const d=exDims();
-    exNoteEl.textContent = r.count+' of '+n+' \u00b7 '+d.w+'\u00d7'+d.h;
+    exNoteEl.textContent = (r.count===n)
+      ? ('All '+n+' page'+(n===1?'':'s'))
+      : (r.count+' of '+n+' page'+(n===1?'':'s'));
   }
   requestAnimationFrame(positionExSeg);
 }

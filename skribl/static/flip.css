@@ -581,3 +581,37 @@
 }
 
 .tune-tool.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+
+  /* ---- export options (Size / Pages) -------------------------------------
+     These classes had NO rules anywhere in the tree. The markup shipped and
+     fell back to browser defaults: bare number spinners, a raw en-dash, and a
+     single flex row that wrapped so "62 of 62 · 640×460" landed orphaned on a
+     line of its own. Labels now sit above their controls and each readout is a
+     sentence under the control it describes. */
+  .export-options { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+  .export-optscope { font-size: 11.5px; color: var(--text-secondary); opacity: .85; }
+  .export-optblock { display: flex; flex-direction: column; gap: 6px; }
+  .export-optlbl { font-size: 12px; color: var(--text-secondary); }
+  .export-optnote { font-size: 11.5px; color: var(--text-secondary); }
+  .export-range { display: flex; align-items: center; gap: 8px; }
+  .export-dash { font-size: 12.5px; color: var(--text-secondary); flex: 0 0 auto; }
+  /* flex-basis 0 with min-width 0 so two fields share the row evenly and neither
+     is pushed wide by the spinner's intrinsic width. */
+  .export-num {
+    flex: 1 1 0; min-width: 0; box-sizing: border-box;
+    height: 32px; padding: 0 10px; text-align: center;
+    background: var(--surface-panel); color: var(--text-primary);
+    border: 1px solid var(--hairline-strong); border-radius: 9px;
+    font: inherit; font-size: 12.5px;
+  }
+  .export-num:focus { outline: none; border-color: var(--accent); }
+  /* The spinners are redundant next to a keyboard and steal horizontal room. */
+  .export-num::-webkit-outer-spin-button,
+  .export-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .export-num { -moz-appearance: textfield; appearance: textfield; }
+  /* .export-size-seg was a class hook with no rule — the control is styled by
+     .seg and the JS binds the id, so it did nothing. Now that the segment sits
+     under a label instead of beside one, it should fill the block. */
+  .export-size-seg { display: flex; width: 100%; }
+  .export-size-seg button { flex: 1 1 0; min-width: 0; }
+  .export-gif-toggle { display: flex; flex-direction: column; gap: 6px; }

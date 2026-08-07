@@ -42,24 +42,39 @@
         </div>
       </button>
       <div class="export-gif-toggle" id="exportGifToggle">
-        <div class="gif-seg" role="group" aria-label="GIF background">
-          <button type="button" class="gif-seg-btn active" data-gif-bg="color">Background color</button>
+        <span class="export-optlbl" id="exportGifBgLbl">Background</span>
+        {# "Solid" pairs with "Transparent" as an actual opposite; "Background
+           color" vs "Transparent" reads as a category against a value. The
+           data-gif-bg values are unchanged — app.js and flip.js bind on those,
+           not on the label text. #}
+        <div class="gif-seg" role="group" aria-labelledby="exportGifBgLbl">
+          <button type="button" class="gif-seg-btn active" data-gif-bg="color">Solid</button>
           <button type="button" class="gif-seg-btn" data-gif-bg="transparent">Transparent</button>
         </div>
       </div>
     </div>
 {% if kind == 'flip' %}
+    {# Size and Pages apply to Video and GIF, NOT to PNG — exportPNG() draws at
+       CW/CH and exports the current frame only. The format buttons export on
+       click, so there is no "selected format" to hide against; the scope note
+       carries that instead. Labels sit ABOVE their controls: the previous
+       single-row layout wrapped, leaving "62 of 62 · 640×460" orphaned on a
+       line of its own with nothing to attach it to. #}
     <div class="export-options" id="exportOptions">
-      <div class="export-opt-row">
-        <span class="export-optlbl">Size</span>
-        <span class="seg export-size-seg" id="exportSizeSeg"><span class="seg-slider"></span><button type="button" data-size="full" class="on">Full</button><button type="button" data-size="medium">Medium</button><button type="button" data-size="small">Small</button></span>
+      <div class="export-optscope">Applies to video and GIF</div>
+      <div class="export-optblock">
+        <span class="export-optlbl" id="exportSizeLbl">Size</span>
+        <span class="seg export-size-seg" id="exportSizeSeg" role="group" aria-labelledby="exportSizeLbl"><span class="seg-slider"></span><button type="button" data-size="full" class="on">Full</button><button type="button" data-size="medium">Medium</button><button type="button" data-size="small">Small</button></span>
+        <span class="export-optnote" id="exportDimNote"></span>
       </div>
-      <div class="export-opt-row">
+      <div class="export-optblock">
         <span class="export-optlbl">Pages</span>
-        <input type="number" id="exportFrom" class="export-num" min="1" step="1" value="1" aria-label="First page to export">
-        <span class="export-dash">–</span>
-        <input type="number" id="exportTo" class="export-num" min="1" step="1" aria-label="Last page to export">
-        <span class="export-rangenote" id="exportRangeNote"></span>
+        <div class="export-range">
+          <input type="number" id="exportFrom" class="export-num" min="1" step="1" value="1" aria-label="First page to export">
+          <span class="export-dash">to</span>
+          <input type="number" id="exportTo" class="export-num" min="1" step="1" aria-label="Last page to export">
+        </div>
+        <span class="export-optnote" id="exportRangeNote"></span>
       </div>
     </div>
 {% endif %}
