@@ -3752,3 +3752,47 @@ body.player-mode #canvas {
      restores 10px padding, making Play taller than Record/Post). */
   .header.compact .btn.play.btn-icon { padding: 7px 14px; }
 }
+
+/* ---- help drawer search ---------------------------------------------------
+   46 entries across 7 sections is past the point where an accordion alone is
+   findable: locating one tip meant opening up to seven sections and scanning.
+   The field filters live, hides sections with no hits, and highlights matches.
+   Counts come from lib/helpsearch.js — no number is written by hand here. */
+.help-search {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 18px 6px;
+  padding: 0 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 10px;
+}
+.help-search:focus-within { border-color: var(--accent); }
+.help-search-icon { display: flex; color: var(--text-secondary); }
+.help-search-icon svg { width: 15px; height: 15px; }
+.help-search-input {
+  flex: 1 1 auto; min-width: 0;
+  height: 38px; padding: 0;
+  background: transparent; border: 0; outline: none;
+  color: var(--text-primary); font: inherit; font-size: 13px;
+}
+.help-search-input::placeholder { color: var(--text-secondary); }
+/* Safari draws its own clear affordance; ours is Esc, which is discoverable
+   from the keyboard and does not shift the layout. */
+.help-search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.help-search-count {
+  margin: 0 20px 10px;
+  font-size: 11.5px; color: var(--text-secondary);
+  min-height: 16px;
+}
+.help-hit {
+  background: rgba(124, 92, 255, 0.32);
+  color: var(--text-primary);
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.help-empty { margin: 8px 18px 16px; padding: 26px 12px; text-align: center; }
+.help-empty[hidden] { display: none; }
+.help-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 4px; }
+.help-empty-sub { font-size: 12px; color: var(--text-secondary); }
+/* An item hidden by a search must not leave its border behind. */
+.help-tip[hidden], .help-step[hidden] { display: none; }

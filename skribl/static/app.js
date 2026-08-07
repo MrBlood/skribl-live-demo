@@ -1774,6 +1774,10 @@ helpBackdrop.addEventListener('click', closeHelpDrawer);
   requestAnimationFrame(fit);
 })();
 
+// Help search — shared via lib/helpsearch.js so the two editors cannot
+// drift. Safe if the lib is absent: the accordions keep working.
+if (window.SkriblHelpSearch) window.SkriblHelpSearch.init();
+
 // Help drawer accordions — tap a section header to expand/collapse it.
 // Multiple sections can be open at once (it's a reference, not a wizard).
 document.querySelectorAll('.accordion-header').forEach(header => {

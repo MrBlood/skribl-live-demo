@@ -2165,6 +2165,10 @@ helpClose.addEventListener('click', closeHelpDrawer);
 helpBackdrop.addEventListener('click', closeHelpDrawer);
 window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !helpDrawer.hidden) closeHelpDrawer(); });
 // Accordion sections — tap a header to expand/collapse (multiple can be open).
+// Help search — shared via lib/helpsearch.js so the two editors cannot
+// drift. Safe if the lib is absent: the accordions keep working.
+if (window.SkriblHelpSearch) window.SkriblHelpSearch.init();
+
 document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
   header.addEventListener('click',()=>{ const body=header.nextElementSibling; const isOpen=header.classList.toggle('open');
     header.setAttribute('aria-expanded', isOpen?'true':'false');

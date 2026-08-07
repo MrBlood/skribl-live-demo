@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v145"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v146"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -120,6 +120,35 @@ and a source-level count is wrong by construction. The Drawing tools badge had
 already drifted by one the moment the pressure tip was added. The second guard
 asserts a phrase per shipped feature, so a feature that lands without its
 documentation fails a suite.
+
+**The help drawer got search, and its counts stopped being typed.** Flip's help
+is 46 entries across 7 sections; finding one meant opening up to seven
+accordions and scanning. `static/lib/helpsearch.js` filters live, hides sections
+with no hits, highlights matches, and offers `/` or Cmd/Ctrl-K to focus. Esc
+clears a query before it closes the drawer, so a search is never one keypress
+from losing the panel.
+
+It lives in `lib/` **on purpose**. The accordion open/close handler is written
+twice — `app.js` and `flip.js` — driving the same partial, and adding search to
+both would have made a third copy of the project's largest known-open. Both
+surfaces now call `SkriblHelpSearch.init()` against one implementation. If the
+lib fails to load, the accordions behave exactly as before.
+
+Every `accordion-count` badge is now DERIVED from the DOM. They were hand-typed,
+and one was wrong the moment the pressure tip was added. During a search they
+show matches rather than totals — more information from the same pixels, and no
+number in the tree that nothing checks.
+
+`verify_help.py` (49) asserts a query reaches more than one section, that
+highlights do not nest under repeated keystrokes (the failure mode of rewriting
+innerHTML without caching the original), that clearing restores every entry and
+removes every mark, and that the empty state appears and retreats. On both
+surfaces, because "shared" is a claim until something checks both.
+
+NOT built, and worth knowing: the two-tier split of "Getting started" from
+"Reference", and reordering the sections so Zoom and pan stops sitting between
+the two heaviest ones. Both are template surgery on a partial two surfaces
+share, and neither is load-bearing for findability now that search exists.
 
 **Every menu sheet was anchored to the browser window, not to the app.**
 `.menu-sheet` was `position: absolute; right: 18px` inside a

@@ -81,8 +81,9 @@ with sync_playwright() as p:
             check(f"{surface} · {row['title']}: badge says {stated}, "
                   f"contains {row['actual']}",
                   stated == row["actual"],
-                  "a hand-typed count that nothing verifies is how the editor's "
-                  "version string drifted nine releases")
+                  "the badge is derived from the DOM by lib/helpsearch.js — a "
+                  "mismatch means the lib did not run, not that someone "
+                  "mistyped a number")
         pg.close()
 
     print("\nHELP — the shipped features are actually described")
@@ -113,6 +114,82 @@ with sync_playwright() as p:
           "png" in text and ("current page" in text or "full size" in text),
           "the sheet says 'applies to video and GIF'; the help should agree")
     pg.close()
+
+    # -----------------------------------------------------------------------
+    print("\nHELP — search, on both surfaces")
+    #
+    # 46 entries across 7 sections is past the point where an accordion alone
+    # is findable. These assert the behaviours that make search worth having,
+    # not merely that a field exists: cross-section reach, a real empty state,
+    # and highlighting that survives repeated keystrokes.
+    for surface, path in (("Flip", "/flip"), ("Pad", "/skribl-pad")):
+        sp = b.new_page()
+        serrs = []
+        sp.on("pageerror", lambda e: serrs.append(str(e)))
+        sp.goto(BASE + path, wait_until="load")
+        sp.wait_for_timeout(1400)
+        sp.evaluate("() => { const d = document.getElementById('helpDrawer');"
+                    " if (d) { d.hidden = false; d.classList.add('open'); } }")
+        sp.wait_for_timeout(250)
+
+        check(f"{surface}: the shared search lib is published",
+              sp.evaluate("() => !!window.SkriblHelpSearch"),
+              "lib/helpsearch.js did not load — both editors fall back to a "
+              "plain accordion")
+        check(f"{surface}: the search field is present",
+              sp.is_visible("#helpSearch"))
+
+        base_count = sp.inner_text("#helpSearchCount")
+        check(f"{surface}: the count states a total before any query",
+              "entries" in base_count and "sections" in base_count,
+              repr(base_count))
+
+        # "loop" appears in Music, Frames and Export — one query reaching three
+        # sections is the thing an accordion structurally cannot do.
+        sp.fill("#helpSearch", "loop")
+        sp.wait_for_timeout(250)
+        open_sections = sp.evaluate(
+            "() => [...document.querySelectorAll('#helpDrawer .accordion-header')]"
+            ".filter(h => !h.hidden).length")
+        check(f"{surface}: 'loop' reaches more than one section",
+              open_sections > 1, f"{open_sections} section(s) matched")
+        check(f"{surface}: matches are highlighted",
+              sp.evaluate("() => document.querySelectorAll('#helpDrawer mark.help-hit').length") > 0)
+        check(f"{surface}: the count switches to matches",
+              " of " in sp.inner_text("#helpSearchCount"),
+              repr(sp.inner_text("#helpSearchCount")))
+
+        # Highlighting rewrites innerHTML. If the original is not cached, marks
+        # nest and compound on every keystroke — the bug this guards.
+        for q in ("l", "lo", "loo", "loop", "loo", "lo"):
+            sp.fill("#helpSearch", q)
+            sp.wait_for_timeout(80)
+        nested = sp.evaluate(
+            "() => document.querySelectorAll('#helpDrawer mark.help-hit mark').length")
+        check(f"{surface}: repeated typing does not nest highlights",
+              nested == 0, f"{nested} nested marks — the original HTML is not cached")
+
+        sp.fill("#helpSearch", "zzzznothing")
+        sp.wait_for_timeout(250)
+        check(f"{surface}: a no-match query shows the empty state",
+              sp.is_visible("#helpEmpty"))
+        check(f"{surface}: no sections remain visible on no match",
+              sp.evaluate("() => [...document.querySelectorAll("
+                          "'#helpDrawer .accordion-header')].filter(h => !h.hidden).length") == 0)
+
+        sp.fill("#helpSearch", "")
+        sp.wait_for_timeout(250)
+        check(f"{surface}: clearing restores every entry",
+              sp.inner_text("#helpSearchCount") == base_count,
+              f"{sp.inner_text('#helpSearchCount')!r} vs {base_count!r}")
+        check(f"{surface}: clearing removes every highlight",
+              sp.evaluate("() => document.querySelectorAll("
+                          "'#helpDrawer mark.help-hit').length") == 0)
+        check(f"{surface}: the empty state is hidden again",
+              not sp.is_visible("#helpEmpty"))
+        check(f"{surface}: no JS errors during the whole search flow",
+              not serrs, "; ".join(serrs[:2]))
+        sp.close()
 
     b.close()
 
