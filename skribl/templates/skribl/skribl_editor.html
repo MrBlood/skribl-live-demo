@@ -229,6 +229,7 @@
   <script nonce="{{ csp_nonce }}">
     window.SKRIBL_MODE = "editor";
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
+  window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
   </script>
   <!-- mp4-muxer (vendored) enables the WebCodecs H.264/AAC MP4 export. Until this

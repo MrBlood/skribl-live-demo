@@ -104,11 +104,23 @@ env = dict(os.environ,
            SKRIBL_RATE_MAX_POSTS=str(QUOTA),
            SKRIBL_RATE_MAX_ATTEMPTS="500",
            SECRET_KEY="pgtest")
-init = subprocess.run([sys.executable, "-c",
-                       "from app import app, db; app.app_context().push(); db.create_all()"],
+# Migrate, do not create_all(). This suite reuses a long-lived database, and
+# create_all() only ever CREATES — it cannot add a column to a table that already
+# exists. When `visibility` landed in v132 this suite started returning 500s on
+# every insert against its stale table, which is the exact failure mode the
+# Alembic chain exists to prevent. Running the real chain here also means every
+# PostgreSQL run dogfoods it.
+init = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"],
                       cwd=str(ROOT), env=env, capture_output=True, text=True)
 if init.returncode != 0:
-    skip(f"could not create the schema on PostgreSQL: {init.stderr.strip()[:120]}")
+    # A database created before the chain existed has the tables but no
+    # alembic_version; stamp the baseline, then upgrade.
+    subprocess.run([sys.executable, "-m", "alembic", "stamp", "6aa1de24dda3"],
+                   cwd=str(ROOT), env=env, capture_output=True, text=True)
+    init = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"],
+                          cwd=str(ROOT), env=env, capture_output=True, text=True)
+if init.returncode != 0:
+    skip(f"could not migrate the schema on PostgreSQL: {init.stderr.strip()[:160]}")
 
 # Baselines. The table is shared with any earlier run, so every assertion below
 # measures a DELTA rather than an absolute count — an absolute count silently

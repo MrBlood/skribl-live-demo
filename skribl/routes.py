@@ -10,24 +10,55 @@ and so on once registered. Nothing in the templates or the client JS refers to a
 route by literal path any more — see the context processor in __init__.py.
 """
 import base64
+import binascii
 import os
 import secrets
+from datetime import datetime
 
 from flask import (abort, current_app, jsonify, redirect, render_template,
                    request, url_for)
+import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
 from .core import (MAX_CARD_BYTES, OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE,
                    SKRIBL_VERSION, _og_meta, _valid_public_id)
-from .models import SkriblPost, session
+from .models import SkriblPost, SkriblPostMedia, session
+from .storage import KEY_RE, LocalDiskStore, externalise_payload
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
-from .validation import (_decode_data_url_image, _payload_has_audio,
+from .validation import (_decode_data_url_image, _iter_media_items,
+                         _payload_has_audio,
                          _validate_payload_complexity, _validate_payload_media)
 
 
+# --- feed cursors -----------------------------------------------------------
+# Opaque to clients on purpose: an obviously-decodable "offset=40" invites
+# clients to construct their own, which then breaks the moment the pagination
+# strategy changes. This encodes the sort tuple, nothing secret, so it needs no
+# signing — a forged cursor can only select a different page of data the caller
+# is already allowed to see.
+def _encode_cursor(post):
+    raw = f"{post.created_at.isoformat()}|{post.id}".encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _decode_cursor(cursor):
+    """-> (datetime, int), or None if the cursor is unusable."""
+    try:
+        pad = "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(cursor + pad).decode("utf-8")
+        created, _, ident = raw.rpartition("|")
+        return datetime.fromisoformat(created), int(ident)
+    except (ValueError, TypeError, binascii.Error, UnicodeDecodeError):
+        return None
+
+
 def register_routes(bp):
-    @bp.app_errorhandler(413)
+    # errorhandler, NOT app_errorhandler: the app_ variant is APPLICATION-WIDE by
+    # Flask's own definition, so a host's unrelated oversized upload would have
+    # received Skribl's JSON "This Skribl is too large to post" message. Scoped
+    # here, it answers only for Skribl's routes.
+    @bp.errorhandler(413)
     def _payload_too_large(_error):
         return jsonify({
             "error": "This Skribl is too large to post. Try a smaller photo or a shorter audio loop."
@@ -60,6 +91,13 @@ def register_routes(bp):
             post = None
             if _valid_public_id(public_id):
                 post = session().query(SkriblPost).filter_by(public_id=public_id).first()
+            # Treat a post the viewer may not read as absent: the shell still
+            # renders (this route is render-always by design), the client's
+            # fetch 404s, and the visitor gets the standard error panel. What
+            # must NOT happen is a private Skribl's title and caption being
+            # served to a social scraper in the Open Graph tags.
+            if post is not None and not post.visible_to(bp.skribl_current_user_id()):
+                post = None
             if post is not None:
                 title, caption = post.title, post.caption
         except Exception:
@@ -91,6 +129,11 @@ def register_routes(bp):
             post = None
             if _valid_public_id(public_id):
                 post = session().query(SkriblPost).filter_by(public_id=public_id).first()
+            # The thumbnail IS the drawing. Serving it for a private post leaks
+            # the content itself, not merely its existence — so fall through to
+            # the generic branded card exactly as for a missing post.
+            if post is not None and not post.visible_to(bp.skribl_current_user_id()):
+                post = None
             if post is not None:
                 payload = post.payload_json or {}
                 thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
@@ -102,7 +145,14 @@ def register_routes(bp):
                     data, mimetype = decoded
                     resp = current_app.response_class(data, mimetype=mimetype)
                     # Immutable once posted; let scrapers/CDNs cache by URL.
-                    resp.headers["Cache-Control"] = "public, max-age=86400"
+                    # NEVER `public` for a post that is not public. A shared
+                    # CDN or proxy would cache the authorised author's thumbnail
+                    # and then serve it to unauthorised viewers without ever
+                    # re-running visible_to(). The thumbnail IS the drawing.
+                    if post.visibility == "public":
+                        resp.headers["Cache-Control"] = "public, max-age=86400"
+                    else:
+                        resp.headers["Cache-Control"] = "private, no-store"
                     return resp
         except Exception:
             try:
@@ -128,6 +178,13 @@ def register_routes(bp):
         # the insert, not here. Checking here and recording after the commit left a
         # window where concurrent requests all saw room and all committed.
         # (Review round 2, #2)
+
+        # CSRF. Only enforced when the host wired a validator — an
+        # unauthenticated deployment has nothing to protect, and refusing posts
+        # from a client that was never given a token would just break it.
+        if bp.skribl_csrf and not bp.skribl_csrf[2](request):
+            return jsonify({"error": "Request could not be verified. "
+                                     "Please reload the page and try again."}), 403
 
         payload = request.get_json(silent=True)
 
@@ -166,6 +223,24 @@ def register_routes(bp):
         if "frames" in payload and not isinstance(payload["frames"], list):
             return jsonify({"error": "'frames' must be a list."}), 400
 
+        # Visibility. Defaults to "unlisted", NOT "public": that is exactly what a
+        # v131 post already was — reachable by its share link, listed nowhere —
+        # so existing clients that never send this field keep their current
+        # behaviour instead of silently becoming feed content.
+        visibility = payload.get("visibility", "unlisted")
+        if visibility not in SkriblPost.VISIBILITIES:
+            return jsonify({"error": "Unknown visibility."}), 400
+        author_id = bp.skribl_current_user_id()
+        # "private" means "the author only", so it is meaningless without an
+        # author. Allowing it anonymously creates a post nobody can ever read —
+        # including the person who just made it, since visible_to(None) denies a
+        # post whose user_id is None. Refuse instead of silently making a
+        # write-only Skribl.
+        if visibility == "private" and author_id is None:
+            return jsonify({
+                "error": "A private Skribl needs a signed-in author."
+            }), 400
+
         title = (payload.get("title") or "Untitled Skribl").strip()[:80]
         caption = (payload.get("caption") or "").strip()[:300]
         # True only when there are actual audio bytes, whether stored top-level
@@ -189,21 +264,41 @@ def register_routes(bp):
         # used to return 500 with the slot still held for the full window.
         # (Review round 3, #1)
         created = False
+
         try:
+            # Externalise media AFTER validation and INSIDE the try. Validation
+            # decodes, signature-checks and size-caps every data URL first, so
+            # nothing unproven is ever written to the store. And it sits inside
+            # the try/finally because it was previously outside it: an exception
+            # from externalise_payload (disk full, permissions) escaped with the
+            # rate-limit slot still held for the whole window.
+            stored_payload, media_keys = externalise_payload(
+                payload, bp.skribl_media_store, _iter_media_items)
+
             for _attempt in range(5):
                 candidate = secrets.token_urlsafe(8)
                 post = SkriblPost(
                     public_id=candidate,
-                    # Was a hardcoded 1. The host injects its own resolver via
-                    # create_blueprint(current_user_id=...); the default still
-                    # returns 1, so standalone behaviour is unchanged.
-                    user_id=bp.skribl_current_user_id(),
+                    # The host injects its own resolver via
+                    # create_blueprint(current_user_id=...). The default is
+                    # ANONYMOUS (None) — not 1, which would have made every
+                    # visitor the owner of user 1's private posts.
+                    user_id=author_id,
                     title=title,
                     caption=caption,
-                    payload_json=payload,
+                    payload_json=stored_payload,
                     has_audio=has_audio,
+                    visibility=visibility,
                 )
                 session().add(post)
+                # Flush to get the post id, then record one association row per
+                # stored object — in the SAME transaction, so a failed commit
+                # leaves neither behind. An orphan association would authorise an
+                # object on behalf of a post that does not exist.
+                session().flush()
+                for _key in media_keys:
+                    session().add(SkriblPostMedia(post_id=post.id,
+                                                  media_key=_key))
                 try:
                     session().commit()
                 except IntegrityError:
@@ -233,6 +328,148 @@ def register_routes(bp):
             "url": url_for(".skribl_player", public_id=public_id)
         }), 201
 
+    @bp.get("/media/<key>")
+    def media(key):
+        """Serve a content-addressed blob.
+
+        Only meaningful for the local store; an S3-backed deployment hands out
+        bucket URLs and never routes through here.
+        """
+        store = bp.skribl_media_store
+        if not isinstance(store, LocalDiskStore) or not KEY_RE.match(key or ""):
+            abort(404)
+
+        # AUTHORISE, do not merely validate the key shape.
+        #
+        # This route previously served any object whose key was well-formed and
+        # present on disk, with no reference to the post that owns it. So with
+        # SKRIBL_MEDIA_BACKEND=local, a private Skribl's audio and images were
+        # retrievable by anyone holding the URL — and the URL is handed out in
+        # the payload. Externalising media silently routed around the visibility
+        # rule the other three surfaces enforce.
+        #
+        # A key is content-addressed, so the same object can be referenced by
+        # several posts; the viewer needs only ONE of them to be readable.
+        viewer = bp.skribl_current_user_id()
+        # Indexed equality join through skribl_post_media. This was a
+        # CAST(payload_json AS TEXT) LIKE '%key%' scan, which was FORGEABLE (the
+        # API preserves unknown JSON fields, so anyone could paste a private
+        # object's key into their own public post and be granted a "reference"),
+        # unindexed (a full scan of every payload on every blob request), and
+        # capped at 25 rows with no ORDER BY (so a widely-referenced object could
+        # 404 for someone genuinely authorised). See SkriblPostMedia.
+        # Authorisation as a single EXISTS. No rows are materialised at all,
+        # so the cost is constant no matter how many posts reference a
+        # content-addressed object.
+        #
+        # This has now been wrong twice in the same way. `.limit(25)` on whole
+        # posts, then `.limit(1000)` on two columns — both arbitrary caps with no
+        # ORDER BY, so an authorised private reference sitting beyond the cap
+        # produced a false 404 for its own owner. A cap is not a fix for
+        # unbounded fan-out; not materialising the fan-out is.
+        readable = sa.select(SkriblPostMedia.id).join(
+            SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
+            SkriblPostMedia.media_key == key,
+            sa.or_(SkriblPost.visibility != "private",
+                   sa.and_(SkriblPost.user_id == viewer,
+                           sa.literal(viewer is not None))))
+        if not session().query(readable.exists()).scalar():
+            # Either referenced by no post at all (orphaned) or by none this
+            # viewer may read. Same 404 either way: a different answer for the
+            # two cases would confirm the object exists.
+            abort(404)
+
+        found = store.read(key)
+        if found is None:
+            abort(404)
+        raw, content_type = found
+        resp = current_app.response_class(raw, mimetype=content_type)
+        # Content-addressed, so the bytes at this URL can never change: cache
+        # forever. This is the whole point of hashing the content for the key.
+        # Only cache publicly when EVERY referencing post is public. Content
+        # addressing makes the bytes immutable, but it does not make them
+        # public, and a shared cache does not re-check authorisation.
+        # Cache policy: a second, independent EXISTS. Public only when NO
+        # referencing post is non-public.
+        non_public = sa.select(SkriblPostMedia.id).join(
+            SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
+            SkriblPostMedia.media_key == key,
+            SkriblPost.visibility != "public")
+        public_only = not session().query(non_public.exists()).scalar()
+        if public_only:
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            resp.headers["Cache-Control"] = "private, no-store"
+        # Never let a stored blob be re-interpreted as something executable.
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["Content-Disposition"] = "inline"
+        return resp
+
+    @bp.get("/api/skribls")
+    def list_skribls():
+        """Feed-shaped listing: metadata only, cursor-paginated.
+
+        NOT offset-paginated. OFFSET makes the database walk and discard every
+        skipped row, so page 50 costs fifty times page 1, and a post created
+        mid-scroll shifts every subsequent page and duplicates an item. A
+        keyset cursor on (created_at, id) is O(log n) at any depth and stable
+        under concurrent writes, which a live feed always has.
+
+        The payload is deliberately absent — see SkriblPost.feed_dict.
+        """
+        viewer = bp.skribl_current_user_id()
+
+        try:
+            limit = int(request.args.get("limit", 20))
+        except (TypeError, ValueError):
+            return jsonify({"error": "limit must be a number."}), 400
+        # Capped: the limit is attacker-controlled, and an uncapped one is a
+        # request for the entire table.
+        limit = max(1, min(limit, 100))
+
+        q = session().query(SkriblPost)
+
+        author = request.args.get("user_id")
+        if author is not None:
+            try:
+                author = int(author)
+            except (TypeError, ValueError):
+                return jsonify({"error": "user_id must be a number."}), 400
+            q = q.filter(SkriblPost.user_id == author)
+            # Private posts are visible on their author's own listing, and only
+            # there. Unlisted stay out of listings entirely — they are reachable
+            # by link, which is what "unlisted" means.
+            if viewer is not None and author == viewer:
+                q = q.filter(SkriblPost.visibility.in_(("public", "private")))
+            else:
+                q = q.filter(SkriblPost.visibility == "public")
+        else:
+            q = q.filter(SkriblPost.visibility == "public")
+
+        cursor = request.args.get("cursor")
+        if cursor:
+            parsed = _decode_cursor(cursor)
+            if parsed is None:
+                return jsonify({"error": "Invalid cursor."}), 400
+            c_created, c_id = parsed
+            # Strict keyset comparison on the same tuple the sort uses, so a row
+            # is never skipped or repeated when timestamps collide.
+            q = q.filter(sa.tuple_(SkriblPost.created_at, SkriblPost.id)
+                         < sa.tuple_(c_created, c_id))
+
+        q = q.order_by(SkriblPost.created_at.desc(), SkriblPost.id.desc())
+
+        # Over-fetch by one to learn whether another page exists, without a
+        # second COUNT query over the whole filtered set.
+        rows = q.limit(limit + 1).all()
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+
+        return jsonify({
+            "items": [r.feed_dict() for r in rows],
+            "next_cursor": (_encode_cursor(rows[-1]) if (rows and has_more) else None),
+        })
+
     @bp.get("/api/skribls/<public_id>")
     def get_skribl(public_id):
         if not _valid_public_id(public_id):
@@ -242,6 +479,11 @@ def register_routes(bp):
         # longer owns a SQLAlchemy instance, so the 404 is raised explicitly.
         # Same status, same body, same behaviour.
         if post is None:
+            abort(404)
+        # 404, NOT 403: a 403 would confirm the id exists, which is a disclosure
+        # in itself. An unauthorised reader gets the same answer as for an id
+        # that was never issued.
+        if not post.visible_to(bp.skribl_current_user_id()):
             abort(404)
 
         # Shallow-copy so we don't mutate the SQLAlchemy-tracked JSON column

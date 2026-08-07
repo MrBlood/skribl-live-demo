@@ -1,3 +1,10 @@
+// CSRF: echo the token the server issued. Empty when the deployment is
+// unauthenticated, in which case no header is sent and nothing changes.
+function skriblPostHeaders(){
+  const h = {'Content-Type':'application/json'};
+  if (window.SKRIBL_CSRF_TOKEN) { h['X-Skribl-CSRF'] = window.SKRIBL_CSRF_TOKEN; }
+  return h;
+}
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const canvasWrap = document.querySelector('.canvas-wrap');
@@ -5258,7 +5265,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
       try {
         res = await fetch(apiBase, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: skriblPostHeaders(),
           body: body
         });
       } catch (netErr) {

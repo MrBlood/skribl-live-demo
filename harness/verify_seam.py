@@ -166,6 +166,93 @@ for modname in modules:
 check("no unresolved names anywhere in the package", not unresolved,
       f"{len(unresolved)} total")
 
+
+
+# ---------------------------------------------------------------- section 3
+print("\nSPLIT BUDGET — what the player is forced to download")
+
+# app.js serves BOTH the editor and the read-only player, so every /s/<id>
+# visitor downloads the eraser cursor, the export pipeline, the post composer and
+# the autosave machinery in order to watch a drawing. On a social feed, where
+# most traffic is viewing rather than authoring, that is the cost that matters.
+#
+# CAVEAT, learned the hard way: this call graph is built with a REGEX, and a
+# regex misses real call sites (optional chaining, aliases, property calls,
+# template strings). A split driven by these numbers was attempted and REVERTED
+# — functions the player genuinely needs were misclassified as editor-only. Use
+# these figures to size the prize, NEVER as a safe-to-move list. See
+# docs/REFACTOR-v132.md.
+#
+# This does not enforce a split. It measures the one that has not happened yet,
+# so the number is visible, and it fails if editor-only code starts leaking into
+# the player's reachable set — which is how a split becomes impossible to do
+# later. Reachability is computed from the READ-ONLY PLAYER section by following
+# calls transitively.
+_appjs = (_layout.STATIC_DIR / "app.js").read_text(encoding="utf-8")
+_lines = _appjs.split("\n")
+
+_fn = re.compile(r"^\s{0,2}(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(")
+_spans, _cur, _start, _depth, _open = {}, None, 0, 0, False
+for _i, _l in enumerate(_lines):
+    _m = _fn.match(_l)
+    if _m and _cur is None:
+        _cur, _start, _depth, _open = _m.group(1), _i, 0, False
+    if _cur is not None:
+        _depth += _l.count("{") - _l.count("}")
+        if "{" in _l:
+            _open = True
+        if _open and _depth <= 0:
+            _spans[_cur] = (_start, _i); _cur = None
+
+check("app.js parses into a plausible number of functions",
+      150 <= len(_spans) <= 400, f"{len(_spans)} functions")
+
+_names = set(_spans)
+_body = {n: "\n".join(_lines[a:b + 1]) for n, (a, b) in _spans.items()}
+_calls = {n: {o for o in _names if o != n and re.search(r"\b" + re.escape(o) + r"\s*\(", _body[n])}
+          for n in _names}
+
+_marker = "// ==================== READ-ONLY PLAYER ===================="
+check("the READ-ONLY PLAYER section marker still exists", _marker in _appjs,
+      "the split boundary this measures is gone")
+if _marker in _appjs:
+    _p0 = _appjs[:_appjs.index(_marker)].count("\n")
+    _p1 = next((i for i in range(_p0 + 1, len(_lines))
+                if _lines[i].startswith("// ---------- Image / Music")), len(_lines))
+    _ptext = "\n".join(_lines[_p0:_p1])
+
+    _seeds = {n for n, (a, b) in _spans.items() if a >= _p0 and b <= _p1}
+    _seeds |= {o for o in _names if re.search(r"\b" + re.escape(o) + r"\s*\(", _ptext)}
+    _seen, _stack = set(), list(_seeds)
+    while _stack:
+        _f = _stack.pop()
+        if _f in _seen:
+            continue
+        _seen.add(_f)
+        _stack.extend(_calls.get(_f, set()) - _seen)
+
+    _editor_only = _names - _seen
+    _editor_lines = sum(_spans[n][1] - _spans[n][0] + 1 for n in _editor_only)
+    _player_lines = sum(_spans[n][1] - _spans[n][0] + 1 for n in _seen & _names)
+
+    print(f"    player-reachable: {len(_seen & _names)} functions / {_player_lines} lines")
+    print(f"    editor-only:      {len(_editor_only)} functions / {_editor_lines} lines")
+
+    # Baselines from the v134 measurement. These are a RATCHET, not a target: the
+    # editor-only figure is what a split would remove from the player bundle, so
+    # it must not shrink by code migrating INTO the shared set.
+    check("editor-only code has not leaked into the player's reachable set",
+          _editor_lines >= 2200,
+          f"{_editor_lines} lines editor-only, was 2467 — something the player "
+          f"now calls used to be editor-only")
+    check("the player's reachable set has not ballooned",
+          _player_lines <= 1700,
+          f"{_player_lines} lines reachable, was 1339")
+    check("a split is still worth doing (editor-only exceeds player-reachable)",
+          _editor_lines > _player_lines,
+          f"editor-only {_editor_lines} vs player {_player_lines}")
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

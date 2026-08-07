@@ -1,105 +1,39 @@
-SKRIBL HARNESS — RECORDED RUN
-Split into two invocations because of a per-command time limit. BOTH recorded in
-full. Every hash here is a SOURCE-TREE hash, NOT the distributed ZIP's hash.
-
-"ERROR in app: Exception on /api/skribls" is EXPECTED: the reservation-release
-test deliberately makes db.session.commit raise.
-
-SKIPPED SUITES contribute ZERO assertions. Nothing was skipped here.
-
-##### POSTGRESQL CONCURRENCY #####
-PostgreSQL 16.14 | 4 gunicorn workers | 12 concurrent | quota 2
-HTTP: 2 x 201, 10 x 429 | post rows: 2 | rate events: committed=2, pending=0
-WORKER LIVENESS:
-  [PASS] all 4 workers were running before the burst  — [2978, 2979, 2980, 2981]
-  [PASS] the SAME worker processes were alive afterwards — none died and respawned  — before=[2978, 2979, 2980, 2981] after=[2978, 2979, 2980, 2981]
-  [PASS] gunicorn booted exactly 4 workers — no respawn was logged  — 4 'Booting worker' lines
-  [PASS] gunicorn logged no worker exit, termination or boot failure DURING the burst  — 0 exit/termination lines before shutdown
-  [PASS] recorded configuration is complete enough to interpret the result  — PostgreSQL 16.14 (Ubuntu 16.14-0ubuntu0.24.04.1), 4 workers, 12 requests, quota 2
-
-##### INVOCATION 1 — CONTEXT #####
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-01T22:23:47Z
+UTC timestamp           : 2026-08-07T17:38:09Z
 Host                    : Linux x86_64
-Tree SHA-256            : 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
+Tree SHA-256            : 6c4d1fe34702ae03c27337ddd77b3b6f04154b5d99166ada79abcb33231be63d
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v131
+SKRIBL_VERSION          : v141
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.ZQx9OOWMgn/harness.db)
+Database reset          : yes (fresh /tmp/tmp.kNKGv61XMm/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_audio.py verify_lib.py verify_fix.py verify_amber.py verify_dots.py verify_loopcap.py verify_race.py verify_muxer.py verify_gifenc.py
+Command                 : ./harness/run_harness.sh verify_privacy.py verify_storage.py verify_feed.py verify_csrf.py verify_migrations.py verify_seam.py verify_prefix.py verify_csp.py verify_media.py verify_version.py verify_lib.py verify_audio.py verify_docs.py
 ============================================
 
-##### INVOCATION 1 — RESULTS #####
 ================ AGGREGATE (machine-generated) ================
-suites requested : 9
-  verify_audio.py: ok — 9/9 passed
-  verify_lib.py: ok — 8/8 passed
-  verify_fix.py: ok — 18/18 passed
-  verify_amber.py: ok — 15/15 passed
-  verify_dots.py: ok — 10/10 passed
-  verify_loopcap.py: ok — 18/18 passed
-  verify_race.py: ok — 17/17 passed
-  verify_muxer.py: ok — 18/18 passed
-  verify_gifenc.py: ok — 35/35 passed
-assertions passed: 148   (skipped suites contribute 0)
-suites skipped   : 0
-suites with problems: 0
-RESULT: PASS — every requested suite exited 0 and reported a summary.
-
-##### INVOCATION 2 — CONTEXT #####
-================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-01T22:27:52Z
-Host                    : Linux x86_64
-Tree SHA-256            : 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
-Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v131
-Python                  : 3.12.3
-Flask                   : 3.1.3
-SQLAlchemy              : 2.0.51
-Playwright              : 1.56.0
-Chromium                : 141.0.7390.37
-DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.kKLCEOp1uH/harness.db)
-SKRIBL_RATE_MAX_POSTS   : 100000
-SKRIBL_RATE_MAX_ATTEMPTS: (default)
-SKRIBL_TRUSTED_PROXIES  : (default 0)
-SKRIBL_EMBED_ORIGINS    : (unset)
-SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_csp.py verify_media.py verify_version.py verify_ux.py verify_pages.py verify_exopts.py verify_hold.py verify_canvas.py verify_postgres.py verify_review.py
-============================================
-
-##### INVOCATION 2 — RESULTS #####
-================ AGGREGATE (machine-generated) ================
-suites requested : 10
+suites requested : 13
+  verify_privacy.py: ok — 30/30 passed
+  verify_storage.py: ok — 26/26 passed
+  verify_feed.py: ok — 25/25 passed
+  verify_csrf.py: ok — 13/13 passed
+  verify_migrations.py: ok — 51/51 passed
+  verify_seam.py: ok — 47/47 passed
+  verify_prefix.py: ok — 26/26 passed
   verify_csp.py: ok — 31/31 passed
   verify_media.py: ok — 24/24 passed
   verify_version.py: ok — 20/20 passed
-  verify_ux.py: ok — 24/24 passed
-  verify_pages.py: ok — 38/38 passed
-  verify_exopts.py: ok — 23/23 passed
-  verify_hold.py: ok — 26/26 passed
-  verify_canvas.py: ok — 21/21 passed
-  verify_postgres.py: ok — 14/14 passed
-  verify_review.py: ok — 277/277 passed
-assertions passed: 498   (skipped suites contribute 0)
+  verify_lib.py: ok — 8/8 passed
+  verify_audio.py: ok — 9/9 passed
+  verify_docs.py: ok — 24/24 passed
+assertions passed: 334   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
-RESULT: PASS — every requested suite exited 0 and reported a summary.
-
-##### TREE-HASH COMPARISON #####
-Invocation 1: 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
-Invocation 2: 1ba48564b5658635aeaa5285ab7a90ddbdce487e992d793648ad3195a3ddf4b5
-MATCH — identical source tree.
-
-##### COMBINED #####
-646 assertions across 19 suites, 0 skipped, 0 problems

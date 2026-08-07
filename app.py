@@ -18,6 +18,7 @@ from flask_sqlalchemy import SQLAlchemy
 import skribl
 import skribl.models
 import skribl.security
+import skribl.storage
 from skribl.core import _env_int
 
 # The ONLY SQLAlchemy instance in the tree. Skribl no longer owns one; it is
@@ -69,8 +70,30 @@ def create_app():
     else:
         static_url_path = "/static/skribl"
 
+    # CSRF is OPT-IN, and off by default. Standalone Skribl is unauthenticated,
+    # so there is no session to protect and turning it on only breaks existing
+    # API clients — which is exactly what happened when it was defaulted on:
+    # every harness suite that posts without a token got a 403. A host that
+    # authenticates this endpoint MUST switch it on; nobody else should.
+    # verify_csrf.py boots its own instance with SKRIBL_CSRF_PROTECT=1.
+    csrf = None
+    if os.environ.get("SKRIBL_CSRF_PROTECT", "0") == "1":
+        csrf = skribl.security.double_submit_csrf()
+
+    # Media backend. 'inline' (default) is v131: base64 data URLs stay inside
+    # payload_json. 'local' externalises them to content-addressed files served
+    # by the blueprint. An S3 deployment subclasses MediaStore and passes it in.
+    media_store = None
+    if os.environ.get("SKRIBL_MEDIA_BACKEND", "inline") == "local":
+        from flask import url_for
+        media_store = skribl.storage.LocalDiskStore(
+            os.environ.get("SKRIBL_MEDIA_ROOT",
+                           os.path.join(app.instance_path, "media")),
+            lambda key: url_for("skribl.media", key=key))
+
     skribl.init_skribl(app, session=lambda: db.session,
-                       url_prefix=url_prefix, static_url_path=static_url_path)
+                       url_prefix=url_prefix, static_url_path=static_url_path,
+                       csrf=csrf, media_store=media_store)
 
     # So a single db.create_all() covers Skribl's tables too. Optional — see
     # skribl.models.attach_to_metadata; an Alembic host would migrate

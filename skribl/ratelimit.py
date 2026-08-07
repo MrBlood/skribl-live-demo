@@ -113,6 +113,36 @@ def _rate_cutoff():
     return datetime.now(timezone.utc) - timedelta(seconds=_RATE_WINDOW_SECONDS)
 
 
+def _db_lock_identity(key_hash):
+    """Serialise the reserve-then-count window, per identity.
+
+    THE BUG THIS FIXES. Reservation was: INSERT, COMMIT, COUNT, withdraw if over.
+    Between the commit and the count, other requests commit their own rows. With
+    twelve concurrent posts against a quota of two, all twelve inserts land
+    before any count runs, every request sees 12 > 2, and every request
+    withdraws — admitting ZERO instead of two.
+
+    SQLite hid this completely: its single-writer lock serialises the commits, so
+    requests effectively queue and the count each one sees is correct. On
+    PostgreSQL, which actually runs them in parallel, the window is wide open.
+    That is why `RateEvent`'s docstring said "verified under SQLite and threads;
+    NOT yet verified on PostgreSQL across processes" — the guarantee did not hold.
+
+    A transaction-scoped advisory lock serialises only requests sharing an
+    identity, so unrelated posters never contend. It is released automatically on
+    commit or rollback, including if the process dies mid-request. On SQLite this
+    is a no-op because writes are already serialised.
+    """
+    bind = session().get_bind()
+    if bind.dialect.name != "postgresql":
+        return
+    # pg_advisory_xact_lock takes a signed 64-bit key; derive one from the
+    # identity hash so the lock is per-poster, not global.
+    n = int.from_bytes(hashlib.sha256(key_hash.encode()).digest()[:8],
+                       "big", signed=True)
+    session().execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
+
+
 def _db_rate_count(bucket, key_hash):
     # Committed rows count for the whole window; pending ones only while they are
     # still plausibly in flight, so an abandoned reservation ages out fast.
@@ -131,25 +161,32 @@ def _db_rate_limited(ip, kind):
     key_hash = _rate_key(ip)
     if kind != "attempts":
         return _db_rate_count(kind, key_hash) >= cap
+    _db_lock_identity(key_hash)
     row = RateEvent(bucket=kind, key_hash=key_hash)
     session().add(row)
-    session().commit()
+    # flush, NOT commit: the row gets its id and participates in our own count,
+    # while the transaction (and the advisory lock with it) stays open until the
+    # decision is made. Committing here is what opened the race.
+    session().flush()
     if _db_rate_count(kind, key_hash) > cap:
         session().delete(row)
         session().commit()
         return True
+    session().commit()
     return False
 
 
 def _db_rate_reserve_post(ip):
     key_hash = _rate_key(ip)
+    _db_lock_identity(key_hash)
     row = RateEvent(bucket="posts", key_hash=key_hash, state="pending")
     session().add(row)
-    session().commit()
+    session().flush()
     if _db_rate_count("posts", key_hash) > _RATE_MAX_POSTS:
         session().delete(row)
         session().commit()
         return None
+    session().commit()
     # Opportunistic cleanup, BOUNDED. An unbounded delete inside a user request
     # can hold locks and spike latency for whoever happens to trigger it after a
     # quiet period. Capped per request; the remainder is collected by subsequent

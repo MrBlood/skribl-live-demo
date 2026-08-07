@@ -1,3 +1,10 @@
+// CSRF: echo the token the server issued. Empty when the deployment is
+// unauthenticated, in which case no header is sent and nothing changes.
+function skriblPostHeaders(){
+  const h = {'Content-Type':'application/json'};
+  if (window.SKRIBL_CSRF_TOKEN) { h['X-Skribl-CSRF'] = window.SKRIBL_CSRF_TOKEN; }
+  return h;
+}
 /* =============================================================================
    Flip Mode — now speaks the Pad's native data language.
    A frame is { strokes, strokeGroups } in the PAD's exact shape: strokes is a
@@ -1101,11 +1108,25 @@ imageInput.addEventListener('change',async e=>{ const file=e.target.files&&e.tar
 /* ---- music loop (Pad's music component: waveform, trim, loop detail) ---- */
 const musicInput=document.getElementById('musicInput');
 function dataURLToArrayBuffer(u){ const b64=(u||'').split(',')[1]||''; const bin=atob(b64); const n=bin.length; const a=new Uint8Array(n); for(let i=0;i<n;i++) a[i]=bin.charCodeAt(i); return a.buffer; }
+// Media may arrive as a base64 data URL (inline storage) or as a plain URL
+// (object storage). This was the ONLY place either client cracked a data URL
+// open structurally, so it is the only place that had to learn the difference —
+// everywhere else assigns the value to a src or fetches it, and both forms work
+// there unchanged.
+function mediaToArrayBuffer(u){
+  if (typeof u === 'string' && u.slice(0,5) === 'data:') {
+    return Promise.resolve(dataURLToArrayBuffer(u));
+  }
+  return fetch(u, { credentials: 'same-origin' }).then(r => {
+    if (!r.ok) { throw new Error('media fetch failed: ' + r.status); }
+    return r.arrayBuffer();
+  });
+}
 function decodeForWaveform(){
   if(!musicData){ currentAudioBuffer=null; return; }
   try{ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ return; }
   try{
-    audioCtx.decodeAudioData(dataURLToArrayBuffer(musicData)).then(buf=>{
+    mediaToArrayBuffer(musicData).then(ab => audioCtx.decodeAudioData(ab)).then(buf=>{
       currentAudioBuffer=buf; audioDuration=buf.duration;
       // Default the loop to the FIRST 20s, not the whole file (matches the Pad's
       // loadedmetadata handler and the cap every drag handler enforces). Setting
@@ -1248,7 +1269,7 @@ async function shareSkribl(){
   if(playing) stop();
   sharing=true; chip('Posting…');
   try{
-    const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(buildSharePayload()) });
+    const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:skriblPostHeaders(), body:JSON.stringify(buildSharePayload()) });
     let data={}; try{ data=await res.json(); }catch(_){}
     if(!res.ok){ chip(data.error || ('Share failed ('+res.status+')')); sharing=false; return; }
     const url=location.origin + (data.url || (window.SKRIBL_PLAYER_BASE+'/'+data.id));

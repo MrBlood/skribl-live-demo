@@ -1,4 +1,4 @@
-"""Skribl's two tables, and the session seam.
+"""Skribl's three tables, and the session seam.
 
 Decoupled from flask_sqlalchemy deliberately. These models used to be declared
 on a module-level `db = SQLAlchemy()` that Skribl owned, which meant a host
@@ -15,6 +15,8 @@ app.py does exactly the same thing with the only SQLAlchemy instance in the tree
 with its own tooling (Alembic included) without importing Flask.
 """
 from datetime import datetime, timezone
+
+from flask import current_app
 
 from sqlalchemy import (Boolean, Column, DateTime, Index, Integer, JSON,
                         String)
@@ -107,6 +109,104 @@ class SkriblPost(SkriblBase):
     has_audio = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
+    # Visibility, for a host that renders feeds. Deliberately a small closed set
+    # rather than a boolean, because "not in the feed" and "not reachable by link"
+    # are different products: an unlisted Skribl is exactly how sharing works
+    # today (anyone with the URL can watch it, but it is nobody's timeline), and
+    # collapsing that into public/private would break existing share links.
+    #   public   — listed in feeds, reachable by link
+    #   unlisted — NOT listed, reachable by link. v131's effective behaviour.
+    #   private  — listed to nobody, reachable only by its author
+    # DEFAULT IS "unlisted", matching the create route and the v132 migration's
+    # backfill. It said "public" — so a host constructing SkriblPost directly,
+    # without going through the API, would silently publish to the feed. Three
+    # places state this default and all three must agree.
+    visibility = Column(String(16), default="unlisted", nullable=False)
+
+    __table_args__ = (
+        # Feed reads are "this author's posts, newest first" and "the public
+        # timeline, newest first". Both are covering-ish index scans with these;
+        # without them a feed degrades to a full table scan the moment the table
+        # is interesting, which is precisely when it must not.
+        Index("ix_skribl_posts_user_created", "user_id", "created_at"),
+        Index("ix_skribl_posts_visibility_created", "visibility", "created_at"),
+    )
+
+    #: Values `visibility` is allowed to take. Enforced in the API, not by a DB
+    #: CHECK constraint, so a host can add its own states without a migration.
+    VISIBILITIES = ("public", "unlisted", "private")
+
+    def visible_to(self, viewer_id):
+        """Can `viewer_id` (may be None) read this post at all?
+
+        THE RULE, in one place, because it was previously enforced in exactly one
+        place — the feed listing — while GET /api/skribls/<id>, the player page
+        and the share-card thumbnail all returned private posts to anybody with
+        the id. "Private" was a listing filter pretending to be an access control.
+
+          public    anyone
+          unlisted  anyone WITH THE LINK — deliberately readable, just not listed
+          private   the author only
+        """
+        if self.visibility != "private":
+            return True
+        return viewer_id is not None and self.user_id == viewer_id
+
+    def feed_dict(self):
+        """Metadata only — NO payload.
+
+        The payload is the whole point of a Skribl and the whole cost of one: it
+        carries base64 audio and images and routinely runs to megabytes. A feed
+        of fifty of those is a hundred megabytes of JSON, so the list endpoint
+        must never include it. The player fetches the payload for the one Skribl
+        it is actually going to play.
+        """
+        return {
+            "id": self.public_id,
+            "title": self.title,
+            "caption": self.caption,
+            "has_audio": bool(self.has_audio),
+            "user_id": self.user_id,
+            "visibility": self.visibility,
+            "created_at": (self.created_at.isoformat() if self.created_at else None),
+        }
+
+
+
+class SkriblPostMedia(SkriblBase):
+    """Exact post -> media-object association.
+
+    Authorisation for /media/<key> was previously a SUBSTRING SEARCH:
+    CAST(payload_json AS TEXT) LIKE '%<key>%'. Three things were wrong with it.
+
+    FORGEABLE. The API deliberately preserves unknown JSON fields, so anyone who
+    learned a private object's key could paste that key into any field of their
+    own public post; the media route then found an "accessible referencing post"
+    and served the private object. Authorisation by string containment is not
+    authorisation.
+
+    SLOW. It was an unindexed full scan of every payload_json on every blob
+    request — reintroducing exactly the hot table-wide read that moving media out
+    of the database was meant to eliminate.
+
+    WRONG AT SCALE. It was capped with .limit(25) and no ORDER BY, so a
+    content-addressed object referenced by more than 25 posts could 404 for a
+    legitimately authorised reader depending on which arbitrary rows came back.
+
+    An exact association fixes all three at once: an indexed equality lookup that
+    cannot be spoofed by putting a string somewhere in your own payload.
+    """
+    __tablename__ = "skribl_post_media"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, nullable=False, index=True)
+    media_key = Column(String(80), nullable=False, index=True)
+
+    __table_args__ = (
+        # One row per (post, object). Content addressing means a post can
+        # reference the same object from several slots; it needs one row.
+        Index("ix_post_media_unique", "post_id", "media_key", unique=True),
+    )
 
 # --- the session seam -------------------------------------------------------
 # A callable, not a session: Flask-SQLAlchemy's `db.session` is a scoped session
@@ -124,6 +224,25 @@ def bind_session(factory):
 
 
 def session():
+    """Resolve the session for the CURRENT application, not the last one bound.
+
+    This used to return `_session_factory()` — one module-level global that every
+    init_skribl() overwrote. Creating app B therefore redirected app A's routes
+    at B's database: fine for one Skribl per process (production, the standalone
+    app), broken for app factories, multi-tenant WSGI, and any test that builds
+    more than one instance. It bit verify_privacy.py, which is how it surfaced.
+
+    The factory now lives in app.extensions["skribl"], so each application
+    resolves its own. The module global remains only as a fallback for code
+    running outside an application context.
+    """
+    try:
+        factory = current_app.extensions.get("skribl", {}).get("session")
+        if factory is not None:
+            return factory()
+    except (ImportError, RuntimeError):
+        # No application context — fall through to the process-wide binding.
+        pass
     if _session_factory is None:
         raise RuntimeError(
             "Skribl has no database session. The host must call "

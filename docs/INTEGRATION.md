@@ -1,3 +1,10 @@
+> **NOTE (v136):** the signature below was a PLAN written before the
+> blueprint existed. The real contract is documented in `skribl/__init__.py`
+> and `ARCHIVE-README.md`: an injected SESSION (not a `db`), a
+> `current_user_id` callable defaulting to anonymous, an optional CSRF
+> triple, and an optional media store. There is no `login_manager` —
+> Skribl never imports flask_login.
+
 # Skribl -> Flask social-media site: integration & efficiency plan
 
 Goal: drop Skribl (Pad + Flip + Player) into a larger Flask app cleanly, with the
@@ -20,7 +27,8 @@ skribl/
 
 - Namespace templates under `templates/skribl/` and static under `static/skribl/`
   so nothing collides with the host app.
-- `create_blueprint(db, login_manager=None, config=None)` so the host injects its
+- `create_blueprint(session=None, url_prefix=None, static_url_path="/static/skribl",
+                 current_user_id=None, csrf=None, media_store=None)` so the host injects its
   own DB session, auth, and settings instead of Skribl owning a global app.
 - Routes become `skribl.pad`, `skribl.flip`, `skribl.player`, etc.; use
   `url_for("skribl.player", public_id=...)`.

@@ -850,6 +850,7 @@
     window.SKRIBL_MODE = "player";
     window.SKRIBL_PLAYER_ID = {{ public_id | tojson }};
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
+  window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
   </script>
   <script src="{{ skribl_asset('lib/media_validation.js') }}" defer></script>

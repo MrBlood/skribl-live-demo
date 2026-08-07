@@ -226,3 +226,8 @@ SHA256SUMS
 
 # Harness scratch: gunicorn's log for verify_postgres.py.
 harness/.pg_gunicorn.log
+
+# Alembic writes probe revisions during verify_migrations.py's autogenerate
+# checks; the suite removes them, but never commit a stray one.
+skribl/migrations/versions/*_scope_probe.py
+skribl/migrations/versions/*_drift_probe.py

@@ -27,7 +27,15 @@ _tree_files() {
         -not -path './.git/*' -not -path './instance/*' \
         -not -path '*/__pycache__/*' -not -name '*.pyc' \
         | sed 's|^\./||')
-  fi | grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' | LC_ALL=C sort
+  # Generated documents are excluded along with the run record itself.
+  # stamp_docs.py rewrites a stanza in README.md, harness/README.md and
+  # docs/HANDOFF.md *from* LAST-RUN.txt, i.e. AFTER the run — so including them
+  # meant the act of recording a result changed the tree whose hash had just
+  # been recorded. The hash could never match the shipped archive, which is
+  # exactly what an external review found. Excluding them makes it reproducible.
+  fi | grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' \
+              -e 'README.md' -e 'harness/README.md' -e 'docs/HANDOFF.md' \
+     | LC_ALL=C sort
 }
 
 _tree_hash() {
@@ -90,7 +98,7 @@ python3 -c "from app import app, db; app.app_context().push(); db.create_all()" 
 
 # Reproducibility header (round 4, #7): a recorded run should state the conditions
 # it was produced under, not only its results.
-{
+RUN_HEADER="$({
   echo "================ RUN CONTEXT ================"
   echo "UTC timestamp           : $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "Host                    : $(uname -sm)"
@@ -114,7 +122,8 @@ p=sync_playwright().start();b=p.chromium.launch();print(b.version);b.close();p.s
   echo "SKRIBL_CSP              : ${SKRIBL_CSP:-(default on)}"
   echo "Command                 : $0 $*"
   echo "============================================"
-}
+})"
+printf '%s\n' "$RUN_HEADER"
 
 # A timed-out or killed run leaves a server holding 5001. The next run then
 # binds nothing, silently tests against the STALE TREE, and reports green — this
@@ -156,6 +165,23 @@ fi
 
 RC=0
 cd "$ROOT/harness" || exit 1
+
+# No arguments means EVERY suite, not "no suites".
+#
+# Both CI jobs invoked this with no arguments, and the loop below simply ran zero
+# times: TOTAL=0, BAD=0, and the script printed "PASS — every requested suite
+# exited 0" and exited 0, because every one of the zero requested suites did
+# indeed pass. A green CI job that tested nothing, under a comment claiming CI
+# runs the full harness rather than a reduced subset.
+if [ "$#" -eq 0 ]; then
+  set -- verify_*.py
+  echo "No suites named; running all $# of them."
+fi
+if [ "$#" -eq 0 ]; then
+  echo "No verify_*.py suites found in $ROOT/harness — refusing to report a" >&2
+  echo "result for an empty run." >&2
+  exit 1
+fi
 LOGDIR="$(mktemp -d)"
 TOTAL=0
 BAD=0
@@ -166,8 +192,23 @@ for suite in "$@"; do
   echo "================ $suite ================"
   log="$LOGDIR/${suite%.py}.log"
   set +e
-  timeout 600 python3 "$suite" >"$log" 2>&1
+  # `timeout 600` alone was not enough: it signals only its DIRECT child, and a
+  # suite's Playwright browser processes keep the output pipe open, so the shell
+  # blocks on the read even after python is gone. A full 26-suite invocation
+  # stalled indefinitely this way — never noticed before because LAST-RUN.txt
+  # shows the harness has only ever been run in batches, not all at once.
+  #
+  # setsid puts the suite in its own process group; -k sends KILL if TERM is
+  # ignored; and on a timeout the whole group is torn down so nothing is left
+  # holding the pipe or a port.
+  setsid timeout -k 15 600 python3 "$suite" >"$log" 2>&1 &
+  suite_pid=$!
+  wait "$suite_pid"
   rc=$?
+  if [ "$rc" -ge 124 ]; then
+    kill -KILL -"$suite_pid" 2>/dev/null || true
+    echo "  (suite exceeded its 600s budget and its process group was killed)" >>"$log"
+  fi
   set -e
   cat "$log"
   echo "---- $suite exit=$rc ----"
@@ -212,12 +253,35 @@ for suite in "$@"; do
 done
 
 echo
+
 echo "================ AGGREGATE (machine-generated) ================"
 echo "suites requested : $#"
 printf '%s\n' "$SUMMARY" | sed '/^$/d'
 echo "assertions passed: $TOTAL   (skipped suites contribute 0)"
 echo "suites skipped   : $SKIPPED"
 echo "suites with problems: $BAD"
+
+# Write the run record. LAST-RUN.txt was previously assembled BY HAND from this
+# script's stdout — which is why its tree hash could never be reproduced, and why
+# three different assertion totals ended up in three different documents. It is
+# generated here now, and harness/stamp_docs.py stamps the docs from it.
+{
+  printf '%s\n\n' "$RUN_HEADER"
+  echo "================ AGGREGATE (machine-generated) ================"
+  echo "suites requested : $#"
+  printf '%s\n' "$SUMMARY" | sed '/^$/d'
+  echo "assertions passed: $TOTAL   (skipped suites contribute 0)"
+  echo "suites skipped   : $SKIPPED"
+  echo "suites with problems: $BAD"
+} > "$ROOT/harness/LAST-RUN.txt" 2>/dev/null || true
+
+# Stamp the docs from the record we just wrote. verify_docs.py runs DURING the
+# suite loop, so it can only ever validate the PREVIOUS run's record — and the
+# runner then overwrote it, invalidating what had just passed. Stamping here
+# closes that loop: after any run, the generated stanzas describe THAT run.
+# The generated docs are excluded from the tree hash, so this cannot change the
+# tree whose hash was recorded moments earlier.
+python3 "$ROOT/harness/stamp_docs.py" >/dev/null 2>&1 || true
 if [ "$BAD" -eq 0 ] && [ "$SKIPPED" -eq 0 ]; then
   echo "RESULT: PASS — every requested suite exited 0 and reported a summary."
 elif [ "$BAD" -eq 0 ]; then

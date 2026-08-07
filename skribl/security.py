@@ -5,6 +5,7 @@ app-wide after_request, which in a host application would either clobber the
 platform's policy or be clobbered by it. It is now attached to the blueprint, so
 it covers Skribl's own routes and Skribl's own static files and nothing else.
 """
+import hmac
 import ipaddress
 import os
 import secrets
@@ -151,7 +152,12 @@ def register_security(bp, skribl_version):
         # rendered ones) so the header and the template can never disagree.
         g.csp_nonce = secrets.token_urlsafe(16)
 
-    @bp.app_context_processor
+    # context_processor, NOT app_context_processor. The app_ variant runs for
+    # templates rendered by EVERY view, and this one calls relative endpoints
+    # (url_for(".create_skribl")) — which, outside a Skribl request, resolve
+    # against the wrong blueprint or none at all and raise BuildError. It would
+    # have broken unrelated host pages that never mention Skribl.
+    @bp.context_processor
     def _expose_template_globals():
         # Route bases are derived, never literals. Templates hardcoded
         # "/api/skribls" and flip.js hardcoded both it and "/s/", so a url_prefix
@@ -160,8 +166,20 @@ def register_security(bp, skribl_version):
         # the prefix move is a registration change, not a search-and-replace.
         return {"csp_nonce": getattr(g, "csp_nonce", ""),
                 "skribl_version": skribl_version,
+                "skribl_csrf_token": getattr(g, "skribl_csrf_token", ""),
                 "skribl_api_base": url_for(".create_skribl"),
                 "skribl_player_base": url_for(".skribl_player", public_id="").rstrip("/")}
+
+    @bp.before_request
+    def _prepare_csrf():
+        if bp.skribl_csrf:
+            bp.skribl_csrf[0]()
+
+    @bp.after_request
+    def _issue_csrf(resp):
+        if bp.skribl_csrf:
+            resp = bp.skribl_csrf[1](resp)
+        return resp
 
     @bp.after_request
     def _security_headers(resp):
@@ -241,3 +259,70 @@ def install_standalone_security(app):
                       if csp_mode == "report-only" else "Content-Security-Policy")
             resp.headers.setdefault(header, policy)
         return resp
+
+
+# --- CSRF -------------------------------------------------------------------
+# Skribl has no CSRF protection in v131, and that is CORRECT there: the API is
+# unauthenticated, so there is no session for a cross-origin form to ride and
+# nothing an attacker gains by making a victim's browser post a drawing.
+#
+# The moment a host authenticates POST /api/skribls with a cookie, that changes
+# completely: any page on the internet can then post as the logged-in user. The
+# vulnerability is CREATED BY the integration, which is why the seam belongs
+# here rather than in the host's backlog.
+#
+# Two ways to satisfy it, because hosts differ:
+#   * The host owns CSRF already (Flask-WTF, Django-style middleware). It passes
+#     its own validator and its own token source; Skribl just calls them.
+#   * The host has nothing. `double_submit_csrf()` below is a complete,
+#     dependency-free implementation it can use as-is.
+CSRF_HEADER = "X-Skribl-CSRF"
+CSRF_COOKIE = "skribl_csrf"
+
+
+def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
+    """A double-submit CSRF triple: (prepare, issue, validate).
+
+    Double-submit rather than server-side session state, so it works for a host
+    that keeps no server-side session and adds no storage requirement. The token
+    goes in a cookie AND in a header; an attacker's page can cause the cookie to
+    be sent, but same-origin policy stops it READING the cookie to set the
+    matching header.
+
+    Requires SameSite=Lax at minimum, which `issue` sets. Compared with
+    hmac.compare_digest so a wrong token cannot be discovered a character at a
+    time by timing the response.
+    """
+    def prepare():
+        """Resolve the token BEFORE the view runs.
+
+        This has to happen in before_request, not after: the template renders
+        during the view, so a token established in after_request arrives too late
+        and the page ships an empty `window.SKRIBL_CSRF_TOKEN` — the client then
+        sends no header and every post is refused. (Caught by verify_csrf.py on
+        its first run, which is exactly the "created by the integration" failure
+        this seam exists to prevent.)
+        """
+        token = request.cookies.get(cookie_name)
+        g.skribl_csrf_token = token or secrets.token_urlsafe(32)
+        g.skribl_csrf_is_new = not token
+
+    def issue(response):
+        if getattr(g, "skribl_csrf_is_new", False):
+            response.set_cookie(
+                cookie_name, g.skribl_csrf_token,
+                httponly=False,      # the client script must read it to echo it
+                samesite="Lax",
+                secure=request.is_secure,
+                max_age=60 * 60 * 12,
+            )
+        return response
+
+    def validate(req):
+        sent = req.headers.get(header_name, "")
+        known = req.cookies.get(cookie_name, "")
+        if not sent or not known:
+            return False
+        return hmac.compare_digest(sent, known)
+
+    return prepare, issue, validate
