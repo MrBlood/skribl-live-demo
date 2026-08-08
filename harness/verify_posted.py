@@ -215,4 +215,55 @@ with sync_playwright() as p:
     pd.close()
     b.close()
 
+print("\nTRAY ICONS — a Flip is marked with the icon that means Flip")
+# The tray used U+25A6 (a hatched square) for a Flip and U+270E for a Pad
+# replay. The square matched nothing in the app — a Flip is identified by the
+# open book that opens it from Pad's header — and the pencil leaned the
+# opposite way to the Pen tool, so a Pad Skribl carried a pencil facing away
+# from the one the user drew with.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page()
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+    _pg.evaluate("""() => {
+      window.SkriblPosted.add({id:'ic1', url:'/s/ic1', kind:'flip', pages:9, title:'A flip'});
+      window.SkriblPosted.add({id:'ic2', url:'/s/ic2', kind:'pad', pages:1, title:'A pad'});
+      const d = document.getElementById('postedDrawer');
+      d.hidden = false; d.classList.add('open');
+      if (window._skriblPostedUI) window._skriblPostedUI.render();
+    }""")
+    _pg.wait_for_timeout(400)
+
+    check("no legacy glyph characters remain in the tray",
+          _pg.evaluate("() => !document.getElementById('postedList')"
+                       ".textContent.match(/[\u25A6\u270E]/)"),
+          "a font glyph renders at whatever weight the system font chooses")
+
+    for _kind in ("flip", "pad"):
+        check(f"a {_kind} entry uses an inline SVG icon",
+              _pg.evaluate(f"() => !!document.querySelector("
+                           f"'.posted-thumb-{_kind} svg')"),
+              "still a text glyph")
+
+    # The Flip icon must be the SAME path the header uses to open Flip. Compared
+    # by geometry, not by eye: a different book would pass a "has an svg" check.
+    _tray = _pg.evaluate("() => document.querySelector("
+                         "'.posted-thumb-flip svg path').getAttribute('d')")
+    _pd = _b.new_page()
+    _pd.goto(f"{BASE}/skribl-pad", wait_until="load")
+    _pd.wait_for_timeout(1200)
+    _hdr = _pd.evaluate("() => { const el = document.querySelector('#flipBtn svg path');"
+                        " return el ? el.getAttribute('d') : null; }")
+    check("the tray's Flip icon is the same book that opens Flip",
+          _tray is not None and _tray == _hdr,
+          f"tray {_tray!r} vs header {_hdr!r}")
+    _pd.close()
+
+    check("the tray icons render at a visible size",
+          _pg.evaluate("() => [...document.querySelectorAll('.posted-thumb svg')]"
+                       ".every(s => s.getBoundingClientRect().width > 10)"),
+          "present but collapsed")
+    _b.close()
+
 summarise_and_exit()

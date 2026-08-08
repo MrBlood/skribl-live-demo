@@ -11,6 +11,30 @@
 (function (global) {
   'use strict';
 
+  /* The SAME open-book that opens Flip from Pad's header. The tray used the
+   * glyph U+25A6 (a hatched square), which meant nothing and matched nothing —
+   * a Flip is identified by the book everywhere else in the app, so the tray
+   * disagreeing with the header is a small lie about what the thing is.
+   *
+   * Inline SVG rather than a character: the two glyphs rendered at whatever
+   * weight and baseline the system font felt like, which is why they sat
+   * unevenly against each other.
+   */
+  var ICON_FLIP =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"' +
+    ' stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/>' +
+    '<path d="M12 6.5v13.3"/></svg>';
+
+  /* Pencil, mirrored to point down-left. The glyph it replaces (U+270E) leans
+   * the opposite way to every other pencil in the app — the Pen tool, the
+   * "Start drawing" hint — so a Pad Skribl was marked with a pencil facing
+   * away from the one the user just drew with. */
+  var ICON_PAD =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"' +
+    ' stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -122,7 +146,7 @@
         var url = store.absolute(e.url || (base ? base + '/' + e.id : ''));
         return '<div class="posted-row" data-id="' + esc(e.id) + '">' +
           '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
-            (e.kind === 'flip' ? '\u25A6' : '\u270E') + '</span>' +
+            (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
           '<a class="posted-main" href="' + esc(url) + '" target="_blank" rel="noopener">' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
             '<span class="posted-sub">' + esc(sub) + '</span>' +

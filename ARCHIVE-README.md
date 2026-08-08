@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v160"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v161"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -157,6 +157,24 @@ lose my animation?") unanswered. Both 429 messages now state the limit and that
 the work is safe. The limiter does not track when the window lifts, so the
 message cannot yet say WHEN — a `Retry-After` needs the oldest event in the
 window and is still open.
+
+**The drawing surface had no findable edge.** `#pad`'s border was
+`--hairline-strong` — `rgba(255,255,255,.09)`, about 4% from the page behind
+it. That reads fine on a good panel and disappears entirely on a dim or
+low-contrast monitor, leaving no way to see where you can draw. Both canvases
+now carry a 2px edge plus a faint outer ring; the ring is the part that
+survives a display crushing blacks. Pad's `.canvas-wrap` had only an inset
+vignette and got the same treatment.
+
+**Your Skribls marked a Flip with a hatched square.** `U+25A6` matched nothing
+in the app — a Flip is identified by the open book that opens it from Pad's
+header — so the tray disagreed with the header about what the thing is. The
+Pad entry's `U+270E` pencil also leaned the opposite way to the Pen tool, so a
+replay carried a pencil facing away from the one the user drew with. Both are
+inline SVG now, because the two characters rendered at whatever weight and
+baseline the system font chose and sat unevenly beside each other.
+`verify_posted.py` compares the tray's book path against the header's by
+geometry — a different book would pass a "has an svg" check.
 
 **A hard server failure looked like a dead button.** Every `POST /api/skribls`
 was returning 500 — `psycopg.OperationalError: failed to resolve host

@@ -149,8 +149,16 @@
   .flip-player[hidden] { display: none; }
   .flip-player .player-progress { width: 100%; max-width: none; height: 6px;
     box-shadow: 0 2px 10px rgba(0,0,0,.4); }
+  /* The drawing surface must have a findable edge. --hairline-strong is
+     rgba(255,255,255,.09) — about 4% from the page behind it — which reads
+     fine on a good panel and disappears entirely on a dim or low-contrast
+     monitor, leaving no way to tell where you can draw. A 2px edge plus a
+     faint outer ring keeps it legible without turning the canvas into a
+     framed picture; the ring is what survives when a display crushes blacks. */
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
-    border: 1px solid var(--hairline-strong); box-shadow: 0 20px 50px rgba(0,0,0,.45); touch-action: none; cursor: none; }
+    border: 2px solid rgba(255,255,255,.20);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 20px 50px rgba(0,0,0,.45);
+    touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
   .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
     background: rgba(9,11,16,.72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 4px 11px;
