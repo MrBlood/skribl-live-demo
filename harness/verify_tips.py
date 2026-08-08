@@ -219,6 +219,20 @@ with sync_playwright() as p:
     heights = fp.evaluate("() => ({"
                           " tips: document.getElementById('hintSeg').getBoundingClientRect().height,"
                           " canvas: document.getElementById('canvasSeg').getBoundingClientRect().height })")
+    widths = fp.evaluate("() => ({"
+                         " tips: document.getElementById('hintSeg').getBoundingClientRect().width,"
+                         " canvas: document.getElementById('canvasSeg').getBoundingClientRect().width,"
+                         " gap: document.getElementById('hintSeg').getBoundingClientRect().left"
+                         "      - document.querySelectorAll('.flip-menu-row .fm-label')[0]"
+                         "        .getBoundingClientRect().right })")
+    check("the Tips and Canvas switches are the same width",
+          abs(widths["tips"] - widths["canvas"]) < 2,
+          f"tips {round(widths['tips'])} vs canvas {round(widths['canvas'])}")
+    # Two right-aligned switches of different widths left a 99px hole after the
+    # word "Tips" while "Canvas" sat snug against its own.
+    check("the Tips label is not stranded from its switch",
+          widths["gap"] < 48, f"{round(widths['gap'])}px gap")
+
     check("the Tips and Canvas switches are the same height",
           abs(heights["tips"] - heights["canvas"]) < 1.5,
           f"tips {heights['tips']} vs canvas {heights['canvas']} — two segmented "

@@ -708,7 +708,19 @@ function commitActiveStroke() {
 canvas.addEventListener('mousedown', startDraw);
 canvas.addEventListener('mousemove', continueDraw);
 canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mouseleave', endDraw);
+/* NO mouseleave -> endDraw.
+ *
+ * It ended the stroke the moment the cursor crossed the canvas edge, so
+ * sweeping a line out past the border and back produced two strokes with a gap
+ * — and a stroke that ends where you did not lift the button is a stroke you
+ * did not draw. Touch never had this, because there is no mouseleave, which is
+ * why the same gesture behaved differently on a phone.
+ *
+ * Continuing outside is the drawing-app convention: the line follows the
+ * pointer, the canvas clips what falls outside, and coming back resumes the
+ * same stroke. The window handlers below still commit on mouseup anywhere and
+ * on losing focus, so a stroke can never be left painted but unrecorded. */
+window.addEventListener('mousemove', (e) => { if (drawing) continueDraw(e); });
 canvas.addEventListener('touchstart', startDraw);
 canvas.addEventListener('touchmove', continueDraw);
 canvas.addEventListener('touchend', endDraw);
@@ -722,7 +734,7 @@ canvas.addEventListener('contextmenu', (e) => {
 });
 // Releasing the mouse outside the canvas, or the window losing focus, also
 // commits — otherwise an interrupted stroke stays painted but unrecorded.
-window.addEventListener('mouseup', () => { if (drawing) commitActiveStroke(); });
+window.addEventListener('mouseup', () => { if (drawing) endDraw(); });
 window.addEventListener('blur', () => { if (drawing) commitActiveStroke(); });
 
 function setTool(nextTool) {

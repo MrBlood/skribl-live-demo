@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v164"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v165"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -214,6 +214,31 @@ silently does nothing for anyone who has already dismissed them, which is a
 setting that lies. The toggle also re-reads the stored state every time the
 menu opens rather than once at load, because a switch showing the opposite of
 what is stored is worse than no switch — `verify_tips.py` caught exactly that.
+
+**The canvas edge vanished the moment you started drawing.** `.canvas-wrap.recording`
+replaced `box-shadow` wholesale, dropping the ring added the release before —
+and Pad enters that class on the FIRST STROKE, so the edge disappeared exactly
+when it was needed. `.light-bg` did the same. The ring is now a
+`--canvas-ring` variable that every state carries forward, and `light-bg` gets
+a DARK ring, because a white ring on a white canvas is not an edge. Checked
+mid-stroke, not at rest: a rest-state assertion cannot see this.
+
+**Pad's canvas was square and Flip's was rounded.** Two editors in one app
+should not disagree about the shape of the thing you draw on. Pad now uses the
+same `--r-frame`.
+
+**A stroke ended when the pointer crossed the canvas border.** `app.js` bound
+`mouseleave -> endDraw`, so sweeping a line out past the edge and back produced
+two strokes with a gap. Touch never had it — there is no `mouseleave` — which
+is why the same gesture behaved differently on a phone, and why Flip was fine:
+Flip binds `pointerup` on WINDOW and uses `pointerleave` only to hide the
+cursor. Pad now tracks movement on `window` while drawing and ends on release
+anywhere. A stroke that ends where you did not lift the button is a stroke you
+did not draw.
+
+**Tips and Canvas are the same width.** Two right-aligned switches of different
+widths left a 99px hole between the word "Tips" and its control while "Canvas"
+sat snug against its own.
 
 **The drawing surface had no findable edge.** `#pad`'s border was
 `--hairline-strong` — `rgba(255,255,255,.09)`, about 4% from the page behind

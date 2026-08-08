@@ -222,6 +222,62 @@ with sync_playwright() as _p:
     check("no JS errors dismissing the menu", not _errs, "; ".join(_errs[:2]))
     _b.close()
 
+print("\nCANVAS — the edge survives every state, and a stroke survives the edge")
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pd = _b.new_page(viewport={"width": 1000, "height": 900})
+    _errs = []
+    _pd.on("pageerror", lambda e: _errs.append(str(e)))
+    _pd.goto(f"{BASE}/skribl-pad", wait_until="load")
+    _pd.wait_for_timeout(1300)
+
+    def _ring():
+        return _pd.evaluate("() => getComputedStyle(document.querySelector"
+                            "('.canvas-wrap')).boxShadow")
+
+    check("the canvas has an outer ring at rest",
+          "rgba(255, 255, 255, 0.18)" in _ring(),
+          "no findable edge on a dim panel")
+    check("Pad's canvas is rounded like Flip's",
+          _pd.evaluate("() => parseFloat(getComputedStyle("
+                       "document.querySelector('.canvas-wrap')).borderTopLeftRadius)") > 8,
+          "two editors in one app disagreeing about the shape you draw on")
+
+    # THE BUG. .canvas-wrap.recording replaced box-shadow wholesale and dropped
+    # the ring — and Pad enters that class on the FIRST STROKE, so the edge
+    # vanished exactly when it was needed. A rest-state-only check misses it.
+    _box = _pd.locator("#canvas").bounding_box()
+    _pd.mouse.move(_box["x"] + 120, _box["y"] + 120)
+    _pd.mouse.down()
+    _pd.mouse.move(_box["x"] + 300, _box["y"] + 200, steps=8)
+    _pd.wait_for_timeout(250)
+    check("the canvas is in its recording state", _pd.evaluate(
+        "() => document.querySelector('.canvas-wrap').classList.contains('recording')"))
+    check("and the ring is STILL there while recording",
+          "rgba(255, 255, 255, 0.18)" in _ring(),
+          "every state that restyles box-shadow must keep --canvas-ring")
+
+    # A stroke must not end because the pointer crossed the border. It did on
+    # mouse and not on touch, so the same gesture behaved differently by device.
+    _pd.mouse.move(_box["x"] + _box["width"] + 120, _box["y"] + 220, steps=8)
+    _pd.wait_for_timeout(120)
+    check("leaving the canvas does not end the stroke",
+          _pd.evaluate("() => drawing") is True,
+          "a stroke that ends where you did not lift the button is one you "
+          "did not draw")
+    _pd.mouse.move(_box["x"] + 340, _box["y"] + 300, steps=8)
+    _pd.mouse.up()
+    _pd.wait_for_timeout(300)
+    check("returning and releasing leaves ONE unbroken stroke",
+          _pd.evaluate("() => strokeGroups.length") == 1,
+          f"{_pd.evaluate('() => strokeGroups.length')} strokes — it broke at the edge")
+    check("and releasing outside still commits it",
+          _pd.evaluate("() => drawing") is False
+          and _pd.evaluate("() => strokes.length") > 0,
+          "painted but unrecorded")
+    check("no JS errors drawing across the edge", not _errs, "; ".join(_errs[:2]))
+    _b.close()
+
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)
 print(f"{ok}/{len(results)} passed")

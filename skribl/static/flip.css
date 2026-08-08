@@ -519,6 +519,11 @@
    segmented controls at different heights in the same menu reads as a mistake
    rather than a hierarchy. */
 .canvas-seg, .hint-seg { --seg-h: 26px; margin-left: auto; }
+/* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
+   hole between the word "Tips" and its switch while "Canvas" sat snug against
+   its own. Matching the widths closes it, and the two rows read as a pair. */
+.hint-seg { width: 147px; }
+.hint-seg button { flex: 1 1 0; }
 .canvas-seg button, .hint-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 
 /* --- v130: playback settings drawer ---------------------------------------
