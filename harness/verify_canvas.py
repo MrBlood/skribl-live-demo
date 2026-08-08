@@ -172,11 +172,53 @@ with sync_playwright() as _p:
           str(_pg.evaluate("() => [CW, CH]")))
     _b.close()
 
-# Computed HERE, not earlier: this was tallied before the last section ran,
-# so eight new assertions grew `results` while `ok` stayed frozen and the
-# suite reported 21/29 with nothing listed as failed.
-ok = sum(1 for o, _ in results if o)
+print("\nDISPLAY SIZE — the two editors show the same canvas at the same size")
+# THE BUG. Both authored 632x474, but Flip DISPLAYED it at 694x521 and Pad at
+# 632x474 — the same drawing, 10% bigger in one editor. Worse, the larger one
+# was the worse one: canvas.width is authored x dpr on both surfaces, so Flip's
+# 1.4 cap stretched a fixed bitmap and softened every line. Pad had always
+# clamped at 1. Flip now does too.
+#
+# Pad also reserved no breathing room while Flip reserved 24px, so on a narrow
+# screen Pad's canvas — and its new 2px ring — pressed against the column edge.
+# The padding was added but getBoundingClientRect() reports the BORDER box, so
+# it was handed straight back until layoutEditorCanvas subtracted it.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    for _w, _h in ((1400, 900), (1000, 900), (500, 900), (390, 844)):
+        _sizes = {}
+        for _name, _path, _sel in (("Flip", "/flip", "#pad"),
+                                   ("Pad", "/skribl-pad", "#canvas")):
+            _pg = _b.new_page(viewport={"width": _w, "height": _h})
+            _pg.goto(f"{BASE}{_path}", wait_until="load")
+            _pg.wait_for_timeout(1300)
+            _sizes[_name] = _pg.evaluate(
+                f"() => {{ const c = document.querySelector('{_sel}');"
+                f" const r = c.getBoundingClientRect();"
+                f" return {{ css: [Math.round(r.width), Math.round(r.height)],"
+                f"          backing: [c.width, c.height] }}; }}")
+            _pg.close()
+
+        _f, _pd = _sizes["Flip"], _sizes["Pad"]
+        check(f"at {_w}x{_h} both editors display the canvas at the same size",
+              _f["css"] == _pd["css"],
+              f"Flip {_f['css']} vs Pad {_pd['css']}")
+
+        # Never above 1:1. Above it, a fixed bitmap is stretched and every line
+        # softens — which is what made the bigger canvas the worse one.
+        for _name, _m in (("Flip", _f), ("Pad", _pd)):
+            _dpr = _m["backing"][0] / max(1, _m["css"][0])
+            check(f"{_name} at {_w}px is not upscaled beyond its bitmap",
+                  _m["css"][0] <= _m["backing"][0] + 1,
+                  f"displayed {_m['css'][0]}px from a {_m['backing'][0]}px bitmap "
+                  f"({_dpr:.2f}x) — every line is softened")
+    _b.close()
+
 print("\n" + "=" * 60)
+# Counted here, not stored earlier: a tally on its own line drifts above
+# sections appended later, and reports a green undercount with nothing
+# listed as failed. Happened twice.
+ok = sum(1 for o, _ in results if o)
 print(f"{ok}/{len(results)} passed")
 for o, n in results:
     if not o:

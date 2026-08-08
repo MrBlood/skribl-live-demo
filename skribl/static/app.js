@@ -72,9 +72,19 @@ function establishEditorCanvas(w, h) {
 // the drawing — rotating just re-fits the display.
 function layoutEditorCanvas() {
   if (!authoredW || !authoredH) return;
-  const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
-  const availW = Math.max(1, area.width);
-  const availH = Math.max(1, area.height);
+  const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
+  const area = areaEl.getBoundingClientRect();
+  // Subtract the padding. getBoundingClientRect() reports the BORDER box, so
+  // the breathing room .canvas-area reserves was being handed straight back to
+  // the canvas and the drawing still touched the column edge.
+  const cs = getComputedStyle(areaEl);
+  const padX = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
+  const padY = parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
+  const availW = Math.max(1, area.width - padX);
+  const availH = Math.max(1, area.height - padY);
+  // Capped at 1: canvas.width is authoredW x dpr, so any scale above 1
+  // stretches a fixed bitmap and softens every line. Flip allowed up to 1.4
+  // and was visibly softer than Pad for the same drawing.
   const scale = Math.min(1, availW / authoredW, availH / authoredH);
   const dispW = Math.round(authoredW * scale);
   const dispH = Math.round(authoredH * scale);

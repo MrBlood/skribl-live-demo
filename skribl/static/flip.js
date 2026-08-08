@@ -71,7 +71,13 @@ function currentSizeId(){
 function fitPad(){
   const stage = document.querySelector('.flip-stage');
   const availW = stage.clientWidth - 24, availH = stage.clientHeight - 6;
-  const scale = Math.max(0.1, Math.min(availW/CW, availH/CH, 1.4));
+  // Capped at 1, not 1.4. The backing store is CW x CH x DPR (see pad.width
+  // above), so any scale above 1 stretches a fixed bitmap and softens every
+  // line — at 1.10 on a 1000px window, Flip's strokes were ~10% blurrier than
+  // the same drawing in Pad, which has always clamped at 1 in
+  // layoutEditorCanvas(). Same authored canvas, two different sizes on screen,
+  // and the larger one was the worse one.
+  const scale = Math.max(0.1, Math.min(availW/CW, availH/CH, 1));
   pad.style.width = Math.round(CW*scale)+'px';
   pad.style.height = Math.round(CH*scale)+'px';
   syncGrid();

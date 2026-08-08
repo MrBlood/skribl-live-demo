@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v165"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v166"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -214,6 +214,29 @@ silently does nothing for anyone who has already dismissed them, which is a
 setting that lies. The toggle also re-reads the stored state every time the
 menu opens rather than once at load, because a switch showing the opposite of
 what is stored is worse than no switch — `verify_tips.py` caught exactly that.
+
+**The two editors showed the same canvas at different sizes, and the bigger
+one was the worse one.** Both author 632x474, but Flip DISPLAYED it at 694x521
+and Pad at 632x474. `canvas.width` is `authored x dpr` on both surfaces, so
+Flip's `fitPad()` cap of **1.4** stretched a fixed bitmap: every line in Flip
+was ~10% softer than the same drawing in Pad, which had always clamped at 1 in
+`layoutEditorCanvas()`. Flip is capped at 1 now — the smaller canvas is the
+sharp one.
+
+**Pad reserved no breathing room while Flip reserved 24px**, so on a narrow
+screen Pad's canvas pressed against the column edge, and after the ring was
+added the ring sat flush against the app border. `.canvas-area` now has the
+matching padding — and `layoutEditorCanvas()` subtracts it, because
+`getBoundingClientRect()` reports the BORDER box and was handing the reserved
+space straight back.
+
+`verify_canvas.py` compares both editors at four viewports and fails if they
+differ by a pixel, and separately asserts neither is displayed larger than its
+own bitmap.
+
+**A tally on its own line drifted above a later section for the SECOND time**,
+reporting a green undercount with nothing listed as failed. `ok` is now
+computed at the point of use, so there is no line left to drift.
 
 **The canvas edge vanished the moment you started drawing.** `.canvas-wrap.recording`
 replaced `box-shadow` wholesale, dropping the ring added the release before —
