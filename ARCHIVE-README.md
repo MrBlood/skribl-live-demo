@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v171"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v172"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -221,15 +221,20 @@ onion, grid, draw-on and more inline. Those controls moved into the settings
 button and the breakpoint was never revisited — a classic leftover: the fix
 outlived the problem.
 
-Measured, "FLIP MODE" needs 86px, "FLIP" 34 and "FM" 23, against 193px free at
-760px+, 154 at 440 and 66 at 340. So three tiers: FLIP MODE on desktop (the
-name Pad's own button already uses), FLIP down to 360px, and FM only below
-that — narrower than any phone in use, an iPhone SE being 375. Even at 340px
-there is room for FLIP, so FM is a fallback rather than a fix.
+The wordmark is **FLIPMODE**, one word, and it shows from 360px up — every
+phone in use, an iPhone SE being 375. FLIP covers 320-359 and FM only below
+320, narrower than any phone sold.
 
-`verify_ux.py` checks the tier at five widths AND that the header still has
-free space at each, because a wordmark that fits by pushing the controls off
-the edge is not fitting.
+**The first attempt got the breakpoint wrong by 80px, and the method is why.**
+It summed the header children's widths and called the remainder "free space",
+which concluded FLIPMODE needed 440px. But flex shrinks the controls before
+anything overflows, so that figure reports room that is not there — and hides
+the squeeze when there is. Forcing each candidate into the DOM and reading
+`header.scrollWidth` against `clientWidth` gives the real answer: zero overflow
+at 360, 9px over at 340, 29px at 320.
+
+`verify_ux.py` checks the tier at seven widths and asserts real overflow at
+each, not arithmetic.
 
 **The onion icon was drawn at stroke-width 1.1** while every neighbour in the
 header is 1.9-2, with four curved paths converging inside a 34px circle. At

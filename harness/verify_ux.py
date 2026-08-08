@@ -230,8 +230,14 @@ print("\nWORDMARK — the fullest label that fits, at every width")
 # 23; free space is 193px at 760+, 154 at 440, 66 at 340.
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
-    for _w, _want in ((1000, "FLIP MODE"), (760, "FLIP MODE"),
-                      (440, "FLIP"), (390, "FLIP"), (340, "FM")):
+    # Measured by FORCING each candidate and reading header.scrollWidth against
+    # clientWidth — not by summing child widths. Flex shrinks the controls
+    # first, so an arithmetic "free space" figure hides the squeeze and reports
+    # room that is not there; that is how the first pass concluded FLIPMODE
+    # needed 440px when it actually clears at 360.
+    for _w, _want in ((1000, "FLIPMODE"), (430, "FLIPMODE"), (393, "FLIPMODE"),
+                      (375, "FLIPMODE"), (360, "FLIPMODE"),
+                      (340, "FLIP"), (300, "FM")):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
         _pg.wait_for_timeout(1200)
@@ -239,17 +245,12 @@ with sync_playwright() as _p:
         check(f"at {_w}px the wordmark reads {_want!r}", _shown == _want,
               f"shows {_shown!r} — exactly one tier must be visible")
 
-        # The header must not overflow to achieve it. A wordmark that fits by
-        # pushing the actions off the edge is not fitting.
-        _fits = _pg.evaluate("""() => {
-          const h = document.querySelector('.header');
-          const kids = [...h.children].reduce((a, c) =>
-            a + c.getBoundingClientRect().width, 0);
-          return { free: Math.round(h.getBoundingClientRect().width - kids) };
-        }""")
-        check(f"at {_w}px the header still has room to spare",
-              _fits["free"] >= 0,
-              f"{_fits['free']}px — the wordmark is crowding the controls")
+        # Real overflow, not arithmetic. A wordmark that "fits" by squeezing
+        # the controls or spilling past the edge is not fitting.
+        _over = _pg.evaluate("""() => { const h = document.querySelector('.header');
+          return Math.round(h.scrollWidth - h.clientWidth); }""")
+        check(f"at {_w}px the header does not overflow",
+              _over <= 0, f"{_over}px past the edge")
         _pg.close()
     _b.close()
 

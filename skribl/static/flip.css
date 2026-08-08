@@ -356,10 +356,9 @@
   @media (max-width: 440px) {
     .fps-label { display: none; }
     .fps-group { gap: 0; }
-    /* FLIP below 440px: the full wordmark fits but crowds the actions, so the
-       middle tier buys breathing room rather than solving an overflow. */
-    .flip-word .fw-full { display: none; }
-    .flip-word .fw-mid { display: inline; }
+    /* FULL wordmark stays here. It was dropped at 440px on a free-space
+       calculation that understated the room — measured by forcing FLIPMODE and
+       reading header.scrollWidth, overflow is ZERO from 360px up. */
     .flip-actions .onion-tool, .flip-actions .grid-tool { width: 31px; height: 31px; }
     #moreBtn { width: 31px; height: 31px; }
     .flip-actions .seg, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 31px; }
@@ -695,7 +694,17 @@
    grid, draw-on and more inline; those moved into the settings button and the
    abbreviation was never revisited. Even at 340px there is room for FLIP, so
    this is a fallback rather than a fix. */
+/* Below 360px FLIPMODE overflows the header — 9px at 340, 29px at 320 — so it
+   steps down to FLIP, which still fits. Measured by forcing each candidate and
+   reading header.scrollWidth against clientWidth, not by summing child widths:
+   flex shrinks the controls first, so an arithmetic "free space" figure hides
+   the squeeze and reports room that is not there. */
 @media (max-width: 359px) {
-  .flip-word .fw-full, .flip-word .fw-mid { display: none; }
+  .flip-word .fw-full { display: none; }
+  .flip-word .fw-mid { display: inline; }
+}
+/* FM only below 320px — narrower than any phone sold. A true fallback. */
+@media (max-width: 319px) {
+  .flip-word .fw-mid { display: none; }
   .flip-word .fw-min { display: inline; }
 }
