@@ -200,6 +200,17 @@ with sync_playwright() as _p:
             _pg.close()
 
         _f, _pd = _sizes["Flip"], _sizes["Pad"]
+        # The canvas should USE the column, not float in it. 632x474 left a
+        # 43px gutter each side of a 720px column and 127px of dead space above
+        # and below in Pad, whose canvas area is far taller than Flip's because
+        # it has no filmstrip. Authoring larger fills it without upscaling.
+        if _w >= 1000:
+            _side = _pd["css"][0] / 694.0
+            check(f"at {_w}px the canvas fills the app column",
+                  _side > 0.95,
+                  f"canvas {_pd['css'][0]}px in a 720px column — it is floating, "
+                  "not filling")
+
         check(f"at {_w}x{_h} both editors display the canvas at the same size",
               _f["css"] == _pd["css"],
               f"Flip {_f['css']} vs Pad {_pd['css']}")

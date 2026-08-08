@@ -28,7 +28,21 @@
 (function (global) {
   'use strict';
 
-  var TARGET_PX = 300000;
+  /* Raised from 300,000. At 300k the 4:3 preset was 632x474, which on a
+   * desktop left the canvas floating in 127px of dead space above and below
+   * inside Pad's 728px-tall area — Pad has no filmstrip or page bar, so its
+   * canvas area is far taller than Flip's.
+   *
+   * Capping DISPLAY at 1:1 (which keeps lines sharp) then means the canvas
+   * cannot grow into that space. Authoring larger solves both at once:
+   * downscaling to fit is sharp, only upscaling is not. 500k puts 4:3 at
+   * 816x612, which fills the 720px app column at every desktop width and is
+   * still downscaled — never stretched — on a phone.
+   *
+   * The ceiling is export weight, not memory: 'Full' export is native size, so
+   * a bigger canvas is a bigger GIF. 500k is ~1.7x the pixels of 300k, and the
+   * Size control exists for anyone who wants smaller. */
+  var TARGET_PX = 500000;
 
   function make(id, label, wr, hr) {
     var k = Math.max(1, Math.round(Math.sqrt(TARGET_PX / (wr * hr))));

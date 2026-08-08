@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v166"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v167"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -214,6 +214,30 @@ silently does nothing for anyone who has already dismissed them, which is a
 setting that lies. The toggle also re-reads the stored state every time the
 menu opens rather than once at load, because a switch showing the opposite of
 what is stored is worse than no switch — `verify_tips.py` caught exactly that.
+
+**The canvas floated in empty space, and capping the scale at 1:1 made it
+worse.** At the 300,000px preset target, 4:3 was 632x474 — a 43px gutter each
+side of the 720px app column, and in Pad **127px of dead space above AND
+below**, because Pad's canvas area is far taller than Flip's: Flip's is 560px
+with a filmstrip and page bar under it, Pad's is 728px with nothing.
+
+The proper fix — grow the canvas and redraw at the larger resolution — is not
+available: Pad holds its drawing in a raster dry/wet buffer keyed off
+`canvas.width`, with no redraw-from-strokes path, so resizing the backing store
+live would erase the drawing. Recorded here as the reason, because it looks
+like the obvious fix and is not.
+
+**Downscaling is sharp; only upscaling is not.** So the target rose to 500,000
+— 4:3 is 816x612, 16:9 944x531, 1:1 707x707, 9:16 531x944, all still exact
+ratios within 0.4% of each other on area. The canvas now renders at 694x521 on
+a desktop: it fills the column, is DOWNSCALED to get there, and stays crisp.
+Side gutter 43px -> 12px, vertical 127px -> 104px. The rest is inherent — a
+fixed-aspect rectangle centred in a taller area leaves margin, and that is what
+centring means.
+
+The ceiling on this is export weight, not memory: 'Full' export is native size,
+so a bigger canvas is a bigger GIF, and the Size control exists for anyone who
+wants smaller.
 
 **The two editors showed the same canvas at different sizes, and the bigger
 one was the worse one.** Both author 632x474, but Flip DISPLAYED it at 694x521
