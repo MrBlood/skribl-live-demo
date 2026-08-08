@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v149"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v157"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -120,6 +120,240 @@ and a source-level count is wrong by construction. The Drawing tools badge had
 already drifted by one the moment the pressure tip was added. The second guard
 asserts a phrase per shipped feature, so a feature that lands without its
 documentation fails a suite.
+
+**Your Skribls — a post used to be unfindable the moment you closed the tab.**
+There are no accounts, so a share link is the only handle on a post, and nothing
+told anyone to keep it. The id existed on the server; the person who made it had
+no way to name it. `static/lib/posted.js` keeps the list and
+`static/lib/postedui.js` draws it — shared, because app.js and flip.js already
+duplicate two controllers and a third copy is not the answer.
+
+NO PAYLOAD IS STORED — id, url, title, kind, page count, timestamp, and nothing
+else. Payloads run to hundreds of kilobytes and localStorage is a ~5MB budget
+shared with the crash-recovery autosave, which matters more than this list does.
+`verify_posted.py` asserts the whole entry is under 400 bytes and contains no
+strokes and no data URL.
+
+It is NOT an account and says so in the footer. Someone who reads it as one will
+clear their site data, lose the lot, and be right to blame the app. A local-only
+save — Pad's fallback when the server is unreachable — is deliberately NOT
+listed, because it has no link and putting it among links you can send would be
+a lie. Removing a row removes the row: the suite posts, removes, and then reads
+the Skribl back off the API to prove it survived.
+
+`verify_seam.py` caught a `'/s/' + id` fallback in the tray while this was being
+written — the exact route literal v132 removed from flip.js, which silently
+posts the wrong URL under a url_prefix. It reads `SKRIBL_PLAYER_BASE` now. The
+guard has now flagged code written in the same session as itself three times.
+
+**A Jinja comment is not an HTML comment.** The usage example in
+`_skribl_posted.html` was written between `<!-- -->`, and Jinja evaluates tags
+inside HTML comments — so the partial included ITSELF 973 times before Jinja
+gave up. Use `{# #}`.
+
+**The rate-limit copy said the wrong thing.** "You're posting too fast — please
+wait a while" scolds, and leaves the question someone actually has ("did I just
+lose my animation?") unanswered. Both 429 messages now state the limit and that
+the work is safe. The limiter does not track when the window lifts, so the
+message cannot yet say WHEN — a `Retry-After` needs the oldest event in the
+window and is still open.
+
+**Flip's menu had no keyboard exit, and its new scrim had no click handler.**
+It closed on an outside click and nothing else. Every other dismissible surface
+in the tree already handled Escape — the export sheet, the tune panel, the help
+drawer, and Pad's own menu at `app.js:1656` — so this one menu trapped you. It
+mattered less before the menu gained a full-screen dim; a scrim with no
+keyboard exit is a dead end, and dimming the page implies tapping the dim
+dismisses it. Both added, and `verify_ux.py` checks the state that actually
+breaks a session: that a scrim is never left painted over the page after the
+menu is gone, swallowing every subsequent click.
+
+Found by a sweep that drives both editors and the player through every menu,
+export, share, undo/redo storm, page operation and canvas switch at two
+viewports while watching for page errors, console errors, failed requests and
+4xx/5xx. That sweep now reports zero problems.
+
+**`.seg` was defined in flip.css while `.seg-slider` was in styles.css, and
+Pad does not load flip.css.** So the moment Pad gained a `.seg` canvas picker,
+its container had no `position: relative` and the absolutely-positioned slider
+stretched against the menu sheet — painting a solid purple bar down the entire
+menu and hiding half the items. Both halves live in `styles.css` now.
+
+**Every functional assertion passed on that build.** The buttons existed,
+applied their sizes, marked themselves selected, and locked after drawing;
+`verify_padcanvas.py` was 21/21 green. Only a screenshot showed it. The suite
+now measures the slider's box against the segment's box and fails if it
+escapes, which is the class of check that was missing: what a control DOES was
+tested, what it LOOKS like was not.
+
+**The Move buttons' page glyph was tried and REVERTED.** At 11px a plain
+rounded rect renders as a zero, so on a phone the buttons read "◀ 0" and
+"0 ▶" — a number, not a page, and worse than the bare arrow it replaced. The
+repeat glyph on Hold works and stays. `verify_hold.py` pins the absence so the
+rect is not helpfully reintroduced; anything legible enough to mean "page" at
+that size needs more detail than 11px can carry, so widen the button and use a
+word instead.
+
+**verify_postgres.py has run, for the first time in the project's history.**
+14/14 on PostgreSQL 16.14 with four gunicorn workers: twelve simultaneous posts
+against a quota of two admitted exactly two, refused ten, committed exactly two
+rows, stranded no reservations, and killed no workers. This is the bug the v141
+rate-limiter work exists to fix, and SQLite cannot exercise it — it serialises
+writes and hides the fault completely. Reproduce with:
+
+    SKRIBL_PG_DSN=postgresql://user@host:port/db ./harness/run_harness.sh verify_postgres.py
+
+**The page bar was unreadable on a phone.** Below 560px every `.pb-tx` label
+is hidden, which is the right call for space — but it left `×1` bare, and
+left Move as two unlabelled arrows in a bar that also reads "Page 10 / 12". The
+arrows therefore looked like page NAVIGATION while actually reordering the
+animation, which is the worse of the two because acting on the misreading
+changes the work.
+
+Each now carries a glyph that does the job the label did: a repeat symbol on
+Hold, a page symbol on the Move pair. The Move glyphs disappear again at 560px
+where the words return, because a glyph beside its own label is decoration.
+
+The glyphs sit OUTSIDE `.pb-ic` deliberately: `flip.js:752` rewrites that
+element's `textContent` on every render, so an svg inside it would survive the
+first paint and vanish on the first page change. `verify_hold.py` clicks
+through a hold, a move and a rebuild and re-checks — a single-state assertion
+would have passed on the broken version.
+
+The section runs at a 390px viewport and asserts FIRST that the labels really
+are hidden there, because at 1280px the labels are present and every assertion
+after it would pass for the wrong reason.
+
+**There was no way to report a problem, and no way to find a Skribl again.**
+Both are release blockers for a test with real people, and neither needs a
+schema change.
+
+`static/lib/posted.js` keeps a list of what this browser has posted — id, url,
+title, kind, page count, timestamp. No payload, so it stays a few kilobytes
+however many are made. The UI says "saved in this browser only" because a
+tester who reads it as an account will lose work and blame the app. Removing a
+row removes the row, not the Skribl; `verify_posted.py` asserts the post is
+still on the server afterwards, and that a corrupt or non-array localStorage
+reads as an empty list rather than crashing the editor.
+
+`static/lib/report.js` collects version, browser, canvas, page and point counts
+onto the clipboard. It COPIES; it does not send. There is no endpoint, and
+adding one would mean an unauthenticated write path, storage, and someone
+reading it — so the button says "Copy details". `verify_report.py` asserts the
+copy never claims to send, because a tester who believed it would wait for a
+reply that was never coming.
+
+**The report must not carry unpublished work**, so titles, captions, stroke
+coordinates and media are excluded. The suite seeds a title that appears
+nowhere else and requires it absent, which catches any field added later that
+happens to carry content.
+
+**Reading editor state off `window` was silently wrong.** Top-level `let` never
+becomes a window property, so `window.CW` is undefined — while `window.frames`
+is the browser's built-in frame collection and `window.fps` is the element with
+`id="fps"`, because ids become window properties. The first collector reported
+`fps: [object HTMLSpanElement]` and no page count at all. Classic scripts share
+one global lexical scope, so a BARE identifier resolves to the editor's
+variable; `lex()` evaluates one through a Function so an undeclared name throws
+into the guard instead of aborting the collector. Any future code reaching
+across these files has the same trap waiting.
+
+**Pad's canvas shape depended on the browser window.** `resizeCanvas()` called
+`establishEditorCanvas(area.width, area.height)` once from whatever the
+available area happened to be on first load, and Pad had no size control at
+all. Two people drawing the same thing got different aspect ratios; the same
+person got different ones on phone and desktop; none of it was chosen. For a
+feed, where every card would be a different shape, that is unworkable.
+
+The preset table moved to `static/lib/canvassizes.js` — copying Flip's list
+into `app.js` would have made a second copy of a list that has already drifted
+from its own labels once. Pad now gets the same four presets, in the same
+markup, with the button labels written from the table at runtime so a rename
+there cannot leave a stale label in the markup.
+
+**Pad locks the canvas once you have drawn, and Flip does not.** This is the
+one place the two surfaces must differ. Flip's pages are independent and
+resizing simply keeps coordinates. Pad records stroke TIMING, so resizing
+mid-take would change the space a replay is drawn into partway through the
+recording it replays. The canvas is free while empty and refuses afterwards —
+refuses with an explanation rather than silently ignoring the click, and never
+by destroying the take. `verify_padcanvas.py` asserts the refusal, that the
+drawing survives it, and that the button does NOT light up for a size that was
+never applied.
+
+The first assertion in that suite is the one that would have caught the
+original bug: load Pad at 1280px and at 520px and require an identical authored
+canvas. A single-viewport suite structurally cannot see it.
+
+A canvas matching no preset reports as `custom` rather than the nearest match —
+every Skribl authored before Pad had a picker is a custom size, and quietly
+relabelling one would misreport what it actually is.
+
+**Two of Flip's four canvas presets did not match their own labels.** `4:3`
+was 640x460 (1.391 — off by 4.3%) and `9:16` was 420x640 (0.656 — off by 16.7%,
+nearer 2:3), so someone picking 9:16 for a phone-shaped animation got something
+noticeably wider. A label and a pixel pair were typed side by side and nothing
+compared them.
+
+Sizes are now integer MULTIPLES of their ratio — exact by construction, not by
+rounding — scaled to a common target area so payload size and export time stay
+comparable across presets. A constant long edge would not have done that; it
+would make 1:1 78% more pixels than 16:9 for no reason a user could see. The
+set is 632x474, 736x414, 548x548, 414x736. `16:9` shifts from 720x405 to
+736x414; both are exact, the new pair matches its siblings. Existing drawings
+are unaffected — every payload carries its own `canvasSize`.
+
+`CW`/`CH` initialised to a SECOND hardcoded 640x460 that had to agree with the
+table by hand, and once the table was corrected it agreed with nothing:
+`currentSizeId()` reported `custom` on a fresh canvas. Both now derive from
+`FLIP_SIZES[0]`. `verify_canvas.py` cross-multiplies each label against its
+dimensions as integers — a float compare passes on a pair that is merely close,
+which is the whole failure — and its expected sizes are read from the table
+rather than repeated in the suite.
+
+**Flip's overflow menu had no backdrop.** Pad dims and blurs behind its menu
+via `.menu-overlay::before`; Flip's `.flip-menu` was a bare positioned div with
+no scrim at all. Added as a real element rather than a pseudo-element: clicks
+on a `::before` register on its parent, so a scrim built that way would have
+swallowed the outside-click that closes the menu. Same alpha and blur as Pad.
+
+**The filmstrip did not follow a restored page.** `buildStrip()` rebuilds the
+strip's children, which resets `scrollLeft` to 0. `applyPayload()` restores
+`idx` but nothing scrolled, so a 62-page animation reopened on page 62 with the
+strip parked at page 1 and the active tile highlighted off-screen. `addFrame()`
+was the only caller that scrolled — the fix existed and was never shared. Now a
+`scrollStripToActive()` helper, called from `addFrame`, `delFrame` and boot;
+un-animated on boot, because scrolling from page 1 to page 62 is a second of
+strip flying past for no reason. `verify_pages.py` asserts the active tile's
+box against the strip's box, since `scrollLeft` alone cannot say whether a tile
+is visible.
+
+**Video export repeated the animation twice, and nothing said so.** Both
+encoders hardcoded 2 loops, so a 5.2s Flip exported as a 10.3s MP4 while the
+header badge still read 5.2s. The doubling is right for a 1.5s clip — video
+players do not loop the way GIFs do — and wrong for a 30s one, and only the
+person exporting knows which they made. It is now a `Loops: 1 / 2 / 3` control
+defaulting to 2, with a readout stating the resulting length.
+
+VIDEO ONLY. A GIF sets `repeat=0` — one pass, looping forever — so repeating
+its frames would inflate the file for nothing. The readout says so rather than
+letting the sheet imply otherwise.
+
+`exLoopSeconds()` is shared by the readout and both encoders, so they cannot
+disagree about a file's length, and `verify_exportui.py` asserts the stated
+duration against it at each setting.
+
+**The sheets could not scroll.** Neither `.menu-sheet` nor `.export-sheet`
+carried a `max-height` or an `overflow`, so a sheet taller than the window ran
+off the bottom with no way to reach it. Found when a fourth options block
+pushed the Loops control out of a 900px viewport; it applied to any short
+window long before that. Both variants are now bounded and scroll.
+
+**The page fields updated on `change` only**, so a readout lagged until the
+field was blurred — you typed a page number and the stated length still
+described the previous range. `input` now refreshes the READOUTS while
+`change` keeps the clamping, because clamping per keystroke would rewrite "1"
+to the maximum while someone was typing "12".
 
 **The help drawer got search, and its counts stopped being typed.** Flip's help
 is 46 entries across 7 sections; finding one meant opening up to seven

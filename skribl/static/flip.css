@@ -44,11 +44,12 @@
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
 
-  /* fps: editor segmented control with the shared sliding accent pill (.seg-slider). */
-  .seg { position: relative; display: inline-flex; background: var(--surface-control); border: 1px solid var(--hairline-strong); border-radius: var(--r-pill); padding: 3px; }
-  .seg button { position: relative; z-index: 1; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-weight: 600; font-size: 13px;
-    padding: 5px 11px; border-radius: var(--r-pill); cursor: pointer; font-variant-numeric: tabular-nums; transition: color .2s var(--ease); }
-  .seg button.on { color: #fff; }
+  /* .seg / .seg button / .seg button.on MOVED to styles.css. They lived here,
+     and Pad does not load flip.css — so when Pad gained a .seg canvas picker
+     the container had no `position: relative` and the absolutely-positioned
+     .seg-slider stretched against the menu sheet instead, painting a purple bar
+     down the whole menu. .seg-slider was already in styles.css; half a
+     component in each file is what made that possible. */
 
   /* Onion toggle — the pad's own icon-toggle (.tool-open + magnify active state). */
   .onion-tool { width: 34px; height: 34px; flex: none; border-radius: 50%; }
@@ -282,6 +283,12 @@
     background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
     box-shadow: 0 24px 60px rgba(0,0,0,.55); padding: 6px; }
   .flip-menu[hidden] { display: none; }
+  /* Matches Pad's .menu-overlay::before — same alpha, same blur — so the two
+     surfaces dim identically. z-index sits just under .flip-menu's 60. */
+  .flip-menu-scrim { position: fixed; inset: 0; z-index: 59;
+    background: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  .flip-menu-scrim[hidden] { display: none; }
   .flip-menu-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
     background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 14px;
     padding: 10px 12px; border-radius: 9px; cursor: pointer; }
@@ -439,8 +446,27 @@
 .pb.danger { margin-left: auto; color: #ff9d9d; border-color: rgba(244, 50, 111, 0.3); }
 .pb.danger:hover:not(:disabled) { background: rgba(244, 50, 111, 0.16); border-color: rgba(244, 50, 111, 0.55); }
 
-/* Labels only where they fit. Below 560px the toolbar is icons, which still
-   gives a 38px target — larger than the 26px the in-tile bar could manage. */
+/* A glyph that carries the meaning the LABEL used to. Below 560px every
+   .pb-tx is hidden, which left "×1" bare and — worse — left Move as two
+   unlabelled arrows in a bar that also reads "Page 10 / 12", so they looked
+   like page navigation when they actually reorder the animation. The repeat
+   glyph says Hold repeats a page; the page glyph says the arrows move a page.
+   Kept OUTSIDE .pb-ic on purpose: flip.js rewrites that element's textContent
+   on every render, so an svg inside it would be wiped on the first page
+   change. */
+.pb-glyph { display: inline-flex; align-items: center; opacity: .62; }
+.pb-glyph svg { width: 13px; height: 13px; display: block; }
+.pb.on .pb-glyph { opacity: 1; }
+/* NO GLYPH ON MOVE, and the attempt is worth recording. A small page rectangle
+   beside the arrow was tried and REVERTED: at 11px a plain rounded rect renders
+   as a zero, so the buttons read "◀ 0" and "0 ▶" — a number, not a page, and
+   worse than the bare arrow it replaced. Anything legible enough to mean "page"
+   at that size needs more detail than 11px can carry.
+   The arrows keep their aria-labels ("Move this page left") and their disabled
+   state at the ends of the strip, which is what a screen reader and a careful
+   user get. If this is revisited, widen the button and use a word, not a
+   smaller picture. */
+
 .pb-tx { display: none; }
 @media (min-width: 560px) {
   .pb-tx { display: inline; }
@@ -615,3 +641,5 @@
   .export-size-seg { display: flex; width: 100%; }
   .export-size-seg button { flex: 1 1 0; min-width: 0; }
   .export-gif-toggle { display: flex; flex-direction: column; gap: 6px; }
+  .export-loops-seg { display: flex; width: 100%; }
+  .export-loops-seg button { flex: 1 1 0; min-width: 0; }

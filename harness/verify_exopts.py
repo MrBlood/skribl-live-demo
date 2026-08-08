@@ -108,26 +108,34 @@ with sync_playwright() as p:
     print("\nDEFAULTS — full size, every page")
     check("options appear on Flip", pg.evaluate("() => !!document.getElementById('exportOptions')"))
     w, h, n = export_gif(pg)
-    check("default export is native resolution (the 480 cap is gone)", (w, h) == (640, 460), f"{w}x{h}")
+    # Read the canvas rather than pin a pair: these were 640x460 literals and
+    # broke the moment the presets were corrected to exact ratios. The contract
+    # is "native by default", not any specific size.
+    NAT = tuple(pg.evaluate("() => [CW, CH]"))
+    check("default export is native resolution (the 480 cap is gone)",
+          (w, h) == NAT, f"{w}x{h} vs native {NAT[0]}x{NAT[1]}")
     check("default export covers every page", n == total, f"{n} of {total}")
 
     print("\nSIZE — measured out of the file, not read off a label")
     set_opts(pg, size="small")
     w2, h2, n2 = export_gif(pg)
-    check("Small downscales", (w2, h2) == (320, 230), f"{w2}x{h2}")
-    check("Small keeps the aspect ratio", abs(w2 / h2 - 640 / 460) < 0.01, f"{w2}x{h2}")
+    check("Small downscales", max(w2, h2) == 320 and (w2, h2) != NAT, f"{w2}x{h2}")
+    check("Small keeps the aspect ratio",
+          abs(w2 / h2 - NAT[0] / NAT[1]) < 0.01, f"{w2}x{h2}")
     check("Small still exports every page", n2 == total, f"{n2} of {total}")
     set_opts(pg, size="medium")
     w3, h3, _ = export_gif(pg)
-    check("Medium matches the old hardcoded 480 cap", (w3, h3) == (480, 345), f"{w3}x{h3}")
+    check("Medium caps the long edge at 480", max(w3, h3) == 480, f"{w3}x{h3}")
+    check("Medium keeps the aspect ratio",
+          abs(w3 / h3 - NAT[0] / NAT[1]) < 0.01, f"{w3}x{h3}")
     set_opts(pg, size="full")
-    check("Full restores native", export_gif(pg)[:2] == (640, 460))
+    check("Full restores native", export_gif(pg)[:2] == NAT)
 
     print("\nRANGE — a subset really is a subset")
     set_opts(pg, frm=2, to=4)
     w4, h4, n4 = export_gif(pg)
     check("pages 2-4 exports exactly 3 frames", n4 == 3, f"{n4} frames")
-    check("and still at the chosen size", (w4, h4) == (640, 460), f"{w4}x{h4}")
+    check("and still at the chosen size", (w4, h4) == NAT, f"{w4}x{h4}")
     set_opts(pg, frm=3, to=3)
     check("a single-page range exports one frame", export_gif(pg)[2] == 1)
 
@@ -147,14 +155,34 @@ with sync_playwright() as p:
     check("a reversed range is swapped, not rejected", r["from"] == 2 and r["to"] == 4, str(r))
     set_opts(pg, frm=0, to=total)
     check("zero/blank clamps to page 1", pg.evaluate("() => exRange().from") == 1)
-    check("the note reports what will actually be exported",
-          "of " + str(total) in pg.evaluate("() => document.getElementById('exportRangeNote').textContent"),
-          pg.evaluate("() => document.getElementById('exportRangeNote').textContent"))
+    # v143 split one combined readout ("6 of 6 · 640×460") into two, each under
+    # the control it describes, and made a full range read "All 6 pages" rather
+    # than "6 of 6". This assertion pinned the OLD literal and was outside the
+    # regression set, so it failed silently for several releases.
+    #
+    # Rewritten to the CONTRACT rather than to the new wording: the note must
+    # name the page count that will actually be exported. That holds for either
+    # phrasing and does not need editing the next time the copy changes.
+    note = pg.evaluate("() => document.getElementById('exportRangeNote').textContent")
+    check("the full-range note names every page",
+          str(total) in note and "page" in note.lower(), note)
+
+    set_opts(pg, frm=2, to=3)
+    note = pg.evaluate("() => document.getElementById('exportRangeNote').textContent")
+    check("a partial range says how many of how many",
+          "2" in note and str(total) in note, note)
+
+    dim = pg.evaluate("() => { const e = document.getElementById('exportDimNote');"
+                      " return e ? e.textContent : ''; }")
+    check("the output dimensions are reported separately, under Size",
+          "\u00d7" in dim, repr(dim))
+    set_opts(pg, frm=0, to=total)
 
     print("\nSHARED CONTRACT — one helper pair feeds all three encoders")
     dims = pg.evaluate("() => { exSize='small'; return exDims(); }")
     check("exDims is the single source of output size",
-          dims["w"] == 320 and dims["h"] == 230, str(dims))
+          max(dims["w"], dims["h"]) == 320
+          and abs(dims["w"] / dims["h"] - NAT[0] / NAT[1]) < 0.01, str(dims))
     check("exRange is the single source of page bounds",
           pg.evaluate("() => { exFrom=2; exTo=4; return exRange().count; }") == 3)
     # The WebM path is the one that can actually run here (no avc1 in this

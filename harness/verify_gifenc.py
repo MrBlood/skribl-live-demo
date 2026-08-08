@@ -182,10 +182,11 @@ with sync_playwright() as p:
     g = parse_gif(raw)
     check("bytes are a valid GIF89a", raw[:6] == b"GIF89a", f"{len(raw)} bytes")
     # v108 removed the hardcoded 480px cap: export size is now a control on the
-    # sheet, defaulting to 'full' (native). Medium reproduces the old 480x345
-    # exactly — verify_exopts.py pins all three sizes.
+    # sheet, defaulting to 'full' (native). Native is read from the canvas rather
+    # than pinned: it was 640x460 until the presets were corrected to exact ratios.
     check("screen size is native by default (480 cap removed in v108)",
-          (g["w"], g["h"]) == (640, 460), f"{g['w']}x{g['h']}")
+          (g["w"], g["h"]) == tuple(flip.evaluate("() => [CW, CH]")),
+          f"{g['w']}x{g['h']}")
     check("one GIF frame per page", len(g["frames"]) == n_pages,
           f"{len(g['frames'])} frames vs {n_pages} pages")
     check("loops forever (NETSCAPE2.0 repeat 0)", g["loop"] == 0, repr(g["loop"]))

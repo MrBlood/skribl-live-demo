@@ -201,6 +201,70 @@ with sync_playwright() as p:
 
     br.close()
 
+print("\nPAGE BAR — the icon-only bar still says what each button does")
+# Below 560px every .pb-tx label is hidden, which left "×1" bare and left Move
+# as two unlabelled arrows in a bar that also reads "Page 10 / 12" — so they
+# looked like page navigation while actually reordering the animation. Checked
+# at a PHONE viewport, because at 1280px the labels are present and every
+# assertion below would pass for the wrong reason.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _errs = []
+    _pg.on("pageerror", lambda e: _errs.append(str(e)))
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+    _pg.evaluate("() => { addFrame(false); addFrame(false); }")
+    _pg.wait_for_timeout(400)
+
+    check("labels really are hidden at phone width",
+          _pg.evaluate("() => getComputedStyle("
+                       "document.querySelector('#pbHold .pb-tx')).display") == "none",
+          "this section proves nothing if the labels are visible")
+
+    check("#pbHold carries a repeat glyph when its label is hidden",
+          _pg.evaluate("() => !!document.querySelector('#pbHold .pb-glyph svg')"),
+          "a bare count is not self-explanatory")
+    check("#pbHold's glyph is actually rendered",
+          _pg.evaluate("() => { const g = document.querySelector('#pbHold .pb-glyph');"
+                       " return g && g.offsetParent !== null"
+                       " && g.getBoundingClientRect().width > 4; }"),
+          "present in markup but not laid out")
+
+    # The Move buttons deliberately carry NO glyph. A page rectangle was tried
+    # and reverted — at 11px it rendered as a zero, so the buttons read "◀ 0".
+    # Pinned so it is not helpfully reintroduced.
+    for _id in ("pbLeft", "pbRight"):
+        check(f"#{_id} carries no glyph — a rect that small reads as a zero",
+              not _pg.evaluate(f"() => !!document.querySelector('#{_id} .pb-glyph')"),
+              "the page-rect glyph is back; it renders as a 0 at this size")
+        check(f"#{_id} still names its action for assistive tech",
+              "move" in (_pg.get_attribute(f"#{_id}", "aria-label") or "").lower(),
+              _pg.get_attribute(f"#{_id}", "aria-label"))
+
+    # flip.js rewrites .pb-ic's textContent on every render. A glyph placed
+    # inside it would survive the first paint and vanish on the first page
+    # change — which is exactly the kind of bug a single-state check misses.
+    _pg.click("#pbHold")
+    _pg.wait_for_timeout(250)
+    # pbLeft, not pbRight: two addFrame() calls leave idx on the LAST page, so
+    # "move right" is correctly disabled there and Playwright waits forever.
+    _pg.click("#pbLeft")
+    _pg.wait_for_timeout(250)
+    _pg.evaluate("() => { idx = 0; buildStrip(); render(); }")
+    _pg.wait_for_timeout(300)
+    check("the repeat glyph survives re-renders and page changes",
+          _pg.evaluate("() => !!document.querySelector('#pbHold .pb-glyph svg')"),
+          "a glyph inside .pb-ic is wiped when flip.js rewrites its textContent")
+
+    check("the hold count still reads as a multiplier",
+          "\u00d7" in _pg.inner_text("#pbHold"), _pg.inner_text("#pbHold"))
+    check("aria-label still names the action for screen readers",
+          "move" in (_pg.get_attribute("#pbLeft", "aria-label") or "").lower(),
+          _pg.get_attribute("#pbLeft", "aria-label"))
+    check("no JS errors at phone width", not _errs, "; ".join(_errs[:2]))
+    _b.close()
+
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)
 print(f"{ok}/{len(results)} passed")

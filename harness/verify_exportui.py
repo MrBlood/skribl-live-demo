@@ -114,8 +114,11 @@ with sync_playwright() as p:
 
     # Add a couple of pages so the range readout has something to say.
     pg.evaluate("() => { if (typeof addFrame === 'function') { addFrame(); addFrame(); } }")
+    # `.open` matters: the desktop sheet sits at opacity 0 and scale(0.96)
+    # until the overlay carries it, so a sheet revealed with `hidden = false`
+    # alone is present but not interactable.
     pg.evaluate("() => { const o = document.getElementById('exportOverlay');"
-                " if (o) o.hidden = false;"
+                " if (o) { o.hidden = false; o.classList.add('open'); }"
                 " if (typeof syncExportOptions === 'function') syncExportOptions(); }")
     pg.wait_for_timeout(400)
 
@@ -157,6 +160,76 @@ with sync_playwright() as p:
     check("the dimensions readout sits under the Size control",
           box_dim["y"] > box_seg["y"] and box_dim["y"] < box_from["y"],
           f"dim y={box_dim['y']} size y={box_seg['y']} pages y={box_from['y']}")
+
+    # -----------------------------------------------------------------------
+    print("\nEXPORT SHEET — loop count is chosen, not assumed")
+    #
+    # THE BUG. Both video encoders hardcoded 2 loops with nothing in the UI
+    # saying so, so a 5.2s animation exported as a 10.3s MP4 while the header
+    # badge still read 5.2s. The doubling is right for a 1.5s clip and wrong
+    # for a 30s one, and only the person exporting knows which they made.
+    #
+    # Asserted against exLoopSeconds(), the shared single-pass helper, so the
+    # readout and both encoders cannot disagree about a file's length.
+    # The sheet had no max-height or overflow anywhere, so a window shorter
+    # than its content left the bottom controls unreachable — no scroll, no
+    # scrollbar, just cut off. Found when a fourth options block pushed Loops
+    # out of a 900px viewport; it applied to any short window before that.
+    reach = pg.evaluate("""() => {
+      const sh = document.getElementById('exportSheet');
+      const el = document.getElementById('exportLoopsSeg');
+      const s = getComputedStyle(sh);
+      return { scrolls: /auto|scroll/.test(s.overflowY),
+               overflows: sh.scrollHeight > sh.clientHeight + 1,
+               inside: el.getBoundingClientRect().bottom
+                       <= sh.getBoundingClientRect().bottom + sh.scrollHeight };
+    }""")
+    check("the export sheet can scroll when its content is taller than it",
+          reach["scrolls"] or not reach["overflows"],
+          "content overflows a sheet with no overflow-y — the last control is "
+          "unreachable on a short window")
+
+    pg.locator("#exportLoopsSeg").scroll_into_view_if_needed()
+    pg.wait_for_timeout(150)
+    one_pass = pg.evaluate("() => exLoopSeconds()")
+    check("a single pass has a positive duration", one_pass > 0, str(one_pass))
+
+    for n in (1, 3, 2):
+        pg.click(f"#exportLoopsSeg button[data-loops='{n}']")
+        pg.wait_for_timeout(200)
+        check(f"selecting {n} loops sets exLoops",
+              pg.evaluate("() => exLoops") == n,
+              str(pg.evaluate("() => exLoops")))
+        note = pg.inner_text("#exportLoopsNote")
+        # Parse the number rather than format one: JS toFixed rounds 0.25 up
+        # and Python's format rounds it down, so comparing strings fails on
+        # exact halves for a reason that has nothing to do with the feature.
+        shown = float(re.search(r"([\d.]+)s", note).group(1))
+        check(f"the readout states the resulting length at {n} loops",
+              abs(shown - one_pass * n) < 0.06,
+              f"{note!r} — expected about {one_pass * n:.2f}s")
+
+    check("2 loops is the default selection",
+          pg.evaluate("() => exLoops") == 2)
+    check("the readout says a GIF is unaffected",
+          "loop forever" in pg.inner_text("#exportLoopsNote").lower(),
+          "GIF sets repeat=0 — one pass, looping forever — so Loops does not "
+          "apply to it, and the sheet must not imply otherwise")
+
+    # Changing pages must change the stated video length too, or the two
+    # controls disagree about the same file.
+    # The page fields bound 'change' only, so a readout lagged until the field
+    # was blurred — you typed a page number and the stated length still
+    # described the previous range. Typing must update it.
+    before = pg.inner_text("#exportLoopsNote")
+    pg.fill("#exportTo", "2")
+    pg.wait_for_timeout(250)
+    check("typing a page range updates the stated video length immediately",
+          pg.inner_text("#exportLoopsNote") != before,
+          f"still {before!r} after typing — the readout waits for blur")
+    check("and the page readout follows too",
+          "2 of" in pg.inner_text("#exportRangeNote"),
+          pg.inner_text("#exportRangeNote"))
 
     b.close()
 

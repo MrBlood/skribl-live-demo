@@ -172,7 +172,8 @@ def register_routes(bp):
         client_ip = _client_ip()
         if _rate_limited(client_ip, "attempts"):
             return jsonify({
-                "error": "Too many requests — please wait a while and try again."
+                "error": ("Too many requests from this connection. Nothing was "
+                          "lost — wait a little and try again.")
             }), 429
         # NOTE: the post cap is enforced by _rate_reserve_post immediately before
         # the insert, not here. Checking here and recording after the commit left a
@@ -256,7 +257,12 @@ def register_routes(bp):
         post_token = _rate_reserve_post(client_ip)
         if post_token is None:
             return jsonify({
-                "error": "You're posting too fast — please wait a while and try again."
+                # Says the limit, and says the work is safe. The old copy —
+                # "you're posting too fast, please wait" — reads as a scolding
+                # and leaves the real question ("did I just lose my animation?")
+                # unanswered, which is the part that actually alarms someone.
+                "error": ("You've hit the posting limit for now. Your Skribl is "
+                          "still here — try again in a little while.")
             }), 429
 
         # try/finally, not a single release on the id-exhaustion path: ANY other

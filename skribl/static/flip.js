@@ -16,17 +16,20 @@ function skriblPostHeaders(){
    ========================================================================== */
 const COLORS = ["#ffffff","#7c5cff","#5b8cff","#f4326f","#1bcf8f","#ffae42","#000000"]; // Pad editor palette
 const DPR = Math.min(window.devicePixelRatio||1, 2);
-let CW = 640, CH = 460;          // mutable since v110 — see setCanvasSize()
+let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
 // always honoured it (app.js establishEditorCanvas), so this needed no format
 // change at all — Flip was simply hardcoded to one of the sizes it could already
 // describe.
-const FLIP_SIZES = [
-  { id:'classic', label:'4:3',  w:640, h:460 },
-  { id:'wide',    label:'16:9', w:720, h:405 },
-  { id:'square',  label:'1:1',  w:560, h:560 },
-  { id:'tall',    label:'9:16', w:420, h:640 }
-];
+// The table moved to lib/canvassizes.js so Pad can read the same one — see that
+// file for why the dimensions are derived rather than typed. Kept under the old
+// name here so every existing call site (and verify_canvas.py) reads unchanged.
+const FLIP_SIZES = window.SkriblCanvasSizes.SIZES;
+// The default was a second hardcoded 640x460 that had to agree with the first
+// entry of FLIP_SIZES by hand. Once the presets were corrected it agreed with
+// nothing, and currentSizeId() reported 'custom' on a fresh canvas.
+CW = FLIP_SIZES[0].w; CH = FLIP_SIZES[0].h;
+
 const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
 
 const pad = document.getElementById('pad');
@@ -118,12 +121,26 @@ let imageSelectionSeq = 0;
 const EX_SIZES = { full: 0, medium: 480, small: 320 };   // 0 = no cap (native)
 let exSize = 'full';
 let exFrom = 1, exTo = 0;        // exTo 0 means "through the last page"
+// Loops applies to VIDEO ONLY. A GIF sets repeat=0 — one pass that loops
+// forever — so repeating its frames would inflate the file for no gain. This
+// was a hardcoded 2 in both video encoders with nothing in the UI saying so,
+// which is why a 5.2s animation exported as a 10s MP4 while the header still
+// read 5.2s. The default stays 2: a 1.5s clip posted to a feed reads as broken
+// because video players do not loop the way GIFs do.
+let exLoops = 2;
 function exRange(){
   const n = frames.length;
   let a = Math.max(1, Math.min(parseInt(exFrom,10) || 1, n));
   let b = exTo ? Math.max(1, Math.min(parseInt(exTo,10) || n, n)) : n;
   if(b < a){ const t = a; a = b; b = t; }               // tolerate reversed input
   return { from: a, to: b, count: b - a + 1 };
+}
+// Seconds for ONE pass of the selected range, holds included. Shared so the
+// readout and the encoders can never disagree about the length of a file.
+function exLoopSeconds(){
+  const r=exRange(); let units=0;
+  for(let i=r.from-1;i<=r.to-1;i++) units+=frameHold(frames[i]);
+  return units/(fps||12);
 }
 function exDims(){
   const cap = EX_SIZES[exSize] || 0;
@@ -857,11 +874,23 @@ document.addEventListener('pointercancel', ()=>{
   _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
 });
 function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice(), hold: frameHold(f) }; }
+// buildStrip() rebuilds the strip's children, which resets its scrollLeft to 0.
+// Any path that rebuilds while idx is non-zero therefore leaves the active page
+// highlighted off-screen with the strip parked at page 1 — most visibly after a
+// refresh, where a restored 62-page animation opened on page 62 with the strip
+// showing page 1. addFrame() was the only caller that scrolled, so the fix
+// existed but was never shared.
+function scrollStripToActive(smooth){
+  const el=strip.children[idx];
+  if(!el) return;
+  try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
+  catch(_){ el.scrollIntoView(); }
+}
 function addFrame(copy){ disarmAll(); invalidateClearUndo(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
-  const el=strip.children[idx]; if(el) el.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); }
+  scrollStripToActive(true); }
 function delFrame(i){ invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
-  buildStrip(); render(); scheduleSave(); }
+  buildStrip(); render(); scheduleSave(); scrollStripToActive(true); }
 function go(i){ idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- flip playback ---- */
@@ -1317,6 +1346,14 @@ async function shareSkribl(){
     let data={}; try{ data=await res.json(); }catch(_){}
     if(!res.ok){ chip(data.error || ('Share failed ('+res.status+')')); sharing=false; return; }
     const url=location.origin + (data.url || (window.SKRIBL_PLAYER_BASE+'/'+data.id));
+    // Record it locally. Without accounts the link is the only handle on a
+    // post, and closing the tab used to lose it permanently.
+    if(window.SkriblPosted){
+      const _t=document.getElementById('flipShareTitle');
+      window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
+        pages:frames.length, title:(_t?_t.value:'').trim() });
+      if(window._skriblPostedUI) window._skriblPostedUI.render();
+    }
     showShareResult(url);
   }catch(err){ console.error('Share failed:', err); chip('Share failed — check your connection'); }
   sharing=false;
@@ -1392,7 +1429,7 @@ function exportWebM(){
   drawFrameTo(c, frames[_r.from-1]); rec.start();
   // Tick in base-fps units, not pages, so a held page simply occupies more ticks.
   const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
-  const loops=2, total=_units.length*loops; let n=0;   // a couple of loops so short clips aren't trivially short
+  const loops=exLoops, total=_units.length*loops; let n=0;   // from the export sheet; see exLoops
   const iv=setInterval(()=>{ if(_exportAbort){ clearInterval(iv); try{rec.stop();}catch(_){ exporting=false; exportHide(); } return; }
     drawFrameTo(c, frames[_units[n%_units.length]]); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
 }
@@ -1485,7 +1522,7 @@ async function exportViaWebCodecsMp4(){
     const rec=document.createElement('canvas'); rec.width=w; rec.height=h; const rctx=rec.getContext('2d');
     rctx.setTransform(w/CW, 0, 0, h/CH, 0, 0);   // same reason as the WebM path
     const encFps=30, frameDurUs=1000000/encFps;
-    const loops = frames.length>1 ? 2 : 1;                    // a couple of loops so short clips aren't trivial
+    const loops = frames.length>1 ? exLoops : 1;              // from the export sheet; a single page has nothing to loop
     const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
     const totalSec=(_units.length/fps)*loops;
     const totalFrames=Math.max(1, Math.ceil(totalSec*encFps));
@@ -1891,10 +1928,24 @@ musicToggle.addEventListener('click',(e)=>{ e.stopPropagation(); musicEnabled=!m
 musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); });
 
 // overflow menu (save/load/export)
-function openMenu(){ moreMenu.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
-function closeMenu(){ moreMenu.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
+const moreScrim=document.getElementById('moreScrim');
+// Shared with Pad via lib/postedui.js — neither editor carries a copy.
+window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : null;
+{ const _mi=document.getElementById('miPosted');
+  if(_mi) _mi.addEventListener('click', ()=>{ closeMenu(); if(window._skriblPostedUI) window._skriblPostedUI.open(); }); }
+function openMenu(){ moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
+function closeMenu(){ moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
+// Escape closes it too. Every other dismissible surface here already does this
+// — the export sheet, the tune panel, the help drawer, and Pad's own menu — so
+// this menu was the only one that trapped you. It mattered less before it had
+// a scrim; now a full-screen dim with no keyboard exit is a dead end.
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !moreMenu.hidden) closeMenu(); });
+// And the scrim is a click target in its own right: dimming the page implies
+// tapping the dim area dismisses it, which the document handler above only
+// achieves incidentally.
+if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
 document.getElementById('postBtn').addEventListener('click', openShareCompose);
 document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
 document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
@@ -1950,15 +2001,20 @@ const exSizeSeg=document.getElementById('exportSizeSeg');
 const exFromEl=document.getElementById('exportFrom');
 const exToEl=document.getElementById('exportTo');
 const exNoteEl=document.getElementById('exportRangeNote');
+const exLoopsSeg=document.getElementById('exportLoopsSeg');
+const exLoopsNote=document.getElementById('exportLoopsNote');
 const exDimEl=document.getElementById('exportDimNote');
-function positionExSeg(){
-  if(!exSizeSeg) return;
-  const a=exSizeSeg.querySelector('button.on'), pill=exSizeSeg.querySelector('.seg-slider');
+function positionSeg(seg){
+  if(!seg) return;
+  const a=seg.querySelector('button.on'), pill=seg.querySelector('.seg-slider');
   if(!a||!pill||!a.offsetWidth) return;
   pill.style.width=a.offsetWidth+'px';
   pill.style.transform='translateX('+(a.offsetLeft-3)+'px)';
   pill.style.opacity=1;
 }
+// Was hardcoded to the Size segment; the Loops segment needs the identical
+// treatment, and a second copy of the same six lines is how they drift.
+function positionExSeg(){ positionSeg(exSizeSeg); positionSeg(exLoopsSeg); }
 function syncExportOptions(){
   const n=frames.length;
   if(!exToEl||!exFromEl) return;
@@ -1971,6 +2027,16 @@ function syncExportOptions(){
   // string under Pages, which put the output dimensions — the thing Size
   // changes — beneath the wrong control, and read as a fragment once it wrapped.
   if(exDimEl){ const d=exDims(); exDimEl.textContent = d.w+' \u00d7 '+d.h; }
+  if(exLoopsNote){
+    const one=exLoopSeconds(), tot=one*exLoops;
+    // State the resulting length, because the header badge shows ONE pass and
+    // the file has always contained more than that.
+    exLoopsNote.textContent = (frames.length>1)
+      ? (tot.toFixed(1)+'s of video \u00b7 GIFs loop forever')
+      : ('Single page \u2014 nothing to loop');
+  }
+  if(exLoopsSeg) exLoopsSeg.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on', +b.dataset.loops===exLoops); });
   if(exNoteEl){
     exNoteEl.textContent = (r.count===n)
       ? ('All '+n+' page'+(n===1?'':'s'))
@@ -1985,10 +2051,46 @@ function onExRangeInput(){
 }
 if(exFromEl) exFromEl.addEventListener('change', onExRangeInput);
 if(exToEl) exToEl.addEventListener('change', onExRangeInput);
+// 'change' alone means the readouts lag until the field is blurred — you type
+// a page number and the stated length still describes the old range. 'input'
+// refreshes the READOUTS only: syncExportOptions() clamps and rewrites the
+// field values, which mid-typing would fight the user (typing "1" toward "12"
+// would be rewritten to the maximum on the first keystroke). Clamping stays on
+// 'change', where the user has finished.
+function refreshExReadouts(){
+  const r=exRange();
+  if(exDimEl){ const d=exDims(); exDimEl.textContent = d.w+' \u00d7 '+d.h; }
+  if(exNoteEl){
+    exNoteEl.textContent = (r.count===frames.length)
+      ? ('All '+frames.length+' page'+(frames.length===1?'':'s'))
+      : (r.count+' of '+frames.length+' page'+(frames.length===1?'':'s'));
+  }
+  if(exLoopsNote && frames.length>1){
+    let units=0; for(let i=r.from-1;i<=r.to-1;i++) units+=frameHold(frames[i]);
+    exLoopsNote.textContent=((units/(fps||12))*exLoops).toFixed(1)+'s of video \u00b7 GIFs loop forever';
+  }
+}
+function onExRangeLive(){
+  exFrom=parseInt(exFromEl.value,10)||1;
+  exTo=parseInt(exToEl.value,10)||frames.length;
+  refreshExReadouts();
+}
+if(exFromEl) exFromEl.addEventListener('input', onExRangeLive);
+if(exToEl) exToEl.addEventListener('input', onExRangeLive);
 if(exSizeSeg) exSizeSeg.addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b) return;
   exSize=b.dataset.size;
   [...exSizeSeg.querySelectorAll('button')].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  syncExportOptions();
+});
+if(exLoopsSeg) exLoopsSeg.addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  // Clamp rather than trust the attribute: a stray data-loops would otherwise
+  // reach the encoders and produce a file of arbitrary length.
+  const n=parseInt(b.dataset.loops,10);
+  exLoops = (n>=1 && n<=3) ? n : 2;
+  [...exLoopsSeg.querySelectorAll('button')].forEach(x=>x.classList.remove('on'));
   b.classList.add('on');
   syncExportOptions();
 });
@@ -2181,6 +2283,11 @@ onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', 
 if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
 syncCanvasSeg();
 sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
+// A restored draft reopens on the page it was left on, so the strip must start
+// there too. Not smooth: on boot an animated scroll from page 1 to page 62 is a
+// second of the strip flying past for no reason. rAF because buildStrip() has
+// only just inserted the tiles and their widths are not laid out yet.
+requestAnimationFrame(()=>scrollStripToActive(false));
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();
 if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') setCrossfadeUI(); }
@@ -2197,3 +2304,7 @@ refreshPendingCards();
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
 window.addEventListener('load', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); });
+
+// Report sheet — shared via lib/report.js so the two editors collect the same
+// context. Null-safe: without the lib the menu item simply does nothing.
+if (window.SkriblReport) window.SkriblReport.init();

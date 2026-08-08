@@ -71,10 +71,10 @@
            apart from everything else. -->
       <div class="pagebar" id="pagebar" role="toolbar" aria-label="Page actions">
         <span class="pb-who" id="pbWho">Page 1</span>
-        <button type="button" class="pb" id="pbLeft" title="Move page left" aria-label="Move page left"><span class="pb-ic">&#9664;</span><span class="pb-tx">Move</span></button>
-        <button type="button" class="pb" id="pbRight" title="Move page right" aria-label="Move page right"><span class="pb-tx">Move</span><span class="pb-ic">&#9654;</span></button>
+        <button type="button" class="pb pb-move" id="pbLeft" title="Move this page left" aria-label="Move this page left"><span class="pb-ic">&#9664;</span><span class="pb-tx">Move</span></button>
+        <button type="button" class="pb pb-move" id="pbRight" title="Move this page right" aria-label="Move this page right"><span class="pb-tx">Move</span><span class="pb-ic">&#9654;</span></button>
         <button type="button" class="pb" id="pbCopy" title="Copy this page" aria-label="Copy this page"><span class="pb-ic">&#10697;</span><span class="pb-tx">Copy</span></button>
-        <button type="button" class="pb" id="pbHold" title="Hold this page longer" aria-label="Hold this page longer"><span class="pb-ic">&#215;1</span><span class="pb-tx">Hold</span></button>
+        <button type="button" class="pb" id="pbHold" title="Hold this page longer" aria-label="Hold this page longer"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span><span class="pb-ic">&#215;1</span><span class="pb-tx">Hold</span></button>
         <button type="button" class="pb danger" id="pbDel" title="Delete this page" aria-label="Delete this page"><span class="pb-ic">&#10005;</span><span class="pb-tx">Delete</span></button>
       </div>
       <div class="strip" id="strip"></div>
@@ -121,13 +121,20 @@
     <div class="flip-chip" id="flipChip"></div>
 
     <!-- "More" menu: the Pad's overflow actions — save/load draft + export. -->
+    {# A real element, not a ::before on the menu: clicks on a pseudo-element
+       register on its parent, so a scrim built that way would swallow the
+       outside-click that closes the menu. Pad has had this since v131; Flip's
+       menu opened with no scrim at all. #}
+    <div class="flip-menu-scrim" id="moreScrim" hidden></div>
     <div class="flip-menu" id="moreMenu" role="menu" hidden>
       <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
       <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miExport" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span class="mi-tx">Export…</span></button>
       <div class="flip-menu-sep"></div>
+      <button type="button" class="flip-menu-item" id="miPosted" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span class="mi-tx">Your Skribls</span></button>
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg></span><span class="mi-tx">How Flip works</span></button>
+      <button type="button" class="flip-menu-item" id="miReport" role="menuitem" data-skribl-report><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L4 20l1.1-4.3A8.4 8.4 0 1 1 21 11.5z"/><path d="M12 8v4M12 15.5v.01"/></svg></span><span class="mi-tx">Report a problem</span></button>
       <div class="flip-menu-sep"></div>
       <div class="flip-menu-row">
         <span class="fm-label">Canvas</span>
@@ -141,7 +148,9 @@
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
     <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
     <input type="file" id="draftInput" accept=".skribl,application/json" class="vis-hidden">
-    {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}{% endwith %}
+    {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}
+{% include 'skribl/_skribl_posted.html' %}{% endwith %}
+{% include 'skribl/_skribl_report.html' %}
     {% with kind='flip' %}{% include 'skribl/_skribl_export.html' %}{% endwith %}
     <div class="flip-hint">Each new page is a <b>copy of the current one</b> — nudge, erase, redraw to animate. Toggle <b>Onion</b> to see the frame beneath. Then hit <b>Flip it</b>.</div>
   </div>
@@ -216,6 +225,10 @@
 <script src="{{ skribl_asset('gifenc.min.js') }}"></script>
 <script src="{{ skribl_asset('lib/media_validation.js') }}"></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}"></script>
+  <script src="{{ skribl_asset('lib/canvassizes.js') }}"></script>
+  <script src="{{ skribl_asset('lib/report.js') }}"></script>
+  <script src="{{ skribl_asset('lib/posted.js') }}"></script>
+  <script src="{{ skribl_asset('lib/postedui.js') }}"></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}"></script>
 <script src="{{ skribl_asset('flip.js') }}"></script>
 </body>

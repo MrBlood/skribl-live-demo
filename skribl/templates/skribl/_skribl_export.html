@@ -76,6 +76,15 @@
         </div>
         <span class="export-optnote" id="exportRangeNote"></span>
       </div>
+      {# Loops is VIDEO ONLY. A GIF sets repeat=0 — one pass that loops forever —
+         so repeating its frames would only inflate the file. The export used a
+         hardcoded 2 with nothing saying so, which is why a 5.2s animation
+         produced a 10s MP4 while the header still read 5.2s. #}
+      <div class="export-optblock">
+        <span class="export-optlbl" id="exportLoopsLbl">Loops</span>
+        <span class="seg export-loops-seg" id="exportLoopsSeg" role="group" aria-labelledby="exportLoopsLbl"><span class="seg-slider"></span><button type="button" data-loops="1">1</button><button type="button" data-loops="2" class="on">2</button><button type="button" data-loops="3">3</button></span>
+        <span class="export-optnote" id="exportLoopsNote"></span>
+      </div>
     </div>
 {% endif %}
     <div class="export-progress" id="exportProgress" hidden>

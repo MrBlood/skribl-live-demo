@@ -245,6 +245,61 @@ with sync_playwright() as p:
     check("and Redo re-offers Undo, so it toggles either way", again == "Undo", repr(again))
     check("no Pad page errors", not pad_errs, "; ".join(pad_errs[:2]))
 
+    # -----------------------------------------------------------------------
+    print("\nSTRIP SCROLL — a restored draft opens with its page in view")
+    #
+    # THE BUG. buildStrip() rebuilds the strip's children, which resets
+    # scrollLeft to 0. applyPayload() restores idx but nothing scrolled, so a
+    # 62-page animation reopened on page 62 with the strip parked at page 1 —
+    # the active tile highlighted somewhere off-screen. addFrame() was the only
+    # caller that scrolled, so the fix existed and was never shared.
+    #
+    # Measured as GEOMETRY — the active tile's box against the strip's box —
+    # because scrollLeft alone cannot tell you whether the tile is visible.
+    sp = br.new_page(viewport={"width": 900, "height": 900})
+    sp_errs = []
+    sp.on("pageerror", lambda e: sp_errs.append(str(e)))
+    sp.goto(f"{BASE}/flip", wait_until="load")
+    sp.wait_for_timeout(1200)
+
+    sp.evaluate("() => { for (let i = 0; i < 40; i++) addFrame(false); }")
+    sp.wait_for_timeout(600)
+    total = sp.evaluate("() => frames.length")
+    check("a long animation was built", total > 30, str(total))
+
+    # Draw one stroke so the draft is non-empty and autosave keeps it.
+    box = sp.locator("#pad").bounding_box()
+    sp.mouse.move(box["x"] + 60, box["y"] + 60)
+    sp.mouse.down()
+    sp.mouse.move(box["x"] + 140, box["y"] + 120, steps=6)
+    sp.mouse.up()
+    sp.wait_for_timeout(1200)
+    saved_idx = sp.evaluate("() => idx")
+    check("the draft was left on a late page", saved_idx > 30, str(saved_idx))
+
+    sp.reload(wait_until="load")
+    sp.wait_for_timeout(1800)
+    check("the restored draft reopens on the same page",
+          sp.evaluate("() => idx") == saved_idx,
+          f"{sp.evaluate('() => idx')} vs {saved_idx}")
+
+    vis = sp.evaluate("""() => {
+      const el = strip.children[idx];
+      if (!el) return null;
+      const a = el.getBoundingClientRect(), b = strip.getBoundingClientRect();
+      return { visible: a.left >= b.left - 2 && a.right <= b.right + 2,
+               scrollLeft: strip.scrollLeft };
+    }""")
+    check("the active tile is within the strip's viewport after a refresh",
+          vis and vis["visible"],
+          f"active tile is off-screen; strip.scrollLeft = "
+          f"{vis['scrollLeft'] if vis else '?'}")
+    check("and the strip is not parked at the far left",
+          vis and vis["scrollLeft"] > 0,
+          "scrollLeft is 0 while a late page is active")
+    check("no JS errors during restore", not sp_errs, "; ".join(sp_errs[:2]))
+    sp.close()
+
     br.close()
 
 ok = sum(1 for o, _ in results if o)

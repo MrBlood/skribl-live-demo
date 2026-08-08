@@ -167,6 +167,61 @@ with sync_playwright() as p:
 
     br.close()
 
+print("\nDISMISS — every overlay has a keyboard and a pointer exit")
+# Flip's ... menu closed on an outside click only: no Escape, and no handler on
+# its own scrim. Every other dismissible surface in the tree already had both —
+# the export sheet, the tune panel, the help drawer, and Pad's own menu — so
+# this one trapped you. It mattered less before the menu gained a full-screen
+# dim; a scrim with no keyboard exit is a dead end, and dimming the page
+# implies tapping the dim dismisses it.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _errs = []
+    _pg.on("pageerror", lambda e: _errs.append(str(e)))
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+
+    def _menu_open():
+        return _pg.evaluate("() => !document.getElementById('moreMenu').hidden")
+
+    def _scrim_open():
+        return _pg.evaluate("() => { const s = document.getElementById('moreScrim');"
+                            " return !!s && !s.hidden; }")
+
+    _pg.click("#moreBtn")
+    _pg.wait_for_timeout(250)
+    check("the menu opens", _menu_open())
+    check("and dims the page behind it", _scrim_open(),
+          "Pad has dimmed behind its menu since v131; Flip had no scrim at all")
+
+    _pg.keyboard.press("Escape")
+    _pg.wait_for_timeout(250)
+    check("Escape closes the menu", not _menu_open(),
+          "every other overlay here closes on Escape; this one trapped you")
+    check("and takes the scrim with it", not _scrim_open(),
+          "a scrim left behind blocks every click on the page")
+
+    _pg.click("#moreBtn")
+    _pg.wait_for_timeout(250)
+    _pg.evaluate("() => document.getElementById('moreScrim').click()")
+    _pg.wait_for_timeout(250)
+    check("tapping the dimmed area closes the menu", not _menu_open(),
+          "dimming the page implies the dim is dismissable")
+    check("and the scrim hides with it", not _scrim_open())
+
+    # The state that actually breaks a session: a scrim still painted while the
+    # menu is gone swallows every subsequent click on the app.
+    check("the toolbar is reachable again afterwards",
+          _pg.evaluate("() => { const b = document.getElementById('postBtn');"
+                       " const r = b.getBoundingClientRect();"
+                       " const top = document.elementFromPoint("
+                       "   r.left + r.width / 2, r.top + r.height / 2);"
+                       " return !!top && (top === b || b.contains(top)); }"),
+          "something is still painted over the page after the menu closed")
+    check("no JS errors dismissing the menu", not _errs, "; ".join(_errs[:2]))
+    _b.close()
+
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)
 print(f"{ok}/{len(results)} passed")

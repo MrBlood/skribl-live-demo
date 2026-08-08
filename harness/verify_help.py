@@ -158,7 +158,7 @@ with sync_playwright() as p:
         # --surface-raised it sat ~4% apart in lightness and read as a hairline
         # rather than a control, which is a thing only a rendered comparison
         # can catch — the markup was identical before and after.
-        contrast = sp.evaluate("""() => {
+        contrast = sp.evaluate(r"""() => {
           const f = document.querySelector('#helpDrawer .help-search');
           const drawer = document.querySelector('#helpDrawer .help-drawer-inner')
                        || document.getElementById('helpDrawer');

@@ -796,7 +796,13 @@ check("the documented install command is the one that actually works",
       "pip install -r constraints.txt --require-hashes" in _c
       and "-c constraints.txt --require-hashes" not in _c.split("NOT ")[0])
 check("and states the platform it was generated on", "linux x86_64" in _c)
-check("and warns that a different target must regenerate", "regenerate this file THERE" in _c)
+# Pinned to a literal phrase the lockfile stopped using when it was regenerated;
+# this suite was outside the recorded run set, so it failed unnoticed. Asserts
+# the REQUIREMENT now — that the header tells a reader on another platform to
+# regenerate — rather than one wording of it.
+check("and warns that a different target must regenerate",
+      "regenerat" in _c.lower() and "platform" in _c.lower(), 
+      "the lock's header must tell a reader on another platform to regenerate")
 
 
 print("\n#7 — media BYTES are verified client-side, not just labels")

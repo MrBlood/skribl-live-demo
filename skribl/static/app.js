@@ -95,8 +95,18 @@ function resizeCanvas() {
   // letterboxes instead of stretching. A restored draft re-establishes it from
   // its own canvasSize (see loadSkribl).
   if (!authoredW || !authoredH) {
-    const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
-    establishEditorCanvas(area.width || 320, area.height || 320);
+    // A PRESET, not the viewport. This took whatever getBoundingClientRect()
+    // returned on first load, so a drawing's shape depended on how wide the
+    // browser window happened to be — different on phone and desktop, different
+    // between two people drawing the same thing, and never anything the user
+    // chose. A restored draft still re-establishes from its own canvasSize
+    // (loadSkribl), so nothing already drawn changes shape.
+    const d = (window.SkriblCanvasSizes && window.SkriblCanvasSizes.DEFAULT) || null;
+    if (d) establishEditorCanvas(d.w, d.h);
+    else {
+      const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
+      establishEditorCanvas(area.width || 320, area.height || 320);
+    }
   }
   layoutEditorCanvas();
 }
@@ -5646,6 +5656,15 @@ if (typeof pendingMusicMeta !== 'undefined') {
       const res = await sendSkribl(payload);
       lastPostUrl = (res && res.url) || null;
       const localOnly = !!(res && res.local);
+      // Record it locally, but ONLY a real post. A local fallback is not
+      // shareable, so listing it under links you can send would be a lie.
+      if (!localOnly && res && res.id && window.SkriblPosted) {
+        window.SkriblPosted.add({
+          id: res.id, url: res.url, kind: 'pad', pages: 1,
+          title: (titleInput.value || '').trim()
+        });
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+      }
       titleInput.value = '';
       captionInput.value = '';
       updateCharCount();
@@ -6645,3 +6664,112 @@ window.addEventListener('touchcancel', _pinchEnd);
 
   render(false);
 })();
+
+/* ---- canvas size (Pad) ----------------------------------------------------
+   Flip has had this since v110; Pad had nothing, so a drawing's shape was
+   whatever the viewport gave it. Same table, same ids, same markup as Flip's
+   row — see lib/canvassizes.js.
+
+   THE DIFFERENCE FROM FLIP, and the reason this is not a copy of Flip's
+   handler: Pad records STROKE TIMING, and a take is a continuous performance.
+   Flip can resize freely because its pages are independent and coordinates are
+   simply kept. Here, resizing mid-take would change the space a replay is
+   drawn into halfway through the recording it is replaying.
+
+   So the rule is: free while the canvas is empty, refused once there is
+   content. Refused, not silently ignored — the note says why, and "clear all"
+   or a reload is the way out. Destroying a recording to change a canvas would
+   be a far worse trade than declining. */
+(function () {
+  const seg = document.getElementById('canvasSeg');
+  const note = document.getElementById('canvasSegNote');
+  const table = window.SkriblCanvasSizes;
+  if (!seg || !table) return;
+
+  // Labels come from the table so a preset cannot be renamed there and left
+  // stale in the markup — the exact drift that made '9:16' mean 2:3.
+  [...seg.querySelectorAll('button')].forEach(b => {
+    const preset = table.byId(b.dataset.size);
+    if (preset) b.textContent = preset.label;
+    else b.remove();
+  });
+
+  function positionSlider() {
+    const on = seg.querySelector('button.on');
+    const pill = seg.querySelector('.seg-slider');
+    if (!on || !pill || !on.offsetWidth) return;
+    pill.style.width = on.offsetWidth + 'px';
+    pill.style.transform = 'translateX(' + (on.offsetLeft - 3) + 'px)';
+    pill.style.opacity = 1;
+  }
+
+  function locked() {
+    return hasContent || recording || finishedRecording;
+  }
+
+  function sync() {
+    const id = table.idFor(authoredW, authoredH);
+    [...seg.querySelectorAll('button')].forEach(b => {
+      b.classList.toggle('on', b.dataset.size === id);
+      // Kept enabled deliberately: a disabled control is low-contrast and shows
+      // no explanation on touch. Tapping one says why instead.
+      b.setAttribute('aria-pressed', String(b.dataset.size === id));
+    });
+    if (note) {
+      const size = Math.round(authoredW) + ' \u00d7 ' + Math.round(authoredH);
+      if (id === 'custom') {
+        // Drawings made before Pad had presets are a custom size. Say so rather
+        // than show no selection and let it look broken.
+        note.textContent = size + ' \u00b7 custom size';
+      } else if (locked()) {
+        note.textContent = size + ' \u00b7 locked once you start drawing';
+      } else {
+        note.textContent = size;
+      }
+    }
+    requestAnimationFrame(positionSlider);
+  }
+
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const preset = table.byId(b.dataset.size);
+    if (!preset) return;
+    if (locked()) {
+      if (typeof showToast === 'function') {
+        showToast('Canvas is locked once you have drawn — clear all to change it');
+      }
+      sync();
+      return;
+    }
+    // establishEditorCanvas + layoutEditorCanvas is the whole sequence — it is
+    // exactly what loadSkribl does. No redraw is needed precisely BECAUSE the
+    // lock above guarantees the canvas is empty; if that rule is ever relaxed,
+    // a repaint has to be added here or strokes will vanish on resize.
+    establishEditorCanvas(preset.w, preset.h);
+    layoutEditorCanvas();
+    sync();
+    if (typeof scheduleAutosave === 'function') scheduleAutosave();
+  });
+
+  window.syncCanvasSeg = sync;
+  sync();
+})();
+
+/* Your Skribls — shared with Flip via lib/postedui.js. */
+window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : null;
+{
+  const item = document.getElementById('postedItem');
+  if (item) item.addEventListener('click', () => {
+    if (typeof closeMenu === 'function') closeMenu();
+    else {
+      const o = document.getElementById('menuOverlay');
+      if (o) { o.classList.remove('open'); o.hidden = true; }
+    }
+    if (window._skriblPostedUI) window._skriblPostedUI.open();
+  });
+}
+
+// Report sheet — shared via lib/report.js so the two editors collect the same
+// context. Null-safe: without the lib the menu item simply does nothing.
+if (window.SkriblReport) window.SkriblReport.init();
