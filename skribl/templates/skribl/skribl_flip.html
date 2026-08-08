@@ -181,6 +181,12 @@
         <textarea id="flipShareCaption" class="flip-share-url flip-share-caption" maxlength="280"
                   rows="3" placeholder="Say something about it…"></textarea>
         <span class="flip-share-count" id="flipShareCount">0 / 280</span>
+        {# A failed post used to report itself only as a transient chip. On a
+           phone that is easy to miss entirely, so a 500 read as "the button
+           does nothing" rather than "it failed" — which is what happened when
+           the database went unreachable. This stays on screen until the next
+           attempt. #}
+        <div class="flip-share-error" id="flipShareError" role="alert" hidden></div>
         <div class="flip-share-actions">
           <button type="button" class="panel-btn" id="flipShareCancel">Cancel</button>
           <button type="button" class="panel-btn flip-share-open" id="flipShareSubmit">Share it</button>

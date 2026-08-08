@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v159"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v160"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -157,6 +157,25 @@ lose my animation?") unanswered. Both 429 messages now state the limit and that
 the work is safe. The limiter does not track when the window lifts, so the
 message cannot yet say WHEN — a `Retry-After` needs the oldest event in the
 window and is still open.
+
+**A hard server failure looked like a dead button.** Every `POST /api/skribls`
+was returning 500 — `psycopg.OperationalError: failed to resolve host
+'dpg-...'`, i.e. the Render Postgres instance had become unreachable. The
+client reported that only as a transient chip, which on a phone is easy to miss
+entirely, so it read as "the share button does nothing". THREE client-side
+theories were chased before a server log settled it in one line.
+
+The lesson is about diagnosis, not code: the failure was reported from a phone,
+so the search started in the client, and the request had a Windows Chrome user
+agent all along. **Check the server log before theorising about the client.**
+
+A failed post now writes into the share sheet itself and stays there until the
+next attempt, distinguishes 5xx ("the server could not save it") from 4xx ("the
+server refused it"), says in both cases that the drawing is safe, and leaves
+the sheet usable so retrying is one tap. `verify_flipmeta.py` drives 500, 503
+and 400 through intercepted routes and asserts a visible message, an intact
+sheet, an unstuck `sharing` flag, and that a stale failure is cleared before a
+retry rather than sitting above it.
 
 **26 unguarded bindings could abort the file, and did so silently.** `flip.js`
 had 26 `document.getElementById(id).addEventListener(...)` chains with no null

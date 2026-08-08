@@ -213,6 +213,88 @@ with sync_playwright() as p:
 
     b.close()
 
+print("\nSHARE — a server failure is visible, not a vanished chip")
+# WHAT HAPPENED. The Render Postgres instance became unresolvable and every
+# POST /api/skribls returned 500. The client reported it only as a transient
+# chip, which on a phone is easy to miss entirely — so a hard server failure
+# read as "the share button does nothing", and three client-side theories were
+# chased before the server log settled it.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    for _status, _expect in ((500, "server"), (503, "server"), (400, "client")):
+        _pg = _b.new_page(viewport={"width": 390, "height": 844})
+        # A def, not a lambda: Playwright's sync route handler must not be a
+        # lambda returning the fulfil coroutine — it raises inside the event
+        # listener and the route never completes.
+        # Playwright calls a route handler with (route, request). Omitting the
+        # second parameter means the Request object lands in the next slot —
+        # here it became the status code, and fulfil failed trying to
+        # serialise it.
+        def _fulfil(route, request=None, st=_status):
+            route.fulfill(status=st, content_type="application/json", body="{}")
+        _pg.route("**/api/skribls", _fulfil)
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1300)
+        _box = _pg.locator("#pad").bounding_box()
+        _pg.mouse.move(_box["x"] + 60, _box["y"] + 60)
+        _pg.mouse.down()
+        _pg.mouse.move(_box["x"] + 150, _box["y"] + 130, steps=8)
+        _pg.mouse.up()
+        _pg.wait_for_timeout(250)
+        _pg.click("#postBtn")
+        _pg.wait_for_timeout(300)
+        _pg.click("#flipShareSubmit")
+        _pg.wait_for_timeout(900)
+
+        check(f"a {_status} shows a visible error in the sheet",
+              _pg.is_visible("#flipShareError"),
+              "the only signal was a chip that disappears")
+        _msg = _pg.inner_text("#flipShareError")
+        check(f"a {_status} says the drawing is safe",
+              "safe" in _msg.lower() or "still here" in _msg.lower(), _msg)
+        if _expect == "server":
+            check(f"a {_status} blames the server, not the user",
+                  "server" in _msg.lower(), _msg)
+        check(f"after a {_status} the sheet is still usable",
+              _pg.is_visible("#flipShareTitle"),
+              "a failed post must not strand the user on a dead sheet")
+        check(f"and a {_status} does not leave sharing stuck",
+              _pg.evaluate("() => sharing") is False,
+              "every later tap would silently do nothing")
+        _pg.close()
+
+    # A retry must not show the previous failure above it.
+    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _fail = {"on": True}
+    def _route(route, request=None):
+        if _fail["on"]:
+            _fail["on"] = False
+            route.fulfill(status=500, content_type="application/json", body="{}")
+        else:
+            route.continue_()
+    _pg.route("**/api/skribls", _route)
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+    _box = _pg.locator("#pad").bounding_box()
+    _pg.mouse.move(_box["x"] + 60, _box["y"] + 60)
+    _pg.mouse.down()
+    _pg.mouse.move(_box["x"] + 150, _box["y"] + 130, steps=8)
+    _pg.mouse.up()
+    _pg.wait_for_timeout(250)
+    _pg.click("#postBtn"); _pg.wait_for_timeout(250)
+    _pg.click("#flipShareSubmit"); _pg.wait_for_timeout(800)
+    check("the first attempt failed visibly", _pg.is_visible("#flipShareError"))
+    _pg.click("#flipShareClose"); _pg.wait_for_timeout(200)
+    _pg.click("#postBtn"); _pg.wait_for_timeout(300)
+    check("reopening clears the stale failure",
+          not _pg.is_visible("#flipShareError"),
+          "a previous error sat above a fresh attempt")
+    _pg.click("#flipShareSubmit")
+    _pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
+    check("and the retry succeeds", "/s/" in _pg.input_value("#flipShareUrl"))
+    _pg.close()
+    _b.close()
+
 print("\nSHARE — it can never fail silently")
 # THE SHAPE OF THE BUG BEING GUARDED. flip.js had 26 unguarded
 # getElementById(id).addEventListener chains. A null from any one throws at the

@@ -643,3 +643,13 @@
   .export-gif-toggle { display: flex; flex-direction: column; gap: 6px; }
   .export-loops-seg { display: flex; width: 100%; }
   .export-loops-seg button { flex: 1 1 0; min-width: 0; }
+  /* Persistent share failure, in the sheet the user is looking at. A chip
+     alone vanishes and, on a phone, is easily missed — which is how a 500 from
+     an unreachable database read as "share does nothing". */
+  .flip-share-error {
+    text-align: left; font-size: 12px; line-height: 1.5;
+    color: #ff9d9d; background: rgba(244, 50, 111, 0.12);
+    border: 1px solid rgba(244, 50, 111, 0.35); border-radius: 10px;
+    padding: 9px 11px;
+  }
+  .flip-share-error[hidden] { display: none; }

@@ -1364,7 +1364,16 @@ async function shareSkribl(){
   try{
     const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:skriblPostHeaders(), body:JSON.stringify(buildSharePayload()) });
     let data={}; try{ data=await res.json(); }catch(_){}
-    if(!res.ok){ chip(data.error || ('Share failed ('+res.status+')')); sharing=false; return; }
+    if(!res.ok){
+      // 5xx is the server's fault and 4xx is usually the user's; saying which
+      // is the difference between "try again" and "change something". A 500
+      // here was an unreachable database, and the old transient chip made that
+      // look like the button doing nothing.
+      const why = data.error || (res.status >= 500
+        ? 'The server could not save it (error ' + res.status + '). Your Skribl is safe here — try again in a moment.'
+        : 'The server refused it (error ' + res.status + '). Your Skribl is safe here — nothing was lost.');
+      showShareError(why); chip('Share failed'); sharing=false; return;
+    }
     const url=location.origin + (data.url || (window.SKRIBL_PLAYER_BASE+'/'+data.id));
     // Record it locally. Without accounts the link is the only handle on a
     // post, and closing the tab used to lose it permanently.
@@ -1375,8 +1384,20 @@ async function shareSkribl(){
       if(window._skriblPostedUI) window._skriblPostedUI.render();
     }
     showShareResult(url);
-  }catch(err){ console.error('Share failed:', err); chip('Share failed — check your connection'); }
+  }catch(err){
+    console.error('[skribl] Share failed:', err);
+    showShareError('Could not reach the server. Check your connection — your Skribl is still here.');
+    chip('Share failed');
+  }
   sharing=false;
+}
+function showShareError(msg){
+  const el=document.getElementById('flipShareError');
+  if(el){ el.textContent=msg; el.hidden=false; }
+}
+function clearShareError(){
+  const el=document.getElementById('flipShareError');
+  if(el){ el.textContent=''; el.hidden=true; }
 }
 function showShareResult(url){
   const m=document.getElementById('flipShare'), inp=document.getElementById('flipShareUrl'), open=document.getElementById('flipShareOpen');
@@ -1409,6 +1430,7 @@ function openShareCompose(){
   }
   if(compose) compose.hidden=false;
   if(result) result.hidden=true;
+  clearShareError();
   m.hidden=false;
   const t=document.getElementById('flipShareTitle');
   if(t) setTimeout(()=>{ try{ t.focus(); }catch(_){ } }, 30);
