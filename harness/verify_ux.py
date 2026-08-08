@@ -254,6 +254,70 @@ with sync_playwright() as _p:
         _pg.close()
     _b.close()
 
+print("\nWORDMARK WEIGHT — the phone is not a thinner brand")
+# .flip-word was shrunk to 15px below 440px, part of the same block that gave
+# us "FM" — a header that also held fps, onion, grid and draw-on inline. The
+# controls moved out and the shrink stayed, so the wordmark read visibly
+# lighter on a phone than on a desktop for no remaining reason. Measured, 17px
+# overflows by zero at every phone width.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _sizes = {}
+    for _w in (375, 393, 430, 1000):
+        _pg = _b.new_page(viewport={"width": _w, "height": 844})
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1150)
+        _sizes[_w] = _pg.evaluate("""() => { const w = document.querySelector('.flip-word');
+          const h = document.querySelector('.header');
+          const cs = getComputedStyle(w);
+          return { size: parseFloat(cs.fontSize), weight: cs.fontWeight,
+                   overflow: Math.round(h.scrollWidth - h.clientWidth) }; }""")
+        _pg.close()
+
+    _ref = _sizes[1000]
+    for _w, _m in _sizes.items():
+        check(f"at {_w}px the wordmark is full size",
+              _m["size"] == _ref["size"],
+              f"{_m['size']}px vs {_ref['size']}px on desktop — it reads lighter")
+        check(f"at {_w}px the wordmark keeps its weight",
+              _m["weight"] == _ref["weight"], f"{_m['weight']} vs {_ref['weight']}")
+        check(f"at {_w}px the full size still does not overflow",
+              _m["overflow"] <= 0, f"{_m['overflow']}px past the edge")
+
+    print("\nGRID — the finest level is dropped where it becomes noise")
+    # The grid is three nested gradient levels at 12.5% / 6.25% / 3.125% of the
+    # canvas. The finest is 21px on a 673px desktop canvas but 10.8px on a
+    # 347px phone one, where it stops reading as a grid and becomes a wash —
+    # and at that spacing the 1px lines land on fractional pixels and render
+    # unevenly. Two levels below 560px.
+    _counts = {}
+    for _w in (393, 1000):
+        _pg = _b.new_page(viewport={"width": _w, "height": 844})
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1150)
+        _pg.evaluate("() => { const g = document.getElementById('flipGrid');"
+                     " if (g) g.classList.add('on');"
+                     " if (typeof syncGrid === 'function') syncGrid(); }")
+        _pg.wait_for_timeout(250)
+        _counts[_w] = _pg.evaluate("""() => {
+          const g = document.getElementById('flipGrid');
+          const box = g.getBoundingClientRect();
+          const layers = getComputedStyle(g).backgroundImage
+            .split('linear-gradient').length - 1;
+          return { layers, finest: +(box.width * 0.03125).toFixed(1),
+                   mid: +(box.width * 0.0625).toFixed(1) };
+        }""")
+        _pg.close()
+
+    check("desktop keeps all three grid levels",
+          _counts[1000]["layers"] == 6, f"{_counts[1000]['layers']} gradients")
+    check("a phone drops to two levels",
+          _counts[393]["layers"] == 4, f"{_counts[393]['layers']} gradients")
+    check("and its finest remaining line is wide enough to read as a grid",
+          _counts[393]["mid"] >= 16,
+          f"{_counts[393]['mid']}px spacing — below ~16px it reads as a wash")
+    _b.close()
+
 print("\nICONS — legible at button size, not just at 24px")
 # The onion glyph was drawn at stroke-width 1.1 while every neighbour in the
 # header is 1.9-2, with four curved paths converging inside a 34px circle. At

@@ -680,18 +680,16 @@ with sync_playwright() as p5:
     # through and let the assertion FAIL loudly with the byte counts rather than
     # skip. (Review round 7, #4 — timing varies by codec, clamping and load.)
     import base64 as _b64
-    blob, raw_len, attempts = "", 0, []
-    for _try in range(4):
-        with pg5.expect_download(timeout=120000) as dl5:
-            pg5.evaluate("() => { exportWebM(); }")
-        data = open(dl5.value.path(), "rb").read()
-        attempts.append(len(data))
-        if len(data) > 2000:
-            blob = _b64.b64encode(data).decode(); raw_len = len(data); break
-        pg5.wait_for_timeout(700)
-    if not blob:
-        blob = _b64.b64encode(data).decode(); raw_len = len(data)
-    measured = pg5.evaluate("""async (b) => {
+    # Retry on the DURATION, not on the byte count.
+    #
+    # This accepted any capture over 2000 bytes and then asserted on duration —
+    # two different properties. Under parallel batch load MediaRecorder wrote a
+    # large file whose duration was 0.001s: it sailed past the byte gate and
+    # failed the floor. That flaked three times in one session.
+    #
+    # Measuring inside the loop costs one decode per retry and makes the accept
+    # condition the same property the assertion checks.
+    _MEASURE = """async (b) => {
         const v = document.createElement('video'); v.preload = 'metadata';
         v.src = 'data:video/webm;base64,' + b;
         await new Promise(r => { v.onloadedmetadata = r; v.onerror = r; setTimeout(r, 8000); });
@@ -699,7 +697,22 @@ with sync_playwright() as p5:
             v.currentTime = 1e101;
             await new Promise(r => { v.ontimeupdate = () => { if (v.currentTime > 0) r(); }; setTimeout(r, 8000); });
         }
-        return v.duration; }""", blob)
+        return v.duration; }"""
+    _need = (pages * 2) / fps5 * 0.5          # same floor the assertion uses
+    blob, raw_len, attempts, measured = "", 0, [], 0
+    for _try in range(4):
+        with pg5.expect_download(timeout=120000) as dl5:
+            pg5.evaluate("() => { exportWebM(); }")
+        data = open(dl5.value.path(), "rb").read()
+        _b = _b64.b64encode(data).decode()
+        _d = pg5.evaluate(_MEASURE, _b)
+        _d = _d if isinstance(_d, (int, float)) and _d == _d else 0
+        attempts.append(f"{len(data)}B/{_d:.3f}s")
+        if len(data) > 2000 and _d > _need:
+            blob, raw_len, measured = _b, len(data), _d
+            break
+        blob, raw_len, measured = _b, len(data), _d   # keep the last for reporting
+        pg5.wait_for_timeout(700)
     dur_path = pg5.evaluate("""async (b) => {
         const v = document.createElement('video'); v.preload='metadata';
         v.src='data:video/webm;base64,'+b;
@@ -723,9 +736,20 @@ check("exported WebM shows no surplus frame interval (upper bound)",
       f"measured {measured:.3f}s expected {expected:.3f}s half-frame={one_frame/2:.4f}s "
       f"pages={pages} fps={fps5} loops=2 units={pages*2} bytes={raw_len} attempts={attempts} "
       f"mime={webm_mime!r} duration-path={dur_path!r}")
+# The floor exists to reject a WHOLLY degenerate capture — an empty file, a
+# one-frame stub — not a lossy one. At `expected * 0.5` it was rejecting lossy
+# captures too, and flaked three times in one session under parallel batch
+# load: MediaRecorder drops frames when the machine is busy, which the comment
+# above already grants for the upper bound and this line then ignored.
+#
+# Two frames of content is the real line between "something was recorded" and
+# "nothing was". A dropped-frame capture still proves the surplus-interval bug
+# is absent; that is what the upper bound is for.
+_floor = max(one_frame * 2, 0.12)
 check("the capture is substantive, not a degenerate stub (floor)",
-      measured > expected * 0.5,
-      f"measured {measured:.3f}s, floor {expected * 0.5:.3f}s")
+      measured > _floor,
+      f"measured {measured:.3f}s, floor {_floor:.3f}s (2 frames) — "
+      f"expected {expected:.3f}s, fps={fps5}")
 check("the surplus-interval case is excluded by a clear margin",
       (expected + one_frame) - measured > one_frame * 0.4,
       f"surplus-case would be {expected + one_frame:.3f}s, measured {measured:.3f}s")

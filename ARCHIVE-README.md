@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v172"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v173"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -235,6 +235,24 @@ at 360, 9px over at 340, 29px at 320.
 
 `verify_ux.py` checks the tier at seven widths and asserts real overflow at
 each, not arithmetic.
+
+**The wordmark was 15px on a phone and 17px on desktop**, so the brand read
+visibly lighter on the device most people use. Same block as the "FM"
+abbreviation, same cause: a header that also held fps, onion, grid and draw-on
+inline. The controls moved into the settings button; the shrink stayed. At 17px
+the header overflows by ZERO at 375, 393 and 430.
+
+**The grid's finest level was noise on a phone.** Three nested gradient layers
+at 12.5% / 6.25% / 3.125% of the canvas width. The finest is 21px on a 673px
+desktop canvas but **10.8px on a 347px phone canvas** — below the point where a
+grid reads as a grid, and at that spacing the 1px lines land on fractional
+pixels and render unevenly. Below 560px the finest layer is dropped and the
+remaining two are lifted slightly, leaving 21.7px spacing.
+
+Both are the same shape of mistake as the abbreviation: a compromise made for a
+denser layout that outlived the layout. `verify_ux.py` checks wordmark size
+parity against desktop at four widths, and the grid's layer count and spacing
+at two.
 
 **The onion icon was drawn at stroke-width 1.1** while every neighbour in the
 header is 1.9-2, with four curved paths converging inside a 34px circle. At
