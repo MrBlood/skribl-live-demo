@@ -222,6 +222,145 @@ with sync_playwright() as _p:
     check("no JS errors dismissing the menu", not _errs, "; ".join(_errs[:2]))
     _b.close()
 
+print("\nICONS — legible at button size, not just at 24px")
+# The onion glyph was drawn at stroke-width 1.1 while every neighbour in the
+# header is 1.9-2, with four curved paths converging inside a 34px circle. At
+# actual size on a dim panel it mushed into a blob. Replaced with a three-sheet
+# stack — three because the depth control beside it is 1/2/3, so a two-sheet
+# icon would quietly contradict its own setting. The NAME stays "Onion skin":
+# it is the correct animation term, and only the drawing was the problem.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+
+    # STROKED icons only. A filled glyph — the play triangle, the ... dots —
+    # reports stroke-width 1 because nothing sets it, and it is never drawn.
+    # Including them made this fail on two icons that are perfectly legible.
+    _widths = _pg.evaluate("""() => [...document.querySelectorAll(
+      '.header button svg, .header a svg')]
+      .filter(s => getComputedStyle(s).fill === 'none')
+      .flatMap(s => [...s.querySelectorAll('path, circle, line')])
+      .map(p => parseFloat(getComputedStyle(p).strokeWidth))
+      .filter(w => w > 0)""")
+    check("no header icon is drawn thinner than the rest",
+          _widths and (max(_widths) - min(_widths)) <= 0.6,
+          f"stroke widths {sorted(set(_widths))} — a thin glyph vanishes on a "
+          "dim display while its neighbours hold up")
+
+    _paths = _pg.evaluate("() => document.querySelectorAll('#onion svg path').length")
+    check("the onion icon is a simple shape, not a tangle",
+          _paths <= 3, f"{_paths} paths inside a 34px circle")
+    check("its stroke matches its neighbours",
+          _pg.evaluate("() => parseFloat(getComputedStyle("
+                       "document.querySelector('#onion svg path')).strokeWidth)") >= 1.8)
+    check("the name is still Onion skin",
+          "onion" in (_pg.get_attribute("#onion", "aria-label") or "").lower(),
+          "the term is right; only the drawing was wrong")
+    _b.close()
+
+print("\nPENDING MEDIA — dismissing the re-add card clears its dot")
+# THE BUG. refreshPendingCards() set the dot hidden=false in its pending
+# branch, and the else branch dropped only the 'pending' class — never
+# restoring hidden. So dismissing the re-add card left a VISIBLE dot with no
+# pending styling, which renders in the "has media" green, until syncMusicUI()
+# next ran and hid it. Dismissing turned the dot green; opening the drawer made
+# it vanish.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 1100, "height": 900})
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+
+    def _dot(kind):
+        return _pg.evaluate(f"""() => {{ const d = document.getElementById('{kind}TabDot');
+          return {{ hidden: d.hidden, pending: d.classList.contains('pending') }}; }}""")
+
+    for _kind, _meta, _btn in (("music", "pendingMusicMeta", "musicPendingDismiss"),
+                               ("photo", "pendingPhotoMeta", "photoPendingDismiss")):
+        _pg.evaluate(f"() => {{ {_meta} = {{ name: 'saved.file' }}; refreshPendingCards(); }}")
+        _pg.wait_for_timeout(150)
+        _d = _dot(_kind)
+        check(f"{_kind}: a saved-but-unloaded file shows a pending dot",
+              _d["hidden"] is False and _d["pending"] is True, str(_d))
+
+        _pg.evaluate(f"() => document.getElementById('{_btn}').click()")
+        _pg.wait_for_timeout(200)
+        _d = _dot(_kind)
+        check(f"{_kind}: dismissing the card HIDES the dot",
+              _d["hidden"] is True,
+              "the dot stays visible without pending styling — it renders green, "
+              "as though media were loaded")
+        check(f"{_kind}: and drops the pending styling",
+              _d["pending"] is False, str(_d))
+
+        # The original symptom was the dot disappearing only when the drawer
+        # was opened. Opening must now be a no-op, not the thing that fixes it.
+        _pg.evaluate("() => syncMediaUI()")
+        _pg.wait_for_timeout(150)
+        check(f"{_kind}: opening the drawer does not change it",
+              _dot(_kind)["hidden"] is True, str(_dot(_kind)))
+    _b.close()
+
+print("\nTUNE PANEL — controls in a stacked row are the same size")
+# #fps was a bare .seg on the default height while .onion-seg overrode it to
+# 26, so Speed rendered visibly larger than Onion skin directly below it. The
+# tint toggle was 28x26 — wider than tall, and 4px proud of the segments —
+# which read as a box rather than a round toggle once its active state gave it
+# a background.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 1000, "height": 900})
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+    _pg.click("#tuneBtn")
+    _pg.wait_for_timeout(400)
+
+    _m = _pg.evaluate("""() => {
+      const g = s => { const e = document.querySelector(s); if (!e) return null;
+        const r = e.getBoundingClientRect();
+        return { w: Math.round(r.width), h: Math.round(r.height) }; };
+      return { fps: g('#fps'), onion: g('#onionDepthSeg'), tint: g('#onionTintBtn') };
+    }""")
+    check("Speed and Onion skin are the same height",
+          abs(_m["fps"]["h"] - _m["onion"]["h"]) < 1.5,
+          f"fps {_m['fps']['h']} vs onion {_m['onion']['h']}")
+    check("and the same width",
+          abs(_m["fps"]["w"] - _m["onion"]["w"]) < 1.5,
+          f"fps {_m['fps']['w']} vs onion {_m['onion']['w']}")
+    check("the tint toggle matches the segment height",
+          abs(_m["tint"]["h"] - _m["onion"]["h"]) < 1.5,
+          f"tint {_m['tint']['h']} vs segment {_m['onion']['h']} — it sits proud")
+    check("the tint toggle is square",
+          _m["tint"]["w"] == _m["tint"]["h"],
+          f"{_m['tint']['w']}x{_m['tint']['h']} — wider than tall reads as a box")
+
+    # The header too: .tool-open is 44x44 and .onion-tool overrode it to 34,
+    # but .tune-tool did not — so the settings button stood 8px taller than
+    # everything beside it. Measured as a SPREAD across the row, which is the
+    # check that finds the next one of these rather than this one again.
+    _hdr = _pg.evaluate("""() => {
+      const ids = ['tuneBtn', 'onion', 'postBtn', 'moreBtn'];
+      const hs = ids.map(i => { const e = document.getElementById(i);
+        return e ? Math.round(e.getBoundingClientRect().height) : null; })
+        .filter(h => h !== null);
+      return { hs, spread: Math.max(...hs) - Math.min(...hs) };
+    }""")
+    check("every control in the header row is the same height",
+          _hdr["spread"] <= 2,
+          f"heights {_hdr['hs']} — spread {_hdr['spread']}px")
+
+    _pg.click("#onionTintBtn")
+    _pg.wait_for_timeout(250)
+    _after = _pg.evaluate("() => { const r = document.querySelector"
+                          "('#onionTintBtn').getBoundingClientRect();"
+                          " return { w: Math.round(r.width), h: Math.round(r.height) }; }")
+    check("activating the tint does not change its size",
+          _after["w"] == _m["tint"]["w"] and _after["h"] == _m["tint"]["h"],
+          f"{_after} vs {_m['tint']} — the highlight grows the control")
+    _b.close()
+
 print("\nCANVAS — the edge survives every state, and a stroke survives the edge")
 with sync_playwright() as _p:
     _b = _p.chromium.launch()

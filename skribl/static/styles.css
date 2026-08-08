@@ -4015,7 +4015,12 @@ body.player-mode #canvas {
    the hint is telling you about. */
 .skribl-hint {
   position: fixed; z-index: 380;
-  left: 50%; bottom: 96px; transform: translate(-50%, 8px);
+  /* TOP, not bottom. At bottom: 96px it landed on Flip's filmstrip — covering
+     the thumbnails the page-move hint tells you to tap. Flip's bottom chrome
+     (page bar + strip + tools) is ~230px tall and Pad's is ~90, so no single
+     bottom offset clears both. The top is clear on every surface, and the
+     canvas is what a hint usually refers to. */
+  left: 50%; top: 84px; transform: translate(-50%, -8px);
   max-width: min(360px, calc(100vw - 32px));
   padding: 11px 14px;
   border-radius: 12px;

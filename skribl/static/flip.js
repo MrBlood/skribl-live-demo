@@ -853,7 +853,21 @@ function refreshAllThumbs(){ [...strip.children].forEach((el,i)=>{ const cv=el.q
 function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
 // Reorder by one slot. Keeps `idx` pointing at the SAME page the user was on —
 // moving a page must never silently switch which page you're drawing on.
-function movePage(i,dir){ movePageTo(i, i+dir); }
+function movePage(i,dir){
+  // Below 560px the pagebar labels are hidden, so Move is two bare arrows in a
+  // row that also reads "Page 62 / 64" — they look like page navigation while
+  // they actually REORDER the animation. A glyph was tried and reverted: a page
+  // rectangle at 11px renders as a zero. Saying it once, at the moment it
+  // happens, is what a hint is for — and it names the pages so the effect is
+  // legible even if you were not watching the strip.
+  if(window.SkriblHints){
+    const to = i + dir + 1;
+    window.SkriblHints.show('page-move',
+      'Moved this page to position ' + to + '. These arrows REORDER pages — '
+      + 'tap a thumbnail below to change which page you are on.');
+  }
+  movePageTo(i, i+dir);
+}
 // Shared by the move buttons and by drag-to-reorder. Keeps `idx` on the SAME page
 // the user was on rather than the same slot — reordering must never silently
 // switch which page you're drawing on.
@@ -1750,7 +1764,15 @@ function refreshPendingCards(){
       document.getElementById('musicPendingMeta').textContent=meta;
       mCard.hidden=false; if(mUp) mUp.hidden=true;
       if(mDot){ mDot.hidden=false; mDot.classList.add('pending'); }
-    } else { mCard.hidden=true; if(mUp) mUp.hidden=false; if(mDot) mDot.classList.remove('pending'); }
+    } else {
+      mCard.hidden=true; if(mUp) mUp.hidden=false;
+      // Restore hidden, not just the class. The branch above sets hidden=false
+      // for the pending dot; dropping only 'pending' here left a VISIBLE dot
+      // with no pending styling — which renders in the "has media" green —
+      // until syncMusicUI() next ran and hid it. Dismissing the re-add card
+      // turned the dot green, and opening the drawer made it vanish.
+      if(mDot){ mDot.classList.remove('pending'); mDot.hidden = !musicData; }
+    }
   }
   if(pCard){
     if(pendingPhotoMeta && !bgImage){
@@ -1763,7 +1785,11 @@ function refreshPendingCards(){
       document.getElementById('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
       pCard.hidden=false; if(pUp) pUp.hidden=true;
       if(pDot){ pDot.hidden=false; pDot.classList.add('pending'); }
-    } else { pCard.hidden=true; if(pUp) pUp.hidden=false; if(pDot) pDot.classList.remove('pending'); }
+    } else {
+      pCard.hidden=true; if(pUp) pUp.hidden=false;
+      // Same as the music dot above: restore hidden, not just the class.
+      if(pDot){ pDot.classList.remove('pending'); pDot.hidden = !bgImage; }
+    }
   }
 }
 

@@ -53,6 +53,12 @@
 
   /* Onion toggle — the pad's own icon-toggle (.tool-open + magnify active state). */
   .onion-tool { width: 34px; height: 34px; flex: none; border-radius: 50%; }
+  /* Same size as its neighbours. .tool-open is 44x44 and .onion-tool overrode
+     it to 34; .tune-tool did not, so the settings button stood 8px taller than
+     the onion toggle, the post button and the ... beside it. The rounded
+     square is kept — a panel-opener reading differently from a toggle is
+     deliberate — but a control that is simply BIGGER than its row is not. */
+  .tune-tool { width: 34px; height: 34px; flex: none; }
   #moreBtn { width: 34px; height: 34px; border-radius: 50%; }
   #moreBtn svg { width: 19px; height: 19px; }
   .onion-tool { background: var(--surface-control); border: 1px solid var(--hairline-strong); }
@@ -381,15 +387,22 @@
 }
 .onion-group[hidden] { display: none; }
 
-.onion-seg { --seg-h: 26px; }
-.onion-seg button { min-width: 22px; padding: 0 7px; font-size: 12px; }
+/* The two tune rows sit one above the other, so they must be the same size.
+   #fps was a bare .seg on the default height while .onion-seg overrode it, and
+   the Speed pill came out visibly larger than the Onion one directly below. */
+.onion-seg, .fps-group .seg { --seg-h: 26px; }
+.onion-seg button, .fps-group .seg button { min-width: 22px; padding: 0 7px; font-size: 12px; }
 
 .onion-tint {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 26px;
+  /* Square, and the same 22px the segments actually render at — --seg-h is 26
+     but padding brings the drawn pill to 22, so 26 here sat 4px proud of the
+     control beside it. It was also 28x26, wider than tall, which read as a box
+     rather than a round toggle once the active state gave it a background. */
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
@@ -397,8 +410,11 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.onion-tint svg { width: 15px; height: 15px; }
-.onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.55); background: rgba(255, 159, 67, 0.14); }
+.onion-tint svg { width: 13px; height: 13px; }
+/* Lighter active state: this is a small secondary toggle next to a segmented
+   control, and a strong border plus fill made it the loudest thing in the row.
+   The icon colour carries the state; the fill only supports it. */
+.onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 
 /* --- v124: page toolbar (replaces the in-tile ops bar) ---------------------
    The old .frame-ops overlaid the thumbnail with 18px targets. Controls now act

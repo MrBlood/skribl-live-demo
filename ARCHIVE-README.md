@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v167"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v170"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -214,6 +214,58 @@ silently does nothing for anyone who has already dismissed them, which is a
 setting that lies. The toggle also re-reads the stored state every time the
 menu opens rather than once at load, because a switch showing the opposite of
 what is stored is worse than no switch — `verify_tips.py` caught exactly that.
+
+**The onion icon was drawn at stroke-width 1.1** while every neighbour in the
+header is 1.9-2, with four curved paths converging inside a 34px circle. At
+actual size on a dim panel it mushed into a blob — thickening it did not help,
+because the interior lines merge. Replaced with a three-sheet stack. THREE, not
+two: the depth control beside it is 1/2/3, so a two-sheet icon would quietly
+contradict its own setting. The NAME stays "Onion skin" — it is the correct
+animation term and only the drawing was wrong.
+
+`verify_ux.py` now compares stroke weights across the whole header and fails if
+one icon is drawn meaningfully thinner than the rest. Its first version counted
+FILLED glyphs too — the play triangle and the `...` dots report stroke-width 1
+because nothing sets it and it is never drawn — and failed on two icons that
+are perfectly legible. It looks only at `fill: none` icons now.
+
+**Dismissing a re-add card turned its dot GREEN.** `refreshPendingCards()`
+sets the tab dot `hidden = false` in its pending branch, and the else branch
+dropped only the `pending` CLASS — never restoring `hidden`. So dismissing left
+a visible dot with no pending styling, which renders in the "has media" green,
+until `syncMusicUI()` next ran and hid it. That is why the green vanished when
+you opened the drawer: opening was not clearing a stale state, it was the only
+thing ever fixing it. Both branches now restore `hidden` from whether media
+actually exists, and the suite asserts that opening the drawer is a NO-OP
+rather than the repair.
+
+**The Move arrows now explain themselves, once.** Below 560px the pagebar
+labels are hidden, so Move is two bare arrows in a row that also reads
+"Page 62 / 64" — they look like navigation while they REORDER the animation.
+A page glyph was tried in v151 and reverted: at 11px a rounded rect renders as
+a zero. A hint says it at the moment it happens and names the new position, so
+the effect is legible even if you were not watching the strip.
+
+**Hints moved to the TOP of the screen.** At `bottom: 96px` the page-move hint
+landed squarely on the filmstrip — covering the thumbnails it tells you to tap.
+Flip's bottom chrome is ~230px tall and Pad's is ~90, so no single bottom
+offset clears both.
+
+**Three controls were sized by accident rather than intent.** `#fps` was a
+bare `.seg` on the default height while `.onion-seg` overrode it to 26, so
+Speed rendered visibly larger than Onion skin directly beneath it. The onion
+tint toggle was 28x26 — wider than tall, and 4px proud of the segments — which
+read as a box rather than a round toggle once its active state gave it a
+background. And in the header, `.tool-open` is 44x44 with `.onion-tool`
+overriding to 34; `.tune-tool` did not, so the settings button stood 8px taller
+than the onion toggle, the post button and the `...` beside it.
+
+The pattern is one class overriding a shared base and its sibling not
+following. `verify_ux.py` measures the SPREAD across a row rather than pinning
+individual pixel values, which is the check that finds the next one of these
+instead of this one again. Found by walking every visible control on both
+surfaces, grouping by row, and flagging any row with a height spread of 6px or
+more — Pad had none, Flip had two.
 
 **The canvas floated in empty space, and capping the scale at 1:1 made it
 worse.** At the 300,000px preset target, 4:3 was 632x474 — a 43px gutter each

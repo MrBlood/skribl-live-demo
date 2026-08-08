@@ -186,6 +186,39 @@ with sync_playwright() as p:
     hp.wait_for_timeout(600)
     check("with tips off, nothing is shown", not shown())
 
+    print("\nHINTS — the page-move hint, and where a hint sits")
+    # Below 560px the pagebar labels are hidden, so Move is two bare arrows in a
+    # row that also reads "Page 62 / 64" — they look like navigation while they
+    # REORDER the animation. A page glyph was tried and reverted: at 11px a
+    # rounded rect renders as a zero. A hint says it once, when it happens.
+    mp = b.new_page(viewport={"width": 390, "height": 844})
+    mp.goto(f"{BASE}/flip", wait_until="load")
+    mp.wait_for_timeout(1300)
+    mp.evaluate("() => window.SkriblHints.reset()")
+    mp.evaluate("() => { addFrame(true); addFrame(true); }")
+    mp.wait_for_timeout(400)
+    mp.click("#pbLeft")
+    mp.wait_for_timeout(450)
+    check("moving a page explains what the arrows do", mp.is_visible(".skribl-hint"))
+    _txt = mp.inner_text(".skribl-hint").lower()
+    check("the hint says the arrows REORDER", "reorder" in _txt, _txt)
+    check("and points at the thumbnails for changing page",
+          "thumbnail" in _txt, _txt)
+
+    # It must not cover the filmstrip it just told you to tap. At bottom:96px
+    # it landed squarely on the strip — Flip's bottom chrome is ~230px tall and
+    # Pad's is ~90, so no single bottom offset clears both.
+    _overlap = mp.evaluate("""() => {
+      const h = document.querySelector('.skribl-hint').getBoundingClientRect();
+      const s = document.querySelector('.strip-wrap, #strip');
+      if (!s) return null;
+      const r = s.getBoundingClientRect();
+      return !(h.bottom < r.top || h.top > r.bottom);
+    }""")
+    check("the hint does not cover the filmstrip", _overlap is False,
+          "it covers the thumbnails it tells you to tap")
+    mp.close()
+
     print("\nHINTS — the toggle is reachable and reflects its state")
     # Open through openMenu(), not by unhiding the node: the toggle re-reads
     # the stored state on open, which is the behaviour being checked.
