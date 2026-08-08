@@ -525,6 +525,16 @@ function pressureSize(e, base, erase) {
 // is asserted directly. This is a measurement seam, not an API.
 window.__skriblPressureSize = pressureSize;
 
+/* Bind an event without letting a missing element abort the rest of the file.
+ * A null from getElementById throws at the top level and every binding written
+ * after it never happens — see the same helper in flip.js. */
+function bindEl(id, ev, fn, opts) {
+  const el = document.getElementById(id);
+  if (!el) { console.warn('[skribl] missing element for binding:', id, ev); return null; }
+  el.addEventListener(ev, fn, opts);
+  return el;
+}
+
 function startDraw(e) {
   // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
   // preventDefault/anything else so it can cleanly abort a nascent 1-finger
@@ -746,7 +756,7 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
   btn.addEventListener('click', () => setTool(btn.dataset.tool));
 });
 
-document.getElementById('colorGroup').addEventListener('click', (e) => {
+bindEl('colorGroup', 'click', (e) => {
   const btn = e.target.closest('.color-dot');
   if (!btn || btn.id === 'customColorBtn') return;
   color = btn.dataset.color;
@@ -780,7 +790,7 @@ updateCurrentColorChip();
   apply();
 })();
 
-document.getElementById('bgGroup').addEventListener('click', (e) => {
+bindEl('bgGroup', 'click', (e) => {
   const btn = e.target.closest('.bg-swatch');
   if (!btn || btn.id === 'customBgBtn') return;
   bgColor = btn.dataset.bg;
@@ -1591,12 +1601,12 @@ function clearAllWithUndo() {
   });
 })();
 
-document.getElementById('saveDraftItem').addEventListener('click', () => {
+bindEl('saveDraftItem', 'click', () => {
   saveDraft();
   closeMenu();
 });
 
-document.getElementById('loadDraftItem').addEventListener('click', () => {
+bindEl('loadDraftItem', 'click', () => {
   document.getElementById('draftInput').click();
   closeMenu();
 });
@@ -2677,7 +2687,7 @@ document.querySelectorAll('.nudge-btn[data-which]').forEach(btn => {
 
 matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 
-document.getElementById('resetPhotoBtn').addEventListener('click', resetPhotoAdjustments);
+bindEl('resetPhotoBtn', 'click', resetPhotoAdjustments);
 let previewingLoop = false;
 let previewLoopTimer = null;
 let seamTimer = null;
@@ -3173,7 +3183,7 @@ photoInput.addEventListener('change', async (e) => {
   updateRepositionUI();
 });
 
-document.getElementById('photoRemove').addEventListener('click', (e) => {
+bindEl('photoRemove', 'click', (e) => {
   // Review round 10, #1: this was missing, so a decode still running when the
   // user hit Remove would finish with a CURRENT token and re-apply the photo
   // that had just been removed. The old test incremented the counter by hand
@@ -4364,7 +4374,7 @@ function loadSkribl(data) {
   }
 }
 
-document.getElementById('draftInput').addEventListener('change', (e) => {
+bindEl('draftInput', 'change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -4436,16 +4446,16 @@ document.getElementById('draftInput').addEventListener('change', (e) => {
   recordBtn.addEventListener('click', scheduleAutosave);
   undoBtn.addEventListener('click', scheduleAutosave);
   redoBtn.addEventListener('click', scheduleAutosave);
-  document.getElementById('bgGroup').addEventListener('click', scheduleAutosave);
+  bindEl('bgGroup', 'click', scheduleAutosave);
   customBgInput.addEventListener('input', scheduleAutosave);
 
   // Media triggers — so adding/adjusting music or photo is captured too.
-  document.getElementById('musicInput').addEventListener('change', scheduleAutosave);
-  document.getElementById('photoInput').addEventListener('change', scheduleAutosave);
-  document.getElementById('musicRemove').addEventListener('click', scheduleAutosave);
-  document.getElementById('photoRemove').addEventListener('click', scheduleAutosave);
-  document.getElementById('photoOpacity').addEventListener('input', scheduleAutosave);
-  document.getElementById('photoBlur').addEventListener('input', scheduleAutosave);
+  bindEl('musicInput', 'change', scheduleAutosave);
+  bindEl('photoInput', 'change', scheduleAutosave);
+  bindEl('musicRemove', 'click', scheduleAutosave);
+  bindEl('photoRemove', 'click', scheduleAutosave);
+  bindEl('photoOpacity', 'input', scheduleAutosave);
+  bindEl('photoBlur', 'input', scheduleAutosave);
   // Loop changes: trim handles, nudges, match-drawing, zoom handles all funnel
   // through updateTrimUI → so trigger autosave from the music track interactions.
   musicTrack.addEventListener('mouseup', scheduleAutosave);
@@ -6446,9 +6456,9 @@ window.addEventListener('touchcancel', _pinchEnd);
     }
   };
 
-  document.getElementById('zoomInBtn').addEventListener('click', function () { ZoomView.step(1); });
-  document.getElementById('zoomOutBtn').addEventListener('click', function () { ZoomView.step(-1); });
-  document.getElementById('zoomFitBtn').addEventListener('click', function () { ZoomView.fit(); });
+  bindEl('zoomInBtn', 'click', function () { ZoomView.step(1); });
+  bindEl('zoomOutBtn', 'click', function () { ZoomView.step(-1); });
+  bindEl('zoomFitBtn', 'click', function () { ZoomView.fit(); });
 
   // Header magnifier: a toggle that shows/hides the zoom pill. Turning it OFF
   // also resets to 100% so you're never left magnified with no controls. While
@@ -6694,7 +6704,13 @@ window.addEventListener('touchcancel', _pinchEnd);
     else b.remove();
   });
 
+  // The menu ships `hidden`, so at init the buttons have no width and a
+  // one-shot position leaves the pill at opacity 0 — the canvas row showed no
+  // selection until you tapped one. The shared tracker watches for the group
+  // gaining layout and places the pill then.
+  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
   function positionSlider() {
+    if (window.SkriblSegSlider) { window.SkriblSegSlider.place(seg); return; }
     const on = seg.querySelector('button.on');
     const pill = seg.querySelector('.seg-slider');
     if (!on || !pill || !on.offsetWidth) return;

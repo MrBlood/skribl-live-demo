@@ -19,6 +19,48 @@
 (function (global) {
   'use strict';
 
+  /* Captured JS errors. THE REASON THIS EXISTS: a bug reported from a phone
+   * ("share does nothing") is unreproducible without the error that caused it,
+   * and there is no console on iOS Safari without a Mac and a cable. A silent
+   * failure is almost always an exception thrown before a handler was bound —
+   * so the exception is the single most useful thing a report can carry.
+   *
+   * Installed at load, before anything else runs, so it catches failures in
+   * the editor scripts themselves. Bounded at 5: a loop that throws every
+   * frame would otherwise fill the clipboard with one repeated line. */
+  var errors = [];
+  function note(kind, msg, where) {
+    if (errors.length >= 5) return;
+    errors.push(kind + ': ' + msg + (where ? '  @ ' + where : ''));
+  }
+  global.addEventListener('error', function (e) {
+    var where = e.filename
+      ? String(e.filename).split('/').pop() + ':' + e.lineno + ':' + e.colno
+      : '';
+    note('Error', (e.message || 'unknown'), where);
+  });
+  // console.error/warn too. A missing element or a refused share now names
+  // itself through bindEl() and openShareCompose(), and those messages are
+  // more useful than the exception that follows them.
+  ['error', 'warn'].forEach(function (level) {
+    var orig = global.console && global.console[level];
+    if (!orig) return;
+    global.console[level] = function () {
+      try {
+        var parts = [];
+        for (var i = 0; i < arguments.length; i++) parts.push(String(arguments[i]));
+        var msg = parts.join(' ');
+        if (msg.indexOf('[skribl]') === 0 || level === 'error') note('console.' + level, msg.slice(0, 200), '');
+      } catch (e) { /* logging must never itself throw */ }
+      return orig.apply(global.console, arguments);
+    };
+  });
+
+  global.addEventListener('unhandledrejection', function (e) {
+    var r = e.reason;
+    note('Unhandled promise', (r && (r.message || r)) || 'unknown', '');
+  });
+
   function safe(fn, fallback) {
     try {
       var v = fn();
@@ -98,6 +140,16 @@
     lines.push('Saved Skribls: ' + safe(function () {
       return global.SkriblPosted ? global.SkriblPosted.list().length : 0;
     }, 0));
+
+    // Last, and clearly separated: this is the part worth reading first when
+    // something silently did nothing.
+    if (errors.length) {
+      lines.push('');
+      lines.push('--- JS errors (' + errors.length + ') ---');
+      for (var i = 0; i < errors.length; i++) lines.push(errors[i]);
+    } else {
+      lines.push('JS errors: none');
+    }
 
     return lines.join('\n');
   }

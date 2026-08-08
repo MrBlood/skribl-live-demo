@@ -125,6 +125,30 @@ with sync_playwright() as p:
     check("the Size and Pages block is visible",
           pg.is_visible("#exportOptions"))
 
+    # THE BUG. .seg-slider is opacity:0 until positioned, and positioning needs
+    # the button laid out. Inside a sheet that ships `hidden` that is never true
+    # at init, so a one-shot call bailed and the pill stayed invisible until an
+    # unrelated event re-ran it. The sheet opened with no selection shown on
+    # Size or Loops — visible on a phone, where layout lands later.
+    for _seg in ("exportSizeSeg", "exportLoopsSeg"):
+        pill = pg.evaluate(f"""() => {{
+          const g = document.getElementById('{_seg}');
+          const p = g.querySelector('.seg-slider');
+          const b = g.querySelector('button.on');
+          if (!p || !b) return null;
+          const pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
+          return {{ opacity: parseFloat(getComputedStyle(p).opacity),
+                   width: pr.width, btnWidth: br.width,
+                   aligned: Math.abs(pr.left - br.left) < 3 }};
+        }}""")
+        check(f"#{_seg} shows its pill as soon as the sheet opens",
+              pill and pill["opacity"] > 0.5,
+              "the pill is invisible — no selection is shown until you tap one")
+        check(f"#{_seg}'s pill sits on the selected button",
+              pill and pill["aligned"] and abs(pill["width"] - pill["btnWidth"]) < 3,
+              f"pill {pill and round(pill['width'])}px vs button "
+              f"{pill and round(pill['btnWidth'])}px")
+
     dim = pg.inner_text("#exportDimNote").strip()
     rng = pg.inner_text("#exportRangeNote").strip()
     check("the dimensions readout shows a WxH", "×" in dim, repr(dim))

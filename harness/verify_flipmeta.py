@@ -213,4 +213,57 @@ with sync_playwright() as p:
 
     b.close()
 
+print("\nSHARE — it can never fail silently")
+# THE SHAPE OF THE BUG BEING GUARDED. flip.js had 26 unguarded
+# getElementById(id).addEventListener chains. A null from any one throws at the
+# top level and aborts the rest of the file, so every binding written after it
+# never happens — and postBtn was bound near the end. That is exactly what
+# "share does nothing while everything else works" looks like from a phone.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _logs = []
+    _pg.on("console", lambda m: _logs.append(m.text))
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1300)
+
+    check("bindEl exists and is used instead of raw chained lookups",
+          _pg.evaluate("() => typeof bindEl === 'function'"),
+          "one missing element can still abort every later binding")
+
+    # Deleting an element that is bound EARLY must not stop a later binding
+    # from having happened. Reload with a node removed before scripts run.
+    _pg2 = _b.new_page(viewport={"width": 390, "height": 844})
+    _pg2.add_init_script("""
+      document.addEventListener('readystatechange', () => {
+        if (document.readyState === 'interactive') {
+          const el = document.getElementById('miSave');
+          if (el) el.remove();
+        }
+      });
+    """)
+    _errs2 = []
+    _pg2.on("pageerror", lambda e: _errs2.append(str(e)))
+    _pg2.goto(f"{BASE}/flip", wait_until="load")
+    _pg2.wait_for_timeout(1400)
+    check("removing a bound element does not throw at load",
+          not _errs2, "; ".join(_errs2[:2]))
+    check("and the share button is still wired afterwards",
+          _pg2.evaluate("() => typeof openShareCompose === 'function'"
+                        " && !!document.getElementById('postBtn')"))
+
+    # Draw, then confirm the sheet actually opens — the user-visible contract.
+    box = _pg2.locator("#pad").bounding_box()
+    _pg2.mouse.move(box["x"] + 60, box["y"] + 60)
+    _pg2.mouse.down()
+    _pg2.mouse.move(box["x"] + 150, box["y"] + 130, steps=8)
+    _pg2.mouse.up()
+    _pg2.wait_for_timeout(300)
+    _pg2.click("#postBtn")
+    _pg2.wait_for_timeout(400)
+    check("tapping share opens the compose sheet even after a missing element",
+          _pg2.is_visible("#flipShareTitle"),
+          "share did nothing — the failure this whole section exists for")
+    _b.close()
+
 summarise_and_exit()

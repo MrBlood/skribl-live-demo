@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v157"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v159"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -157,6 +157,50 @@ lose my animation?") unanswered. Both 429 messages now state the limit and that
 the work is safe. The limiter does not track when the window lifts, so the
 message cannot yet say WHEN — a `Retry-After` needs the oldest event in the
 window and is still open.
+
+**26 unguarded bindings could abort the file, and did so silently.** `flip.js`
+had 26 `document.getElementById(id).addEventListener(...)` chains with no null
+check, and `app.js` had 17. A null from ANY one throws a TypeError at the top
+level, which aborts the remainder of the script — so every binding written
+after the failure never happens. `postBtn` was bound at line 1949, after most
+of them. That is precisely the shape of "share does nothing while everything
+else works", reported from an iPhone and not reproducible here.
+
+All 43 now go through `bindEl()`, which logs and skips a missing element
+instead of throwing. The share binding also moved to the earliest point its
+handler exists, because share doing nothing is the worst failure in the app —
+it is the whole point of it. `openShareCompose()` no longer has a silent early
+return: a busy state says "Still posting…", and a missing sheet says so and
+names itself in the console.
+
+This is a fix for the CLASS of failure, not for a diagnosed line. The iPhone
+bug is still unreproduced — WebKit cannot be installed in this container — so
+`lib/report.js` also captures `console.error`/`console.warn` alongside `error`
+and `unhandledrejection`, and loads FIRST so it sees failures in the editors.
+A control that quietly stops working on a device we cannot reach now names
+itself in a report the user can copy.
+
+**Segmented controls showed no selection until you tapped one.** `.seg-slider`
+is `opacity: 0` until something positions it, and positioning needs the button
+laid out — `offsetWidth > 0`. Inside a sheet or menu that ships `hidden` that is
+never true at init, so the one-shot call bailed and the pill stayed invisible.
+Reported from a phone, where layout lands later than on desktop: Flip's export
+sheet opened with no pill on Size or Loops, and Pad's canvas row showed no
+selection at all.
+
+`app.js` had already solved this for the DYNAMICALLY built zoom/magnify groups
+with MutationObserver + ResizeObserver; the groups written directly into
+templates never got the same treatment. `static/lib/segslider.js` is that
+treatment, shared. The ResizeObserver is the one that matters — it fires when
+the group finally gains layout, i.e. when the sheet containing it is shown.
+
+**The report sheet now captures JS errors.** A bug reported from a phone
+("share does nothing") is unreproducible without the exception behind it, and
+iOS Safari has no console without a Mac and a cable. A silent failure is almost
+always an exception thrown before a handler was bound, so the exception is the
+single most useful thing a report can carry. `lib/report.js` installs
+`error` and `unhandledrejection` listeners and now LOADS FIRST, before the
+editor scripts, so it catches failures in them. Bounded at five entries.
 
 **Flip's menu had no keyboard exit, and its new scrim had no click handler.**
 It closed on an outside click and nothing else. Every other dismissible surface

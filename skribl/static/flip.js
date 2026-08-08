@@ -446,6 +446,26 @@ function render(){
   paintFrame(ctx, frame().strokes);
 }
 
+/* Bind an event without letting a missing element take the rest of the file
+ * down with it.
+ *
+ * WHY. This file had 26 unguarded `getElementById(id).addEventListener(...)`
+ * chains. A null from any ONE of them throws a TypeError at the top level,
+ * which aborts the remainder of the script — so every binding written after
+ * the failure never happens. The share button is bound near the end, which is
+ * exactly the shape of "share does nothing while everything else works".
+ *
+ * A missing element is now logged and skipped. The log matters: lib/report.js
+ * captures console output into the report sheet, so a control that quietly
+ * stops working on a device we cannot reproduce still names itself.
+ */
+function bindEl(id, ev, fn, opts){
+  const el = document.getElementById(id);
+  if(!el){ console.warn('[skribl] missing element for binding:', id, ev); return null; }
+  el.addEventListener(ev, fn, opts);
+  return el;
+}
+
 /* ---- drawing (pad-format points, with timestamps for future replay) ---- */
 function pos(e){ const r=pad.getBoundingClientRect(); return { x:(e.clientX-r.left)*(CW/r.width), y:(e.clientY-r.top)*(CH/r.height) }; }
 
@@ -628,9 +648,9 @@ window.addEventListener('touchcancel', _pinchEnd);
     setPct(pct){ const s=wrapSize(); const target=Math.min(MAX,Math.max(MIN,(pct||0)/100)); this.zoomAt(target/zoom, s.w/2, s.h/2); paint(true); },
     reclamp(){ paint(false); }
   };
-  document.getElementById('zoomInBtn').addEventListener('click',()=>ZoomView.step(1));
-  document.getElementById('zoomOutBtn').addEventListener('click',()=>ZoomView.step(-1));
-  document.getElementById('zoomFitBtn').addEventListener('click',()=>ZoomView.fit());
+  bindEl('zoomInBtn', 'click',()=>ZoomView.step(1));
+  bindEl('zoomOutBtn', 'click',()=>ZoomView.step(-1));
+  bindEl('zoomFitBtn', 'click',()=>ZoomView.fit());
   const magnifyBtn=document.getElementById('magnifyBtn');
   function setMagnify(on){ magnifyOn=on; hud.hidden=!on; if(magnifyBtn){ magnifyBtn.classList.toggle('active',on); magnifyBtn.setAttribute('aria-pressed', on?'true':'false'); } if(!on) ZoomView.fit(); }
   if(magnifyBtn) magnifyBtn.addEventListener('click',()=>setMagnify(!magnifyOn));
@@ -1371,15 +1391,25 @@ function showShareResult(url){
    asked for a title and then told there is nothing to share. shareSkribl()
    keeps its own check because it is still reachable directly. ---------------*/
 function openShareCompose(){
-  if(sharing) return;
+  // Never fail silently. Every early return below used to leave the user
+  // tapping a button that did nothing, with no way to tell whether the app was
+  // busy, refusing, or broken.
+  if(sharing){ chip('Still posting…'); return; }
   const empty = frames.length===1 && !frames[0].strokes.length && !bgImage;
   if(empty){ chip('Draw something to share'); return; }
   if(playing) stop();
   const m=document.getElementById('flipShare');
   const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
+  if(!m){
+    // The sheet is missing entirely. Say so rather than appear dead, and name
+    // it in the console so lib/report.js carries it off the device.
+    console.error('[skribl] #flipShare is missing — cannot open the share sheet');
+    chip('Share is unavailable — please reload');
+    return;
+  }
   if(compose) compose.hidden=false;
   if(result) result.hidden=true;
-  if(m) m.hidden=false;
+  m.hidden=false;
   const t=document.getElementById('flipShareTitle');
   if(t) setTimeout(()=>{ try{ t.focus(); }catch(_){ } }, 30);
 }
@@ -1397,9 +1427,9 @@ if(_shareCancel) _shareCancel.addEventListener('click',()=>{ document.getElement
 const _shareTitle=document.getElementById('flipShareTitle');
 if(_shareTitle) _shareTitle.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); shareSkribl(); } });
 
-document.getElementById('flipShareClose').addEventListener('click',()=>{ document.getElementById('flipShare').hidden=true; });
-document.getElementById('flipShare').addEventListener('click',e=>{ if(e.target.id==='flipShare') e.currentTarget.hidden=true; });
-document.getElementById('flipShareCopy').addEventListener('click',async()=>{
+bindEl('flipShareClose', 'click',()=>{ document.getElementById('flipShare').hidden=true; });
+bindEl('flipShare', 'click',e=>{ if(e.target.id==='flipShare') e.currentTarget.hidden=true; });
+bindEl('flipShareCopy', 'click',async()=>{
   const url=document.getElementById('flipShareUrl').value;
   try{ await navigator.clipboard.writeText(url); chip('Link copied'); }
   catch(_){ const inp=document.getElementById('flipShareUrl'); inp.focus(); inp.select(); try{ document.execCommand('copy'); chip('Link copied'); }catch(e){ chip('Select the link and copy'); } }
@@ -1855,7 +1885,7 @@ function attachSegSlider(group){ if(!group||group.__segAttached) return; group._
   bar.addEventListener('click',(e)=>{ const b=e.target.closest('.zoom-mag-btn'); if(!b) return; b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; } if(b.dataset.mag) zoomMag=parseFloat(b.dataset.mag)||1; updateTrimUI(); });
   const style=document.createElement('style'); style.textContent='.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}.zoom-mag-group{position:relative;overflow:hidden;display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:3px}.zoom-mag-btn{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:color .12s}.zoom-mag-btn:hover{color:#c8cede}.zoom-mag-btn.active{color:#fff}'; document.head.appendChild(style);
 })();
-document.getElementById('fineTuneToggle').addEventListener('click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-mag-group').forEach(g=>positionSegSlider(g)); }); } });
+bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-mag-group').forEach(g=>positionSegSlider(g)); }); } });
 
 // nudge fine-tune
 const nudgeSteps=[0.01,0.02,0.05,0.1]; let nudgeStepIdx=3;
@@ -1946,9 +1976,13 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !moreMenu.hidden
 // tapping the dim area dismisses it, which the document handler above only
 // achieves incidentally.
 if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
-document.getElementById('postBtn').addEventListener('click', openShareCompose);
-document.getElementById('miSave').addEventListener('click',()=>{ closeMenu(); saveDraft(); });
-document.getElementById('miLoad').addEventListener('click',()=>{ closeMenu(); draftInput.click(); });
+// Bound as early as the function exists, not near the end of the file. Even
+// with bindEl() guarding each lookup, a throw ANYWHERE above here would still
+// have prevented this line from running — and share doing nothing is the worst
+// failure in the app, because it is the whole point of it.
+bindEl('postBtn', 'click', openShareCompose);
+bindEl('miSave', 'click',()=>{ closeMenu(); saveDraft(); });
+bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
 /* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to
    Flip's existing encoders. The menu's "Export…" opens it; each format runs the
    same proven export fn (which keeps its own #flipExport progress overlay). The
@@ -2014,7 +2048,16 @@ function positionSeg(seg){
 }
 // Was hardcoded to the Size segment; the Loops segment needs the identical
 // treatment, and a second copy of the same six lines is how they drift.
-function positionExSeg(){ positionSeg(exSizeSeg); positionSeg(exLoopsSeg); }
+// Delegates to the shared tracker: a one-shot call cannot work for a control
+// inside a sheet that ships `hidden`, because its buttons have no width until
+// the sheet is shown, and positionSeg() bails in that case leaving the pill at
+// opacity 0. Kept as a named function so every existing call site stands.
+const _segTrack = (window.SkriblSegSlider && window.SkriblSegSlider.track) || null;
+function positionExSeg(){
+  if(_segTrack){ _segTrack(exSizeSeg); _segTrack(exLoopsSeg); _segTrack(canvasSegEl); return; }
+  positionSeg(exSizeSeg); positionSeg(exLoopsSeg);
+}
+const canvasSegEl = document.getElementById('canvasSeg');
 function syncExportOptions(){
   const n=frames.length;
   if(!exToEl||!exFromEl) return;
@@ -2096,14 +2139,14 @@ if(exLoopsSeg) exLoopsSeg.addEventListener('click', e=>{
 });
 
 function closeExportSheet(){ exportOverlay.classList.remove('open'); _exCloseT=setTimeout(()=>{ exportOverlay.hidden=true; },350); }
-document.getElementById('miExport').addEventListener('click', openExportSheet);
+bindEl('miExport', 'click', openExportSheet);
 exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')) closeExportSheet(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !exportOverlay.hidden) closeExportSheet(); });
 const _exHandle = exportSheet ? exportSheet.querySelector('.menu-handle') : null;
 if(_exHandle) _exHandle.addEventListener('click', e=>{ e.stopPropagation(); closeExportSheet(); });
-document.getElementById('exportPng').addEventListener('click',()=>{ closeExportSheet(); exportPNG(); });
-document.getElementById('exportVideo').addEventListener('click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportVideo(); });
-document.getElementById('exportGif').addEventListener('click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportGIF(); });
+bindEl('exportPng', 'click',()=>{ closeExportSheet(); exportPNG(); });
+bindEl('exportVideo', 'click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportVideo(); });
+bindEl('exportGif', 'click',e=>{ if(e.currentTarget.disabled) return; closeExportSheet(); exportGIF(); });
 (function(){ const gifToggle=document.getElementById('exportGifToggle'); if(!gifToggle) return;
   gifToggle.querySelectorAll('.gif-seg-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ gifBgMode=btn.getAttribute('data-gif-bg')||'color'; gifToggle.querySelectorAll('.gif-seg-btn').forEach(b=>b.classList.toggle('active', b===btn)); }); });
   const gifSeg=gifToggle.querySelector('.gif-seg'); if(gifSeg) attachSegSlider(gifSeg);
@@ -2127,8 +2170,8 @@ function redoStroke(){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener('click',()=>{ if(!playing) setTool(b.dataset.tool); }));
-document.getElementById('undo').addEventListener('click',()=>{ disarmAll(); undoStroke(); });
-document.getElementById('redo').addEventListener('click',()=>{ disarmAll(); redoStroke(); });
+bindEl('undo', 'click',()=>{ disarmAll(); undoStroke(); });
+bindEl('redo', 'click',()=>{ disarmAll(); redoStroke(); });
 /* Delete-all lives in the draw menu now; destructive → same two-tap arm as frame delete. */
 // CLEAR SEMANTICS (review #5/#9), stated once here because the old code did
 // neither thing consistently: **Clear removes PAGES ONLY.** Music, background
@@ -2147,7 +2190,7 @@ function invalidateClearUndo(){
   clearFramesBackup=null;
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=true;
 }
-document.getElementById('clear').addEventListener('click',e=>{
+bindEl('clear', 'click',e=>{
   if(playing) return;
   const empty = frames.length===1 && frames[0].strokes.length===0;
   if(empty) return;                                  // nothing to delete
@@ -2160,7 +2203,7 @@ document.getElementById('clear').addEventListener('click',e=>{
   scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
 });
-document.getElementById('clearUndo').addEventListener('click',()=>{
+bindEl('clearUndo', 'click',()=>{
   if(!clearFramesBackup) return;
   disarmAll();
   frames = clearFramesBackup.frames.map(deepCopy);
@@ -2245,7 +2288,7 @@ window.addEventListener('keydown', e=>{
   if(e.key==='p' || e.key==='P'){ setTool('pen'); }
   if(e.key==='e' || e.key==='E'){ setTool('eraser'); }
 });
-document.getElementById('flipExportCancel').addEventListener('click',()=>{ _exportAbort=true; });
+bindEl('flipExportCancel', 'click',()=>{ _exportAbort=true; });
 
 /* ---- fps segmented control ---- */
 const fpsGroup=document.getElementById('fps');
@@ -2262,7 +2305,7 @@ let helpCloseTimer=null;
 function openHelpDrawer(){ clearTimeout(helpCloseTimer); document.documentElement.classList.add('help-open'); helpDrawer.hidden=false; helpDrawer.classList.remove('closing'); requestAnimationFrame(()=>helpDrawer.classList.add('open')); }
 function closeHelpDrawer(){ clearTimeout(helpCloseTimer); if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); helpDrawer.classList.add('closing'); helpDrawer.classList.remove('open');
   helpCloseTimer=setTimeout(()=>{ helpDrawer.hidden=true; helpDrawer.classList.remove('closing'); document.documentElement.classList.remove('help-open'); }, 250); }
-document.getElementById('miInfo').addEventListener('click',()=>{ closeMenu(); openHelpDrawer(); });
+bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 helpClose.addEventListener('click', closeHelpDrawer);
 helpBackdrop.addEventListener('click', closeHelpDrawer);
 window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !helpDrawer.hidden) closeHelpDrawer(); });
