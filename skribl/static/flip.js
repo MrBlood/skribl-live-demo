@@ -652,7 +652,15 @@ window.addEventListener('touchcancel', _pinchEnd);
   bindEl('zoomOutBtn', 'click',()=>ZoomView.step(-1));
   bindEl('zoomFitBtn', 'click',()=>ZoomView.fit());
   const magnifyBtn=document.getElementById('magnifyBtn');
-  function setMagnify(on){ magnifyOn=on; hud.hidden=!on; if(magnifyBtn){ magnifyBtn.classList.toggle('active',on); magnifyBtn.setAttribute('aria-pressed', on?'true':'false'); } if(!on) ZoomView.fit(); }
+  function setMagnify(on){
+    // The button zooms the CENTRE. Aiming it needs scroll or space-drag, which
+    // lived only in the help drawer under a separate heading — findable only if
+    // you already knew to look. Shown once, the first time magnify is enabled.
+    if(on && window.SkriblHints){
+      window.SkriblHints.show('magnify-pan',
+        'Zoomed in. Scroll — or hold Space and drag — to move to the part you want.');
+    }
+    magnifyOn=on; hud.hidden=!on; if(magnifyBtn){ magnifyBtn.classList.toggle('active',on); magnifyBtn.setAttribute('aria-pressed', on?'true':'false'); } if(!on) ZoomView.fit(); }
   if(magnifyBtn) magnifyBtn.addEventListener('click',()=>setMagnify(!magnifyOn));
   // click the % to type an exact zoom
   const valEl=document.getElementById('zoomVal'); valEl.title='Click to type a zoom %';
@@ -1985,7 +1993,8 @@ const moreScrim=document.getElementById('moreScrim');
 window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : null;
 { const _mi=document.getElementById('miPosted');
   if(_mi) _mi.addEventListener('click', ()=>{ closeMenu(); if(window._skriblPostedUI) window._skriblPostedUI.open(); }); }
-function openMenu(){ moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
+function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
+  moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
 function closeMenu(){ moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
@@ -2002,6 +2011,30 @@ if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
 // with bindEl() guarding each lookup, a throw ANYWHERE above here would still
 // have prevented this line from running — and share doing nothing is the worst
 // failure in the app, because it is the whole point of it.
+// Tips toggle. Turning them back ON also forgets what has been seen, or the
+// switch would silently do nothing for anyone who had already dismissed them.
+(function(){
+  const seg=document.getElementById('hintSeg');
+  if(!seg || !window.SkriblHints) return;
+  function sync(){
+    const on=window.SkriblHints.isEnabled();
+    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', (b.dataset.hints==='on')===on));
+    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  }
+  seg.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.hints==='on') window.SkriblHints.reset();
+    else window.SkriblHints.setEnabled(false);
+    sync();
+  });
+  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  // Re-read on every open, not once at load. The stored state can change from
+  // anywhere — another tab, a reset — and a switch showing the opposite of
+  // what is stored is worse than no switch.
+  window._skriblSyncHintToggle = sync;
+  sync();
+})();
+
 bindEl('postBtn', 'click', openShareCompose);
 bindEl('miSave', 'click',()=>{ closeMenu(); saveDraft(); });
 bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
@@ -2373,3 +2406,6 @@ window.addEventListener('load', ()=>{ sizeStage(); positionSeg(); positionToolSl
 // Report sheet — shared via lib/report.js so the two editors collect the same
 // context. Null-safe: without the lib the menu item simply does nothing.
 if (window.SkriblReport) window.SkriblReport.init();
+
+// Styled tooltips. Native `title` cannot be rounded; this swaps them out.
+if (window.SkriblTooltip) window.SkriblTooltip.init();

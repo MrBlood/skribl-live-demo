@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v161"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v162"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -157,6 +157,33 @@ lose my animation?") unanswered. Both 429 messages now state the limit and that
 the work is safe. The limiter does not track when the window lifts, so the
 message cannot yet say WHEN — a `Retry-After` needs the oldest event in the
 window and is still open.
+
+**Tooltips were native, patchy, and unstyleable.** 125 buttons across the
+templates, 33 with a `title` — and the export, music and image drawers had
+none at all. A native tooltip also cannot be styled: not the corners, not the
+colour, not the delay. It is operating-system chrome, so rounding one means
+not using it.
+
+`static/lib/tooltip.js` moves every `title` to `data-tip`, removes the title
+(leaving it shows BOTH tooltips, ours at once and the browser's a second
+later), and draws a rounded bubble that flips below when there is no room above
+and clamps to the window. Hover AND keyboard focus, because a tooltip only
+reachable with a mouse is a mouse decoration. `aria-label` is left alone and
+`aria-describedby` is used where there is none, so the text is not
+sighted-only. Suppressed entirely on coarse pointers: there is no hover on a
+phone, and a tooltip there fires on tap and covers what you just pressed.
+
+**First-use hints, because a tooltip cannot teach a gesture.** The magnifier
+zooms the CENTRE; aiming it needs scroll or space-drag, which was documented
+only in the help drawer under a SEPARATE heading — findable only if you already
+knew to look. `static/lib/hints.js` shows one short toast the first time such a
+control is used, once ever, persisted in localStorage.
+
+**Turning tips back on also forgets what has been seen.** Otherwise the switch
+silently does nothing for anyone who has already dismissed them, which is a
+setting that lies. The toggle also re-reads the stored state every time the
+menu opens rather than once at load, because a switch showing the opposite of
+what is stored is worse than no switch — `verify_tips.py` caught exactly that.
 
 **The drawing surface had no findable edge.** `#pad`'s border was
 `--hairline-strong` — `rgba(255,255,255,.09)`, about 4% from the page behind

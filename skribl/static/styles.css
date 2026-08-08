@@ -3963,3 +3963,50 @@ body.player-mode #canvas {
 .report-actions { display: flex; gap: 8px; padding: 0 14px 12px; }
 .report-actions .panel-btn { flex: 1 1 0; text-align: center; }
 .report-primary { background: var(--accent); border-color: transparent; color: #fff; }
+
+/* ---- tooltips -------------------------------------------------------------
+   A native `title` tooltip cannot be styled — not the corners, not the colour,
+   not the delay. It is OS chrome. lib/tooltip.js moves every title to data-tip
+   and draws this instead. Suppressed entirely on coarse pointers, where there
+   is no hover and a "tooltip" would fire on tap and cover what you pressed. */
+.skribl-tip {
+  position: fixed; z-index: 400; pointer-events: none;
+  max-width: 260px; padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--surface-control-hover);
+  border: 1px solid var(--hairline-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
+  font-size: 12px; line-height: 1.45; text-align: center;
+  opacity: 0; transform: translateY(3px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.skribl-tip.below { transform: translateY(-3px); }
+.skribl-tip.in { opacity: 1; transform: translateY(0); }
+.skribl-tip[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .skribl-tip { transition: none; }
+}
+
+/* ---- first-use hints ------------------------------------------------------
+   A tooltip says what a control is; a hint says how to drive it, once. Sits
+   above the bottom toolbar rather than centred, so it never covers the canvas
+   the hint is telling you about. */
+.skribl-hint {
+  position: fixed; z-index: 380;
+  left: 50%; bottom: 96px; transform: translate(-50%, 8px);
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--surface-control-hover);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  color: var(--text-primary);
+  font-size: 12.5px; line-height: 1.5; text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.skribl-hint.in { opacity: 1; transform: translate(-50%, 0); }
+.skribl-hint[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }

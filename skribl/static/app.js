@@ -6789,3 +6789,6 @@ window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : 
 // Report sheet — shared via lib/report.js so the two editors collect the same
 // context. Null-safe: without the lib the menu item simply does nothing.
 if (window.SkriblReport) window.SkriblReport.init();
+
+// Styled tooltips. Native `title` cannot be rounded; this swaps them out.
+if (window.SkriblTooltip) window.SkriblTooltip.init();

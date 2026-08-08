@@ -96,7 +96,7 @@
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
-      <button type="button" class="tool-open magnify-tool" id="magnifyBtn" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+      <button type="button" class="tool-open magnify-tool" id="magnifyBtn" title="Magnify &mdash; then scroll, or hold Space and drag, to move around" aria-label="Toggle magnify controls" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
       <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
       <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
     </div>
@@ -136,6 +136,12 @@
       <button type="button" class="flip-menu-item" id="miInfo" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg></span><span class="mi-tx">How Flip works</span></button>
       <button type="button" class="flip-menu-item" id="miReport" role="menuitem" data-skribl-report><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L4 20l1.1-4.3A8.4 8.4 0 1 1 21 11.5z"/><path d="M12 8v4M12 15.5v.01"/></svg></span><span class="mi-tx">Report a problem</span></button>
       <div class="flip-menu-sep"></div>
+      <div class="flip-menu-row">
+        <span class="fm-label">Tips</span>
+        {# Reads "Tips: On/Off" rather than a bare switch: a toggle with no
+           state visible until you interact with it is a guess. #}
+        <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
+      </div>
       <div class="flip-menu-row">
         <span class="fm-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic" class="on">4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>
@@ -233,6 +239,8 @@
   <script src="{{ skribl_asset('lib/audioloop.js') }}"></script>
   <script src="{{ skribl_asset('lib/report.js') }}"></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}"></script>
+  <script src="{{ skribl_asset('lib/tooltip.js') }}"></script>
+  <script src="{{ skribl_asset('lib/hints.js') }}"></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}"></script>
   <script src="{{ skribl_asset('lib/posted.js') }}"></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}"></script>

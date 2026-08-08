@@ -18,7 +18,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     <span id="musicBtnLabel">Add music</span>
     <button type="button" id="musicToggle" class="layer-toggle on" role="switch" aria-checked="true" aria-label="Toggle music on or off"><span class="layer-toggle-knob"></span></button>
-    <button type="button" id="musicRemove" class="dropzone-remove" hidden>Remove</button>
+    <button type="button" id="musicRemove" class="dropzone-remove" hidden title="Remove the track">Remove</button>
   </div>
   {% if kind != 'flip' -%}
   <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" style="display:none">
