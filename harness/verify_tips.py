@@ -91,6 +91,52 @@ with sync_playwright() as p:
           "space" in (pg.get_attribute("#magnifyBtn", "data-tip") or "").lower(),
           pg.get_attribute("#magnifyBtn", "data-tip"))
 
+    print("\nTOOLTIPS — coverage, counted rather than assumed")
+    # THE ACTUAL BUG. The first pass was keyed by element id, and the two
+    # surfaces name the SAME controls differently — Flip has musicBtn/imageBtn,
+    # Pad has musicOpenBtn/imageOpenBtn — so Flip got tooltips and Pad got
+    # none. Two more (addcopy, addblank) are built in flip.js, not the
+    # template, so no template-wide pass could reach them at all.
+    #
+    # A list of ids to check would have the same blind spot as the pass that
+    # created the gap. This COUNTS what is on screen instead.
+    # ICON-ONLY controls only. A tooltip on a button that already reads "Save
+    # draft" or "Transparent" is noise, and noise is what makes people stop
+    # reading tooltips at all — the opposite of the goal. The contract is: if a
+    # control shows no words, it must say what it does on hover.
+    MISSING = """() => {
+      const out = [];
+      document.querySelectorAll('button, a[href], input[type=range]').forEach(el => {
+        if (el.getAttribute('data-tip')) return;
+        const r = el.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) return;
+        // Visible text of its own is a label; a tooltip would just repeat it.
+        const text = (el.textContent || '').replace(/\s+/g, '');
+        if (text.length > 0) return;
+        out.push(el.id || el.getAttribute('aria-label') || '(unnamed icon button)');
+      });
+      return out;
+    }"""
+    for _surface, _path in (("Flip", "/flip"), ("Pad", "/skribl-pad")):
+        cp = b.new_page(viewport={"width": 1200, "height": 900})
+        cp.goto(BASE + _path, wait_until="load")
+        cp.wait_for_timeout(1400)
+        missing = cp.evaluate(MISSING)
+        check(f"{_surface}: every icon-only control has a tooltip",
+              not missing, "no tooltip on: " + ", ".join(missing[:8]))
+
+        # Open the drawers too — most controls are behind one, and checking
+        # only the resting screen is how the drawers ended up with zero.
+        cp.evaluate("""() => {
+          document.querySelectorAll('.drawer, .tool-drawer, .menu-overlay')
+            .forEach(d => { d.hidden = false; d.classList.add('open'); });
+        }""")
+        cp.wait_for_timeout(500)
+        missing2 = cp.evaluate(MISSING)
+        check(f"{_surface}: icon-only controls in the drawers have tooltips too",
+              not missing2, "no tooltip on: " + ", ".join(missing2[:8]))
+        cp.close()
+
     print("\nTOOLTIPS — not on touch")
     touch = b.new_context(viewport={"width": 390, "height": 844},
                           has_touch=True, is_mobile=True)

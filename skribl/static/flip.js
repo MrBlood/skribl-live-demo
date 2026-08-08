@@ -821,7 +821,11 @@ function buildStrip(){
     strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
   });
   const col=document.createElement('div'); col.className='addcol';
-  col.innerHTML='<button class="addbtn" id="addcopy">＋ Page</button><button class="addbtn mini" id="addblank">＋ Blank</button>'
+  // Built here rather than in the template, which is why a template-wide
+  // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
+  // MutationObserver, so a title written here is picked up like any other.
+  col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw">＋ Page</button>'
+    +'<button class="addbtn mini" id="addblank" title="Add an empty page">＋ Blank</button>'
     + (pageClip ? '<button class="addbtn mini" id="addpaste">＋ Paste</button>' : '');
   strip.appendChild(col);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(!playing) addFrame(true); });

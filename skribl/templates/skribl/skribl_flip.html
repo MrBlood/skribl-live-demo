@@ -44,8 +44,8 @@
     <div class="tune-shell" id="tuneShell" aria-hidden="true">
       <div class="tune-clip">
         <div class="tune-panel" id="tunePanel">
-    <div class="tune-row"><span class="tune-label"><span class="tune-name">Speed</span><span class="tune-hint">frames per second</span></span><span class="fps-group" title="Playback speed — frames per second"><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6">6</button><button data-fps="12" class="on">12</button><button data-fps="24">24</button></span></span></div>
-          <div class="tune-row" id="tuneOnionRow"><span class="tune-label"><span class="tune-name">Onion skin</span><span class="tune-hint">pages showing behind</span></span><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on">1</button><button type="button" data-depth="2">2</button><button type="button" data-depth="3">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
+    <div class="tune-row"><span class="tune-label"><span class="tune-name">Speed</span><span class="tune-hint">frames per second</span></span><span class="fps-group" title="Playback speed — frames per second"><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6" title="6 pages a second &mdash; slow and deliberate">6</button><button data-fps="12" class="on" title="12 pages a second &mdash; the usual choice">12</button><button data-fps="24" title="24 pages a second &mdash; smooth, and needs more pages">24</button></span></span></div>
+          <div class="tune-row" id="tuneOnionRow"><span class="tune-label"><span class="tune-name">Onion skin</span><span class="tune-hint">pages showing behind</span></span><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on" title="Show 1 page beneath">1</button><button type="button" data-depth="2" title="Show 2 pages beneath">2</button><button type="button" data-depth="3" title="Show 3 pages beneath">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
         </div>
       </div>
     </div>
@@ -86,10 +86,10 @@
       </div>
       <div class="tool-group" id="toolGroup" title="Pen / Eraser">
         <div class="tool-slider" id="toolSlider"></div>
-        <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen">
+        <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen" title="Draw — shortcut P">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
           <span class="tool-btn-label">Pen</span>
-        </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser">
+        </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase, at three times the brush size — shortcut E">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
           <span class="tool-btn-label">Eraser</span>
         </button>

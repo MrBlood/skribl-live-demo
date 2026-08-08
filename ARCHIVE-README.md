@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v162"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v163"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -172,6 +172,23 @@ reachable with a mouse is a mouse decoration. `aria-label` is left alone and
 `aria-describedby` is used where there is none, so the text is not
 sighted-only. Suppressed entirely on coarse pointers: there is no hover on a
 phone, and a tooltip there fires on tap and covers what you just pressed.
+
+**The first tooltip pass covered Flip and missed Pad entirely**, because it
+was keyed by element id and the two surfaces name the SAME controls
+differently: Flip has `musicBtn`/`imageBtn`, Pad has `musicOpenBtn`/
+`musicOpenBtn`. Two more, `addcopy` and `addblank`, are built in `flip.js`
+rather than a template, so no template-wide pass could reach them at all.
+
+The durable fix is not the missing tooltips, it is that nothing counted them.
+`verify_tips.py` now walks every visible control on both surfaces, opens the
+drawers, and fails naming what it found — a list of ids to check would carry
+the same blind spot as the pass that created the gap.
+
+**The contract is ICON-ONLY controls.** The first version of that check
+demanded a tooltip on everything and flagged buttons that already read "Save
+draft" and "Transparent". A tooltip repeating a visible label is noise, and
+noise is what makes people stop reading tooltips at all. If a control shows no
+words, it must say what it does on hover; if it shows words, it must not.
 
 **First-use hints, because a tooltip cannot teach a gesture.** The magnifier
 zooms the CENTRE; aiming it needs scroll or space-drag, which was documented
