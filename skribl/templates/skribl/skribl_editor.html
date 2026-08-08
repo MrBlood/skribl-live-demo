@@ -92,6 +92,14 @@
          same ids as Flip's row, reading the same table from lib/canvassizes.js.
          The buttons' labels are filled in from that table at runtime so a preset
          cannot be renamed here and left stale. #}
+      {# The SAME setting as Flip's, not a second one: lib/hints.js stores it
+         under a single key for the whole app, so off here is off there. It is
+         shown on both surfaces because a user on Pad should not have to open
+         Flip to turn tips off. #}
+      <div class="menu-row">
+        <span class="menu-row-label">Tips</span>
+        <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
+      </div>
       <div class="menu-row">
         <span class="menu-row-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic"></button><button type="button" data-size="wide"></button><button type="button" data-size="square"></button><button type="button" data-size="tall"></button></span>

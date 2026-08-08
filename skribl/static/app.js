@@ -1494,6 +1494,10 @@ let menuCloseTimer = null;
 function openMenu() {
   clearTimeout(menuCloseTimer);
   updateClearVisibility();
+  // Re-read the stored state on every open. It is shared with Flip and can be
+  // changed in another tab, and a switch showing the opposite of what is
+  // stored is worse than no switch.
+  if (window._skriblSyncHintToggle) window._skriblSyncHintToggle();
   menuOverlay.hidden = false;
   requestAnimationFrame(() => menuOverlay.classList.add('open'));
 }
@@ -6465,6 +6469,12 @@ window.addEventListener('touchcancel', _pinchEnd);
   // off, pinch / wheel / Space-drag all no-op (they check ZoomView.enabled()).
   const magnifyBtn = document.getElementById('magnifyBtn');
   function setMagnify(on) {
+    // Same hint key as Flip: this is one behaviour across two surfaces, so
+    // being taught it on Pad should not mean being taught it again on Flip.
+    if (on && window.SkriblHints) {
+      window.SkriblHints.show('magnify-pan',
+        'Zoomed in. Scroll — or hold Space and drag — to move to the part you want.');
+    }
     magnifyOn = on;
     hud.hidden = !on;
     if (magnifyBtn) {
@@ -6789,6 +6799,30 @@ window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : 
 // Report sheet — shared via lib/report.js so the two editors collect the same
 // context. Null-safe: without the lib the menu item simply does nothing.
 if (window.SkriblReport) window.SkriblReport.init();
+
+// Tips toggle — the SAME stored setting as Flip's, surfaced here too.
+(function(){
+  const seg = document.getElementById('hintSeg');
+  if (!seg || !window.SkriblHints) return;
+  function sync() {
+    const on = window.SkriblHints.isEnabled();
+    seg.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('on', (b.dataset.hints === 'on') === on));
+    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  }
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    // Turning them back ON also forgets what has been seen, or the switch
+    // does nothing for anyone who already dismissed every hint.
+    if (b.dataset.hints === 'on') window.SkriblHints.reset();
+    else window.SkriblHints.setEnabled(false);
+    sync();
+  });
+  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  window._skriblSyncHintToggle = sync;
+  sync();
+})();
 
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();

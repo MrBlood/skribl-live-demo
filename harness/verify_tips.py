@@ -204,6 +204,66 @@ with sync_playwright() as p:
     check("and the switch moves to Off",
           hp.evaluate("() => document.querySelector"
                       "(\"#hintSeg button[data-hints='off']\").classList.contains('on')"))
+    print("\nHINTS — one setting, surfaced on both editors")
+    # It is the SAME setting, not two. lib/hints.js stores it under one key for
+    # the whole app, so off on Pad is off on Flip. Both surfaces show the
+    # control because a user on Pad should not have to open Flip to reach it —
+    # and two switches over one setting is only confusing if they can disagree.
+    ctx = b.new_context(viewport={"width": 1100, "height": 900})
+    fp = ctx.new_page()
+    fp.goto(f"{BASE}/flip", wait_until="load")
+    fp.wait_for_timeout(1400)
+    fp.click("#moreBtn")
+    fp.wait_for_timeout(400)
+
+    heights = fp.evaluate("() => ({"
+                          " tips: document.getElementById('hintSeg').getBoundingClientRect().height,"
+                          " canvas: document.getElementById('canvasSeg').getBoundingClientRect().height })")
+    check("the Tips and Canvas switches are the same height",
+          abs(heights["tips"] - heights["canvas"]) < 1.5,
+          f"tips {heights['tips']} vs canvas {heights['canvas']} — two segmented "
+          "controls stacked at different heights read as a mistake")
+
+    fp.click("#hintSeg button[data-hints='off']")
+    fp.wait_for_timeout(300)
+    check("turning tips off on Flip stores it",
+          fp.evaluate("() => window.SkriblHints.isEnabled()") is False)
+
+    pd = ctx.new_page()
+    pd.goto(f"{BASE}/skribl-pad", wait_until="load")
+    pd.wait_for_timeout(1400)
+    pd.click("#menuBtn")
+    pd.wait_for_timeout(400)
+    check("the Tips control is in Pad's menu too", pd.is_visible("#hintSeg"),
+          "a user on Pad would have to open Flip to turn tips off")
+    check("Pad reads OFF because Flip set it",
+          pd.evaluate("() => document.querySelector"
+                      "(\"#hintSeg button[data-hints='off']\").classList.contains('on')"),
+          "the two switches disagree — that IS the confusing version")
+    check("and Pad agrees with the stored value",
+          pd.evaluate("() => window.SkriblHints.isEnabled()") is False)
+
+    # Pad's magnifier centres exactly as Flip's does, so it earns the same hint
+    # — under the same key, so learning it once is learning it everywhere.
+    pd.evaluate("() => { window.SkriblHints.reset(); }")
+    pd.reload(wait_until="load")
+    pd.wait_for_timeout(1400)
+    pd.click("#magnifyBtn")
+    pd.wait_for_timeout(500)
+    check("Pad shows the magnify hint too", pd.is_visible(".skribl-hint"),
+          "Pad's magnifier centres the same way and said nothing about it")
+
+    fp2 = ctx.new_page()
+    fp2.goto(f"{BASE}/flip", wait_until="load")
+    fp2.wait_for_timeout(1400)
+    fp2.click("#magnifyBtn")
+    fp2.wait_for_timeout(500)
+    check("and Flip does NOT teach it again after Pad did",
+          fp2.evaluate("() => { const h = document.querySelector('.skribl-hint');"
+                       " return !(h && h.classList.contains('in')); }"),
+          "the same lesson twice, once per surface")
+    ctx.close()
+
     hp.close()
     b.close()
 

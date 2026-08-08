@@ -3873,7 +3873,8 @@ body.player-mode #canvas {
   font-weight: 500;
   color: var(--text-secondary);
 }
-.menu-row .canvas-seg { --seg-h: 26px; margin-left: auto; }
+.menu-row .canvas-seg, .menu-row .hint-seg { --seg-h: 26px; margin-left: auto; }
+.menu-row .hint-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 .menu-row .canvas-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 .menu-row-note {
   padding: 0 14px 8px;

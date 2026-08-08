@@ -515,8 +515,11 @@
   font-weight: 700;
   color: var(--text-secondary);
 }
-.canvas-seg { --seg-h: 26px; margin-left: auto; }
-.canvas-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
+/* Tips matches Canvas exactly — they sit one above the other, and two
+   segmented controls at different heights in the same menu reads as a mistake
+   rather than a hierarchy. */
+.canvas-seg, .hint-seg { --seg-h: 26px; margin-left: auto; }
+.canvas-seg button, .hint-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 
 /* --- v130: playback settings drawer ---------------------------------------
    Slides down from the header that opens it. The animation is on

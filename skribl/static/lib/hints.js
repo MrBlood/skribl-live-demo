@@ -93,6 +93,17 @@
     return true;
   }
 
+  /* Two tabs, one setting. The store is already shared between Pad and Flip —
+   * a single key, not one per surface — so turning tips off in one place turns
+   * them off everywhere. Without this listener the OTHER tab keeps showing the
+   * old position until it is reopened, which looks like the switch not working.
+   */
+  global.addEventListener('storage', function (e) {
+    if (e && (e.key === OFF_KEY || e.key === SEEN_KEY)) {
+      if (typeof global._skriblSyncHintToggle === 'function') global._skriblSyncHintToggle();
+    }
+  });
+
   global.SkriblHints = {
     show: show, hide: hide, reset: reset,
     isEnabled: isEnabled, setEnabled: setEnabled

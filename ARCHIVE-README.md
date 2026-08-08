@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v163"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v164"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -195,6 +195,19 @@ zooms the CENTRE; aiming it needs scroll or space-drag, which was documented
 only in the help drawer under a SEPARATE heading — findable only if you already
 knew to look. `static/lib/hints.js` shows one short toast the first time such a
 control is used, once ever, persisted in localStorage.
+
+**ONE hints setting, surfaced on both editors.** `lib/hints.js` stores it under
+a single key for the whole app, so off on Pad is off on Flip — and the seen-list
+is shared too, meaning a hint read on one surface never reappears on the other.
+Both menus show the control, because a user on Pad should not have to open Flip
+to turn tips off. Two switches over one setting is only confusing if they can
+disagree; a `storage` listener keeps two open tabs in step, and each menu
+re-reads on open.
+
+Pad's magnifier centres exactly as Flip's does, so it now shows the same hint
+under the same key. `verify_tips.py` asserts the cross-surface behaviour
+directly: turn it off on Flip, open Pad, the switch reads Off; learn the
+magnify hint on Pad, open Flip, it is not taught again.
 
 **Turning tips back on also forgets what has been seen.** Otherwise the switch
 silently does nothing for anyone who has already dismissed them, which is a
