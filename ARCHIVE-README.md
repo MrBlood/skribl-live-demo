@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v170"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v171"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -214,6 +214,22 @@ silently does nothing for anyone who has already dismissed them, which is a
 setting that lies. The toggle also re-reads the stored state every time the
 menu opens rather than once at load, because a switch showing the opposite of
 what is stored is worse than no switch — `verify_tips.py` caught exactly that.
+
+**The wordmark said "FM" on a phone with 104px of free header space.** The
+abbreviation kicked in below 440px, tuned for a header that ALSO held fps,
+onion, grid, draw-on and more inline. Those controls moved into the settings
+button and the breakpoint was never revisited — a classic leftover: the fix
+outlived the problem.
+
+Measured, "FLIP MODE" needs 86px, "FLIP" 34 and "FM" 23, against 193px free at
+760px+, 154 at 440 and 66 at 340. So three tiers: FLIP MODE on desktop (the
+name Pad's own button already uses), FLIP down to 360px, and FM only below
+that — narrower than any phone in use, an iPhone SE being 375. Even at 340px
+there is room for FLIP, so FM is a fallback rather than a fix.
+
+`verify_ux.py` checks the tier at five widths AND that the header still has
+free space at each, because a wordmark that fits by pushing the controls off
+the edge is not fitting.
 
 **The onion icon was drawn at stroke-width 1.1** while every neighbour in the
 header is 1.9-2, with four curved paths converging inside a 34px circle. At

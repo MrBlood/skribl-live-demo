@@ -40,7 +40,9 @@
 
   /* Wordmark: just FLIP (logo/Skribl removed to free room on mobile). */
   .flip-word { font-weight: 800; font-size: 17px; letter-spacing: .12em; color: var(--text-primary); padding-left: 2px; white-space: nowrap; }
-  .fw-min { display: none; }
+  /* Three tiers, widest that fits wins. Measured: the header has 193px free at
+     760px+, 154 at 440 and 66 at 340; FLIP MODE needs 86, FLIP 34, FM 23. */
+  .fw-mid, .fw-min { display: none; }
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
 
@@ -354,8 +356,10 @@
   @media (max-width: 440px) {
     .fps-label { display: none; }
     .fps-group { gap: 0; }
+    /* FLIP below 440px: the full wordmark fits but crowds the actions, so the
+       middle tier buys breathing room rather than solving an overflow. */
     .flip-word .fw-full { display: none; }
-    .flip-word .fw-min { display: inline; }
+    .flip-word .fw-mid { display: inline; }
     .flip-actions .onion-tool, .flip-actions .grid-tool { width: 31px; height: 31px; }
     #moreBtn { width: 31px; height: 31px; }
     .flip-actions .seg, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 31px; }
@@ -685,3 +689,13 @@
     padding: 9px 11px;
   }
   .flip-share-error[hidden] { display: none; }
+
+/* FM only below 360px — narrower than any phone in use (an iPhone SE is 375).
+   It used to appear below 440px, tuned for a header that also held fps, onion,
+   grid, draw-on and more inline; those moved into the settings button and the
+   abbreviation was never revisited. Even at 340px there is room for FLIP, so
+   this is a fallback rather than a fix. */
+@media (max-width: 359px) {
+  .flip-word .fw-full, .flip-word .fw-mid { display: none; }
+  .flip-word .fw-min { display: inline; }
+}

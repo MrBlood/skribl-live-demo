@@ -222,6 +222,37 @@ with sync_playwright() as _p:
     check("no JS errors dismissing the menu", not _errs, "; ".join(_errs[:2]))
     _b.close()
 
+print("\nWORDMARK — the fullest label that fits, at every width")
+# "FM" appeared below 440px, tuned for a header that ALSO held fps, onion,
+# grid, draw-on and more inline. Those moved into the settings button and the
+# abbreviation was never revisited, so a phone with 104px of free header space
+# was showing a 23px abbreviation. Measured: FLIP MODE needs 86px, FLIP 34, FM
+# 23; free space is 193px at 760+, 154 at 440, 66 at 340.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    for _w, _want in ((1000, "FLIP MODE"), (760, "FLIP MODE"),
+                      (440, "FLIP"), (390, "FLIP"), (340, "FM")):
+        _pg = _b.new_page(viewport={"width": _w, "height": 844})
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1200)
+        _shown = _pg.evaluate("() => document.querySelector('.flip-word').innerText.trim()")
+        check(f"at {_w}px the wordmark reads {_want!r}", _shown == _want,
+              f"shows {_shown!r} — exactly one tier must be visible")
+
+        # The header must not overflow to achieve it. A wordmark that fits by
+        # pushing the actions off the edge is not fitting.
+        _fits = _pg.evaluate("""() => {
+          const h = document.querySelector('.header');
+          const kids = [...h.children].reduce((a, c) =>
+            a + c.getBoundingClientRect().width, 0);
+          return { free: Math.round(h.getBoundingClientRect().width - kids) };
+        }""")
+        check(f"at {_w}px the header still has room to spare",
+              _fits["free"] >= 0,
+              f"{_fits['free']}px — the wordmark is crowding the controls")
+        _pg.close()
+    _b.close()
+
 print("\nICONS — legible at button size, not just at 24px")
 # The onion glyph was drawn at stroke-width 1.1 while every neighbour in the
 # header is 1.9-2, with four curved paths converging inside a 34px circle. At
