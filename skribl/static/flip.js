@@ -1057,7 +1057,13 @@ try{ const r=JSON.parse(localStorage.getItem('skribl_recent_colors')||'[]'); if(
 function setColor(hex){
   color=hex;
   colorCurrent.style.background=hex;
-  [...colorGroup.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active', d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase()));
+  // !! is load-bearing. The custom swatch has no data-color, so this expression
+  // was `undefined && ...` -> undefined, and classList.toggle(name, undefined)
+  // is treated as NO second argument — which TOGGLES instead of forcing off. So
+  // every colour change flipped the custom swatch's highlight, leaving two
+  // swatches ringed at once and the wrong one appearing selected.
+  [...colorGroup.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active',
+    !!(d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase())));
   setTool('pen');   // picking a colour returns you to the pen, like the Pad
 }
 /* Pen / eraser toggle — the Pad's segmented control with the sliding accent pill. */

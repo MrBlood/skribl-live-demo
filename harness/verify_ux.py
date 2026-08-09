@@ -254,6 +254,56 @@ with sync_playwright() as _p:
         _pg.close()
     _b.close()
 
+print("\nCOLOUR SWATCHES — exactly one is ever selected")
+# THE BUG. setColor did:
+#   toggle('active', d.dataset.color && d.dataset.color.toLowerCase() === hex)
+# The custom swatch has NO data-color, so that is `undefined && ...` ->
+# undefined — and classList.toggle(name, undefined) is treated as no second
+# argument, which TOGGLES rather than forcing off. Every colour change flipped
+# the custom swatch's ring, so two swatches showed as selected and the wrong
+# one looked current. Pad was unaffected: it passes `b === btn`, a real boolean.
+import os as _os
+_TOGGLE_SRC = open(_os.path.join(_os.path.dirname(_os.path.dirname(
+    _os.path.abspath(__file__))), "skribl", "static", "flip.js"),
+    encoding="utf-8").read()
+check("setColor coerces its toggle condition to a boolean",
+      "!!(d.dataset.color" in _TOGGLE_SRC,
+      "an && chain can yield undefined, and toggle(name, undefined) TOGGLES")
+
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    for _name, _path in (("Flip", "/flip"), ("Pad", "/skribl-pad")):
+        _pg = _b.new_page(viewport={"width": 393, "height": 852})
+        _pg.goto(f"{BASE}{_path}", wait_until="load")
+        _pg.wait_for_timeout(1250)
+
+        def _active():
+            return _pg.evaluate("() => [...document.querySelectorAll("
+                                "'#colorGroup .color-dot.active')]"
+                                ".map(d => d.id || d.dataset.color || '(dot)')")
+
+        _a = _active()
+        check(f"{_name}: exactly one swatch is selected at load",
+              len(_a) == 1, f"{len(_a)} selected: {_a}")
+
+        # Clicking through several presets is what surfaced it: the custom
+        # swatch flipped on every call, so a single check could pass by luck.
+        _dots = _pg.evaluate("() => document.querySelectorAll("
+                             "'#colorGroup .color-dot[data-color]').length")
+        for _i in range(min(5, _dots)):
+            _pg.evaluate(f"() => document.querySelectorAll("
+                         f"'#colorGroup .color-dot[data-color]')[{_i}].click()")
+            _pg.wait_for_timeout(90)
+            _a = _active()
+            check(f"{_name}: still exactly one selected after change {_i + 1}",
+                  len(_a) == 1, f"{len(_a)} selected: {_a}")
+
+        check(f"{_name}: the custom swatch is not selected by a preset click",
+              "customColorBtn" not in _active(),
+              "the custom picker shows as current while a preset is in use")
+        _pg.close()
+    _b.close()
+
 print("\nWORDMARK WEIGHT — the phone is not a thinner brand")
 # .flip-word was shrunk to 15px below 440px, part of the same block that gave
 # us "FM" — a header that also held fps, onion, grid and draw-on inline. The

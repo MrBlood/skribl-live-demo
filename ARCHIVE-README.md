@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v173"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v174"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -235,6 +235,26 @@ at 360, 9px over at 340, 29px at 320.
 
 `verify_ux.py` checks the tier at seven widths and asserts real overflow at
 each, not arithmetic.
+
+**Two colour swatches showed as selected at once, and the cause is a JS
+footgun worth knowing.** `setColor()` did:
+
+    d.classList.toggle('active', d.dataset.color && d.dataset.color... === hex)
+
+The custom swatch has NO `data-color`, so that expression is
+`undefined && ...` -> **undefined** — and `classList.toggle(name, undefined)`
+is treated as *no second argument*, which TOGGLES rather than forcing off. Every
+colour change therefore flipped the custom swatch's ring on and off, leaving two
+swatches highlighted and the wrong one appearing current.
+
+Pad was unaffected because it passes `b === btn`, always a real boolean. The fix
+is `!!`, and a sweep of every `classList.toggle(name, X)` in the tree found this
+was the only expression that could yield undefined — the rest pass genuine
+boolean flags.
+
+`verify_ux.py` clicks through five presets on BOTH surfaces and asserts exactly
+one swatch is selected after each. A single check at load could pass by luck,
+because the state flipped on every call.
 
 **The wordmark was 15px on a phone and 17px on desktop**, so the brand read
 visibly lighter on the device most people use. Same block as the "FM"
