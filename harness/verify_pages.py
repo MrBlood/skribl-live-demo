@@ -171,8 +171,14 @@ with sync_playwright() as p:
           flip.evaluate("() => document.getElementById('pbWho').textContent"))
     check("no controls overlay the thumbnail any more",
           flip.evaluate("() => !document.querySelector('.frame-ops')"))
+    # VISIBLE targets only. This selected every .pb on the page, which now
+    # includes the move bar's buttons while it is hidden — a hidden element has
+    # zero height, so the check failed on controls that were not on screen.
+    # Filtering by offsetParent keeps it honest either way: when the move bar
+    # IS open, its buttons are measured like any other.
     check("toolbar targets are at least 38px (were 18px in-tile)",
           flip.evaluate("""() => [...document.querySelectorAll('.pb')]
+              .filter(b => b.offsetParent !== null)
               .every(b => b.getBoundingClientRect().height >= 38)"""))
     # margin-left:auto resolves to a pixel value, so assert the OUTCOME — a real
     # gap between Delete and its neighbour — rather than the declaration.

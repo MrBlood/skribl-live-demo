@@ -713,3 +713,33 @@
   .flip-word .fw-mid { display: none; }
   .flip-word .fw-min { display: inline; }
 }
+
+  /* ---- move artwork -------------------------------------------------------
+     The move bar REPLACES the page bar rather than sitting beside it: on a
+     phone the page bar already fills its row, and a second bar would push the
+     filmstrip off screen exactly when you need it to judge the move. */
+  .movebar { gap: 8px; }
+  .movebar[hidden] { display: none; }
+  .mb-label { font-size: 12px; font-weight: 600; color: var(--accent-bright); }
+  .mb-offset {
+    font-variant-numeric: tabular-nums; font-size: 12px;
+    color: var(--text-primary);
+    background: var(--surface-control); border: 1px solid var(--hairline-strong);
+    border-radius: 8px; padding: 4px 8px; min-width: 62px; text-align: center;
+  }
+  .mb-scope { --seg-h: 26px; }
+  .mb-scope button { min-width: 34px; padding: 0 8px; font-size: 11px; }
+  .mb-done { margin-left: auto; background: var(--accent); border-color: transparent; color: #fff; }
+  /* The canvas says what it is doing. `grab` is the resting affordance and
+     `grabbing` the active one — the same pair the photo repositioner uses. */
+  .flip-stage.moving #pad { cursor: grab; }
+  .flip-stage.moving.dragging #pad { cursor: grabbing; }
+  /* Below 560px the labels go, like every other page-bar button. */
+  @media (max-width: 559px) {
+    .mb-label { display: none; }
+    .mb-scope button { min-width: 30px; padding: 0 6px; }
+  }
+  /* The move bar's buttons are touch targets like any other page-bar control:
+     verify_pages.py holds every visible .pb to 38px, and Reset/Done are the
+     two you press under time pressure. */
+  .movebar .pb { min-height: 38px; }

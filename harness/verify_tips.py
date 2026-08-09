@@ -104,7 +104,7 @@ with sync_playwright() as p:
     # draft" or "Transparent" is noise, and noise is what makes people stop
     # reading tooltips at all — the opposite of the goal. The contract is: if a
     # control shows no words, it must say what it does on hover.
-    MISSING = """() => {
+    MISSING = r"""() => {
       const out = [];
       document.querySelectorAll('button, a[href], input[type=range]').forEach(el => {
         if (el.getAttribute('data-tip')) return;

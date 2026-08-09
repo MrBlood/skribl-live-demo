@@ -164,6 +164,28 @@ with sync_playwright() as p:
                aligned: Math.abs(pr.left - br.left) < 3,
                width: pr.width, btnWidth: br.width };
     }""")
+    # Wait for the pill to SETTLE before measuring its position. It has a 0.42s
+    # spring transition, so a single sample can land mid-flight and report a
+    # misalignment that resolves a moment later — this flaked under batch load
+    # while passing alone.
+    pg.wait_for_function("""() => {
+      const g = document.getElementById('canvasSeg');
+      const p = g && g.querySelector('.seg-slider');
+      const b = g && g.querySelector('button.on');
+      if (!p || !b) return false;
+      const pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
+      return Math.abs(pr.left - br.left) < 3 && Math.abs(pr.width - br.width) < 3;
+    }""", timeout=4000)
+    pill = pg.evaluate("""() => {
+      const g = document.getElementById('canvasSeg');
+      const p = g.querySelector('.seg-slider');
+      const b = g.querySelector('button.on');
+      const pr = p.getBoundingClientRect(), br = b.getBoundingClientRect();
+      return { opacity: parseFloat(getComputedStyle(p).opacity),
+               aligned: Math.abs(pr.left - br.left) < 3,
+               width: pr.width, btnWidth: br.width };
+    }""")
+
     check("the canvas pill is visible as soon as the menu opens",
           pill and pill["opacity"] > 0.5,
           "no selection is shown until you tap a preset")

@@ -138,9 +138,17 @@ function drawGrid(g, w, h){
   const c = g.getContext('2d');
   c.clearRect(0, 0, W, H);
 
-  // Below 560px the fine subdivision is dropped: at ~10px spacing it stops
-  // reading as a grid and becomes a wash.
-  const fine = w >= 560;
+  // The fine subdivision now runs at EVERY size.
+  //
+  // It was gated to >=560px back when the grid was CSS gradients: percentage
+  // background-size put lines on fractional pixels, so at ~10px spacing the
+  // fine layer rendered as an uneven wash rather than a grid. Drawing to a
+  // canvas snapped to whole device pixels removed that cause, and the gate
+  // outlived it — a phone was left with 43px cells and nothing between them.
+  //
+  // Majors stay at 8x6 so the coarse landmarks remain countable between
+  // frames; the sub-cells add halves at 21.6px on a 346px phone canvas.
+  const fine = true;
   const cols = 8, rows = 6;
   const line = Math.max(1, Math.round(dpr));   // whole device pixels only
 
@@ -575,14 +583,35 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
   if(picking){ sampleColorAt(e); return; }   // eyedropper: pick, don't draw
+  // Move mode intercepts BEFORE drawing, or dragging the artwork would lay a
+  // stroke down the middle of it.
+  if(moveMode){
+    moveDragging = true;
+    moveStart = { x:e.clientX, y:e.clientY, dx:moveDx, dy:moveDy };
+    const st = document.querySelector('.flip-stage'); if(st) st.classList.add('dragging');
+    pad.style.cursor = 'grabbing';
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    return;
+  }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
-  drawing=true; curCount=1; redoStack.length=0;
+  drawing=true; curCount=1; redoStack.length=0; noteAction('stroke');
   const p=pos(e); smoothPt={x:p.x,y:p.y}; lastRaw={x:p.x,y:p.y};
   const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
   frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
+  if(moveDragging && moveStart){
+    e.preventDefault();
+    // Screen pixels -> canvas units, so a drag tracks the pointer exactly at
+    // any zoom or display scale. Using raw clientX would move the drawing
+    // faster or slower than the finger whenever the canvas is not 1:1.
+    const r = pad.getBoundingClientRect();
+    moveDx = moveStart.dx + (e.clientX - moveStart.x) * (CW / r.width);
+    moveDy = moveStart.dy + (e.clientY - moveStart.y) * (CH / r.height);
+    applyMoveOffset();
+    return;
+  }
   if(reposActive){ e.preventDefault(); const r=pad.getBoundingClientRect();
     photoOffX=Math.max(0,Math.min(1, reposStart.ox - (e.clientX-reposStart.x)/r.width));
     photoOffY=Math.max(0,Math.min(1, reposStart.oy - (e.clientY-reposStart.y)/r.height));
@@ -615,6 +644,17 @@ function endStroke(){
   drawing=false; smoothPt=null; lastRaw=null;
   frame().strokeGroups.push(curCount); curCount=0;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
+function endMoveDrag(){
+  if(!moveDragging) return;
+  moveDragging = false;
+  const st = document.querySelector('.flip-stage'); if(st) st.classList.remove('dragging');
+  if(moveMode) pad.style.cursor = 'grab';
+  // Thumbs update on release, not on every pointer event: repainting 62 of
+  // them per frame of a drag is what makes a move feel heavy.
+  moveTargets().forEach(i=>refreshThumb(i));
+}
+window.addEventListener('pointerup', endMoveDrag);
+window.addEventListener('pointercancel', endMoveDrag);
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke);
 
@@ -1023,7 +1063,8 @@ function updateToolState(){
   if(_pw) _pw.hidden = playBtn.disabled && !playing;
   if(typeof syncFlipDuration==='function') syncFlipDuration();
   const undoB=document.getElementById('undo');
-  undoB.disabled = frame().strokeGroups.length === 0;
+  undoB.disabled = frame().strokeGroups.length === 0
+    && !(actionLog.length && typeof actionLog[actionLog.length-1] === 'object');
   undoB.style.opacity = undoB.disabled ? .38 : 1;
   const redoB=document.getElementById('redo');
   redoB.disabled = redoStack.length === 0;
@@ -2317,10 +2358,45 @@ bindEl('exportGif', 'click',e=>{ if(e.currentTarget.disabled) return; closeExpor
   const gifSeg=gifToggle.querySelector('.gif-seg'); if(gifSeg) attachSegSlider(gifSeg);
 })();
 
+/* ---- move artwork ---------------------------------------------------------
+ * Translating a page is exactly reversible, so undo stores the INVERSE OFFSET
+ * rather than a snapshot of the strokes. A 62-page animation would otherwise
+ * cost a full copy of every affected page per move; an offset costs two
+ * numbers, and it cannot drift because applying -dx,-dy is the exact inverse
+ * of +dx,+dy on the same points.
+ *
+ * actionLog records the ORDER of undoable actions so a move and a stroke can
+ * interleave. Without it, undo after "draw, move" would pop the stroke and
+ * leave the move — undoing something the user did not do last.
+ */
+let actionLog = [];          // 'stroke' | {type:'move', idxs, dx, dy}
+const MOVE_UNDO_LIMIT = 60;
+
+function translateFrames(idxs, dx, dy){
+  if(!dx && !dy) return;
+  for(const i of idxs){
+    const f = frames[i]; if(!f) continue;
+    for(const pt of f.strokes){ pt.x += dx; pt.y += dy; }
+  }
+}
+function noteAction(entry){
+  actionLog.push(entry);
+  if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+}
+
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
+  // A move is undone only if it was the LAST thing done. Popping strokes past
+  // a move would silently leave the move in place.
+  if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'){
+    const m = actionLog.pop();
+    translateFrames(m.idxs, -m.dx, -m.dy);
+    render(); m.idxs.forEach(i=>refreshThumb(i)); updateToolState(); scheduleSave();
+    return;
+  }
   const f = frame(); if(!f.strokeGroups.length) return;
+  if(actionLog.length) actionLog.pop();
   const n = f.strokeGroups.pop();
   const removed = f.strokes.splice(f.strokes.length - n, n);
   redoStack.push({ pts: removed, count: n });
@@ -2335,6 +2411,106 @@ function redoStroke(){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener('click',()=>{ if(!playing) setTool(b.dataset.tool); }));
+/* ---- move-artwork mode ----------------------------------------------------
+ * Enter from the page bar, drag on the canvas, Done commits.
+ *
+ * The offset is applied to a WORKING COPY of the original points, not
+ * accumulated onto the live ones: accumulating would round-trip the
+ * coordinates on every pointer event and drift the drawing a fraction at a
+ * time over a long drag. Reset is then simply "offset zero".
+ */
+let moveMode = false, moveScope = 'one', moveDx = 0, moveDy = 0;
+let moveOrigin = null, moveDragging = false, moveStart = null;
+
+function moveTargets(){
+  if(moveScope === 'after'){
+    const out = []; for(let i = idx; i < frames.length; i++) out.push(i); return out;
+  }
+  return [idx];
+}
+function captureMoveOrigin(){
+  moveOrigin = new Map();
+  for(const i of moveTargets()) moveOrigin.set(i, frames[i].strokes.map(p => ({x:p.x, y:p.y})));
+}
+function applyMoveOffset(){
+  if(!moveOrigin) return;
+  for(const [i, pts] of moveOrigin){
+    const f = frames[i]; if(!f) continue;
+    for(let k = 0; k < f.strokes.length && k < pts.length; k++){
+      f.strokes[k].x = pts[k].x + moveDx;
+      f.strokes[k].y = pts[k].y + moveDy;
+    }
+  }
+  const off = document.getElementById('mbOffset');
+  if(off) off.textContent = Math.round(moveDx) + ', ' + Math.round(moveDy);
+  render();
+}
+function setMoveMode(on){
+  if(on && playing) return;
+  moveMode = on;
+  moveDx = moveDy = 0; moveDragging = false;
+  const stage = document.querySelector('.flip-stage');
+  if(stage){ stage.classList.toggle('moving', on); stage.classList.remove('dragging'); }
+  // Set inline, because setTool() sets pad.style.cursor='none' inline for the
+  // custom brush cursor and an inline style beats any stylesheet rule however
+  // specific. '' hands control back to the CSS when leaving.
+  pad.style.cursor = on ? 'grab' : 'none';
+  const pb = document.getElementById('pagebar'), mb = document.getElementById('movebar');
+  if(pb) pb.hidden = on;
+  if(mb) mb.hidden = !on;
+  if(on){
+    captureMoveOrigin();
+    const off = document.getElementById('mbOffset'); if(off) off.textContent = '0, 0';
+    if(window.SkriblSegSlider) window.SkriblSegSlider.track(document.getElementById('mbScope'));
+    // Onion is what makes a move judgeable — you are lining this page up
+    // against the one beneath. Say so rather than silently forcing it on.
+    if(window.SkriblHints){
+      window.SkriblHints.show('move-artwork', onion
+        ? 'Drag anywhere to move this page\u2019s drawing. The faint page beneath is your reference.'
+        : 'Drag anywhere to move this page\u2019s drawing. Turn on the stacked-sheets button to see the page beneath while you line it up.');
+    }
+  } else {
+    moveOrigin = null;
+  }
+  updateToolState();
+}
+function commitMove(){
+  if(!moveMode) return;
+  const dx = moveDx, dy = moveDy, idxs = moveTargets();
+  if(dx || dy){
+    noteAction({ type:'move', idxs, dx, dy });
+    idxs.forEach(i => refreshThumb(i));
+    scheduleSave();
+  }
+  setMoveMode(false);
+}
+function cancelMove(){
+  if(!moveMode) return;
+  moveDx = moveDy = 0; applyMoveOffset();
+  setMoveMode(false);
+}
+
+bindEl('pbArt', 'click', ()=>{ disarmAll(); setMoveMode(!moveMode); });
+bindEl('mbDone', 'click', ()=>{ commitMove(); });
+bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
+(function(){
+  const seg = document.getElementById('mbScope');
+  if(!seg) return;
+  seg.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    moveScope = b.dataset.scope === 'after' ? 'after' : 'one';
+    seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x === b));
+    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+    // Re-capture: the set of pages being moved just changed, and the current
+    // offset must apply to the new set from their ORIGINAL positions.
+    const dx = moveDx, dy = moveDy;
+    captureMoveOrigin(); moveDx = dx; moveDy = dy; applyMoveOffset();
+  });
+})();
+// Escape cancels rather than commits. A drag you did not mean is undone by
+// leaving, which is what Escape means everywhere else in this app.
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && moveMode) cancelMove(); });
+
 bindEl('undo', 'click',()=>{ disarmAll(); undoStroke(); });
 bindEl('redo', 'click',()=>{ disarmAll(); redoStroke(); });
 /* Delete-all lives in the draw menu now; destructive → same two-tap arm as frame delete. */

@@ -293,7 +293,12 @@ with sync_playwright() as _p:
             edges: [ a(midX, 0), a(midX, g.height - 1), a(0, midY), a(g.width - 1, midY) ],
             // A cell centre must be EMPTY. If gradients were still painting, or
             // lines had smeared, this would pick up stray alpha.
-            cellCentre: a(Math.floor(g.width / 16), Math.floor(g.height / 12))
+            //
+            // Sampled at 1/32 x 1/24 — the middle of a FINE cell. It used to be
+            // 1/16 x 1/12, which is exactly where a fine line falls once the
+            // subdivision runs at every size, so the check was reading the
+            // grid's own line and calling it a smear.
+            cellCentre: a(Math.floor(g.width / 32), Math.floor(g.height / 24))
           };
         }""")
 
@@ -521,13 +526,16 @@ with sync_playwright() as _p:
         check(f"at {_w}px the full size still does not overflow",
               _m["overflow"] <= 0, f"{_m['overflow']}px past the edge")
 
-    print("\nGRID DENSITY — the fine subdivision is dropped where it is noise")
-    # The fine layer is 16x12 cells. On a 671px desktop canvas that is ~42px
-    # apart; on a 345px phone canvas it would be ~21px for the major lines and
-    # ~10px for the fine ones, which stops reading as a grid. drawGrid() omits
-    # the fine layer below 560px. Counted by sampling the canvas rather than by
-    # reading CSS, because the grid is no longer painted with gradients.
-    for _w, _fine in ((1000, True), (393, False)):
+    print("\nGRID DENSITY — the fine subdivision runs at every size")
+    # It used to be gated to >=560px, from when the grid was CSS gradients:
+    # percentage background-size put lines on fractional pixels, so at ~10px
+    # spacing the fine layer rendered as an uneven wash. Drawing to a canvas
+    # snapped to whole device pixels removed that cause, and the gate outlived
+    # it — a phone was left with 43px cells and nothing between them.
+    #
+    # Counted by sampling the canvas rather than reading CSS, because the grid
+    # is no longer painted with gradients.
+    for _w, _fine in ((1000, True), (393, True)):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
         _pg.wait_for_timeout(1200)
@@ -548,9 +556,32 @@ with sync_playwright() as _p:
           }
           return n;
         }""")
-        check(f"at {_w}px the grid has {'fine' if _fine else 'only major'} columns",
+        check(f"at {_w}px the grid includes the fine subdivision",
               (_lines > 12) == _fine,
-              f"{_lines} vertical lines — 9 majors, 17 with the fine layer")
+              f"{_lines} vertical lines — 9 majors alone, 17 with the fine layer")
+
+        # Evenness is the property that made the fine layer usable at all:
+        # equal gaps and one opacity per tier. A denser grid that is uneven is
+        # worse than a sparse one.
+        _even = _pg.evaluate("""() => {
+          const g = document.getElementById('flipGrid');
+          const c = g.getContext('2d');
+          const y = Math.floor(g.height * 0.37);
+          const row = c.getImageData(0, y, g.width, 1).data;
+          const starts = []; let run = false;
+          for (let x = 0; x < g.width; x++) {
+            const on = row[x * 4 + 3] > 8;
+            if (on && !run) starts.push(x);
+            run = on;
+          }
+          const gaps = [];
+          for (let i = 1; i < starts.length; i++) gaps.push(starts[i] - starts[i - 1]);
+          return { spread: gaps.length ? Math.max(...gaps) - Math.min(...gaps) : 0 };
+        }""")
+        check(f"at {_w}px the lines are evenly spaced",
+              _even["spread"] <= 2,
+              f"{_even['spread']}px spread between gaps — uneven spacing is what "
+              "made the old gradient grid read as a wash")
         _pg.close()
 
     _b.close()

@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v177"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v179"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -252,7 +252,21 @@ None of the three is fixable in CSS. It is a `<canvas>` now: `drawGrid()` places
 every line on a whole DEVICE pixel with `fillRect`, draws the closing edges
 explicitly, clamps the last line inward so it lands inside the canvas, and reads
 the inset from `getComputedStyle(pad).borderTopWidth` instead of assuming it.
-Density lives in JS too — the fine 16x12 layer is omitted below 560px.
+Density lives in JS too. The fine 16x12 layer USED to be omitted below 560px,
+a gate inherited from the gradient era: percentage background-size put lines on
+fractional pixels, so at ~10px spacing the fine layer rendered as an uneven
+wash. Snapping to whole device pixels removed that cause and the gate outlived
+it — a phone was left with 43px cells and nothing between them. The subdivision
+now runs at every size: majors stay 8x6 so the coarse landmarks remain
+countable between frames, and the sub-cells add halves at 21.6px on a 346px
+phone canvas.
+
+Two assertions in `verify_ux.py` had encoded the old behaviour. One expected
+the phone to have major lines only; the other sampled a "cell interior" at
+1/16 x 1/12 — which is exactly where a fine line now falls, so it was reading
+the grid's own line and calling it a smear. Both were measuring the gate rather
+than the property, and the property is EVENNESS: equal gaps, one opacity per
+tier. That is what is asserted now, at both sizes.
 
 `verify_ux.py` samples the rendered canvas at three device-pixel ratios: insets
 equal on all four sides, alpha present on every closing edge, and ZERO inside a
@@ -360,6 +374,55 @@ one icon is drawn meaningfully thinner than the rest. Its first version counted
 FILLED glyphs too — the play triangle and the `...` dots report stroke-width 1
 because nothing sets it and it is never drawn — and failed on two icons that
 are perfectly legible. It looks only at `fill: none` icons now.
+
+**Move artwork — dragging a page's drawing to new coordinates.** The first
+transform in the app, and deliberately the SIMPLEST one: the whole page moves,
+nothing is selected. Copy a page, nudge the drawing, repeat — the pegbar
+workflow that frame-by-frame animation has used for a century.
+
+**It lives in the PAGE BAR, not the tool row.** Moving a page's artwork is a
+page operation, and it belongs with Copy, Hold and Delete; the tool row is also
+full on a phone. Entering the mode REPLACES the page bar with a transform bar
+rather than adding one, because a second bar would push the filmstrip off
+screen exactly when it is needed to judge the move. Labelled "Artwork" because
+"Move" already means reorder, two buttons to its left.
+
+**Undo stores the INVERSE OFFSET, not a snapshot.** A translation is exactly
+reversible, so undoing is applying -dx,-dy to the same points. With `& after`
+on a 62-page animation a snapshot would copy every affected page; two numbers
+cost nothing. It cannot be bit-exact — adding then subtracting a float does not
+reproduce the original — but the round trip lands within 2e-14 canvas units,
+and `verify_move.py` asserts to 1e-6 rather than asserting a property of IEEE
+754.
+
+**An action log records the ORDER of undoable actions.** Flip's undo pops
+stroke groups; without the log, undo after "draw, move" would pop the stroke
+and silently leave the move in place — undoing something the user did not do
+last. The suite drives exactly that sequence.
+
+**The offset is applied to a working COPY of the original points.**
+Accumulating onto the live coordinates would round-trip them on every pointer
+event and drift the drawing over a long drag. Reset then becomes "offset zero"
+and lands exactly.
+
+**The drag is measured in canvas units, not screen pixels** — `CW / rect.width`
+— so it tracks the pointer at any zoom or display scale. Raw `clientX` would
+move the drawing faster or slower than the finger whenever the canvas is not
+1:1, which it never is on a phone.
+
+**The cursor is set INLINE.** `setTool()` writes `pad.style.cursor='none'` for
+the custom brush cursor, and an inline style beats any stylesheet rule however
+specific — the first attempt styled `.flip-stage.moving #pad` and the grab
+cursor never appeared.
+
+**Thumbnails repaint on pointer release, not per move event.** Repainting 62 of
+them on every frame of a drag is what would make the feature feel heavy.
+
+WHAT THIS SETS UP. Selection — moving PART of a drawing — reuses all of it: the
+mode, the bar, the offset readout, Reset, Done, Escape-to-cancel and the undo
+mechanism. Only hit-testing and a selection overlay would be new, and the
+readout changes from an offset to a count. That was the argument for building
+the whole-page move first.
 
 **Dismissing a re-add card turned its dot GREEN.** `refreshPendingCards()`
 sets the tab dot `hidden = false` in its pending branch, and the else branch

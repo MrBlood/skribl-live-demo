@@ -1,26 +1,26 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-09T06:57:15Z
+UTC timestamp           : 2026-08-09T14:45:14Z
 Host                    : Linux x86_64
-Tree SHA-256            : b43d89f89148d8e7c89e7421bdd8ffc1756f4c52bfc119067c818c1095751d21
+Tree SHA-256            : 1208e339f3f6176116bceeec2f724e0a3aff7b5649387d7728bbb22cbd3859f8
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v177
+SKRIBL_VERSION          : v179
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.yr19LoG8Nr/harness.db)
+Database reset          : yes (fresh /tmp/tmp.vh6R9iqX6p/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_privacy.py verify_storage.py verify_feed.py verify_csrf.py verify_migrations.py verify_seam.py verify_prefix.py verify_csp.py verify_media.py verify_version.py verify_lib.py verify_audio.py verify_docs.py verify_flipmeta.py verify_pressure.py verify_exportui.py verify_help.py verify_tips.py verify_review.py
+Command                 : ./harness/run_harness.sh verify_privacy.py verify_storage.py verify_feed.py verify_csrf.py verify_migrations.py verify_seam.py verify_prefix.py verify_csp.py verify_media.py verify_version.py verify_lib.py verify_audio.py verify_docs.py verify_flipmeta.py verify_pressure.py verify_exportui.py verify_help.py verify_tips.py verify_move.py verify_review.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 19
+suites requested : 20
   verify_privacy.py: ok — 30/30 passed
   verify_storage.py: ok — 26/26 passed
   verify_feed.py: ok — 25/25 passed
@@ -39,7 +39,8 @@ suites requested : 19
   verify_exportui.py: ok — 45/45 passed
   verify_help.py: ok — 61/61 passed
   verify_tips.py: ok — 43/43 passed
+  verify_move.py: ok — 18/18 passed
   verify_review.py: ok — 277/277 passed
-assertions passed: 858   (skipped suites contribute 0)
+assertions passed: 876   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
