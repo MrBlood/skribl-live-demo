@@ -254,6 +254,193 @@ with sync_playwright() as _p:
         _pg.close()
     _b.close()
 
+print("\nGRID — centred, on exact pixels, closed on all four edges")
+# THE BUG. The grid was a div painted with CSS gradients. Three faults at once:
+#   1. Gradients repeat from the origin, so a line lands on 0% but the CLOSING
+#      edge gets none — it saturated the top and left borders and stopped short
+#      of the bottom and right, reading as top-left justified.
+#   2. Percentage stops land on fractional pixels; a 1px line at x=103.6 paints
+#      as two dim half-lines, which is what the phantom doubling was.
+#   3. syncGrid inset by a hard-coded 1px while the canvas border had become
+#      2px, so the whole grid sat a pixel off centre.
+# It is a canvas now: every line on a whole DEVICE pixel, closing edges drawn
+# explicitly, inset read from the border rather than assumed.
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    for _w, _dpr in ((393, 3), (1000, 2), (760, 1)):
+        _pg = _b.new_page(viewport={"width": _w, "height": 844},
+                          device_scale_factor=_dpr)
+        _errs = []
+        _pg.on("pageerror", lambda e: _errs.append(str(e)))
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1250)
+        _pg.evaluate("() => { document.getElementById('flipGrid')"
+                     ".classList.add('on'); syncGrid(); }")
+        _pg.wait_for_timeout(350)
+
+        _m = _pg.evaluate("""() => {
+          const g = document.getElementById('flipGrid');
+          const p = document.getElementById('pad');
+          const gb = g.getBoundingClientRect(), pb = p.getBoundingClientRect();
+          const c = g.getContext('2d');
+          const a = (x, y) => c.getImageData(x, y, 1, 1).data[3];
+          const midX = Math.floor(g.width / 2), midY = Math.floor(g.height / 2);
+          return {
+            tag: g.tagName,
+            insets: [ +(gb.left - pb.left).toFixed(1), +(gb.top - pb.top).toFixed(1),
+                      +(pb.right - gb.right).toFixed(1), +(pb.bottom - gb.bottom).toFixed(1) ],
+            // A line on every closing edge, sampled away from intersections.
+            edges: [ a(midX, 0), a(midX, g.height - 1), a(0, midY), a(g.width - 1, midY) ],
+            // A cell centre must be EMPTY. If gradients were still painting, or
+            // lines had smeared, this would pick up stray alpha.
+            cellCentre: a(Math.floor(g.width / 16), Math.floor(g.height / 12))
+          };
+        }""")
+
+        check(f"at {_w}px/{_dpr}x the grid is a canvas", _m["tag"] == "CANVAS",
+              f"{_m['tag']} — CSS gradients cannot hit an exact device pixel")
+        _ins = _m["insets"]
+        check(f"at {_w}px/{_dpr}x the grid is centred in the frame",
+              max(_ins) - min(_ins) < 0.6,
+              f"insets L/T/R/B {_ins} — it is justified to one corner")
+        check(f"at {_w}px/{_dpr}x every closing edge has a line",
+              all(e > 20 for e in _m["edges"]),
+              f"edge alphas {_m['edges']} — a zero means that side has none")
+        check(f"at {_w}px/{_dpr}x cell interiors are clean",
+              _m["cellCentre"] == 0,
+              f"alpha {_m['cellCentre']} inside a cell — stray or smeared lines")
+        check(f"at {_w}px/{_dpr}x drawing the grid raises no errors",
+              not _errs, "; ".join(_errs[:2]))
+        _pg.close()
+    _b.close()
+
+print("\nGRID — even lines, measured from the pixels")
+# The grid is a <canvas>, drawn by drawGrid() at integer device-pixel
+# positions. Two failure modes this guards:
+#   1. uneven spacing — the old CSS-gradient grid used PERCENTAGE background
+#      sizes, so every line landed on a fractional pixel and the browser
+#      rounded each one independently, giving visibly irregular columns
+#   2. a double grid — a canvas still paints its CSS background-image, so a
+#      leftover gradient rule under the canvas draws a SECOND grid through it
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    for _vw, _dpr, _label in ((393, 3, "phone"), (1000, 2, "desktop")):
+        _ctx = _b.new_context(viewport={"width": _vw, "height": 852},
+                              device_scale_factor=_dpr)
+        _pg = _ctx.new_page()
+        _pg.goto(f"{BASE}/flip", wait_until="load")
+        _pg.wait_for_timeout(1300)
+        _pg.evaluate("() => { grid = true;"
+                     " const g = document.getElementById('flipGrid');"
+                     " g.classList.add('on'); syncGrid(); }")
+        _pg.wait_for_timeout(350)
+
+        check(f"{_label}: the grid canvas has no CSS background image",
+              _pg.evaluate("() => getComputedStyle("
+                           "document.getElementById('flipGrid')).backgroundImage") == "none",
+              "a canvas still paints its background — that is a second grid "
+              "drawn through the first")
+
+        _g = _pg.evaluate("""() => {
+          const g = document.getElementById('flipGrid');
+          const c = g.getContext('2d'), W = g.width, H = g.height;
+          // Rows are H/6 apart, so H/12 is the midpoint of the first row —
+          // except when rounding puts a line there, which it did at desktop.
+          // Search for a row that actually crosses verticals instead of
+          // assuming one: sampling blind measured a solid horizontal and
+          // reported "1 line".
+          let y = Math.round(H / 12);
+          for (let k = 0; k < 40; k++) {
+            const probe = c.getImageData(0, y, W, 1).data;
+            let opaque = 0;
+            for (let x = 0; x < W; x++) if (probe[x * 4 + 3] > 10) opaque++;
+            if (opaque > 0 && opaque < W * 0.5) break;   // crosses lines, not on one
+            y = Math.round(H / 12) + k + 1;
+          }
+          const d = c.getImageData(0, y, W, 1).data;
+          const xs = [];
+          for (let x = 0; x < W; x++) if (d[x * 4 + 3] > 10) xs.push(x);
+          const runs = [];
+          if (xs.length) { let s = xs[0], prev = xs[0];
+            for (const x of xs.slice(1)) { if (x !== prev + 1) { runs.push([s, prev]); s = x; } prev = x; }
+            runs.push([s, prev]); }
+          const centers = runs.map(r => (r[0] + r[1]) / 2);
+          const gaps = centers.slice(1).map((v, i) => v - centers[i]);
+          return { lines: runs.length, gaps,
+                   widths: [...new Set(runs.map(r => r[1] - r[0] + 1))] };
+        }""")
+        check(f"{_label}: the sample row crosses vertical lines",
+              _g["lines"] >= 5, f"found {_g['lines']} — the sample landed on a "
+              "horizontal line and measures nothing")
+
+        # Even spacing is the whole point. One device pixel of variation is
+        # rounding; more than two means lines are landing where they fall.
+        # Tightened from 4 to 1. A spread of 4 was the LAST column being narrow:
+        # clamping only the closing line inward kept it on the canvas but stole
+        # its width from the final cell alone — 129,129,129,129,129,129,130,126.
+        # One narrow column on the right edge reads as "the grid is off" without
+        # being obviously wrong anywhere you can point at. Laying the lines out
+        # over (W - line) instead of W makes every gap equal.
+        _spread = max(_g["gaps"]) - min(_g["gaps"]) if _g["gaps"] else 0
+        check(f"{_label}: the columns are evenly spaced",
+              _spread <= 1,
+              f"gap spread {_spread} device px across {_g['gaps']} — "
+              "fractional positions rounded independently")
+        check(f"{_label}: every line is the same width",
+              len(_g["widths"]) == 1,
+              f"widths {_g['widths']} — a grid with mixed line weights reads "
+              "as noise")
+        _ctx.close()
+    _b.close()
+
+print("\nDRAWERS ON A PHONE — the last row is not sliced by the browser")
+# THE BUG. The drawers are the last thing on the page and had ZERO bottom
+# padding, so the colour swatches and the eyedropper sat under iOS Safari's
+# bottom toolbar, visibly cut in half. Two causes, both needed:
+#   1. no safe-area padding, so nothing reserved space for the browser chrome
+#   2. refitDrawer() used scrollIntoView({block:'nearest'}), which scrolls the
+#      MINIMUM amount — a drawer already partly on screen got no scroll at all
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    _ctx = _b.new_context(viewport={"width": 393, "height": 760},
+                          has_touch=True, is_mobile=True)
+    _pg = _ctx.new_page()
+    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.wait_for_timeout(1400)
+    _pg.tap("#colorCurrent")
+    _pg.wait_for_timeout(1100)
+
+    _m = _pg.evaluate("""() => {
+      const eye = document.getElementById('eyedropperBtn').getBoundingClientRect();
+      const dots = [...document.querySelectorAll('#colorGroup .color-dot')]
+        .map(d => d.getBoundingClientRect());
+      const lowest = Math.max(...dots.map(d => d.bottom), eye.bottom);
+      const drawers = document.querySelector('.flip-drawers');
+      return { lowest: Math.round(lowest), vh: innerHeight,
+               pad: parseFloat(getComputedStyle(drawers).paddingBottom) };
+    }""")
+    check("opening the colour drawer brings its swatches on screen",
+          _m["lowest"] <= _m["vh"],
+          f"lowest swatch at {_m['lowest']}px in a {_m['vh']}px viewport — "
+          "block:'nearest' scrolls the minimum, so a partly-visible drawer "
+          "never comes fully into view")
+    check("the drawers reserve space for the browser's bottom chrome",
+          _m["pad"] >= 20,
+          f"padding-bottom {_m['pad']}px — on iOS the toolbar overlays the "
+          "viewport and slices whatever is last")
+
+    # A transient pill must not cover a destructive control.
+    _pg.evaluate("() => { const a = document.getElementById('autosaveStatus');"
+                 " if (a) { a.hidden = false; a.classList.add('show'); } }")
+    _pg.wait_for_timeout(250)
+    check("the Saving pill is hidden while a drawer is open",
+          float(_pg.evaluate("() => getComputedStyle("
+                             "document.getElementById('autosaveStatus')).opacity")) < 0.05,
+          "it sits over Clear all pages — a pill covering a destructive button "
+          "is worse than one you cannot see")
+    _ctx.close()
+    _b.close()
+
 print("\nCOLOUR SWATCHES — exactly one is ever selected")
 # THE BUG. setColor did:
 #   toggle('active', d.dataset.color && d.dataset.color.toLowerCase() === hex)
@@ -334,38 +521,38 @@ with sync_playwright() as _p:
         check(f"at {_w}px the full size still does not overflow",
               _m["overflow"] <= 0, f"{_m['overflow']}px past the edge")
 
-    print("\nGRID — the finest level is dropped where it becomes noise")
-    # The grid is three nested gradient levels at 12.5% / 6.25% / 3.125% of the
-    # canvas. The finest is 21px on a 673px desktop canvas but 10.8px on a
-    # 347px phone one, where it stops reading as a grid and becomes a wash —
-    # and at that spacing the 1px lines land on fractional pixels and render
-    # unevenly. Two levels below 560px.
-    _counts = {}
-    for _w in (393, 1000):
+    print("\nGRID DENSITY — the fine subdivision is dropped where it is noise")
+    # The fine layer is 16x12 cells. On a 671px desktop canvas that is ~42px
+    # apart; on a 345px phone canvas it would be ~21px for the major lines and
+    # ~10px for the fine ones, which stops reading as a grid. drawGrid() omits
+    # the fine layer below 560px. Counted by sampling the canvas rather than by
+    # reading CSS, because the grid is no longer painted with gradients.
+    for _w, _fine in ((1000, True), (393, False)):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
-        _pg.wait_for_timeout(1150)
-        _pg.evaluate("() => { const g = document.getElementById('flipGrid');"
-                     " if (g) g.classList.add('on');"
-                     " if (typeof syncGrid === 'function') syncGrid(); }")
-        _pg.wait_for_timeout(250)
-        _counts[_w] = _pg.evaluate("""() => {
+        _pg.wait_for_timeout(1200)
+        _pg.evaluate("() => { document.getElementById('flipGrid')"
+                     ".classList.add('on'); syncGrid(); }")
+        _pg.wait_for_timeout(300)
+        # Count distinct vertical lines along one scanline.
+        _lines = _pg.evaluate("""() => {
           const g = document.getElementById('flipGrid');
-          const box = g.getBoundingClientRect();
-          const layers = getComputedStyle(g).backgroundImage
-            .split('linear-gradient').length - 1;
-          return { layers, finest: +(box.width * 0.03125).toFixed(1),
-                   mid: +(box.width * 0.0625).toFixed(1) };
+          const c = g.getContext('2d');
+          const y = Math.floor(g.height * 0.37);   // avoid horizontal lines
+          const row = c.getImageData(0, y, g.width, 1).data;
+          let n = 0, run = false;
+          for (let x = 0; x < g.width; x++) {
+            const on = row[x * 4 + 3] > 8;
+            if (on && !run) n++;
+            run = on;
+          }
+          return n;
         }""")
+        check(f"at {_w}px the grid has {'fine' if _fine else 'only major'} columns",
+              (_lines > 12) == _fine,
+              f"{_lines} vertical lines — 9 majors, 17 with the fine layer")
         _pg.close()
 
-    check("desktop keeps all three grid levels",
-          _counts[1000]["layers"] == 6, f"{_counts[1000]['layers']} gradients")
-    check("a phone drops to two levels",
-          _counts[393]["layers"] == 4, f"{_counts[393]['layers']} gradients")
-    check("and its finest remaining line is wide enough to read as a grid",
-          _counts[393]["mid"] >= 16,
-          f"{_counts[393]['mid']}px spacing — below ~16px it reads as a wash")
     _b.close()
 
 print("\nICONS — legible at button size, not just at 24px")

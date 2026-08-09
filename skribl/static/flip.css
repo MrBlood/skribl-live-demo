@@ -79,32 +79,12 @@
      as before), a medium split (16x12), and a fine small split (32x24), each
      fainter than the level above so the hierarchy reads at a glance. Big is listed
      first so its lines win where all three coincide. */
-  .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; border-radius: calc(var(--r-frame) - 1px); overflow: hidden;
-    background-image:
-      linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.22) 1px, transparent 1px),
-      linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px),
-      linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
-    background-size:
-      12.5% 16.6667%, 12.5% 16.6667%,
-      6.25% 8.3333%,  6.25% 8.3333%,
-      3.125% 4.1667%, 3.125% 4.1667%; }
+  /* A canvas now — see drawGrid() in flip.js for why gradients could not do
+     this. Kept clipped to the pad's inner radius so the corners follow the
+     frame instead of squaring off against it. */
+  .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none;
+    border-radius: calc(var(--r-frame) - 2px); overflow: hidden; }
   .flip-grid.on { display: block; }
-  /* THREE levels only where they are legible. The finest is 3.125% of the
-     canvas width — 21px on a 673px desktop canvas but 10.8px on a 347px phone
-     one, which stops reading as a grid and becomes a wash. Worse, at that
-     spacing the 1px lines land on fractional pixels and render unevenly.
-     Below 560px the finest layer is dropped and the other two are lifted
-     slightly, so what remains is a grid rather than noise. */
-  @media (max-width: 559px) {
-    .flip-grid {
-      background-image:
-        linear-gradient(rgba(255,255,255,.26) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.26) 1px, transparent 1px),
-        linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px);
-      background-size:
-        12.5% 16.6667%, 12.5% 16.6667%,
-        6.25% 8.3333%,  6.25% 8.3333%;
-    }
-  }
   body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
   .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
@@ -207,7 +187,13 @@
   /* Drawers are normal in-flow blocks living in .flip-drawers, directly below the
      toolbar. Opening one doesn't move or cover the canvas — the page just grows and
      scrolls to reveal it, exactly like the Pad's docked tab panels. */
-  .flip-drawers { width: 100%; }
+  /* Clear the browser's own chrome. The drawers are the LAST thing in the
+     page, and on iOS Safari the bottom toolbar overlays the viewport — so the
+     colour swatches and the eyedropper sat underneath it, visibly sliced in
+     half. Measured at 393x852 the drawer already ended 12px past the fold with
+     zero bottom padding, before the toolbar took its ~60-90px on top.
+     env() is 0 on desktop, so this costs nothing there. */
+  .flip-drawers { width: 100%; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
   .draw-popout.tab-panel { position: static; box-sizing: border-box; }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
   .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }

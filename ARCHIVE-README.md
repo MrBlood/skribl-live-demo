@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v174"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v177"` (skribl/core.py).**
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -235,6 +235,79 @@ at 360, 9px over at 340, 29px at 320.
 
 `verify_ux.py` checks the tier at seven widths and asserts real overflow at
 each, not arithmetic.
+
+**The grid was a div painted with CSS gradients, and it had three faults.**
+
+  1. **Top-left justified.** A gradient repeats from the origin, so a line lands
+     on 0% but the CLOSING edge gets none — the grid saturated the top and left
+     borders and stopped short of the bottom and right.
+  2. **Phantom lines.** Percentage stops land on fractional pixels; a 1px line
+     at x=103.6 paints as two dim half-lines, so parts looked doubled and parts
+     looked faint.
+  3. **The inset was stale.** `syncGrid()` subtracted a hard-coded 1px border
+     while the canvas border had become 2px, so the whole grid sat a pixel off
+     centre and the corners fought the rounded frame.
+
+None of the three is fixable in CSS. It is a `<canvas>` now: `drawGrid()` places
+every line on a whole DEVICE pixel with `fillRect`, draws the closing edges
+explicitly, clamps the last line inward so it lands inside the canvas, and reads
+the inset from `getComputedStyle(pad).borderTopWidth` instead of assuming it.
+Density lives in JS too — the fine 16x12 layer is omitted below 560px.
+
+`verify_ux.py` samples the rendered canvas at three device-pixel ratios: insets
+equal on all four sides, alpha present on every closing edge, and ZERO inside a
+cell. It also counts vertical lines along a scanline — 17 on desktop, 9 on a
+phone — rather than reading CSS, because there is no CSS left to read.
+
+**The last grid column was narrower than the rest.** `paint()` clamped only the
+CLOSING line inward — `if (x > W - line) x = W - line` — which kept it on the
+canvas but stole its width from the final cell alone: 129, 129, 129, 129, 129,
+129, 130, **126**. One narrow column on the right edge is exactly the kind of
+defect that reads as "the grid is off" without being obviously wrong anywhere
+you can point at, and it survived a check whose tolerance was 4px.
+
+Laying the lines out over `(W - line)` rather than `W` puts the closing line at
+the edge by construction and leaves every gap equal. Measured after: spread of
+**0** device pixels on both phone and desktop, down from 4. The assertion's
+tolerance is now 1.
+
+**The grid is a `<canvas>`, and that matters twice over.** A canvas still
+paints its CSS `background-image`, so a leftover gradient rule under it draws a
+SECOND grid straight through the first — which is what an earlier attempt at
+"fixing the grid" by editing `background-image` would have produced. There is
+no such rule now, and `verify_ux.py` asserts `backgroundImage === 'none'` so
+one cannot be reintroduced.
+
+The lines themselves are painted at integer DEVICE-pixel positions by
+`drawGrid()`. The old percentage-based gradient grid put every line on a
+fractional pixel and let the browser round each independently, which is what
+made the columns look irregular. Measured from the rendered pixels: 8 columns
+at 129-130 device px on a phone, 16 at 85-86 on desktop — a spread of at most
+4, which is rounding, not drift.
+
+The suite SEARCHES for a sample row that crosses verticals rather than assuming
+one. Sampling blind at H/12 landed exactly on a horizontal line at desktop and
+reported "1 line" — a measurement that looked like a catastrophic failure and
+was actually a bad probe.
+
+**The colour drawer was sliced by the browser's own toolbar on a phone.** Two
+causes, both needed:
+
+* `.flip-drawers` had ZERO bottom padding, and the drawers are the last thing
+  on the page — so on iOS Safari, whose bottom toolbar OVERLAYS the viewport,
+  the swatch row and the eyedropper sat underneath it. Measured at 393x852 the
+  drawer already ended 12px past the fold before the toolbar took its ~60-90px.
+* `refitDrawer()` scrolled with `block: 'nearest'`, which moves the MINIMUM
+  amount — a drawer already partly on screen got no scroll at all, so it stayed
+  permanently half-visible. `block: 'end'` brings its bottom to the viewport
+  bottom, where the new safe-area padding keeps it clear of the chrome.
+
+Both editors got the padding; `.tab-panel` had the same exposure on Pad.
+
+**The Saving pill sat on top of "Clear all pages"** whenever a drawer was open.
+It is fixed to the bottom-left and the drawer scrolls under it. A transient
+advisory covering a destructive control is worse than one you cannot see, so it
+fades out while any drawer is open.
 
 **Two colour swatches showed as selected at once, and the cause is a JS
 footgun worth knowing.** `setColor()` did:

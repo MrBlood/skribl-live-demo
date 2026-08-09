@@ -666,7 +666,10 @@ body.stroking .zoom-hud { pointer-events: none; }
 .tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
 
 .tab-panel {
-  margin: 0 12px 12px;
+  /* Same reason as .flip-drawers: on iOS Safari the bottom toolbar overlays
+     the viewport and this panel is the last thing on the page, so its final
+     row was sliced. env() is 0 where there is no inset. */
+  margin: 0 12px calc(12px + env(safe-area-inset-bottom));
   padding: 16px;
   border: 1px solid var(--hairline);
   border-radius: 16px;
@@ -2061,6 +2064,16 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .autosave-status.show { opacity: 1; }
+/* A transient status pill must not sit on top of a control. Fixed at the
+   bottom-left, it landed squarely over "Clear all pages" whenever a drawer was
+   open — and a pill covering a destructive button is worse than one you cannot
+   see. Fades out while any drawer is open; it is advisory, and the drawer is
+   what the user is actually looking at. */
+body:has(.tab-panel:not([hidden])) .autosave-status,
+body:has(#drawPanel:not([hidden])) .autosave-status {
+  opacity: 0;
+  pointer-events: none;
+}
 .autosave-status[hidden] { display: none; }
 
 .autosave-dot {

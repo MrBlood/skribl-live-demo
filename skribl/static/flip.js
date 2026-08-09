@@ -98,11 +98,73 @@ function sizeStage(){
 // Pin the grid overlay to the canvas's actual rendered box (offsetWidth/Height
 // include the 1px border) instead of trusting the wrapper's size, so it always
 // covers the whole canvas edge-to-edge no matter how the flex wrapper sizes.
+/* The grid, drawn on a canvas rather than painted with CSS gradients.
+ *
+ * WHY NOT GRADIENTS. Three faults, all of them visible and none of them
+ * fixable in CSS:
+ *
+ *  1. TOP-LEFT JUSTIFIED. A gradient repeats from the origin, so a line lands
+ *     on 0% but the closing edge gets none — the grid saturated the top and
+ *     left borders and stopped short of the bottom and right.
+ *  2. PHANTOM LINES. Percentage stops land on fractional pixels. A 1px line at
+ *     x=103.6 is rendered as two dim half-lines, so parts of the grid looked
+ *     doubled and parts looked faint.
+ *  3. THE INSET WAS WRONG. This function subtracted a 1px border while the pad
+ *     now has 2px, so the whole grid sat a pixel off centre.
+ *
+ * On a canvas every line is placed on an exact DEVICE pixel with fillRect, and
+ * the closing edge is drawn explicitly. Nothing is fractional, so nothing is
+ * phantom.
+ */
 function syncGrid(){
   const g = document.getElementById('flipGrid'); if(!g) return;
-  const b = 1;  // pad border width — sit the grid inside it so corners follow the rounded frame
-  g.style.left = (pad.offsetLeft + b) + 'px'; g.style.top = (pad.offsetTop + b) + 'px';
-  g.style.width = (pad.offsetWidth - 2*b) + 'px'; g.style.height = (pad.offsetHeight - 2*b) + 'px';
+  // Read the border rather than assume it. Hard-coding 1 here is what put the
+  // grid a pixel off when the canvas border went to 2px.
+  const b = parseFloat(getComputedStyle(pad).borderTopWidth) || 0;
+  const w = Math.max(0, pad.offsetWidth  - 2*b);
+  const h = Math.max(0, pad.offsetHeight - 2*b);
+  g.style.left = (pad.offsetLeft + b) + 'px';
+  g.style.top  = (pad.offsetTop  + b) + 'px';
+  g.style.width = w + 'px';
+  g.style.height = h + 'px';
+  drawGrid(g, w, h);
+}
+
+function drawGrid(g, w, h){
+  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if(!W || !H) return;
+  if(g.width !== W || g.height !== H){ g.width = W; g.height = H; }
+  const c = g.getContext('2d');
+  c.clearRect(0, 0, W, H);
+
+  // Below 560px the fine subdivision is dropped: at ~10px spacing it stops
+  // reading as a grid and becomes a wash.
+  const fine = w >= 560;
+  const cols = 8, rows = 6;
+  const line = Math.max(1, Math.round(dpr));   // whole device pixels only
+
+  // Sub-cells first so the majors sit on top of them.
+  if(fine) paint(cols*2, rows*2, 'rgba(255,255,255,.10)');
+  paint(cols, rows, 'rgba(255,255,255,.26)');
+
+  function paint(nx, ny, colour){
+    c.fillStyle = colour;
+    // Distribute across (W - line), not W.
+    //
+    // Clamping only the LAST line inward kept it on the canvas but stole its
+    // width from the final cell alone: every other column measured 129-130
+    // device px and the last one 126. One narrow column on the right edge is
+    // exactly the kind of thing that reads as "the grid is off" without being
+    // obviously wrong anywhere you can point at.
+    //
+    // Laying the lines out over the span that is actually available puts the
+    // closing line at W - line by construction, and leaves every gap equal to
+    // within rounding.
+    const spanX = Math.max(1, W - line), spanY = Math.max(1, H - line);
+    for(let i = 0; i <= nx; i++) c.fillRect(Math.round(i * spanX / nx), 0, line, H);
+    for(let j = 0; j <= ny; j++) c.fillRect(0, Math.round(j * spanY / ny), W, line);
+  }
 }
 window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); if(!photoPanel.hidden) positionFitSlider(); });
 
@@ -1126,7 +1188,13 @@ function closeMediaDrawers(){ hidePhoto(); hideMusic(); }
 function refitDrawer(){
   const open = !drawPanel.hidden ? drawPanel : (!photoPanel.hidden ? photoPanel : (!musicPanel.hidden ? musicPanel : null));
   if(!open) return;
-  requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(_){ open.scrollIntoView(); }
+  // block:'end', not 'nearest'. 'nearest' scrolls the MINIMUM amount, so a
+  // drawer that is already partly on screen gets no scroll at all — which on a
+  // phone left the colour swatches and the eyedropper permanently sliced by the
+  // bottom edge, under Safari's toolbar. 'end' brings the drawer's bottom to
+  // the viewport bottom, and the safe-area padding on .flip-drawers keeps it
+  // clear of the browser chrome once it gets there.
+  requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:'smooth', block:'end'}); }catch(_){ open.scrollIntoView(); }
     if(currentAudioBuffer && open===musicPanel) requestZoomWaveformDraw(); });
 }
 function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); refitDrawer(); requestAnimationFrame(positionSmoothSeg); }
