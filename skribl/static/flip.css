@@ -279,6 +279,20 @@
   /* Selected page: 1px border + a 1px ring = 2px of accent, down from 3px.
      Still unmistakable at thumbnail size without the heavy slab look. */
   .frame.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  /* Scope preview. A move spanning pages 3-7 shows itself on pages 3-7 rather
+     than only in a text selector — better feedback, and it costs no width in a
+     bar that is already tight at 320px. Deliberately distinct from .on, which
+     still means "the page you are drawing on": during a move both are true of
+     the current page and they must remain tellable apart. */
+  .frame.in-scope { border-color: var(--accent-bright, var(--accent)); }
+  .frame.in-scope::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    border-radius: 10px; background: var(--accent); opacity: .14;
+  }
+  /* The strip stays VISIBLE during a move — it is what makes the move
+     judgeable — but stops being operable. Dimming the add column signals that
+     without hiding the thumbnails you are lining the drawing up against. */
+  body.move-locked .addcol { opacity: .4; }
   .frame canvas { width: 100%; height: 100%; display: block; }
   /* Top-left, with the hold badge to its right — the ops bar owns the bottom. */
   .frame .num { position: absolute; top: 4px; left: 6px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
@@ -398,7 +412,13 @@
 /* The two tune rows sit one above the other, so they must be the same size.
    #fps was a bare .seg on the default height while .onion-seg overrode it, and
    the Speed pill came out visibly larger than the Onion one directly below. */
-.onion-seg, .fps-group .seg { --seg-h: 26px; }
+/* --seg-h intentionally NOT set: this control has only ever been
+   measured on one machine, and its height follows the installed font.
+   Opting it in means choosing a number for every viewer, so it waits
+   for a measurement on a real device. The dead `--seg-h: 26px` that
+   used to sit here rendered nowhere and is gone rather than left to
+   look like a decision. */
+.onion-seg, .fps-group .seg { }
 .onion-seg button, .fps-group .seg button { min-width: 22px; padding: 0 7px; font-size: 12px; }
 
 .onion-tint {
@@ -542,7 +562,13 @@
 /* Tips matches Canvas exactly — they sit one above the other, and two
    segmented controls at different heights in the same menu reads as a mistake
    rather than a hierarchy. */
-.canvas-seg, .hint-seg { --seg-h: 26px; margin-left: auto; }
+/* --seg-h intentionally NOT set: this control has only ever been
+   measured on one machine, and its height follows the installed font.
+   Opting it in means choosing a number for every viewer, so it waits
+   for a measurement on a real device. The dead `--seg-h: 26px` that
+   used to sit here rendered nowhere and is gone rather than left to
+   look like a decision. */
+.canvas-seg, .hint-seg { margin-left: auto; }
 /* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
    hole between the word "Tips" and its switch while "Canvas" sat snug against
    its own. Matching the widths closes it, and the two rows read as a pair. */
@@ -719,16 +745,57 @@
      phone the page bar already fills its row, and a second bar would push the
      filmstrip off screen exactly when you need it to judge the move. */
   .movebar { gap: 8px; }
+  /* Redundant since styles.css added a global [hidden] rule; kept so the
+     move bar still hides if flip.css is ever loaded without styles.css. */
   .movebar[hidden] { display: none; }
   .mb-label { font-size: 12px; font-weight: 600; color: var(--accent-bright); }
+  /* The offset readout and the scope pill are a matched pair: both report
+     state, both sit between the "Moving" label and the actions. They were 24px
+     and 20px — three pixels apart on a Mac — because neither stated a height.
+     30px is the app's existing secondary-control size (.eyedropper-btn,
+     .color-dot, .bg-swatch, .zoom-hud .zoom-val, #musicPendingBtn), one tier
+     below the 38px .pb controls they sit beside. */
   .mb-offset {
     font-variant-numeric: tabular-nums; font-size: 12px;
     color: var(--text-primary);
     background: var(--surface-control); border: 1px solid var(--hairline-strong);
-    border-radius: 8px; padding: 4px 8px; min-width: 62px; text-align: center;
+    border-radius: 8px; min-width: 62px; text-align: center;
+    height: 30px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 10px;
   }
-  .mb-scope { --seg-h: 26px; }
-  .mb-scope button { min-width: 34px; padding: 0 8px; font-size: 11px; }
+  /* The readout is operable, so it says so. */
+  .mb-offset { cursor: pointer; }
+  .mb-offset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* The input replaces the button in the same slot, so it must match its box
+     exactly or the bar jumps on every edit. Both take their height from the
+     same 30px as the scope pill. */
+  .mb-offset-input {
+    font: inherit; font-size: 12px; font-variant-numeric: tabular-nums;
+    text-align: center; cursor: text;
+    color: var(--text-primary); caret-color: var(--accent);
+    outline: none;
+  }
+  .mb-offset-input:focus { border-color: var(--accent); }
+  /* An unparseable entry is reported, not silently discarded. */
+  .mb-offset-input.bad { border-color: #e0576b; color: #e0576b; }
+
+  /* "And following" reads better than "& after" but costs 23px, which the bar
+     does not have below 393px — it is overflow-x:auto, so it does not clip, it
+     scrolls and takes Done off screen. Same step-down the FLIPMODE wordmark
+     takes. Measured with scrollWidth against clientWidth at the WIDEST label
+     the feature can produce, not at whatever page happens to be selected. */
+  .mb-scope .lbl-narrow { display: none; }
+  @media (max-width: 559px) {
+    .mb-scope .lbl-wide { display: none; }
+    .mb-scope .lbl-narrow { display: inline; }
+  }
+
+  .mb-scope { --seg-h: 30px; }
+  /* Type matches the .pb buttons in the same row rather than being two sizes
+     smaller. `nowrap` because a stated height leaves a wrapped label nowhere to
+     go: at 320px "This page" wrapped to two lines and the box simply grew. */
+  .mb-scope button { min-width: 34px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
   .mb-done { margin-left: auto; background: var(--accent); border-color: transparent; color: #fff; }
   /* The canvas says what it is doing. `grab` is the resting affordance and
      `grabbing` the active one — the same pair the photo repositioner uses. */
@@ -737,7 +804,27 @@
   /* Below 560px the labels go, like every other page-bar button. */
   @media (max-width: 559px) {
     .mb-label { display: none; }
-    .mb-scope button { min-width: 30px; padding: 0 6px; }
+    .mb-scope button { min-width: 30px; padding: 0 9px; font-size: 12px; }
+  }
+  /* A 30px pill with a 13px label is wider than the old 20px one, and
+     `white-space: nowrap` removes the escape the narrow widths were quietly
+     relying on: at 320px "This page" used to WRAP to two lines, which is why
+     the bar fitted. Forbidding the wrap turned that into an overflow — the bar
+     is `overflow-x: auto`, so it did not clip, it became scrollable and Done
+     left the screen. Both tiers below were found by measuring scrollWidth
+     against clientWidth on the real page at each width, not by summing child
+     widths: the flex row shrinks .mb-offset before anything overflows, so
+     arithmetic reports room that is not there.
+     360px was over by two pixels and needed nothing but the row's own gap,
+     which leaves the pill full-size on every phone in common use. */
+  @media (max-width: 400px) { .movebar { gap: 6px; } }
+  /* 320px is the 1st-gen SE and narrower than anything sold now — a true
+     fallback, like the FLIPMODE wordmark's step-down, not a target. */
+  @media (max-width: 359px) {
+    .movebar { gap: 5px; padding: 7px 8px; }
+    .mb-scope button { min-width: 24px; padding: 0 5px; font-size: 11px; }
+    .mb-offset { min-width: 46px; padding: 0 4px; }
+    .movebar #mbReset, .movebar .mb-done { padding: 0 8px; }
   }
   /* The move bar's buttons are touch targets like any other page-bar control:
      verify_pages.py holds every visible .pb to 38px, and Reset/Done are the

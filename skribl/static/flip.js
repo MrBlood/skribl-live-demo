@@ -889,14 +889,14 @@ function syncPagebar(){
     pbHold.classList.toggle('on', frameHold(f)>1);
   }
 }
-if(pbLeft) pbLeft.addEventListener('click',()=>{ if(!pbLeft.disabled) movePage(idx,-1); });
+if(pbLeft) pbLeft.addEventListener('click',()=>{ if(!pbLeft.disabled && !moveMode) movePage(idx,-1); });
 if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) movePage(idx,1); });
 if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return;
   pageClip=deepCopy(frames[idx]); buildStrip(); chip('Page copied — use ＋ Paste'); });
 if(pbHold) pbHold.addEventListener('click',()=>{ if(pbHold.disabled) return;
   invalidateClearUndo(); frames[idx].hold=(frameHold(frames[idx]) % MAX_HOLD)+1;
   buildStrip(); scheduleSave(); });
-if(pbDel) pbDel.addEventListener('click',()=>{ if(!pbDel.disabled) delFrame(idx); });
+if(pbDel) pbDel.addEventListener('click',()=>{ if(!pbDel.disabled && !moveMode) delFrame(idx); });
 
 function buildStrip(){
   armedDel = -1;
@@ -908,12 +908,22 @@ function buildStrip(){
       + (frameHold(f)>1 ? '<div class="holdbadge">\u00d7'+frameHold(f)+'</div>' : '')
       +'<canvas></canvas>';   // per-page controls now live in #pagebar (v124)
     el.addEventListener('pointerdown',ev=>{
-      if(playing || frames.length<2) return;
+      if(playing || moveMode || frames.length<2) return;
       if(ev.target.closest('.del')) return;
       _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false, centers:stripTileCenters() };
     });
     el.addEventListener('click',ev=>{
+      // moveOrigin is keyed by ARRAY INDEX, so selecting, adding, deleting or
+      // reordering a page during a live move makes index i stop identifying
+      // the page whose points were captured. commitMove() then recomputes its
+      // targets from the CURRENT idx, so the undo record could name a
+      // different page set from the one previewed — and a reorder could apply
+      // one page's captured coordinates to another page's strokes, which is
+      // state corruption rather than a visual glitch. A transform session
+      // operates on a stable set of pages; the strip stays visible because it
+      // is what makes a move judgeable, but it stops being operable.
       if(playing) return;
+      if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(_pdragSuppressClick) return;
       const del = ev.target.closest('.del');
       if(del){
@@ -932,17 +942,18 @@ function buildStrip(){
   // Built here rather than in the template, which is why a template-wide
   // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
   // MutationObserver, so a title written here is picked up like any other.
-  col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw">＋ Page</button>'
+  col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw">＋ Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page">＋ Blank</button>'
     + (pageClip ? '<button class="addbtn mini" id="addpaste">＋ Paste</button>' : '');
   strip.appendChild(col);
-  col.querySelector('#addcopy').addEventListener('click',()=>{ if(!playing) addFrame(true); });
-  col.querySelector('#addblank').addEventListener('click',()=>{ if(!playing) addFrame(false); });
+  col.querySelector('#addcopy').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(true); });
+  col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
   syncPagebar();
   syncFlipDuration();
+  if(typeof syncMoveLabel === 'function') syncMoveLabel();
   const pasteBtn=col.querySelector('#addpaste');
   if(pasteBtn) pasteBtn.addEventListener('click',()=>{
-    if(playing || !pageClip) return;
+    if(playing || moveMode || !pageClip) return;
     invalidateClearUndo(); redoStack.length=0;
     frames.splice(idx+1,0,deepCopy(pageClip)); idx++;
     buildStrip(); render(); scheduleSave();
@@ -974,6 +985,7 @@ function movePage(i,dir){
 // the user was on rather than the same slot — reordering must never silently
 // switch which page you're drawing on.
 function movePageTo(i,j){
+  if(moveMode) return;              // see the note in buildStrip's click handler
   if(i===j) return;
   if(j<0 || j>=frames.length) return;
   invalidateClearUndo(); redoStack.length=0;
@@ -1040,12 +1052,12 @@ function scrollStripToActive(smooth){
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }
 }
-function addFrame(copy){ disarmAll(); invalidateClearUndo(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
+function addFrame(copy){ if(moveMode) return; disarmAll(); invalidateClearUndo(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   scrollStripToActive(true); }
-function delFrame(i){ invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
+function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true); }
-function go(i){ idx=i; redoStack.length=0; buildStrip(); render(); }
+function go(i){ if(moveMode) return; idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- flip playback ---- */
 const playBtn=document.getElementById('play');
@@ -1186,17 +1198,21 @@ function setTool(t){
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   if(picking) setPicking(false);
 }
-function addRecent(hex){
-  recentColors=[hex, ...recentColors.filter(c=>c.toLowerCase()!==hex.toLowerCase())].slice(0,6);
-  try{ localStorage.setItem('skribl_recent_colors', JSON.stringify(recentColors)); }catch(_){ }
-  renderRecent();
+// Shared with Pad via lib/recentcolors.js. closePop() stays here: Flip's
+// colour popover sits over the canvas, so leaving it open after a pick would
+// cover the drawing. That is layout, and layout is not what gets shared.
+let _recent = null;
+function _initRecent(){
+  if(_recent || !window.SkriblRecentColors) return;
+  _recent = window.SkriblRecentColors.create({
+    wrap: recentColorsEl,
+    row: recentRow,
+    onPick: hex => { setColor(hex); closePop(); },
+    onChange: list => { recentColors = list; },
+  });
 }
-function renderRecent(){
-  recentColorsEl.innerHTML='';
-  recentColors.forEach(hex=>{ const b=document.createElement('button'); b.type='button'; b.className='recent-swatch'; b.style.background=hex;
-    b.title=hex; b.addEventListener('click',()=>{ setColor(hex); closePop(); }); recentColorsEl.appendChild(b); });
-  recentRow.hidden = recentColors.length===0;
-}
+function addRecent(hex){ _initRecent(); if(_recent) _recent.add(hex); }
+function renderRecent(){ _initRecent(); if(_recent) _recent.render(); }
 // preset dots — inserted before the static custom picker + eyedropper (Pad order)
 COLORS.forEach(col=>{ const b=document.createElement('button'); b.type='button'; b.className='color-dot'; b.style.background=col; b.dataset.color=col;
   if(col==='#000000') b.style.borderColor='#3a4150';
@@ -1207,8 +1223,21 @@ customInput.addEventListener('input',e=>{ customBtn.style.background=e.target.va
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
 
 // eyedropper — click to arm, then click the canvas to sample a pixel's colour
-function setPicking(v){ picking=v; eyedropperBtn.classList.toggle('picking',picking); pad.style.cursor = picking ? 'crosshair' : 'none';
-  if(picking) hideCursors(); }
+// Shared with Pad via lib/eyedropper.js — the arming, the cursor, Escape and
+// the one-shot semantics. Reading the pixel stays here: the two surfaces
+// genuinely differ on context, DPR and what a transparent pixel means.
+let _eyedropper = null;
+function _initEyedropper(){
+  if(_eyedropper || !window.SkriblEyedropper) return;
+  _eyedropper = window.SkriblEyedropper.create({
+    button: eyedropperBtn,
+    surface: pad,
+    idleCursor: 'none',
+    onArm: () => hideCursors(),
+    onChange: v => { picking = v; },
+  });
+}
+function setPicking(v){ _initEyedropper(); if(_eyedropper){ v ? (!picking && _eyedropper.toggle()) : _eyedropper.disarm(); } }
 function sampleColorAt(e){
   try{
     const p=pos(e); const dx=Math.round(p.x*DPR), dy=Math.round(p.y*DPR);
@@ -1219,7 +1248,7 @@ function sampleColorAt(e){
   }catch(_){ }
   setPicking(false); closePop();
 }
-eyedropperBtn.addEventListener('click',e=>{ e.stopPropagation(); setPicking(!picking); });
+_initEyedropper();   // the lib binds the button's own click handler
 
 const photoPanel=document.getElementById('photoPanel'), musicPanel=document.getElementById('musicPanel');
 const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElementById('musicBtn');
@@ -1292,9 +1321,16 @@ customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
 const smoothSeg=document.getElementById('smoothSeg');
 function positionSmoothSeg(){ const active=smoothSeg.querySelector('.smooth-btn.active'), pill=smoothSeg.querySelector('.seg-slider');
   if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
-smoothSeg.addEventListener('click',e=>{ const b=e.target.closest('.smooth-btn'); if(!b) return;
-  const lvl=b.dataset.smooth; smoothingAlpha = lvl==='high' ? 0.25 : lvl==='low' ? 0.5 : 1;
-  smoothSeg.querySelectorAll('.smooth-btn').forEach(x=>x.classList.toggle('active', x===b)); positionSmoothSeg(); });
+// Shared with Pad via lib/smoothing.js. positionSmoothSeg stays injected:
+// slider positioning exists three times in this codebase (here, app.js and
+// lib/segslider.js) and consolidating it is its own extraction.
+if(window.SkriblSmoothing){
+  window.SkriblSmoothing.create({
+    seg: smoothSeg,
+    onChange: a => { smoothingAlpha = a; },
+    onRender: () => positionSmoothSeg(),
+  });
+}
 
 /* =====================================================================
    "More" menu: background image, music loop, save/load draft, export.
@@ -2055,8 +2091,9 @@ function dragZoomHandle(handle, isStart){
 dragZoomHandle(zoomHandleStart,true); dragZoomHandle(zoomHandleEnd,false);
 
 // seg-slider pill for the zoom mag/focus groups
-function positionSegSlider(group){ if(!group) return; const pill=group.__segPill; if(!pill) return; const btns=[].slice.call(group.querySelectorAll('button')); let idx=-1; for(let i=0;i<btns.length;i++){ if(btns[i].classList.contains('active')) idx=i; } const a=idx>=0?btns[idx]:null; if(!a||!a.offsetWidth){ pill.style.opacity='0'; return; } const off=a.offsetLeft-btns[0].offsetLeft; pill.style.width=a.offsetWidth+'px'; pill.style.transform='translateX('+off+'px)'; pill.style.opacity='1'; }
-function attachSegSlider(group){ if(!group||group.__segAttached) return; group.__segAttached=true; const pill=document.createElement('div'); pill.className='seg-slider'; group.insertBefore(pill, group.firstChild); group.__segPill=pill; const reflow=()=>positionSegSlider(group); if(typeof MutationObserver!=='undefined'){ new MutationObserver(reflow).observe(group,{subtree:true,attributes:true,attributeFilter:['class']}); } if(typeof ResizeObserver!=='undefined'){ new ResizeObserver(reflow).observe(group); } else if(window.addEventListener){ window.addEventListener('resize',reflow); } reflow(); }
+function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.placeAttached(group); }
+// Both editors carried an equivalent of this; it lives in lib/segslider.js now.
+function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
 (function initZoomMagControl(){ if(!zoomTrackWrap||!zoomTrackWrap.parentNode) return;
   const bar=document.createElement('div'); bar.className='zoom-mag-bar';
   bar.innerHTML='<div class="zoom-mag-group" data-role="focus"><button type="button" class="zoom-mag-btn active" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></div>'+
@@ -2392,6 +2429,15 @@ function undoStroke(){
   if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'){
     const m = actionLog.pop();
     translateFrames(m.idxs, -m.dx, -m.dy);
+    // A move joined the undo history, so it owes a redo. Without this the
+    // button stayed stroke-only: undoing a move left redoStack holding some
+    // older stroke, so pressing Redo resurrected a stroke from two operations
+    // ago instead of restoring the move.
+    redoStack.push(m);
+    // Named because it is NOT a stroke. Undo is trusted when it is obvious what
+    // it just did, and a page translation vanishing is far less legible than a
+    // stroke vanishing — especially when it undoes across several pages.
+    chip(m.idxs.length > 1 ? 'Move undone on ' + m.idxs.length + ' pages' : 'Move undone');
     render(); m.idxs.forEach(i=>refreshThumb(i)); updateToolState(); scheduleSave();
     return;
   }
@@ -2405,6 +2451,15 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'move'){
+    const m = redoStack.pop();
+    translateFrames(m.idxs, m.dx, m.dy);
+    actionLog.push(m);            // back on the history it came off
+    chip(m.idxs.length > 1 ? 'Move redone on ' + m.idxs.length + ' pages' : 'Move redone');
+    render(); m.idxs.forEach(i=>refreshThumb(i)); updateToolState(); scheduleSave();
+    return;
+  }
   const f = frame(); const item = redoStack.pop();
   for(const p of item.pts) f.strokes.push(p);
   f.strokeGroups.push(item.count);
@@ -2429,20 +2484,58 @@ function moveTargets(){
   return [idx];
 }
 function captureMoveOrigin(){
+  // EVERY page, ONCE, for the life of the session — not just the pages
+  // currently in scope. The old version captured only the target set and was
+  // called again whenever scope changed, which re-read points that had already
+  // been translated by the live preview: the canonical original and the live
+  // preview are the same array only while the offset is zero. Switching scope
+  // after a +40 drag therefore captured `original + 40` as the new origin and
+  // applied +40 to it, landing the current page on +80 while pages newly in
+  // scope got +40 — the two no longer sharing a translation, and the readout
+  // still saying 40. A session-wide snapshot cannot express that bug: there is
+  // exactly one origin per page and it is never re-derived from a preview.
   moveOrigin = new Map();
-  for(const i of moveTargets()) moveOrigin.set(i, frames[i].strokes.map(p => ({x:p.x, y:p.y})));
+  for(let i = 0; i < frames.length; i++){
+    moveOrigin.set(i, frames[i].strokes.map(p => ({x:p.x, y:p.y})));
+  }
+}
+function syncMoveLabel(){
+  // Both the label and the filmstrip highlight read moveTargets(), the same
+  // function the transform itself uses, so neither can drift from what is
+  // actually moving. A scope preview that disagrees with the operation is
+  // worse than none.
+  const who = document.getElementById('mbWho');
+  const t = moveMode ? moveTargets() : [];
+  if(who && t.length){
+    who.textContent = t.length === 1
+      ? 'Page ' + (t[0] + 1)
+      : 'Pages ' + (t[0] + 1) + '\u2013' + (t[t.length - 1] + 1);
+  }
+  // The strip shows scope far better than any label can, and costs no width in
+  // a bar that is already tight at 320px.
+  const set = new Set(t);
+  strip.querySelectorAll('.frame').forEach((el, i) => {
+    el.classList.toggle('in-scope', moveMode && set.has(i));
+  });
 }
 function applyMoveOffset(){
   if(!moveOrigin) return;
+  const targets = new Set(moveTargets());
   for(const [i, pts] of moveOrigin){
     const f = frames[i]; if(!f) continue;
+    // Pages OUT of scope are restored to their originals rather than left
+    // wherever a previous scope setting put them, so narrowing the scope is as
+    // exact as widening it.
+    const dx = targets.has(i) ? moveDx : 0;
+    const dy = targets.has(i) ? moveDy : 0;
     for(let k = 0; k < f.strokes.length && k < pts.length; k++){
-      f.strokes[k].x = pts[k].x + moveDx;
-      f.strokes[k].y = pts[k].y + moveDy;
+      f.strokes[k].x = pts[k].x + dx;
+      f.strokes[k].y = pts[k].y + dy;
     }
   }
   const off = document.getElementById('mbOffset');
   if(off) off.textContent = Math.round(moveDx) + ', ' + Math.round(moveDy);
+  syncMoveLabel();
   render();
 }
 function setMoveMode(on){
@@ -2458,6 +2551,12 @@ function setMoveMode(on){
   const pb = document.getElementById('pagebar'), mb = document.getElementById('movebar');
   if(pb) pb.hidden = on;
   if(mb) mb.hidden = !on;
+  // Leaving the mode with the entry box open would strand an input over a bar
+  // that is no longer there — and its blur handler would then commit into a
+  // move that had already ended.
+  if(typeof closeOffsetEntry === 'function') closeOffsetEntry();
+  document.body.classList.toggle('move-locked', on);
+  syncMoveLabel();
   if(on){
     captureMoveOrigin();
     const off = document.getElementById('mbOffset'); if(off) off.textContent = '0, 0';
@@ -2478,6 +2577,7 @@ function commitMove(){
   if(!moveMode) return;
   const dx = moveDx, dy = moveDy, idxs = moveTargets();
   if(dx || dy){
+    redoStack.length = 0;
     noteAction({ type:'move', idxs, dx, dy });
     idxs.forEach(i => refreshThumb(i));
     scheduleSave();
@@ -2501,15 +2601,74 @@ bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
     moveScope = b.dataset.scope === 'after' ? 'after' : 'one';
     seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x === b));
     if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
-    // Re-capture: the set of pages being moved just changed, and the current
-    // offset must apply to the new set from their ORIGINAL positions.
-    const dx = moveDx, dy = moveDy;
-    captureMoveOrigin(); moveDx = dx; moveDy = dy; applyMoveOffset();
+    // No re-capture. The snapshot already holds every page's original, so
+    // changing scope only changes which of them receive the offset; pages
+    // leaving the set are restored by applyMoveOffset itself.
+    applyMoveOffset();
   });
 })();
 // Escape cancels rather than commits. A drag you did not mean is undone by
 // leaving, which is what Escape means everywhere else in this app.
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && moveMode) cancelMove(); });
+
+/* ---- typing an exact offset ----------------------------------------------
+ * Dragging answers "about there"; typing answers "exactly 40 across". Both
+ * write the same two numbers, so this needs no new state: moveDx/moveDy are
+ * already absolute offsets from the captured origin, and applyMoveOffset()
+ * recomputes from that origin every time. Setting them directly is therefore
+ * exactly equivalent to having dragged to that position — the same Reset, the
+ * same Done, and the same single inverse-offset undo entry.
+ */
+function closeOffsetEntry(){
+  const view = document.getElementById('mbOffset');
+  const input = document.getElementById('mbOffsetInput');
+  if(!view || !input || input.hidden) return;
+  input.hidden = true; view.hidden = false;
+}
+function parseOffsetEntry(text){
+  // "40, -12" / "40 -12" / "40,-12". Rejects anything else rather than
+  // salvaging a number out of it: a half-understood entry that silently moves
+  // the drawing somewhere unintended is worse than no move at all.
+  const m = String(text).match(/^\s*(-?\d+(?:\.\d+)?)\s*(?:,|\s)\s*(-?\d+(?:\.\d+)?)\s*$/);
+  return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : null;
+}
+(function(){
+  const view = document.getElementById('mbOffset');
+  const input = document.getElementById('mbOffsetInput');
+  if(!view || !input) return;
+
+  function openEntry(){
+    if(!moveMode || playing) return;
+    input.value = Math.round(moveDx) + ', ' + Math.round(moveDy);
+    view.hidden = true; input.hidden = false;
+    input.focus(); input.select();
+  }
+  function commitEntry(){
+    if(input.hidden) return;
+    const v = parseOffsetEntry(input.value);
+    if(v){
+      moveDx = v.x; moveDy = v.y;
+      applyMoveOffset();                      // rewrites the readout itself
+    } else if(input.value.trim() !== ''){
+      // Say so rather than silently keeping the old offset.
+      input.classList.add('bad');
+      setTimeout(()=>input.classList.remove('bad'), 700);
+    }
+    closeOffsetEntry();
+  }
+
+  view.addEventListener('click', openEntry);
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){ e.preventDefault(); commitEntry(); }
+    else if(e.key === 'Escape'){
+      // stopPropagation, or the document-level Escape handler above cancels the
+      // whole move — abandoning a typo would throw away the drag as well.
+      e.preventDefault(); e.stopPropagation();
+      closeOffsetEntry();
+    }
+  });
+  input.addEventListener('blur', commitEntry);
+})();
 
 bindEl('undo', 'click',()=>{ disarmAll(); undoStroke(); });
 bindEl('redo', 'click',()=>{ disarmAll(); redoStroke(); });
@@ -2623,7 +2782,7 @@ window.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z'){ e.preventDefault(); undoStroke(); return; }
   // Space = play / stop (when not magnified — Space pans the zoomed canvas instead).
   if((e.code==='Space' || e.key===' ') && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
-  if(playing) return;
+  if(playing || moveMode) return;   // page identity must not shift mid-move
   if(e.key==='ArrowLeft'  && idx>0){ disarmAll(); go(idx-1); }
   if(e.key==='ArrowRight' && idx<frames.length-1){ disarmAll(); go(idx+1); }
   if(e.key==='p' || e.key==='P'){ setTool('pen'); }

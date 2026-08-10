@@ -1067,6 +1067,24 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    against the menu sheet, painting a purple bar down the entire menu. Half a
    component in each stylesheet is what made that possible; both halves live
    here now, and both surfaces load this file. */
+/* [hidden] is a UA rule at `display:none`, and the UA origin loses to ANY
+   author rule — including a same-specificity one like `.pagebar{display:flex}`.
+   So `el.hidden = true` was a no-op for any element whose class states a
+   display, which is most of them: a sweep of both editors found 380 such
+   elements on Flip and 366 on Pad. It had already been hit four times
+   (.movebar, and the three noted in ARCHIVE-README), each fixed with a
+   one-off `.thing[hidden]{display:none}`. This is the general form.
+   Verified safe before adding: no element on either surface carries [hidden]
+   while still rendering, so nothing relied on the defeated behaviour.
+   `!important` is required — without it this loses to the same author rules. */
+[hidden] { display: none !important; }
+
+/* Measured on the real export sheet at 31.7px with a 24px pill — the fraction
+   is the signature of a height inherited through `font: inherit` ->
+   `line-height: inherit`. 32px is that same size stated, so it renders
+   identically here and stops depending on the viewer's font. */
+.export-size-seg, .export-loops-seg { --seg-h: 32px; }
+
 .seg {
   position: relative;
   display: inline-flex;
@@ -1074,6 +1092,18 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
   padding: 3px;
+  /* --seg-h was declared in four places and read in none, so a seg's height
+     came from `font: inherit` -> `line-height: inherit`: it was as tall as
+     whatever contained it, and it followed the INSTALLED FONT's metrics. The
+     same stylesheet rendered #hintSeg at 20px in headless Chromium and 23px on
+     a Mac, while .pb — which states `height: 38px` — matched exactly. A control
+     whose size depends on the viewer's font stack cannot be asserted.
+     Deliberately NO fallback: an undefined var() makes `height` compute to
+     `auto`, so a seg that has not been measured keeps its current behaviour and
+     opting one in is a one-line, one-control decision. */
+  height: var(--seg-h);
+  box-sizing: border-box;
+  align-items: stretch;
 }
 .seg button {
   position: relative; z-index: 1;
@@ -1085,6 +1115,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   transition: color .2s var(--ease);
 }
 .seg button.on { color: #fff; }
+/* Only for segs that opt into --seg-h. Applying `line-height: 1` to every seg
+   would resize the export sheet's Size/Loops groups, which have not been
+   measured — a seg cannot be pinned to a number nobody has looked at. */
+.mb-scope button {
+  height: 100%; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 
 .seg-slider {
   position: absolute;
@@ -3901,7 +3938,7 @@ body.player-mode #canvas {
   font-weight: 500;
   color: var(--text-secondary);
 }
-.menu-row .canvas-seg, .menu-row .hint-seg { --seg-h: 26px; margin-left: auto; }
+.menu-row .canvas-seg, .menu-row .hint-seg { margin-left: auto; }
 /* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
    hole between the word "Tips" and its switch while "Canvas" sat snug against
    its own. Matching the widths closes it, and the two rows read as a pair. */

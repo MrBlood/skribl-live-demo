@@ -72,9 +72,23 @@
       {# Same row, different job. Replacing the page bar rather than adding a bar
          means no extra chrome appears on a phone, where there is none to spare. #}
       <div class="pagebar movebar" id="movebar" role="toolbar" aria-label="Move artwork" hidden>
-        <span class="mb-label">Moving</span>
-        <span class="mb-offset" id="mbOffset">0, 0</span>
-        <span class="seg mb-scope" id="mbScope" role="group" aria-label="Which pages to move"><span class="seg-slider"></span><button type="button" data-scope="one" class="on">This page</button><button type="button" data-scope="after">&amp; after</button></span>
+        <!-- Carries the page identity the move bar otherwise costs you: it
+             REPLACES the page bar, so entering Move is the exact moment
+             "Page 3 / 7" disappears. Written by syncMoveLabel() from the same
+             moveTargets() the transform uses, so it cannot disagree with what
+             is actually being moved. -->
+        <span class="mb-label" id="mbWho">Page 1</span>
+        <!-- The readout doubles as the entry point for exact coordinates: a
+             drag is right for "about there", typing is right for "exactly 40
+             across". A button rather than a span so it is focusable and
+             announces as operable; the input is a sibling rather than a
+             contenteditable span so mobile keyboards open numeric. -->
+        <button type="button" class="mb-offset" id="mbOffset"
+                aria-label="Move offset in canvas units. Activate to type exact coordinates.">0, 0</button>
+        <input class="mb-offset mb-offset-input" id="mbOffsetInput" type="text"
+               inputmode="numeric" autocomplete="off" spellcheck="false"
+               aria-label="Offset as x, y" hidden>
+        <span class="seg mb-scope" id="mbScope" role="group" aria-label="Which pages to move"><span class="seg-slider"></span><button type="button" data-scope="one" class="on">This page</button><button type="button" data-scope="after"><span class="lbl-wide">And following</span><span class="lbl-narrow">After</span></button></span>
         <button type="button" class="pb" id="mbReset">Reset</button>
         <button type="button" class="pb mb-done" id="mbDone">Done</button>
       </div>
@@ -253,6 +267,11 @@
   <script src="{{ skribl_asset('lib/audioloop.js') }}"></script>
   <script src="{{ skribl_asset('lib/report.js') }}"></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}"></script>
+  {# Shared recent-colour controller. Loaded before the editor script,
+     which reads window.SkriblRecentColors at first use. #}
+  <script src="{{ skribl_asset('lib/recentcolors.js') }}"></script>
+  <script src="{{ skribl_asset('lib/eyedropper.js') }}"></script>
+  <script src="{{ skribl_asset('lib/smoothing.js') }}"></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}"></script>
   <script src="{{ skribl_asset('lib/hints.js') }}"></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}"></script>

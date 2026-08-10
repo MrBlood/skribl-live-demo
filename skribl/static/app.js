@@ -909,30 +909,22 @@ function setPenColor(hex) {
   updateCurrentColorChip();
 }
 
-function addRecent(hex) {
-  hex = (hex || '').toLowerCase();
-  if (!/^#[0-9a-f]{6}$/.test(hex)) return;
-  recentColors = [hex, ...recentColors.filter(c => c !== hex)].slice(0, 6);
-  try { localStorage.setItem('skribl_recent_colors', JSON.stringify(recentColors)); } catch (e) {}
-  renderRecent();
-}
-
-function renderRecent() {
-  const row = document.getElementById('recentRow');
-  const wrap = document.getElementById('recentColors');
-  if (!row || !wrap) return;
-  wrap.innerHTML = '';
-  recentColors.forEach(hex => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'recent-swatch';
-    b.style.background = hex;
-    b.setAttribute('aria-label', 'Use color ' + hex);
-    b.addEventListener('click', () => setPenColor(hex));
-    wrap.appendChild(b);
+// Shared with Flip via lib/recentcolors.js. Only onPick differs: Pad's drawer
+// stays open after a pick, Flip's popover closes because it covers the canvas.
+// `recentColors` is kept in step through onChange because other call sites in
+// this file read it directly.
+let _recent = null;
+function _initRecent() {
+  if (_recent || !window.SkriblRecentColors) return;
+  _recent = window.SkriblRecentColors.create({
+    wrap: document.getElementById('recentColors'),
+    row: document.getElementById('recentRow'),
+    onPick: hex => setPenColor(hex),
+    onChange: list => { recentColors = list; },
   });
-  row.hidden = recentColors.length === 0;
 }
+function addRecent(hex) { _initRecent(); if (_recent) _recent.add(hex); }
+function renderRecent() { _initRecent(); if (_recent) _recent.render(); }
 
 function sampleColorAt(x, y) {
   try {
@@ -946,10 +938,10 @@ function sampleColorAt(x, y) {
   stopPicking();
 }
 
+let _eyedropper = null;
 function stopPicking() {
+  if (_eyedropper) _eyedropper.disarm();
   pickingColor = false;
-  const b = document.getElementById('eyedropperBtn');
-  if (b) b.classList.remove('picking');
   updateCanvasLockCue();   // restore lock/eraser/normal cursor rather than wiping it
 }
 
@@ -977,34 +969,31 @@ function stopPicking() {
     if (typeof updateSliderFill === 'function') updateSliderFill(opacitySlider);
   }
 
+  // Shared with Flip via lib/smoothing.js — the level-to-alpha mapping was
+  // three magic numbers written out twice. Pill positioning stays here because
+  // Pad and Flip do it differently; see the note in that file.
   const smoothSeg = document.getElementById('smoothSeg');
-  if (smoothSeg) {
-    smoothSeg.addEventListener('click', (e) => {
-      const btn = e.target.closest('.smooth-btn');
-      if (!btn) return;
-      const lvl = btn.dataset.smooth;
-      smoothingAlpha = lvl === 'high' ? 0.25 : lvl === 'low' ? 0.5 : 1;
-      smoothSeg.querySelectorAll('.smooth-btn').forEach(b => b.classList.toggle('active', b === btn));
+  if (smoothSeg && window.SkriblSmoothing) {
+    window.SkriblSmoothing.create({
+      seg: smoothSeg,
+      onChange: a => { smoothingAlpha = a; },
     });
     attachSegSlider(smoothSeg);
   }
 
+  // Shared with Flip via lib/eyedropper.js. The native window.EyeDropper
+  // branch that used to live here is GONE: it existed only on Chromium, so the
+  // tap-to-sample path had to exist anyway, and keeping both shipped two
+  // different experiences behind one button. See the note in that file.
   const eyedropperBtn = document.getElementById('eyedropperBtn');
-  if (eyedropperBtn) {
-    eyedropperBtn.addEventListener('click', async () => {
-      if (window.EyeDropper) {
-        try {
-          const res = await new EyeDropper().open();
-          if (res && res.sRGBHex) setPenColor(res.sRGBHex);
-        } catch (e) {}
-        return;
-      }
-      // Fallback (e.g. iOS Safari): arm a one-tap sample on the canvas.
-      if (pickingColor) { stopPicking(); return; }
-      pickingColor = true;
-      eyedropperBtn.classList.add('picking');
-      canvas.style.cursor = 'crosshair';
-      showToast('Tap the canvas to pick a color', eyedropperBtn);
+  if (eyedropperBtn && window.SkriblEyedropper) {
+    _eyedropper = window.SkriblEyedropper.create({
+      button: eyedropperBtn,
+      surface: canvas,
+      idleCursor: '',
+      onArm: () => showToast('Tap the canvas to pick a color', eyedropperBtn),
+      // pickingColor is read by the pointer handler and by two teardown paths.
+      onChange: v => { pickingColor = v; },
     });
   }
 
@@ -2037,53 +2026,10 @@ dragZoomHandle(zoomHandleEnd, false);
 // resizes or first becomes visible from a hidden tab/drawer (ResizeObserver);
 // both are feature-detected so the headless harness — which stubs neither — runs
 // this file top-level without throwing.
-function positionSegSlider(group) {
-  if (!group) return;
-  const pill = group.__segPill;
-  if (!pill) return;
-  const btns = Array.prototype.slice.call(group.querySelectorAll('button'));
-  let idx = -1;
-  for (let i = 0; i < btns.length; i++) {
-    if (btns[i].classList.contains('active')) idx = i;
-  }
-  const activeBtn = idx >= 0 ? btns[idx] : null;
-  // No selection, or the group is still collapsed (zero-width) — keep it hidden
-  // and let the next reflow place it once it has real layout.
-  if (!activeBtn || !activeBtn.offsetWidth) { pill.style.opacity = '0'; return; }
-  // Measure from the first button via offsetLeft so any inter-button `gap`
-  // (the zoom groups use gap:2px) is included. Summing widths alone drifts the
-  // pill left by one gap per button. The pill at translateX(0) sits under btn 0.
-  const offset = activeBtn.offsetLeft - btns[0].offsetLeft;
-  pill.style.width = activeBtn.offsetWidth + 'px';
-  pill.style.transform = 'translateX(' + offset + 'px)';
-  pill.style.opacity = '1';
-}
+function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.placeAttached(group); }
 
-function attachSegSlider(group) {
-  if (!group || group.__segAttached) return;
-  group.__segAttached = true;
-  const pill = document.createElement('div');
-  pill.className = 'seg-slider';
-  group.insertBefore(pill, group.firstChild);
-  group.__segPill = pill;
-  const reflow = () => positionSegSlider(group);
-  // Active-state changes (clicks, syncZoomFocusButtons, the programmatic 'free'
-  // state) all flip the `active` class — observing it keeps the pill in sync
-  // without threading a call through every one of those code paths.
-  if (typeof MutationObserver !== 'undefined') {
-    new MutationObserver(reflow).observe(group, {
-      subtree: true, attributes: true, attributeFilter: ['class'],
-    });
-  }
-  // Fires when the group gains size (revealed from a hidden panel) and on
-  // viewport resize, so the pill lands correctly the first time it's seen.
-  if (typeof ResizeObserver !== 'undefined') {
-    new ResizeObserver(reflow).observe(group);
-  } else if (window.addEventListener) {
-    window.addEventListener('resize', reflow);
-  }
-  reflow();
-}
+// Both editors carried an equivalent of this; it lives in lib/segslider.js now.
+function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
 
 // Focus + magnification control for the Loop Detail view. Built in JS (styles
 // injected once) so the whole feature lives in this one file. Focus centers the

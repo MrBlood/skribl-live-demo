@@ -70,5 +70,58 @@
     for (var i = 0; i < groups.length; i++) track(groups[i]);
   }
 
-  global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place };
+  /* The variant for groups built by JavaScript rather than by a template.
+   * They have no markup pill, so one is CREATED, and they are positioned
+   * relative to the first button rather than to a fixed 3px padding — the
+   * zoom magnifier and focus groups are not `.seg` and do not share its
+   * padding. This is not a duplicate of place(): different groups, different
+   * offset origin, and the two must not be collapsed into one.
+   *
+   * app.js and flip.js each carried a byte-for-byte equivalent of this (the
+   * only differences were `Array.prototype.slice` against `[].slice`, a
+   * variable named `activeBtn` against `a`, and a trailing comma). Both now
+   * delegate here.
+   */
+  function placeAttached(group) {
+    if (!group) return;
+    var pill = group.__segPill;
+    if (!pill) return;
+    var btns = [].slice.call(group.querySelectorAll('button'));
+    var idx = -1;
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].classList.contains('active')) idx = i;
+    }
+    var a = idx >= 0 ? btns[idx] : null;
+    if (!a || !a.offsetWidth) { pill.style.opacity = '0'; return; }
+    pill.style.width = a.offsetWidth + 'px';
+    pill.style.transform = 'translateX(' + (a.offsetLeft - btns[0].offsetLeft) + 'px)';
+    pill.style.opacity = '1';
+  }
+
+  function attach(group) {
+    if (!group || group.__segAttached) return;
+    group.__segAttached = true;
+    var pill = document.createElement('div');
+    pill.className = 'seg-slider';
+    group.insertBefore(pill, group.firstChild);
+    group.__segPill = pill;
+    var reflow = function () { placeAttached(group); };
+    // Active-state changes (clicks, programmatic syncing) all flip the
+    // `active` class, so observing it keeps the pill in step without threading
+    // a call through every code path that can change the selection.
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(reflow).observe(group, {
+        subtree: true, attributes: true, attributeFilter: ['class']
+      });
+    }
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(reflow).observe(group);
+    } else if (global.addEventListener) {
+      global.addEventListener('resize', reflow);
+    }
+    reflow();
+  }
+
+  global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place,
+                             attach: attach, placeAttached: placeAttached };
 })(window);

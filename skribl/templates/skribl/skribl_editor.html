@@ -276,6 +276,11 @@
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
+  {# Shared recent-colour controller. Loaded before the editor script,
+     which reads window.SkriblRecentColors at first use. #}
+  <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
