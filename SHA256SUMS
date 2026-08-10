@@ -81,7 +81,7 @@ eca1461367bfa31ab5b4882548c143bc5183d74438024e6962644f14d1863b66  ./skribl/migra
 0a9934616317051b70a8035f590bc7aa51187259953dfe8eebac9268dae76b57  ./skribl/security.py
 8621ad61bfd997bd844653a811e2250f0d0f3a87448af8e264cf872a871594d5  ./skribl/static/app.js
 e8fd62cabd68d3e9b50c098a8fe0e5f69306356f31f20e8e44584bc7271d5525  ./skribl/static/flip.css
-fc1b71fbe03a65087dc6584c9569fa04b6bf35be4fa3e226305e42ba175e56f3  ./skribl/static/flip.js
+f2d86efcc525979e1586ecc1ecddec5b2a6b76fd545365ed4d4bd5a16de2b22c  ./skribl/static/flip.js
 b65d30f6cbec65e6b6abc52144e4ebe4c64e215624357fab404048d0343250fd  ./skribl/static/gifenc.min.js
 fb1d17f0a55c4cb1a407387311568475322f68d4db14143e01ac4b7c941fc855  ./skribl/static/lib/audioloop.js
 3dc97328aec16873f175be8f6c6e7a5ed764b1a66b0ea6852c80f7dba9340504  ./skribl/static/lib/canvassizes.js

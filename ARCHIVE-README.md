@@ -1,4 +1,4 @@
-nt side# What this archive is
+# What this archive is
 
 **Source version: `SKRIBL_VERSION = "v179"` (skribl/core.py).**
 

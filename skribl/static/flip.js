@@ -889,14 +889,16 @@ function syncPagebar(){
     pbHold.classList.toggle('on', frameHold(f)>1);
   }
 }
-if(pbLeft) pbLeft.addEventListener('click',()=>{ if(!pbLeft.disabled && !moveMode) movePage(idx,-1); });
+if(pbLeft) pbLeft.addEventListener('click',()=>{ if(pbLeft.disabled) return;
+  if(moveMode){ chip('Finish or cancel the move first'); return; } movePage(idx,-1); });
 if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) movePage(idx,1); });
 if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return;
   pageClip=deepCopy(frames[idx]); buildStrip(); chip('Page copied — use ＋ Paste'); });
 if(pbHold) pbHold.addEventListener('click',()=>{ if(pbHold.disabled) return;
   invalidateClearUndo(); frames[idx].hold=(frameHold(frames[idx]) % MAX_HOLD)+1;
   buildStrip(); scheduleSave(); });
-if(pbDel) pbDel.addEventListener('click',()=>{ if(!pbDel.disabled && !moveMode) delFrame(idx); });
+if(pbDel) pbDel.addEventListener('click',()=>{ if(pbDel.disabled) return;
+  if(moveMode){ chip('Finish or cancel the move first'); return; } delFrame(idx); });
 
 function buildStrip(){
   armedDel = -1;
@@ -908,7 +910,13 @@ function buildStrip(){
       + (frameHold(f)>1 ? '<div class="holdbadge">\u00d7'+frameHold(f)+'</div>' : '')
       +'<canvas></canvas>';   // per-page controls now live in #pagebar (v124)
     el.addEventListener('pointerdown',ev=>{
-      if(playing || moveMode || frames.length<2) return;
+      if(playing) return;
+      // Speak here, not only in the click handler: a real drag sets
+      // _pdragSuppressClick, so the click that would have explained the
+      // refusal never fires. Dragging a thumbnail during a move was the
+      // one page operation that failed in complete silence.
+      if(moveMode){ chip('Finish or cancel the move first'); return; }
+      if(frames.length<2) return;
       if(ev.target.closest('.del')) return;
       _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false, centers:stripTileCenters() };
     });
