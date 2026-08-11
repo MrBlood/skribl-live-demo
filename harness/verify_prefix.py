@@ -160,4 +160,45 @@ finally:
     except subprocess.TimeoutExpired:
         proc.kill()
 
+
+# ---- the documented session contract is now enforced -----------------------
+# The package docs say the host MUST provide a session callable, but
+# create_blueprint(session=None) accepted it and models.session() fell through
+# to the process-wide binding. An app initialised WITHOUT a session could
+# therefore reach whichever database the last app to pass one had bound — the
+# cross-application coupling the per-app extension storage was written to end,
+# reintroduced through the door left open for it. Failing at startup is safer
+# than discovering the wrong database mid-request.
+try:
+    import sys as _sys, pathlib as _pl
+    # this suite drives a subprocess server, so the package is not on
+    # the path here the way it is in suites that import it directly
+    _sys.path.insert(0, str(_pl.Path(__file__).resolve().parents[1]))
+    import flask
+    import skribl
+
+    _raised = None
+    try:
+        skribl.init_skribl(flask.Flask("no_session_app"))
+    except Exception as _e1:      # noqa: BLE001
+        _raised = _e1
+    check("initialising without a session is refused at startup",
+          isinstance(_raised, (TypeError, RuntimeError, ValueError)),
+          f"got {_raised!r} — a missing session must not be discoverable only "
+          "later, as a query against another application's database")
+    check("and the refusal names what the host has to do",
+          _raised is not None and "session" in str(_raised).lower(),
+          f"message was {str(_raised)!r}")
+
+    _app_ok = flask.Flask("with_session_app")
+    _sentinel = object()
+    skribl.init_skribl(_app_ok, session=lambda: _sentinel)
+    with _app_ok.app_context():
+        from skribl.models import session as _sess
+        check("an app that supplies one resolves its own session",
+              _sess() is _sentinel)
+except Exception as _e2:          # noqa: BLE001
+    check("the session contract is testable", False, repr(_e2))
+
+
 summarise_and_exit()

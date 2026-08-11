@@ -17,6 +17,10 @@ _CSP_KEYWORD_SOURCES = {"'self'", "'none'"}
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
+
+_FORCE_SECURE = os.environ.get("SKRIBL_FORCE_SECURE_COOKIES", "").strip().lower() \
+    in ("1", "true", "yes", "on")
+
 def _normalise_origin(token):
     parsed = urlsplit(token)
     host = parsed.hostname or ""
@@ -313,7 +317,14 @@ def double_submit_csrf(cookie_name=CSRF_COOKIE, header_name=CSRF_HEADER):
                 cookie_name, g.skribl_csrf_token,
                 httponly=False,      # the client script must read it to echo it
                 samesite="Lax",
-                secure=request.is_secure,
+                # request.is_secure is only true if Flask can SEE the original
+                # scheme. Behind a TLS-terminating proxy that is a deployment
+                # setting (ProxyFix / X-Forwarded-Proto), not something this
+                # package can know, so an HTTPS site whose proxy headers are not
+                # trusted would ship this cookie WITHOUT Secure. Set
+                # SKRIBL_FORCE_SECURE_COOKIES=1 to state that the public origin
+                # is HTTPS regardless of what the request object believes.
+                secure=_FORCE_SECURE or request.is_secure,
                 max_age=60 * 60 * 12,
             )
         return response

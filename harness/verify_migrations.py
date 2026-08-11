@@ -447,6 +447,67 @@ for line in out.splitlines():
 
 shutil.rmtree(tmp, ignore_errors=True)
 
+# ---- v180: the invariants are enforced by the database, not only by Python --
+# The package expects a host application to touch the same database and
+# possibly construct models itself, so an invariant that authorisation depends
+# on must not live only in application code.
+try:
+    import sqlite3 as _sq
+    import tempfile as _tf
+
+    _d = _tf.mkdtemp(prefix="skribl-v180-")
+    _db = os.path.join(_d, "inv.db")
+    alembic(_db, "upgrade", "head")
+    _c = _sq.connect(_db)
+    _c.execute("PRAGMA foreign_keys = ON")
+
+    _fks = _c.execute("PRAGMA foreign_key_list(skribl_post_media)").fetchall()
+    check("skribl_post_media has a foreign key to skribl_posts",
+          any(r[2] == "skribl_posts" and r[3] == "post_id" for r in _fks),
+          f"got {_fks}")
+    check("and it cascades, so a deleted post takes its associations with it",
+          any((r[6] or "").upper() == "CASCADE" for r in _fks),
+          "otherwise the orphan sweep sees their media as still referenced")
+
+    _c.execute("INSERT INTO skribl_posts "
+               "(public_id, title, payload_json, has_audio, created_at, visibility) "
+               "VALUES ('inv-1', 'inv', '{}', 0, '2026-01-01 00:00:00', 'public')")
+    _pid = _c.execute("SELECT id FROM skribl_posts WHERE public_id='inv-1'").fetchone()[0]
+    _c.execute("INSERT INTO skribl_post_media (post_id, media_key) VALUES (?, 'abc.png')",
+               (_pid,))
+    _c.commit()
+    _refused = False
+    try:
+        _c.execute("INSERT INTO skribl_post_media (post_id, media_key) "
+                   "VALUES (999999, 'ghost.png')")
+        _c.commit()
+    except Exception:       # noqa: BLE001
+        _refused = True
+        _c.rollback()
+    check("an association for a post that does not exist is refused",
+          _refused, "authorisation by a row nothing points at is not "
+                    "authorisation")
+
+    _c.execute("DELETE FROM skribl_posts WHERE id = ?", (_pid,))
+    _c.commit()
+    _left = _c.execute("SELECT COUNT(*) FROM skribl_post_media WHERE post_id = ?",
+                       (_pid,)).fetchone()[0]
+    check("deleting a post removes its associations", _left == 0, f"{_left} left")
+
+    _bad = False
+    try:
+        _c.execute("INSERT INTO skribl_rate_events (bucket, key_hash, created_at, state) "
+                   "VALUES ('posts', 'x', '2026-01-01', 'weird')")
+        _c.commit()
+    except Exception:       # noqa: BLE001
+        _bad = True
+        _c.rollback()
+    check("a rate-event state outside pending/committed is refused",
+          _bad, "a third value counts as neither and holds no quota slot")
+    _c.close()
+except Exception as _e5:    # noqa: BLE001
+    check("the v180 invariants are testable", False, repr(_e5))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

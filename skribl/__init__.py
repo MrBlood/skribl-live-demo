@@ -35,7 +35,7 @@ import os
 from flask import Blueprint, url_for
 
 from .core import SKRIBL_VERSION
-from .models import SkriblBase, bind_session, create_all, session
+from .models import SkriblBase, bind_session, create_all, session, set_visibility_policy
 from .routes import register_routes
 from .security import register_security
 
@@ -80,8 +80,39 @@ def asset_url(bp, filename):
 
 def create_blueprint(session=None, url_prefix=None,
                      static_url_path="/static/skribl", current_user_id=None,
-                     csrf=None, media_store=None):
-    """Build the Skribl blueprint. See the module docstring for the contract."""
+                     csrf=None, media_store=None, index_route=False):
+    """Build the Skribl blueprint. See the module docstring for the contract.
+
+    `session` is REQUIRED. It defaulted to None, which made the documented
+    contract unenforced: models.session() falls back to the process-wide
+    binding when an app has none of its own, so a second application
+    initialised without one could reach whichever database the last app to
+    pass a session had bound. That is the cross-application coupling the
+    per-app extension storage exists to prevent, reached through the door left
+    open for it. A missing session now fails at startup rather than surfacing
+    later as a query against somebody else's data.
+
+    Construction without one, for tests that never touch the database, is
+    explicit: pass `session=False`.
+
+    `index_route` defaults to FALSE, and that default is the drop-in contract.
+    The blueprint used to register `GET /` unconditionally — a second copy of
+    the Pad editor, there so the standalone demo had a landing page. Mounted
+    into a host application without a url_prefix, that route SILENTLY REPLACED
+    the host's own homepage: Flask resolves duplicate rules by registration
+    order, and the blueprint is registered first. A host lost its front page by
+    installing a drawing widget, with no error to explain it.
+
+    The demo asks for it explicitly (see app.py). A host that genuinely wants
+    Skribl at its root passes `index_route=True` and means it.
+    """
+    if session is False:
+        session = None          # deliberate, not forgotten
+    elif session is None:
+        raise ValueError(
+            "skribl needs a database session: pass session=lambda: db.session "
+            "to init_skribl()/create_blueprint(). For a test blueprint that "
+            "never queries, pass session=False to say so explicitly.")
     if session is not None:
         bind_session(session)
 
@@ -137,7 +168,7 @@ def create_blueprint(session=None, url_prefix=None,
     @bp.context_processor
     def _expose_asset_helper():
         return {"skribl_asset": lambda filename: asset_url(bp, filename)}
-    register_routes(bp)
+    register_routes(bp, index_route=index_route)
     register_security(bp, SKRIBL_VERSION)
     return bp
 
@@ -148,6 +179,7 @@ def init_skribl(app, **kwargs):
     # Store the session factory PER APPLICATION. A module-level global meant the
     # most recently initialised app won for the whole process; see
     # skribl.models.session().
-    app.extensions.setdefault("skribl", {})["session"] = kwargs.get("session")
+    _sess = kwargs.get("session")
+    app.extensions.setdefault("skribl", {})["session"] = None if _sess is False else _sess
     app.register_blueprint(bp)
     return bp

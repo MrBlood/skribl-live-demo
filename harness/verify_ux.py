@@ -455,12 +455,24 @@ print("\nCOLOUR SWATCHES — exactly one is ever selected")
 # the custom swatch's ring, so two swatches showed as selected and the wrong
 # one looked current. Pad was unaffected: it passes `b === btn`, a real boolean.
 import os as _os
-_TOGGLE_SRC = open(_os.path.join(_os.path.dirname(_os.path.dirname(
-    _os.path.abspath(__file__))), "skribl", "static", "flip.js"),
-    encoding="utf-8").read()
-check("setColor coerces its toggle condition to a boolean",
-      "!!(d.dataset.color" in _TOGGLE_SRC,
+# The toggle now lives in lib/colorselect.js, shared by BOTH editors — so this
+# reads the lib rather than flip.js. That is the point of the extraction: the
+# coercion had to be right in two files and is now right in one. Reading the
+# old location would have passed forever once the code moved, which is the
+# failure mode of a source-level assertion.
+_root = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+_TOGGLE_SRC = open(_os.path.join(_root, "skribl", "static", "lib",
+                                 "colorselect.js"), encoding="utf-8").read()
+check("the shared colour selector coerces its toggle condition to a boolean",
+      "!!(d.dataset" in _TOGGLE_SRC,
       "an && chain can yield undefined, and toggle(name, undefined) TOGGLES")
+check("and neither editor still carries its own copy of that toggle",
+      all("classList.toggle('active'" not in open(
+          _os.path.join(_root, "skribl", "static", f), encoding="utf-8").read()
+          .split("function set" + n)[1].split("\n}")[0]
+          for f, n in (("flip.js", "Color(hex){"), ("app.js", "PenColor(hex) {")))
+      if True else False,
+      "two copies of a rule is how they drift apart")
 
 with sync_playwright() as _p:
     _b = _p.chromium.launch()

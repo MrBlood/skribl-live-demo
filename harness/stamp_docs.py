@@ -30,7 +30,7 @@ BEGIN = "<!-- HARNESS-COUNTS -->"
 END = "<!-- /HARNESS-COUNTS -->"
 
 TARGETS = [ROOT / "README.md", ROOT / "harness" / "README.md",
-           ROOT / "docs" / "HANDOFF.md"]
+           ROOT / "docs" / "HANDOFF.md", ROOT / "START-HERE.md"]
 
 
 def read_run():

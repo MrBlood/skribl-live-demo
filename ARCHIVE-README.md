@@ -994,6 +994,540 @@ backup; nothing in the chain can derive them.
 
 ## Known-open
 
+### Closed in this session
+
+**`[hidden]` no longer needs a per-element rule.** `styles.css` now carries
+`[hidden] { display: none !important; }`. The UA's `[hidden]` rule loses to any
+author rule, including a same-specificity one like `.pagebar{display:flex}`, so
+`el.hidden = true` silently drew nothing for most of the app: a sweep of both
+editors found 380 such elements on Flip and 366 on Pad. The move bar's own
+`.movebar[hidden]` was the fourth one-off fix for this; the rule generalises
+them. Checked safe first — no element on either surface carried `[hidden]` while
+still rendering, so nothing depended on the defeated behaviour — and confirmed
+after by a full-page pixel diff of both editors at load, which is identical
+apart from one 6x6 region that differs between two runs of the SAME build.
+
+**The move bar's page bar actually hides.** `#pagebar` rendered 55px tall with
+`hidden === true` through every version of Move artwork, because
+`verify_move.py` asserted the PROPERTY. It now asserts `offsetParent`, computed
+`display` and rendered height, and fails on unmodified v179.
+
+**Segmented controls state their height.** `--seg-h` was declared in four places
+and read in none, so a `.seg` took its height from `font: inherit` ->
+`line-height: inherit` — it was as tall as whatever contained it, and it
+followed the VIEWER'S installed font. The same stylesheet rendered `#hintSeg` at
+20px in headless Chromium and 23px on the owner's Mac while `.pb`, which states
+`height: 38px`, matched exactly. `.seg` now reads `var(--seg-h)` with NO
+fallback: an undefined `var()` computes `height` to `auto`, so a control that
+has not been measured keeps its current behaviour and opting one in stays a
+one-line decision. Only `.mb-scope` and `.mb-offset` opt in so far, both at 30px
+— the app's existing secondary-control size (`.eyedropper-btn`, `.color-dot`,
+`.bg-swatch`, `.zoom-val`, `#musicPendingBtn`). The four dead `--seg-h: 26px`
+declarations were REMOVED rather than left looking like decisions: 26 rendered
+nowhere, and pinning the others would mean choosing a number for every viewer
+from a measurement taken on one machine.
+
+### Move artwork is transactional (external abuse pass)
+
+A session-wide origin snapshot, a frozen page set, and a redo.
+
+* **Scope could not be changed after moving.** `captureMoveOrigin()` captured
+  only the pages in scope and was called again on every scope change — re-reading
+  points the live preview had ALREADY translated. Drag +40, switch to "& after",
+  and the current page went to +80 while newly-scoped pages got +40; the readout
+  still said 40. Switching repeatedly compounded it to +360, after which Reset
+  and Escape could no longer restore the originals. The snapshot is now taken
+  once, for EVERY page, at mode entry and is never re-derived from a preview;
+  pages leaving scope are restored from it rather than left where they were.
+* **Page structure is frozen while a move is live.** `moveOrigin` is keyed by
+  array index, so selecting, adding, deleting or reordering a page mid-move made
+  index `i` stop identifying the captured page — and `commitMove()` recomputes
+  its targets from the current `idx`, so the undo record could name a page that
+  was never previewed. A reorder could apply one page's captured coordinates to
+  another page's strokes. The strip stays visible (it is what makes a move
+  judgeable) but stops being operable, and the mutating functions guard
+  themselves so a future caller is covered too.
+* **A move now redoes.** It was on the undo history but not the redo stack, so
+  Redo after undoing a move replayed an unrelated older stroke. `commitMove()`
+  also clears the redo branch, as starting a stroke does.
+
+Found by composing two valid actions, not by exercising either alone — every
+dimension of this feature passed in isolation. `verify_move.py` is now 67
+assertions and covers the transitions; reverting only the origin fix fails 11
+of them.
+
+**Still open from that pass:** the action history is global while stroke undo is
+page-local (`actionLog` records `'stroke'` with no page identity, but
+`undoStroke()` pops from `frame()`). Freezing page structure during a move
+removes the acute hazard, but the hybrid model remains and wants a deliberate
+choice between page-local history and a fully identified document-global one.
+That is a contract decision, not a patch.
+
+### Move reads as a mode (UX pass)
+
+Six changes, all deriving from state that already existed:
+
+* **The bar names the pages.** `#mbWho` shows "Page 3" or "Pages 3-5", written
+  by `syncMoveLabel()` from the same `moveTargets()` the transform uses, so the
+  preview cannot disagree with the operation. The move bar REPLACES the page
+  bar, so entering Move was the exact moment "Page 3 / 7" disappeared.
+* **The filmstrip shows scope.** `.frame.in-scope` marks the affected pages —
+  better feedback than a text selector and it costs no width in a bar already
+  tight at 320px. Deliberately distinct from `.on`, which still means "the page
+  you are drawing on"; during a move both are true of the current page.
+* **`& after` became language.** "And following", stepping down to "After"
+  below 560px. The wider wording cost 23px the bar did not have: it overflowed
+  at 320-390 and, since `.pagebar` is `overflow-x: auto`, it did not clip — it
+  scrolled and took Done off screen. Caught only because the fit sweep now
+  forces the WIDEST label the feature can produce ("Pages 108-162") rather than
+  measuring whatever page happens to be selected.
+* **Frozen controls speak.** Freezing page structure for correctness left the
+  strip visibly inviting taps it would not honour. Tapping now says "Finish or
+  cancel the move first" rather than doing nothing.
+* **`+ Page` became `+ Duplicate`.** The button already deep-copied the current
+  page — draw, duplicate, nudge, duplicate is the animation loop, and the label
+  hid it.
+* **Undo and redo of a move say so.** A page translation vanishing is far less
+  legible than a stroke vanishing, especially across several pages.
+
+### Fourth shared controller: colour selection
+
+`skribl/static/lib/colorselect.js`. Shared: validating a hex, normalising its
+case, and marking exactly one preset swatch active. Pad rejected anything that
+was not `/^#[0-9a-f]{6}$/` and lower-cased it; **Flip did neither**, so
+`setColor('nonsense')` set the pen to a string the canvas cannot paint with, and
+`#FF0000` did not match the `#ff0000` swatch it IS.
+
+NOT shared, because the two surfaces are genuinely built differently: Pad shows
+the current colour on a custom swatch and an `<input type=color>` and feeds
+recents from inside its setter; Flip shows it on the popover trigger and feeds
+recents from the custom input and the eyedropper. `apply()` returns
+`{hex, matched}` so each surface does its own thing with the result — `matched`
+being null is what makes a colour "custom" and worth remembering.
+
+Confirmed shared rather than coincidentally equal: disabling the hex pattern in
+the lib alone fails the same three assertions on BOTH surfaces.
+
+**It also moved an existing assertion's target.** `verify_ux.py` checked
+flip.js's source for the `!!` coercion that stops
+`classList.toggle(name, undefined)` toggling. That logic now lives in the lib,
+so the check reads the lib — and gained a second check that neither editor still
+carries its own copy. A source-level assertion pointed at the old location would
+have passed forever after the code moved, which is the failure mode of that kind
+of test.
+
+### The production runtime is pinned (Python 3.12)
+
+`.python-version` carries `3.12`; mirror it with a `PYTHON_VERSION` environment
+variable on the Render service. Both, deliberately: the env var is what Render
+reads, the file is what a reader of this repository can see without opening a
+dashboard.
+
+Why 3.12 and not something newer: `constraints.txt` is a hash-locked cp312
+environment, and `harness/RELEASE.md` records the interpreter its numbers were
+produced on. Pinning to the tested version makes that evidence describe
+production. The alternative — moving to 3.14 — requires regenerating the lock on
+that target AND re-running the full 38-suite aggregate there before any of these
+assertions mean anything about the deployment. That is a deliberate upgrade with
+its own evidence, not a default.
+
+The environment was also reinstalled from the hashed lock
+(`pip install -r constraints.txt --require-hashes`) before the recorded run, so
+the evidence describes the LOCKED versions rather than whatever a fresh
+`requirements.txt` resolve happened to produce. That caught one drift: alembic
+1.19.1 installed against 1.19.0 locked.
+
+`verify_docs.py` now fails if the pin is missing, if the harness runs on a
+different interpreter from the pin, or if the lock carries no matching cp tag.
+
+### Stable invariants moved into the schema (revision c7e1a5f04b93)
+
+A NEW revision on top of head `f0a3d81b47e2`. No released migration was
+touched; its digest is appended to RELEASED.txt.
+
+* **Foreign key** `skribl_post_media.post_id -> skribl_posts.id`, ON DELETE
+  CASCADE. Authorisation for /media/<key> is decided by that table, and the
+  package expects a host to touch the same database and possibly build models
+  itself — so application validation is not the only thing that can write these
+  rows. An association whose post is gone authorises nothing AND makes the
+  orphan sweep treat its media as still referenced, which is the leak the sweep
+  exists to close. Orphan rows are deleted first, because the constraint cannot
+  be created while one violates it; this database has never had a delete path,
+  but "in practice there are none" is not a migration strategy.
+* **CHECK** on `skribl_rate_events.state`: `pending` or `committed`. A third
+  value counts as neither, so it holds no quota slot and is never cleaned up as
+  one.
+
+**Deliberately NOT added: a CHECK on `visibility`.** VISIBILITIES is enforced by
+the API rather than the database specifically so a host can add its own states,
+and `visible_to()` now fails closed on states it does not know with
+`set_visibility_policy()` as the way to open them. A CHECK would remove that
+extensibility again, at the layer hardest to change. The reviewer offered CHECK
+*or* an extensible policy; the policy was chosen, so the CHECK must not follow.
+
+Both constraints are declared in `models.py` as well, or the drift check
+reports the migration as ahead of the models — and `create_all()` would build a
+table without the constraint authorisation depends on. The assertions insert
+violating rows and require the database to refuse them, and delete a post to
+confirm the cascade.
+
+### Orphan media has a lifecycle, and the CSRF cookie has a switch
+
+**`storage.sweep_orphans(store, session, older_than_seconds, dry_run)`.** Media
+is written BEFORE the transaction recording its association commits: the
+association rows are transactional, the object store is not, so a failed or
+abandoned commit leaves bytes nothing points at. Content addressing means that
+never corrupts valid data — an orphan is unreachable, not wrong — but at scale
+it accumulates.
+
+Two deliberate defaults. The grace period exists because an object written
+seconds ago may belong to a transaction still in flight; sweeping on the
+association table alone would delete the media of a post being created
+concurrently, so age is the only thing separating "orphan" from "not finished
+yet". And `dry_run` defaults to TRUE because this deletes user data — a
+maintenance job that removes things by default is one typo from removing the
+wrong ones. Both are asserted, including that a referenced object survives a
+real sweep.
+
+`MediaStore` gained `iter_keys()` and `delete_key()`. The base class raises
+NotImplementedError on purpose: an object store answers `iter_keys` with a
+paginated LIST, and a generic implementation would invite one that loads a
+bucket into memory. Do not try to make S3 and SQL one distributed transaction.
+
+**`SKRIBL_FORCE_SECURE_COOKIES=1`.** The CSRF cookie used `secure=request.is_secure`,
+which is only true if Flask can SEE the original scheme. Behind a
+TLS-terminating proxy that is a deployment setting, not something this package
+can know, so an HTTPS site whose proxy headers are not trusted would ship the
+cookie without Secure. The switch lets a deployment state that its public
+origin is HTTPS regardless. Off unless asked for.
+
+### The session contract is enforced, not just documented
+
+`create_blueprint(session=None)` accepted None while the package documentation
+said a session was required. `models.session()` falls back to the process-wide
+binding when an app has none of its own, so a second application initialised
+WITHOUT a session could reach whichever database the last app to pass one had
+bound — the cross-application coupling the per-app `app.extensions` storage was
+written to end, reached through the door left open for it.
+
+Demonstrated first: `init_skribl(Flask("no_session_app"))` raised nothing at
+all. It now raises at startup, naming what the host has to pass. A blueprint
+that genuinely never queries is built with `session=False`, so the absence is
+deliberate rather than forgotten.
+
+### LocalDiskStore no longer stores metadata beside the object
+
+`put_bytes()` renamed the body into place and THEN wrote a `<key>.type`
+sidecar. Two writes, not atomic together: a crash in between left the media
+present without its type, and permanently, because every later call begins
+`if os.path.exists(path): return` — nothing repaired it — so `read()` served
+`application/octet-stream` for that object forever. Two writers of identical
+bytes could also race over the sidecar.
+
+Reproduced before fixing: store a wav, delete the sidecar, and the type came
+back `application/octet-stream`; re-storing the identical bytes did not repair
+it. Three assertions failed.
+
+The content type is now DERIVED from the key's extension. That is not a guess:
+`key_for()` builds the key from the already-validated content type, and
+`_KEY_RE` rejects anything that is not a hex digest plus a known extension
+before it can reach the filesystem. One file, one atomic rename, nothing to
+repair, and no second write to race over.
+
+A side effect worth having: aliases normalise. `audio/wav`, `audio/x-wav` and
+`audio/wave` are one object served as `audio/wav`, rather than as whichever
+spelling the first uploader happened to send. Any `.type` file left by an older
+build is ignored, so there is no migration.
+
+### Unknown visibility states now fail closed
+
+`SkriblPost.visible_to()` used to read "anything that is not private is
+readable". `VISIBILITIES` is enforced by the API rather than a database
+constraint SPECIFICALLY so a host can add its own states without a Skribl
+migration — the model comment invites it — so a host adding `draft`,
+`moderated`, `blocked` or `scheduled` would have created posts hidden from the
+feed and readable by anyone holding the id. A listing filter pretending to be
+an access control: the exact mistake `visible_to()` was written to end, one
+layer up. Demonstrated before it was fixed — five assertions failed.
+
+Now: `public` and `unlisted` are readable, and `private` **and every state this
+package does not define** are author-only.
+
+An extensible vocabulary needs an extensible policy, so refusal is not a dead
+end:
+
+    skribl.set_visibility_policy(lambda post, viewer_id: ...)
+
+Returning `None` defers to the built-in rules, so a host only describes the
+states it added. It can open its own states AND close built-in ones, which is
+what moderation needs. A non-callable is refused at install time rather than
+exploding mid-request. Clearing it restores the defaults.
+
+`routes.py`'s media authorization query changed with it, from
+`visibility != "private"` to an allowlist. The two must agree: a query saying
+"anything but private" would have handed out the media of a `draft` post while
+the post itself was refused — which is how externalised media routed around
+visibility once before.
+
+### Slider positioning consolidated — and two of my own claims corrected
+
+`app.js` and `flip.js` no longer carry their own `attachSegSlider` /
+`positionSegSlider`; both delegate to `lib/segslider.js`, which gained
+`attach()` and `placeAttached()`.
+
+**"Three implementations of the same thing" was wrong.** `place()` positions an
+EXISTING markup pill at a fixed 3px offset; `attach()` CREATES a pill for
+JS-built groups (the zoom magnifier and focus bars, which are not `.seg` and do
+not share its padding) and positions relative to the first button. Different
+groups, different offset origin. They must not be collapsed into one. The real
+duplication was only between the two editor copies, and a token-level
+comparison showed those differed in three cosmetic ways: `Array.prototype.slice`
+against `[].slice`, a variable named `activeBtn` against `a`, and a trailing
+comma.
+
+**"The same control ends up with a different pill element by accident" was also
+wrong.** `_skribl_draw_drawer.html` emits the pill span
+`{% if kind == 'flip' %}` — Flip gets a markup span positioned by
+`positionSmoothSeg`, Pad gets a div created by `attachSegSlider`. That is a
+deliberate conditional, not drift. A first pass reported it as a defect.
+
+The merge is confirmed live rather than assumed: widening attached pills by
+20px in the lib now fails the placement assertion, where the same perturbation
+before the merge changed nothing. It fails on Pad only — Flip's smoothSeg takes
+the markup-span path — which is exactly the asymmetry that template conditional
+creates, and a useful check that the assertion is reading the real code path.
+
+### Pill placement is measured before the sliders are merged
+
+`verify_parity.py` now measures every segmented pill's RENDERED rect against its
+RENDERED active button, on both surfaces. Written before touching the three
+slider implementations, because the risk there is a pill landing in the wrong
+place and nothing else in the harness would notice.
+
+Four things had to be right, and each produced a false result first:
+
+* **Open panels by clicking their real opener**, not by setting `hidden=false`.
+  A panel revealed by fiat has a pill that was never placed: it measured 0 wide
+  on Flip and Pad's segs measured 0 tall, which looked like a 35px misalignment
+  and was entirely an artifact. An earlier pass nearly reported it as a bug.
+* **Open idempotently** — clicking an opener toggles.
+* **Wait for placement** — positioning runs through ResizeObserver and
+  MutationObserver, so a same-tick measurement reads zero.
+* **Measure `#smoothSeg` BEFORE opening the menu**, which closes the draw
+  drawer that contains it. Measuring after returned a null indistinguishable
+  from a positioning failure.
+
+**The mutation test found something the assertions could not.** Perturbing
+`lib/segslider.js` changed nothing: these segs are positioned by the per-file
+`attachSegSlider` copies in app.js and flip.js, NOT by the lib, which is used
+only for other controls. Perturbing the code that actually runs — widening every
+pill by 20px — fails the assertion with `dWidth: 19.7` on both surfaces. Any
+consolidation of the three implementations now has a net under it, and the
+mutation is also proof of which implementation is live.
+
+### Third shared controller: smoothing — and the next target found
+
+`skribl/static/lib/smoothing.js`. Small, and worth doing: the level-to-alpha
+mapping (`off 1`, `low 0.5`, `high 0.25`) was three magic numbers written out
+twice and asserted nowhere, so both surfaces could have drifted to different
+stabilizer strengths with every existing assertion still passing. There is now
+one that walks every level on both surfaces and compares the resulting alpha.
+
+Pill repositioning is injected rather than shared, because of what looking for
+it turned up: **slider positioning exists three times in this codebase** —
+`attachSegSlider` in `app.js`, a second `attachSegSlider` in `flip.js`, and
+`lib/segslider.js`, which both files also use for other controls — plus Flip's
+bespoke `positionSmoothSeg()` for this one segment. That is the next extraction,
+and it is a bigger one than it looks: the two `attachSegSlider` copies inject a
+`div.seg-slider` while the shared partial supplies a `span.seg-slider`, so the
+same control ends up with a different pill element depending on which surface
+rendered it. Consolidating them needs its own before-and-after assertions, not
+a quick merge.
+
+### Second shared controller: the eyedropper, and one path instead of two
+
+`skribl/static/lib/eyedropper.js` owns arming, the button's class and
+`aria-pressed`, the canvas cursor, Escape and the one-shot semantics. Reading
+the pixel stays per-surface: Pad and Flip genuinely differ on context, DPR and
+what a transparent pixel means, so `onSample` is injected.
+
+**Pad's native `window.EyeDropper` branch was DELETED.** It was not an
+alternative to tap-to-sample, it was an extra: Safari, Firefox and every browser
+on iOS have no EyeDropper, so the in-app path had to exist regardless. Keeping
+both meant two implementations forever and two different experiences behind one
+button depending on the browser. It was also the wrong semantics — the native
+picker samples anything on screen, including other applications, when the ask is
+"the colour of that part of my drawing" — and an OS dialog cannot be driven by
+the harness, so the path most desktop users took was the one no assertion could
+reach. Deleting it removes a path rather than adding one. The cost is that
+desktop Chrome loses screen-wide sampling; if that is wanted back it belongs in
+this file, once, not in one editor only.
+
+Both surfaces now also announce the armed state with `aria-pressed`, which
+neither did before — a class alone says nothing to a screen reader.
+
+**Two of the assertions written for this were wrong, in instructive ways.**
+The first clicked the drawer opener unconditionally, which TOGGLES: a drawer
+left open by an earlier section was closed by the step meant to open it, and it
+surfaced as "element is not visible" on a button that plainly existed. Opening
+is now conditional on the panel not already being shown. The second asserted
+that disarming "drops the crosshair" — but Pad's IDLE canvas cursor is a
+crosshair, because it is a drawing surface. The parity statement is that each
+surface returns to its OWN baseline, captured before arming, not that both end
+up at the same literal value.
+
+### First shared controller extracted: recent colours
+
+`skribl/static/lib/recentcolors.js`. Both editors now call one implementation;
+`addRecent()` and `renderRecent()` remain in each file as thin wrappers so no
+call site had to move, and `recentColors` is kept in step through an `onChange`
+callback because several call sites read that variable directly.
+
+**Reading the two implementations side by side found drift the parity suite had
+not reached**, because the assertions written first did not observe it:
+
+* Pad validated `/^#[0-9a-f]{6}$/` and lower-cased; Flip did neither, so
+  `#AABBCC` and `#aabbcc` could both be stored, and an unvalidated string
+  rendered as a transparent swatch that set the pen to nothing.
+* Pad gave each swatch an `aria-label`; Flip set only `title`, which is not an
+  accessible name and does nothing at all on a touch device.
+
+Neither was deliberate. Both are now assertions that failed before the
+extraction and pass after — which is the order that makes an extraction
+provable rather than merely finished.
+
+**What is deliberately NOT shared:** what happens when a swatch is picked. Pad
+sets the pen and leaves its bottom drawer open; Flip sets the pen and closes its
+popover, which sits over the canvas. That is layout, injected as a callback.
+Extract behaviour, not layout — Pad and Flip are meant to feel different.
+
+**Verified as genuinely shared, not coincidentally equal:** changing `LIMIT`
+from 6 to 4 in the lib alone, in a scratch copy, moved BOTH surfaces to 4. Two
+implementations that happen to agree would not have done that, and that is the
+property the whole refactor is for.
+
+**A vacuous assertion was caught while writing this.** The check that neither
+surface stores an invalid colour originally compared list LENGTH — but once the
+list is full at six, adding three invalid entries leaves the length unchanged
+whether they were rejected or stored. It now checks contents.
+
+### The first full aggregate run
+
+`harness/RELEASE.md` is generated by `harness/release_run.py` and is the answer
+to "what was tested, on which tree". All 39 suites reported on one frozen tree,
+1510 assertions, 2 declared skips (`verify_mp4.py` — headless Chromium has
+WebCodecs but no H.264 profile; `verify_postgres.py` — no PostgreSQL client).
+The tree hash is computed before batch 1 and RE-VERIFIED before each of the
+eleven batches, so a source edit mid-run aborts instead of being averaged into
+the result.
+
+Point other documents at that file rather than repeating its numbers. Volatile
+release facts are generated here precisely because hand-typed ones drift, which
+is how a stale hash in START-HERE.md once made an external reviewer distrust
+provenance that was actually sound.
+
+**The first run of it failed, and the failure was in the reporting, not the
+code.** It reported 36/38 with `verify_mp4.py` and `verify_postgres.py`
+"reporting nothing". They had reported: `run_harness.sh` printed
+`verify_mp4.py: SKIPPED (0 assertions) — ...` with the reason. The parser
+required `(\w+) — ` for the status field and the `(0 assertions)` parenthetical
+broke the match, so a DECLARED skip with a stated cause was recorded as
+unexplained silence — the exact failure the batch diagnostics exist to prevent,
+committed by the code that writes them. Skips are now matched on a `SKIP` prefix
+and separated from failures.
+
+Note also that background processes survive between tool invocations in this
+sandbox; the aggregate had previously been described as impossible to run here
+on the assumption that they do not. Test the assumption before repeating it.
+
+### Parity between the two editors is now testable
+
+`harness/verify_parity.py` (42 assertions) loads BOTH surfaces and checks they
+agree about the controls they share. It exists because every other suite drives
+one surface — `verify_review`'s 277 assertions never load Pad, `verify_ux` hits
+Flip twelve times against Pad's two — so drift between the duplicated
+controllers failed nothing.
+
+It is built on a CONTROL MAP rather than an id diff, because the same control
+has different ids on each surface: undo is `#undoBtn` on Pad and `#undo` on
+Flip, brush size is `#brushSizeRange` against `#size`, photo opens from
+`#imageOpenBtn` against `#imageBtn`. An id-set comparison reports that noise and
+misses the real divergence. The map names each control once and records where it
+lives on both surfaces — which makes it the extraction plan as well: every row
+is a controller boundary, and this suite is the acceptance test for moving one.
+
+Rows with a `None` selector are DELIBERATE differences (the filmstrip is Flip
+only; the empty-canvas hint is Pad only). Pad and Flip should not converge —
+Pad is meant to be immediate, Flip is an animation tool — so the value is that
+differences are declared rather than accidental.
+
+**Behaviour parity, not just structure.** The suite drives the same user action
+on both surfaces and compares the OUTCOME: the shared draw drawer opens, exactly
+one colour and one smoothing option read as selected (the
+`classList.toggle(name, undefined)` bug once left two selected at once), recent
+colours keep the same cap, order and de-duplication, the brush readout tracks
+its input, and the eyedropper arms tap-to-sample. That is what an extraction has
+to preserve, and structure parity alone would not notice losing any of it.
+
+**Media parity uses real bytes.** The photo and music controllers are the
+largest duplicated pair (350 and 131 references in app.js against 83 and 97 in
+flip.js), so they are what an extraction hurts most if unguarded. The suite
+generates a real 8x8 PNG and a real one-second 440Hz WAV in Python — no binary
+fixtures in the tree — uploads them to BOTH surfaces and compares what happens:
+tab markers, fit choices, opacity range, the trim handles' reported start and
+end (so both read the same duration from the same file), and a nudge moving the
+trim edge by the same amount. The waveform check reads PIXELS rather than state,
+because an empty canvas beside a loaded track is exactly what a state assertion
+misses.
+
+**The suite was mutation-tested, not merely run.** Breaking ONE surface in a
+scratch copy — Flip's brush minimum 2 to 3, Flip's recent-colour cap 6 to 4 —
+produced two failures naming the exact divergence. A first mutation attempt
+silently did not apply because the string did not match, which proves nothing
+either way; that was checked before drawing a conclusion.
+
+**A diagnostic worth knowing:** a parity assertion that is simply WRONG fails
+symmetrically — 0 on Pad and 0 on Flip. Real drift fails asymmetrically. Four
+first-run failures all read 0/0 and were bad selectors, not divergence.
+
+**Declared difference found while writing it:** Pad uses the browser's native
+`window.EyeDropper` when present and returns early, so it shows no armed state;
+Flip always uses the in-app tap-to-sample path. On iOS Safari there is no native
+picker, so both fall back — and that shared path is what most phone users get.
+The suite deletes `window.EyeDropper` before testing it, because comparing an OS
+dialog against an in-app mode proves nothing. Whether Flip should adopt the
+native picker where available is an open product question.
+
+**Found on the first run:** the brush size range differs by surface, Pad 1-30
+default 5 against Flip 2-34 default 7. `_skribl_draw_drawer.html` records THAT
+they differ but not WHY. Pinned as characterization so it cannot drift further;
+if the two should match, that assertion is where the decision gets made.
+
+### Still open
+
+**The loop fine-tune magnifier has no CSS.** `app.js` builds `.zoom-mag-bar`,
+`.zoom-mag-group` and `.zoom-mag-btn`, and those class names appear in exactly
+one rule across both stylesheets (`touch-action` in flip.css). Same shape as the
+export sheet's Size/Pages. `attachSegSlider` also points a `.seg-slider` at a
+group with no `position: relative`, which is what painted a purple bar down
+Pad's canvas menu.
+
+**The export sheet's segs are unmeasured.** `#exportSizeSeg` and
+`#exportLoopsSeg` never rendered in the harness used here, so they have no
+`--seg-h` and keep their inherited height.
+
+**`START-HERE.md` in this archive is the v175 copy.** Its suite count and file
+count are four versions stale, and it points at `docs/v175-client.patch`. (The
+counts are deliberately not repeated here: `verify_docs.py` scans for
+hand-typed "N suites" claims and cannot tell a quotation of a stale number from
+a stale number, which is the correct trade — it caught this paragraph.)
+`verify_docs.py` checks
+README.md, harness/README.md, docs/HANDOFF.md and ARCHIVE-README.md — not
+START-HERE.md, which is the one document a new session reads first. Adding it to
+that check, plus an assertion that every path named in the docs exists, closes
+both holes.
+
+
 * `app.js` is still 6,643 lines (6,596 at v141, plus the pressure reader) and
   serves both the editor and the player. A
   split was attempted and REVERTED; see docs/REFACTOR-v132.md for why the

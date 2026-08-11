@@ -18,7 +18,8 @@ from datetime import datetime, timezone
 
 from flask import current_app
 
-from sqlalchemy import (Boolean, Column, DateTime, Index, Integer, JSON,
+from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
+                        ForeignKeyConstraint, Index, Integer, JSON,
                         String)
 from sqlalchemy.orm import DeclarativeBase
 
@@ -94,7 +95,29 @@ class RateEvent(SkriblBase):
     __table_args__ = (
         Index("ix_rate_bucket_key_time", "bucket", "key_hash", "created_at"),
         Index("ix_rate_created_at", "created_at"),
+        # A third value would count as neither pending nor committed: it would
+        # hold no quota slot and never be cleaned up as one.
+        CheckConstraint("state IN ('pending', 'committed')", name="ck_rate_state"),
     )
+
+
+# A host may add visibility states without a Skribl migration (see
+# SkriblPost.visible_to). Unknown states fail CLOSED, so a host that means one
+# of its own to be readable installs a policy saying so. Returning None defers
+# to the built-in rules, which keeps the host's policy to just its own states.
+_VISIBILITY_POLICY = None
+
+
+def set_visibility_policy(fn):
+    """Install `fn(post, viewer_id) -> True | False | None`, or None to clear."""
+    global _VISIBILITY_POLICY
+    if fn is not None and not callable(fn):
+        raise TypeError("visibility policy must be callable or None")
+    _VISIBILITY_POLICY = fn
+
+
+def _visibility_policy():
+    return _VISIBILITY_POLICY
 
 
 class SkriblPost(SkriblBase):
@@ -147,9 +170,35 @@ class SkriblPost(SkriblBase):
           public    anyone
           unlisted  anyone WITH THE LINK — deliberately readable, just not listed
           private   the author only
+          anything else — the AUTHOR ONLY
+
+        That last line is the whole point of the rewrite. VISIBILITIES is
+        enforced by the API rather than a database constraint precisely so a
+        host application can add its own states without a Skribl migration, and
+        the rule used to read "anything that is not private is readable". A host
+        adding 'draft', 'moderated', 'blocked' or 'scheduled' would therefore
+        have created posts that were hidden from the feed and readable by anyone
+        holding the id — a listing filter pretending to be an access control,
+        which is the exact mistake this method was written to end.
+
+        An extensible VOCABULARY needs an extensible POLICY. A host that means
+        one of its own states to be readable says so, by installing a policy:
+
+            skribl.set_visibility_policy(lambda post, viewer_id: ...)
+
+        Returning None from that policy falls through to the rules above, so a
+        host only has to describe the states it added. Defaulting to refusal
+        means a new state is invisible until someone decides otherwise, rather
+        than public until someone notices.
         """
-        if self.visibility != "private":
+        policy = _visibility_policy()
+        if policy is not None:
+            decided = policy(self, viewer_id)
+            if decided is not None:
+                return bool(decided)
+        if self.visibility in ("public", "unlisted"):
             return True
+        # private, and every state this package does not define
         return viewer_id is not None and self.user_id == viewer_id
 
     def feed_dict(self):
@@ -206,6 +255,13 @@ class SkriblPostMedia(SkriblBase):
         # One row per (post, object). Content addressing means a post can
         # reference the same object from several slots; it needs one row.
         Index("ix_post_media_unique", "post_id", "media_key", unique=True),
+        # Declared here as well as in the v180 migration, or the drift check
+        # reports the migration as "ahead" of the models — and create_all()
+        # would build a table without the constraint that authorisation
+        # depends on. An association whose post is gone authorises nothing and
+        # would make the orphan sweep treat its media as still referenced.
+        ForeignKeyConstraint(["post_id"], ["skribl_posts.id"],
+                             name="fk_post_media_post", ondelete="CASCADE"),
     )
 
 # --- the session seam -------------------------------------------------------

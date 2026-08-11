@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import socket
+import pathlib
 import subprocess
 import sys
 import tempfile
@@ -250,6 +251,107 @@ finally:
         proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
         proc.kill()
+
+# ---- a crash between the two writes must not change how bytes are served ---
+# put_bytes() renamed the body into place and THEN wrote a `.type` sidecar. A
+# crash between those two steps left the media permanently present without its
+# metadata, and permanently so: every later call starts with
+# `if os.path.exists(path): return`, so nothing ever repairs the sidecar, and
+# read() falls back to application/octet-stream. One crash silently changes how
+# that object is served forever. Two writers of identical bytes could also race
+# over the sidecar.
+try:
+    import sys as _sys, tempfile
+    # This suite drives the store through a subprocess server, so the
+    # package is not on the path here the way it is in verify_privacy.
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+    from skribl.storage import LocalDiskStore
+
+    _root = tempfile.mkdtemp(prefix="skribl-store-")
+    _store = LocalDiskStore(_root, lambda k: "/media/" + k)
+    _raw = b"RIFF....WAVEfmt data"
+    _key = _store.key_for(_raw, "audio/wav")
+    _store.put_bytes(_raw, "audio/wav", _key)
+
+    got = _store.read(_key)
+    check("a stored object reads back with its real content type",
+          got is not None and got[1] == "audio/wav",
+          f"got {got[1] if got else None!r}")
+
+    # Simulate the crash: the body landed, the sidecar never did.
+    for _p in pathlib.Path(_root).rglob("*.type"):
+        _p.unlink()
+    got = _store.read(_key)
+    check("and still does when no sidecar is present",
+          got is not None and got[1] == "audio/wav",
+          f"got {got[1] if got else None!r} — a crash between the body and its "
+          "metadata must not permanently change the served type")
+
+    _store.put_bytes(_raw, "audio/wav", _key)
+    got = _store.read(_key)
+    check("re-storing identical bytes is still correct afterwards",
+          got is not None and got[1] == "audio/wav",
+          f"got {got[1] if got else None!r}")
+
+    # Aliases normalise: the same bytes offered as audio/x-wav are the same
+    # object and must be served identically, not as whichever alias arrived
+    # first.
+    _k2 = _store.key_for(_raw, "audio/x-wav")
+    _store.put_bytes(_raw, "audio/x-wav", _k2)
+    got2 = _store.read(_k2)
+    check("an aliased content type serves as the canonical one",
+          got2 is not None and got2[1] == "audio/wav",
+          f"got {got2[1] if got2 else None!r}")
+except Exception as _e:      # noqa: BLE001
+    check("the local store's crash behaviour is testable", False, repr(_e))
+
+# ---- orphan media -----------------------------------------------------------
+# Objects are written BEFORE the transaction recording the association commits,
+# so a failed or abandoned commit leaves bytes nothing points at. Content
+# addressing means that never corrupts valid data, but it accumulates.
+try:
+    import time as _time
+    from skribl.storage import sweep_orphans
+
+    class _FakeQuery:
+        def __init__(self, rows): self._rows = rows
+        def all(self): return self._rows
+
+    class _FakeSession:
+        def __init__(self, keys): self._keys = [(k,) for k in keys]
+        def query(self, *_a, **_k): return _FakeQuery(self._keys)
+
+    _root2 = tempfile.mkdtemp(prefix="skribl-sweep-")
+    _s2 = LocalDiskStore(_root2, lambda k: "/media/" + k)
+    _kept = _s2.key_for(b"kept-bytes", "image/png")
+    _orph = _s2.key_for(b"orphan-bytes", "image/png")
+    _s2.put_bytes(b"kept-bytes", "image/png", _kept)
+    _s2.put_bytes(b"orphan-bytes", "image/png", _orph)
+
+    # Nothing is old enough yet: an object written seconds ago may belong to a
+    # transaction still in flight, and sweeping it would delete the media of a
+    # post being created right now.
+    fresh = sweep_orphans(_s2, _FakeSession([_kept]), older_than_seconds=3600)
+    check("a recently written orphan is left alone",
+          fresh == [],
+          f"would have removed {fresh} — age is the only thing separating "
+          "'orphan' from 'not committed yet'")
+
+    old = sweep_orphans(_s2, _FakeSession([_kept]), older_than_seconds=0)
+    check("an aged orphan is identified", old == [_orph], f"got {old}")
+    check("and a referenced object never is", _kept not in old)
+
+    check("dry run does not delete", _s2.read(_orph) is not None,
+          "the default must not remove user data")
+
+    done = sweep_orphans(_s2, _FakeSession([_kept]), older_than_seconds=0,
+                         dry_run=False)
+    check("with dry_run=False the orphan is gone",
+          done == [_orph] and _s2.read(_orph) is None)
+    check("and the referenced object survives", _s2.read(_kept) is not None,
+          "a sweep that takes live media with it is worse than the leak")
+except Exception as _e3:      # noqa: BLE001
+    check("orphan sweeping is testable", False, repr(_e3))
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +

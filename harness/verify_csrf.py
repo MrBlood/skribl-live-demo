@@ -18,6 +18,8 @@ exercises the path rather than leaving it untested until it matters.
 import http.cookiejar
 import json
 import os
+import pathlib as _pl, sys as _sys
+_sys.path.insert(0, str(_pl.Path(__file__).resolve().parents[1]))
 import socket
 import subprocess
 import sys
@@ -145,6 +147,28 @@ again = next((c.value for c in jar if c.name == COOKIE), None)
 check("the same token is reused rather than rotated per request",
       again == token,
       "rotating per response breaks any client that cached the first one")
+
+# The Secure flag depends on Flask SEEING the original scheme, which behind a
+# TLS-terminating proxy is a deployment setting, not something this package can
+# know. An HTTPS site whose proxy headers are not trusted would ship this
+# cookie without Secure, over plaintext-looking requests.
+try:
+    import importlib
+    import os as _os
+    import skribl.security as _sec
+
+    _os.environ["SKRIBL_FORCE_SECURE_COOKIES"] = "1"
+    importlib.reload(_sec)
+    check("SKRIBL_FORCE_SECURE_COOKIES makes the cookie Secure regardless",
+          _sec._FORCE_SECURE is True,
+          "a deployment behind a proxy needs a way to state its public origin "
+          "is HTTPS without depending on request.is_secure")
+    _os.environ.pop("SKRIBL_FORCE_SECURE_COOKIES", None)
+    importlib.reload(_sec)
+    check("and it is off unless the deployment asks for it",
+          _sec._FORCE_SECURE is False)
+except Exception as _e4:      # noqa: BLE001
+    check("the force-secure switch is testable", False, repr(_e4))
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +

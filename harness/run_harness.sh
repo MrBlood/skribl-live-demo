@@ -33,8 +33,14 @@ _tree_files() {
   # meant the act of recording a result changed the tree whose hash had just
   # been recorded. The hash could never match the shipped archive, which is
   # exactly what an external review found. Excluding them makes it reproducible.
+  # START-HERE.md joined that list when it was brought under stamp_docs.py:
+  # a stamped document is written AFTER the run, so leaving it in the hash
+  # meant recording a result changed the tree whose hash had just been
+  # recorded — the exact defect the three above were excluded for. Anything
+  # added to stamp_docs.py's TARGETS must be added here in the same edit.
   fi | grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' \
               -e 'README.md' -e 'harness/README.md' -e 'docs/HANDOFF.md' \
+              -e 'START-HERE.md' -e 'harness/RELEASE.md' \
      | LC_ALL=C sort
 }
 

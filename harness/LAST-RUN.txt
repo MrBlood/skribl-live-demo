@@ -1,7 +1,7 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-09T14:45:14Z
+UTC timestamp           : 2026-08-11T10:42:17Z
 Host                    : Linux x86_64
-Tree SHA-256            : 1208e339f3f6176116bceeec2f724e0a3aff7b5649387d7728bbb22cbd3859f8
+Tree SHA-256            : fb9c7f4a832d3cf01734f620196c29945157630da5a014d6d50defd9e3e98c5b
 Git commit              : (not a git checkout)
 SKRIBL_VERSION          : v179
 Python                  : 3.12.3
@@ -10,37 +10,20 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.vh6R9iqX6p/harness.db)
+Database reset          : yes (fresh /tmp/tmp.5OtQQnlnJk/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_privacy.py verify_storage.py verify_feed.py verify_csrf.py verify_migrations.py verify_seam.py verify_prefix.py verify_csp.py verify_media.py verify_version.py verify_lib.py verify_audio.py verify_docs.py verify_flipmeta.py verify_pressure.py verify_exportui.py verify_help.py verify_tips.py verify_move.py verify_review.py
+Command                 : /home/claude/skribl-v179/harness/run_harness.sh verify_version.py verify_migrations.py verify_postgres.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 20
-  verify_privacy.py: ok — 30/30 passed
-  verify_storage.py: ok — 26/26 passed
-  verify_feed.py: ok — 25/25 passed
-  verify_csrf.py: ok — 13/13 passed
-  verify_migrations.py: ok — 51/51 passed
-  verify_seam.py: ok — 71/71 passed
-  verify_prefix.py: ok — 26/26 passed
-  verify_csp.py: ok — 31/31 passed
-  verify_media.py: ok — 24/24 passed
+suites requested : 3
   verify_version.py: ok — 22/22 passed
-  verify_lib.py: ok — 8/8 passed
-  verify_audio.py: ok — 9/9 passed
-  verify_docs.py: ok — 24/24 passed
-  verify_flipmeta.py: ok — 45/45 passed
-  verify_pressure.py: ok — 27/27 passed
-  verify_exportui.py: ok — 45/45 passed
-  verify_help.py: ok — 61/61 passed
-  verify_tips.py: ok — 43/43 passed
-  verify_move.py: ok — 18/18 passed
-  verify_review.py: ok — 277/277 passed
-assertions passed: 876   (skipped suites contribute 0)
+  verify_migrations.py: ok — 56/56 passed
+  verify_postgres.py: ok — 14/14 passed
+assertions passed: 92   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

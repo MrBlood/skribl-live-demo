@@ -53,7 +53,7 @@ def _decode_cursor(cursor):
         return None
 
 
-def register_routes(bp):
+def register_routes(bp, *, index_route=False):
     # errorhandler, NOT app_errorhandler: the app_ variant is APPLICATION-WIDE by
     # Flask's own definition, so a host's unrelated oversized upload would have
     # received Skribl's JSON "This Skribl is too large to post" message. Scoped
@@ -64,9 +64,14 @@ def register_routes(bp):
             "error": "This Skribl is too large to post. Try a smaller photo or a shorter audio loop."
         }), 413
 
-    @bp.get("/")
-    def home():
-        return render_template("skribl/skribl_editor.html")
+    # Registered ONLY when the host asks for it. Unconditionally claiming "/"
+    # meant mounting Skribl silently replaced a host application's homepage —
+    # Flask resolves duplicate rules by registration order and the blueprint
+    # wins. See create_blueprint(index_route=...).
+    if index_route:
+        @bp.get("/")
+        def home():
+            return render_template("skribl/skribl_editor.html")
 
     @bp.get("/skribl-pad")
     def skribl_editor():
@@ -306,6 +311,12 @@ def register_routes(bp):
                     session().add(SkriblPostMedia(post_id=post.id,
                                                   media_key=_key))
                 try:
+                    # DB-backed quota promotion belongs to this transaction. If
+                    # either the post or promotion fails, both roll back; once
+                    # the commit succeeds there is no second DB write that can
+                    # turn a successful post into an HTTP 500. Memory-backed
+                    # limiting has no promotion step, so this is a no-op there.
+                    _rate_commit_post(post_token, commit=False)
                     session().commit()
                 except IntegrityError:
                     session().rollback()
@@ -317,9 +328,7 @@ def register_routes(bp):
             session().rollback()
             raise
         finally:
-            if created:
-                _rate_commit_post(post_token)      # durable now — promote it
-            else:
+            if not created:
                 _rate_release_post(client_ip, post_token)
 
         if not created:
@@ -376,7 +385,11 @@ def register_routes(bp):
         readable = sa.select(SkriblPostMedia.id).join(
             SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
             SkriblPostMedia.media_key == key,
-            sa.or_(SkriblPost.visibility != "private",
+            # Allowlist, not "!= private": this must agree with
+            # SkriblPost.visible_to, which now refuses states it does not know.
+            # A query that says "anything but private" would hand out the media
+            # of a host-defined 'draft' post while the post itself was refused.
+            sa.or_(SkriblPost.visibility.in_(("public", "unlisted")),
                    sa.and_(SkriblPost.user_id == viewer,
                            sa.literal(viewer is not None))))
         if not session().query(readable.exists()).scalar():

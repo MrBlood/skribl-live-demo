@@ -93,7 +93,11 @@ def create_app():
 
     skribl.init_skribl(app, session=lambda: db.session,
                        url_prefix=url_prefix, static_url_path=static_url_path,
-                       csrf=csrf, media_store=media_store)
+                       csrf=csrf, media_store=media_store,
+                       # THIS demo is a standalone site, so it wants Skribl on
+                       # its homepage. A host application embedding Skribl does
+                       # not, and the default is False for exactly that reason.
+                       index_route=True)
 
     # So a single db.create_all() covers Skribl's tables too. Optional — see
     # skribl.models.attach_to_metadata; an Alembic host would migrate

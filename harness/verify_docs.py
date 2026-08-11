@@ -32,8 +32,13 @@ def check(name, ok, detail=""):
 
 
 BEGIN, END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
+# START-HERE.md is the first document a new session reads and was the ONLY one
+# not checked here — so it drifted four versions unnoticed, still announcing
+# v175's suite and file counts and pointing at a patch that had been renamed.
+# The document most likely to be trusted blind is the one that most needs a
+# guard.
 DOCS = [ROOT / "README.md", ROOT / "harness" / "README.md",
-        ROOT / "docs" / "HANDOFF.md"]
+        ROOT / "docs" / "HANDOFF.md", ROOT / "START-HERE.md"]
 
 print("\nDOCS — the generated stanza is present and current")
 for doc in DOCS:
@@ -66,6 +71,91 @@ missing = sorted(n for n in named if not (ROOT / "harness" / n).is_file())
 check("no document references a harness suite that does not exist",
       not missing, ", ".join(missing))
 
+# The suite-name check above would not have caught START-HERE.md naming
+# `v179-client.patch`, because that is not a verify_*.py. A document that tells
+# you how to deploy by applying a patch, and names a patch that is not in the
+# tree, is worse than one that says nothing.
+paths = set()
+for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
+    if doc.is_file():
+        body = doc.read_text(encoding="utf-8")
+        # Lookbehind, not \b: the docs name `static/skribl/gifenc.min.js`,
+        # which is the SERVED url path and not a file in the tree. Matching
+        # mid-path turns every correct reference into a false failure.
+        paths |= set(re.findall(r"(?<![A-Za-z0-9_/-])((?:docs|skribl|harness)/"
+                                r"[A-Za-z0-9_./-]+"
+                                r"\.(?:py|md|patch|css|js|html|txt|sh))", body))
+gone = sorted(p for p in paths if not (ROOT / p).is_file())
+check("no document names a repo file that is not there",
+      not gone, ", ".join(gone))
+
+print("\nDOCS — no volatile release fact is typed by hand")
+# A tree hash written into prose cannot be kept true: it describes the tree it
+# is written into, so writing it changes it. START-HERE.md carried one, it went
+# stale within the same session, and an external reviewer reasonably concluded
+# the archive could not be trusted to be the tree the recorded run executed on
+# — even though it reproduced its LAST-RUN hash exactly. A wrong hash in a
+# document is worse than no hash, because it looks like provenance.
+# The stamped stanza already carries the tree; docs must point at it.
+_HEXY = re.compile(r"\b[0-9a-f]{32,}\b")
+typed = []
+for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
+    if not doc.is_file():
+        continue
+    body = doc.read_text(encoding="utf-8")
+    body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", body, flags=re.S)
+    if _HEXY.search(body):
+        typed.append(doc.relative_to(ROOT))
+check("no current document hand-types a tree hash outside the generated stanza",
+      not typed, ", ".join(str(d) for d in typed))
+
+print("\nDOCS — the two generated-file lists agree")
+# run_harness.sh and release_run.py each exclude generated documents from the
+# tree hash. They must exclude the SAME ones: START-HERE.md was added to
+# stamp_docs.py without being added to run_harness.sh, and the tree hash
+# immediately stopped reproducing. Drift between these lists is silent.
+_sh = (ROOT / "harness" / "run_harness.sh").read_text(encoding="utf-8")
+_py = (ROOT / "harness" / "release_run.py").read_text(encoding="utf-8")
+_sh_names = set(re.findall(r"-e '([^']+)'", _sh))
+_py_names = set(re.findall(r'"([A-Za-z0-9_./-]+\.(?:md|txt))"',
+                           re.search(r"GENERATED = \{(.*?)\}", _py, re.S).group(1)))
+_py_names.add("SHA256SUMS")
+check("run_harness.sh and release_run.py exclude the same generated files",
+      _sh_names == _py_names,
+      f"only in run_harness: {sorted(_sh_names - _py_names)}; "
+      f"only in release_run: {sorted(_py_names - _sh_names)}")
+
+print("\nDOCS — the deployed runtime is pinned, and it is the one tested")
+# constraints.txt is a hash-locked cp312 environment. Render's default Python
+# depends on when the service was created and can move under you, so an
+# unpinned deployment resolves requirements.txt fresh at build time and runs
+# versions no assertion here ever exercised — two applications, one repo. The
+# pin lives in .python-version (and should be mirrored by PYTHON_VERSION on the
+# service) so it travels with the code rather than living in a dashboard.
+_pyver = ROOT / ".python-version"
+check("the repository pins a Python version", _pyver.is_file(),
+      "an unpinned runtime means the lock describes an environment nobody runs")
+if _pyver.is_file():
+    _want = _pyver.read_text().strip()
+    _have = f"{sys.version_info.major}.{sys.version_info.minor}"
+    check("and the harness is running on that version",
+          _want.split(".")[:2] == _have.split(".")[:2],
+          f"pinned {_want!r}, running {_have!r} — evidence produced on a "
+          "different interpreter from the deployed one describes nothing")
+    check("the lock is built for the pinned version",
+          f"cp{_want.replace('.', '')}" in (ROOT / "constraints.txt").read_text(),
+          f"constraints.txt carries no cp{_want.replace('.', '')} marker")
+
+print("\nDOCS — the archive reports one version, everywhere")
+# The delivered zip was once named v180 while the directory, SKRIBL_VERSION and
+# every document said v179. One artifact, one identity.
+_ver = re.search(r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
+                 (ROOT / "skribl" / "core.py").read_text(encoding="utf-8"))
+_v = _ver.group(1) if _ver else None
+check("the archive directory name carries SKRIBL_VERSION",
+      bool(_v) and ROOT.name.endswith(_v),
+      f"directory {ROOT.name!r} against SKRIBL_VERSION {_v!r}")
+
 print("\nDOCS — suite counts match what is on disk")
 on_disk = sorted(p.name for p in (ROOT / "harness").glob("verify_*.py"))
 claims = []
@@ -73,7 +163,7 @@ claims = []
 # 5)" is a true statement about v-something, not a claim about this tree. Only
 # documents that describe the current state are checked.
 _current = [ROOT / "README.md", ROOT / "harness" / "README.md",
-            ROOT / "ARCHIVE-README.md"]
+            ROOT / "ARCHIVE-README.md", ROOT / "START-HERE.md"]
 for doc in _current:
     if not doc.is_file():
         continue
@@ -205,6 +295,31 @@ if _wf.is_file():
     check("the workflow does not claim a full run it cannot deliver",
           ("set -- verify_*.py" in _runner) or ("verify_" in _y),
           "CI runs the runner bare and the runner has no default")
+
+print("\nDOCS — the archive-verification command states the real file count")
+# This number is the FIRST thing a new session runs, so when it is wrong the
+# session opens by disbelieving the archive. It had drifted to 110 against a
+# manifest of 121 — the file-count check above only reads README and
+# ARCHIVE-README and only matches the phrase "covers all N files", so the
+# `# expect N` comment on the verify command was covered by nothing.
+# Matched off the command itself rather than a bare "expect N" so that prose
+# elsewhere cannot accidentally satisfy or trip it.
+_sums = ROOT / "SHA256SUMS"
+if _sums.is_file():
+    _actual = len(re.findall(r"^[0-9a-f]{64}\s", _sums.read_text(encoding="utf-8"), re.M))
+    for _doc in sorted(ROOT.rglob("*.md")):
+        if not _doc.is_file() or ".git" in _doc.parts:
+            continue
+        _claims = [int(n) for n in re.findall(
+            r"sha256sum -c SHA256SUMS[^\n]*?expect (\d+)",
+            _doc.read_text(encoding="utf-8"))]
+        if not _claims:
+            continue
+        _bad = [n for n in _claims if n != _actual]
+        check(f"{_doc.relative_to(ROOT)}: the verify command expects the real count",
+              not _bad,
+              f"tells the reader to expect {_bad}, manifest has {_actual} — "
+              "a wrong number here makes a sound archive look tampered with")
 
 print("\nDOCS — the dependency lock covers every requirement")
 req = (ROOT / "requirements.txt")

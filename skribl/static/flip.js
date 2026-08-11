@@ -370,7 +370,9 @@ function applyPayload(d){
   bgImage  = (typeof d.bgImage === 'string' && d.bgImage.slice(0,10) === 'data:image') ? d.bgImage : null;
   musicData = (typeof d.music === 'string' && d.music.slice(0,10) === 'data:audio') ? d.music : null;
   const ph = d.photo || {};
-  photoFit = ['cover','contain','fill'].includes(ph.fit) ? ph.fit : 'cover';
+  // Was ['cover','contain','fill'], which rejected the 'stretch' this file
+  // itself posts and silently downgraded it to 'cover'.
+  photoFit = localFit(ph.fit);
   photoOpacity = typeof ph.opacity==='number' ? ph.opacity : 1;
   photoBlur = typeof ph.blur==='number' ? ph.blur : 0;
   photoZoom = typeof ph.zoom==='number' ? ph.zoom : 1;
@@ -473,12 +475,19 @@ const fctx = frameCv.getContext('2d'); fctx.scale(DPR,DPR);
 
 // Where the background image lands, honouring fit + zoom + reposition.
 function photoRect(iw, ih){
-  if (photoFit === 'fill') return { x:0, y:0, w:CW, h:CH };
-  let s = photoFit === 'contain' ? Math.min(CW/iw, CH/ih) : Math.max(CW/iw, CH/ih) * photoZoom;
-  const w = iw*s, h = ih*s;
-  const x = photoFit === 'contain' ? (CW-w)/2 : (CW-w)*photoOffX;
-  const y = photoFit === 'contain' ? (CH-h)/2 : (CH-h)*photoOffY;
-  return { x, y, w, h };
+  // Shared with Pad and the player via lib/photofit.js. This used to special-
+  // case only 'fill', so a 'stretch' — the value THIS FILE writes into the post
+  // payload — rendered as cover with no fit button active. The lib treats
+  // 'fill' as an alias of 'stretch', so both spellings land in the same place.
+  return window.SkriblPhotoFit.rect(iw, ih, CW, CH,
+    { fit: photoFit, offX: photoOffX, offY: photoOffY, zoom: photoZoom });
+}
+/* Flip stores the third fit as 'fill' and posts it as 'stretch'. Incoming
+ * values may use either spelling, so they are mapped to the local one at every
+ * entry point rather than at the one that happened to be noticed. */
+function localFit(f){
+  return window.SkriblPhotoFit.normalise(f) === 'stretch' ? 'fill'
+                                                          : window.SkriblPhotoFit.normalise(f);
 }
 function drawBackdrop(c){
   c.save();
@@ -667,26 +676,54 @@ document.querySelector('.flip-wrap').appendChild(eraserCursor);
 const brushCursor = document.createElement('div');
 brushCursor.className = 'flip-brush-cursor';
 document.querySelector('.flip-wrap').appendChild(brushCursor);
+/* The brush/eraser ring trailed the ink on a phone, badly enough that a fast
+ * scribble showed the ring lagging behind the line it was supposedly marking.
+ * Three causes, all in here, all fixed:
+ *
+ *  1. IT RAN ON TOUCH. pointermove fires for touch too, so a DOM ring chased a
+ *     finger that was already on the glass. It marks where the brush WILL land,
+ *     which is information a mouse user needs and a finger user already has by
+ *     looking at their hand — and being DOM, it can only ever arrive after the
+ *     ink. Now mouse (and pen) only.
+ *  2. left/top ON EVERY MOVE. Those are layout-and-paint properties, so the
+ *     ring could not be composited independently of the canvas. transform is.
+ *  3. getBoundingClientRect() ON EVERY EVENT. A forced synchronous layout read
+ *     per pointermove, in the same frame as the stroke draw. The rect is now
+ *     cached and invalidated on resize/scroll/zoom rather than re-measured
+ *     thousands of times a stroke.
+ */
+let _padRect = null;
+function _padRectCached(){
+  if(!_padRect) _padRect = pad.getBoundingClientRect();
+  return _padRect;
+}
+function invalidatePadRect(){ _padRect = null; }
+window.addEventListener('resize', invalidatePadRect);
+window.addEventListener('scroll', invalidatePadRect, true);
+window.addEventListener('orientationchange', invalidatePadRect);
+
 function moveEraserCursor(e){
-  const r = pad.getBoundingClientRect();
-  const scale = r.width / CW;
-  const sz = size * 3 * scale;
+  const r = _padRectCached();
+  const sz = size * 3 * (r.width / CW);
   eraserCursor.style.width = sz + 'px'; eraserCursor.style.height = sz + 'px';
-  eraserCursor.style.left = (e.clientX - r.left) + 'px';
-  eraserCursor.style.top  = (e.clientY - r.top) + 'px';
+  eraserCursor.style.transform =
+    'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
   eraserCursor.style.display = 'block';
 }
 function moveBrushCursor(e){
-  const r = pad.getBoundingClientRect();
-  const scale = r.width / CW;
-  const sz = Math.max(2, size * scale);
+  const r = _padRectCached();
+  const sz = Math.max(2, size * (r.width / CW));
   brushCursor.style.width = sz + 'px'; brushCursor.style.height = sz + 'px';
-  brushCursor.style.left = (e.clientX - r.left) + 'px';
-  brushCursor.style.top  = (e.clientY - r.top) + 'px';
+  brushCursor.style.transform =
+    'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
   brushCursor.style.display = 'block';
 }
 function hideCursors(){ eraserCursor.style.display='none'; brushCursor.style.display='none'; }
 pad.addEventListener('pointermove', e=>{
+  // A finger is its own cursor. Anything but a mouse or pen gets nothing.
+  if(e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen'){
+    hideCursors(); return;
+  }
   if(playing || picking){ hideCursors(); return; }
   if(ZoomView && ZoomView.isZoomed()){ hideCursors(); return; }   // use a normal cursor while magnified
   if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; }
@@ -1178,6 +1215,14 @@ let recentColors=[], picking=false;
 try{ const r=JSON.parse(localStorage.getItem('skribl_recent_colors')||'[]'); if(Array.isArray(r)) recentColors=r.filter(c=>/^#[0-9a-f]{6}$/i.test(c)).slice(0,6); }catch(_){ }
 
 function setColor(hex){
+  // Shared with Pad via lib/colorselect.js. This used to accept ANY string:
+  // an invalid value became the pen colour and the canvas painted with
+  // nothing, and '#FF0000' did not match the '#ff0000' swatch. The `!!` note
+  // below is now inside the lib, where both editors get it.
+  const sel = window.SkriblColorSelect
+    && window.SkriblColorSelect.apply(colorGroup, hex);
+  if(!sel) return;
+  hex = sel.hex;
   color=hex;
   colorCurrent.style.background=hex;
   // !! is load-bearing. The custom swatch has no data-color, so this expression
@@ -1185,8 +1230,6 @@ function setColor(hex){
   // is treated as NO second argument — which TOGGLES instead of forcing off. So
   // every colour change flipped the custom swatch's highlight, leaving two
   // swatches ringed at once and the wrong one appearing selected.
-  [...colorGroup.querySelectorAll('.color-dot')].forEach(d=>d.classList.toggle('active',
-    !!(d.dataset.color && d.dataset.color.toLowerCase()===hex.toLowerCase())));
   setTool('pen');   // picking a colour returns you to the pen, like the Pad
 }
 /* Pen / eraser toggle — the Pad's segmented control with the sliding accent pill. */
@@ -1358,7 +1401,7 @@ function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cove
   // Re-adding a file the autosave had to drop — restore its saved framing rather
   // than the defaults above. (Keeps the newly picked filename, not the old one.)
   if(pendingPhotoMeta){ const m=pendingPhotoMeta;
-    if(m.fit) photoFit=m.fit;
+    if(m.fit) photoFit=localFit(m.fit);   // accepted ANY string before
     if(typeof m.opacity==='number') photoOpacity=m.opacity;
     if(typeof m.blur==='number') photoBlur=m.blur;
     if(typeof m.zoom==='number') photoZoom=m.zoom;
@@ -1879,7 +1922,11 @@ function syncPhotoUI(){
   photoRemove.hidden=!hasImg; photoNote.hidden=hasImg; photoDetail.hidden=!hasImg;
   photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   photoTabDot.hidden = !hasImg;                                                       // green dot when an image is set
-  [...photoFitGroup.querySelectorAll('.photo-fit-btn')].forEach(b=>b.classList.toggle('active', b.dataset.fit===photoFit));
+  // Compared through the shared normaliser, not by string equality: this row's
+  // third button is data-fit="fill" on Flip and data-fit="stretch" on Pad, so a
+  // raw === left NO button active whenever photoFit held the other spelling.
+  const _pf = window.SkriblPhotoFit.normalise(photoFit);
+  [...photoFitGroup.querySelectorAll('.photo-fit-btn')].forEach(b=>b.classList.toggle('active', !!(window.SkriblPhotoFit.normalise(b.dataset.fit)===_pf)));
   const isCover = photoFit==='cover';
   photoZoomRow.style.display = isCover ? '' : 'none';
   repositionBtn.style.display = isCover ? '' : 'none';
@@ -1990,7 +2037,7 @@ function updateTrimUI(){
   trimEnd=Math.max(trimStart+minLoop, Math.min(trimEnd, audioDuration));
   // Single choke point for the cap: every path (load, draft restore, re-add,
   // drag) lands here, so the <=20s invariant can't be bypassed by any of them.
-  if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS;
+  if(trimEnd-trimStart>window.SkriblLoopTrim.MAX_LOOP_SECONDS) trimEnd=trimStart+window.SkriblLoopTrim.MAX_LOOP_SECONDS;
   const startPct=(trimStart/audioDuration)*100, endPct=(trimEnd/audioDuration)*100;
   handleStart.style.left=startPct+'%'; handleEnd.style.left=endPct+'%';
   musicRange.style.left=startPct+'%'; musicRange.style.width=(endPct-startPct)+'%';
@@ -2065,8 +2112,10 @@ function dragHandle(handle, isStart){
   function cx(e){ return e.touches?e.touches[0].clientX:e.clientX; }
   function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
     function onMove(ev){ const rect=musicTrack.getBoundingClientRect(); let pct=(cx(ev)-rect.left)/rect.width; pct=Math.max(0,Math.min(1,pct)); const time=pct*audioDuration;
-      if(isStart){ trimStart=Math.min(time,trimEnd-0.5); trimStart=Math.max(0,trimStart); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimStart=trimEnd-MAX_LOOP_SECONDS; }
-      else { trimEnd=Math.max(time,trimStart+0.5); trimEnd=Math.min(audioDuration,trimEnd); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS; }
+      // Shared with Pad via lib/looptrim.js. 'constrain': the handle being
+      // dragged stops at the cap and the other end stays where the user put it.
+      const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'constrain');
+      trimStart=_t.start; trimEnd=_t.end;
       updateTrimUI(); scheduleSave(); }
     function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
     window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
@@ -2088,8 +2137,11 @@ dragRangeWindow(musicRange);
 function dragZoomHandle(handle, isStart){
   function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
     function onMove(ev){ const clientX=ev.touches?ev.touches[0].clientX:ev.clientX; const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
-      if(isStart){ trimStart=Math.max(0,Math.min(time,trimEnd-0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS; }
-      else { trimEnd=Math.min(audioDuration,Math.max(time,trimStart+0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimStart=trimEnd-MAX_LOOP_SECONDS; }
+      // 'slide': the zoom track pushes the OTHER end to hold the cap. That
+      // differs from the main track above — declared, not accidental; see the
+      // module header.
+      const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'slide');
+      trimStart=_t.start; trimEnd=_t.end;
       updateTrimUI(); scheduleSave(); }
     function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
     window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
@@ -2119,12 +2171,13 @@ function updateNudgeStepLabel(){ nudgeStepLabel.textContent=nudgeSteps[nudgeStep
 nudgeStepFinerBtn.addEventListener('click',()=>{ nudgeStepIdx=Math.max(0,nudgeStepIdx-1); updateNudgeStepLabel(); });
 nudgeStepCoarserBtn.addEventListener('click',()=>{ nudgeStepIdx=Math.min(nudgeSteps.length-1,nudgeStepIdx+1); updateNudgeStepLabel(); });
 function nudgeTrim(which, direction){ if(!audioEl) return; if((which!=='start'&&which!=='end')||!Number.isFinite(direction)) return; const amount=direction*nudgeSteps[nudgeStepIdx];
-  if(which==='start'){ trimStart=Math.max(0,Math.min(trimStart+amount,trimEnd-0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimEnd=trimStart+MAX_LOOP_SECONDS; } else { trimEnd=Math.min(audioDuration,Math.max(trimEnd+amount,trimStart+0.5)); if(trimEnd-trimStart>MAX_LOOP_SECONDS) trimStart=trimEnd-MAX_LOOP_SECONDS; } updateTrimUI(); scheduleSave(); }
+  const _n=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, which, (which==='start'?trimStart:trimEnd)+amount, 'slide');
+  trimStart=_n.start; trimEnd=_n.end; updateTrimUI(); scheduleSave(); }
 document.querySelectorAll('.nudge-btn[data-which]').forEach(btn=>{ btn.addEventListener('click',()=>nudgeTrim(btn.dataset.which, parseFloat(btn.dataset.amount))); });
 updateNudgeStepLabel();
 
 // Match Drawing Time — set loop length to the animation runtime
-function setLoopToDrawingLength(){ if(!audioEl || !(audioDuration>0)) return; const drawingSeconds=frames.length/fps; const loopLength=Math.min(MAX_LOOP_SECONDS,Math.max(0.5,Math.min(drawingSeconds,audioDuration))); trimEnd=trimStart+loopLength; if(trimEnd>audioDuration){ trimEnd=audioDuration; trimStart=Math.max(0,trimEnd-loopLength); } updateTrimUI(); scheduleSave(); }
+function setLoopToDrawingLength(){ if(!audioEl || !(audioDuration>0)) return; const drawingSeconds=frames.length/fps; const loopLength=window.SkriblLoopTrim.loopLength(drawingSeconds,audioDuration); trimEnd=trimStart+loopLength; if(trimEnd>audioDuration){ trimEnd=audioDuration; trimStart=Math.max(0,trimEnd-loopLength); } updateTrimUI(); scheduleSave(); }
 matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 
 // preview loop + test seam (seek-based on the <audio> element)

@@ -79,6 +79,61 @@ for vis, anon, author, other in [("public", True, True, True),
           _p.visible_to(9) is other,
           "this is the case a single-user harness cannot exercise over HTTP")
 
+# ---- states this package did not define -----------------------------------
+# VISIBILITIES is enforced by the API rather than a DB constraint SPECIFICALLY
+# so a host application can add its own states without a Skribl migration. The
+# model comment invites that. But the rule read "anything that is not private
+# is readable", so a host adding 'draft', 'moderated', 'blocked' or 'scheduled'
+# would create posts hidden from the feed and readable by anyone holding the id
+# — a listing filter pretending to be an access control, which is the exact
+# mistake this suite exists to prevent, one layer up.
+#
+# Extensibility of the VOCABULARY has to come with extensibility of the POLICY,
+# and the default for an unrecognised state must be to refuse.
+for unknown in ("draft", "moderated", "blocked", "scheduled", ""):
+    _u = SkriblPost(user_id=7)
+    _u.visibility = unknown
+    check(f"a host-defined {unknown or '(empty)'!r} state is NOT readable by a stranger",
+          _u.visible_to(None) is False and _u.visible_to(9) is False,
+          "unknown states must fail closed; a new state should be invisible "
+          "until someone decides otherwise, not public until someone notices")
+    check(f"and {unknown or '(empty)'!r} is still readable by its author",
+          _u.visible_to(7) is True,
+          "failing closed must not lock an author out of their own post")
+
+# The escape hatch has to work, or "fail closed" just means "cannot extend".
+from skribl.models import set_visibility_policy
+
+_d = SkriblPost(user_id=7)
+_d.visibility = "followers"
+set_visibility_policy(lambda post, viewer_id: True if post.visibility == "followers" else None)
+check("a host policy can open one of its own states",
+      _d.visible_to(None) is True)
+_priv = SkriblPost(user_id=7)
+_priv.visibility = "private"
+check("and returning None leaves the built-in rules alone",
+      _priv.visible_to(9) is False and _priv.visible_to(7) is True,
+      "a host should only have to describe the states it added")
+
+set_visibility_policy(lambda post, viewer_id: False)
+_pub = SkriblPost(user_id=7)
+_pub.visibility = "public"
+check("a host policy can also CLOSE a built-in state",
+      _pub.visible_to(None) is False,
+      "moderation needs to be able to take something down")
+
+set_visibility_policy(None)
+check("clearing the policy restores the defaults",
+      _pub.visible_to(None) is True and _d.visible_to(None) is False)
+
+try:
+    set_visibility_policy("not callable")
+    _raised = False
+except TypeError:
+    _raised = True
+check("a non-callable policy is refused at install time, not at read time",
+      _raised, "a policy that explodes mid-request fails open or 500s")
+
 check("the model's own default is 'unlisted', matching route and migration",
       SkriblPost.__table__.c.visibility.default.arg == "unlisted",
       str(SkriblPost.__table__.c.visibility.default.arg))

@@ -890,16 +890,16 @@ function nibRGB(color) {
 }
 
 function setPenColor(hex) {
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex || '')) return;
-  hex = hex.toLowerCase();
+  // Validation, casing and swatch state are shared with Flip via
+  // lib/colorselect.js. What Pad does with the result — the custom swatch, the
+  // colour input, feeding recents — stays here: Flip is built differently.
+  const sel = window.SkriblColorSelect
+    && window.SkriblColorSelect.apply(document.getElementById('colorGroup'), hex);
+  if (!sel) return;
+  hex = sel.hex;
+  const matched = sel.matched;
   color = hex;
   setTool('pen');
-  let matched = null;
-  document.querySelectorAll('#colorGroup .color-dot').forEach(b => {
-    const isMatch = b.dataset.color && b.dataset.color.toLowerCase() === hex;
-    if (isMatch) matched = b;
-    b.classList.toggle('active', isMatch);
-  });
   if (!matched) {
     customColorBtn.style.background = hex;
     if (customColorInput) customColorInput.value = hex;
@@ -1877,6 +1877,13 @@ function updateTrimUI() {
   const minLoop = 0.01;
   trimStart = Math.max(0, Math.min(trimStart, Math.max(0, audioDuration - minLoop)));
   trimEnd = Math.max(trimStart + minLoop, Math.min(trimEnd, audioDuration));
+  // Single choke point for the cap, matching Flip. Pad enforced the <=20s
+  // limit in its drag and nudge paths only, so a loop that arrived any OTHER
+  // way — a load, a draft restore, a re-add — kept whatever length it came
+  // with. Measured before this line: a 60s loop through updateTrimUI stayed
+  // 60s on Pad and became 20s on Flip.
+  const _maxLoop = window.SkriblLoopTrim.MAX_LOOP_SECONDS;
+  if (trimEnd - trimStart > _maxLoop) trimEnd = trimStart + _maxLoop;
   const startPct = (trimStart / audioDuration) * 100;
   const endPct = (trimEnd / audioDuration) * 100;
   handleStart.style.left = startPct + '%';
@@ -1986,12 +1993,14 @@ function dragZoomHandle(handle, isStart) {
       const zoom = getZoomWindow();
       const time = zoom.start + pct * (zoom.end - zoom.start);
 
-      if (isStart) {
-        trimStart = Math.max(0, Math.min(time, trimEnd - 0.5));
-        if (trimEnd - trimStart > 20) trimEnd = trimStart + 20;
-      } else {
-        trimEnd = Math.min(audioDuration, Math.max(time, trimStart + 0.5));
-        if (trimEnd - trimStart > 20) trimStart = trimEnd - 20;
+      // Shared with Flip via lib/looptrim.js. 'slide': the zoom track pushes
+      // the OTHER end to hold the cap, unlike the main track below. The cap was
+      // a bare 20 here and in seven other places in this file, with no constant.
+      {
+        const _t = window.SkriblLoopTrim.setHandle(
+          { start: trimStart, end: trimEnd, duration: audioDuration },
+          isStart ? 'start' : 'end', time, 'slide');
+        trimStart = _t.start; trimEnd = _t.end;
       }
       updateTrimUI();
     }
@@ -2457,7 +2466,7 @@ function isImageFile(file) {
 function setLoopToDrawingLength() {
   if (!audioEl || !strokes.length) return;
   const drawingSeconds = getPlaybackDuration() / 1000;
-  const loopLength = Math.min(20, Math.max(0.5, Math.min(drawingSeconds, audioDuration)));
+  const loopLength = window.SkriblLoopTrim.loopLength(drawingSeconds, audioDuration);
   // Resize in place: keep the current start, just change the length. Only pull
   // the start back if the loop would otherwise run past the end of the song.
   trimEnd = trimStart + loopLength;
@@ -2532,14 +2541,13 @@ function dragHandle(handle, isStart) {
       let pct = (getClientX(ev) - rect.left) / rect.width;
       pct = Math.max(0, Math.min(1, pct));
       const time = pct * audioDuration;
-      if (isStart) {
-        trimStart = Math.min(time, trimEnd - 0.5);
-        trimStart = Math.max(0, trimStart);
-        if (trimEnd - trimStart > 20) trimStart = trimEnd - 20;
-      } else {
-        trimEnd = Math.max(time, trimStart + 0.5);
-        trimEnd = Math.min(audioDuration, trimEnd);
-        if (trimEnd - trimStart > 20) trimEnd = trimStart + 20;
+      // 'constrain': the dragged handle stops at the cap; the other end does
+      // not move. Declared difference from the zoom track — see the module.
+      {
+        const _t = window.SkriblLoopTrim.setHandle(
+          { start: trimStart, end: trimEnd, duration: audioDuration },
+          isStart ? 'start' : 'end', time, 'constrain');
+        trimStart = _t.start; trimEnd = _t.end;
       }
       updateTrimUI();
     }
@@ -2639,12 +2647,12 @@ function nudgeTrim(which, direction) {
   // a NaN amount would corrupt trimEnd and make updateTrimUI reset the loop.
   if ((which !== 'start' && which !== 'end') || !Number.isFinite(direction)) return;
   const amount = direction * nudgeSteps[nudgeStepIdx];
-  if (which === 'start') {
-    trimStart = Math.max(0, Math.min(trimStart + amount, trimEnd - 0.5));
-    if (trimEnd - trimStart > 20) trimEnd = trimStart + 20;
-  } else {
-    trimEnd = Math.min(audioDuration, Math.max(trimEnd + amount, trimStart + 0.5));
-    if (trimEnd - trimStart > 20) trimStart = trimEnd - 20;
+  // 'slide', matching Flip's nudge and both zoom tracks.
+  {
+    const _n = window.SkriblLoopTrim.setHandle(
+      { start: trimStart, end: trimEnd, duration: audioDuration },
+      which, (which === 'start' ? trimStart : trimEnd) + amount, 'slide');
+    trimStart = _n.start; trimEnd = _n.end;
   }
   updateTrimUI();
 }
@@ -4752,16 +4760,15 @@ if (typeof pendingMusicMeta !== 'undefined') {
     targetCtx.drawImage(canvas, 0, 0, w, h);
   }
 
+  // Geometry is shared with Flip and the player via lib/photofit.js — this
+  // function is now just "compute the rect, then draw it". The two copies of
+  // the arithmetic agreed on cover/contain but not on the third mode's NAME,
+  // which is how a value one surface posts became unreadable to the other.
   function drawPhotoFitted(c, img, w, h, fit, ox, oy, zoom) {
     const iw = img.naturalWidth || w, ih = img.naturalHeight || h;
-    if (fit === 'stretch') { c.drawImage(img, 0, 0, w, h); return; }
-    let scale = fit === 'contain' ? Math.min(w/iw, h/ih) : Math.max(w/iw, h/ih);
-    if (fit === 'cover' && zoom) scale *= zoom;   // zoom multiplies the cover scale
-    const dw = iw * scale, dh = ih * scale;
-    // Cover uses the stored crop offset; contain/stretch stay centered.
-    const fx = fit === 'cover' && ox != null ? ox : 0.5;
-    const fy = fit === 'cover' && oy != null ? oy : 0.5;
-    c.drawImage(img, (w-dw)*fx, (h-dh)*fy, dw, dh);
+    const r = window.SkriblPhotoFit.rect(iw, ih, w, h,
+      { fit: fit, offX: ox, offY: oy, zoom: zoom });
+    c.drawImage(img, r.x, r.y, r.w, r.h);
   }
 
   // ---- PNG export ----

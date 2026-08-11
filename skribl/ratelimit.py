@@ -210,17 +210,24 @@ def _db_rate_release_post(ip, token):
     session().commit()
 
 
-def _db_rate_commit_post(token):
-    # Promote the reservation once the post row is durable.
+def _db_rate_commit_post(token, *, commit=True):
+    # Promote the reservation. create_skribl() does this inside the SAME
+    # transaction as the post insert, so a client can never receive a 500 after
+    # the post became durable merely because a second bookkeeping commit failed.
     if token is None:
         return
-    session().query(RateEvent).filter(RateEvent.id == token).update({"state": "committed"})
-    session().commit()
+    updated = (session().query(RateEvent)
+               .filter(RateEvent.id == token)
+               .update({"state": "committed"}))
+    if updated != 1:
+        raise RuntimeError("Post rate-limit reservation disappeared before commit.")
+    if commit:
+        session().commit()
 
 
-def _rate_commit_post(token):
+def _rate_commit_post(token, *, commit=True):
     if _RATE_BACKEND == "db":
-        _db_rate_commit_post(token)
+        _db_rate_commit_post(token, commit=commit)
 
 
 def _rate_reserve_post(ip):

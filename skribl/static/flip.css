@@ -87,13 +87,13 @@
   .flip-grid.on { display: block; }
   body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
-  .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%;
-    pointer-events: none; display: none; transform: translate(-50%,-50%); z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
+  .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; top: 0; left: 0; will-change: transform;
+    pointer-events: none; display: none; z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
   /* Pen brush cursor — a ring the size of the brush footprint with a little
      crosshair at its centre for precise aiming (crosshair stays a fixed small
      size so it's still usable when the brush ring is tiny or large). */
-  .flip-brush-cursor { position: absolute; border: 1.5px solid rgba(255,255,255,0.7); border-radius: 50%;
-    pointer-events: none; display: none; transform: translate(-50%,-50%); z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
+  .flip-brush-cursor { position: absolute; border: 1.5px solid rgba(255,255,255,0.7); border-radius: 50%; top: 0; left: 0; will-change: transform;
+    pointer-events: none; display: none; z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
   .flip-brush-cursor::before, .flip-brush-cursor::after { content: ''; position: absolute; top: 50%; left: 50%;
     background: rgba(255,255,255,0.85); box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
   .flip-brush-cursor::before { width: 11px; height: 1px; transform: translate(-50%,-50%); }
