@@ -1371,8 +1371,15 @@ function positionScrub() {
   if (!playScrub || playScrub.hidden || !canvasArea) return;
   const a = canvasArea.getBoundingClientRect();
   const w = canvasWrap.getBoundingClientRect();
-  playScrub.style.left = (w.left - a.left) + 'px';
-  playScrub.style.width = w.width + 'px';
+  // Inset by the frame's corner radius at BOTH ends so the bar spans only the
+  // flat part of the canvas bottom. Full width put its ends level with the
+  // rounded corners, where the frame has already curved away. Read from the
+  // token so it stays correct if --r-frame changes.
+  const _r = parseFloat(getComputedStyle(document.documentElement)
+                          .getPropertyValue('--r-frame')) || 14;
+  const _inset = Math.min(_r, w.width / 4);   // never eat the whole bar
+  playScrub.style.left = (w.left - a.left + _inset) + 'px';
+  playScrub.style.width = Math.max(0, w.width - _inset * 2) + 'px';
   playScrub.style.top = (w.bottom - a.top) + 'px';
 }
 function showScrub() {
