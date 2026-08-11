@@ -2369,6 +2369,9 @@ musicInput.addEventListener('change', async (e) => {
       const mCard = document.getElementById('musicPending');
       if (mCard) mCard.hidden = true;
       musicUploadBtn.hidden = false;
+      // Same omission as the photo path above — the dot kept its amber
+      // .pending class after the file was successfully re-added.
+      refreshPendingCards();
     }
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
   });
@@ -4470,6 +4473,11 @@ if (typeof pendingMusicMeta !== 'undefined') {
     const pCard = document.getElementById('photoPending');
     if (pCard) pCard.hidden = true;
     photoUploadBtn.hidden = false;
+    // The dot stays AMBER without this. Amber means "remembered but missing —
+    // re-add it"; the user has just re-added it, so it must go green. This
+    // path cleared the meta and the card by hand but never the dot's .pending
+    // class, and refreshPendingCards is the only function that owns it.
+    refreshPendingCards();
     setTimeout(() => {
       if (!photoBgImg || photoBgImg.style.display === 'none') return;
       if (meta.fit) {
