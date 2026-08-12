@@ -26,10 +26,12 @@ volatile release facts, so they stop being hand-typed.
 import argparse
 import datetime
 import hashlib
+import json
 import pathlib
 import re
 import subprocess
 import sys
+import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "harness"
@@ -50,11 +52,24 @@ BATCHES = [
     ["verify_exportui.py", "verify_exopts.py", "verify_dots.py", "verify_fix.py"],
     ["verify_amber.py", "verify_posted.py", "verify_report.py", "verify_canvas.py"],
     ["verify_padcanvas.py", "verify_pressure.py", "verify_lib.py", "verify_docs.py",
-     "verify_integration.py"],
+     "verify_integration.py", "verify_scrub.py"],
+    # Posts through the editor and then loads the share link, so it needs the
+    # whole authoring path working; it also holds the ratchets on the player
+    # split. Alone in a batch because it is slow and because a browser it shares
+    # a batch with is a browser competing for the same CPU during a timing-
+    # sensitive replay.
+    ["verify_player_isolation.py"],
     ["verify_parity.py"],
     ["verify_audio.py", "verify_seam.py", "verify_loopcap.py"],
     ["verify_gifenc.py", "verify_muxer.py", "verify_mp4.py", "verify_flipmeta.py"],
-    ["verify_feed.py", "verify_media.py", "verify_storage.py", "verify_privacy.py"],
+    ["verify_feed.py", "verify_media.py", "verify_storage.py", "verify_privacy.py",
+     # Runs LAST in its batch and brings its own local-media server, on its own
+     # port with an isolated media root, because it calls sweep_orphans with
+     # dry_run=False. Pointed at a shared root it deletes other suites' media —
+     # observed doing exactly that. It must never share a store with verify_media
+     # or verify_storage, which is also why it cannot just take the ambient
+     # backend: verify_storage asserts the default instance stores media INLINE.
+     "verify_deletion_foundation.py"],
     ["verify_csp.py", "verify_csrf.py", "verify_race.py", "verify_prefix.py"],
     ["verify_version.py", "verify_migrations.py", "verify_postgres.py"],
 ]
@@ -88,6 +103,30 @@ def tree_hash():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    # RESUME. A full aggregate takes ~25 minutes of wall clock. Some execution
+    # environments — including the sandbox this is usually run in — cap a single
+    # invocation well below that and do not let a background process survive
+    # between invocations, so the run is killed part-way and no evidence is
+    # produced at all. The tempting workaround is to run batches by hand and add
+    # the numbers up, which is precisely the hand-typed total this whole file
+    # exists to abolish.
+    #
+    # Instead the run checkpoints after every batch and can be re-invoked until
+    # it completes. The guarantees are unchanged, and the tree-hash one is
+    # actually STRONGER: the frozen hash is stored in the checkpoint and
+    # re-verified on every resume, so an edit made BETWEEN invocations aborts
+    # the run exactly as an edit between batches does.
+    #
+    # The state file lives outside the tree by default. Putting it inside would
+    # mean a file written during the run changing the hash of the tree the run
+    # is about to describe — the defect GENERATED exists to prevent.
+    ap.add_argument("--state", default="/tmp/skribl-release-state.json",
+                    help="checkpoint path (outside the tree by design)")
+    ap.add_argument("--budget", type=float, default=0.0,
+                    help="seconds of wall clock before checkpointing and exiting "
+                         "with 75 (incomplete); 0 means run to completion")
+    ap.add_argument("--restart", action="store_true",
+                    help="discard any existing checkpoint and start over")
     args = ap.parse_args()
 
     on_disk = sorted(p.name for p in HARNESS.glob("verify_*.py"))
@@ -109,9 +148,51 @@ def main():
         return 0
 
     frozen = tree_hash()
-    print(f"frozen tree    : {frozen}\n")
+    state_path = pathlib.Path(args.state)
     rows, skipped, total, failed = [], [], 0, []
     diagnostics = []
+    done = 0
+
+    if args.restart and state_path.exists():
+        state_path.unlink()
+        print("checkpoint discarded (--restart)")
+
+    if state_path.exists():
+        state = json.loads(state_path.read_text())
+        if state.get("frozen") != frozen:
+            # Refuse rather than silently starting over: a resumed run that
+            # quietly restarts on a different tree would report batches from
+            # two trees under one hash, which is the exact claim this file
+            # exists to make impossible.
+            print(f"ABORT: the tree changed since the checkpoint was written "
+                  f"({tree_hash()[:12]} != {state['frozen'][:12]}).\n"
+                  f"       Release evidence must describe ONE tree. Re-run with "
+                  f"--restart to begin a fresh run on the current tree.")
+            return 1
+        if state.get("batches") != [list(b) for b in BATCHES]:
+            print("ABORT: the batch layout changed since the checkpoint was "
+                  "written. Re-run with --restart.")
+            return 1
+        rows = [tuple(r) for r in state["rows"]]
+        skipped = state["skipped"]
+        total = state["total"]
+        failed = state["failed"]
+        diagnostics = state["diagnostics"]
+        done = state["done"]
+        print(f"resuming: {done}/{len(BATCHES)} batches already recorded "
+              f"on tree {frozen[:12]}")
+
+    print(f"frozen tree    : {frozen}\n")
+    started = time.monotonic()
+
+    def save(done_count):
+        state_path.write_text(json.dumps({
+            "frozen": frozen,
+            "batches": [list(b) for b in BATCHES],
+            "rows": [list(r) for r in rows],
+            "skipped": skipped, "total": total, "failed": failed,
+            "diagnostics": diagnostics, "done": done_count,
+        }))
 
     def tail(text, lines=25, chars=2500):
         # Bounded on purpose: a full Chromium batch log is thousands of lines,
@@ -121,6 +202,14 @@ def main():
         return t[-chars:] if len(t) > chars else t
 
     for n, batch in enumerate(BATCHES, 1):
+        if n <= done:
+            continue
+        if args.budget and time.monotonic() - started > args.budget:
+            save(n - 1)
+            print(f"\nBUDGET REACHED — checkpointed after batch {n - 1}/"
+                  f"{len(BATCHES)}. Re-invoke to continue; the frozen tree is "
+                  f"re-verified on resume.")
+            return 75
         now = tree_hash()
         if now != frozen:
             print(f"ABORT: the tree changed before batch {n} ({now[:12]} != "
@@ -169,6 +258,7 @@ def main():
             if r.stderr.strip():
                 print("    !! stderr tail: "
                       + r.stderr.strip().splitlines()[-1][:160])
+        save(n)
 
     seen = {r[0] for r in rows}
     never = [s for s in on_disk if s not in seen]
@@ -215,6 +305,52 @@ def main():
             if d["stdout"]:
                 lines += ["", "stdout (tail):", "", "```", d["stdout"], "```"]
     (HARNESS / "RELEASE.md").write_text("\n".join(lines) + "\n")
+
+    # LAST-RUN.txt is written by run_harness.sh, which this drives ONE BATCH AT
+    # A TIME — so the record left behind described only the final batch, and
+    # stamp_docs.py (invoked by the runner at the end of that batch) stamped the
+    # docs from it. A completed 42-suite release therefore published README.md
+    # saying "78 assertions across 2 suites" beside a RELEASE.md saying 1693
+    # across 42. Both were machine-generated and they contradicted each other,
+    # which is the exact defect the generated-not-typed rule exists to prevent —
+    # it just moved from typed prose into a second generator.
+    #
+    # The whole run is the run. Rewrite the record to describe every batch, then
+    # re-stamp from it so the docs agree with RELEASE.md.
+    # The whole run is the run. Keep the RUN CONTEXT block the runner itself
+    # wrote — every environment fact in it (Chromium build, SQLAlchemy version,
+    # DATABASE_URL class) is machine-generated and would be invented if this
+    # rewrote the header — and replace only the AGGREGATE with one covering
+    # every batch. stamp_docs.py then reads the widened record.
+    _lr = HARNESS / "LAST-RUN.txt"
+    _prev = _lr.read_text(encoding="utf-8") if _lr.is_file() else ""
+    _marker = "================ AGGREGATE"
+    _header = _prev.split(_marker)[0] if _marker in _prev else ""
+    _header = re.sub(r"^(Tree SHA-256\s+:\s*)\S+$", r"\g<1>" + frozen, _header,
+                     flags=re.M)
+    summary_lines = [f"  {n}: " + ("SKIPPED (0 assertions) — " + d
+                                   if s == "skip" else
+                                   ("ok — " if s == "pass" else "FAIL — ") + d)
+                     for n, s, d in sorted(rows)]
+    _lr.write_text(_header + "\n".join([
+        "================ AGGREGATE (machine-generated) ================",
+        f"# whole release run: {len(BATCHES)} batches recorded as one run",
+        f"suites requested : {len(on_disk)}",
+        *summary_lines,
+        f"assertions passed: {total}   (skipped suites contribute 0)",
+        f"suites skipped   : {len(skipped)}",
+        f"suites with problems: {len(failed) + len(never)}",
+        "",
+    ]))
+    subprocess.run([sys.executable, str(HARNESS / "stamp_docs.py")],
+                   cwd=str(ROOT), capture_output=True)
+
+    # The run is complete, so the checkpoint has served its purpose. Leaving it
+    # behind would make the NEXT release silently resume a finished run and
+    # report its batches again — a stale-state failure of exactly the kind that
+    # has already cost this project a debugging cycle.
+    if state_path.exists():
+        state_path.unlink()
 
     print(f"\n{'PASS' if ok else 'FAIL'} — {total} assertions, "
           f"{len(seen)}/{len(on_disk)} suites reported, {len(skipped)} skipped")

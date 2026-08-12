@@ -263,3 +263,11 @@ check("the guard is used on at least three surfaces", _guards >= 3, str(_guards)
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
+
+# These suites printed their failures and then exited 0. run_harness.sh takes
+# ok/FAIL from the EXIT CODE, so a failing run was reported as "ok — 32/33
+# passed" and the aggregate counted it as PASS with a failed assertion inside.
+# Eight suites shared this hole, verify_amber among them — which is very likely
+# what the "flake" earlier in this session actually was.
+import sys
+sys.exit(1 if bad else 0)

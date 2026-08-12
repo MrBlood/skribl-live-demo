@@ -337,7 +337,7 @@ body:not(.player-mode) .canvas-area { position: relative; }
   height: 5px;
   background: rgba(255, 255, 255, 0.07);
   /* Fully rounded: the bar is inset to the canvas frame's FLAT bottom span
-     (see positionPlayScrub), so it reads as its own pill rather than trying to
+     (see positionScrub in app.js), so it reads as its own pill rather than trying to
      continue the frame's corners. Spanning the full width put its ends out
      past the rounded corners, which is what looked wrong. */
   border-radius: 999px;

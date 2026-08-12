@@ -291,5 +291,14 @@
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
   <script src="{{ skribl_asset('app.js') }}" defer></script>
+  {# Editor-only. These were inside app.js, which the PLAYER also loads — so
+     every shared link shipped the GIF/WebM encoders and the post composer to
+     run them for nothing. They read globals app.js declares, so they must stay
+     after it; `defer` preserves document order. #}
+  <script src="{{ skribl_asset('editor_menu.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_music.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_photo.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_export.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_post.js') }}" defer></script>
 </body>
 </html>

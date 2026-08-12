@@ -228,7 +228,17 @@ for suite in "$@"; do
   # command fails aborts the script. grep exits 1 when there is no summary line —
   # i.e. exactly when a suite CRASHED or SKIPPED — so without this the runner
   # silently stopped instead of reporting the very cases it exists to catch.
-  line="$(grep -E '^[0-9]+/[0-9]+ passed$' "$log" | tail -1 || true)"
+  # The `$` anchor here was wrong, and it hid real failures. Suites do not agree
+  # on one summary format: some print
+  #     32/33 passed  FAILURES: the verify command expects the real count
+  # on a single line. That does not match an anchored pattern, so the runner
+  # concluded NO SUMMARY and reported the suite as "crashed before reporting" —
+  # the one classification that says nothing about what failed. A failing suite
+  # and a suite killed mid-run became indistinguishable, and at least one real
+  # assertion failure (verify_amber, in a batch, passing standalone) was written
+  # off as a flake because of it. The counts are still anchored at the START of
+  # the line so a mid-sentence "1/2 passed" cannot be mistaken for a summary.
+  line="$(grep -E '^[0-9]+/[0-9]+ passed' "$log" | tail -1 || true)"
 
   # Exit 77 means the suite declined to run because a prerequisite was absent.
   # A SKIP contributes ZERO assertions and is reported separately: it must never

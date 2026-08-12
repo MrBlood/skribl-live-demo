@@ -86,7 +86,15 @@
         <button type="button" class="mb-offset" id="mbOffset"
                 aria-label="Move offset in canvas units. Activate to type exact coordinates.">0, 0</button>
         <input class="mb-offset mb-offset-input" id="mbOffsetInput" type="text"
-               inputmode="numeric" autocomplete="off" spellcheck="false"
+               {# The field takes BOTH coordinates in one box ("40, -12"), so a
+                  numeric keypad is the wrong keyboard: it offers digits only —
+                  no comma, and on most phones no minus — which makes a negative
+                  offset impossible to type at all. `decimal` does not fix it
+                  either; that adds a decimal POINT, not a separator. `text`
+                  gives the full keyboard. parseOffsetEntry() already accepts a
+                  comma or a space between the two numbers, plus a leading minus
+                  and decimals, so nothing downstream had to change. #}
+               inputmode="text" autocomplete="off" spellcheck="false"
                aria-label="Offset as x, y" hidden>
         <span class="seg mb-scope" id="mbScope" role="group" aria-label="Which pages to move"><span class="seg-slider"></span><button type="button" data-scope="one" class="on">This page</button><button type="button" data-scope="after"><span class="lbl-wide">And following</span><span class="lbl-narrow">After</span></button></span>
         <button type="button" class="pb" id="mbReset">Reset</button>

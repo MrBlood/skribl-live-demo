@@ -251,8 +251,37 @@ if src:
               all(c == n_tables for c in claimed),
               f"claims {claimed}, metadata has {n_tables}")
 
-print("\nDOCS — a run with skips is not published as 'all green'")
-# The runner reports PASS WITH SKIPS when nothing failed but something was
+print("\nDOCS — the two generated records describe the SAME run")
+# There are two generators: run_harness.sh writes LAST-RUN.txt (and stamp_docs.py
+# stamps the docs from it), and release_run.py writes RELEASE.md. release_run
+# drives the runner one BATCH at a time, so LAST-RUN.txt described only the last
+# batch — and a finished 42-suite release published "78 assertions across 2
+# suites" in README.md beside "1693 across 42" in RELEASE.md. Two machine-
+# generated numbers contradicting each other is not better than one typed one.
+_rel = ROOT / "harness" / "RELEASE.md"
+_lr = ROOT / "harness" / "LAST-RUN.txt"
+# Only comparable when LAST-RUN.txt was written BY a release run. A targeted
+# `run_harness.sh verify_x.py` legitimately overwrites the record with one
+# suite, and demanding that agree with RELEASE.md would fail every ordinary
+# invocation. Like the stamped stanzas, this therefore validates the PREVIOUS
+# release — verify_docs runs inside the suite loop, so it cannot see a record
+# that has not been written yet.
+if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(encoding="utf-8"):
+    _rel_n = re.search(r"^\s*assertions\s+(\d+)", _rel.read_text(encoding="utf-8"), re.M)
+    _lr_n = re.search(r"^assertions passed:\s*(\d+)", _lr.read_text(encoding="utf-8"), re.M)
+    check("RELEASE.md and LAST-RUN.txt agree on the assertion count",
+          bool(_rel_n and _lr_n) and _rel_n.group(1) == _lr_n.group(1),
+          f"RELEASE.md says {_rel_n.group(1) if _rel_n else '?'}, "
+          f"LAST-RUN.txt says {_lr_n.group(1) if _lr_n else '?'} — a release run "
+          "must rewrite the record for the WHOLE run, not leave the final batch "
+          "standing as it")
+    _rel_t = re.search(r"^\s*tree hash\s+([0-9a-f]{64})", _rel.read_text(encoding="utf-8"), re.M)
+    _lr_t = re.search(r"^Tree SHA-256\s*:\s*([0-9a-f]{64})", _lr.read_text(encoding="utf-8"), re.M)
+    check("and on the tree they were produced from",
+          bool(_rel_t and _lr_t) and _rel_t.group(1) == _lr_t.group(1),
+          "one of them describes a different tree")
+
+print("\nDOCS — a run with skips is not published as 'all green'")# The runner reports PASS WITH SKIPS when nothing failed but something was
 # skipped; the stanza generator decided on failures alone and wrote "all green",
 # then listed the skipped suites and said a skip is not evidence of coverage —
 # two contradictory claims in one generated block. Now that a bare run expands to
@@ -341,3 +370,9 @@ if req.is_file() and lock.is_file():
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
+# This suite printed its failures and then exited 0, so run_harness.sh — which
+# takes ok/FAIL from the exit code — reported it as "ok — 32/33 passed" and the
+# aggregate counted the run as PASS with a failed assertion in it. A suite that
+# fails must SAY so in the only channel the runner reads.
+import sys
+sys.exit(1 if bad else 0)

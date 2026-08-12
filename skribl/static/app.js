@@ -235,8 +235,16 @@ let lastRawPos = null;    // last true pointer position (for snap-to-final on re
 let pickingColor = false; // eyedropper fallback: next canvas tap samples a pixel
 let recentColors = [];    // recently used custom / eyedropped colors (hex)
 
-const undoBtn = document.getElementById('undoBtn');
-const redoBtn = document.getElementById('redoBtn');
+// Editor-only elements: authoring controls and the tab panels' contents. They
+// exist only in the EDITOR template, and app.js touches them from dozens of
+// places, so an absent one falls back to a DETACHED element of the same kind
+// that absorbs writes and listeners harmlessly. Cheaper and more durable than
+// guarding every site. See START-HERE.
+function _authoringCtl(id, tag) {
+  return document.getElementById(id) || document.createElement(tag || 'button');
+}
+const undoBtn = _authoringCtl('undoBtn');
+const redoBtn = _authoringCtl('redoBtn');
 undoBtn.disabled = true;
 redoBtn.disabled = true;
 
@@ -822,7 +830,7 @@ bindEl('bgGroup', 'click', (e) => {
 });
 
 const customBgBtn = document.getElementById('customBgBtn');
-const customBgInput = document.getElementById('customBgInput');
+const customBgInput = _authoringCtl('customBgInput', 'input');
 
 customBgInput.addEventListener('input', (e) => {
   const newColor = e.target.value;
@@ -846,7 +854,7 @@ function updateVignette() {
 updateVignette();
 
 const customColorBtn = document.getElementById('customColorBtn');
-const customColorInput = document.getElementById('customColorInput');
+const customColorInput = _authoringCtl('customColorInput', 'input');
 
 customColorInput.addEventListener('input', (e) => {
   const newColor = e.target.value;
@@ -1082,10 +1090,10 @@ if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   openDrawer(btn.classList.contains('open') ? null : name);
 });
 
-const recordBtn = document.getElementById('recordBtn');
+const recordBtn = _authoringCtl('recordBtn');
 const playBtn = document.getElementById('playBtn');
 const playWrap = document.getElementById('playWrap');
-const postBtn = document.getElementById('postBtn');
+const postBtn = _authoringCtl('postBtn');
 const recIndicator = document.getElementById('recIndicator');
 const recTimer = document.getElementById('recTimer');
 const durationBadge = document.getElementById('durationBadge');
@@ -1504,284 +1512,10 @@ if (playScrub) {
 
 // The Post button opens the composer sheet — wired in initPostComposer() below.
 
-// ---------- Overflow menu ----------
-const menuBtn = document.getElementById('menuBtn');
-const menuOverlay = document.getElementById('menuOverlay');
-let menuCloseTimer = null;
-
-function openMenu() {
-  clearTimeout(menuCloseTimer);
-  updateClearVisibility();
-  // Re-read the stored state on every open. It is shared with Flip and can be
-  // changed in another tab, and a switch showing the opposite of what is
-  // stored is worse than no switch.
-  if (window._skriblSyncHintToggle) window._skriblSyncHintToggle();
-  menuOverlay.hidden = false;
-  requestAnimationFrame(() => menuOverlay.classList.add('open'));
-}
-
-function closeMenu(instant) {
-  menuOverlay.classList.remove('open');
-  clearTimeout(menuCloseTimer);
-  if (instant) {
-    menuOverlay.hidden = true;   // dismiss with no slide (e.g. when opening another panel)
-  } else {
-    menuCloseTimer = setTimeout(() => { menuOverlay.hidden = true; }, 350);
-  }
-}
-
-menuBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (menuOverlay.hidden) openMenu(); else closeMenu();
-});
-
-menuOverlay.addEventListener('click', (e) => {
-  // Close if the tap is not inside the sheet itself
-  if (!e.target.closest('.menu-sheet')) closeMenu();
-});
-
-// Full reset for the overflow menu's "Clear all": the drawing AND the music,
-// photo, and background all back to a fresh start. Reuses each item's existing
-// removal (via its own control) so behavior can't drift from the single-item
-// remove buttons. clearCanvas() intentionally keeps media, so we clear those
-// explicitly here, then return the background to the default swatch.
-function resetAll() {
-  clearCanvas();
-  const mr = document.getElementById('musicRemove');
-  if (mr && !mr.hidden) mr.click();
-  const pr = document.getElementById('photoRemove');
-  if (pr && !pr.hidden) pr.click();
-  bgColor = '#0d0f14';
-  document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b.dataset.bg === '#0d0f14'));
-  canvasWrap.style.backgroundColor = bgColor;
-  if (typeof updateVignette === 'function') updateVignette();
-  if (typeof clearAutosave === 'function') clearAutosave();
-}
-
-// Clear everything, then offer a one-tap way back. Snapshotting goes through the
-// SAME serialize/apply pair the draft and autosave paths use (serializeSkribl /
-// loadSkribl), so media returns too and there is no parallel restore logic.
-// Skipped while mediaBusy > 0 — the same guard saveDraft() uses — because the
-// snapshot would capture a half-loaded photo or track. The clear still happens in
-// that case, just without the undo offer.
-function clearAllWithUndo() {
-  let snap = null;
-  if (mediaBusy === 0) {
-    try { snap = serializeSkribl(); } catch (err) { snap = null; }
-  }
-  resetAll();
-  if (!snap) return;
-  showToast('Cleared everything', null, {
-    label: 'Undo',
-    onClick: () => {
-      try {
-        loadSkribl(snap);
-        showToast('Restored', null, { label: 'Redo', onClick: clearAllWithUndo });
-      } catch (err) {
-        showToast('Couldn\u2019t restore that', null);
-      }
-    }
-  });
-}
-
-// "Clear all" wipes music/photo too, so it's the most destructive action —
-// guarded with the same two-tap arm as the drawer's Clear drawing. The first tap
-// arms (menu stays open for the confirm); the second clears everything.
-(function initClearAllMenu() {
-  const item = document.getElementById('clearMenuItem');
-  if (!item) return;
-  let armed = false, armTimer = null;
-  const label = item.querySelector('span');
-  const disarm = () => { armed = false; item.classList.remove('armed'); if (label) label.textContent = 'Clear all'; };
-  item.addEventListener('click', () => {
-    if (recording) { showToast('Stop recording before clearing', item); return; }
-    if (!armed) {
-      armed = true;
-      item.classList.add('armed');
-      if (label) label.textContent = 'Tap again to clear all';
-      clearTimeout(armTimer);
-      armTimer = setTimeout(disarm, 3000);
-      return;   // keep the menu open for the confirm tap
-    }
-    clearTimeout(armTimer);
-    disarm();
-    // "Clear all" wipes strokes, music, photo AND the background — then calls
-    // clearAutosave(), so even the recovery copy is gone. The two-tap arm above
-    // guards against the accidental tap, but nothing could undo a deliberate one.
-    // Snapshot the whole document first, through the SAME serialize the draft and
-    // autosave paths use, and offer a one-tap restore via loadSkribl(). Reusing
-    // that pair means media comes back too, with no parallel restore logic.
-    // Skipped while media is still being prepared (mediaBusy), because the
-    // snapshot would capture a half-loaded photo or track — same guard saveDraft
-    // uses. In that case the clear still happens, just without the undo offer.
-    // v107: Undo now offers Redo, and Redo re-offers Undo — so the clear becomes a
-    // toggle you can flip either way, rather than the one-shot restore v106 had.
-    // Redo simply re-runs this same function, which re-snapshots the restored
-    // document; no second snapshot is stored and the two can never fall out of sync.
-    clearAllWithUndo();
-    closeMenu();
-  });
-})();
-
-bindEl('saveDraftItem', 'click', () => {
-  saveDraft();
-  closeMenu();
-});
-
-bindEl('loadDraftItem', 'click', () => {
-  document.getElementById('draftInput').click();
-  closeMenu();
-});
-
-// Swipe-to-dismiss + tap-to-close on the mobile sheet handle
-(function setupSheetGestures() {
-  const sheet = document.getElementById('menuSheet');
-  const handle = sheet ? sheet.querySelector('.menu-handle') : null;
-  if (!sheet) return;
-
-  let dragStartY = 0;
-  let dragging = false;
-  let currentY = 0;
-
-  function onTouchStart(e) {
-    // Only engage drag from the top region of the sheet (handle + header area)
-    const touchY = e.touches[0].clientY;
-    const rect = sheet.getBoundingClientRect();
-    if (touchY - rect.top > 60) return; // only near the top
-    dragging = true;
-    dragStartY = touchY;
-    currentY = 0;
-    sheet.style.transition = 'none';
-  }
-
-  function onTouchMove(e) {
-    if (!dragging) return;
-    currentY = Math.max(0, e.touches[0].clientY - dragStartY);
-    sheet.style.transform = `translateY(${currentY}px)`;
-  }
-
-  function onTouchEnd() {
-    if (!dragging) return;
-    dragging = false;
-    sheet.style.transition = '';
-    sheet.style.transform = '';
-    if (currentY > 80) {
-      closeMenu();
-    }
-  }
-
-  sheet.addEventListener('touchstart', onTouchStart, { passive: true });
-  sheet.addEventListener('touchmove', onTouchMove, { passive: true });
-  sheet.addEventListener('touchend', onTouchEnd);
-
-  // Tap the handle to close
-  if (handle) {
-    handle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeMenu();
-    });
-  }
-})();
-
-// Close menu on Escape
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !menuOverlay.hidden) closeMenu();
-  if (e.key === 'Escape' && helpDrawer && !helpDrawer.hidden) closeHelpDrawer();
-
-  // Undo / redo shortcuts (desktop). Ignore while typing in a field.
-  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') ||
-                 (e.target && e.target.isContentEditable);
-  if (!typing && (e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
-    e.preventDefault();
-    if (e.shiftKey) { if (!redoBtn.disabled) redoBtn.click(); }
-    else { if (!undoBtn.disabled) undoBtn.click(); }
-  } else if (!typing && (e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
-    e.preventDefault();
-    if (!redoBtn.disabled) redoBtn.click();
-  }
-});
-
-undoBtn.addEventListener('click', () => {
-  if (undoStack.length === 0) return;
-  const { width: cw, height: ch } = getCanvasLogicalSize();
-  redoStack.push(makeHistoryState());
-  redoBtn.disabled = false;
-  const prev = undoStack.pop();
-  // Synchronous restore from the snapshot canvas (see makeHistoryState).
-  // save/restore + explicit source-over/alpha guards against a stale
-  // 'destination-out' left on the ctx by a just-finished eraser stroke,
-  // which would make this drawImage erase instead of paint.
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 1;
-  ctx.clearRect(0, 0, cw, ch);
-  ctx.drawImage(prev.image, 0, 0, cw, ch);
-  ctx.restore();
-  strokes = prev.strokes.slice();
-  strokeGroups = prev.strokeGroups.slice();
-  syncStateAfterHistoryChange(prev.hasContent === undefined ? strokes.length > 0 : prev.hasContent);
-  if (undoStack.length === 0) undoBtn.disabled = true;
-});
-
-redoBtn.addEventListener('click', () => {
-  if (redoStack.length === 0) return;
-  const { width: cw, height: ch } = getCanvasLogicalSize();
-  undoStack.push(makeHistoryState());
-  undoBtn.disabled = false;
-  const next = redoStack.pop();
-  // Synchronous restore from the snapshot canvas — same pattern as undo.
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 1;
-  ctx.clearRect(0, 0, cw, ch);
-  ctx.drawImage(next.image, 0, 0, cw, ch);
-  ctx.restore();
-  strokes = next.strokes.slice();
-  strokeGroups = next.strokeGroups.slice();
-  syncStateAfterHistoryChange(next.hasContent === undefined ? strokes.length > 0 : next.hasContent);
-  if (redoStack.length === 0) redoBtn.disabled = true;
-});
-
-const helpBtn = document.getElementById('helpBtn');       // legacy header button (now null in editor)
-const helpItem = document.getElementById('helpItem');     // "How it works" — moved into the ⋯ menu
-const helpDrawer = document.getElementById('helpDrawer');
-const helpClose = document.getElementById('helpClose');
-const helpBackdrop = document.getElementById('helpBackdrop');
-
-let helpCloseTimer = null;
-
-function openHelpDrawer() {
-  clearTimeout(helpCloseTimer);
-  document.documentElement.classList.add('help-open');   // lock page scroll (one scrollbar)
-  helpDrawer.hidden = false;
-  helpDrawer.classList.remove('closing');
-  requestAnimationFrame(() => {
-    helpDrawer.classList.add('open');
-  });
-}
-
-if (helpBtn) helpBtn.addEventListener('click', openHelpDrawer);
-if (helpItem) helpItem.addEventListener('click', () => { closeMenu(true); openHelpDrawer(); });
-
-function closeHelpDrawer() {
-  clearTimeout(helpCloseTimer);
-  // Drop focus off the trigger so its :focus-visible ring doesn't linger (Escape).
-  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
-  helpDrawer.classList.add('closing');
-  helpDrawer.classList.remove('open');
-  helpCloseTimer = setTimeout(() => {
-    helpDrawer.hidden = true;
-    helpDrawer.classList.remove('closing');
-    document.documentElement.classList.remove('help-open');   // restore page scroll after it's gone
-  }, 250);
-}
-
-helpClose.addEventListener('click', closeHelpDrawer);
-helpBackdrop.addEventListener('click', closeHelpDrawer);
-
-// Show the "Skribl Pad" wordmark whenever the header has room for it, and drop
-// to logo-only when it doesn't (after a take, while recording, on tiny screens)
-// — measured, not a fixed breakpoint, so it adapts to every state and width.
+// ---------- Overflow menu / help drawer ----------
+// Moved to editor_menu.js, loaded only by the editor template. The cut stops
+// short of initBrandFit() below, which the PLAYER executes — its inner fit()
+// is why the header brand collapses correctly on a shared link.
 (function initBrandFit() {
   const brand = document.querySelector('.brand');
   const brandText = brand && brand.querySelector(':scope > span');
@@ -1834,7 +1568,9 @@ document.querySelectorAll('.accordion-header').forEach(header => {
 });
 
 // --- Music upload + trim ---
-const musicInput = document.getElementById('musicInput');
+// The drawer WIRING moved to editor_music.js (editor-only). What remains here
+// is state and the functions the player reaches through loadSkribl.
+const musicInput = _authoringCtl('musicInput', 'input');
 // Selection tokens (review round 9, #1). Adding `await` to these handlers created
 // a race that did not exist when they were synchronous: a slow decode of file A
 // could finish AFTER the user picked B and overwrite it. Each slot has a counter
@@ -1844,7 +1580,7 @@ const musicInput = document.getElementById('musicInput');
 let musicSelectionSeq = 0;
 let photoSelectionSeq = 0;
 const musicPanel = document.getElementById('musicPanel');
-const musicRemove = document.getElementById('musicRemove');
+const musicRemove = _authoringCtl('musicRemove');
 const musicTrack = document.getElementById('musicTrack');
 const musicRange = document.getElementById('musicRange');
 const handleStart = document.getElementById('handleStart');
@@ -1875,8 +1611,14 @@ function formatTimeH(sec) {
   return m + ':' + String(s).padStart(2, '0') + '.' + String(hh).padStart(2, '0');
 }
 
-function updateTrimUI() {
-  if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
+function clampTrim() {
+  // Clamp half of the old updateTrimUI, split out so it runs on the PLAYER too.
+  // It is the single choke point enforcing the loop cap on load: put it behind
+  // a player-mode guard and a shared link can play a loop longer than either
+  // editor allows. Returns false when there is nothing to clamp.
+  // (This file ships uncompressed to every visitor — see START-HERE for the
+  // full reasoning rather than carrying it here.)
+  if (!Number.isFinite(audioDuration) || audioDuration <= 0) return false;
   // Guard against NaN/invalid trim values sneaking in from a drag/nudge edge
   // case — clamp both to a valid range so a bad value can't propagate.
   if (!Number.isFinite(trimStart)) trimStart = 0;
@@ -1891,6 +1633,14 @@ function updateTrimUI() {
   // 60s on Pad and became 20s on Flip.
   const _maxLoop = window.SkriblLoopTrim.MAX_LOOP_SECONDS;
   if (trimEnd - trimStart > _maxLoop) trimEnd = trimStart + _maxLoop;
+  return true;
+}
+
+function updateTrimUI() {
+  // Clamp always; paint only where there is a trim track to paint on. The null
+  // check is what lets the player's template drop the editor shell safely.
+  if (!clampTrim()) return;
+  if (!handleStart || !musicRange || !musicTrack) return;
   const startPct = (trimStart / audioDuration) * 100;
   const endPct = (trimEnd / audioDuration) * 100;
   handleStart.style.left = startPct + '%';
@@ -1920,9 +1670,12 @@ function updateTrimUI() {
   if (typeof updateZoomPanSlider === 'function') updateZoomPanSlider();
 }
 
-const waveformCanvas = document.getElementById('waveformCanvas');
+// Waveform canvases live in the music panel — editor only. A detached <canvas>
+// gives a real 2d context, so drawWaveform() and every clearRect() downstream
+// work unchanged and paint into nothing.
+const waveformCanvas = _authoringCtl('waveformCanvas', 'canvas');
 const waveformCtx = waveformCanvas.getContext('2d');
-const zoomWaveformCanvas = document.getElementById('zoomWaveformCanvas');
+const zoomWaveformCanvas = _authoringCtl('zoomWaveformCanvas', 'canvas');
 const zoomWaveformCtx = zoomWaveformCanvas.getContext('2d');
 const loopZoomLabel = document.getElementById('loopZoomLabel');
 const loopSummary = document.getElementById('loopSummary');
@@ -1988,50 +1741,7 @@ function updateZoomHandles() {
   zoomHandleEnd.hidden = !(endPct >= -2 && endPct <= 102);
 }
 
-function dragZoomHandle(handle, isStart) {
-  function onStart(e) {
-    e.preventDefault();
-    handle.classList.add('dragging');
 
-    function onMove(ev) {
-      const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
-      const rect = zoomTrackWrap.getBoundingClientRect();
-      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const zoom = getZoomWindow();
-      const time = zoom.start + pct * (zoom.end - zoom.start);
-
-      // Shared with Flip via lib/looptrim.js. 'slide': the zoom track pushes
-      // the OTHER end to hold the cap, unlike the main track below. The cap was
-      // a bare 20 here and in seven other places in this file, with no constant.
-      {
-        const _t = window.SkriblLoopTrim.setHandle(
-          { start: trimStart, end: trimEnd, duration: audioDuration },
-          isStart ? 'start' : 'end', time, 'slide');
-        trimStart = _t.start; trimEnd = _t.end;
-      }
-      updateTrimUI();
-    }
-
-    function onEnd() {
-      handle.classList.remove('dragging');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    }
-
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  }
-
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
-}
-
-dragZoomHandle(zoomHandleStart, true);
-dragZoomHandle(zoomHandleEnd, false);
 
 // Sliding-pill highlight for segmented button groups — the same affordance as
 // the draw/eraser tool slider, generalized so it can be attached to any group.
@@ -2042,7 +1752,6 @@ dragZoomHandle(zoomHandleEnd, false);
 // resizes or first becomes visible from a hidden tab/drawer (ResizeObserver);
 // both are feature-detected so the headless harness — which stubs neither — runs
 // this file top-level without throwing.
-function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.placeAttached(group); }
 
 // Both editors carried an equivalent of this; it lives in lib/segslider.js now.
 function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
@@ -2050,68 +1759,11 @@ function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlid
 // Focus + magnification control for the Loop Detail view. Built in JS (styles
 // injected once) so the whole feature lives in this one file. Focus centers the
 // zoom window on the loop / start edge / end edge; the multiplier tightens it.
-(function initZoomMagControl() {
-  if (!zoomTrackWrap || !zoomTrackWrap.parentNode) return;
-  const bar = document.createElement('div');
-  bar.className = 'zoom-mag-bar';
-  bar.innerHTML =
-    '<div class="zoom-mag-group" data-role="focus">' +
-      '<button type="button" class="zoom-mag-btn active" data-focus="loop">Loop</button>' +
-      '<button type="button" class="zoom-mag-btn" data-focus="start">Start</button>' +
-      '<button type="button" class="zoom-mag-btn" data-focus="end">End</button>' +
-    '</div>' +
-    '<div class="zoom-mag-group" data-role="mag">' +
-      '<button type="button" class="zoom-mag-btn active" data-mag="1">1&times;</button>' +
-      '<button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button>' +
-      '<button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button>' +
-      '<button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button>' +
-    '</div>';
-  zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
-  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="focus"]'));
-  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="mag"]'));
-  bar.addEventListener('click', (e) => {
-    const b = e.target.closest('.zoom-mag-btn');
-    if (!b) return;
-    b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    if (b.dataset.focus) { zoomFocus = b.dataset.focus; zoomCenter = null; }
-    if (b.dataset.mag) zoomMag = parseFloat(b.dataset.mag) || 1;
-    updateTrimUI();   // recomputes the window, redraws waveform + handles
-  });
-  const style = document.createElement('style');
-  style.textContent =
-    '.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}' +
-    '.zoom-mag-group{position:relative;overflow:hidden;display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:3px}' +
-    '.zoom-mag-btn{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:color .12s}' +
-    '.zoom-mag-btn:hover{color:#c8cede}' +
-    '.zoom-mag-btn.active{color:#fff}';
-  document.head.appendChild(style);
-})();
 
 // Fine-tune disclosure: the Music panel opens to essentials (waveform + trim +
 // Match/Preview); the deep Loop Detail (zoom, focus/magnifier, nudgers) lives
 // behind this toggle so all three tab panels share the same "essentials shown,
 // depth one tap away" rhythm. Null-guarded — the player shell has no toggle.
-(function initFineTuneToggle() {
-  const toggle = document.getElementById('fineTuneToggle');
-  const body = document.getElementById('fineTuneBody');
-  if (!toggle || !body) return;
-  toggle.addEventListener('click', () => {
-    const open = body.hidden;
-    body.hidden = !open;
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) {
-      // First reveal: the zoom canvas and the two seg-pills were laid out at
-      // zero size while hidden. Redraw and re-home them now that they have a box.
-      requestAnimationFrame(() => {
-        if (typeof updateTrimUI === 'function') updateTrimUI();
-        if (typeof positionSegSlider === 'function') {
-          body.querySelectorAll('.zoom-mag-group').forEach(g => positionSegSlider(g));
-        }
-      });
-    }
-  });
-})();
 const bubbleStart = document.getElementById('bubbleStart');
 const bubbleEnd = document.getElementById('bubbleEnd');
 let audioCtx = null;
@@ -2273,119 +1925,15 @@ function drawWaveform(audioBuffer) {
   }
 }
 
-const musicUploadBtn = document.getElementById('musicUploadBtn');
+const musicUploadBtn = _authoringCtl('musicUploadBtn');
 const musicBtnLabel = document.getElementById('musicBtnLabel');
 const musicDetail = document.getElementById('musicDetail');
 const musicTabDot = document.getElementById('musicTabDot');
 
-musicUploadBtn.addEventListener('click', (e) => {
-  if (e.target.closest('.dropzone-remove')) return;
-  if (!musicUploadBtn.classList.contains('loaded')) {
-    musicInput.click();
-  }
-});
 
-musicUploadBtn.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  if (!musicUploadBtn.classList.contains('loaded')) {
-    musicUploadBtn.classList.add('drag-over');
-  }
-});
 
-musicUploadBtn.addEventListener('dragleave', () => {
-  musicUploadBtn.classList.remove('drag-over');
-});
 
-musicUploadBtn.addEventListener('drop', (e) => {
-  e.preventDefault();
-  musicUploadBtn.classList.remove('drag-over');
-  if (musicUploadBtn.classList.contains('loaded')) return;
-  const file = e.dataTransfer.files[0];
-  const err = validateMusicFile(file);
-  if (err) { showToast(err, musicUploadBtn); return; }
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  musicInput.files = dt.files;
-  musicInput.dispatchEvent(new Event('change'));
-});
 
-musicInput.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  const seq = ++musicSelectionSeq;
-  const err = validateMusicFile(file);
-  if (err) { if (seq === musicSelectionSeq) showToast(err, musicUploadBtn); return; }
-  // Bytes, not just the label. (Round 6, #7)
-  const decodeErr = await skriblDecodeCheckAudio(file);
-  if (seq !== musicSelectionSeq) return;          // superseded or removed mid-decode
-  if (decodeErr) { showToast(decodeErr, musicUploadBtn); musicInput.value = ''; return; }
-  if (audioEl && audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
-  const url = URL.createObjectURL(file);
-  audioEl = new Audio(url);
-  audioEl._objectUrl = url;
-  // Keep a base64 copy so drafts can embed the full song
-  const thisAudio = audioEl;
-  const draftReader = new FileReader();
-  beginMediaRead();
-  draftReader.onload = () => {
-    try {
-      // Only attach if this is still the same audio object (guards against a
-      // fast remove/replace before the read finished).
-      if (audioEl === thisAudio && thisAudio) thisAudio._draftData = draftReader.result;
-    } finally {
-      endMediaRead();
-    }
-  };
-  draftReader.onerror = () => { endMediaRead(); };
-  draftReader.onabort = () => { endMediaRead(); };
-  draftReader.readAsDataURL(file);
-  audioEl._fileName = file.name;
-  audioEl.addEventListener('loadedmetadata', () => {
-    audioDuration = audioEl.duration;
-    trimStart = 0;
-    trimEnd = Math.min(audioDuration, 20);
-    musicDetail.hidden = false;
-    musicUploadBtn.classList.add('loaded');
-    musicBtnLabel.textContent = file.name;
-    resetMusicToggle();
-    musicTabDot.hidden = false;
-    document.getElementById('musicRemove').hidden = false;
-    updateTrimUI();
-    // "Just works" default: if a recording already exists, size the loop to the
-    // drawing's length so the music and the replay finish together — no manual
-    // trimming for the common case. Fine-tune stays one tap away. Reuses the
-    // tested match-drawing logic (keeps start at 0, clamps to song + 20s cap).
-    // Skipped while restoring saved trim from an autosave/draft, so a user's
-    // chosen loop is never overwritten.
-    const _restoringTrim = (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta);
-    if (!_restoringTrim && strokes.length) {
-      setLoopToDrawingLength();
-      showToast('Loop set to your drawing length', musicUploadBtn);
-    }
-    // Reapply any pending trim from an autosave restore, from THIS path so it
-    // can't race a separately-attached listener.
-    if (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta) {
-      applyPendingMusicSettings(pendingMusicMeta);
-      pendingMusicMeta = null;
-      const mCard = document.getElementById('musicPending');
-      if (mCard) mCard.hidden = true;
-      musicUploadBtn.hidden = false;
-      // Same omission as the photo path above — the dot kept its amber
-      // .pending class after the file was successfully re-added.
-      refreshPendingCards();
-    }
-    if (typeof scheduleAutosave === 'function') scheduleAutosave();
-  });
-
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  file.arrayBuffer().then(buf => audioCtx.decodeAudioData(buf)).then(audioBuffer => {
-    currentAudioBuffer = audioBuffer;
-    setTimeout(() => {
-      drawWaveform(audioBuffer);
-      drawZoomWaveform();
-      updateZoomHandles();
-    }, 50);
-  }).catch(() => {});
-});
 
 const toast = document.getElementById('toast');
 // Media format policy + byte checks now live in lib/media_validation.js
@@ -2453,19 +2001,6 @@ function showToast(msg, anchorEl, action) {
 }
 
 
-function validateMusicFile(file) {
-  if (!file) return 'No file selected.';
-  // Mirrors ALLOWED_AUDIO_SUBTYPES in app.py, so the editor refuses at selection
-  // time what the server would refuse at post time. (Review round 5, #3)
-  if (skriblHasUsableMime(file)) {
-    if (!SKRIBL_AUDIO_MIMES.has(file.type.toLowerCase())) {
-      return 'That file type is not supported for audio.';
-    }
-  } else if (!SKRIBL_AUDIO_EXTENSIONS.test(file.name || '')) {
-    return 'Please choose an audio file (mp3, m4a, wav, flac, ogg, webm).';
-  }
-  return null;
-}
 
 function isImageFile(file) {
   // Mirrors ALLOWED_IMAGE_SUBTYPES in app.py — see the note above.
@@ -2514,126 +2049,22 @@ function resetPhotoAdjustments() {
   updateRepositionUI();
 }
 
-musicRemove.addEventListener('click', (e) => {
-  musicSelectionSeq++;   // a pending decode must not restore what was just removed
-  e.stopPropagation();
-  stopLoopPreview();
-  if (typeof pendingMusicMeta !== 'undefined') pendingMusicMeta = null;
-  { const c = document.getElementById('musicPending'); if (c) c.hidden = true; }
-  if (audioEl) {
-    audioEl.pause();
-    if (audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
-    audioEl = null;
-  }
-  musicDetail.hidden = true;
-  musicInput.value = '';
-  musicUploadBtn.classList.remove('loaded');
-  musicBtnLabel.textContent = 'Add music';
-  musicTabDot.hidden = true;
-  document.getElementById('musicRemove').hidden = true;
-  waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-  zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
-  currentAudioBuffer = null;
-  loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
-  if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
-});
 
-function dragHandle(handle, isStart) {
-  function getClientX(e) {
-    return e.touches ? e.touches[0].clientX : e.clientX;
-  }
-
-  function onStart(e) {
-    e.preventDefault();
-    handle.classList.add('dragging');
-    function onMove(ev) {
-      const rect = musicTrack.getBoundingClientRect();
-      let pct = (getClientX(ev) - rect.left) / rect.width;
-      pct = Math.max(0, Math.min(1, pct));
-      const time = pct * audioDuration;
-      // 'constrain': the dragged handle stops at the cap; the other end does
-      // not move. Declared difference from the zoom track — see the module.
-      {
-        const _t = window.SkriblLoopTrim.setHandle(
-          { start: trimStart, end: trimEnd, duration: audioDuration },
-          isStart ? 'start' : 'end', time, 'constrain');
-        trimStart = _t.start; trimEnd = _t.end;
-      }
-      updateTrimUI();
-    }
-    function onEnd() {
-      handle.classList.remove('dragging');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  }
-
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
-}
-dragHandle(handleStart, true);
-dragHandle(handleEnd, false);
 
 // Drag the middle of the selection to slide the whole loop window along the
 // song, keeping its length locked. Edges (handles) still resize independently
 // because they sit above the range in z-order. Stops at the song boundaries.
-function dragRangeWindow(rangeEl) {
-  function getClientX(e) {
-    return e.touches ? e.touches[0].clientX : e.clientX;
-  }
-  function onStart(e) {
-    if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;
-    if (rangeEl.classList.contains('narrow')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    rangeEl.classList.add('dragging');
-    const rect = musicTrack.getBoundingClientRect();
-    const loopLength = trimEnd - trimStart;
-    const grabTime = (getClientX(e) - rect.left) / rect.width * audioDuration;
-    const grabOffset = grabTime - trimStart; // where inside the loop we grabbed
-
-    function onMove(ev) {
-      const time = (getClientX(ev) - rect.left) / rect.width * audioDuration;
-      let newStart = time - grabOffset;
-      // Clamp so the whole window stays within the song, length unchanged.
-      newStart = Math.max(0, Math.min(newStart, audioDuration - loopLength));
-      trimStart = newStart;
-      trimEnd = newStart + loopLength;
-      updateTrimUI();
-    }
-    function onEnd() {
-      rangeEl.classList.remove('dragging');
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onEnd);
-      window.removeEventListener('touchmove', onMove);
-      window.removeEventListener('touchend', onEnd);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onEnd);
-  }
-  rangeEl.addEventListener('mousedown', onStart);
-  rangeEl.addEventListener('touchstart', onStart, { passive: false });
-}
-dragRangeWindow(musicRange);
 
 // --- Loop preview & test seam ---
-const previewLoopBtn = document.getElementById('previewLoopBtn');
-const testSeamBtn = document.getElementById('testSeamBtn');
-const matchDrawingBtn = document.getElementById('matchDrawingBtn');
+const previewLoopBtn = _authoringCtl('previewLoopBtn');
+const testSeamBtn = _authoringCtl('testSeamBtn');
+const matchDrawingBtn = _authoringCtl('matchDrawingBtn');
 
 const nudgeSteps = [0.01, 0.02, 0.05, 0.1];
 let nudgeStepIdx = 3;
 const nudgeStepLabel = document.getElementById('nudgeStepLabel');
-const nudgeStepFinerBtn = document.getElementById('nudgeStepFiner');
-const nudgeStepCoarserBtn = document.getElementById('nudgeStepCoarser');
+const nudgeStepFinerBtn = _authoringCtl('nudgeStepFiner');
+const nudgeStepCoarserBtn = _authoringCtl('nudgeStepCoarser');
 
 function updateNudgeStepLabel() {
   nudgeStepLabel.textContent = nudgeSteps[nudgeStepIdx] + 's';
@@ -2924,64 +2355,17 @@ function updateEraserCursor(x, y) {
   eraserCursor.style.top = y + 'px';
 }
 
-canvasWrap.addEventListener('mousemove', (e) => {
-  if (tool !== 'eraser') return;
-  if (finishedRecording && !recording) { eraserCursor.style.display = 'none'; return; }
-  const rect = canvas.getBoundingClientRect();
-  updateEraserCursor(e.clientX - rect.left, e.clientY - rect.top);
-  eraserCursor.style.display = 'block';
-});
 
-canvasWrap.addEventListener('mouseleave', () => {
-  eraserCursor.style.display = 'none';
-});
 
-canvasWrap.addEventListener('touchmove', (e) => {
-  if (tool !== 'eraser') return;
-  if (finishedRecording && !recording) { eraserCursor.style.display = 'none'; return; }
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  updateEraserCursor(touch.clientX - rect.left, touch.clientY - rect.top);
-  eraserCursor.style.display = 'block';
-}, { passive: true });
 
-canvasWrap.addEventListener('touchend', () => {
-  eraserCursor.style.display = 'none';
-});
-const photoUploadBtn = document.getElementById('photoUploadBtn');
+const photoUploadBtn = _authoringCtl('photoUploadBtn');
 const photoBgImg = document.getElementById('photoBgImg');
-const photoInput = document.getElementById('photoInput');
+const photoInput = _authoringCtl('photoInput', 'input');
 const photoFitSlider = document.getElementById('photoFitSlider');
 
-photoUploadBtn.addEventListener('click', (e) => {
-  if (e.target.closest('.dropzone-remove')) return;
-  photoInput.click();
-});
 
-photoUploadBtn.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  photoUploadBtn.classList.add('drag-over');
-});
 
-photoUploadBtn.addEventListener('dragleave', () => {
-  photoUploadBtn.classList.remove('drag-over');
-});
 
-photoUploadBtn.addEventListener('drop', (e) => {
-  e.preventDefault();
-  photoUploadBtn.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  if (!isImageFile(file)) {
-    showToast('Please drop an image file — jpg, png, gif, or webp', photoUploadBtn);
-    return;
-  }
-  // Reuse the existing photo input handler
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  photoInput.files = dt.files;
-  photoInput.dispatchEvent(new Event('change'));
-});
 
 // ── Photo import / normalization ────────────────────────────────────────────
 // A freshly imported photo is downscaled + recompressed to JPEG right here, at
@@ -3110,105 +2494,7 @@ async function normalizePhotoDataURL(file, originalDataUrl) {
   }
 }
 
-photoInput.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  const seq = ++photoSelectionSeq;
-  if (!file) return;
-  if (!isImageFile(file)) {
-    if (seq === photoSelectionSeq) showToast('Please choose an image file — jpg, png, gif, or webp', photoUploadBtn);
-    photoInput.value = '';
-    return;
-  }
-  const decodeErr = await skriblDecodeCheckImage(file);
-  if (seq !== photoSelectionSeq) return;          // superseded or removed mid-decode
-  if (decodeErr) { showToast(decodeErr, photoUploadBtn); photoInput.value = ''; return; }
-  resetPhotoAdjustments();
-  if (photoBgImg._objectUrl) URL.revokeObjectURL(photoBgImg._objectUrl);
-  const url = URL.createObjectURL(file);
-  photoBgImg._objectUrl = url;
-  photoBgImg.src = url;
-  // Keep a base64 copy so drafts can embed the photo
-  const readToken = Symbol('photoRead');
-  photoBgImg._readToken = readToken;
-  const photoDraftReader = new FileReader();
-  beginMediaRead();
-  photoDraftReader.onload = () => {
-    const original = photoDraftReader.result;
-    // Downscale/recompress before storing so drafts + posts stay small. Keep the
-    // media-read open until normalization settles, so a post fired mid-import
-    // waits for the final bytes rather than grabbing the full-size original. The
-    // readToken guard still applies — a fast remove/replace must never let a
-    // stale photo's normalized result win. On any failure, fall back to the
-    // original so the photo is never dropped.
-    const attach = (data) => {
-      if (photoBgImg._readToken === readToken && photoBgImg.style.display !== 'none') {
-        photoBgImg._draftData = data;
-      }
-    };
-    Promise.resolve(normalizePhotoDataURL(file, original))
-      .then((finalData) => { attach(finalData); })
-      .catch(() => { attach(original); })
-      .finally(() => { endMediaRead(); });
-  };
-  photoDraftReader.onerror = () => { endMediaRead(); };
-  photoDraftReader.onabort = () => { endMediaRead(); };
-  photoDraftReader.readAsDataURL(file);
-  photoBgImg.style.display = 'block';
-  photoBgImg.style.objectFit = 'cover';
-  photoBgImg.style.opacity = 1;
-  photoOffsetX = 0.5; photoOffsetY = 0.5;
-  photoZoom = 1; setZoomSliderUI();
-  applyPhotoPosition();
-  photoBg = photoBgImg;
-  // canvas is always transparent
-  canvasWrap.style.backgroundColor = bgColor;
-  document.querySelector('#photoUploadBtn span').textContent = file.name;
-  photoBgImg._fileName = file.name;
-  document.getElementById('photoDetail').hidden = false;
-  photoUploadBtn.classList.add('loaded');
-  resetPhotoToggle();
-  document.getElementById('photoTabDot').hidden = false;
-  document.getElementById('photoRemove').hidden = false;
-  setTimeout(initPhotoFitSlider, 50);
-  updateRepositionUI();
-});
 
-bindEl('photoRemove', 'click', (e) => {
-  // Review round 10, #1: this was missing, so a decode still running when the
-  // user hit Remove would finish with a CURRENT token and re-apply the photo
-  // that had just been removed. The old test incremented the counter by hand
-  // instead of clicking this control, which hid the gap.
-  photoSelectionSeq++;
-  e.stopPropagation();
-  if (typeof pendingPhotoMeta !== 'undefined') pendingPhotoMeta = null;
-  { const c = document.getElementById('photoPending'); if (c) c.hidden = true; }
-  photoBg = null;
-  if (photoBgImg._objectUrl) { URL.revokeObjectURL(photoBgImg._objectUrl); photoBgImg._objectUrl = null; }
-  photoBgImg.src = '';
-  photoBgImg.style.display = 'none';
-  canvasWrap.style.backgroundColor = bgColor;
-  document.getElementById('photoDetail').hidden = true;
-  photoInput.value = '';
-  photoUploadBtn.classList.remove('loaded');
-  document.querySelector('#photoUploadBtn span').textContent = 'Add a photo';
-  document.getElementById('photoTabDot').hidden = true;
-  document.getElementById('photoRemove').hidden = true;
-  document.getElementById('photoOpacity').value = 100;
-  document.getElementById('photoOpacityVal').textContent = '100%';
-  photoOpacityVal_ = 1;
-  photoBlur_ = 0;
-  photoBgImg.style.filter = '';
-  const blEl = document.getElementById('photoBlur');
-  if (blEl) { blEl.value = 0; document.getElementById('photoBlurVal').textContent = '0px'; updateSliderFill(blEl); }
-  updateSliderFill(document.getElementById('photoOpacity'));
-  // Reset fit to Fill
-  document.querySelectorAll('.photo-fit-btn').forEach(b => b.classList.toggle('active', b.dataset.fit === 'cover'));
-  if (photoFitSlider) { photoFitSlider.style.width = '0'; photoFitSlider.style.transform = 'translateX(0)'; }
-  photoOffsetX = 0.5; photoOffsetY = 0.5;
-  photoZoom = 1; setZoomSliderUI();
-  exitReposition();
-  updateRepositionUI();
-});
 
 const photoFitBtns = document.querySelectorAll('.photo-fit-btn');
 
@@ -3219,23 +2505,7 @@ function initPhotoFitSlider() {
     photoFitSlider.style.transform = 'translateX(0)';
   }
 }
-setTimeout(initPhotoFitSlider, 50);
 
-document.querySelectorAll('.photo-fit-btn').forEach((btn, idx) => {
-  btn.addEventListener('click', () => {
-    photoFit = btn.dataset.fit;
-    document.querySelectorAll('.photo-fit-btn').forEach(b => b.classList.toggle('active', b === btn));
-    const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
-    photoBgImg.style.objectFit = fitMap[photoFit];
-    applyPhotoPosition();
-    updateRepositionUI();
-    // Slide the slider
-    const allBtns = [...document.querySelectorAll('.photo-fit-btn')];
-    const offset = allBtns.slice(0, idx).reduce((sum, b) => sum + b.offsetWidth, 0);
-    photoFitSlider.style.width = btn.offsetWidth + 'px';
-    photoFitSlider.style.transform = `translateX(${offset}px)`;
-  });
-});
 
 // ===== Photo reposition (Fill mode) ========================================
 // Fill (object-fit: cover) crops the photo; dragging picks which part shows.
@@ -3353,22 +2623,6 @@ function beginPhotoDrag(e) {
   window.addEventListener('touchcancel', up);
 }
 
-(function initReposition() {
-  const btn = document.getElementById('repositionBtn');
-  if (btn) btn.addEventListener('click', () => {
-    if (repositioning) exitReposition(); else enterReposition();
-  });
-  const zoom = document.getElementById('photoZoom');
-  if (zoom) zoom.addEventListener('input', () => {
-    photoZoom = Math.max(1, Math.min(3, (parseInt(zoom.value, 10) || 100) / 100));
-    const v = document.getElementById('photoZoomVal');
-    if (v) v.textContent = Math.round(photoZoom * 100) + '%';
-    if (typeof updateSliderFill === 'function') updateSliderFill(zoom);
-    applyPhotoPosition();
-    if (typeof scheduleAutosave === 'function') scheduleAutosave();
-  });
-  updateRepositionUI();
-})();
 
 // Paint the WebKit track fill up to the thumb (Chrome/Safari have no native
 // progress element). Firefox uses ::-moz-range-progress and ignores this.
@@ -3384,27 +2638,13 @@ function applyPhotoFilter() {
   photoBgImg.style.filter = photoBlur_ > 0 ? `blur(${photoBlur_}px)` : '';
 }
 
-const photoOpacityEl = document.getElementById('photoOpacity');
-const photoBlurEl = document.getElementById('photoBlur');
+const photoOpacityEl = _authoringCtl('photoOpacity', 'input');
+const photoBlurEl = _authoringCtl('photoBlur', 'input');
 const photoBlurValEl = document.getElementById('photoBlurVal');
 
-photoOpacityEl.addEventListener('input', (e) => {
-  photoOpacityVal_ = parseInt(e.target.value) / 100;
-  document.getElementById('photoOpacityVal').textContent = e.target.value + '%';
-  photoBgImg.style.opacity = photoOpacityVal_;
-  updateSliderFill(e.target);
-});
 
-photoBlurEl.addEventListener('input', (e) => {
-  photoBlur_ = parseInt(e.target.value, 10);
-  photoBlurValEl.textContent = photoBlur_ + 'px';
-  applyPhotoFilter();
-  updateSliderFill(e.target);
-});
 
 // Set initial track fills so both sliders render correctly before any input
-updateSliderFill(photoOpacityEl);
-updateSliderFill(photoBlurEl);
 
 // ===== Slider nudgers + Loop Detail pan + crossfade control =================
 // Three related additions, all self-contained (DOM + CSS injected here so the
@@ -3534,86 +2774,6 @@ function dragZoomPan(wrap) {
   wrap.addEventListener('touchstart', onStart, { passive: false });
 }
 
-(function initSliderExtras() {
-  // ---- CSS (injected once) ----
-  const style = document.createElement('style');
-  style.textContent =
-    '.slider-nudge-wrap{display:flex;align-items:center;gap:6px;flex:1;min-width:0}' +
-    '.slider-nudge-wrap input[type=range]{flex:1;min-width:0}' +
-    '.slider-nudge-btn{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:#232734;color:#c8cede;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:background .12s}' +
-    '.slider-nudge-btn:hover{background:#2c3140}' +
-    '.slider-nudge-btn:active{background:#7c5cff;color:#fff}' +
-    '.zoom-pan-row,.crossfade-row{display:flex;align-items:center;gap:10px;margin:8px 0 2px}' +
-    '.zoom-pan-label,.crossfade-label{font-size:12px;color:#8a93a6;flex:none;min-width:64px}' +
-    '.crossfade-val{font-size:12px;color:#c8cede;flex:none;min-width:38px;text-align:right}' +
-    '#zoomTrackWrap{cursor:grab}#zoomTrackWrap.panning{cursor:grabbing}';
-  document.head.appendChild(style);
-
-  // ---- (1) Nudgers on existing sliders ----
-  ['photoOpacity', 'photoBlur', 'photoZoom', 'opacitySlider'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) addSliderNudgers(el, { step: parseFloat(el.step) || 1 });
-  });
-
-  // ---- (2) Loop Detail pan: scroll slider + waveform drag ----
-  const zoomWrap = document.getElementById('zoomTrackWrap');
-  if (zoomWrap) {
-    const panRow = document.createElement('div');
-    panRow.className = 'zoom-pan-row';
-    panRow.innerHTML =
-      '<span class="zoom-pan-label">Scroll</span>' +
-      '<input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">';
-    zoomWrap.insertAdjacentElement('afterend', panRow);
-    const panSlider = document.getElementById('zoomPanSlider');
-    panSlider.addEventListener('input', () => {
-      if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
-      zoomCenter = (parseInt(panSlider.value, 10) / 1000) * audioDuration;
-      zoomFocus = 'free';
-      syncZoomFocusButtons();
-      updateTrimUI();
-    });
-    addSliderNudgers(panSlider, {
-      nudgeFn: (dir) => {
-        if (!Number.isFinite(audioDuration) || audioDuration <= 0) return;
-        const zw = getZoomWindow();
-        const center = (zw.start + zw.end) / 2;
-        const half = zw.duration / 2;
-        const lo = half, hi = Math.max(half, audioDuration - half);
-        zoomCenter = Math.max(lo, Math.min(center + dir * zw.duration * 0.1, hi));
-        zoomFocus = 'free';
-        syncZoomFocusButtons();
-        updateTrimUI();
-      }
-    });
-    dragZoomPan(zoomWrap);
-  }
-
-  // ---- (3) Crossfade control (bake-only; default Off) ----
-  const finePanel = document.querySelector('.finetune-panel');
-  const cfRow = document.createElement('div');
-  cfRow.className = 'crossfade-row';
-  cfRow.innerHTML =
-    '<span class="crossfade-label">Crossfade</span>' +
-    '<input type="range" id="crossfadeSlider" class="slider" min="0" max="500" value="0" step="5" aria-label="Loop crossfade length">' +
-    '<span class="crossfade-val" id="crossfadeVal">Off</span>';
-  if (finePanel) finePanel.insertAdjacentElement('afterend', cfRow);
-  else {
-    const preRow = document.querySelector('.loop-preview-row');
-    if (preRow) preRow.parentNode.insertBefore(cfRow, preRow);
-  }
-  const cf = document.getElementById('crossfadeSlider');
-  if (cf) {
-    cf.addEventListener('input', () => {
-      loopCrossfadeMs = parseInt(cf.value, 10) || 0;
-      setCrossfadeUI();
-      // Refresh the loop waveform so the amber crossfade bands track the slider.
-      if (typeof updateTrimUI === 'function') updateTrimUI();
-      if (typeof scheduleAutosave === 'function') scheduleAutosave();
-    });
-    addSliderNudgers(cf, { step: 5 });
-    setCrossfadeUI();
-  }
-})();
 
 
 
@@ -4175,16 +3335,23 @@ function resetMediaForLoad() {
   trimStart = 0;
   trimEnd = 0;
   currentAudioBuffer = null;
-  loopCrossfadeMs = 0; if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
-  musicDetail.hidden = true;
-  musicInput.value = '';
-  musicUploadBtn.classList.remove('loaded');
-  musicBtnLabel.textContent = 'Add music';
-  musicTabDot.hidden = true;
-  musicRemove.hidden = true;
-  if (waveformCtx) waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
-  if (zoomWaveformCtx) zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
-  if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
+  loopCrossfadeMs = 0;
+  // State above, drawer UI below. The player runs this on every load — it was
+  // clearing waveform canvases and rewriting button labels for a drawer it does
+  // not have. Unguarded property writes on absent elements (musicDetail.hidden)
+  // would throw the moment the player's template drops the editor shell.
+  if (!document.body.classList.contains('player-mode')) {
+    if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
+    if (musicDetail) musicDetail.hidden = true;
+    if (musicInput) musicInput.value = '';
+    if (musicUploadBtn) musicUploadBtn.classList.remove('loaded');
+    if (musicBtnLabel) musicBtnLabel.textContent = 'Add music';
+    if (musicTabDot) musicTabDot.hidden = true;
+    if (musicRemove) musicRemove.hidden = true;
+    if (waveformCtx) waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+    if (zoomWaveformCtx) zoomWaveformCtx.clearRect(0, 0, zoomWaveformCanvas.width, zoomWaveformCanvas.height);
+    if (loopZoomLabel) loopZoomLabel.textContent = '0:00.00 → 0:00.00 [0.00s]';
+  }
   // Photo
   photoBg = null;
   if (photoBgImg._objectUrl) { URL.revokeObjectURL(photoBgImg._objectUrl); photoBgImg._objectUrl = null; }
@@ -4194,18 +3361,31 @@ function resetMediaForLoad() {
   photoBgImg.style.display = 'none';
   photoBgImg.style.filter = '';
   photoInput.value = '';
-  photoUploadBtn.classList.remove('loaded');
-  document.querySelector('#photoUploadBtn span').textContent = 'Add a photo';
-  document.getElementById('photoDetail').hidden = true;
-  document.getElementById('photoTabDot').hidden = true;
-  document.getElementById('photoRemove').hidden = true;
+  // Photo STATE resets unconditionally; the photo drawer's DOM is editor-only.
+  // Same split as the music half above.
   photoFit = 'cover';
   photoOpacityVal_ = 1;
   photoBlur_ = 0;
-  document.getElementById('photoOpacity').value = 100;
-  document.getElementById('photoOpacityVal').textContent = '100%';
-  const _blEl = document.getElementById('photoBlur');
-  if (_blEl) { _blEl.value = 0; document.getElementById('photoBlurVal').textContent = '0px'; updateSliderFill(_blEl); }
+  if (!document.body.classList.contains('player-mode')) {
+    photoUploadBtn.classList.remove('loaded');
+    const _pLabel = document.querySelector('#photoUploadBtn span');
+    if (_pLabel) _pLabel.textContent = 'Add a photo';
+    for (const _id of ['photoDetail', 'photoTabDot', 'photoRemove']) {
+      const _e = document.getElementById(_id);
+      if (_e) _e.hidden = true;
+    }
+    const _opEl = document.getElementById('photoOpacity');
+    if (_opEl) _opEl.value = 100;
+    const _opVal = document.getElementById('photoOpacityVal');
+    if (_opVal) _opVal.textContent = '100%';
+    const _blEl = document.getElementById('photoBlur');
+    if (_blEl) {
+      _blEl.value = 0;
+      const _blVal = document.getElementById('photoBlurVal');
+      if (_blVal) _blVal.textContent = '0px';
+      updateSliderFill(_blEl);
+    }
+  }
   photoOffsetX = 0.5;
   photoOffsetY = 0.5;
   photoZoom = 1; setZoomSliderUI();
@@ -4339,17 +3519,26 @@ function loadSkribl(data) {
         trimStart = data.music.trimStart != null ? data.music.trimStart : 0;
         trimEnd = data.music.trimEnd != null ? data.music.trimEnd : Math.min(audioDuration, 20);
         loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
-        if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
-        musicDetail.hidden = false;
-        musicUploadBtn.classList.add('loaded');
-        musicBtnLabel.textContent = 'Loaded from draft';
-        musicTabDot.hidden = false;
-        document.getElementById('musicRemove').hidden = false;
-        updateTrimUI();
+        // State above, drawer UI below. clampTrim() stays on the state side.
+        clampTrim();
+        if (!document.body.classList.contains('player-mode')) {
+          if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
+          if (musicDetail) musicDetail.hidden = false;
+          if (musicUploadBtn) musicUploadBtn.classList.add('loaded');
+          if (musicBtnLabel) musicBtnLabel.textContent = 'Loaded from draft';
+          if (musicTabDot) musicTabDot.hidden = false;
+          const _mr = document.getElementById('musicRemove');
+          if (_mr) _mr.hidden = false;
+          updateTrimUI();
+        }
       });
       audioCtx.decodeAudioData(buf.slice(0)).then(audioBuffer => {
         currentAudioBuffer = audioBuffer;
-        setTimeout(() => { drawWaveform(audioBuffer); drawZoomWaveform(); updateZoomHandles(); }, 60);
+        // Waveforms are drawer furniture; the player painted them into canvases
+        // it never shows, on every shared link with music.
+        if (!document.body.classList.contains('player-mode')) {
+          setTimeout(() => { drawWaveform(audioBuffer); drawZoomWaveform(); updateZoomHandles(); }, 60);
+        }
       }).catch(() => {});
     }).catch(() => {});
   }
@@ -4433,9 +3622,11 @@ bindEl('draftInput', 'change', (e) => {
   // Triggers: schedule an autosave whenever the drawing meaningfully changes.
   canvas.addEventListener('mouseup', scheduleAutosave);
   canvas.addEventListener('touchend', scheduleAutosave);
-  recordBtn.addEventListener('click', scheduleAutosave);
-  undoBtn.addEventListener('click', scheduleAutosave);
-  redoBtn.addEventListener('click', scheduleAutosave);
+  // Authoring controls, absent from the player's template. bindEl() already
+  // exists for exactly this and null-checks; these three predate it.
+  bindEl('recordBtn', 'click', scheduleAutosave);
+  bindEl('undoBtn', 'click', scheduleAutosave);
+  bindEl('redoBtn', 'click', scheduleAutosave);
   bindEl('bgGroup', 'click', scheduleAutosave);
   customBgInput.addEventListener('input', scheduleAutosave);
 
@@ -4466,7 +3657,8 @@ if (typeof pendingMusicMeta !== 'undefined') {
   // (applyPendingMusicSettings) to avoid a listener-timing race.
 
   const photoInputEl = document.getElementById('photoInput');
-  photoInputEl.addEventListener('change', () => {
+  // Absent on the player, which has no photo picker.
+  if (photoInputEl) photoInputEl.addEventListener('change', () => {
     if (!pendingPhotoMeta) return;
     const meta = pendingPhotoMeta;
     pendingPhotoMeta = null;
@@ -4547,1192 +3739,12 @@ if (typeof pendingMusicMeta !== 'undefined') {
   });
 }
 
-// ==================== EXPORT ====================
-(function initExport() {
-  const exportItem = document.getElementById('exportItem');
-  const overlay = document.getElementById('exportOverlay');
-  const sheet = document.getElementById('exportSheet');
-  const pngBtn = document.getElementById('exportPng');
-  const videoBtn = document.getElementById('exportVideo');
-  const progress = document.getElementById('exportProgress');
-  const progressFill = document.getElementById('exportProgressFill');
-  const progressLabel = document.getElementById('exportProgressLabel');
-  const exportCancel = document.getElementById('exportCancel');
-  let _exportAbort = false;
-  if (exportCancel) exportCancel.addEventListener('click', () => {
-    _exportAbort = true;
-    if (progressLabel) progressLabel.textContent = 'Cancelling…';
-  });
-  const videoDesc = document.getElementById('exportVideoDesc');
-  const gifBtn = document.getElementById('exportGif');
-  const gifDesc = document.getElementById('exportGifDesc');
-  const gifToggle = document.getElementById('exportGifToggle');
-  let gifBgMode = 'color';   // 'color' | 'transparent'
-  let closeTimer = null;
-
-  function openExport() {
-    // Update the video option description based on what's available
-    const videoTitle = videoBtn.querySelector('.export-opt-title');
-    if (!strokes.length) {
-      videoDesc.textContent = 'Record a drawing first to export video';
-      videoBtn.disabled = true;
-    } else {
-      videoDesc.textContent = audioEl ? 'Replay of your drawing with music' : 'Replay of your drawing';
-      videoBtn.disabled = false;
-      // Label the button with the format this browser will actually output.
-      if (videoTitle) {
-        expectedVideoFormat().then((fmt) => {
-          videoTitle.textContent = 'Video (' + fmt + ')';
-          // Name the container in the description too, not just for MP4 — a user
-          // who is getting WebM should be told before they click, not after.
-          const base = audioEl ? 'Replay with music' : 'Replay';
-          videoDesc.textContent = base + (fmt === 'MP4' ? ' · MP4 (H.264)' : ' · WebM');
-        }).catch(() => { videoTitle.textContent = 'Video'; });
-      }
-    }
-    pngBtn.disabled = !hasContent;
-    // GIF option: needs strokes AND the vendored gifenc library.
-    if (gifBtn) {
-      const gifReady = typeof window.gifenc !== 'undefined' && window.gifenc.GIFEncoder;
-      if (!strokes.length) {
-        gifBtn.disabled = true;
-        if (gifDesc) gifDesc.textContent = 'Record a drawing first to export a GIF';
-        if (gifToggle) gifToggle.hidden = true;
-      } else if (!gifReady) {
-        gifBtn.disabled = true;
-        if (gifDesc) gifDesc.textContent = 'GIF encoder didn’t load — try reloading';
-        if (gifToggle) gifToggle.hidden = true;
-      } else {
-        gifBtn.disabled = false;
-        const hasPhoto = photoBgImg && photoBgImg.src && photoBgImg.style.display !== 'none';
-        if (gifDesc) gifDesc.textContent = hasPhoto
-          ? 'Strokes only · your photo won’t be included (use Video for that)'
-          : 'Just the strokes, animated · silent · loops';
-        if (gifToggle) gifToggle.hidden = false;
-      }
-    }
-    progress.hidden = true;
-    clearTimeout(closeTimer);
-    overlay.hidden = false;
-    requestAnimationFrame(() => {
-      overlay.classList.add('open');
-      // Re-measure the GIF toggle's sliding pill now that the sheet has real
-      // layout — the observers can miss this on reopen, leaving the pill wrongly
-      // sized. A rAF after reveal guarantees correct button widths.
-      if (gifToggle && !gifToggle.hidden) {
-        const seg = gifToggle.querySelector('.gif-seg');
-        if (seg && typeof positionSegSlider === 'function') {
-          requestAnimationFrame(() => positionSegSlider(seg));
-        }
-      }
-    });
-  }
-  function closeExport() {
-    overlay.classList.remove('open');
-    closeTimer = setTimeout(() => { overlay.hidden = true; }, 350);
-  }
-
-  exportItem.addEventListener('click', () => {
-    closeMenu();
-    openExport();
-  });
-  overlay.addEventListener('click', (e) => {
-    if (!e.target.closest('.menu-sheet')) closeExport();
-  });
-  // Close on Escape, consistent with the main menu.
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden) closeExport();
-  });
-  // Mobile sheet handle closes too.
-  const exportHandle = sheet ? sheet.querySelector('.menu-handle') : null;
-  if (exportHandle) exportHandle.addEventListener('click', (e) => { e.stopPropagation(); closeExport(); });
-
-  // GIF background toggle (Background color | Transparent)
-  if (gifToggle) {
-    gifToggle.querySelectorAll('.gif-seg-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        gifBgMode = btn.getAttribute('data-gif-bg') || 'color';
-        gifToggle.querySelectorAll('.gif-seg-btn').forEach((b) => b.classList.toggle('active', b === btn));
-      });
-    });
-    // Same sliding-pill highlight as the smoothing/focus/magnifier segments.
-    const gifSeg = gifToggle.querySelector('.gif-seg');
-    if (gifSeg && typeof attachSegSlider === 'function') attachSegSlider(gifSeg);
-  }
-
-  // ---- GIF export (strokes only; looping; silent) ------------------------
-  // Renders the SAME replay frames as the video path, but strokes-only (no
-  // photo) at a capped size/framerate, and encodes an animated GIF via the
-  // vendored `gifenc` global. Transparent mode keys out the background (GIF's
-  // 1-bit alpha → crisp for bold line art); color mode paints the pad's solid
-  // background (no fringe). Gated on gifenc; dormant/handled if absent.
-  async function exportGif() {
-    const G = window.gifenc;
-    if (!(G && G.GIFEncoder && G.quantize && G.applyPalette)) {
-      showToast('GIF export needs gifenc.min.js', null);
-      return;
-    }
-    const timeline = buildPlaybackTimeline();
-    if (!timeline.length) return;
-    const transparent = (gifBgMode === 'transparent');
-
-    // Cap output size so GIFs stay a sane weight (256-color, no inter-frame delta).
-    const dpr = window.devicePixelRatio || 1;
-    const logicalW = canvas.width / dpr, logicalH = canvas.height / dpr;
-    const MAX_EDGE = 480;
-    const scale = Math.min(1, MAX_EDGE / Math.max(logicalW, logicalH));
-    const outW = Math.max(2, Math.round(logicalW * scale));
-    const outH = Math.max(2, Math.round(logicalH * scale));
-
-    _exportAbort = false;
-    videoBtn.disabled = true; pngBtn.disabled = true; gifBtn.disabled = true;
-    progress.hidden = false; progressFill.style.width = '0%'; progressLabel.textContent = 'Rendering GIF…';
-
-    try {
-      // Strokes accumulate on a transparent canvas (the live canvas is already
-      // transparent — bg color/photo live behind it — so this is strokes-only).
-      const strokeCanvas = document.createElement('canvas'); strokeCanvas.width = canvas.width; strokeCanvas.height = canvas.height;
-      const sctx = strokeCanvas.getContext('2d'); sctx.scale(dpr, dpr);
-      const sDot = (x, y, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.arc(x, y, s / 2, 0, Math.PI * 2); sctx.fillStyle = er ? 'rgba(0,0,0,1)' : c; sctx.fill(); sctx.globalCompositeOperation = 'source-over'; };
-      const sLine = (x1, y1, x2, y2, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.moveTo(x1, y1); sctx.lineTo(x2, y2); sctx.strokeStyle = er ? 'rgba(0,0,0,1)' : c; sctx.lineWidth = s; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.stroke(); sctx.globalCompositeOperation = 'source-over'; };
-      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
-
-      // Seed prior strokes (pre-record snapshot is drawing-only on transparent).
-      if (preRecordSnapshot) {
-        await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, logicalW, logicalH); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
-      }
-
-      const out = document.createElement('canvas'); out.width = outW; out.height = outH;
-      const octx = out.getContext('2d');
-      function frameData() {
-        octx.clearRect(0, 0, outW, outH);
-        if (!transparent) { octx.fillStyle = bgColor || '#0d0f14'; octx.fillRect(0, 0, outW, outH); }
-        octx.drawImage(strokeCanvas, 0, 0, outW, outH);
-        return octx.getImageData(0, 0, outW, outH);
-      }
-
-      const enc = G.GIFEncoder();
-      const fps = 15, delay = Math.round(1000 / fps);
-      const totalMs = timeline[timeline.length - 1].playT || 0;
-      const holdMs = 600;
-      const totalFrames = Math.max(1, Math.ceil(((totalMs + holdMs) / 1000) * fps));
-      const fmt = transparent ? 'rgba4444' : 'rgb565';
-      let ti = 0;
-      for (let f = 0; f < totalFrames; f++) {
-        if (_exportAbort) {
-          videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
-          progress.hidden = true; showToast('Export cancelled', null);
-          return;
-        }
-        const elapsed = f * (1000 / fps);
-        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
-        else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
-        if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
-        const img = frameData();
-        const palette = G.quantize(img.data, 256, { format: fmt, oneBitAlpha: transparent });
-        const index = G.applyPalette(img.data, palette, fmt);
-        const opts = { palette, delay };
-        if (f === 0) opts.repeat = 0;                 // loop forever
-        if (transparent) {
-          let tIdx = palette.findIndex((c) => c.length > 3 && c[3] === 0);
-          if (tIdx < 0) tIdx = 0;
-          opts.transparent = true; opts.transparentIndex = tIdx; opts.dispose = 2;
-        }
-        enc.writeFrame(index, outW, outH, opts);
-        if ((f & 3) === 0) { progressFill.style.width = Math.min(95, (f / totalFrames) * 95) + '%'; await new Promise((r) => setTimeout(r, 0)); }
-      }
-      enc.finish();
-      const bytes = enc.bytes();
-      downloadBlob(new Blob([bytes], { type: 'image/gif' }), 'skribl.gif');
-      progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
-      showToast('GIF exported', null);
-      videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
-      setTimeout(closeExport, 800);
-    } catch (err) {
-      console.error('GIF export failed:', err);
-      showToast('GIF export failed', null);
-      progress.hidden = true;
-      videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
-    }
-  }
-
-  if (gifBtn) gifBtn.addEventListener('click', () => { exportGif(); });
-
-  // ---- Build a flattened composite of bg color + photo + drawing ----
-  function drawComposite(targetCtx, w, h) {
-    // Background color
-    targetCtx.fillStyle = bgColor || '#0d0f14';
-    targetCtx.fillRect(0, 0, w, h);
-    // Photo (respect fit + opacity + blur)
-    if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
-      targetCtx.save();
-      targetCtx.globalAlpha = photoOpacityVal_ != null ? photoOpacityVal_ : 1;
-      if (photoBlur_ > 0 && 'filter' in targetCtx) targetCtx.filter = `blur(${photoBlur_}px)`;
-      drawPhotoFitted(targetCtx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
-      targetCtx.restore();
-    }
-    // Drawing canvas on top
-    targetCtx.drawImage(canvas, 0, 0, w, h);
-  }
-
-  // Geometry is shared with Flip and the player via lib/photofit.js — this
-  // function is now just "compute the rect, then draw it". The two copies of
-  // the arithmetic agreed on cover/contain but not on the third mode's NAME,
-  // which is how a value one surface posts became unreadable to the other.
-  function drawPhotoFitted(c, img, w, h, fit, ox, oy, zoom) {
-    const iw = img.naturalWidth || w, ih = img.naturalHeight || h;
-    const r = window.SkriblPhotoFit.rect(iw, ih, w, h,
-      { fit: fit, offX: ox, offY: oy, zoom: zoom });
-    c.drawImage(img, r.x, r.y, r.w, r.h);
-  }
-
-  // ---- PNG export ----
-  pngBtn.addEventListener('click', () => {
-    const w = canvas.width, h = canvas.height;
-    const out = document.createElement('canvas');
-    out.width = w; out.height = h;
-    const octx = out.getContext('2d');
-    drawComposite(octx, w, h);
-    out.toBlob((blob) => {
-      if (!blob) { showToast('Export failed', null); return; }
-      downloadBlob(blob, 'skribl.png');
-      showToast('Image exported', null);
-      closeExport();
-    }, 'image/png');
-  });
-
-  // ---- MP4 export via WebCodecs + mp4-muxer (Route A) --------------------
-  // Produces a real H.264/AAC MP4 by stepping the SAME replay core frame-by-
-  // frame into a VideoEncoder and looping the baked WAV into an AudioEncoder,
-  // muxed by the vendored `Mp4Muxer` global. Everything is capability-gated:
-  // if WebCodecs, the codecs, or the muxer aren't present it returns false and
-  // the caller falls back to the MediaRecorder path — so this is never worse
-  // than today, and stays dormant until mp4-muxer is deployed.
-  async function pickAvcCodec(w, h) {
-    if (typeof VideoEncoder === 'undefined' || !VideoEncoder.isConfigSupported) return null;
-    const cands = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f', 'avc1.42e01e'];
-    for (const c of cands) {
-      try {
-        const r = await VideoEncoder.isConfigSupported({ codec: c, width: w, height: h, bitrate: 6000000, framerate: 30 });
-        if (r && r.supported) return c;
-      } catch (e) {}
-    }
-    return null;
-  }
-  async function aacSupported(sr, ch) {
-    if (typeof AudioEncoder === 'undefined' || !AudioEncoder.isConfigSupported) return false;
-    try {
-      const r = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: sr, numberOfChannels: ch, bitrate: 128000 });
-      return !!(r && r.supported);
-    } catch (e) { return false; }
-  }
-
-  // What format will the Video button actually produce in THIS browser? Used to
-  // label the export option honestly (MP4 vs WebM).
-  function mediaRecorderFormat() {
-    if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return null;
-    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) return t.indexOf('mp4') >= 0 ? 'mp4' : 'webm'; }
-    return null;
-  }
-  async function webcodecsMp4Ready() {
-    const MM = window.Mp4Muxer;
-    if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
-    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
-    const w = canvas.width & ~1, h = canvas.height & ~1;
-    if (!(await pickAvcCodec(w, h))) return false;
-    // If the Skribl has music, MP4 needs AAC too — else the export falls back to
-    // MediaRecorder, so don't promise MP4 in the label.
-    const hasAudio = !!(audioEl && (audioEl._objectUrl || audioEl.src)) && (typeof musicEnabled === 'undefined' ? true : musicEnabled);
-    if (hasAudio && !(await aacSupported(44100, 2))) return false;
-    return true;
-  }
-  async function expectedVideoFormat() {
-    if (await webcodecsMp4Ready()) return 'MP4';
-    return mediaRecorderFormat() === 'mp4' ? 'MP4' : 'WebM';
-  }
-
-  async function exportViaWebCodecsMp4() {
-    // ---- capability pre-check (NO UI side effects; false ⇒ clean fallback) ----
-    const MM = window.Mp4Muxer;
-    if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
-    if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
-    const w = canvas.width & ~1, h = canvas.height & ~1;   // encoders want even dims
-    if (w < 2 || h < 2) return false;
-    const avcCodec = await pickAvcCodec(w, h);
-    if (!avcCodec) return false;
-    const timeline = buildPlaybackTimeline();
-    if (!timeline.length) return false;
-
-    // Audio: only if the Skribl has enabled music. If it does but we can't
-    // AAC-encode, decline so the MediaRecorder fallback keeps the audio rather
-    // than us shipping a silent MP4.
-    const hasAudio = !!(audioEl && (audioEl._objectUrl || audioEl.src)) &&
-                     (typeof musicEnabled === 'undefined' ? true : musicEnabled);
-    let audioBuf = null, useAudio = false;
-    if (hasAudio) {
-      try {
-        const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
-        if (built && built.dataUrl) {
-          const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
-          audioBuf = await tmpCtx.decodeAudioData(ab);
-          try { tmpCtx.close(); } catch (e) {}
-          useAudio = await aacSupported(audioBuf.sampleRate, audioBuf.numberOfChannels);
-        }
-      } catch (e) { audioBuf = null; useAudio = false; }
-      if (!useAudio) return false;
-    }
-
-    // ---- commit: from here we own the export UI ----
-    _exportAbort = false;
-    videoBtn.disabled = true; pngBtn.disabled = true;
-    progress.hidden = false; progressFill.style.width = '0%'; progressLabel.textContent = 'Preparing…';
-    const cleanup = () => { videoBtn.disabled = false; pngBtn.disabled = false; };
-
-    try {
-      const muxer = new MM.Muxer({
-        target: new MM.ArrayBufferTarget(),
-        video: { codec: 'avc', width: w, height: h },
-        audio: useAudio ? { codec: 'aac', numberOfChannels: audioBuf.numberOfChannels, sampleRate: audioBuf.sampleRate } : undefined,
-        fastStart: 'in-memory'    // moov at front → immediately playable file
-      });
-      let encErr = null;
-      const vEnc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => { encErr = e; } });
-      vEnc.configure({ codec: avcCodec, width: w, height: h, bitrate: 6000000, framerate: 30 });
-      let aEnc = null;
-      if (useAudio) {
-        aEnc = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => { encErr = e; } });
-        aEnc.configure({ codec: 'mp4a.40.2', numberOfChannels: audioBuf.numberOfChannels, sampleRate: audioBuf.sampleRate, bitrate: 128000 });
-      }
-
-      // Offscreen frame renderer (mirrors renderFrameUpTo in the MediaRecorder path).
-      const rec = document.createElement('canvas'); rec.width = w; rec.height = h;
-      const rctx = rec.getContext('2d');
-      const strokeCanvas = document.createElement('canvas'); strokeCanvas.width = w; strokeCanvas.height = h;
-      const sctx = strokeCanvas.getContext('2d');
-      const dpr = window.devicePixelRatio || 1; sctx.scale(dpr, dpr);
-      const sDot = (x, y, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.arc(x, y, s / 2, 0, Math.PI * 2); sctx.fillStyle = er ? 'rgba(0,0,0,1)' : c; sctx.fill(); sctx.globalCompositeOperation = 'source-over'; };
-      const sLine = (x1, y1, x2, y2, c, s, er) => { sctx.globalCompositeOperation = er ? 'destination-out' : 'source-over'; sctx.beginPath(); sctx.moveTo(x1, y1); sctx.lineTo(x2, y2); sctx.strokeStyle = er ? 'rgba(0,0,0,1)' : c; sctx.lineWidth = s; sctx.lineCap = 'round'; sctx.lineJoin = 'round'; sctx.stroke(); sctx.globalCompositeOperation = 'source-over'; };
-      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
-      function composite() {
-        rctx.fillStyle = bgColor || '#0d0f14'; rctx.fillRect(0, 0, w, h);
-        if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
-          rctx.save(); rctx.globalAlpha = (photoOpacityVal_ != null ? photoOpacityVal_ : 1);
-          if (photoBlur_ > 0 && 'filter' in rctx) rctx.filter = 'blur(' + photoBlur_ + 'px)';
-          drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
-          rctx.restore();
-        }
-        rctx.drawImage(strokeCanvas, 0, 0, w, h);
-      }
-
-      // Seed the pre-record base drawing, if any.
-      if (preRecordSnapshot) {
-        await new Promise((res) => { const im = new Image(); im.onload = () => { try { sctx.drawImage(im, 0, 0, w / dpr, h / dpr); } catch (e) {} res(); }; im.onerror = () => res(); im.src = preRecordSnapshot; });
-      }
-
-      const fps = 30, frameDurUs = 1000000 / fps;
-      const totalMs = timeline[timeline.length - 1].playT || 0;
-      const holdMs = 700;
-      const totalFrames = Math.max(1, Math.ceil(((totalMs + holdMs) / 1000) * fps));
-      progressLabel.textContent = 'Encoding…';
-      let ti = 0;
-      for (let f = 0; f < totalFrames; f++) {
-        if (_exportAbort) {
-          try { vEnc.close(); } catch (e) {}
-          try { if (aEnc) aEnc.close(); } catch (e) {}
-          progress.hidden = true; cleanup(); showToast('Export cancelled', null);
-          return true;
-        }
-        const elapsed = f * (1000 / fps);
-        if (comp) { ti = replayTimelineToCanvas(timeline, ti, elapsed, comp.dotFn, comp.lineFn); comp.present(); }
-        else { ti = replayTimelineToCanvas(timeline, ti, elapsed, sDot, sLine); }
-        if (f === totalFrames - 1 && comp) { comp.finish(); comp.present(); }
-        composite();
-        const vf = new VideoFrame(rec, { timestamp: Math.round(f * frameDurUs), duration: Math.round(frameDurUs) });
-        vEnc.encode(vf, { keyFrame: (f % (fps * 2)) === 0 });
-        vf.close();
-        if (encErr) throw encErr;
-        if (vEnc.encodeQueueSize > 8) { await new Promise(r => setTimeout(r, 0)); }
-        if ((f & 7) === 0) { progressFill.style.width = Math.min(85, (f / totalFrames) * 85) + '%'; await new Promise(r => setTimeout(r, 0)); }
-      }
-      await vEnc.flush();
-
-      // Audio: tile the baked loop across the full duration, encode in blocks.
-      if (useAudio && aEnc) {
-        progressLabel.textContent = 'Encoding audio…';
-        const sr = audioBuf.sampleRate, ch = audioBuf.numberOfChannels, loopLen = audioBuf.length;
-        const chans = []; for (let c = 0; c < ch; c++) chans.push(audioBuf.getChannelData(c));
-        const totalSamples = Math.ceil(((totalMs + holdMs) / 1000) * sr);
-        const blk = 1024; let pos = 0;
-        while (pos < totalSamples) {
-          const n = Math.min(blk, totalSamples - pos);
-          const data = new Float32Array(n * ch);         // f32-planar: [ch0…, ch1…]
-          for (let c = 0; c < ch; c++) { const src = chans[c]; const off = c * n; for (let k = 0; k < n; k++) { data[off + k] = src[(pos + k) % loopLen]; } }
-          const ad = new AudioData({ format: 'f32-planar', sampleRate: sr, numberOfFrames: n, numberOfChannels: ch, timestamp: Math.round((pos / sr) * 1000000), data });
-          aEnc.encode(ad); ad.close();
-          if (encErr) throw encErr;
-          pos += n;
-          if ((pos % (blk * 32)) === 0) { await new Promise(r => setTimeout(r, 0)); }
-        }
-        await aEnc.flush();
-      }
-      if (encErr) throw encErr;
-
-      muxer.finalize();
-      const buffer = muxer.target.buffer;
-      progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
-      downloadBlob(new Blob([buffer], { type: 'video/mp4' }), 'skribl.mp4');
-      showToast('MP4 exported', null);
-      try { vEnc.close(); } catch (e) {} try { if (aEnc) aEnc.close(); } catch (e) {}
-      cleanup();
-      setTimeout(closeExport, 800);
-      return true;
-    } catch (err) {
-      console.error('WebCodecs MP4 export failed:', err);
-      showToast('MP4 failed — using standard video', null);
-      progress.hidden = true;
-      cleanup();
-      return false;    // let the caller fall back to the MediaRecorder export
-    }
-  }
-
-  // ---- Video export ----
-  videoBtn.addEventListener('click', async () => {
-    if (!strokes.length) return;
-    if (typeof MediaRecorder === 'undefined') {
-      showToast('Video export not supported on this browser', null);
-      return;
-    }
-    // Stop any live playback/preview/seam so live audio doesn't overlap export.
-    stopPlayback();
-    stopLoopPreview();
-    stopSeamTest();
-
-    // Prefer a real MP4 (H.264/AAC) via WebCodecs + muxer when available. Returns
-    // false (cleanly, no UI left dangling) if unsupported or on failure, so we
-    // fall through to the MediaRecorder path below — never worse than today.
-    try {
-      const okMp4 = await exportViaWebCodecsMp4();
-      if (okMp4) return;
-    } catch (e) { /* fall through to MediaRecorder */ }
-
-    // Pick a supported mime type
-    const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
-    let mimeType = '';
-    for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; } }
-    if (!mimeType) { showToast('Video export not supported here', null); return; }
-
-    videoBtn.disabled = true; pngBtn.disabled = true;
-    progress.hidden = false;
-    progressFill.style.width = '0%';
-    progressLabel.textContent = 'Preparing…';
-
-    try {
-    // Clear any export-audio globals from a prior run so a stale loop buffer
-    // can't be picked up by an export that has no audio this time.
-    window._exportAudioSrc = null; window._exportAudioNode = null;
-    window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
-    const w = canvas.width, h = canvas.height;
-    const rec = document.createElement('canvas');
-    rec.width = w; rec.height = h;
-    const rctx = rec.getContext('2d');
-
-    const fps = 30;
-    // Manual capture (0) so requestFrame() explicitly pushes each composited
-    // frame — more reliable start and end than auto-capture. Fall back to
-    // auto-capture if the browser lacks requestFrame support.
-    let stream = rec.captureStream(0);
-    let manualCapture = true;
-    if (!stream.getVideoTracks()[0] || typeof stream.getVideoTracks()[0].requestFrame !== 'function') {
-      stream = rec.captureStream(fps);
-      manualCapture = false;
-    }
-    let videoTrack = null;
-
-    // Mix audio in if present
-    let audioContextForExport = null;
-    let mixDest = null;
-    if (audioEl) {
-      try {
-        audioContextForExport = new (window.AudioContext || window.webkitAudioContext)();
-        // Browsers often start an AudioContext suspended; resume it so samples
-        // actually flow from the very first frame (fixes silent/glitchy intro).
-        if (audioContextForExport.state === 'suspended') {
-          await audioContextForExport.resume().catch(()=>{});
-        }
-        mixDest = audioContextForExport.createMediaStreamDestination();
-
-        // Prefer the SAME baked loop the post uses: buildTrimmedLoopWav() folds
-        // the crossfade and slices [trimStart,trimEnd] into one clip, so the
-        // exported audio loops seamlessly (no hard-cut seam click) and matches
-        // the posted Skribl exactly. Decode it into the export context and play
-        // it as a gapless looping AudioBufferSourceNode (started in runTimeline).
-        let loopBuf = null;
-        try {
-          const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
-          if (built && built.dataUrl) {
-            const ab = await fetch(built.dataUrl).then(r => r.arrayBuffer());
-            loopBuf = await audioContextForExport.decodeAudioData(ab);
-          }
-        } catch (e) { loopBuf = null; }
-
-        if (loopBuf) {
-          stream.getAudioTracks().forEach(t => t.stop());
-          mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-          window._exportAudioBuf = loopBuf;
-          window._exportAudioCtx = audioContextForExport;
-          window._exportAudioDest = mixDest;
-          window._exportAudioSrc = null;
-        } else {
-          // Fallback (baked loop unavailable, e.g. source not decoded): raw
-          // <audio> region loop — the previous hard-cut behavior, wrap in frame().
-          const srcEl = new Audio();
-          srcEl.src = audioEl._draftData || audioEl.src;
-          srcEl.crossOrigin = 'anonymous';
-          srcEl.loop = false;
-          srcEl.preload = 'auto';
-          // Wait until the audio is actually ready to play through.
-          await new Promise((resolve) => {
-            let done = false;
-            const finish = () => { if (!done) { done = true; resolve(); } };
-            if (srcEl.readyState >= 3) finish();
-            srcEl.addEventListener('canplaythrough', finish, { once: true });
-            srcEl.addEventListener('loadeddata', finish, { once: true });
-            setTimeout(finish, 1500); // safety timeout
-            srcEl.load();
-          });
-          srcEl.currentTime = trimStart;
-          const track = audioContextForExport.createMediaElementSource(srcEl);
-          track.connect(mixDest);
-          stream.getAudioTracks().forEach(t => t.stop());
-          mixDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-          window._exportAudioSrc = srcEl;
-        }
-      } catch (e) { audioContextForExport = null; }
-    }
-
-    const chunks = [];
-    videoTrack = stream.getVideoTracks()[0];
-    const recorder = new MediaRecorder(stream, { mimeType });
-    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
-      const ext = mimeType.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
-      downloadBlob(blob, 'skribl.' + ext);
-      progressLabel.textContent = 'Done!';
-      progressFill.style.width = '100%';
-      showToast('Video exported', null);
-      videoBtn.disabled = false; pngBtn.disabled = false;
-      if (audioContextForExport) { try { audioContextForExport.close(); } catch(e){} }
-      if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} try { window._exportAudioNode.disconnect(); } catch(e){} window._exportAudioNode = null; }
-      window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
-      if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
-      setTimeout(closeExport, 800);
-    };
-
-    // Prepare the base frame (bg + photo + pre-record snapshot)
-    const baseImg = new Image();
-    // Compressed timeline so export matches preview (capped idle gaps).
-    const timeline = buildPlaybackTimeline();
-    const totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
-
-    function renderFrameUpTo(strokeIndex) {
-      // Composite: bg + photo + a temp canvas holding strokes drawn so far
-      rctx.fillStyle = bgColor || '#0d0f14';
-      rctx.fillRect(0, 0, w, h);
-      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
-        rctx.save();
-        rctx.globalAlpha = photoOpacityVal_ != null ? photoOpacityVal_ : 1;
-        if (photoBlur_ > 0 && 'filter' in rctx) rctx.filter = `blur(${photoBlur_}px)`;
-        drawPhotoFitted(rctx, photoBgImg, w, h, photoFit, photoOffsetX, photoOffsetY, photoZoom);
-        rctx.restore();
-      }
-      rctx.drawImage(strokeCanvas, 0, 0, w, h);
-    }
-
-    // Offscreen canvas that accumulates strokes during export (so we don't disturb the live one)
-    const strokeCanvas = document.createElement('canvas');
-    strokeCanvas.width = w; strokeCanvas.height = h;
-    const sctx = strokeCanvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    sctx.scale(dpr, dpr);
-
-    function sDot(x,y,c,s,erase){ sctx.globalCompositeOperation = erase?'destination-out':'source-over'; sctx.beginPath(); sctx.arc(x,y,s/2,0,Math.PI*2); sctx.fillStyle = erase?'rgba(0,0,0,1)':c; sctx.fill(); sctx.globalCompositeOperation='source-over'; }
-    function sLine(x1,y1,x2,y2,c,s,erase){ sctx.globalCompositeOperation = erase?'destination-out':'source-over'; sctx.beginPath(); sctx.moveTo(x1,y1); sctx.lineTo(x2,y2); sctx.strokeStyle = erase?'rgba(0,0,0,1)':c; sctx.lineWidth=s; sctx.lineCap='round'; sctx.lineJoin='round'; sctx.stroke(); sctx.globalCompositeOperation='source-over'; }
-
-    function startRecording() {
-      progressLabel.textContent = 'Recording…';
-      renderFrameUpTo(0);
-      // Wet/dry compositor for low-opacity strokes, targeting the export stroke
-      // layer. Seeds dry from strokeCanvas (base already painted). Flag-gated.
-      const comp = strokeLayersOn() ? makeStrokeCompositor(sctx, strokeCanvas) : null;
-
-      const pushFrame = () => { if (manualCapture && videoTrack && videoTrack.requestFrame) { try { videoTrack.requestFrame(); } catch(e){} } };
-
-      // 1. Start the recorder first and push a few opening frames so it has a
-      //    stable stream before anything happens.
-      recorder.start();
-      renderFrameUpTo(0);
-      pushFrame();
-
-      // 2. After a short warm-up, start audio and the drawing timeline TOGETHER
-      //    on the same tick — so they're in sync and the recorder is already
-      //    running when audio begins (no early clipped blip).
-      function runTimeline() {
-        // Start audio in sync with the timeline: the gapless crossfaded loop
-        // buffer (preferred) or the raw <audio> region-loop fallback.
-        if (window._exportAudioBuf && window._exportAudioCtx && window._exportAudioDest) {
-          try {
-            const node = window._exportAudioCtx.createBufferSource();
-            node.buffer = window._exportAudioBuf;
-            node.loop = true;
-            node.loopStart = 0;
-            node.loopEnd = window._exportAudioBuf.duration;
-            node.connect(window._exportAudioDest);
-            node.start();
-            window._exportAudioNode = node;
-          } catch (e) {}
-        } else if (window._exportAudioSrc) {
-          const a = window._exportAudioSrc;
-          try { a.currentTime = trimStart; a.play().catch(()=>{}); } catch(e){}
-        }
-        const startTime = performance.now();
-        let i = 0;
-        let finished = false;
-        function frame() {
-          const elapsed = performance.now() - startTime;
-          if (comp) {
-            i = replayTimelineToCanvas(timeline, i, elapsed, comp.dotFn, comp.lineFn);
-            comp.present();
-          } else {
-            i = replayTimelineToCanvas(timeline, i, elapsed, sDot, sLine);
-          }
-          renderFrameUpTo(i);
-          pushFrame();
-          if (window._exportAudioSrc) {
-            const a = window._exportAudioSrc;
-            if (a.currentTime >= trimEnd - 0.05) { a.currentTime = trimStart; }
-          }
-          progressFill.style.width = Math.min(100, (elapsed / Math.max(1, totalMs)) * 100) + '%';
-          if (i < timeline.length || elapsed < totalMs) {
-            requestAnimationFrame(frame);
-          } else if (!finished) {
-            finished = true;
-            if (comp) { comp.finish(); comp.present(); }
-            const holdStart = performance.now();
-            function holdFrame() {
-              renderFrameUpTo(timeline.length);
-              pushFrame();
-              if (performance.now() - holdStart < 700) {
-                requestAnimationFrame(holdFrame);
-              } else {
-                if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} }
-                if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} }
-                try { recorder.stop(); } catch(e){}
-              }
-            }
-            requestAnimationFrame(holdFrame);
-          }
-        }
-        requestAnimationFrame(frame);
-      }
-
-      // Brief warm-up so the recorder/stream are established, then go.
-      setTimeout(runTimeline, 250);
-    }
-
-    // If there's a pre-record base drawing, paint it into strokeCanvas first
-    progressLabel.textContent = 'Preparing…';
-    if (preRecordSnapshot) {
-      baseImg.onload = () => { sctx.drawImage(baseImg, 0, 0, w/dpr, h/dpr); startRecording(); };
-      baseImg.onerror = () => startRecording();
-      baseImg.src = preRecordSnapshot;
-    } else {
-      startRecording();
-    }
-    } catch (err) {
-      // Any failure in setup (MediaRecorder, audio context, stream) must not
-      // leave the export sheet stuck with disabled buttons.
-      showToast('Video export failed', null);
-      videoBtn.disabled = false; pngBtn.disabled = false;
-      progress.hidden = true;
-      if (window._exportAudioNode) { try { window._exportAudioNode.stop(); } catch(e){} window._exportAudioNode = null; }
-      window._exportAudioBuf = null; window._exportAudioCtx = null; window._exportAudioDest = null;
-      if (window._exportAudioSrc) { try { window._exportAudioSrc.pause(); } catch(e){} window._exportAudioSrc = null; }
-    }
-  });
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-})();
-
-// ==================== POST COMPOSER ====================
-// The client-side half of posting: a sheet to title/caption the Skribl, a
-// preview, and a sending → success/error state machine. serializeSkribl()
-// already produces the self-contained payload; sendSkribl() is the ONE seam
-// where a real network call drops in later — nothing else here changes.
-(function initPostComposer() {
-  const overlay = document.getElementById('postOverlay');
-  const sheet = document.getElementById('postSheet');
-  const titleInput = document.getElementById('postTitleInput');
-  const captionInput = document.getElementById('postCaptionInput');
-  const charCount = document.getElementById('postCharCount');
-  const previewImg = document.getElementById('postPreviewImg');
-  const previewFrame = document.getElementById('postPreview');
-  const submitBtn = document.getElementById('postSubmitBtn');
-  const submitLabel = document.getElementById('postSubmitLabel');
-  const watchBtn = document.getElementById('postWatchBtn');
-  let lastPostUrl = null;
-  const status = document.getElementById('postStatus');
-  const statusLabel = document.getElementById('postStatusLabel');
-  const progressFill = document.getElementById('postProgressFill');
-  const body = document.getElementById('postBody');
-  let closeTimer = null;
-  let posting = false;
-
-  // ---- THE NETWORK SEAM ----
-  // The ONE place a post leaves the app. When Flask serves the page the editor
-  // template sets window.SKRIBL_API_BASE ("/api/skribls"); we POST the authored
-  // serializeSkribl() payload there and return the server's { id, url } — url is
-  // a real /s/<id> path. If there's no API base, or the request fails for any
-  // reason, we fall back to the localStorage stub so a post never hard-fails in
-  // front of the user (a Render free-tier cold start can 502 on first hit; a
-  // transient failure shouldn't lose the user's work). Fallback url is a
-  // #skribl=<id> hash the in-page player opens on this device only.
-  async function sendSkribl(payload) {
-    const apiBase = (typeof window !== 'undefined' && window.SKRIBL_API_BASE) || null;
-
-    if (apiBase) {
-      // Serialize once so the size-check and the request send the exact same bytes.
-      const body = JSON.stringify(payload);
-
-      // Client-side size guard: the server caps the request body at
-      // MAX_CONTENT_LENGTH (25 MB via a Render env var) and raises a 413 that the
-      // composer would otherwise only discover after uploading the whole payload.
-      // Measure the true UTF-8 byte length up front and reject instantly with the
-      // same wording the server's 413 handler uses, so an oversized post fails
-      // immediately instead of stalling on the way up. Keep MAX_POST_BYTES a little
-      // under the server cap for HTTP/proxy overhead beyond the body; if the Render
-      // env var changes, keep this roughly in step with it.
-      const MAX_POST_BYTES = 24_000_000;
-      const bodyBytes = (typeof Blob !== 'undefined') ? new Blob([body]).size : body.length;
-      if (bodyBytes > MAX_POST_BYTES) {
-        throw new Error('This Skribl is too large to post. Try a smaller photo or a shorter audio loop.');
-      }
-
-      let res;
-      try {
-        res = await fetch(apiBase, {
-          method: 'POST',
-          headers: skriblPostHeaders(),
-          body: body
-        });
-      } catch (netErr) {
-        // Network failure (offline / DNS / CORS) — temporary. Save locally so
-        // the user's work isn't lost, but flag it so the UI won't claim "Posted".
-        console.warn('sendSkribl: network error, saving locally —', netErr);
-        return saveLocalFallback(payload);
-      }
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        // Server returns { id, url:"/s/<id>" } — a real, shared post.
-        if (data && data.id && data.url) return { id: data.id, url: data.url, local: false };
-        throw new Error('The server returned an unexpected response.');
-      }
-      // Server errors ≥500 are temporary → local fallback (flagged). But a 4xx
-      // means the post was REJECTED (bad/oversized payload, auth, etc.) — never
-      // fake success; surface the real error so the user knows it wasn't shared.
-      if (res.status >= 500) {
-        console.warn('sendSkribl: server ' + res.status + ', saving locally');
-        return saveLocalFallback(payload);
-      }
-      let msg = 'Post rejected by the server (' + res.status + ').';
-      try { const e = await res.json(); if (e && e.error) msg = e.error; } catch (e) {}
-      throw new Error(msg);
-    }
-
-    // No API base at all (pure standalone build) — local-only by design.
-    return saveLocalFallback(payload);
-  }
-
-  // Persist to localStorage under an id; hand back a #skribl=<id> hash URL the
-  // in-page player opens on THIS device only. `local:true` tells the composer to
-  // say "saved locally" rather than "posted/shared".
-  async function saveLocalFallback(payload) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const id = 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const post = {
-      id,
-      createdAt: new Date().toISOString(),
-      title: payload.title,
-      caption: payload.caption,
-      hasAudio: !!((normalizeSkribl(payload).music) || {}).data,
-      skribl: payload
-    };
-    try {
-      localStorage.setItem('skribl_post_' + id, JSON.stringify(post));
-    } catch (e) {
-      throw new Error('Local storage full — could not save Skribl');
-    }
-    return { id, url: '#skribl=' + id, local: true };
-  }
-
-  // Flatten bg + photo + drawing into a single opaque canvas at native size.
-  // Kept local (a few lines duplicated from export) so the delicate export IIFE
-  // stays untouched. Returns a <canvas>, or null on failure.
-  function buildPreviewCanvas() {
-    try {
-      const w = canvas.width, h = canvas.height;
-      const out = document.createElement('canvas');
-      out.width = w; out.height = h;
-      const octx = out.getContext('2d');
-      octx.fillStyle = bgColor || '#0d0f14';
-      octx.fillRect(0, 0, w, h);
-      if (photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src) {
-        octx.save();
-        octx.globalAlpha = photoOpacityVal_ != null ? photoOpacityVal_ : 1;
-        if (photoBlur_ > 0 && 'filter' in octx) octx.filter = `blur(${photoBlur_}px)`;
-        const iw = photoBgImg.naturalWidth || w, ih = photoBgImg.naturalHeight || h;
-        if (photoFit === 'stretch') {
-          octx.drawImage(photoBgImg, 0, 0, w, h);
-        } else {
-          let scale = photoFit === 'contain' ? Math.min(w/iw, h/ih) : Math.max(w/iw, h/ih);
-          if (photoFit === 'cover') scale *= photoZoom;
-          const dw = iw * scale, dh = ih * scale;
-          const fx = photoFit === 'cover' ? photoOffsetX : 0.5;
-          const fy = photoFit === 'cover' ? photoOffsetY : 0.5;
-          octx.drawImage(photoBgImg, (w-dw)*fx, (h-dh)*fy, dw, dh);
-        }
-        octx.restore();
-      }
-      octx.drawImage(canvas, 0, 0, w, h);
-      return out;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function buildPreviewDataURL() {
-    const out = buildPreviewCanvas();
-    return out ? out.toDataURL('image/png') : null;
-  }
-
-  // Render the finished drawing onto a 1200×630 branded share card (the Open
-  // Graph aspect) so a shared /s/<id> link unfurls with the actual drawing
-  // instead of the generic card. Composited client-side at post time and sent as
-  // payload.thumbnail; encoded per-content — JPEG q0.92 when a photo is present
-  // (~6x smaller, artifacts hidden), PNG for line-art cards (smaller AND crisp as
-  // PNG). The /s/<id>/card.png route serves either format (also legacy PNG posts).
-  function buildShareCardDataURL() {
-    try {
-      const flat = buildPreviewCanvas();
-      const CARD_W = 1200, CARD_H = 630;
-      const card = document.createElement('canvas');
-      card.width = CARD_W; card.height = CARD_H;
-      const c = card.getContext('2d');
-
-      // Ground + soft accent wash (echoes the static og-card).
-      c.fillStyle = '#0b0d12';
-      c.fillRect(0, 0, CARD_W, CARD_H);
-      const wash = c.createRadialGradient(CARD_W*0.5, CARD_H*0.28, 40, CARD_W*0.5, CARD_H*0.28, CARD_W*0.7);
-      wash.addColorStop(0, 'rgba(124,92,255,0.16)');
-      wash.addColorStop(1, 'rgba(124,92,255,0)');
-      c.fillStyle = wash;
-      c.fillRect(0, 0, CARD_W, CARD_H);
-
-      const roundRect = (x, y, w, h, r) => {
-        c.beginPath();
-        c.moveTo(x+r, y);
-        c.arcTo(x+w, y, x+w, y+h, r);
-        c.arcTo(x+w, y+h, x, y+h, r);
-        c.arcTo(x, y+h, x, y, r);
-        c.arcTo(x, y, x+w, y, r);
-        c.closePath();
-      };
-
-      // Contain the drawing centered, leaving a strip at the bottom for the mark.
-      const footer = 84;
-      const pad = 54;
-      if (flat && flat.width && flat.height) {
-        const areaW = CARD_W - pad*2;
-        const areaH = CARD_H - pad - footer;
-        const scale = Math.min(areaW / flat.width, areaH / flat.height);
-        const dw = Math.round(flat.width * scale);
-        const dh = Math.round(flat.height * scale);
-        const dx = Math.round((CARD_W - dw) / 2);
-        const dy = Math.round((CARD_H - footer - dh) / 2);
-        c.save();
-        roundRect(dx, dy, dw, dh, 18);
-        c.clip();
-        c.drawImage(flat, dx, dy, dw, dh);   // flat is already opaque (bg baked in)
-        c.restore();
-        c.lineWidth = 2;
-        c.strokeStyle = 'rgba(124,92,255,0.45)';
-        roundRect(dx, dy, dw, dh, 18);
-        c.stroke();
-      }
-
-      // Brand mark: 6-point star + wordmark, centered in the footer strip.
-      const cy = CARD_H - footer/2 + 6;
-      const label = 'Skribl Pad';
-      c.font = '700 30px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-      c.textBaseline = 'middle';
-      const tw = c.measureText(label).width;
-      const starR = 13;
-      const gap = 14;
-      const totalW = starR*2 + gap + tw;
-      let x = (CARD_W - totalW) / 2;
-      // star
-      const scx = x + starR, scy = cy;
-      c.save();
-      c.translate(scx, scy);
-      c.beginPath();
-      for (let i = 0; i < 12; i++) {
-        const ang = (Math.PI / 6) * i - Math.PI/2;
-        const rr = (i % 2 === 0) ? starR : starR * 0.42;
-        const px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
-        i === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
-      }
-      c.closePath();
-      const sg = c.createLinearGradient(-starR, -starR, starR, starR);
-      sg.addColorStop(0, '#7c5cff');
-      sg.addColorStop(1, '#5b8cff');
-      c.fillStyle = sg;
-      c.fill();
-      c.restore();
-      // wordmark
-      c.fillStyle = 'rgba(246,247,249,0.94)';
-      c.textAlign = 'left';
-      c.fillText(label, x + starR*2 + gap, cy);
-
-      // Encode by content. A photo card compresses several x smaller as JPEG (the
-      // point of this change), but the drawn lines sit ON TOP of the photo as sharp
-      // white-on-dark edges, so use q0.92 (not a lower q) to keep JPEG's edge
-      // ringing off those lines while still landing ~4-5x under PNG. A line-art
-      // card (no photo) is the opposite: PNG is both SMALLER and crisp, and JPEG
-      // would bloat AND ring it — so PNG there. The /s/<id>/card.png route serves
-      // either format. The photo-present test mirrors buildPreviewCanvas exactly.
-      const hasPhoto = !!(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src);
-      return hasPhoto ? card.toDataURL('image/jpeg', 0.92) : card.toDataURL('image/png');
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function updateCharCount() {
-    charCount.textContent = captionInput.value.length + ' / 280';
-  }
-
-  // states: 'idle' | 'sending' | 'success' | 'error'
-  function setState(state) {
-    if (state === 'idle') {
-      posting = false;
-      status.hidden = true;
-      status.classList.remove('error');
-      progressFill.style.width = '0%';
-      if (watchBtn) watchBtn.hidden = true;
-      body.style.opacity = '';
-      titleInput.disabled = false;
-      captionInput.disabled = false;
-      submitBtn.disabled = false;
-      submitBtn.hidden = false;
-      submitLabel.textContent = 'Post to Skribl';
-    } else if (state === 'sending') {
-      posting = true;
-      status.hidden = false;
-      status.classList.remove('error');
-      statusLabel.textContent = 'Posting…';
-      progressFill.style.width = '35%';
-      body.style.opacity = '0.5';
-      titleInput.disabled = true;
-      captionInput.disabled = true;
-      submitBtn.disabled = true;
-    } else if (state === 'success') {
-      posting = false;
-      progressFill.style.width = '100%';
-      statusLabel.textContent = 'Posted!';
-      submitBtn.hidden = true;
-    } else if (state === 'error') {
-      posting = false;
-      status.classList.add('error');
-      statusLabel.textContent = 'Couldn\u2019t post — try again';
-      progressFill.style.width = '100%';
-      body.style.opacity = '';
-      titleInput.disabled = false;
-      captionInput.disabled = false;
-      submitBtn.disabled = false;
-      submitBtn.hidden = false;
-      submitLabel.textContent = 'Try again';
-    }
-  }
-
-  function openPost() {
-    setState('idle');
-    // Field values persist across an accidental close within the session; they
-    // reset only after a successful post. So don't clear them here.
-    updateCharCount();
-    const preview = buildPreviewDataURL();
-    if (preview) {
-      previewImg.src = preview;
-      // Mirror the pad's shape so the snapshot shows whole (no crop), and match
-      // the frame background to the canvas color so there are never odd bars.
-      if (previewFrame) {
-        const ratio = (canvas.width && canvas.height) ? (canvas.width / canvas.height) : 1.6;
-        previewFrame.style.aspectRatio = ratio.toFixed(4);
-        previewFrame.style.background = bgColor || '#0d0f14';
-        previewFrame.style.display = '';
-      }
-    } else if (previewFrame) {
-      previewFrame.style.display = 'none';
-    }
-    clearTimeout(closeTimer);
-    overlay.hidden = false;
-    requestAnimationFrame(() => { overlay.classList.add('open'); applyKeyboardInset(); });
-  }
-
-  function closePost() {
-    if (document.activeElement === titleInput || document.activeElement === captionInput) {
-      document.activeElement.blur();
-    }
-    overlay.classList.remove('open');
-    if (sheet) sheet.style.maxHeight = '';
-    overlay.style.top = ''; overlay.style.bottom = ''; overlay.style.height = '';
-    closeTimer = setTimeout(() => { overlay.hidden = true; }, 350);
-  }
-
-  // iOS doesn't shrink CSS viewport units for the on-screen keyboard, so the
-  // bottom-anchored sheet ends up behind it. Fix: resize the fixed overlay to
-  // the *visible* region (above the keyboard) using visualViewport. The sheet,
-  // anchored to the overlay's bottom, then sits right on the keyboard — and iOS
-  // has no reason to scroll the page and push the header off the top.
-  // Mobile only; desktop / unsupported clears any inline styles.
-  function applyKeyboardInset() {
-    const vv = window.visualViewport;
-    if (overlay.hidden || window.innerWidth > 640 || !vv) {
-      overlay.style.top = '';
-      overlay.style.bottom = '';
-      overlay.style.height = '';
-      if (sheet) sheet.style.maxHeight = '';
-      return;
-    }
-    overlay.style.top = vv.offsetTop + 'px';
-    overlay.style.bottom = 'auto';
-    overlay.style.height = vv.height + 'px';
-    if (sheet) sheet.style.maxHeight = Math.max(200, vv.height - 12) + 'px';
-  }
-
-  async function submit() {
-    // Mirror saveDraft(): don't serialize while photo/music bytes are still
-    // being read into base64, or the posted Skribl could omit them.
-    if (mediaBusy > 0) {
-      showToast('Preparing media — try again in a moment', submitBtn);
-      return;
-    }
-    setState('sending');
-    const payload = serializeSkribl();
-    payload.title = (titleInput.value || '').trim() || 'Untitled Skribl';
-    payload.caption = (captionInput.value || '').trim();
-    // Per-Skribl share card for link unfurls. Post-only (kept out of
-    // serializeSkribl so drafts stay lean); the server serves it at
-    // /s/<id>/card.png and drops it from the player GET envelope. Best-effort —
-    // a null card just falls back to the static branded image server-side.
-    const card = buildShareCardDataURL();
-    if (card) payload.thumbnail = card;
-    // Crop music down to just the loop for posting. Post-only — drafts keep the
-    // full sample so they can be re-trimmed. The trimmed clip IS the loop, so
-    // trimStart/trimEnd become 0..loopLen. Falls back to the full sample if the
-    // decoded buffer isn't ready or encoding fails, so a post never breaks here.
-    if (payload.music && payload.music.data && currentAudioBuffer) {
-      try {
-        const cropped = buildTrimmedLoopWav();
-        if (cropped) {
-          payload.music = { data: cropped.dataUrl, name: payload.music.name, trimStart: 0, trimEnd: cropped.duration };
-        }
-      } catch (e) { /* keep the full-sample payload.music */ }
-    }
-    try {
-      const res = await sendSkribl(payload);
-      lastPostUrl = (res && res.url) || null;
-      const localOnly = !!(res && res.local);
-      // Record it locally, but ONLY a real post. A local fallback is not
-      // shareable, so listing it under links you can send would be a lie.
-      if (!localOnly && res && res.id && window.SkriblPosted) {
-        window.SkriblPosted.add({
-          id: res.id, url: res.url, kind: 'pad', pages: 1,
-          title: (titleInput.value || '').trim()
-        });
-        if (window._skriblPostedUI) window._skriblPostedUI.render();
-      }
-      titleInput.value = '';
-      captionInput.value = '';
-      updateCharCount();
-      setState('success');
-      // A posted (or locally-saved) Skribl is finished, so drop the crash-recovery
-      // autosave — otherwise returning to the editor (e.g. via "Make your own
-      // Skribl") offers to restore the drawing you just posted. Recovery turns
-      // back on by itself as soon as you start a new drawing (scheduleAutosave).
-      if (typeof clearAutosave === 'function') clearAutosave();
-      if (localOnly) {
-        // Saved to this device only (no server, or a temporary server/network
-        // failure). Be honest — this is NOT a shared post.
-        statusLabel.textContent = 'Saved on this device only';
-        showToast('Saved locally — works on this device', null);
-      } else {
-        showToast('Posted! 🎨', null);
-      }
-      if (watchBtn && lastPostUrl) watchBtn.hidden = false;
-    } catch (e) {
-      setState('error');
-      if (e && e.message) statusLabel.textContent = e.message;
-    }
-  }
-
-  captionInput.addEventListener('input', updateCharCount);
-  submitBtn.addEventListener('click', submit);
-  if (watchBtn) watchBtn.addEventListener('click', () => {
-    if (!lastPostUrl) return;
-    if (lastPostUrl.charAt(0) === '#') {
-      // Local fallback: #skribl=<id> — boot the in-page player via the hash.
-      location.hash = lastPostUrl;
-      location.reload();
-    } else {
-      // Server post: a real /s/<id> path — navigate to the player route.
-      location.href = lastPostUrl;
-    }
-  });
-
-  // Recompute the keyboard lift when the viewport changes or a field is focused.
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyKeyboardInset);
-    window.visualViewport.addEventListener('scroll', applyKeyboardInset);
-  }
-  titleInput.addEventListener('focus', () => setTimeout(applyKeyboardInset, 100));
-  captionInput.addEventListener('focus', () => setTimeout(applyKeyboardInset, 100));
-
-  // Backdrop tap / Escape / handle tap all close — but never mid-send.
-  overlay.addEventListener('click', (e) => {
-    if (posting) return;
-    if (!e.target.closest('.menu-sheet')) closePost();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden && !posting) closePost();
-  });
-  const postHandle = sheet ? sheet.querySelector('.menu-handle') : null;
-  if (postHandle) postHandle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!posting) closePost();
-  });
-
-  // The Post button in the header opens the composer.
-  postBtn.addEventListener('click', openPost);
-})();
-
+// ==================== EXPORT / POST COMPOSER ====================
+// Both sections now live in editor_export.js and editor_post.js, loaded ONLY
+// by the editor template. They were self-contained IIFEs (checked: nothing
+// outside them referenced anything they defined), and the player executed
+// initExport() and initPostComposer() on every shared link to wire up
+// controls it does not have. Moved verbatim, not rewritten.
 // ==================== READ-ONLY PLAYER ====================
 // Two ways to enter the read-only player, ONE code path once the post is in hand:
 //   (a) Flask path player — the /s/<id> template sets window.SKRIBL_MODE="player"

@@ -14,6 +14,8 @@ app.py does exactly the same thing with the only SQLAlchemy instance in the tree
 `SkriblBase.metadata` is exported so a host can create or migrate these tables
 with its own tooling (Alembic included) without importing Flask.
 """
+import os
+import weakref
 from datetime import datetime, timezone
 
 from flask import current_app
@@ -21,6 +23,8 @@ from flask import current_app
 from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         ForeignKeyConstraint, Index, Integer, JSON,
                         String)
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -292,18 +296,124 @@ def session():
     resolves its own. The module global remains only as a fallback for code
     running outside an application context.
     """
+    factory = None
     try:
         factory = current_app.extensions.get("skribl", {}).get("session")
-        if factory is not None:
-            return factory()
     except (ImportError, RuntimeError):
         # No application context — fall through to the process-wide binding.
         pass
-    if _session_factory is None:
-        raise RuntimeError(
-            "Skribl has no database session. The host must call "
-            "skribl.init_skribl(session=lambda: db.session) before serving.")
-    return _session_factory()
+    if factory is None:
+        if _session_factory is None:
+            raise RuntimeError(
+                "Skribl has no database session. The host must call "
+                "skribl.init_skribl(session=lambda: db.session) before serving.")
+        factory = _session_factory
+    sess = factory()
+    # Normally False: init_skribl() resolves the bind eagerly and this is one
+    # boolean read per request. It is only True for hosts whose engine did not
+    # exist at mount time.
+    if _FK_RESOLVE_LATE:
+        _fk_install_late(sess)
+    return sess
+
+
+# Engines that already carry the pragma listener. A WeakSet so a host that
+# builds and discards engines (tests, app factories) is not leaked into.
+_FK_ENGINES = weakref.WeakSet()
+# Set only when the engine could not be resolved at init time. The lazy path in
+# session() is a fallback, not the normal route, and this keeps it to one
+# boolean check per session resolution when it is not needed.
+_FK_RESOLVE_LATE = False
+
+
+def _fk_opted_out():
+    return os.environ.get("SKRIBL_SQLITE_FOREIGN_KEYS", "1") == "0"
+
+
+def _install_sqlite_fk(bind):
+    """Attach the pragma listener to ONE engine. Idempotent per engine."""
+    engine = getattr(bind, "engine", bind)
+    if engine is None or engine in _FK_ENGINES:
+        return False
+    _FK_ENGINES.add(engine)
+    if getattr(getattr(engine, "dialect", None), "name", None) != "sqlite":
+        return False                     # PostgreSQL and friends: nothing to do
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cur = dbapi_connection.cursor()
+        try:
+            cur.execute("PRAGMA foreign_keys=ON")
+        finally:
+            cur.close()
+
+    return True
+
+
+def enable_sqlite_foreign_keys(app=None):
+    """Make SQLite honour the foreign keys this package declares.
+
+    SQLite defaults `PRAGMA foreign_keys` to OFF, PER CONNECTION. The constraint
+    added by revision c7e1a5f04b93 — `skribl_post_media.post_id -> skribl_posts.id`
+    ON DELETE CASCADE — is therefore written into the schema and then ignored, so
+    on SQLite deleting a post left its association rows behind. Measured before
+    this was added: one row survived, `sweep_orphans` consequently read the media
+    as still referenced, and the bytes were never reclaimed. That is exactly the
+    leak the constraint exists to close, still open on the one engine nobody had
+    run the assertion against — PostgreSQL enforces it natively, and that is
+    where the suite had always been run.
+
+    Access was NOT exposed by this: `/media/<key>` authorises through an EXISTS
+    join to the post, so a deleted post's media is refused (404) whether or not
+    the orphan row survives. It is a data-integrity and storage leak.
+
+    SCOPE. This attaches to the ENGINE Skribl was given, not to SQLAlchemy's
+    `Engine` class. The earlier version listened on the class, so mounting this
+    blueprint turned on foreign-key enforcement for every SQLite connection
+    anywhere in the host's process — an unrelated analytics database, a cache, a
+    test fixture. A drop-in component should not reach past its own seam to do
+    that, and the blast radius is now the one engine Skribl's session is bound
+    to. Where that engine IS the host's engine (the normal integration, since
+    Skribl deliberately shares the host's session so the two sets of tables
+    commit in one transaction) the host's SQLite tables are still covered: the
+    pragma is a property of the connection and cannot be narrowed further than
+    the engine. That remains a real behaviour change for a SQLite host whose own
+    data violates a constraint it declared, and `SKRIBL_SQLITE_FOREIGN_KEYS=0`
+    opts out — the constraint then reverts to being declared and unenforced.
+
+    Nothing happens on PostgreSQL, which enforces foreign keys regardless.
+
+    `app` is optional: pass it and the engine is resolved once, at init, before
+    the pool has opened anything. Without it — or if resolution fails, e.g. a
+    host that configures its database after mounting — installation falls back
+    to the first session() resolution.
+    """
+    global _FK_RESOLVE_LATE
+    if _fk_opted_out():
+        return False
+    if app is not None:
+        try:
+            with app.app_context():
+                factory = (app.extensions.get("skribl", {}).get("session")
+                           or _session_factory)
+                if factory is not None:
+                    return _install_sqlite_fk(factory().get_bind())
+        except Exception:
+            # A host that has not configured its database yet is not an error
+            # here; it just means the engine is not knowable until first use.
+            pass
+    _FK_RESOLVE_LATE = True
+    return False
+
+
+def _fk_install_late(sess):
+    """Fallback path: attach on first use when init could not resolve a bind."""
+    if _fk_opted_out():
+        return
+    try:
+        _install_sqlite_fk(sess.get_bind())
+    except Exception:
+        pass
 
 
 def create_all(engine):

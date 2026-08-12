@@ -1123,13 +1123,52 @@ for n, body in _tpls.items():
     # numeric form for a pre-v132 tree.
     derived = "skribl_asset('lib/media_validation.js')" in body
     numeric = re.search(r"media_validation\.js',\s*v='(\d+)'", body)
+    _loads = any("<script" in l and "media_validation.js" in l
+                 for l in body.splitlines())
+    if not (derived or numeric) and not _loads:
+        # The template does not LOAD the module, so it has no cache-bust to get
+        # right. This is the player since the tab panels were removed: its only
+        # callers left with them. Asserting a bust on a script that is correctly
+        # absent would force it back just to satisfy the check.
+        print(f"    {n}: does not load the module — cache-bust not applicable")
+        continue
     check(f"{n}: shared module cache-bust tracks its contents",
           derived or bool(numeric),
           "derived" if derived else (f"pinned v={numeric.group(1)}" if numeric else "no bust"))
-# The player is NOT trimmed: it renders both media inputs, so app.js binds the
-# handlers there and the module is genuinely reachable.
-check("the player really does render media inputs (so the module is needed)",
-      'id="musicInput"' in _tpls["skribl_player.html"] and 'id="photoInput"' in _tpls["skribl_player.html"])
+# This used to read: "the player really does render media inputs (so the module
+# is needed)" — asserting that skribl_player.html contains #musicInput and
+# #photoInput. That was TRUE and load-bearing when the player carried the whole
+# editor shell. It is false now: the authoring controls were removed from the
+# player template, and verify_player_isolation.py asserts they stay out.
+#
+# The assertion's PURPOSE survives, so it is inverted rather than deleted: the
+# module must still be loaded wherever code that calls it can run.
+# skriblHasUsableMime and skriblDecodeCheckImage are reached from the photo and
+# music DROP handlers, which are bound to #photoUploadBtn / #musicUploadBtn in
+# the tab panels — still present in the player's template. While those panels
+# remain, the module has to stay on all three templates. Drop the panels and
+# lib/media_validation.js (7,130 B) can leave the player with them.
+check("the player no longer renders authoring media inputs",
+      'id="musicInput"' not in _tpls["skribl_player.html"]
+      and 'id="photoInput"' not in _tpls["skribl_player.html"],
+      "the editor shell was removed from the player template")
+# Was: the module must be on all three templates, because the player's tab
+# panels still carried the drop handlers that call it. Those panels are gone
+# now, so the claim inverts again — and this is the assertion that PROVES the
+# 7,130 B saving is real rather than a script tag someone forgot.
+check("the editors still load the media-validation module",
+      all("media_validation.js" in _tpls[n]
+          for n in ("skribl_editor.html", "skribl_flip.html")),
+      "both authoring surfaces validate uploads through the shared module")
+# Match the SCRIPT TAG, not the filename: the player template explains in a
+# comment why the module is absent, and a substring check reads that comment as
+# the thing it was looking for. A test that a file is gone must look for the
+# mechanism, not the word.
+check("and the player does not, having no caller for it",
+      "<script" not in "".join(
+          l for l in _tpls["skribl_player.html"].splitlines()
+          if "media_validation.js" in l),
+      "the upload buttons and file inputs left with the tab panels")
 
 
 print("\nR10 — pending/committed reservations close the crash window")

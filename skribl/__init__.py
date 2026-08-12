@@ -182,4 +182,14 @@ def init_skribl(app, **kwargs):
     _sess = kwargs.get("session")
     app.extensions.setdefault("skribl", {})["session"] = None if _sess is False else _sess
     app.register_blueprint(bp)
+    # Make the foreign key this package declares actually apply on SQLite, which
+    # ignores ON DELETE CASCADE unless the pragma is set per connection. Done
+    # HERE rather than at import time so a process that merely imports skribl
+    # without mounting it does not have its host's behaviour changed underneath
+    # it, and AFTER the session is registered so the pragma can be attached to
+    # the engine Skribl was actually given rather than to every engine in the
+    # process. Idempotent, inert on PostgreSQL, opt-out with
+    # SKRIBL_SQLITE_FOREIGN_KEYS=0 — see skribl.models for the scope note.
+    from .models import enable_sqlite_foreign_keys
+    enable_sqlite_foreign_keys(app)
     return bp

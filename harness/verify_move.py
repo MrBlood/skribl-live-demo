@@ -313,6 +313,30 @@ with sync_playwright() as p:
           and pg.input_value("#mbOffsetInput") == "0, 0",
           "it must open ready to type over, not ready to append to")
 
+    # The field takes BOTH coordinates in one box, so the keyboard it summons has
+    # to be able to produce a separator AND a minus. inputmode="numeric" offers
+    # digits only on a phone: no comma, and on most keyboards no minus, which
+    # makes a negative offset — half the useful moves — impossible to type at
+    # all. `decimal` is not the fix either; it adds a decimal POINT. Asserted
+    # rather than reviewed because nothing else in the tree reads this attribute,
+    # and it fails on unmodified v179.
+    _im = (pg.get_attribute("#mbOffsetInput", "inputmode") or "").lower()
+    check("the offset field asks for a keyboard that can type a comma and a minus",
+          _im == "text",
+          f'inputmode={_im!r} — "numeric" and "decimal" both hide the separator')
+
+    # And the parser must accept whatever that fuller keyboard lets someone
+    # produce, or the fix just moves the failure one step later.
+    _accepts = pg.evaluate("""() => {
+        const r = {};
+        for (const s of ['40, -12', '40,-12', '40 -12', '-40, -12', '1.5, -2.5'])
+          r[s] = !!parseOffsetEntry(s);
+        r['banana'] = !!parseOffsetEntry('banana');
+        return r; }""")
+    check("the parser takes every form that keyboard allows, and still rejects junk",
+          all(_accepts[k] for k in _accepts if k != "banana") and not _accepts["banana"],
+          str(_accepts))
+
     pg.fill("#mbOffsetInput", "40, -12")
     pg.keyboard.press("Enter")
     pg.wait_for_timeout(350)

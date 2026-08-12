@@ -455,16 +455,60 @@ reaches.
 
 **Do not retry with a regex call graph.** A textual approximation is fine for
 MEASURING the size of the prize and useless for deciding what is safe to move.
-The next attempt needs a real JS parser building a real reference graph — `node`
-is available in this environment, so an AST pass over app.js is a few hours of
-work and would have caught every one of these.
 
-**Suggested order, unchanged but now evidence-backed:**
-  1. Build the reference graph with an AST, not a regex. Verify it by checking
-     that its player-reachable set is a strict superset of the regex one.
+### The AST step was built, and it DISPROVES the paragraph above
+
+The advice used to continue: "the next attempt needs a real JS parser building a
+real reference graph — an AST pass over app.js is a few hours of work and would
+have caught every one of these." That was a hypothesis stated as a fact. It has
+now been built (`harness/tools/refgraph.js`, acorn, declarations at any depth,
+every identifier in a load position attributed to its enclosing declaration) and
+it is **wrong on both counts**:
+
+* Its own proposed acceptance gate — the AST player-reachable set must be a
+  strict superset of the regex one — **FAILS**. Three names present in the regex
+  set are absent from the AST set.
+* All four functions the attempt wrongly moved — `skriblPostHeaders`,
+  `ensureStrokeLayers`, `presentWet`, `beginWetStroke` — are **still classified
+  editor-only by the AST**. A parser would have moved every one of them again.
+
+**Because the diagnosis was wrong.** Those four are not misclassified. Read the
+call sites: `ensureStrokeLayers`, `presentWet` and `beginWetStroke` are reached
+only from the live pointer handlers, and the player's replay path goes through
+`makeStrokeCompositor` instead — they genuinely are editor-only. `skriblPostHeaders`
+is now called from `editor_post.js`. The classification was right and the move
+still broke, so the fault was never the call graph.
+
+The fault was **load order**. `app-editor.js` was loaded `defer` after `app.js`
+while `app.js`'s own top-level statements still named those bindings, and the
+failure that surfaced was editor-side (`verify_pages`, the Undo toast after
+Clear) — not a player regression at all. Every cut that has SUCCEEDED since
+(`editor_export`, `editor_post`, `editor_menu`, `editor_music`, `editor_photo`)
+moved statements rather than bindings and loaded after `app.js`. That is also
+what item 3 of the v190 deploy notes warns about.
+
+**Revised order. Step 2 was always the real work; step 1 was never the blocker:**
+  1. ~~Build the reference graph with an AST~~ — done, and it does not decide
+     safety. Use it, like the regex, to size the prize only.
   2. Move top-level wiring into explicit init functions so hoisting stops being
-     load-bearing and the 91 blocked functions become movable.
+     load-bearing. This is the whole job.
   3. Only then draw the module boundary.
+
+### And the target does not close even if step 2 is done perfectly
+
+Measured, this tree: the player downloads 231,106 B of JavaScript across four
+files. `verify_player_isolation.py` targets 153,600, so the gap is 77,506 B.
+Every editor-only function in `app.js`, by the AST graph, is 71,633 B. Move
+**all** of them — including the ~34 KB that step 2 exists to unpin — and the
+player lands at 159,473 B. **Still 5,873 B over.**
+
+Extraction cannot reach 153,600, because what is left is not functions: roughly
+88 KB of `app.js` is top-level wiring and comments, outside every function body.
+Reaching the target means `app.js` stops being the player's file at all — a
+separate player entry point — not another cut. Anyone continuing this should
+either commit to that or move the number and say why, because a target the
+available method provably cannot reach is the failure mode the ratchets were
+written to prevent.
 
 The section-3 ratchet in `verify_seam.py` stays, with the caveat that its numbers
 are a regex approximation: treat 2467/1339 as an order-of-magnitude estimate of

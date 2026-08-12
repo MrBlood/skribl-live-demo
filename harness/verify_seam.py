@@ -241,10 +241,50 @@ if _marker in _appjs:
     # Baselines from the v134 measurement. These are a RATCHET, not a target: the
     # editor-only figure is what a split would remove from the player bundle, so
     # it must not shrink by code migrating INTO the shared set.
+    #
+    # It counted editor-only lines INSIDE app.js only — so the moment editor-only
+    # code was actually EXTRACTED to its own file, the number fell (2467 -> 1765)
+    # and this failed. Extraction is the outcome this measurement exists to
+    # encourage, and the metric punished it. The fix is to count editor-only code
+    # wherever it now lives: app.js's editor-only spans PLUS the files that exist
+    # solely to keep editor code off the player. Parsed with the same span logic,
+    # so the figures stay commensurable rather than mixing spans with raw line
+    # counts.
+    _extracted = 0
+    for _name in ("editor_export.js", "editor_post.js", "editor_menu.js",
+                  "editor_music.js", "editor_photo.js"):
+        _p = _layout.STATIC_DIR / _name
+        if not _p.exists():
+            continue
+        _el = _p.read_text(encoding="utf-8").split("\n")
+        _es, _ec, _est, _ed, _eo = {}, None, 0, 0, False
+        for _i, _l in enumerate(_el):
+            _m = _fn.match(_l)
+            if _m and _ec is None:
+                _ec, _est, _ed, _eo = _m.group(1), _i, 0, False
+            if _ec is not None:
+                _ed += _l.count("{") - _l.count("}")
+                if "{" in _l:
+                    _eo = True
+                if _eo and _ed <= 0:
+                    _es[_ec] = (_est, _i); _ec = None
+        _extracted += sum(b - a + 1 for a, b in _es.values())
+
+    check("the extracted editor bundles are not loaded by the player",
+          not any("editor_export.js" in _t or "editor_post.js" in _t
+                  or "editor_menu.js" in _t or "editor_music.js" in _t
+                  or "editor_photo.js" in _t
+                  for _t in [_layout.template("skribl_player.html")
+                             .read_text(encoding="utf-8")]),
+          "the whole point of moving them is that the player never fetches them")
+
+    _editor_total = _editor_lines + _extracted
+    print(f"    editor-only extracted to their own files: {_extracted} lines")
     check("editor-only code has not leaked into the player's reachable set",
-          _editor_lines >= 2200,
-          f"{_editor_lines} lines editor-only, was 2467 — something the player "
-          f"now calls used to be editor-only")
+          _editor_total >= 2200,
+          f"{_editor_total} lines editor-only ({_editor_lines} still in app.js, "
+          f"{_extracted} extracted), was 2467 — something the player now calls "
+          f"used to be editor-only")
     check("the player's reachable set has not ballooned",
           _player_lines <= 1700,
           f"{_player_lines} lines reachable, was 1339")
@@ -256,3 +296,11 @@ if _marker in _appjs:
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
+
+# These suites printed their failures and then exited 0. run_harness.sh takes
+# ok/FAIL from the EXIT CODE, so a failing run was reported as "ok — 32/33
+# passed" and the aggregate counted it as PASS with a failed assertion inside.
+# Eight suites shared this hole, verify_amber among them — which is very likely
+# what the "flake" earlier in this session actually was.
+import sys
+sys.exit(1 if bad else 0)
