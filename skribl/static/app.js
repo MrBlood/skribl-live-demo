@@ -3463,18 +3463,6 @@ function loadSkribl(data) {
     photoFit = data.photo.fit || 'cover';
     const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
     photoBgImg.style.objectFit = fitMap[photoFit] || 'cover';
-    // Sync the segmented Fit control to the restored fit (was showing stale state).
-    const _fitBtns = [...document.querySelectorAll('.photo-fit-btn')];
-    _fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === photoFit));
-    const _ai = _fitBtns.findIndex(b => b.dataset.fit === photoFit);
-    if (_ai >= 0 && photoFitSlider) {
-      const _mv = () => {
-        const off = _fitBtns.slice(0, _ai).reduce((s, b) => s + b.offsetWidth, 0);
-        photoFitSlider.style.width = _fitBtns[_ai].offsetWidth + 'px';
-        photoFitSlider.style.transform = `translateX(${off}px)`;
-      };
-      _mv(); setTimeout(_mv, 80);
-    }
     photoOpacityVal_ = data.photo.opacity != null ? data.photo.opacity : 1;
     photoBgImg.style.opacity = photoOpacityVal_;
     photoBlur_ = data.photo.blur != null ? data.photo.blur : 0;
@@ -3483,24 +3471,50 @@ function loadSkribl(data) {
     photoOffsetX = _off.x != null ? _off.x : 0.5;
     photoOffsetY = _off.y != null ? _off.y : 0.5;
     photoZoom = clampPhotoZoom(data.photo.zoom);
-    setZoomSliderUI();
     applyPhotoPosition();
-    if (typeof updateRepositionUI === 'function') updateRepositionUI();
-    document.getElementById('photoDetail').hidden = false;
-    photoUploadBtn.classList.add('loaded');
-    document.getElementById('photoTabDot').hidden = false;
-    document.getElementById('photoRemove').hidden = false;
-    const opEl2 = document.getElementById('photoOpacity');
-    opEl2.value = Math.round(photoOpacityVal_ * 100);
-    document.getElementById('photoOpacityVal').textContent = Math.round(photoOpacityVal_ * 100) + '%';
-    updateSliderFill(opEl2);
-    const blEl2 = document.getElementById('photoBlur');
-    if (blEl2) {
-      blEl2.value = photoBlur_;
-      document.getElementById('photoBlurVal').textContent = photoBlur_ + 'px';
-      updateSliderFill(blEl2);
+
+    // State above, drawer UI below — the same split the music branch has.
+    // Every line below touches markup only the editor has; v190 removed it from
+    // the player, and the unguarded version threw inside loadSkribl, aborting
+    // the whole restore. See harness/verify_player_photo.py.
+    if (!document.body.classList.contains('player-mode')) {
+      // Sync the segmented Fit control to the restored fit (was showing stale state).
+      const _fitBtns = [...document.querySelectorAll('.photo-fit-btn')];
+      _fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === photoFit));
+      const _ai = _fitBtns.findIndex(b => b.dataset.fit === photoFit);
+      if (_ai >= 0 && photoFitSlider) {
+        const _mv = () => {
+          const off = _fitBtns.slice(0, _ai).reduce((s, b) => s + b.offsetWidth, 0);
+          photoFitSlider.style.width = _fitBtns[_ai].offsetWidth + 'px';
+          photoFitSlider.style.transform = `translateX(${off}px)`;
+        };
+        _mv(); setTimeout(_mv, 80);
+      }
+      setZoomSliderUI();
+      if (typeof updateRepositionUI === 'function') updateRepositionUI();
+      const _pd = document.getElementById('photoDetail');
+      if (_pd) _pd.hidden = false;
+      if (photoUploadBtn) photoUploadBtn.classList.add('loaded');
+      const _ptd = document.getElementById('photoTabDot');
+      if (_ptd) _ptd.hidden = false;
+      const _prm = document.getElementById('photoRemove');
+      if (_prm) _prm.hidden = false;
+      const opEl2 = document.getElementById('photoOpacity');
+      if (opEl2) {
+        opEl2.value = Math.round(photoOpacityVal_ * 100);
+        const _ov = document.getElementById('photoOpacityVal');
+        if (_ov) _ov.textContent = Math.round(photoOpacityVal_ * 100) + '%';
+        updateSliderFill(opEl2);
+      }
+      const blEl2 = document.getElementById('photoBlur');
+      if (blEl2) {
+        blEl2.value = photoBlur_;
+        const _bv = document.getElementById('photoBlurVal');
+        if (_bv) _bv.textContent = photoBlur_ + 'px';
+        updateSliderFill(blEl2);
+      }
+      setTimeout(initPhotoFitSlider, 50);
     }
-    setTimeout(initPhotoFitSlider, 50);
   }
 
   // Music — restore full audio + trim points (reversible)
