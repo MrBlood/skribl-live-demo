@@ -3878,9 +3878,35 @@ function showPlayerError(msg) {
     return shellEl.getBoundingClientRect().height + padV + gap;
   }
   function playerFitScale() {
+    // Measure the COLUMN the canvas actually lives in, not the viewport. This
+    // used to be `window.innerWidth - 40`, and .app has a max-width: on a 1023px
+    // viewport the column is 718px, so the scale came out at the 1:1 cap and the
+    // wrap was set to the authored 816px. `.canvas-wrap { max-width: 100% }` then
+    // clipped it back to 718 and `overflow: hidden` cropped the drawing — a
+    // shared link lost ~100px of its right-hand side on any viewport wider than
+    // the column. The editor never had this because layoutEditorCanvas() measures
+    // its container; this is the same measurement, done the same way.
+    //
+    // .app rather than canvasWrap.parentElement: in player mode .canvas-area is
+    // `display: contents`, so its own rect is 0x0 and would scale everything to
+    // the 120px floor.
+    const appEl = document.querySelector('.app');
+    let availW = Math.max(120, window.innerWidth - 40);   // fallback, as before
+    if (appEl) {
+      const r = appEl.getBoundingClientRect();
+      if (r.width > 0) {
+        const cs = getComputedStyle(appEl);
+        // getBoundingClientRect() reports the BORDER box, so both the padding
+        // and the border have to come off to get the space a child can occupy.
+        // .app has a 1px border each side; subtracting only the padding left the
+        // canvas 2px wider than its column and `overflow: hidden` clipped it.
+        const insetX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0)
+          + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+        availW = Math.max(120, r.width - insetX);
+      }
+    }
     // Clamp the viewport budget so a short viewport (or an on-screen keyboard)
     // can't drive the available height ≤ 0 and flip the scale negative.
-    const availW = Math.max(120, window.innerWidth - 40);
     const availH = Math.max(96, window.innerHeight - playerReservedV());
     return Math.min(1, availW / authorW, availH / authorH);
   }

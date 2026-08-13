@@ -120,6 +120,23 @@ EDITOR_DOM = ["recordBtn", "helpDrawer", "exportSheet", "musicInput",
               "photoInput", "undoBtn", "postBtn", "exportPng"]
 
 
+# The player fits the drawing into the COLUMN, not the viewport. playerFitScale()
+# used `window.innerWidth - 40`, and .app has a max-width: on a 1023px viewport
+# the column is 718px, the scale hit its 1:1 cap, the wrap was set to the
+# authored 816px, and `overflow: hidden` cropped ~100px off the right of every
+# shared link. It reached a user as "the image is off the edge" and was first
+# misattributed to a different bug entirely, because the crop only appears when
+# the viewport is WIDER than the column — which no fixture used.
+FIT_GEOMETRY = """() => {
+  const w = document.querySelector('.canvas-wrap'), c = document.getElementById('canvas');
+  if (!w || !c) return null;
+  const wr = w.getBoundingClientRect(), cr = c.getBoundingClientRect();
+  return { wrapW: Math.round(wr.width), canvasW: Math.round(cr.width),
+           wrapH: Math.round(wr.height), canvasH: Math.round(cr.height),
+           scrolls: document.documentElement.scrollHeight > window.innerHeight + 2 };
+}"""
+
+
 INK = """() => {
   const c = document.getElementById('canvas');
   if (!c) return null;
@@ -232,6 +249,26 @@ with sync_playwright() as sp:
     pg.goto(link, wait_until="load")
     pg.wait_for_timeout(3500)
     player = pg.evaluate(INK)
+
+    print("FIT — the drawing is not cropped by the column it sits in")
+    # 1280 above is already wider than .app's max-width, which is the case that
+    # used to crop. Check a second, much wider viewport too: the failure grows
+    # with the gap between viewport and column, so a narrow fixture hides it.
+    for _vw in (1280, 1600):
+        pg.set_viewport_size({"width": _vw, "height": 900})
+        pg.wait_for_timeout(400)
+        _g = pg.evaluate(FIT_GEOMETRY)
+        check(f"at {_vw}px the canvas fits inside its wrapper",
+              _g and _g["canvasW"] <= _g["wrapW"] and _g["canvasH"] <= _g["wrapH"],
+              f"canvas {_g and (_g['canvasW'], _g['canvasH'])} in wrap "
+              f"{_g and (_g['wrapW'], _g['wrapH'])} — overflow:hidden means the "
+              "difference is drawing the viewer never sees")
+        check(f"and the page does not scroll at {_vw}px",
+              _g and not _g["scrolls"],
+              "the fit reserves vertical space for the shell; a scrollbar means "
+              "it reserved too little")
+    pg.set_viewport_size({"width": 1280, "height": 900})
+    pg.wait_for_timeout(300)
 
     # ================= HALF A — playback still works ========================
     print("HALF A — playback (must keep passing through the split)")
