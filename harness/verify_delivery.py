@@ -236,6 +236,29 @@ for _surface, _f in (("Pad", "editor_post.js"), ("Flip", "flip.js")):
           f"{_f} still builds its own request body")
 
 
+print("\nDELIVERY — compression is optional, and is not allowed to break posting")
+# A user hit `skriblPackBody is not defined` on Post. No shipped artifact had
+# the helper missing while a caller used it, so the live server had a mixed
+# deploy — but the real defect was that a mixed deploy COULD break posting at
+# all. Compression is an optimisation; it was written as a hard cross-file
+# dependency, so lib/posted.js failing to load for any reason (stale cache,
+# partial deploy, blocked request) turned "posts a bit slower" into "cannot
+# post", with a raw ReferenceError shown to the user.
+#
+# Asserted by shape rather than by running the browser, because the failure is
+# a MISSING file: both call sites must feature-detect before calling.
+for _surface, _f in (("Pad", "editor_post.js"), ("Flip", "flip.js")):
+    _src = (pathlib.Path(__file__).resolve().parent.parent /
+            "skribl" / "static" / _f).read_text(encoding="utf-8")
+    _calls = [ln for ln in _src.split("\n") if "skriblPackBody(" in ln]
+    _guarded = "typeof skriblPackBody === 'function'" in _src \
+        or "typeof skriblPackBody==='function'" in _src
+    check(f"{_surface} feature-detects the packing helper before calling it",
+          bool(_calls) and _guarded,
+          f"{len(_calls)} call site(s), guarded={_guarded} — an unguarded call "
+          "makes an optimisation load-bearing")
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

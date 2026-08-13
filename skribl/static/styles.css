@@ -284,6 +284,29 @@ body:not(.player-mode) .canvas-wrap {
   flex: none;
   max-width: 100%;
   max-height: 100%;
+  /* Pre-JS placeholder. layoutEditorCanvas() sets width/height INLINE, and an
+     inline style always beats this rule, so these two lines can only ever
+     affect the frame BEFORE app.js has run — the settled layout is untouched.
+
+     Without them the wrap is 0px wide until JS sizes it, so a refresh showed
+     the header and toolbar over empty space until app.js downloaded, parsed
+     and ran. On a cold cache that is a few hundred milliseconds of a page that
+     looks broken; with the caching headers missing it was seconds.
+
+     100%/100% is not a guess: for a fresh pad establishEditorCanvas() is called
+     with the canvas-area's own dimensions and layoutEditorCanvas() then scales
+     by min(1, ...) = 1, so the settled frame IS the area. A restored draft with
+     a different aspect will shrink from this to its own rectangle, which is a
+     smaller change than appearing from nothing.
+
+     aspect-ratio matches the DEFAULT PRESET in lib/canvassizes.js (4:3, 816x612)
+     rather than filling the area outright: filling it left the frame 728px tall
+     against a settled 521px, so the placeholder appeared and then visibly
+     collapsed. Sized this way it lands on the settled rectangle for a default
+     pad and there is nothing to see. */
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  height: auto;
 }
 
 .canvas-wrap {

@@ -64,7 +64,16 @@
       }
 
       let res;
-      const packed = await skriblPackBody(body, skriblPostHeaders());
+      // Compression is an OPTIMISATION and must never be load-bearing. This
+      // used to call skriblPackBody() directly, which made posting depend on
+      // lib/posted.js having loaded — so a stale cache, a partial deploy or a
+      // blocked request turned "posts a bit slower" into "cannot post at all",
+      // with `skriblPackBody is not defined` shown to the user. Feature-detect
+      // it like every other optional capability here, and fall back to the
+      // uncompressed body that worked before it existed.
+      const packed = (typeof skriblPackBody === 'function')
+        ? await skriblPackBody(body, skriblPostHeaders())
+        : { body: body, headers: skriblPostHeaders() };
       try {
         res = await fetch(apiBase, {
           method: 'POST',

@@ -1596,7 +1596,12 @@ async function shareSkribl(){
   if(playing) stop();
   sharing=true; chip('Posting…');
   try{
-    const _p=await skriblPackBody(JSON.stringify(buildSharePayload()), skriblPostHeaders());
+    // Feature-detected: compression must never be able to break posting.
+    // See the note at the matching call site in editor_post.js.
+    const _body=JSON.stringify(buildSharePayload());
+    const _p=(typeof skriblPackBody==='function')
+      ? await skriblPackBody(_body, skriblPostHeaders())
+      : { body:_body, headers:skriblPostHeaders() };
     const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:_p.headers, body:_p.body });
     let data={}; try{ data=await res.json(); }catch(_){}
     if(!res.ok){
