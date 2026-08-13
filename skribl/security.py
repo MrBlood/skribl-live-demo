@@ -5,13 +5,25 @@ app-wide after_request, which in a host application would either clobber the
 platform's policy or be clobbered by it. It is now attached to the blueprint, so
 it covers Skribl's own routes and Skribl's own static files and nothing else.
 """
+import gzip
 import hmac
+import io
 import ipaddress
+import re as _re
 import os
 import secrets
+import zlib
 from urllib.parse import urlsplit
 
-from flask import g, request, url_for
+from flask import current_app, g, jsonify, request, url_for
+
+# Text-ish types only. Images, audio and video are already compressed;
+# re-gzipping them spends CPU to make them marginally larger.
+_GZIP_CACHE = {}          # (path, ?v=) -> gzipped bytes
+_GZIP_CACHE_MAX = 128     # editor pulls 25; this is slack, not a budget
+_GZIP_MIN = 1024          # below this the header costs more than the saving
+_COMPRESSIBLE = _re.compile(
+    r'^(?:text/|application/(?:javascript|json|xml|manifest\+json)$|image/svg)')
 
 _CSP_KEYWORD_SOURCES = {"'self'", "'none'"}
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -109,7 +121,7 @@ def _validate_embed_origins(raw):
 
 
 # --- CSP + security headers, scoped to the blueprint ------------------------
-def register_security(bp, skribl_version):
+def register_security(bp, skribl_version, player_target="_blank"):
     # --- Content Security Policy ---------------------------------------------
     # Deferred until v105 for a good reason: while gifenc/mp4-muxer came from
     # jsdelivr, any workable policy needed a third-party script-src, and the app
@@ -172,7 +184,8 @@ def register_security(bp, skribl_version):
                 "skribl_version": skribl_version,
                 "skribl_csrf_token": getattr(g, "skribl_csrf_token", ""),
                 "skribl_api_base": url_for(".create_skribl"),
-                "skribl_player_base": url_for(".skribl_player", public_id="").rstrip("/")}
+                "skribl_player_base": url_for(".skribl_player", public_id="").rstrip("/"),
+                "skribl_player_target": player_target}
 
     @bp.before_request
     def _prepare_csrf():
@@ -183,6 +196,136 @@ def register_security(bp, skribl_version):
     def _issue_csrf(resp):
         if bp.skribl_csrf:
             resp = bp.skribl_csrf[1](resp)
+        return resp
+
+    @bp.before_request
+    def _inflate_request():
+        """Accept a gzipped request body.
+
+        Response compression cannot touch the direction that actually hurts
+        here. Measured on a photo-plus-music post: 2,382,255 B of request body
+        against 33 ms of server processing. The seven seconds a user waits on
+        Post is upload transfer, essentially all of it base64 media inside the
+        JSON, and no amount of work on the response side moves it. Gzipped, the
+        same body is about 40 KB.
+
+        Optional and backwards compatible: a client that does not set the header
+        is untouched, so an older cached editor keeps posting exactly as before.
+
+        The cap is the point of the decompressobj: MAX_CONTENT_LENGTH bounds the
+        COMPRESSED bytes Werkzeug will read, which is no bound at all on what
+        they expand to. Decompression stops at the same limit and the request is
+        refused, so a few KB cannot become a few GB of resident memory.
+        """
+        if (request.method not in ("POST", "PUT", "PATCH")
+                or (request.headers.get("Content-Encoding") or "").lower() != "gzip"):
+            return None
+        limit = current_app.config.get("MAX_CONTENT_LENGTH") or 25_000_000
+        try:
+            dec = zlib.decompressobj(16 + zlib.MAX_WBITS)
+            plain = dec.decompress(request.get_data(cache=False), limit)
+            if dec.unconsumed_tail or not dec.eof:
+                raise ValueError("body expands past MAX_CONTENT_LENGTH")
+        except Exception:
+            return jsonify({"error": "Malformed compressed request body."}), 400
+        request._cached_data = plain
+        request.environ["wsgi.input"] = io.BytesIO(plain)
+        request.environ["CONTENT_LENGTH"] = str(len(plain))
+        request.environ.pop("HTTP_CONTENT_ENCODING", None)
+        return None
+
+    @bp.after_request
+    def _cache_and_compress(resp):
+        """Long-cache the busted assets and gzip our own responses.
+
+        SCOPE FIRST: this is `bp.after_request`, so it touches ONLY responses
+        from this blueprint. A `flask_compress` on the application, or an
+        app-wide after_request, would compress and cache the HOST'S pages too —
+        the same reach-past-the-seam mistake the FK listener made.
+
+        Measured before this: the editor pulled 25 files / 559,734 B and the
+        player 5 files / 350,950 B, every one of them `Cache-Control: no-cache`
+        and uncompressed. Flask's default max-age is no-cache, so every page
+        load revalidated all 25 — on a phone that is seconds of round trips
+        before anything renders, and it is what left a shared link sitting on an
+        unsized 300x150 canvas while app.js (214 KB, uncompressed) arrived.
+
+        The long cache is SAFE because asset_url() busts on content: a changed
+        file gets a new ?v=, so nothing stale can be pinned. It is applied only
+        when that bust is present — an un-busted request is not immutable and
+        must not be treated as such. setdefault throughout, so a host or CDN
+        that sets its own policy wins.
+        """
+        is_static = (request.endpoint == f"{bp.name}.static"
+                     and resp.status_code == 200)
+        bust = request.args.get("v") if is_static else None
+        if bust:
+            # Assignment, not setdefault: send_file already put "no-cache" here
+            # from SEND_FILE_MAX_AGE_DEFAULT. Safe to overwrite ONLY because
+            # asset_url() busts on content, so a changed file gets a new ?v=.
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+
+        # Decide BEFORE touching the body. The first version of this turned off
+        # direct_passthrough for every busted asset, which materialised fonts
+        # and images into memory to then not compress them, and it recompressed
+        # app.js on every single request: 10.4 ms against 0.6 ms unmodified, 37 ms
+        # of CPU for one cold page load of 25 assets, serialised across two sync
+        # workers. Compression that costs more than the transfer it saves is not
+        # an optimisation.
+        if not (resp.status_code == 200
+                and "Content-Encoding" not in resp.headers
+                and "gzip" in (request.headers.get("Accept-Encoding") or "")
+                and _COMPRESSIBLE.match(resp.mimetype or "")):
+            resp.vary.add("Accept-Encoding")
+            return resp
+
+        packed = None
+        if bust:
+            # A busted URL names one immutable byte sequence, so its compressed
+            # form is equally immutable: compress once per file version and hand
+            # out the bytes thereafter. The ?v= IS the content key; no stat call
+            # is needed to know the entry is still valid.
+            key = (request.path, bust)
+            packed = _GZIP_CACHE.get(key)
+            if packed is None:
+                resp.direct_passthrough = False
+                body = resp.get_data()
+                if len(body) < _GZIP_MIN:
+                    resp.vary.add("Accept-Encoding")
+                    return resp
+                packed = gzip.compress(body, 6)   # paid once, so buy the ratio
+                if len(packed) >= len(body):
+                    packed = None
+                if packed is not None:
+                    if len(_GZIP_CACHE) >= _GZIP_CACHE_MAX:
+                        _GZIP_CACHE.clear()        # bounded; refills on demand
+                    _GZIP_CACHE[key] = packed
+        else:
+            # Dynamic, or an unbusted asset: the result cannot be reused, so buy
+            # speed instead of ratio. On app.js level 1 is 2.9 ms for 77 KB where
+            # level 6 is 9.0 ms for 64 KB — six milliseconds of a worker for
+            # thirteen kilobytes, on a response nobody will ask for twice.
+            resp.direct_passthrough = False
+            body = resp.get_data()
+            if len(body) >= _GZIP_MIN:
+                cand = gzip.compress(body, 1)
+                packed = cand if len(cand) < len(body) else None
+
+        if packed is not None:
+            resp.direct_passthrough = False
+            resp.set_data(packed)
+            resp.headers["Content-Encoding"] = "gzip"
+            resp.headers["Content-Length"] = str(len(packed))
+            # A gzipped body is not the same entity as the plain one. send_file's
+            # ETag is derived from the FILE, so both variants were going out
+            # under one tag — Vary saves a compliant cache, but a tag that
+            # identifies two different byte sequences is simply wrong. nginx
+            # suffixes it; so do we.
+            etag = resp.headers.get("ETag")
+            if etag:
+                resp.headers["ETag"] = etag[:-1] + '-gzip"' if etag.endswith('"') \
+                    else etag + "-gzip"
+        resp.headers.add("Vary", "Accept-Encoding")
         return resp
 
     @bp.after_request

@@ -1,7 +1,7 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-12T18:29:01Z
+UTC timestamp           : 2026-08-13T12:44:54Z
 Host                    : Linux x86_64
-Tree SHA-256            : 646194b7a938a7a23485bbd14bec3f82329245fb28ef795b5447d7cecd163e56
+Tree SHA-256            : 59499fe1977c4c150c8fd5b55a792057ba491f238311aeebe1a978706b717f78
 Git commit              : (not a git checkout)
 SKRIBL_VERSION          : v191
 Python                  : 3.12.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.NYvl9biEnU/harness.db)
+Database reset          : yes (fresh /tmp/tmp.pwciZZPUXy/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -20,14 +20,15 @@ Command                 : /home/claude/work/skribl-v191/harness/run_harness.sh v
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 12 batches recorded as one run
-suites requested : 42
+# whole release run: 13 batches recorded as one run
+suites requested : 45
   verify_amber.py: ok — 15/15 passed
   verify_audio.py: ok — 9/9 passed
   verify_canvas.py: ok — 44/44 passed
-  verify_csp.py: ok — 31/31 passed
+  verify_csp.py: ok — 32/32 passed
   verify_csrf.py: ok — 15/15 passed
   verify_deletion_foundation.py: ok — 11/11 passed
+  verify_delivery.py: ok — 24/24 passed
   verify_docs.py: ok — 33/33 passed
   verify_dots.py: ok — 10/10 passed
   verify_exopts.py: ok — 26/26 passed
@@ -35,7 +36,7 @@ suites requested : 42
   verify_feed.py: ok — 25/25 passed
   verify_fix.py: ok — 18/18 passed
   verify_flipmeta.py: ok — 45/45 passed
-  verify_gifenc.py: ok — 35/35 passed
+  verify_gifenc.py: ok — 38/38 passed
   verify_help.py: ok — 61/61 passed
   verify_hold.py: ok — 37/37 passed
   verify_integration.py: ok — 14/14 passed
@@ -49,7 +50,8 @@ suites requested : 42
   verify_padcanvas.py: ok — 26/26 passed
   verify_pages.py: ok — 44/44 passed
   verify_parity.py: ok — 115/115 passed
-  verify_player_isolation.py: ok — 13/13 passed
+  verify_player_isolation.py: ok — 14/14 passed
+  verify_player_photo.py: ok — 9/9 passed
   verify_posted.py: ok — 34/34 passed
   verify_postgres.py: SKIPPED (0 assertions) — no PostgreSQL client found and SKRIBL_PG_DSN is not set
   verify_prefix.py: ok — 29/29 passed
@@ -61,9 +63,10 @@ suites requested : 42
   verify_scrub.py: ok — 17/17 passed
   verify_seam.py: ok — 105/105 passed
   verify_storage.py: ok — 36/36 passed
+  verify_surfaces.py: ok — 7/7 passed
   verify_tips.py: ok — 43/43 passed
   verify_ux.py: ok — 130/130 passed
-  verify_version.py: ok — 22/22 passed
-assertions passed: 1693   (skipped suites contribute 0)
+  verify_version.py: ok — 23/23 passed
+assertions passed: 1739   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0

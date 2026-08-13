@@ -22,6 +22,8 @@ malformed fixture. It now records a real drawing in Pad and follows the share
 link the app itself produced, which is also the path a real viewer takes.
 """
 import math
+import pathlib
+import re
 import struct
 import sys
 import wave
@@ -358,7 +360,46 @@ with sync_playwright() as sp:
     # GLOBALS_TARGET has the same shape: of the five remaining, four
     # (setTool, pressureSize, addRecent, attachSegSlider) are named by top-level
     # statements, so 5 -> 0 is that same restructuring in miniature, not a cut.
+    # UNGUARDED EDITOR DOM. Two production outages came from this one shape:
+    # app.js dereferencing an element the v190 cut removed from the player.
+    #   loadSkribl:  getElementById('photoDetail').hidden = false  -> threw on
+    #     every shared link with a photo, aborting the restore mid-way, which
+    #     reached users as a Flip post that would not play, a Pad drawing
+    #     hanging off the canvas edge, and a misplaced replay nib.
+    #   startDraw:   getElementById('drawPanel').hidden -> threw on a TAP, so
+    #     the link loaded fine and broke only when touched.
+    # Both were found by a user, not here. The suites drove the player with
+    # drawings and with music, so neither fixture entered the branch that broke.
+    #
+    # This asserts on the SHAPE, not on the two instances: any
+    # `getElementById('x').` where x is absent from the player template and its
+    # partials. That covers the ones nobody has hit yet, which is the point —
+    # a reachability argument is what failed twice, and this needs none.
+    # Remaining nine are pending-card and drawer-label writes on paths the
+    # player is not believed to reach; "not believed to reach" is exactly the
+    # claim that was wrong before, so they are counted, not excused.
+    DOM_DEREF_RATCHET, DOM_DEREF_TARGET = 9, 0
     GLOBALS_RATCHET, GLOBALS_TARGET = 5, 0
+
+    ROOT = pathlib.Path(__file__).resolve().parent.parent
+    _player_tpl = (ROOT / "skribl" / "templates" / "skribl" /
+                   "skribl_player.html").read_text(encoding="utf-8")
+    _app_src = (ROOT / "skribl" / "static" / "app.js").read_text(encoding="utf-8")
+    _player_ids = set(re.findall(r'id="([^"]+)"', _player_tpl))
+    for _inc in re.findall(r"""include\s+['"]([^'"]+)['"]""", _player_tpl):
+        _p = ROOT / "skribl" / "templates" / _inc
+        if _p.is_file():
+            _player_ids |= set(re.findall(r'id="([^"]+)"', _p.read_text(encoding="utf-8")))
+    _deref = sorted({m.group(1) for m in re.finditer(
+        r"""document\.getElementById\(\s*['"]([A-Za-z0-9_-]+)['"]\s*\)\s*\.""",
+        _app_src)} - _player_ids)
+    check(f"app.js dereferences at most {DOM_DEREF_RATCHET} elements the player "
+          f"does not have (target {DOM_DEREF_TARGET})",
+          len(_deref) <= DOM_DEREF_RATCHET,
+          f"{len(_deref)}: {', '.join(_deref)} — each is a TypeError waiting for "
+          "the first viewer whose skribl reaches that line")
+
+
     DOM_RATCHET, DOM_TARGET = 0, 0          # reached: the shell is out of the player
     BYTES_RATCHET, BYTES_TARGET = 232_000, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session

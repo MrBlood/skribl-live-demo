@@ -80,7 +80,8 @@ def asset_url(bp, filename):
 
 def create_blueprint(session=None, url_prefix=None,
                      static_url_path="/static/skribl", current_user_id=None,
-                     csrf=None, media_store=None, index_route=False):
+                     csrf=None, media_store=None, index_route=False,
+                     player_target="_blank"):
     """Build the Skribl blueprint. See the module docstring for the contract.
 
     `session` is REQUIRED. It defaulted to None, which made the documented
@@ -105,7 +106,27 @@ def create_blueprint(session=None, url_prefix=None,
 
     The demo asks for it explicitly (see app.py). A host that genuinely wants
     Skribl at its root passes `index_route=True` and means it.
+
+    `player_target` decides where "watch it" goes after posting, and defaults to
+    `_blank` for the same reason `index_route` defaults to False. Pad's watch
+    button did `location.href = url`, which inside a host application navigates
+    the HOST'S top-level document away from whatever page Skribl was embedded
+    in — a drawing widget unilaterally deciding the surrounding app should stop
+    being on screen. Flip's equivalent was already an anchor with
+    `target="_blank"`, as is the posted-list link in `lib/postedui.js`, so two
+    of the three paths opened a tab and one did not. That was drift, not a
+    decision: the difference is that one is a <button> and the others are <a>.
+
+    `_blank` is now the default for all three. A host that routes the player
+    itself — an SPA that renders `/s/<id>` inside its own shell, say — passes
+    `player_target="_self"` and takes over. No other value is accepted, because
+    a named target would let one embed steal another's tab.
     """
+    if player_target not in ("_blank", "_self"):
+        raise ValueError(
+            "player_target must be '_blank' (open the player in a new tab, the "
+            "default) or '_self' (navigate in place, for a host that routes the "
+            f"player itself). Got {player_target!r}.")
     if session is False:
         session = None          # deliberate, not forgotten
     elif session is None:
@@ -169,7 +190,7 @@ def create_blueprint(session=None, url_prefix=None,
     def _expose_asset_helper():
         return {"skribl_asset": lambda filename: asset_url(bp, filename)}
     register_routes(bp, index_route=index_route)
-    register_security(bp, SKRIBL_VERSION)
+    register_security(bp, SKRIBL_VERSION, player_target=player_target)
     return bp
 
 

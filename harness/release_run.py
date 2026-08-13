@@ -59,6 +59,7 @@ BATCHES = [
     # a batch with is a browser competing for the same CPU during a timing-
     # sensitive replay.
     ["verify_player_isolation.py"],
+    ["verify_player_photo.py"],
     ["verify_parity.py"],
     ["verify_audio.py", "verify_seam.py", "verify_loopcap.py"],
     ["verify_gifenc.py", "verify_muxer.py", "verify_mp4.py", "verify_flipmeta.py"],
@@ -70,7 +71,8 @@ BATCHES = [
      # or verify_storage, which is also why it cannot just take the ambient
      # backend: verify_storage asserts the default instance stores media INLINE.
      "verify_deletion_foundation.py"],
-    ["verify_csp.py", "verify_csrf.py", "verify_race.py", "verify_prefix.py"],
+    ["verify_csp.py", "verify_csrf.py", "verify_race.py", "verify_prefix.py",
+     "verify_delivery.py", "verify_surfaces.py"],
     ["verify_version.py", "verify_migrations.py", "verify_postgres.py"],
 ]
 

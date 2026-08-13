@@ -114,7 +114,17 @@ with sync_playwright() as p:
         hasApply: typeof (window.gifenc||{}).applyPalette === 'function'
     })"""
 
-    print("\nVENDORED GIFENC — loads with the CDN unreachable")
+    # gifenc is no longer a <script> tag on either editor: it is 4,557 B
+    # encoded that only matters when somebody exports a GIF, so it is fetched on
+    # the click via skriblLoadVendor(). These assertions therefore ASK for it
+    # first. What they check is unchanged — our own origin, the same API shape,
+    # both surfaces agreeing — but "is the global there on load" would now be
+    # testing the old mechanism rather than the guarantee.
+    def load_gifenc(page):
+        page.evaluate("() => window.skriblLoadVendor('gifenc')")
+        page.wait_for_timeout(200)
+
+    print("\nVENDORED GIFENC — loads on demand, with the CDN unreachable")
     flip_errors, pad_errors = [], []
     flip_reqs, pad_reqs = [], []
     flip = ctx.new_page()
@@ -123,8 +133,13 @@ with sync_playwright() as p:
     flip.goto(BASE + "/flip", wait_until="load")
     flip.wait_for_timeout(1200)
 
+    check("Flip does NOT ship gifenc on page load",
+          not flip.evaluate(API)["hasGlobal"],
+          "it is export-only; paying for it on every page load is the thing "
+          "this indirection exists to stop")
+    load_gifenc(flip)
     f = flip.evaluate(API)
-    check("Flip exposes window.gifenc", f["hasGlobal"])
+    check("Flip exposes window.gifenc once asked for", f["hasGlobal"])
     check("Flip has GIFEncoder / quantize / applyPalette",
           f["hasEncoder"] and f["hasQuantize"] and f["hasApply"], str(f))
     check("no Flip page errors from the vendored script", not flip_errors,
@@ -135,6 +150,7 @@ with sync_playwright() as p:
     pad.on("request", lambda r: pad_reqs.append(r.url))
     pad.goto(BASE + "/", wait_until="load")
     pad.wait_for_timeout(1200)
+    load_gifenc(pad)
     d = pad.evaluate(API)
     check("Pad exposes the same global", d["hasGlobal"] and d["hasEncoder"])
     check("both surfaces agree on the API shape", f == d, f"flip {f} vs pad {d}")
@@ -238,7 +254,7 @@ with sync_playwright() as p:
     check("Pad GIF has at least one frame and loops", len(gp["frames"]) >= 1 and gp["loop"] == 0,
           f"{len(gp['frames'])} frames, loop={gp['loop']}")
 
-    print("\nDEGRADATION — a missing vendored file disables the button, nothing else")
+    print("\nDEGRADATION — a missing vendored file is reported, never thrown")
     gone = ctx.new_page()
     gone_errors = []
     gone.on("pageerror", lambda e: gone_errors.append(str(e)))
@@ -253,7 +269,26 @@ with sync_playwright() as p:
     st = gone.evaluate("""() => ({
         disabled: document.getElementById('exportGif').disabled,
         desc: (document.getElementById('exportGifDesc')||{}).textContent })""")
-    check("GIF button is disabled rather than throwing", st["disabled"], str(st))
+    # The button is now OFFERED even though the file is unreachable, because
+    # the page cannot know it is unreachable until it asks. The guarantee is no
+    # longer "disabled before you touch it" but "tells you, and does not throw"
+    # — which this exercises by actually clicking, where the old assertion
+    # only inspected an attribute.
+    check("the GIF button is offered, since availability is a deployed URL",
+          not st["disabled"], str(st))
+    gone.evaluate("() => { const b = document.getElementById('exportGif'); if (b) b.click(); }")
+    gone.wait_for_timeout(2500)
+    check("clicking it with the file unreachable raises NO page error",
+          not gone_errors, "; ".join(gone_errors[:2]))
+    # Flip reports through #flipChip (see chip() in flip.js); the Pad uses a
+    # toast. Read the element rather than guessing at a class.
+    _msg = gone.evaluate("""() => {
+        const c = document.getElementById('flipChip');
+        return c ? (c.textContent || '').trim() : ''; }""")
+    check("and tells the user instead of failing silently",
+          "load" in _msg.lower() or "encoder" in _msg.lower(),
+          f"visible messages: {_msg!r} — a dead button with no explanation is "
+          "the failure mode this replaced")
     check("copy points at the file, not the user's wifi",
           "connection" not in (st["desc"] or "").lower(), repr(st["desc"]))
     check("no page errors from the missing library", not gone_errors,

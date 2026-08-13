@@ -261,17 +261,17 @@
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
+  window.SKRIBL_PLAYER_TARGET = {{ skribl_player_target | tojson }};
   </script>
   <!-- mp4-muxer (vendored) enables the WebCodecs H.264/AAC MP4 export. Until this
        file is present the MP4 path stays dormant and video export falls back to
        the MediaRecorder (WebM/MP4) path — so a missing file never breaks export. -->
-  <script src="{{ skribl_asset('mp4-muxer.min.js') }}" defer></script>
   <!-- gifenc (vendored) enables GIF export. Upstream is ESM-only, so this is a
        global-publishing IIFE build of gifenc 1.0.3 (see the banner in the file for
        the exact reproduce command) — same file and same `window.gifenc` global
        Flip loads, so both surfaces run one version. Until this file is present the
        GIF option simply disables itself with a hint — nothing else breaks. -->
-  <script src="{{ skribl_asset('gifenc.min.js') }}" defer></script>
+  {% include 'skribl/_skribl_vendor.html' %}
   <script src="{{ skribl_asset('lib/media_validation.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>

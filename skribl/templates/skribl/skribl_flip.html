@@ -241,7 +241,7 @@
         <input type="text" id="flipShareUrl" class="flip-share-url" readonly>
         <div class="flip-share-actions">
           <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
-          <a id="flipShareOpen" class="panel-btn flip-share-open" target="_blank" rel="noopener">Open player</a>
+          <a id="flipShareOpen" class="panel-btn flip-share-open" target="{{ skribl_player_target }}" rel="noopener">Open player</a>
         </div>
       </div>
     </div>
@@ -255,6 +255,7 @@
   window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
   window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
+  window.SKRIBL_PLAYER_TARGET = {{ skribl_player_target | tojson }};
 </script>
 
 <!-- mp4-muxer (vendored) enables the WebCodecs H.264/AAC MP4 export — same file
@@ -262,7 +263,6 @@
      version. Until this file is present the MP4 path stays dormant and video
      export falls back to MediaRecorder (WebM/MP4), so a missing file never
      breaks export. Classic script: it must execute before flip.js below. -->
-<script src="{{ skribl_asset('mp4-muxer.min.js') }}"></script>
 
 <!-- gifenc (vendored) enables GIF export — same file and same `window.gifenc`
      global the Pad loads, so both surfaces run one version. Upstream is ESM-only,
@@ -270,25 +270,25 @@
      has the exact reproduce command). Until this file is present GIF export shows
      a friendly message, so a missing file never breaks anything else.
      Classic script: it must execute before flip.js below. -->
-<script src="{{ skribl_asset('gifenc.min.js') }}"></script>
-<script src="{{ skribl_asset('lib/media_validation.js') }}"></script>
-  <script src="{{ skribl_asset('lib/audioloop.js') }}"></script>
-  <script src="{{ skribl_asset('lib/report.js') }}"></script>
-  <script src="{{ skribl_asset('lib/segslider.js') }}"></script>
+  {% include 'skribl/_skribl_vendor.html' %}
+<script src="{{ skribl_asset('lib/media_validation.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
   {# Shared recent-colour controller. Loaded before the editor script,
      which reads window.SkriblRecentColors at first use. #}
-  <script src="{{ skribl_asset('lib/recentcolors.js') }}"></script>
-  <script src="{{ skribl_asset('lib/eyedropper.js') }}"></script>
-  <script src="{{ skribl_asset('lib/smoothing.js') }}"></script>
-  <script src="{{ skribl_asset('lib/colorselect.js') }}"></script>
-  <script src="{{ skribl_asset('lib/photofit.js') }}"></script>
-  <script src="{{ skribl_asset('lib/looptrim.js') }}"></script>
-  <script src="{{ skribl_asset('lib/tooltip.js') }}"></script>
-  <script src="{{ skribl_asset('lib/hints.js') }}"></script>
-  <script src="{{ skribl_asset('lib/canvassizes.js') }}"></script>
-  <script src="{{ skribl_asset('lib/posted.js') }}"></script>
-  <script src="{{ skribl_asset('lib/postedui.js') }}"></script>
-  <script src="{{ skribl_asset('lib/helpsearch.js') }}"></script>
-<script src="{{ skribl_asset('flip.js') }}"></script>
+  <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/colorselect.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
+<script src="{{ skribl_asset('flip.js') }}" defer></script>
 </body>
 </html>

@@ -55,7 +55,11 @@
     pngBtn.disabled = !hasContent;
     // GIF option: needs strokes AND the vendored gifenc library.
     if (gifBtn) {
-      const gifReady = typeof window.gifenc !== 'undefined' && window.gifenc.GIFEncoder;
+      // Availability is now 'the server has the file', not 'the file is already
+      // in memory' — gifenc is fetched on the click. Asking for the global here
+      // would disable the option on every page load; see _skribl_vendor.html.
+      const gifReady = !!(window.gifenc && window.gifenc.GIFEncoder)
+        || !!(window.SKRIBL_VENDOR && window.SKRIBL_VENDOR.gifenc);
       if (!strokes.length) {
         gifBtn.disabled = true;
         if (gifDesc) gifDesc.textContent = 'Record a drawing first to export a GIF';
@@ -129,6 +133,12 @@
   // 1-bit alpha → crisp for bold line art); color mode paints the pad's solid
   // background (no fringe). Gated on gifenc; dormant/handled if absent.
   async function exportGif() {
+    try {
+      await skriblLoadVendor('gifenc');
+    } catch (e) {
+      showToast('GIF encoder didn\u2019t load — check your connection', null);
+      return;
+    }
     const G = window.gifenc;
     if (!(G && G.GIFEncoder && G.quantize && G.applyPalette)) {
       showToast('GIF export needs gifenc.min.js', null);
@@ -298,8 +308,14 @@
     return null;
   }
   async function webcodecsMp4Ready() {
-    const MM = window.Mp4Muxer;
-    if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
+    // Deliberately does NOT load the muxer. This runs when the export SHEET
+    // OPENS, only to choose between the "MP4 (H.264)" and "WebM" labels, and
+    // pulling 32 KB to pick a word would move the cost from every page load to
+    // every sheet open — better, but still paid by people who never export.
+    // Whether MP4 is possible depends on the browser's encoder support and on
+    // the muxer being DEPLOYED; presence of the URL answers the second without
+    // fetching it. exportViaWebCodecsMp4() does the real load, on the click.
+    if (!(window.Mp4Muxer || (window.SKRIBL_VENDOR && window.SKRIBL_VENDOR.mp4muxer))) return false;
     if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;
     const w = canvas.width & ~1, h = canvas.height & ~1;
     if (!(await pickAvcCodec(w, h))) return false;
@@ -316,6 +332,7 @@
 
   async function exportViaWebCodecsMp4() {
     // ---- capability pre-check (NO UI side effects; false ⇒ clean fallback) ----
+    try { await skriblLoadVendor('mp4muxer'); } catch (e) { return false; }
     const MM = window.Mp4Muxer;
     if (!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
     if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return false;

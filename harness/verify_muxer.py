@@ -45,7 +45,16 @@ with sync_playwright() as p:
     print("\nVENDORED MUXER — loads with the CDN unreachable")
     flip_errors, pad_errors = [], []
     flip = ctx.new_page(); flip.on("pageerror", lambda e: flip_errors.append(str(e)))
+    # mp4-muxer is no longer a <script> tag on either editor: 9,504 B encoded
+    # that only matters when somebody exports an MP4, so it is fetched on the
+    # click via skriblLoadVendor(). These ask for it first — the guarantees
+    # (our own origin, same API on both surfaces) are unchanged.
+    def load_muxer(page):
+        page.evaluate("() => window.skriblLoadVendor('mp4muxer')")
+        page.wait_for_timeout(200)
+
     flip.goto(BASE + "/flip", wait_until="load"); flip.wait_for_timeout(1500)
+    load_muxer(flip)
 
     f = flip.evaluate(API)
     check("Flip exposes window.Mp4Muxer", f["hasGlobal"])
@@ -56,6 +65,7 @@ with sync_playwright() as p:
 
     pad = ctx.new_page(); pad.on("pageerror", lambda e: pad_errors.append(str(e)))
     pad.goto(BASE + "/", wait_until="load"); pad.wait_for_timeout(1500)
+    load_muxer(pad)
     d = pad.evaluate(API)
     check("Pad exposes the same global", d["hasGlobal"] and d["hasMuxer"] and d["hasTarget"])
     check("both surfaces agree on the API shape", f == d, f"flip {f} vs pad {d}")
@@ -66,6 +76,7 @@ with sync_playwright() as p:
     flip2 = ctx.new_page()
     flip2.on("request", lambda r: reqs.append(r.url))
     flip2.goto(BASE + "/flip", wait_until="load"); flip2.wait_for_timeout(1500)
+    load_muxer(flip2)
     cdn_muxer = [u for u in reqs if "mp4-muxer" in u and "jsdelivr" in u]
     local_muxer = [u for u in reqs if "mp4-muxer" in u and "127.0.0.1" in u]
     check("no CDN request for mp4-muxer", not cdn_muxer, str(cdn_muxer[:1]))
@@ -126,7 +137,12 @@ with sync_playwright() as p:
     # all this needs to pin is that the second vendored library didn't disturb the
     # first, and that no jsdelivr script origin survives on the page.
     print("\nGIFENC — vendored as of v104 (encoder covered by verify_gifenc.py)")
-    check("window.gifenc is present, not CDN-dependent",
+    # Both codecs are lazy now, so ask for the second one too. The point of this
+    # assertion is unchanged: loading one vendored library must not disturb the
+    # other, and neither may come from a CDN.
+    flip.evaluate("() => window.skriblLoadVendor('gifenc')")
+    flip.wait_for_timeout(200)
+    check("window.gifenc is present once asked for, not CDN-dependent",
           flip.evaluate("() => typeof (window.gifenc||{}).GIFEncoder") == "function")
     check("Flip still loaded and ran with both libraries", flip.evaluate("() => Array.isArray(frames)"))
     check("no jsdelivr request of any kind remains",

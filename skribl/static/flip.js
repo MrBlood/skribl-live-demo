@@ -1596,7 +1596,8 @@ async function shareSkribl(){
   if(playing) stop();
   sharing=true; chip('Posting…');
   try{
-    const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:skriblPostHeaders(), body:JSON.stringify(buildSharePayload()) });
+    const _p=await skriblPackBody(JSON.stringify(buildSharePayload()), skriblPostHeaders());
+    const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:_p.headers, body:_p.body });
     let data={}; try{ data=await res.json(); }catch(_){}
     if(!res.ok){
       // 5xx is the server's fault and 4xx is usually the user's; saying which
@@ -1720,6 +1721,8 @@ function exportWebM(){
     drawFrameTo(c, frames[_units[n%_units.length]]); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
 }
 async function exportGIF(){
+  try{ await skriblLoadVendor('gifenc'); }
+  catch(e){ chip('GIF encoder didn\u2019t load — check your connection'); return; }
   const G=window.gifenc;
   if(!(G && G.GIFEncoder && G.quantize && G.applyPalette)){ chip('GIF export needs gifenc.min.js'); return; }
   if(exporting) return; if(!frames.length){ chip('Draw something first'); return; }
@@ -1778,6 +1781,7 @@ async function aacSupported(sr,ch){
   try{ const r=await AudioEncoder.isConfigSupported({codec:'mp4a.40.2',sampleRate:sr,numberOfChannels:ch,bitrate:128000}); return !!(r&&r.supported); }catch(e){ return false; }
 }
 async function exportViaWebCodecsMp4(){
+  try{ await skriblLoadVendor('mp4muxer'); }catch(e){ return false; }
   const MM=window.Mp4Muxer;
   if(!(MM && MM.Muxer && MM.ArrayBufferTarget)) return false;
   if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined') return false;
@@ -1852,8 +1856,11 @@ async function exportViaWebCodecsMp4(){
 // rate and channel count, which the trimmed loop inherits from currentAudioBuffer.
 async function expectedVideoFormat(){
   try{
-    const MM=window.Mp4Muxer;
-    if(!(MM && MM.Muxer && MM.ArrayBufferTarget)) return 'WebM';
+    // Label only — do NOT load the muxer here. This runs when the export sheet
+    // opens; fetching 32 KB to choose between the words "MP4" and "WebM" would
+    // just move the cost from every page load to every sheet open. Presence of
+    // the deployed URL answers it. exportViaWebCodecsMp4() loads for real.
+    if(!(window.Mp4Muxer || (window.SKRIBL_VENDOR && window.SKRIBL_VENDOR.mp4muxer))) return 'WebM';
     if(typeof VideoEncoder==='undefined' || typeof VideoFrame==='undefined') return 'WebM';
     const w=CW&~1, h=CH&~1; if(w<2||h<2) return 'WebM';
     if(!(await pickAvcCodec(w,h))) return 'WebM';
@@ -2319,7 +2326,10 @@ function openExportSheet(){
     }
   }
   const gifBtn=document.getElementById('exportGif'), gifDesc=document.getElementById('exportGifDesc'), gifToggle=document.getElementById('exportGifToggle');
-  const gifReady=(typeof window.gifenc!=='undefined' && window.gifenc.GIFEncoder);
+  // Availability is 'the server has the file', not 'it is already in memory':
+  // gifenc is fetched on the click now. See _skribl_vendor.html.
+  const gifReady=!!(window.gifenc && window.gifenc.GIFEncoder)
+    || !!(window.SKRIBL_VENDOR && window.SKRIBL_VENDOR.gifenc);
   if(gifBtn){
     if(single){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='Add a page or two to export a GIF'; if(gifToggle) gifToggle.hidden=true; }
     else if(!gifReady){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='GIF encoder didn\u2019t load — try reloading'; if(gifToggle) gifToggle.hidden=true; }

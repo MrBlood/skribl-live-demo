@@ -64,11 +64,12 @@
       }
 
       let res;
+      const packed = await skriblPackBody(body, skriblPostHeaders());
       try {
         res = await fetch(apiBase, {
           method: 'POST',
-          headers: skriblPostHeaders(),
-          body: body
+          headers: packed.headers,
+          body: packed.body
         });
       } catch (netErr) {
         // Network failure (offline / DNS / CORS) — temporary. Save locally so
@@ -436,11 +437,18 @@
     if (!lastPostUrl) return;
     if (lastPostUrl.charAt(0) === '#') {
       // Local fallback: #skribl=<id> — boot the in-page player via the hash.
+      // Always in place: there is no server URL to open in a tab.
       location.hash = lastPostUrl;
       location.reload();
-    } else {
-      // Server post: a real /s/<id> path — navigate to the player route.
+    } else if ((window.SKRIBL_PLAYER_TARGET || '_blank') === '_self') {
+      // The host routes the player itself; navigate in place as it asked.
       location.href = lastPostUrl;
+    } else {
+      // Default. This used to be location.href unconditionally, which inside a
+      // host application navigates the HOST'S page away — and left Pad the odd
+      // one out, since Flip's Open player and the posted list are both anchors
+      // with target="_blank". Configured by create_blueprint(player_target=...).
+      window.open(lastPostUrl, '_blank', 'noopener');
     }
   });
 

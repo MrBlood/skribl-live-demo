@@ -95,7 +95,15 @@ def register_routes(bp, *, index_route=False):
         try:
             post = None
             if _valid_public_id(public_id):
-                post = session().query(SkriblPost).filter_by(public_id=public_id).first()
+                # Same reason as the feed: this route renders a shell with the
+                # title and caption in the Open Graph tags and nothing else. The
+                # template never references the payload — the client fetches it
+                # separately from /api/skribls/<id> — so loading it here pulled
+                # the whole drawing and its base64 media over the database
+                # connection for every view of every shared link, to discard it.
+                post = (session().query(SkriblPost)
+                        .options(sa.orm.defer(SkriblPost.payload_json))
+                        .filter_by(public_id=public_id).first())
             # Treat a post the viewer may not read as absent: the shell still
             # renders (this route is render-always by design), the client's
             # fetch 404s, and the visitor gets the standard error panel. What
@@ -446,7 +454,15 @@ def register_routes(bp, *, index_route=False):
         # request for the entire table.
         limit = max(1, min(limit, 100))
 
-        q = session().query(SkriblPost)
+        # DEFER THE PAYLOAD. feed_dict() already refuses to serialise it — its
+        # docstring is explicit that a feed of fifty multi-megabyte payloads is
+        # a hundred megabytes of JSON — but the RESPONSE being clean did nothing
+        # about the QUERY, which loaded every payload from the database and threw
+        # it away. Measured on twelve modest posts: 3,046,610 B read per request,
+        # 9.75 ms against 1.04 ms deferred. At the 100-row cap with real posts
+        # that is hundreds of megabytes over the database connection, per feed
+        # request, to render metadata.
+        q = session().query(SkriblPost).options(sa.orm.defer(SkriblPost.payload_json))
 
         author = request.args.get("user_id")
         if author is not None:

@@ -143,9 +143,23 @@ with sync_playwright() as p:
 
     check("Player's nonced config script ran (SKRIBL_MODE set)",
           pages["Player"][0].evaluate("() => window.SKRIBL_MODE") == "player")
-    check("vendored libraries still load under script-src 'self'",
-          pages["Flip"][0].evaluate(
+    # The vendored codecs are injected at export time by skriblLoadVendor()
+    # rather than being <script> tags, so this now exercises the case a CSP is
+    # most likely to break: a script element created AND appended by JavaScript
+    # after load. `script-src 'self'` permits it by origin; a policy tightened
+    # to nonces-only would not, and the failure would surface only for people
+    # who export. Asking for them here is the point, not a workaround.
+    _flip = pages["Flip"][0]
+    _flip.evaluate("() => Promise.all([window.skriblLoadVendor('gifenc'),"
+                   " window.skriblLoadVendor('mp4muxer')])")
+    _flip.wait_for_timeout(400)
+    check("vendored libraries still load under script-src 'self' when injected "
+          "at export time",
+          _flip.evaluate(
               "() => typeof (window.gifenc||{}).GIFEncoder === 'function' && !!window.Mp4Muxer"))
+    check("and injecting them raised no CSP violation",
+          not _flip.evaluate("() => window.__csp"),
+          "; ".join((_flip.evaluate("() => window.__csp") or [])[:2]))
 
     print("\nNON-BREAKING — the two paths a naive policy would silently break")
     # 1. fetch() against a data: URL — exactly what app.js does to load audio.

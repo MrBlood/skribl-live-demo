@@ -554,6 +554,9 @@ function bindEl(id, ev, fn, opts) {
 }
 
 function startDraw(e) {
+  // Playback surface, never a drawing one. Bound at load, before player-mode
+  // is set, so the guard belongs here. See verify_player_isolation.py.
+  if (document.body.classList.contains('player-mode')) return;
   // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
   // preventDefault/anything else so it can cleanly abort a nascent 1-finger
   // stroke that the first finger just began. Guarded on ZoomView so the player
@@ -582,9 +585,8 @@ function startDraw(e) {
   if (repositioning && !recording) { beginPhotoDrag(e); return; }
   // Tapping the canvas while a drawer is open just dismisses it (no stray dot).
   // After the eyedropper/reposition checks so those keep working.
-  if (!document.getElementById('drawPanel').hidden ||
-      !document.getElementById('musicPanel').hidden ||
-      !document.getElementById('photoPanel').hidden) {
+  if (['drawPanel', 'musicPanel', 'photoPanel']
+      .some(i => { const p = document.getElementById(i); return p && !p.hidden; })) {
     openDrawer(null);
     return;
   }
@@ -1060,9 +1062,10 @@ setTimeout(() => {
 // above the bar; only one open at a time; tapping the open one closes it.
 function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
   const idMap = { draw: 'drawPanel', photo: 'photoPanel', music: 'musicPanel' };
-  document.getElementById('drawPanel').hidden  = name !== 'draw';
-  document.getElementById('musicPanel').hidden = name !== 'music';
-  document.getElementById('photoPanel').hidden = name !== 'photo';
+  for (const k in idMap) {
+    const p = document.getElementById(idMap[k]);
+    if (p) p.hidden = name !== k;
+  }
   document.querySelectorAll('#toolBar .tool-open').forEach(b =>
     b.classList.toggle('open', b.dataset.drawer === name));
   if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
