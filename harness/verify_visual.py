@@ -35,12 +35,34 @@ appeared at particular widths — the crop needed a viewport WIDER than the app
 column, which no fixture had.
 """
 import math
+import struct
 import sys
+import zlib
 
 from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:5001"
 VIEWPORTS = [(1600, 950), (1280, 900), (1023, 931), (830, 914), (420, 850)]
+
+PNG = "/tmp/visual_photo.png"
+
+
+def _png(w, h):
+    raw = b"".join(b"\x00" + bytes([(x * 7) % 256, (y * 5) % 256, 180, 255][k]
+                                   for x in range(w) for k in range(4))
+                   for y in range(h))
+
+    def chunk(tag, data):
+        body = tag + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xffffffff)
+
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw))
+            + chunk(b"IEND", b""))
+
+
+open(PNG, "wb").write(_png(400, 300))
 
 results = []
 
@@ -196,6 +218,59 @@ with sync_playwright() as p:
     check("play, restart and loop are all on screen",
           all(state == "visible" for _, state in ctrl), str(ctrl))
     pl.close()
+
+    print("\nARTWORK STAGE — the rule holds on BOTH surfaces, not one")
+    # v196 gave Flip an artwork stage and left Pad alone, which did not make Pad
+    # wrong — it made the two DISAGREE, which is worse. Flip's pad carried too much
+    # (onion skin and motion guides were sampled); Pad's canvas carried too little
+    # (the background photo is a DOM <img> BEHIND it, so an empty pixel fell through
+    # to bgColor and the eyedropper could not see the photo at all). Same rule
+    # broken in opposite directions.
+    #
+    # This lives in verify_visual.py rather than verify_flipmotion.py precisely so
+    # it cannot be satisfied by fixing one surface: it asserts the same property of
+    # each, in one place, in one loop.
+    for _label, _path, _input in (("Pad", "/", "#photoInput"), ("Flip", "/flip", None)):
+        _pg = ctx.new_page()
+        _pg.set_viewport_size({"width": 1100, "height": 950})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(1200)
+        _sel = _input or _pg.evaluate(
+            """() => { const i = document.querySelector('input[type=file][accept*=image]');
+                       return i ? ('#' + i.id) : null; }""")
+        if not _sel:
+            check(f"{_label}: has a photo input (fixture)", False, "none found")
+            _pg.close()
+            continue
+        _pg.set_input_files(_sel, PNG)
+        _pg.wait_for_timeout(2800)
+        _bg = _pg.evaluate("() => bgColor")
+        # Set a sentinel first. Without it "the result is not the backdrop" also
+        # passes when sampling silently does nothing and the pen keeps its
+        # default — which is how #ffffff went green here on the first run.
+        _pg.evaluate("() => { try { setColor('#010203'); } catch (e) { setPenColor('#010203'); } }")
+        _pg.wait_for_timeout(200)
+        # Sample an empty spot that sits OVER the photo. The photo is artwork, so
+        # the answer must be the photo — never the backdrop showing through.
+        _got = _pg.evaluate("""(isPad) => {
+            const c = document.getElementById('canvas') || document.getElementById('pad');
+            const b = c.getBoundingClientRect();
+            if (typeof sampleColorAt !== 'function') return null;
+            if (isPad) sampleColorAt(b.width * 0.5, b.height * 0.5);
+            else sampleColorAt({ clientX: b.left + b.width * 0.5,
+                                 clientY: b.top + b.height * 0.5 });
+            return (typeof color !== 'undefined') ? color : null; }""", _label == "Pad")
+        check(f"{_label}: the eyedropper actually sampled something",
+              _got is not None and _got.lower() != "#010203",
+              f"still the sentinel — sampleColorAt did nothing on {_label}, so any "
+              "assertion about the VALUE below would pass while testing nothing")
+        check(f"{_label}: the eyedropper can see the background photo",
+              _got and _got.lower() not in ((_bg or "").lower(), "#010203"),
+              f"returned {_got} against a backdrop of {_bg} — the photo IS artwork, "
+              "and a sampler that reads only the stroke canvas cannot see it")
+        _pg.close()
+
+
     b.close()
 
 bad = [r for r in results if not r[0]]

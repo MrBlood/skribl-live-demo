@@ -52,7 +52,8 @@ function applyCanvasSize(w, h, opts){
   if(!(w > 0 && h > 0 && w <= MAX_CANVAS_EDGE && h <= MAX_CANVAS_EDGE)) return false;
   if(w === CW && h === CH) return false;
   CW = w; CH = h;
-  const layers = [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx]];
+  const layers = [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx],
+                  [artCv, actx]];   // the artwork stage resizes with the rest
   for(const pair of layers){
     const cv = pair[0], c = pair[1];
     if(!cv || !c) continue;
@@ -182,6 +183,14 @@ let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
 // Onion skin depth/tint are view-only session state — deliberately NOT persisted
 // or posted, so they cannot affect the payload format or the player.
 let onionDepth = 1, onionTint = false;
+// Motion guides: the path the drawing travels, and the SPACING between pages.
+// Spacing is the whole point — even gaps read as constant speed, gaps that
+// widen read as acceleration. It is the classic spacing chart, drawn for you.
+// Session-only view state, like onion: never persisted, never posted, and
+// never rendered into a thumbnail, an export or a shared link.
+let arcGuides = false;
+const ARC_WINDOW = 12;         // pages either side; bounds both cost and clutter
+
 const ONION_ALPHAS = [0.30, 0.17, 0.10];          // nearer frame = more visible
 const ONION_TINTS  = ['#ff5f6d', '#ff9f43', '#ffd76a'];   // warmer = further back
 let pageClip = null;                              // copied page, for paste
@@ -473,6 +482,45 @@ const frameCv = document.createElement('canvas');
 frameCv.width = CW*DPR; frameCv.height = CH*DPR;
 const fctx = frameCv.getContext('2d'); fctx.scale(DPR,DPR);
 
+/* ---- ARTWORK STAGE ------------------------------------------------------
+ * What the drawing IS: backdrop, background image, and the current page's
+ * strokes. Nothing else is ever composited here — not onion skin, not the
+ * motion path, not spacing dots, not selection bounds, not a cursor.
+ *
+ * The live pad is a PRESENTATION surface: artwork with editor overlays drawn
+ * on top so you can work. Anything that reads a COLOUR or produces a FILE must
+ * read the artwork instead, because an overlay is a temporary aid and has no
+ * business in a picked colour or a published frame.
+ *
+ * This exists because the eyedropper read the pad. Measured before the change:
+ * draw a red ring, add a page, and sample where only the onion skin shows —
+ * it returned #561317, the onion's red at reduced alpha over the backdrop, a
+ * colour present nowhere in the artwork. The motion guides had the same problem
+ * and were patched with a suppress-and-repaint flag; that fixed one overlay and
+ * would have needed repeating for the next one. This retires the class.
+ */
+const artCv = document.createElement('canvas');
+artCv.width = CW*DPR; artCv.height = CH*DPR;
+const actx = artCv.getContext('2d'); actx.scale(DPR,DPR);
+
+// Composite the artwork as it stands. Cheap: the same two calls render() makes,
+// minus every overlay. Callers ask for it on demand rather than keeping it in
+// sync, so it can never drift from what is actually on the page.
+function paintArtwork(){
+  // Flip paints its own backdrop (drawBackdrop already composites the photo and
+  // the background colour), so the shared stage is handed a finished backdrop
+  // and only needs the strokes layered on. See lib/artwork.js.
+  actx.setTransform(DPR,0,0,DPR,0,0);
+  actx.clearRect(0,0,CW,CH);
+  drawBackdrop(actx);
+  fctx.clearRect(0,0,CW,CH);
+  paintStatic(fctx, frame().strokes);
+  return window.SkriblArtwork.stage({
+    canvas: artCv, w: CW, h: CH, dpr: DPR, bg: null, photo: null,
+    strokes: frameCv, keep: true
+  });
+}
+
 // Where the background image lands, honouring fit + zoom + reposition.
 function photoRect(iw, ih){
   // Shared with Pad and the player via lib/photofit.js. This used to special-
@@ -502,6 +550,56 @@ function drawBackdrop(c){
   c.restore();
 }
 function paintFrame(c, strokes){ fctx.clearRect(0,0,CW,CH); paintStatic(fctx, strokes); c.drawImage(frameCv, 0, 0, CW, CH); }
+// Centre of mass of a page's ink, in canvas coordinates. Averaging the stroke
+// POINTS (not their bounding box) is what makes the path track the drawing's
+// weight rather than its extremes, so a wobbling outline does not throw it.
+// Cheap enough to recompute per render: bounded by ARC_WINDOW pages.
+function frameCentroid(f){
+  const pts = f && f.strokes;
+  if(!pts || !pts.length) return null;
+  let sx=0, sy=0, n=0;
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    if(p && typeof p.x === 'number' && typeof p.y === 'number'){ sx+=p.x; sy+=p.y; n++; }
+  }
+  return n ? { x:sx/n, y:sy/n } : null;
+}
+
+function drawArcGuides(c){
+  const lo = Math.max(0, idx-ARC_WINDOW), hi = Math.min(frames.length-1, idx+ARC_WINDOW);
+  const pts = [];
+  for(let i=lo;i<=hi;i++){
+    const ct = frameCentroid(frames[i]);
+    if(ct) pts.push({ i, x:ct.x, y:ct.y });
+  }
+  if(pts.length < 2) return;      // one page has no motion to show
+  c.save();
+  c.lineCap='round'; c.lineJoin='round';
+  // The arc itself, drawn twice: a dark casing under a light line so it stays
+  // legible on both a white page and a black one without knowing which.
+  for(const pass of [{w:3.5, col:'rgba(0,0,0,0.45)'}, {w:1.5, col:'rgba(125,125,255,0.95)'}]){
+    c.beginPath();
+    c.moveTo(pts[0].x, pts[0].y);
+    for(let k=1;k<pts.length;k++){
+      // Quadratic through midpoints: a smooth arc rather than a dogleg polyline,
+      // which matters because the ARC is the thing being judged.
+      const a=pts[k-1], b=pts[k];
+      c.quadraticCurveTo(a.x, a.y, (a.x+b.x)/2, (a.y+b.y)/2);
+    }
+    c.lineWidth=pass.w; c.strokeStyle=pass.col; c.stroke();
+  }
+  // A dot per page. The GAPS between them are the spacing chart.
+  for(const p of pts){
+    const here = p.i === idx;
+    c.beginPath();
+    c.arc(p.x, p.y, here ? 5 : 3, 0, Math.PI*2);
+    c.fillStyle = here ? 'rgba(160,140,255,1)' : 'rgba(255,255,255,0.85)';
+    c.strokeStyle = 'rgba(0,0,0,0.55)'; c.lineWidth = 1.5;
+    c.fill(); c.stroke();
+  }
+  c.restore();
+}
+
 function render(){
   ctx.clearRect(0,0,CW,CH);
   drawBackdrop(ctx);
@@ -529,6 +627,10 @@ function render(){
     }
   }
   paintFrame(ctx, frame().strokes);
+  // Last, so the guides read on top of the drawing rather than under it. Only
+  // ever on the live pad: thumbnails, exports and the player all render through
+  // their own contexts, so nothing here can be baked into what is published.
+  if(arcGuides && !playing) drawArcGuides(ctx);
 }
 
 /* Bind an event without letting a missing element take the rest of the file
@@ -544,6 +646,19 @@ function render(){
  * captures console output into the report sheet, so a control that quietly
  * stops working on a device we cannot reproduce still names itself.
  */
+/* Is the user typing? Every global key handler needs this, so it lives at top
+ * level: it used to be declared inside the pan/zoom block, invisible to
+ * anything outside it, and the flip-scrub handler below threw a
+ * ReferenceError on every arrow press because of it. */
+function typingTarget(el){
+  return !!(el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || '') || el.isContentEditable));
+}
+// Legacy name, kept so the older handler below reads unchanged. There were
+// THREE copies of this predicate in this file and they did not agree — one
+// omitted SELECT — which is how a keyboard shortcut fires while you are
+// choosing from a dropdown.
+const _typingEl = typingTarget;
+
 function bindEl(id, ev, fn, opts){
   const el = document.getElementById(id);
   if(!el){ console.warn('[skribl] missing element for binding:', id, ev); return null; }
@@ -604,9 +719,19 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; curCount=1; redoStack.length=0; noteAction('stroke');
+  // A stroke belongs to the page it STARTED on. Every later step used frame(),
+  // which re-reads the current index — so changing page mid-stroke (tapping a
+  // thumbnail, the pagebar, or holding an arrow to riffle) pushed the remaining
+  // points and the group count onto whichever page had become current. The
+  // result was one page with points and no group and another with a group and
+  // no points, which the server rejects on share:
+  //   'frames[0].strokeGroups' accounts for 0 points, but the strokes array
+  //   contains 3.
+  // Reported from the live demo on a phone; reproduced as 4 points / 0 groups.
+  strokeFrame = frame();
   const p=pos(e); smoothPt={x:p.x,y:p.y}; lastRaw={x:p.x,y:p.y};
   const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
-  frame().strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
+  strokeFrame.strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
@@ -631,7 +756,7 @@ pad.addEventListener('pointermove', e=>{
   if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
   else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
   curCount++; const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
-  frame().strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
+  (strokeFrame || frame()).strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
   render(); });
 function endStroke(){
   invalidateClearUndo();   // review #4: new work invalidates a pending clear-undo
@@ -644,14 +769,14 @@ function endStroke(){
     // the nominal slider value, which was invisible at constant width but with
     // pressure would snap the final few points back to full thickness — a blob
     // on the end of every tapered stroke.
-    const _pts=frame().strokes, _last=_pts.length ? _pts[_pts.length-1] : null;
+    const _pts=(strokeFrame || frame()).strokes, _last=_pts.length ? _pts[_pts.length-1] : null;
     const dsize=(_last && typeof _last.size==='number') ? _last.size : size, pcol=penColorFor(color);
     for(let k=0;k<6;k++){ smoothPt={x: smoothPt.x+(lastRaw.x-smoothPt.x)*0.5, y: smoothPt.y+(lastRaw.y-smoothPt.y)*0.5};
-      curCount++; frame().strokes.push({ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false }); }
+      curCount++; (strokeFrame || frame()).strokes.push({ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false }); }
     render();
   }
   drawing=false; smoothPt=null; lastRaw=null;
-  frame().strokeGroups.push(curCount); curCount=0;
+  (strokeFrame || frame()).strokeGroups.push(curCount); curCount=0; strokeFrame=null;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 function endMoveDrag(){
   if(!moveDragging) return;
@@ -737,8 +862,9 @@ pad.addEventListener('pointerleave', hideCursors);
 function abortStrokeForPinch(){
   if(reposActive){ reposActive=false; return; }
   if(!drawing) return;
-  const s=frame().strokes; if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
-  drawing=false; curCount=0; smoothPt=null; lastRaw=null; render();
+  const s=(strokeFrame || frame()).strokes;
+  if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
+  drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; render();
 }
 function _touchDist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
 function _touchMid(a,b){ const r=document.querySelector('.flip-wrap').getBoundingClientRect();
@@ -843,7 +969,6 @@ window.addEventListener('touchcancel', _pinchEnd);
   flipWrap.addEventListener('wheel',(e)=>{ if(zoom<=1) return; e.preventDefault(); let dx=e.deltaX, dy=e.deltaY; if(e.shiftKey && dx===0){ dx=dy; dy=0; } panX-=dx; panY-=dy; paint(false); }, {passive:false});
   // hold Space and drag to grab-pan (desktop)
   let spaceHeld=false, spaceDragging=false, lastX=0, lastY=0;
-  function typingTarget(el){ return el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.isContentEditable); }
   window.addEventListener('keydown',(e)=>{ if(e.code==='Space' && !typingTarget(e.target)){ spaceHeld=true; if(zoom>1){ e.preventDefault(); flipWrap.style.cursor=spaceDragging?'grabbing':'grab'; } } });
   window.addEventListener('keyup',(e)=>{ if(e.code==='Space'){ spaceHeld=false; spaceDragging=false; flipWrap.style.cursor=''; } });
   flipWrap.addEventListener('mousedown',(e)=>{ if(spaceHeld && zoom>1){ spaceDragging=true; lastX=e.clientX; lastY=e.clientY; flipWrap.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
@@ -1104,6 +1229,90 @@ function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.leng
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true); }
 function go(i){ if(moveMode) return; idx=i; redoStack.length=0; buildStrip(); render(); }
 
+/* ---- Instant flip scrub -------------------------------------------------
+ * Hold a left/right key and the pages flip past like a thumb riffling paper.
+ * This is the whole metaphor of the app, so it has to feel physical: fast,
+ * continuous, and stoppable exactly where your eye says stop.
+ *
+ * It cannot go through go(). buildStrip() destroys and rebuilds every tile in
+ * the strip, each with its own <canvas> and listeners, and redraws every
+ * thumbnail — fine for a click, ruinous sixteen times a second, and it would
+ * also throw away the thumbnails it just drew. goFast() moves the selection
+ * and repaints the pad only; the strip is rebuilt ONCE when the key comes up.
+ *
+ * Browser key-repeat is not usable for this: the first repeat lags ~500ms and
+ * the rate is an OS setting, so the same hold flips at different speeds on
+ * different machines. The timer below is ours, so the feel is ours.
+ */
+const FLIP_HOLD_DELAY = 240;   // ms before a hold becomes a riffle
+const FLIP_HOLD_STEP  = 62;    // ms between pages while held (~16/sec)
+let _flipHoldT = null, _flipHoldDir = 0, _flipHoldMoved = false;
+
+function markStripActive(){
+  const tiles = strip.children;
+  for(let i=0;i<tiles.length;i++){
+    if(tiles[i].classList) tiles[i].classList.toggle('on', i===idx);
+  }
+  const el = tiles[idx];
+  // Keep the current page in view, but never scroll the PAGE — 'nearest' on
+  // both axes confines it to the strip's own overflow.
+  if(el && el.scrollIntoView) el.scrollIntoView({ block:'nearest', inline:'nearest' });
+}
+
+function goFast(i){
+  if(moveMode) return;
+  idx = i;
+  // Mirrors go(): navigating clears the redo stack there too. Diverging would
+  // mean redo behaved differently depending on how you reached the page.
+  redoStack.length = 0;
+  markStripActive();
+  render();
+}
+
+function stepFrame(dir){
+  if(moveMode || playing) return false;
+  disarmAll();          // leaving a page must cancel its armed delete
+  const next = idx + dir;
+  if(next < 0 || next > frames.length-1) return false;   // stop at the ends
+  goFast(next);
+  return true;
+}
+
+function startFlipHold(dir){
+  if(_flipHoldDir === dir) return;
+  endFlipHold(false);
+  _flipHoldDir = dir;
+  _flipHoldMoved = stepFrame(dir);        // one page immediately: a tap is a step
+  _flipHoldT = setTimeout(function riffle(){
+    if(!_flipHoldDir) return;
+    if(stepFrame(_flipHoldDir)) _flipHoldMoved = true;
+    _flipHoldT = setTimeout(riffle, FLIP_HOLD_STEP);
+  }, FLIP_HOLD_DELAY);
+}
+
+function endFlipHold(rebuild){
+  if(_flipHoldT){ clearTimeout(_flipHoldT); _flipHoldT = null; }
+  _flipHoldDir = 0;
+  if(rebuild !== false && _flipHoldMoved){
+    _flipHoldMoved = false;
+    buildStrip();      // once, at the end — restores per-tile state and thumbs
+  }
+}
+
+window.addEventListener('keydown', e=>{
+  if(typingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+  if(!dir) return;
+  e.preventDefault();
+  startFlipHold(dir);
+});
+window.addEventListener('keyup', e=>{
+  if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') endFlipHold(true);
+});
+// A hold must not survive the tab losing focus: keyup never arrives, and the
+// riffle would keep running against a page nobody is looking at.
+window.addEventListener('blur', ()=> endFlipHold(true));
+
 /* ---- flip playback ---- */
 const playBtn=document.getElementById('play');
 const liveBadge=document.querySelector('.flip-live');
@@ -1290,9 +1499,13 @@ function _initEyedropper(){
 }
 function setPicking(v){ _initEyedropper(); if(_eyedropper){ v ? (!picking && _eyedropper.toggle()) : _eyedropper.disarm(); } }
 function sampleColorAt(e){
+  // Reads the ARTWORK, never the pad. The pad carries onion skin and motion
+  // guides, and sampling those returned colours that exist nowhere in the
+  // drawing — a ghost of the previous page, or the guide's own violet.
   try{
+    const art = paintArtwork();
     const p=pos(e); const dx=Math.round(p.x*DPR), dy=Math.round(p.y*DPR);
-    const d=ctx.getImageData(dx,dy,1,1).data;
+    const d=art.getContext('2d').getImageData(dx,dy,1,1).data;
     const hex = d[3] < 10 ? bgColor
       : '#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');
     setColor(hex); addRecent(hex);
@@ -2817,6 +3030,16 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && tuneIsOpen()) se
 
 const onionEl=document.getElementById('onion');
 const onionGroup=document.getElementById('onionGroup');
+// Motion guides toggle. Bound through bindEl for the reason documented there:
+// an unguarded getElementById().addEventListener() chain that hits a null takes
+// out every binding written after it.
+bindEl('arcGuideBtn','click',function(){
+  arcGuides = !arcGuides;
+  this.setAttribute('aria-checked', arcGuides ? 'true' : 'false');
+  this.classList.toggle('on', arcGuides);
+  render();
+});
+
 const onionSeg=document.getElementById('onionDepthSeg');
 const onionTintBtn=document.getElementById('onionTintBtn');
 function positionOnionSeg(){
@@ -2851,7 +3074,6 @@ onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
 /* ---- keyboard ---- */
-function _typingEl(el){ return el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||'') || el.isContentEditable); }
 window.addEventListener('keydown', e=>{
   if(_typingEl(e.target)) return;
   if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); redoStroke(); return; }
@@ -2859,8 +3081,9 @@ window.addEventListener('keydown', e=>{
   // Space = play / stop (when not magnified — Space pans the zoomed canvas instead).
   if((e.code==='Space' || e.key===' ') && !(ZoomView && ZoomView.isZoomed())){ e.preventDefault(); playing?stop():play(); return; }
   if(playing || moveMode) return;   // page identity must not shift mid-move
-  if(e.key==='ArrowLeft'  && idx>0){ disarmAll(); go(idx-1); }
-  if(e.key==='ArrowRight' && idx<frames.length-1){ disarmAll(); go(idx+1); }
+  // ArrowLeft/ArrowRight are handled by the flip-scrub block above, which adds
+  // hold-to-riffle. Leaving the single-step versions here as well meant BOTH
+  // fired on one press and the page advanced twice.
   if(e.key==='p' || e.key==='P'){ setTool('pen'); }
   if(e.key==='e' || e.key==='E'){ setTool('eraser'); }
 });

@@ -1,27 +1,27 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-13T14:54:33Z
+UTC timestamp           : 2026-08-14T03:33:00Z
 Host                    : Linux x86_64
-Tree SHA-256            : 70cf761b7f849dfeffdbb63bd72a73f47f3b7f58d7f4b22ad83b82e5dd67c75f
+Tree SHA-256            : 397d93bf21f79865f9b786211ecf52371aabd324e2a577f51bd9ecff2a90c55b
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v193
+SKRIBL_VERSION          : v198
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.Caovn7B5mb/harness.db)
+Database reset          : yes (fresh /tmp/tmp.9sziIB4Mi6/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/claude/work/skribl-v193/harness/run_harness.sh verify_version.py verify_migrations.py verify_postgres.py
+Command                 : /home/claude/work/skribl-v198/harness/run_harness.sh verify_version.py verify_migrations.py verify_postgres.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 14 batches recorded as one run
-suites requested : 46
+# whole release run: 15 batches recorded as one run
+suites requested : 47
   verify_amber.py: ok — 15/15 passed
   verify_audio.py: ok — 9/9 passed
   verify_canvas.py: ok — 44/44 passed
@@ -36,6 +36,7 @@ suites requested : 46
   verify_feed.py: ok — 25/25 passed
   verify_fix.py: ok — 18/18 passed
   verify_flipmeta.py: ok — 45/45 passed
+  verify_flipmotion.py: ok — 26/26 passed
   verify_gifenc.py: ok — 38/38 passed
   verify_help.py: ok — 61/61 passed
   verify_hold.py: ok — 37/37 passed
@@ -61,13 +62,13 @@ suites requested : 46
   verify_report.py: ok — 35/35 passed
   verify_review.py: ok — 278/278 passed
   verify_scrub.py: ok — 17/17 passed
-  verify_seam.py: ok — 105/105 passed
+  verify_seam.py: ok — 108/108 passed
   verify_storage.py: ok — 36/36 passed
   verify_surfaces.py: ok — 7/7 passed
   verify_tips.py: ok — 43/43 passed
   verify_ux.py: ok — 130/130 passed
   verify_version.py: ok — 23/23 passed
-  verify_visual.py: ok — 72/72 passed
-assertions passed: 1817   (skipped suites contribute 0)
+  verify_visual.py: ok — 76/76 passed
+assertions passed: 1850   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0

@@ -116,7 +116,14 @@ print("\nDOCS — the two generated-file lists agree")
 # immediately stopped reproducing. Drift between these lists is silent.
 _sh = (ROOT / "harness" / "run_harness.sh").read_text(encoding="utf-8")
 _py = (ROOT / "harness" / "release_run.py").read_text(encoding="utf-8")
-_sh_names = set(re.findall(r"-e '([^']+)'", _sh))
+# Only the generated-DOCUMENT exclusions are comparable. run_harness.sh also
+# excludes path CLASSES from its `git ls-files` branch (__pycache__, .pyc,
+# instance/) which the find branch gets from find's own -not clauses and which
+# release_run.py hardcodes in tree_files() — those are the same rule expressed
+# three ways, not a list that can drift out of step with GENERATED.
+_sh_names = {n for n in re.findall(r"-e '([^']+)'", _sh)
+             if not n.startswith("^") and not n.startswith("\\.")
+             and not n.endswith("/")}
 _py_names = set(re.findall(r'"([A-Za-z0-9_./-]+\.(?:md|txt))"',
                            re.search(r"GENERATED = \{(.*?)\}", _py, re.S).group(1)))
 _py_names.add("SHA256SUMS")
@@ -152,9 +159,18 @@ print("\nDOCS — the archive reports one version, everywhere")
 _ver = re.search(r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
                  (ROOT / "skribl" / "core.py").read_text(encoding="utf-8"))
 _v = _ver.group(1) if _ver else None
-check("the archive directory name carries SKRIBL_VERSION",
-      bool(_v) and ROOT.name.endswith(_v),
-      f"directory {ROOT.name!r} against SKRIBL_VERSION {_v!r}")
+# The archive is distributed as skribl-<version>/, and the name carrying the
+# version is how you can tell two unpacked drops apart in a downloads folder.
+# A GIT CHECKOUT is named after the repository, not the release, so this cannot
+# apply there — it would fail permanently for everyone working in the repo,
+# which is how an assertion gets ignored rather than fixed.
+if (ROOT / ".git").exists():
+    check("archive naming: skipped, this is a git checkout",
+          True, f"directory {ROOT.name!r} — the version lives in skribl/core.py")
+else:
+    check("the archive directory name carries SKRIBL_VERSION",
+          bool(_v) and ROOT.name.endswith(_v),
+          f"directory {ROOT.name!r} against SKRIBL_VERSION {_v!r}")
 
 print("\nDOCS — suite counts match what is on disk")
 on_disk = sorted(p.name for p in (ROOT / "harness").glob("verify_*.py"))

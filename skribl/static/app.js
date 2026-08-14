@@ -936,11 +936,36 @@ function _initRecent() {
 function addRecent(hex) { _initRecent(); if (_recent) _recent.add(hex); }
 function renderRecent() { _initRecent(); if (_recent) _recent.render(); }
 
+/* The artwork stage lives in lib/artwork.js — ONE implementation shared with
+ * Flip. See that file for the rule and for what each surface was getting wrong.
+ * Pad deliberately does NOT wrap it in a local paintArtwork(): flip.js already
+ * defines that name, and verify_surfaces.py ratchets how many functions the two
+ * files define in common. It caught exactly that on a release run. */
+const artCv = document.createElement('canvas');
+
+function padArtwork() {
+  const dpr = window.devicePixelRatio || 1;
+  const showing = photoBgImg && photoBgImg.src && photoBgImg.complete
+    && photoBgImg.naturalWidth && photoBgImg.style.display !== 'none';
+  return window.SkriblArtwork.stage({
+    canvas: artCv, w: canvas.width / dpr, h: canvas.height / dpr, dpr: dpr,
+    bg: bgColor,
+    photo: showing ? { img: photoBgImg, fit: photoFit, offX: photoOffsetX,
+                       offY: photoOffsetY, zoom: photoZoom,
+                       opacity: photoOpacityVal_, blur: photoBlur_ } : null,
+    // Pad's canvas holds artwork only: the nib is a DOM element, and the wet
+    // layer is a stroke in progress, which IS artwork.
+    strokes: canvas
+  });
+}
+
 function sampleColorAt(x, y) {
   try {
     const dpr = window.devicePixelRatio || 1;
-    const d = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
-    // Transparent spot (empty canvas) reads as the visible background instead.
+    const art = padArtwork();
+    const d = art.getContext('2d').getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
+    // The stage is opaque, so this fallback should never fire now. Kept because
+    // a zero-sized canvas before first layout would otherwise return black.
     let hex = d[3] < 10 ? bgColor
       : '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
     setPenColor(hex);

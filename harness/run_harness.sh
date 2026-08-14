@@ -21,7 +21,18 @@ export SKRIBL_RATE_MAX_POSTS="${SKRIBL_RATE_MAX_POSTS:-100000}"
 # be reproduced. Both paths now apply the same exclusions.
 _tree_files() {
   if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-    git -C "$ROOT" ls-files
+    # ls-files lists TRACKED files, and a repo that has committed __pycache__
+    # tracks .pyc bytecode — which the find branch below excludes. That made the
+    # comment above ("Both paths now apply the same exclusions") false: in such a
+    # checkout this banner reported a different hash from harness/RELEASE.md,
+    # which computes its own list with find. Worse, .pyc content varies by
+    # machine and Python build, so the checkout's hash was not reproducible on
+    # any other machine. Observed on a real repository with 40 tracked .pyc
+    # files: banner b11ffcef..., RELEASE.md 70cf761b....
+    # instance/ is excluded here for the same reason: a tracked local database
+    # would put a file the app WRITES AT RUNTIME into the hash of the tree.
+    git -C "$ROOT" ls-files \
+      | grep -v -e '__pycache__/' -e '\.pyc$' -e '^instance/'
   else
     (cd "$ROOT" && find . -type f \
         -not -path './.git/*' -not -path './instance/*' \
