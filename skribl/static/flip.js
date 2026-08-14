@@ -245,6 +245,7 @@ let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // 
 let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
 let musicName = '';                                                          // track filename (shown in the dropzone)
 let drawing = false, curCount = 0, playing = false, playTimer = null;
+let strokePointerId = null;   // the pointer that owns the stroke in progress
 let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
 let editIdx = 0, armedDel = -1, armedClear = false;
@@ -702,7 +703,27 @@ function sizeFor(e, base){
 }
 let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
-pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return; e.preventDefault(); disarmAll();
+pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return;
+  // A STROKE BELONGS TO ONE POINTER. A second finger, or a palm landing beside
+  // a pen, fired pointerdown while a stroke was already in progress: curCount
+  // was reset to 1 and its point went into the SAME strokes array, so every
+  // point captured up to that moment lost its group entry. The frame then
+  // serialised with more points than strokeGroups accounts for and the server
+  // refused the share:
+  //   'frames[9].strokeGroups' accounts for 317 points, but the strokes array
+  //   contains 318.
+  // Reported from the live demo; reproduced by dispatching a second pointerdown
+  // mid-stroke, which gives 22 points against 1 group. isPrimary is NOT enough
+  // — each pointerType has its own primary, so a pen and a palm are both
+  // primary — hence the id comparison.
+  //
+  // The Pad cannot reach this shape at all: it accumulates into a separate
+  // `currentStroke` and concatenates it with its group count in one step
+  // (app.js endDraw/commitActiveStroke), so the two can never disagree. Flip
+  // pushes into the shared array and counts alongside it, which is what makes
+  // the guard load-bearing here and unnecessary there.
+  if(drawing && e.pointerId !== strokePointerId) return;
+  e.preventDefault(); disarmAll();
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
@@ -718,7 +739,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     return;
   }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
-  drawing=true; curCount=1; redoStack.length=0; noteAction('stroke');
+  drawing=true; strokePointerId=e.pointerId; curCount=1; redoStack.length=0; noteAction('stroke');
   // A stroke belongs to the page it STARTED on. Every later step used frame(),
   // which re-reads the current index — so changing page mid-stroke (tapping a
   // thumbnail, the pagebar, or holding an arrow to riffle) pushed the remaining
@@ -776,7 +797,7 @@ function endStroke(){
     render();
   }
   drawing=false; smoothPt=null; lastRaw=null;
-  (strokeFrame || frame()).strokeGroups.push(curCount); curCount=0; strokeFrame=null;
+  (strokeFrame || frame()).strokeGroups.push(curCount); curCount=0; strokeFrame=null; strokePointerId=null;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 function endMoveDrag(){
   if(!moveDragging) return;
@@ -864,7 +885,7 @@ function abortStrokeForPinch(){
   if(!drawing) return;
   const s=(strokeFrame || frame()).strokes;
   if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
-  drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; render();
+  drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; strokePointerId=null; render();
 }
 function _touchDist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
 function _touchMid(a,b){ const r=document.querySelector('.flip-wrap').getBoundingClientRect();
@@ -969,6 +990,8 @@ window.addEventListener('touchcancel', _pinchEnd);
   flipWrap.addEventListener('wheel',(e)=>{ if(zoom<=1) return; e.preventDefault(); let dx=e.deltaX, dy=e.deltaY; if(e.shiftKey && dx===0){ dx=dy; dy=0; } panX-=dx; panY-=dy; paint(false); }, {passive:false});
   // hold Space and drag to grab-pan (desktop)
   let spaceHeld=false, spaceDragging=false, lastX=0, lastY=0;
+  KeyRegistry.register({surface:'flip', label:'grab-pan the magnified canvas',
+    keys:['Space'], scope:()=>zoom>1});
   window.addEventListener('keydown',(e)=>{ if(e.code==='Space' && !typingTarget(e.target)){ spaceHeld=true; if(zoom>1){ e.preventDefault(); flipWrap.style.cursor=spaceDragging?'grabbing':'grab'; } } });
   window.addEventListener('keyup',(e)=>{ if(e.code==='Space'){ spaceHeld=false; spaceDragging=false; flipWrap.style.cursor=''; } });
   flipWrap.addEventListener('mousedown',(e)=>{ if(spaceHeld && zoom>1){ spaceDragging=true; lastX=e.clientX; lastY=e.clientY; flipWrap.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
@@ -1299,6 +1322,11 @@ function endFlipHold(rebuild){
   }
 }
 
+// Unscoped on purpose: riffling is live whenever Flip is. The single-step
+// versions that used to sit in the shortcut block below were unscoped too,
+// which is exactly why both fired on one press.
+KeyRegistry.register({surface:'flip', label:'hold to riffle pages',
+  keys:['ArrowLeft','ArrowRight']});
 window.addEventListener('keydown', e=>{
   if(typingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
   const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
@@ -2476,6 +2504,8 @@ document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest(
 // — the export sheet, the tune panel, the help drawer, and Pad's own menu — so
 // this menu was the only one that trapped you. It mattered less before it had
 // a scrim; now a full-screen dim with no keyboard exit is a dead end.
+KeyRegistry.register({surface:'flip', label:'close the overflow menu',
+  keys:['Escape'], scope:()=>!moreMenu.hidden});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !moreMenu.hidden) closeMenu(); });
 // And the scrim is a click target in its own right: dimming the page implies
 // tapping the dim area dismisses it, which the document handler above only
@@ -2673,6 +2703,8 @@ if(exLoopsSeg) exLoopsSeg.addEventListener('click', e=>{
 function closeExportSheet(){ exportOverlay.classList.remove('open'); _exCloseT=setTimeout(()=>{ exportOverlay.hidden=true; },350); }
 bindEl('miExport', 'click', openExportSheet);
 exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')) closeExportSheet(); });
+KeyRegistry.register({surface:'flip', label:'close the export sheet',
+  keys:['Escape'], scope:()=>!exportOverlay.hidden});
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !exportOverlay.hidden) closeExportSheet(); });
 const _exHandle = exportSheet ? exportSheet.querySelector('.menu-handle') : null;
 if(_exHandle) _exHandle.addEventListener('click', e=>{ e.stopPropagation(); closeExportSheet(); });
@@ -2898,6 +2930,8 @@ bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
 })();
 // Escape cancels rather than commits. A drag you did not mean is undone by
 // leaving, which is what Escape means everywhere else in this app.
+KeyRegistry.register({surface:'flip', label:'cancel Move artwork',
+  keys:['Escape'], scope:()=>moveMode});
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && moveMode) cancelMove(); });
 
 /* ---- typing an exact offset ----------------------------------------------
@@ -3026,6 +3060,8 @@ function setTune(open){
 }
 if(tuneBtn) tuneBtn.addEventListener('click',()=>setTune(!tuneIsOpen()));
 // Escape closes it, like every other transient surface here.
+KeyRegistry.register({surface:'flip', label:'close the tune panel',
+  keys:['Escape'], scope:()=>tuneIsOpen()});
 document.addEventListener('keydown',e=>{ if(e.key==='Escape' && tuneIsOpen()) setTune(false); });
 
 const onionEl=document.getElementById('onion');
@@ -3074,6 +3110,12 @@ onionEl.addEventListener('click',()=>setOnion(!onion));
 onionEl.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOnion(!onion); } });
 
 /* ---- keyboard ---- */
+KeyRegistry.register({surface:'flip', label:'undo', keys:['Mod+z']});
+KeyRegistry.register({surface:'flip', label:'redo', keys:['Mod+y','Mod+Shift+z']});
+KeyRegistry.register({surface:'flip', label:'play / stop', keys:['Space'],
+  scope:()=>!(ZoomView && ZoomView.isZoomed())});
+KeyRegistry.register({surface:'flip', label:'pen / eraser', keys:['p','e'],
+  scope:()=>!playing && !moveMode});
 window.addEventListener('keydown', e=>{
   if(_typingEl(e.target)) return;
   if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); redoStroke(); return; }
@@ -3107,6 +3149,8 @@ function closeHelpDrawer(){ clearTimeout(helpCloseTimer); if(document.activeElem
 bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 helpClose.addEventListener('click', closeHelpDrawer);
 helpBackdrop.addEventListener('click', closeHelpDrawer);
+KeyRegistry.register({surface:'flip', label:'close the help drawer',
+  keys:['Escape'], scope:()=>!helpDrawer.hidden});
 window.addEventListener('keydown',e=>{ if(e.key==='Escape' && !helpDrawer.hidden) closeHelpDrawer(); });
 // Accordion sections — tap a header to expand/collapse (multiple can be open).
 // Help search — shared via lib/helpsearch.js so the two editors cannot

@@ -60,7 +60,13 @@ from playwright.sync_api import sync_playwright
 BASE = "http://127.0.0.1:5001"
 results = []
 def check(name, ok, detail=""):
-    results.append((bool(ok), name))
+    # The detail is recorded, not just printed. The summary at the bottom used
+    # to re-print only the NAME of each failure, so a run read through `tail`
+    # — which is how a 278-assertion suite is actually read — showed
+    # "FAILED: attempt and post budgets are separate" and nothing else. The
+    # measured values were sitting in the inline line thousands of lines up.
+    # A failure has to carry what it measured to the place it gets read.
+    results.append((bool(ok), name, detail))
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
 
 def post(payload, headers=None):
@@ -162,8 +168,31 @@ st2, _ = post({"frames": [frame]}, {"X-Forwarded-For": "5.6.7.8"})
 check("a spoofed X-Forwarded-For does not create a fresh bucket by default",
       A._TRUSTED_PROXIES == 0, f"trusted proxies = {A._TRUSTED_PROXIES}")
 check("both requests still served (limit raised for harness runs)", st in (201, 429) and st2 in (201, 429))
-check("attempt and post budgets are separate", A._RATE_MAX_ATTEMPTS != A._RATE_MAX_POSTS,
-      f"attempts={A._RATE_MAX_ATTEMPTS} posts={A._RATE_MAX_POSTS}")
+# WHAT REVIEW #7 ACTUALLY CLAIMS is that a burst of failed requests cannot
+# exhaust the POSTING allowance — two buckets, not one. This assertion used to
+# be `_RATE_MAX_ATTEMPTS != _RATE_MAX_POSTS`, which tests the CONFIGURATION
+# rather than the code: the attempts default is derived as
+# `max(_RATE_MAX_POSTS * 10, 200)`, so the two differ under run_harness.sh and
+# are equal the moment an operator sets both env vars to the same number. That
+# is a legitimate deployment choice, and the suite called it a failure —
+# observed here, booting with both set to 100000.
+#
+# Charge the attempts bucket and prove the posts bucket did not move. Buckets
+# are keyed (kind, ip), so a probe ip nothing else touches isolates it.
+if A._RATE_BACKEND == "memory":
+    _probe_ip = "budget-separation-probe"
+    for _ in range(5):
+        A._rate_limited(_probe_ip, "attempts")
+    _att = len(A._rate_buckets.get(("attempts", _probe_ip), ()))
+    _pst = len(A._rate_buckets.get(("posts", _probe_ip), ()))
+    check("a burst of attempts spends none of the posting budget",
+          _att == 5 and _pst == 0,
+          f"attempts bucket {_att} (expected 5), posts bucket {_pst} (expected 0); "
+          f"caps attempts={A._RATE_MAX_ATTEMPTS} posts={A._RATE_MAX_POSTS}")
+else:
+    check("a burst of attempts spends none of the posting budget",
+          True, f"SKIPPED — {A._RATE_BACKEND} backend; the db path is covered by "
+                "the R10 reservation assertions below")
 
 with sync_playwright() as p:
     br = p.chromium.launch()
@@ -1205,10 +1234,20 @@ check("a COMMITTED slot of the same age still counts for the full window",
 check("so a process killed mid-post costs the TTL, not the hour",
       counted_pending == 0 and counted_committed == 1)
 
-ok = sum(1 for o, _ in results if o)
+ok = sum(1 for o, _, _ in results if o)
 print("\n" + "=" * 60)
 print(f"{ok}/{len(results)} passed")
-for o, n in results:
+for o, n, d in results:
     if not o:
         print(f"  FAILED: {n}")
+        print(f"          {d}" if d else
+              "          (no measured value reported — see the count below)")
+# How many assertions could not explain themselves if they failed. Not an
+# assertion: failing the suite over it would be a worse outcome than the gap
+# it describes. It is printed because the number is otherwise invisible, and
+# because "FAILED: <name>" with nothing after it is the least useful thing a
+# harness can say.
+_silent = sum(1 for _, _, d in results if not d)
+print(f"\n{_silent}/{len(results)} assertions report no measured value; if one of "
+      f"those fails it can only tell you its name.")
 raise SystemExit(0 if ok == len(results) else 1)

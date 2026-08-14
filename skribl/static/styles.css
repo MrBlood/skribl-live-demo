@@ -2609,6 +2609,9 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     padding: 10px;
     transform-origin: center center;
     transform: translateY(10px) scale(0.97);
+    /* Not the dropdown's 88px: that reserves a `top` a centred sheet has not.
+       See START-HERE. */
+    max-height: calc(100dvh - 24px);
   }
   #postOverlay.open #postSheet { transform: translateY(0) scale(1); }
   #postSheet .export-head { font-size: 17px; padding: 8px 16px 4px; }
@@ -2714,7 +2717,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: calc(100% - 20px);
+  /* NO WIDTH — margins alone set the inset. A paired width/margin drifted and
+     overflowed the sheet by 4px. verify_sheetfit.py; START-HERE. */
   margin: 2px 10px 6px;
   padding: 12px;
   border: none;

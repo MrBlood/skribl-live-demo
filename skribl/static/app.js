@@ -2062,12 +2062,12 @@ function resetPhotoAdjustments() {
   applyPhotoPosition();
   const opEl = document.getElementById('photoOpacity');
   opEl.value = 100;
-  document.getElementById('photoOpacityVal').textContent = '100%';
+  _authoringCtl('photoOpacityVal').textContent = '100%';
   updateSliderFill(opEl);
   const blEl = document.getElementById('photoBlur');
   if (blEl) {
     blEl.value = 0;
-    document.getElementById('photoBlurVal').textContent = '0px';
+    _authoringCtl('photoBlurVal').textContent = '0px';
     updateSliderFill(blEl);
   }
   document.querySelectorAll('.photo-fit-btn').forEach(btn => {
@@ -3100,13 +3100,13 @@ function refreshPendingCards() {
 
   if (mCard) {
     if (pendingMusicMeta && !audioEl) {
-      document.getElementById('musicPendingName').textContent = pendingMusicMeta.name;
+      _authoringCtl('musicPendingName').textContent = pendingMusicMeta.name;
       let meta = 'Loop saved';
       if (pendingMusicMeta.trimStart != null && pendingMusicMeta.trimEnd != null) {
         const len = (pendingMusicMeta.trimEnd - pendingMusicMeta.trimStart);
         meta = `Loop ${fmtLoopTime(pendingMusicMeta.trimStart)}–${fmtLoopTime(pendingMusicMeta.trimEnd)} · ${len.toFixed(1)}s`;
       }
-      document.getElementById('musicPendingMeta').textContent = meta;
+      _authoringCtl('musicPendingMeta').textContent = meta;
       mCard.hidden = false;
       musicUploadBtn.hidden = true;
       musicTabDot.hidden = false;
@@ -3120,7 +3120,7 @@ function refreshPendingCards() {
 
   if (pCard) {
     if (pendingPhotoMeta && (!photoBgImg || photoBgImg.style.display === 'none')) {
-      document.getElementById('photoPendingName').textContent = pendingPhotoMeta.name;
+      _authoringCtl('photoPendingName').textContent = pendingPhotoMeta.name;
       const parts = [];
       if (pendingPhotoMeta.fit) {
         const fitName = { cover: 'Fill', contain: 'Fit', stretch: 'Stretch' }[pendingPhotoMeta.fit] || pendingPhotoMeta.fit;
@@ -3129,11 +3129,11 @@ function refreshPendingCards() {
       if (pendingPhotoMeta.opacity != null) parts.push(Math.round(pendingPhotoMeta.opacity * 100) + '% opacity');
       if (pendingPhotoMeta.blur) parts.push(pendingPhotoMeta.blur + 'px blur');
       if (pendingPhotoMeta.zoom && pendingPhotoMeta.zoom !== 1) parts.push(Math.round(pendingPhotoMeta.zoom * 100) + '% zoom');
-      document.getElementById('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
+      _authoringCtl('photoPendingMeta').textContent = parts.length ? parts.join(' · ') : 'Adjustments saved';
       pCard.hidden = false;
       photoUploadBtn.hidden = true;
-      document.getElementById('photoTabDot').hidden = false;
-      document.getElementById('photoTabDot').classList.add('pending');
+      _authoringCtl('photoTabDot').hidden = false;
+      _authoringCtl('photoTabDot').classList.add('pending');
     } else {
       pCard.hidden = true;
       photoUploadBtn.hidden = false;
@@ -3735,7 +3735,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
         photoBgImg.style.opacity = photoOpacityVal_;
         const opEl = document.getElementById('photoOpacity');
         opEl.value = Math.round(photoOpacityVal_ * 100);
-        document.getElementById('photoOpacityVal').textContent = Math.round(photoOpacityVal_ * 100) + '%';
+        _authoringCtl('photoOpacityVal').textContent = Math.round(photoOpacityVal_ * 100) + '%';
         updateSliderFill(opEl);
       }
       if (meta.blur != null) {
@@ -3743,7 +3743,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
         photoBgImg.style.filter = photoBlur_ > 0 ? `blur(${photoBlur_}px)` : '';
         const blEl = document.getElementById('photoBlur');
         blEl.value = photoBlur_;
-        document.getElementById('photoBlurVal').textContent = photoBlur_ + 'px';
+        _authoringCtl('photoBlurVal').textContent = photoBlur_ + 'px';
         updateSliderFill(blEl);
       }
       if (meta.offset) {
@@ -3763,7 +3763,7 @@ if (typeof pendingMusicMeta !== 'undefined') {
   if (mBtn) mBtn.addEventListener('click', () => musicInputEl.click());
   if (mDismiss) mDismiss.addEventListener('click', () => {
     pendingMusicMeta = null;
-    document.getElementById('musicPending').hidden = true;
+    _authoringCtl('musicPending').hidden = true;
     musicUploadBtn.hidden = false;
     if (!audioEl) musicTabDot.hidden = true;
     scheduleAutosave();
@@ -3774,9 +3774,9 @@ if (typeof pendingMusicMeta !== 'undefined') {
   if (pBtn) pBtn.addEventListener('click', () => photoInputEl.click());
   if (pDismiss) pDismiss.addEventListener('click', () => {
     pendingPhotoMeta = null;
-    document.getElementById('photoPending').hidden = true;
+    _authoringCtl('photoPending').hidden = true;
     photoUploadBtn.hidden = false;
-    if (!photoBgImg || photoBgImg.style.display === 'none') document.getElementById('photoTabDot').hidden = true;
+    if (!photoBgImg || photoBgImg.style.display === 'none') _authoringCtl('photoTabDot').hidden = true;
     scheduleAutosave();
   });
 }

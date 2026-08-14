@@ -21,7 +21,11 @@
   <meta name="twitter:description" content="{{ og_description }}">
   {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
 
-  <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
+  <!-- player.css, NOT styles.css: a derived strict subset of the rules a
+       player page can actually match. styles.css is 123 KB and a shared link
+       matched about 10% of it. Regenerate with harness/tools/cssgraph.py;
+       verify_cssplit.py fails if this file and styles.css disagree. -->
+  <link rel="stylesheet" href="{{ skribl_asset('player.css') }}">
 </head>
 <body class="player-mode">
 

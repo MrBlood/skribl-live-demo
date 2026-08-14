@@ -265,7 +265,130 @@ def externalise_payload(payload, store, iter_media):
 # Module level, not inside the function: models does not import storage, so
 # there is no cycle, and verify_seam.py's name resolution cannot see imports
 # hidden inside a function body — which is exactly what it is there to catch.
-from .models import SkriblPostMedia  # noqa: E402
+from .models import SkriblPost, SkriblPostMedia  # noqa: E402
+
+def backfill_media(store, session, iter_media, batch=100, after_id=0,
+                   limit=None, dry_run=True):
+    """Move media out of payloads that were written while the store was inline.
+
+    Returns a dict: see the keys at the bottom of this function.
+
+    WHY THIS EXISTS. Flipping the default only changes what NEW posts do.
+    Everything already in the table keeps its base64 in `payload_json` forever,
+    which is the row size the change was made to fix. A mixed table is correct
+    and supported — `verify_storage.py` asserts inline posts keep working — but
+    "supported" is not "reclaimed", and without this the saving applies only to
+    posts nobody has made yet.
+
+    WHY dry_run DEFAULTS TO TRUE, and what a dry run must NOT do. This rewrites
+    rows holding real user media, so the caller says `dry_run=False`
+    deliberately — the same rule `sweep_orphans` follows. Note that a dry run
+    also must not call `put_data_url`: that writes bytes. It counts what WOULD
+    move by walking the same media slots, so a rehearsal on a large table costs
+    nothing but reads. A "dry run" that fills a disk is not one.
+
+    IDEMPOTENT AND RESUMABLE, because it will be interrupted. It commits per
+    batch and reports the last id it finished, so a run that dies at post 40,000
+    resumes with `after_id=` instead of starting over.
+
+    What makes resume safe is that THE PAYLOAD IS THE PROGRESS MARKER, and it
+    moves in the same transaction as the association rows it justifies. A batch
+    that dies rolls back both, so the post is found still inline next time and
+    converted exactly once; a batch that committed leaves no data URL for
+    `externalise_payload` to replace, so a second pass skips it. There is no
+    separate bookkeeping to get out of step with the data.
+
+    NOT SAFE TO RUN TWICE AT ONCE. Two concurrent backfills over the same range
+    both read a post as inline and both insert its associations; one commits and
+    the other aborts its batch on the unique index. Nothing is corrupted — the
+    objects are content-addressed and the loser rolls back — but the run dies
+    partway for no useful reason. Run one.
+
+    THE ORDERING HAZARD IS THE SAME ONE THE POST PATH HAS, and it is not fixed
+    here. Objects are written to the store BEFORE the transaction recording
+    their associations commits, so an interrupted batch can leave bytes nothing
+    points at. That is exactly what `sweep_orphans` reconciles, and it is why
+    that function has a grace period — do not run a sweep with a short
+    `older_than_seconds` while a backfill is in flight, or it will delete media
+    belonging to a batch that has not committed yet.
+
+    DOES NOT TOUCH ANYTHING ELSE. No visibility, no timestamps, no ids. The only
+    column written is `payload_json`, and the only rows added are associations.
+    """
+    if not store.externalises:
+        # An inline store would report every post as convertible and convert
+        # none of them, because externalise_payload returns the payload
+        # untouched. Refuse rather than return a reassuring zero.
+        raise ValueError(
+            "backfill_media needs an externalising store; the configured one "
+            f"({type(store).__name__}) leaves payloads alone. Set "
+            "SKRIBL_MEDIA_BACKEND before running this.")
+
+    scanned = converted = 0
+    inline_bytes = 0
+    keys_written = set()
+    last_id = after_id
+
+    while True:
+        rows = (session().query(SkriblPost)
+                .filter(SkriblPost.id > last_id)
+                .order_by(SkriblPost.id)
+                .limit(batch).all())
+        if not rows:
+            break
+
+        for post in rows:
+            scanned += 1
+            last_id = post.id
+            payload = post.payload_json or {}
+
+            pending = [v for v, _k, _c, _l in iter_media(payload)
+                       if is_data_url(v)]
+            if not pending:
+                continue
+            converted += 1
+            # Size the SAVING from the data URLs themselves, before anything is
+            # written, so the number is the same on a dry run and a real one.
+            inline_bytes += sum(len(v) for v in set(pending))
+
+            if dry_run:
+                continue
+
+            stored_payload, media_keys = externalise_payload(
+                payload, store, iter_media)
+            post.payload_json = stored_payload
+            # Inserted unconditionally. The first version checked for an
+            # existing association first, to survive "a previous batch wrote
+            # rows and then died" — and that state cannot occur: the payload
+            # rewrite and its association rows commit in ONE transaction, so a
+            # batch that dies rolls back both and the post is found still
+            # inline on resume. The check was therefore an unreachable branch
+            # that no assertion could cover, which mutation testing showed by
+            # deleting it and changing nothing.
+            #
+            # It also did not protect the one case that CAN produce a duplicate
+            # — two backfills running at once — because a read-then-insert is
+            # a race, not a guard. That case is unsupported and stated in the
+            # docstring rather than half-defended here.
+            for key in media_keys:
+                keys_written.add(key)
+                session().add(SkriblPostMedia(post_id=post.id, media_key=key))
+
+        if not dry_run:
+            session().commit()
+
+        if limit is not None and scanned >= limit:
+            break
+
+    return {
+        "scanned": scanned,            # posts examined
+        "converted": converted,        # posts that had (or have) inline media
+        "inline_bytes": inline_bytes,  # base64 bytes that left, or would
+        "keys": sorted(keys_written),  # objects written this run
+        "last_id": last_id,            # resume with after_id=this
+        "dry_run": dry_run,
+    }
+
 
 def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
     """Delete stored objects that no post references. Returns the keys.

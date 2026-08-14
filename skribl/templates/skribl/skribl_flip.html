@@ -285,6 +285,12 @@
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/artwork.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
+  <!-- Flip ONLY, deliberately. flip.js is not served to the player, so nothing
+       here reaches a shared link. Adding it to app.js would put it on the
+       player's critical path, and that path is currently OVER its byte ratchet
+       (234,741 against 232,000) — see verify_player_isolation.py. Pad's global
+       Space handler is unregistered until that debt is paid. -->
+  <script src="{{ skribl_asset('lib/keyregistry.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>

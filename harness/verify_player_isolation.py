@@ -234,14 +234,46 @@ with sync_playwright() as sp:
 
     html_bytes = {}
 
+    # CSS was not collected here until now, and that omission is the same
+    # mistake this file already records making with HTML — see the note above
+    # the HTML ratchet. A measurement that sees part of the payload rewards
+    # moving weight into the part it cannot see, and in this case it did not
+    # even need moving: styles.css simply grew, from 119,844 to 123,283 bytes
+    # across v194-v198, while every ratchet in this suite stayed green.
+    css_bytes = {}
+
+    # WIRE SIZE IS NOT WHAT THESE RATCHETS ARE WRITTEN AGAINST, and reading
+    # content-length made every one of them inert.
+    #
+    # security.py gzips compressible responses when the request accepts it, and
+    # Chromium always does. content-length on such a response is the COMPRESSED
+    # length, so this collector was reporting app.js at 65,230 bytes against a
+    # ratchet of 232,000 — roughly 160,000 bytes of headroom in a mechanism whose
+    # whole purpose is to have none. Every number the ratchets were set from
+    # (329,159 -> 231,106, HTML 56,716 -> 7,989, the 153,600 target) is a SOURCE
+    # size, and the extraction work they measure removes source bytes, not
+    # compressed ones. The measurement has to be on the same basis as the
+    # constant or the comparison is meaningless.
+    #
+    # r.body() returns the decoded body, so this measures what the browser
+    # actually parses. Wire size is reported alongside, because it is the number
+    # "what a visitor downloads" should quote, and the two are not the same fact.
+    wire_bytes = {}
+
     def _record(r):
         u = r.url.split("?")[0]
         try:
-            n = int(r.headers.get("content-length") or 0)
-        except (TypeError, ValueError):
+            n = len(r.body())
+        except Exception:
             return
+        try:
+            wire_bytes[u.split("/")[-1]] = int(r.headers.get("content-length") or 0)
+        except (TypeError, ValueError):
+            pass
         if u.endswith(".js"):
             js_bytes[u.split("/")[-1]] = n
+        elif u.endswith(".css"):
+            css_bytes[u.split("/")[-1]] = n
         elif "/s/" in u and "text/html" in (r.headers.get("content-type") or ""):
             html_bytes[u.split("/")[-1]] = n
 
@@ -475,6 +507,37 @@ with sync_playwright() as sp:
           f"{total_js:,} bytes over {len(js_bytes)} files; largest: "
           + ", ".join(f"{k} {v:,}" for k, v in
                       sorted(js_bytes.items(), key=lambda kv: -kv[1])[:3]))
+
+    # CSS. The player links the WHOLE of styles.css — the editor's drawers,
+    # export sheet, help panel and page bar included — and none of it was ever
+    # measured here, which is why it grew unnoticed while the JS came down.
+    #
+    # The ratchet is set at today's value, which is the POST-regression one.
+    # That is deliberate and it is not an accommodation: 123,283 is where the
+    # tree is, and a ratchet's job is to stop the next 3,439 bytes, not to
+    # relitigate the last. The DEBT is the number beside it — 119,844 was the
+    # v194 size, and getting back under it is the first repayment. The target is
+    # what a player-only stylesheet would plausibly cost; like BYTES_TARGET it
+    # is the honest distance, not the next cut.
+    CSS_RATCHET, CSS_WAS, CSS_TARGET = 123_283, 119_844, 40_000
+    total_css = sum(css_bytes.values())
+    check(f"the player's CSS does not grow past {CSS_RATCHET:,} bytes "
+          f"(was {CSS_WAS:,} at v194; target {CSS_TARGET:,})",
+          total_css and total_css <= CSS_RATCHET,
+          f"{total_css:,} bytes over {len(css_bytes)} files: "
+          + ", ".join(f"{k} {v:,}" for k, v in
+                      sorted(css_bytes.items(), key=lambda kv: -kv[1])))
+
+    # The number this project quotes as "what a visitor downloads" has been
+    # JS + HTML. It is short by every byte of the line above.
+    _wire = sum(v for k, v in wire_bytes.items()
+                if k.endswith((".js", ".css")) or "text/html" in k)
+    check("the whole player payload is accounted for, not two thirds of it",
+          bool(total_css and total_js and total_html),
+          f"source: JS {total_js:,} + HTML {total_html:,} + CSS {total_css:,} = "
+          f"{total_js + total_html + total_css:,} B; on the wire (gzip) "
+          f"{_wire:,} B — quote the second only as 'downloaded', never as "
+          f"'the player's JavaScript'")
 
     pg.close()
     b.close()
