@@ -267,6 +267,74 @@ function totalHoldUnits(from, to){
 }
 function frame(){ return frames[idx]; }
 
+/* ---- strokes and strokeGroups must leave this file in step -----------------
+ *
+ * `strokes` is FLAT and `strokeGroups` counts the points in each stroke, and
+ * the server refuses a payload where they disagree — the user sees a red box on
+ * the share sheet and cannot share at all:
+ *
+ *   'frames[9].strokeGroups' accounts for 317 points, but the strokes array
+ *   contains 318.
+ *
+ * A stroke IN FLIGHT is exactly that state and legitimately so: pointerdown
+ * pushes its first point immediately, and the group count is not pushed until
+ * endStroke. Every point is accounted for the instant the pen lifts. The bug is
+ * never the in-flight state itself — it is COPYING that state somewhere it
+ * outlives the stroke.
+ *
+ * That is what shipped: `scheduleSave` debounces 800 ms, so a stroke begun
+ * within 800 ms of the previous one finishing — which is simply drawing — was
+ * serialised half-captured into the autosave. Measured: 9 points against 7
+ * accounted. Nothing was wrong in memory, `endStroke` pushed the group a moment
+ * later, and the session shared fine. But the DRAFT was already broken, and the
+ * next reload restored it verbatim: from then on the page was permanently
+ * unshareable, on whichever page the timer happened to land.
+ *
+ * So anything that copies a frame out of live memory takes the accounted prefix
+ * instead. The in-flight tail is not lost — it is still in `frames`, still
+ * drawn, and still counted the moment the stroke ends; it is only excluded from
+ * the SNAPSHOT, which is a moment the user did not choose. Below the point
+ * where the arrays are already in step this is a no-op, which is every call
+ * except the ones this exists for.
+ */
+/* A frame arriving from OUTSIDE live memory — an autosave written by a build
+ * that had this bug, a .skribl file, a payload — may already be out of step.
+ * Prevention does not help anyone who has one: their draft is on their disk
+ * now, it restores unshareable, and no amount of redrawing fixes it because the
+ * orphaned points are in every subsequent save.
+ *
+ * Here the tail is ADOPTED rather than dropped, which is the opposite of
+ * balancedPair and deliberately so. In a snapshot the tail is a stroke still
+ * being drawn and excluding it loses nothing. On load it is ink the user has
+ * been looking at since the reload — a stroke that was captured, drawn, and
+ * only ever missing its accounting. Giving it a group entry is what endStroke
+ * would have done, keeps the drawing identical, and makes it undoable.
+ */
+function healFrame(f){
+  const strokes = Array.isArray(f.strokes) ? f.strokes : [];
+  const groups = Array.isArray(f.strokeGroups) ? f.strokeGroups.slice() : [];
+  let n = 0;
+  for(const c of groups) n += c;
+  if(n === strokes.length) return { strokes: strokes, strokeGroups: groups };
+  if(n < strokes.length){ groups.push(strokes.length - n); return { strokes: strokes, strokeGroups: groups }; }
+  while(groups.length && n > strokes.length) n -= groups.pop();
+  return { strokes: strokes.slice(0, n), strokeGroups: groups };
+}
+
+function balancedPair(f){
+  const groups = (f.strokeGroups || []).slice();
+  const strokes = f.strokes || [];
+  let n = 0;
+  for(const c of groups) n += c;
+  if(n === strokes.length) return { strokes: strokes.slice(), strokeGroups: groups };
+  if(n < strokes.length) return { strokes: strokes.slice(0, n), strokeGroups: groups };
+  // groups claim more than exist — a truncated or hand-built payload rather
+  // than an in-flight stroke. Drop whole groups from the end until they fit,
+  // so what remains is describable rather than approximately right.
+  while(groups.length && n > strokes.length) n -= groups.pop();
+  return { strokes: strokes.slice(0, n), strokeGroups: groups };
+}
+
 /* ---- autosave: a real frame-format Skribl ---- */
 let _saveT = null;
 function scheduleSave(){ clearTimeout(_saveT); showAutosaveStatus('saving'); _saveT = setTimeout(saveNow, 800); }
@@ -288,7 +356,10 @@ function serializeFlip(opts){
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : (pendingMusicMeta || null),
     frames: frames.map(f => {
-      const o = { strokes: f.strokes.slice(), strokeGroups: f.strokeGroups.slice(), background: bgColor };
+      // NOT f.strokes.slice(): that is what wrote a half-captured stroke into
+      // the autosave and made the next reload unshareable. See balancedPair.
+      const b = balancedPair(f);
+      const o = { strokes: b.strokes, strokeGroups: b.strokeGroups, background: bgColor };
       const h = frameHold(f);
       if(h > 1) o.hold = h;      // omitted at the default => payload unchanged
       return o;
@@ -361,8 +432,10 @@ function applyPayload(d){
   if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
   frames = d.frames.map(f => {
     if (Array.isArray(f.strokeGroups)) {
-      // current pad-format frame
-      return { strokes: Array.isArray(f.strokes) ? f.strokes : [], strokeGroups: f.strokeGroups };
+      // current pad-format frame. Healed rather than trusted: a draft written
+      // mid-stroke by an older build restores permanently unshareable, and the
+      // user has no way to see why or to repair it. See healFrame.
+      return healFrame(f);
     }
     // migrate the old prototype shape: [{color,size,erase,pts:[{x,y}]}]
     const flat = [], groups = [];
@@ -1232,7 +1305,8 @@ document.addEventListener('pointercancel', ()=>{
   if(!_pdrag) return;
   _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
 });
-function deepCopy(f){ return { strokes: f.strokes.map(p=>Object.assign({},p)), strokeGroups: f.strokeGroups.slice(), hold: frameHold(f) }; }
+function deepCopy(f){ const b = balancedPair(f);
+  return { strokes: b.strokes.map(p=>Object.assign({},p)), strokeGroups: b.strokeGroups, hold: frameHold(f) }; }
 // buildStrip() rebuilds the strip's children, which resets its scrollLeft to 0.
 // Any path that rebuilds while idx is non-zero therefore leaves the active page
 // highlighted off-screen with the strip parked at page 1 — most visibly after a

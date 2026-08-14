@@ -1,7 +1,7 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-14T17:30:25Z
+UTC timestamp           : 2026-08-14T18:38:50Z
 Host                    : Linux x86_64
-Tree SHA-256            : b2703c4e8b46ed99978d44a9ba5284a611b351ea4fb921154c2ad1d92d4c7dcf
+Tree SHA-256            : a2a10c0ed8c66e5891e89dc4a5d0b49fb6244ce8d3770b3fba72444ea0fbbf41
 Git commit              : (not a git checkout)
 SKRIBL_VERSION          : v199
 Python                  : 3.12.3
@@ -10,18 +10,18 @@ SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.TiT8Q9SinR/harness.db)
+Database reset          : yes (fresh /tmp/tmp.1jwEgEQC19/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/claude/work/skribl-v199/harness/run_harness.sh verify_jsstrip.py
+Command                 : /home/claude/work/skribl-v199/harness/run_harness.sh verify_s3.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 19 batches recorded as one run
-suites requested : 54
+# whole release run: 20 batches recorded as one run
+suites requested : 55
   verify_amber.py: ok — 15/15 passed
   verify_audio.py: ok — 9/9 passed
   verify_backfill.py: ok — 21/21 passed
@@ -66,16 +66,17 @@ suites requested : 54
   verify_race.py: ok — 17/17 passed
   verify_report.py: ok — 35/35 passed
   verify_review.py: ok — 278/278 passed
+  verify_s3.py: ok — 25/25 passed
   verify_scrub.py: ok — 17/17 passed
   verify_seam.py: ok — 112/112 passed
   verify_sheetfit.py: ok — 14/14 passed
   verify_storage.py: ok — 36/36 passed
-  verify_strokegroups.py: ok — 16/16 passed
+  verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 7/7 passed
   verify_tips.py: ok — 43/43 passed
   verify_ux.py: ok — 130/130 passed
   verify_version.py: ok — 23/23 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 1972   (skipped suites contribute 0)
+assertions passed: 2005   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0

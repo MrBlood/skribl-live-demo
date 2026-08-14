@@ -21,8 +21,11 @@ carries a URL instead of a megabyte. Backends:
           into, not arrive by upgrade.
   local   Content-addressed files on disk, served by the blueprint. Right for a
           single-host deployment and for proving the path end to end.
-  s3      Subclass hook. `put_bytes` and `url_for_key` are the only two methods a
-          real object store needs to implement.
+  s3      An S3-compatible bucket (S3Store, at the foot of this file). Objects
+          are served through the app's own /media/<key>, NOT as bucket URLs, so
+          the visibility check on that route still applies — see the note above
+          the class. A deployment that already runs boto3 can still subclass
+          MediaStore and pass its own store in; that hook has not moved.
 
 Keys are the SHA-256 of the CONTENT, so identical media is stored once no matter
 how many posts carry it — the same photo reposted by fifty people costs one
@@ -30,11 +33,17 @@ file — and a stored object can be cached immutably forever, because a differen
 byte is a different key.
 """
 import base64
+import datetime
 import hashlib
+import hmac
 import os
 import re
 import time
+import urllib.error
+import urllib.request
 import uuid
+import xml.etree.ElementTree as ET
+from urllib.parse import quote, urlsplit
 
 _DATA_URL_RE = re.compile(r"^data:([-\w.+]+/[-\w.+]+)?;base64,", re.IGNORECASE)
 
@@ -425,3 +434,203 @@ def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
         if not dry_run:
             store.delete_key(key)
     return removed
+
+
+# --- S3 -----------------------------------------------------------------------
+#
+# WHY THIS IS NOT boto3. requirements.txt is hash-locked in constraints.txt for
+# one cp312 environment, and adding a dependency the size of botocore to a
+# deployment in order to issue four HTTP verbs is a bad trade — especially when
+# the four are PUT, GET, DELETE and LIST against a single bucket. SigV4 is about
+# sixty lines and is specified precisely; it is below. A deployment that already
+# runs boto3 for other reasons can subclass MediaStore instead and pass its own
+# store in — that hook has not moved.
+#
+# WHY OBJECTS ARE SERVED THROUGH THE APP, and this is the important part.
+# The obvious S3 design hands the bucket URL out in the payload, and the
+# docstring on `routes.media` used to say exactly that: "an S3-backed deployment
+# hands out bucket URLs and never routes through here." That would route around
+# the authorisation on that route — the one added because externalising media
+# had made a PRIVATE Skribl's audio and images retrievable by anyone holding the
+# URL. Re-introducing that with a different backend is the same bug wearing a
+# different hat.
+#
+# So `url_for_key` returns the app's own /media/<key> URL, exactly as the local
+# store does, and the route authorises against the post that owns the object
+# before reading it. The cost is that bytes cross the app rather than going
+# straight from the bucket. The answer to that is a CDN in front of /media/<key>
+# — the response is already `immutable` and cached for a year when every
+# referencing post is public, and `private, no-store` when one is not, which is
+# the distinction a bucket URL cannot make.
+#
+# PRESIGNED URLS ARE NOT AN ALTERNATIVE HERE. The URL is written into
+# payload_json and lives as long as the post; a presigned URL expires. A post
+# whose media 403s a week later is worse than one that costs a little egress.
+class S3Store(MediaStore):
+    """Content-addressed objects in an S3-compatible bucket.
+
+    Path-style addressing (`<endpoint>/<bucket>/<key>`), because it is what
+    MinIO, Ceph, R2 and every test double speak, and because a bucket name with
+    a dot in it breaks virtual-host style TLS.
+    """
+
+    def __init__(self, bucket, url_builder, region="us-east-1", endpoint=None,
+                 access_key=None, secret_key=None, session_token=None,
+                 prefix="", timeout=15):
+        if not bucket:
+            raise RuntimeError("SKRIBL_S3_BUCKET is required for the s3 backend.")
+        self.bucket = bucket
+        self._url_builder = url_builder
+        self.region = region or "us-east-1"
+        self.endpoint = (endpoint or f"https://s3.{self.region}.amazonaws.com").rstrip("/")
+        self.access_key = access_key
+        self.secret_key = secret_key
+        self.session_token = session_token
+        # A prefix lets one bucket hold several deployments. Normalised here so
+        # callers cannot produce "//" or a key that escapes it.
+        self.prefix = (prefix or "").strip("/")
+        if self.prefix:
+            self.prefix += "/"
+        self.timeout = timeout
+
+    # -- signing ---------------------------------------------------------------
+    def _sign(self, method, path, query, payload, headers=None):
+        """Return headers carrying a SigV4 Authorization for this request.
+
+        `path` is the already-encoded absolute path, `query` the canonical
+        (sorted, encoded) query string or "".
+        """
+        host = urlsplit(self.endpoint).netloc
+        now = datetime.datetime.now(datetime.timezone.utc)
+        amzdate = now.strftime("%Y%m%dT%H%M%SZ")
+        datestamp = now.strftime("%Y%m%d")
+        payload_hash = hashlib.sha256(payload or b"").hexdigest()
+
+        hdrs = dict(headers or {})
+        hdrs["host"] = host
+        hdrs["x-amz-content-sha256"] = payload_hash
+        hdrs["x-amz-date"] = amzdate
+        if self.session_token:
+            hdrs["x-amz-security-token"] = self.session_token
+
+        signed = sorted(k.lower() for k in hdrs)
+        canonical_headers = "".join(f"{k}:{str(hdrs[k]).strip()}\n" for k in signed)
+        signed_headers = ";".join(signed)
+        canonical = "\n".join([method, path, query, canonical_headers,
+                               signed_headers, payload_hash])
+        scope = f"{datestamp}/{self.region}/s3/aws4_request"
+        to_sign = "\n".join(["AWS4-HMAC-SHA256", amzdate, scope,
+                             hashlib.sha256(canonical.encode()).hexdigest()])
+
+        def _hmac(key, msg):
+            return hmac.new(key, msg.encode(), hashlib.sha256).digest()
+
+        k = _hmac(("AWS4" + (self.secret_key or "")).encode(), datestamp)
+        k = _hmac(k, self.region)
+        k = _hmac(k, "s3")
+        k = _hmac(k, "aws4_request")
+        signature = hmac.new(k, to_sign.encode(), hashlib.sha256).hexdigest()
+        hdrs["Authorization"] = (
+            f"AWS4-HMAC-SHA256 Credential={self.access_key}/{scope}, "
+            f"SignedHeaders={signed_headers}, Signature={signature}")
+        return hdrs
+
+    def _request(self, method, path, query="", body=None, extra_headers=None):
+        headers = self._sign(method, path, query, body or b"", extra_headers)
+        url = self.endpoint + path + (("?" + query) if query else "")
+        req = urllib.request.Request(url, data=body, method=method)
+        for k, v in headers.items():
+            req.add_header(k, v)
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:
+                return r.status, r.read(), dict(r.headers)
+        except urllib.error.HTTPError as e:
+            return e.code, e.read() or b"", dict(e.headers or {})
+
+    def _path(self, key):
+        return "/" + quote(f"{self.bucket}/{self.prefix}{key}", safe="/~")
+
+    # -- MediaStore ------------------------------------------------------------
+    def put_bytes(self, raw, content_type, key):
+        # Content-addressed: identical bytes are already there under the same
+        # key, so a HEAD that finds one turns a repost into no upload at all.
+        # The same skip the local store gets from os.path.exists.
+        status, _body, _h = self._request("HEAD", self._path(key))
+        if status == 200:
+            return
+        status, body, _h = self._request(
+            "PUT", self._path(key), body=raw,
+            extra_headers={"content-type": content_type or "application/octet-stream"})
+        if status not in (200, 201):
+            raise RuntimeError(f"S3 PUT {key} failed: {status} {body[:200]!r}")
+
+    def url_for_key(self, key):
+        # The app's own URL, NOT the bucket's. See the note above this class.
+        return self._url_builder(key)
+
+    def read(self, key):
+        """-> (bytes, content_type), or None. Key is validated by the caller."""
+        status, body, headers = self._request("GET", self._path(key))
+        if status == 404:
+            return None
+        if status != 200:
+            raise RuntimeError(f"S3 GET {key} failed: {status}")
+        # DERIVED from the key's extension, exactly as the local store does, and
+        # deliberately not the bucket's stored Content-Type: the key is built
+        # from the VALIDATED type and KEY_RE has already constrained the
+        # extension, whereas a bucket's metadata can be set by anything that
+        # ever had write access. Serving an uploaded object as whatever it
+        # claims to be is how an image becomes text/html.
+        ext = os.path.splitext(key)[1].lower()
+        return body, _TYPE_FOR_EXT.get(ext, "application/octet-stream")
+
+    def iter_keys(self):
+        """Paginated LIST. Yields (key, mtime) for sweep_orphans.
+
+        Continuation-token paging rather than one call: a bucket is not a
+        directory and the interface note on MediaStore.iter_keys exists to stop
+        exactly the implementation that loads one into memory.
+        """
+        import datetime
+        import xml.etree.ElementTree as ET
+
+        token = None
+        ns = "{http://s3.amazonaws.com/doc/2006-03-01/}"
+        while True:
+            parts = ["list-type=2", "max-keys=1000"]
+            if self.prefix:
+                parts.append("prefix=" + quote(self.prefix, safe=""))
+            if token:
+                parts.append("continuation-token=" + quote(token, safe=""))
+            query = "&".join(sorted(parts))
+            status, body, _h = self._request(
+                "GET", "/" + quote(self.bucket, safe="/~"), query=query)
+            if status != 200:
+                raise RuntimeError(f"S3 LIST failed: {status} {body[:200]!r}")
+            root = ET.fromstring(body)
+            for c in root.findall(f"{ns}Contents"):
+                name = (c.findtext(f"{ns}Key") or "")
+                if self.prefix and name.startswith(self.prefix):
+                    name = name[len(self.prefix):]
+                if not name:
+                    continue
+                stamp = c.findtext(f"{ns}LastModified") or ""
+                try:
+                    mtime = datetime.datetime.fromisoformat(
+                        stamp.replace("Z", "+00:00")).timestamp()
+                except ValueError:
+                    # Unparseable timestamp must read as NEW, not as ancient:
+                    # sweep_orphans deletes anything older than the grace
+                    # period, and 0 would make every such object collectable.
+                    mtime = time.time()
+                yield name, mtime
+            if (root.findtext(f"{ns}IsTruncated") or "").lower() != "true":
+                return
+            token = root.findtext(f"{ns}NextContinuationToken")
+            if not token:
+                return
+
+    def delete_key(self, key):
+        status, body, _h = self._request("DELETE", self._path(key))
+        if status not in (200, 204, 404):
+            raise RuntimeError(f"S3 DELETE {key} failed: {status} {body[:200]!r}")

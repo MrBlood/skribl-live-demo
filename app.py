@@ -84,12 +84,27 @@ def create_app():
     # payload_json. 'local' externalises them to content-addressed files served
     # by the blueprint. An S3 deployment subclasses MediaStore and passes it in.
     media_store = None
-    if os.environ.get("SKRIBL_MEDIA_BACKEND", "inline") == "local":
+    _backend = os.environ.get("SKRIBL_MEDIA_BACKEND", "inline")
+    if _backend == "local":
         from flask import url_for
         media_store = skribl.storage.LocalDiskStore(
             os.environ.get("SKRIBL_MEDIA_ROOT",
                            os.path.join(app.instance_path, "media")),
             lambda key: url_for("skribl.media", key=key))
+    elif _backend == "s3":
+        # Objects are served through /media/<key> so the visibility check on
+        # that route still applies — see the note above S3Store. Credentials
+        # come from the environment and are never logged.
+        from flask import url_for
+        media_store = skribl.storage.S3Store(
+            os.environ.get("SKRIBL_S3_BUCKET"),
+            lambda key: url_for("skribl.media", key=key),
+            region=os.environ.get("SKRIBL_S3_REGION", "us-east-1"),
+            endpoint=os.environ.get("SKRIBL_S3_ENDPOINT"),
+            access_key=os.environ.get("AWS_ACCESS_KEY_ID"),
+            secret_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+            session_token=os.environ.get("AWS_SESSION_TOKEN"),
+            prefix=os.environ.get("SKRIBL_S3_PREFIX", ""))
 
     skribl.init_skribl(app, session=lambda: db.session,
                        url_prefix=url_prefix, static_url_path=static_url_path,

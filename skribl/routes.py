@@ -355,11 +355,18 @@ def register_routes(bp, *, index_route=False):
     def media(key):
         """Serve a content-addressed blob.
 
-        Only meaningful for the local store; an S3-backed deployment hands out
-        bucket URLs and never routes through here.
+        Any store that can `read` a key is served HERE, through the
+        authorisation below — including S3. The gate used to be
+        `isinstance(store, LocalDiskStore)`, with a docstring saying an
+        S3-backed deployment "hands out bucket URLs and never routes through
+        here". That is precisely the shape of the bug this route was written to
+        close: externalising media had made a private Skribl's audio and images
+        retrievable by anyone holding the URL. A bucket URL cannot ask who is
+        looking, so an S3 store returns an app URL and arrives here like the
+        rest. See the note above S3Store.
         """
         store = bp.skribl_media_store
-        if not isinstance(store, LocalDiskStore) or not KEY_RE.match(key or ""):
+        if not callable(getattr(store, "read", None)) or not KEY_RE.match(key or ""):
             abort(404)
 
         # AUTHORISE, do not merely validate the key shape.

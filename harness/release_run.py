@@ -90,6 +90,7 @@ BATCHES = [
     ["verify_cssplit.py"],
     ["verify_keys.py", "verify_strokegroups.py", "verify_sheetfit.py"],
     ["verify_jsstrip.py"],
+    ["verify_s3.py"],
 ]
 
 

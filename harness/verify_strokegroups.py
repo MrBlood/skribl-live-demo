@@ -174,6 +174,126 @@ try:
                              "frames": out["frames"]})
             check(f"{label}: the server accepts the share", st == 201,
                   f"{st} {body.get('error', '')}")
+        # =================================================================
+        # PHASE 2 — the snapshot, which is where the LIVE failure came from.
+        #
+        # Phase 1 is about the live arrays and they were never the bug: an
+        # in-flight stroke has points and no group entry by design, and
+        # endStroke closes it a moment later. The bug is copying that instant
+        # somewhere it outlives the stroke. `scheduleSave` debounces 800 ms, so
+        # a stroke begun within 800 ms of the previous one — drawing, in other
+        # words — was serialised half-captured into the autosave. Memory stayed
+        # correct, the session shared fine, and the DRAFT was already broken;
+        # the next reload restored it verbatim and the page was unshareable
+        # from then on, which is what was reported against frames[9].
+        # =================================================================
+        print("\nSTROKE GROUPS — a snapshot taken mid-stroke")
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        pg.goto(BASE + "/flip", wait_until="load")
+        pg.wait_for_timeout(1200)
+        box = pg.locator("#pad").bounding_box()
+        cx, cy = box["x"] + 150, box["y"] + 150
+        pg.mouse.move(cx, cy)
+        pg.mouse.down()
+        for i in range(6):
+            pg.mouse.move(cx + i * 6, cy + i * 3)
+        pg.mouse.up()                      # completed stroke -> schedules a save
+        pg.mouse.move(cx + 50, cy + 50)
+        pg.mouse.down()                    # second stroke starts inside the 800 ms
+        pg.mouse.move(cx + 56, cy + 53)
+        pg.wait_for_timeout(1400)          # the autosave lands HERE, mid-stroke
+        draft = pg.evaluate("""() => {
+            const raw = localStorage.getItem('skribl_flip_autosave_v1');
+            if (!raw) return null;
+            const d = JSON.parse(raw);
+            return (d.frames || []).map(f => ({
+                pts: (f.strokes || []).length,
+                grp: (f.strokeGroups || []).reduce((a, b) => a + b, 0)}));
+        }""")
+        check("the autosave fired mid-stroke at all (FIXTURE GATE)",
+              draft is not None and any(r["pts"] for r in draft),
+              f"{draft} — if nothing was saved this phase proves nothing")
+        check("a draft written mid-stroke is in step",
+              draft and all(r["pts"] == r["grp"] for r in draft),
+              f"{draft} — 9 points against 7 accounted is what shipped")
+        for i in range(6, 10):
+            pg.mouse.move(cx + 60 + i * 6, cy + 55 + i * 3)
+        pg.mouse.up()
+        pg.wait_for_timeout(1200)
+        after = pg.evaluate("""() => frames.map(f => ({pts: f.strokes.length,
+            grp: f.strokeGroups.reduce((a, b) => a + b, 0)}))""")
+        check("and the finished stroke is still fully accounted in memory",
+              all(r["pts"] == r["grp"] for r in after) and after[0]["pts"] > 6,
+              f"{after} — excluding the tail from a SNAPSHOT must not drop it "
+              f"from the drawing")
+        pg.reload(wait_until="load")
+        pg.wait_for_timeout(1500)
+        restored = pg.evaluate("""() => frames.map(f => ({pts: f.strokes.length,
+            grp: f.strokeGroups.reduce((a, b) => a + b, 0)}))""")
+        check("a restored session is in step",
+              all(r["pts"] == r["grp"] for r in restored),
+              f"{restored}")
+
+        # A page COPY is the same defect through a different door: deepCopy took
+        # the live arrays, so copying while a stroke was in flight produced a
+        # page carrying its points and not its count. Measured at 14 against 7.
+        copied = pg.evaluate("""() => {
+            const el = document.getElementById('pad');
+            const r = el.getBoundingClientRect();
+            const ev = (t, x, y) => el.dispatchEvent(new PointerEvent(t, {
+                pointerId: 1, isPrimary: true, bubbles: true, cancelable: true,
+                pointerType: 'mouse', clientX: r.left + x, clientY: r.top + y}));
+            ev('pointerdown', 60, 60);
+            for (let i = 0; i < 6; i++) ev('pointermove', 60 + i * 5, 60 + i * 3);
+            addFrame(true);                       // copy, stroke still in flight
+            window.dispatchEvent(new PointerEvent('pointerup', {pointerId: 1, bubbles: true}));
+            return frames.map(f => ({pts: f.strokes.length,
+                grp: f.strokeGroups.reduce((a, b) => a + b, 0)}));
+        }""")
+        check("a page copied mid-stroke is in step",
+              all(r["pts"] == r["grp"] for r in copied), f"{copied}")
+
+        # THE REPORTER'S OWN DRAFT. Prevention does nothing for anyone who
+        # already has a broken one — it is on their disk, it restores
+        # unshareable, and redrawing cannot fix it because the orphaned points
+        # are copied into every later save. This plants the exact numbers from
+        # the report and requires the session to load in step AND to share.
+        planted = pg.evaluate("""() => {
+            const mk = (n, acct) => {
+                const s = [];
+                for (let i = 0; i < n; i++) s.push({x: 10 + (i % 300), y: 20 + (i % 200),
+                    color: '#fff', size: 4, t: i, erase: false, start: i === 0});
+                return {strokes: s, strokeGroups: [acct], background: '#101418'};
+            };
+            const frames = [];
+            for (let i = 0; i < 9; i++) frames.push(mk(20, 20));
+            frames.push(mk(318, 317));            // 'frames[9]', as reported
+            localStorage.setItem('skribl_flip_autosave_v1', JSON.stringify({
+                schemaVersion: 2, version: 2, playbackMode: 'flip', fps: 12,
+                canvasSize: {cssWidth: 1000, cssHeight: 700, dpr: 1},
+                editIdx: 9, frames: frames}));
+            return frames.length;
+        }""")
+        pg.reload(wait_until="load")
+        pg.wait_for_timeout(1500)
+        healed = pg.evaluate("""() => ({
+            n: frames.length,
+            bad: frames.map((f, i) => ({i, pts: f.strokes.length,
+                grp: f.strokeGroups.reduce((a, b) => a + b, 0)})).filter(r => r.pts !== r.grp),
+            pts9: frames[9] ? frames[9].strokes.length : -1})""")
+        check("a draft ALREADY broken by the old build loads in step",
+              planted == 10 and not healed["bad"], f"{healed['bad']}")
+        check("and healing it keeps every point the user drew",
+              healed["pts9"] == 318,
+              f"{healed['pts9']} points — the orphan is adopted as its own "
+              f"stroke, not discarded; it is ink they have been looking at")
+        st, body = post({"title": "sg healed", "schemaVersion": 2,
+                         "frames": pg.evaluate("""() => frames.map(f => ({
+                             strokes: f.strokes, strokeGroups: f.strokeGroups,
+                             baseSnapshot: null, background: {color: '#101418'}}))""")})
+        check("the healed session is accepted by the server", st == 201,
+              f"{st} {body.get('error', '')} — the refusal the user reported")
+        pg.close()
         b.close()
 finally:
     proc.terminate()
