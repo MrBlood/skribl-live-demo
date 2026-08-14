@@ -470,7 +470,15 @@ with sync_playwright() as sp:
 
 
     DOM_RATCHET, DOM_TARGET = 0, 0          # reached: the shell is out of the player
-    BYTES_RATCHET, BYTES_TARGET = 232_000, 153_600
+    # 232,000 until v199, and RED at 234,611: app.js grew 3,635 B across
+    # v194-v198 while this collector read content-length, which is the GZIPPED
+    # length, so nothing could see it. Both halves are fixed — the measurement
+    # reads r.body(), and skribl/jsstrip.py strips comments at serve time — and
+    # this is the post-strip number, set at exactly today's value in the same
+    # spirit as CSS_RATCHET below. The comments still exist in every source
+    # file; they are simply no longer parsed by a browser that will never read
+    # them. verify_jsstrip.py is what proves the strip preserves meaning.
+    BYTES_RATCHET, BYTES_TARGET = 155_843, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

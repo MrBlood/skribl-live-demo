@@ -17,10 +17,20 @@ from urllib.parse import urlsplit
 
 from flask import current_app, g, jsonify, request, url_for
 
+from .jsstrip import strip_bytes
+
 # Text-ish types only. Images, audio and video are already compressed;
 # re-gzipping them spends CPU to make them marginally larger.
 _GZIP_CACHE = {}          # (path, ?v=) -> gzipped bytes
 _GZIP_CACHE_MAX = 128     # editor pulls 25; this is slack, not a budget
+
+# Comment-stripped JavaScript, cached on exactly the same key and for exactly
+# the same reason: a busted URL names one immutable byte sequence, so its
+# stripped form is immutable too. Lexing app.js costs ~90 ms, which is a
+# non-starter per request and a rounding error once per file version — the same
+# arithmetic that decided gzip level 6 for busted assets and level 1 otherwise.
+_STRIP_CACHE = {}         # (path, ?v=) -> comment-stripped bytes
+_STRIP_CACHE_MAX = 128
 _GZIP_MIN = 1024          # below this the header costs more than the saving
 _COMPRESSIBLE = _re.compile(
     r'^(?:text/|application/(?:javascript|json|xml|manifest\+json)$|image/svg)')
@@ -264,6 +274,37 @@ def register_security(bp, skribl_version, player_target="_blank"):
             # from SEND_FILE_MAX_AGE_DEFAULT. Safe to overwrite ONLY because
             # asset_url() busts on content, so a changed file gets a new ?v=.
             resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+
+        # STRIP BEFORE COMPRESSING, and inline here rather than in a second
+        # after_request, because Flask runs those in reverse registration order:
+        # a separate handler would have to be registered AFTER this one to run
+        # BEFORE it, which is a correctness-critical ordering that reads as a
+        # mistake. The sequence is explicit instead.
+        #
+        # Only busted requests are stripped. Without a ?v= there is no key to
+        # cache under, and paying ~90 ms of lexing per request to save 32% of a
+        # transfer is the same bad trade as gzip level 6 on a dynamic response.
+        # An unbusted asset therefore serves its comments, which is correct
+        # JavaScript either way — the file on disk is what it always was.
+        if bust and request.path.endswith(".js"):
+            key = (request.path, bust)
+            lean = _STRIP_CACHE.get(key)
+            if lean is None:
+                resp.direct_passthrough = False
+                lean = strip_bytes(resp.get_data(), request.path)
+                if len(_STRIP_CACHE) >= _STRIP_CACHE_MAX:
+                    _STRIP_CACHE.clear()          # bounded; refills on demand
+                _STRIP_CACHE[key] = lean
+            if len(lean) != resp.headers.get("Content-Length", type=int):
+                resp.direct_passthrough = False
+                resp.set_data(lean)
+                # send_file's ETag is derived from the FILE on disk, and this is
+                # no longer that byte sequence. Two entities under one tag is
+                # the defect the -gzip suffix below already exists to fix.
+                etag = resp.headers.get("ETag")
+                if etag:
+                    resp.headers["ETag"] = (etag[:-1] + '-strip"' if etag.endswith('"')
+                                            else etag + "-strip")
 
         # Decide BEFORE touching the body. The first version of this turned off
         # direct_passthrough for every busted asset, which materialised fonts

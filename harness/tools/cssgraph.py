@@ -164,10 +164,59 @@ print("\nwrote /tmp/css_selectors.json")
 # classification (which needs a browser) and the generation (which does not) can
 # be re-run independently — and so verify_cssplit.py can regenerate and compare
 # without deciding anything itself.
+def _split_media(block_text, live):
+    """Emit only the live rules inside one @media block, or None to keep it whole.
+
+    The block-level rule — keep the construct if ANY selector in it is live —
+    was applied to a whole @media, so one live rule dragged in every editor rule
+    that happened to share the breakpoint. styles.css puts most of its
+    responsive rules in a handful of large media blocks, so that is thousands of
+    bytes of drawer and composer styling on a page with neither.
+
+    The condition is not re-evaluated here: liveness is a property of a
+    selector, measured by asking a real page whether anything matches it, and
+    that answer does not change with the viewport the rule is gated on. This is
+    the same classification, applied one level deeper.
+
+    Returns None when the block should be emitted verbatim — when every inner
+    rule is live (so a rebuild could only differ in whitespace), when none is
+    (the caller drops it), or when anything inside cannot be classified by
+    matching at all, which is the superset gate one level down.
+    """
+    brace = block_text.find("{")
+    close = block_text.rfind("}")
+    if brace < 0 or close < brace:
+        return None
+    inner = block_text[brace + 1:close]
+    kept, total = [], 0
+    for s, e, hh, bb in blocks(inner):
+        sub = selectors_of(hh, bb)
+        if sub is None:
+            return None                     # nested at-rule: do not touch it
+        total += 1
+        if any(x in live for x in sub):
+            kept.append(inner[s:e])
+    if not kept or len(kept) == total:
+        return None
+    return block_text[:brace + 1] + "".join(kept) + block_text[close:]
+
+
 def emit(live_path, out_path):
     live = set(json.loads(Path(live_path).read_text())["player"])
-    parts = [text[p["start"]:p["end"]] for p in parsed
-             if p["sels"] is None or any(s in live for s in p["sels"])]
+    parts = []
+    for p in parsed:
+        block_text = text[p["start"]:p["end"]]
+        if p["sels"] is None:
+            parts.append(block_text)
+            continue
+        if not any(s in live for s in p["sels"]):
+            continue
+        if p["header"].startswith("@media"):
+            split = _split_media(block_text, live)
+            if split is not None:
+                parts.append(split)
+                continue
+        parts.append(block_text)
     Path(out_path).write_text(HEADER + "".join(parts))
     return sum(len(p) for p in parts) + len(HEADER)
 

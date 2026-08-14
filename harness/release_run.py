@@ -76,6 +76,20 @@ BATCHES = [
     ["verify_csp.py", "verify_csrf.py", "verify_race.py", "verify_prefix.py",
      "verify_delivery.py", "verify_surfaces.py"],
     ["verify_version.py", "verify_migrations.py", "verify_postgres.py"],
+    # v199 suites. They were on disk and in no batch, which is the one thing
+    # the coverage check refuses to let a release paper over — so the release
+    # could not start at all until they were placed. Each brings its own server
+    # on its own port with its own media root and database, so placement here is
+    # about wall clock and CPU contention, not isolation.
+    #
+    # externalised and backfill each boot TWO instances and post through them.
+    # They are kept out of verify_deletion_foundation's batch because that suite
+    # sweeps orphans for real.
+    ["verify_externalised.py", "verify_backfill.py"],
+    # Alone: eleven scenes, screenshotted against two stylesheets.
+    ["verify_cssplit.py"],
+    ["verify_keys.py", "verify_strokegroups.py", "verify_sheetfit.py"],
+    ["verify_jsstrip.py"],
 ]
 
 
