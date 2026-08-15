@@ -94,6 +94,7 @@ function layoutEditorCanvas() {
   canvas.style.height = dispH + 'px';
   canvas.style.minHeight = '0';
   canvasWrap.style.backgroundColor = bgColor;
+  if (window._skriblSyncPadGrid) window._skriblSyncPadGrid();  // no-op in player
 }
 
 function resizeCanvas() {
@@ -3578,13 +3579,22 @@ function loadSkribl(data) {
       });
       audioCtx.decodeAudioData(buf.slice(0)).then(audioBuffer => {
         currentAudioBuffer = audioBuffer;
+        // LATE-DECODE START (v202 review amendment, A1). On a phone the decode
+        // routinely finishes AFTER the user pressed Play: the drawing was
+        // already animating, paStartAtElapsed() had no buffer and no-op'd, and
+        // nothing ever revisited the music — a silently mute post on iPhone.
+        // If playback is running when the buffer arrives, start the loop at
+        // the drawing's CURRENT elapsed position. paStartAtElapsed() calls
+        // paStop() first, so a race with a simultaneous play/seek cannot
+        // stack two sources.
+        if (window._skriblLateAudio) window._skriblLateAudio();
         // Waveforms are drawer furniture; the player painted them into canvases
         // it never shows, on every shared link with music.
         if (!document.body.classList.contains('player-mode')) {
           setTimeout(() => { drawWaveform(audioBuffer); drawZoomWaveform(); updateZoomHandles(); }, 60);
         }
-      }).catch(() => {});
-    }).catch(() => {});
+      }).catch(e => console.warn('skribl: music decode failed', e));
+    }).catch(e => console.warn('skribl: music fetch failed', e));
   }
 
   updateEmptyHint();
@@ -4185,12 +4195,26 @@ function showPlayerError(msg) {
     else { if (strokeComp) { strokeComp.finish(); strokeComp.present(); showNibAtIndex(idx); } onEnded(); }
   }
 
+  // Late-decode hook (module scopes differ): when the buffer arrives
+  // mid-playback, start the loop where the drawing already is.
+  window._skriblLateAudio = () => { if (running) paStartAtElapsed(elapsedBase + (performance.now() - segStart)); };
+
   function play() {
     if (running || (!timeline.length && !isFlip)) return;
-    // Unlock the AudioContext inside the click gesture: begin() below can run in
-    // an async image onload on the first fresh play, which is outside the gesture
-    // and would leave the context suspended on stricter browsers (iOS Safari).
-    if (audioCtx && audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
+    // Unlock the AudioContext inside the click gesture — and AWAIT it (v202
+    // review amendment, A1): resume() is promise-returning, and iOS Safari can
+    // report 'suspended' until that promise resolves. The old fire-and-forget
+    // call let AudioBufferSourceNode.start() run against a context that never
+    // actually unlocked. The drawing does not wait (begin() runs on its own
+    // path); only the AUDIO start is gated on the resolved resume, via the
+    // second audioStart() below once the context is genuinely running.
+    if (audioCtx && audioCtx.state === 'suspended') {
+      try {
+        const p = audioCtx.resume();
+        if (p && p.then) p.then(() => { if (running && !paSource) audioStart(); },
+                                e => console.warn('skribl: resume failed', e));
+      } catch (e) { console.warn('skribl: resume threw', e); }
+    }
     const fresh = idx === 0;
     const begin = () => {
       running = true;

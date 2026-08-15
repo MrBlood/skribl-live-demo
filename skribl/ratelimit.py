@@ -250,14 +250,38 @@ def _rate_sessionmaker():
     if ext is not None:
         sm = ext.get("rate_sessionmaker")
         if sm is None or ext.get("rate_engine") is not engine:
-            sm = sa.orm.sessionmaker(bind=engine)
+            sm = _make_rate_sessionmaker(engine)
             ext["rate_sessionmaker"] = sm
             ext["rate_engine"] = engine
         return sm
     sm = _rate_sessionmakers.get(id(engine))
     if sm is None:
-        sm = _rate_sessionmakers[id(engine)] = sa.orm.sessionmaker(bind=engine)
+        sm = _rate_sessionmakers[id(engine)] = _make_rate_sessionmaker(engine)
     return sm
+
+
+def _bounded(s):
+    """Bound THIS limiter session's SQLite lock wait, then return it.
+
+    pysqlite's default busy timeout is ~5 seconds. The limiter deliberately
+    writes from its own connection while the host may hold the file's write
+    lock (failed-request teardown; see routes._finish_parked_reservation), so
+    an un-bounded wait turns that ordinary collision into a five-second stall
+    per failed request. Session.connection() pins the connection to this
+    session's transaction, so the PRAGMA governs every statement that
+    follows; 200 ms is generous for a contended commit and converts the
+    truly-blocked case into a fast OperationalError that the teardown
+    containment logs and RATE_PENDING_TTL reconciles (v202 review, F1).
+    Applied to the LIMITER's sessions only — the host engine's behaviour is
+    the host's."""
+    conn = s.connection()
+    if conn.dialect.name == "sqlite":
+        conn.exec_driver_sql("PRAGMA busy_timeout=200")
+    return s
+
+
+def _make_rate_sessionmaker(engine):
+    return sa.orm.sessionmaker(bind=engine)
 
 
 def _db_lock_identity(s, key_hash):
@@ -310,6 +334,7 @@ def _db_rate_limited(ip, kind):
     cap = _rate_cap(kind)
     key_hash = _rate_key(ip)
     with _rate_sessionmaker()() as s:
+        _bounded(s)
         if kind != "attempts":
             return _db_rate_count(s, kind, key_hash) >= cap
         _db_lock_identity(s, key_hash)
@@ -331,6 +356,7 @@ def _db_rate_limited(ip, kind):
 def _db_rate_reserve_post(ip):
     key_hash = _rate_key(ip)
     with _rate_sessionmaker()() as s:
+        _bounded(s)
         _db_lock_identity(s, key_hash)
         row = RateEvent(bucket="posts", key_hash=key_hash, state="pending")
         s.add(row)
@@ -374,22 +400,26 @@ def _db_rate_release_post(ip, token):
     if token is None:
         return
     with _rate_sessionmaker()() as s:
+        _bounded(s)
         s.query(RateEvent).filter(RateEvent.id == token).delete()
         s.commit()
 
 
 def _db_rate_commit_post(token):
-    # Promote the reservation, on the limiter's own transaction. This used to
-    # ride in the SAME transaction as the post insert so a bookkeeping failure
-    # could not 500 a request whose post was already durable. The ordering now
-    # provides the same guarantee the other way round: promotion happens BEFORE
-    # the request's transaction commits, so a promotion failure aborts the
-    # request while the post is still pending — and if the request then fails,
-    # a committed 'posts' charge for a post that never landed is the
-    # conservative outcome the contract allows (a failed request still counts).
+    # Promote the reservation, on the limiter's own transaction. ORDERING (the
+    # authoritative story; v202 review, F4): promotion happens in BLUEPRINT
+    # TEARDOWN, after the host's before-response commit has made the post
+    # durable and closed the host transaction — never mid-request, where a
+    # second SQLite writer deadlocks against the host's open transaction. The
+    # caller (routes._finish_parked_reservation) proves the host transaction
+    # is closed before calling, and contains any exception from here: a
+    # promotion failure leaves the row 'pending', which counts within
+    # RATE_PENDING_TTL and then ages out. The RuntimeError below is therefore
+    # a logged anomaly, not a request-visible one.
     if token is None:
         return
     with _rate_sessionmaker()() as s:
+        _bounded(s)
         updated = (s.query(RateEvent)
                    .filter(RateEvent.id == token)
                    .update({"state": "committed"}))

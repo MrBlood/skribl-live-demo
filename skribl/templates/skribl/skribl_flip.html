@@ -45,7 +45,8 @@
       <div class="tune-clip">
         <div class="tune-panel" id="tunePanel">
     <div class="tune-row"><span class="tune-label"><span class="tune-name">Speed</span><span class="tune-hint">frames per second</span></span><span class="fps-group" title="Playback speed — frames per second"><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6" title="6 pages a second &mdash; slow and deliberate">6</button><button data-fps="12" class="on" title="12 pages a second &mdash; the usual choice">12</button><button data-fps="24" title="24 pages a second &mdash; smooth, and needs more pages">24</button></span></span></div>
-          <div class="tune-row" id="tuneArcRow"><span class="tune-label"><span class="tune-name">Motion guides</span><span class="tune-hint">path and spacing between pages</span></span><button type="button" id="arcGuideBtn" class="onion-tint" role="switch" aria-checked="false" title="Show the path the drawing travels, and the spacing between pages" aria-label="Motion guides"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17c4-9 14-11 18-2"/><circle cx="4.5" cy="15.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="11" cy="9.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="13" r="1.6" fill="currentColor" stroke="none"/></svg></button></div>
+          <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas (a drawing aid; never part of the animation)" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button></div>
+          <div class="tune-row" id="tuneArcRow"><span class="tune-label"><span class="tune-name">Motion guides</span><span class="tune-hint">path and spacing between pages</span></span><button type="button" id="arcGuideBtn" class="onion-tint" role="switch" aria-checked="false" title="Show the path the drawing travels, and the spacing between pages" aria-label="Motion guides"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18C6 8 16 6.5 20 10"/><path d="M16.5 8.2 L20.6 9.8 L19.2 13.9"/></svg></button></div>
           <div class="tune-row" id="tuneOnionRow"><span class="tune-label"><span class="tune-name">Onion skin</span><span class="tune-hint">pages showing behind</span></span><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on" title="Show 1 page beneath">1</button><button type="button" data-depth="2" title="Show 2 pages beneath">2</button><button type="button" data-depth="3" title="Show 3 pages beneath">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
         </div>
       </div>
@@ -195,7 +196,7 @@
 {% include 'skribl/_skribl_posted.html' %}{% endwith %}
 {% include 'skribl/_skribl_report.html' %}
     {% with kind='flip' %}{% include 'skribl/_skribl_export.html' %}{% endwith %}
-    <div class="flip-hint">Each new page is a <b>copy of the current one</b> — nudge, erase, redraw to animate. Toggle <b>Onion</b> to see the frame beneath. Then hit <b>Flip it</b>.</div>
+
   </div>
 
   <!-- Autosave status pill (Pad component) + export progress overlay -->
@@ -277,6 +278,7 @@
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/drawers.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/gridoverlay.js') }}" defer></script>
   {# Shared recent-colour controller. Loaded before the editor script,
      which reads window.SkriblRecentColors at first use. #}
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>

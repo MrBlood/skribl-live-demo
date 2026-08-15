@@ -315,8 +315,6 @@
     transition: color .15s, border-color .15s, background .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
   .addbtn:hover { color: var(--text-primary); border-color: var(--accent); background: rgba(124,92,255,.06); }
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
-  .flip-hint { color: var(--text-dim); font-size: 12px; text-align: center; padding: 0 16px 12px; }
-  .flip-hint b { color: var(--text-secondary); font-weight: 600; }
   /* "More" popover menu (image / music / save / export). */
   .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; min-width: 232px;
     background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
@@ -375,7 +373,6 @@
     .onion-tool, .grid-tool { width: 33px; }
     #moreBtn { width: 33px; height: 33px; }
     .onion-tool svg, .grid-tool svg { width: 20px; height: 20px; }
-    .flip-hint { display: none; }
   }
   /* Tight controls + drop the fps LABEL and switch the wordmark to FM so the whole
      row (fps, onion, grid, draw-on, more, Flip it, Post) fits down to ~340px. */

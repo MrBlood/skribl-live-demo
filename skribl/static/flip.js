@@ -117,64 +117,18 @@ function sizeStage(){
  * the closing edge is drawn explicitly. Nothing is fractional, so nothing is
  * phantom.
  */
+// Grid overlay via the shared lib (lib/gridoverlay.js) — same maths as before,
+// now shared with Pad. Lazily bound so a page without the overlay still loads.
+let _gridCtl = null;
 function syncGrid(){
-  const g = document.getElementById('flipGrid'); if(!g) return;
-  // Read the border rather than assume it. Hard-coding 1 here is what put the
-  // grid a pixel off when the canvas border went to 2px.
-  const b = parseFloat(getComputedStyle(pad).borderTopWidth) || 0;
-  const w = Math.max(0, pad.offsetWidth  - 2*b);
-  const h = Math.max(0, pad.offsetHeight - 2*b);
-  g.style.left = (pad.offsetLeft + b) + 'px';
-  g.style.top  = (pad.offsetTop  + b) + 'px';
-  g.style.width = w + 'px';
-  g.style.height = h + 'px';
-  drawGrid(g, w, h);
-}
-
-function drawGrid(g, w, h){
-  const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-  const W = Math.round(w * dpr), H = Math.round(h * dpr);
-  if(!W || !H) return;
-  if(g.width !== W || g.height !== H){ g.width = W; g.height = H; }
-  const c = g.getContext('2d');
-  c.clearRect(0, 0, W, H);
-
-  // The fine subdivision now runs at EVERY size.
-  //
-  // It was gated to >=560px back when the grid was CSS gradients: percentage
-  // background-size put lines on fractional pixels, so at ~10px spacing the
-  // fine layer rendered as an uneven wash rather than a grid. Drawing to a
-  // canvas snapped to whole device pixels removed that cause, and the gate
-  // outlived it — a phone was left with 43px cells and nothing between them.
-  //
-  // Majors stay at 8x6 so the coarse landmarks remain countable between
-  // frames; the sub-cells add halves at 21.6px on a 346px phone canvas.
-  const fine = true;
-  const cols = 8, rows = 6;
-  const line = Math.max(1, Math.round(dpr));   // whole device pixels only
-
-  // Sub-cells first so the majors sit on top of them.
-  if(fine) paint(cols*2, rows*2, 'rgba(255,255,255,.10)');
-  paint(cols, rows, 'rgba(255,255,255,.26)');
-
-  function paint(nx, ny, colour){
-    c.fillStyle = colour;
-    // Distribute across (W - line), not W.
-    //
-    // Clamping only the LAST line inward kept it on the canvas but stole its
-    // width from the final cell alone: every other column measured 129-130
-    // device px and the last one 126. One narrow column on the right edge is
-    // exactly the kind of thing that reads as "the grid is off" without being
-    // obviously wrong anywhere you can point at.
-    //
-    // Laying the lines out over the span that is actually available puts the
-    // closing line at W - line by construction, and leaves every gap equal to
-    // within rounding.
-    const spanX = Math.max(1, W - line), spanY = Math.max(1, H - line);
-    for(let i = 0; i <= nx; i++) c.fillRect(Math.round(i * spanX / nx), 0, line, H);
-    for(let j = 0; j <= ny; j++) c.fillRect(0, Math.round(j * spanY / ny), W, line);
+  if(!_gridCtl){
+    const g = document.getElementById('flipGrid');
+    if(!g || typeof skriblGrid !== 'function') return;
+    _gridCtl = skriblGrid(pad, g);
   }
+  _gridCtl.sync();
 }
+
 window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); if(!photoPanel.hidden) positionFitSlider(); });
 
 let frames = [ newFrame() ];
@@ -3267,6 +3221,15 @@ sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
 // second of the strip flying past for no reason. rAF because buildStrip() has
 // only just inserted the tiles and their widths are not laid out yet.
 requestAnimationFrame(()=>scrollStripToActive(false));
+// Intro toast (v204) — replaces the crammed .flip-hint footer that forced the
+// page to scroll on load. Shown once ever via SkriblHints (honours the Tips
+// toggle, persists 'seen', fails quiet), dismissable by click.
+if (window.SkriblHints) {
+  window.SkriblHints.show('flip-intro',
+    'Each new page copies the current one — nudge, erase, and redraw to '
+    + 'animate, then hit Flip it. Turn on Onion skin to trace over the page '
+    + 'beneath. (Tips can be turned off in the \u22EF menu.)');
+}
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();
 if (musicData) { decodeForWaveform(); if (typeof setCrossfadeUI==='function') setCrossfadeUI(); }

@@ -478,10 +478,15 @@ with sync_playwright() as sp:
     # spirit as CSS_RATCHET below. The comments still exist in every source
     # file; they are simply no longer parsed by a browser that will never read
     # them. verify_jsstrip.py is what proves the strip preserves meaning.
-    # 141,730 measured after the drawer-controller extraction (app.js
-    # 133,363); before that 141,824 when _collapse_whitespace landed. Lowered
-    # after real reductions both times — never raised to fit.
-    BYTES_RATCHET, BYTES_TARGET = 141_730, 153_600
+    # 142,220 = 142,160 (A1, owner-signed v204) + 60 B: the single
+    # layoutEditorCanvas hook that repaints the Pad grid overlay on re-fit
+    # (v204). The grid's WIRING and STATE were extracted to editor_tune.js —
+    # editor-only, NOT in the player download — which is what a naive add
+    # (~1,300 B in the player) was refactored down to. What remains is one
+    # window-hook call the editor's layout path needs; it is a no-op the
+    # player never reaches (resizeCanvas returns early in player-mode). Owner
+    # approved alongside A1. History: 141,730 / 141,824 lows after real cuts.
+    BYTES_RATCHET, BYTES_TARGET = 142_220, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

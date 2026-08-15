@@ -30,6 +30,26 @@ def check(name, ok, detail=""):
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail and not ok else ""))
 
 
+def dismiss_intro(page):
+    """Clear the v204 Flip intro toast (key 'flip-intro') and any visible hint.
+
+    That toast fires once on Flip load; these per-hint tests target OTHER hints
+    (magnify, page-move), so the intro must be out of the way — dismissed AND
+    marked seen — or it sits in front of the hint under test. Marking it seen
+    (not a blanket reset) preserves whatever else the test has set up.
+    """
+    page.evaluate("""() => {
+        try {
+            var raw = localStorage.getItem('skribl_hints_seen_v1');
+            var o = raw ? JSON.parse(raw) : {};
+            o['flip-intro'] = 1;
+            localStorage.setItem('skribl_hints_seen_v1', JSON.stringify(o));
+        } catch (e) {}
+        var h = document.querySelector('.skribl-hint');
+        if (h) { h.classList.remove('in'); h.hidden = true; }
+    }""")
+
+
 def summarise_and_exit():
     bad = [r for r in results if not r[0]]
     print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
@@ -153,6 +173,7 @@ with sync_playwright() as p:
     hp = b.new_page(viewport={"width": 1100, "height": 900})
     hp.goto(f"{BASE}/flip", wait_until="load")
     hp.wait_for_timeout(1400)
+    dismiss_intro(hp)                 # v204 Flip intro toast is not what this tests
     hp.click("#magnifyBtn")
     hp.wait_for_timeout(500)
     check("enabling magnify shows the hint", hp.is_visible(".skribl-hint"))
@@ -195,6 +216,7 @@ with sync_playwright() as p:
     mp.goto(f"{BASE}/flip", wait_until="load")
     mp.wait_for_timeout(1300)
     mp.evaluate("() => window.SkriblHints.reset()")
+    dismiss_intro(mp)                 # reset re-arms flip-intro; this tests page-move
     mp.evaluate("() => { addFrame(true); addFrame(true); }")
     mp.wait_for_timeout(400)
     mp.click("#pbLeft")
@@ -303,11 +325,17 @@ with sync_playwright() as p:
     fp2 = ctx.new_page()
     fp2.goto(f"{BASE}/flip", wait_until="load")
     fp2.wait_for_timeout(1400)
+    # Flip shows a one-time intro toast on load (v204, key 'flip-intro'), a
+    # DIFFERENT hint than magnify-pan. Dismiss it and assert on the magnify
+    # TEXT — the intent is that magnify-pan is not taught twice across
+    # surfaces, not that Flip is silent on load.
+    dismiss_intro(fp2)
     fp2.click("#magnifyBtn")
     fp2.wait_for_timeout(500)
     check("and Flip does NOT teach it again after Pad did",
           fp2.evaluate("() => { const h = document.querySelector('.skribl-hint');"
-                       " return !(h && h.classList.contains('in')); }"),
+                       " return !(h && h.classList.contains('in')"
+                       " && /magnif|zoom|scroll|space/i.test(h.textContent)); }"),
           "the same lesson twice, once per surface")
     ctx.close()
 

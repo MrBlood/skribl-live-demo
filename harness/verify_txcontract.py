@@ -312,6 +312,139 @@ check("the client still received a success", r.status_code == 201,
 check("...for a post that never became durable — the documented hazard",
       durable == 1, f"{durable} durable posts (1 from the happy path only)")
 
+print("\nDB LIMITER + SQLITE — a failed host commit neither hangs nor strands")
+# v202 review, F1: blueprint teardown runs BEFORE app teardown, so on a failed
+# request the host's rollback has not run when Skribl's bookkeeping fires, and
+# a limiter write from a second connection deadlocks against the host's open
+# SQLite write transaction. The fix PROVES closure: with the transaction still
+# open, the limiter store is not touched and the row is left pending for TTL
+# recovery. The memory-backend version of this test is NOT equivalent, hence
+# this one: DB backend, real SQLite file, injected commit failure.
+os.environ["SKRIBL_RATE_HMAC_KEY"] = "txcontract-db-limiter"
+dbl = Flask("db-limiter-host")
+_dtmp = tempfile.mkdtemp()
+dbl.config.update(SQLALCHEMY_DATABASE_URI=f"sqlite:///{_dtmp}/dbl.db",
+                  SECRET_KEY="harness-dbl", SKRIBL_RATE_BACKEND="db",
+                  SKRIBL_RATE_MAX_POSTS=5, SKRIBL_RATE_MAX_ATTEMPTS=500)
+dbldb = SQLAlchemy()
+dbldb.init_app(dbl)
+skribl.init_skribl(dbl, session=lambda: dbldb.session)
+skribl.models.attach_to_metadata(dbldb.metadata)
+with dbl.app_context():
+    dbldb.create_all()
+_dboom = {"armed": False}
+
+
+@dbl.after_request
+def _dcommit(resp):
+    if resp.status_code < 500:
+        if _dboom["armed"]:
+            _dboom["armed"] = False
+            raise RuntimeError("injected host commit failure")
+        dbldb.session.commit()
+    return resp
+
+
+@dbl.teardown_request
+def _drollback(exc):
+    dbldb.session.rollback()
+
+
+import skribl.ratelimit as _rl2
+r = dbl.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("db-limiter happy path posts", r.status_code == 201, str(r.status_code))
+_dboom["armed"] = True
+import time as _time
+_t0 = _time.monotonic()
+r = dbl.test_client().post("/api/skribls", json={"frames": [FRAME]})
+_elapsed = _time.monotonic() - _t0
+check("the injected commit failure returns 5xx", r.status_code >= 500,
+      str(r.status_code))
+check("...without a lock hang", _elapsed < 4, f"{_elapsed:.2f}s")
+with dbl.app_context():
+    dbldb.session.rollback()
+    durable = dbldb.session.execute(sa.text(
+        "SELECT COUNT(*) FROM skribl_posts")).scalar()
+    check("no second post is durable", durable == 1, f"{durable}")
+    pend = dbldb.session.execute(sa.text(
+        "SELECT COUNT(*) FROM skribl_rate_events WHERE bucket='posts' "
+        "AND state='pending'")).scalar()
+    check("the reservation is in the documented TTL-recoverable state "
+          "(pending) or removed", pend in (0, 1), f"pending={pend}")
+r = dbl.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("a subsequent request is not blocked", r.status_code == 201,
+      str(r.status_code))
+
+print("\nTEARDOWN CONTAINMENT — limiter failures are logged, never raised")
+# v202 review, F2: promotion/release exceptions in teardown must be contained
+# — a committed post stays a success and an original exception is not masked.
+_orig_commit_post = _rl2._db_rate_commit_post
+_rl2._db_rate_commit_post = lambda tok: (_ for _ in ()).throw(
+    RuntimeError("injected promotion failure"))
+try:
+    r = dbl.test_client().post("/api/skribls", json={"frames": [FRAME]})
+finally:
+    _rl2._db_rate_commit_post = _orig_commit_post
+check("a teardown PROMOTION failure leaves the request a success",
+      r.status_code == 201, str(r.status_code))
+_orig_release = _rl2._db_rate_release_post
+_rl2._db_rate_release_post = lambda ip, tok: (_ for _ in ()).throw(
+    RuntimeError("injected release failure"))
+try:
+    r = dbl.test_client().post("/api/skribls", json={"caption": 5})
+finally:
+    _rl2._db_rate_release_post = _orig_release
+check("a teardown RELEASE failure does not mask the original 4xx",
+      r.status_code == 400, str(r.status_code))
+del os.environ["SKRIBL_RATE_HMAC_KEY"]
+
+print("\nCOEXISTENCE — a host with its own BEGIN recipe still works")
+# v202 review, F3: a pre-existing host BEGIN listener must coexist (the
+# recognised double-BEGIN shape is tolerated), and Skribl on an AUTOCOMMIT
+# engine must refuse loudly rather than contradict the host's choice.
+coex = Flask("begin-coexist-host")
+_ctmp = tempfile.mkdtemp()
+coex.config.update(SQLALCHEMY_DATABASE_URI=f"sqlite:///{_ctmp}/coex.db",
+                   SECRET_KEY="harness-coex")
+coexdb = SQLAlchemy()
+coexdb.init_app(coex)
+with coex.app_context():
+    _ceng = coexdb.engine
+import sqlalchemy as _sa2
+
+
+@_sa2.event.listens_for(_ceng, "connect")
+def _host_iso(dbapi_conn, rec):
+    dbapi_conn.isolation_level = None
+
+
+@_sa2.event.listens_for(_ceng, "begin")
+def _host_begin(conn):
+    conn.exec_driver_sql("BEGIN")
+
+
+skribl.init_skribl(coex, session=lambda: coexdb.session)
+skribl.models.attach_to_metadata(coexdb.metadata)
+
+
+@coex.after_request
+def _ccommit(resp):
+    if resp.status_code < 500:
+        coexdb.session.commit()
+    return resp
+
+
+@coex.teardown_request
+def _crollback(exc):
+    coexdb.session.rollback()
+
+
+with coex.app_context():
+    coexdb.create_all()
+r = coex.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("posting through a host with its own BEGIN recipe works",
+      r.status_code == 201, str(r.status_code))
+
 print("\nSTANDALONE — app.py owns the per-request commit")
 # The other half of the contract. Removing the routes' commits without giving
 # app.py one would make every standalone post vanish at request end; this is

@@ -118,35 +118,47 @@ def _idempotent_replay(idem_hash, fingerprint):
 def register_routes(bp, *, index_route=False):
     @bp.teardown_request
     def _finish_parked_reservation(exc):
-        # POST-SLOT BOOKKEEPING LIVES HERE, after the host transaction ended.
-        # Two reasons, one per database:
-        #   * Correctness everywhere: the host owns the request transaction
-        #     (docs/INTEGRATION.md), so only after it resolves do we know
-        #     whether the post landed. Success -> promote the reservation;
-        #     any failure — including the host's before-response commit
-        #     raising — -> release it, so a failed request does not hold a
-        #     slot for the whole window.
-        #   * Liveness on SQLite: with real transactions (see models.py's
-        #     BEGIN recipe), the host's open write transaction and the
-        #     limiter's independent session are two writers on one file; a
-        #     promote or release issued mid-request deadlocks against the
-        #     very rows it is accounting for. Teardown is after COMMIT or
-        #     ROLLBACK, where the lock is free.
-        # A teardown-time promotion failure leaves the row 'pending', which
-        # still counts within RATE_PENDING_TTL and then ages out — quota can
-        # only leak DOWNWARD, briefly, and only if the limiter's own store is
-        # failing. This ordering is also why the integration contract requires
-        # the host commit BEFORE the response (after_request), never in
-        # teardown: a teardown-committing host resolves its transaction after
-        # this hook has already had to decide.
+        """Resolve the parked post-slot reservation — promote on success,
+        release on failure — WITHOUT assuming teardown ordering.
+
+        On the SUPPORTED topology (host commits before the response), success
+        finds the host transaction closed and both operations are cheap. On
+        failure paths the host's rollback may not have run yet — Flask runs
+        blueprint teardowns before app teardowns — so the limiter's write can
+        collide with the host's still-open SQLite transaction. That collision
+        is made FAST (bounded busy_timeout on the limiter's SQLite sessions)
+        and CONTAINED (caught, logged, row left pending for RATE_PENDING_TTL
+        reconciliation) rather than divined away: introspecting the host
+        session's transaction state under autobegin is guesswork, a bounded
+        failed write is mechanics. Quota can leak only downward, briefly,
+        only while the limiter's own store is failing or locked, and the log
+        line says which (v202 review, F1+F2).
+        """
         reservation = g.pop("_skribl_post_reservation", None)
         if reservation is None:
             return
         ip, token, succeeded = reservation
-        if succeeded and exc is None:
-            _rate_commit_post(token)
-        else:
-            _rate_release_post(ip, token)
+        try:
+            if succeeded and exc is None:
+                _rate_commit_post(token)
+            else:
+                _rate_release_post(ip, token)
+        except Exception:
+            # The failure-path collision this contains: Flask runs BLUEPRINT
+            # teardowns before APP teardowns, so a host whose rollback lives
+            # in app teardown (app.py's does) still holds its SQLite write
+            # transaction when this fires — and the limiter's write from a
+            # second connection hits the lock. The limiter's SQLite sessions
+            # carry a SHORT busy_timeout (see _rate_sessionmaker) precisely so
+            # that collision resolves in milliseconds as an exception, which
+            # lands here, is LOGGED, and leaves the row pending — the
+            # RATE_PENDING_TTL reconciliation is the documented and actual
+            # degradation. Nothing raises out of teardown: a post the host
+            # already committed stays a success, and an original request
+            # exception is never masked by bookkeeping (v202 review, F1+F2).
+            current_app.logger.exception(
+                "skribl: limiter bookkeeping failed in teardown; reservation "
+                "%s left pending for TTL recovery.", token)
 
     # errorhandler, NOT app_errorhandler: the app_ variant is APPLICATION-WIDE by
     # Flask's own definition, so a host's unrelated oversized upload would have

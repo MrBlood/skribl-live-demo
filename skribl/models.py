@@ -414,6 +414,16 @@ def _install_sqlite_fk(bind):
     _FK_ENGINES.add(engine)
     if getattr(getattr(engine, "dialect", None), "name", None) != "sqlite":
         return False                     # PostgreSQL and friends: nothing to do
+    if str(getattr(engine.dialect, "isolation_level", "") or "").upper() == "AUTOCOMMIT":
+        # The host EXPLICITLY chose driver-level autocommit (v202 review, F3).
+        # Installing the explicit-BEGIN recipe would contradict that choice —
+        # and Skribl's savepoint contract cannot hold without real
+        # transactions — so refuse loudly instead of silently doing either.
+        raise RuntimeError(
+            "Skribl cannot run on a SQLite engine configured with "
+            "isolation_level='AUTOCOMMIT': its transaction contract needs "
+            "real transactions (see docs/INTEGRATION.md, 'SQLite transaction "
+            "mode').")
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, connection_record):
@@ -429,6 +439,10 @@ def _install_sqlite_fk(bind):
         # FK pragma because it is the same class of per-engine SQLite truth.
         dbapi_connection.isolation_level = None
         cur = dbapi_connection.cursor()
+        # (An engine created with isolation_level="AUTOCOMMIT" is detected
+        # BEFORE these listeners install — see the guard in
+        # _install_sqlite_fk — because emitting BEGINs against a deliberately
+        # autocommit engine would contradict the host's explicit choice.)
         try:
             cur.execute("PRAGMA foreign_keys=ON")
         finally:
@@ -436,7 +450,17 @@ def _install_sqlite_fk(bind):
 
     @event.listens_for(engine, "begin")
     def _real_begin(conn):
-        conn.exec_driver_sql("BEGIN")
+        try:
+            conn.exec_driver_sql("BEGIN")
+        except Exception as e:
+            # DELIBERATE COEXISTENCE (v202 review, F3): a host that installed
+            # its own BEGIN-emitting recipe before Skribl would double-BEGIN
+            # here. "cannot start a transaction within a transaction" in that
+            # one shape means the host already began — which is the outcome
+            # this listener wants — so it is tolerated. Anything else is a
+            # real error and raises.
+            if "within a transaction" not in str(e).lower():
+                raise
 
     return True
 

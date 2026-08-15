@@ -22,6 +22,8 @@ wrong, and therefore the useful one to pin.
 from playwright.sync_api import sync_playwright
 
 BASE = "http://127.0.0.1:5001"
+import pathlib
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 results = []
 def check(name, ok, detail=""):
@@ -795,6 +797,99 @@ with sync_playwright() as _p:
 
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)
+print("\nV204 PINS — Pad tune drawer, Grid overlay, Flip intro toast")
+from playwright.sync_api import sync_playwright as _sp204
+with _sp204() as _p:
+    _b = _p.chromium.launch()
+    # Pad: tune button opens the drawer; Grid toggles the overlay canvas.
+    pg = _b.new_page(viewport={"width": 900, "height": 800})
+    pg.goto(BASE + "/", wait_until="load")
+    pg.wait_for_timeout(900)
+    check("V204: Pad has a tune button (new drawer)",
+          pg.locator("#tuneBtn").count() == 1)
+    check("V204: Pad's tune drawer starts closed",
+          not pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
+    pg.click("#tuneBtn"); pg.wait_for_timeout(350)
+    check("V204: clicking the tune button opens it",
+          pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
+    check("V204: Grid lives in the tune drawer, not the draw drawer",
+          pg.evaluate("() => !!document.querySelector('#tunePanel #gridBtn')"))
+    # Draw something so the grid has a canvas box, then toggle grid on.
+    draw(pg, "#canvas", 120, 120, n=10)
+    pg.click("#gridBtn"); pg.wait_for_timeout(300)
+    gridpaints = pg.evaluate("""() => {
+        const g = document.getElementById('padGrid');
+        if (!g || !g.classList.contains('on')) return false;
+        const c = g.getContext('2d');
+        const d = c.getImageData(0, 0, g.width, g.height).data;
+        for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return true;
+        return false;
+    }""")
+    check("V204: toggling Grid paints the overlay canvas", gridpaints)
+    check("V204: the Grid button lights when on",
+          pg.evaluate("() => document.getElementById('gridBtn').classList.contains('active')"))
+    # Grid must NOT appear inside the shared draw drawer anymore.
+    check("V204: Grid row removed from the draw drawer",
+          pg.evaluate("() => !document.querySelector('#drawPanel #gridBtn')"))
+    pg.close()
+    # Flip: the intro toast fires on load (Tips default on, first visit).
+    fp = _b.new_page(viewport={"width": 900, "height": 800})
+    fp.goto(BASE + "/flip", wait_until="load")
+    fp.wait_for_timeout(900)
+    toast = fp.evaluate("""() => {
+        const el = document.querySelector('.skribl-hint');
+        return el && !el.hidden ? el.textContent : null;
+    }""")
+    check("V204: Flip shows the intro toast on first load",
+          toast and "copies the current one" in toast, str(toast)[:50])
+    check("V204: the old crammed .flip-hint footer is gone",
+          fp.evaluate("() => !document.querySelector('.flip-hint')"))
+    fp.close()
+    _b.close()
+
+print("\nAMENDMENT PINS — A1 wiring, A2 narrow-viewport frame")
+import re as _re
+_appjs = (ROOT / "skribl" / "static" / "app.js").read_text()
+check("A1: the late-decode hook is defined",
+      "_skriblLateAudio = " in _appjs or "_skriblLateAudio=(" in _appjs)
+check("A1: ...and invoked from the decode-complete path",
+      _appjs.count("_skriblLateAudio") >= 2,
+      f"{_appjs.count('_skriblLateAudio')} references")
+check("A1: play() gates audio start on the RESOLVED resume promise",
+      "p.then(() => { if (running && !paSource) audioStart(); }" in _appjs)
+check("A1: decode/fetch failures are no longer silent",
+      "music decode failed" in _appjs and "music fetch failed" in _appjs)
+
+# A2: at the widths that used to clip, the ring must be sampleable INSIDE the
+# wrap's left and right edges. Computed-style + geometry, not screenshots:
+# an inset shadow is unclippable by construction, so pin the construction.
+from playwright.sync_api import sync_playwright as _sp
+with _sp() as _p:
+    _b = _p.chromium.launch()
+    for _w in (461, 390, 344):
+        _pg = _b.new_page(viewport={"width": _w, "height": 800})
+        _pg.goto(f"{BASE}/skribl-pad", wait_until="load")
+        _pg.wait_for_timeout(400)
+        _probe = _pg.evaluate("""() => {
+            const el = document.querySelector('.canvas-wrap');
+            if (!el) return null;
+            const cs = getComputedStyle(el);
+            const r = el.getBoundingClientRect();
+            return { shadow: cs.boxShadow, left: r.left, right: r.right,
+                     vw: document.documentElement.clientWidth };
+        }""")
+        check(f"A2 @{_w}px: the frame ring is INSET (paints inside the box)",
+              _probe and "inset" in (_probe["shadow"] or ""),
+              str((_probe or {}).get("shadow"))[:60])
+        check(f"A2 @{_w}px: the wrap's edges are on-screen where the ring paints",
+              _probe and _probe["left"] >= 0
+              and _probe["right"] <= _probe["vw"] + 0.5,
+              f"left {_probe['left']:.1f}, right {_probe['right']:.1f}, "
+              f"vw {_probe['vw']}" if _probe else "no .canvas-wrap")
+        _pg.close()
+    _b.close()
+
+ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:
     if not o:

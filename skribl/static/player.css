@@ -269,7 +269,14 @@ body.player-mode .canvas-area { display: contents; }
      on a dim panel. Held in a variable because every state below replaces
      box-shadow wholesale — .recording did, and Pad enters it on the FIRST
      STROKE, so the edge vanished exactly when it was needed. */
-  --canvas-ring: 0 0 0 2px rgba(255,255,255,0.18);
+  /* INSET, not an outer spread (v202 review amendment, A2). A box-shadow
+     painted OUTSIDE the box contributes nothing to layout, so once the fitted
+     wrapper reached its width ceiling (~461px viewports) the 2px ring painted
+     past the container edge and was clipped: the frame's left and right sides
+     simply vanished while the canvas stayed. Inset paints within the border
+     box — unclippable at the edge, zero layout change, and every state rule
+     below that swaps box-shadow wholesale still re-includes this variable. */
+  --canvas-ring: inset 0 0 0 2px rgba(255,255,255,0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
   border-radius: var(--r-frame, 14px);
@@ -1032,3 +1039,4 @@ body.player-mode #canvas {
   .skribl-tip { transition: none; }
 }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }

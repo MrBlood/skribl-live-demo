@@ -101,11 +101,9 @@
       <span class="prop-val" id="opacityVal">100%</span>
     </div>
     {% if kind == 'flip' -%}
-    <div class="prop-row">
-      <span class="draw-section-label">Grid</span>
-      <button type="button" id="gridBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Grid overlay"><span class="layer-toggle-knob"></span></button>
-      <span class="prop-val grid-hint">Alignment guides</span>
-    </div>
+    {# Grid moved to the tune drawer in v204 (it's a working aid, alongside
+       Speed/Onion/Motion guides). Draw-on stays here: it's a Flip-only
+       playback style, not a canvas-tuning control. #}
     <div class="prop-row">
       <span class="draw-section-label">Draw-on</span>
       <button type="button" id="drawOnBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Draw-on replay"><span class="layer-toggle-knob"></span></button>

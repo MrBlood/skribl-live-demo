@@ -332,7 +332,14 @@ body:not(.player-mode) .canvas-wrap #canvas {
      on a dim panel. Held in a variable because every state below replaces
      box-shadow wholesale — .recording did, and Pad enters it on the FIRST
      STROKE, so the edge vanished exactly when it was needed. */
-  --canvas-ring: 0 0 0 2px rgba(255,255,255,0.18);
+  /* INSET, not an outer spread (v202 review amendment, A2). A box-shadow
+     painted OUTSIDE the box contributes nothing to layout, so once the fitted
+     wrapper reached its width ceiling (~461px viewports) the 2px ring painted
+     past the container edge and was clipped: the frame's left and right sides
+     simply vanished while the canvas stayed. Inset paints within the border
+     box — unclippable at the edge, zero layout change, and every state rule
+     below that swaps box-shadow wholesale still re-includes this variable. */
+  --canvas-ring: inset 0 0 0 2px rgba(255,255,255,0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
   border-radius: var(--r-frame, 14px);
@@ -349,7 +356,7 @@ body:not(.player-mode) .canvas-wrap #canvas {
    edges don't look muddy. Screen-only; export is unaffected. */
 .canvas-wrap.light-bg {
   /* Darker ring: a white ring on a white canvas is not an edge. */
-  --canvas-ring: 0 0 0 2px rgba(0,0,0,0.22);
+  --canvas-ring: inset 0 0 0 2px rgba(0,0,0,0.22);
   box-shadow: var(--canvas-ring),
               inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 70px rgba(0,0,0,0.06);
 }
@@ -4152,3 +4159,42 @@ body.player-mode #canvas {
 .skribl-hint.in { opacity: 1; transform: translate(-50%, 0); }
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
+
+/* ============================================================
+   Tune drawer + grid overlay (v204) — Pad gained the tune drawer
+   that holds Grid. These rules are lifted verbatim from flip.css
+   (same tokens, which styles.css also defines) EXCEPT .tune-shell's
+   margin: Flip's header is a floating card (margin 7px) so its drawer
+   tucks under it; Pad's toolbar is in normal flow, so the drawer sits
+   flush below it with no negative top margin.
+   ============================================================ */
+.onion-tint {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0;
+  border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+.onion-tint svg { width: 13px; height: 13px; }
+.onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
+.tune-shell {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+  margin: 0; background: var(--surface-raised); border: 0; border-radius: 0 0 14px 14px;
+}
+.tune-shell.open { grid-template-rows: 1fr; border: 1px solid var(--hairline-strong); border-top: 0; }
+.tune-clip { overflow: hidden; min-height: 0; }
+.tune-panel {
+  padding: 12px 16px; opacity: 0; transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.tune-shell.open .tune-panel { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
+.tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
+.tune-row + .tune-row { border-top: 1px solid var(--hairline); }
+.tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; }
+.tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.tune-hint { font-size: 11px; color: var(--text-dim); }
+.tune-tool.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
+.flip-grid.on { display: block; }
+body.playing .flip-grid { display: none; }

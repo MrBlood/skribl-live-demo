@@ -130,6 +130,24 @@ the opt-in means, and you must accept BOTH:
    as everyone's. If your policy makes viewer-specific denials, do not enable
    this opt-in.
 
+### SQLite transaction mode (engine-wide, on purpose)
+
+On SQLite engines, Skribl installs two per-engine listeners alongside the
+foreign-key pragma: `isolation_level = None` on connect and an explicit
+`BEGIN` on transaction begin. **This changes transaction behaviour for the
+whole engine — every host table, every component sharing it — not just
+Skribl's tables.** It is the canonical SQLAlchemy recipe, and it is not
+optional decoration: without it, pysqlite's deferred BEGIN runs Skribl's
+savepoints in autocommit and `RELEASE` silently commits — the transaction
+ownership contract on this page would be fiction. If your host already
+installs its own BEGIN-emitting recipe, the two coexist (a double-BEGIN in
+the recognised shape is tolerated). An engine explicitly configured with
+`isolation_level="AUTOCOMMIT"` is refused at startup with an error, because
+the contract cannot hold there and silently overriding your choice would be
+worse. `SKRIBL_SQLITE_FOREIGN_KEYS=0` disables the FK pragma only; the
+transaction recipe is not separately disableable, because every documented
+guarantee on this page depends on it.
+
 ### LocalDiskStore temp files
 
 Writes go to a unique `*.part` and rename into place; ordinary write failures
