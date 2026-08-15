@@ -67,6 +67,9 @@ env = dict(os.environ,
            DATABASE_URL=f"sqlite:///{tmp}/media.db",
            SKRIBL_RATE_MAX_POSTS="100000",
            SKRIBL_RATE_MAX_ATTEMPTS="100000",
+           # This suite pins the OPTED-IN cache behaviour; the default
+           # (private, no-store) is pinned by verify_mediaauthz.py.
+           SKRIBL_PUBLIC_MEDIA_CACHE="1",
            SECRET_KEY="harness-storage-suite")
 subprocess.run([sys.executable, "-c",
                 "from app import app, db; app.app_context().push(); db.create_all()"],
@@ -140,10 +143,13 @@ try:
           headers.get("Content-Type", "").startswith("audio/wav"),
           headers.get("Content-Type", ""))
     check("served with nosniff", headers.get("X-Content-Type-Options") == "nosniff")
-    # Immutable PUBLIC caching only when every referencing post is public.
-    # Content addressing makes the bytes unchanging; it does not make them
-    # public, and a shared cache does not re-check authorisation.
-    check("public media is cached immutably",
+    # Immutable PUBLIC caching only when every referencing post is public AND
+    # the deployment opted in (SKRIBL_PUBLIC_MEDIA_CACHE, set above). Content
+    # addressing makes the bytes unchanging; it does not make them public,
+    # visibility is revocable, and a shared cache does not re-check
+    # authorisation — hence the opt-in. Default behaviour is pinned in
+    # verify_mediaauthz.py.
+    check("public media is cached immutably (behind the opt-in)",
           "immutable" in headers.get("Cache-Control", ""),
           headers.get("Cache-Control", ""))
 
@@ -314,7 +320,13 @@ try:
     from skribl.storage import sweep_orphans
 
     class _FakeQuery:
+        # sweep_orphans checks references in CHUNKS now — one IN() query per
+        # chunk instead of one all-keys set (bounded memory at scale) — so the
+        # fake grows a filter() that narrows to the requested keys.
         def __init__(self, rows): self._rows = rows
+        def filter(self, clause):
+            wanted = set(clause.right.value)
+            return _FakeQuery([r for r in self._rows if r[0] in wanted])
         def all(self): return self._rows
 
     class _FakeSession:

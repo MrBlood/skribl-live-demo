@@ -25,8 +25,8 @@ What the host does NOT need to give up: its own CSP (Skribl's is attached to the
 blueprint, not the app), its own error handlers, its own template namespace
 (everything lives under templates/skribl/), or its own static route.
 
-Tables: `skribl.models.SkriblBase.metadata` covers exactly Skribl's three
-tables (posts, rate events, post-media associations),
+Tables: `skribl.models.SkriblBase.metadata` covers exactly Skribl's four
+tables (posts, rate events, post-media associations, idempotency keys),
 so the host can migrate them with its own Alembic setup.
 """
 import hashlib
@@ -81,7 +81,7 @@ def asset_url(bp, filename):
 def create_blueprint(session=None, url_prefix=None,
                      static_url_path="/static/skribl", current_user_id=None,
                      csrf=None, media_store=None, index_route=False,
-                     player_target="_blank"):
+                     player_target="_blank", public_media_cache=False):
     """Build the Skribl blueprint. See the module docstring for the contract.
 
     `session` is REQUIRED. It defaulted to None, which made the documented
@@ -182,6 +182,14 @@ def create_blueprint(session=None, url_prefix=None,
     # opted into, never inherited by upgrading.
     from .storage import InlineStore
     bp.skribl_media_store = media_store or InlineStore()
+    # Cache opt-in for authorisation-dependent responses (/media/<key>, the
+    # share card). Default OFF: visibility is REVOCABLE — a post can go from
+    # public to private — and a shared cache never re-runs visible_to(). So
+    # `Cache-Control: public` on anything whose readability depends on a
+    # visibility check is a decision only a deployment can make, by declaring
+    # that it accepts serving formerly-public bytes from caches until they
+    # expire. The standalone app wires this to SKRIBL_PUBLIC_MEDIA_CACHE.
+    bp.skribl_public_media_cache = bool(public_media_cache)
     # Registered on the blueprint's Jinja environment, not the application's.
     # add_app_template_global() would expose skribl_asset to every template in
     # the host app, and calling it there builds a relative endpoint from outside
@@ -196,7 +204,13 @@ def create_blueprint(session=None, url_prefix=None,
 
 def init_skribl(app, **kwargs):
     """Build the blueprint and register it on `app`. Returns the blueprint."""
+    # App-local visibility policy (see models.set_visibility_policy): popped
+    # here because create_blueprint has no app to hang it on.
+    _policy = kwargs.pop("visibility_policy", None)
     bp = create_blueprint(**kwargs)
+    if _policy is not None:
+        from .models import set_visibility_policy
+        set_visibility_policy(_policy, app=app)
     # Store the session factory PER APPLICATION. A module-level global meant the
     # most recently initialised app won for the whole process; see
     # skribl.models.session().

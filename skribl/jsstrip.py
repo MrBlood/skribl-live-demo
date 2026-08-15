@@ -345,6 +345,33 @@ def strip_comments(src, keep_banner=False):
     return "".join(out)
 
 
+def _collapse_whitespace(src):
+    """Collapse each inter-token gap containing a line terminator to "\\n".
+
+    Token-aware for the same reason strip_comments is: a regex can hold spaces,
+    a template literal can hold anything, and both are single tokens here, so
+    their interiors are untouchable BY CONSTRUCTION — only the gaps between
+    tokens are visited. Keeping exactly one newline in any gap that had one
+    preserves automatic semicolon insertion exactly (ASI asks whether a
+    LineTerminator separates two tokens, never how many); gaps on one line are
+    left alone, so this removes indentation and blank lines and nothing else.
+    """
+    out, last = [], 0
+    for tok in _Lexer(src):
+        gap = src[last:tok.start]
+        if gap:
+            if any(ch in gap for ch in _LINE_TERMINATORS):
+                out.append("\n")
+            else:
+                out.append(gap)
+        out.append(src[tok.start:tok.end])
+        last = tok.end
+    tail = src[last:]
+    if tail:
+        out.append("\n" if any(ch in tail for ch in _LINE_TERMINATORS) else tail)
+    return "".join(out)
+
+
 def strip_bytes(data, name=""):
     """Comment-stripped UTF-8 bytes, or `data` unchanged if anything is off.
 
@@ -363,9 +390,11 @@ def strip_bytes(data, name=""):
         return data
     try:
         stripped = strip_comments(src, keep_banner=name.endswith(".min.js"))
-        # Cheap round trip. It cannot prove the lexer read the file correctly
-        # (it would have to be right to check), but it does catch a strip that
-        # removed or merged real tokens, which is the failure that matters.
+        stripped = _collapse_whitespace(stripped)
+        # Cheap round trip, on the COMBINED result of both passes. It cannot
+        # prove the lexer read the file correctly (it would have to be right to
+        # check), but it does catch a strip or collapse that removed or merged
+        # real tokens, which is the failure that matters.
         if _significant(stripped) != _significant(src):
             return data
     except Exception:

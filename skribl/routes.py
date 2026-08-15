@@ -15,14 +15,17 @@ import os
 import secrets
 from datetime import datetime
 
-from flask import (abort, current_app, jsonify, redirect, render_template,
+from flask import (abort, current_app, g, jsonify, redirect, render_template,
                    request, url_for)
+import hashlib
+
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
 from .core import (MAX_CARD_BYTES, OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE,
                    SKRIBL_VERSION, _og_meta, _valid_public_id)
-from .models import SkriblPost, SkriblPostMedia, session
+from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
+                     _visibility_policy, as_utc, session)
 from .storage import KEY_RE, LocalDiskStore, externalise_payload
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
@@ -53,7 +56,60 @@ def _decode_cursor(cursor):
         return None
 
 
+def _idempotency_hash(raw_key, viewer_id):
+    """sha256('<author>|<key>'), or None when the header is absent/unusable.
+
+    Author-scoped so one client's key can never resolve to another's post.
+    Keys are bounded (1-200 chars) — an unbounded header would otherwise be a
+    free write amplifier into an indexed column.
+    """
+    if not raw_key or not isinstance(raw_key, str):
+        return None
+    raw_key = raw_key.strip()
+    if not raw_key or len(raw_key) > 200:
+        return None
+    scope = "anon" if viewer_id is None else f"u{viewer_id}"
+    return hashlib.sha256(f"{scope}|{raw_key}".encode()).hexdigest()
+
+
+def _idempotent_replay(idem_hash):
+    """The stored response for this key, or None if the key is unused.
+
+    200, not 201: the post already existed when THIS request arrived. The body
+    matches the original create response, so a client that missed the first
+    answer can proceed identically. A mapping whose post has been deleted
+    (the FK cascades) simply no longer exists, and the retry creates anew —
+    which is right: the thing the key named is gone.
+    """
+    row = (session().query(SkriblIdempotency)
+           .filter_by(key_hash=idem_hash).first())
+    if row is None:
+        return None
+    post = session().query(SkriblPost).options(
+        sa.orm.defer(SkriblPost.payload_json)).filter_by(id=row.post_id).first()
+    if post is None:
+        return None
+    return jsonify({
+        "id": post.public_id,
+        "url": url_for(".skribl_player", public_id=post.public_id),
+        "idempotentReplay": True,
+    }), 200
+
+
 def register_routes(bp, *, index_route=False):
+    @bp.teardown_request
+    def _release_parked_reservation(exc):
+        # The create handler parks its post reservation on `g` and returns with
+        # its rows flushed but uncommitted; the HOST's commit makes them durable
+        # (docs/INTEGRATION.md). If the request died after the handler returned
+        # — the host's commit raising is the concrete case — the post never
+        # landed, so the slot goes back rather than being held for the window.
+        # On the db backend the release deletes the (already promoted) row on
+        # the limiter's own session; on the memory backend it frees the slot.
+        reservation = g.pop("_skribl_post_reservation", None)
+        if exc is not None and reservation is not None:
+            _rate_release_post(*reservation)
+
     # errorhandler, NOT app_errorhandler: the app_ variant is APPLICATION-WIDE by
     # Flask's own definition, so a host's unrelated oversized upload would have
     # received Skribl's JSON "This Skribl is too large to post" message. Scoped
@@ -93,31 +149,40 @@ def register_routes(bp, *, index_route=False):
         # unchanged. This route stays render-always; it never 404s the page.
         title = caption = None
         try:
-            post = None
-            if _valid_public_id(public_id):
-                # Same reason as the feed: this route renders a shell with the
-                # title and caption in the Open Graph tags and nothing else. The
-                # template never references the payload — the client fetches it
-                # separately from /api/skribls/<id> — so loading it here pulled
-                # the whole drawing and its base64 media over the database
-                # connection for every view of every shared link, to discard it.
-                post = (session().query(SkriblPost)
-                        .options(sa.orm.defer(SkriblPost.payload_json))
-                        .filter_by(public_id=public_id).first())
-            # Treat a post the viewer may not read as absent: the shell still
-            # renders (this route is render-always by design), the client's
-            # fetch 404s, and the visitor gets the standard error panel. What
-            # must NOT happen is a private Skribl's title and caption being
-            # served to a social scraper in the Open Graph tags.
-            if post is not None and not post.visible_to(bp.skribl_current_user_id()):
+            # A savepoint, not a rollback: this route is render-always by
+            # design, so a database error must not take the page down — but the
+            # old `session().rollback()` recovery threw away the HOST's pending
+            # work along with our failed read (docs/INTEGRATION.md). Rolling
+            # back to a savepoint reopens the transaction for whoever owns it
+            # while touching nothing the host had already done.
+            with session().begin_nested():
                 post = None
-            if post is not None:
-                title, caption = post.title, post.caption
+                if _valid_public_id(public_id):
+                    # Same reason as the feed: this route renders a shell with
+                    # the title and caption in the Open Graph tags and nothing
+                    # else. The template never references the payload — the
+                    # client fetches it separately from /api/skribls/<id> — so
+                    # loading it here pulled the whole drawing and its base64
+                    # media over the database connection for every view of
+                    # every shared link, to discard it.
+                    post = (session().query(SkriblPost)
+                            .options(sa.orm.defer(SkriblPost.payload_json))
+                            .filter_by(public_id=public_id).first())
+                # Treat a post the viewer may not read as absent: the shell
+                # still renders (this route is render-always by design), the
+                # client's fetch 404s, and the visitor gets the standard error
+                # panel. What must NOT happen is a private Skribl's title and
+                # caption being served to a social scraper in the Open Graph
+                # tags.
+                if post is not None and not post.visible_to(bp.skribl_current_user_id()):
+                    post = None
+                if post is not None:
+                    title, caption = post.title, post.caption
         except Exception:
-            try:
-                session().rollback()
-            except Exception:
-                pass
+            # The savepoint has already unwound; the outer transaction — and
+            # anything the host had pending on it — is untouched and remains
+            # the host's to finish.
+            pass
         og_title, og_description = _og_meta(title, caption)
         return render_template(
             "skribl/skribl_player.html",
@@ -139,39 +204,66 @@ def register_routes(bp, *, index_route=False):
         # missing post, missing/'malformed thumbnail, or a transient DB error we
         # redirect to the static branded card so the og:image never 404s.
         try:
-            post = None
-            if _valid_public_id(public_id):
-                post = session().query(SkriblPost).filter_by(public_id=public_id).first()
-            # The thumbnail IS the drawing. Serving it for a private post leaks
-            # the content itself, not merely its existence — so fall through to
-            # the generic branded card exactly as for a missing post.
-            if post is not None and not post.visible_to(bp.skribl_current_user_id()):
+            # Savepoint for the same reason as the player shell above: recover
+            # from OUR failed read without rolling back the host's transaction.
+            with session().begin_nested():
                 post = None
-            if post is not None:
-                payload = post.payload_json or {}
-                thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
-                decoded = _decode_data_url_image(thumb)
-                # Size cap: see MAX_CARD_BYTES. Oversize → static fallback below.
-                if decoded is not None and len(decoded[0]) > MAX_CARD_BYTES:
-                    decoded = None
-                if decoded is not None:
-                    data, mimetype = decoded
-                    resp = current_app.response_class(data, mimetype=mimetype)
-                    # Immutable once posted; let scrapers/CDNs cache by URL.
-                    # NEVER `public` for a post that is not public. A shared
-                    # CDN or proxy would cache the authorised author's thumbnail
-                    # and then serve it to unauthorised viewers without ever
-                    # re-running visible_to(). The thumbnail IS the drawing.
-                    if post.visibility == "public":
-                        resp.headers["Cache-Control"] = "public, max-age=86400"
-                    else:
-                        resp.headers["Cache-Control"] = "private, no-store"
-                    return resp
+                if _valid_public_id(public_id):
+                    post = session().query(SkriblPost).filter_by(public_id=public_id).first()
+                # The thumbnail IS the drawing. Serving it for a private post leaks
+                # the content itself, not merely its existence — so fall through to
+                # the generic branded card exactly as for a missing post.
+                if post is not None and not post.visible_to(bp.skribl_current_user_id()):
+                    post = None
+                if post is not None:
+                    payload = post.payload_json or {}
+                    thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
+                    decoded = _decode_data_url_image(thumb)
+                    if decoded is None and isinstance(thumb, str):
+                        # EXTERNALISED thumbnail (outside review follow-up).
+                        # With an externalising store the payload holds the
+                        # STORED URL, not a data URL — so every card on such a
+                        # deployment silently fell back to the generic branded
+                        # image, which reads as "working" and is not. Resolve
+                        # the key back through the store, under the visibility
+                        # check already made above and the same size cap
+                        # below. The key is taken from the URL's LAST segment
+                        # and must be Skribl-shaped — never a path to open.
+                        _seg = thumb.rsplit("/", 1)[-1]
+                        _store = bp.skribl_media_store
+                        if (KEY_RE.match(_seg)
+                                and callable(getattr(_store, "read", None))):
+                            _got = _store.read(_seg)
+                            if _got is not None:
+                                decoded = (_got[0], _got[1]) \
+                                    if isinstance(_got, tuple) else None
+                    # Size cap: see MAX_CARD_BYTES. Oversize → static fallback below.
+                    if decoded is not None and len(decoded[0]) > MAX_CARD_BYTES:
+                        decoded = None
+                    if decoded is not None:
+                        data, mimetype = decoded
+                        resp = current_app.response_class(data, mimetype=mimetype)
+                        # Immutable once posted; let scrapers/CDNs cache by URL.
+                        # NEVER `public` for a post that is not public. A shared
+                        # CDN or proxy would cache the authorised author's thumbnail
+                        # and then serve it to unauthorised viewers without ever
+                        # re-running visible_to(). The thumbnail IS the drawing.
+                        # Public caching only behind the same deployment
+                        # opt-in as /media/<key>, for the same reason:
+                        # visibility is revocable and a shared cache does not
+                        # re-check. visible_to(None) — the ONE predicate again
+                        # — so a host policy refusing this post refuses the
+                        # cache hint too.
+                        if (post.visibility == "public"
+                                and post.visible_to(None)
+                                and bp.skribl_public_media_cache):
+                            resp.headers["Cache-Control"] = "public, max-age=86400"
+                        else:
+                            resp.headers["Cache-Control"] = "private, no-store"
+                        return resp
         except Exception:
-            try:
-                session().rollback()
-            except Exception:
-                pass
+            # The savepoint already unwound; the host's transaction is intact.
+            pass
         return redirect(url_for(".static", filename="og-card.png"))
 
     @bp.post("/api/skribls")
@@ -199,6 +291,21 @@ def register_routes(bp, *, index_route=False):
         if bp.skribl_csrf and not bp.skribl_csrf[2](request):
             return jsonify({"error": "Request could not be verified. "
                                      "Please reload the page and try again."}), 403
+
+        # IDEMPOTENCY (outside review, P1). A response lost in transit leaves
+        # the client unable to tell "never happened" from "happened and I
+        # missed the answer"; a bare retry then duplicates the post. With an
+        # Idempotency-Key header the retry resolves to the SAME post. The
+        # lookup runs BEFORE the post-slot reservation, so a replayed success
+        # costs no second quota slot. Scoped per author (see
+        # SkriblIdempotency); opt-in, so clients without the header behave
+        # exactly as before.
+        idem_hash = _idempotency_hash(request.headers.get("Idempotency-Key"),
+                                      bp.skribl_current_user_id())
+        if idem_hash is not None:
+            prior = _idempotent_replay(idem_hash)
+            if prior is not None:
+                return prior
 
         payload = request.get_json(silent=True)
 
@@ -296,44 +403,92 @@ def register_routes(bp, *, index_route=False):
 
             for _attempt in range(5):
                 candidate = secrets.token_urlsafe(8)
-                post = SkriblPost(
-                    public_id=candidate,
-                    # The host injects its own resolver via
-                    # create_blueprint(current_user_id=...). The default is
-                    # ANONYMOUS (None) — not 1, which would have made every
-                    # visitor the owner of user 1's private posts.
-                    user_id=author_id,
-                    title=title,
-                    caption=caption,
-                    payload_json=stored_payload,
-                    has_audio=has_audio,
-                    visibility=visibility,
-                )
-                session().add(post)
-                # Flush to get the post id, then record one association row per
-                # stored object — in the SAME transaction, so a failed commit
-                # leaves neither behind. An orphan association would authorise an
-                # object on behalf of a post that does not exist.
-                session().flush()
-                for _key in media_keys:
-                    session().add(SkriblPostMedia(post_id=post.id,
-                                                  media_key=_key))
                 try:
-                    # DB-backed quota promotion belongs to this transaction. If
-                    # either the post or promotion fails, both roll back; once
-                    # the commit succeeds there is no second DB write that can
-                    # turn a successful post into an HTTP 500. Memory-backed
-                    # limiting has no promotion step, so this is a no-op there.
-                    _rate_commit_post(post_token, commit=False)
-                    session().commit()
-                except IntegrityError:
-                    session().rollback()
+                    # A SAVEPOINT per attempt, not a commit: the request's
+                    # transaction belongs to the HOST (docs/INTEGRATION.md). A
+                    # public_id collision surfaces at flush — the UNIQUE
+                    # violation does not wait for commit — and rolling back to
+                    # the savepoint discards only this attempt's rows, never
+                    # whatever the host has pending on the same session.
+                    with session().begin_nested():
+                        post = SkriblPost(
+                            public_id=candidate,
+                            # The host injects its own resolver via
+                            # create_blueprint(current_user_id=...). The default
+                            # is ANONYMOUS (None) — not 1, which would have made
+                            # every visitor the owner of user 1's private posts.
+                            user_id=author_id,
+                            title=title,
+                            caption=caption,
+                            payload_json=stored_payload,
+                            has_audio=has_audio,
+                            visibility=visibility,
+                        )
+                        session().add(post)
+                        # Flush to get the post id, then record one association
+                        # row per stored object — under the SAME savepoint, so a
+                        # failed attempt leaves neither behind. An orphan
+                        # association would authorise an object on behalf of a
+                        # post that does not exist.
+                        session().flush()
+                        for _key in media_keys:
+                            session().add(SkriblPostMedia(post_id=post.id,
+                                                          media_key=_key))
+                        if idem_hash is not None:
+                            # Same savepoint, same (host-owned) transaction as
+                            # the post: durable together or not at all, which
+                            # is the property a retry needs.
+                            session().add(SkriblIdempotency(
+                                key_hash=idem_hash, post_id=post.id))
+                        session().flush()
+                except IntegrityError as ie:
+                    # RETRY BOUNDARY (outside review follow-up). Retrying is
+                    # only correct for the ONE violation a fresh public_id can
+                    # cure. This handler used to retry on ANY IntegrityError —
+                    # which is how the media-key dedup bug (see
+                    # externalise_payload) burned five attempts on a
+                    # constraint no new id could satisfy and surfaced as
+                    # "Could not allocate a unique id": five wasted inserts
+                    # and a diagnosis pointing at the wrong table.
+                    diag = str(getattr(ie, "orig", ie))
+                    if idem_hash is not None and "key_hash" in diag:
+                        # The idempotency index refused the KEY: a concurrent
+                        # duplicate won. Resolve to the winner instead of
+                        # retrying into a second post.
+                        prior = _idempotent_replay(idem_hash)
+                        if prior is not None:
+                            return prior
+                    if "public_id" not in diag:
+                        # Some other constraint. A new candidate cannot fix
+                        # it; let the generic handler report THIS error.
+                        raise
                     continue
+                # Promote the DB-backed quota reservation on the LIMITER's own
+                # transaction, before this request's transaction can commit. If
+                # promotion fails, the request 500s while the post is still
+                # pending, so a client never sees an error for a post that
+                # became durable. If the request fails AFTER promotion, the
+                # spent slot stands — a failed request counting against quota is
+                # the contract, not a leak. Memory-backed limiting has no
+                # promotion step, so this is a no-op there.
+                _rate_commit_post(post_token)
                 public_id = candidate
                 created = True
+                # The rows are FLUSHED, not committed — the host's per-request
+                # commit makes them durable (docs/INTEGRATION.md). If that
+                # commit fails after this handler returns, the reservation must
+                # not stay spent for the whole window, so it is parked on `g`
+                # for the blueprint teardown below to release on a failed
+                # request. On success the teardown just discards it.
+                g._skribl_post_reservation = (client_ip, post_token)
                 break
         except Exception:
-            session().rollback()
+            # No rollback here: the session and its transaction are the host's
+            # (see docs/INTEGRATION.md). The savepoints above have already
+            # unwound this route's own rows; deciding the fate of the outer
+            # transaction — including whatever the host had pending before this
+            # request — is the host's teardown's job, and app.py does exactly
+            # that for the standalone deployment.
             raise
         finally:
             if not created:
@@ -397,17 +552,50 @@ def register_routes(bp, *, index_route=False):
         # ORDER BY, so an authorised private reference sitting beyond the cap
         # produced a false 404 for its own owner. A cap is not a fix for
         # unbounded fan-out; not materialising the fan-out is.
-        readable = sa.select(SkriblPostMedia.id).join(
-            SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
-            SkriblPostMedia.media_key == key,
-            # Allowlist, not "!= private": this must agree with
-            # SkriblPost.visible_to, which now refuses states it does not know.
-            # A query that says "anything but private" would hand out the media
-            # of a host-defined 'draft' post while the post itself was refused.
-            sa.or_(SkriblPost.visibility.in_(("public", "unlisted")),
-                   sa.and_(SkriblPost.user_id == viewer,
-                           sa.literal(viewer is not None))))
-        if not session().query(readable.exists()).scalar():
+        # ONE predicate for all four surfaces. Payload, card and player ask
+        # SkriblPost.visible_to(); this route used to hard-code a
+        # public/unlisted/owner allowlist in SQL instead — so a host's
+        # visibility policy (set_visibility_policy) was consulted everywhere
+        # EXCEPT here. A policy granting its own 'draft' state got a 404 for
+        # the media of a post it had just served, and — the dangerous
+        # direction — a policy REVOKING readability (moderated, blocked) was
+        # ignored and the media served anyway. (Outside review, P0.)
+        #
+        # With no policy installed, the built-in rule is still evaluated as a
+        # single EXISTS — no rows materialised, constant cost regardless of
+        # fan-out (the .limit(25)/.limit(1000) false-404 history above). With a
+        # policy installed the rule is host Python, so the referencing posts
+        # are streamed (payload deferred, batched, no arbitrary cap) and
+        # visible_to() is asked post by post, short-circuiting on the first
+        # grant. The worst case — every reference refused — walks the full
+        # fan-out; that is the honest cost of a Python policy, and it is paid
+        # only by deployments that installed one.
+        if _visibility_policy() is None:
+            readable = sa.select(SkriblPostMedia.id).join(
+                SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
+                SkriblPostMedia.media_key == key,
+                # Allowlist, not "!= private": this must agree with
+                # SkriblPost.visible_to, which refuses states it does not know.
+                # A query that says "anything but private" would hand out the
+                # media of a host-defined 'draft' post while the post itself
+                # was refused.
+                sa.or_(SkriblPost.visibility.in_(("public", "unlisted")),
+                       sa.and_(SkriblPost.user_id == viewer,
+                               sa.literal(viewer is not None))))
+            granted = session().query(readable.exists()).scalar()
+        else:
+            granted = False
+            refs = (session().query(SkriblPost)
+                    .join(SkriblPostMedia,
+                          SkriblPost.id == SkriblPostMedia.post_id)
+                    .filter(SkriblPostMedia.media_key == key)
+                    .options(sa.orm.defer(SkriblPost.payload_json))
+                    .yield_per(100))
+            for ref in refs:
+                if ref.visible_to(viewer):
+                    granted = True
+                    break
+        if not granted:
             # Either referenced by no post at all (orphaned) or by none this
             # viewer may read. Same 404 either way: a different answer for the
             # two cases would confirm the object exists.
@@ -425,11 +613,39 @@ def register_routes(bp, *, index_route=False):
         # public, and a shared cache does not re-check authorisation.
         # Cache policy: a second, independent EXISTS. Public only when NO
         # referencing post is non-public.
-        non_public = sa.select(SkriblPostMedia.id).join(
-            SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
-            SkriblPostMedia.media_key == key,
-            SkriblPost.visibility != "public")
-        public_only = not session().query(non_public.exists()).scalar()
+        # ...and only behind the deployment's explicit opt-in. Visibility is
+        # REVOCABLE: a post can go public -> private, and a shared cache never
+        # re-runs visible_to(), so "public, immutable" turns a revocation into
+        # a promise the cache keeps breaking until it expires. The default is
+        # therefore private, no-store for EVERYTHING served through an
+        # authorisation check; a deployment that accepts the revocation window
+        # says so with public_media_cache=True / SKRIBL_PUBLIC_MEDIA_CACHE=1.
+        # (Outside review, P0: no shared-public cache responses for
+        # viewer-dependent or revocable authorisation without a declaration.)
+        public_only = False
+        if bp.skribl_public_media_cache:
+            if _visibility_policy() is None:
+                non_public = sa.select(SkriblPostMedia.id).join(
+                    SkriblPost, SkriblPost.id == SkriblPostMedia.post_id).where(
+                    SkriblPostMedia.media_key == key,
+                    SkriblPost.visibility != "public")
+                public_only = not session().query(non_public.exists()).scalar()
+            else:
+                # A policy can refuse a 'public' post, so under a policy the
+                # question is asked the only way it can be answered: is every
+                # referencing post readable by an ANONYMOUS viewer? First
+                # refusal wins.
+                public_only = True
+                refs = (session().query(SkriblPost)
+                        .join(SkriblPostMedia,
+                              SkriblPost.id == SkriblPostMedia.post_id)
+                        .filter(SkriblPostMedia.media_key == key)
+                        .options(sa.orm.defer(SkriblPost.payload_json))
+                        .yield_per(100))
+                for ref in refs:
+                    if not ref.visible_to(None):
+                        public_only = False
+                        break
         if public_only:
             resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         else:
@@ -542,7 +758,7 @@ def register_routes(bp, *, index_route=False):
             "title": post.title,
             "caption": post.caption,
             "hasAudio": post.has_audio,
-            "createdAt": post.created_at.isoformat(),
+            "createdAt": as_utc(post.created_at).isoformat(),
             "author": {
                 "id": post.user_id,
                 "username": "demo-user"

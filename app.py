@@ -109,6 +109,13 @@ def create_app():
     skribl.init_skribl(app, session=lambda: db.session,
                        url_prefix=url_prefix, static_url_path=static_url_path,
                        csrf=csrf, media_store=media_store,
+                       # Shared-cache opt-in for /media and the share card.
+                       # OFF unless the deployment declares it: visibility is
+                       # revocable, and `public` cache headers outlive a
+                       # revocation. See docs/INTEGRATION.md.
+                       public_media_cache=os.environ.get(
+                           "SKRIBL_PUBLIC_MEDIA_CACHE", "").strip().lower()
+                           in ("1", "true", "yes"),
                        # THIS demo is a standalone site, so it wants Skribl on
                        # its homepage. A host application embedding Skribl does
                        # not, and the default is False for exactly that reason.
@@ -123,6 +130,31 @@ def create_app():
     # still Skribl's and must carry the restrictive default. A host application
     # owns its own 404s and must not call this.
     skribl.security.install_standalone_security(app)
+
+    # TRANSACTION OWNERSHIP (docs/INTEGRATION.md): this app — the HOST — owns
+    # the per-request transaction. Skribl's routes flush and use savepoints but
+    # never commit or roll back the shared session; the db-backed rate limiter
+    # runs on its own sessions entirely. So the commit that makes a POST's rows
+    # durable happens HERE, once, per request:
+    #
+    #   * after_request, not teardown_request: teardown runs after the response
+    #     has left, so a commit failure there could not change the status the
+    #     client already received. Here it raises before the response is sent
+    #     and the client gets the 500 it deserves.
+    #   * skipped for 5xx: the request already failed; its pending rows must
+    #     die, and the teardown rollback below is what kills them.
+    #   * the teardown rollback is a no-op after a successful commit and the
+    #     safety net after everything else — including exceptions that never
+    #     reached after_request at all.
+    @app.after_request
+    def _commit_request_transaction(response):
+        if response.status_code < 500:
+            db.session.commit()
+        return response
+
+    @app.teardown_request
+    def _rollback_request_transaction(exc):
+        db.session.rollback()
 
     @app.cli.command("init-db")
     def init_db():

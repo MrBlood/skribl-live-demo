@@ -49,6 +49,22 @@
       // Serialize once so the size-check and the request send the exact same bytes.
       const body = JSON.stringify(payload);
 
+      // IDEMPOTENCY. One key per POSTING ATTEMPT of one piece of work, held
+      // until the server confirms success. If the response is lost in transit
+      // (timeout, dropped connection, a proxy 502 issued after the commit),
+      // the user's retry carries the SAME key and the server resolves it to
+      // the SAME post instead of creating a duplicate and spending a second
+      // rate-limit slot. Cleared only on a confirmed success, so a fresh post
+      // after that gets a fresh key; the retry-after-failure path reuses it,
+      // which is the entire point.
+      if (!sendSkribl._idemKey) {
+        sendSkribl._idemKey = (typeof crypto !== 'undefined' && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+      }
+      const baseHeaders = skriblPostHeaders();
+      baseHeaders['Idempotency-Key'] = sendSkribl._idemKey;
+
       // Client-side size guard: the server caps the request body at
       // MAX_CONTENT_LENGTH (25 MB via a Render env var) and raises a 413 that the
       // composer would otherwise only discover after uploading the whole payload.
@@ -72,8 +88,8 @@
       // it like every other optional capability here, and fall back to the
       // uncompressed body that worked before it existed.
       const packed = (typeof skriblPackBody === 'function')
-        ? await skriblPackBody(body, skriblPostHeaders())
-        : { body: body, headers: skriblPostHeaders() };
+        ? await skriblPackBody(body, baseHeaders)
+        : { body: body, headers: baseHeaders };
       try {
         res = await fetch(apiBase, {
           method: 'POST',
@@ -88,8 +104,13 @@
       }
       if (res.ok) {
         const data = await res.json().catch(() => null);
-        // Server returns { id, url:"/s/<id>" } — a real, shared post.
-        if (data && data.id && data.url) return { id: data.id, url: data.url, local: false };
+        // Server returns { id, url:"/s/<id>" } — a real, shared post. (A 200
+        // with idempotentReplay:true is the same post found again after a
+        // lost response; identical shape, treated identically.)
+        if (data && data.id && data.url) {
+          sendSkribl._idemKey = null;   // confirmed: the next post is new work
+          return { id: data.id, url: data.url, local: false };
+        }
         throw new Error('The server returned an unexpected response.');
       }
       // Server errors ≥500 are temporary → local fallback (flagged). But a 4xx

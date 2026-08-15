@@ -214,12 +214,13 @@ with sync_playwright() as sp:
           f"{src_total:,} B of source -> {lean_total:,} B parsed")
     # START-HERE concluded from a function count that reaching 153,600 needs a
     # separate player entry point, and the v199 handoff concluded from a
-    # predicted 153,741 that it does not. Neither number is this one. Assert the
-    # gap so the next person reads a measurement rather than either claim.
-    check("and does NOT reach the 153,600 target on its own",
-          lean_total > 153_600,
-          f"{lean_total - 153_600:,} B short — stripping is most of the "
-          f"distance, not all of it; the remaining cut is real work")
+    # predicted 153,741 that it does not. Both were wrong in opposite
+    # directions: comment stripping plus token-aware whitespace collapse
+    # (_collapse_whitespace) REACHES the target with room to spare. Assert it,
+    # so any regression that pushes the player back over the line is loud.
+    check("REACHES the 153,600 target (strip + whitespace collapse)",
+          lean_total <= 153_600,
+          f"lean_total {lean_total:,} B ({153_600 - lean_total:,} B under)")
 
     pg.close()
     b.close()

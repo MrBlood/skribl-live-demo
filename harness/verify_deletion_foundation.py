@@ -232,6 +232,36 @@ with app.app_context():
     check("a real sweep reclaims the bytes", key in wet and gone,
           f"swept={wet}, still on disk={not gone}")
 
+    # --- the sweep touches ONLY Skribl-shaped keys ------------------------
+    # A store view can see more than this deployment wrote: an S3 prefix
+    # shorter than a co-tenant's lists the co-tenant's objects, and a local
+    # media root can hold stray files. Every one of them is by definition
+    # unreferenced by OUR association table, so the pre-guard sweep's next
+    # step was TO DELETE THEM. (Outside review, P1.) Plant two non-Skribl
+    # objects — a co-tenant-namespaced key and a stray file — age them past
+    # any grace period, and require the sweep to leave both alone.
+    _root = getattr(store, "root", None)
+    if _root:
+        _alien1 = os.path.join(_root, "tenant-b")
+        os.makedirs(_alien1, exist_ok=True)
+        _alien1 = os.path.join(_alien1, "0" * 64 + ".png")
+        with open(_alien1, "wb") as _f:
+            _f.write(b"co-tenant bytes")
+        _alien2 = os.path.join(_root, "README-not-media.txt")
+        with open(_alien2, "wb") as _f:
+            _f.write(b"stray host file")
+        _old = time.time() - 10 * 86400
+        os.utime(_alien1, (_old, _old))
+        os.utime(_alien2, (_old, _old))
+        _wet2 = storage.sweep_orphans(store, db.session,
+                                      older_than_seconds=0, dry_run=False)
+        check("a co-tenant's namespaced object survives a real sweep",
+              os.path.exists(_alien1), f"swept: {_wet2}")
+        check("a stray non-Skribl file survives it too",
+              os.path.exists(_alien2), f"swept: {_wet2}")
+        os.remove(_alien1)
+        os.remove(_alien2)
+
     # --- BLAST RADIUS -----------------------------------------------------
     # The cascade above is only enforced on SQLite because Skribl installs a
     # PRAGMA listener. That listener used to be attached to SQLAlchemy's Engine

@@ -85,10 +85,12 @@ BATCHES = [
     # externalised and backfill each boot TWO instances and post through them.
     # They are kept out of verify_deletion_foundation's batch because that suite
     # sweeps orphans for real.
-    ["verify_externalised.py", "verify_backfill.py"],
+    ["verify_externalised.py", "verify_backfill.py", "verify_mediaauthz.py"],
     # Alone: eleven scenes, screenshotted against two stylesheets.
     ["verify_cssplit.py"],
-    ["verify_keys.py", "verify_strokegroups.py", "verify_sheetfit.py"],
+    ["verify_keys.py", "verify_strokegroups.py", "verify_sheetfit.py",
+     "verify_apiedges.py", "verify_txcontract.py", "verify_assetcache.py",
+     "verify_mimeparity.py"],
     ["verify_jsstrip.py"],
     ["verify_s3.py"],
 ]

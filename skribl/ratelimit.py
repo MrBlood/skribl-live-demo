@@ -1,8 +1,25 @@
 """Rate limiting: in-memory (per-process) and database-backed (shared).
 
-Moved verbatim from app.py. The only edits are mechanical: `db.session` ->
-`session()` and `Model.query` -> `session().query(Model)`, so the limiter uses
-whatever session the host app owns rather than a SQLAlchemy instance of its own.
+TRANSACTION OWNERSHIP (see docs/INTEGRATION.md). The db backend runs on its OWN
+sessionmaker, opened against the same engine as the host's session but never
+sharing its transaction. This is load-bearing twice over:
+
+  1. Accounting must survive the request failing. An attempt is charged whether
+     or not the request goes on to succeed — that is the flood protection — so
+     the charge cannot ride in a transaction the host may roll back. With the
+     old shared session, a host rolling back a failed request erased the very
+     rows that were supposed to record the failure.
+
+  2. The limiter must not commit the host's work. A commit on the shared
+     session here used to commit whatever the HOST had pending on it —
+     the outside review proved a host's uncommitted row was made durable by a
+     limiter bookkeeping commit. The limiter now cannot reach the host's
+     transaction at all.
+
+The sessionmaker is app-local (in app.extensions["skribl"]), resolved lazily
+from the bound session's engine, so two Skribl apps in one process do not share
+limiter state through a module global. The memory backend is untouched — it
+never had a transaction to own.
 """
 import hashlib
 import ipaddress
@@ -15,13 +32,37 @@ from datetime import datetime, timedelta, timezone
 from threading import Lock
 
 import sqlalchemy as sa
-from flask import request
+from flask import current_app, request
 
 from .core import RATE_CLEANUP_BATCH, RATE_PENDING_TTL, _env_int
 from .models import RateEvent, session
 
 _RATE_WINDOW_SECONDS = 3600
 _RATE_MAX_POSTS = _env_int("SKRIBL_RATE_MAX_POSTS", 20)
+
+
+def _rate_cap(kind):
+    """The cap for `kind`, APP-LOCAL where the app chose one.
+
+    app.config["SKRIBL_RATE_MAX_POSTS"] / ["SKRIBL_RATE_MAX_ATTEMPTS"] win over
+    the process-wide env values, so two Skribl apps in one process can run
+    different budgets — the env read at import time was a per-process seam
+    wearing per-app clothing (outside review, P1). Outside any app context the
+    env values stand, exactly as before.
+    """
+    name = ("SKRIBL_RATE_MAX_ATTEMPTS" if kind == "attempts"
+            else "SKRIBL_RATE_MAX_POSTS")
+    default = _RATE_MAX_ATTEMPTS if kind == "attempts" else _RATE_MAX_POSTS
+    try:
+        val = current_app.config.get(name)
+    except RuntimeError:            # outside any application context
+        return default
+    if val is None:
+        return default
+    try:
+        return max(1, int(val))
+    except (TypeError, ValueError):
+        return default
 # Review #7: a flood of malformed bodies used to burn the same quota as real
 # posts, so one bad client could lock out everyone sharing its IP. Every request
 # is charged to a large ATTEMPT budget; only a committed post spends a post.
@@ -65,7 +106,7 @@ def _rate_limited(ip, kind="posts"):
     # Only 'attempts' goes through here now; post slots are reserved atomically by
     # _rate_reserve_post. Entries are timestamps here and (timestamp, token) pairs
     # in the posts bucket, so read element 0 either way.
-    cap = _RATE_MAX_ATTEMPTS if kind == "attempts" else _RATE_MAX_POSTS
+    cap = _rate_cap(kind)
     now = time.monotonic()
     with _rate_lock:
         bucket = _rate_buckets.setdefault((kind, ip), deque())
@@ -113,7 +154,34 @@ def _rate_cutoff():
     return datetime.now(timezone.utc) - timedelta(seconds=_RATE_WINDOW_SECONDS)
 
 
-def _db_lock_identity(key_hash):
+# Fallback for code running outside an application context, keyed by engine so
+# two engines never share a sessionmaker even without an app to hang one on.
+_rate_sessionmakers = {}
+
+
+def _rate_sessionmaker():
+    """The limiter's own sessionmaker: same engine as the host, separate
+    transactions. App-local first; engine-keyed module fallback second."""
+    engine = session().get_bind()
+    ext = None
+    try:
+        ext = current_app.extensions.get("skribl")
+    except RuntimeError:            # outside any application context
+        pass
+    if ext is not None:
+        sm = ext.get("rate_sessionmaker")
+        if sm is None or ext.get("rate_engine") is not engine:
+            sm = sa.orm.sessionmaker(bind=engine)
+            ext["rate_sessionmaker"] = sm
+            ext["rate_engine"] = engine
+        return sm
+    sm = _rate_sessionmakers.get(id(engine))
+    if sm is None:
+        sm = _rate_sessionmakers[id(engine)] = sa.orm.sessionmaker(bind=engine)
+    return sm
+
+
+def _db_lock_identity(s, key_hash):
     """Serialise the reserve-then-count window, per identity.
 
     THE BUG THIS FIXES. Reservation was: INSERT, COMMIT, COUNT, withdraw if over.
@@ -132,22 +200,25 @@ def _db_lock_identity(key_hash):
     identity, so unrelated posters never contend. It is released automatically on
     commit or rollback, including if the process dies mid-request. On SQLite this
     is a no-op because writes are already serialised.
+
+    `s` is a LIMITER session (from _rate_sessionmaker), never the host's: the
+    lock must release when the limiter's accounting transaction ends, not hang
+    on until whenever the host decides to commit the request.
     """
-    bind = session().get_bind()
-    if bind.dialect.name != "postgresql":
+    if s.get_bind().dialect.name != "postgresql":
         return
     # pg_advisory_xact_lock takes a signed 64-bit key; derive one from the
     # identity hash so the lock is per-poster, not global.
     n = int.from_bytes(hashlib.sha256(key_hash.encode()).digest()[:8],
                        "big", signed=True)
-    session().execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
+    s.execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
 
 
-def _db_rate_count(bucket, key_hash):
+def _db_rate_count(s, bucket, key_hash):
     # Committed rows count for the whole window; pending ones only while they are
     # still plausibly in flight, so an abandoned reservation ages out fast.
     pending_cutoff = datetime.now(timezone.utc) - timedelta(seconds=RATE_PENDING_TTL)
-    return (session().query(RateEvent)
+    return (s.query(RateEvent)
             .filter(RateEvent.bucket == bucket,
                     RateEvent.key_hash == key_hash,
                     RateEvent.created_at >= _rate_cutoff(),
@@ -157,77 +228,88 @@ def _db_rate_count(bucket, key_hash):
 
 
 def _db_rate_limited(ip, kind):
-    cap = _RATE_MAX_ATTEMPTS if kind == "attempts" else _RATE_MAX_POSTS
+    cap = _rate_cap(kind)
     key_hash = _rate_key(ip)
-    if kind != "attempts":
-        return _db_rate_count(kind, key_hash) >= cap
-    _db_lock_identity(key_hash)
-    row = RateEvent(bucket=kind, key_hash=key_hash)
-    session().add(row)
-    # flush, NOT commit: the row gets its id and participates in our own count,
-    # while the transaction (and the advisory lock with it) stays open until the
-    # decision is made. Committing here is what opened the race.
-    session().flush()
-    if _db_rate_count(kind, key_hash) > cap:
-        session().delete(row)
-        session().commit()
-        return True
-    session().commit()
-    return False
+    with _rate_sessionmaker()() as s:
+        if kind != "attempts":
+            return _db_rate_count(s, kind, key_hash) >= cap
+        _db_lock_identity(s, key_hash)
+        row = RateEvent(bucket=kind, key_hash=key_hash)
+        s.add(row)
+        # flush, NOT commit: the row gets its id and participates in our own
+        # count, while the transaction (and the advisory lock with it) stays
+        # open until the decision is made. Committing here is what opened the
+        # race.
+        s.flush()
+        if _db_rate_count(s, kind, key_hash) > cap:
+            s.delete(row)
+            s.commit()
+            return True
+        s.commit()
+        return False
 
 
 def _db_rate_reserve_post(ip):
     key_hash = _rate_key(ip)
-    _db_lock_identity(key_hash)
-    row = RateEvent(bucket="posts", key_hash=key_hash, state="pending")
-    session().add(row)
-    session().flush()
-    if _db_rate_count("posts", key_hash) > _RATE_MAX_POSTS:
-        session().delete(row)
-        session().commit()
-        return None
-    session().commit()
-    # Opportunistic cleanup, BOUNDED. An unbounded delete inside a user request
-    # can hold locks and spike latency for whoever happens to trigger it after a
-    # quiet period. Capped per request; the remainder is collected by subsequent
-    # requests. A scheduled job is still the better answer at scale.
-    # (Review round 7, #8)
-    if secrets.randbelow(50) == 0:
-        stale = (session().query(RateEvent.id)
-                 .filter(RateEvent.created_at < _rate_cutoff())
-                 .limit(RATE_CLEANUP_BATCH).all())
-        if stale:
-            session().query(RateEvent).filter(RateEvent.id.in_([r[0] for r in stale])).delete(
-                synchronize_session=False)
-            session().commit()
-    return row.id
+    with _rate_sessionmaker()() as s:
+        _db_lock_identity(s, key_hash)
+        row = RateEvent(bucket="posts", key_hash=key_hash, state="pending")
+        s.add(row)
+        s.flush()
+        if _db_rate_count(s, "posts", key_hash) > _rate_cap("posts"):
+            s.delete(row)
+            s.commit()
+            return None
+        s.commit()
+        token = row.id
+        # Opportunistic cleanup, BOUNDED. An unbounded delete inside a user
+        # request can hold locks and spike latency for whoever happens to
+        # trigger it after a quiet period. Capped per request; the remainder is
+        # collected by subsequent requests. A scheduled job is still the better
+        # answer at scale. (Review round 7, #8)
+        if secrets.randbelow(50) == 0:
+            stale = (s.query(RateEvent.id)
+                     .filter(RateEvent.created_at < _rate_cutoff())
+                     .limit(RATE_CLEANUP_BATCH).all())
+            if stale:
+                s.query(RateEvent).filter(
+                    RateEvent.id.in_([r[0] for r in stale])).delete(
+                    synchronize_session=False)
+                s.commit()
+        return token
 
 
 def _db_rate_release_post(ip, token):
     if token is None:
         return
-    session().query(RateEvent).filter(RateEvent.id == token).delete()
-    session().commit()
+    with _rate_sessionmaker()() as s:
+        s.query(RateEvent).filter(RateEvent.id == token).delete()
+        s.commit()
 
 
-def _db_rate_commit_post(token, *, commit=True):
-    # Promote the reservation. create_skribl() does this inside the SAME
-    # transaction as the post insert, so a client can never receive a 500 after
-    # the post became durable merely because a second bookkeeping commit failed.
+def _db_rate_commit_post(token):
+    # Promote the reservation, on the limiter's own transaction. This used to
+    # ride in the SAME transaction as the post insert so a bookkeeping failure
+    # could not 500 a request whose post was already durable. The ordering now
+    # provides the same guarantee the other way round: promotion happens BEFORE
+    # the request's transaction commits, so a promotion failure aborts the
+    # request while the post is still pending — and if the request then fails,
+    # a committed 'posts' charge for a post that never landed is the
+    # conservative outcome the contract allows (a failed request still counts).
     if token is None:
         return
-    updated = (session().query(RateEvent)
-               .filter(RateEvent.id == token)
-               .update({"state": "committed"}))
-    if updated != 1:
-        raise RuntimeError("Post rate-limit reservation disappeared before commit.")
-    if commit:
-        session().commit()
+    with _rate_sessionmaker()() as s:
+        updated = (s.query(RateEvent)
+                   .filter(RateEvent.id == token)
+                   .update({"state": "committed"}))
+        if updated != 1:
+            raise RuntimeError("Post rate-limit reservation disappeared before commit.")
+        s.commit()
 
 
-def _rate_commit_post(token, *, commit=True):
+def _rate_commit_post(token):
     if _RATE_BACKEND == "db":
-        _db_rate_commit_post(token, commit=commit)
+        _db_rate_commit_post(token)
 
 
 def _rate_reserve_post(ip):
@@ -247,7 +329,7 @@ def _rate_reserve_post(ip):
         bucket = _rate_buckets.setdefault(("posts", ip), deque())
         while bucket and now - bucket[0][0] > _RATE_WINDOW_SECONDS:
             bucket.popleft()
-        if len(bucket) >= _RATE_MAX_POSTS:
+        if len(bucket) >= _rate_cap("posts"):
             return None
         token = object()
         bucket.append((now, token))

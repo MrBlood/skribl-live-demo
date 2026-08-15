@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 from flask import current_app
 
 from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
-                        ForeignKeyConstraint, Index, Integer, JSON,
+                        ForeignKey, ForeignKeyConstraint, Index, Integer, JSON,
                         String)
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -86,7 +86,8 @@ class RateEvent(SkriblBase):
     id = Column(Integer, primary_key=True)
     bucket = Column(String(16), nullable=False)          # 'posts' | 'attempts'
     key_hash = Column(String(64), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), nullable=False,
+                        default=lambda: datetime.now(timezone.utc))
     # 'pending' until the post row commits, then 'committed'. A pending row that
     # is never resolved — because the process was killed between the two commits —
     # stops counting after RATE_PENDING_TTL instead of holding a slot for the full
@@ -112,15 +113,39 @@ class RateEvent(SkriblBase):
 _VISIBILITY_POLICY = None
 
 
-def set_visibility_policy(fn):
-    """Install `fn(post, viewer_id) -> True | False | None`, or None to clear."""
+_POLICY_UNSET = object()   # app-local sentinel: "no per-app choice made"
+
+
+def set_visibility_policy(fn, app=None):
+    """Install `fn(post, viewer_id) -> True | False | None`, or None to clear.
+
+    With `app`, the policy is APP-LOCAL — stored in app.extensions["skribl"],
+    seen only by requests of that application — which is what a process
+    mounting two Skribl apps needs: one host's 'draft' rules must not decide
+    the other host's posts (outside review, P1: runtime seams app-local for
+    both registration APIs; init_skribl(visibility_policy=...) routes here).
+    Without `app`, this sets the process-wide default exactly as before, which
+    every existing caller and the single-app deployment keep relying on. An
+    app-local policy, including an explicit app-local None, shadows the
+    module default.
+    """
     global _VISIBILITY_POLICY
     if fn is not None and not callable(fn):
         raise TypeError("visibility policy must be callable or None")
+    if app is not None:
+        app.extensions.setdefault("skribl", {})["visibility_policy"] = fn
+        return
     _VISIBILITY_POLICY = fn
 
 
 def _visibility_policy():
+    try:
+        from flask import current_app
+        local = current_app.extensions.get("skribl", {})                            .get("visibility_policy", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            return local
+    except (ImportError, RuntimeError):
+        pass
     return _VISIBILITY_POLICY
 
 
@@ -134,7 +159,8 @@ class SkriblPost(SkriblBase):
     caption = Column(String(300), nullable=True)
     payload_json = Column(JSON, nullable=False)
     has_audio = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Visibility, for a host that renders feeds. Deliberately a small closed set
     # rather than a boolean, because "not in the feed" and "not reachable by link"
@@ -221,9 +247,39 @@ class SkriblPost(SkriblBase):
             "has_audio": bool(self.has_audio),
             "user_id": self.user_id,
             "visibility": self.visibility,
-            "created_at": (self.created_at.isoformat() if self.created_at else None),
+            "created_at": (as_utc(self.created_at).isoformat()
+                           if self.created_at else None),
         }
 
+
+
+class SkriblIdempotency(SkriblBase):
+    """One row per (author, idempotency key): the post a retry must resolve to.
+
+    THE AMBIGUITY THIS CLOSES (outside review, P1). A POST whose response is
+    lost in transit — timeout, dropped connection, proxy 502 after the commit —
+    leaves the client unable to distinguish "never happened" from "happened and
+    I missed the answer". Retrying then either duplicates the post or spends a
+    second rate-limit slot on nothing. With an `Idempotency-Key` header, the
+    retry finds this row and gets the SAME post back.
+
+    Scoped to the AUTHOR: key_hash = sha256(user_id_or_'anon' + '|' + key), so
+    one client's key can never resolve to (or block on) another's post. Rows
+    ride the SAME transaction as the post they name — the host owns the commit
+    (docs/INTEGRATION.md), so either both are durable or neither is, which is
+    exactly the property a retry needs. A concurrent duplicate loses on the
+    unique index, rolls back to its savepoint, and reads the winner's row.
+    """
+    __tablename__ = "skribl_idempotency"
+
+    id = Column(Integer, primary_key=True)
+    key_hash = Column(String(64), unique=True, nullable=False, index=True)
+    post_id = Column(Integer,
+                     ForeignKey("skribl_posts.id", ondelete="CASCADE"),
+                     nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc),
+                        nullable=False)
 
 
 class SkriblPostMedia(SkriblBase):
@@ -414,6 +470,26 @@ def _fk_install_late(sess):
         _install_sqlite_fk(sess.get_bind())
     except Exception:
         pass
+
+
+def as_utc(dt):
+    """A timezone-AWARE UTC datetime for a stored created_at, or None.
+
+    The columns are DateTime(timezone=True) as of v200, but two kinds of naive
+    value still reach Python: every row written before the migration, and
+    everything SQLite returns (its DATETIME affinity has no zone to give back
+    — the review's roundtrip proof: tzinfo=None on reload). Every stored value
+    IS UTC — the defaults have always been datetime.now(timezone.utc) — so
+    naive-means-UTC is a fact of this schema, not a guess. Serialising a naive
+    value directly rendered "2026-08-14T12:00:00": a timestamp javascript's
+    Date() parses as LOCAL time, shifting every post's age by the viewer's
+    offset.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def create_all(engine):

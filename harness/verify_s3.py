@@ -259,6 +259,9 @@ env = dict(os.environ,
            SKRIBL_S3_PREFIX="media/",
            AWS_ACCESS_KEY_ID=AK, AWS_SECRET_ACCESS_KEY=SK,
            SKRIBL_RATE_MAX_POSTS="100000", SKRIBL_RATE_MAX_ATTEMPTS="100000",
+           # Cache assertions below pin the OPTED-IN behaviour; the default
+           # (private, no-store) is pinned by verify_mediaauthz.py.
+           SKRIBL_PUBLIC_MEDIA_CACHE="1",
            SECRET_KEY="harness-s3")
 subprocess.run([sys.executable, "-c",
                 "from app import app, db; app.app_context().push(); db.create_all()"],

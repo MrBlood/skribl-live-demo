@@ -70,6 +70,39 @@ resolves duplicate rules by registration order and the blueprint registers
 first, mounting Skribl *silently replaced the host's front page*. The default is
 now False; the standalone demo opts in explicitly.
 
+## Transaction ownership  <!-- ⚑ PENDING SIGN-OFF (v200 review response) -->
+
+**The contract: the HOST owns the request transaction.** You hand Skribl your
+session; Skribl treats it as yours.
+
+* **Skribl's routes flush; they never commit or roll back your session.** A
+  successful `POST /api/skribls` returns with its rows *pending on your
+  transaction*. They become durable when **you** commit — in your own
+  `after_request`/teardown, your unit-of-work middleware, wherever you already
+  do it. The standalone `app.py` shows the pattern: commit in `after_request`
+  for sub-500 responses, rollback in `teardown_request` as the safety net. If
+  your host commits nothing, Skribl's posts persist nothing — that is the
+  contract working, not a bug.
+* **Internal recovery uses savepoints.** Retrying a colliding `public_id`, or
+  surviving a failed best-effort read on a render-always route, rolls back to a
+  savepoint — never your transaction. Your pending work is untouched by
+  anything Skribl does, including Skribl failing.
+* **The db-backed rate limiter runs on its own sessions** (same engine, its own
+  `sessionmaker`, app-local). Its accounting commits independently, because a
+  failed request must still count against quota even when the host rolls the
+  request back — that independence is flood protection, not an implementation
+  detail. One consequence to know about: if your commit fails *after* the
+  handler returned, Skribl's request teardown releases the reserved post slot
+  so the client can retry.
+* **Maintenance entrypoints are the exception, on purpose.** `backfill_media`
+  and `sweep_orphans` take an explicit `session` argument and commit per batch
+  — the payload-as-progress-marker resume design requires it. Hand them a
+  **dedicated** session (e.g. from `sessionmaker(bind=engine)`), never a live
+  request's.
+
+Pinned by `verify_txcontract.py` (host-pending-row scenario, static commit
+grep, standalone durability) and `verify_review.py` (limiter semantics).
+
 ## The seams
 
 All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
@@ -129,8 +162,8 @@ behaviour so it cannot change silently.
 
 ## Database and migrations
 
-Skribl ships Alembic migrations for its own three tables (`skribl_posts`,
-`skribl_post_media`, `skribl_rate_events`). Two supported approaches:
+Skribl ships Alembic migrations for its own four tables (`skribl_posts`,
+`skribl_post_media`, `skribl_rate_events`, `skribl_idempotency`). Two supported approaches:
 
 * **You own migrations.** Call `attach_to_metadata(db.metadata)` and let your
   Alembic autogenerate pick the tables up with everything else.

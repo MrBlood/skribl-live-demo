@@ -1618,28 +1618,43 @@ _initEyedropper();   // the lib binds the button's own click handler
 
 const photoPanel=document.getElementById('photoPanel'), musicPanel=document.getElementById('musicPanel');
 const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElementById('musicBtn');
-function hidePhoto(){ photoPanel.hidden=true; imageBtn.classList.remove('open'); imageBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
-function hideMusic(){ musicPanel.hidden=true; musicBtn.classList.remove('open'); musicBtn.setAttribute('aria-expanded','false'); refitDrawer(); }
-function closeMediaDrawers(){ hidePhoto(); hideMusic(); }
-function refitDrawer(){
-  const open = !drawPanel.hidden ? drawPanel : (!photoPanel.hidden ? photoPanel : (!musicPanel.hidden ? musicPanel : null));
-  if(!open) return;
-  // block:'end', not 'nearest'. 'nearest' scrolls the MINIMUM amount, so a
-  // drawer that is already partly on screen gets no scroll at all — which on a
-  // phone left the colour swatches and the eyedropper permanently sliced by the
-  // bottom edge, under Safari's toolbar. 'end' brings the drawer's bottom to
-  // the viewport bottom, and the safe-area padding on .flip-drawers keeps it
-  // clear of the browser chrome once it gets there.
-  requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:'smooth', block:'end'}); }catch(_){ open.scrollIntoView(); }
-    if(currentAudioBuffer && open===musicPanel) requestZoomWaveformDraw(); });
-}
-function openPop(){ closeMediaDrawers(); drawPanel.hidden=false; colorCurrent.setAttribute('aria-expanded','true'); refitDrawer(); requestAnimationFrame(positionSmoothSeg); }
-function closePop(){ drawPanel.hidden=true; colorCurrent.setAttribute('aria-expanded','false'); if(picking) setPicking(false); refitDrawer(); }
-function openPhoto(){ closePop(); hideMusic(); photoPanel.hidden=false; imageBtn.classList.add('open'); imageBtn.setAttribute('aria-expanded','true'); syncMediaUI(); refitDrawer(); requestAnimationFrame(positionFitSlider); }
-function openMusic(){ closePop(); hidePhoto(); musicPanel.hidden=false; musicBtn.classList.add('open'); musicBtn.setAttribute('aria-expanded','true'); syncMediaUI(); refitDrawer(); }
-colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); (drawPanel.hidden?openPop:closePop)(); });
-imageBtn.addEventListener('click',e=>{ e.stopPropagation(); (photoPanel.hidden?openPhoto:hidePhoto)(); });
-musicBtn.addEventListener('click',e=>{ e.stopPropagation(); (musicPanel.hidden?openMusic:hideMusic)(); });
+// The exclusive-open machine is lib/drawers.js (shared with Pad); Flip keeps
+// its hooks — eyedropper cancel on draw close, syncMediaUI on media open, the
+// two slider re-positioners — and its reveal. The old openPop/closePop/
+// openPhoto/openMusic/hidePhoto/hideMusic/closeMediaDrawers octet collapses to
+// wrappers so every existing call site reads unchanged.
+const _flipDrawerCtl = skriblDrawers({
+  panels: {
+    draw:  { panel: drawPanel, button: colorCurrent, aria: true,
+             onOpen(){ requestAnimationFrame(positionSmoothSeg); },
+             onClose(){ if(picking) setPicking(false); } },
+    photo: { panel: photoPanel, button: imageBtn, openClass: 'open', aria: true,
+             onOpen(){ syncMediaUI(); requestAnimationFrame(positionFitSlider); } },
+    music: { panel: musicPanel, button: musicBtn, openClass: 'open', aria: true,
+             onOpen(){ syncMediaUI(); } }
+  },
+  reveal(open){
+    if(!open) return;
+    // block:'end', not 'nearest'. 'nearest' scrolls the MINIMUM amount, so a
+    // drawer that is already partly on screen gets no scroll at all — which on a
+    // phone left the colour swatches and the eyedropper permanently sliced by the
+    // bottom edge, under Safari's toolbar. 'end' brings the drawer's bottom to
+    // the viewport bottom, and the safe-area padding on .flip-drawers keeps it
+    // clear of the browser chrome once it gets there.
+    requestAnimationFrame(()=>{ try{ open.scrollIntoView({behavior:'smooth', block:'end'}); }catch(_){ open.scrollIntoView(); }
+      if(currentAudioBuffer && open===musicPanel) requestZoomWaveformDraw(); });
+  }
+});
+// Only the wrappers with live callers survive the collapse: closePop for the
+// swatch/eyedropper pick handlers, hidePhoto/hideMusic for the outside-click
+// dismisser below. openPop/openPhoto/openMusic/closeMediaDrawers/refitDrawer
+// had no remaining callers once the buttons went through toggle().
+function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null); }
+function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
+function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
+colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('draw'); });
+imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
+musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
 document.addEventListener('click',e=>{ const t=e.target;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#colorCurrent')) closePop();
   if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#imageBtn')) hidePhoto();

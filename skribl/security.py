@@ -6,6 +6,7 @@ platform's policy or be clobbered by it. It is now attached to the blueprint, so
 it covers Skribl's own routes and Skribl's own static files and nothing else.
 """
 import gzip
+import hashlib
 import hmac
 import io
 import ipaddress
@@ -17,20 +18,69 @@ from urllib.parse import urlsplit
 
 from flask import current_app, g, jsonify, request, url_for
 
+from .core import _env_int
 from .jsstrip import strip_bytes
 
 # Text-ish types only. Images, audio and video are already compressed;
 # re-gzipping them spends CPU to make them marginally larger.
-_GZIP_CACHE = {}          # (path, ?v=) -> gzipped bytes
 _GZIP_CACHE_MAX = 128     # editor pulls 25; this is slack, not a budget
 
-# Comment-stripped JavaScript, cached on exactly the same key and for exactly
+# Comment-stripped JavaScript is cached on exactly the same key and for exactly
 # the same reason: a busted URL names one immutable byte sequence, so its
 # stripped form is immutable too. Lexing app.js costs ~90 ms, which is a
 # non-starter per request and a rounding error once per file version — the same
 # arithmetic that decided gzip level 6 for busted assets and level 1 otherwise.
-_STRIP_CACHE = {}         # (path, ?v=) -> comment-stripped bytes
 _STRIP_CACHE_MAX = 128
+
+# The strip/gzip caches themselves live PER APPLICATION, in
+# app.extensions["skribl"] — they used to be module globals, which was
+# cross-application state (two Skribl apps thrashing one 128-entry budget, and
+# one app's eviction emptying the other's cache). The digest memo below stays
+# module-level on purpose: it is a pure content function of a file path, so
+# every app computes the identical answer.
+_BUST_MEMO = {}           # path -> ((mtime_ns, size), digest8)
+
+
+def _app_caches():
+    from flask import current_app
+    ext = current_app.extensions.setdefault("skribl", {})
+    return (ext.setdefault("strip_cache", {}),
+            ext.setdefault("gzip_cache", {}))
+
+
+def _real_bust(static_folder, filename):
+    """The asset's CURRENT content bust — the same digest asset_url() emits.
+
+    THE HOLE THIS CLOSES (outside review, P0-adjacent). The busted-asset path
+    trusted ANY ?v= value as a cache key: strip (~90 ms of lexing app.js) and
+    gzip level 6 both ran for every previously-unseen value, and the caches
+    cleared wholesale at 128 entries. So a loop of fabricated busts
+    (?v=00000001, ?v=00000002, ...) forced the full lex+compress on every
+    request — a CPU DoS built from our own optimisation — while also poisoning
+    ETag/Cache-Control for anyone sharing the cache. A request only gets the
+    busted-asset treatment when its ?v= IS the file's real current bust;
+    anything else (fabricated, or a stale bust for a since-changed file) is
+    served as an ordinary un-busted asset: correct bytes, no immutable header,
+    no cache entry, no lex.
+    """
+    if not filename:
+        return None
+    path = os.path.join(static_folder, filename)
+    try:
+        st = os.stat(path)
+        key = (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+    memo = _BUST_MEMO.get(path)
+    if memo is None or memo[0] != key:
+        try:
+            with open(path, "rb") as fh:
+                digest = hashlib.sha256(fh.read()).hexdigest()[:8]
+        except OSError:
+            return None
+        _BUST_MEMO[path] = (key, digest)
+        memo = _BUST_MEMO[path]
+    return memo[1]
 _GZIP_MIN = 1024          # below this the header costs more than the saving
 _COMPRESSIBLE = _re.compile(
     r'^(?:text/|application/(?:javascript|json|xml|manifest\+json)$|image/svg)')
@@ -209,6 +259,35 @@ def register_security(bp, skribl_version, player_target="_blank"):
         return resp
 
     @bp.before_request
+    def _bound_request():
+        """Refuse unbounded request bodies BEFORE anything reads them.
+
+        Werkzeug enforces MAX_CONTENT_LENGTH — when the application sets it.
+        The standalone app does; an embedding host may not, and this blueprint
+        used to inherit that omission: with no cap configured, create_skribl's
+        get_json() read whatever arrived. So the blueprint now enforces a bound
+        of its own wherever the host has not chosen one (outside review, P1:
+        "enforce or require a bounded whole request"). The host's configured
+        cap, when present, wins — one limit, theirs.
+
+        Mutating requests without a Content-Length are refused outright (411):
+        a declared length is what makes the cap checkable before the read, and
+        both editors always send one. The gzip expansion cap in
+        _inflate_request below completes the story for compressed bodies —
+        this bounds what arrives, that bounds what it inflates to.
+        """
+        if request.method not in ("POST", "PUT", "PATCH"):
+            return None
+        limit = (current_app.config.get("MAX_CONTENT_LENGTH")
+                 or _env_int("SKRIBL_MAX_REQUEST_BYTES", 25_000_000,
+                             minimum=1024))
+        if request.content_length is None:
+            return jsonify({"error": "Content-Length is required."}), 411
+        if request.content_length > limit:
+            return jsonify({"error": "Request body too large."}), 413
+        return None
+
+    @bp.before_request
     def _inflate_request():
         """Accept a gzipped request body.
 
@@ -270,6 +349,14 @@ def register_security(bp, skribl_version, player_target="_blank"):
                      and resp.status_code == 200)
         bust = request.args.get("v") if is_static else None
         if bust:
+            # VERIFY the bust before honouring it — see _real_bust. A ?v= that
+            # is not this file's actual current content hash gets no immutable
+            # header, no strip, and no cache entry.
+            real = _real_bust(bp.static_folder,
+                              (request.view_args or {}).get("filename"))
+            if real is None or bust != real:
+                bust = None
+        if bust:
             # Assignment, not setdefault: send_file already put "no-cache" here
             # from SEND_FILE_MAX_AGE_DEFAULT. Safe to overwrite ONLY because
             # asset_url() busts on content, so a changed file gets a new ?v=.
@@ -287,14 +374,15 @@ def register_security(bp, skribl_version, player_target="_blank"):
         # An unbusted asset therefore serves its comments, which is correct
         # JavaScript either way — the file on disk is what it always was.
         if bust and request.path.endswith(".js"):
+            strip_cache, _ = _app_caches()
             key = (request.path, bust)
-            lean = _STRIP_CACHE.get(key)
+            lean = strip_cache.get(key)
             if lean is None:
                 resp.direct_passthrough = False
                 lean = strip_bytes(resp.get_data(), request.path)
-                if len(_STRIP_CACHE) >= _STRIP_CACHE_MAX:
-                    _STRIP_CACHE.clear()          # bounded; refills on demand
-                _STRIP_CACHE[key] = lean
+                if len(strip_cache) >= _STRIP_CACHE_MAX:
+                    strip_cache.clear()           # bounded; refills on demand
+                strip_cache[key] = lean
             if len(lean) != resp.headers.get("Content-Length", type=int):
                 resp.direct_passthrough = False
                 resp.set_data(lean)
@@ -322,12 +410,13 @@ def register_security(bp, skribl_version, player_target="_blank"):
 
         packed = None
         if bust:
-            # A busted URL names one immutable byte sequence, so its compressed
-            # form is equally immutable: compress once per file version and hand
-            # out the bytes thereafter. The ?v= IS the content key; no stat call
-            # is needed to know the entry is still valid.
+            # A VERIFIED busted URL names one immutable byte sequence, so its
+            # compressed form is equally immutable: compress once per file
+            # version and hand out the bytes thereafter. `bust` survived the
+            # _real_bust check above, so the ?v= genuinely IS the content key.
+            _, gzip_cache = _app_caches()
             key = (request.path, bust)
-            packed = _GZIP_CACHE.get(key)
+            packed = gzip_cache.get(key)
             if packed is None:
                 resp.direct_passthrough = False
                 body = resp.get_data()
@@ -338,9 +427,9 @@ def register_security(bp, skribl_version, player_target="_blank"):
                 if len(packed) >= len(body):
                     packed = None
                 if packed is not None:
-                    if len(_GZIP_CACHE) >= _GZIP_CACHE_MAX:
-                        _GZIP_CACHE.clear()        # bounded; refills on demand
-                    _GZIP_CACHE[key] = packed
+                    if len(gzip_cache) >= _GZIP_CACHE_MAX:
+                        gzip_cache.clear()         # bounded; refills on demand
+                    gzip_cache[key] = packed
         else:
             # Dynamic, or an unbusted asset: the result cannot be reused, so buy
             # speed instead of ratio. On app.js level 1 is 2.9 ms for 77 KB where

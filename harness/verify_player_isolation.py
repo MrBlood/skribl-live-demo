@@ -478,7 +478,10 @@ with sync_playwright() as sp:
     # spirit as CSS_RATCHET below. The comments still exist in every source
     # file; they are simply no longer parsed by a browser that will never read
     # them. verify_jsstrip.py is what proves the strip preserves meaning.
-    BYTES_RATCHET, BYTES_TARGET = 155_843, 153_600
+    # 141,730 measured after the drawer-controller extraction (app.js
+    # 133,363); before that 141,824 when _collapse_whitespace landed. Lowered
+    # after real reductions both times — never raised to fit.
+    BYTES_RATCHET, BYTES_TARGET = 141_730, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

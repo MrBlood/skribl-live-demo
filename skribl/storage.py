@@ -51,10 +51,24 @@ _DATA_URL_RE = re.compile(r"^data:([-\w.+]+/[-\w.+]+)?;base64,", re.IGNORECASE)
 # from the name — but it makes the storage directory legible to a human.
 _EXT = {
     "audio/wav": ".wav", "audio/x-wav": ".wav", "audio/wave": ".wav",
+    "audio/vnd.wave": ".wav",
     "audio/mpeg": ".mp3", "audio/mp3": ".mp3", "audio/ogg": ".ogg",
-    "audio/webm": ".weba", "audio/mp4": ".m4a", "audio/aac": ".aac",
-    "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp",
+    "audio/opus": ".opus",
+    "audio/webm": ".weba",
+    "audio/mp4": ".m4a", "audio/m4a": ".m4a", "audio/x-m4a": ".m4a",
+    "audio/aac": ".aac",
+    "audio/flac": ".flac", "audio/x-flac": ".flac",
+    "image/png": ".png",
+    "image/jpeg": ".jpg", "image/jpg": ".jpg",
+    "image/webp": ".webp",
     "image/gif": ".gif",
+    # PARITY WITH VALIDATION, pinned by verify_mimeparity.py. Every subtype in
+    # validation's ALLOWED_* sets must map here: an accepted type absent from
+    # this table fell through to ".bin" and was served back as
+    # application/octet-stream — bytes the validator had proved were FLAC
+    # arriving at the player as a type <audio> refuses to probe. Seven accepted
+    # spellings (flac, x-flac, opus, m4a, x-m4a, vnd.wave, image/jpg) sat in
+    # that gap. (Outside review, P1.)
 }
 
 
@@ -65,6 +79,7 @@ _EXT = {
 #: served identically whichever spelling the uploader happened to send.
 _TYPE_FOR_EXT = {
     ".wav": "audio/wav", ".mp3": "audio/mpeg", ".ogg": "audio/ogg",
+    ".opus": "audio/opus", ".flac": "audio/flac",
     ".weba": "audio/webm", ".m4a": "audio/mp4", ".aac": "audio/aac",
     ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp",
     ".gif": "image/gif",
@@ -198,7 +213,18 @@ class LocalDiskStore(MediaStore):
             for name in files:
                 if name.endswith(".part") or name.endswith(".type"):
                     continue        # a temp file mid-write, or an old sidecar
-                yield name, os.path.getmtime(os.path.join(sub, name))
+                # Yield only files sitting at THIS store's canonical sharded
+                # path (root/ab/cd/abcd….ext). A file anywhere else under the
+                # root — a co-tenant's tree, a stray README, a misplaced copy
+                # — is not something this store wrote, and surfacing it by
+                # basename made it look exactly like an orphan to
+                # sweep_orphans. The sweep also refuses non-KEY_RE names
+                # (see its NAMESPACE GUARD); this keeps the store's own
+                # inventory honest rather than relying on that alone.
+                full = os.path.join(sub, name)
+                if full != self._paths(name)[1]:
+                    continue
+                yield name, os.path.getmtime(full)
 
     def delete_key(self, key):
         _, path, type_path = self._paths(key)
@@ -339,10 +365,21 @@ def backfill_media(store, session, iter_media, batch=100, after_id=0,
     last_id = after_id
 
     while True:
+        # `limit` caps posts SCANNED, exactly. It used to be checked only
+        # after a whole batch committed, so limit=10 with batch=100 scanned —
+        # and converted, and COMMITTED — up to 100 posts: a "careful first
+        # run" flag that overshot by an order of magnitude on the run where
+        # being careful mattered. The fetch itself now never asks for more
+        # than the remaining allowance. (Outside review follow-up.)
+        take = batch
+        if limit is not None:
+            take = min(batch, limit - scanned)
+            if take <= 0:
+                break
         rows = (session().query(SkriblPost)
                 .filter(SkriblPost.id > last_id)
                 .order_by(SkriblPost.id)
-                .limit(batch).all())
+                .limit(take).all())
         if not rows:
             break
 
@@ -420,19 +457,51 @@ def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
     that removes things by default is one typo away from removing the wrong
     things; the caller says `dry_run=False` deliberately.
 
+    NAMESPACE GUARD (outside review, P1). Only keys that are SKRIBL-SHAPED —
+    KEY_RE: a 64-hex content digest plus a known extension, no slashes — are
+    even candidates. A store view can see more than this deployment wrote: an
+    S3 prefix shorter than a co-tenant's ("" beside "tenant-a/") lists the
+    co-tenant's objects with their namespace still in the name, and a local
+    root can contain someone's stray files. Every one of those is by
+    definition unreferenced by OUR association table, so the old code's next
+    step was to delete it. Anything that is not shaped like ours is not ours
+    to reclaim, whatever it is.
+
+    BOUNDED MEMORY. The reference check used to load every media_key in the
+    table into one Python set — fine at a thousand posts, an OOM at the scale
+    the sweep exists for. Candidates are now collected in chunks and checked
+    with one IN() query per chunk: memory is O(chunk), queries are O(n/chunk),
+    and the store side was already paginated.
+
     Do NOT try to make the object store and the database one distributed
     transaction. Objects are immutable, associations are authoritative, and a
     periodic sweep is the honest reconciliation.
     """
-    referenced = {row[0] for row in session.query(SkriblPostMedia.media_key).all()}
     cutoff = time.time() - max(0, older_than_seconds)
     removed = []
+    chunk = []
+
+    def flush_chunk():
+        if not chunk:
+            return
+        referenced = {row[0] for row in
+                      session.query(SkriblPostMedia.media_key)
+                      .filter(SkriblPostMedia.media_key.in_(chunk)).all()}
+        for key in chunk:
+            if key in referenced:
+                continue
+            removed.append(key)
+            if not dry_run:
+                store.delete_key(key)
+        chunk.clear()
+
     for key, mtime in store.iter_keys():
-        if key in referenced or mtime > cutoff:
+        if not KEY_RE.match(key or "") or mtime > cutoff:
             continue
-        removed.append(key)
-        if not dry_run:
-            store.delete_key(key)
+        chunk.append(key)
+        if len(chunk) >= 500:
+            flush_chunk()
+    flush_chunk()
     return removed
 
 

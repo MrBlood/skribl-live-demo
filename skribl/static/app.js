@@ -1083,40 +1083,42 @@ setTimeout(() => {
   updateTabSlider(document.querySelector('.tab-btn.active'));
 }, 50);
 
-// Toolbar drawers: each .tool-open button toggles its panel open as a drawer
-// above the bar; only one open at a time; tapping the open one closes it.
+// Toolbar drawers: the exclusive-open machine lives in lib/drawers.js
+// (shared with Flip); only Pad's hooks and its scroll behaviour are here.
+// Per-name hooks below reproduce the old openDrawer() exactly: leaving any
+// non-photo state exits reposition and cancels an eyedropper pick; opening
+// photo refreshes reposition UI; opening music refreshes the time labels.
+// The `typeof skriblDrawers` guard is load-bearing: the PLAYER runs app.js
+// without lib/drawers.js (editor furniture), so the reference must not throw.
+const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
+  panels: {
+    draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
+    photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
+    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' }
+  },
+  reveal(panel, name) {
+    if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
+    if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
+    if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
+    if (name === 'music') updateDrawingTimeLabels();
+    // Drawer opens below the bar; scroll just enough to reveal it (keeps max
+    // canvas in frame), and scroll back to rest when everything closes. Honor
+    // the user's reduced-motion preference — the CSS sets scroll-behavior:auto
+    // for them, but a JS-requested 'smooth' scroll would override that intent,
+    // so mirror it here.
+    const b = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
+    if (panel) requestAnimationFrame(() => panel.scrollIntoView({ behavior: b, block: 'end' }));
+    else window.scrollTo({ top: 0, behavior: b });
+  }
+}) : null;
 function openDrawer(name) {                      // name = 'draw'|'photo'|'music' or null
-  const idMap = { draw: 'drawPanel', photo: 'photoPanel', music: 'musicPanel' };
-  for (const k in idMap) {
-    const p = document.getElementById(idMap[k]);
-    if (p) p.hidden = name !== k;
-  }
-  document.querySelectorAll('#toolBar .tool-open').forEach(b =>
-    b.classList.toggle('open', b.dataset.drawer === name));
-  if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
-  if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
-  if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
-  if (name === 'music') updateDrawingTimeLabels();
-  // Drawer opens below the bar; scroll just enough to reveal it (keeps max canvas
-  // in frame), and scroll back to rest when everything closes. Honor the user's
-  // reduced-motion preference — the CSS sets scroll-behavior:auto for them, but a
-  // JS-requested 'smooth' scroll would override that intent, so mirror it here.
-  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const scrollBehavior = reduceMotion ? 'auto' : 'smooth';
-  if (name && idMap[name]) {
-    const panel = document.getElementById(idMap[name]);
-    requestAnimationFrame(() => panel.scrollIntoView({ behavior: scrollBehavior, block: 'end' }));
-  } else {
-    window.scrollTo({ top: 0, behavior: scrollBehavior });
-  }
+  if (_padDrawerCtl) _padDrawerCtl.open(name);
 }
 const toolBarEl = document.getElementById('toolBar');
 if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
-  if (!btn) return;                              // pen/eraser use their own setTool binding
-  const name = btn.dataset.drawer;
-  openDrawer(btn.classList.contains('open') ? null : name);
-});
+  if (btn && _padDrawerCtl) _padDrawerCtl.toggle(btn.dataset.drawer);
+});                                              // pen/eraser use their own setTool binding
 
 const recordBtn = _authoringCtl('recordBtn');
 const playBtn = document.getElementById('playBtn');

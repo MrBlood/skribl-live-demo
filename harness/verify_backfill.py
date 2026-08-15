@@ -285,6 +285,18 @@ try:
                                      dry_run=False)["scanned"] == 0,
               f"resume point {again['last_id']}")
 
+        print("\nBACKFILL — `limit` caps scanned posts EXACTLY")
+        # limit used to be checked only after a whole batch committed, so
+        # limit=1 with the default batch scanned all three posts on the run
+        # where caution was the point.
+        capped = storage.backfill_media(store, session, _iter_media_items,
+                                        batch=100, limit=1)
+        check("limit=1 scans exactly one post even with batch=100",
+              capped["scanned"] == 1, f"scanned {capped['scanned']}")
+        check("limit=0 scans nothing",
+              storage.backfill_media(store, session, _iter_media_items,
+                                     batch=100, limit=0)["scanned"] == 0)
+
         print("\nBACKFILL — it refuses a store that cannot externalise")
         try:
             storage.backfill_media(storage.InlineStore(), session,

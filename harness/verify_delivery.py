@@ -161,16 +161,19 @@ print("\nDELIVERY — compression must not cost more than it saves")
 # because a timing threshold on shared CI is a flake generator.
 import skribl.security as _sec  # noqa: E402
 
-_sec._GZIP_CACHE.clear()
+# The caches are APP-LOCAL now (outside review: module-level was cross-app
+# state, and any ?v= was honoured — verify_assetcache.py pins both fixes).
+_gzc = app.extensions["skribl"].setdefault("gzip_cache", {})
+_gzc.clear()
 n0, v0 = assets[0]
 c.get(f"/static/skribl/{n0}?v={v0}", headers=GZIP)
 check("a compressed asset is cached by version, not recompressed per request",
-      (f"/static/skribl/{n0}", v0) in _sec._GZIP_CACHE,
-      f"cache holds {len(_sec._GZIP_CACHE)} entries after one busted request")
-_before = dict(_sec._GZIP_CACHE)
+      (f"/static/skribl/{n0}", v0) in _gzc,
+      f"cache holds {len(_gzc)} entries after one busted request")
+_before = dict(_gzc)
 c.get(f"/static/skribl/{n0}?v={v0}", headers=GZIP)
 check("a second request reuses those bytes",
-      _sec._GZIP_CACHE[(f"/static/skribl/{n0}", v0)] is _before[(f"/static/skribl/{n0}", v0)],
+      _gzc[(f"/static/skribl/{n0}", v0)] is _before[(f"/static/skribl/{n0}", v0)],
       "the entry was rebuilt, so the cache is not being hit")
 check("the cache is bounded", _sec._GZIP_CACHE_MAX <= 512,
       f"max {_sec._GZIP_CACHE_MAX} entries — unbounded is a leak, not a cache")

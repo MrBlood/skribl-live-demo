@@ -17,7 +17,11 @@ unpublished drawing. The assertions below seed a recognisable title and stroke
 and require neither to appear.
 """
 import os
+import pathlib
 import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from skribl.core import SKRIBL_VERSION  # noqa: E402
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 SECRET_TITLE = "Zqx-private-working-title-42"
@@ -78,8 +82,11 @@ with sync_playwright() as p:
         check(f"{surface}: the sheet opens", pg.is_visible("#reportDetails"))
 
         text = pg.inner_text("#reportDetails")
+        # The REAL version, not a "v1" prefix pin — that literal matched every
+        # version from v100 to v199 and then broke on the v200 bump while
+        # still not proving the sheet showed the right number.
         check(f"{surface}: the version is included",
-              "v1" in text, repr(text[:80]))
+              SKRIBL_VERSION in text, repr(text[:80]))
         check(f"{surface}: the browser is included",
               "Mozilla" in text or "Chrome" in text, repr(text[:80]))
         check(f"{surface}: the canvas size is included",

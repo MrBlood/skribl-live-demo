@@ -1,37 +1,39 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-14T18:38:50Z
+UTC timestamp           : 2026-08-15T01:40:41Z
 Host                    : Linux x86_64
-Tree SHA-256            : a2a10c0ed8c66e5891e89dc4a5d0b49fb6244ce8d3770b3fba72444ea0fbbf41
+Tree SHA-256            : e1d97f18a2f4c74136a36dcdc73ff7bcc8ecf8f6acff6aaa2a8e94d271090fab
 Git commit              : (not a git checkout)
-SKRIBL_VERSION          : v199
+SKRIBL_VERSION          : v200
 Python                  : 3.12.3
 Flask                   : 3.1.3
-SQLAlchemy              : 2.0.52
+SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.1jwEgEQC19/harness.db)
+Database reset          : yes (fresh /tmp/tmp.YiDtilanQF/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/claude/work/skribl-v199/harness/run_harness.sh verify_s3.py
+Command                 : /home/claude/skribl-v200/harness/run_harness.sh verify_s3.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 # whole release run: 20 batches recorded as one run
-suites requested : 55
+suites requested : 60
   verify_amber.py: ok — 15/15 passed
+  verify_apiedges.py: ok — 32/32 passed
+  verify_assetcache.py: ok — 12/12 passed
   verify_audio.py: ok — 9/9 passed
-  verify_backfill.py: ok — 21/21 passed
+  verify_backfill.py: ok — 23/23 passed
   verify_canvas.py: ok — 44/44 passed
   verify_csp.py: ok — 32/32 passed
   verify_csrf.py: ok — 15/15 passed
   verify_cssplit.py: ok — 16/16 passed
-  verify_deletion_foundation.py: ok — 11/11 passed
+  verify_deletion_foundation.py: ok — 13/13 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 33/33 passed
+  verify_docs.py: ok — 34/34 passed
   verify_dots.py: ok — 10/10 passed
   verify_exopts.py: ok — 26/26 passed
   verify_exportui.py: ok — 45/45 passed
@@ -49,7 +51,9 @@ suites requested : 55
   verify_lib.py: ok — 8/8 passed
   verify_loopcap.py: ok — 18/18 passed
   verify_media.py: ok — 24/24 passed
+  verify_mediaauthz.py: ok — 28/28 passed
   verify_migrations.py: ok — 56/56 passed
+  verify_mimeparity.py: ok — 26/26 passed
   verify_move.py: ok — 79/79 passed
   verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
   verify_muxer.py: ok — 18/18 passed
@@ -59,7 +63,7 @@ suites requested : 55
   verify_player_isolation.py: ok — 20/20 passed
   verify_player_photo.py: ok — 9/9 passed
   verify_posted.py: ok — 34/34 passed
-  verify_postgres.py: SKIPPED (0 assertions) — no PostgreSQL client found and SKRIBL_PG_DSN is not set
+  verify_postgres.py: ok — 14/14 passed
   verify_prefix.py: ok — 29/29 passed
   verify_pressure.py: ok — 27/27 passed
   verify_privacy.py: ok — 45/45 passed
@@ -68,15 +72,16 @@ suites requested : 55
   verify_review.py: ok — 278/278 passed
   verify_s3.py: ok — 25/25 passed
   verify_scrub.py: ok — 17/17 passed
-  verify_seam.py: ok — 112/112 passed
+  verify_seam.py: ok — 115/115 passed
   verify_sheetfit.py: ok — 14/14 passed
   verify_storage.py: ok — 36/36 passed
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 7/7 passed
   verify_tips.py: ok — 43/43 passed
+  verify_txcontract.py: ok — 12/12 passed
   verify_ux.py: ok — 130/130 passed
   verify_version.py: ok — 23/23 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 2005   (skipped suites contribute 0)
-suites skipped   : 2
+assertions passed: 2137   (skipped suites contribute 0)
+suites skipped   : 1
 suites with problems: 0

@@ -206,6 +206,16 @@ def _iter_media_items(payload):
             item = container.get(key)
             if isinstance(item, dict) and item.get("data") is not None:
                 yield item["data"], kind, cap, f"{where}{key}.data"
+        # baseSnapshot: Pad serialises the pre-recording canvas as a data URL
+        # at the root, and the frame format reserves the same slot per frame
+        # (f0.baseSnapshot falls back to payload.baseSnapshot in the player).
+        # It used to be walked by NOTHING — the one media slot that was neither
+        # validated, capped, nor externalised, so an uncapped inline image rode
+        # every such payload into the row and back out of every GET. Same
+        # image rules and cap as `photo`, since it is one. (Outside review, P1.)
+        snap = container.get("baseSnapshot")
+        if snap is not None:
+            yield snap, "image", MAX_IMAGE_BYTES, f"{where}baseSnapshot"
 
     yield from scan(payload, "")
     thumb = payload.get("thumbnail")
@@ -352,6 +362,19 @@ def _validate_payload_complexity(payload):
         return None
     if not isinstance(frames, list):
         return "'frames' must be a list."
+    if len(frames) == 0:
+        # No editor produces an empty list: Pad sends no frames key at all and
+        # Flip always has at least a page. An empty list only arrives hand-made.
+        return "'frames' must contain at least one frame."
+    # fps rides beside frames, so it is validated here. The player reads
+    # payload.fps || 12, so a bad fps does not crash — a negative one silently
+    # freezes the post on page one forever. Flip's editor only produces 6/12/24;
+    # 1..60 is the accepted band, bools excluded (a bool IS an int in Python).
+    fps = payload.get("fps")
+    if fps is not None:
+        if isinstance(fps, bool) or not isinstance(fps, (int, float)) \
+                or not math.isfinite(fps) or fps < 1 or fps > 60:
+            return "'fps' must be a number between 1 and 60."
     if len(frames) > MAX_FRAMES:
         return f"At most {MAX_FRAMES} frames are allowed (got {len(frames)})."
     for i, frame in enumerate(frames):

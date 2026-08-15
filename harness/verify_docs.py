@@ -71,6 +71,23 @@ missing = sorted(n for n in named if not (ROOT / "harness" / n).is_file())
 check("no document references a harness suite that does not exist",
       not missing, ", ".join(missing))
 
+# ...and the converse, which nothing checked: every suite ON DISK must be
+# named in at least one .md. Six suites sat undocumented while this file
+# stayed green — a reader of the docs had no way to learn they existed, and a
+# suite nobody can find is a suite nobody maintains. Scans every tracked .md
+# in the repo, not just DOCS: a suite documented only in e.g. DECISIONS.md is
+# documented.
+_all_md_text = "\n".join(
+    p.read_text(encoding="utf-8")
+    for p in ROOT.rglob("*.md")
+    if "__pycache__" not in p.parts and p.is_file())
+_undocumented = sorted(
+    p.name for p in (ROOT / "harness").glob("verify_*.py")
+    if p.name not in _all_md_text)
+check("every harness suite on disk is named in at least one .md",
+      not _undocumented,
+      ", ".join(_undocumented) + " — add each to harness/README.md at least")
+
 # The suite-name check above would not have caught START-HERE.md naming
 # `v179-client.patch`, because that is not a verify_*.py. A document that tells
 # you how to deploy by applying a patch, and names a patch that is not in the

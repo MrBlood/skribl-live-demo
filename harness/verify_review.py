@@ -1223,9 +1223,12 @@ with A.create_app().app_context():
                         created_at=_dt.datetime.now(_dt.timezone.utc)
                                    - _dt.timedelta(seconds=A.RATE_PENDING_TTL + 60))
     A.db.session.add(stale); A.db.session.commit()
-    counted_pending = A._db_rate_count("posts", kh)
+    # _db_rate_count now takes an explicit session — the limiter runs on its
+    # own sessionmaker (transaction-ownership contract) — and any session on
+    # the same engine gives the same count, so the test app's will do.
+    counted_pending = A._db_rate_count(A.db.session, "posts", kh)
     stale.state = "committed"; A.db.session.commit()
-    counted_committed = A._db_rate_count("posts", kh)
+    counted_committed = A._db_rate_count(A.db.session, "posts", kh)
     A.db.session.delete(stale); A.db.session.commit()
 check("an abandoned PENDING reservation stops counting after its TTL",
       counted_pending == 0, f"counted {counted_pending}")
