@@ -57,6 +57,14 @@
       // rate-limit slot. Cleared only on a confirmed success, so a fresh post
       // after that gets a fresh key; the retry-after-failure path reuses it,
       // which is the entire point.
+      // Key-per-BODY (v201 review, F4): the server now 409s a reused key
+      // with a different body, so an edit between an ambiguous failure and
+      // the retry mints a fresh key. An unchanged body keeps its key — that
+      // is the retry the whole mechanism exists for.
+      if (sendSkribl._idemBody !== body) {
+        sendSkribl._idemKey = null;
+        sendSkribl._idemBody = body;
+      }
       if (!sendSkribl._idemKey) {
         sendSkribl._idemKey = (typeof crypto !== 'undefined' && crypto.randomUUID)
           ? crypto.randomUUID()

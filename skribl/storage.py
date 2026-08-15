@@ -33,6 +33,7 @@ file — and a stored object can be cached immutably forever, because a differen
 byte is a different key.
 """
 import base64
+import copy
 import datetime
 import hashlib
 import hmac
@@ -86,8 +87,19 @@ _TYPE_FOR_EXT = {
 }
 
 
+_MEDIA_LABEL_RE = re.compile(
+    r"^(?:frames\[(?P<frame>\d+)\]\.)?(?:(?P<slot>photo|music)\.data"
+    r"|(?P<snap>baseSnapshot|thumbnail))$")
+
+
 def is_data_url(value):
-    return isinstance(value, str) and bool(_DATA_URL_RE.match(value))
+    # .strip(): validation strips before validating, so a whitespace-padded
+    # data URL is ACCEPTED there — and used to be missed HERE, leaving the
+    # validated media inline in payload_json with no association row on an
+    # externalizing deployment (v200 follow-up review, F4 / v199 F12). The two
+    # parsers must accept the same strings or the "externalizing store removes
+    # validated media from the DB" invariant quietly fails per-item.
+    return isinstance(value, str) and bool(_DATA_URL_RE.match(value.strip()))
 
 
 class MediaStore:
@@ -135,8 +147,15 @@ class MediaStore:
         signature-checked, size-capped — before it reaches here. This does not
         re-validate, and must never be called on unvalidated input.
         """
-        header, _, b64 = data_url.partition(",")
+        # Normalize EXACTLY as validation does — strip, lowercase the MIME —
+        # before the _EXT lookup (F4). Validation accepts `  data:Audio/WAV `
+        # as audio/wav; looking up the raw "Audio/WAV" here missed the table
+        # and served the validated bytes back as .bin/octet-stream, undoing
+        # the MIME-parity fix one request at a time. The mapping key stays the
+        # ORIGINAL string (externalise replaces by equality on it).
+        header, _, b64 = data_url.strip().partition(",")
         content_type = (header[5:].split(";")[0] or "application/octet-stream")
+        content_type = content_type.strip().lower()
         raw = base64.b64decode(b64, validate=False)
         key = self.key_for(raw, content_type)
         self.put_bytes(raw, content_type, key)
@@ -188,9 +207,24 @@ class LocalDiskStore(MediaStore):
         # so the race was pure collateral damage — a 500 for a request that had
         # done nothing wrong.
         tmp = f"{path}.{os.getpid()}.{uuid.uuid4().hex}.part"
-        with open(tmp, "wb") as fh:
-            fh.write(raw)
-        os.replace(tmp, path)
+        try:
+            with open(tmp, "wb") as fh:
+                fh.write(raw)
+            os.replace(tmp, path)
+        except BaseException:
+            # Best-effort unlink (v200 follow-up review, F9 / v199 F18):
+            # iter_keys deliberately ignores .part files, so without this an
+            # ordinary write/replace failure (disk full, permissions) left a
+            # temp file that NOTHING would ever reclaim — invisible to the
+            # sweep by design, growing with every failed request. A crash
+            # between write and unlink can still strand one; that residue is a
+            # maintenance concern (documented in INTEGRATION.md), not a
+            # per-request leak.
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            raise
         # NO sidecar. The content type used to be written to `<key>.type` after
         # this rename, which made the object and its metadata two writes and
         # therefore not atomic together: a crash in between left the body
@@ -285,15 +319,36 @@ def externalise_payload(payload, store, iter_media):
     if not mapping:
         return payload, []
 
-    def walk(node):
-        if isinstance(node, dict):
-            return {k: walk(v) for k, v in node.items()}
-        if isinstance(node, list):
-            return [walk(v) for v in node]
-        return mapping.get(node, node) if isinstance(node, str) else node
+    # Rewrite ONLY the paths the media walker classified as media (v201
+    # review, F5). The old walk replaced ANY string equal to a mapped data URL
+    # anywhere in the document — but the API deliberately preserves unknown
+    # keys for forward compatibility, so an extension field that happened to
+    # hold the same string as photo.data was silently rewritten across the
+    # validation/storage abstraction boundary: validation decides what is
+    # media, storage must not overrule it by value coincidence. The walker's
+    # labels have a fixed grammar (root or frames[i], then photo.data /
+    # music.data / baseSnapshot), pinned by _MEDIA_LABEL_RE so a new media
+    # slot added to _iter_media_items without a matching setter fails loudly
+    # here instead of silently staying inline.
+    payload = copy.deepcopy(payload)   # rebuilt, never the tracked original
+    for value, _kind, _cap, label in iter_media(payload):
+        if not isinstance(value, str) or value not in mapping:
+            continue
+        pm = _MEDIA_LABEL_RE.match(label)
+        if pm is None:
+            raise RuntimeError(
+                f"externalise_payload has no setter for media label {label!r}"
+                " — teach _MEDIA_LABEL_RE about the new slot.")
+        container = payload
+        if pm.group("frame") is not None:
+            container = container["frames"][int(pm.group("frame"))]
+        if pm.group("snap"):
+            container[pm.group("snap")] = mapping[value]
+        else:
+            container[pm.group("slot")]["data"] = mapping[value]
 
     # Return the KEYS the store reported — never parsed back out of a URL.
-    return walk(payload), sorted(keys)
+    return payload, sorted(keys)
 
 
 

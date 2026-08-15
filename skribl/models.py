@@ -274,6 +274,13 @@ class SkriblIdempotency(SkriblBase):
 
     id = Column(Integer, primary_key=True)
     key_hash = Column(String(64), unique=True, nullable=False, index=True)
+    # sha256 of the raw request body (v201 review, F4): a key names an
+    # author+REQUEST, not an author+whim. Without this, reusing a key with a
+    # DIFFERENT body silently replayed the old post — the editor's edited
+    # retry after an ambiguous failure got a 200 for the drawing it replaced.
+    # Same key + same fingerprint replays; same key + different fingerprint is
+    # a 409. NULL means a pre-v202 row: replayed unconditionally, as written.
+    request_fingerprint = Column(String(64), nullable=True)
     post_id = Column(Integer,
                      ForeignKey("skribl_posts.id", ondelete="CASCADE"),
                      nullable=False, index=True)
@@ -339,6 +346,9 @@ def bind_session(factory):
     _session_factory = factory
 
 
+NO_SESSION = object()   # app-local marker: "this app declared session=False"
+
+
 def session():
     """Resolve the session for the CURRENT application, not the last one bound.
 
@@ -358,6 +368,16 @@ def session():
     except (ImportError, RuntimeError):
         # No application context — fall through to the process-wide binding.
         pass
+    if factory is NO_SESSION:
+        # session=False FAILS CLOSED (v201 review, F6). The app declared "this
+        # blueprint never queries"; a query reaching here anyway used to fall
+        # through to the process-global binding — i.e. to whichever OTHER
+        # Skribl app bound its session last. A database-less blueprint must
+        # never borrow someone else's database; it must say this, loudly.
+        raise RuntimeError(
+            "This Skribl blueprint was created with session=False (no "
+            "database), but a database query was attempted. Pass a real "
+            "session factory if this blueprint should query.")
     if factory is None:
         if _session_factory is None:
             raise RuntimeError(
@@ -397,11 +417,26 @@ def _install_sqlite_fk(bind):
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, connection_record):
+        # REAL TRANSACTIONS, or the savepoint contract is fiction. pysqlite's
+        # legacy transaction handling defers its BEGIN until the first DML —
+        # so a request whose first statement is our SAVEPOINT (a bare POST:
+        # begin_nested before any other SQL) ran that SAVEPOINT in autocommit
+        # mode, and RELEASE made the rows durable with NO commit ever issued.
+        # Found by verify_txcontract's teardown-commit counterexample: an
+        # engine "commit" listener counted zero while the row sat committed.
+        # This is the canonical SQLAlchemy recipe: take transaction control
+        # away from the driver and emit BEGIN ourselves. Installed beside the
+        # FK pragma because it is the same class of per-engine SQLite truth.
+        dbapi_connection.isolation_level = None
         cur = dbapi_connection.cursor()
         try:
             cur.execute("PRAGMA foreign_keys=ON")
         finally:
             cur.close()
+
+    @event.listens_for(engine, "begin")
+    def _real_begin(conn):
+        conn.exec_driver_sql("BEGIN")
 
     return True
 

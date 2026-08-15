@@ -234,6 +234,19 @@ with sync_playwright() as p:
     check("switching them on draws a path", on > 100, f"{on} guide pixels")
     check("the control reports its state to assistive tech",
           pg.get_attribute("#arcGuideBtn", "aria-checked") == "true")
+    # ...and reports it VISUALLY with a class the stylesheet actually styles.
+    # The handler used to toggle 'on' while flip.css lights .onion-tint via
+    # .active — aria flipped, the canvas drew guides, and the switch looked
+    # permanently off. Computed color, not class name, so renaming the class
+    # in CSS+JS together stays legal while a re-split fails here.
+    lit = pg.evaluate("""() => {
+        const b = document.getElementById('arcGuideBtn');
+        const rest = document.createElement('button');
+        rest.className = 'onion-tint'; b.parentElement.appendChild(rest);
+        const a = getComputedStyle(b).color, r = getComputedStyle(rest).color;
+        rest.remove(); return a !== r; }""")
+    check("...and the switch itself lights up while the guides are on", lit,
+          "computed color of the enabled switch equals the resting style")
 
     print("\nGUIDES — the path tracks the drawing, and spacing shows speed")
     cents = pg.evaluate("""() => frames.map(f => {

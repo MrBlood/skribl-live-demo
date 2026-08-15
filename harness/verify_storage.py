@@ -333,6 +333,29 @@ try:
         def __init__(self, keys): self._keys = [(k,) for k in keys]
         def query(self, *_a, **_k): return _FakeQuery(self._keys)
 
+    print("\nSTORAGE — a failed write cleans up its own temp file")
+    # v200 follow-up review, F9 / v199 F18: iter_keys ignores *.part BY DESIGN
+    # (a temp mid-write is not an orphan), so a temp stranded by an ordinary
+    # write failure was invisible to the sweep forever — a leak that grew with
+    # every failed request. Inject a replace failure and require the temp gone.
+    _rootF = tempfile.mkdtemp(prefix="skribl-partfail-")
+    _sF = LocalDiskStore(_rootF, lambda k: "/media/" + k)
+    _kF = _sF.key_for(b"doomed-bytes", "image/png")
+    _real_replace = os.replace
+    os.replace = lambda *_a, **_k: (_ for _ in ()).throw(OSError("disk full"))
+    try:
+        try:
+            _sF.put_bytes(b"doomed-bytes", "image/png", _kF)
+            check("the injected replace failure propagates", False, "no raise")
+        except OSError:
+            check("the injected replace failure propagates", True)
+    finally:
+        os.replace = _real_replace
+    _leftover = [p for p in
+                 __import__("pathlib").Path(_rootF).rglob("*.part")]
+    check("no *.part survives the failure", not _leftover,
+          str([str(p) for p in _leftover]))
+
     _root2 = tempfile.mkdtemp(prefix="skribl-sweep-")
     _s2 = LocalDiskStore(_root2, lambda k: "/media/" + k)
     _kept = _s2.key_for(b"kept-bytes", "image/png")

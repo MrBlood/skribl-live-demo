@@ -70,16 +70,23 @@ resolves duplicate rules by registration order and the blueprint registers
 first, mounting Skribl *silently replaced the host's front page*. The default is
 now False; the standalone demo opts in explicitly.
 
-## Transaction ownership  <!-- ⚑ PENDING SIGN-OFF (v200 review response) -->
+## Transaction ownership  <!-- signed off (v201): host-owned transactions, independent limiter accounting, promotion-forfeiture rule as written -->
 
 **The contract: the HOST owns the request transaction.** You hand Skribl your
 session; Skribl treats it as yours.
 
 * **Skribl's routes flush; they never commit or roll back your session.** A
   successful `POST /api/skribls` returns with its rows *pending on your
-  transaction*. They become durable when **you** commit — in your own
-  `after_request`/teardown, your unit-of-work middleware, wherever you already
-  do it. The standalone `app.py` shows the pattern: commit in `after_request`
+  transaction*. They become durable when **you** commit — and that commit
+  MUST happen **before the response is finalized**: `after_request`, or
+  unit-of-work middleware that runs before response handoff. **Never in
+  `teardown_request`** (v201 review, F1): teardown runs after the response has
+  left, so a commit failure there can neither change the status the client
+  already received nor be observed by Skribl's own teardown — which will
+  already have discarded the quota reservation it would need to release. A
+  teardown-time commit therefore yields the worst of both: a 201 the client
+  believes, no durable post, and a spent rate-limit slot. This topology is
+  OUT OF CONTRACT, and `verify_txcontract.py` demonstrates why. The standalone `app.py` shows the pattern: commit in `after_request`
   for sub-500 responses, rollback in `teardown_request` as the safety net. If
   your host commits nothing, Skribl's posts persist nothing — that is the
   contract working, not a bug.
@@ -104,6 +111,33 @@ Pinned by `verify_txcontract.py` (host-pending-row scenario, static commit
 grep, standalone durability) and `verify_review.py` (limiter semantics).
 
 ## The seams
+
+### Shared-cache opt-in (`public_media_cache`)
+
+Everything served through an authorisation check — `/media/<key>`, the share
+card — defaults to `Cache-Control: private, no-store`. Passing
+`public_media_cache=True` (standalone: `SKRIBL_PUBLIC_MEDIA_CACHE=1`) lets
+all-public objects be served `public, immutable` for CDN caching. Two things
+the opt-in means, and you must accept BOTH:
+
+1. **Revocation window.** Visibility is revocable; shared caches don't
+   re-check. Formerly-public bytes keep serving from caches until they expire.
+2. **Incompatible with viewer-dependent DENIAL.** Public-cacheability is
+   decided by `visible_to(None)` — "may an anonymous viewer see this?". A
+   policy that allows anonymous viewing while denying a *specific* viewer
+   (per-viewer blocks, moderation targeting one account) cannot be honoured by
+   a shared cache: the blocked viewer's CDN node serves the same cached bytes
+   as everyone's. If your policy makes viewer-specific denials, do not enable
+   this opt-in.
+
+### LocalDiskStore temp files
+
+Writes go to a unique `*.part` and rename into place; ordinary write failures
+best-effort unlink their temp. A hard crash between write and unlink can still
+strand one, and the orphan sweep ignores `*.part` by design — schedule an
+occasional `find <media root> -name '*.part' -mtime +1 -delete` alongside your
+sweep job.
+
 
 All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 
@@ -144,7 +178,7 @@ def policy(post, viewer_id):
         return False
     return None          # everything else: Skribl's rules
 
-skribl.set_visibility_policy(policy)
+skribl.set_visibility_policy(policy, app=app)  # app-local; omit app= only in a single-app process
 ```
 
 The policy is enforced on the payload endpoint and on the share card — the card
@@ -168,7 +202,7 @@ Skribl ships Alembic migrations for its own four tables (`skribl_posts`,
 * **You own migrations.** Call `attach_to_metadata(db.metadata)` and let your
   Alembic autogenerate pick the tables up with everything else.
 * **Skribl owns its migrations.** Run `alembic upgrade head` against
-  `skribl/migrations` with `DATABASE_URL` set. Current head: `c7e1a5f04b93`.
+  `skribl/migrations` with `DATABASE_URL` set. Current head: `b7e2f9a41c55`.
 
 Do not do both for the same tables.
 

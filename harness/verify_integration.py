@@ -54,6 +54,20 @@ def host_app(**kw):
     def home():
         return "HOST HOMEPAGE"
 
+    # Host-owned per-request commit, per the contract. This pretend host never
+    # committed and still passed — pysqlite's fake savepoints were committing
+    # at RELEASE. With v202's real transactions the flushed post evaporates at
+    # teardown unless the HOST commits, which is the entire contract.
+    @app.after_request
+    def _commit(resp):
+        if resp.status_code < 500:
+            db.session.commit()
+        return resp
+
+    @app.teardown_request
+    def _rollback(exc):
+        db.session.rollback()
+
     with app.app_context():
         db.create_all()
     return app, db

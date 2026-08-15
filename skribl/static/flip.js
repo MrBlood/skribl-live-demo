@@ -3161,7 +3161,11 @@ const onionGroup=document.getElementById('onionGroup');
 bindEl('arcGuideBtn','click',function(){
   arcGuides = !arcGuides;
   this.setAttribute('aria-checked', arcGuides ? 'true' : 'false');
-  this.classList.toggle('on', arcGuides);
+  // 'active', not 'on': .onion-tint's lit state is styled as .active (the ◐
+  // tint button beside Onion skin uses the same class). Toggling 'on' here
+  // flipped a class nothing styles, so the guides drew on the canvas while
+  // the switch looked permanently off.
+  this.classList.toggle('active', arcGuides);
   render();
 });
 

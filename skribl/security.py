@@ -258,6 +258,20 @@ def register_security(bp, skribl_version, player_target="_blank"):
             resp = bp.skribl_csrf[1](resp)
         return resp
 
+    def _request_limit():
+        """ONE resolved request-size limit, used by BOTH request hooks.
+
+        v200's _bound_request honoured SKRIBL_MAX_REQUEST_BYTES while
+        _inflate_request kept its own hard-coded 25 MB fallback (v200
+        follow-up review, F3) — so a host that set the Skribl-specific cap to
+        1 MB bounded the COMPRESSED bytes at 1 MB and the EXPANDED bytes at
+        25 MB: the configured limit was bypassed by anything gzipped. The
+        host's MAX_CONTENT_LENGTH, when set, wins for both.
+        """
+        return (current_app.config.get("MAX_CONTENT_LENGTH")
+                or _env_int("SKRIBL_MAX_REQUEST_BYTES", 25_000_000,
+                            minimum=1024))
+
     @bp.before_request
     def _bound_request():
         """Refuse unbounded request bodies BEFORE anything reads them.
@@ -278,9 +292,7 @@ def register_security(bp, skribl_version, player_target="_blank"):
         """
         if request.method not in ("POST", "PUT", "PATCH"):
             return None
-        limit = (current_app.config.get("MAX_CONTENT_LENGTH")
-                 or _env_int("SKRIBL_MAX_REQUEST_BYTES", 25_000_000,
-                             minimum=1024))
+        limit = _request_limit()
         if request.content_length is None:
             return jsonify({"error": "Content-Length is required."}), 411
         if request.content_length > limit:
@@ -309,7 +321,8 @@ def register_security(bp, skribl_version, player_target="_blank"):
         if (request.method not in ("POST", "PUT", "PATCH")
                 or (request.headers.get("Content-Encoding") or "").lower() != "gzip"):
             return None
-        limit = current_app.config.get("MAX_CONTENT_LENGTH") or 25_000_000
+        # The SAME resolved limit as _bound_request — see _request_limit (F3).
+        limit = _request_limit()
         try:
             dec = zlib.decompressobj(16 + zlib.MAX_WBITS)
             plain = dec.decompress(request.get_data(cache=False), limit)

@@ -380,6 +380,21 @@ try:
                                 region=REGION, endpoint=f"http://127.0.0.1:{S3_PORT}",
                                 access_key=AK, secret_key=SK, prefix="media/"))
         skribl.models.attach_to_metadata(d.metadata)
+
+        # HOST-OWNED COMMIT, per the transaction contract. This fixture never
+        # wired one and still worked — because pysqlite's fake savepoints were
+        # committing at RELEASE. With real transactions (v202 BEGIN recipe)
+        # the flushed post vanished at request teardown and every downstream
+        # check went vacuous. The fixture now commits like a real host.
+        @a.after_request
+        def _commit(resp):
+            if resp.status_code < 500:
+                d.session.commit()
+            return resp
+
+        @a.teardown_request
+        def _rollback(exc):
+            d.session.rollback()
         return a, d
 
     _author, _d = _app_as(1)

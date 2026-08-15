@@ -446,7 +446,10 @@ with server(SKRIBL_RATE_MAX_POSTS=2, SKRIBL_RATE_MAX_ATTEMPTS=500) as base3:
 print("\nR3#1 — a failed commit must not strand the reservation")
 
 def _post_slots():
-    return sum(len(q) for k, q in A._rate_buckets.items() if k[0] == "posts")
+    # APP-LOCAL buckets (v201 review, F2): the module dict is only the
+    # no-app-context fallback now, so the count reads this app's own state.
+    b = _app.extensions["skribl"].get("rate_buckets", {})
+    return sum(len(q) for k, q in b.items() if k[0] == "posts")
 
 _app = A.create_app()
 before_slots = _post_slots()
@@ -785,9 +788,17 @@ check("the surplus-interval case is excluded by a clear margin",
 
 print("\n#13 — shared-store limiter (survives restart, shared across workers)")
 check("backend is selectable", A._RATE_BACKEND in ("memory", "db"), A._RATE_BACKEND)
-check("the identity key is a salted hash, never a raw address",
-      A._rate_key("1.2.3.4") != "1.2.3.4" and len(A._rate_key("1.2.3.4")) == 64
-      and A._rate_key("1.2.3.4") != A._rate_key("1.2.3.5"))
+# A key must be PRESENT for the probe: _rate_hmac_key() now refuses to hash
+# with an empty key anywhere (v200 hashed with "" outside the db backend,
+# which the code itself called decorative), and it resolves app config first
+# so hosts can configure it in Python (v200 follow-up review, F5).
+os.environ["SKRIBL_RATE_HMAC_KEY"] = "harness-hash-probe"
+try:
+    check("the identity key is a salted hash, never a raw address",
+          A._rate_key("1.2.3.4") != "1.2.3.4" and len(A._rate_key("1.2.3.4")) == 64
+          and A._rate_key("1.2.3.4") != A._rate_key("1.2.3.5"))
+finally:
+    del os.environ["SKRIBL_RATE_HMAC_KEY"]
 with server(SKRIBL_RATE_BACKEND="db", SKRIBL_RATE_MAX_POSTS=2, SKRIBL_RATE_MAX_ATTEMPTS=500,
             SKRIBL_RATE_HMAC_KEY="harness-fixed-key") as dbbase:
     codes_db = [post_to(dbbase, {"frames": [frame]}) for _ in range(3)]
@@ -1212,6 +1223,37 @@ with server(SKRIBL_RATE_BACKEND="db", SKRIBL_RATE_MAX_POSTS=1,
     check("a committed post spends its slot", post_to(ttlbase, {"frames": [frame]}) == 201)
     check("and the next one is refused for the whole window",
           post_to(ttlbase, {"frames": [frame]}) == 429)
+
+# A cleanup failure must not strand the reservation it rides behind (v200
+# follow-up review, F6 / v199 F15): the reservation commits, THEN opportunistic
+# cleanup runs on the same limiter session — an exception there used to escape
+# before the token reached the route, leaving a committed pending row nothing
+# could release. Inject the failure by making the cleanup batch size
+# un-coercible; force the 1-in-50 path deterministically.
+with A.create_app().app_context():
+    import skribl.ratelimit as _rl
+
+    class _Boom:
+        def __index__(self):
+            raise RuntimeError("injected cleanup failure")
+
+    _old_batch, _old_rb = _rl.RATE_CLEANUP_BATCH, _rl.secrets.randbelow
+    _rl.RATE_CLEANUP_BATCH = _Boom()
+    _rl.secrets.randbelow = lambda _n: 0
+    try:
+        _tok = A._db_rate_reserve_post("cleanup-probe-ip")
+    finally:
+        _rl.RATE_CLEANUP_BATCH, _rl.secrets.randbelow = _old_batch, _old_rb
+    check("a cleanup failure still returns the reservation token",
+          _tok is not None, str(_tok))
+    if _tok is not None:
+        A._db_rate_release_post("cleanup-probe-ip", _tok)
+        gone = (A.db.session.query(A.RateEvent)
+                .filter(A.RateEvent.id == _tok).count()) == 0
+        check("...which the route can then release normally", gone)
+    else:
+        check("...which the route can then release normally", False,
+              "no token to release")
 
 # An abandoned PENDING row must stop counting after the TTL, where a committed one
 # would not. Written directly, because killing a worker mid-post is not something

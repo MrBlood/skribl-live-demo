@@ -35,7 +35,8 @@ import os
 from flask import Blueprint, url_for
 
 from .core import SKRIBL_VERSION
-from .models import SkriblBase, bind_session, create_all, session, set_visibility_policy
+from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
+                     session, set_visibility_policy)
 from .routes import register_routes
 from .security import register_security
 
@@ -127,6 +128,7 @@ def create_blueprint(session=None, url_prefix=None,
             "player_target must be '_blank' (open the player in a new tab, the "
             "default) or '_self' (navigate in place, for a host that routes the "
             f"player itself). Got {player_target!r}.")
+    _declared_no_session = session is False
     if session is False:
         session = None          # deliberate, not forgotten
     elif session is None:
@@ -135,6 +137,8 @@ def create_blueprint(session=None, url_prefix=None,
             "to init_skribl()/create_blueprint(). For a test blueprint that "
             "never queries, pass session=False to say so explicitly.")
     if session is not None:
+        # Process-global default: last-writer-wins, kept for no-app-context
+        # callers (maintenance scripts, the harness's direct calls).
         bind_session(session)
 
     bp = Blueprint(
@@ -177,10 +181,38 @@ def create_blueprint(session=None, url_prefix=None,
     # which is right for an UNAUTHENTICATED deployment and wrong the moment one
     # authenticates.
     bp.skribl_csrf = csrf
+    if current_user_id is not None and csrf is None:
+        # THE TRIPWIRE (DECISIONS.md #2). CSRF-off is correct while posting is
+        # anonymous — there is no session to ride. The moment a host wires in
+        # current_user_id (cookie auth, almost always), CSRF-off means any
+        # webpage on the internet can post as the logged-in user. Those two
+        # seams contradicting is precisely detectable, so it is detected: a
+        # loud warning, not a refusal, because a host may authenticate by
+        # non-cookie means (bearer tokens) where CSRF does not apply — that
+        # host should silence this by passing its verifier or an explicit
+        # csrf=False-equivalent no-op. Everyone else should treat this line in
+        # their logs as a security bug filed against them.
+        import logging
+        logging.getLogger("skribl").warning(
+            "skribl: current_user_id is configured but csrf is not. If your "
+            "authentication uses cookies, any third-party page can post as "
+            "the logged-in user. Pass csrf=... to create_blueprint()/"
+            "init_skribl() (see DECISIONS.md #2).")
     # Where media lives. Defaults to inline, i.e. exactly v131: the data URL
     # stays in payload_json. A storage change to a system holding real posts is
     # opted into, never inherited by upgrading.
     from .storage import InlineStore
+    # F1 (v200 follow-up review): record_once installs this blueprint's own
+    # session choice into the registering app the moment register_blueprint()
+    # runs, making direct registration genuinely equivalent to init_skribl():
+    # every registered app is app-local; the module global serves only code
+    # running outside any application. F6 (v201 review): session=False records
+    # the NO_SESSION sentinel, so a query on a declared-database-less
+    # blueprint raises app-locally instead of falling through to whichever
+    # other app bound the module global last — fail closed, as declared.
+    _recorded = NO_SESSION if _declared_no_session else session
+    bp.record_once(lambda state: state.app.extensions
+                   .setdefault("skribl", {}).setdefault("session", _recorded))
     bp.skribl_media_store = media_store or InlineStore()
     # Cache opt-in for authorisation-dependent responses (/media/<key>, the
     # share card). Default OFF: visibility is REVOCABLE — a post can go from
@@ -215,7 +247,8 @@ def init_skribl(app, **kwargs):
     # most recently initialised app won for the whole process; see
     # skribl.models.session().
     _sess = kwargs.get("session")
-    app.extensions.setdefault("skribl", {})["session"] = None if _sess is False else _sess
+    app.extensions.setdefault("skribl", {})["session"] = (
+        NO_SESSION if _sess is False else _sess)
     app.register_blueprint(bp)
     # Make the foreign key this package declares actually apply on SQLite, which
     # ignores ON DELETE CASCADE unless the pragma is set per connection. Done

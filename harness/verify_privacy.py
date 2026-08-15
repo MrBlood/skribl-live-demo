@@ -204,6 +204,21 @@ def _app_as(viewer):
     skribl.init_skribl(a, session=lambda: d.session,
                        current_user_id=(lambda: viewer))
     skribl.models.attach_to_metadata(d.metadata)
+
+    # Host-owned per-request commit, per the transaction contract. Like the
+    # s3/integration fixtures, this one never committed and passed anyway —
+    # pysqlite's fake savepoints committed at RELEASE. With v202's real
+    # transactions the created post evaporates at teardown unless the host
+    # commits, and the "rebuilt author app" assertions read committed state.
+    @a.after_request
+    def _commit(resp):
+        if resp.status_code < 500:
+            d.session.commit()
+        return resp
+
+    @a.teardown_request
+    def _rollback(exc):
+        d.session.rollback()
     return a, d
 
 

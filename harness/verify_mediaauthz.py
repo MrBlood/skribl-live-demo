@@ -283,6 +283,69 @@ r = build_app(None).test_client().get(f"/s/{body.get('id')}/card.png")
 check("...while a private post's card still falls back for strangers",
       r.status_code == 302, str(r.status_code))
 
+print("\nPARSER PARITY — what validation accepts, storage externalises")
+# v200 follow-up review, F4 / v199 F12: validation strips and lowercases;
+# storage tested the RAW string and looked up the RAW MIME. A whitespace-
+# padded data URL validated, then failed storage's is_data_url and stayed
+# inline in payload_json with no association row; `Audio/WAV` validated as
+# audio/wav and externalised as .bin/octet-stream.
+_padded = "  data:image/png;base64," + png_b64((80, 0, 0)) + "  "
+st, body = post_as(None, {"visibility": "public", "frames": [FRAME],
+                          "photo": {"data": _padded, "fit": "fit"}})
+check("a whitespace-padded valid data URL is accepted", st == 201, str(st))
+if st == 201:
+    r = build_app(None).test_client().get(f"/api/skribls/{body['id']}")
+    _p = ((r.get_json() or {}).get("skribl") or {}).get("photo") or {}
+    _u = _p.get("data")
+    check("...and externalised — no inline media survives in the payload",
+          isinstance(_u, str) and _u.startswith("/media/")
+          and "base64" not in str(r.get_data())[:200000],
+          str(_u)[:60])
+else:
+    check("...and externalised — no inline media survives in the payload",
+          False, "post refused")
+import base64 as _b64
+_wav = ("data:Audio/X-WAV;base64," + _b64.b64encode(
+    b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00"
+    b"\x40\x1f\x00\x00\x80>\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00").decode())
+st, body = post_as(None, {"visibility": "public", "frames": [FRAME],
+                          "music": {"data": _wav}})
+if st == 201:
+    r = build_app(None).test_client().get(f"/api/skribls/{body['id']}")
+    _m = ((r.get_json() or {}).get("skribl") or {}).get("music") or {}
+    _u = str(_m.get("data") or "")
+    check("mixed-case MIME externalises to the canonical extension, not .bin",
+          _u.startswith("/media/") and _u.endswith(".wav"), _u[-30:])
+    if _u.startswith("/media/"):
+        rr = build_app(None).test_client().get(_u)
+        check("...and serves back as canonical audio/wav",
+              rr.status_code == 200 and rr.mimetype == "audio/wav",
+              f"{rr.status_code} {rr.mimetype}")
+    else:
+        check("...and serves back as canonical audio/wav", False, "not external")
+else:
+    check("mixed-case MIME externalises to the canonical extension, not .bin",
+          False, f"POST {st} {str(body)[:60]}")
+    check("...and serves back as canonical audio/wav", False, "post refused")
+
+print("\nIDEMPOTENCY — author-scoped: replays for the author, never across")
+import uuid as _uuid
+_k = str(_uuid.uuid4())
+_h = {"Idempotency-Key": _k}
+a7 = build_app(7)
+r1 = a7.test_client().post("/api/skribls", json={"frames": [FRAME]}, headers=_h)
+r2 = a7.test_client().post("/api/skribls", json={"frames": [FRAME]}, headers=_h)
+check("the SAME author retrying the SAME key replays the same post",
+      r1.status_code == 201 and r2.status_code == 200
+      and (r2.get_json() or {}).get("id") == (r1.get_json() or {}).get("id"),
+      f"{r1.status_code}/{r2.status_code}")
+r3 = build_app(8).test_client().post("/api/skribls", json={"frames": [FRAME]},
+                                     headers=_h)
+check("a DIFFERENT author with the same key gets a different post",
+      r3.status_code == 201
+      and (r3.get_json() or {}).get("id") != (r1.get_json() or {}).get("id"),
+      f"{r3.status_code}")
+
 print("\nPER-APP SEAMS — one process, two apps, two policies, two budgets")
 # The module-level setter used to be the ONLY policy seam, so the most
 # recently configured app decided visibility for every app in the process.
@@ -307,6 +370,81 @@ check("app A's own attempt budget exhausts app A", rA.status_code == 429,
       str(rA.status_code))
 check("...while app B keeps the process default", rB.status_code == 201,
       str(rB.status_code))
+
+print("\nv201 GATE PINS — F2/F3/F4/F5/F6")
+# F2: exhausting app A's memory budget leaves app B's untouched (same IP).
+appA2, appB2 = build_app(None), build_app(None)
+appA2.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 2
+appB2.config["SKRIBL_RATE_MAX_ATTEMPTS"] = 2
+for _ in range(3):
+    rA = appA2.test_client().post("/api/skribls", json={"frames": [FRAME]},
+                                  environ_overrides={"REMOTE_ADDR": "7.7.7.7"})
+rB = appB2.test_client().post("/api/skribls", json={"frames": [FRAME]},
+                              environ_overrides={"REMOTE_ADDR": "7.7.7.7"})
+check("F2: app A exhausted its own budget", rA.status_code == 429,
+      str(rA.status_code))
+check("F2: ...while app B's budget for the same IP is untouched",
+      rB.status_code == 201, str(rB.status_code))
+
+# F3: a bytes SECRET_KEY must hash, not AttributeError.
+import skribl.ratelimit as _rl
+appC = build_app(None)
+appC.config["SECRET_KEY"] = b"bytes-secret-form"
+with appC.app_context():
+    try:
+        h = _rl._rate_key("1.2.3.4")
+        check("F3: bytes SECRET_KEY hashes (64 hex)", len(h) == 64, h[:12])
+    except Exception as e:
+        check("F3: bytes SECRET_KEY hashes (64 hex)", False, repr(e)[:60])
+
+# F4: same author, same key, DIFFERENT body -> 409, never a silent replay.
+_k4 = {"Idempotency-Key": "gate-f4-key"}
+a4 = build_app(4)
+r1 = a4.test_client().post("/api/skribls", json={"frames": [FRAME],
+                                                 "title": "first"},
+                           headers=_k4)
+r2 = a4.test_client().post("/api/skribls", json={"frames": [FRAME],
+                                                 "title": "second"},
+                           headers=_k4)
+check("F4: reused key with a different body is refused (409)",
+      r1.status_code == 201 and r2.status_code == 409,
+      f"{r1.status_code}/{r2.status_code}")
+r3 = a4.test_client().post("/api/skribls", json={"frames": [FRAME],
+                                                 "title": "first"},
+                           headers=_k4)
+check("F4: the ORIGINAL body still replays",
+      r3.status_code == 200
+      and (r3.get_json() or {}).get("id") == (r1.get_json() or {}).get("id"),
+      str(r3.status_code))
+
+# F5: an unknown field holding the SAME string as photo.data stays inline.
+_du = f"data:image/png;base64,{png_b64((90, 0, 0))}"
+st, body = post_as(None, {"visibility": "public", "frames": [FRAME],
+                          "photo": {"data": _du, "fit": "fit"},
+                          "hostExtensionEcho": _du})
+check("F5: payload with a media-equal extension string is accepted",
+      st == 201, str(st))
+if st == 201:
+    r = build_app(None).test_client().get(f"/api/skribls/{body['id']}")
+    sk = (r.get_json() or {}).get("skribl") or {}
+    check("F5: the media path was externalised",
+          str((sk.get("photo") or {}).get("data", "")).startswith("/media/"))
+    check("F5: ...but the equal NON-media string is byte-for-byte untouched",
+          sk.get("hostExtensionEcho") == _du,
+          str(sk.get("hostExtensionEcho"))[:50])
+else:
+    check("F5: the media path was externalised", False, "post refused")
+    check("F5: ...but the equal NON-media string is byte-for-byte untouched",
+          False, "post refused")
+
+# F6: session=False fails CLOSED even with another app's global binding live.
+bpF = skribl.create_blueprint(session=False)
+appF = Flask("no-db")
+appF.config["SECRET_KEY"] = "x"
+appF.register_blueprint(bpF)
+rF = appF.test_client().get("/api/skribls/zzzzzzzz")
+check("F6: a session=False blueprint's query FAILS (5xx), never borrows "
+      "another app's database", rF.status_code >= 500, str(rF.status_code))
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

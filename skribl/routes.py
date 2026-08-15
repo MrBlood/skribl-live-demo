@@ -68,11 +68,22 @@ def _idempotency_hash(raw_key, viewer_id):
     raw_key = raw_key.strip()
     if not raw_key or len(raw_key) > 200:
         return None
-    scope = "anon" if viewer_id is None else f"u{viewer_id}"
-    return hashlib.sha256(f"{scope}|{raw_key}".encode()).hexdigest()
+    if viewer_id is None:
+        # ANONYMOUS CALLERS GET NO IDEMPOTENCY (v200 follow-up review, F2).
+        # v200 scoped them all to one literal namespace, which made the header
+        # a shared capability: any two anonymous clients sending the same key
+        # resolved to the SAME post — the second caller receiving the first's
+        # id and share URL, a disclosure for unlisted posts. The property
+        # "one client's key can never resolve to another's post" needs a
+        # client identity to scope by, and an anonymous request has none the
+        # server can trust. A host that authenticates gets replay protection
+        # from the author scope; anonymous lost-response retries fall back to
+        # v199 behaviour (a duplicate post), which is an annoyance, not a leak.
+        return None
+    return hashlib.sha256(f"u{viewer_id}|{raw_key}".encode()).hexdigest()
 
 
-def _idempotent_replay(idem_hash):
+def _idempotent_replay(idem_hash, fingerprint):
     """The stored response for this key, or None if the key is unused.
 
     200, not 201: the post already existed when THIS request arrived. The body
@@ -85,6 +96,14 @@ def _idempotent_replay(idem_hash):
            .filter_by(key_hash=idem_hash).first())
     if row is None:
         return None
+    if (row.request_fingerprint is not None
+            and fingerprint is not None
+            and row.request_fingerprint != fingerprint):
+        # The key exists but names a DIFFERENT request (v201 review, F4).
+        # Refuse rather than silently answer with the old post; a NULL stored
+        # fingerprint is a pre-v202 row and replays as originally promised.
+        return jsonify({"error": "This Idempotency-Key was already used with "
+                                 "a different request body."}), 409
     post = session().query(SkriblPost).options(
         sa.orm.defer(SkriblPost.payload_json)).filter_by(id=row.post_id).first()
     if post is None:
@@ -98,17 +117,36 @@ def _idempotent_replay(idem_hash):
 
 def register_routes(bp, *, index_route=False):
     @bp.teardown_request
-    def _release_parked_reservation(exc):
-        # The create handler parks its post reservation on `g` and returns with
-        # its rows flushed but uncommitted; the HOST's commit makes them durable
-        # (docs/INTEGRATION.md). If the request died after the handler returned
-        # — the host's commit raising is the concrete case — the post never
-        # landed, so the slot goes back rather than being held for the window.
-        # On the db backend the release deletes the (already promoted) row on
-        # the limiter's own session; on the memory backend it frees the slot.
+    def _finish_parked_reservation(exc):
+        # POST-SLOT BOOKKEEPING LIVES HERE, after the host transaction ended.
+        # Two reasons, one per database:
+        #   * Correctness everywhere: the host owns the request transaction
+        #     (docs/INTEGRATION.md), so only after it resolves do we know
+        #     whether the post landed. Success -> promote the reservation;
+        #     any failure — including the host's before-response commit
+        #     raising — -> release it, so a failed request does not hold a
+        #     slot for the whole window.
+        #   * Liveness on SQLite: with real transactions (see models.py's
+        #     BEGIN recipe), the host's open write transaction and the
+        #     limiter's independent session are two writers on one file; a
+        #     promote or release issued mid-request deadlocks against the
+        #     very rows it is accounting for. Teardown is after COMMIT or
+        #     ROLLBACK, where the lock is free.
+        # A teardown-time promotion failure leaves the row 'pending', which
+        # still counts within RATE_PENDING_TTL and then ages out — quota can
+        # only leak DOWNWARD, briefly, and only if the limiter's own store is
+        # failing. This ordering is also why the integration contract requires
+        # the host commit BEFORE the response (after_request), never in
+        # teardown: a teardown-committing host resolves its transaction after
+        # this hook has already had to decide.
         reservation = g.pop("_skribl_post_reservation", None)
-        if exc is not None and reservation is not None:
-            _rate_release_post(*reservation)
+        if reservation is None:
+            return
+        ip, token, succeeded = reservation
+        if succeeded and exc is None:
+            _rate_commit_post(token)
+        else:
+            _rate_release_post(ip, token)
 
     # errorhandler, NOT app_errorhandler: the app_ variant is APPLICATION-WIDE by
     # Flask's own definition, so a host's unrelated oversized upload would have
@@ -220,23 +258,39 @@ def register_routes(bp, *, index_route=False):
                     thumb = payload.get("thumbnail") if isinstance(payload, dict) else None
                     decoded = _decode_data_url_image(thumb)
                     if decoded is None and isinstance(thumb, str):
-                        # EXTERNALISED thumbnail (outside review follow-up).
-                        # With an externalising store the payload holds the
-                        # STORED URL, not a data URL — so every card on such a
-                        # deployment silently fell back to the generic branded
-                        # image, which reads as "working" and is not. Resolve
-                        # the key back through the store, under the visibility
-                        # check already made above and the same size cap
-                        # below. The key is taken from the URL's LAST segment
-                        # and must be Skribl-shaped — never a path to open.
-                        _seg = thumb.rsplit("/", 1)[-1]
+                        # EXTERNALISED thumbnail. With an externalising store
+                        # the payload holds the STORED URL, not a data URL —
+                        # so every card on such a deployment silently fell
+                        # back to the generic branded image. Resolution goes
+                        # through this post's OWN association rows, matching
+                        # each key's presentation URL by equality (v200
+                        # follow-up review, F8): parsing a key out of the URL
+                        # string reintroduced exactly the derive-authz-from-
+                        # presentation mistake put_data_url() was changed to
+                        # avoid, and broke silently for any custom store whose
+                        # URLs carry a CDN path or query string. A store whose
+                        # URLs are non-deterministic (signed, expiring) simply
+                        # falls back to the branded card — documented, and
+                        # strictly no worse than v199. Bounded by the post's
+                        # association fan-out, and still under the visibility
+                        # check made above and the size cap below.
                         _store = bp.skribl_media_store
-                        if (KEY_RE.match(_seg)
-                                and callable(getattr(_store, "read", None))):
-                            _got = _store.read(_seg)
-                            if _got is not None:
-                                decoded = (_got[0], _got[1]) \
-                                    if isinstance(_got, tuple) else None
+                        if (callable(getattr(_store, "read", None))
+                                and callable(getattr(_store, "url_for_key",
+                                                     None))):
+                            _keys = [row[0] for row in
+                                     session().query(SkriblPostMedia.media_key)
+                                     .filter_by(post_id=post.id).all()]
+                            for _key in _keys:
+                                try:
+                                    if _store.url_for_key(_key) != thumb:
+                                        continue
+                                    _got = _store.read(_key)
+                                except Exception:
+                                    break
+                                if isinstance(_got, tuple):
+                                    decoded = (_got[0], _got[1])
+                                break
                     # Size cap: see MAX_CARD_BYTES. Oversize → static fallback below.
                     if decoded is not None and len(decoded[0]) > MAX_CARD_BYTES:
                         decoded = None
@@ -302,8 +356,15 @@ def register_routes(bp, *, index_route=False):
         # exactly as before.
         idem_hash = _idempotency_hash(request.headers.get("Idempotency-Key"),
                                       bp.skribl_current_user_id())
+        idem_fp = None
         if idem_hash is not None:
-            prior = _idempotent_replay(idem_hash)
+            # The fingerprint binds the key to THIS body (v201 review, F4):
+            # same key + same fingerprint replays, same key + different
+            # fingerprint is refused — never a silent replay of an older post
+            # under a reused key. Raw post-inflate bytes: exactly what the
+            # parser will see.
+            idem_fp = hashlib.sha256(request.get_data(cache=True)).hexdigest()
+            prior = _idempotent_replay(idem_hash, idem_fp)
             if prior is not None:
                 return prior
 
@@ -439,7 +500,8 @@ def register_routes(bp, *, index_route=False):
                             # the post: durable together or not at all, which
                             # is the property a retry needs.
                             session().add(SkriblIdempotency(
-                                key_hash=idem_hash, post_id=post.id))
+                                key_hash=idem_hash, post_id=post.id,
+                                request_fingerprint=idem_fp))
                         session().flush()
                 except IntegrityError as ie:
                     # RETRY BOUNDARY (outside review follow-up). Retrying is
@@ -453,9 +515,11 @@ def register_routes(bp, *, index_route=False):
                     diag = str(getattr(ie, "orig", ie))
                     if idem_hash is not None and "key_hash" in diag:
                         # The idempotency index refused the KEY: a concurrent
-                        # duplicate won. Resolve to the winner instead of
-                        # retrying into a second post.
-                        prior = _idempotent_replay(idem_hash)
+                        # duplicate won. Resolve to the winner — same
+                        # fingerprint rule as the fast path, so a concurrent
+                        # DIFFERENT body under the same key gets the 409, not
+                        # the other request's post.
+                        prior = _idempotent_replay(idem_hash, idem_fp)
                         if prior is not None:
                             return prior
                     if "public_id" not in diag:
@@ -463,24 +527,17 @@ def register_routes(bp, *, index_route=False):
                         # it; let the generic handler report THIS error.
                         raise
                     continue
-                # Promote the DB-backed quota reservation on the LIMITER's own
-                # transaction, before this request's transaction can commit. If
-                # promotion fails, the request 500s while the post is still
-                # pending, so a client never sees an error for a post that
-                # became durable. If the request fails AFTER promotion, the
-                # spent slot stands — a failed request counting against quota is
-                # the contract, not a leak. Memory-backed limiting has no
-                # promotion step, so this is a no-op there.
-                _rate_commit_post(post_token)
                 public_id = candidate
                 created = True
-                # The rows are FLUSHED, not committed — the host's per-request
-                # commit makes them durable (docs/INTEGRATION.md). If that
-                # commit fails after this handler returns, the reservation must
-                # not stay spent for the whole window, so it is parked on `g`
-                # for the blueprint teardown below to release on a failed
-                # request. On success the teardown just discards it.
-                g._skribl_post_reservation = (client_ip, post_token)
+                # ALL post-slot bookkeeping happens in TEARDOWN, after the
+                # host's transaction has closed (see _finish_parked_reservation
+                # for the full why): the rows here are FLUSHED, not committed,
+                # and on SQLite the host's open write transaction and the
+                # limiter's own session cannot both hold the write lock — a
+                # promote or release issued now deadlocks the very request it
+                # accounts for. So the reservation is parked with its outcome,
+                # and teardown promotes on success or releases on failure.
+                g._skribl_post_reservation = (client_ip, post_token, True)
                 break
         except Exception:
             # No rollback here: the session and its transaction are the host's
@@ -491,8 +548,14 @@ def register_routes(bp, *, index_route=False):
             # that for the standalone deployment.
             raise
         finally:
-            if not created:
-                _rate_release_post(client_ip, post_token)
+            if not created and post_token is not None:
+                # Parked for teardown, NOT released here: on the failure path
+                # the host session may hold this request's flushed-then-
+                # poisoned writes, and a limiter delete on a second SQLite
+                # connection blocks against that open transaction. Teardown
+                # runs after the host transaction ends, where the release is
+                # cheap and safe.
+                g._skribl_post_reservation = (client_ip, post_token, False)
 
         if not created:
             return jsonify({"error": "Could not allocate a unique id; please retry."}), 503

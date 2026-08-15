@@ -150,19 +150,24 @@ check("createdAt carries an explicit UTC offset",
       created.endswith("+00:00") or created.endswith("Z"),
       f"{created!r} — a naive ISO string is parsed as LOCAL time by Date()")
 
-print("\nIDEMPOTENCY — a retried POST resolves to the same post")
+print("\nIDEMPOTENCY — anonymous callers get NO shared replay namespace")
+# v200 follow-up review, F2: v200 scoped every anonymous client to one literal
+# namespace, so two strangers sending the same key resolved to the SAME post —
+# the second received the first's id and share URL (a disclosure for unlisted
+# posts). This server is anonymous, so these two "different clients" are
+# distinguishable only by their key reuse — which is exactly the attack shape:
+# same key, different payloads, and the second MUST NOT see the first's post.
+# The authenticated replay path (where a real author scope exists) is pinned
+# in verify_mediaauthz.py.
 import uuid
 K = {"Idempotency-Key": str(uuid.uuid4())}
-st1, b1 = post({"frames": [frame], "title": "idem"}, headers=K)
-check("first POST with a key creates (201)", st1 == 201, f"{st1}")
-st2, b2 = post({"frames": [frame], "title": "idem"}, headers=K)
-check("the retry replays (200) rather than creating",
-      st2 == 200 and b2.get("idempotentReplay") is True, f"{st2} {str(b2)[:70]}")
-check("and names the SAME post", b1.get("id") == b2.get("id"),
-      f"{b1.get('id')} vs {b2.get('id')}")
-st3, b3 = post({"frames": [frame], "title": "idem"})
-check("without the header, an identical body is a NEW post",
-      st3 == 201 and b3.get("id") != b1.get("id"), f"{st3} {b3.get('id')}")
+st1, b1 = post({"frames": [frame], "title": "client one"}, headers=K)
+check("an anonymous POST with a key still creates (201)", st1 == 201, f"{st1}")
+st2, b2 = post({"frames": [frame], "title": "client two"}, headers=K)
+check("a second anonymous client reusing the key gets its OWN post",
+      st2 == 201 and b2.get("id") != b1.get("id")
+      and not b2.get("idempotentReplay"),
+      f"{st2} {b2.get('id')} vs {b1.get('id')}")
 st4, b4 = post({"frames": [frame]}, headers={"Idempotency-Key": "x" * 300})
 check("an oversized key is ignored, not stored", st4 == 201, f"{st4}")
 
