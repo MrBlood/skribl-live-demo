@@ -185,6 +185,16 @@ try:
         ("player-phone", plain["url"], (390, 844), []),
         ("player-photo", photo["url"], (1280, 900), []),
         ("player-404", "/s/nope", (1280, 900), []),
+        # v207: the loop/mute buttons' PRESSED state. Every player scene was
+        # static, so .player-btn.active (a JS-toggled class, not the :active
+        # pseudo) never matched at rest and cssgraph dropped it from
+        # player.css — the Repeat button worked but never lit up, so it read
+        # as dead. .player-btn.active is now in css_live.json directly and the
+        # ux suite proves the button lights; this scene pixel-compares the
+        # pressed render. It is LAST so its click/focus state cannot bleed into
+        # a following editor scene (it did: a 4px focus strip on the Pad tune
+        # button differed between passes when this scene preceded editor-pad).
+
         ("editor-pad", "/", (1280, 900), []),
         ("editor-pad-phone", "/", (390, 844), []),
         ("editor-flip", "/flip", (1280, 900), []),
@@ -192,6 +202,7 @@ try:
         ("editor-menu", "/", (1280, 900), ["menu"]),
         ("editor-export", "/", (1280, 900), ["menu", "export"]),
         ("editor-help", "/flip", (1280, 900), ["help"]),
+        ("player-pressed", plain["url"], (1280, 900), ["loop", "mute"]),
     ]
 
     shots = pathlib.Path(tempfile.mkdtemp())
@@ -221,6 +232,10 @@ try:
                     pg.click("#exportItem", timeout=2500); pg.wait_for_timeout(800)
                 if "help" in acts:
                     pg.click("#helpBtn", timeout=2500); pg.wait_for_timeout(800)
+                if "loop" in acts:
+                    pg.click("#playerLoopBtn", timeout=2500); pg.wait_for_timeout(300)
+                if "mute" in acts:
+                    pg.click("#playerMuteBtn", timeout=2500); pg.wait_for_timeout(300)
             except Exception:
                 pass
             pg.add_style_tag(content=FREEZE)

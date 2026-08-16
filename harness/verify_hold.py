@@ -231,13 +231,18 @@ with sync_playwright() as _p:
                        " && g.getBoundingClientRect().width > 4; }"),
           "present in markup but not laid out")
 
-    # The Move buttons deliberately carry NO glyph. A page rectangle was tried
-    # and reverted — at 11px it rendered as a zero, so the buttons read "◀ 0".
-    # Pinned so it is not helpfully reintroduced.
+    # The Move buttons carry ONLY an arrow. A page RECTANGLE was once added
+    # beside the arrow and reverted — at 11px a tiny rect renders as a zero, so
+    # the buttons read "◀ 0". v207 replaced the ◀/▶ TEXT arrows with SVG
+    # chevrons (so the page bar is uniformly SVG, no mixed text/SVG glyphs);
+    # the chevron IS the arrow, not an extra glyph. Pin the real concern: no
+    # <rect> in the Move glyph, and the arrow is a single chevron path.
     for _id in ("pbLeft", "pbRight"):
-        check(f"#{_id} carries no glyph — a rect that small reads as a zero",
-              not _pg.evaluate(f"() => !!document.querySelector('#{_id} .pb-glyph')"),
-              "the page-rect glyph is back; it renders as a 0 at this size")
+        _g = _pg.evaluate(f"""() => {{ const g = document.querySelector('#{_id} .pb-glyph svg'); if (!g) return null;
+            return {{ rects: g.querySelectorAll('rect').length, paths: g.querySelectorAll('path').length }}; }}""")
+        check(f"#{_id} glyph is a chevron arrow, not a page rectangle that reads as a zero",
+              _g is not None and _g["rects"] == 0 and _g["paths"] == 1,
+              f"{_g} — a <rect> here renders as a 0 at this size")
         check(f"#{_id} still names its action for assistive tech",
               "move" in (_pg.get_attribute(f"#{_id}", "aria-label") or "").lower(),
               _pg.get_attribute(f"#{_id}", "aria-label"))

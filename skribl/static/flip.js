@@ -1162,9 +1162,12 @@ function buildStrip(){
   // Built here rather than in the template, which is why a template-wide
   // tooltip pass could not reach them. lib/tooltip.js adopts late markup via a
   // MutationObserver, so a title written here is picked up like any other.
-  col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw">＋ Duplicate</button>'
-    +'<button class="addbtn mini" id="addblank" title="Add an empty page">＋ Blank</button>'
-    + (pageClip ? '<button class="addbtn mini" id="addpaste">＋ Paste</button>' : '');
+  // v207: SVG plus, not the U+FF0B fullwidth '＋' text glyph — that character
+  // renders at different weights across fonts/platforms and did not match the
+  // SVG icons in the page bar beside it.
+  col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
+    +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
+    + (pageClip ? '<button class="addbtn mini" id="addpaste"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Paste</button>' : '');
   strip.appendChild(col);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
@@ -2465,14 +2468,16 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
 function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
 (function initZoomMagControl(){ if(!zoomTrackWrap||!zoomTrackWrap.parentNode) return;
   const bar=document.createElement('div'); bar.className='zoom-mag-bar';
-  bar.innerHTML='<div class="zoom-mag-group" data-role="focus"><button type="button" class="zoom-mag-btn active" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></div>'+
-    '<div class="zoom-mag-group" data-role="mag"><button type="button" class="zoom-mag-btn active" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></div>';
+  // v207: real .seg pill sliders + a magnifier glyph on the zoom group (matches Pad).
+  bar.innerHTML='<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>'+'<span class="zoom-mag-wrap"><span class="zoom-mag-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span><span class="seg zoom-seg" data-role="mag" title="Zoom level"><button type="button" class="zoom-mag-btn on" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></span></span>';
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
-  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="focus"]')); attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="mag"]'));
-  bar.addEventListener('click',(e)=>{ const b=e.target.closest('.zoom-mag-btn'); if(!b) return; b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; } if(b.dataset.mag) zoomMag=parseFloat(b.dataset.mag)||1; updateTrimUI(); });
-  const style=document.createElement('style'); style.textContent='.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}.zoom-mag-group{position:relative;overflow:hidden;display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:3px}.zoom-mag-btn{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:color .12s}.zoom-mag-btn:hover{color:#c8cede}.zoom-mag-btn.active{color:#fff}'; document.head.appendChild(style);
+  attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]')); attachSegSlider(bar.querySelector('.zoom-seg[data-role="mag"]'));
+  // .on not .active: real .seg cells now; the shared slider reads .on.
+  bar.addEventListener('click',(e)=>{ const b=e.target.closest('.zoom-mag-btn'); if(!b) return; b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; } if(b.dataset.mag) zoomMag=parseFloat(b.dataset.mag)||1; updateTrimUI(); });
+  // v207: shell + cells come from styles.css .seg; only bar layout + the magnifier glyph here.
+  const style=document.createElement('style'); style.textContent='.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}.zoom-mag-wrap{display:inline-flex;align-items:center;gap:8px}.zoom-mag-glyph{display:inline-flex;color:var(--text-muted)}.zoom-mag-glyph svg{width:16px;height:16px}'; document.head.appendChild(style);
 })();
-bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-mag-group').forEach(g=>positionSegSlider(g)); }); } });
+bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-seg').forEach(g=>positionSegSlider(g)); }); } });
 
 // nudge fine-tune
 const nudgeSteps=[0.01,0.02,0.05,0.1]; let nudgeStepIdx=3;
@@ -3266,8 +3271,9 @@ if (window.SkriblHints) {
   // Short, timed toast + a tap-through to the full guide (v206). The long
   // v205 panel tried to explain everything inline and got in the way; this
   // says the one essential thing and offers the rest one tap away.
+  // Owner: just the link, no explanatory sentence — the guide is one tap away.
   window.SkriblHints.show('flip-intro',
-    'Each new page copies the last \u2014 nudge, erase, redraw, then Flip it.',
+    'New here?',
     { action: { label: 'How it works \u2192', onClick: function () { if (typeof openHelpDrawer === 'function') openHelpDrawer(); } } });
 }
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image

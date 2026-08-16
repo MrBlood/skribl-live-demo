@@ -719,7 +719,9 @@ with sync_playwright() as _p:
     # everything beside it. Measured as a SPREAD across the row, which is the
     # check that finds the next one of these rather than this one again.
     _hdr = _pg.evaluate("""() => {
-      const ids = ['tuneBtn', 'onion', 'postBtn', 'moreBtn'];
+      // 'onion' left the header for the tune drawer's Onion row (v207) — it is
+      // an in-drawer 32px toggle now, not a header control.
+      const ids = ['tuneBtn', 'postBtn', 'moreBtn'];
       const hs = ids.map(i => { const e = document.getElementById(i);
         return e ? Math.round(e.getBoundingClientRect().height) : null; })
         .filter(h => h !== null);
@@ -913,7 +915,7 @@ with _sp204() as _p:
                 + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
                 + b"data" + struct.pack("<I", len(frames)) + frames)
     _AUD = wav_bytes()
-    for pw in (375, 1280):
+    for pw in (363, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); mp.wait_for_timeout(700)
         mp.click("#musicOpenBtn"); mp.wait_for_timeout(300)
@@ -926,6 +928,21 @@ with _sp204() as _p:
             const b = document.querySelector('#fineTuneBody .nudge-btn').getBoundingClientRect();
             return { over: gr.right > vw + 1, scrollX: document.documentElement.scrollWidth > vw + 1, nudgeW: Math.round(b.width) }; }""")
         check(f"V206: nudge grid fits at {pw}px (no overflow)", fit and not fit["over"] and not fit["scrollX"], str(fit))
+        # v207: the pills themselves must not overlap or spill their column. On
+        # phone the groups STACK (one per row) — the earlier three-on-a-row
+        # squeeze put 120px pills into 93px columns and they overlapped at 390.
+        _ov = mp.evaluate("""() => { const ecs = [...document.querySelectorAll('#fineTuneBody .edge-controls')].map(e => e.getBoundingClientRect());
+            const groups = [...document.querySelectorAll('#fineTuneBody .edge-group')].map(e => e.getBoundingClientRect());
+            let overlap = false;
+            for (let i = 0; i < ecs.length; i++) for (let j = i + 1; j < ecs.length; j++) {
+                const a = ecs[i], b = ecs[j];
+                const sameRow = Math.abs(a.top - b.top) < 4;
+                if (sameRow && a.right > b.left + 1 && b.right > a.left + 1) overlap = true; }
+            const spill = ecs.some((e, i) => e.right > groups[i].right + 1 || e.left < groups[i].left - 1);
+            return { overlap, spill, rows: new Set(groups.map(g => Math.round(g.top))).size }; }""")
+        check(f"V207: at {pw}px the nudge pills do not overlap each other or spill their column", not _ov["overlap"] and not _ov["spill"], str(_ov))
+        if pw <= 640:
+            check(f"V207: at {pw}px the three nudge groups stack one-per-row", _ov["rows"] == 3, str(_ov))
         if pw == 1280:
             check("V206: nudge buttons are 32px on desktop (option A)", fit and fit["nudgeW"] == 32, str(fit))
             # tap area: click 5px LEFT of the first "-" nudge (start-earlier). Its
@@ -1054,7 +1071,7 @@ with _sp204() as _p:
         return el && !el.hidden ? el.textContent : null;
     }""")
     check("V204: Flip shows the intro toast on first load",
-          toast and "copies the last" in toast, str(toast)[:50])
+          toast and ("New here" in toast or "How it works" in toast), str(toast)[:50])
     # v206: the intro is a NORMAL small timed toast (the v205 panel is retired —
     # it hid the pointer and could leave a dead zone) that carries a tap-through
     # "How it works ->" action opening the help drawer.
@@ -1125,6 +1142,216 @@ with _sp204() as _p:
     check("V206: Flip image drawer also survives its file-input click",
           not fp.evaluate("() => document.getElementById('photoPanel').hidden"))
     fp.click("#imageBtn"); fp.wait_for_timeout(300)
+
+    # v206: the two demo .skribl fixtures (harness/fixtures/) must load, render,
+    # and PLAY in their own editor, and be refused by the other. These are real
+    # non-trivial documents (a timed-replay galaxy; a 24-page bouncing-ball
+    # flipbook), so they exercise the whole load->render->play path and pin the
+    # format: if the schema drifts, the demos break here first.
+    import pathlib as _pl
+    _fx = _pl.Path(__file__).resolve().parent / "fixtures"
+    _gal = (_fx / "demo-galaxy.skribl").read_bytes(); _bnc = (_fx / "demo-bounce.skribl").read_bytes()
+    def _ink(page, sel):
+        return page.evaluate(f"""() => {{ const c = document.querySelector('{sel}'); const x = c.getContext('2d');
+            const d = x.getImageData(0,0,c.width,c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++; return n; }}""")
+    dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); dp.wait_for_timeout(600)
+    dp.set_input_files("#draftInput", {"name": "demo-galaxy.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
+    check("DEMO: galaxy .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
+          f"strokes={dp.evaluate('() => (typeof strokes!==\'undefined\'?strokes.length:-1)')}")
+    check("DEMO: galaxy renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
+    dp.click("#playBtn"); dp.wait_for_timeout(1200); _a = _ink(dp, "#canvas"); dp.wait_for_timeout(1200); _b2 = _ink(dp, "#canvas")
+    check("DEMO: galaxy REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
+    dp.close()
+    df = _b.new_page(viewport={"width": 1280, "height": 900}); df.goto(BASE + "/flip", wait_until="load"); df.wait_for_timeout(800)
+    df.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+    df.set_input_files("#draftInput", {"name": "demo-bounce.skribl", "mimeType": "application/json", "buffer": _bnc}); df.wait_for_timeout(1400)
+    check("DEMO: bounce .skribl loads in Flip as 24 pages @ 12fps",
+          df.evaluate("() => frames.length === 24 && fps === 12"), f"pages={df.evaluate('() => frames.length')} fps={df.evaluate('() => fps')}")
+    check("DEMO: bounce renders ink", _ink(df, "#pad") > 5000, f"ink={_ink(df,'#pad')}")
+    df.click("#play"); df.wait_for_timeout(500); _i1 = df.evaluate("() => idx"); df.wait_for_timeout(500); _i2 = df.evaluate("() => idx")
+    check("DEMO: bounce FLIPS — page index advances on Play", df.evaluate("() => playing") and _i1 != _i2, f"idx {_i1} -> {_i2}")
+    df.close()
+
+    # v207: the player's Repeat (loop) button must VISIBLY light when pressed.
+    # .player-btn.active is a JS-toggled class; every player scene in the
+    # css-live capture was static, so cssgraph dropped the rule from player.css
+    # and the button toggled loop internally but never lit — it read as dead.
+    # Post the galaxy, open the real player, press Repeat, check the fill.
+    import json as _json, re as _re
+    _pp = _b.new_page(viewport={"width": 1280, "height": 900}); _pp.goto(BASE + "/", wait_until="load"); _pp.wait_for_timeout(600)
+    _pp.set_input_files("#draftInput", {"name": "g.skribl", "mimeType": "application/json", "buffer": _gal}); _pp.wait_for_timeout(1200)
+    _payload = _pp.evaluate("() => JSON.stringify(serializeSkribl())")
+    _resp = _pp.evaluate("""async (body) => { const r = await fetch('/api/skribls', {method:'POST', headers:{'Content-Type':'application/json'}, body}); return {status: r.status, text: await r.text()}; }""", _payload)
+    _pp.close()
+    _pid = None
+    try: _pid = _json.loads(_resp["text"]).get("id")
+    except Exception: pass
+    check("V207: posting the galaxy demo yields a player id", bool(_pid), str(_resp)[:100])
+    if _pid:
+        _pl = _b.new_page(viewport={"width": 1000, "height": 800}); _pl.goto(f"{BASE}/s/{_pid}", wait_until="load"); _pl.wait_for_timeout(1000)
+        _pl.click("#playerLoopBtn"); _pl.wait_for_timeout(250)
+        _lit = _pl.evaluate("() => { const b = document.getElementById('playerLoopBtn'); return { active: b.classList.contains('active'), bg: getComputedStyle(b).backgroundColor }; }")
+        check("V207: player Repeat button LIGHTS (accent fill) when pressed — .player-btn.active is in player.css",
+              _lit["active"] and _lit["bg"] == "rgb(124, 92, 255)", str(_lit))
+        _pl.close()
+
+    # v207: at 641px (the desktop breakpoint's first pixel) after recording,
+    # "Post to Skribl" wrapped to THREE lines (59px pill), Record wrapped too,
+    # and the header overflowed. Pills must never wrap; Post keeps its short
+    # label until ~720px where the long one genuinely fits.
+    for pw in (641, 660, 700):
+        _n = _b.new_page(viewport={"width": pw, "height": 900}); _n.goto(BASE + "/", wait_until="load"); _n.wait_for_timeout(600)
+        _n.click("#recordBtn"); _n.wait_for_timeout(250)
+        _bb = _n.locator("#canvas").bounding_box(); _n.mouse.move(_bb["x"] + 200, _bb["y"] + 200); _n.mouse.down()
+        for _i in range(1, 10): _n.mouse.move(_bb["x"] + 200 + _i * 12, _bb["y"] + 200 + _i * 7)
+        _n.mouse.up(); _n.wait_for_timeout(300); _n.click("#recordBtn"); _n.wait_for_timeout(450)
+        _g = _n.evaluate("""() => { const h = document.querySelector('.header'); const p = document.getElementById('postBtn'); const r = document.getElementById('recordBtn');
+            const ph = p.getBoundingClientRect().height, rh = r.getBoundingClientRect().height;
+            return { overflow: h.scrollWidth > h.clientWidth + 1, postH: Math.round(ph), recordH: Math.round(rh), headerH: Math.round(h.getBoundingClientRect().height) }; }""")
+        check(f"V207: at {pw}px post-record the header does not overflow", not _g["overflow"], str(_g))
+        check(f"V207: at {pw}px Post/Record pills are single-line (<=48px tall, not wrapped)",
+              _g["postH"] <= 48 and _g["recordH"] <= 48, str(_g))
+        _n.close()
+
+    # v207: onion on/off moved from the header into the tune drawer's Onion row
+    # (frees header space), styled as an .onion-tint toggle so it lights ORANGE
+    # like grid / motion / tint. setOnion() and the row-mute behaviour unchanged.
+    _o = _b.new_page(viewport={"width": 1280, "height": 900}); _o.goto(BASE + "/flip", wait_until="load"); _o.wait_for_timeout(800)
+    _o.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+    check("V207: the onion toggle is no longer in the header",
+          _o.evaluate("() => !document.querySelector('.header #onion')"))
+    _o.click("#tuneBtn"); _o.wait_for_timeout(350)
+    check("V207: the onion toggle lives in the tune drawer's Onion row",
+          _o.evaluate("() => !!document.querySelector('#tuneOnionRow #onion')"))
+    _on0 = _o.evaluate("() => onion")
+    _o.click("#onion"); _o.wait_for_timeout(200); _on1 = _o.evaluate("() => onion")
+    check("V207: clicking it toggles onion skin", _on0 != _on1, f"{_on0} -> {_on1}")
+    # make sure it's ON, then check the orange
+    if not _on1: _o.click("#onion"); _o.wait_for_timeout(200)
+    _col = _o.evaluate("() => { const o = document.getElementById('onion'); return { active: o.classList.contains('active'), color: getComputedStyle(o).color }; }")
+    check("V207: onion toggle lights ORANGE when on (matches grid/motion/tint)",
+          _col["active"] and _col["color"] == "rgb(255, 159, 67)", str(_col))
+    _o.close()
+
+    # v207: the loop-detail Focus (Loop/Start/End) and Zoom (1x-8x) groups are
+    # real .seg pill sliders (round shell, sliding highlight) matching the tune
+    # drawer's Speed/Onion — not the ad-hoc rounded-rect buttons they were — and
+    # a magnifier glyph labels the zoom group. Both editors build the same bar.
+    for path, nm, opener in (("/", "Pad", "#musicOpenBtn"), ("/flip", "Flip", "#musicBtn")):
+        _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); _z.wait_for_timeout(800)
+        _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+        _z.click(opener); _z.wait_for_timeout(300)
+        _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
+        _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+        _z.wait_for_timeout(900)
+        _zi = _z.evaluate("""() => { const f = document.querySelector('.zoom-seg[data-role="focus"]'); const m = document.querySelector('.zoom-seg[data-role="mag"]');
+            if (!f || !m) return null; const sl = f.querySelector('.seg-slider'); const cs = getComputedStyle(f);
+            return { bothSeg: f.classList.contains('seg') && m.classList.contains('seg'), radius: cs.borderRadius,
+                     sliderVisible: sl && getComputedStyle(sl).opacity === '1' && sl.getBoundingClientRect().width > 20,
+                     magnifier: !!document.querySelector('.zoom-mag-glyph svg') }; }""")
+        check(f"V207: {nm} loop-detail focus/zoom groups are .seg pills (999px radius)",
+              _zi and _zi["bothSeg"] and _zi["radius"] == "999px", str(_zi))
+        check(f"V207: {nm} loop-detail slider highlight is visible on the selected cell", _zi and _zi["sliderVisible"], str(_zi))
+        check(f"V207: {nm} zoom group carries a magnifier glyph", _zi and _zi["magnifier"], str(_zi))
+        _z.close()
+
+    # v207: help pills that name a real tappable control carry that control's
+    # actual glyph (same SVG the button renders); concept pills (Brush size,
+    # Pressure) do not. And the Onion-skin text no longer says "in the header"
+    # (onion moved to the tune drawer this release).
+    _h = _b.new_page(viewport={"width": 1000, "height": 900}); _h.goto(BASE + "/flip", wait_until="load"); _h.wait_for_timeout(800)
+    _h.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+    _h.evaluate("() => openHelpDrawer()"); _h.wait_for_timeout(400)
+    _h.evaluate("() => document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => { if (!h.classList.contains('open')) h.click(); })"); _h.wait_for_timeout(300)
+    _ic = _h.evaluate("""() => { const pills = [...document.querySelectorAll('#helpDrawer .help-pill')];
+        const withIcon = pills.filter(p => p.querySelector('.help-pill-ic svg')).map(p => p.textContent.trim());
+        const without = pills.filter(p => !p.querySelector('.help-pill-ic svg')).map(p => p.textContent.trim());
+        const onionTxt = (document.querySelector('#helpDrawer .help-pill-ic') ? [...document.querySelectorAll('#helpDrawer .help-tip')].map(t=>t.textContent).join(' ') : '');
+        return { withIcon, without, saysHeader: /stacked-sheets.*button in the header/i.test(onionTxt) }; }""")
+    check("V207: Pen/Eraser/Magnifier/Onion/Grid help pills carry the real button glyph",
+          all(x in _ic["withIcon"] for x in ("Pen", "Eraser", "Magnifier", "Onion skin", "Grid")), str(_ic["withIcon"]))
+    check("V207: concept pills (Brush size, Pressure) stay icon-less", "Brush size" in _ic["without"] and "Pressure" in _ic["without"], str(_ic["without"])[:120])
+    check("V207: help no longer says the onion button is 'in the header'", not _ic["saysHeader"])
+    _h.close()
+
+    # v207: the eyedropper — the one control in the colour row that lacked its
+    # 44pt tap area (the dots beside it had theirs). Box stays 30px (dot-sized,
+    # on purpose); icon 16->18 to match tier-2 toggles; tap area added. And the
+    # help pill's glyph must be the button's OWN glyph, not a lookalike.
+    for path, nm, opener in (("/", "Pad", "#colorOpenBtn"), ("/flip", "Flip", "#colorCurrent")):
+        _e = _b.new_page(viewport={"width": 1280, "height": 900}); _e.goto(BASE + path, wait_until="load"); _e.wait_for_timeout(800)
+        _e.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+        _e.click(opener); _e.wait_for_timeout(400)
+        _eg = _e.evaluate("""() => { const e = document.getElementById('eyedropperBtn'); if (!e) return null;
+            const r = e.getBoundingClientRect(); const s = e.querySelector('svg').getBoundingClientRect();
+            return { box: Math.round(r.width), icon: Math.round(s.width), tap: getComputedStyle(e, '::before').inset, x: r.left, y: r.top, h: r.height }; }""")
+        check(f"V207: {nm} eyedropper is 30px box / 18px icon with a 44pt tap area", _eg and _eg["box"] == 30 and _eg["icon"] == 18 and _eg["tap"] == "-8px", str(_eg))
+        _e.mouse.click(_eg["x"] - 5, _eg["y"] + _eg["h"] / 2); _e.wait_for_timeout(250)
+        check(f"V207: {nm} a tap 5px outside the eyedropper still enters picking mode",
+              _e.evaluate("() => document.getElementById('eyedropperBtn').classList.contains('picking')"))
+        if nm == "Flip":
+            _bp = _e.evaluate("() => [...document.querySelectorAll('#eyedropperBtn svg path')].map(p => p.getAttribute('d')).join('|')")
+            _e.evaluate("() => openHelpDrawer()"); _e.wait_for_timeout(400)
+            _e.evaluate("() => document.querySelectorAll('#helpDrawer .accordion-header').forEach(h => { if (!h.classList.contains('open')) h.click(); })"); _e.wait_for_timeout(300)
+            _hp = _e.evaluate("""() => { const pill = [...document.querySelectorAll('#helpDrawer .help-pill')].find(p => p.textContent.trim().startsWith('Eyedropper'));
+                return pill ? [...pill.querySelectorAll('svg path')].map(p => p.getAttribute('d')).join('|') : null; }""")
+            check("V207: the help Eyedropper pill uses the button's OWN glyph (not a lookalike)", _bp and _bp == _hp, f"btn {str(_bp)[:30]} vs help {str(_hp)[:30]}")
+        _e.close()
+
+    # v207: icons are SVG, not Unicode text glyphs. The Flip page bar was MIXED
+    # (Hold/Artwork SVG, Move/Move/Copy/Delete text: ◀ ▶ ⧉ ✕) and the add-page
+    # buttons used the fullwidth ＋ — text glyphs render at different weights
+    # across fonts/platforms and did not match their SVG neighbours. Hold's
+    # ×N COUNT stays text (it is a number, not an icon).
+    _s = _b.new_page(viewport={"width": 1280, "height": 900}); _s.goto(BASE + "/flip", wait_until="load"); _s.wait_for_timeout(800)
+    _s.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); addFrame(true); }")
+    _s.wait_for_timeout(300)
+    _ic2 = _s.evaluate("""() => { const ids = ['pbLeft','pbRight','pbCopy','pbHold','pbArt','pbDel'];
+        const pb = ids.map(i => { const b = document.getElementById(i); return { id: i, svg: !!b.querySelector('svg') }; });
+        const iconOnlyText = ['pbLeft','pbRight','pbCopy','pbDel'].some(i => document.getElementById(i).querySelector('.pb-ic'));
+        const adds = [...document.querySelectorAll('.addbtn')].map(a => ({ svg: !!a.querySelector('svg.addbtn-ic'), hasFullwidthPlus: a.textContent.includes('\uFF0B') }));
+        return { allPbSvg: pb.every(x => x.svg), iconOnlyText, adds }; }""")
+    check("V207: every page-action button carries an SVG icon", _ic2["allPbSvg"], str(_ic2))
+    check("V207: Move/Copy/Delete no longer use text-glyph icons", not _ic2["iconOnlyText"], str(_ic2))
+    check("V207: add-page buttons use an SVG plus, not the fullwidth text ＋",
+          _ic2["adds"] and all(a["svg"] and not a["hasFullwidthPlus"] for a in _ic2["adds"]), str(_ic2["adds"]))
+    _s.close()
+
+    # v207: COMPREHENSIVE phone fit. Measures every interactive control's real
+    # rectangle (not container boxes — that is how the nudge-grid overlap slipped
+    # past an earlier "fits" check): nothing off-screen, no horizontal page
+    # scroll, no same-row overlap between distinct controls. Both editors, each
+    # drawer opened in turn, plus music-loaded + fine-tune open, at 375 and 390.
+    _AUDIT = """() => { const vw = document.documentElement.clientWidth;
+        const els = [...document.querySelectorAll('button, a[href], input[type=range], [role=switch], .color-dot')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+        const rects = els.map(e => ({ id: e.id || String(e.className).split(' ')[0] || e.tagName, r: e.getBoundingClientRect() }));
+        const offRight = rects.filter(x => x.r.right > vw + 1).map(x => x.id);
+        const overlaps = [];
+        for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+            if (els[i].contains(els[j]) || els[j].contains(els[i])) continue;
+            const a = rects[i].r, b = rects[j].r;
+            const sameRow = Math.abs(a.top - b.top) < 6 && Math.abs(a.height - b.height) < 12;
+            const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+            if (sameRow && ox > 2) overlaps.push(rects[i].id + '~' + rects[j].id); }
+        return { scrollX: document.documentElement.scrollWidth > vw + 1, offRight, overlaps: overlaps.slice(0, 6) }; }"""
+    for pw in (375, 390):
+        for path, nm, openers in (("/", "Pad", ("#tuneBtn", "#colorOpenBtn", "#imageOpenBtn", "#musicOpenBtn")),
+                                  ("/flip", "Flip", ("#tuneBtn", "#colorCurrent", "#imageBtn", "#musicBtn"))):
+            _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); _f.wait_for_timeout(700)
+            _f.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+            _r = _f.evaluate(_AUDIT)
+            check(f"PHONE {nm}@{pw}: every control on-screen, no scroll, no overlap (base)", not _r["scrollX"] and not _r["offRight"] and not _r["overlaps"], str(_r))
+            for op in openers:
+                if _f.locator(op).count():
+                    _f.click(op); _f.wait_for_timeout(350); _r = _f.evaluate(_AUDIT)
+                    check(f"PHONE {nm}@{pw}: ...with {op} drawer open", not _r["scrollX"] and not _r["offRight"] and not _r["overlaps"], str(_r))
+                    _f.click(op); _f.wait_for_timeout(200)
+            _f.click(openers[3]); _f.wait_for_timeout(300)
+            _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
+            _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
+            _r = _f.evaluate(_AUDIT)
+            check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", not _r["scrollX"] and not _r["offRight"] and not _r["overlaps"], str(_r))
+            _f.close()
     check("V204: the old crammed .flip-hint footer is gone",
           fp.evaluate("() => !document.querySelector('.flip-hint')"))
     fp.close()

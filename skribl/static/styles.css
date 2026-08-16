@@ -147,6 +147,7 @@ body {
   gap: 7px;
   transition: filter 0.15s ease, transform 0.18s var(--spring), background 0.2s ease, box-shadow 0.2s ease;
   letter-spacing: 0.1px;
+  white-space: nowrap;   /* v207: a pill must never wrap into a 3-line blob (it did at 641px) */
 }
 
 .btn svg {
@@ -1064,7 +1065,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   cursor: pointer; flex-shrink: 0;
   transition: background .15s ease, color .15s ease;
 }
-.eyedropper-btn svg { width: 16px; height: 16px; }
+.eyedropper-btn svg { width: 18px; height: 18px; }  /* v207: tier-2 glyph size, matches drawer toggles */
 .eyedropper-btn:hover { background: #1c212c; color: #c8cede; }
 .eyedropper-btn.picking { background: var(--accent); color: #fff; border-color: transparent; }
 
@@ -3204,6 +3205,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   border-radius: 999px;
   padding: 3px 9px;
   white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;   /* v207: room for the tool icon */
   flex-shrink: 0;
   margin-top: 2px;
   letter-spacing: 0.02em;
@@ -3455,15 +3457,21 @@ input:focus-visible {
 
   #previewLoopBtn { grid-column: 1 / -1; }
 
-  .edge-group { min-width: 84px; gap: 6px; }
-
-  .finetune-grid { gap: 6px; }
-
-  /* Tighten the [− value +] pills so all three sit on one row without the
-     slight overlap that showed at narrow widths. */
-  .edge-controls { gap: 3px; padding: 3px 3px; }
-  .edge-readout { min-width: 46px; font-size: 11px; padding: 0 1px; }
-  .nudge-btn { width: 30px; height: 30px; font-size: 16px; }  /* v206: was 24, phone step-down from 32 */
+  /* v207: on a phone the three [- value +] pills DO NOT fit on one row once
+     the nudge buttons are the 30/32px tier-2 size (three ~120px pills need
+     ~380px; a 390px phone has ~290px of grid). The old approach — squeeze all
+     three onto one row — produced overlapping pills at 390 and a wrap at 363.
+     Stack them instead: one group per row, label on the left, pill on the
+     right. Cleaner to read, and the bigger buttons get the room they need. */
+  .finetune-grid { flex-direction: column; align-items: stretch; gap: 8px; }
+  .edge-group {
+    flex-direction: row; align-items: center; justify-content: space-between;
+    min-width: 0; gap: 10px;
+  }
+  .edge-name { flex: 1; text-align: left; }
+  .edge-controls { flex: none; gap: 4px; padding: 3px; }
+  .edge-readout { min-width: 52px; font-size: 12px; }
+  .nudge-btn { width: 30px; height: 30px; font-size: 16px; }
 
 }
 
@@ -3879,6 +3887,15 @@ body.player-mode #canvas {
   .toolbar { margin: 12px 6px; max-width: calc(100% - 12px); gap: 1px; }
 }
 
+/* v207: 641-720px is "desktop" by breakpoint but has no room for the full
+   "Post to Skribl" + "Record" + "Play" labels the desktop layout enables — at
+   exactly 641px Post wrapped to THREE lines (59px tall) and the header
+   overflowed. Keep the short "Post" label until ~720px, where the full text
+   genuinely fits (measured: 120px one-line Post at 700). */
+@media (min-width: 641px) and (max-width: 720px) {
+  .btn.post .post-long { display: none; }
+}
+
 /* ===================================================================
    Apple header polish (v75): Record keeps its label (sheds when tight),
    even glyph sizes on one centerline, and spacing that groups Record+Play
@@ -4280,7 +4297,8 @@ body.playing .flip-grid { display: none; }
 .loop-btn,
 .pb,
 .nudge-btn,
-.pending-dismiss { position: relative; z-index: 1; }
+.pending-dismiss,
+.eyedropper-btn { position: relative; z-index: 1; }
 /* z-index:1 matters: the ::before extends OUTSIDE the button's box, over the
    parent row. Without a stacking context the row (painted later / on top)
    wins the hit-test in that overflow band, so a tap there lands on the row
@@ -4292,7 +4310,8 @@ body.playing .flip-grid { display: none; }
 .loop-btn::before,
 .pb::before,
 .nudge-btn::before,
-.pending-dismiss::before {
+.pending-dismiss::before,
+.eyedropper-btn::before {
   content: "";
   position: absolute;
   inset: calc(-1 * var(--tap-grow, 6px));
@@ -4307,6 +4326,7 @@ body.playing .flip-grid { display: none; }
 .pb         { --tap-grow: 3px; }   /* 40 tall  -> 44+ tap */
 .nudge-btn  { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (readout between - and + keeps them apart) */
 .pending-dismiss { --tap-grow: 7px; }  /* 32 -> 44+ */
+.eyedropper-btn  { --tap-grow: 8px; }  /* 30 visual (dot-sized, on purpose) -> 44+ tap; it sat beside dots that had it and lacked its own */
 
 /* Menu rows: already ~44 from padding; pin the minimum so it can't shrink. */
 .menu-item { min-height: 44px; }
@@ -4377,3 +4397,8 @@ body.playing .flip-grid { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
 }
+
+/* v207: help pills show the actual button glyph beside the name — people match
+   shapes, not words — using the same SVG the real control renders. */
+.help-pill-ic { display: inline-flex; flex: none; color: var(--accent-bright); }
+.help-pill-ic svg { width: 12px; height: 12px; }

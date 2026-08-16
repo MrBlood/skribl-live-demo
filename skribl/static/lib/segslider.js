@@ -89,7 +89,11 @@
     var btns = [].slice.call(group.querySelectorAll('button'));
     var idx = -1;
     for (var i = 0; i < btns.length; i++) {
-      if (btns[i].classList.contains('active')) idx = i;
+      // .on OR .active: the tune-drawer segs mark selection with .on, the
+      // attach()-built ones (loop-detail focus/zoom) used .active. Accept both
+      // so a group can be built either way (v207 moved the loop-detail bars
+      // onto .on to match every other .seg in the app).
+      if (btns[i].classList.contains('on') || btns[i].classList.contains('active')) idx = i;
     }
     var a = idx >= 0 ? btns[idx] : null;
     if (!a || !a.offsetWidth) { pill.style.opacity = '0'; return; }

@@ -1750,7 +1750,7 @@ function getZoomWindow() {
 // highlighted while free-panning ('free'). Called when panning takes over.
 function syncZoomFocusButtons() {
   document.querySelectorAll('.zoom-mag-btn[data-focus]').forEach(b => {
-    b.classList.toggle('active', zoomFocus !== 'free' && b.dataset.focus === zoomFocus);
+    b.classList.toggle('on', zoomFocus !== 'free' && b.dataset.focus === zoomFocus);
   });
 }
 

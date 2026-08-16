@@ -58,9 +58,10 @@
         <span id="durationBadge" class="duration-badge" hidden>0:00</span>
       </div>
   {# post button removed — authoring control, absent on the player #}
-      <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
-        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-      </button>
+  {# ⋯ menu button removed too (v207): its overflow menu was already gone (see
+     below) and the JS that drove it lives in an editor-only bundle, so this
+     rendered as a 0x0 dead affordance — invisible now, but one CSS change away
+     from becoming a visible button that does nothing. #}
     </div>
   </div>
 
@@ -69,7 +70,8 @@
      drove it now lives in an editor-only bundle the player never loads.
      Markup that nothing can wire up is dead weight on every shared link. #}
 
-  <input type="file" id="draftInput" accept=".skribl,application/json" style="display:none">
+  {# #draftInput removed (v207): nothing on the player could open it — the
+     Load-draft menu item lives in the editors' overflow menu, absent here. #}
 
   <!-- Export sheet -->
   {# export sheet removed: the player has no export sheet, and the JS that

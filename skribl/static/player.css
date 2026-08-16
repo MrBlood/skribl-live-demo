@@ -157,6 +157,7 @@ body {
   gap: 7px;
   transition: filter 0.15s ease, transform 0.18s var(--spring), background 0.2s ease, box-shadow 0.2s ease;
   letter-spacing: 0.1px;
+  white-space: nowrap;   /* v207: a pill must never wrap into a 3-line blob (it did at 641px) */
 }
 
 .btn svg {
@@ -906,6 +907,12 @@ body.player-mode #canvas {
 }
 .player-btn.primary svg { width: 24px; height: 24px; }
 .player-btn.primary:hover { background: var(--accent-bright); }
+
+.player-btn.active {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
 
 .player-cta {
   display: inline-flex;

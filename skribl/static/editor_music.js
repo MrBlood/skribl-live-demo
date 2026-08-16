@@ -70,37 +70,33 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
   if (!zoomTrackWrap || !zoomTrackWrap.parentNode) return;
   const bar = document.createElement('div');
   bar.className = 'zoom-mag-bar';
-  bar.innerHTML =
-    '<div class="zoom-mag-group" data-role="focus">' +
-      '<button type="button" class="zoom-mag-btn active" data-focus="loop">Loop</button>' +
-      '<button type="button" class="zoom-mag-btn" data-focus="start">Start</button>' +
-      '<button type="button" class="zoom-mag-btn" data-focus="end">End</button>' +
-    '</div>' +
-    '<div class="zoom-mag-group" data-role="mag">' +
-      '<button type="button" class="zoom-mag-btn active" data-mag="1">1&times;</button>' +
-      '<button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button>' +
-      '<button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button>' +
-      '<button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button>' +
-    '</div>';
+  // v207: the two groups are real .seg pill sliders now (same shell as the
+  // tune drawer's Speed / Onion), not the ad-hoc rounded-rect buttons they were.
+  // A magnifier glyph labels the 1x-8x group so it reads as "zoom level".
+  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + '<span class="zoom-mag-wrap"><span class="zoom-mag-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span><span class="seg zoom-seg" data-role="mag" title="Zoom level"><button type="button" class="zoom-mag-btn on" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></span></span>';
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
-  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="focus"]'));
-  attachSegSlider(bar.querySelector('.zoom-mag-group[data-role="mag"]'));
+  attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]'));
+  attachSegSlider(bar.querySelector('.zoom-seg[data-role="mag"]'));
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('.zoom-mag-btn');
     if (!b) return;
-    b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
+    // .on, not .active: these are .seg pill cells now, and the shared seg
+    // slider positions its highlight from the .on button.
+    b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
     if (b.dataset.focus) { zoomFocus = b.dataset.focus; zoomCenter = null; }
     if (b.dataset.mag) zoomMag = parseFloat(b.dataset.mag) || 1;
     updateTrimUI();   // recomputes the window, redraws waveform + handles
   });
+  // v207: the groups ARE .seg pills now (styles.css owns the shell + cells),
+  // so the old injected rounded-rect styles are gone. Only the bar layout and
+  // the magnifier glyph beside the zoom group are styled here.
   const style = document.createElement('style');
   style.textContent =
     '.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}' +
-    '.zoom-mag-group{position:relative;overflow:hidden;display:inline-flex;gap:2px;background:#13161c;border:1px solid rgba(255,255,255,.055);border-radius:8px;padding:3px}' +
-    '.zoom-mag-btn{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#8a93a6;font:inherit;font-size:12px;line-height:1;padding:5px 9px;border-radius:6px;cursor:pointer;transition:color .12s}' +
-    '.zoom-mag-btn:hover{color:#c8cede}' +
-    '.zoom-mag-btn.active{color:#fff}';
+    '.zoom-mag-wrap{display:inline-flex;align-items:center;gap:8px}' +
+    '.zoom-mag-glyph{display:inline-flex;color:var(--text-muted)}' +
+    '.zoom-mag-glyph svg{width:16px;height:16px}';
   document.head.appendChild(style);
 })();
 
@@ -118,7 +114,7 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
       requestAnimationFrame(() => {
         if (typeof updateTrimUI === 'function') updateTrimUI();
         if (typeof positionSegSlider === 'function') {
-          body.querySelectorAll('.zoom-mag-group').forEach(g => positionSegSlider(g));
+          body.querySelectorAll('.zoom-seg').forEach(g => positionSegSlider(g));
         }
       });
     }
