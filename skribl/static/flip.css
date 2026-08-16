@@ -172,7 +172,7 @@
     touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
   .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
-    background: rgba(9,11,16,.72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 4px 11px;
+    background: rgba(9,11,16,.72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 5px 18px;
     font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--accent-bright); }
   body.playing .flip-live { display: inline-flex; }
 
@@ -227,7 +227,10 @@
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
   /* image/music use the Pad's .tool-open + green .tab-dot; keep them sized like the row */
   .flip-tools .tool-open { width: 40px; height: 40px; border-radius: 12px; }
-  .t-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-control);
+  /* Rounded-square, not a circle (v205-fix): undo/redo are TOOLS, and the shape
+     language reserves tiles for tools/openers and circles for on/off toggles.
+     Pad's undo/redo are already tiles; Flip's were the one stray circle pair. */
+  .t-btn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-control);
     border: 1px solid var(--hairline-strong); color: var(--text-secondary); cursor: pointer; transition: filter .15s ease, color .15s ease; }
   .t-btn.on { color: var(--text-primary); border-color: var(--accent); }
   .t-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
@@ -423,18 +426,30 @@
    used to sit here rendered nowhere and is gone rather than left to
    look like a decision. */
 .onion-seg, .fps-group .seg { }
-.onion-seg button, .fps-group .seg button { min-width: 22px; padding: 0 7px; font-size: 12px; }
+/* v205-fix: roomier segments + numbers dead-centered. Was `min-width:22px;
+   padding:0 7px`, which was tight against the sliding pill and, with no vertical
+   padding or flex centering, let the digit sit slightly high in the cell. Now
+   wider padding and inline-flex centering so each number is centered in its
+   segment horizontally and vertically. */
+.onion-seg button, .fps-group .seg button {
+  /* Fixed width, not min: Speed's two-digit 12/24 would otherwise render wider
+     than Onion's single-digit 1/2/3, so the two stacked segments came out
+     different widths and no longer aligned as a column. A fixed 34px cell makes
+     all six buttons identical, so both segments are exactly equal width, and
+     the roomier cell centres the digit. */
+  width: 34px; padding: 5px 0; font-size: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 
 .onion-tint {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Square, and the same 22px the segments actually render at — --seg-h is 26
-     but padding brings the drawn pill to 22, so 26 here sat 4px proud of the
-     control beside it. It was also 28x26, wider than tall, which read as a box
-     rather than a round toggle once the active state gave it a background. */
-  width: 22px;
-  height: 22px;
+  /* 32px = the segment height it shares the Onion row with, so the toggle and
+     the 1/2/3 depth segment align instead of the toggle sitting proud. Was 22
+     (chosen for an earlier, shorter segment); the segments render at 32 now. */
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
@@ -442,7 +457,7 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.onion-tint svg { width: 16px; height: 16px; }  /* v204-fix: was 13px, too small to read the glyph */
+.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
 /* Lighter active state: this is a small secondary toggle next to a segmented
    control, and a strong border plus fill made it the loudest thing in the row.
    The icon colour carries the state; the fill only supports it. */

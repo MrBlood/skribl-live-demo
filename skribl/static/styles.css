@@ -759,7 +759,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   flex: none; -webkit-tap-highlight-color: transparent;
   transition: background .15s ease, color .15s ease;
 }
-.tool-open svg { width: 21px; height: 21px; }
+.tool-open svg { width: 24px; height: 24px; }  /* v205-fix: standardized tier-1 icon 21->24 */
 .tool-open:hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
 
 /* Magnify tool — lit (accent) when its zoom pill is showing. */
@@ -2269,9 +2269,15 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
 
 /* Icon-only header button */
 .icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  /* v205-fix: standardized to the tier-1 primary size + rounded-square shape,
+     matching .tool-open, so Pad's header (Flip Mode, menu, tune) reads as one
+     button family with Flip's header instead of a mix of circles and squares.
+     Was 36px circle / 18px icon. Keeps its border (the subtle bordered look
+     distinguishes these bordered actions from the borderless .tool-open, but
+     size + corner radius now agree). */
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   border: 1px solid var(--hairline-strong);
   background: rgba(255, 255, 255, 0.045);
   color: var(--text-secondary);
@@ -2284,10 +2290,19 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.18s var(--spring);
 }
 
-.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn svg { width: 24px; height: 24px; }
+
+/* v205-fix: the two round header actions (Flip-mode book, ⋯ menu) sat at
+   36px/18px beside the 44px/21px tune opener, so they read as smaller,
+   mismatched siblings. Match them to the tune button's footprint and glyph
+   size. Scoped to .header, and only two .icon-btn exist there, so nothing
+   else is affected. They keep their circular, bordered identity — only the
+   size is brought into line. */
+.header .icon-btn { width: 44px; height: 44px; }
+.header .icon-btn svg { width: 24px; height: 24px; }
 /* Flip Mode entry point — an <a> styled as an icon button. */
 .flip-btn { text-decoration: none; }
-.flip-btn svg { width: 19px; height: 19px; }
+.flip-btn svg { width: 24px; height: 24px; }
 .icon-btn:active { transform: scale(0.94); }
 /* ---- Unified header-button hover (v90) --------------------------------------
    Goal: every header button lifts by the SAME subtle amount as Record always did,
@@ -3361,6 +3376,11 @@ input:focus-visible {
 
   .icon-btn svg { width: 17px; height: 17px; }
 
+  /* v205-fix: header actions stay matched to the tune opener at this width.
+     Phone tier-1 steps down one notch from desktop's 44/24 to 40/22. */
+  .header .icon-btn { width: 40px; height: 40px; }
+  .header .icon-btn svg { width: 22px; height: 22px; }
+
   /* Keep the duration badge the same height as the round controls and stop
      it from squishing, so the pill sits in line instead of reading as odd. */
   .duration-badge {
@@ -3874,7 +3894,7 @@ body.player-mode #canvas {
   #menuBtn  { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room */
 
   /* Toolbar magnify sized to match Pen/Eraser. */
-  .magnify-tool svg { width: 23px; height: 23px; }
+  .magnify-tool svg { width: 22px; height: 22px; }  /* v205-fix: phone tier-1 icon */
 }
 
 /* ===================================================================
@@ -3923,13 +3943,17 @@ body.player-mode #canvas {
   .play-wrap { border-color: var(--hairline); }
   .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
 
-  /* ⋯ — same height as the pills, lighter hairline, dead-centered. */
-  .icon-btn { width: 32px; height: 32px; border-color: var(--hairline); }
-  .icon-btn svg { width: 17px; height: 17px; }
+  /* v205-fix: keep the header icon buttons at the tier-1 size (44/24) even in
+     the compact/recording state, so they stay uniform with the tune opener
+     rather than shrinking to pill height. Was 32/17. */
+  .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
+  .icon-btn svg { width: 24px; height: 24px; }
 
-  /* Keep the merged Play pill slim after a take (the compact rule otherwise
-     restores 10px padding, making Play taller than Record/Post). */
-  .header.compact .btn.play.btn-icon { padding: 7px 14px; }
+  /* Match Play's height to Record/Post (44px) so the whole compact row —
+     Record, Play, Post, and the ⋯ icon button — is one uniform height. Play is
+     a .btn-icon that sized to content (~29px) while Record/Post carry an
+     explicit 44px height, leaving Play visibly short in the row. v205-fix. */
+  .header.compact .btn.play.btn-icon { padding: 7px 14px; height: 44px; }
 }
 
 /* ---- help drawer search ---------------------------------------------------
@@ -4206,11 +4230,11 @@ body.player-mode #canvas {
    ============================================================ */
 .onion-tint {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; padding: 0;
+  width: 32px; height: 32px; padding: 0;  /* v205-fix: tier-2 toggle = the 32px segment height it shares a row with (was 22, briefly 28) */
   border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
   background: transparent; color: var(--text-secondary); cursor: pointer;
 }
-.onion-tint svg { width: 16px; height: 16px; }  /* v204-fix: was 13px, too small to read the glyph */
+.onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
 .onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 .tune-shell {
   display: grid; grid-template-rows: 0fr;
@@ -4238,3 +4262,121 @@ body.player-mode #canvas {
 .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
 .flip-grid.on { display: block; }
 body.playing .flip-grid { display: none; }
+
+/* ============================================================
+   BUTTON SYSTEM — tap areas + states (v205-fix)
+   One documented block for the app-wide interaction rules, so they are
+   defined once and applied consistently to both editors.
+
+   SHAPE LANGUAGE (unchanged by this block; kept on purpose):
+     rounded-square tile  = tool / opener      (.tool-open, .icon-btn, .undo-btn, .t-btn)
+     round toggle         = on/off switch      (.onion-tint, .color-dot)
+     pill segment         = one-of-N slider    (.seg, .tool-btn pen/eraser, .smooth-btn)
+     labelled pill        = named action       (.btn record/play/post, .loop-btn, .pb)
+
+   TAP AREAS: Apple HIG wants a >=44pt tap target. Controls whose VISUAL is
+   smaller than 44 keep their visual size (enlarging them breaks the drawer and
+   swatch layouts) and instead grow an INVISIBLE hit region via a transparent
+   ::before that extends past the box. It intercepts pointer events for its
+   parent without changing layout, spacing, or how anything looks.
+   ============================================================ */
+
+/* Invisible expanded tap area for sub-44 controls. --tap-grow is how far the
+   hit box extends past each edge: (44 - visual) / 2. */
+.onion-tint,
+.color-dot,
+.smooth-btn,
+.loop-btn,
+.pb { position: relative; z-index: 1; }
+/* z-index:1 matters: the ::before extends OUTSIDE the button's box, over the
+   parent row. Without a stacking context the row (painted later / on top)
+   wins the hit-test in that overflow band, so a tap there lands on the row
+   and the button never fires — elementFromPoint even claimed the button
+   while the real click target was the row. Verified by the ux pin. */
+.onion-tint::before,
+.color-dot::before,
+.smooth-btn::before,
+.loop-btn::before,
+.pb::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--tap-grow, 6px));
+  /* transparent + inherits pointer-events, so taps land on the button */
+  background: transparent;
+  border-radius: inherit;
+}
+.onion-tint { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (7 not 6: absorbs border-box rounding) */
+.color-dot  { --tap-grow: 8px; }   /* 30 visual -> 44+ tap */
+.smooth-btn { --tap-grow: 9px; }   /* ~28 tall -> 44+ tap */
+.loop-btn   { --tap-grow: 5px; }   /* 36 tall  -> 44+ tap */
+.pb         { --tap-grow: 3px; }   /* 40 tall  -> 44+ tap */
+
+/* Menu rows: already ~44 from padding; pin the minimum so it can't shrink. */
+.menu-item { min-height: 44px; }
+
+/* ---------- STATES: pressed / disabled / loading, defined once ---------- */
+/* Pressed: every interactive control gives the same tactile response — a
+   slight scale-down and a dim. Touch-down feedback, not hover. */
+.tool-open:active,
+.icon-btn:active,
+.undo-btn:active,
+.t-btn:active,
+.onion-tint:active,
+.tool-btn:active,
+.pb:active,
+.loop-btn:active,
+.btn:active:not(:disabled) {
+  transform: scale(0.94);
+  filter: brightness(0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-open:active, .icon-btn:active, .undo-btn:active, .t-btn:active,
+  .onion-tint:active, .tool-btn:active, .pb:active, .loop-btn:active,
+  .btn:active:not(:disabled) { transform: none; }
+}
+
+/* Disabled: one opacity, no pointer, no press feedback. 0.42 keeps the glyph
+   legible as "there but unavailable" without reading as active. */
+.tool-open:disabled,
+.icon-btn:disabled,
+.undo-btn:disabled,
+.t-btn:disabled,
+.onion-tint:disabled,
+.tool-btn:disabled,
+.pb:disabled,
+.loop-btn:disabled,
+.btn:disabled,
+[aria-disabled="true"] {
+  opacity: 0.42;
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+  filter: none;
+}
+
+/* Loading: an in-progress action hides its label and shows a spinner in place,
+   keeps its footprint (no layout jump), and cannot be re-tapped. Apply with
+   the .is-loading class; aria-busy is set alongside for assistive tech. */
+.btn.is-loading,
+.pb.is-loading,
+.loop-btn.is-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+.btn.is-loading::after,
+.pb.is-loading::after,
+.loop-btn.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px; height: 16px;
+  top: calc(50% - 8px); left: calc(50% - 8px);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: skribl-spin 0.8s linear infinite;
+}
+@keyframes skribl-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
+}

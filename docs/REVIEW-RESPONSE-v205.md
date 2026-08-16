@@ -39,3 +39,44 @@ Pad tune button in header not toolbar; intro toast is the panel variant with an
 X and does not auto-dismiss; the X dismisses it; at 600px the tune button hides
 while recording, the record indicator does not overlap the brand, and the tune
 button returns after stop), cssplit 16, player-isolation 20, tips 43, lib 8.
+
+## Button system pass (owner-driven, same v205 cycle)
+
+After the size fixes above, a design-system pass answering "would this pass an
+Apple HIG audit?" — without flattening the app's existing shape language.
+
+**Shape language kept, on purpose.** The shapes already mean something:
+rounded-square tile = tool/opener; round toggle = on/off switch; pill segment
+= one-of-N with a sliding highlight; labelled pill = named action. Only ONE
+genuine inconsistency existed and was fixed: Flip's undo/redo were circles
+while Pad's (same function) are tiles — now tiles on both, matching the
+tool rule. Nothing else changed shape.
+
+**Sizes, by discretion, NOT everything to 44.** Header icon buttons 44/24
+(desktop) · 40/22 (phone); action pills 44 tall; drawer toggles 32/18 (aligned
+to the 32px segments they share rows with); segments fixed 34px cells,
+centered; page-bar 40; color dots 30. Forcing 44 into drawers/swatches/phone
+toolbars breaks layout, so those keep their visual size and instead gain an
+invisible tap area (below).
+
+**HIG tap areas.** Every sub-44 control grows an invisible `::before` hit
+region to >=44pt (`--tap-grow` per family) with zero layout change. Found and
+fixed during build: the ::before extends OUTSIDE the button over the parent
+row, and without a stacking context the row won the hit-test in that band —
+elementFromPoint even claimed the button while the real click target was the
+row. `z-index:1` on the targets fixed it, and `--tap-grow` is +1px over the
+arithmetic to absorb border-box rounding at the edge. Verified by an actual
+click 5px outside the visual box that toggles the control, and one 12px
+outside that does not (bounded).
+
+**States, defined once.** Pressed = scale .94 + brightness .9 on every control
+(reduced-motion drops the scale). Disabled = opacity .42, no pointer, no press.
+Loading = `.is-loading` hides the label, shows an in-place spinner, keeps the
+footprint, blocks re-tap.
+
+**Style roles.** Post = filled (the one primary); Record = tinted; Play /
+utilities = plain. Menu rows pinned to 44 min-height.
+
+Gates: ux 166 (new pins: 32px visual preserved; 5px-outside tap toggles;
+12px-outside does not; Flip undo/redo are 12px tiles), visual 76, parity 115,
+cssplit 16, player-isolation 20, pages 44, tips 43.

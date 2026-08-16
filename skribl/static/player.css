@@ -509,9 +509,15 @@ body.player-mode .canvas-area { display: contents; }
 
 /* Icon-only header button */
 .icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  /* v205-fix: standardized to the tier-1 primary size + rounded-square shape,
+     matching .tool-open, so Pad's header (Flip Mode, menu, tune) reads as one
+     button family with Flip's header instead of a mix of circles and squares.
+     Was 36px circle / 18px icon. Keeps its border (the subtle bordered look
+     distinguishes these bordered actions from the borderless .tool-open, but
+     size + corner radius now agree). */
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   border: 1px solid var(--hairline-strong);
   background: rgba(255, 255, 255, 0.045);
   color: var(--text-secondary);
@@ -524,7 +530,7 @@ body.player-mode .canvas-area { display: contents; }
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.18s var(--spring);
 }
 
-.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn svg { width: 24px; height: 24px; }
 .icon-btn:active { transform: scale(0.94); }
 /* ---- Unified header-button hover (v90) --------------------------------------
    Goal: every header button lifts by the SAME subtle amount as Record always did,
@@ -1032,11 +1038,38 @@ body.player-mode #canvas {
   .play-wrap { border-color: var(--hairline); }
   .duration-badge { border-left-color: var(--hairline); font-size: 12.5px; padding: 0 13px 0 11px; }
 
-  /* ⋯ — same height as the pills, lighter hairline, dead-centered. */
-  .icon-btn { width: 32px; height: 32px; border-color: var(--hairline); }
-  .icon-btn svg { width: 17px; height: 17px; }}
+  /* v205-fix: keep the header icon buttons at the tier-1 size (44/24) even in
+     the compact/recording state, so they stay uniform with the tune opener
+     rather than shrinking to pill height. Was 32/17. */
+  .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
+  .icon-btn svg { width: 24px; height: 24px; }}
 @media (prefers-reduced-motion: reduce) {
   .skribl-tip { transition: none; }
 }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
+
+/* ---------- STATES: pressed / disabled / loading, defined once ---------- */
+/* Pressed: every interactive control gives the same tactile response — a
+   slight scale-down and a dim. Touch-down feedback, not hover. */
+.tool-open:active,
+.icon-btn:active,
+.undo-btn:active,
+.t-btn:active,
+.onion-tint:active,
+.tool-btn:active,
+.pb:active,
+.loop-btn:active,
+.btn:active:not(:disabled) {
+  transform: scale(0.94);
+  filter: brightness(0.9);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-open:active, .icon-btn:active, .undo-btn:active, .t-btn:active,
+  .onion-tint:active, .tool-btn:active, .pb:active, .loop-btn:active,
+  .btn:active:not(:disabled) { transform: none; }
+}
+@keyframes skribl-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
+}

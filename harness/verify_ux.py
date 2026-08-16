@@ -811,6 +811,129 @@ with _sp204() as _p:
           pg.evaluate("() => !!document.querySelector('.header #tuneBtn')"
                       " && !document.querySelector('#toolBar #tuneBtn')"))
 
+    # v205-fix: the tune button must match its header neighbours (flipBtn, menuBtn)
+    # in size — it was a larger .tool-open (44px) dropped among 36px .icon-btns,
+    # which read as inconsistent. It is now an .icon-btn like them.
+    sizes = pg.evaluate("""() => {
+        const ids = ['tuneBtn', 'menuBtn'];
+        const r = {};
+        for (const id of ids) {
+            const el = document.getElementById(id);
+            if (el) { const b = el.getBoundingClientRect(); r[id] = [Math.round(b.width), Math.round(b.height)]; }
+        }
+        return r;
+    }""")
+    check("V205-fix: the tune button matches the menu button's size",
+          sizes.get("tuneBtn") == sizes.get("menuBtn"),
+          f"tune {sizes.get('tuneBtn')} vs menu {sizes.get('menuBtn')}")
+    # v205-fix: standardized tier-1 = 44px box on desktop. Lock it so it can't drift.
+    check("V205-fix: header buttons are the standardized 44px tier-1 size",
+          sizes.get("tuneBtn") == [44, 44],
+          f"tuneBtn {sizes.get('tuneBtn')}")
+
+    # v205-fix: the compact/recording row (Record, Play, Post, menu) must be one
+    # uniform height — Play was a short .btn-icon (~29px) among 44px pills.
+    pg.evaluate("() => document.getElementById('recordBtn').click()")
+    pg.wait_for_timeout(300)
+    pg.mouse.move(300, 300); pg.mouse.down(); pg.mouse.move(360, 340); pg.mouse.up()
+    pg.wait_for_timeout(200)
+    pg.evaluate("() => document.getElementById('recordBtn').click()")
+    pg.wait_for_timeout(500)
+    rowh = pg.evaluate("""() => {
+        const h = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().height) : null; };
+        return { record: h('#recordBtn'), play: h('.btn.play'), post: h('#postBtn'), menu: h('#menuBtn') };
+    }""")
+    hs = [v for v in rowh.values() if v]
+    check("V205-fix: the compact row is one uniform height (Play no longer short)",
+          hs and (max(hs) - min(hs)) <= 2,
+          f"heights {rowh}")
+
+    # v205-fix: HIG tap areas. Sub-44 controls grow an invisible ::before hit
+    # region. Prove it: click 5px OUTSIDE the grid toggle's 32px visual box (in
+    # the expanded zone) and the toggle must still fire. That is the entire
+    # point of the tap-area rule; a rule that only exists in CSS is not proof.
+    pg.click("#tuneBtn"); pg.wait_for_timeout(350)
+    r = pg.evaluate("() => { const b = document.getElementById('gridBtn').getBoundingClientRect(); return {x:b.left, y:b.top, w:b.width, h:b.height}; }")
+    # visual should be 32; the ::before extends 6px each side -> 44 hit box
+    check("V205-fix: the grid toggle's VISUAL stays 32px (layout untouched)",
+          round(r["w"]) == 32 and round(r["h"]) == 32, f"{r['w']}x{r['h']}")
+    before = pg.evaluate("() => document.getElementById('gridBtn').getAttribute('aria-checked')")
+    # click 5px left of the visual left edge, vertically centered: inside the
+    # 7px expanded zone, outside the 32px box.
+    pg.mouse.click(r["x"] - 5, r["y"] + r["h"] / 2)
+    pg.wait_for_timeout(250)
+    after = pg.evaluate("() => document.getElementById('gridBtn').getAttribute('aria-checked')")
+    check("V205-fix: a tap 5px OUTSIDE the toggle's visual box still toggles it (44pt hit area)",
+          before != after, f"aria-checked {before} -> {after}")
+    # and 12px outside (past the 6px zone) must NOT toggle -> the zone is bounded
+    pg.mouse.click(r["x"] - 12, r["y"] + r["h"] / 2)
+    pg.wait_for_timeout(250)
+    after2 = pg.evaluate("() => document.getElementById('gridBtn').getAttribute('aria-checked')")
+    check("V205-fix: ...but 12px outside (beyond the 44 zone) does not — the hit area is bounded",
+          after2 == after, f"aria-checked {after} -> {after2}")
+    # Restore: turn grid back off and close the drawer, so the later V204 pins
+    # (which expect the drawer closed on this same page) are unaffected.
+    if after == "true":
+        pg.click("#gridBtn"); pg.wait_for_timeout(150)
+    pg.click("#tuneBtn"); pg.wait_for_timeout(350)
+
+    # Flip undo/redo are now rounded-square tiles, not circles.
+    fpx = _b.new_page(viewport={"width": 900, "height": 800})
+    fpx.goto(BASE + "/flip", wait_until="load"); fpx.wait_for_timeout(700)
+    rad = fpx.evaluate("() => getComputedStyle(document.getElementById('undo')).borderRadius")
+    check("V205-fix: Flip undo/redo are rounded-square tiles (were circles) — matches Pad + tool shape rule",
+          rad == "12px", f"border-radius {rad}")
+    fpx.close()
+
+    # v205-fix: PHONE FIT. The bigger buttons + tap areas must not overflow at
+    # real phone widths. iPhone SE (375) is the tightest; check both editors,
+    # header, toolbar, and with the tune drawer open. No horizontal page scroll,
+    # nothing past the right edge.
+    for pw in (375, 390):
+        for path, nm in (("/", "Pad"), ("/flip", "Flip")):
+            ph = _b.new_page(viewport={"width": pw, "height": 844})
+            ph.goto(BASE + path, wait_until="load"); ph.wait_for_timeout(700)
+            def _fit(page):
+                return page.evaluate("""() => {
+                    const vw = document.documentElement.clientWidth;
+                    const over = [];
+                    for (const s of ['.header', '#toolBar', '.toolbar', '.flip-tools', '.tune-shell']) {
+                        const e = document.querySelector(s); if (!e) continue;
+                        for (const c of e.querySelectorAll('button,a')) {
+                            const r = c.getBoundingClientRect();
+                            if (r.width > 0 && r.right > vw + 1) over.push((c.id || c.className.split(' ')[0]) + '@' + Math.round(r.right));
+                        }
+                    }
+                    return { scrollX: document.documentElement.scrollWidth > vw + 1, over };
+                }""")
+            f1 = _fit(ph)
+            check(f"V205-fix: {nm} fits at {pw}px — no horizontal overflow, nothing clipped",
+                  not f1["scrollX"] and not f1["over"], f"scrollX={f1['scrollX']} over={f1['over']}")
+            if ph.locator("#tuneBtn").count():
+                ph.click("#tuneBtn"); ph.wait_for_timeout(350)
+                f2 = _fit(ph)
+                check(f"V205-fix: {nm} at {pw}px with tune drawer open still fits",
+                      not f2["scrollX"] and not f2["over"], f"scrollX={f2['scrollX']} over={f2['over']}")
+            ph.close()
+
+    # v205-fix: the round header actions (Flip-mode book, ⋯) must match the tune
+    # opener's box so they do not read as smaller mismatched siblings.
+    sizes = pg.evaluate("""() => {
+        const box = el => { const r = el.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
+        const svg = el => { const s = el.querySelector('svg'); const r = s.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
+        const tune = document.getElementById('tuneBtn');
+        const menu = document.getElementById('menuBtn');
+        const flip = document.getElementById('flipBtn');
+        return { tuneBox: box(tune), menuBox: box(menu), flipBox: box(flip),
+                 tuneSvg: svg(tune), menuSvg: svg(menu), flipSvg: svg(flip) };
+    }""")
+    check("V205-fix: the ⋯ menu button matches the tune button box",
+          sizes["menuBox"] == sizes["tuneBox"], str(sizes))
+    check("V205-fix: the Flip-mode (book) button matches the tune button box",
+          sizes["flipBox"] == sizes["tuneBox"], str(sizes))
+    check("V205-fix: the ⋯ glyph matches the tune glyph size",
+          sizes["menuSvg"] == sizes["tuneSvg"], str(sizes))
+
     # v204-fix: at ~600px, recording must not let the tune button crowd the
     # record indicator onto the wordmark, and the wordmark must recover after
     # stop. Reproduces the reported 600px overlap + stuck-brand bug.
