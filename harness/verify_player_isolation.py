@@ -478,15 +478,17 @@ with sync_playwright() as sp:
     # spirit as CSS_RATCHET below. The comments still exist in every source
     # file; they are simply no longer parsed by a browser that will never read
     # them. verify_jsstrip.py is what proves the strip preserves meaning.
-    # 142,220 = 142,160 (A1, owner-signed v204) + 60 B: the single
-    # layoutEditorCanvas hook that repaints the Pad grid overlay on re-fit
-    # (v204). The grid's WIRING and STATE were extracted to editor_tune.js —
-    # editor-only, NOT in the player download — which is what a naive add
-    # (~1,300 B in the player) was refactored down to. What remains is one
-    # window-hook call the editor's layout path needs; it is a no-op the
-    # player never reaches (resizeCanvas returns early in player-mode). Owner
-    # approved alongside A1. History: 141,730 / 141,824 lows after real cuts.
-    BYTES_RATCHET, BYTES_TARGET = 142_220, 153_600
+    # 142,344 = 142,220 (v204) + 119 B: the v206 cross-load guard in the
+    # draft-input handler — refuses a Flip .skribl in Pad with directions,
+    # instead of silently loading an EMPTY drawing that said "Draft loaded"
+    # (data loss dressed as success). Golfed to its irreducible condition +
+    # message. It stays in app.js because the PLAYER template also carries
+    # #draftInput, so the handler is not editor-only and could not be moved
+    # to editor_menu.js. RAISE FLAGGED FOR OWNER: same category as the two
+    # prior approved raises (A1 audio, grid hook) — small, functional,
+    # user-protecting, golfed first. History of the number: 141,730 / 141,824
+    # lows after real cuts; +430 (A1) / +60 (grid hook) / +119 (this) raised.
+    BYTES_RATCHET, BYTES_TARGET = 142_344, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

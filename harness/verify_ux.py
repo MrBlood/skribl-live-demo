@@ -885,6 +885,64 @@ with _sp204() as _p:
           rad == "12px", f"border-radius {rad}")
     fpx.close()
 
+    # v206: Flip's grid toggle must LIGHT when on, like its .onion-tint siblings.
+    # It toggled 'on' (unstyled) instead of 'active' since v204, so the overlay
+    # drew but the button stayed dark. Pin all three siblings to .active.
+    fg = _b.new_page(viewport={"width": 1280, "height": 900})
+    fg.goto(BASE + "/flip", wait_until="load"); fg.wait_for_timeout(700)
+    fg.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
+    fg.click("#tuneBtn"); fg.wait_for_timeout(350)
+    for bid, nm in (("gridBtn", "grid"), ("arcGuideBtn", "motion guides"), ("onionTintBtn", "onion tint")):
+        fg.click("#" + bid); fg.wait_for_timeout(200)
+        lit = fg.evaluate(f"() => document.getElementById('{bid}').classList.contains('active')")
+        check(f"V206: Flip {nm} toggle lights (.active) when on", lit)
+        fg.click("#" + bid); fg.wait_for_timeout(150)  # off again
+    fg.close()
+
+    # v206 (music drawer option A): nudge +/- are 32px with a 44pt invisible tap
+    # area; the 3-column Start/End/Step grid must fit a 375px phone; and a real
+    # click 5px OUTSIDE a nudge button must still nudge (tap area is real).
+    import struct, io, math
+    def wav_bytes(seconds=1.0, rate=8000):
+        """A real one-second 440Hz WAV, so the music path actually DECODES rather
+        than being handed something the AudioContext rejects."""
+        n = int(seconds * rate)
+        frames = b"".join(struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * i / rate)))
+                          for i in range(n))
+        return (b"RIFF" + struct.pack("<I", 36 + len(frames)) + b"WAVEfmt "
+                + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+                + b"data" + struct.pack("<I", len(frames)) + frames)
+    _AUD = wav_bytes()
+    for pw in (375, 1280):
+        mp = _b.new_page(viewport={"width": pw, "height": 844})
+        mp.goto(BASE + "/", wait_until="load"); mp.wait_for_timeout(700)
+        mp.click("#musicOpenBtn"); mp.wait_for_timeout(300)
+        mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
+        mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
+        mp.wait_for_timeout(400)
+        fit = mp.evaluate("""() => { const vw = document.documentElement.clientWidth;
+            const grid = document.querySelector('#fineTuneBody .finetune-grid'); if (!grid) return null;
+            const gr = grid.getBoundingClientRect();
+            const b = document.querySelector('#fineTuneBody .nudge-btn').getBoundingClientRect();
+            return { over: gr.right > vw + 1, scrollX: document.documentElement.scrollWidth > vw + 1, nudgeW: Math.round(b.width) }; }""")
+        check(f"V206: nudge grid fits at {pw}px (no overflow)", fit and not fit["over"] and not fit["scrollX"], str(fit))
+        if pw == 1280:
+            check("V206: nudge buttons are 32px on desktop (option A)", fit and fit["nudgeW"] == 32, str(fit))
+            # tap area: click 5px LEFT of the first "-" nudge (start-earlier). Its
+            # readout must change, proving the expanded hit region fires the nudge.
+            # the fine-tune body sits below the fold; bring the button on-screen
+            # first or the coordinate click lands outside the viewport.
+            mp.evaluate("() => document.querySelector('#fineTuneBody .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').scrollIntoView({block: 'center'})")
+            mp.wait_for_timeout(300)
+            r = mp.evaluate("() => { const b = document.querySelector('#fineTuneBody .nudge-btn[data-which=\"start\"][data-amount=\"1\"]').getBoundingClientRect(); return {x: b.left, y: b.top, w: b.width, h: b.height, r: b.right}; }")
+            before = mp.evaluate("() => document.getElementById('startReadout').textContent")
+            # click 5px to the RIGHT of the '+' (outside its box, in the tap zone, away from the readout on its left)
+            mp.mouse.click(r["r"] + 5, r["y"] + r["h"] / 2); mp.wait_for_timeout(300)
+            after = mp.evaluate("() => document.getElementById('startReadout').textContent")
+            check("V206: a click 5px outside the '+' nudge still nudges (44pt tap area is real)",
+                  before != after, f"readout {before!r} -> {after!r}")
+        mp.close()
+
     # v205-fix: PHONE FIT. The bigger buttons + tap areas must not overflow at
     # real phone widths. iPhone SE (375) is the tightest; check both editors,
     # header, toolbar, and with the tune drawer open. No horizontal page scroll,
@@ -996,21 +1054,77 @@ with _sp204() as _p:
         return el && !el.hidden ? el.textContent : null;
     }""")
     check("V204: Flip shows the intro toast on first load",
-          toast and "copies the current one" in toast, str(toast)[:50])
-    # v204-fix: the intro toast is the roomy PANEL variant — has an X and does
-    # NOT auto-dismiss (the old 6.2s timer let it vanish mid-sentence).
-    check("V204-fix: the intro toast is the panel variant with an X",
-          fp.evaluate("() => { const p = document.querySelector('.skribl-hint-panel');"
-                      " return !!(p && p.querySelector('.skribl-hint-x')); }"))
-    fp.wait_for_timeout(1200)
-    check("V204-fix: it is still visible after the old auto-dismiss window",
-          fp.evaluate("() => { const p = document.querySelector('.skribl-hint-panel');"
-                      " return !!(p && p.classList.contains('in')); }"))
-    fp.evaluate("() => document.querySelector('.skribl-hint-x').click()")
+          toast and "copies the last" in toast, str(toast)[:50])
+    # v206: the intro is a NORMAL small timed toast (the v205 panel is retired —
+    # it hid the pointer and could leave a dead zone) that carries a tap-through
+    # "How it works ->" action opening the help drawer.
+    check("V206: the intro toast is NOT the retired panel variant",
+          fp.evaluate("() => !document.querySelector('.skribl-hint-panel')"))
+    check("V206: the intro toast carries a 'How it works' action link",
+          fp.evaluate("() => { const a = document.querySelector('.skribl-hint-action');"
+                      " return !!(a && /how it works/i.test(a.textContent)); }"))
+    fp.evaluate("() => document.querySelector('.skribl-hint-action').click()")
+    fp.wait_for_timeout(500)
+    check("V206: tapping the action opens the How-it-works help drawer",
+          fp.evaluate("() => { const h = document.getElementById('helpDrawer');"
+                      " return !!(h && !h.hidden && h.classList.contains('open')); }"))
+    check("V206: ...and dismisses the toast",
+          fp.evaluate("() => { const t = document.querySelector('.skribl-hint');"
+                      " return !t || !t.classList.contains('in'); }"))
+    fp.evaluate("() => { const c = document.getElementById('helpClose'); if (c) c.click(); }")
     fp.wait_for_timeout(400)
-    check("V204-fix: clicking the X dismisses it",
-          fp.evaluate("() => { const p = document.querySelector('.skribl-hint-panel');"
-                      " return !p || !p.classList.contains('in'); }"))
+
+    # v206: menu verbiage aligned across editors + Clear all in BOTH menus.
+    # (pg was closed above; open a fresh Pad page for the Pad-side checks.)
+    pg = _b.new_page(viewport={"width": 1280, "height": 900})
+    pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(600)
+    pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
+    flip_items = fp.evaluate("() => [...document.querySelectorAll('.flip-menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
+    def has(items, s): return any(s in x for x in items)
+    check("V206: Pad menu says 'Save draft (.skribl)' like Flip", has(pad_items, "Save draft (.skribl)"), str(pad_items))
+    check("V206: Pad menu says 'Load draft (.skribl)' like Flip", has(pad_items, "Load draft (.skribl)"), str(pad_items))
+    check("V206: Pad menu says 'Export…' like Flip", has(pad_items, "Export\u2026"), str(pad_items))
+    check("V206: Flip menu has 'Clear all pages' (was drawer-only)", has(flip_items, "Clear all pages"), str(flip_items))
+    check("V206: Pad menu has 'Clear all'", has(pad_items, "Clear all"), str(pad_items))
+    # .skribl file input accepts the types iOS tags an unknown-ext JSON file with
+    for page_, nm in ((pg, "Pad"), (fp, "Flip")):
+        acc = page_.evaluate("() => document.getElementById('draftInput').getAttribute('accept')")
+        check(f"V206: {nm} draft input accepts iOS-friendly types (.skribl + json + text/plain + octet-stream)",
+              acc and ".skribl" in acc and "application/json" in acc and "text/plain" in acc and "application/octet-stream" in acc, str(acc))
+    # cross-load guard: a Flip .skribl into Pad is refused with directions, and vice versa
+    flip_doc = '{"schemaVersion":2,"playbackMode":"flip","fps":12,"frames":[{"strokes":[]}]}'
+    pad_doc  = '{"schemaVersion":2,"playbackMode":"replay","fps":30,"frames":[{"strokes":[]}]}'
+    pg.set_input_files("#draftInput", {"name": "flip.skribl", "mimeType": "application/json", "buffer": flip_doc.encode()})
+    pg.wait_for_timeout(600)
+    ptoast = pg.evaluate("() => { const t = document.querySelector('.toast, #toast, .skribl-toast'); return t ? t.textContent : (document.body.textContent.includes('Flip Skribl') ? 'Flip Skribl' : ''); }")
+    check("V206: loading a Flip .skribl into Pad is refused with 'open it in Flip Mode'",
+          "Flip Skribl" in ptoast or "Flip Mode" in ptoast, repr(ptoast)[:80])
+    fp.set_input_files("#draftInput", {"name": "pad.skribl", "mimeType": "application/json", "buffer": pad_doc.encode()})
+    fp.wait_for_timeout(600)
+    ftoast = fp.evaluate("() => { const c = document.querySelector('.chip'); return c ? c.textContent : (document.body.textContent.includes('Pad Skribl') ? 'Pad Skribl' : ''); }")
+    check("V206: loading a Pad .skribl into Flip is refused with 'open it in Skribl Pad'",
+          "Pad Skribl" in ftoast or "Skribl Pad" in ftoast, repr(ftoast)[:80])
+    pg.close()
+
+    # v206: the Flip image/music drawer must SURVIVE picking a file. Flip's file
+    # inputs live at the page root (outside the panels), and when the OS dialog
+    # returns the browser fires click on that input; the click-outside handler
+    # read it as "outside" and closed the drawer the instant a file was chosen —
+    # which is why it "never opened" for the owner. Headless can't open a real
+    # dialog, so dispatch the same click on the input the browser would.
+    fp.click("#musicBtn"); fp.wait_for_timeout(400)
+    check("V206: Flip music drawer opens", not fp.evaluate("() => document.getElementById('musicPanel').hidden"))
+    fp.evaluate("() => document.getElementById('musicInput').dispatchEvent(new MouseEvent('click', {bubbles: true}))")
+    fp.wait_for_timeout(300)
+    check("V206: ...and stays open when the file input is clicked (dialog round-trip)",
+          not fp.evaluate("() => document.getElementById('musicPanel').hidden"))
+    fp.click("#musicBtn"); fp.wait_for_timeout(300)  # close
+    fp.click("#imageBtn"); fp.wait_for_timeout(400)
+    fp.evaluate("() => document.getElementById('imageInput').dispatchEvent(new MouseEvent('click', {bubbles: true}))")
+    fp.wait_for_timeout(300)
+    check("V206: Flip image drawer also survives its file-input click",
+          not fp.evaluate("() => document.getElementById('photoPanel').hidden"))
+    fp.click("#imageBtn"); fp.wait_for_timeout(300)
     check("V204: the old crammed .flip-hint footer is gone",
           fp.evaluate("() => !document.querySelector('.flip-hint')"))
     fp.close()
