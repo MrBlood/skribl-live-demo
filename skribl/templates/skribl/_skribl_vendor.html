@@ -1,0 +1,46 @@
+{# Lazy vendor loader — included by skribl_editor.html and skribl_flip.html.
+
+   mp4-muxer.min.js and gifenc.min.js used to be plain <script> tags on both
+   editors: 14,061 B encoded on EVERY page load, 8% of the editor's payload, for
+   code that only runs when somebody exports a GIF or an MP4. Most sessions
+   never do.
+
+   They cannot simply be dropped, because both surfaces decided whether to OFFER
+   the GIF option by asking `typeof window.gifenc !== 'undefined'` while building
+   the export sheet. With the tags gone that check is false at sheet-open time
+   and the option would present itself as permanently broken. So availability is
+   now a URL the server knows exists, and the download happens on the click.
+
+   This lives in ONE partial rather than inline in two templates on purpose:
+   app.js and flip.js already define 57 of the same functions between them, and
+   verify_surfaces.py exists because that divergence is what ships bugs here. #}
+<script nonce="{{ csp_nonce }}">
+  // Content-busted URLs, resolved server-side. Presence here means the file is
+  // deployed and reachable — which is exactly what the export sheet needs to
+  // know, and it knows it without paying for the download.
+  window.SKRIBL_VENDOR = {
+    gifenc: {{ skribl_asset('gifenc.min.js') | tojson }},
+    mp4muxer: {{ skribl_asset('mp4-muxer.min.js') | tojson }}
+  };
+
+  // Load a vendored library once, on demand. Repeat calls share the in-flight
+  // promise, so double-clicking Export does not fetch it twice. A failed load
+  // clears the cache so a later retry can succeed on a flaky connection.
+  window._skriblVendorLoads = {};
+  window.skriblLoadVendor = function (name) {
+    var url = window.SKRIBL_VENDOR && window.SKRIBL_VENDOR[name];
+    if (!url) return Promise.reject(new Error('unknown vendor library: ' + name));
+    if (window._skriblVendorLoads[name]) return window._skriblVendorLoads[name];
+    window._skriblVendorLoads[name] = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function () { resolve(true); };
+      s.onerror = function () {
+        window._skriblVendorLoads[name] = null;   // let a retry try again
+        reject(new Error('failed to load ' + name));
+      };
+      document.head.appendChild(s);
+    });
+    return window._skriblVendorLoads[name];
+  };
+</script>
