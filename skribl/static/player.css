@@ -276,7 +276,7 @@ body.player-mode .canvas-area { display: contents; }
      simply vanished while the canvas stayed. Inset paints within the border
      box — unclippable at the edge, zero layout change, and every state rule
      below that swaps box-shadow wholesale still re-includes this variable. */
-  --canvas-ring: inset 0 0 0 2px rgba(255,255,255,0.18);
+  --canvas-ring: inset 0 0 0 1px rgba(255,255,255,0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
   border-radius: var(--r-frame, 14px);

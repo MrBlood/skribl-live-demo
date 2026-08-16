@@ -339,7 +339,7 @@ body:not(.player-mode) .canvas-wrap #canvas {
      simply vanished while the canvas stayed. Inset paints within the border
      box — unclippable at the edge, zero layout change, and every state rule
      below that swaps box-shadow wholesale still re-includes this variable. */
-  --canvas-ring: inset 0 0 0 2px rgba(255,255,255,0.18);
+  --canvas-ring: inset 0 0 0 1px rgba(255,255,255,0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
   border-radius: var(--r-frame, 14px);
@@ -356,7 +356,7 @@ body:not(.player-mode) .canvas-wrap #canvas {
    edges don't look muddy. Screen-only; export is unaffected. */
 .canvas-wrap.light-bg {
   /* Darker ring: a white ring on a white canvas is not an edge. */
-  --canvas-ring: inset 0 0 0 2px rgba(0,0,0,0.22);
+  --canvas-ring: inset 0 0 0 1px rgba(0,0,0,0.22);
   box-shadow: var(--canvas-ring),
               inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 70px rgba(0,0,0,0.06);
 }
@@ -3755,9 +3755,14 @@ body.player-mode #canvas {
   }
   .duration-badge { display: none !important; }
 
-  /* A — while recording, hide Help + ⋯ so the timer/stop never overflow the
-     header. They return the moment recording stops. Magnifier stays. */
+  /* A — while recording, hide Help + ⋯ + canvas-settings so the timer/stop
+     never overflow the header. They return the moment recording stops.
+     Magnifier stays. The tune (canvas-settings) button joined this set in
+     v204-fix: it added ~40px to the header and is meaningless mid-record
+     (you do not adjust the grid while capturing), and its width was pushing
+     the record indicator onto the wordmark at ~600px. */
   body.recording #helpBtn,
+  body.recording #tuneBtn,
   body.recording #menuBtn { display: none; }
 }
 
@@ -4160,6 +4165,37 @@ body.player-mode #canvas {
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 
+/* Panel variant (v204-fix): the roomy Flip intro toast. Wider (~80% of the
+   canvas, capped so it never spans a desktop), more padding, larger text, and
+   an explicit X — it does not auto-dismiss, so it must be obviously closable.
+   Sized against the canvas wrap when present, falling back to the viewport. */
+.skribl-hint-panel {
+  top: 96px;
+  width: min(80vw, 560px);
+  max-width: calc(100vw - 32px);
+  padding: 22px 44px 22px 26px;
+  border-radius: 16px;
+  font-size: 15px; line-height: 1.6;
+  cursor: default;
+  /* The panel is a read-me overlay, not a modal: it must not swallow taps
+     meant for the canvas beneath it (drawing, and the harness's draw()). Only
+     the X is interactive, so the panel itself is pointer-transparent and the X
+     re-enables events. Keeps the "does not auto-dismiss" behaviour while never
+     blocking a stroke. */
+  pointer-events: none;
+}
+.skribl-hint-panel .skribl-hint-text { display: block; }
+.skribl-hint-x { pointer-events: auto; }
+.skribl-hint-x {
+  position: absolute; top: 8px; right: 10px;
+  width: 28px; height: 28px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 8px; background: transparent;
+  color: var(--text-secondary); font-size: 20px; line-height: 1;
+  cursor: pointer;
+}
+.skribl-hint-x:hover { background: var(--surface-control); color: var(--text-primary); }
+
 /* ============================================================
    Tune drawer + grid overlay (v204) — Pad gained the tune drawer
    that holds Grid. These rules are lifted verbatim from flip.css
@@ -4174,12 +4210,16 @@ body.player-mode #canvas {
   border: 1px solid var(--hairline-strong); border-radius: var(--r-pill);
   background: transparent; color: var(--text-secondary); cursor: pointer;
 }
-.onion-tint svg { width: 13px; height: 13px; }
+.onion-tint svg { width: 16px; height: 16px; }  /* v204-fix: was 13px, too small to read the glyph */
 .onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 .tune-shell {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
-  margin: 0; background: var(--surface-raised); border: 0; border-radius: 0 0 14px 14px;
+  /* Identical to Flip (v204-fix): the header is a floating card (margin 7px),
+     so the drawer matches its inset and tucks up under the card's rounded
+     bottom, reading as one object opening. Was margin:0 / bottom-flush when
+     the button lived in the toolbar; the button is in the header now. */
+  margin: -10px 7px 0; background: var(--surface-raised); border: 0; border-radius: 0 0 14px 14px;
 }
 .tune-shell.open { grid-template-rows: 1fr; border: 1px solid var(--hairline-strong); border-top: 0; }
 .tune-clip { overflow: hidden; min-height: 0; }

@@ -74,22 +74,46 @@
   }
 
   /* key  - stable id; the hint shows once per key, forever
-   * text - one or two clauses. Longer than that belongs in the help drawer. */
-  function show(key, text) {
+   * text - one or two clauses. Longer than that belongs in the help drawer.
+   * opts - optional { panel: true }. A PANEL hint is the roomy intro variant:
+   *        it does not auto-dismiss (some people read slowly, and the old
+   *        6.2s timer let it vanish mid-sentence), and it carries an explicit
+   *        X so it is obvious how to close. Ordinary hints stay small,
+   *        auto-dismissing, click-anywhere-to-close. */
+  function show(key, text, opts) {
     if (!key || !text || !isEnabled()) return false;
     var s = seen();
     if (s[key]) return false;
     s[key] = 1;
     write(SEEN_KEY, JSON.stringify(s));
 
+    var panel = !!(opts && opts.panel);
     var node = ensure();
-    node.textContent = text;
+    node.classList.toggle('skribl-hint-panel', panel);
+    clearTimeout(timer);
+    if (panel) {
+      // Text + an explicit close button. textContent would drop the button, so
+      // build the two children.
+      node.textContent = '';
+      var span = document.createElement('span');
+      span.className = 'skribl-hint-text';
+      span.textContent = text;
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'skribl-hint-x';
+      x.setAttribute('aria-label', 'Close');
+      x.textContent = '\u00D7';
+      x.onclick = function (e) { e.stopPropagation(); hide(); };
+      node.appendChild(span);
+      node.appendChild(x);
+      node.onclick = null;             // panel closes via its X, not a stray tap
+    } else {
+      node.textContent = text;
+      node.onclick = hide;             // small hints: click anywhere to dismiss
+    }
     node.hidden = false;
     global.requestAnimationFrame(function () { node.classList.add('in'); });
-    clearTimeout(timer);
-    timer = setTimeout(hide, DURATION);
-    // Dismissable: someone who has read it should not wait out the timer.
-    node.onclick = hide;
+    if (!panel) timer = setTimeout(hide, DURATION);   // panels wait for the X
     return true;
   }
 

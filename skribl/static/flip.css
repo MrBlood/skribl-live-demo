@@ -442,7 +442,7 @@
   color: var(--text-secondary);
   cursor: pointer;
 }
-.onion-tint svg { width: 13px; height: 13px; }
+.onion-tint svg { width: 16px; height: 16px; }  /* v204-fix: was 13px, too small to read the glyph */
 /* Lighter active state: this is a small secondary toggle next to a segmented
    control, and a strong border plus fill made it the loudest thing in the row.
    The icon colour carries the state; the fill only supports it. */

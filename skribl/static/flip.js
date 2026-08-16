@@ -3228,7 +3228,8 @@ if (window.SkriblHints) {
   window.SkriblHints.show('flip-intro',
     'Each new page copies the current one — nudge, erase, and redraw to '
     + 'animate, then hit Flip it. Turn on Onion skin to trace over the page '
-    + 'beneath. (Tips can be turned off in the \u22EF menu.)');
+    + 'beneath. (Tips can be turned off in the \u22EF menu.)',
+    { panel: true });
 }
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();

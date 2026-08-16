@@ -53,6 +53,12 @@ with sync_playwright() as p:
     flip.on("pageerror", lambda e: errs.append(str(e)))
     flip.goto(BASE + "/flip", wait_until="load")
     flip.wait_for_timeout(1000)
+    # v205: the intro toast is a center panel that does NOT auto-dismiss, so it
+    # sits over the canvas until closed. Dismiss it before drawing, or every
+    # draw() lands on the panel instead of the canvas.
+    flip.evaluate("() => { try { localStorage.setItem('skribl_hints_seen_v1',"
+                  " JSON.stringify({'flip-intro':1})); } catch(e){} "
+                  "const h=document.querySelector('.skribl-hint'); if(h){h.classList.remove('in');h.hidden=true;} }")
 
     # Four pages, each with a different amount of ink so reordering is visible.
     for i in range(4):
@@ -267,6 +273,9 @@ with sync_playwright() as p:
     sp.on("pageerror", lambda e: sp_errs.append(str(e)))
     sp.goto(f"{BASE}/flip", wait_until="load")
     sp.wait_for_timeout(1200)
+    sp.evaluate("() => { try { localStorage.setItem('skribl_hints_seen_v1',"
+                " JSON.stringify({'flip-intro':1})); } catch(e){} "
+                "const h=document.querySelector('.skribl-hint'); if(h){h.classList.remove('in');h.hidden=true;} }")
 
     sp.evaluate("() => { for (let i = 0; i < 40; i++) addFrame(false); }")
     sp.wait_for_timeout(600)

@@ -807,6 +807,38 @@ with _sp204() as _p:
     pg.wait_for_timeout(900)
     check("V204: Pad has a tune button (new drawer)",
           pg.locator("#tuneBtn").count() == 1)
+    check("V204-fix: the Pad tune button is in the header actions, not the toolbar",
+          pg.evaluate("() => !!document.querySelector('.header #tuneBtn')"
+                      " && !document.querySelector('#toolBar #tuneBtn')"))
+
+    # v204-fix: at ~600px, recording must not let the tune button crowd the
+    # record indicator onto the wordmark, and the wordmark must recover after
+    # stop. Reproduces the reported 600px overlap + stuck-brand bug.
+    narrow = _b.new_page(viewport={"width": 600, "height": 800})
+    narrow.goto(BASE + "/", wait_until="load")
+    narrow.wait_for_timeout(700)
+    narrow.evaluate("() => document.getElementById('recordBtn').click()")
+    narrow.wait_for_timeout(400)
+    check("V204-fix: the tune button is hidden while recording (reclaims width)",
+          narrow.evaluate("() => { const t = document.getElementById('tuneBtn');"
+                          " return t && getComputedStyle(t).display === 'none'; }"))
+    # Record indicator and brand must not horizontally overlap.
+    overlap = narrow.evaluate("""() => {
+        const b = document.querySelector('.brand');
+        const r = document.getElementById('recIndicator');
+        if (!b || !r || r.hidden) return false;
+        const br = b.getBoundingClientRect(), rr = r.getBoundingClientRect();
+        // brand is collapsed to the logo; its right edge must clear the indicator
+        return br.right > rr.left + 1;
+    }""")
+    check("V204-fix: the record indicator does not overlap the brand at 600px",
+          not overlap)
+    narrow.evaluate("() => document.getElementById('recordBtn').click()")  # stop
+    narrow.wait_for_timeout(500)
+    check("V204-fix: the tune button returns after recording stops",
+          narrow.evaluate("() => { const t = document.getElementById('tuneBtn');"
+                          " return t && getComputedStyle(t).display !== 'none'; }"))
+    narrow.close()
     check("V204: Pad's tune drawer starts closed",
           not pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
     pg.click("#tuneBtn"); pg.wait_for_timeout(350)
@@ -842,6 +874,20 @@ with _sp204() as _p:
     }""")
     check("V204: Flip shows the intro toast on first load",
           toast and "copies the current one" in toast, str(toast)[:50])
+    # v204-fix: the intro toast is the roomy PANEL variant — has an X and does
+    # NOT auto-dismiss (the old 6.2s timer let it vanish mid-sentence).
+    check("V204-fix: the intro toast is the panel variant with an X",
+          fp.evaluate("() => { const p = document.querySelector('.skribl-hint-panel');"
+                      " return !!(p && p.querySelector('.skribl-hint-x')); }"))
+    fp.wait_for_timeout(1200)
+    check("V204-fix: it is still visible after the old auto-dismiss window",
+          fp.evaluate("() => { const p = document.querySelector('.skribl-hint-panel');"
+                      " return !!(p && p.classList.contains('in')); }"))
+    fp.evaluate("() => document.querySelector('.skribl-hint-x').click()")
+    fp.wait_for_timeout(400)
+    check("V204-fix: clicking the X dismisses it",
+          fp.evaluate("() => { const p = document.querySelector('.skribl-hint-panel');"
+                      " return !p || !p.classList.contains('in'); }"))
     check("V204: the old crammed .flip-hint footer is gone",
           fp.evaluate("() => !document.querySelector('.flip-hint')"))
     fp.close()
