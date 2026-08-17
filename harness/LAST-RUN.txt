@@ -1,7 +1,7 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-17T17:34:40Z
+UTC timestamp           : 2026-08-17T18:29:10Z
 Host                    : Linux x86_64
-Tree SHA-256            : d067104e26c40e8fc6cbde87c2937b242e94aabce2413d7c123b513a4a616b0b
+Tree SHA-256            : f9a203851d88a41b6ef3eb4fa282a9c4411835daba4d301104e85c1a50914e05
 Git commit              : (not a git checkout)
 SKRIBL_VERSION          : v209
 Python                  : 3.12.3
@@ -10,18 +10,18 @@ SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.SGel2F3Ghg/harness.db)
+Database reset          : yes (fresh /tmp/tmp.v116CXSnYU/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_zzdbg2.py
+Command                 : harness/run_harness.sh verify_zzdbg3.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 1
-  verify_zzdbg2.py: ok — 1/1 passed
+  verify_zzdbg3.py: ok — 1/1 passed
 assertions passed: 1   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

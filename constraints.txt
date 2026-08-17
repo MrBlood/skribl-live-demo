@@ -1,4 +1,4 @@
-V# Hashed constraints for reproducible installs (review #14).
+# Hashed constraints for reproducible installs (review #14).
 #
 # Generated in the harness container: Python 3.12, linux x86_64, from a clean
 # 'pip install -r requirements.txt' followed by 'pip freeze' and 'pip download'.

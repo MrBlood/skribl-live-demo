@@ -53,9 +53,10 @@
     }, true);
   });
 
-  var panel, body;
+  var panel, body, pill, open = false;
+
   function render() {
-    if (!panel) return;
+    if (!body) return;
     var html = '';
     for (var i = 0; i < rows.length; i++) {
       // Phone-first: a fixed 150px label column pushed the value into a
@@ -68,27 +69,47 @@
     }
     body.innerHTML = html;
     body.scrollTop = body.scrollHeight;
+    if (pill) pill.textContent = 'AUDIO ' + rows.length;
+  }
+
+  function setOpen(v) {
+    open = v;
+    panel.style.display = v ? 'flex' : 'none';
+    pill.style.display = v ? 'none' : 'block';
+    if (v) render();
   }
 
   function mount() {
+    // COLLAPSED BY DEFAULT. A fixed panel across the bottom sits exactly on top
+    // of the editor's toolbar and the player's controls — you cannot tap Play
+    // through a debug overlay. So the resting state is a small pill out of the
+    // way; expand it only when it is time to screenshot.
+    pill = document.createElement('button');
+    pill.setAttribute('style', 'position:fixed;right:8px;bottom:8px;z-index:99999;'
+      + 'background:#6c5cff;color:#fff;border:0;border-radius:999px;padding:6px 12px;'
+      + 'font:700 11px ui-monospace,Menlo,monospace;box-shadow:0 2px 8px rgba(0,0,0,.5)');
+    pill.textContent = 'AUDIO 0';
+    pill.addEventListener('click', function () { setOpen(true); });
+
     panel = document.createElement('div');
     panel.setAttribute('style', 'position:fixed;left:0;right:0;bottom:0;z-index:99999;'
       + 'background:#000;color:#fff;font:10px/1.3 ui-monospace,Menlo,monospace;'
-      + 'max-height:46vh;display:flex;flex-direction:column;border-top:2px solid #6c5cff');
+      + 'max-height:60vh;display:none;flex-direction:column;border-top:2px solid #6c5cff');
     var head = document.createElement('div');
     head.setAttribute('style', 'padding:6px 8px;background:#6c5cff;color:#fff;font-weight:700;'
       + 'display:flex;justify-content:space-between;align-items:center');
     head.innerHTML = '<span>SKRIBL AUDIO DEBUG</span>';
-    var hide = document.createElement('button');
-    hide.textContent = 'hide';
-    hide.setAttribute('style', 'background:#000;color:#fff;border:0;padding:4px 10px;border-radius:6px');
-    hide.addEventListener('click', function () { panel.style.display = 'none'; });
-    head.appendChild(hide);
+    var close = document.createElement('button');
+    close.textContent = 'collapse';
+    close.setAttribute('style', 'background:#000;color:#fff;border:0;padding:4px 10px;border-radius:6px;font:700 11px ui-monospace,monospace');
+    close.addEventListener('click', function () { setOpen(false); });
+    head.appendChild(close);
     body = document.createElement('div');
-    body.setAttribute('style', 'overflow:auto;padding:6px 8px');
+    body.setAttribute('style', 'overflow:auto;padding:6px 8px;-webkit-overflow-scrolling:touch');
     panel.appendChild(head);
     panel.appendChild(body);
     document.body.appendChild(panel);
+    document.body.appendChild(pill);
     render();
   }
   if (document.readyState === 'loading') {
@@ -96,7 +117,6 @@
   } else {
     mount();
   }
-
   function describeCtx(ctx) {
     var dest = ctx.destination || {};
     return ctx.state + ' | rate ' + ctx.sampleRate
