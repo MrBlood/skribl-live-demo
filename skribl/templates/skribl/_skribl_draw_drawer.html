@@ -1,0 +1,138 @@
+{# Shared "Draw" drawer — color / background / brush / smoothing / opacity / clear+undo,
+   plus Flip-only Grid + Draw-on. Behavior-preserving extraction: each surface renders
+   its EXACT current markup and IDs, so app.js (Pad) and Flip's inline JS bind unchanged;
+   only the genuinely divergent pieces are gated on `kind` ('pad' | 'flip'). All classes
+   already live in the shared styles.css both surfaces load. Divergences captured here:
+     - root: Flip is a .draw-popout dialog; Pad is a plain .tab-panel
+     - color presets: Pad has 7 fixed dots; Flip has custom + eyedropper + recent only
+     - brush input: Pad #brushSizeRange (1–30/5); Flip #size (2–34/7) + #sizeVal
+     - smoothing: Flip carries an inline .seg-slider pill; Pad injects one in JS
+     - more-drawer: Pad has id="moreDrawer"; Flip adds Grid + Draw-on rows
+     - clear/undo: Pad #clearDrawerBtn/#clearUndoBtn; Flip #clear(+#clearLabel)/#clearUndo
+   Include with:
+     {% with kind='pad'  %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+     {% with kind='flip' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %} #}
+{% set kind = kind|default('pad') -%}
+{% if kind == 'flip' -%}
+<div class="tab-panel draw-popout" id="drawPanel" role="dialog" aria-label="Colors and brush" hidden>
+{%- else -%}
+<div class="tab-panel" id="drawPanel" hidden>
+{%- endif %}
+  <div class="color-section">
+    <span class="draw-section-label">Color</span>
+    <div class="color-group" id="colorGroup">
+      {% if kind != 'flip' -%}
+      <button type="button" class="color-dot active" style="background:#ffffff" data-color="#ffffff" aria-label="White"></button>
+      <button type="button" class="color-dot" style="background:#7c5cff" data-color="#7c5cff" aria-label="Purple"></button>
+      <button type="button" class="color-dot" style="background:#5b8cff" data-color="#5b8cff" aria-label="Blue"></button>
+      <button type="button" class="color-dot" style="background:#f4326f" data-color="#f4326f" aria-label="Pink"></button>
+      <button type="button" class="color-dot" style="background:#1bcf8f" data-color="#1bcf8f" aria-label="Green"></button>
+      <button type="button" class="color-dot" style="background:#ffae42" data-color="#ffae42" aria-label="Orange"></button>
+      <button type="button" class="color-dot" style="background:#000000; border-color:#3a4150;" data-color="#000000" aria-label="Black"></button>
+      {% endif -%}
+      <label class="color-custom-wrap" title="Custom color">
+        <span class="color-dot color-custom" id="customColorBtn" style="background:#ff6b6b;"></span>
+        <span class="color-custom-badge">+</span>
+        <input type="color" id="customColorInput" value="#ff6b6b" aria-label="Custom drawing color">
+      </label>
+      <button type="button" id="eyedropperBtn" class="eyedropper-btn" title="Pick a color from the canvas" aria-label="Pick a color from the canvas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 7l6 6"/><path d="M4 20l4.5-1L18 9.5a2.12 2.12 0 0 0-3-3L5.5 16 4 20z"/></svg>
+      </button>
+    </div>
+    <div class="recent-row" id="recentRow" hidden>
+      <span class="draw-section-label recent-label">Recent</span>
+      <div class="recent-colors" id="recentColors"></div>
+    </div>
+  </div>
+
+  <div class="bg-section">
+    <span class="draw-section-label">Background</span>
+    <div class="bg-group" id="bgGroup">
+      <button type="button" class="bg-swatch active" data-bg="#0d0f14" style="background:#0d0f14;" aria-label="Background dark"></button>
+      <button type="button" class="bg-swatch" data-bg="#ffffff" style="background:#ffffff;" aria-label="Background white"></button>
+      <button type="button" class="bg-swatch" data-bg="#1a1a2e" style="background:#1a1a2e;" aria-label="Background navy"></button>
+      <button type="button" class="bg-swatch" data-bg="#0a1628" style="background:#0a1628;" aria-label="Background midnight blue"></button>
+      <button type="button" class="bg-swatch" data-bg="#1a0a0a" style="background:#1a0a0a;" aria-label="Background dark red"></button>
+      <button type="button" class="bg-swatch" data-bg="#2d1b4e" style="background:#2d1b4e;" aria-label="Background dark purple"></button>
+      <label class="bg-custom-wrap" title="Custom background">
+        <span class="bg-swatch bg-custom" id="customBgBtn" style="background:#2d1b4e;"></span>
+        <span class="color-custom-badge">+</span>
+        <input type="color" id="customBgInput" value="#2d1b4e" aria-label="Custom canvas background">
+      </label>
+    </div>
+  </div>
+
+  <div class="draw-inline">
+    <div class="tool-row">
+      <span class="draw-section-label" id="brushSizeLabel">Brush size</span>
+      <div class="brush-slider-line">
+        {% if kind == 'flip' -%}
+        <input type="range" id="size" class="slider" min="2" max="34" value="7" step="1" aria-label="Brush size">
+        <span class="prop-val" id="sizeVal">7px</span>
+        <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:7px;height:7px"></span></span>
+        {%- else -%}
+        <input type="range" id="brushSizeRange" class="slider" min="1" max="30" value="5" step="1" aria-label="Brush size">
+        <span class="prop-val" id="brushSizeVal">5px</span>
+        <span class="brush-dot-cell"><span class="brush-dot" id="brushSizeDot" style="width:5px;height:5px"></span></span>
+        {%- endif %}
+      </div>
+    </div>
+    <div class="prop-row">
+      <span class="draw-section-label">Smoothing</span>
+      <div class="smooth-seg" id="smoothSeg">
+        {% if kind == 'flip' %}<span class="seg-slider"></span>{% endif %}
+        <button type="button" class="smooth-btn active" data-smooth="off">Off</button>
+        <button type="button" class="smooth-btn" data-smooth="low">Low</button>
+        <button type="button" class="smooth-btn" data-smooth="high">High</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-divider"></div>
+
+  {% if kind == 'flip' -%}
+  <div class="more-drawer">
+  {%- else -%}
+  <div id="moreDrawer" class="more-drawer">
+  {%- endif %}
+    <div class="prop-row">
+      <span class="draw-section-label">Opacity</span>
+      <input type="range" id="opacitySlider" class="slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
+      <span class="prop-val" id="opacityVal">100%</span>
+    </div>
+    {% if kind == 'flip' -%}
+    {# Grid moved to the tune drawer in v204 (it's a working aid, alongside
+       Speed/Onion/Motion guides). Draw-on stays here: it's a Flip-only
+       playback style, not a canvas-tuning control. #}
+    <div class="prop-row">
+      <span class="draw-section-label">Draw-on</span>
+      <button type="button" id="drawOnBtn" class="layer-toggle" role="switch" aria-checked="false" aria-label="Draw-on replay"><span class="layer-toggle-knob"></span></button>
+      <span class="prop-val grid-hint">On playback, each frame draws itself on in stroke order</span>
+    </div>
+    {%- endif %}
+
+    <div class="drawer-divider"></div>
+
+    <div class="drawer-actions">
+      {% if kind == 'flip' -%}
+      <button type="button" id="clear" class="clear-drawer-btn" title="Delete all pages (keeps music and background)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span id="clearLabel">Clear all pages</span>
+      </button>
+      <button type="button" id="clearUndo" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
+        <span>Undo</span>
+      </button>
+      {%- else -%}
+      <button type="button" id="clearDrawerBtn" class="clear-drawer-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span>Clear drawing</span>
+      </button>
+      <button type="button" id="clearUndoBtn" class="clear-drawer-btn clear-undo-btn" title="Undo clear — bring it back" aria-label="Undo clear" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
+        <span>Undo</span>
+      </button>
+      {%- endif %}
+    </div>
+  </div>
+</div>
