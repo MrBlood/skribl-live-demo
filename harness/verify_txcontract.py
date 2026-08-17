@@ -398,6 +398,175 @@ check("a teardown RELEASE failure does not mask the original 4xx",
       r.status_code == 400, str(r.status_code))
 del os.environ["SKRIBL_RATE_HMAC_KEY"]
 
+
+print("\nF2 — A FAILED POST MUST NOT COST QUOTA (v207 review, owner option (a))")
+# The decisive test the reviewer specified: SKRIBL_RATE_MAX_POSTS=1, reserve,
+# force the host commit to fail, force the release's bounded write to fail,
+# then retry IMMEDIATELY. If the slot was not really released the retry is
+# 429 and the poster is locked out for RATE_PENDING_TTL over a failure of
+# OURS. The cap is the point: the older regression above runs at 5, where one
+# stuck pending slot cannot be observed at all.
+#
+# The release failure is NOT mocked. A second connection holds a real
+# BEGIN IMMEDIATE across teardown, which is the production shape — the host
+# still holding SQLite's single write lock, because Flask runs blueprint
+# teardowns before app teardowns — and it makes the collision deterministic
+# instead of the "pending in (0, 1)" the older test had to allow.
+import sqlite3
+
+import skribl.ratelimit as _rl3
+
+_F2_POSTS = "SELECT COUNT(*) FROM skribl_rate_events WHERE bucket='posts'"
+
+
+def _f2_app(name, cap=1):
+    """A capped host on its own SQLite file, with an armable commit failure
+    that grabs the write lock on its way out."""
+    os.environ["SKRIBL_RATE_HMAC_KEY"] = "txcontract-f2-" + name
+    app = Flask("f2-" + name)
+    path = f"{tempfile.mkdtemp()}/{name}.db"
+    app.config.update(SQLALCHEMY_DATABASE_URI=f"sqlite:///{path}",
+                      SECRET_KEY="harness-f2", SKRIBL_RATE_BACKEND="db",
+                      SKRIBL_RATE_MAX_POSTS=cap, SKRIBL_RATE_MAX_ATTEMPTS=500)
+    db = SQLAlchemy()
+    db.init_app(app)
+    skribl.init_skribl(app, session=lambda: db.session)
+    skribl.models.attach_to_metadata(db.metadata)
+    with app.app_context():
+        db.create_all()
+    state = {"armed": False, "lock": None}
+
+    @app.after_request
+    def _commit(resp):
+        if resp.status_code < 500:
+            if state["armed"]:
+                state["armed"] = False
+                # Take the write lock the way an un-rolled-back host does and
+                # hold it THROUGH teardown, so the limiter's release is a
+                # genuine SQLITE_BUSY against a real second writer.
+                lk = sqlite3.connect(path, timeout=0)
+                lk.isolation_level = None
+                lk.execute("BEGIN IMMEDIATE")
+                state["lock"] = lk
+                raise RuntimeError("injected host commit failure")
+            db.session.commit()
+        return resp
+
+    @app.teardown_request
+    def _rollback(exc):
+        db.session.rollback()
+
+    def unlock():
+        if state["lock"] is not None:
+            state["lock"].execute("ROLLBACK")
+            state["lock"].close()
+            state["lock"] = None
+
+    return app, db, state, unlock
+
+
+def _f2_count(app, db, sql):
+    with app.app_context():
+        db.session.rollback()
+        return db.session.execute(sa.text(sql)).scalar()
+
+
+_a, _adb, _ast, _aunlock = _f2_app("fix")
+_ast["armed"] = True
+_t0 = _time.monotonic()
+r = _a.test_client().post("/api/skribls", json={"frames": [FRAME]})
+_f2_elapsed = _time.monotonic() - _t0
+check("F2 setup: the injected host commit failure returns 5xx",
+      r.status_code >= 500, str(r.status_code))
+check("F2 setup: the contended release fails FAST, not on pysqlite's 5 s "
+      "default", _f2_elapsed < 4, f"{_f2_elapsed:.2f}s")
+_f2_stranded = _f2_count(_a, _adb, _F2_POSTS)
+check("F2 setup: the release genuinely could not be delivered — the row is "
+      "still physically there, so this tests the real collision",
+      _f2_stranded == 1, f"{_f2_stranded} rows")
+_aunlock()
+r = _a.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("THE CONTRACT: an immediate retry after a failed post is NOT rate "
+      "limited, at SKRIBL_RATE_MAX_POSTS=1", r.status_code == 201,
+      str(r.status_code))
+check("the dead reservation was SWEPT by that retry, not merely hidden from "
+      "the count", _f2_count(_a, _adb, _F2_POSTS) == 1,
+      f"{_f2_count(_a, _adb, _F2_POSTS)} post rows remain")
+check("...and the surviving row is the retry's committed reservation, so the "
+      "sweep deleted the dead row and not a live one",
+      _f2_count(_a, _adb, _F2_POSTS + " AND state='committed'") == 1,
+      "the survivor is not a committed reservation")
+
+# Mutation pin. Same sequence, but the in-memory release record is dropped
+# before the retry — which is exactly the v208 behaviour. If this check ever
+# goes green, the contract check above has stopped proving anything.
+_b, _bdb, _bst, _bunlock = _f2_app("counterexample")
+_bst["armed"] = True
+r = _b.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("counterexample setup: the host commit failed", r.status_code >= 500,
+      str(r.status_code))
+_bunlock()
+with _b.app_context():
+    _rl3._tombstone_store(_bdb.engine).clear()
+_rl3._rate_tombstones.clear()
+r = _b.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("COUNTEREXAMPLE: with the release record dropped, the stranded pending "
+      "row DOES limit the retry — so the contract check is real",
+      r.status_code == 429, str(r.status_code))
+
+# SQLite reuses rowids, so an id-keyed tombstone whose row was deleted by
+# someone else could exempt a later, innocent reservation. The design rests on
+# _sweep_tombstones being the only deleter that can touch a tombstoned row,
+# and on it dropping the tombstone in the same breath. Pinned here because
+# whoever adds the next deleter will read this file, not that comment.
+_f2_src = (ROOT / "skribl" / "ratelimit.py").read_text()
+check("the sweep drops the tombstone for every row it deletes (rowid reuse)",
+      "store.pop(tok, None)" in _f2_src, "the sweep no longer clears the store")
+check("a release that SUCCEEDS records no tombstone — one add site only",
+      _f2_src.count("_tombstone_add(token)") == 1,
+      "tombstones are added on more than one path")
+
+# A failed SWEEP must not escape either. verify_review already pins that the
+# stale-row janitor cannot take a request down with it, and it caught exactly
+# that bug in the first draft of _sweep_tombstones — RATE_CLEANUP_BATCH was
+# read OUTSIDE the guard, and by the time the sweep runs the reservation is
+# already committed, so an escape strands the very row it came to collect.
+# What that pin does not check is the property F2 depends on: when the sweep
+# fails the tombstone must SURVIVE, or the row starts counting again and this
+# finding quietly reopens.
+class _F2Poison:
+    def __index__(self):
+        raise RuntimeError("injected sweep failure")
+
+
+# Cap 2, deliberately: at cap 1 the retry itself consumes the only slot, so a
+# third post is limited whether or not the tombstone survived and the check
+# discriminates nothing. At 2 the third post succeeds ONLY if the stranded row
+# is still uncounted.
+_c, _cdb, _cst, _cunlock = _f2_app("sweepfail", cap=2)
+_cst["armed"] = True
+_c.test_client().post("/api/skribls", json={"frames": [FRAME]})
+_cunlock()
+_f2_batch = _rl3.RATE_CLEANUP_BATCH
+_rl3.RATE_CLEANUP_BATCH = _F2Poison()
+try:
+    r = _c.test_client().post("/api/skribls", json={"frames": [FRAME]})
+finally:
+    _rl3.RATE_CLEANUP_BATCH = _f2_batch
+check("a failing sweep is CONTAINED — the retry still succeeds",
+      r.status_code == 201, str(r.status_code))
+_f2_pend = _f2_count(_c, _cdb, _F2_POSTS + " AND state='pending'")
+check("...and the dead row is still on disk, since the sweep is what deletes it",
+      _f2_pend == 1, f"{_f2_pend} pending")
+r = _c.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("...but the RELEASE survived the failed sweep — the stranded row is "
+      "still uncounted, so this post is not limited", r.status_code == 201,
+      str(r.status_code))
+_f2_pend = _f2_count(_c, _cdb, _F2_POSTS + " AND state='pending'")
+check("and the next writer collects what the failed sweep left behind — no "
+      "pending rows survive it", _f2_pend == 0, f"{_f2_pend} pending")
+del os.environ["SKRIBL_RATE_HMAC_KEY"]
+
 print("\nCOEXISTENCE — a host with its own BEGIN recipe still works")
 # v202 review, F3: a pre-existing host BEGIN listener must coexist (the
 # recognised double-BEGIN shape is tolerated), and Skribl on an AUTOCOMMIT
@@ -464,6 +633,32 @@ with A.create_app().app_context():
            .filter_by(public_id=pid).first())
     check("and is durable across app contexts — app.py committed it",
           row is not None)
+
+# ---- v208 (v207 review F1): the AUTOCOMMIT refusal, against a REAL engine ----
+# The v202/v203 guard checked `dialect.isolation_level`, which SQLAlchemy 2.x
+# leaves None for `create_engine(..., isolation_level="AUTOCOMMIT")` — the
+# configured mode lives on `dialect._on_connect_isolation_level`. So the guard
+# never fired against the exact configuration it was written to refuse. The
+# earlier "AUTOCOMMIT" regression built a host with its own explicit-BEGIN
+# listener, which is a different shape and never exercised this. Build the real
+# thing (no faked attributes) and assert the documented RuntimeError.
+print("\nAUTOCOMMIT — a REAL create_engine(isolation_level='AUTOCOMMIT') is refused")
+import sqlalchemy as _sa
+_ac = _sa.create_engine("sqlite:///:memory:", isolation_level="AUTOCOMMIT")
+check("SQLAlchemy reports the AUTOCOMMIT request where the guard must look",
+      str(getattr(_ac.dialect, "_on_connect_isolation_level", None)).upper() == "AUTOCOMMIT",
+      f"dialect.isolation_level={getattr(_ac.dialect, 'isolation_level', None)!r} "
+      f"_on_connect_isolation_level={getattr(_ac.dialect, '_on_connect_isolation_level', None)!r}")
+_refused = False
+try:
+    skribl.models._install_sqlite_fk(_ac)
+except RuntimeError as _e:
+    _refused = "AUTOCOMMIT" in str(_e)
+check("Skribl REFUSES a real AUTOCOMMIT SQLite engine with the documented RuntimeError", _refused,
+      "the guard installed its transaction listeners on an autocommit engine")
+_ok_engine = _sa.create_engine("sqlite:///:memory:")
+check("...and still accepts a default (transactional) SQLite engine",
+      skribl.models._install_sqlite_fk(_ok_engine) is True)
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

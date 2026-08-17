@@ -127,12 +127,19 @@ def register_routes(bp, *, index_route=False):
         blueprint teardowns before app teardowns — so the limiter's write can
         collide with the host's still-open SQLite transaction. That collision
         is made FAST (bounded busy_timeout on the limiter's SQLite sessions)
-        and CONTAINED (caught, logged, row left pending for RATE_PENDING_TTL
-        reconciliation) rather than divined away: introspecting the host
-        session's transaction state under autobegin is guesswork, a bounded
-        failed write is mechanics. Quota can leak only downward, briefly,
-        only while the limiter's own store is failing or locked, and the log
-        line says which (v202 review, F1+F2).
+        and CONTAINED (caught, logged) rather than divined away: introspecting
+        the host session's transaction state under autobegin is guesswork, a
+        bounded failed write is mechanics. Quota can leak only downward,
+        briefly, only while the limiter's own store is failing or locked, and
+        the log line says which (v202 review, F1+F2).
+
+        The RELEASE side no longer costs the poster that wait (v207 review F2,
+        owner decision (a)): when the delete cannot be delivered the limiter
+        records the release in memory and stops counting the row immediately,
+        deleting it on the next request that can get a writer. The exception
+        still arrives here and is still logged — the degradation is now a
+        deferred delete rather than a held slot. See ratelimit._tombstone_store
+        for the scope this does and does not cover.
         """
         reservation = g.pop("_skribl_post_reservation", None)
         if reservation is None:

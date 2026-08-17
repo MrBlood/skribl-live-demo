@@ -317,17 +317,143 @@ def _db_lock_identity(s, key_hash):
     s.execute(sa.text("SELECT pg_advisory_xact_lock(:n)"), {"n": n})
 
 
+# ---- releases that could not be delivered --------------------------------
+# v207 review F2, owner decision: option (a) — a failed post must not also
+# cost you quota.
+#
+# THE SHAPE OF THE BUG. The failure path already RELEASES the slot: on a
+# failed request routes._finish_parked_reservation calls _rate_release_post,
+# which deletes the pending row. What fails is the DELIVERY of that delete.
+# Flask runs blueprint teardowns before app teardowns, so when the host's
+# commit fails its rollback has not run yet and it still holds SQLite's single
+# write lock; the limiter's bounded busy_timeout (see _bounded) turns the
+# collision into a fast OperationalError, teardown logs it, and the row stays
+# 'pending' — counting against that poster until RATE_PENDING_TTL. With
+# SKRIBL_RATE_MAX_POSTS=1 that is a full lockout, for two minutes, because a
+# post of OURS failed.
+#
+# WHY NOT JUST RETRY THE WRITE. The write is failing precisely because another
+# writer holds the file. A second attempt is the same coin flip, so it cannot
+# make immediate retry MECHANICALLY true — which is the contract the owner
+# chose. The release is therefore recorded where no writer is needed, in
+# process memory, and _db_rate_count() subtracts tombstoned ids from the
+# count. The row itself is deleted by the next request that can get the
+# writer (_sweep_tombstones), so the store is a deferral, not a shadow ledger.
+#
+# SCOPE, stated rather than implied. This makes immediate retry mechanically
+# true WITHIN THE PROCESS THAT TOOK THE RESERVATION — the same scope the
+# reservation itself claims (_rate_reserve_post: internally correct
+# single-process, explicitly not distributed, #13). With several workers on
+# one SQLite file another worker still counts the row until it is swept or
+# ages out, i.e. exactly the v208 behaviour: never worse, better in the
+# single-process case that is the SQLite deployment. Entries older than
+# RATE_PENDING_TTL are dropped, because past that the row has stopped
+# counting as pending and the tombstone has nothing left to do.
+#
+# INVARIANT THIS DEPENDS ON — read before adding a deleter. RateEvent.id is a
+# plain INTEGER PRIMARY KEY, i.e. SQLite's rowid, and SQLite REUSES rowids once
+# the highest row is gone. An id-keyed tombstone whose row had vanished could
+# therefore silently exempt somebody else's new reservation. It cannot happen
+# today because a tombstoned row has exactly one deleter: _sweep_tombstones,
+# which drops the tombstone in the same breath. The stale janitor cannot reach
+# it inside the tombstone's life (it deletes rows older than the one-hour
+# window; tombstones die at RATE_PENDING_TTL, 120 s), and a release that
+# SUCCEEDS never tombstones. Any new code that deletes pending rows must drop
+# the matching tombstone too, or key the store on something SQLite does not
+# recycle. Pinned in verify_txcontract.
+_rate_tombstones = {}
+_tombstone_lock = Lock()
+
+
+def _tombstone_store(engine=None):
+    """The dead-reservation map for this app/engine.
+
+    Resolved exactly like _rate_sessionmaker — app-local first, engine-keyed
+    module fallback — so two Skribl apps in one process never subtract each
+    other's ids (row ids are only unique within a database).
+    """
+    if engine is None:
+        engine = session().get_bind()
+    try:
+        ext = current_app.extensions.get("skribl")
+    except RuntimeError:            # outside any application context
+        ext = None
+    if ext is not None:
+        store = ext.get("rate_tombstones")
+        if store is None or ext.get("rate_tombstone_engine") is not engine:
+            store = ext["rate_tombstones"] = {}
+            ext["rate_tombstone_engine"] = engine
+        return store
+    return _rate_tombstones.setdefault(id(engine), {})
+
+
+def _tombstone_add(token, engine=None):
+    store = _tombstone_store(engine)
+    with _tombstone_lock:
+        store[token] = time.monotonic()
+
+
+def _tombstone_ids(store):
+    """Live tombstones, pruning any that have outlived the pending TTL."""
+    now = time.monotonic()
+    with _tombstone_lock:
+        for tok, at in list(store.items()):
+            if now - at > RATE_PENDING_TTL:
+                del store[tok]
+        return list(store)
+
+
+def _sweep_tombstones(s):
+    """Delete tombstoned rows now that this session HAS a writer.
+
+    Best-effort and bounded, for the same reason the stale-row janitor below
+    is: this runs inside somebody's request, and a janitor must never take the
+    tenant's keys down with it. A failed sweep keeps the tombstones, so the
+    count stays correct and the next request tries again.
+
+    EVERYTHING is inside the guard, including reading RATE_CLEANUP_BATCH and
+    resolving the store. An earlier draft sliced by RATE_CLEANUP_BATCH before
+    the try and verify_review's injected-cleanup-failure pin caught it
+    immediately — the reservation is already COMMITTED by the time we get
+    here, so an exception escaping this function strands the very row it came
+    to collect.
+    """
+    try:
+        store = _tombstone_store(s.get_bind())
+        dead = _tombstone_ids(store)[:RATE_CLEANUP_BATCH]
+        if not dead:
+            return
+        s.query(RateEvent).filter(RateEvent.id.in_(dead)).delete(
+            synchronize_session=False)
+        s.commit()
+    except Exception:
+        try:
+            s.rollback()
+        except Exception:
+            pass
+        return
+    with _tombstone_lock:
+        for tok in dead:
+            store.pop(tok, None)
+
+
 def _db_rate_count(s, bucket, key_hash):
     # Committed rows count for the whole window; pending ones only while they are
     # still plausibly in flight, so an abandoned reservation ages out fast.
     pending_cutoff = datetime.now(timezone.utc) - timedelta(seconds=RATE_PENDING_TTL)
-    return (s.query(RateEvent)
-            .filter(RateEvent.bucket == bucket,
-                    RateEvent.key_hash == key_hash,
-                    RateEvent.created_at >= _rate_cutoff(),
-                    sa.or_(RateEvent.state == "committed",
-                           RateEvent.created_at >= pending_cutoff))
-            .count())
+    q = (s.query(RateEvent)
+         .filter(RateEvent.bucket == bucket,
+                 RateEvent.key_hash == key_hash,
+                 RateEvent.created_at >= _rate_cutoff(),
+                 sa.or_(RateEvent.state == "committed",
+                        RateEvent.created_at >= pending_cutoff)))
+    # A released-but-undeletable reservation is not in flight and must not be
+    # charged to anyone (F2). Only ever post reservations, so this is a no-op
+    # for the attempts bucket.
+    dead = _tombstone_ids(_tombstone_store(s.get_bind()))
+    if dead:
+        q = q.filter(RateEvent.id.notin_(dead))
+    return q.count()
 
 
 def _db_rate_limited(ip, kind):
@@ -367,6 +493,9 @@ def _db_rate_reserve_post(ip):
             return None
         s.commit()
         token = row.id
+        # This session has a writer, which is the thing the failed release
+        # lacked — so pay off any deferred releases here (F2).
+        _sweep_tombstones(s)
         # Opportunistic cleanup, BOUNDED. An unbounded delete inside a user
         # request can hold locks and spike latency for whoever happens to
         # trigger it after a quiet period. Capped per request; the remainder is
@@ -399,10 +528,20 @@ def _db_rate_reserve_post(ip):
 def _db_rate_release_post(ip, token):
     if token is None:
         return
-    with _rate_sessionmaker()() as s:
-        _bounded(s)
-        s.query(RateEvent).filter(RateEvent.id == token).delete()
-        s.commit()
+    try:
+        with _rate_sessionmaker()() as s:
+            _bounded(s)
+            s.query(RateEvent).filter(RateEvent.id == token).delete()
+            s.commit()
+    except Exception:
+        # The delete could not be delivered — on SQLite, almost always because
+        # the host still holds the write lock on the failure path. The slot is
+        # released in memory instead (F2, option (a)); the row goes with the
+        # next sweep. RE-RAISED, not swallowed: teardown's log line saying
+        # which degradation happened is load-bearing (v202 review, F1+F2), and
+        # the caller already contains it.
+        _tombstone_add(token)
+        raise
 
 
 def _db_rate_commit_post(token):

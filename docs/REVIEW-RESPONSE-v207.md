@@ -49,7 +49,28 @@ Owner-driven, from device testing of v206.
   (Match Drawing Time, player controls) filled.
 - Phone fit: every interactive control's real rectangle measured on Pad,
   Flip, Player at 375/390 — each drawer open in turn + music/fine-tune —
-  nothing off-screen, no scroll, no same-row overlap. 24 pins.
+  no right-edge overflow, no horizontal scroll, no same-row overlap. 24 pins.
+  (Scope note per the v207 review: this is a right-edge + same-row horizontal
+  audit, not a proof of full on-screen placement — see the response below.)
 
 Gates: ux 259, visual 76, parity 115, cssplit 17, pages 44, tips 43, lib 8,
 docs 34. Demo fixtures (harness/fixtures/) ship in this seal.
+
+---
+
+## Developer review of v207 (received after seal) — response
+
+The reviewer's split is accepted as stated: **UI/device release: strong
+candidate. Integration contract fully closed: not yet.** Seal evidence
+(177/177, v207 stamp, compileall, node --check, 2,310/60/1, PG 14/14) was
+independently confirmed by the reviewer.
+
+| # | Finding | Status | What was done |
+|---|---|---|---|
+| F1 | P1 — SQLite AUTOCOMMIT guard checked the wrong SQLAlchemy field | **CLOSED (unsealed, next build)** | Reviewer exactly right and it was **dead code**: SA 2.x leaves `dialect.isolation_level` None for a real `create_engine(..., isolation_level="AUTOCOMMIT")`; the mode lives on `dialect._on_connect_isolation_level`. Guard now checks both. Regression builds a REAL AUTOCOMMIT engine (no faked attribute) and asserts the RuntimeError; a default engine is still accepted. verify_txcontract 34/34. |
+| F4 | P2 — Record with Tune open stranded an open drawer with a hidden opener | **CLOSED (unsealed, next build)** | Reproduced. `editor_tune.js` exposes `window._skriblClosePadTune`; `beginRecording()` calls it first. Pinned exactly as specified: no `.open`, `aria-hidden="true"`, `aria-expanded="false"`, and stop does not reopen. ⚑ +23 B player-JS (`?.()` call), ratchet 142,344→142,370, flagged. |
+| F2 | P1 — failed SQLite DB-backed POST can consume quota until pending TTL | **OPEN — needs owner decision** | The reviewer is right that the current regression uses a cap large enough to hide it; the decisive test is `SKRIBL_RATE_MAX_POSTS=1` → reserve → force host-commit failure → force the bounded cleanup failure → immediate retry. Two honest contracts: (a) make immediate retry mechanically true (release the slot on failure even if it means a second bounded write attempt), or (b) document that a failed SQLite DB-backed request may hold quota until pending-TTL. **This is a contract choice, not a bug fix, so it is not decided unilaterally here.** Recommend (a) — a user whose post failed should not also be told "slow down". |
+| F3 | P1 — Pad replay's Web Audio unlock is fire-and-forget (iOS race) | **OPEN — real, deferred to next session** | Confirmed in `startWebAudioLoop()`: `audioCtx.resume()` not awaited; the ordinary Play path starts music from inside `clearAndRestore()`, which on the async `Image.onload` branch runs after the click gesture returns — the same unlock-timing class the v203 player fix (A1) closed. The fix shape is known (resume synchronously from the Play gesture, retain the Promise, start the loop when both restore + unlock resolve) and the A1 code is the template. Not attempted at end-of-session; needs the same care as A1 plus the regression the reviewer specifies (force the async branch, instrument resume, assert it starts before onload). Real iPhone remains the hardware check. |
+| — | Phone-audit claim overstated | **ACCEPTED — wording corrected** | Reviewer is right: the audit is a strong **right-edge + same-row horizontal** fit check, not a proof that "every interactive rectangle is on-screen". It does not test left<0, vertical overflow, overflow-hidden ancestor clipping, off-row collisions, or pseudo-element hit-area overlap. The claim is narrowed here and in START-HERE; extending the checker is a follow-up. |
+
+**Net for the next session:** F2 (owner decision), F3 (Pad audio unlock — the last iPhone item), and optionally widening the phone audit. F1 + F4 are done in the working tree and will seal as v208 with the pending ⚑ ratchet raise.

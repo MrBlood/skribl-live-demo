@@ -488,7 +488,30 @@ with sync_playwright() as sp:
     # prior approved raises (A1 audio, grid hook) — small, functional,
     # user-protecting, golfed first. History of the number: 141,730 / 141,824
     # lows after real cuts; +430 (A1) / +60 (grid hook) / +119 (this) raised.
-    BYTES_RATCHET, BYTES_TARGET = 142_344, 153_600
+    # 142,370 = 142,344 (v206) + 23 B: v208's F4 fix — beginRecording() closes
+    # the Pad tune drawer via `window._skriblClosePadTune?.()` (optional
+    # chaining; the hook itself lives in editor-only editor_tune.js). Golfed to
+    # one call. APPROVED by the owner in the v209 session, with the three
+    # prior raises (A1 audio, grid hook, cross-load guard).
+    # 142,880 = 142,370 (v208) + 510 B: v209's F3 fix — Pad replay's Web Audio
+    # unlock. resume() is now called INSIDE the Play gesture (unlockWebAudio),
+    # its promise is retained, and the loop source starts only once that
+    # resolves; a generation counter stops a late start overtaking a stop.
+    # Golfed from 623 B (one closure instead of a second top-level function,
+    # the file's own dense one-liner style). APPROVED by the owner at the v209
+    # seal. Same category as the four prior approved raises and, specifically,
+    # the same FIX as A1 (+430 B) applied to the editor replay A1 missed.
+    #
+    # AND THE CHEAPER ANSWER, MEASURED, FOR WHOEVER TAKES THE NEXT PASS: the
+    # whole Web Audio loop block (_waLoopSource … webAudioLoopSongTime) is
+    # ~2,060 code bytes and is EDITOR-ONLY — startWebAudioLoop, playMusicLooped
+    # and startLoopPreview are reached from the Play button and the music
+    # drawer, never from the player, which has its own pa* audio path. Moving
+    # it to an editor-only file the way editor_tune.js went would CUT roughly
+    # four times this raise. Not done here on purpose: an audio fix and an
+    # externalisation in one pass makes a silent replay unattributable. Watch
+    # stopWebAudioLoop — 8 call sites, several on teardown paths.
+    BYTES_RATCHET, BYTES_TARGET = 142_880, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

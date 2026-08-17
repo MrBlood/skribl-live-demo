@@ -48,6 +48,11 @@
     if (open) window._skriblSyncPadGrid();
   }
   if (tuneBtnEl) tuneBtnEl.addEventListener('click', function () { setPadTune(!padTuneOpen()); });
+  // v208 (v207 review F4): let app.js close the drawer when recording starts.
+  // Recording hides the Tune BUTTON (it is meaningless mid-capture), so a
+  // drawer left open would have no visible opener — an expanded panel with no
+  // way to see how it got there. beginRecording() calls this first.
+  window._skriblClosePadTune = function () { setPadTune(false); };
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && padTuneOpen()) setPadTune(false);
   });

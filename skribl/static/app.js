@@ -1193,6 +1193,10 @@ let recTimerInterval = null;
 // point keeps start:true, so on replay it draws as a fresh pen-down dot rather
 // than a line connecting from wherever the previous take ended.
 function beginRecording(continueTake) {
+  // v208 (v207 review F4): close the Pad tune drawer before recording. The
+  // recording CSS hides #tuneBtn; leaving #tuneShell open would strand an
+  // expanded drawer with no visible opener. Editor-only hook (player has none).
+  window._skriblClosePadTune?.();
   if (!continueTake) {
     // Fresh Skribl: snapshot whatever is already on the canvas as the static
     // base image, and start the stroke list empty.
@@ -1490,6 +1494,9 @@ playBtn.addEventListener('click', () => {
   if (playing) { stopPlayback(); return; }
   playTimeline = buildPlaybackTimeline();
   if (!playTimeline.length) return;
+  unlockWebAudio();   // F3: inside the gesture — clearAndRestore below may not
+                      // call back until an Image decode has resolved, long
+                      // after iOS stops treating this as a user activation.
   playing = true;
   playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span class="btn-label">Stop</span>';
   playBtn.classList.add('playing');
@@ -3291,23 +3298,49 @@ function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBu
 function stopWebAudioLoop() {
   if (_waLoopSource) { try { _waLoopSource.stop(); } catch (e) {} try { _waLoopSource.disconnect(); } catch (e) {} _waLoopSource = null; }
 }
+// F3 (v207 review): the unlock used to be `resume()` with the Promise thrown
+// away, and Pad's ordinary Play reaches here from INSIDE clearAndRestore's
+// Image.onload callback — i.e. after the click gesture has already returned.
+// iOS Safari can still report 'suspended' until resume's promise resolves, so
+// start() ran against a context that never unlocked and the replay was silent.
+// That is precisely the class the v203 player fix (A1) closed for the player;
+// the editor replay never got it. Same shape as A1 here: resume is called
+// INSIDE the gesture (unlockWebAudio, from the Play handler), the promise is
+// RETAINED, and the source starts only once it resolves. The drawing does not
+// wait — it is already running from clearAndRestore — only the audio start is
+// gated, and nothing is swallowed by a silent catch.
+let _waUnlock = null;      // resume() promise captured in the click gesture
+let _waGen = 0;            // a stop during unlock must not be overtaken by a late start
+function unlockWebAudio() {
+  if (!audioCtx || audioCtx.state !== 'suspended') return null;
+  try { const p = audioCtx.resume(); return (_waUnlock = (p && p.then) ? p : null); }
+  catch (e) { console.warn('skribl: resume threw', e); return null; }
+}
 function startWebAudioLoop() {
   if (!audioCtx || !currentAudioBuffer) return false;
   const buf = buildLoopAudioBuffer();
   if (!buf) return false;
   stopWebAudioLoop();
-  if (audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
-  const src = audioCtx.createBufferSource();
-  src.buffer = buf;
-  src.loop = true;
-  src.loopStart = 0;
-  src.loopEnd = buf.duration;
-  src.connect(audioCtx.destination);
-  try { src.start(); } catch (e) { return false; }
-  _waLoopSource = src;
-  _waLoopStartCtx = audioCtx.currentTime;
-  _waLoopDuration = buf.duration;
-  return true;
+  const gen = ++_waGen, go = () => {
+    if (gen !== _waGen) return false;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = buf.duration;
+    src.connect(audioCtx.destination);
+    try { src.start(); } catch (e) { return false; }
+    _waLoopSource = src; _waLoopStartCtx = audioCtx.currentTime; _waLoopDuration = buf.duration;
+    return true;
+  };
+  if (audioCtx.state !== 'suspended') return go();
+  // Suspended: prefer the promise captured in the gesture; if there is none
+  // (Preview Loop calls this synchronously from its OWN click) resume here,
+  // which is still inside that gesture. Consumed either way — a promise that
+  // resolved for an earlier play says nothing about a context iOS has since
+  // re-suspended.
+  const p = _waUnlock || unlockWebAudio();
+  _waUnlock = null;
+  if (p && p.then) p.then(go, (e) => { console.warn('skribl: unlock failed', e); go(); });
+  else go();
+  return true;   // the Web Audio path IS the path taken; only its start defers
 }
 // Current position within the looping clip, mapped onto the song timeline.
 function webAudioLoopSongTime() {

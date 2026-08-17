@@ -797,6 +797,9 @@ with sync_playwright() as _p:
     check("no JS errors drawing across the edge", not _errs, "; ".join(_errs[:2]))
     _b.close()
 
+
+
+
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)
 print("\nV204 PINS — Pad tune drawer, Grid overlay, Flip intro toast")
@@ -879,6 +882,19 @@ with _sp204() as _p:
         pg.click("#gridBtn"); pg.wait_for_timeout(150)
     pg.click("#tuneBtn"); pg.wait_for_timeout(350)
 
+    # v208 (v207 review F4): starting recording with the Tune drawer OPEN must
+    # close it and sync ARIA — recording hides the Tune button, so an open
+    # drawer would have no visible opener. And stopping must NOT reopen it.
+    pg.click("#tuneBtn"); pg.wait_for_timeout(300)
+    check("F4 setup: tune drawer is open before Record", pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
+    pg.click("#recordBtn"); pg.wait_for_timeout(350)
+    _st = pg.evaluate("() => { const sh = document.getElementById('tuneShell'), b = document.getElementById('tuneBtn'); return { open: sh.classList.contains('open'), ariaHidden: sh.getAttribute('aria-hidden'), expanded: b.getAttribute('aria-expanded') }; }")
+    check("F4: Record closes the tune drawer (no .open)", not _st["open"], str(_st))
+    check("F4: ...shell aria-hidden='true'", _st["ariaHidden"] == "true", str(_st))
+    check("F4: ...button aria-expanded='false'", _st["expanded"] == "false", str(_st))
+    pg.click("#recordBtn"); pg.wait_for_timeout(350)   # stop
+    check("F4: stopping recording does NOT reopen the drawer",
+          not pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
     # Flip undo/redo are now rounded-square tiles, not circles.
     fpx = _b.new_page(viewport={"width": 900, "height": 800})
     fpx.goto(BASE + "/flip", wait_until="load"); fpx.wait_for_timeout(700)
@@ -1370,6 +1386,19 @@ check("A1: play() gates audio start on the RESOLVED resume promise",
 check("A1: decode/fetch failures are no longer silent",
       "music decode failed" in _appjs and "music fetch failed" in _appjs)
 
+# F3 (v207 review): the same unlock-timing class as A1, in the EDITOR replay
+# A1 never touched. Pad's Play calls clearAndRestore, which on a first play
+# after recording goes through `new Image()` + onload — so anything the
+# callback does happens AFTER the click gesture has returned, and iOS will not
+# unlock an AudioContext there. Not a source pin: drive the real button and
+# watch the ORDER, because the whole bug was that the code looked right and
+# ran late.
+#
+# The page is made to behave like iOS: state reports 'suspended' until a
+# resume() promise resolves. Headless Chromium starts contexts running, so
+# without this the branch under test is never entered — and a green light for
+# a path that was never taken is what F1 was.
+
 # A2: at the widths that used to clip, the ring must be sampleable INSIDE the
 # wrap's left and right edges. Computed-style + geometry, not screenshots:
 # an inset shadow is unclippable by construction, so pin the construction.
@@ -1397,6 +1426,96 @@ with _sp() as _p:
               f"left {_probe['left']:.1f}, right {_probe['right']:.1f}, "
               f"vw {_probe['vw']}" if _probe else "no .canvas-wrap")
         _pg.close()
+    _b.close()
+
+with _sp() as _p3:
+    _b = _p3.chromium.launch()
+    _F3_INIT = """
+    window.__ord = [];
+    const AC = window.AudioContext || window.webkitAudioContext;
+    let unlocked = false;
+    Object.defineProperty(AC.prototype, 'state',
+      { configurable: true, get() { return unlocked ? 'running' : 'suspended'; } });
+    const _resume = AC.prototype.resume;
+    AC.prototype.resume = function () {
+      window.__ord.push('resume');
+      return _resume.call(this).then(() => { unlocked = true; });
+    };
+    const _draw = CanvasRenderingContext2D.prototype.drawImage;
+    CanvasRenderingContext2D.prototype.drawImage = function (src) {
+      if (src instanceof HTMLImageElement) window.__ord.push('base-image-painted');
+      return _draw.apply(this, arguments);
+    };
+    // clearAndRestore caches the decoded base image and paints SYNCHRONOUSLY on
+    // every later call, so by the time we press Play the async branch would be
+    // gone — and the bug with it. Reporting complete=false keeps the cache
+    // fast-path shut, which is how the reviewer specified forcing this: onto
+    // the Image.onload branch, not around it.
+    Object.defineProperty(HTMLImageElement.prototype, 'complete',
+      { configurable: true, get() { return false; } });
+    const _start = AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start = function () {
+      window.__ord.push('loop-started:' + this.context.state);
+      return _start.apply(this, arguments);
+    };
+    """
+    _f3 = _b.new_page(viewport={"width": 1280, "height": 900})
+    _f3.add_init_script(_F3_INIT)
+    _f3.goto(BASE + "/", wait_until="load")
+    _f3.wait_for_timeout(700)
+    _f3.click("#musicOpenBtn")
+    _f3.wait_for_timeout(300)
+    _f3.set_input_files("#musicInput",
+                        {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD})
+    _f3.wait_for_timeout(1500)
+    _f3.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }")
+    _f3.wait_for_timeout(200)
+
+
+    def _f3_stroke(pg, y):
+        box = pg.evaluate("() => { const r = document.getElementById('canvas')"
+                          ".getBoundingClientRect(); return {x: r.x, y: r.y}; }")
+        pg.mouse.move(box["x"] + 60, box["y"] + y)
+        pg.mouse.down()
+        pg.mouse.move(box["x"] + 200, box["y"] + y, steps=8)
+        pg.mouse.up()
+
+
+    # Drawing AUTO-STARTS the take (there is no separate arm step), so two
+    # strokes and one Stop is a complete recording with a baseSnapshot behind
+    # it — which is what sends Play through clearAndRestore's Image branch.
+    _f3_stroke(_f3, 60)
+    _f3.wait_for_timeout(400)
+    _f3_stroke(_f3, 120)
+    _f3.wait_for_timeout(300)
+    _f3.click("#recordBtn")          # Stop
+    _f3.wait_for_timeout(600)
+    _f3.evaluate("() => { window.__ord = []; "
+                 "document.getElementById('playBtn').addEventListener('click', "
+                 "() => window.__ord.push('gesture-returned')); }")
+    _f3.click("#playBtn")
+    _f3.wait_for_timeout(1800)
+    _ord = _f3.evaluate("() => window.__ord")
+    _ix = lambda tag: next((i for i, e in enumerate(_ord) if e.startswith(tag)), -1)
+    _i_resume, _i_gesture = _ix("resume"), _ix("gesture-returned")
+    _i_paint, _i_loop = _ix("base-image-painted"), _ix("loop-started")
+
+    # The listener above is registered AFTER app.js's, so on the same element it
+    # runs last in the same dispatch: anything before it happened synchronously
+    # inside the gesture.
+    check("F3: the replay really took the async Image.onload branch — the base "
+          "image is painted AFTER the click handler returned (else this proves "
+          "nothing)", _i_paint > _i_gesture >= 0, str(_ord))
+    check("F3: resume() begins SYNCHRONOUSLY inside the Play gesture, before the "
+          "canvas restore calls back", 0 <= _i_resume < _i_gesture, str(_ord))
+    check("F3: ...and before the base image paints, which is where the old code "
+          "reached resume()", 0 <= _i_resume < _i_paint, str(_ord))
+    check("F3: the loop starts only once the context is genuinely running — no "
+          "start() against a suspended context",
+          _i_loop > 0 and _ord[_i_loop].endswith(":running"), str(_ord))
+    check("F3: and it does start — the unlock defers the loop, it does not lose it",
+          _i_loop > _i_resume, str(_ord))
+    _f3.close()
     _b.close()
 
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins

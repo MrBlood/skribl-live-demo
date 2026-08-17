@@ -414,7 +414,15 @@ def _install_sqlite_fk(bind):
     _FK_ENGINES.add(engine)
     if getattr(getattr(engine, "dialect", None), "name", None) != "sqlite":
         return False                     # PostgreSQL and friends: nothing to do
-    if str(getattr(engine.dialect, "isolation_level", "") or "").upper() == "AUTOCOMMIT":
+    # v208 (v207 review F1): SQLAlchemy 2.x does NOT surface the configured
+    # mode on `dialect.isolation_level` — that stays None for a real
+    # `create_engine(..., isolation_level="AUTOCOMMIT")`. The configured
+    # on-connect mode lives on `dialect._on_connect_isolation_level`. The old
+    # single check therefore never fired against the exact configuration it
+    # was written to refuse: the guard was dead code. Check both locations.
+    _iso = (getattr(engine.dialect, "_on_connect_isolation_level", None)
+            or getattr(engine.dialect, "isolation_level", None) or "")
+    if str(_iso).upper() == "AUTOCOMMIT":
         # The host EXPLICITLY chose driver-level autocommit (v202 review, F3).
         # Installing the explicit-BEGIN recipe would contradict that choice —
         # and Skribl's savepoint contract cannot hold without real
