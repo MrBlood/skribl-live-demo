@@ -3296,6 +3296,15 @@ let _waLoopStartCtx = 0;   // audioCtx.currentTime when the loop started
 let _waLoopDuration = 0;   // loop clip length (seconds)
 function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBuffer({ currentAudioBuffer: currentAudioBuffer, audioCtx: audioCtx, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
 function stopWebAudioLoop() {
+  // Bump the generation FIRST (v209 review F1). v209 introduced _waGen with the
+  // comment "a stop during unlock must not be overtaken by a late start" and
+  // then never incremented it here — so Play, Stop, then a resume that resolves
+  // afterwards still started the loop, because the deferred go() saw its
+  // generation unchanged. The counter existed; the property did not. Clearing
+  // _waUnlock with it stops a stale promise from a previous Play standing in
+  // for the next one's unlock.
+  _waGen++;
+  _waUnlock = null;
   if (_waLoopSource) { try { _waLoopSource.stop(); } catch (e) {} try { _waLoopSource.disconnect(); } catch (e) {} _waLoopSource = null; }
 }
 // F3 (v207 review): the unlock used to be `resume()` with the Promise thrown
@@ -3320,9 +3329,17 @@ function startWebAudioLoop() {
   if (!audioCtx || !currentAudioBuffer) return false;
   const buf = buildLoopAudioBuffer();
   if (!buf) return false;
+  // Take the gesture-captured unlock BEFORE stopWebAudioLoop(), which clears
+  // _waUnlock to kill stale promises (F1). Without this, the Play handler's
+  // in-gesture resume would be discarded here and re-requested outside the
+  // gesture — silently undoing F3 while every ordering pin still passed.
+  const pending = _waUnlock;
   stopWebAudioLoop();
   const gen = ++_waGen, go = () => {
-    if (gen !== _waGen) return false;
+    // 'running', not merely 'not suspended': a source begun on a context that
+    // is closed or still unlocking is silence that reports success, which is
+    // the whole v210 player lesson applied to the editor path too.
+    if (gen !== _waGen || !audioCtx || audioCtx.state !== 'running') return false;
     const src = audioCtx.createBufferSource();
     src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = buf.duration;
     src.connect(audioCtx.destination);
@@ -3330,16 +3347,32 @@ function startWebAudioLoop() {
     _waLoopSource = src; _waLoopStartCtx = audioCtx.currentTime; _waLoopDuration = buf.duration;
     return true;
   };
-  if (audioCtx.state !== 'suspended') return go();
+  if (audioCtx.state === 'running') return go();
   // Suspended: prefer the promise captured in the gesture; if there is none
   // (Preview Loop calls this synchronously from its OWN click) resume here,
   // which is still inside that gesture. Consumed either way — a promise that
   // resolved for an earlier play says nothing about a context iOS has since
   // re-suspended.
-  const p = _waUnlock || unlockWebAudio();
+  const p = pending || unlockWebAudio();
   _waUnlock = null;
-  if (p && p.then) p.then(go, (e) => { console.warn('skribl: unlock failed', e); go(); });
-  else go();
+  if (p && p.then) {
+    p.then(go, (e) => {
+      // A REJECTED unlock must not start anyway (v209 review F2). v209 logged
+      // the failure and then called go() regardless, against a context still
+      // suspended — silence that reports success, with the native <audio>
+      // fallback already suppressed by the `true` below. Invalidate instead,
+      // so nothing starts and a later Play gets a clean generation.
+      console.warn('skribl: unlock failed', e);
+      _waGen++;
+    });
+  } else if (p) {
+    go();          // a non-promise resume (older WebKit): already synchronous
+  } else {
+    // No promise and no resume: the context could not be asked to unlock, so
+    // there is nothing to wait for and nothing to start.
+    _waGen++;
+    return false;
+  }
   return true;   // the Web Audio path IS the path taken; only its start defers
 }
 // Current position within the looping clip, mapped onto the song timeline.
@@ -4129,13 +4162,17 @@ function showPlayerError(msg) {
   // live monitor. We own a GainNode (mute) and start the source at a phase
   // offset from the drawing clock so play/resume/seek stay aligned under the
   // replay. The decoded source + trim/crossfade state are set by loadSkribl().
-  let paSource = null, paGain = null, paBuffer = null;
+  let paSource = null, paGain = null, paBuffer = null, paGen = 0;
   function paLoopBuffer() {
     // Build once and cache — the player's trims/crossfade don't change post-load.
     if (!paBuffer) { try { paBuffer = buildLoopAudioBuffer(); } catch (e) { paBuffer = null; } }
     return paBuffer;
   }
   function paStop() {
+    // Bump the generation FIRST: a start awaiting its unlock must not land
+    // after the user stopped (v209 review F1 — the counter existed in the Pad
+    // path but nothing ever incremented it on stop).
+    paGen++;
     if (paSource) {
       try { paSource.stop(); } catch (e) {}
       try { paSource.disconnect(); } catch (e) {}
@@ -4145,22 +4182,56 @@ function showPlayerError(msg) {
   // Start the loop bed aligned to a drawing-elapsed position (ms). Returns false
   // (a no-op) if audio isn't decoded yet — the drawing still plays and a later
   // start (next play/seek) picks the audio up once the buffer is ready.
+  //
+  // v210, and this is the whole bug the iPhone found. The player builds its
+  // AudioContext in loadSkribl(), which on a share link runs at PAGE LOAD with
+  // no user activation, so iOS hands back a SUSPENDED context. This function
+  // used to fire-and-forget resume() and then start() anyway, which sets
+  // paSource without producing a sound. A1's repair in play() was then
+  // unreachable, because it only retried `if (running && !paSource)` — and
+  // paSource was already non-null. A source object existing is NOT the same as
+  // audible playback, and treating them as equivalent is what let A1 look
+  // fixed for three builds while every shared link was silent on iPhone.
+  // Desktop never showed it: its context is running from the start, so the
+  // suspended branch is dead code there — including in the harness.
+  //
+  // So: no source is EVER constructed while the context is suspended. The
+  // unlock is awaited, the generation is re-checked after the await (a Stop or
+  // a second Play during the wait must win), and only a confirmed 'running'
+  // context gets a source. paSource now means "started on a running context".
   function paStartAtElapsed(elapsedMs) {
     if (!audioCtx) return false;
     const buf = paLoopBuffer();
     if (!buf) return false;
     paStop();
-    if (audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) {} }
-    if (!paGain) { paGain = audioCtx.createGain(); paGain.connect(audioCtx.destination); }
-    paGain.gain.value = muted ? 0 : 1;
-    const dur = buf.duration;
-    const offset = dur > 0 ? (((elapsedMs / 1000) % dur) + dur) % dur : 0;
-    const src = audioCtx.createBufferSource();
-    src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = dur;
-    src.connect(paGain);
-    try { src.start(0, offset); } catch (e) { return false; }
-    paSource = src;
-    return true;
+    const gen = ++paGen;
+    const mk = () => {
+      // Re-check EVERYTHING that could have changed across the await.
+      if (gen !== paGen || !audioCtx || audioCtx.state !== 'running') return false;
+      if (!paGain) { paGain = audioCtx.createGain(); paGain.connect(audioCtx.destination); }
+      paGain.gain.value = muted ? 0 : 1;
+      const dur = buf.duration;
+      const offset = dur > 0 ? (((elapsedMs / 1000) % dur) + dur) % dur : 0;
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = dur;
+      src.connect(paGain);
+      try { src.start(0, offset); } catch (e) { return false; }
+      paSource = src;
+      return true;
+    };
+    if (audioCtx.state === 'running') return mk();
+    let p = null;
+    try { p = audioCtx.resume(); } catch (e) { console.warn('skribl: resume threw', e); }
+    if (p && p.then) {
+      p.then(mk, (e) => {
+        // A rejected unlock is a FAILURE, not a reason to start anyway: the
+        // context is still suspended and a source begun on it is silence that
+        // reports success (v209 review F2).
+        console.warn('skribl: player audio unlock failed', e);
+      });
+    }
+    // The drawing never waits on audio; the loop joins when the context is up.
+    return false;
   }
   // Loop bed replaces <audio>; the gapless source loops itself, so frame() no
   // longer wraps the audio. elapsedBase carries the aligned position on resume.
@@ -4247,11 +4318,14 @@ function showPlayerError(msg) {
     // path); only the AUDIO start is gated on the resolved resume, via the
     // second audioStart() below once the context is genuinely running.
     if (audioCtx && audioCtx.state === 'suspended') {
-      try {
-        const p = audioCtx.resume();
-        if (p && p.then) p.then(() => { if (running && !paSource) audioStart(); },
-                                e => console.warn('skribl: resume failed', e));
-      } catch (e) { console.warn('skribl: resume threw', e); }
+      // Ask for the unlock INSIDE the gesture — iOS is far happier resuming
+      // here than from a later callback. The result is not acted on here:
+      // paStartAtElapsed owns the "only start on a running context" rule, so
+      // whichever of the two resumes wins, no source exists until the context
+      // genuinely reports running. The old retry (`if (running && !paSource)`)
+      // is GONE — it was unreachable, because begin() had already set paSource
+      // by starting a silent source on the suspended context (v210).
+      try { audioCtx.resume(); } catch (e) { console.warn('skribl: resume threw', e); }
     }
     const fresh = idx === 0;
     const begin = () => {

@@ -511,7 +511,21 @@ with sync_playwright() as sp:
     # four times this raise. Not done here on purpose: an audio fix and an
     # externalisation in one pass makes a silent replay unattributable. Watch
     # stopWebAudioLoop — 8 call sites, several on teardown paths.
-    BYTES_RATCHET, BYTES_TARGET = 142_880, 153_600
+    # 143,217 = 142,880 (v209) + 337 B: v210's player-audio fix — the bug a
+    # real iPhone found and 2,337 assertions could not. paStartAtElapsed no
+    # longer constructs a source on a suspended context (it awaits the unlock
+    # and re-checks a generation across the await), stopWebAudioLoop/paStop
+    # invalidate pending starts, and a REJECTED resume no longer starts anyway
+    # (v209 review F1+F2). Includes deleting A1's unreachable retry. RAISE
+    # FLAGGED FOR OWNER: the largest single functional raise since A1 (+430),
+    # and for the same class of defect A1 was meant to fix but did not.
+    #
+    # The ?audioDebug=1 diagnostic costs this budget NOTHING: it is a separate
+    # file (skribl/static/audiodebug.js), included only when the query flag is
+    # present, and it wraps the real Web Audio API rather than calling hooks in
+    # app.js — an earlier draft DID add hooks here and they were removed for
+    # exactly this reason. This measurement loads the page WITHOUT the flag.
+    BYTES_RATCHET, BYTES_TARGET = 143_217, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

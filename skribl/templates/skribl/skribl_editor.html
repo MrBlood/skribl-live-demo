@@ -307,6 +307,13 @@
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
+  {# Audio diagnostic, ONLY when explicitly requested (?audioDebug=1). It is a
+     separate file on purpose: the player's JS budget must not carry a
+     diagnostic that almost nobody loads, and verify_player_isolation measures
+     the page WITHOUT the flag, so the ratchet is unaffected. Must precede
+     app.js — deferred scripts run in document order, and it wraps the
+     AudioContext constructor before anything can call it. #}
+  {% if request.args.get('audioDebug') %}<script src="{{ skribl_asset('audiodebug.js') }}" defer></script>{% endif %}
   <script src="{{ skribl_asset('app.js') }}" defer></script>
   {# Editor-only. These were inside app.js, which the PLAYER also loads — so
      every shared link shipped the GIF/WebM encoders and the post composer to

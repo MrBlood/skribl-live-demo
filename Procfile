@@ -1,1 +1,1 @@
-V209 fixedweb: gunicorn app:app
+web: gunicorn app:app
