@@ -424,13 +424,29 @@
     // full sample so they can be re-trimmed. The trimmed clip IS the loop, so
     // trimStart/trimEnd become 0..loopLen. Falls back to the full sample if the
     // decoded buffer isn't ready or encoding fails, so a post never breaks here.
-    if (payload.music && payload.music.data && currentAudioBuffer) {
+    // BUG B (v210): this guarded on payload.music, which serializeSkribl() has
+    // not produced since the v2 frame migration — the media lives in
+    // frames[0].music. The condition was therefore never true on a v2 Pad post,
+    // the crop never ran, and every shared post carried the FULL song with the
+    // authored trim rather than the baked loop. Proven by byte count, not by
+    // trimEnd: an uncropped payload keeps the authored trim, so the metadata
+    // looks identical either way. Located through the shared accessor so no
+    // further consumer has to know where a frame keeps its media.
+    const media = window.SkriblPayload.currentFrameMedia(payload);
+    if (media.music && media.music.data && currentAudioBuffer) {
       try {
         const cropped = buildTrimmedLoopWav();
         if (cropped) {
-          payload.music = { data: cropped.dataUrl, name: payload.music.name, trimStart: 0, trimEnd: cropped.duration };
+          // The clip IS the loop now, so trims collapse to 0..len and the
+          // crossfade is already folded into the samples.
+          media.setMusic({ data: cropped.dataUrl, name: media.music.name,
+                           trimStart: 0, trimEnd: cropped.duration, crossfadeMs: 0 });
         }
-      } catch (e) { /* keep the full-sample payload.music */ }
+      } catch (e) {
+        // Keep the full-sample media rather than failing the post, but say so:
+        // a silent fallback here is how the size regression would hide again.
+        console.warn('skribl: loop crop failed, posting the full sample', e);
+      }
     }
     try {
       const res = await sendSkribl(payload);

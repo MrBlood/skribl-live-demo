@@ -3457,19 +3457,38 @@ input:focus-visible {
 
   #previewLoopBtn { grid-column: 1 / -1; }
 
-  /* v207: on a phone the three [- value +] pills DO NOT fit on one row once
-     the nudge buttons are the 30/32px tier-2 size (three ~120px pills need
-     ~380px; a 390px phone has ~290px of grid). The old approach — squeeze all
-     three onto one row — produced overlapping pills at 390 and a wrap at 363.
-     Stack them instead: one group per row, label on the left, pill on the
-     right. Cleaner to read, and the bigger buttons get the room they need. */
-  .finetune-grid { flex-direction: column; align-items: stretch; gap: 8px; }
-  .edge-group {
-    flex-direction: row; align-items: center; justify-content: space-between;
-    min-width: 0; gap: 10px;
+  /* v207: three [- value +] pills DO NOT fit on one row once the nudge buttons
+     are the 30/32px tier-2 size (three ~120px pills need ~380px; a 390px phone
+     has ~290px of grid). Squeezing all three produced overlapping pills at 390
+     and a wrap at 363, so v207 stacked them one per row.
+     v210 (owner's iPhone): one-per-row reads as three tall stacked pills.
+     TWO fit comfortably (~250px), so Start and End sit side by side, each a
+     compact label-over-pill column, and Step size takes its own full row
+     underneath. Two-up is a wider column than the three-up that failed, and
+     the phone audit measures every pill's rectangle, so the v207 overlap
+     class is still guarded. */
+  .finetune-grid {
+    /* Each column must hold a whole [- 00.00s +] pill: MEASURED 128px at
+       every phone width. minmax(130) + 10px gap = 270 fits the 275/290px
+       grids at 375/390 and drops to one column at 363 (263px grid) and 320
+       (220px) rather than spilling the pill — v207's exact bug class, which
+       verify_ux caught again at 363 while this was being built. */
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px 10px; align-items: stretch;
   }
-  .edge-name { flex: 1; text-align: left; }
-  .edge-controls { flex: none; gap: 4px; padding: 3px; }
+  .edge-group {
+    flex-direction: column; align-items: stretch; justify-content: flex-start;
+    min-width: 0; gap: 6px;
+  }
+  .edge-group:nth-child(3) {
+    grid-column: 1 / -1;
+    flex-direction: row; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .edge-name { text-align: left; }
+  .edge-group:nth-child(3) .edge-name { flex: 1; }
+  .edge-controls { flex: none; gap: 4px; padding: 3px; align-self: flex-start; }
+  .edge-group:nth-child(3) .edge-controls { align-self: center; }
   .edge-readout { min-width: 52px; font-size: 12px; }
   .nudge-btn { width: 30px; height: 30px; font-size: 16px; }
 
@@ -4402,3 +4421,71 @@ body.playing .flip-grid { display: none; }
    shapes, not words — using the same SVG the real control renders. */
 .help-pill-ic { display: inline-flex; flex: none; color: var(--accent-bright); }
 .help-pill-ic svg { width: 12px; height: 12px; }
+
+/* ============================================================
+   v210 PHONE LAYOUT — three real-device findings (owner's iPhone, v209)
+   ============================================================ */
+
+/* 1. Onion tint on the RIGHT EDGE of the tune drawer. Headless measured a
+   4px margin between #onionTintBtn and .tune-clip (overflow:hidden); iOS's
+   font metrics eat that and the round toggle is clipped. Two causes, both
+   fixed here: .tune-label is a FIXED 150px so the control cluster gets only
+   what is left, and the row cannot wrap. On phone the label yields, and the
+   cluster may drop to its own line before it is ever clipped. */
+@media (max-width: 640px) {
+  .tune-row { flex-wrap: wrap; row-gap: 8px; }
+  .tune-label { width: auto; flex: 1 1 140px; min-width: 0; }
+  .tune-hint { white-space: normal; }
+  /* The cluster keeps its own gap and never touches the clip edge. */
+  #onionGroup, .tune-row > .seg, .tune-row > .tune-tool { margin-right: 4px; }
+}
+
+/* 3. Header: the control cluster must never sit against — or under — the
+   brand. Two states, both measured on the owner's iPhone and reproduced here:
+   on FIRST LOAD at 375 the tune glyph painted over the "d" of "Pad"; with a
+   TAKE SAVED the cluster (tune + record + play + Post + ⋯) is wider than the
+   room to the right of the logo, and .actions{flex:1;min-width:0} let it
+   shrink until #tuneBtn sat UNDERNEATH the logo at x=16 with the glyph poking
+   out its left side. A margin cannot hold when the container is over-full,
+   so the same rule the wordmark follows applies: shed decoration before
+   anything overlaps. fitBrand (app.js) measures the real collision and
+   toggles the classes; these are the shapes it can shed into. */
+@media (max-width: 640px) {
+  .header .actions { margin-left: 12px; flex-shrink: 1; }
+  /* Post's LONG suffix goes first — nobody needs "to Skribl" at 375. */
+  .header .btn.post .post-long { display: none; }
+  /* Shed step 3: tighten the inter-control gap. Six 40px controls at a 9px
+     gap are 6px too wide for a 375 header even with every label gone; 6px
+     gaps buy 15px back and cost nothing legible. Tried BEFORE dropping Post's
+     label, which is worth more than 3px of air between icons. */
+  .header.gap-collapsed .actions { gap: 6px; }
+  .header.gap-collapsed #menuBtn { margin-left: 4px; }
+  /* Shed step 4 (last resort): Post drops to its icon, like Record does. */
+  .header.post-collapsed .btn.post { width: 40px; padding: 0; }
+  .header.post-collapsed .btn.post .btn-label { display: none; }
+  /* Once everything is shed the card's own side padding is the only slack
+     left. At 375 with a take saved the fully-collapsed cluster clears the mark
+     by 5px; 11px sides instead of 14 make it 8 — the same floor 430 meets
+     with Post's label intact. The card is still a card at 11. */
+  .header.post-collapsed { padding-left: 11px; padding-right: 11px; }
+}
+/* 320-class phones (iPhone SE 1st gen and smaller). MEASURED: with a take
+   saved, six 40px controls are 50px over-full even with every label shed and
+   the gap at 6px — nothing left to shed without orphaning a mode (the Flip
+   link has no menu entry). Six controls x 4px + a 4px logo cut recovers 28;
+   the remaining 22 comes from the tightest gap that still reads as separate
+   controls. Tier-1 stays 40 everywhere else, per the owner's size table. */
+@media (max-width: 340px) {
+  .header .actions button.icon-btn, .header .actions a.icon-btn,
+  .header .btn.play,
+  .header.rec-collapsed .btn.record,
+  .actions:has(#playWrap:not([hidden])) .btn.record,
+  .header.post-collapsed .btn.post { width: 36px; height: 36px; min-width: 36px; }
+  .header .brand svg { width: 30px; height: 30px; }
+  .header.gap-collapsed .actions { gap: 4px; }
+  .header.gap-collapsed #menuBtn { margin-left: 2px; margin-right: 0; }
+  .header .actions { margin-left: 8px; }
+  /* The card's 14px side padding is the last slack: 10px each side gives the
+     row the 8px it is short of, and the card still reads as a card. */
+  .header.gap-collapsed { padding-left: 10px; padding-right: 10px; }
+}

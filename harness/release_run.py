@@ -47,7 +47,12 @@ GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
 # small enough to finish, and so the server/security suites — which do not
 # drive Chromium — are not held hostage to a browser batch timing out.
 BATCHES = [
-    ["verify_move.py", "verify_ux.py", "verify_pages.py", "verify_hold.py"],
+    # v210: verify_ux is 284 assertions and no longer finishes alongside three
+    # other suites inside one sandbox invocation, so the checkpoint after
+    # batch 1 was never written and every re-invoke restarted from the top.
+    # It gets a batch of its own; the three it shared with move to batch 2.
+    ["verify_ux.py"],
+    ["verify_move.py", "verify_pages.py", "verify_hold.py"],
     ["verify_review.py", "verify_help.py", "verify_tips.py"],
     ["verify_exportui.py", "verify_exopts.py", "verify_dots.py", "verify_fix.py"],
     ["verify_amber.py", "verify_posted.py", "verify_report.py", "verify_canvas.py"],
@@ -63,7 +68,7 @@ BATCHES = [
     ["verify_visual.py"],
     ["verify_flipmotion.py"],
     ["verify_parity.py"],
-    ["verify_audio.py", "verify_seam.py", "verify_loopcap.py"],
+    ["verify_audio.py", "verify_seam.py", "verify_loopcap.py", "verify_audiostate.py"],
     ["verify_gifenc.py", "verify_muxer.py", "verify_mp4.py", "verify_flipmeta.py"],
     ["verify_feed.py", "verify_media.py", "verify_storage.py", "verify_privacy.py",
      # Runs LAST in its batch and brings its own local-media server, on its own

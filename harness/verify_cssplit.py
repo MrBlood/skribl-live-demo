@@ -240,6 +240,15 @@ try:
                 pass
             pg.add_style_tag(content=FREEZE)
             pg.wait_for_timeout(400)
+            # v210: settle JS-driven LAYOUT too, not just CSS transitions. The
+            # header's fitBrand runs on ResizeObserver + requestAnimationFrame
+            # and sheds classes by measuring; under batch load one pass could
+            # capture a frame before that settled and the other after — a 4x34
+            # strip at the cluster's edge differed between two byte-identical
+            # passes (batch 18 of the v210 run; 17/17 in isolation). Two frames
+            # is what a rAF-driven fit needs to converge, and a settled DOM is
+            # a precondition of a pixel comparison, not something to hope for.
+            pg.evaluate("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
             pg.screenshot(path=str(shots / f"{tag}-{name}.png"))
             pg.close()
 

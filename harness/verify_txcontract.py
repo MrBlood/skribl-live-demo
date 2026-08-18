@@ -660,6 +660,56 @@ _ok_engine = _sa.create_engine("sqlite:///:memory:")
 check("...and still accepts a default (transactional) SQLite engine",
       skribl.models._install_sqlite_fk(_ok_engine) is True)
 
+# v209 review F3: the refusal must not CONTAMINATE the installed-engine
+# registry. The engine used to be added to _FK_ENGINES BEFORE the AUTOCOMMIT
+# check raised, so a refused engine was recorded as installed — and any later
+# call for the same object returned False silently with no listener attached:
+# a SQLite engine running with neither the FK pragma nor the explicit-BEGIN
+# recipe, the exact state the guard exists to prevent.
+check("F3: a REFUSED engine is not recorded as installed",
+      _ac not in skribl.models._FK_ENGINES,
+      "the refused AUTOCOMMIT engine sits in _FK_ENGINES")
+_refused_again = False
+try:
+    skribl.models._install_sqlite_fk(_ac)
+except RuntimeError:
+    _refused_again = True
+check("F3: ...so a second attempt is refused again, not silently skipped",
+      _refused_again, "the second call returned instead of raising")
+check("F3: while an ACCEPTED engine IS recorded (idempotence intact)",
+      _ok_engine in skribl.models._FK_ENGINES
+      and skribl.models._install_sqlite_fk(_ok_engine) is False)
+
+# v209 review F4: the limiter's busy_timeout must survive a mid-session
+# COMMIT. _bounded() used to run one PRAGMA on whichever connection the
+# session held at that instant; the reserve path commits twice, and after a
+# commit SQLAlchemy may hand the session a DIFFERENT pooled connection whose
+# timeout is pysqlite's 5 s default. Read the timeout back on the connection
+# actually in use after the commit — that is what the second write pays.
+print("\nF4 — busy_timeout is bounded on the connection in use AFTER a commit")
+import skribl.ratelimit as _rl4
+_f4_eng = _sa.create_engine(f"sqlite:///{tempfile.mkdtemp()}/f4.db",
+                            poolclass=_sa.pool.QueuePool, pool_size=3)
+_f4_sm = _sa.orm.sessionmaker(bind=_f4_eng)
+with _f4_sm() as _s:
+    _rl4._bounded(_s)
+    _first = _s.connection().exec_driver_sql("PRAGMA busy_timeout").scalar()
+    _s.commit()
+    # Force the pool to hand back a different DBAPI connection: check out a
+    # second one on the side so the first cannot simply be reused.
+    _side = _f4_eng.raw_connection()
+    _second = _s.connection().exec_driver_sql("PRAGMA busy_timeout").scalar()
+    _side.close()
+check("F4 setup: the first statement group is bounded", _first == 200, str(_first))
+check("F4: the connection in use AFTER a commit is bounded too — the second "
+      "write does not pay pysqlite's 5 s default", _second == 200,
+      f"busy_timeout={_second} on the post-commit connection")
+with _f4_sm() as _s2:
+    _fresh = _s2.connection().exec_driver_sql("PRAGMA busy_timeout").scalar()
+check("F4: any later session on the same engine is bounded without calling "
+      "_bounded() at all (engine-level, cannot be forgotten)",
+      _fresh == 200, str(_fresh))
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

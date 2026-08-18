@@ -27,6 +27,7 @@ import hmac
 import os
 import secrets
 import time
+import weakref
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from threading import Lock
@@ -273,11 +274,48 @@ def _bounded(s):
     truly-blocked case into a fast OperationalError that the teardown
     containment logs and RATE_PENDING_TTL reconciles (v202 review, F1).
     Applied to the LIMITER's sessions only — the host engine's behaviour is
-    the host's."""
+    the host's.
+
+    v210 (v209 review F4): applied per CONNECTION, not per session. A session
+    that commits and then keeps working — the reserve path does
+    lock-identity, COMMIT, insert, COMMIT; the tombstone sweep commits
+    mid-request — may be handed a different pooled connection after the
+    commit, on which busy_timeout is pysqlite's 5 s default again. The
+    original one-shot PRAGMA therefore governed the first statement group and
+    silently not the second. Now every checkout of a limiter-engine
+    connection is bounded by an engine-level listener, installed once per
+    engine, so it cannot be forgotten by a caller and cannot lapse across a
+    commit. The direct PRAGMA below is kept as belt-and-braces for the very
+    first statement on a connection that pre-dates the listener."""
     conn = s.connection()
     if conn.dialect.name == "sqlite":
+        _bound_engine(conn.engine)
         conn.exec_driver_sql("PRAGMA busy_timeout=200")
     return s
+
+
+_bounded_engines = weakref.WeakSet()
+
+
+def _bound_engine(engine):
+    """Attach the busy_timeout bound at checkout, once per limiter engine.
+
+    'checkout' fires on every pool checkout, so a session that commits and
+    continues on a fresh connection is bounded again without anyone having
+    to remember to call _bounded() a second time.
+    """
+    if engine in _bounded_engines:
+        return
+    _bounded_engines.add(engine)
+
+    @sa.event.listens_for(engine, "checkout")
+    def _bound_on_checkout(dbapi_conn, connection_record, connection_proxy):
+        try:
+            cur = dbapi_conn.cursor()
+            cur.execute("PRAGMA busy_timeout=200")
+            cur.close()
+        except Exception:
+            pass
 
 
 def _make_rate_sessionmaker(engine):

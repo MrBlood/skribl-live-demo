@@ -411,8 +411,8 @@ def _install_sqlite_fk(bind):
     engine = getattr(bind, "engine", bind)
     if engine is None or engine in _FK_ENGINES:
         return False
-    _FK_ENGINES.add(engine)
     if getattr(getattr(engine, "dialect", None), "name", None) != "sqlite":
+        _FK_ENGINES.add(engine)          # nothing to install; remember we looked
         return False                     # PostgreSQL and friends: nothing to do
     # v208 (v207 review F1): SQLAlchemy 2.x does NOT surface the configured
     # mode on `dialect.isolation_level` — that stays None for a real
@@ -427,11 +427,22 @@ def _install_sqlite_fk(bind):
         # Installing the explicit-BEGIN recipe would contradict that choice —
         # and Skribl's savepoint contract cannot hold without real
         # transactions — so refuse loudly instead of silently doing either.
+        # NOT recorded in _FK_ENGINES (v209 review F3). It used to be added
+        # before this check, so a refused engine was marked "installed": if the
+        # host caught the RuntimeError and rebuilt the same engine object
+        # without AUTOCOMMIT, or two Skribl apps shared one engine, the second
+        # attempt returned False silently and no listener was ever attached —
+        # a SQLite engine running Skribl with neither the FK pragma nor the
+        # explicit-BEGIN recipe, which is precisely the state the guard exists
+        # to prevent. Registration is the LAST step now, after the listener is
+        # actually attached.
         raise RuntimeError(
             "Skribl cannot run on a SQLite engine configured with "
             "isolation_level='AUTOCOMMIT': its transaction contract needs "
             "real transactions (see docs/INTEGRATION.md, 'SQLite transaction "
             "mode').")
+
+    _FK_ENGINES.add(engine)
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, connection_record):

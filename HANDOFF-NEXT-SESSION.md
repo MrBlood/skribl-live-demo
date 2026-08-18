@@ -1,4 +1,4 @@
-# Skribl — Handoff for the next session (written at the v209 seal)
+# Skribl — Handoff for the next session (written at the v210 seal)
 
 **Read this first.** It is the complete state of the project: what shipped,
 what is open, what the owner has decided, what the harness protects, and the
@@ -10,12 +10,12 @@ exact procedures. Everything here was verified against the tree, not recalled.
 
 | Thing | Location |
 |---|---|
-| **Sealed, shipped builds** | `/mnt/user-data/outputs/skribl-vNNN-sealed.zip` — v203 … v209 |
-| **Current sealed build** | **v209** — tree `see harness/RELEASE.md`, 2,337 assertions, 60/60, 1 skip (mp4), PG 14/14 |
-| Working tree | `/home/claude/skribl-v209/` (identical to the seal at time of writing) |
+| **Sealed, shipped builds** | `/mnt/user-data/outputs/skribl-vNNN-sealed.zip` — v203 … v210 |
+| **Current sealed build** | **v210** — tree `see harness/RELEASE.md`, 61/61, 1 skip (mp4), PG 14/14 |
+| Working tree | `/home/claude/skribl-v210/` (identical to the seal at time of writing) |
 | Demo `.skribl` files + previews | `/mnt/user-data/outputs/skribl-demos/` (also `harness/fixtures/` in-tree) |
 | Design mockups (HTML, real pixels) | `/mnt/user-data/outputs/skribl-*.html` |
-| Per-release response docs | `docs/REVIEW-RESPONSE-v200.md` … `v209.md` |
+| Per-release response docs | `docs/REVIEW-RESPONSE-v200.md` … `v210.md` |
 | **The developer's v207 review + this reply** | `docs/REVIEW-RETORT-v207.md` (in-tree), original in the review zip |
 | Prior transcript catalog | `/mnt/transcripts/journal.txt` |
 
@@ -31,7 +31,8 @@ exact procedures. Everything here was verified against the tree, not recalled.
 | v206 | 2244 | **Flip image/music drawer bug root-caused** (root-level file inputs + click-outside handler; unreproducible headless because it needs the real OS dialog); toast → link; menus aligned; Clear-all in both; `.skribl` iOS accept; cross-load guards; music drawer option A; grid lights; pill sliders unified. |
 | v207 | 2310 | Repeat button lights; onion → tune drawer (orange); loop-detail pills + magnifier; 641px no-wrap; nudge grid stacks on phone; help icons + player step + Match Drawing Time; eyedropper tap area; **all icons SVG**; dead player ⋯ removed; demo fixtures; three audits (consistency / help completeness / phone fit). |
 | v208 | 2318 | v207 review F1 + F4 closed (real AUTOCOMMIT guard; Record closes Tune). |
-| **v209** | **2337** | **v207 review F2 + F3 closed** — failed posts no longer cost quota (tombstoned release + real-lock regression); Pad replay unlocks audio inside the Play gesture (A1 template, order-instrumented, mutation-tested). ⚑ ratchet +510 B. |
+| v209 | 2337 | v207 review F2 + F3 closed — failed posts no longer cost quota (tombstoned release + real-lock regression); Pad replay unlocks audio inside the Play gesture (A1 template, order-instrumented, mutation-tested). ⚑ ratchet +510 B. |
+| **v210** | *see RELEASE.md* | **THE IPHONE BUILD.** The phone found shared links silent; two deterministic bugs, both reproduced in-harness before fixing: player loop bounds lived in `loadedmetadata` (Bug A); post-time crop dead on v2 payloads (Bug B). v209 review F1–F4 closed. Three real-device layout defects fixed; phone audit widened. Release language changed: "mechanism corrected; verified on [device]" only. |
 
 Every seal: verified from its own shipped zip (`sha256sum -c`), every fix behind a mutation-tested or counterexample pin.
 
@@ -39,51 +40,45 @@ Every seal: verified from its own shipped zip (`sha256sum -c`), every fix behind
 
 ## 2. What is OPEN — the actual to-do list
 
-### 2a. From the v207 developer review (see `docs/REVIEW-RETORT-v207.md`)
+### 2a. The iPhone: what it found and what is still owed
 
-**All four findings are now CLOSED.** F1 + F4 in v208, F2 + F3 in v209 — see
-`docs/REVIEW-RESPONSE-v209.md` for both in full.
+**Read `docs/REVIEW-RESPONSE-v210.md` first.** Short version: the v209 seal was
+put on a real iPhone and shared links were SILENT. Three builds of "iOS audio
+fixed" had never been hardware-confirmed. The cause was two deterministic
+software bugs, not iOS policy — the player's loop bounds lived inside an
+`<audio>` `loadedmetadata` handler that iOS does not fire before Play (Bug A),
+and the post-time crop was dead code on v2 payloads so posts carried the whole
+song (Bug B). Both are fixed and pinned in `verify_audiostate.py`, both
+mutation-tested against the exact historical mistake.
 
-**F2 — CLOSED (v209), owner chose option (a).** A failed post no longer costs
-quota. Reading the tree narrowed the finding: the failure path already
-RELEASED the slot; what failed was the DELIVERY of the delete, against a host
-still holding SQLite's write lock. Retrying that write cannot make immediate
-retry *mechanically* true, so the release is recorded in a process-local
-tombstone that `_db_rate_count()` subtracts immediately, and the row is deleted
-by the next request that can get a writer. Regression at
-`SKRIBL_RATE_MAX_POSTS=1` with a REAL held `BEGIN IMMEDIATE`, plus a
-counterexample that reproduces v208 and goes 429.
-**Scope to remember:** true within the process that took the reservation —
-the same scope the reservation itself claims. Multi-worker SQLite still waits
-for the sweep or the TTL, i.e. v208 behaviour, never worse.
-**Watch:** `RateEvent.id` is SQLite's rowid and rowids are REUSED. A tombstoned
-row has exactly one legal deleter (`_sweep_tombstones`, which drops the
-tombstone with it). Adding another deleter of pending rows without dropping the
-tombstone is the way to break this. Pinned in `verify_txcontract`.
+**→ STILL OWED: the targeted iPhone confirmation on THIS build.** Not
+exploratory — three things: on a share link, trims present before any metadata
+event; `createBufferSource()`/`start()` on first Play; the post decoding ~20 s
+rather than the source length. Until the phone says so, the wording is
+"mechanism corrected", not "fixed". This is the only thing between v210 and
+calling the integration contract closed.
 
-**F3 — CLOSED (v209) except the iPhone.** Fixed on the A1 template:
-`unlockWebAudio()` runs inside the Play gesture, the promise is retained, the
-loop source starts only once it resolves, a generation counter stops a late
-start overtaking a stop, nothing is swallowed. Regression drives the real
-button and instruments the ORDER (`resume` → `gesture-returned` →
-`base-image-painted` → `loop-started:running`); it forces the async branch by
-reporting `HTMLImageElement.complete` false, because the decoded-base cache
-would otherwise make Play synchronous and hide the bug. Mutation-tested: remove
-the gesture unlock and the two ordering pins go red.
-**→ A real iPhone is the one thing still owed.** The harness's simulated
-context unlocks late quite happily; a phone will not. Last iPhone item.
+**All four v209 developer-review findings are CLOSED** (F1 stop-generation, F2
+rejected-resume + native handoff, F3 `_FK_ENGINES` contamination, F4
+`busy_timeout` across commits). Details and pins in the response doc.
 
-**Phone-audit widening (optional, unchanged).** The v207 audit is a strong
-*right-edge + same-row horizontal* check. Extend to: `left < 0`, vertical
-viewport overflow, overflow-hidden ancestor clipping, off-row collisions,
-pseudo-element hit-area overlap. Not a known bug; a scope correction.
+**The methodological finding, because it is the one that will bite next:**
+this arc produced FIVE instances of a passing test in the wrong equivalence
+class — the AUTOCOMMIT guard (v207), A1's unreachable retry, `_waGen` never
+incremented, `trimEnd == 20` as proof of cropping, a mono byte count for a
+stereo buffer. Every fix that stuck was one that reproduced the failure in the
+harness before touching code. Do that first.
 
-**Web Audio loop externalisation (new, measured).** The whole Web Audio loop
-block in `app.js` is ~2,060 code bytes and is EDITOR-ONLY — the player has its
-own `pa*` audio path. Moving it out the way `editor_tune.js` went would cut
-roughly four times the v209 ratchet raise. Not done in the same pass as an
-audio fix on purpose. `stopWebAudioLoop` has 8 call sites, several on teardown
-paths.
+**Web Audio loop externalisation (measured, deferred).** ~2,060 code bytes of
+editor-only Web Audio loop code sit in the player's payload; the player has
+its own `pa*` path. Moving it out the way `editor_tune.js` went would recover
+most of this arc's ratchet raises. Deferred on purpose so audio fixes and code
+moves stay in separate builds. `stopWebAudioLoop` has 8 call sites.
+
+**Direct-buffer playback (deferred).** For a zero-crossfade loop the player
+could play `currentAudioBuffer` with `loopStart/loopEnd` instead of copying it
+through `buildLoopAudioBuffer`. Good cleanup; explicitly kept OUT of v210 to
+preserve the clean causal proof. Separate build, separate pin.
 
 ### 2b. Standing owner items (unchanged for many builds)
 
@@ -96,16 +91,13 @@ paths.
   stylus path needs real-iPad minutes; A1's iOS audio fix and F3 above need
   a physical iPhone.
 
-### 2c. The ratchet — signed off, nothing pending
+### 2c. The ratchet — owner said "don't worry about it"
 
-Player-JS ratchet is **142,880** (target 153,600). Raised in small, flagged,
-functional steps: +430 (A1 iOS audio, v203) · +60 (grid layout hook, v204) ·
-+119 (cross-load guard, v206) · +23 (F4 hook, v208, **approved**) ·
-**+510 (F3 gesture unlock, v209)**. Each is documented in
-`harness/verify_player_isolation.py`. **Every raise to date is owner-approved**
-— the v208 +23 and the v209 +510 were both signed off in the v209 session.
-Nothing is pending. The externalisation noted in 2a would give back about four
-times the last raise.
+Player-JS ratchet is **145,053** (target 153,600). Raised in flagged functional
+steps; the owner approved the v208/v209 raises explicitly and for v210 said not
+to worry about it. Every raise is documented with its accounting in
+`harness/verify_player_isolation.py`. The externalisation in 2a is the way to
+give most of it back.
 
 ---
 
@@ -134,7 +126,7 @@ times the last raise.
 
 ## 4. The harness — how it protects you
 
-60 suites, ~2,300 assertions. The **pixel/behaviour suites are the gate for
+61 suites, ~2,400 assertions. New in v210: `verify_audiostate` (16) — the two iPhone bugs, behavioural, mutation-tested. The **pixel/behaviour suites are the gate for
 any UI change**: `verify_visual` (76), `verify_parity` (115), `verify_ux`
 (264), `verify_cssplit` (17), `verify_player_isolation` (20), `verify_pages`
 (44), `verify_tips` (43), `verify_lib` (8), `verify_hold` (37). Server-side:
@@ -228,6 +220,29 @@ new suites; regenerate SHA256SUMS last; mp4 stays CI-skip.
 
 ## 6. Lessons this arc paid for (so they are not paid twice)
 
+- **The phone is not optional, and green is not evidence for it.** Three
+  builds said "iOS audio fixed" on the strength of ordering pins. The player
+  was silent the whole time. Automated browsers cannot certify device media
+  policy; the release words for it are now "mechanism corrected; verified on
+  [device]", and the second half waits for the device.
+- **Reproduce before you fix.** Both v210 bugs were reproduced in the harness
+  (suppress `loadedmetadata` → zero sources; measure posted bytes → full
+  source) before a line changed. Both fixes were then trivial. The unlock
+  theory that came first was wrong and would have shipped as "fixed" again.
+- **A silent catch destroys the one piece of evidence you need.**
+  `paLoopBuffer`'s `catch (e) { paBuffer = null; }` made "threw" and
+  "returned null" identical to every caller for three builds. It warns now.
+- **Measure the thing, not your model of it.** `trimEnd == 20` passed against
+  the broken build (an uncropped payload keeps the authored trim). A byte
+  count computed for mono was wrong for stereo. The pin reads the WAV header.
+  A strokeless fixture "proved" playback was broken when `play()` simply had
+  nothing to play. `fitBrand` measured `scrollWidth`, which never grows when
+  things OVERLAP. The nudge grid "fit" — the pills inside did not. Every one
+  of these looked like a real regression for ten minutes.
+- **A design's own conventions must be readable by its audit.** The widened
+  phone audit false-positived on `.seg` pills, `--tap-grow` hit areas and the
+  thumbnail card until it was taught the shape language it was checking.
+
 - **An old pin caught the new code.** The first draft of `_sweep_tombstones`
   (v209, F2) read `RATE_CLEANUP_BATCH` OUTSIDE its try block, so a cleanup
   failure escaped into a request whose reservation was already committed.
@@ -263,13 +278,22 @@ new suites; regenerate SHA256SUMS last; mp4 stays CI-skip.
 
 ## 7. First things to do next session
 
-1. **Put v209 on a real iPhone.** Pad → draw → Stop → Play with music: the
-   replay must have audio on the first tap, from cold. That is the whole of
-   what F3 still owes, and the only hardware item that blocks calling the
-   integration contract closed.
-2. Consider the Web Audio loop externalisation (2a) — measured at ~2,060 code
-   bytes of editor-only code sitting in the player's payload.
-3. Optionally widen the phone audit.
-4. The remaining standing items are unchanged and all need hardware or auth:
-   S3Store against a real bucket, the Pad stylus path on a real iPad,
-   DECISIONS.md #1 + #2 when cookie auth lands.
+1. **Put v210 on the iPhone — targeted, not exploratory.** Share link: trims
+   present before any metadata event; a source constructed and started on
+   first Play; ~20 s decoded rather than the source length. Then update the
+   release wording to "verified on [device / iOS version]".
+2. If the phone is green, the integration contract is closed. Say so.
+3. Consider the Web Audio loop externalisation (2a) — measured, deferred.
+4. Consider direct-buffer playback (2a) — deferred to keep v210's proof clean.
+5. The standing items are unchanged and all need hardware or auth: S3Store
+   against a real bucket, the Pad stylus path on a real iPad, DECISIONS.md #1
+   + #2 when cookie auth lands.
+
+## 8. If a temporary on-device diagnostic is ever needed again
+
+v210 used one (`audiodebug.js`, wrapping the real Web Audio API rather than
+hooking `app.js`, behind a sticky `?audioDebug=1` cookie, collapsed to a pill so
+it never covered controls) and REMOVED it before sealing. It was the single
+most useful thing in the arc. If it comes back: separate file; zero references
+in `app.js`; observe the API, not the app's beliefs; must not ride into the
+player budget; and its useful checks belong in the harness before it goes.

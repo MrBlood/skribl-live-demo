@@ -520,12 +520,51 @@ with sync_playwright() as sp:
     # FLAGGED FOR OWNER: the largest single functional raise since A1 (+430),
     # and for the same class of defect A1 was meant to fix but did not.
     #
-    # The ?audioDebug=1 diagnostic costs this budget NOTHING: it is a separate
-    # file (skribl/static/audiodebug.js), included only when the query flag is
-    # present, and it wraps the real Web Audio API rather than calling hooks in
-    # app.js — an earlier draft DID add hooks here and they were removed for
-    # exactly this reason. This measurement loads the page WITHOUT the flag.
-    BYTES_RATCHET, BYTES_TARGET = 143_217, 153_600
+    # A temporary on-device diagnostic (audiodebug.js, wrapping the real Web
+    # Audio API rather than hooking app.js) was used to trace this on the
+    # owner's iPhone and then REMOVED before sealing — its useful checks live
+    # in verify_audiostate now. If a runtime debugger is ever wanted again it
+    # needs its own contract; it must not ride into the player budget.
+    # 144,301 = 143,217 + 1,084 B: the native-<audio> HANDOFF. Refusing to
+    # start on a suspended context is right, but on the owner's iPhone the
+    # AudioContext never reaches 'running' at all — Test Seam (native <audio>)
+    # plays there while Preview Loop (Web Audio) does not — so refusing alone
+    # turned intermittent silence into total silence. startWebAudioLoop() now
+    # takes an onFail handler and the two callers' native paths were split into
+    # callable functions (playNativeLooped, startLoopPreviewNative) so they are
+    # reachable when the unlock fails ASYNCHRONOUSLY, including a 600 ms timeout
+    # for a resume() that never settles — iOS does that instead of rejecting.
+    # RAISE FLAGGED FOR OWNER, and this one is big.
+    #
+    # HONEST COUNTER-ARGUMENT the owner should weigh: most of this is EDITOR
+    # code sitting in the player's budget. The externalisation noted below
+    # (~2,060 B of Web Audio loop code that the player never executes) would
+    # more than pay for it. If the answer is "not another raise", the cut is
+    # available and identified — it is deferred only to keep an audio fix and a
+    # code move in separate builds.
+    # 145,053 = 144,301 + 752 B: BUG A + BUG B, the two deterministic causes of
+    # iPhone-silent shared links, both reproduced in the harness before being
+    # fixed (verify_audiostate, 16 pins, both mutation-tested against the exact
+    # historical mistakes). A: loop bounds installed synchronously from the
+    # payload and finalised from the decoded buffer, so loadedmetadata is no
+    # longer load-bearing. B: window.SkriblPayload.currentFrameMedia(), the
+    # writer-side accessor for current-frame media, so the post-time crop stops
+    # guarding on a field serializeSkribl() stopped producing at v2. RAISE
+    # FLAGGED FOR OWNER. All temporary AUDIODEBUG instrumentation and
+    # audiodebug.js were removed before this figure was taken; verify_seam
+    # dropping 124 -> 121 is the evidence the extra file is gone.
+    # 145,649 = 145,053 + 596 B: the header fit (v210). fitBrand measured
+    # scrollWidth, which never grows when the cluster OVERLAPS the wordmark;
+    # it now measures the real gap to the brand and sheds in cost order
+    # (wordmark, Record label, inter-control gap, Post label), plus the
+    # currentFrameMedia accessor. Owner: "don't worry about the ratchet, just
+    # make the whole thing fixed" — set to fit. Full accounting for every raise
+    # this arc is above; the externalisation gives most of it back.
+    # 145,881 = 145,649 + 232 B: pixel-snapping the header cluster, which is
+    # what closed verify_cssplit's twice-failing 4x34 sub-pixel strip at the
+    # source rather than loosening a zero-tolerance pixel test. Owner: set to
+    # fit. FINAL v210 figure.
+    BYTES_RATCHET, BYTES_TARGET = 145_881, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

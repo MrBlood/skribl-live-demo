@@ -96,7 +96,14 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
     '.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}' +
     '.zoom-mag-wrap{display:inline-flex;align-items:center;gap:8px}' +
     '.zoom-mag-glyph{display:inline-flex;color:var(--text-muted)}' +
-    '.zoom-mag-glyph svg{width:16px;height:16px}';
+    '.zoom-mag-glyph svg{width:16px;height:16px}' +
+    // v210 (owner's iPhone): on phone the bar wraps to two rows, and the
+    // 16px glyph + 8px gap pushed the 1x-8x segment 24px right of the
+    // Loop/Start/End segment above it, so the two pills did not line up.
+    // Give the focus segment the SAME 24px lead so both start on one line;
+    // the glyph now reads as labelling the row rather than offsetting it.
+    '@media (max-width:640px){.zoom-mag-bar{justify-content:flex-start;gap:8px 10px}' +
+    '.zoom-seg[data-role="focus"]{margin-left:24px}}';
   document.head.appendChild(style);
 })();
 

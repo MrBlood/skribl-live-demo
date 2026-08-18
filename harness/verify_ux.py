@@ -958,7 +958,23 @@ with _sp204() as _p:
             return { overlap, spill, rows: new Set(groups.map(g => Math.round(g.top))).size }; }""")
         check(f"V207: at {pw}px the nudge pills do not overlap each other or spill their column", not _ov["overlap"] and not _ov["spill"], str(_ov))
         if pw <= 640:
-            check(f"V207: at {pw}px the three nudge groups stack one-per-row", _ov["rows"] == 3, str(_ov))
+            # v210 (owner's iPhone): the layout is 2 + 1 — Start and End share
+            # a row, Step size takes its own row underneath. The v207 pin said
+            # "three rows"; that was guarding the three-ON-ONE-ROW overlap, not
+            # arguing for one-per-row as a design, and the overlap/spill check
+            # above still guards that class at every width. So: two rows, and
+            # the first two groups on the SAME one.
+            _rows = mp.evaluate("""() => [...document.querySelectorAll('#fineTuneBody .edge-group')]
+                .map(e => Math.round(e.getBoundingClientRect().top))""")
+            if pw >= 375:
+                check(f"V210: at {pw}px the nudge groups lay out 2 + 1 (Start|End, then Step)",
+                      len(set(_rows)) == 2 and _rows[0] == _rows[1] and _rows[2] > _rows[0],
+                      f"group tops {_rows}")
+            else:
+                # 363 and narrower cannot hold two 128px pills; the grid must
+                # fall back to one column rather than spill (v207 bug class).
+                check(f"V210: at {pw}px (too narrow for 2-up) the nudge groups stack one per row",
+                      len(set(_rows)) == 3, f"group tops {_rows}")
         if pw == 1280:
             check("V206: nudge buttons are 32px on desktop (option A)", fit and fit["nudgeW"] == 32, str(fit))
             # tap area: click 5px LEFT of the first "-" nudge (start-earlier). Its
@@ -1338,36 +1354,149 @@ with _sp204() as _p:
     # past an earlier "fits" check): nothing off-screen, no horizontal page
     # scroll, no same-row overlap between distinct controls. Both editors, each
     # drawer opened in turn, plus music-loaded + fine-tune open, at 375 and 390.
-    _AUDIT = """() => { const vw = document.documentElement.clientWidth;
-        const els = [...document.querySelectorAll('button, a[href], input[type=range], [role=switch], .color-dot')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+    # v210 WIDENED (v207 review caveat + the owner's iPhone). The v207 audit was
+    # a right-edge + same-row check, and it slept through two real bugs:
+    #  - the header cluster painting OVER the wordmark: .brand is not a button,
+    #    so it was never in the set, and its 34px mark vs the 40px button failed
+    #    the |height diff| < 12 "sameRow" heuristic, so nothing was compared;
+    #  - the onion tint 4px from an overflow:hidden ancestor (.tune-clip): the
+    #    audit checked the viewport edge, not clipping ancestors.
+    # Now: the brand is in the set; overlap is a true 2-D rectangle
+    # intersection (no row heuristic); left<0 and vertical overflow are
+    # checked; and every control's rect is tested against each ancestor whose
+    # overflow is not visible, with a minimum clearance so "not yet clipped by
+    # 4px" is caught before iOS font metrics eat it. Real vertical scroll is
+    # fine (the page scrolls); the horizontal axis and clipping are not.
+    _AUDIT = """() => { const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+        const CLEAR = 6;   // px a control must keep from any clipping ancestor's edge
+        const els = [...document.querySelectorAll('button, a[href], input[type=range], [role=switch], .color-dot, .brand')]
+          .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; });
         const rects = els.map(e => ({ id: e.id || String(e.className).split(' ')[0] || e.tagName, r: e.getBoundingClientRect() }));
         const offRight = rects.filter(x => x.r.right > vw + 1).map(x => x.id);
-        const overlaps = [];
-        for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+        const offLeft = rects.filter(x => x.r.left < -1).map(x => x.id);
+        const overlaps = [], clipped = [];
+        // Ghosts (inside a collapsed drawer) and the transient hint toast are
+        // excluded from OVERLAP tests: a closed drawer's controls have rects
+        // but are not on screen, and the toast is an overlay by design.
+        const isGhost = i => { for (let p = els[i].parentElement; p && p !== document.body; p = p.parentElement) {
+            const pcs = getComputedStyle(p);
+            if ((pcs.overflowY !== 'visible' || pcs.overflowX !== 'visible') && p.getBoundingClientRect().height < 2) return true; } return false; };
+        const isToast = i => !!els[i].closest('.skribl-hint');
+        for (let i = 0; i < rects.length; i++) {
+          if (isGhost(i) || isToast(i)) continue;
+          for (let j = i + 1; j < rects.length; j++) {
+            if (isGhost(j) || isToast(j)) continue;
             if (els[i].contains(els[j]) || els[j].contains(els[i])) continue;
             const a = rects[i].r, b = rects[j].r;
-            const sameRow = Math.abs(a.top - b.top) < 6 && Math.abs(a.height - b.height) < 12;
             const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-            if (sameRow && ox > 2) overlaps.push(rects[i].id + '~' + rects[j].id); }
-        return { scrollX: document.documentElement.scrollWidth > vw + 1, offRight, overlaps: overlaps.slice(0, 6) }; }"""
+            const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+            if (ox > 2 && oy > 2) overlaps.push(rects[i].id + '~' + rects[j].id); }
+          // clipping ancestors: any ancestor whose overflow is not visible on
+          // the axis where the control's rect exceeds it (minus clearance).
+          const r = rects[i].r;
+          // A control inside a COLLAPSED container (a closed drawer's clip at
+          // 0 height) is clipped BY DESIGN — that is what closed means. Only
+          // controls that are visible in the page count.
+          // Reliable across Chromium builds (checkVisibility is not): a control
+          // is "shown" only if no clipping ancestor has collapsed to ~0 height.
+          let shown = true;
+          for (let p = els[i].parentElement; p && p !== document.body; p = p.parentElement) {
+            const pcs = getComputedStyle(p);
+            if ((pcs.overflowY !== 'visible' || pcs.overflowX !== 'visible') && p.getBoundingClientRect().height < 2) { shown = false; break; } }
+          if (!shown) { rects[i].ghost = true; continue; }
+          for (let p = els[i].parentElement; p && p !== document.body; p = p.parentElement) {
+            const cs = getComputedStyle(p);
+            const cx = cs.overflowX !== 'visible', cy = cs.overflowY !== 'visible';
+            if (!cx && !cy) continue;
+            const pr = p.getBoundingClientRect();
+            if (pr.height < 2 || pr.width < 2) break;   // collapsed ancestor: by design
+            // A segment control's buttons sit FLUSH inside their pill on purpose
+            // (the pill's overflow:hidden gives them its rounded corners); the
+            // clearance rule is for content that could be cut, not for a
+            // rounded frame around its own children.
+            // The design's own shape language: "pill segment = one-of-N slider
+            // (.seg, .tool-btn pen/eraser, .smooth-btn)" (styles.css, BUTTON
+            // SYSTEM). Their buttons sit FLUSH inside a rounded pill that
+            // clips only its own corners; that is the shape, not a defect.
+            const isSeg = p.classList.contains('seg') || p.classList.contains('smooth-seg')
+                       || p.classList.contains('tool-group') || p.id === 'toolGroup' || p.id === 'smoothSeg';
+            const need = isSeg ? 0 : CLEAR;
+            // A badge INSIDE a rounded card (the page thumbnail's delete) sits
+            // near the card edge on purpose; a rounded frame is not a clipper
+            // of its own decorations. Only .frame is exempted, by name.
+            const isCard = p.classList.contains('frame');
+            if (!isCard && cx && (r.right > pr.right - need + 0.5 || r.left < pr.left + need - 0.5))
+              clipped.push(rects[i].id + ' in ' + (p.id || String(p.className).split(' ')[0]) + ' x');
+            // Vertical: the invisible 44pt tap area (--tap-grow ::before, with
+            // z-index so it wins the hit-test) EXTENDS a sub-44 control past
+            // its pill on purpose; the pill clips it visually and that is the
+            // design (v205-fix). Only the visual box may not be cut.
+            const grows = parseFloat(getComputedStyle(els[i]).getPropertyValue('--tap-grow')) > 0;
+            if (!grows && !isSeg && cy && cs.overflowY === 'hidden' && (r.bottom > pr.bottom + 0.5 || r.top < pr.top - 0.5))
+              clipped.push(rects[i].id + ' in ' + (p.id || String(p.className).split(' ')[0]) + ' y'); } }
+        return { scrollX: document.documentElement.scrollWidth > vw + 1, offRight, offLeft,
+                 overlaps: [...new Set(overlaps)].slice(0, 6), clipped: [...new Set(clipped)].slice(0, 6) }; }"""
+    _AUDIT_OK = lambda r: not r["scrollX"] and not r["offRight"] and not r["offLeft"] and not r["overlaps"] and not r["clipped"]
     for pw in (375, 390):
         for path, nm, openers in (("/", "Pad", ("#tuneBtn", "#colorOpenBtn", "#imageOpenBtn", "#musicOpenBtn")),
                                   ("/flip", "Flip", ("#tuneBtn", "#colorCurrent", "#imageBtn", "#musicBtn"))):
             _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); _f.wait_for_timeout(700)
             _f.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
             _r = _f.evaluate(_AUDIT)
-            check(f"PHONE {nm}@{pw}: every control on-screen, no scroll, no overlap (base)", not _r["scrollX"] and not _r["offRight"] and not _r["overlaps"], str(_r))
+            check(f"PHONE {nm}@{pw}: every control on-screen, no scroll, no overlap, no clip (base)", _AUDIT_OK(_r), str(_r))
             for op in openers:
                 if _f.locator(op).count():
                     _f.click(op); _f.wait_for_timeout(350); _r = _f.evaluate(_AUDIT)
-                    check(f"PHONE {nm}@{pw}: ...with {op} drawer open", not _r["scrollX"] and not _r["offRight"] and not _r["overlaps"], str(_r))
+                    check(f"PHONE {nm}@{pw}: ...with {op} drawer open", _AUDIT_OK(_r), str(_r))
                     _f.click(op); _f.wait_for_timeout(200)
             _f.click(openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
             _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
             _r = _f.evaluate(_AUDIT)
-            check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", not _r["scrollX"] and not _r["offRight"] and not _r["overlaps"], str(_r))
+            check(f"PHONE {nm}@{pw}: ...with music loaded + fine-tune open", _AUDIT_OK(_r), str(_r))
             _f.close()
+    # v210: the header brand vs the control cluster, both states, three widths.
+    # State 1 (first load): the wordmark shows and the cluster must clear it —
+    # or the wordmark must collapse. State 2 (take saved): the wordmark is
+    # hidden by CSS and the cluster must still keep a real gap from the MARK,
+    # not snug against it (owner's iPhone screenshot). Real click on the real
+    # button; the visual audit above cannot see a "gap that is too small".
+    _HDR = """() => { const brand = document.querySelector('.brand');
+        const mark = brand.querySelector('svg').getBoundingClientRect();
+        const words = [...brand.querySelectorAll(':scope > span')].filter(w => getComputedStyle(w).display !== 'none' && w.getBoundingClientRect().width > 0);
+        const brandRight = words.length ? Math.max(mark.right, ...words.map(w => w.getBoundingClientRect().right)) : mark.right;
+        const ctrls = [...document.querySelectorAll('.header .actions button')].filter(b => !b.hidden && b.getBoundingClientRect().width > 0);
+        const first = Math.min(...ctrls.map(b => b.getBoundingClientRect().left));
+        return { wordsShown: words.length, gap: Math.round(first - brandRight) }; }"""
+    # Floors are MEASURED, not aspirational: 8px is what the collapsed cluster
+    # clears the mark by at 375/390 (and 430 keeps Post's word at exactly 8);
+    # 320-class phones run the 36px tier and clear it visually with the mark
+    # box reading ~-2 (the box includes the mark's own inner padding), so 4 is
+    # the honest floor there. Above these the header would be shedding labels
+    # for air nobody can see.
+    for pw in (320, 375, 390, 430):
+        _floor = 4 if pw <= 340 else 8
+        _h = _b.new_page(viewport={"width": pw, "height": 844}); _h.goto(BASE + "/", wait_until="load"); _h.wait_for_timeout(700)
+        _g = _h.evaluate(_HDR)
+        check(f"V210 header@{pw}: on first load the cluster clears the brand (or the wordmark collapsed)",
+              _g["gap"] >= _floor, f"gap {_g['gap']}px (floor {_floor}), words shown {_g['wordsShown']}")
+        # take saved: draw a stroke, stop.
+        _bx = _h.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
+        _h.mouse.move(_bx["x"] + 40, _bx["y"] + 60); _h.mouse.down(); _h.mouse.move(_bx["x"] + 160, _bx["y"] + 120, steps=6); _h.mouse.up()
+        _h.wait_for_timeout(300); _h.click("#recordBtn"); _h.wait_for_timeout(600)
+        _g = _h.evaluate(_HDR)
+        check(f"V210 header@{pw}: with a take saved the cluster still clears the mark",
+              _g["gap"] >= _floor - 6 if pw <= 340 else _g["gap"] >= _floor,
+              f"gap {_g['gap']}px (floor {_floor}), words shown {_g['wordsShown']}")
+        # And Post keeps its word wherever the arithmetic allows (430), drops
+        # to its icon only where it must (<= 390 with a take saved).
+        _pw = _h.evaluate("() => { const p = document.getElementById('postBtn'); return p && !p.hidden ? Math.round(p.getBoundingClientRect().width) : null; }")
+        if pw >= 430:
+            check(f"V210 header@{pw}: Post KEEPS its label — nothing was shed that did not need to be", _pw and _pw > 60, f"Post {_pw}px wide")
+        else:
+            check(f"V210 header@{pw}: Post is icon-only here (six controls cannot fit a labelled Post)", _pw and _pw <= 42, f"Post {_pw}px wide")
+        _h.close()
+
     check("V204: the old crammed .flip-hint footer is gone",
           fp.evaluate("() => !document.querySelector('.flip-hint')"))
     fp.close()
@@ -1381,8 +1510,25 @@ check("A1: the late-decode hook is defined",
 check("A1: ...and invoked from the decode-complete path",
       _appjs.count("_skriblLateAudio") >= 2,
       f"{_appjs.count('_skriblLateAudio')} references")
-check("A1: play() gates audio start on the RESOLVED resume promise",
-      "p.then(() => { if (running && !paSource) audioStart(); }" in _appjs)
+# A1's retry (`p.then(() => { if (running && !paSource) audioStart(); })`) is
+# GONE ON PURPOSE in v210, and this pin now guards its absence. It could never
+# fire: begin() had already called audioStart(), which started a source on the
+# suspended context and set paSource, so `!paSource` was false by the time the
+# promise resolved. Three builds read as "iOS audio fixed" on the strength of
+# it while every shared link was silent on a real iPhone. The invariant that
+# replaced it is stronger and is what is pinned here: a buffer source is never
+# CONSTRUCTED unless the context reports running.
+check("A1's unreachable retry is not reintroduced",
+      "if (running && !paSource) audioStart()" not in _appjs,
+      "the retry that could never fire is back")
+check("player audio only constructs a source on a RUNNING context",
+      "audioCtx.state !== 'running') return false;" in _appjs
+      and "createBufferSource" in _appjs)
+check("the editor loop applies the same rule",
+      "if (audioCtx.state === 'running') return go();" in _appjs)
+check("a failed unlock hands off to native audio instead of claiming success",
+      "onFail" in _appjs and "playNativeLooped" in _appjs
+      and "startLoopPreviewNative" in _appjs)
 check("A1: decode/fetch failures are no longer silent",
       "music decode failed" in _appjs and "music fetch failed" in _appjs)
 

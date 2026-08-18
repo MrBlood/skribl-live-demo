@@ -1560,15 +1560,73 @@ if (playScrub) {
   const actions = document.getElementById('actions');
   const header = document.querySelector('.header');
   if (!brand || !brandText || !actions || !header) return;
+  // v210 (owner's iPhone): the test used to be scrollWidth > clientWidth. That
+  // detects the cluster pushing PAST the header's edge — but on a phone the
+  // header's controls are laid out on top of the wordmark, so nothing pushes
+  // past anything: at 375 the tune glyph painted over the "d" of "Pad" and at
+  // 320 both the glyph and the record dot sat INSIDE the wordmark, while
+  // scrollWidth stayed equal to clientWidth and the collapse never fired.
+  // Measure the actual thing: does the first control clear the wordmark's
+  // right edge with a real gap? Overflow is still checked as a second test.
+  // 8, not 12: measured at 375 with a take saved, the fully-collapsed cluster
+  // clears the brand by 5px before the gap step and 8+ after it. A 12px floor
+  // forced Post to drop its label at 375 for 4px of air; 8 keeps the word on
+  // the phone that matters most and still shows daylight past the mark.
+  const MIN_GAP = 8;   // px between the brand (mark or wordmark) and the first control
+  function firstControlLeft() {
+    let left = Infinity;
+    for (const el of actions.querySelectorAll('button, a')) {
+      if (el.hidden || el.closest('[hidden]')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0) left = Math.min(left, r.left);
+    }
+    return left;
+  }
+  const collides = () => {
+    const b = brand.getBoundingClientRect();
+    const first = firstControlLeft();
+    // What matters is the BRAND, not the cluster's own box: with
+    // justify-content:flex-end an over-full cluster overflows leftward, and
+    // that is fine right up until it reaches the brand's gap. (A first draft
+    // also tested the cluster's box edge, and at 430 it shed Post's label for
+    // an overflow of 3px into a margin the user cannot see.)
+    return first < b.right + MIN_GAP
+        || header.scrollWidth > header.clientWidth + 1;
+  };
   function fit() {
     brand.classList.remove('brand-collapsed');           // reveal, then measure
     header.classList.remove('rec-collapsed');
-    // Step 1: if the wordmark makes it overflow, drop the wordmark.
-    if (header.scrollWidth > header.clientWidth + 1) brand.classList.add('brand-collapsed');
-    // Step 2: if it's STILL tight, shed Record's label (keep the function-critical
-    // controls over decoration). The flex spacer absorbs slack, so overflow only
-    // appears when it genuinely doesn't fit.
-    if (header.scrollWidth > header.clientWidth + 1) header.classList.add('rec-collapsed');
+    header.classList.remove('gap-collapsed');
+    header.classList.remove('post-collapsed');
+    // Pixel-snap the cluster. The wordmark's text width is fractional (the
+    // brand's right edge measured 435.65625 at 1280) and justify-content:
+    // flex-end hands that fraction straight to the cluster's x (715.609375),
+    // where the buttons' rounded corners then anti-alias differently between
+    // two renders of BYTE-IDENTICAL CSS — verify_cssplit's editor-pad scene
+    // failed twice on a 4x34 strip at exactly this button's edge, 1-3 RGB per
+    // pixel, corners only. Rounding the actions box to whole pixels removes
+    // the sensitivity at its source instead of loosening a zero-tolerance
+    // pixel test that is right to be zero-tolerance.
+    // With flex:1 + flex-end the buttons are packed to the RIGHT edge, so
+    // their x is (right edge - content width); a margin on the box shifts
+    // nothing. What is fractional is the content width itself (252.390625:
+    // the labelled Record/Post pills size to their text). So the snap goes on
+    // the flex item's right side: a fractional padding-right that makes the
+    // content start on a whole pixel. Cheap, invisible, idempotent.
+    actions.style.paddingRight = '';
+    const first = firstControlLeft();
+    const frac = Number.isFinite(first) ? first % 1 : 0;
+    if (frac) actions.style.paddingRight = (parseFloat(getComputedStyle(actions).paddingRight) || 0) + frac + 'px';
+    // Shed in order of how little it costs, re-measuring after each, and stop
+    // as soon as nothing collides: 1. the wordmark  2. Record's label
+    // 3. the inter-control gap  4. Post's label (icon stays). Measured at
+    // 375: with a take saved, steps 1-2 leave the cluster 6px over-full;
+    // step 3 alone clears it, so Post keeps its word there and only loses it
+    // on narrower phones.
+    if (collides()) brand.classList.add('brand-collapsed');
+    if (collides()) header.classList.add('rec-collapsed');
+    if (collides()) header.classList.add('gap-collapsed');
+    if (collides()) header.classList.add('post-collapsed');
   }
   const refit = () => requestAnimationFrame(fit);   // measure after layout settles
   if (typeof ResizeObserver !== 'undefined') {
@@ -2211,7 +2269,17 @@ function startLoopPreview() {
 
   // Primary path: sample-accurate Web Audio loop of the exact posted clip.
   // Gapless + drift-free. Playhead reads the audio clock, mapped to song time.
-  if (startWebAudioLoop()) {
+  // The fallbacks below are reachable ASYNCHRONOUSLY too: on a device whose
+  // AudioContext never reaches 'running', the Web Audio attempt fails after
+  // this function has already returned, and the preview must still play.
+  let previewHandedOff = false;
+  const previewFallback = () => {
+    if (previewHandedOff || !previewingLoop) return;
+    previewHandedOff = true;
+    if (previewLoopTimer) { clearInterval(previewLoopTimer); previewLoopTimer = null; }
+    startLoopPreviewNative();
+  };
+  if (startWebAudioLoop(previewFallback)) {
     previewLoopTimer = setInterval(() => {
       if (!previewingLoop || !_waLoopSource) return;
       const songTime = webAudioLoopSongTime();
@@ -2227,6 +2295,11 @@ function startLoopPreview() {
     return;
   }
 
+  startLoopPreviewNative();
+}
+
+function startLoopPreviewNative() {
+  if (!audioEl) return;
   // Fallback A: baked clip via native <audio> loop (if Web Audio unavailable).
   const built = (typeof buildTrimmedLoopWav === 'function') ? buildTrimmedLoopWav() : null;
   if (built) {
@@ -2329,7 +2402,16 @@ function playMusicLooped(totalDurationMs, onStarted) {
   // Primary: sample-accurate Web Audio loop (gapless, drift-free) — the same
   // clip the post uses. The drawing replay (onStarted) starts immediately in
   // lockstep. The interval only drives the playhead + the total-time stop.
-  if (startWebAudioLoop()) {
+  // The native path is a FUNCTION now, not just the code below, because the
+  // Web Audio attempt can fail asynchronously (an unlock that never reaches
+  // 'running'). Called at most once, by whichever path gives up first.
+  let handedOff = false;
+  const nativeFallback = () => {
+    if (handedOff) return;
+    handedOff = true;
+    playNativeLooped(totalDurationMs, onStarted);
+  };
+  if (startWebAudioLoop(nativeFallback)) {
     if (onStarted) onStarted();
     let elapsedWA = 0;
     const loopCheckWA = setInterval(() => {
@@ -2341,8 +2423,15 @@ function playMusicLooped(totalDurationMs, onStarted) {
     }, 100);
     return;
   }
+  nativeFallback();
+}
 
-  // Fallback: original timer-wrapped source loop (if Web Audio unavailable).
+function playNativeLooped(totalDurationMs, onStarted) {
+  // Timer-wrapped <audio> loop. On iOS this is the path that actually plays:
+  // the element's own gesture-driven play() has none of Web Audio's unlock
+  // conditions, which is why Test Seam works on the owner's phone while the
+  // Web Audio preview does not.
+  if (!audioEl) { if (onStarted) onStarted(); return; }
   audioEl.currentTime = trimStart;
 
   const playPromise = audioEl.play();
@@ -3223,6 +3312,30 @@ function normalizeSkribl(payload) {
   });
 }
 
+// The canonical place a payload's current-frame media lives, for WRITERS.
+// normalizeSkribl() above does this for readers; before v210 there was no
+// writer-side equivalent, so editor_post.js kept mutating payload.music — a
+// field serializeSkribl() stopped producing at the v2 frame migration. The
+// post-time loop crop was therefore skipped on every v2 Pad post, silently,
+// and shared posts shipped the whole song instead of the selected loop. The
+// server was migrated for frames; that one client consumer was not. Anything
+// that needs to READ OR REPLACE current-frame media goes through here rather
+// than learning about frames[0] for itself — format knowledge drifting
+// between modules is exactly what caused the bug.
+function currentFrameMedia(payload) {
+  const frames = payload && payload.frames;
+  const f0 = (Array.isArray(frames) && frames.length) ? frames[0] : null;
+  return {
+    // Legacy top-level is still read so a pre-v2 payload keeps working.
+    music: f0 && f0.music != null ? f0.music : ((payload && payload.music) || null),
+    photo: f0 && f0.photo != null ? f0.photo : ((payload && payload.photo) || null),
+    setMusic(value) {
+      if (f0) f0.music = value; else payload.music = value;
+    }
+  };
+}
+window.SkriblPayload = { currentFrameMedia };
+
 function serializeSkribl() {
   // A frame captures the live drawing (base layer + recorded strokes + media).
   // Frame-format: the drawing lives under frames[] only — no legacy top-level
@@ -3325,7 +3438,7 @@ function unlockWebAudio() {
   try { const p = audioCtx.resume(); return (_waUnlock = (p && p.then) ? p : null); }
   catch (e) { console.warn('skribl: resume threw', e); return null; }
 }
-function startWebAudioLoop() {
+function startWebAudioLoop(onFail) {
   if (!audioCtx || !currentAudioBuffer) return false;
   const buf = buildLoopAudioBuffer();
   if (!buf) return false;
@@ -3353,24 +3466,30 @@ function startWebAudioLoop() {
   // which is still inside that gesture. Consumed either way — a promise that
   // resolved for an earlier play says nothing about a context iOS has since
   // re-suspended.
+  // HANDING OFF, not just declining (v209 review F2, and the owner's iPhone).
+  // Refusing to start on a suspended context is correct but not sufficient: the
+  // callers below suppress their native <audio> fallback whenever this returns
+  // true, so a context that never reaches 'running' turned "intermittently
+  // silent" into "always silent, honestly". On that device Test Seam (native
+  // <audio>) plays while Preview Loop (Web Audio) does not, so native is the
+  // path that actually works there and must be reachable.
+  const fail = (why) => {
+    _waGen++;                      // nothing from this attempt may start later
+    if (onFail) { const f = onFail; onFail = null; console.warn('skribl: web audio unavailable — ' + why); f(); }
+  };
   const p = pending || unlockWebAudio();
   _waUnlock = null;
   if (p && p.then) {
-    p.then(go, (e) => {
-      // A REJECTED unlock must not start anyway (v209 review F2). v209 logged
-      // the failure and then called go() regardless, against a context still
-      // suspended — silence that reports success, with the native <audio>
-      // fallback already suppressed by the `true` below. Invalidate instead,
-      // so nothing starts and a later Play gets a clean generation.
-      console.warn('skribl: unlock failed', e);
-      _waGen++;
-    });
+    let settled = false;
+    p.then(() => { settled = true; if (!go()) fail('context not running after resume'); },
+           (e) => { settled = true; fail('resume rejected: ' + ((e && e.message) || e)); });
+    // iOS can leave resume() pending indefinitely rather than rejecting. Silence
+    // with no error is the worst outcome for the listener, so time it out.
+    setTimeout(() => { if (!settled && !_waLoopSource) fail('resume never settled'); }, 600);
   } else if (p) {
-    go();          // a non-promise resume (older WebKit): already synchronous
+    if (!go()) fail('synchronous resume did not reach running');
   } else {
-    // No promise and no resume: the context could not be asked to unlock, so
-    // there is nothing to wait for and nothing to start.
-    _waGen++;
+    fail('no AudioContext resume available');
     return false;
   }
   return true;   // the Web Audio path IS the path taken; only its start defers
@@ -3616,6 +3735,23 @@ function loadSkribl(data) {
 
   // Music — restore full audio + trim points (reversible)
   if (data.music && data.music.data) {
+    // BUG A (v210). Loop bounds used to be installed ONLY inside the <audio>
+    // element's 'loadedmetadata' handler below. trimEnd starts at 0, and iOS
+    // defers media loading until playback is requested, so on a shared link the
+    // event routinely had not fired when the user tapped Play: trimEnd was
+    // still 0, buildLoopAudioBuffer() saw a zero-length loop window, returned
+    // null with no exception, and nothing was ever constructed. Silent on
+    // iPhone, fine on desktop, invisible to every headless test — until the
+    // harness suppressed the event and reproduced it exactly.
+    //
+    // The serialized values are authority and are installed SYNCHRONOUSLY here.
+    // trimEnd stays null when the payload omits it; the default needs a real
+    // duration, and the decoded buffer supplies that below. loadedmetadata may
+    // still refresh the element and the editor's drawer UI, but it is no longer
+    // load-bearing for Web Audio playback.
+    trimStart = data.music.trimStart != null ? data.music.trimStart : 0;
+    trimEnd = data.music.trimEnd != null ? data.music.trimEnd : null;
+    loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     fetch(data.music.data).then(r => r.arrayBuffer()).then(buf => {
       if (audioEl && audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
@@ -3626,11 +3762,13 @@ function loadSkribl(data) {
       audioEl._draftData = data.music.data;
       audioEl._fileName = data.music.name || 'Music from draft';
       audioEl.addEventListener('loadedmetadata', () => {
-        audioDuration = audioEl.duration;
-        trimStart = data.music.trimStart != null ? data.music.trimStart : 0;
-        trimEnd = data.music.trimEnd != null ? data.music.trimEnd : Math.min(audioDuration, 20);
-        loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
-        // State above, drawer UI below. clampTrim() stays on the state side.
+        // UI/element refresh only. The authoritative loop state was installed
+        // synchronously above and is finalised on decode (BUG A) — do not move
+        // trim assignment back in here.
+        if (!Number.isFinite(audioDuration) || audioDuration <= 0) audioDuration = audioEl.duration;
+        if (trimEnd == null && Number.isFinite(audioEl.duration)) {
+          trimEnd = Math.min(audioEl.duration, 20);
+        }
         clampTrim();
         if (!document.body.classList.contains('player-mode')) {
           if (typeof setCrossfadeUI === 'function') setCrossfadeUI();
@@ -3645,6 +3783,15 @@ function loadSkribl(data) {
       });
       audioCtx.decodeAudioData(buf.slice(0)).then(audioBuffer => {
         currentAudioBuffer = audioBuffer;
+        // BUG A: the decoded buffer is the authoritative duration source. It
+        // arrives independently of the <audio> element, so a post whose
+        // serialized trimEnd is absent (legacy, or a default-trim post) still
+        // gets a usable loop window without waiting on loadedmetadata. After
+        // this line the invariant holds: once currentAudioBuffer exists, the
+        // loop bounds are valid whether or not media metadata ever loaded.
+        audioDuration = audioBuffer.duration;
+        if (trimEnd == null) trimEnd = Math.min(audioDuration, 20);
+        clampTrim();
         // LATE-DECODE START (v202 review amendment, A1). On a phone the decode
         // routinely finishes AFTER the user pressed Play: the drawing was
         // already animating, paStartAtElapsed() had no buffer and no-op'd, and
@@ -4165,7 +4312,17 @@ function showPlayerError(msg) {
   let paSource = null, paGain = null, paBuffer = null, paGen = 0;
   function paLoopBuffer() {
     // Build once and cache — the player's trims/crossfade don't change post-load.
-    if (!paBuffer) { try { paBuffer = buildLoopAudioBuffer(); } catch (e) { paBuffer = null; } }
+    if (!paBuffer) {
+      try { paBuffer = buildLoopAudioBuffer(); } catch (e) {
+        // NOT silent any more (v210). This catch swallowed the exception, which
+        // made "the builder threw" and "the builder returned null" identical
+        // to every caller — and erased the one piece of evidence that would
+        // have named the iPhone silence in a day instead of a week. The permanent
+        // diagnostic path is a warning; the harness pins the equivalence class.
+        console.warn('skribl: loop buffer build failed', e);
+        paBuffer = null;
+      }
+    }
     return paBuffer;
   }
   function paStop() {
