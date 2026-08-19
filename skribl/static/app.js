@@ -558,6 +558,8 @@ function startDraw(e) {
   // Playback surface, never a drawing one. Bound at load, before player-mode
   // is set, so the guard belongs here. See verify_player_isolation.py.
   if (document.body.classList.contains('player-mode')) return;
+  // Space held = grab-pan mode; never a stroke (v211).
+  if (window._skriblSpaceHeld && window._skriblSpaceHeld()) return;
   // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
   // preventDefault/anything else so it can cleanly abort a nascent 1-finger
   // stroke that the first finger just began. Guarded on ZoomView so the player
@@ -4330,6 +4332,7 @@ function showPlayerError(msg) {
     // after the user stopped (v209 review F1 — the counter existed in the Pad
     // path but nothing ever incremented it on stop).
     paGen++;
+    if (audioEl && !audioEl.paused) { try { audioEl.pause(); } catch (e) {} }   // native fallback, if it took over (H1)
     if (paSource) {
       try { paSource.stop(); } catch (e) {}
       try { paSource.disconnect(); } catch (e) {}
@@ -4377,15 +4380,39 @@ function showPlayerError(msg) {
       return true;
     };
     if (audioCtx.state === 'running') return mk();
+    // v211 (v210 review H1): parity with the editor. If Web Audio cannot
+    // unlock — resume() rejects, never settles (iOS leaves it pending), or
+    // resolves onto a context that still isn't running — hand off to the
+    // native <audio> element loadSkribl already created from the same media,
+    // aligned to the drawing position. A browser where Web Audio will not
+    // unlock but <audio> would play must not stay silent because Web Audio
+    // was tried first. Nothing is swallowed: the reason is logged.
+    const nativeFallback = (why) => {
+      // Guard against a stale attempt (a Stop or a newer Play happened), but
+      // NOT against our own paStop(): paStartAtElapsed calls paStop() before
+      // bumping to `gen`, so `gen` IS the current generation here.
+      if (gen !== paGen) return;
+      paGen++;
+      console.warn('skribl: player web audio unavailable — ' + why + ' — using native audio');
+      if (!audioEl) return;
+      try {
+        const dur = buf.duration;
+        const off = dur > 0 ? (((elapsedMs / 1000) % dur) + dur) % dur : 0;
+        audioEl.currentTime = trimStart + off;
+        audioEl.loop = true;
+        const pp = audioEl.play();
+        if (pp && pp.catch) pp.catch((e) => console.warn('skribl: native audio failed too', e));
+      } catch (e) { console.warn('skribl: native audio failed too', e); }
+    };
     let p = null;
-    try { p = audioCtx.resume(); } catch (e) { console.warn('skribl: resume threw', e); }
+    try { p = audioCtx.resume(); } catch (e) { nativeFallback('resume threw'); return false; }
     if (p && p.then) {
-      p.then(mk, (e) => {
-        // A rejected unlock is a FAILURE, not a reason to start anyway: the
-        // context is still suspended and a source begun on it is silence that
-        // reports success (v209 review F2).
-        console.warn('skribl: player audio unlock failed', e);
-      });
+      let settled = false;
+      p.then(() => { settled = true; if (!mk()) nativeFallback('context not running after resume'); },
+             (e) => { settled = true; nativeFallback('resume rejected: ' + ((e && e.message) || e)); });
+      setTimeout(() => { if (!settled && !paSource) nativeFallback('resume never settled'); }, 600);
+    } else if (!mk()) {
+      nativeFallback('synchronous resume did not reach running');
     }
     // The drawing never waits on audio; the loop joins when the context is up.
     return false;
@@ -5018,12 +5045,22 @@ window.addEventListener('touchcancel', _pinchEnd);
   }, { passive: false });
 
   // Hold Space and drag to grab-pan.
+  //
+  // v211 (owner, desktop): this used to gate BOTH the intercept and the
+  // cursor on `zoom > 1`. At 100% the guard was false, the capture-phase
+  // intercept skipped, and startDraw ran — so Space+drag DREW A LINE. That is
+  // the wrong failure even when there is nothing to pan: the universal
+  // contract of holding Space is "the pointer is a hand now, not a pen". So
+  // Space always claims the drag and always suppresses drawing; the pan
+  // itself is simply a no-op at 100% (nothing to move), and the cursor says
+  // 'grab' either way so the user knows the mode changed.
   let spaceHeld = false, spaceDragging = false, lastX = 0, lastY = 0;
   function typingTarget(el) { return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable); }
   window.addEventListener('keydown', function (e) {
     if (e.code === 'Space' && !typingTarget(e.target)) {
+      if (!spaceHeld) canvasWrap.style.cursor = spaceDragging ? 'grabbing' : 'grab';
       spaceHeld = true;
-      if (zoom > 1) { e.preventDefault(); canvasWrap.style.cursor = spaceDragging ? 'grabbing' : 'grab'; }
+      e.preventDefault();               // no page scroll / button activation
     }
   });
   window.addEventListener('keyup', function (e) {
@@ -5031,12 +5068,16 @@ window.addEventListener('touchcancel', _pinchEnd);
   });
   // Capture phase so a Space-drag claims the mousedown before startDraw fires.
   canvasWrap.addEventListener('mousedown', function (e) {
-    if (spaceHeld && zoom > 1) {
+    if (spaceHeld) {
       spaceDragging = true; lastX = e.clientX; lastY = e.clientY;
       canvasWrap.style.cursor = 'grabbing';
       e.preventDefault(); e.stopPropagation();
     }
   }, true);
+  // Belt and braces: if focus was somewhere that ate the keydown (a button
+  // the user just clicked), the mousedown still must not draw while Space is
+  // physically down. startDraw checks this flag too.
+  window._skriblSpaceHeld = function () { return spaceHeld; };
   window.addEventListener('mousemove', function (e) {
     if (!spaceDragging) return;
     panX += e.clientX - lastX; panY += e.clientY - lastY;

@@ -564,7 +564,20 @@ with sync_playwright() as sp:
     # what closed verify_cssplit's twice-failing 4x34 sub-pixel strip at the
     # source rather than loosening a zero-tolerance pixel test. Owner: set to
     # fit. FINAL v210 figure.
-    BYTES_RATCHET, BYTES_TARGET = 145_881, 153_600
+    # 145,994 = 145,881 + 113 B: Space+drag fix (v211). The grab-pan
+    # intercept was gated on zoom>1, so at 100% Space+drag DREW A LINE
+    # (owner, desktop); Space now always claims the drag and startDraw refuses
+    # a stroke while it is held. Pinned on both editors at both zoom states,
+    # mutation-tested (the old gate back -> pad@100% fails, magnified passes).
+    # Owner: set to fit.
+    # 146,911 = 145,994 + 917 B: v210 review H1 (player native-<audio>
+    # fallback when Web Audio cannot unlock — rejection, never-settles, or
+    # resume landing on a still-suspended context — aligned to the drawing,
+    # paused by paStop) and the F2 decode-await comments in app.js. Owner:
+    # set to fit. The ~2,060 B editor-only Web Audio loop externalisation
+    # noted above is now worth doing in its own build — it would recover
+    # most of this arc's raises.
+    BYTES_RATCHET, BYTES_TARGET = 146_911, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

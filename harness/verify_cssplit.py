@@ -64,11 +64,23 @@ def check(name, ok, detail=""):
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
 
 
+# FREEZE neutralises everything that is NOT what this suite tests. The suite
+# tests that the CSS SPLIT produced an identical stylesheet — so transitions
+# (timing-dependent), the caret (blink-phase), and, since v211, ANTI-ALIASED
+# CURVES are removed from the comparison. Rounded corners rasterise with a
+# 1-5 RGB coverage jitter between two Chromium renders of byte-identical CSS
+# at integer geometry (GPU layer promotion / compositor path differences
+# between pages); editor-pad's #tuneBtn corners failed exactly so, three
+# times, across two builds, after its position had been pixel-snapped and
+# the mouse parked. Squaring corners for the capture keeps the test
+# zero-tolerance on what it is FOR and blind to rasteriser jitter. (Hover
+# and pointer position are also parked per scene, in capture().)
 FREEZE = """*, *::before, *::after {
   animation: none !important;
   transition: none !important;
   animation-play-state: paused !important;
   caret-color: transparent !important;
+  border-radius: 0 !important;
 }"""
 
 
@@ -207,6 +219,26 @@ try:
 
     shots = pathlib.Path(tempfile.mkdtemp())
 
+    # v211: because FREEZE squares corners for the pixel comparison, the split
+    # could in principle drop a border-radius without this suite seeing it.
+    # So radius is compared by COMPUTED STYLE instead, on the player's
+    # controls, between the split sheet and the full one — the same
+    # before/after the pixel test uses, exact, and immune to rasteriser jitter.
+    def radii(b, override):
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        if override:
+            pg.route("**/player.css*", lambda route: route.fulfill(
+                status=200, content_type="text/css", body=styles))
+        pg.goto(BASE + plain["url"], wait_until="load")
+        pg.wait_for_timeout(1200)
+        out = pg.evaluate("""() => {
+          const sels = ['#playerPlayBtn', '#playerRestartBtn', '#playerLoopBtn', '.player-btn', '#playerShell', '.brand-mark'];
+          const o = {};
+          for (const s of sels) { const e = document.querySelector(s); if (e) o[s] = getComputedStyle(e).borderRadius; }
+          return o; }""")
+        pg.close()
+        return out
+
     def capture(b, override, tag):
         """Shoot every scene, optionally forcing the player back onto styles.css."""
         for name, path, (vw, vh), acts in SCENES:
@@ -219,6 +251,15 @@ try:
                     status=200, content_type="text/css", body=styles))
             pg.goto(BASE + path, wait_until="load")
             pg.wait_for_timeout(1800)
+            # v211: park the pointer. Pages share one browser context, and the
+            # mouse position persists across new_page(); if the previous pass's
+            # last scene left it over where a control lands in THIS scene, that
+            # control is :hover in one pass and not the other — a 1-3 RGB
+            # anti-aliasing delta on its rounded corners, and a zero-tolerance
+            # pixel test rightly fails. editor-pad's #tuneBtn at (715,32-66)
+            # failed exactly so, twice, after v210 had already pixel-snapped
+            # its position. Hover state is part of the scene; fix it.
+            pg.mouse.move(0, vh - 1)
             # Freeze BEFORE the clicks as well as after. Applying it only at the
             # end catches any sheet-open transition partway through, and where
             # it got to depends on timing — which is how editor-export came out
@@ -256,6 +297,11 @@ try:
         b = sp.chromium.launch()
         capture(b, True, "full")       # player served the whole styles.css
         capture(b, False, "subset")    # player served the committed player.css
+        # Radii, by computed style (see radii() — the pixel pass squares them).
+        _rf, _rs = radii(b, True), radii(b, False)
+        check("player.css keeps every control's border-radius identical to styles.css "
+              "(computed style; the pixel pass deliberately squares corners)",
+              _rf == _rs and len(_rf) >= 3, f"full {_rf} vs subset {_rs}")
 
         # GATE. If the two capture passes produced identical bytes for a scene
         # the player does not even style, the comparison proves nothing. Require

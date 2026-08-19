@@ -441,6 +441,90 @@ def _tombstone_ids(store):
         return list(store)
 
 
+# ---- durable release journal (SQLite only) -----------------------------
+# v211 (v210 review F3, owner: option A — durable, uniform). The in-memory
+# tombstone is process-local: another worker on the same SQLite file, or this
+# process after a restart, does not have it and counts the stranded row
+# until sweep or TTL. The durable record must NOT be another write to the same
+# SQLite database — the whole reason we are here is that that write failed
+# because a host transaction holds the single writer, and a second statement
+# against the same file is F2 under a different name. So the record goes to a
+# SIDECAR JOURNAL next to the database file: an append of one line, which
+# needs no database lock and survives the process. Any worker's next
+# reservation — the moment it holds a writer of its own — reads the journal,
+# sweeps those ids, and truncates it. Crash semantics: an append that did not
+# land is a release that will age out at TTL (v208 behaviour, never worse);
+# an append that landed is applied by whoever next reserves, in any process.
+# The journal is SQLite-only: PostgreSQL's release write does not collide, and
+# the cross-worker guarantee there is pinned live in verify_postgres.
+def _journal_path(engine):
+    try:
+        if engine.dialect.name != "sqlite":
+            return None
+        db = engine.url.database
+        if not db or db == ":memory:":
+            return None
+        return db + ".rate-release.journal"
+    except Exception:
+        return None
+
+
+def _journal_append(engine, token):
+    path = _journal_path(engine)
+    if not path:
+        return False
+    try:
+        with open(path, "a") as fh:
+            fh.write(f"{int(token)} {int(time.time())}\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        return True
+    except Exception:
+        return False
+
+
+def _journal_peek(engine):
+    """Non-truncating read of live journal ids (for counting)."""
+    path = _journal_path(engine)
+    if not path or not os.path.exists(path):
+        return []
+    ids, cutoff = [], int(time.time()) - int(RATE_PENDING_TTL)
+    try:
+        with open(path) as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit() and int(parts[1]) >= cutoff:
+                    ids.append(int(parts[0]))
+    except Exception:
+        return []
+    return ids
+
+
+def _journal_take(engine):
+    """Read and TRUNCATE the journal; return the live ids it held. Entries
+    older than RATE_PENDING_TTL are dropped (the row has stopped counting as
+    pending anyway). Truncating before sweeping is safe: a sweep that then
+    fails leaves the ids in this process's memory tombstone and they are
+    re-journaled by the next failed release or simply age out — never
+    counted against anyone in the meantime, because they are also added to
+    the in-memory store below."""
+    path = _journal_path(engine)
+    if not path or not os.path.exists(path):
+        return []
+    ids, cutoff = [], int(time.time()) - int(RATE_PENDING_TTL)
+    try:
+        with open(path, "r+") as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit() and int(parts[1]) >= cutoff:
+                    ids.append(int(parts[0]))
+            fh.seek(0)
+            fh.truncate()
+    except Exception:
+        return []
+    return ids
+
+
 def _sweep_tombstones(s):
     """Delete tombstoned rows now that this session HAS a writer.
 
@@ -457,7 +541,15 @@ def _sweep_tombstones(s):
     to collect.
     """
     try:
-        store = _tombstone_store(s.get_bind())
+        engine = s.get_bind()
+        store = _tombstone_store(engine)
+        # Apply the durable journal first: releases recorded by ANY process
+        # (another worker, or this one before a restart) become this
+        # process's tombstones now, so they stop counting immediately here
+        # too, and get swept below while we hold a writer.
+        for tok in _journal_take(engine):
+            with _tombstone_lock:
+                store.setdefault(tok, time.monotonic())
         dead = _tombstone_ids(store)[:RATE_CLEANUP_BATCH]
         if not dead:
             return
@@ -488,7 +580,15 @@ def _db_rate_count(s, bucket, key_hash):
     # A released-but-undeletable reservation is not in flight and must not be
     # charged to anyone (F2). Only ever post reservations, so this is a no-op
     # for the attempts bucket.
-    dead = _tombstone_ids(_tombstone_store(s.get_bind()))
+    engine = s.get_bind()
+    store = _tombstone_store(engine)
+    # Counting runs BEFORE reserving: worker B's first request after worker
+    # A's failure must not count A's stranded row, so the journal is read
+    # here as well as in the sweep. Reading is a non-truncating peek.
+    for tok in _journal_peek(engine):
+        with _tombstone_lock:
+            store.setdefault(tok, time.monotonic())
+    dead = _tombstone_ids(store)
     if dead:
         q = q.filter(RateEvent.id.notin_(dead))
     return q.count()
@@ -579,6 +679,10 @@ def _db_rate_release_post(ip, token):
         # which degradation happened is load-bearing (v202 review, F1+F2), and
         # the caller already contains it.
         _tombstone_add(token)
+        try:
+            _journal_append(session().get_bind(), token)
+        except Exception:
+            pass
         raise
 
 

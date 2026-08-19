@@ -508,11 +508,141 @@ check("counterexample setup: the host commit failed", r.status_code >= 500,
 _bunlock()
 with _b.app_context():
     _rl3._tombstone_store(_bdb.engine).clear()
+    # v211: the release is now ALSO journaled to a sidecar file, so dropping
+    # memory alone no longer reproduces v208 — the journal rescues the retry
+    # (which is the point of it). The counterexample must drop both.
+    _jp = _rl3._journal_path(_bdb.engine)
+    if _jp and os.path.exists(_jp):
+        os.remove(_jp)
 _rl3._rate_tombstones.clear()
 r = _b.test_client().post("/api/skribls", json={"frames": [FRAME]})
-check("COUNTEREXAMPLE: with the release record dropped, the stranded pending "
-      "row DOES limit the retry — so the contract check is real",
+check("COUNTEREXAMPLE: with the release record dropped (memory AND journal), the "
+      "stranded pending row DOES limit the retry — so the contract check is real",
       r.status_code == 429, str(r.status_code))
+
+# ---- v211 (v210 review F3, option A): the release must survive a PROCESS
+# BOUNDARY on SQLite. Two regressions the reviewer specified, in the shape
+# that actually discriminates:
+#  (1) RESTART — failure + release in "process 1"; discard ALL process-local
+#      state (tombstones, sessionmakers); build a fresh app on the SAME file
+#      as "process 2"; immediate retry must be accepted.
+#  (2) SECOND WORKER — two live apps on the same file at once; A fails, B
+#      retries immediately, never having seen A's memory.
+# Both are REAL process-local-state boundaries, not a mock of one: the
+# module-level caches are wiped and the sidecar journal is the only thing
+# that can carry the release across. Mutation: delete the journal between
+# the two halves and both must fail.
+print("\nF3 (v211) — the SQLite release survives a process boundary via the sidecar journal")
+
+
+def _f3_fresh_app(path, name):
+    os.environ["SKRIBL_RATE_HMAC_KEY"] = "txcontract-f3pb"
+    app = Flask("f3pb-" + name)
+    app.config.update(SQLALCHEMY_DATABASE_URI=f"sqlite:///{path}",
+                      SECRET_KEY="harness-f3pb", SKRIBL_RATE_BACKEND="db",
+                      SKRIBL_RATE_MAX_POSTS=1, SKRIBL_RATE_MAX_ATTEMPTS=500)
+    db = SQLAlchemy()
+    db.init_app(app)
+    skribl.init_skribl(app, session=lambda: db.session)
+    skribl.models.attach_to_metadata(db.metadata)
+    with app.app_context():
+        db.create_all()
+    state = {"armed": False, "lock": None}
+
+    @app.after_request
+    def _commit(resp):
+        if resp.status_code < 500:
+            if state["armed"]:
+                state["armed"] = False
+                lk = sqlite3.connect(path, timeout=0)
+                lk.isolation_level = None
+                lk.execute("BEGIN IMMEDIATE")
+                state["lock"] = lk
+                raise RuntimeError("injected host commit failure")
+            db.session.commit()
+        return resp
+
+    @app.teardown_request
+    def _rollback(exc):
+        db.session.rollback()
+
+    def unlock():
+        if state["lock"] is not None:
+            state["lock"].execute("ROLLBACK"); state["lock"].close(); state["lock"] = None
+
+    return app, db, state, unlock
+
+
+def _forget_process_state():
+    """Everything process-local the limiter holds: the memory tombstones and
+    the per-engine sessionmakers (which also drop the bounded engines). This
+    is what a restart forgets."""
+    _rl3._rate_tombstones.clear()
+    try:
+        _rl3._rate_sessionmakers.clear()
+    except Exception:
+        pass
+
+
+# (1) RESTART
+_pb_path = f"{tempfile.mkdtemp()}/f3pb.db"
+_p1, _p1db, _p1st, _p1unlock = _f3_fresh_app(_pb_path, "proc1")
+_p1st["armed"] = True
+r = _p1.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("F3 restart setup: process 1's post failed (host commit, lock held)", r.status_code >= 500, str(r.status_code))
+_p1unlock()
+with _p1.app_context():
+    _jpath = _rl3._journal_path(_p1db.engine)
+check("F3 restart setup: the release was JOURNALED to the sidecar file",
+      _jpath is not None and os.path.exists(_jpath) and os.path.getsize(_jpath) > 0,
+      f"journal {_jpath} missing or empty")
+with _p1.app_context():
+    _stranded = _p1db.session.execute(sa.text(_F2_POSTS + " AND state='pending'")).scalar()
+check("F3 restart setup: the stranded pending row is physically in the DB", _stranded == 1, f"{_stranded} pending")
+# "restart": forget everything process-local, bring up a fresh app on the same file
+_forget_process_state()
+_p2, _p2db, _p2st, _p2unlock = _f3_fresh_app(_pb_path, "proc2")
+r = _p2.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("F3 RESTART: a fresh process on the same file accepts the immediate retry — the "
+      "journaled release is honoured at cap 1", r.status_code == 201, str(r.status_code))
+with _p2.app_context():
+    _after = _p2db.session.execute(sa.text(_F2_POSTS + " AND state='pending'")).scalar()
+check("F3 RESTART: ...and process 2's reservation SWEPT the stranded row while it held a writer",
+      _after == 0, f"{_after} pending rows remain")
+check("F3 RESTART: ...and truncated the journal once applied",
+      (not os.path.exists(_jpath)) or os.path.getsize(_jpath) == 0, "journal still has entries")
+
+# (2) SECOND WORKER (two live apps, same file, at once)
+_pb2 = f"{tempfile.mkdtemp()}/f3pb2.db"
+_wa, _wadb, _wast, _waunlock = _f3_fresh_app(_pb2, "workerA")
+_wb, _wbdb, _wbst, _wbunlock = _f3_fresh_app(_pb2, "workerB")
+_wb.test_client().get("/skribl-pad")         # B is live before A fails
+_wast["armed"] = True
+r = _wa.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("F3 two-worker setup: worker A's post failed", r.status_code >= 500, str(r.status_code))
+_waunlock()
+# B must not see A's memory tombstone: A's store is app-local (ext), so B's
+# app genuinely does not have it. The journal is the only channel.
+r = _wb.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("F3 TWO WORKERS: worker B accepts the immediate retry — it never had A's memory; "
+      "only the sidecar journal could have told it", r.status_code == 201, str(r.status_code))
+
+# MUTATION of the channel: delete the journal between failure and retry.
+_pb3 = f"{tempfile.mkdtemp()}/f3pb3.db"
+_ma, _madb, _mast, _maunlock = _f3_fresh_app(_pb3, "mutA")
+_mb, _mbdb, _mbst, _mbunlock = _f3_fresh_app(_pb3, "mutB")
+_mast["armed"] = True
+_ma.test_client().post("/api/skribls", json={"frames": [FRAME]})
+_maunlock()
+with _ma.app_context():
+    _jp3 = _rl3._journal_path(_madb.engine)
+if _jp3 and os.path.exists(_jp3):
+    os.remove(_jp3)
+r = _mb.test_client().post("/api/skribls", json={"frames": [FRAME]})
+check("F3 COUNTEREXAMPLE: with the journal deleted, worker B DOES count A's stranded row "
+      "(429) — so the journal is the thing carrying the guarantee, not luck",
+      r.status_code == 429, str(r.status_code))
+del os.environ["SKRIBL_RATE_HMAC_KEY"]
 
 # SQLite reuses rowids, so an id-keyed tombstone whose row was deleted by
 # someone else could exempt a later, innocent reservation. The design rests on
@@ -679,6 +809,43 @@ check("F3: ...so a second attempt is refused again, not silently skipped",
 check("F3: while an ACCEPTED engine IS recorded (idempotence intact)",
       _ok_engine in skribl.models._FK_ENGINES
       and skribl.models._install_sqlite_fk(_ok_engine) is False)
+
+# v211 (v210 review F4): registration must be the LAST step of a SUCCESSFUL
+# install. The v209 fix moved _FK_ENGINES.add past the AUTOCOMMIT refusal, but
+# it still sat BEFORE the two listener registrations; if either registration
+# raised, the engine stayed recorded as installed and every later call
+# returned False — no pragma, no BEGIN recipe, silently. The v209 pin only
+# attacked the refusal path (which happens before the add), so it generalised
+# one exception point to the whole installation. Attack a listener
+# registration instead.
+print("\nF4 — a failing listener registration must not leave the engine recorded")
+# models.py resolves `event.listens_for` at call time through its own imported
+# `event` module object, so that is the name to patch (patching
+# sqlalchemy.event.listen missed: listens_for is a separate factory).
+_f4_eng = _sa.create_engine("sqlite:///:memory:")
+_ev = skribl.models.event
+_orig_lf = _ev.listens_for
+_calls = {"n": 0}
+def _boom_lf(target, identifier, *a, **kw):
+    _calls["n"] += 1
+    if _calls["n"] == 2:                      # first listener attaches; second registration raises
+        raise RuntimeError("injected listener registration failure")
+    return _orig_lf(target, identifier, *a, **kw)
+_ev.listens_for = _boom_lf
+try:
+    _raised = False
+    try:
+        skribl.models._install_sqlite_fk(_f4_eng)
+    except RuntimeError as e:
+        _raised = "injected" in str(e)
+finally:
+    _ev.listens_for = _orig_lf
+check("F4 setup: the second listener registration really raised", _raised)
+check("F4: the engine is NOT recorded as installed after a partial install",
+      _f4_eng not in skribl.models._FK_ENGINES, "engine sits in _FK_ENGINES with only one listener")
+check("F4: ...so a retry actually installs (returns True), not 'already done'",
+      skribl.models._install_sqlite_fk(_f4_eng) is True,
+      "retry returned False — the partial install was recorded as complete")
 
 # v209 review F4: the limiter's busy_timeout must survive a mid-session
 # COMMIT. _bounded() used to run one PRAGMA on whichever connection the

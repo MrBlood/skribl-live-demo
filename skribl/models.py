@@ -442,8 +442,6 @@ def _install_sqlite_fk(bind):
             "real transactions (see docs/INTEGRATION.md, 'SQLite transaction "
             "mode').")
 
-    _FK_ENGINES.add(engine)
-
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, connection_record):
         # REAL TRANSACTIONS, or the savepoint contract is fiction. pysqlite's
@@ -481,6 +479,14 @@ def _install_sqlite_fk(bind):
             if "within a transaction" not in str(e).lower():
                 raise
 
+    # v211 (v210 review F4): registered ONLY here, after BOTH listeners are
+    # attached. Before, the add sat between the AUTOCOMMIT check and the
+    # listener registrations; if either registration raised, the engine was
+    # left recorded as installed and every later attempt returned False —
+    # a SQLite engine running with neither pragma nor BEGIN recipe, silently.
+    # The v209 fix moved the add past the refusal; this moves it past the
+    # whole installation, which is what the comment claimed all along.
+    _FK_ENGINES.add(engine)
     return True
 
 

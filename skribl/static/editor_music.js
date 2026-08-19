@@ -227,14 +227,20 @@ musicInput.addEventListener('change', async (e) => {
   });
 
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  file.arrayBuffer().then(buf => audioCtx.decodeAudioData(buf)).then(audioBuffer => {
+  // v211 (v210 review F2): the decode is RETAINED as a promise the poster
+  // can await. mediaBusy is cleared by the FileReader's onload — a different
+  // async chain from this one — so "media ready" and "decoded" were never the
+  // same instant, and a post in the gap saw currentAudioBuffer === null and
+  // silently skipped the loop crop, shipping the full source. Same
+  // readiness/decode split as Bug A, on the write side.
+  window._skriblDecodePending = file.arrayBuffer().then(buf => audioCtx.decodeAudioData(buf)).then(audioBuffer => {
     currentAudioBuffer = audioBuffer;
     setTimeout(() => {
       drawWaveform(audioBuffer);
       drawZoomWaveform();
       updateZoomHandles();
     }, 50);
-  }).catch(() => {});
+  }).catch(() => {}).finally(() => { window._skriblDecodePending = null; });
 });
 
 function validateMusicFile(file) {

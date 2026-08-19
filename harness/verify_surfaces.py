@@ -72,7 +72,16 @@ shared = sorted(app_fns & flip_fns)
 # genuinely draw strokes — and collapsing it is a redesign, not a cleanup. The
 # number is here so that it goes DOWN over time and so that anyone adding the
 # 58th parallel implementation has to change this line and think about why.
-PARALLEL_RATCHET = 57
+# v211: 57 -> 58. The new shared name is startLoopPreviewNative — the native
+# <audio> fallback for Preview Loop, reachable asynchronously when Web Audio
+# cannot unlock — added to BOTH editors by the v210 review's F1 (Flip) after
+# Pad got it in v209. That is exactly the "fix made twice" this ratchet exists
+# to count, and it is counted honestly rather than hidden behind a different
+# name in one file. The cure is the externalisation of the editor-only Web
+# Audio loop into a shared lib (HANDOFF-NEXT-SESSION.md), which would take
+# startWebAudioLoop, stopWebAudioLoop, webAudioLoopSongTime, and this
+# fallback OUT of both files and move this number the right way.
+PARALLEL_RATCHET = 58
 check(f"app.js and flip.js define at most {PARALLEL_RATCHET} of the same "
       f"function names", len(shared) <= PARALLEL_RATCHET,
       f"{len(shared)}: {', '.join(shared[:8])}... — each one is a fix that has "

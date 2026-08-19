@@ -245,6 +245,161 @@ with sync_playwright() as browser_ctx:
 
     b.close()
 
+# ---- v211: v210 review F1 + H1 — a suspended context whose resume() NEVER
+# settles. The reviewer's exact counterexample. On the broken Flip, a source
+# was constructed and start()ed on the still-suspended context and the
+# function returned true, suppressing the native fallback. Now: no source
+# while suspended, and native <audio> is asked to play within the 600ms
+# unlock timeout. Same test on the shared player (H1) and Pad (parity).
+HANG = """
+  const AC = window.AudioContext || window.webkitAudioContext;
+  window.__ev = [];
+  Object.defineProperty(AC.prototype, 'state', { configurable: true, get() { return 'suspended'; } });
+  AC.prototype.resume = function () { window.__ev.push('resume'); return new Promise(() => {}); };   // never settles
+  const cbs = AC.prototype.createBufferSource;
+  AC.prototype.createBufferSource = function () { window.__ev.push('createBufferSource'); return cbs.apply(this, arguments); };
+  const st = AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start = function () { window.__ev.push('start'); return st.apply(this, arguments); };
+  const play = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () { window.__ev.push('native-play'); return play.apply(this, arguments); };
+"""
+
+with sync_playwright() as browser_ctx:
+    b = browser_ctx.chromium.launch()
+
+    # Flip (F1): load music, press Preview Loop under a hung unlock.
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    pg.add_init_script(HANG)
+    pg.goto(BASE + "/flip", wait_until="load"); pg.wait_for_timeout(700)
+    pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
+    pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}); pg.wait_for_timeout(2500)
+    pg.evaluate("() => { window.__ev = []; document.getElementById('previewLoopBtn').click(); }")
+    pg.wait_for_timeout(1200)
+    ev = pg.evaluate("() => window.__ev")
+    check("F1 Flip: resume() was asked for", "resume" in ev, str(ev))
+    check("F1 Flip: NO source constructed while the context stays suspended",
+          "createBufferSource" not in ev and "start" not in ev, str(ev))
+    check("F1 Flip: native <audio> was handed the loop within the unlock timeout",
+          "native-play" in ev, str(ev))
+    pg.close()
+
+    # Pad (parity): same, Preview Loop.
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    pg.add_init_script(HANG)
+    pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(700)
+    pg.click("#musicOpenBtn"); pg.wait_for_timeout(300)
+    pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}); pg.wait_for_timeout(2500)
+    pg.evaluate("() => { window.__ev = []; document.getElementById('previewLoopBtn').click(); }")
+    pg.wait_for_timeout(1200)
+    ev = pg.evaluate("() => window.__ev")
+    check("F1 Pad: no source while suspended", "createBufferSource" not in ev and "start" not in ev, str(ev))
+    check("F1 Pad: native fallback taken", "native-play" in ev, str(ev))
+    pg.close()
+
+    # Shared player (H1): a posted skribl with music, Play under a hung unlock.
+    # The drawing must OUTLAST the 600ms unlock timeout: on a 400ms stroke the
+    # replay ended (audioPause -> paStop) before the fallback could fire, and
+    # the fallback correctly refused to start music after the end — a fixture
+    # trap, caught while building this. 3s of drawing here.
+    import base64 as _b64
+    long_frame = {"strokes": [{"x": 20 + i * 8, "y": 40 + (i % 7) * 20, "t": i * 150, "color": "#ffffff", "size": 4} for i in range(21)],
+                  "strokeGroups": [21], "background": {"color": "#101418"},
+                  "music": {"data": "data:audio/wav;base64," + _b64.b64encode(AUD).decode(),
+                            "name": "h1.wav", "trimStart": 0, "trimEnd": 20}}
+    _req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps({"frames": [long_frame]}).encode(),
+                                  headers={"Content-Type": "application/json"})
+    long_id = json.loads(urllib.request.urlopen(_req).read())["id"]
+    pg = b.new_page(viewport={"width": 390, "height": 860})
+    pg.add_init_script(HANG)
+    pg.goto(f"{BASE}/s/{long_id}", wait_until="load"); pg.wait_for_timeout(2500)
+    pg.evaluate("() => { window.__ev = []; }")
+    pg.click("#playerPlayBtn"); pg.wait_for_timeout(1500)
+    ev = pg.evaluate("() => window.__ev")
+    check("H1 player: no source while suspended", "createBufferSource" not in ev and "start" not in ev, str(ev))
+    check("H1 player: native <audio> handed the loop instead of going silent", "native-play" in ev, str(ev))
+    pg.close()
+    b.close()
+
+# ---- v211: v210 review F2 — the crop/decode readiness race, both editors.
+# mediaBusy is cleared by the FileReader; decodeAudioData is a separate
+# promise. Hold the decode UNRESOLVED, get the editor to the point where the
+# post button is enabled, submit, THEN release the decode, and inspect the
+# posted WAV. Before the fix: currentAudioBuffer was null at submit, the crop
+# silently skipped, and the full 30s shipped. After: submit awaits the
+# retained decode and the 20s loop ships. Measured from the WAV header, never
+# from trimEnd (an uncropped payload carries the authored trim too).
+HOLD_DECODE = """
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const real = AC.prototype.decodeAudioData;
+  window.__releaseDecode = null;
+  AC.prototype.decodeAudioData = function (buf) {
+    const ctx = this;
+    return new Promise((res, rej) => {
+      window.__releaseDecode = () => real.call(ctx, buf).then(res, rej);
+    });
+  };
+"""
+
+def post_under_held_decode(pg, editor):
+    if editor == "pad":
+        pg.click("#musicOpenBtn"); pg.wait_for_timeout(300)
+    else:
+        pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
+    pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
+    pg.wait_for_timeout(2500)          # FileReader done; decode HELD
+    held = pg.evaluate("() => ({busy: (typeof mediaBusy!=='undefined')?mediaBusy:0, buf: !!(typeof currentAudioBuffer!=='undefined' && currentAudioBuffer), rel: !!window.__releaseDecode})")
+    check(f"F2 {editor} setup: media read complete but decode still held (the race window)",
+          held["busy"] == 0 and not held["buf"] and held["rel"], str(held))
+    if editor == "pad":
+        pg.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }"); pg.wait_for_timeout(300)
+        box = pg.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
+        pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
+        pg.wait_for_timeout(400); pg.click("#recordBtn"); pg.wait_for_timeout(800)
+        pg.click("#postBtn"); pg.wait_for_timeout(500)
+        pg.fill("#postTitleInput", "f2 race")
+        pg.click("#postSubmitBtn")
+    else:
+        pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(200)
+        box = pg.evaluate("() => { const r = document.getElementById('pad').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
+        pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
+        pg.wait_for_timeout(400)
+        pg.click("#postBtn"); pg.wait_for_timeout(500)
+        # Flip's share sheet has its own ids
+        pg.fill("#flipShareTitle", "f2 race")
+        pg.click("#flipShareSubmit")
+    pg.wait_for_timeout(600)           # submit is now waiting on the decode
+    pg.evaluate("() => { if (window.__releaseDecode) window.__releaseDecode(); }")
+    pg.wait_for_timeout(5000)
+    if editor == "pad":
+        return pg.evaluate("() => (window.SkriblPosted && SkriblPosted.list && SkriblPosted.list()[0] || {}).id || null")
+    url = pg.evaluate("() => { const u = document.getElementById('flipShareUrl'); return u ? (u.value || u.textContent || u.href || '') : ''; }")
+    return url.rstrip('/').split('/')[-1] if url else None
+
+
+with sync_playwright() as browser_ctx:
+    b = browser_ctx.chromium.launch()
+    for editor, url in (("pad", "/"), ("flip", "/flip")):
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        pg.add_init_script(HOLD_DECODE)
+        pg.goto(BASE + url, wait_until="load"); pg.wait_for_timeout(700)
+        rid = post_under_held_decode(pg, editor)
+        pg.close()
+        check(f"F2 {editor}: the post went through", bool(rid), str(rid))
+        if not rid:
+            continue
+        env = json.loads(urllib.request.urlopen(f"{BASE}/api/skribls/{rid}").read())
+        fm = ((env.get("skribl") or {}).get("frames") or [{}])[0].get("music") or {}
+        raw = fm.get("data") or ""
+        secs = None
+        if raw.startswith("data:"):
+            import base64 as _b64
+            secs = wav_duration(_b64.b64decode(raw.split(",", 1)[1]))
+        check(f"F2 {editor}: posted media is the {LOOP_SECONDS:.0f}s LOOP even though decode was still pending at submit "
+              f"— submit awaited it (WAV header, not trimEnd)",
+              secs is not None and abs(secs - LOOP_SECONDS) < 1.0,
+              f"posted media {secs}s (source {SRC_SECONDS}s)")
+    b.close()
+
 # Static guards on the ownership itself, so a later edit cannot quietly move
 # the state back under the event.
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

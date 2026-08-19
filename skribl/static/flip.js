@@ -731,6 +731,10 @@ function sizeFor(e, base){
 let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
 pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return;
+  // Space held = grab-pan; never a stroke (v211). Guarded HERE because Flip
+  // draws on pointerdown, which fires BEFORE the mousedown the pan
+  // intercept listens for — so a capture-phase mousedown was always too late.
+  if(window._skriblSpaceHeld && window._skriblSpaceHeld()) return;
   // A STROKE BELONGS TO ONE POINTER. A second finger, or a palm landing beside
   // a pen, fired pointerdown while a stroke was already in progress: curCount
   // was reset to 1 and its point went into the SAME strokes array, so every
@@ -1017,11 +1021,21 @@ window.addEventListener('touchcancel', _pinchEnd);
   flipWrap.addEventListener('wheel',(e)=>{ if(zoom<=1) return; e.preventDefault(); let dx=e.deltaX, dy=e.deltaY; if(e.shiftKey && dx===0){ dx=dy; dy=0; } panX-=dx; panY-=dy; paint(false); }, {passive:false});
   // hold Space and drag to grab-pan (desktop)
   let spaceHeld=false, spaceDragging=false, lastX=0, lastY=0;
-  KeyRegistry.register({surface:'flip', label:'grab-pan the magnified canvas',
-    keys:['Space'], scope:()=>zoom>1});
-  window.addEventListener('keydown',(e)=>{ if(e.code==='Space' && !typingTarget(e.target)){ spaceHeld=true; if(zoom>1){ e.preventDefault(); flipWrap.style.cursor=spaceDragging?'grabbing':'grab'; } } });
+  // Flip's Space has two owners by DESIGN and they are scoped to be mutually
+  // exclusive: not zoomed -> play/stop (registered near the bottom of this
+  // file); zoomed -> hold to grab-pan. v211 briefly dropped this scope so
+  // Space+drag would stop drawing at 100% too, and verify_keys caught the
+  // resulting double registration — correctly: at 100% a Space keydown was
+  // then BOTH a play toggle and a pan arm. So the registry split stands, and
+  // the draw-suppression (the actual owner-reported bug) lives where it
+  // belongs: in the pointerdown stroke start, which refuses while Space is
+  // held at ANY zoom. Pan stays a zoomed-only affordance on Flip.
+  KeyRegistry.register({surface:'flip', label:'hold to grab-pan the magnified canvas',
+    keys:['Space'], scope:()=>ZoomView && ZoomView.isZoomed()});
+  window.addEventListener('keydown',(e)=>{ if(e.code==='Space' && !typingTarget(e.target)){ spaceHeld=true; if(ZoomView && ZoomView.isZoomed()){ e.preventDefault(); flipWrap.style.cursor=spaceDragging?'grabbing':'grab'; } } });
   window.addEventListener('keyup',(e)=>{ if(e.code==='Space'){ spaceHeld=false; spaceDragging=false; flipWrap.style.cursor=''; } });
-  flipWrap.addEventListener('mousedown',(e)=>{ if(spaceHeld && zoom>1){ spaceDragging=true; lastX=e.clientX; lastY=e.clientY; flipWrap.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
+  flipWrap.addEventListener('mousedown',(e)=>{ if(spaceHeld && ZoomView && ZoomView.isZoomed()){ spaceDragging=true; lastX=e.clientX; lastY=e.clientY; flipWrap.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
+  window._skriblSpaceHeld = () => spaceHeld;
   window.addEventListener('mousemove',(e)=>{ if(!spaceDragging) return; panX+=e.clientX-lastX; panY+=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; paint(false); });
   window.addEventListener('mouseup',()=>{ if(spaceDragging){ spaceDragging=false; flipWrap.style.cursor=spaceHeld?'grab':''; } });
   paint(false);
@@ -1742,7 +1756,8 @@ function decodeForWaveform(){
   if(!musicData){ currentAudioBuffer=null; return; }
   try{ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ return; }
   try{
-    mediaToArrayBuffer(musicData).then(ab => audioCtx.decodeAudioData(ab)).then(buf=>{
+    // v211 (v210 review F2): retained so shareSkribl can await it — see Pad.
+    window._skriblDecodePending = mediaToArrayBuffer(musicData).then(ab => audioCtx.decodeAudioData(ab)).then(buf=>{
       currentAudioBuffer=buf; audioDuration=buf.duration;
       // Default the loop to the FIRST 20s, not the whole file (matches the Pad's
       // loadedmetadata handler and the cap every drag handler enforces). Setting
@@ -1758,7 +1773,7 @@ function decodeForWaveform(){
         pendingMusicMeta=null;
         if(typeof setCrossfadeUI==='function') setCrossfadeUI(); }
       drawWaveform(buf); requestZoomWaveformDraw(); updateZoomHandles(); updateTrimUI(); syncMusicUI(); syncMediaUI();
-    }).catch(()=>{});
+    }).catch(()=>{}).finally(()=>{ window._skriblDecodePending=null; });
   }catch(_){}
 }
 function ensureAudio(){
@@ -1780,9 +1795,10 @@ function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='functi
   try{ waveformCtx.clearRect(0,0,waveformCanvas.width,waveformCanvas.height); zoomWaveformCtx.clearRect(0,0,zoomWaveformCanvas.width,zoomWaveformCanvas.height); }catch(_){}
   if(typeof setCrossfadeUI==='function') setCrossfadeUI();
   syncMediaUI(); scheduleSave(); }
+function startMusicNative(){ ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
 function startMusic(){ if(!musicEnabled || musicMuted) return;
-  if(startWebAudioLoop()) return;                               // gapless path
-  ensureAudio(); if(audioEl){ try{ audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){}} }
+  if(startWebAudioLoop(startMusicNative)) return;               // gapless path; native reachable on async unlock failure
+  startMusicNative(); }
 function stopMusic(){ stopWebAudioLoop(); if(audioEl){ try{ audioEl.pause(); }catch(_){}} }
 musicInput.addEventListener('change',async e=>{ const file=e.target.files&&e.target.files[0]; e.target.value='';
   const _seq=++musicSelectionSeq; if(!file) return;
@@ -1806,16 +1822,41 @@ function buildLoopAudioBuffer() { return window.SkriblAudioLoop.buildLoopAudioBu
 // Crop to the loop for posting (same encoder the Pad uses). Post-only — the
 // draft keeps the full sample so the loop can still be re-trimmed.
 function buildTrimmedLoopWav() { return window.SkriblAudioLoop.buildTrimmedLoopWav({ currentAudioBuffer: currentAudioBuffer, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs }); }
-function stopWebAudioLoop(){ if(_waLoopSource){ try{_waLoopSource.stop();}catch(e){} try{_waLoopSource.disconnect();}catch(e){} _waLoopSource=null; } }
-function startWebAudioLoop(){
+// v211 (v210 review F1): Flip kept the PRE-FIX shape Pad moved away from —
+// fire-and-forget resume(), then construct and start a source on a context
+// that may still be suspended, and return true, which suppressed the callers'
+// native <audio> fallback. A source object existing is not proof of sound;
+// this exact class is what silenced shared links on the owner's iPhone. Same
+// contract as Pad now: no source is constructed until the context reports
+// 'running'; a generation counter stops a late start after Stop; and when
+// the unlock rejects, never settles (iOS leaves resume() pending), or lands
+// on a context that still isn't running, `onFail` fires so the caller can
+// hand off to native <audio> ASYNCHRONOUSLY. Returns true meaning "the Web
+// Audio path was taken and will either play or call onFail" — never "sound".
+let _waGen=0;
+function stopWebAudioLoop(){ _waGen++; if(_waLoopSource){ try{_waLoopSource.stop();}catch(e){} try{_waLoopSource.disconnect();}catch(e){} _waLoopSource=null; } }
+function startWebAudioLoop(onFail){
   if(!audioCtx || !currentAudioBuffer) return false;
   const buf=buildLoopAudioBuffer(); if(!buf) return false;
   stopWebAudioLoop();
-  if(audioCtx.state==='suspended'){ try{ audioCtx.resume(); }catch(e){} }
-  const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true; src.loopStart=0; src.loopEnd=buf.duration;
-  src.connect(audioCtx.destination);
-  try{ src.start(); }catch(e){ return false; }
-  _waLoopSource=src; _waLoopStartCtx=audioCtx.currentTime; _waLoopDuration=buf.duration; return true;
+  const gen=++_waGen;
+  const go=()=>{
+    if(gen!==_waGen || !audioCtx || audioCtx.state!=='running') return false;
+    const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true; src.loopStart=0; src.loopEnd=buf.duration;
+    src.connect(audioCtx.destination);
+    try{ src.start(); }catch(e){ return false; }
+    _waLoopSource=src; _waLoopStartCtx=audioCtx.currentTime; _waLoopDuration=buf.duration; return true;
+  };
+  const fail=(why)=>{ if(gen!==_waGen) return; _waGen++; if(onFail){ const f=onFail; onFail=null; console.warn('skribl: web audio unavailable — '+why); f(); } };
+  if(audioCtx.state==='running') return go();
+  let p=null; try{ p=audioCtx.resume(); }catch(e){ fail('resume threw'); return false; }
+  if(p && p.then){
+    let settled=false;
+    p.then(()=>{ settled=true; if(!go()) fail('context not running after resume'); },
+           (e)=>{ settled=true; fail('resume rejected: '+((e&&e.message)||e)); });
+    setTimeout(()=>{ if(!settled && !_waLoopSource) fail('resume never settled'); }, 600);
+  } else if(!go()){ fail('synchronous resume did not reach running'); return false; }
+  return true;
 }
 // Current playback position inside [trimStart,trimEnd], whichever engine is live.
 function loopPosition(){
@@ -1872,11 +1913,12 @@ function buildSharePayload(){
   // fold is already baked in; re-applying it at playback would double it).
   // Falls back to the full sample if the decoded buffer isn't ready or encoding
   // fails, so a post never breaks here.
+  if (music0 && music0.data && !currentAudioBuffer) console.warn('skribl: music not decoded at post time — posting the full sample');
   if (music0 && music0.data && currentAudioBuffer) {
     try {
       const cropped = buildTrimmedLoopWav();
-      if (cropped) music0 = { data: cropped.dataUrl, name: music0.name, trimStart: 0, trimEnd: cropped.duration };
-    } catch (e) { /* keep the full-sample music0 */ }
+      if (cropped) music0 = { data: cropped.dataUrl, name: music0.name, trimStart: 0, trimEnd: cropped.duration, crossfadeMs: 0 };
+    } catch (e) { console.warn('skribl: loop crop failed, posting the full sample', e); }
   }
   const photo0=bgImage ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
   const outFrames=frames.map((f,i)=>({ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null }));
@@ -1898,6 +1940,8 @@ async function shareSkribl(){
   try{
     // Feature-detected: compression must never be able to break posting.
     // See the note at the matching call site in editor_post.js.
+    // v211 (v210 review F2): decode is part of post readiness — see Pad's submit().
+    if(window._skriblDecodePending){ try{ await window._skriblDecodePending; }catch(_){} }
     const _body=JSON.stringify(buildSharePayload());
     const _p=(typeof skriblPackBody==='function')
       ? await skriblPackBody(_body, skriblPostHeaders())
@@ -2505,20 +2549,23 @@ function previewTick(){ if(!previewingLoop) return;
   const st=loopPosition();
   const pct=(st/audioDuration)*100; if(playhead){ playhead.hidden=false; playhead.style.left=pct+'%'; }
   if(zoomPlayhead && currentAudioBuffer){ const zw=getZoomWindow(); const zp=((st-zw.start)/zw.duration)*100; zoomPlayhead.hidden=false; zoomPlayhead.style.left=Math.max(0,Math.min(100,zp))+'%'; } }
+function startLoopPreviewNative(){ if(!previewingLoop) return; _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; } try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} }
 function startLoopPreview(){
   previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
-  if(startWebAudioLoop()){ _previewWA=true; }                                  // gapless, real crossfade
-  else { _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; } try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} }
+  if(startWebAudioLoop(startLoopPreviewNative)){ _previewWA=true; }           // gapless; native reachable on async unlock failure
+  else startLoopPreviewNative();
   previewLoopTimer=setInterval(previewTick,30);
 }
 previewLoopBtn.addEventListener('click',()=>{ if(previewingLoop) stopLoopPreview(); else startLoopPreview(); });
 testSeamBtn.addEventListener('click',()=>{ stopLoopPreview(); previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
   // The gapless engine already loops seamlessly; play ~2 loops so you can hear the wrap (and the crossfade, if set).
-  if(startWebAudioLoop()){ _previewWA=true; previewLoopTimer=setInterval(previewTick,30);
+  const seamNative=()=>{ if(!previewingLoop) return; _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; }
+    const seamStart=Math.max(trimStart, trimEnd-1.25); try{ audioEl.muted=false; audioEl.currentTime=seamStart; audioEl.play().catch(()=>{}); }catch(_){}
+    if(!previewLoopTimer) previewLoopTimer=setInterval(previewTick,30);
+    const runFor=(trimEnd-seamStart)+Math.min(1.25, trimEnd-trimStart)+0.4; if(seamStopTimer) clearTimeout(seamStopTimer); seamStopTimer=setTimeout(stopLoopPreview, runFor*1000); };
+  if(startWebAudioLoop(seamNative)){ _previewWA=true; previewLoopTimer=setInterval(previewTick,30);
     seamStopTimer=setTimeout(stopLoopPreview, Math.min((trimEnd-trimStart)*2+0.4, 12)*1000); return; }
-  _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; }
-  const seamStart=Math.max(trimStart, trimEnd-1.25); try{ audioEl.muted=false; audioEl.currentTime=seamStart; audioEl.play().catch(()=>{}); }catch(_){} previewLoopTimer=setInterval(previewTick,30);
-  const runFor=(trimEnd-seamStart)+Math.min(1.25, trimEnd-trimStart)+0.4; seamStopTimer=setTimeout(stopLoopPreview, runFor*1000); });
+  seamNative(); });
 
 // Loop Detail scroll + crossfade (injected, like the Pad)
 function updateZoomPanSlider(){ const s=document.getElementById('zoomPanSlider'); if(!s) return; if(!(audioDuration>0)){ s.value=500; return; } const zw=getZoomWindow(); const c=(zw.start+zw.end)/2; s.value=Math.round(Math.max(0,Math.min(1,c/audioDuration))*1000); updateSliderFill(s); }

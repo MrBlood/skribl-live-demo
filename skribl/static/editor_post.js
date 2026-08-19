@@ -411,6 +411,12 @@
       return;
     }
     setState('sending');
+    // v211 (v210 review F2): decode is part of readiness. mediaBusy tracks the
+    // FileReader; decodeAudioData is a separate promise, and in the gap the
+    // crop below saw currentAudioBuffer null and silently shipped the full
+    // song. Await the retained decode — it is normally already settled — so
+    // the crop can never be skipped for a buffer that is merely late.
+    if (window._skriblDecodePending) { try { await window._skriblDecodePending; } catch (e) {} }
     const payload = serializeSkribl();
     payload.title = (titleInput.value || '').trim() || 'Untitled Skribl';
     payload.caption = (captionInput.value || '').trim();
@@ -433,6 +439,12 @@
     // looks identical either way. Located through the shared accessor so no
     // further consumer has to know where a frame keeps its media.
     const media = window.SkriblPayload.currentFrameMedia(payload);
+    if (media.music && media.music.data && !currentAudioBuffer) {
+      // Decode failed (not merely late — we awaited it). Post the full sample
+      // rather than fail the post, but SAY SO: this is how the size regression
+      // would hide again.
+      console.warn('skribl: music not decoded at post time — posting the full sample');
+    }
     if (media.music && media.music.data && currentAudioBuffer) {
       try {
         const cropped = buildTrimmedLoopWav();

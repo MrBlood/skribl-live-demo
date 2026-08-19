@@ -148,6 +148,35 @@ worse. `SKRIBL_SQLITE_FOREIGN_KEYS=0` disables the FK pragma only; the
 transaction recipe is not separately disableable, because every documented
 guarantee on this page depends on it.
 
+### Failed posts and the rate limiter (`SKRIBL_RATE_BACKEND=db`)
+
+**Contract: after the host POST fails, no worker counts that failed
+reservation against an immediate retry.** Uniform across backends; the
+mechanism differs because the failure mode does.
+
+- **PostgreSQL** — the release is an ordinary delete in the limiter's own
+  session; it does not collide with the host's transaction, so every worker
+  sees it at once. This is **pinned live** in `verify_postgres.py`: two
+  gunicorn workers on one database, a commit failure injected on worker A,
+  an immediate retry on worker B accepted, two real successes filling a
+  cap-2 bucket and a third limited. It is the recommended backend for any
+  multi-worker or scale deployment, and the guarantee there is a tested
+  contract, not an inference.
+- **SQLite** — the release delete can be undeliverable at the instant it is
+  attempted, because Flask runs blueprint teardowns before app teardowns and
+  the host still holds SQLite's single writer. Skribl then records the
+  release in two places: process memory (the immediate fast path) and a
+  **sidecar journal** next to the database file (`<db>.rate-release.journal`,
+  one appended line, no database lock needed). Any worker's next request
+  reads the journal when counting and applies it when it next holds a
+  writer, so the guarantee survives **another worker on the same file and a
+  process restart** — both pinned in `verify_txcontract.py`, with a
+  counterexample showing that deleting the journal reinstates the count.
+  Deliberately *not* a second write to the same SQLite database: that would
+  fail for the same reason the first did. SQLite remains appropriate for
+  small, single-file deployments; it is not the recommended shape for scale,
+  but it is correct.
+
 ### LocalDiskStore temp files
 
 Writes go to a unique `*.part` and rename into place; ordinary write failures

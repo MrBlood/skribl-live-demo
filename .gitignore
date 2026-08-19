@@ -231,3 +231,4 @@ harness/.pg_gunicorn.log
 # checks; the suite removes them, but never commit a stray one.
 skribl/migrations/versions/*_scope_probe.py
 skribl/migrations/versions/*_drift_probe.py
+harness/.pg_f3_gunicorn.log

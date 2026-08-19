@@ -41,7 +41,11 @@ HARNESS = ROOT / "harness"
 # changes the tree whose hash was just recorded. Kept in step by verify_docs.
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
-             "harness/RELEASE.md"}
+             "harness/RELEASE.md",
+             # v211: verify_postgres writes gunicorn logs beside itself; they
+             # are run artefacts, not tree, and must not move the frozen hash
+             # between batches (the F3 host log did exactly that once).
+             "harness/.pg_gunicorn.log", "harness/.pg_f3_gunicorn.log"}
 
 # Batches exist because a bare run hangs. Grouped so a browser batch stays
 # small enough to finish, and so the server/security suites — which do not

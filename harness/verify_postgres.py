@@ -299,6 +299,123 @@ print("        worker model, no induced failures, a single 12-request burst. It 
 print("        not establish behaviour under every isolation level, pooling")
 print("        arrangement, failure mode, or production load.")
 
+# ---------------------------------------------------------------------------
+# v211 (v210 review F3): the CROSS-WORKER failed-post guarantee, on the
+# backend a larger site actually runs. The claim under test:
+#
+#   after the host POST fails, no worker may count that failed reservation
+#   against an immediate retry — even when the retry lands on a DIFFERENT
+#   process.
+#
+# v209's SQLite fix keeps the release in process memory, which the reviewer
+# rightly called process-local. The inference "PostgreSQL is fine because its
+# cleanup write does not collide with SQLite's single writer" is exactly the
+# kind of architectural inference this project has been burned by, so it is
+# TESTED here, first, before it is allowed to become a contract. Two real
+# gunicorn workers on one real PostgreSQL, a harness-owned host whose commit
+# fails on a request header (app.py grows no test hook), cap 1, and every
+# response stamped with its worker pid so "a different process" is a fact,
+# not an assumption.
+print("\nF3 — CROSS-WORKER: a failed post on worker A must not cost worker B's immediate retry")
+F3_PORT = PORT + 1
+F3_KEY = "pgf3-" + uuid.uuid4().hex[:12]
+f3_env = dict(env, SKRIBL_RATE_HMAC_KEY=F3_KEY, SKRIBL_RATE_MAX_POSTS="2")
+f3_log = open(ROOT / "harness" / ".pg_f3_gunicorn.log", "w+")
+f3 = subprocess.Popen(["gunicorn", "-w", "2", "-b", f"127.0.0.1:{F3_PORT}",
+                       "--timeout", "60", "--log-level", "info",
+                       "--pythonpath", str(ROOT / "harness"), "f3_host:app"],
+                      cwd=str(ROOT), env=f3_env, stdout=subprocess.DEVNULL, stderr=f3_log)
+f3_base = f"http://127.0.0.1:{F3_PORT}"
+f3_ready = False
+for _ in range(120):
+    if f3.poll() is not None:
+        break
+    try:
+        urllib.request.urlopen(f3_base + "/skribl-pad", timeout=1); f3_ready = True; break
+    except Exception:
+        time.sleep(0.25)
+if not f3_ready:
+    f3.terminate()
+    check("F3 setup: the two-worker F3 host came up", False, "gunicorn never became ready")
+else:
+    def f3_post(fail=False):
+        body = json.dumps({"frames": [{"strokes": [], "strokeGroups": [], "background": {"color": "#101418"}}]}).encode()
+        hdr = {"Content-Type": "application/json"}
+        if fail:
+            hdr["X-Skribl-Fail-Commit"] = "1"
+        req = urllib.request.Request(f3_base + "/api/skribls", data=body, headers=hdr)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status, r.headers.get("X-Skribl-Worker")
+        except urllib.error.HTTPError as e:
+            return e.code, e.headers.get("X-Skribl-Worker")
+
+    # Find both workers by pid: hit the pad page until two distinct pids answer.
+    seen = set()
+    for _ in range(40):
+        try:
+            with urllib.request.urlopen(f3_base + "/skribl-pad", timeout=5) as r:
+                seen.add(r.headers.get("X-Skribl-Worker"))
+        except Exception:
+            pass
+        if len(seen) >= 2:
+            break
+    check("F3 setup: two distinct worker processes are answering", len(seen) >= 2, str(seen))
+
+    # The failing post. Whichever worker takes it is 'A'.
+    st, worker_a = f3_post(fail=True)
+    check("F3 setup: the injected host commit failure returns 5xx from worker A",
+          st >= 500 and worker_a is not None, f"{st} from {worker_a}")
+
+    # Immediate retries until one lands on a DIFFERENT worker. gunicorn's
+    # scheduling is not ours to pick, so a retry may land on A first — and at
+    # cap 1 a successful A retry then legitimately owns the only slot, which
+    # would make B's 429 correct rather than a bug (a first draft of this pin
+    # broke out at that point and proved nothing). Cap is 2 for this reason:
+    # A's failed reservation, if it were counted, plus one successful retry
+    # would fill the bucket; only if the failure is NOT counted does a retry
+    # on B still fit. Every 429 from B before B has succeeded once is the
+    # finding; a 201 from B is the contract.
+    # Retry until the bucket fills, recording every outcome by worker. We
+    # cannot choose which worker gunicorn hands each request to, so the claim
+    # is made worker-agnostic and exact: with cap 2, EXACTLY TWO retries
+    # succeed in total (across A and B) and the next is 429. If A's failed
+    # reservation were counted by any worker, only ONE retry could succeed
+    # before a 429. (A first draft asserted "B's retry is 201" and broke when
+    # A happened to take both slots first — B's 429 was correct then.)
+    # Fire the two retries CONCURRENTLY so both workers are busy at once and
+    # each takes one — sequential retries let a single worker answer both
+    # before the other ever saw a request, which made "a success on the
+    # other worker" a coin flip. Two threads, two posts, same instant.
+    import threading
+    outcomes = []
+    def _one():
+        outcomes.append(f3_post(fail=False))
+    ts = [threading.Thread(target=_one) for _ in range(2)]
+    for t in ts: t.start()
+    for t in ts: t.join(timeout=40)
+    # then one more, sequential, to show the cap is now full
+    outcomes.append(f3_post(fail=False))
+    succ = [(st, w) for st, w in outcomes if st == 201]
+    workers_seen = {w for _, w in outcomes}
+    check("F3: the two concurrent retries were handled by BOTH workers",
+          len({w for _, w in outcomes[:2]}) == 2, f"workers {[w for _, w in outcomes[:2]]}")
+    check("F3 THE CONTRACT (PostgreSQL): EXACTLY the cap's worth of retries succeed across "
+          "all workers — A's failed reservation is not counted by anyone (a counted stranded "
+          "row would leave room for only one)", len(succ) == 2,
+          f"{len(succ)} of {len(outcomes)} retries succeeded: {outcomes}")
+    check("F3 control: the retry after the cap is 429 — the cap is real, the test is not vacuous",
+          outcomes and outcomes[-1][0] == 429, str(outcomes[-1] if outcomes else None))
+    check("F3 CROSS-WORKER: a success landed on the worker that did NOT fail — the release "
+          "was visible across processes, not just in A's memory",
+          any(w != worker_a for _, w in succ), f"A={worker_a} successes on {[w for _, w in succ]}")
+    f3.terminate()
+    try:
+        f3.wait(timeout=10)
+    except Exception:
+        f3.kill()
+f3_log.close()
+
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)
 print(f"{ok}/{len(results)} passed")

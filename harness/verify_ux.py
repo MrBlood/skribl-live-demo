@@ -1664,6 +1664,63 @@ with _sp() as _p3:
     _f3.close()
     _b.close()
 
+
+# v211 (owner, desktop): Space+drag DREW A LINE instead of grab-panning.
+# Both editors gated the pan intercept on zoom>1, so at 100% the drag fell
+# through to the drawing tool. And Flip draws on pointerdown, which fires
+# BEFORE the mousedown the intercept listened for — a capture-phase mousedown
+# was always too late there. Pinned by doing what the owner did: hold Space,
+# drag across the canvas, and count strokes. Zero, at 100% AND magnified, on
+# both editors. A key held down in Playwright is a real keydown/keyup pair.
+with _sp() as _p4:
+    _b = _p4.chromium.launch()
+    for nm, url, canvas_sel, count_js in (
+            ("pad", "/", "#canvas", "() => strokes.length"),
+            ("flip", "/flip", "#pad", "() => frame().strokes.length")):
+        for magnified in (False, True):
+            _s = _b.new_page(viewport={"width": 1280, "height": 900})
+            _s.goto(BASE + url, wait_until="load"); _s.wait_for_timeout(700)
+            if magnified:
+                # magnify through the app's own zoom API (both editors expose
+                # ZoomView.setPct) — the button is behind the magnify toggle
+                _z = _s.evaluate("() => { if (typeof ZoomView === 'undefined' || !ZoomView) return null; ZoomView.setPct(200); return ZoomView.isZoomed(); }")
+                _s.wait_for_timeout(300)
+                if not _z:
+                    _s.close(); continue
+            before = _s.evaluate(count_js)
+            box = _s.evaluate(f"() => {{ const r = document.querySelector('{canvas_sel}').getBoundingClientRect(); return {{x: r.x, y: r.y, w: r.width, h: r.height}}; }}")
+            _s.mouse.move(box["x"] + box["w"] * 0.3, box["y"] + box["h"] * 0.5)
+            _s.keyboard.down("Space")
+            _s.wait_for_timeout(50)
+            _s.mouse.down()
+            _s.mouse.move(box["x"] + box["w"] * 0.6, box["y"] + box["h"] * 0.55, steps=8)
+            _s.mouse.up()
+            _s.keyboard.up("Space")
+            _s.wait_for_timeout(200)
+            after = _s.evaluate(count_js)
+            check(f"V211 {nm}@{'magnified' if magnified else '100%'}: Space+drag does NOT draw",
+                  after == before, f"strokes {before} -> {after}")
+            if nm == "flip":
+                # On Flip an unzoomed Space is play/stop BY DESIGN (verify_keys
+                # guards the scoped split). A Space held down for a grab must
+                # not have left the flipbook PLAYING — if it did, "no stroke"
+                # above would be true for the wrong reason (pointerdown bails
+                # on `playing`). Holding Space to drag fires ONE keydown; a
+                # toggle would be visible here.
+                _pl = _s.evaluate("() => (typeof playing !== 'undefined') ? playing : null")
+                check(f"V211 flip@{'magnified' if magnified else '100%'}: ...and Space+drag did not toggle PLAYBACK "
+                      "(the no-draw result is the stroke guard, not a side effect of playing)",
+                      _pl is False, f"playing={_pl}")
+            # and a plain drag right after DOES draw (the key was released cleanly)
+            _s.mouse.move(box["x"] + box["w"] * 0.3, box["y"] + box["h"] * 0.7)
+            _s.mouse.down(); _s.mouse.move(box["x"] + box["w"] * 0.5, box["y"] + box["h"] * 0.72, steps=6); _s.mouse.up()
+            _s.wait_for_timeout(200)
+            after2 = _s.evaluate(count_js)
+            check(f"V211 {nm}@{'magnified' if magnified else '100%'}: ...and drawing resumes once Space is released",
+                  after2 > after, f"strokes {after} -> {after2}")
+            _s.close()
+    _b.close()
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:
