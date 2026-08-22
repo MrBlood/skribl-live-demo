@@ -117,22 +117,6 @@
         <span class="menu-row-label">Tips</span>
         <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
       </div>
-
-    {# Leaving for the other editor was a plain <a href> navigation with nothing
-       in its way — one tap and an unposted drawing was gone. Copy notes: the
-       title names the PLACE being left; the body states a fact rather than
-       claiming work "will be lost", which is a storage question this sentence
-       cannot answer; and the safe choice says what happens when you pick it,
-       because it is the one a mis-tap should land on. #}
-    <div class="menu-sheet leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
-         aria-labelledby="leaveSheetTitle" hidden>
-      <h2 class="sheet-title" id="leaveSheetTitle">Leave Pad?</h2>
-      <p class="sheet-body">Your drawing hasn&rsquo;t been posted.</p>
-      <div class="sheet-actions">
-        <button type="button" class="sheet-btn" id="leaveCancel">Keep drawing</button>
-        <button type="button" class="sheet-btn danger" id="leaveGo">Leave</button>
-      </div>
-    </div>
       <div class="menu-row">
         <span class="menu-row-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic"></button><button type="button" data-size="wide"></button><button type="button" data-size="square"></button><button type="button" data-size="tall"></button></span>
@@ -259,37 +243,32 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
+    <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        </button>
     <span class="tool-sep"></span>
-    {# The ring lives on .color-ring, NOT on #toolColorChip: app.js writes the
-       colour there as an inline background, and an inline style beats any rule.
-       Putting the gradient on the chip would erase it at the first colour
-       change while still looking right on load. #}
-    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
-      <span class="color-ring">
-        <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
-      </span>
+    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colors & brush" title="Colour, brush size, opacity and smoothing">
+      <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
     </button>
     <span class="tool-sep"></span>
-    {# Image, Music and Zoom collapse into one control. Measured: takes Pad from
-       10 controls to 8 and fixes wrapping at 360px and up. The dot is DERIVED
-       from the per-item dots (see updateMediaDot) so the toolbar and the drawer
-       cannot disagree; amber beats green because amber is the only state that
-       asks anything of the user. #}
-    <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
+    <button type="button" class="tool-open" id="imageOpenBtn" data-drawer="photo" aria-label="Image" title="Put a photo behind your drawing">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4.5" width="13" height="12" rx="2"/><path d="m4.4 14.5 3.6-3.4 3 2.6"/><circle cx="7.6" cy="8.4" r="1.1"/>
-        <path d="M15.4 20.2v-5.4l4.4-1.1v5.2"/><circle cx="14" cy="20.3" r="1.5"/><circle cx="18.4" cy="18.9" r="1.5"/>
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
       </svg>
-      <span id="mediaTabDot" class="tab-dot" hidden></span>
+      <span id="photoTabDot" class="tab-dot" hidden></span>
+      <span class="tab-dot-empty" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="tool-open" id="musicOpenBtn" data-drawer="music" aria-label="Music" title="Add a music loop that plays underneath">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <span id="musicTabDot" class="tab-dot" hidden></span>
       <span class="tab-dot-empty" aria-hidden="true"></span>
     </button>
   </div>
 
   <!-- Draw drawer (shared partial — Pad + Flip) -->
   {% with kind='pad' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
-
-  <!-- Media drawer (shared partial - Pad + Flip) -->
-  {% with kind='pad' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
 
   <!-- Music drawer (shared partial — Pad + Flip) -->
@@ -361,3 +340,15 @@
   <script src="{{ skribl_asset('editor_post.js') }}" defer></script>
 </body>
 </html>
+
+<!-- Leave confirm. Top level: a modal cannot live inside something that hides. -->
+<div class="leave-scrim" id="leaveScrim" hidden></div>
+<div class="leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
+     aria-labelledby="leaveSheetTitle" hidden>
+  <h2 class="leave-title" id="leaveSheetTitle">Leave Pad?</h2>
+  <p class="leave-body">Your drawing hasn&rsquo;t been posted.</p>
+  <div class="leave-actions">
+    <button type="button" class="leave-btn" id="leaveCancel">Keep drawing</button>
+    <button type="button" class="leave-btn danger" id="leaveGo">Leave</button>
+  </div>
+</div>

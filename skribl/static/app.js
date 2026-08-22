@@ -5282,146 +5282,34 @@ if (window.SkriblReport) window.SkriblReport.init();
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();
 
-/* ===================================================================
-   v215 — media dot, paint target, inspector, seg pills, Flip guard
-   =================================================================== */
-
-// One dot, two sources. Amber beats green: amber is the only state that asks
-// anything of the user ("the file is remembered but missing"), and a merged
-// signal that averaged them would hide the one worth acting on. DERIVED from
-// the per-item dots rather than tracked separately — a second copy of this
-// state is how the toolbar and the drawer end up disagreeing.
-function updateMediaDot() {
-  const dot = document.getElementById('mediaTabDot');
-  if (!dot) return;
-  const items = ['photoTabDot', 'musicTabDot']
-    .map(id => document.getElementById(id))
-    .filter(Boolean);
-  const present = items.filter(d => !d.hidden);
-  const pending = present.filter(d => d.classList.contains('pending'));
-  dot.hidden = present.length === 0;
-  // !! is load-bearing: classList.toggle(name, undefined) TOGGLES rather than
-  // forcing off, which is what left two colour swatches ringed at once.
-  dot.classList.toggle('pending', !!pending.length);
-  // Mirror onto the drawer rows: the toolbar generalises, these localise.
-  [['photoTabDot', 'photoRowDot'], ['musicTabDot', 'musicRowDot']].forEach(([src, dst]) => {
-    const a = document.getElementById(src), b = document.getElementById(dst);
-    if (!a || !b) return;
-    b.hidden = a.hidden;
-    b.classList.toggle('pending', !!a.classList.contains('pending'));
-  });
-}
-
-// Paint target. Swaps WHICH grid is shown, not what the sheet shows: size,
-// opacity and brush stay put underneath and never move.
-(function initPaintTarget() {
-  const seg = document.getElementById('paintTargetSeg');
-  if (!seg) return;
-  seg.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-target]');
-    if (!btn) return;
-    const target = btn.dataset.target;
-    seg.querySelectorAll('button').forEach(b => {
-      const on = b === btn;
-      b.classList.toggle('active', !!on);
-      b.setAttribute('aria-pressed', String(!!on));
-    });
-    ['colorGroup', 'bgGroup'].forEach(id => {
-      const g = document.getElementById(id);
-      if (g) g.hidden = g.dataset.target !== target;
-    });
-    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
-  });
-  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-})();
-
-// The inspector describes the ACTIVE MODE only. Absent, not greyed: a greyed
-// control still costs a glance and still invites a tap, and showing colour or
-// brush while the eraser is selected is a small lie about what the tool does.
-function syncInspectorToTool(nextTool) {
-  const eraser = nextTool === 'eraser';
-  ['colorGroup', 'bgGroup', 'paintTargetSeg', 'brushRow', 'opacityRow'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === 'colorGroup')      el.hidden = eraser || el.dataset.target !== currentPaintTarget();
-    else if (id === 'bgGroup')    el.hidden = eraser || el.dataset.target !== currentPaintTarget();
-    else                          el.hidden = eraser;
-  });
-  const er = document.getElementById('eraserRow');
-  if (er) er.hidden = !eraser;
-}
-function currentPaintTarget() {
-  const on = document.querySelector('#paintTargetSeg button.active');
-  return on ? on.dataset.target : 'stroke';
-}
-
-// The draw drawer's segmented rows now carry a pill on BOTH surfaces. track()
-// rather than a one-shot place(): the drawer ships `hidden`, so at init the
-// buttons have no layout and any single call bails, leaving the pill at
-// opacity 0 — the exact bug lib/segslider.js was written for.
-(function trackDrawerSegs() {
-  ['smoothSeg', 'brushSeg', 'shapeSeg', 'pressureSeg', 'eraserSeg'].forEach(id => {
-    const seg = document.getElementById(id);
-    if (seg && window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
-  });
-})();
-
-// Media drawer rows route to the existing photo/music drawers. A router, so
-// nothing about their internals changes.
-(function initMediaRows() {
-  const go = (id, drawer) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('click', () => {
-      const panel = document.getElementById('mediaPanel');
-      if (panel) panel.hidden = true;
-      const opener = document.querySelector('[data-drawer="' + drawer + '"]');
-      if (opener && opener !== el) opener.click();
-    });
-  };
-  go('mediaAddImage', 'photo');
-  go('mediaAddMusic', 'music');
-  const zoom = document.getElementById('mediaZoom');
-  if (zoom) zoom.addEventListener('click', () => {
-    const panel = document.getElementById('mediaPanel');
-    if (panel) panel.hidden = true;
-    // Reveal the zoom HUD, which is where Fit lives. beginPinch() already does
-    // this for the gesture; this is the same reveal for people without one.
-    if (typeof revealZoomHud === 'function') revealZoomHud();
-  });
-})();
-
-// Flip was a bare <a href>, so leaving Pad was a plain navigation with nothing
-// in its way: one tap and an unposted drawing was gone. Deliberately NOT
-// beforeunload — that fires on reload and tab-close too, where the browser
-// shows its own untranslatable string and cannot say WHICH work is at risk.
+/* Flip was a bare <a href>: one tap and an unposted drawing was gone. No
+   beforeunload — that fires on reload and tab-close too, where the browser
+   shows its own untranslatable string and cannot say which work is at risk. */
 (function guardFlipNavigation() {
-  const flipBtn     = document.getElementById('flipBtn');
-  const leaveSheet  = document.getElementById('leaveSheet');
-  const leaveGo     = document.getElementById('leaveGo');
-  const leaveCancel = document.getElementById('leaveCancel');
-  if (!flipBtn || !leaveSheet || !leaveGo || !leaveCancel) return;
-
-  // Only guard when there is something to lose. A guard that fires on an empty
-  // canvas trains people to dismiss it unread, which is worse than none.
-  const atRisk = () => recording || hasContent || recorded;
-  let released = false;
-
-  flipBtn.addEventListener('click', (e) => {
+  var flipBtn = document.getElementById('flipBtn');
+  var sheet = document.getElementById('leaveSheet');
+  var scrim = document.getElementById('leaveScrim');
+  var go = document.getElementById('leaveGo');
+  var cancel = document.getElementById('leaveCancel');
+  if (!flipBtn || !sheet || !go || !cancel) return;
+  // Only guard when there is something to lose: a confirm on an empty canvas
+  // trains people to dismiss it unread.
+  function atRisk() { return recording || hasContent || recorded; }
+  var released = false;
+  flipBtn.addEventListener('click', function (e) {
     if (released || !atRisk()) return;
     e.preventDefault();
-    leaveSheet.hidden = false;
-    leaveCancel.focus();   // focus the SAFE choice
+    sheet.hidden = false;
+    if (scrim) scrim.hidden = false;
+    cancel.focus();               // the SAFE choice takes focus
   });
-  const close = () => { leaveSheet.hidden = true; flipBtn.focus(); };
-  leaveCancel.addEventListener('click', close);
-  leaveGo.addEventListener('click', () => {
+  function close() { sheet.hidden = true; if (scrim) scrim.hidden = true; flipBtn.focus(); }
+  cancel.addEventListener('click', close);
+  go.addEventListener('click', function () {
     released = true;
-    // Navigate directly rather than re-clicking the anchor: a synthetic click
-    // re-enters this handler, and `released` is all that stops the loop.
     window.location.href = flipBtn.getAttribute('href');
   });
-  leaveSheet.addEventListener('keydown', (e) => {
+  sheet.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { e.stopPropagation(); close(); }
   });
 })();

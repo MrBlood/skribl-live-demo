@@ -121,21 +121,8 @@
 
     <div class="flip-tools">
       <div class="color-tool">
-        {# Flip needed MARKUP where Pad needed only a wrapper: #colorCurrent IS the
-           button, so there was no inner element to become the core. flip.js now writes
-           to #colorCurrentCore instead — see flip.js, the setColor path. #}
-        <button type="button" class="color-current" id="colorCurrent" title="Colours and brush" aria-haspopup="true" aria-expanded="false">
-          <span class="color-ring"><span class="color-core" id="colorCurrentCore"></span></span>
-        </button>
+        <button type="button" class="color-current" id="colorCurrent" title="Colors &amp; brush" aria-haspopup="true" aria-expanded="false"></button>
       </div>
-      <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4.5" width="13" height="12" rx="2"/><path d="m4.4 14.5 3.6-3.4 3 2.6"/><circle cx="7.6" cy="8.4" r="1.1"/>
-          <path d="M15.4 20.2v-5.4l4.4-1.1v5.2"/><circle cx="14" cy="20.3" r="1.5"/><circle cx="18.4" cy="18.9" r="1.5"/>
-        </svg>
-        <span id="mediaTabDot" class="tab-dot" hidden></span>
-        <span class="tab-dot-empty" aria-hidden="true"></span>
-      </button>
       <div class="tool-group" id="toolGroup" title="Pen / Eraser">
         <div class="tool-slider" id="toolSlider"></div>
         <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen" title="Draw — shortcut P">
@@ -151,6 +138,9 @@
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
+      <button type="button" class="tool-open magnify-tool" id="magnifyBtn" title="Magnify &mdash; then scroll, or hold Space and drag, to move around" aria-label="Toggle magnify controls" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
+      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
     </div>
 
     <!-- Drawers open BELOW the toolbar in normal flow: the canvas above stays
@@ -159,9 +149,6 @@
     <div class="flip-drawers" id="flipDrawers">
       <!-- Draw drawer (shared partial — Pad + Flip) -->
       {% with kind='flip' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
-
-  <!-- Media drawer (shared partial - Pad + Flip) -->
-  {% with kind='flip' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
       <!-- Image drawer (drop-up, like the Draw menu). One image per animation. -->
       <!-- Image drawer (shared partial — Pad + Flip) -->
@@ -210,18 +197,6 @@
            app.py — never hardcode it here (the Pad's literal drifted from v96
            to v105 unnoticed). .menu-version is shared styling from styles.css. -->
       <div class="menu-version">Skribl Flip · {{ skribl_version }}</div>
-    </div>
-
-    {# Mirror of Pad's guard. Flip reuses .menu-sheet rather than .flip-menu:
-       this is a modal decision, not a menu, and the two should not look alike. #}
-    <div class="menu-sheet leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
-         aria-labelledby="leaveSheetTitle" hidden>
-      <h2 class="sheet-title" id="leaveSheetTitle">Leave Flip Mode?</h2>
-      <p class="sheet-body">Your animation hasn&rsquo;t been posted.</p>
-      <div class="sheet-actions">
-        <button type="button" class="sheet-btn" id="leaveCancel">Keep drawing</button>
-        <button type="button" class="sheet-btn danger" id="leaveGo">Leave</button>
-      </div>
     </div>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
     <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
@@ -344,3 +319,15 @@
   <script src="{{ skribl_asset('flip.js') }}" defer></script>
 </body>
 </html>
+
+<!-- Leave confirm. Top level: a modal cannot live inside something that hides. -->
+<div class="leave-scrim" id="leaveScrim" hidden></div>
+<div class="leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
+     aria-labelledby="leaveSheetTitle" hidden>
+  <h2 class="leave-title" id="leaveSheetTitle">Leave Flip Mode?</h2>
+  <p class="leave-body">Your animation hasn&rsquo;t been posted.</p>
+  <div class="leave-actions">
+    <button type="button" class="leave-btn" id="leaveCancel">Keep drawing</button>
+    <button type="button" class="leave-btn danger" id="leaveGo">Leave</button>
+  </div>
+</div>

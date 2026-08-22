@@ -771,9 +771,7 @@ body.stroking .zoom-hud { pointer-events: none; }
    toolbar and across Pad + Flip (Flip's image/music already use these exact values
    via .flip-tools .magnify-tool.open). */
 .tool-open.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
-/* Sizing now comes from .color-ring > .tool-chip below. The old outer white
-   ring is gone: it sat between the core and the spectrum and read as a halo. */
-.tool-chip { border-radius: 50%; }
+.tool-chip { width: 24px; height: 24px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.4); }
 .tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
@@ -4531,69 +4529,23 @@ body.playing .flip-grid { display: none; }
   #magnifyBtn { display: none; }
 }
 
-/* ===================================================================
-   Colour control — spectrum ring, current-colour core            v215
-   ===================================================================
-   The plain disc said WHAT colour you were on and nothing said it was
-   tappable; a bare wheel says the opposite. Ring is the affordance, core is
-   the state, and the core keeps most of the pixels because that is what the
-   disc was doing right.
-
-   THE RING IS ON THE WRAPPER, DELIBERATELY. app.js:669 and flip.js:1609 both
-   set the colour as an INLINE background, and an inline style beats any rule
-   here. Put the gradient on the element the JS writes to and the FIRST colour
-   change erases it — while initial render still looks correct, so an assertion
-   that checks load-time would never see it. Assert after a colour change. */
-.color-ring {
-  position: relative;
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  flex: none;
-  background: conic-gradient(from -90deg,
-    #ff3b30, #ff9500, #ffd60a, #34c759, #00c7be,
-    #0a84ff, #5e5ce6, #bf5af2, #ff2d55, #ff3b30);
+/* ---------- Leave confirm (v215-minimal) ---------- */
+.leave-scrim { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); }
+.leave-scrim[hidden] { display: none; }
+.leave-sheet {
+  position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: min(340px, calc(100vw - 40px)); background: #1b1f27;
+  border: 1px solid var(--hairline, #252a35); border-radius: 18px;
+  padding: 22px 22px 18px; box-shadow: 0 24px 60px rgba(0,0,0,.6);
 }
-/* 26 outer, 20 inner = a 3px band. At 4px it competes with the purple pen for
-   the eye, and the pen has to stay the loudest thing in the bar. */
-.color-ring > .tool-chip,
-.color-ring > .color-core {
-  display: block;
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  /* Load-bearing: without it a white stroke colour bleeds into the ring and
-     the control reads as one pale blob. */
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .38);
+.leave-sheet[hidden] { display: none; }
+.leave-title { margin: 0 0 8px; font-size: 18px; font-weight: 640; color: #f2f4f8; }
+.leave-body { margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #a9b1c1; }
+.leave-actions { display: flex; gap: 10px; }
+.leave-btn {
+  flex: 1 1 0; min-height: 44px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--hairline, #2a3040); background: rgba(255,255,255,.06);
+  color: #e7e9ee; font: inherit; font-size: 14px; font-weight: 560; cursor: pointer;
 }
-
-/* Media drawer rows. The toolbar dot generalises (amber beats green); these
-   localise, because a merged dot cannot say WHICH item needs re-adding. */
-.media-panel .media-row {
-  display: flex; align-items: center; gap: 13px; width: 100%;
-  background: none; border: 0; padding: 12px 15px; cursor: pointer;
-  text-align: left; color: var(--text, #e6e9f0);
-}
-.media-panel .media-row:hover { background: rgba(255,255,255,.03); }
-.media-panel .media-ico {
-  width: 34px; height: 34px; border-radius: 10px; flex: none;
-  display: grid; place-items: center; background: #20242e;
-}
-.media-panel .media-ico svg { width: 19px; height: 19px; }
-.media-panel .media-text { flex: 1; min-width: 0; }
-.media-panel .media-text b {
-  display: flex; align-items: center; font-size: 13.5px; font-weight: 610;
-}
-.media-panel .media-text i {
-  display: block; font-style: normal; font-size: 11.5px;
-  color: #8b93a5; margin-top: 2px;
-}
-.media-panel .media-text .tab-dot { position: static; margin-left: 7px; }
-.media-panel .media-chev { color: #5f6878; font-size: 17px; flex: none; }
-
-/* An explicit display defeats [hidden] — hit three times in this codebase, so
-   these are paired rather than trusted. */
-.color-group[hidden], .bg-group[hidden], .media-panel[hidden] { display: none; }
-
-/* Paint-target switcher. Swaps WHICH swatch grid is shown, not what the sheet
-   shows: size, opacity and brush stay put underneath and never move. */
-.paint-target { display: flex; gap: 2px; margin: 0 0 10px; }
+.leave-btn:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
+.leave-btn.danger { background: #b3283f; border-color: #b3283f; color: #fff; }

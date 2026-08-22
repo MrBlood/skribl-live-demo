@@ -20,16 +20,7 @@
 {%- endif %}
   <div class="color-section">
     <span class="draw-section-label">Color</span>
-    {# One switcher, two targets. The grids are SWAPPED rather than stacked: they
-     were two identical rings of dots meaning opposite things, distinguished only
-     by a label. Kept in ONE view deliberately — choosing a pen colour is relative
-     to what it sits on, and you cannot judge contrast across two drawers. #}
-    <div class="paint-target smooth-seg" id="paintTargetSeg" role="group" aria-label="What to colour">
-      <span class="seg-slider"></span>
-      <button type="button" class="smooth-btn active" data-target="stroke" aria-pressed="true">Pen</button>
-      <button type="button" class="smooth-btn" data-target="background" aria-pressed="false">Background</button>
-    </div>
-    <div class="color-group" id="colorGroup" data-target="stroke">
+    <div class="color-group" id="colorGroup">
       {% if kind != 'flip' -%}
       <button type="button" class="color-dot active" style="background:#ffffff" data-color="#ffffff" aria-label="White"></button>
       <button type="button" class="color-dot" style="background:#7c5cff" data-color="#7c5cff" aria-label="Purple"></button>
@@ -55,7 +46,8 @@
   </div>
 
   <div class="bg-section">
-        <div class="bg-group" id="bgGroup" data-target="background" hidden>
+    <span class="draw-section-label">Background</span>
+    <div class="bg-group" id="bgGroup">
       <button type="button" class="bg-swatch active" data-bg="#0d0f14" style="background:#0d0f14;" aria-label="Background dark"></button>
       <button type="button" class="bg-swatch" data-bg="#ffffff" style="background:#ffffff;" aria-label="Background white"></button>
       <button type="button" class="bg-swatch" data-bg="#1a1a2e" style="background:#1a1a2e;" aria-label="Background navy"></button>
@@ -88,7 +80,7 @@
     <div class="prop-row">
       <span class="draw-section-label">Smoothing</span>
       <div class="smooth-seg" id="smoothSeg">
-        <span class="seg-slider"></span>
+        {% if kind == 'flip' %}<span class="seg-slider"></span>{% endif %}
         <button type="button" class="smooth-btn active" data-smooth="off">Off</button>
         <button type="button" class="smooth-btn" data-smooth="low">Low</button>
         <button type="button" class="smooth-btn" data-smooth="high">High</button>
@@ -102,10 +94,10 @@
     {# Brush presets. Every one of these is expressed through per-point size
        and colour alone — see lib/brushes.js — so the player replays them with
        no notion that brushes exist. #}
-    <div class="prop-row" id="brushRow">
+    <div class="prop-row">
       <span class="draw-section-label">Brush</span>
       <div class="smooth-seg" id="brushSeg" role="group" aria-label="Brush">
-        <span class="seg-slider"></span>
+        {% if kind == 'flip' %}<span class="seg-slider"></span>{% endif %}
         <button type="button" class="smooth-btn active" data-brush="pen" aria-pressed="true" title="The plain pen &mdash; your width, your opacity">Pen</button>
         <button type="button" class="smooth-btn" data-brush="marker" aria-pressed="false" title="Wider and slightly translucent, constant width">Marker</button>
         <button type="button" class="smooth-btn" data-brush="pencil" aria-pressed="false" title="Thinner, and lighter the faster you draw">Pencil</button>
@@ -118,7 +110,7 @@
     <div class="prop-row">
       <span class="draw-section-label">Shape</span>
       <div class="smooth-seg" id="shapeSeg" role="group" aria-label="Shape kind">
-        <span class="seg-slider"></span>
+        {% if kind == 'flip' %}<span class="seg-slider"></span>{% endif %}
         <button type="button" class="smooth-btn active" data-shape="line" aria-pressed="true" title="Straight line">Line</button>
         <button type="button" class="smooth-btn" data-shape="rect" aria-pressed="false" title="Rectangle &mdash; hold Shift for a square">Rect</button>
         <button type="button" class="smooth-btn" data-shape="ellipse" aria-pressed="false" title="Ellipse &mdash; hold Shift for a circle">Oval</button>
@@ -131,15 +123,15 @@
     <div class="prop-row">
       <span class="draw-section-label">Pressure</span>
       <div class="smooth-seg" id="pressureSeg" role="group" aria-label="Stylus pressure">
-        <span class="seg-slider"></span>
+        {% if kind == 'flip' %}<span class="seg-slider"></span>{% endif %}
         <button type="button" class="smooth-btn" data-pressure="off" aria-pressed="false" title="Ignore stylus pressure &mdash; every stroke the nominal width">Off</button>
         <button type="button" class="smooth-btn active" data-pressure="on" aria-pressed="true" title="Vary stroke width with stylus pressure (the default)">On</button>
       </div>
     </div>
-    <div class="prop-row" id="eraserRow">
+    <div class="prop-row">
       <span class="draw-section-label">Eraser</span>
       <div class="smooth-seg" id="eraserSeg" role="group" aria-label="Eraser width">
-        <span class="seg-slider"></span>
+        {% if kind == 'flip' %}<span class="seg-slider"></span>{% endif %}
         <button type="button" class="smooth-btn" data-eraser="2" aria-pressed="false" title="Eraser twice the pen width">2&times;</button>
         <button type="button" class="smooth-btn active" data-eraser="3" aria-pressed="true" title="Eraser three times the pen width (the default)">3&times;</button>
         <button type="button" class="smooth-btn" data-eraser="5" aria-pressed="false" title="Eraser five times the pen width">5&times;</button>
@@ -154,7 +146,7 @@
   {%- else -%}
   <div id="moreDrawer" class="more-drawer">
   {%- endif %}
-    <div class="prop-row" id="opacityRow">
+    <div class="prop-row">
       <span class="draw-section-label">Opacity</span>
       <input type="range" id="opacitySlider" class="slider" min="10" max="100" value="100" step="1" aria-label="Stroke opacity">
       <span class="prop-val" id="opacityVal">100%</span>
