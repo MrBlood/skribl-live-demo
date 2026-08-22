@@ -1715,7 +1715,9 @@ const _flipDrawerCtl = skriblDrawers({
     photo: { panel: photoPanel, button: imageBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaUI(); requestAnimationFrame(positionFitSlider); } },
     music: { panel: musicPanel, button: musicBtn, openClass: 'open', aria: true,
-             onOpen(){ syncMediaUI(); } }
+             onOpen(){ syncMediaUI(); } },
+    media: { panel: document.getElementById('mediaPanel'), button: document.getElementById('mediaOpenBtn'),
+             openClass: 'open', aria: true }
   },
   reveal(open){
     if(!open) return;
@@ -1737,8 +1739,14 @@ function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null)
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('draw'); });
-imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
-musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
+// GUARDED. #imageBtn and #musicBtn no longer exist — they merged into the single
+// #mediaOpenBtn — and these two lines were unguarded, so they threw a TypeError
+// at load and every line of flip.js after them never ran. Flip was dead on
+// arrival and nothing in the build checked for it.
+if (imageBtn) imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
+if (musicBtn) musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
+const mediaOpenBtn=document.getElementById('mediaOpenBtn');
+if (mediaOpenBtn) mediaOpenBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('media'); });
 document.addEventListener('click',e=>{ const t=e.target;
   // The file inputs (#imageInput/#musicInput/#draftInput) live at the PAGE
   // ROOT on Flip, outside the drawer panels (the shared drawer partials omit
@@ -3636,6 +3644,17 @@ function updateMediaDot() {
       const g=document.getElementById(id);
       if(g) g.hidden = g.dataset.target!==target;
     });
+    // Recent is a list of PEN colours. It sits between the two swatch grids as a
+    // sibling, so it stayed on screen in Background mode and read as "recent
+    // backgrounds" — which is what it was reported as. It belongs to the pen.
+    const recent = document.getElementById('recentRow');
+    if (recent) {
+      // Read the real state rather than inventing a flag: lib/recentcolors.js
+      // owns this row's visibility, and a parallel copy would drift from it.
+      const swatches = document.getElementById('recentColors');
+      const has = !!(swatches && swatches.children.length);
+      recent.hidden = (target !== 'stroke') || !has;
+    }
     if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   });
   if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);

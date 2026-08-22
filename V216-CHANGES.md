@@ -20,6 +20,37 @@ nobody re-tests them: the segslider trackers (0.4ms per 600 stroke segments),
 forced layout per pointer move (v215 measured FASTER than v214), and DOM size
 (identical node count).
 
+## Fixed in v216b — three bugs, all mine
+
+**The media button did nothing.** The toolbar handler calls
+`toggle(btn.dataset.drawer)`, and `media` was never registered in the drawer
+panel list. The call resolved to nothing — a button that looked right and was
+inert. Registered on both surfaces.
+
+**FLIP WAS COMPLETELY BROKEN.** `flip.js` lines 1740-41 did
+`imageBtn.addEventListener(...)` with no null guard, and those buttons no longer
+exist since they merged into the media control. That throws a TypeError at load,
+so every line of flip.js after it never ran. Now guarded. `node --check` cannot
+see this: it is valid syntax that throws at runtime.
+
+**Recent showed pen colours under Background.** The Recent row sits between the
+two swatch grids as a sibling, so switching to Background left it on screen
+reading as "recent backgrounds". Recent is a list of PEN colours; it now hides
+in Background mode, reading `recentColors.children` rather than a parallel flag,
+since `lib/recentcolors.js` owns that row.
+
+**Media note is now FILLED, not stroked.** A stroke-drawn note at 28px turns to
+mush; solid shapes survive downscaling where thin outlines do not. The photo
+frame stays outlined so it still matches Pen, Eraser and Shape. A single 26px
+composite (frame with the note inside) was drawn and compared — it is a cleaner
+icon in isolation, but it can only carry ONE dot, which brings back the
+amber-beats-green precedence rule and its inability to say which item needs
+re-adding. Two separate glyphs keep the honest signal.
+
+**Media glyphs redrawn.** The photo and note now share optical height, corner
+radius and stroke rhythm, so they read as one control rather than two mismatched
+icons.
+
 ## Changes
 
 **1. Select removed from Pad.** Pad captures a performance; Select edits points
@@ -41,9 +72,11 @@ precedence rule — amber beats green — and still could not say WHICH item nee
 re-adding. Two dots let each item report itself and the rule disappears.
 Measured: the row goes 308px to 343px and still fits one line at 375px.
 
-**4. Flip keeps its book glyph** in the overflow menu. The original icon meant
-something — it is a flip book — and the generic rectangle that replaced it did
-not.
+**4. Flip keeps its book glyph** in the overflow menu — the ACTUAL original,
+copied verbatim from sealed v214: an open book with two facing pages and a
+spine. An earlier pass claimed to "restore" it and in fact drew a new generic
+stacked-rectangle shape from memory, which meant nothing. The original icon was
+saying *flip book*, which is exactly what the control is.
 
 ## Measured
 

@@ -129,9 +129,14 @@
         </button>
       </div>
         <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
-      <svg viewBox="0 0 52 24" width="56" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="5" width="19" height="15" rx="2.5"/><path d="M3.5 18 8.5 13l4 3.5"/><circle cx="8" cy="9.8" r="1.3"/>
-        <path d="M33 20v-11l12-3v11"/><circle cx="31" cy="20" r="2.2"/><circle cx="43" cy="17" r="2.2"/>
+      <svg viewBox="0 0 52 24" width="56" height="28" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="4.5" width="18" height="15" rx="3"/><path d="M4 17 9 12l3.8 3.4"/><circle cx="8.2" cy="9" r="1.35"/>
+        </g>
+        <g fill="currentColor" stroke="none">
+          <path d="M33 18.2V8.3l11-2.7v9.9l-2.2.5V8.4l-6.6 1.6v10z"/>
+          <ellipse cx="31.4" cy="18.3" rx="2.9" ry="2.5"/><ellipse cx="42.4" cy="15.6" rx="2.9" ry="2.5"/>
+        </g>
       </svg>
       <span id="photoTabDot" class="tab-dot for-photo" hidden></span>
       <span id="musicTabDot" class="tab-dot for-music" hidden></span>

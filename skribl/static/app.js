@@ -991,7 +991,12 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
   panels: {
     draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
     photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
-    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' }
+    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' },
+    // The media button was inert without this: the toolbar click handler calls
+    // toggle(btn.dataset.drawer), and 'media' was not a registered panel, so the
+    // call resolved to nothing at all — a button that looked fine and did
+    // nothing. Registering it is the whole fix.
+    media: { panel: 'mediaPanel', button: 'mediaOpenBtn', openClass: 'open' }
   },
   reveal(panel, name) {
     if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
@@ -5318,6 +5323,17 @@ function updateMediaDot() {
       const g = document.getElementById(id);
       if (g) g.hidden = g.dataset.target !== target;
     });
+    // Recent is a list of PEN colours. It sits between the two swatch grids as a
+    // sibling, so it stayed on screen in Background mode and read as "recent
+    // backgrounds" — which is what it was reported as. It belongs to the pen.
+    const recent = document.getElementById('recentRow');
+    if (recent) {
+      // Read the real state rather than inventing a flag: lib/recentcolors.js
+      // owns this row's visibility, and a parallel copy would drift from it.
+      const swatches = document.getElementById('recentColors');
+      const has = !!(swatches && swatches.children.length);
+      recent.hidden = (target !== 'stroke') || !has;
+    }
     if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   });
   if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
