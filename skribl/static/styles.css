@@ -4567,13 +4567,15 @@ body.playing .flip-grid { display: none; }
   border-radius: 50%;
   display: grid; place-items: center;
   flex: none;
-  /* BISECT BUILD: the conic-gradient is replaced by a flat colour. This is the
-     ONLY difference from the full v215 build — same markup, same DOM, same
-     everything else. The gradient sits inside .toolbar, which carries
-     backdrop-filter: blur(14px); that layer must recomposite every frame the
-     canvas behind it changes, and a live gradient inside it makes each
-     recomposite dearer. If drawing is smooth here, that is the cause. */
-  background: #7c5cff;
+  /* A PRE-RENDERED IMAGE, not a live gradient. Measured A/B on device: the full
+     v215 build with a live spectrum gradient here was laggy to draw on, and the
+     identical build with a flat colour was smooth. .toolbar carries
+     backdrop-filter: blur(14px), so that layer recomposites every frame the
+     canvas behind it changes; a live gradient made each recomposite dear enough
+     to drop stroke points. A static PNG cannot be re-rasterised.
+     26px at 3x, 2.7KB, transparent core so the chip shows through. */
+  background-image: url("data:image/png;base64,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");
+  background-size: 100% 100%;
 }
 /* 26 outer, 20 inner = a 3px band. At 4px it competes with the purple pen for
    the eye, and the pen has to stay the loudest thing in the bar. */
@@ -4617,7 +4619,12 @@ body.playing .flip-grid { display: none; }
 
 /* Paint-target switcher. Swaps WHICH swatch grid is shown, not what the sheet
    shows: size, opacity and brush stay put underneath and never move. */
-.paint-target { display: flex; gap: 2px; margin: 0 0 10px; }
+/* width: fit-content is load-bearing. .smooth-seg is a flex container with no
+   intrinsic width, so inside the full-width .draw-section it stretched edge to
+   edge with Pen and Background huddled at the left — a pill the width of the
+   screen holding two short words. It should hug its buttons. */
+.paint-target { display: flex; gap: 2px; margin: 0 0 10px; width: fit-content; }
+.paint-target .smooth-btn { flex: 0 0 auto; padding: 5px 18px; }
 
 /* Media glyph is 26px where the others are 24, and carries THREE elements where
    the first attempt carried six (photo rect, mountain, sun, two note heads, a
@@ -4686,3 +4693,20 @@ body.playing .flip-grid { display: none; }
 .menu-item .menu-item-text { display: flex; flex-direction: column; gap: 2px; text-align: left; }
 .menu-item .menu-item-sub { font-size: 12px; font-weight: 400; color: #8b93a5; line-height: 1.35; }
 .menu-item { text-decoration: none; }
+
+/* Media control is 1.5x wide with the photo and the note as SEPARATE glyphs,
+   each carrying its own dot. One dot for two sources forced a precedence rule
+   (amber beats green) and could never say WHICH item needed attention; two dots
+   let each report itself and the rule disappears. Measured: the row goes
+   308px -> 340px and still fits one line at 375px. */
+#mediaOpenBtn { width: 66px; }
+#mediaOpenBtn svg { width: 56px; height: 28px; }
+#mediaOpenBtn .tab-dot { position: absolute; top: 5px; }
+#mediaOpenBtn .tab-dot.for-photo { left: 21px; right: auto; }
+#mediaOpenBtn .tab-dot.for-music { right: 7px; }
+
+/* Magnify returns, on desktop only. The button exists where the GESTURE does
+   not: a phone has pinch, a mouse has nothing. Below 640px the Zoom row in the
+   media drawer keeps Fit and the presets reachable, so nothing reachable ONLY
+   through this button becomes unreachable. */
+@media (max-width: 640px) { #magnifyBtn { display: none; } }

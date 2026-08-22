@@ -129,11 +129,13 @@
         </button>
       </div>
         <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
-          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2.5" y="5.5" width="12" height="11" rx="2.5"/><path d="M3.6 15 7 11.6l3.1 2.8"/><path d="M17 20.5v-8l4.5-1.2v7.6"/><circle cx="15.4" cy="20.6" r="1.8"/>
-          </svg>
-          <span id="mediaTabDot" class="tab-dot" hidden></span>
-        </button>
+      <svg viewBox="0 0 52 24" width="56" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="19" height="15" rx="2.5"/><path d="M3.5 18 8.5 13l4 3.5"/><circle cx="8" cy="9.8" r="1.3"/>
+        <path d="M33 20v-11l12-3v11"/><circle cx="31" cy="20" r="2.2"/><circle cx="43" cy="17" r="2.2"/>
+      </svg>
+      <span id="photoTabDot" class="tab-dot for-photo" hidden></span>
+      <span id="musicTabDot" class="tab-dot for-music" hidden></span>
+    </button>
       <div class="tool-group" id="toolGroup" title="Pen / Eraser">
         <div class="tool-slider" id="toolSlider"></div>
         <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen" title="Draw — shortcut P">

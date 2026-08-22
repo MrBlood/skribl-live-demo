@@ -5286,29 +5286,17 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    v215 — media dot, paint target, inspector, seg pills, Flip guard
    =================================================================== */
 
-// One dot, two sources. Amber beats green: amber is the only state that asks
-// anything of the user ("the file is remembered but missing"), and a merged
-// signal that averaged them would hide the one worth acting on. DERIVED from
-// the per-item dots rather than tracked separately — a second copy of this
-// state is how the toolbar and the drawer end up disagreeing.
+// SUPERSEDED. The toolbar now carries a dot per item (photo and music each
+// have their own), so there is nothing to merge and the amber-beats-green
+// precedence rule is gone with it. The per-item dots are updated by the
+// existing photo/music code; this only mirrors them onto the drawer rows.
 function updateMediaDot() {
-  const dot = document.getElementById('mediaTabDot');
-  if (!dot) return;
-  const items = ['photoTabDot', 'musicTabDot']
-    .map(id => document.getElementById(id))
-    .filter(Boolean);
-  const present = items.filter(d => !d.hidden);
-  const pending = present.filter(d => d.classList.contains('pending'));
-  dot.hidden = present.length === 0;
-  // !! is load-bearing: classList.toggle(name, undefined) TOGGLES rather than
-  // forcing off, which is what left two colour swatches ringed at once.
-  dot.classList.toggle('pending', !!pending.length);
-  // Mirror onto the drawer rows: the toolbar generalises, these localise.
-  [['photoTabDot', 'photoRowDot'], ['musicTabDot', 'musicRowDot']].forEach(([src, dst]) => {
-    const a = document.getElementById(src), b = document.getElementById(dst);
-    if (!a || !b) return;
-    b.hidden = a.hidden;
-    b.classList.toggle('pending', !!a.classList.contains('pending'));
+  [['photoTabDot', 'photoRowDot'], ['musicTabDot', 'musicRowDot']].forEach(function (pair) {
+    var src = document.getElementById(pair[0]), dst = document.getElementById(pair[1]);
+    if (!src || !dst) return;
+    dst.hidden = src.hidden;
+    // !! is load-bearing: toggle(name, undefined) TOGGLES rather than forcing off.
+    dst.classList.toggle('pending', !!src.classList.contains('pending'));
   });
 }
 

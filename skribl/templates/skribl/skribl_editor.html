@@ -84,8 +84,7 @@
       </button>
       {# A 40px icon could not say what Flip Mode IS. A menu row can. Still an
          <a href> so open-in-new-tab works, still id="flipBtn" so the guard binds. #}
-      <a href="/flip" id="flipBtn" class="menu-item" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="13" height="13" rx="2"/><path d="M20 8v11a2 2 0 0 1-2 2H7"/></svg>
+      <a href="/flip" id="flipBtn" class="menu-item" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span class="menu-item-text">Flip Mode<span class="menu-item-sub">Draw a frame-by-frame animation</span></span>
       </a>
       <button type="button" class="menu-item" id="postedItem">
@@ -233,11 +232,7 @@
           </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle or ellipse &mdash; pick which in the Draw drawer; hold Shift for square/circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
             <span class="tool-btn-label">Shape</span>
-          </button><button type="button" class="tool-btn" id="selectToolBtn" data-tool="select" title="Drag a box to select strokes, then drag them to move &mdash; Escape clears">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.5"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/></svg>
-            <span class="tool-btn-label">Select</span>
-          </button>
-        </div>
+          </button>        </div>
     <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
           <span class="undo-label">Undo</span>
@@ -246,7 +241,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
-    <span class="tool-sep"></span>
+        <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    </button>
+<span class="tool-sep"></span>
     {# Ring on .color-ring, NOT on #toolColorChip: app.js writes the colour there
        as an inline background, and an inline style beats any stylesheet rule. #}
     <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
@@ -260,10 +258,12 @@
        per-item dots so the toolbar and drawer cannot disagree; amber beats green
        because amber is the only state that asks anything of the user. #}
     <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2.5" y="5.5" width="12" height="11" rx="2.5"/><path d="M3.6 15 7 11.6l3.1 2.8"/><path d="M17 20.5v-8l4.5-1.2v7.6"/><circle cx="15.4" cy="20.6" r="1.8"/>
+      <svg viewBox="0 0 52 24" width="56" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="19" height="15" rx="2.5"/><path d="M3.5 18 8.5 13l4 3.5"/><circle cx="8" cy="9.8" r="1.3"/>
+        <path d="M33 20v-11l12-3v11"/><circle cx="31" cy="20" r="2.2"/><circle cx="43" cy="17" r="2.2"/>
       </svg>
-      <span id="mediaTabDot" class="tab-dot" hidden></span>
+      <span id="photoTabDot" class="tab-dot for-photo" hidden></span>
+      <span id="musicTabDot" class="tab-dot for-music" hidden></span>
     </button>
 </div>
 
