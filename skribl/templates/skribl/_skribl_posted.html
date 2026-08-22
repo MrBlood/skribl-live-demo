@@ -1,0 +1,35 @@
+{# Your Skribls — the local record of what this browser has posted.
+   Shared by Pad and Flip; the list lives in lib/posted.js and the rendering in
+   lib/postedui.js, so neither editor carries a copy.
+
+   NOTE: this is a Jinja comment, not an HTML one. An HTML comment does NOT stop
+   Jinja evaluating tags inside it, so writing the usage example between <!-- -->
+   made this partial include ITSELF, 973 times, before Jinja gave up.
+   Usage: include 'skribl/_skribl_posted.html' from each editor template. #}
+<div id="postedDrawer" class="posted-drawer" role="dialog" aria-modal="true" aria-label="Your Skribls" hidden>
+  <div class="posted-backdrop" id="postedBackdrop"></div>
+  <div class="posted-inner">
+    <div class="posted-head">
+      <span>Your Skribls</span>
+      <button type="button" id="postedClose" class="posted-close" aria-label="Close">&#x2715;</button>
+    </div>
+
+    <div class="help-search posted-search">
+      <span class="help-search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </span>
+      <input type="search" id="postedSearch" class="help-search-input" autocomplete="off"
+             placeholder="Search your Skribls" aria-label="Search your Skribls">
+    </div>
+    <div class="help-search-count" id="postedCount" aria-live="polite"></div>
+
+    <div class="posted-list" id="postedList"></div>
+
+    {# Stated, not implied. Someone who reads this as an account will clear
+       their site data, lose everything, and be right to blame the app. #}
+    <div class="posted-foot">
+      <span>Saved in this browser only &middot; clearing site data removes them</span>
+      <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
+    </div>
+  </div>
+</div>

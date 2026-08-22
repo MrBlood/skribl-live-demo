@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skribl Pad</title>
+  <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
+</head>
+<body>
+
+ <div class="app">
+  <div class="header">
+    <div class="brand">
+      <svg viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7c5cff"/>
+            <stop offset="1" stop-color="#5b8cff"/>
+          </linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="28" fill="url(#g)"/>
+        <polygon fill="#fff" points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/>
+      </svg>
+      <span><span class="brand-word">Skribl</span> <span class="brand-word">Pad</span></span>
+    </div>
+
+    <div id="recIndicator" class="rec-indicator" hidden>
+      <span class="dot"></span> <span id="recTimer" class="rec-timer">0:00</span>
+    </div>
+    <div class="actions" id="actions">
+      {# Canvas settings (tune drawer) — in the header, mirroring Flip exactly,
+         so the drawer slides down FROM the bar that opens it. #}
+      <button type="button" id="tuneBtn" class="icon-btn tune-tool" aria-expanded="false" aria-controls="tunePanel" title="Canvas settings" aria-label="Canvas settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="15" cy="8" r="2.4" fill="var(--surface-raised)"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="16" r="2.4" fill="var(--surface-raised)"/></svg></button>
+      <button type="button" id="recordBtn" class="btn record" title="Start recording — or just draw, and it starts on its own">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+        <span class="btn-label">Record</span>
+      </button>
+      <div class="play-wrap" id="playWrap" hidden>
+        <button type="button" id="playBtn" class="btn play btn-icon" title="Play" aria-label="Play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+          <span class="btn-label">Play</span>
+        </button>
+        <span id="durationBadge" class="duration-badge" hidden>0:00</span>
+      </div>
+      <button type="button" id="postBtn" class="btn post" hidden title="Post it and get a link anyone can open">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <span class="btn-label">Post<span class="post-long"> to Skribl</span></span>
+      </button>
+      <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tune drawer — attached under the header so it slides down FROM the bar
+       that opens it, exactly like Flip. Same tune-shell markup and animation. -->
+  <div class="tune-shell" id="tuneShell" aria-hidden="true">
+    <div class="tune-clip">
+      <div class="tune-panel" id="tunePanel">
+        <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button><span class="onion-group" id="gridDensityGroup" hidden><span class="seg onion-seg" id="gridDensitySeg" title="How fine the alignment grid is"><span class="seg-slider"></span><button type="button" data-density="coarse" title="Fewer, larger cells">S</button><button type="button" data-density="medium" class="on" title="The default grid">M</button><button type="button" data-density="fine" title="More, smaller cells">L</button></span></span></div>
+        <div class="tune-row" id="tuneLayersRow"><span class="tune-label"><span class="tune-name">Stroke layers</span><span class="tune-hint">keeps see-through strokes from beading</span></span><button type="button" id="strokeLayersBtn" class="onion-tint" role="switch" aria-checked="true" title="Draw each see-through stroke on its own layer, so overlaps inside one stroke do not stack into dark beads" aria-label="Stroke layers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5l9 4.5 9-4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/></svg></button></div>
+        <div class="tune-row" id="tuneMirrorRow"><span class="tune-label"><span class="tune-name">Mirror</span><span class="tune-hint">reflects across the canvas centre</span></span><span class="seg onion-seg" id="mirrorSeg" role="group" aria-label="Mirror drawing"><span class="seg-slider"></span><button type="button" data-mirror="off" class="on" title="No mirroring">Off</button><button type="button" data-mirror="vertical" title="Mirror left to right" aria-label="Mirror left to right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9.5 8 5 12l4.5 4"/><path d="M14.5 8 19 12l-4.5 4"/></svg></button><button type="button" data-mirror="horizontal" title="Mirror top to bottom" aria-label="Mirror top to bottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></button><button type="button" data-mirror="both" title="Four-way mirror" aria-label="Four-way mirror"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9 5.5H5.5V9M15 5.5h3.5V9M9 18.5H5.5V15M15 18.5h3.5V15"/></svg></button></span></div>
+        <div class="tune-row" id="tunePauseRow"><span class="tune-label"><span class="tune-name">Pauses</span><span class="tune-hint">idle gaps between strokes</span></span><span class="seg onion-seg" id="pauseSeg" role="group" aria-label="Pause handling"><span class="seg-slider"></span><button type="button" data-pause="keep" title="Replay every pause exactly as you drew it">Keep</button><button type="button" data-pause="trim" title="Shorten long pauses to a quarter second">Trim</button><button type="button" data-pause="tight" class="on" title="Squeeze pauses right down (the default)">Tight</button></span></div>
+        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Preview speed</span><span class="tune-hint">how Play runs here, not how it posts</span></span><span class="seg onion-seg" id="speedSeg" role="group" aria-label="Preview speed"><span class="seg-slider"></span><button type="button" data-rate="0.5" title="Half speed">&frac12;&times;</button><button type="button" data-rate="1" class="on" title="Real time (the speed it posts at)">1&times;</button><button type="button" data-rate="2" title="Double speed">2&times;</button></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overflow menu (dropdown on desktop, sheet on mobile) -->
+  <div id="menuOverlay" class="menu-overlay" hidden>
+    <div class="menu-sheet" id="menuSheet" role="dialog" aria-modal="true" aria-label="More options">
+      <div class="menu-handle"></div>
+      <button type="button" class="menu-item" id="saveDraftItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save draft (.skribl)
+      </button>
+      <button type="button" class="menu-item" id="loadDraftItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Load draft (.skribl)
+      </button>
+      <button type="button" class="menu-item" id="exportItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export…
+      </button>
+      {# A 40px icon could not say what Flip Mode IS. A menu row can. Still an
+         <a href> so open-in-new-tab works, still id="flipBtn" so the guard binds. #}
+      <a href="/flip" id="flipBtn" class="menu-item" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>
+        <span class="menu-item-text">Flip Mode<span class="menu-item-sub">Draw a frame-by-frame animation</span></span>
+      </a>
+      <button type="button" class="menu-item" id="postedItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        <span>Your Skribls</span>
+      </button>
+      <button type="button" class="menu-item" id="helpItem">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg>
+        How it works
+      </button>
+      <button type="button" class="menu-item" id="reportItem" data-skribl-report>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L4 20l1.1-4.3A8.4 8.4 0 1 1 21 11.5z"/><path d="M12 8v4M12 15.5v.01"/></svg>
+        <span>Report a problem</span>
+      </button>
+      <div class="menu-divider"></div>
+      <button type="button" class="menu-item danger" id="clearMenuItem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        <span>Clear all</span>
+      </button>
+      <div class="menu-divider"></div>
+      {# Pad had no canvas control at all: establishEditorCanvas() took whatever
+         the viewport happened to be on first load, so a drawing's shape depended
+         on browser width and no two people got the same one. Same markup and
+         same ids as Flip's row, reading the same table from lib/canvassizes.js.
+         The buttons' labels are filled in from that table at runtime so a preset
+         cannot be renamed here and left stale. #}
+      {# The SAME setting as Flip's, not a second one: lib/hints.js stores it
+         under a single key for the whole app, so off here is off there. It is
+         shown on both surfaces because a user on Pad should not have to open
+         Flip to turn tips off. #}
+      <div class="menu-row">
+        <span class="menu-row-label">Tips</span>
+        <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
+      </div>
+      <div class="menu-row">
+        <span class="menu-row-label">Canvas</span>
+        <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic"></button><button type="button" data-size="wide"></button><button type="button" data-size="square"></button><button type="button" data-size="tall"></button></span>
+      </div>
+      <div class="menu-row-note" id="canvasSegNote"></div>
+      <div class="menu-version">Skribl Pad · {{ skribl_version }}</div>
+    </div>
+  </div>
+
+  <input type="file" id="draftInput" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" style="display:none">
+
+  <!-- Export sheet (shared partial — canonical chooser for Pad + Flip) -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_export.html' %}{% endwith %}
+
+  <!-- Post composer sheet -->
+  <div id="postOverlay" class="menu-overlay" hidden>
+    <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="Post your Skribl">
+      <div class="menu-handle"></div>
+      <div class="export-head">Post your Skribl</div>
+      <div class="export-sub">Add a title and share it to Skribl</div>
+      <div class="post-body" id="postBody">
+        <div class="post-preview" id="postPreview">
+          <img id="postPreviewImg" class="post-preview-img" alt="Preview of your Skribl">
+        </div>
+        <div class="post-fields">
+          <label class="post-field">
+            <span class="post-field-label">Title</span>
+            <input type="text" id="postTitleInput" class="post-input" maxlength="60" placeholder="Untitled Skribl" autocomplete="off">
+          </label>
+          <label class="post-field">
+            <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
+            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="280" rows="3" placeholder="Say something about it…"></textarea>
+            <span class="post-char-count" id="postCharCount">0 / 280</span>
+          </label>
+        </div>
+      </div>
+      <button type="button" class="post-submit" id="postSubmitBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        <span id="postSubmitLabel">Post to Skribl</span>
+      </button>
+      <button type="button" class="post-submit post-watch" id="postWatchBtn" hidden>
+        <span class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+        <span>Watch your Skribl</span>
+      </button>
+      <div class="post-status" id="postStatus" hidden>
+        <div class="export-progress-bar"><div class="export-progress-fill" id="postProgressFill"></div></div>
+        <span class="export-progress-label" id="postStatusLabel">Posting…</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-area">
+  <div class="canvas-wrap">
+    <div id="zoomLayer" class="zoom-layer">
+    <img id="photoBgImg" class="photo-bg-img" style="display:none" alt="">
+    <canvas id="canvas"></canvas>
+    <canvas class="flip-grid" id="padGrid" aria-hidden="true"></canvas>
+    <div id="canvasEmptyHint" class="canvas-empty-hint">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      <span>Start drawing</span>
+      <span class="canvas-empty-sub">Recording starts automatically — it plays back as a replay</span>
+    </div>
+    </div>
+    <!-- Zoom pill (editor only). Grip = drag-only (move to any corner); the
+         four buttons below are pure taps. Guarded in app.js so the player,
+         which has no #zoomLayer, is unaffected. -->
+    <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
+    {% include 'skribl/_skribl_zoom_hud.html' %}
+
+  </div>
+  <div class="play-scrub" id="playScrub" hidden aria-label="Playback scrubber" role="slider" aria-valuemin="0" aria-valuemax="100"><div class="play-scrub-fill" id="playScrubFill"></div></div>
+  </div>
+
+  <!-- Help drawer -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_help.html' %}
+{% include 'skribl/_skribl_posted.html' %}{% endwith %}
+{% include 'skribl/_skribl_report.html' %}
+
+  <!-- Autosave status (quiet, auto-fading) -->
+  <div id="autosaveStatus" class="autosave-status" hidden><span class="autosave-dot"></span><span id="autosaveStatusText">Saved</span></div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Autosave restore prompt -->
+  <div id="restoreBanner" class="restore-banner" hidden>
+    <div class="restore-text">
+      <span class="restore-title">Unsaved drawing found</span>
+      <span class="restore-sub" id="restoreSub">From your last session</span>
+    </div>
+    <div class="restore-actions">
+      <button type="button" id="restoreDiscard" class="restore-btn discard">Discard</button>
+      <button type="button" id="restoreConfirm" class="restore-btn confirm">Restore</button>
+    </div>
+  </div>
+
+  <!-- Read-only player shell (shown only in player-mode) -->
+  <!-- Player shell (shared partial — editor preview + public player) -->
+  {% include 'skribl/_skribl_player_controls.html' %}
+
+
+  <div class="toolbar" id="toolBar">
+    {# The shape picker lives ON the Shape button, not buried in the drawer.
+       Tapping Shape selects the tool AND opens this; tapping a kind sets it and
+       closes. Tapping Shape again re-opens it to switch. Same #shapeSeg id and
+       same data-shape buttons as before, so editor_shapes.js binds unchanged —
+       this is a RELOCATION, not a rewrite. #}
+    <div class="shape-pop" id="shapePop" role="dialog" aria-label="Shape kind" hidden>
+      <div class="smooth-seg" id="shapeSeg" role="group" aria-label="Shape kind">
+        <span class="seg-slider"></span>
+        <button type="button" class="smooth-btn active" data-shape="line" aria-pressed="true" title="Straight line">Line</button>
+        <button type="button" class="smooth-btn" data-shape="rect" aria-pressed="false" title="Rectangle &mdash; hold Shift for a square">Rect</button>
+        <button type="button" class="smooth-btn" data-shape="ellipse" aria-pressed="false" title="Ellipse &mdash; hold Shift for a circle">Oval</button>
+      </div>
+    </div>
+
+    <div class="tool-group" id="toolGroup">
+          <div class="tool-slider" id="toolSlider"></div>
+          <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen" title="Draw — shortcut P">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            <span class="tool-btn-label">Pen</span>
+          </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase, at three times the brush size — shortcut E">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+            <span class="tool-btn-label">Eraser</span>
+          </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle or ellipse &mdash; pick which in the Draw drawer; hold Shift for square/circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
+            <span class="tool-btn-label">Shape</span>
+          </button>        </div>
+    <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
+          <span class="undo-label">Undo</span>
+        </button>
+    <button type="button" id="redoBtn" class="undo-btn bar-undo" title="Redo last stroke">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
+          <span class="undo-label">Redo</span>
+        </button>
+        <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    </button>
+<span class="tool-sep"></span>
+    {# Ring on .color-ring, NOT on #toolColorChip: app.js writes the colour there
+       as an inline background, and an inline style beats any stylesheet rule. #}
+    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
+      <span class="color-ring">
+        <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
+      </span>
+    </button>
+    <span class="tool-sep"></span>
+      {# Image, Music and Zoom collapse into one control: Pad goes from 10 controls
+       to 8, which fixes wrapping from 360px up. The dot is DERIVED from the
+       per-item dots so the toolbar and drawer cannot disagree; amber beats green
+       because amber is the only state that asks anything of the user. #}
+    <button type="button" class="tool-open" id="imageOpenBtn" data-drawer="photo" aria-label="Image" title="Put a photo behind your drawing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+      </svg>
+      <span id="photoTabDot" class="tab-dot" hidden></span>
+      <span class="tab-dot-empty" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="tool-open" id="musicOpenBtn" data-drawer="music" aria-label="Music" title="Add a music loop that plays underneath">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <span id="musicTabDot" class="tab-dot" hidden></span>
+      <span class="tab-dot-empty" aria-hidden="true"></span>
+    </button>
+</div>
+
+  <!-- Draw drawer (shared partial — Pad + Flip) -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+
+
+  <!-- Music drawer (shared partial — Pad + Flip) -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+
+
+  <!-- Image drawer (shared partial — Pad + Flip) -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
+
+</div>
+
+  <script nonce="{{ csp_nonce }}">
+    window.SKRIBL_MODE = "editor";
+    window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
+  window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
+    window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
+  window.SKRIBL_PLAYER_TARGET = {{ skribl_player_target | tojson }};
+  </script>
+  <!-- mp4-muxer (vendored) enables the WebCodecs H.264/AAC MP4 export. Until this
+       file is present the MP4 path stays dormant and video export falls back to
+       the MediaRecorder (WebM/MP4) path — so a missing file never breaks export. -->
+  <!-- gifenc (vendored) enables GIF export. Upstream is ESM-only, so this is a
+       global-publishing IIFE build of gifenc 1.0.3 (see the banner in the file for
+       the exact reproduce command) — same file and same `window.gifenc` global
+       Flip loads, so both surfaces run one version. Until this file is present the
+       GIF option simply disables itself with a hint — nothing else breaks. -->
+  {% include 'skribl/_skribl_vendor.html' %}
+  <script src="{{ skribl_asset('lib/media_validation.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/drawers.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/gridoverlay.js') }}" defer></script>
+  {# Shared recent-colour controller. Loaded before the editor script,
+     which reads window.SkriblRecentColors at first use. #}
+  <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/pressure.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/mirror.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/brushes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/selection.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/colorselect.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/artwork.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
+  <script src="{{ skribl_asset('app.js') }}" defer></script>
+  {# Editor-only. These were inside app.js, which the PLAYER also loads — so
+     every shared link shipped the GIF/WebM encoders and the post composer to
+     run them for nothing. They read globals app.js declares, so they must stay
+     after it; `defer` preserves document order. #}
+  <script src="{{ skribl_asset('editor_menu.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_tune.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_draw.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_shapes.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_music.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_photo.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_export.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_post.js') }}" defer></script>
+</body>
+</html>
+
+{# Leave confirm. TOP LEVEL: nesting it inside #menuSheet made clicking Flip
+   look like it did nothing, and put the text inside the overflow menu. #}
+<div class="leave-scrim" id="leaveScrim" hidden></div>
+<div class="leave-sheet" id="leaveSheet" role="dialog" aria-modal="true" aria-labelledby="leaveSheetTitle" hidden>
+  <h2 class="leave-title" id="leaveSheetTitle">Leave Pad?</h2>
+  <p class="leave-body">Your drawing hasn&rsquo;t been posted.</p>
+  <div class="leave-actions">
+    <button type="button" class="leave-btn" id="leaveCancel">Keep drawing</button>
+    <button type="button" class="leave-btn danger" id="leaveGo">Leave</button>
+  </div>
+</div>

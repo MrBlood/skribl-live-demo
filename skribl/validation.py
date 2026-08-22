@@ -1,0 +1,410 @@
+"""Payload validation: media data URLs, and structural complexity limits.
+
+Moved verbatim from app.py. No database or Flask coupling here at all.
+"""
+import base64
+import math
+import re
+
+from .core import MAX_CARD_BYTES, _DATA_URL_IMAGE_RE, _env_int
+
+def _decode_data_url_image(data_url):
+    # Returns (raw_bytes, mimetype) for a PNG or JPEG data URL, or None if the
+    # value is missing/malformed/an unsupported type (webp, gif, svg, …) so the
+    # caller falls back to the static card.
+    if not isinstance(data_url, str):
+        return None
+    m = _DATA_URL_IMAGE_RE.match(data_url.strip())
+    if not m:
+        return None
+    try:
+        raw = base64.b64decode(m.group(2), validate=True)
+    except Exception:
+        return None
+    return raw, "image/" + m.group(1)
+
+
+def _payload_has_audio(payload):
+    # Whether a posted Skribl carries actual audio bytes. Frame-aware: audio lives
+    # at the top level on a legacy Skribl, or inside a frame on a frame-format one
+    # (a classic Skribl is a 1-frame Skribl). A settings-only/empty music dict
+    # ({}) doesn't count. Pure + import-light so it can be unit-tested headless.
+    if not isinstance(payload, dict):
+        return False
+    music = payload.get("music")
+    if not isinstance(music, dict) or not music.get("data"):
+        music = None
+        frames = payload.get("frames")
+        if isinstance(frames, list):
+            for frame in frames:
+                if isinstance(frame, dict):
+                    m = frame.get("music")
+                    if isinstance(m, dict) and m.get("data"):
+                        music = m
+                        break
+    return bool((music or {}).get("data"))
+
+
+# --- Server-side media validation (INTEGRATION §7) ---------------------------
+# The post endpoint is public and unauthenticated, and every media item arrives as
+# a base64 data URL inside payload_json. Until now the only limit was
+# MAX_CONTENT_LENGTH on the whole request, so a single post could carry ~24 MB of
+# arbitrary blob — any type, valid base64 or not — straight into the JSON column.
+# At the current rate limit that is ~480 MB/hour/IP into a free-tier Postgres.
+#
+# These caps are per-item and deliberately generous: a trimmed loop is a couple of
+# MB (see the v102 note: a 42s WAV with an 8s loop posts 1.41 MB) and a background
+# photo is well under 8 MB. They are env-tunable so a deploy can tighten them
+# without a code change.
+#
+# Type handling is an ALLOW-LIST of top-level types (audio/*, image/*) with SVG
+# explicitly excluded — SVG is the one image type that carries script, and nothing
+# the client produces is SVG. Subtypes are otherwise left open on purpose: `music`
+# is whatever audio file the user picked (mpeg/wav/ogg/mp4/flac/…), and narrowing
+# that would reject legitimate uploads for no security gain.
+#
+# NOT covered here: dimensions and duration, which need real decoding (Pillow /
+# an audio decoder) and a dependency this app does not have. Bytes and type are
+# the cheap 90%.
+MAX_AUDIO_BYTES = _env_int("SKRIBL_MAX_AUDIO_BYTES", 12_000_000, minimum=1024)
+MAX_IMAGE_BYTES = _env_int("SKRIBL_MAX_IMAGE_BYTES", 8_000_000, minimum=1024)
+
+_MEDIA_DATA_URL_RE = re.compile(r"^data:([a-zA-Z]+)/([a-zA-Z0-9.+-]+);base64,(.*)$", re.DOTALL)
+
+
+# STRICT image allow-list (review round 2, #1). The first pass matched prefixes
+# only and left unknown subtypes unchecked, which meant image/avif or image/tiff
+# with arbitrary bytes was stored unverified, and a RIFF/WAVE body passed as WebP
+# because only the first four bytes were compared. Both are closed: an unlisted
+# subtype is now REJECTED, and WebP is checked as a container (RIFF....WEBP), not
+# a prefix.
+# BMP was dropped in v116 rather than added to the Pad's pickers: the Pad drawers
+# only ever offered jpeg/png/gif/webp, so keeping BMP meant two policies wearing
+# one comment. Nothing the client produces is BMP. (Review round 6, #6)
+ALLOWED_IMAGE_SUBTYPES = {"png", "jpeg", "jpg", "gif", "webp"}
+
+
+def _valid_image_signature(sub_type, raw):
+    """Header/container check ONLY — deliberately not full image validation.
+
+    This proves the declared subtype matches the leading bytes. It does NOT prove
+    the file decodes, and a truncated b"\x89PNG\r\n\x1a\n" with no IHDR passes.
+    Dimensions, pixel count, decompression cost and completeness are NOT checked;
+    doing so needs a real decoder (Pillow) with resource limits, which is a
+    deliberate follow-up rather than something to imply here. The error message
+    says "does not match the declared container" for the same reason.
+    (Review round 4, #3)
+    """
+    if sub_type == "png":
+        return raw.startswith(b"\x89PNG\r\n\x1a\n")
+    if sub_type in ("jpeg", "jpg"):
+        return raw.startswith(b"\xff\xd8\xff")
+    if sub_type == "gif":
+        return raw.startswith((b"GIF87a", b"GIF89a"))
+    if sub_type == "webp":
+        # RIFF is a generic container: WAV and AVI share the first four bytes.
+        # The format is only established by the WEBP fourcc at offset 8.
+        return len(raw) >= 12 and raw.startswith(b"RIFF") and raw[8:12] == b"WEBP"
+    return False
+# Audio the client can decode. Narrower than 'any audio/*' per review #6, but
+# deliberately generous — these are the containers a file picker actually yields.
+ALLOWED_AUDIO_SUBTYPES = {
+    "wav", "x-wav", "wave", "vnd.wave", "mpeg", "mp3", "mp4", "x-m4a", "m4a",
+    "aac", "ogg", "opus", "webm", "flac", "x-flac",
+}
+
+
+def _valid_audio_signature(sub_type, raw):
+    """Container check for declared audio. (Review round 4, #2)
+
+    Round 3 allow-listed subtypes but never looked at the bytes, so
+    b"this is not a WAV" passed as audio/wav. Like the image checks, this proves
+    the CONTAINER, not that a complete file decodes — see the note on
+    _valid_image_signature.
+
+    Two of these are container-FAMILY checks, not proof of audio, and should be
+    described that way (review round 5, #4):
+      - webm: the EBML magic identifies Matroska/WebM generally. A video-only
+        WebM or a Matroska file declared audio/webm will pass.
+      - mp4/x-m4a/m4a/aac: the `ftyp` box identifies ISO Base Media Format. A
+        video MP4 or an HEIF/HEIC container declared audio/mp4 will pass.
+    Distinguishing tracks and codecs needs a real media parser, which is out of
+    scope here. What these DO close is the arbitrary-bytes case.
+    """
+    if sub_type in ("wav", "x-wav", "wave", "vnd.wave"):
+        return len(raw) >= 12 and raw.startswith(b"RIFF") and raw[8:12] == b"WAVE"
+    if sub_type in ("flac", "x-flac"):
+        return raw.startswith(b"fLaC")
+    if sub_type in ("ogg", "opus"):
+        return raw.startswith(b"OggS")
+    if sub_type == "webm":
+        return raw.startswith(b"\x1a\x45\xdf\xa3")          # EBML
+    if sub_type in ("mpeg", "mp3"):
+        # ID3 tag, or an MPEG audio frame sync (11 set bits).
+        return raw.startswith(b"ID3") or (len(raw) >= 2 and raw[0] == 0xFF and (raw[1] & 0xE0) == 0xE0)
+    if sub_type in ("mp4", "x-m4a", "m4a"):
+        return len(raw) >= 12 and raw[4:8] == b"ftyp"
+    if sub_type == "aac":
+        # ADTS sync, or an MP4/ftyp container mislabelled as aac by a picker.
+        return (len(raw) >= 2 and raw[0] == 0xFF and (raw[1] & 0xF0) == 0xF0) or \
+               (len(raw) >= 12 and raw[4:8] == b"ftyp")
+    return False
+
+
+def _validate_media_data_url(value, expected_type, max_bytes, label):
+    # Returns None if acceptable, else a human-readable error string. Pure and
+    # import-light (re + base64) so it can be unit-tested headless.
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return f"'{label}' must be a data URL string."
+    m = _MEDIA_DATA_URL_RE.match(value.strip())
+    if not m:
+        return f"'{label}' must be a base64 data URL."
+    top, sub_type, b64 = m.group(1).lower(), m.group(2).lower(), m.group(3)
+    if top != expected_type:
+        return f"'{label}' must be {expected_type}/*, got {top}/{sub_type}."
+    if top == "image" and sub_type in ("svg+xml", "svg"):
+        return f"'{label}' may not be SVG."
+    # Size from the base64 length before decoding, so an oversize payload is
+    # rejected without spending the CPU to decode it.
+    approx = (len(b64) * 3) // 4
+    if approx > max_bytes:
+        return f"'{label}' is too large ({approx // 1000} kB; limit {max_bytes // 1000} kB)."
+    try:
+        raw = base64.b64decode(b64, validate=True)
+    except Exception:
+        return f"'{label}' is not valid base64."
+    # Review #6: syntax + declared type + size said nothing about the BYTES.
+    # 'data:image/png;base64,' (empty) and b'not a png' declared as PNG both
+    # sailed through. Reject empty payloads and check the magic number, so the
+    # declared container has to match what was actually sent.
+    if not raw:
+        return f"'{label}' is empty."
+    if top == "image":
+        if sub_type not in ALLOWED_IMAGE_SUBTYPES:
+            return f"'{label}' has an unsupported image format ({sub_type})."
+        if not _valid_image_signature(sub_type, raw):
+            return f"'{label}' does not match the declared {sub_type} container."
+    if top == "audio":
+        if sub_type not in ALLOWED_AUDIO_SUBTYPES:
+            return f"'{label}' has an unsupported audio format ({sub_type})."
+        if not _valid_audio_signature(sub_type, raw):
+            return f"'{label}' does not match the declared {sub_type} container."
+    return None
+
+
+def _iter_media_items(payload):
+    # Yields (value, expected_type, max_bytes, label) for every media item in a
+    # payload, top-level and per-frame. Frame-format Skribls carry media on their
+    # frames (a classic Skribl is a 1-frame Skribl), so both must be walked.
+    def scan(container, where):
+        if not isinstance(container, dict):
+            return
+        for key, kind, cap in (("music", "audio", MAX_AUDIO_BYTES),
+                               ("photo", "image", MAX_IMAGE_BYTES)):
+            item = container.get(key)
+            if isinstance(item, dict) and item.get("data") is not None:
+                yield item["data"], kind, cap, f"{where}{key}.data"
+        # baseSnapshot: Pad serialises the pre-recording canvas as a data URL
+        # at the root, and the frame format reserves the same slot per frame
+        # (f0.baseSnapshot falls back to payload.baseSnapshot in the player).
+        # It used to be walked by NOTHING — the one media slot that was neither
+        # validated, capped, nor externalised, so an uncapped inline image rode
+        # every such payload into the row and back out of every GET. Same
+        # image rules and cap as `photo`, since it is one. (Outside review, P1.)
+        snap = container.get("baseSnapshot")
+        if snap is not None:
+            yield snap, "image", MAX_IMAGE_BYTES, f"{where}baseSnapshot"
+
+    yield from scan(payload, "")
+    thumb = payload.get("thumbnail")
+    if thumb is not None:
+        yield thumb, "image", MAX_CARD_BYTES, "thumbnail"
+    frames = payload.get("frames")
+    if isinstance(frames, list):
+        # No slice here any more. The old frames[:200] silently skipped media on
+        # frame 201+, so an oversize payload could smuggle unvalidated media past
+        # the check entirely. The frame COUNT is now capped up front by
+        # _validate_payload_complexity, which runs before this. (Review #2)
+        for i, frame in enumerate(frames):
+            yield from scan(frame, f"frames[{i}].")
+
+
+# --- Structural complexity limits (review #8) --------------------------------
+# MAX_CONTENT_LENGTH caps BYTES, which says nothing about rendering cost: a small
+# payload can still describe a canvas or a point count that will pin a phone.
+# These are deliberately far above anything the editors produce — they exist to
+# stop hand-built payloads, not to constrain real drawings.
+MAX_FRAMES = _env_int("SKRIBL_MAX_FRAMES", 200, minimum=1)
+MAX_POINTS_PER_FRAME = _env_int("SKRIBL_MAX_POINTS_PER_FRAME", 20_000, minimum=1)
+MAX_TOTAL_POINTS = _env_int("SKRIBL_MAX_TOTAL_POINTS", 200_000, minimum=1)
+MAX_GROUPS_PER_FRAME = _env_int("SKRIBL_MAX_GROUPS_PER_FRAME", 5_000, minimum=1)
+MAX_HOLD = _env_int("SKRIBL_MAX_HOLD", 8, minimum=1)
+MAX_CANVAS_EDGE = _env_int("SKRIBL_MAX_CANVAS_EDGE", 4096, minimum=16)
+COORD_LIMIT = 100_000
+MAX_BRUSH = 500
+
+
+def _finite(n):
+    return isinstance(n, (int, float)) and not isinstance(n, bool) and math.isfinite(n)
+
+
+def _validate_points(points, label, budget):
+    if not isinstance(points, list):
+        return f"'{label}' must be a list.", budget
+    if len(points) > MAX_POINTS_PER_FRAME:
+        return (f"'{label}' has too many points ({len(points)}; limit "
+                f"{MAX_POINTS_PER_FRAME}).", budget)
+    budget -= len(points)
+    if budget < 0:
+        return f"Too many points overall (limit {MAX_TOTAL_POINTS}).", budget
+    for index, p in enumerate(points):
+        # Non-object entries used to be skipped (round 2, #6), and coordinates
+        # used to be optional (round 6, #1) — so {} and {"x": 10} were "valid"
+        # while every renderer dereferences p.x/p.y directly (drawDot, drawLine,
+        # nib positioning), turning them into undefined mid-canvas. Both editors
+        # always emit x and y, verified against real serialised payloads, so
+        # requiring them costs nothing legitimate.
+        if not isinstance(p, dict):
+            return f"'{label}[{index}]' must be an object.", budget
+        for axis in ("x", "y"):
+            if axis not in p:
+                return f"'{label}[{index}].{axis}' is required.", budget
+            v = p[axis]
+            # NaN/Infinity arrive via hand-built JSON and imported drafts, and
+            # poison every downstream bounds calculation silently.
+            if not _finite(v):
+                return f"'{label}[{index}].{axis}' must be finite.", budget
+            if abs(v) > COORD_LIMIT:
+                return f"'{label}[{index}].{axis}' is out of range.", budget
+        size = p.get("size")
+        if size is not None and (not _finite(size) or size <= 0 or size > MAX_BRUSH):
+            return f"'{label}' has an out-of-range brush size.", budget
+    return None, budget
+
+
+def _validate_stroke_groups(groups, label, stroke_count):
+    """Group entries are per-stroke point counts; they must account for exactly
+    the points present. Applied to BOTH the classic root-level payload and each
+    frame — round 3 only covered frames, so a classic Pad payload could carry
+    `strokeGroups: [{"unexpected": "object"}]` unchecked. (Review round 4, #1)
+
+    Entries must be STRICTLY POSITIVE. v114 allowed 0 on the theory that a
+    degenerate stroke could emit one; that was wrong, and checking the editors
+    disproves it — Flip sets curCount=1 at stroke start (flip.js:428) before
+    pushing it (flip.js:460), and the Pad only pushes under
+    `currentStroke.length > 0` (app.js:610, 627). Neither can emit a zero.
+
+    Worse, a zero is actively harmful: Flip's undo does
+    `splice(strokes.length - n, n)`, so n=0 removes nothing while still consuming
+    a group — a no-op undo entry. `strokeGroups: [0, 1]` passes an exact-sum check
+    against one point, and `[0,0,0,0]` passes against an empty frame, which would
+    let a crafted payload plant thousands of dead undo steps.
+    (Review round 5, #1)
+    """
+    if groups is None:
+        # Optional only for an empty strokes array. Otherwise the stroke
+        # boundaries that undo and reconstruction depend on would simply be
+        # absent, which a crafted payload could do deliberately. Both editors
+        # always serialise the array. (Review round 6, #2)
+        if stroke_count == 0:
+            return None
+        return f"'{label}' is required when its strokes array contains points."
+    if not isinstance(groups, list):
+        return f"'{label}' must be a list."
+    if len(groups) > MAX_GROUPS_PER_FRAME:
+        return f"'{label}' has too many entries."
+    total = 0
+    for index, value in enumerate(groups):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            return f"'{label}[{index}]' must be a positive whole number of points."
+        total += value
+        if total > stroke_count:
+            return f"'{label}' describes more points than its strokes array."
+    if total != stroke_count:
+        return (f"'{label}' accounts for {total} points, but the strokes array "
+                f"contains {stroke_count}.")
+    return None
+
+
+def _validate_payload_complexity(payload):
+    """Bytes are capped elsewhere; this caps STRUCTURE. Returns an error or None."""
+    cs = payload.get("canvasSize")
+    if cs is not None:
+        # "huge", [], {}, and half-specified objects used to pass. The client
+        # ignores them, but these are public persisted payloads and the schema
+        # should mean something. (Review round 6, #8)
+        if not isinstance(cs, dict):
+            return "'canvasSize' must be an object."
+        missing = {"cssWidth", "cssHeight"} - set(cs)
+        if missing:
+            return "'canvasSize' must contain cssWidth and cssHeight."
+        for key in ("cssWidth", "cssHeight"):
+            v = cs.get(key)
+            # Pixel counts, so whole numbers only — 0.5 and 4095.75 were
+            # accepted before and left the client to coerce. (Review round 4, #6)
+            if isinstance(v, bool) or not isinstance(v, int) or v < 1 or v > MAX_CANVAS_EDGE:
+                return (f"'canvasSize.{key}' must be a whole number between 1 and "
+                        f"{MAX_CANVAS_EDGE}.")
+    budget = MAX_TOTAL_POINTS
+    root_strokes = payload.get("strokes", [])
+    err, budget = _validate_points(root_strokes, "strokes", budget)
+    if err:
+        return err
+    if isinstance(root_strokes, list):
+        err = _validate_stroke_groups(payload.get("strokeGroups"), "strokeGroups",
+                                      len(root_strokes))
+        if err:
+            return err
+    frames = payload.get("frames")
+    if frames is None:
+        return None
+    if not isinstance(frames, list):
+        return "'frames' must be a list."
+    if len(frames) == 0:
+        # No editor produces an empty list: Pad sends no frames key at all and
+        # Flip always has at least a page. An empty list only arrives hand-made.
+        return "'frames' must contain at least one frame."
+    # fps rides beside frames, so it is validated here. The player reads
+    # payload.fps || 12, so a bad fps does not crash — a negative one silently
+    # freezes the post on page one forever. Flip's editor only produces 6/12/24;
+    # 1..60 is the accepted band, bools excluded (a bool IS an int in Python).
+    fps = payload.get("fps")
+    if fps is not None:
+        if isinstance(fps, bool) or not isinstance(fps, (int, float)) \
+                or not math.isfinite(fps) or fps < 1 or fps > 60:
+            return "'fps' must be a number between 1 and 60."
+    if len(frames) > MAX_FRAMES:
+        return f"At most {MAX_FRAMES} frames are allowed (got {len(frames)})."
+    for i, frame in enumerate(frames):
+        # Non-dict entries used to be skipped in silence by the media walker.
+        if not isinstance(frame, dict):
+            return f"'frames[{i}]' must be an object."
+        frame_strokes = frame.get("strokes", [])
+        err, budget = _validate_points(frame_strokes, f"frames[{i}].strokes", budget)
+        if err:
+            return err
+        if isinstance(frame_strokes, list):
+            err = _validate_stroke_groups(frame.get("strokeGroups"),
+                                          f"frames[{i}].strokeGroups", len(frame_strokes))
+            if err:
+                return err
+        hold = frame.get("hold")
+        if hold is not None:
+            # Integer only — fractional holds are not a supported concept and the
+            # finite-range check alone allowed 1.5. (Review round 2, #6)
+            if isinstance(hold, bool) or not isinstance(hold, int):
+                return f"'frames[{i}].hold' must be a whole number."
+            if hold < 1 or hold > MAX_HOLD:
+                return f"'frames[{i}].hold' must be between 1 and {MAX_HOLD}."
+    return None
+
+
+def _validate_payload_media(payload):
+    # First error wins; returns None when everything is acceptable.
+    for value, kind, cap, label in _iter_media_items(payload):
+        err = _validate_media_data_url(value, kind, cap, label)
+        if err:
+            return err
+    return None
