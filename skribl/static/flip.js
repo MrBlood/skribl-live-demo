@@ -1585,6 +1585,7 @@ flipProgress.addEventListener('pointercancel',endFrameScrub);
 
 /* ---- tools: the Pad editor's Draw menu (colors + brush), wired to Flip state ---- */
 const colorCurrent=document.getElementById('colorCurrent');
+const colorCurrentCore=document.getElementById('colorCurrentCore');
 const drawPanel=document.getElementById('drawPanel');   // the shared .tab-panel drawer
 const colorGroup=document.getElementById('colorGroup');
 const recentRow=document.getElementById('recentRow');
@@ -1606,7 +1607,9 @@ function setColor(hex){
   if(!sel) return;
   hex = sel.hex;
   color=hex;
-  colorCurrent.style.background=hex;
+  // The ring lives on .color-ring; writing the colour to the BUTTON would sit
+  // on top of it as an inline style and paint the spectrum out entirely.
+  if (colorCurrentCore) colorCurrentCore.style.background=hex;
   // !! is load-bearing. The custom swatch has no data-color, so this expression
   // was `undefined && ...` -> undefined, and classList.toggle(name, undefined)
   // is treated as NO second argument — which TOGGLES instead of forcing off. So
@@ -1793,8 +1796,9 @@ customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
 
 /* ---- smoothing: stabilizer strength baked into the captured points (Pad parity) ---- */
 const smoothSeg=document.getElementById('smoothSeg');
-function positionSmoothSeg(){ const active=smoothSeg.querySelector('.smooth-btn.active'), pill=smoothSeg.querySelector('.seg-slider');
-  if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
+// Was a private copy of what lib/segslider.js does. Two implementations of
+// one behaviour is how the two surfaces drift, and this was the easy one.
+function positionSmoothSeg(){ if (window.SkriblSegSlider) window.SkriblSegSlider.place(smoothSeg); }
 // Shared with Pad via lib/smoothing.js. positionSmoothSeg stays injected:
 // slider positioning exists three times in this codebase (here, app.js and
 // lib/segslider.js) and consolidating it is its own extraction.
@@ -3596,35 +3600,101 @@ if (window.SkriblReport) window.SkriblReport.init();
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();
 
-/* Flip was a bare <a href>: one tap and an unposted drawing was gone. No
-   beforeunload — that fires on reload and tab-close too, where the browser
-   shows its own untranslatable string and cannot say which work is at risk. */
-(function guardPadNavigation() {
-  var flipBtn = document.querySelector('#padBtn, .pad-btn, a[href="/"]');
-  var sheet = document.getElementById('leaveSheet');
-  var scrim = document.getElementById('leaveScrim');
-  var go = document.getElementById('leaveGo');
-  var cancel = document.getElementById('leaveCancel');
-  if (!flipBtn || !sheet || !go || !cancel) return;
-  // Only guard when there is something to lose: a confirm on an empty canvas
-  // trains people to dismiss it unread.
-  // Unsure means guard: a false prompt is cheaper than lost work.
-  function atRisk() { try { return (typeof pages !== 'undefined' && pages.some(function (p) { return p && p.strokes && p.strokes.length; })); } catch (e) { return true; } }
-  var released = false;
-  flipBtn.addEventListener('click', function (e) {
-    if (released || !atRisk()) return;
+/* ===================================================================
+   v215 — parity block. Every fix in this codebase has to be made twice,
+   and most bugs in the v213 session were one surface having a fix the
+   other lacked. This is the Flip half.
+   =================================================================== */
+
+function updateMediaDot(){
+  const dot=document.getElementById('mediaTabDot');
+  if(!dot) return;
+  const items=['photoTabDot','musicTabDot'].map(id=>document.getElementById(id)).filter(Boolean);
+  const present=items.filter(d=>!d.hidden);
+  const pending=present.filter(d=>d.classList.contains('pending'));
+  dot.hidden=present.length===0;
+  dot.classList.toggle('pending', !!pending.length);
+  [['photoTabDot','photoRowDot'],['musicTabDot','musicRowDot']].forEach(([src,dst])=>{
+    const a=document.getElementById(src), b=document.getElementById(dst);
+    if(!a||!b) return;
+    b.hidden=a.hidden;
+    b.classList.toggle('pending', !!a.classList.contains('pending'));
+  });
+}
+
+(function initPaintTarget(){
+  const seg=document.getElementById('paintTargetSeg');
+  if(!seg) return;
+  seg.addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-target]');
+    if(!btn) return;
+    const target=btn.dataset.target;
+    seg.querySelectorAll('button').forEach(b=>{
+      const on=b===btn;
+      b.classList.toggle('active', !!on);
+      b.setAttribute('aria-pressed', String(!!on));
+    });
+    ['colorGroup','bgGroup'].forEach(id=>{
+      const g=document.getElementById(id);
+      if(g) g.hidden = g.dataset.target!==target;
+    });
+    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  });
+  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+})();
+
+(function trackDrawerSegs(){
+  ['smoothSeg','brushSeg','shapeSeg','pressureSeg','eraserSeg'].forEach(id=>{
+    const seg=document.getElementById(id);
+    if(seg&&window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  });
+})();
+
+(function initMediaRows(){
+  const go=(id,drawer)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('click',()=>{
+      const panel=document.getElementById('mediaPanel');
+      if(panel) panel.hidden=true;
+      const opener=document.querySelector('[data-drawer="'+drawer+'"]');
+      if(opener&&opener!==el) opener.click();
+    });
+  };
+  go('mediaAddImage','photo');
+  go('mediaAddMusic','music');
+})();
+
+// The mirror of Pad's guard: Flip's link back to Pad loses unposted work the
+// same way, and a fix on one surface only is the shape of bug this codebase
+// keeps producing.
+(function guardPadNavigation(){
+  const back=document.querySelector('#padBtn, .pad-btn, a[href="/"]');
+  const sheet=document.getElementById('leaveSheet');
+  const go=document.getElementById('leaveGo');
+  const cancel=document.getElementById('leaveCancel');
+  if(!back||!sheet||!go||!cancel) return;
+  const atRisk=()=>{
+    try { return (typeof pages!=='undefined' && pages.some(p=>p&&p.strokes&&p.strokes.length)); }
+    catch(_) { return true; }   // unsure means guard: a false prompt beats lost work
+  };
+  let released=false;
+  back.addEventListener('click',e=>{
+    if(released||!atRisk()) return;
     e.preventDefault();
-    sheet.hidden = false;
-    if (scrim) scrim.hidden = false;
-    cancel.focus();               // the SAFE choice takes focus
+    sheet.hidden=false;
+    const scrim=document.getElementById('leaveScrim');
+    if(scrim) scrim.hidden=false;
+    cancel.focus();
   });
-  function close() { sheet.hidden = true; if (scrim) scrim.hidden = true; flipBtn.focus(); }
-  cancel.addEventListener('click', close);
-  go.addEventListener('click', function () {
-    released = true;
-    window.location.href = flipBtn.getAttribute('href');
+  const close=()=>{ sheet.hidden=true;
+    const scrim=document.getElementById('leaveScrim');
+    if(scrim) scrim.hidden=true;
+    back.focus(); };
+  cancel.addEventListener('click',close);
+  go.addEventListener('click',()=>{
+    released=true;
+    window.location.href=back.getAttribute('href')||'/';
   });
-  sheet.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { e.stopPropagation(); close(); }
-  });
+  sheet.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.stopPropagation(); close(); } });
 })();

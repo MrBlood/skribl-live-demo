@@ -46,9 +46,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span class="btn-label">Post<span class="post-long"> to Skribl</span></span>
       </button>
-      <a href="/flip" id="flipBtn" class="icon-btn flip-btn" title="Flip Mode — draw a frame animation" aria-label="Flip Mode">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>
-      </a>
       <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       </button>
@@ -85,6 +82,16 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export…
       </button>
+      {# Flip lives here rather than in the header. A 40px icon could not say what
+         Flip Mode IS, which is why nobody recognised it; a menu row has space for a
+         subtitle that does. Still an <a href> so right-click and open-in-new-tab
+         behave, and still id="flipBtn" so the navigation guard binds unchanged. #}
+      <a href="/flip" id="flipBtn" class="menu-item" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="13" height="13" rx="2"/><path d="M20 8v11a2 2 0 0 1-2 2H7"/></svg>
+        <span class="menu-item-text">Flip Mode
+          <span class="menu-item-sub">Draw a frame-by-frame animation</span>
+        </span>
+      </a>
       <button type="button" class="menu-item" id="postedItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         <span>Your Skribls</span>
@@ -117,6 +124,7 @@
         <span class="menu-row-label">Tips</span>
         <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
       </div>
+    </div>
       <div class="menu-row">
         <span class="menu-row-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic"></button><button type="button" data-size="wide"></button><button type="button" data-size="square"></button><button type="button" data-size="tall"></button></span>
@@ -243,32 +251,36 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
-    <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-        </button>
     <span class="tool-sep"></span>
-    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colors & brush" title="Colour, brush size, opacity and smoothing">
-      <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
+    {# The ring lives on .color-ring, NOT on #toolColorChip: app.js writes the
+       colour there as an inline background, and an inline style beats any rule.
+       Putting the gradient on the chip would erase it at the first colour
+       change while still looking right on load. #}
+    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
+      <span class="color-ring">
+        <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
+      </span>
     </button>
     <span class="tool-sep"></span>
-    <button type="button" class="tool-open" id="imageOpenBtn" data-drawer="photo" aria-label="Image" title="Put a photo behind your drawing">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+    {# Image, Music and Zoom collapse into one control. Measured: takes Pad from
+       10 controls to 8 and fixes wrapping at 360px and up. The dot is DERIVED
+       from the per-item dots (see updateMediaDot) so the toolbar and the drawer
+       cannot disagree; amber beats green because amber is the only state that
+       asks anything of the user. #}
+    <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2.5" y="5.5" width="12" height="11" rx="2.5"/><path d="M3.6 15 7 11.6l3.1 2.8"/><path d="M17 20.5v-8l4.5-1.2v7.6"/><circle cx="15.4" cy="20.6" r="1.8"/>
       </svg>
-      <span id="photoTabDot" class="tab-dot" hidden></span>
-      <span class="tab-dot-empty" aria-hidden="true"></span>
-    </button>
-    <button type="button" class="tool-open" id="musicOpenBtn" data-drawer="music" aria-label="Music" title="Add a music loop that plays underneath">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-      </svg>
-      <span id="musicTabDot" class="tab-dot" hidden></span>
+      <span id="mediaTabDot" class="tab-dot" hidden></span>
       <span class="tab-dot-empty" aria-hidden="true"></span>
     </button>
   </div>
 
   <!-- Draw drawer (shared partial — Pad + Flip) -->
   {% with kind='pad' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+
+  <!-- Media drawer (shared partial - Pad + Flip) -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
 
   <!-- Music drawer (shared partial — Pad + Flip) -->
@@ -341,7 +353,10 @@
 </body>
 </html>
 
-<!-- Leave confirm. Top level: a modal cannot live inside something that hides. -->
+<!-- Leave confirm. TOP LEVEL, deliberately: it was first nested inside
+     #menuSheet, which meant it only appeared when the overflow menu opened and
+     clicking Flip looked like it did nothing. A modal cannot live inside
+     something that hides. -->
 <div class="leave-scrim" id="leaveScrim" hidden></div>
 <div class="leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
      aria-labelledby="leaveSheetTitle" hidden>

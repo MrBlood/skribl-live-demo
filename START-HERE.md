@@ -237,6 +237,18 @@ is actually live before diagnosing anything.
 run v135-v141. The live Postgres is stamped at head `f0a3d81b47e2`. Do not
 propose collapsing it again.
 
+**THE CANVAS LOCK AFTER A TAKE IS DELIBERATE — do not "fix" it.** When a take
+ends, `updateCanvasLockCue()` sets `cursor: not-allowed` and the canvas is not
+drawable until you Record again or Clear. This looks like a dead end and is not:
+it is the multi-take model, and `endRecordingTake()` says so in a toast —
+*"Take saved — Record again to add more to this Skribl, or Play to preview."*
+An external design pass in v215 read the lock as a bug and came close to
+recommending its removal, which would have turned every stray tap after a take
+into recorded timing. The round-trip through Record is the cost of knowing when
+the clock is running. If it is ever revisited, the narrower change is to let
+drawing on a locked canvas START the next take — same model, no round-trip —
+rather than removing the lock.
+
 **Visibility defaults to `unlisted`,** and the migration backfilled every
 existing post as `unlisted`. The platform must send `"visibility": "public"`
 explicitly or posts appear in no feed, silently. Leave the backfill alone.
@@ -1121,8 +1133,20 @@ without ever revealing the HUD, so a pinch-zoomed user would have had no way
 back to 100%. `beginPinch` now reveals it. Hiding a control is only safe when
 nothing reachable ONLY through it becomes unreachable.
 
-**Anything further added to that row needs a layout decision, not more
-shaving** — the buttons are at the 44px tap-target minimum already.
+**CORRECTED AT v215 — the buttons are NOT at 44px.** That claim was carried
+for several releases and is wrong: `styles.css` sets `.tool-open` and
+`.toolbar .undo-btn` to **36px** below 640px, and the smallest control
+*renders* at **34px** on every phone width, including the shipping v214 row.
+44px is the desktop value. Measured, not read:
+
+    375-600px   bar 308px, one row, smallest control 34px
+    641px+      bar 550px, one row, smallest control 40px
+
+So the row was never at the tap-target minimum, and any argument that started
+"there is no room because we are already at 44" was resting on a number that
+had not been true for some time. Whether 34px is acceptable is a decision, and
+`verify_layout.py` pins it in ONE place (`MIN_TOUCH_PX`) so raising it is a
+deliberate edit rather than a discovery.
 
 ## Closed in v214 — seven defects from two external review passes
 
@@ -1303,8 +1327,45 @@ is already 210 of 286px, and it is the same header that overflowed and wrapped
 the record pill in the v213 bug report. And the owner noted Image/Music may be
 COMBINED later, which would change whether a Tools sheet is needed at all.
 
+**PARTLY CLOSED IN v215, and here are the measurements the deferral lacked.**
+Every number below is from Chromium against the real stylesheet, reproducible
+with `harness/verify_layout.py`:
+
+    Pad today (10 controls)      wraps at 320 and 360; one row from 375
+    Pad merged (8 controls)      one row from 360 up; STILL WRAPS at 320
+    Pad merged + Pointer (9)     puts 360 back into the wrapped column
+    Any 7-control row            one row at every width including 320
+    Flip merged                  273px, never wraps
+
+  * **Merging Image + Music + Magnify into one Media control is what v215
+    shipped.** It takes Pad from 10 controls to 8 and fixes wrapping from 360px
+    up. It does NOT fix 320px, and no amount of shaving does — 320 is one
+    control too many whatever the ninth slot is.
+  * **320px is Display Zoom on a modern iPhone**, an accessibility setting, not
+    only a legacy device. So it must DEGRADE (wrap) rather than clip, and
+    `verify_layout.py` asserts exactly that rather than asserting it fits.
+  * **The 641px cliff is real and unaddressed.** One pixel of resize takes the
+    bar from 308px to 550px and three buttons regain text labels. Anything from
+    560-640px gets the phone layout on a viewport with ~300px spare — iPad
+    Split View, Stage Manager and foldables. Size classes, not a pixel
+    breakpoint, is the fix; it was not attempted in v215.
+  * The Pointer tool appeared in one review mockup and not the other. It was
+    NOT added: it costs exactly the breakpoint the merge just bought.
+
 Do this in a NEW suite. `verify_tools.py` is at 125 assertions and ~30 browser
-launches; see the split trigger above.
+launches; see the split trigger above. **v215 added `verify_layout.py`** for
+precisely this.
+
+**2. THE HEADER IS OVER BUDGET WHILE RECORDING — measured, not suspected.**
+At 375px the header needs 396px against 355 available; at 390px it is 26px
+over; it only fits from 430px. This is the v213 record-pill wrap report with a
+number attached, and it is present on the sealed v214 tree with no redesign
+applied. Cause: recording ADDS Play, the duration badge and Post to a header
+that was already full. Shaving does not fix it — a state that accumulates
+controls has to swap instead, since tune and the menu have no job mid-take and
+Post has nothing to post yet. `verify_layout.py` section 2 asserts this and is
+EXPECTED TO FAIL until it is addressed; that is deliberate, so the failure
+describes the bug rather than hiding it.
 
 **2. The two unpinned guards.** Described in the v214 section. Neither is
 demonstrated; both are labelled at their own line in the source.
