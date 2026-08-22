@@ -60,7 +60,11 @@
   <div class="tune-shell" id="tuneShell" aria-hidden="true">
     <div class="tune-clip">
       <div class="tune-panel" id="tunePanel">
-        <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button></div>
+        <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button><span class="onion-group" id="gridDensityGroup" hidden><span class="seg onion-seg" id="gridDensitySeg" title="How fine the alignment grid is"><span class="seg-slider"></span><button type="button" data-density="coarse" title="Fewer, larger cells">S</button><button type="button" data-density="medium" class="on" title="The default grid">M</button><button type="button" data-density="fine" title="More, smaller cells">L</button></span></span></div>
+        <div class="tune-row" id="tuneLayersRow"><span class="tune-label"><span class="tune-name">Stroke layers</span><span class="tune-hint">keeps see-through strokes from beading</span></span><button type="button" id="strokeLayersBtn" class="onion-tint" role="switch" aria-checked="true" title="Draw each see-through stroke on its own layer, so overlaps inside one stroke do not stack into dark beads" aria-label="Stroke layers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5l9 4.5 9-4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/></svg></button></div>
+        <div class="tune-row" id="tuneMirrorRow"><span class="tune-label"><span class="tune-name">Mirror</span><span class="tune-hint">reflects across the canvas centre</span></span><span class="seg onion-seg" id="mirrorSeg" role="group" aria-label="Mirror drawing"><span class="seg-slider"></span><button type="button" data-mirror="off" class="on" title="No mirroring">Off</button><button type="button" data-mirror="vertical" title="Mirror left to right" aria-label="Mirror left to right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9.5 8 5 12l4.5 4"/><path d="M14.5 8 19 12l-4.5 4"/></svg></button><button type="button" data-mirror="horizontal" title="Mirror top to bottom" aria-label="Mirror top to bottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></button><button type="button" data-mirror="both" title="Four-way mirror" aria-label="Four-way mirror"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9 5.5H5.5V9M15 5.5h3.5V9M9 18.5H5.5V15M15 18.5h3.5V15"/></svg></button></span></div>
+        <div class="tune-row" id="tunePauseRow"><span class="tune-label"><span class="tune-name">Pauses</span><span class="tune-hint">idle gaps between strokes</span></span><span class="seg onion-seg" id="pauseSeg" role="group" aria-label="Pause handling"><span class="seg-slider"></span><button type="button" data-pause="keep" title="Replay every pause exactly as you drew it">Keep</button><button type="button" data-pause="trim" title="Shorten long pauses to a quarter second">Trim</button><button type="button" data-pause="tight" class="on" title="Squeeze pauses right down (the default)">Tight</button></span></div>
+        <div class="tune-row" id="tuneSpeedRow"><span class="tune-label"><span class="tune-name">Preview speed</span><span class="tune-hint">how Play runs here, not how it posts</span></span><span class="seg onion-seg" id="speedSeg" role="group" aria-label="Preview speed"><span class="seg-slider"></span><button type="button" data-rate="0.5" title="Half speed">&frac12;&times;</button><button type="button" data-rate="1" class="on" title="Real time (the speed it posts at)">1&times;</button><button type="button" data-rate="2" title="Double speed">2&times;</button></span></div>
       </div>
     </div>
   </div>
@@ -113,6 +117,22 @@
         <span class="menu-row-label">Tips</span>
         <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
       </div>
+
+    {# Leaving for the other editor was a plain <a href> navigation with nothing
+       in its way — one tap and an unposted drawing was gone. Copy notes: the
+       title names the PLACE being left; the body states a fact rather than
+       claiming work "will be lost", which is a storage question this sentence
+       cannot answer; and the safe choice says what happens when you pick it,
+       because it is the one a mis-tap should land on. #}
+    <div class="menu-sheet leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
+         aria-labelledby="leaveSheetTitle" hidden>
+      <h2 class="sheet-title" id="leaveSheetTitle">Leave Pad?</h2>
+      <p class="sheet-body">Your drawing hasn&rsquo;t been posted.</p>
+      <div class="sheet-actions">
+        <button type="button" class="sheet-btn" id="leaveCancel">Keep drawing</button>
+        <button type="button" class="sheet-btn danger" id="leaveGo">Leave</button>
+      </div>
+    </div>
       <div class="menu-row">
         <span class="menu-row-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic"></button><button type="button" data-size="wide"></button><button type="button" data-size="square"></button><button type="button" data-size="tall"></button></span>
@@ -223,6 +243,12 @@
           </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase, at three times the brush size — shortcut E">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
             <span class="tool-btn-label">Eraser</span>
+          </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle or ellipse &mdash; pick which in the Draw drawer; hold Shift for square/circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
+            <span class="tool-btn-label">Shape</span>
+          </button><button type="button" class="tool-btn" id="selectToolBtn" data-tool="select" title="Drag a box to select strokes, then drag them to move &mdash; Escape clears">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 2.5"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/></svg>
+            <span class="tool-btn-label">Select</span>
           </button>
         </div>
     <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke">
@@ -233,32 +259,37 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
-    <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify" aria-label="Toggle magnify controls" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-        </button>
     <span class="tool-sep"></span>
-    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colors & brush" title="Colour, brush size, opacity and smoothing">
-      <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
+    {# The ring lives on .color-ring, NOT on #toolColorChip: app.js writes the
+       colour there as an inline background, and an inline style beats any rule.
+       Putting the gradient on the chip would erase it at the first colour
+       change while still looking right on load. #}
+    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
+      <span class="color-ring">
+        <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
+      </span>
     </button>
     <span class="tool-sep"></span>
-    <button type="button" class="tool-open" id="imageOpenBtn" data-drawer="photo" aria-label="Image" title="Put a photo behind your drawing">
+    {# Image, Music and Zoom collapse into one control. Measured: takes Pad from
+       10 controls to 8 and fixes wrapping at 360px and up. The dot is DERIVED
+       from the per-item dots (see updateMediaDot) so the toolbar and the drawer
+       cannot disagree; amber beats green because amber is the only state that
+       asks anything of the user. #}
+    <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+        <rect x="3" y="4.5" width="13" height="12" rx="2"/><path d="m4.4 14.5 3.6-3.4 3 2.6"/><circle cx="7.6" cy="8.4" r="1.1"/>
+        <path d="M15.4 20.2v-5.4l4.4-1.1v5.2"/><circle cx="14" cy="20.3" r="1.5"/><circle cx="18.4" cy="18.9" r="1.5"/>
       </svg>
-      <span id="photoTabDot" class="tab-dot" hidden></span>
-      <span class="tab-dot-empty" aria-hidden="true"></span>
-    </button>
-    <button type="button" class="tool-open" id="musicOpenBtn" data-drawer="music" aria-label="Music" title="Add a music loop that plays underneath">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-      </svg>
-      <span id="musicTabDot" class="tab-dot" hidden></span>
+      <span id="mediaTabDot" class="tab-dot" hidden></span>
       <span class="tab-dot-empty" aria-hidden="true"></span>
     </button>
   </div>
 
   <!-- Draw drawer (shared partial — Pad + Flip) -->
   {% with kind='pad' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+
+  <!-- Media drawer (shared partial - Pad + Flip) -->
+  {% with kind='pad' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
 
   <!-- Music drawer (shared partial — Pad + Flip) -->
@@ -297,6 +328,14 @@
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/pressure.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/mirror.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/brushes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/selection.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/colorselect.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/artwork.js') }}" defer></script>
@@ -314,6 +353,8 @@
      after it; `defer` preserves document order. #}
   <script src="{{ skribl_asset('editor_menu.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_tune.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_draw.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_shapes.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_music.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_photo.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_export.js') }}" defer></script>

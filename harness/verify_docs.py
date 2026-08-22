@@ -400,6 +400,108 @@ if req.is_file() and lock.is_file():
     check("the lockfile documents the install command that actually works",
           "--require-hashes" in lock.read_text(encoding="utf-8"))
 
+# ---------------------------------------------------------------------------
+# v212 — a one-batch run cannot overwrite release-wide evidence.
+#
+# release_run.py drives run_harness.sh ONE BATCH AT A TIME, so the record left
+# behind describes only the final batch; it already rewrites LAST-RUN.txt to
+# cover every batch and re-stamps. That holds only while the release run is the
+# LAST harness invocation. A bare `run_harness.sh verify_docs.py` afterwards
+# rewrites LAST-RUN.txt and re-stamps from it — observed at the v212 seal,
+# publishing "36 assertions across 1 suites" beside a RELEASE.md recording 2400
+# across 61, on the same tree.
+#
+# That is WORSE than a hand-typed number: it is machine-generated, so it carries
+# the authority this project grants generated figures, and it is wrong. The
+# generated-not-typed rule assumes ONE generator; there are two, and they can
+# disagree. stamp_docs.py now refuses a stamp that would narrow the record for
+# the same tree.
+#
+# RUN IN AN ISOLATED TEMP ROOT, and this is the load-bearing detail. The first
+# version of this pin drove the REAL stamp_docs against the REAL files, and it
+# could not work: stamp_docs resolves ROOT from __file__, so it read the live
+# RELEASE.md — which, DURING a release run, describes the PREVIOUS tree, because
+# release_run.py writes RELEASE.md at the end. The guard correctly declines to
+# gate on a record for a different tree, so there would be nothing to refuse and
+# the assertion would fail inside the very run that seals the archive. It also
+# restored "the real record" from disk, which at that moment WAS the damaged
+# narrow one. Copying the script into a temp ROOT with fabricated inputs makes
+# the pin independent of both.
+print("\nDOCS — a single batch cannot narrow release-wide evidence")
+import shutil as _shutil, subprocess as _sub, tempfile as _tf
+
+def _fake_root(tmp, assertions, rel_assertions, tree="a1b2c3d4e5f6" + "0" * 52):
+    """A minimal tree: the real stamp_docs.py, a fabricated run and release."""
+    (tmp / "harness").mkdir(parents=True, exist_ok=True)
+    _shutil.copy(ROOT / "harness" / "stamp_docs.py", tmp / "harness" / "stamp_docs.py")
+    (tmp / "harness" / "LAST-RUN.txt").write_text("\n".join([
+        "================ RUN CONTEXT ================",
+        f"Tree SHA-256            : {tree}",
+        "SKRIBL_VERSION          : v212",
+        "DATABASE_URL class      : sqlite",
+        "============================================",
+        "",
+        "================ AGGREGATE (machine-generated) ================",
+        "suites requested : 1",
+        f"  verify_probe.py: ok — {assertions}/{assertions} passed",
+        f"assertions passed: {assertions}   (skipped suites contribute 0)",
+        "suites skipped   : 0",
+        "suites with problems: 0",
+        "",
+    ]))
+    (tmp / "harness" / "RELEASE.md").write_text(
+        "# Release evidence\n\n"
+        "    result           PASS\n"
+        f"    tree hash        {tree}\n"
+        "    suites on disk   61\n"
+        "    suites reported  61\n"
+        f"    assertions       {rel_assertions}\n"
+        "    skipped          0\n")
+    doc = tmp / "README.md"
+    doc.write_text("# x\n\n" + BEGIN + "\nPLACEHOLDER\n" + END + "\n")
+    return doc
+
+def _run_stamp(tmp):
+    return _sub.run([sys.executable, str(tmp / "harness" / "stamp_docs.py")],
+                    capture_output=True, text=True, cwd=str(tmp))
+
+with _tf.TemporaryDirectory() as _td:
+    # (a) narrower than the release record on the SAME tree -> refuse
+    _t = Path(_td) / "narrow"
+    _doc = _fake_root(_t, assertions=3, rel_assertions=2400)
+    _before = _doc.read_text(encoding="utf-8")
+    _r = _run_stamp(_t)
+    check("stamp_docs.py REFUSES to stamp a record narrower than "
+          "RELEASE.md on the same tree",
+          _r.returncode != 0 and "REFUSED" in (_r.stdout + _r.stderr),
+          f"exit {_r.returncode}")
+    check("...and it left the stamped stanza untouched "
+          "(refusing loudly then writing anyway would pass on exit code alone)",
+          _doc.read_text(encoding="utf-8") == _before,
+          "unchanged" if _doc.read_text(encoding="utf-8") == _before else "REWRITTEN")
+
+    # (b) NEGATIVE CONTROL: the release-wide record itself must still stamp, or
+    # the guard is just a script that never works.
+    _t2 = Path(_td) / "wide"
+    _doc2 = _fake_root(_t2, assertions=2400, rel_assertions=2400)
+    _r2 = _run_stamp(_t2)
+    check("...and a release-wide record DOES stamp "
+          "(the guard blocks narrowing, not stamping)",
+          _r2.returncode == 0 and "2400" in _doc2.read_text(encoding="utf-8"),
+          f"exit {_r2.returncode}")
+
+    # (c) A DIFFERENT tree must not gate at all: a release record for some other
+    # tree says nothing about this run, and gating on it would wedge the next
+    # build — which is exactly the state the real tree is in mid-release.
+    _t3 = Path(_td) / "othertree"
+    _doc3 = _fake_root(_t3, assertions=3, rel_assertions=2400)
+    (_t3 / "harness" / "RELEASE.md").write_text(
+        (_t3 / "harness" / "RELEASE.md").read_text().replace("a1b2c3d4e5f6", "999999999999"))
+    _r3 = _run_stamp(_t3)
+    check("...and a RELEASE.md for a DIFFERENT tree does not gate the stamp",
+          _r3.returncode == 0,
+          f"exit {_r3.returncode}: {(_r3.stdout or _r3.stderr).strip().splitlines()[:1]}")
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

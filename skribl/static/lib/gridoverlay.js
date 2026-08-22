@@ -19,6 +19,18 @@
 (function (global) {
   'use strict';
 
+  /* Density — how many major cells along the canvas's LONGER edge. `medium`
+   * is 8, which reproduces the historical 8x6 exactly on a 4:3 canvas, so
+   * turning the grid on looks the same as it always did until you change it.
+   */
+  var KEY = 'skribl_grid_density';
+  var DENSITY = { fine: 12, medium: 8, coarse: 5 };
+  var density = 'medium';
+  try {
+    var savedD = localStorage.getItem(KEY);
+    if (Object.prototype.hasOwnProperty.call(DENSITY, savedD)) density = savedD;
+  } catch (e) {}
+
   function skriblGrid(canvasEl, overlayEl) {
     if (!canvasEl || !overlayEl) return { sync: function () {} };
 
@@ -32,7 +44,18 @@
       var c = overlayEl.getContext('2d');
       c.clearRect(0, 0, W, H);
 
-      var cols = 8, rows = 6;
+      // CELL COUNT IS DERIVED FROM THE CANVAS ASPECT, not fixed.
+      // This was `cols = 8, rows = 6` — which is 4:3, so the cells were square
+      // ONLY on the `classic` preset. On `tall` (9:16) an 8x6 grid draws cells
+      // about 2.4x taller than wide, which is not an alignment guide so much as
+      // a distortion of one. `majors` is the count along the LONGER edge and the
+      // shorter edge is scaled from the real pixel box, so cells stay square at
+      // every preset. At the default density on classic this still resolves to
+      // exactly 8x6, so the shipped grid is unchanged where it was already right.
+      var majors = api.majors();
+      var cols, rows;
+      if (W >= H) { cols = majors; rows = Math.max(1, Math.round(majors * H / W)); }
+      else        { rows = majors; cols = Math.max(1, Math.round(majors * W / H)); }
       var line = Math.max(1, Math.round(dpr));   // whole device pixels only
 
       // Sub-cells first so the majors sit on top of them.
@@ -66,5 +89,23 @@
     return { sync: sync };
   }
 
+  /* The density is module state, not per-instance: both editors show one grid
+   * at a time and the setting is a user preference, so an instance-local copy
+   * would be a second place for it to live. setDensity() returns the applied
+   * value so a caller can tell a rejected value from an accepted one.
+   */
+  var api = {
+    DENSITIES: Object.keys(DENSITY),
+    majors: function () { return DENSITY[density]; },
+    density: function () { return density; },
+    setDensity: function (name) {
+      if (!Object.prototype.hasOwnProperty.call(DENSITY, name)) return density;
+      density = name;
+      try { localStorage.setItem(KEY, density); } catch (e) {}
+      return density;
+    }
+  };
+
   global.skriblGrid = skriblGrid;
+  global.SkriblGrid = api;
 })(window);

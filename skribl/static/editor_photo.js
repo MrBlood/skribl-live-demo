@@ -34,9 +34,13 @@ canvasWrap.addEventListener('touchmove', (e) => {
   eraserCursor.style.display = 'block';
 }, { passive: true });
 
-canvasWrap.addEventListener('touchend', () => {
-  eraserCursor.style.display = 'none';
-});
+// touchcancel as well as touchend: a cancelled touch never fires touchend, so
+// the eraser ring stayed painted on the canvas with no finger near it. Stale
+// visual state rather than a stuck gesture, but the same lifecycle mistake —
+// and the ring is what the user aims with.
+function hideEraserCursor() { eraserCursor.style.display = 'none'; }
+canvasWrap.addEventListener('touchend', hideEraserCursor);
+canvasWrap.addEventListener('touchcancel', hideEraserCursor);
 
 photoUploadBtn.addEventListener('click', (e) => {
   if (e.target.closest('.dropzone-remove')) return;

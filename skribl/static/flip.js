@@ -290,6 +290,20 @@ function balancedPair(f){
 }
 
 /* ---- autosave: a real frame-format Skribl ---- */
+let _brushLastPt = null;
+// See the note on Pad's _brushWidth: pixels per POINT, not per millisecond, and
+// reset at every stroke start so a long reposition does not taper the first
+// segment to a hairline.
+function _brushWidth(base, pos, erase){
+  if(erase || !window.SkriblBrush || SkriblBrush.name() === 'pen') return base;
+  const d = (_brushLastPt && pos) ? Math.hypot(pos.x-_brushLastPt.x, pos.y-_brushLastPt.y) : 0;
+  return SkriblBrush.shape(base, d);
+}
+let _mirrorPainting = false;
+let _constrainActive = false;
+let flipTool = 'pen';
+let shapeKind = 'line';
+let _shapePrev = null, _shapeAnchor = null;   // 'pen' | 'eraser' | 'shape'; `erasing` stays the fast path
 let _saveT = null;
 function scheduleSave(){ clearTimeout(_saveT); showAutosaveStatus('saving'); _saveT = setTimeout(saveNow, 800); }
 // media:false drops the base64 bytes but keeps photo/musicMeta, so a restore can
@@ -458,6 +472,16 @@ function drawDot(c, x, y, col, s, erase){
   c.globalCompositeOperation = 'source-over';
 }
 function drawLine(c, x1,y1,x2,y2, col, s, erase){
+  // Live mirror feedback — see the note in endStroke about why the POINTS are
+  // generated there and not here.
+  if(window.SkriblMirror && SkriblMirror.active() && !_mirrorPainting){
+    _mirrorPainting = true;
+    try {
+      const _a = SkriblMirror.reflect({x:x1,y:y1}, CW, CH);
+      const _b = SkriblMirror.reflect({x:x2,y:y2}, CW, CH);
+      for(let _i=0;_i<_a.length;_i++) drawLine(c, _a[_i].x,_a[_i].y,_b[_i].x,_b[_i].y, col, s, erase);
+    } finally { _mirrorPainting = false; }
+  }
   c.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
   c.strokeStyle = erase ? '#000' : col; c.lineWidth = s; c.lineCap='round'; c.lineJoin='round';
   c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
@@ -481,7 +505,13 @@ function paintStatic(c, strokeArr){
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
     const seg = strokeArr.slice(i, j);
-    const a = seg[0].erase ? 1 : alphaOf(seg[0].color);
+    // Stroke layers, the same setting Pad's tune row drives. Off means paint
+    // straight through, so a see-through stroke compounds at its own overlaps
+    // — which is exactly what the layer exists to prevent, and now visible
+    // rather than a global only a console could reach.
+    const _layered = (typeof window.SKRIBL_STROKE_LAYERS === 'undefined')
+      || window.SKRIBL_STROKE_LAYERS !== false;
+    const a = (seg[0].erase || !_layered) ? 1 : alphaOf(seg[0].color);
     if (a >= 1) { paintSeg(c, seg, false); }
     else {
       tctx.clearRect(0,0,CW,CH);
@@ -659,6 +689,14 @@ function render(){
   // ever on the live pad: thumbnails, exports and the player all render through
   // their own contexts, so nothing here can be baked into what is published.
   if(arcGuides && !playing) drawArcGuides(ctx);
+  // Shape preview. Flip repaints the whole frame every time, so the provisional
+  // outline is just drawn last — no canvas copy is needed here, unlike Pad,
+  // which paints incrementally and has nothing to repaint from.
+  if(_shapePrev && typeof SkriblShapes !== 'undefined'){
+    const pts = SkriblShapes.points(shapeKind, _shapePrev.a, _shapePrev.b, {square:_shapePrev.sq});
+    const pcol = penColorFor(color);
+    for(let i=1;i<pts.length;i++) drawLine(ctx, pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, pcol, size, false);
+  }
 }
 
 /* Bind an event without letting a missing element take the rest of the file
@@ -725,8 +763,11 @@ function sizeFor(e, base){
   // Chromium reports 0 on the first pen event of a stroke often enough that
   // trusting it would start every line at minimum width. Treat 0 as "no
   // reading yet" and fall through to the nominal size.
-  if(!(raw > 0)) return base;
-  return base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw));
+  // Shared curve/floor/toggle: lib/pressure.js. See the note in that file about
+  // why the raw read stays per-surface.
+  return (typeof SkriblPressure !== 'undefined' && SkriblPressure)
+    ? SkriblPressure.sizeFrom(base, raw)
+    : (raw > 0 ? base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw)) : base);
 }
 let reposActive=false, reposStart=null;
 pad.addEventListener('contextmenu', e=>e.preventDefault());
@@ -782,7 +823,14 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   // Reported from the live demo on a phone; reproduced as 4 points / 0 groups.
   strokeFrame = frame();
   const p=pos(e); smoothPt={x:p.x,y:p.y}; lastRaw={x:p.x,y:p.y};
-  const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
+  if(flipTool==='shape'){
+    // No first point and no group yet: a shape commits as one run on release,
+    // so curCount stays 0 until then and endStroke pushes the real count.
+    _shapeAnchor={x:p.x,y:p.y}; _shapePrev=null; curCount=0; render(); return;
+  }
+  _brushLastPt = null;
+  const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), p, erasing); const pcol = erasing ? color : penColorFor(color);
+  _brushLastPt = {x:p.x, y:p.y};
   strokeFrame.strokes.push({ x:p.x, y:p.y, color: pcol, size: dsize, t: performance.now(), erase: erasing, start: true });
   render(); });
 pad.addEventListener('pointermove', e=>{
@@ -806,8 +854,19 @@ pad.addEventListener('pointermove', e=>{
   const raw=pos(e); lastRaw={x:raw.x,y:raw.y};
   let px, py;
   if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
+  if(flipTool==='shape'){
+    _constrainActive = !!(e && e.shiftKey);
+    _shapePrev = {a:_shapeAnchor, b:{x:raw.x,y:raw.y}, sq:_constrainActive};
+    render(); return;
+  }
   else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
-  curCount++; const dsize = sizeFor(e, erasing ? size*3 : size); const pcol = erasing ? color : penColorFor(color);
+  // Shift-to-constrain — same shared helper and same stroke-start anchor as Pad.
+  _constrainActive = !!(e && e.shiftKey);
+  if(_constrainActive && typeof SkriblConstrain !== 'undefined'){
+    const _sf = (strokeFrame || frame()).strokes, _a = _sf.length ? _sf[_sf.length - curCount] : null;
+    if(_a){ const _c = SkriblConstrain.apply(_a, {x:px,y:py}, true); px=_c.x; py=_c.y; }
+  }
+  curCount++; const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), {x:px,y:py}, erasing); const pcol = erasing ? color : penColorFor(color); _brushLastPt = {x:px, y:py};
   (strokeFrame || frame()).strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
   render(); });
 function endStroke(){
@@ -827,8 +886,38 @@ function endStroke(){
       curCount++; (strokeFrame || frame()).strokes.push({ x:smoothPt.x, y:smoothPt.y, color:pcol, size:dsize, t:performance.now(), erase:false }); }
     render();
   }
+  if(flipTool==='shape'){
+    const tgt = strokeFrame || frame();
+    const pts = (_shapeAnchor && _shapePrev && typeof SkriblShapes !== 'undefined')
+      ? SkriblShapes.points(shapeKind, _shapeAnchor, _shapePrev.b, {square:_shapePrev.sq}) : [];
+    if(pts.length > 1){
+      const pcol = penColorFor(color), now = performance.now();
+      for(let i=0;i<pts.length;i++) tgt.strokes.push({ x:pts[i].x, y:pts[i].y, color:pcol,
+        size:size, t:now + i, erase:false, start:i===0 });
+      curCount = pts.length;
+    }
+    _shapePrev=null; _shapeAnchor=null;
+  }
   drawing=false; smoothPt=null; lastRaw=null;
-  (strokeFrame || frame()).strokeGroups.push(curCount); curCount=0; strokeFrame=null; strokePointerId=null;
+  const _tgt = (strokeFrame || frame());
+  _tgt.strokeGroups.push(curCount);
+  // Mirrored copies, one GROUP each — never appended to the original, or the
+  // replay joins the two halves with a line straight across the canvas. Flip
+  // also validates that strokeGroups accounts for every point on share, so a
+  // reflection that skipped its group entry would be refused outright.
+  if(curCount > 0 && window.SkriblMirror && SkriblMirror.active()){
+    const _src = _tgt.strokes.slice(_tgt.strokes.length - curCount);
+    const _n = SkriblMirror.count();
+    for(let r=0;r<_n;r++){
+      for(let i=0;i<_src.length;i++){
+        const m = SkriblMirror.reflect(_src[i], CW, CH)[r];
+        _tgt.strokes.push(Object.assign({}, _src[i], {x:m.x, y:m.y}));
+      }
+      _tgt.strokeGroups.push(_src.length);
+    }
+    render();
+  }
+  curCount=0; strokeFrame=null; strokePointerId=null;
   refreshThumb(idx); updateToolState(); scheduleSave(); }
 function endMoveDrag(){
   if(!moveDragging) return;
@@ -879,9 +968,20 @@ window.addEventListener('resize', invalidatePadRect);
 window.addEventListener('scroll', invalidatePadRect, true);
 window.addEventListener('orientationchange', invalidatePadRect);
 
+// Eraser width: the pen size times a shared multiplier (lib/erasersize.js).
+// This 3 used to be written out seven times across the two editors, including
+// in the two eraser-CURSOR sites, where a drifted copy would leave the ring
+// lying about how much it erases. Fall back to the shipped 3 so a surface that
+// somehow loads without the lib erases exactly as it always did.
+function _eraserSize(size, erase) {
+  return (typeof SkriblEraser !== 'undefined' && SkriblEraser)
+    ? SkriblEraser.sizeFor(size, erase)
+    : (erase ? size * 3 : size);
+}
+
 function moveEraserCursor(e){
   const r = _padRectCached();
-  const sz = size * 3 * (r.width / CW);
+  const sz = _eraserSize(size, true) * (r.width / CW);
   eraserCursor.style.width = sz + 'px'; eraserCursor.style.height = sz + 'px';
   eraserCursor.style.transform =
     'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
@@ -1485,6 +1585,7 @@ flipProgress.addEventListener('pointercancel',endFrameScrub);
 
 /* ---- tools: the Pad editor's Draw menu (colors + brush), wired to Flip state ---- */
 const colorCurrent=document.getElementById('colorCurrent');
+const colorCurrentCore=document.getElementById('colorCurrentCore');
 const drawPanel=document.getElementById('drawPanel');   // the shared .tab-panel drawer
 const colorGroup=document.getElementById('colorGroup');
 const recentRow=document.getElementById('recentRow');
@@ -1506,7 +1607,9 @@ function setColor(hex){
   if(!sel) return;
   hex = sel.hex;
   color=hex;
-  colorCurrent.style.background=hex;
+  // The ring lives on .color-ring; writing the colour to the BUTTON would sit
+  // on top of it as an inline style and paint the spectrum out entirely.
+  if (colorCurrentCore) colorCurrentCore.style.background=hex;
   // !! is load-bearing. The custom swatch has no data-color, so this expression
   // was `undefined && ...` -> undefined, and classList.toggle(name, undefined)
   // is treated as NO second argument — which TOGGLES instead of forcing off. So
@@ -1515,16 +1618,26 @@ function setColor(hex){
   setTool('pen');   // picking a colour returns you to the pen, like the Pad
 }
 /* Pen / eraser toggle — the Pad's segmented control with the sliding accent pill. */
+function activeToolBtn(){
+  const id = flipTool === 'eraser' ? 'eraserToolBtn'
+           : flipTool === 'shape'  ? 'shapeToolBtn' : 'penToolBtn';
+  return document.getElementById(id) || document.getElementById('penToolBtn');
+}
 function positionToolSlider(){
-  const pen=document.getElementById('penToolBtn'), er=document.getElementById('eraserToolBtn'), sl=document.getElementById('toolSlider');
-  if(!pen||!er||!sl) return; const active = erasing ? er : pen;
+  const sl=document.getElementById('toolSlider'), grp=document.getElementById('toolGroup');
+  const active=activeToolBtn();
+  if(!active||!sl) return;
+  // offsetLeft, not a sum of the widths before it. The old form was
+  // `erasing ? penWidth : 0` — a two-button ASSUMPTION, not a special case —
+  // and a third tool parked the pill under the second. Same bug as Pad's.
   sl.style.width = active.offsetWidth+'px';
-  sl.style.transform = erasing ? 'translateX('+pen.offsetWidth+'px)' : 'translateX(0)';
+  sl.style.transform = 'translateX('+(active.offsetLeft - (grp?grp.offsetLeft:0))+'px)';
 }
 function setTool(t){
-  erasing = (t === 'eraser');
-  const pen=document.getElementById('penToolBtn'), er=document.getElementById('eraserToolBtn');
-  if(pen&&er){ pen.classList.toggle('active', !erasing); er.classList.toggle('active', erasing); }
+  flipTool = (t === 'eraser' || t === 'shape') ? t : 'pen';
+  erasing = (flipTool === 'eraser');
+  const active = activeToolBtn();
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b === active));
   positionToolSlider();
   pad.style.cursor='none';
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
@@ -1649,6 +1762,9 @@ sizeEl.addEventListener('input',()=>{ size=+sizeEl.value; sizeFill(); });
 
 /* ---- opacity: rides inside the per-stroke color as rgba() (Pad parity) ---- */
 function penColorFor(hex){
+  // Brush presets shape opacity here, exactly as on Pad, so every caller that
+  // already asks for the pen colour picks the brush up.
+  if(window.SkriblBrush && SkriblBrush.name() !== 'pen') return SkriblBrush.colorFor(hex, strokeOpacity);
   if(strokeOpacity>=1) return hex;                 // 100% keeps the plain hex
   const h=(hex||'#ffffff').replace('#',''); const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
   return 'rgba('+r+', '+g+', '+b+', '+strokeOpacity+')';
@@ -1680,8 +1796,9 @@ customBgInput.addEventListener('input',e=>{ setBg(e.target.value,true); });
 
 /* ---- smoothing: stabilizer strength baked into the captured points (Pad parity) ---- */
 const smoothSeg=document.getElementById('smoothSeg');
-function positionSmoothSeg(){ const active=smoothSeg.querySelector('.smooth-btn.active'), pill=smoothSeg.querySelector('.seg-slider');
-  if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
+// Was a private copy of what lib/segslider.js does. Two implementations of
+// one behaviour is how the two surfaces drift, and this was the easy one.
+function positionSmoothSeg(){ if (window.SkriblSegSlider) window.SkriblSegSlider.place(smoothSeg); }
 // Shared with Pad via lib/smoothing.js. positionSmoothSeg stays injected:
 // slider positioning exists three times in this codebase (here, app.js and
 // lib/segslider.js) and consolidating it is its own extraction.
@@ -1690,6 +1807,40 @@ if(window.SkriblSmoothing){
     seg: smoothSeg,
     onChange: a => { smoothingAlpha = a; },
     onRender: () => positionSmoothSeg(),
+  });
+}
+// Eraser width — same shared module, same one copy of the multiplier.
+if(window.SkriblEraser){
+  window.SkriblEraser.create({
+    seg: document.getElementById('eraserSeg'),
+  });
+}
+if(window.SkriblMirror){ window.SkriblMirror.create({
+  seg: document.getElementById('mirrorSeg'),
+  onChange: () => { if(typeof render === 'function') render(); } }); }
+const _flipShapeSeg = document.getElementById('shapeSeg');
+if(_flipShapeSeg && window.SkriblShapes){
+  _flipShapeSeg.addEventListener('click', e=>{
+    const b = e.target.closest('[data-shape]'); if(!b || !_flipShapeSeg.contains(b)) return;
+    const k = b.getAttribute('data-shape');
+    if(SkriblShapes.KINDS.indexOf(k) === -1) return;
+    shapeKind = k;
+    _flipShapeSeg.querySelectorAll('[data-shape]').forEach(x=>{
+      const on = x===b; x.classList.toggle('on', on); x.classList.toggle('active', on);
+      x.setAttribute('aria-pressed', String(on)); });
+    setTool('shape');
+  });
+}
+if(window.SkriblBrush){ window.SkriblBrush.create({ seg: document.getElementById('brushSeg') }); }
+if(window.SkriblPressure){
+  window.SkriblPressure.create({ seg: document.getElementById('pressureSeg') });
+}
+if(window.SkriblStrokeLayers){
+  // Flip composites whole strokes on repaint, so the change is invisible until
+  // the frame is redrawn — unlike Pad, where the next stroke shows it.
+  window.SkriblStrokeLayers.create({
+    btn: document.getElementById('strokeLayersBtn'),
+    onChange: () => { if(typeof render === 'function') render(); },
   });
 }
 
@@ -1705,7 +1856,25 @@ function drawFrameTo(c, f){ drawBackdrop(c); paintFrame(c, f.strokes); }
 
 /* ---- background image ---- */
 const imageInput=document.getElementById('imageInput');
-function loadBgImageObj(cb){ if(!bgImage){ bgImageObj=null; if(cb)cb(); return; } const im=new Image(); im.onload=()=>{ bgImageObj=im; if(cb)cb(); }; im.onerror=()=>{ bgImageObj=null; if(cb)cb(); }; im.src=bgImage; }
+// The image-selection token has to reach THROUGH the Image load. It guarded
+// validation and the FileReader, but stopped there — so once A's reader had
+// passed, selecting B and having B's Image finish FIRST left bgImageObj (what
+// the canvas draws) as A while bgImage and the serialized payload were B.
+// Reproduced with A=40x40 and B=120x120: rendered 40, serialized B. Preview and
+// posted content disagreeing is worse than either being wrong, because nothing
+// on screen says so.
+//
+// The callback still runs on a superseded load — callers use it to re-render,
+// and skipping it would strand whatever the current image is unpainted. Only
+// the ASSIGNMENT is guarded.
+function loadBgImageObj(cb){
+  if(!bgImage){ bgImageObj=null; if(cb)cb(); return; }
+  const _seq=imageSelectionSeq;
+  const im=new Image();
+  im.onload=()=>{ if(_seq===imageSelectionSeq) bgImageObj=im; if(cb)cb(); };
+  im.onerror=()=>{ if(_seq===imageSelectionSeq) bgImageObj=null; if(cb)cb(); };
+  im.src=bgImage;
+}
 function redrawAll(){ render(); refreshAllThumbs(); }
 function setBgImage(dataURL){ bgImage=dataURL; photoEnabled=true; photoFit='cover'; photoOpacity=1; photoBlur=0; photoZoom=1; photoOffX=0.5; photoOffY=0.5; reposMode=false;
   // Re-adding a file the autosave had to drop — restore its saved framing rather
@@ -1753,11 +1922,17 @@ function mediaToArrayBuffer(u){
   });
 }
 function decodeForWaveform(){
+  // Same race as Pad's, and worse here: this writes audioDuration and the trim
+  // window as well as the buffer, so a superseded decode landing last rewrote
+  // the loop to the OLD track's length. Reproduced with A=3.00s and B=9.00s:
+  // after B landed and then A, everything read 3.00s again.
+  const _seq = musicSelectionSeq;
   if(!musicData){ currentAudioBuffer=null; return; }
   try{ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(_){ return; }
   try{
     // v211 (v210 review F2): retained so shareSkribl can await it — see Pad.
     window._skriblDecodePending = mediaToArrayBuffer(musicData).then(ab => audioCtx.decodeAudioData(ab)).then(buf=>{
+      if(_seq !== musicSelectionSeq) return;      // superseded while decoding
       currentAudioBuffer=buf; audioDuration=buf.duration;
       // Default the loop to the FIRST 20s, not the whole file (matches the Pad's
       // loadedmetadata handler and the cap every drag handler enforces). Setting
@@ -1773,7 +1948,10 @@ function decodeForWaveform(){
         pendingMusicMeta=null;
         if(typeof setCrossfadeUI==='function') setCrossfadeUI(); }
       drawWaveform(buf); requestZoomWaveformDraw(); updateZoomHandles(); updateTrimUI(); syncMusicUI(); syncMediaUI();
-    }).catch(()=>{}).finally(()=>{ window._skriblDecodePending=null; });
+    // Only the CURRENT decode clears the shared flag — an older completion
+    // clearing it tells shareSkribl (line ~2097 awaits this) that nothing is
+    // decoding while a newer decode is still in flight.
+    }).catch(()=>{}).finally(()=>{ if(_seq===musicSelectionSeq) window._skriblDecodePending=null; });
   }catch(_){}
 }
 function ensureAudio(){
@@ -1885,10 +2063,35 @@ function loadDraftFile(file){
       // 1-page 'animation' with no error. Refuse it with directions instead.
       if(d.playbackMode==='replay'){ chip('That\u2019s a Pad Skribl \u2014 open it in Skribl Pad'); return; }
       if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null; musicMuted=false;
+      // Same reasoning as Pad's loadSkribl generation token: a draft load is a
+      // NEW document, so an image or track selected moments earlier must not
+      // complete into it. Bumping both sequences invalidates anything in flight.
+      //
+      // UNPINNED — DEFENCE IN DEPTH, NOT DEMONSTRATED BEHAVIOUR. Removing these
+      // two increments reddens nothing in verify_tools: no scenario drives a
+      // selection that is still in flight when a draft file is opened. The
+      // model is right and this is the second of the two guards v214 shipped
+      // without evidence (the other is loadSkribl's deferred writeAutosave
+      // guard in app.js). Do not read it as tested, and do not delete it
+      // assuming the suite would catch it — it would not.
       const ok=applyPayload(d);            // sets frames/bgColor/bgImage/musicData/fps directly
       invalidateClearUndo();
       loadBgImageObj(()=>{ applyBg(); render(); });
       ensureAudio();
+      // DECODE, or a restored draft is not the same thing as a fresh selection.
+      // applyPayload() clears currentAudioBuffer, and ensureAudio() only builds
+      // the <audio> element — so this path restored musicData and a trim window
+      // with no decoded buffer behind them. The boot/autosave path at the
+      // bottom of this file has always called decodeForWaveform(); only the
+      // draft-FILE path was missing it.
+      //
+      // The visible half is a blank waveform. The costly half is the post:
+      // buildSharePayload() crops to the loop ONLY when currentAudioBuffer
+      // exists and otherwise warns and ships the whole sample. Measured on a
+      // 30s track trimmed to a 5s loop — 588,082 B posted after a fresh
+      // selection against 3,528,082 B after restoring the same draft, both
+      // claiming the same 5s loop.
+      if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
       try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip())); }catch(_){ }  // best-effort
       chip(ok?'Draft loaded':'Loaded');
@@ -2436,7 +2639,17 @@ function updateZoomHandles(){
 let zoomDrawPending=false;
 function requestZoomWaveformDraw(){ if(zoomDrawPending) return; zoomDrawPending=true; requestAnimationFrame(()=>{ zoomDrawPending=false; if(currentAudioBuffer) drawWaveform(currentAudioBuffer); drawZoomWaveform(); }); }
 function drawWaveform(audioBuffer){
-  const rect=musicTrack.getBoundingClientRect(); waveformCanvas.width=rect.width; waveformCanvas.height=rect.height;
+  // Same guard as Pad's copy, for the same reason — see the long comment on
+  // app.js's drawWaveform. A 0-wide rect CLEARS the bitmap and paints nothing,
+  // and drawZoomWaveform() below has always had this line while this one did
+  // not, which is why Loop Detail rendered and the strip above it did not.
+  // Flip recovers more often than Pad (requestZoomWaveformDraw repaints BOTH
+  // canvases and reveal() calls it on music open), so the window here is
+  // narrower — but the unguarded wipe is identical, and a repaint that lands
+  // while the panel is still mid-animation reintroduces it.
+  if(!audioBuffer||!musicTrack||!waveformCanvas) return;
+  const rect=musicTrack.getBoundingClientRect(); if(!rect.width) return;
+  waveformCanvas.width=rect.width; waveformCanvas.height=rect.height;
   const data=audioBuffer.getChannelData(0); const samples=waveformCanvas.width||1; const blockSize=Math.max(1,Math.floor(data.length/samples));
   const h=waveformCanvas.height, mid=h/2; waveformCtx.clearRect(0,0,waveformCanvas.width,h); waveformCtx.fillStyle='#3a4150';
   for(let i=0;i<samples;i++){ const s=i*blockSize; let mn=1,mx=-1; for(let j=0;j<blockSize;j++){ const v=data[s+j]||0; if(v<mn)mn=v; if(v>mx)mx=v; } const y1=mid+mn*mid*0.85, y2=mid+mx*mid*0.85; waveformCtx.fillRect(i,y1,1,Math.max(1,y2-y1)); }
@@ -2473,8 +2686,8 @@ function dragHandle(handle, isStart){
       const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'constrain');
       trimStart=_t.start; trimEnd=_t.end;
       updateTrimUI(); scheduleSave(); }
-    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
+    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd);
   }
   handle.addEventListener('mousedown',onStart); handle.addEventListener('touchstart',onStart,{passive:false});
 }
@@ -2484,8 +2697,8 @@ function dragRangeWindow(rangeEl){
   function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(rangeEl.classList.contains('narrow')) return; e.preventDefault(); e.stopPropagation(); rangeEl.classList.add('dragging');
     const rect=musicTrack.getBoundingClientRect(); const loopLength=trimEnd-trimStart; const grabTime=(cx(e)-rect.left)/rect.width*audioDuration; const grabOffset=grabTime-trimStart;
     function onMove(ev){ const time=(cx(ev)-rect.left)/rect.width*audioDuration; let ns=time-grabOffset; ns=Math.max(0,Math.min(ns,audioDuration-loopLength)); trimStart=ns; trimEnd=ns+loopLength; updateTrimUI(); }
-    function onEnd(){ rangeEl.classList.remove('dragging'); scheduleSave(); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
+    function onEnd(){ rangeEl.classList.remove('dragging'); scheduleSave(); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd);
   }
   rangeEl.addEventListener('mousedown',onStart); rangeEl.addEventListener('touchstart',onStart,{passive:false});
 }
@@ -2499,8 +2712,8 @@ function dragZoomHandle(handle, isStart){
       const _t=window.SkriblLoopTrim.setHandle({start:trimStart,end:trimEnd,duration:audioDuration}, isStart?'start':'end', time, 'slide');
       trimStart=_t.start; trimEnd=_t.end;
       updateTrimUI(); scheduleSave(); }
-    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd);
+    function onEnd(){ handle.classList.remove('dragging'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd);
   }
   handle.addEventListener('mousedown',onStart); handle.addEventListener('touchstart',onStart,{passive:false});
 }
@@ -2572,8 +2785,8 @@ function updateZoomPanSlider(){ const s=document.getElementById('zoomPanSlider')
 function dragZoomPan(wrap){ if(!wrap) return; const cx=(e)=>(e.touches?e.touches[0].clientX:e.clientX);
   function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(e.target.closest('.zoom-handle')) return; e.preventDefault(); const rect=wrap.getBoundingClientRect(); const zw=getZoomWindow(); const sc=(zw.start+zw.end)/2; const winDur=zw.duration; const sx=cx(e); wrap.classList.add('panning');
     function onMove(ev){ const dx=cx(ev)-sx; const dt=-(dx/rect.width)*winDur; const half=winDur/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(sc+dt,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); }
-    function onEnd(){ wrap.classList.remove('panning'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); }
-    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); }
+    function onEnd(){ wrap.classList.remove('panning'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onEnd); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onEnd); window.addEventListener('touchcancel',onEnd); }
   wrap.addEventListener('mousedown',onStart); wrap.addEventListener('touchstart',onStart,{passive:false});
 }
 function addSliderNudgers(el, opts){ opts=opts||{}; const wrap=document.createElement('span'); wrap.className='slider-nudge-wrap'; el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
@@ -3144,14 +3357,41 @@ bindEl('clearUndo', 'click',()=>{
   buildStrip(); render(); updateToolState(); scheduleSave();
   chip('Animation restored');
 });
+
+// Grid density — the shared setting in lib/gridoverlay.js. The seg only shows
+// while the grid is ON: a density control for an invisible grid is a control
+// whose effect you cannot see, which is how the onion-depth seg behaves too.
+function _wireGridDensity(isOnFn, repaintFn) {
+  var seg = document.getElementById('gridDensitySeg');
+  var group = document.getElementById('gridDensityGroup');
+  if (!seg || !window.SkriblGrid) return function () {};
+  function render() {
+    var cur = window.SkriblGrid.density();
+    var btns = seg.querySelectorAll('[data-density]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-density') === cur);
+    }
+    if (group) group.hidden = !isOnFn();
+  }
+  seg.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-density]') : null;
+    if (!b || !seg.contains(b)) return;
+    window.SkriblGrid.setDensity(b.getAttribute('data-density'));
+    render();
+    repaintFn();
+  });
+  render();
+  return render;
+}
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
+const _renderFlipGridDensity = _wireGridDensity(function(){ return grid; }, function(){ syncGrid(); });
 // 'active', not 'on' (v206): the button is an .onion-tint toggle and that
 // family lights on .active — motion guides and onion tint both use it. Grid
 // kept its pre-tune-drawer 'on' class when it moved into the drawer (v204),
 // so the overlay drew but the button never lit. gridEl (the overlay canvas)
 // still uses .on — that is its own display class, unrelated to the button.
-gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.classList.toggle('active',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); });
+gridBtn.addEventListener('click',()=>{ grid=!grid; if(grid) syncGrid(); gridBtn.classList.toggle('active',grid); gridEl.classList.toggle('on',grid); gridBtn.setAttribute('aria-checked',String(grid)); _renderFlipGridDensity(); });
 // v129: the settings drawer. Kept deliberately dumb — it only shows/hides; every
 // control inside keeps its existing handler, so behaviour is unchanged.
 const tuneBtn=document.getElementById('tuneBtn'), tunePanel=document.getElementById('tunePanel');
@@ -3233,6 +3473,10 @@ KeyRegistry.register({surface:'flip', label:'play / stop', keys:['Space'],
   scope:()=>!(ZoomView && ZoomView.isZoomed())});
 KeyRegistry.register({surface:'flip', label:'pen / eraser', keys:['p','e'],
   scope:()=>!playing && !moveMode});
+KeyRegistry.register({surface:'flip', label:'brush size', keys:['[',']'],
+  scope:()=>!playing && !moveMode});
+KeyRegistry.register({surface:'flip', label:'grid', keys:['g'],
+  scope:()=>!playing && !moveMode});
 window.addEventListener('keydown', e=>{
   if(_typingEl(e.target)) return;
   if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.shiftKey && e.key.toLowerCase()==='z'))){ e.preventDefault(); redoStroke(); return; }
@@ -3245,6 +3489,15 @@ window.addEventListener('keydown', e=>{
   // fired on one press and the page advanced twice.
   if(e.key==='p' || e.key==='P'){ setTool('pen'); }
   if(e.key==='e' || e.key==='E'){ setTool('eraser'); }
+  // Brush size and grid, matching Pad. Dispatched as an 'input' event rather
+  // than set-and-call: the value label, the fill and the autosave all hang off
+  // this input's own event, and reaching past them would move the number alone.
+  if(e.key==='[' || e.key===']'){
+    const r=document.getElementById('size');
+    if(r){ const next=Math.max(+r.min, Math.min(+r.max, (+r.value||0) + (e.key===']'?1:-1)));
+      if(next!==+r.value){ r.value=String(next); r.dispatchEvent(new Event('input',{bubbles:true})); } }
+  }
+  if(e.key==='g' || e.key==='G'){ if(gridBtn) gridBtn.click(); }
 });
 bindEl('flipExportCancel', 'click',()=>{ _exportAbort=true; });
 
@@ -3346,3 +3599,97 @@ if (window.SkriblReport) window.SkriblReport.init();
 
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();
+
+/* ===================================================================
+   v215 — parity block. Every fix in this codebase has to be made twice,
+   and most bugs in the v213 session were one surface having a fix the
+   other lacked. This is the Flip half.
+   =================================================================== */
+
+function updateMediaDot(){
+  const dot=document.getElementById('mediaTabDot');
+  if(!dot) return;
+  const items=['photoTabDot','musicTabDot'].map(id=>document.getElementById(id)).filter(Boolean);
+  const present=items.filter(d=>!d.hidden);
+  const pending=present.filter(d=>d.classList.contains('pending'));
+  dot.hidden=present.length===0;
+  dot.classList.toggle('pending', !!pending.length);
+  [['photoTabDot','photoRowDot'],['musicTabDot','musicRowDot']].forEach(([src,dst])=>{
+    const a=document.getElementById(src), b=document.getElementById(dst);
+    if(!a||!b) return;
+    b.hidden=a.hidden;
+    b.classList.toggle('pending', !!a.classList.contains('pending'));
+  });
+}
+
+(function initPaintTarget(){
+  const seg=document.getElementById('paintTargetSeg');
+  if(!seg) return;
+  seg.addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-target]');
+    if(!btn) return;
+    const target=btn.dataset.target;
+    seg.querySelectorAll('button').forEach(b=>{
+      const on=b===btn;
+      b.classList.toggle('active', !!on);
+      b.setAttribute('aria-pressed', String(!!on));
+    });
+    ['colorGroup','bgGroup'].forEach(id=>{
+      const g=document.getElementById(id);
+      if(g) g.hidden = g.dataset.target!==target;
+    });
+    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  });
+  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+})();
+
+(function trackDrawerSegs(){
+  ['smoothSeg','brushSeg','shapeSeg','pressureSeg','eraserSeg'].forEach(id=>{
+    const seg=document.getElementById(id);
+    if(seg&&window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  });
+})();
+
+(function initMediaRows(){
+  const go=(id,drawer)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('click',()=>{
+      const panel=document.getElementById('mediaPanel');
+      if(panel) panel.hidden=true;
+      const opener=document.querySelector('[data-drawer="'+drawer+'"]');
+      if(opener&&opener!==el) opener.click();
+    });
+  };
+  go('mediaAddImage','photo');
+  go('mediaAddMusic','music');
+})();
+
+// The mirror of Pad's guard: Flip's link back to Pad loses unposted work the
+// same way, and a fix on one surface only is the shape of bug this codebase
+// keeps producing.
+(function guardPadNavigation(){
+  const back=document.querySelector('#padBtn, .pad-btn, a[href="/"]');
+  const sheet=document.getElementById('leaveSheet');
+  const go=document.getElementById('leaveGo');
+  const cancel=document.getElementById('leaveCancel');
+  if(!back||!sheet||!go||!cancel) return;
+  const atRisk=()=>{
+    try { return (typeof pages!=='undefined' && pages.some(p=>p&&p.strokes&&p.strokes.length)); }
+    catch(_) { return true; }   // unsure means guard: a false prompt beats lost work
+  };
+  let released=false;
+  back.addEventListener('click',e=>{
+    if(released||!atRisk()) return;
+    e.preventDefault();
+    sheet.hidden=false;
+    cancel.focus();
+  });
+  const close=()=>{ sheet.hidden=true; back.focus(); };
+  cancel.addEventListener('click',close);
+  go.addEventListener('click',()=>{
+    released=true;
+    window.location.href=back.getAttribute('href')||'/';
+  });
+  sheet.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.stopPropagation(); close(); } });
+})();

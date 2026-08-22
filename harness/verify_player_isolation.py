@@ -577,7 +577,119 @@ with sync_playwright() as sp:
     # set to fit. The ~2,060 B editor-only Web Audio loop externalisation
     # noted above is now worth doing in its own build — it would recover
     # most of this arc's raises.
-    BYTES_RATCHET, BYTES_TARGET = 146_911, 153_600
+    # 147,120 = 146,911 + 209 B: v212 trim-strip repaint. drawWaveform() sized
+    # #waveformCanvas from musicTrack's rect with no guard and is called ONLY
+    # from the decode chain, so a decode landing while the music drawer was shut
+    # sized the canvas to 0 (which CLEARS it), painted zero peaks, and nothing
+    # ever repainted — the strip stayed blank while Loop Detail, guarded and
+    # re-called from updateTrimUI(), drew correctly from the same buffer.
+    # Guard on both editors + a repaint from Pad's openDrawer() music branch.
+    # Owner: reported from a phone. Set to fit. NOTE THE COST IS ALMOST ALL
+    # COMMENT: 2,428 B of source, 209 B served, because jsstrip removes the
+    # rest at serve time — the third "sized from a rect with no layout yet" bug
+    # in this drawer, and naming the pattern in place is worth 209 B.
+    # 147,685 = 147,120 + 565 B: v213 eraser-width extraction. The `size * 3`
+    # multiplier existed in SEVEN places across the two editors, including both
+    # eraser-CURSOR sites, where a drifted copy leaves the ring lying about how
+    # much it erases. `_eraserSize()` and the #eraserSeg wiring both live in
+    # app.js, so the PLAYER carries them; lib/erasersize.js itself is loaded
+    # only by the two editor templates (verified: 0 hits in skribl_player.html).
+    # Owner: set to fit — this is a scratch build, not a seal.
+    # WORTH KNOWING: the wiring block is editor-only work sitting in the shared
+    # file, exactly the shape editor_music.js and editor_photo.js were carved
+    # out of. If the tool row keeps growing, that carve is the place to give
+    # this back rather than raising again.
+    # 148,138 = 147,685 + 453 B: v213 pause handling. The 50ms idle-gap cap was
+    # hardcoded at both gap sites; it is now PAUSE_CAPS + pauseMode, written into
+    # the payload by serializeSkribl and adopted by loadSkribl. The player pays
+    # for this ON PURPOSE — it builds its timeline with the same
+    # buildPlaybackTimeline(), so without the adopt the author's replay and the
+    # viewer's would differ on the same Skribl (mutation-measured: 1,903ms
+    # against 410ms). This is the rare case where player bytes buy player
+    # correctness rather than editor furniture. Owner: set to fit; scratch build.
+    # 148,413 = 148,138 + 275 B: v213 pressure extraction. PRESSURE_MIN and its
+    # curve existed once per surface; both now route through lib/pressure.js,
+    # which is loaded by the two EDITOR templates only (0 hits in the player
+    # template). The player pays only for the delegating branch inside
+    # pressureSize(), which it never calls — the same editor-wiring-in-a-shared-
+    # file shape noted at the eraser raise. Owner: set to fit; scratch build.
+    # 148,787 = 148,413 + 374 B: v213 shift-to-constrain. lib/constrain.js is
+    # editor-only (0 hits in the player template); the player carries the guarded
+    # branches inside continueDraw/snapStrokeToFinal, which it never reaches
+    # because it never draws. Third raise in this arc from editor-only work
+    # living in app.js — the running total since v212 is ~1,667 B, and carving
+    # the draw path into an editor bundle is now the obvious way to repay it
+    # rather than raising a fourth time. Owner: set to fit; scratch build.
+    # 149,641 = 151,978 - 2,337 B. A RATCHET THAT WENT DOWN.
+    #
+    # The shape tool's preview/commit helpers and its kind picker were added to
+    # app.js and cost the PLAYER 3,191 B for a tool it can never select — the
+    # largest editor-only addition to the shared file since v212, bigger than
+    # the five before it combined, leaving 1,622 B of headroom. They now live in
+    # editor_shapes.js, the third carve after editor_music.js and
+    # editor_photo.js, and the player keeps three guarded call sites instead of
+    # the implementation.
+    #
+    # It does not undo the whole 3,191: app.js still carries the branches and
+    # the hook checks. It DOES turn a 1,622 B headroom into 3,959 B, which is
+    # the difference between "the next feature does not fit" and "it does".
+    #
+    # The lesson worth keeping is the ordering. Building the feature in the
+    # shared file and carving afterwards cost a ratchet raise and this second
+    # pass; the draw path was already the obvious third carve before the shape
+    # tool was written. Carve first when the target is a tool the player has no
+    # use for.
+    # 151,010 = 149,641 + 1,369 B: v213 preview speed. Unlike the shape tool,
+    # this one CANNOT be carved the way editor_shapes.js was: the rate is read
+    # by editorReplayFrame() and by startWebAudioLoop(), both of which live in
+    # app.js because the player shares the audio path. Carving it would mean
+    # splitting the replay loop itself, which is a bigger change than the
+    # feature. The seg wiring did go to editor_shapes.js.
+    # Headroom to target after this: 2,590 B. Owner: set to fit; scratch build.
+    # 145,125 = 151,712 - 6,587 B. THE SECOND RATCHET THAT WENT DOWN, and by
+    # far the larger: the whole stroke CAPTURE path now lives in editor_draw.js
+    # (startDraw, continueDraw, snapStrokeToFinal, commitActiveStroke,
+    # commitStrokeWithMirrors, endDraw, and the canvas and window listeners
+    # that drive them).
+    #
+    # The player loads app.js to REPLAY a finished drawing; it never captures
+    # one, so it had been carrying every byte of that path. drawLine(),
+    # drawDot(), getPos(), pressureSize(), _eraserSize() and _brushWidth() stay
+    # behind, because replayTimelineToCanvas hands drawLine/drawDot to the
+    # player as its painters — only the gesture-to-points code moved.
+    #
+    # Headroom to target: 1,888 -> 8,475 B. Done BEFORE selection rather than
+    # after, which is the lesson from the shape tool: building in the shared
+    # file and carving afterwards cost a raise and a second pass.
+    # 145,320 = 145,125 + 195 B: v213 selection. THE CARVE PAYING FOR ITSELF —
+    # the entire tool (marquee, hit-testing, move, undo) cost the player 195 B,
+    # against 3,191 B for the shape tool built the other way round. All of it
+    # lives in editor_draw.js and lib/selection.js, both editor-only; app.js
+    # gained only setTool's select branch and the selection-clearing call.
+    # Headroom to target: 8,280 B.
+    # 145,465 = 145,320 + 145 B: v213 pinch reveals the zoom HUD. beginPinch()
+    # and the _skriblRevealZoomHud hook are in app.js because ZoomView and the
+    # HUD are shared with the player's own pan/zoom. Small, and it buys the
+    # magnify button being hidden on skinny phones without stranding a
+    # pinch-zoomed user with no Fit. Headroom to target: 8,135 B.
+    # 145,669 = 145,465 + 204 B of SERVED, COMMENT-STRIPPED JavaScript, which is
+    # what this ratchet measures: len(r.body()) over the .js responses the player
+    # actually fetches, after skribl/jsstrip.py removes comments at serve time,
+    # before gzip. Not source bytes and not wire bytes — this project has had
+    # all three in play at once, so an unlabelled byte figure is a future
+    # ambiguity. Source cost here is larger; the gzip figure is smaller and is
+    # only ever quoted as "downloaded".
+    #
+    # v214 touchcancel cleanup. The Loop Detail pan
+    # and the scrub drag are in app.js and the player shares both, so it pays
+    # for cleanup it also benefits from — a cancelled scrub on the player would
+    # have left playback frozen with the listener live. Headroom: 7,931 B.
+    # 145,920 = 145,669 + 251 B of SERVED, COMMENT-STRIPPED JavaScript: v214
+    # loadSkribl generation token. The player CALLS loadSkribl for every shared
+    # link, so it pays for this and benefits from it — a viewer opening a second
+    # Skribl before the first finished decoding had the same overwrite.
+    # Headroom: 7,680 B.
+    BYTES_RATCHET, BYTES_TARGET = 145_920, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(
@@ -614,6 +726,21 @@ with sync_playwright() as sp:
           f"{total_js:,} bytes over {len(js_bytes)} files; largest: "
           + ", ".join(f"{k} {v:,}" for k, v in
                       sorted(js_bytes.items(), key=lambda kv: -kv[1])[:3]))
+
+    # The carve, asserted directly rather than only through the byte count. A
+    # byte ratchet notices the SIZE coming back; this notices the CODE coming
+    # back, which is the thing that matters and which a later raise would hide.
+    _player_js = (ROOT / "skribl" / "templates" / "skribl" / "skribl_player.html").read_text(encoding="utf-8")
+    check("the player does not load any of the four editor-only files "
+          "(the carves stay carved)",
+          all(f"{_n}.js" not in _player_js for _n in
+              ("editor_draw", "editor_shapes", "editor_music", "editor_photo")),
+          "editor_draw / editor_shapes / editor_music / editor_photo all absent")
+    _app_js = (ROOT / "skribl" / "static" / "app.js").read_text(encoding="utf-8")
+    check("...and the stroke CAPTURE path has not drifted back into app.js, "
+          "which the player does load",
+          "function startDraw(" not in _app_js and "function endDraw(" not in _app_js,
+          "startDraw/endDraw live in editor_draw.js")
 
     # CSS. The player links the WHOLE of styles.css — the editor's drawers,
     # export sheet, help panel and page bar included — and none of it was ever

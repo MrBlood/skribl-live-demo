@@ -273,7 +273,8 @@ if _marker in _appjs:
     check("the extracted editor bundles are not loaded by the player",
           not any("editor_export.js" in _t or "editor_post.js" in _t
                   or "editor_menu.js" in _t or "editor_music.js" in _t
-                  or "editor_photo.js" in _t
+                  or "editor_photo.js" in _t or "editor_shapes.js" in _t
+                  or "editor_draw.js" in _t or "editor_tune.js" in _t
                   for _t in [_layout.template("skribl_player.html")
                              .read_text(encoding="utf-8")]),
           "the whole point of moving them is that the player never fetches them")
@@ -288,9 +289,23 @@ if _marker in _appjs:
     check("the player's reachable set has not ballooned",
           _player_lines <= 1700,
           f"{_player_lines} lines reachable, was 1339")
-    check("a split is still worth doing (editor-only exceeds player-reachable)",
-          _editor_lines > _player_lines,
-          f"editor-only {_editor_lines} vs player {_player_lines}")
+    # THIS ASSERTION USED TO READ `_editor_lines > _player_lines`, under the
+    # name "a split is still worth doing". It was a TODO wearing a test's
+    # clothes: it could only pass while the work was OUTSTANDING, and it went
+    # red at v213 the moment the stroke capture path moved into editor_draw.js
+    # and editor-only code left in app.js fell to 1,526 lines against 1,637
+    # reachable by the player. A green suite meant the split had not been done.
+    #
+    # Inverted, so it now guards the achievement instead of the intention: what
+    # is left in the shared file must STAY below the player's own reachable set.
+    # Adding editor-only code back to app.js is what this catches, which is the
+    # thing that actually costs the player bytes — and it is a direction, not a
+    # fixed number, so it does not need editing every time either side moves.
+    check("editor-only code left in app.js stays BELOW the player's reachable "
+          "set (the carves hold; adding editor work back here is what fails)",
+          _editor_lines <= _player_lines,
+          f"editor-only still in app.js {_editor_lines} vs player-reachable "
+          f"{_player_lines} — was 1,900+ vs 1,339 before the four carves")
 
 
 bad = [r for r in results if not r[0]]

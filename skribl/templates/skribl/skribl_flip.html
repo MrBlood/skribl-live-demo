@@ -44,7 +44,9 @@
       <div class="tune-clip">
         <div class="tune-panel" id="tunePanel">
     <div class="tune-row"><span class="tune-label"><span class="tune-name">Speed</span><span class="tune-hint">frames per second</span></span><span class="fps-group" title="Playback speed — frames per second"><span class="seg" id="fps"><span class="seg-slider"></span><button data-fps="6" title="6 pages a second &mdash; slow and deliberate">6</button><button data-fps="12" class="on" title="12 pages a second &mdash; the usual choice">12</button><button data-fps="24" title="24 pages a second &mdash; smooth, and needs more pages">24</button></span></span></div>
-          <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas (a drawing aid; never part of the animation)" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button></div>
+          <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas (a drawing aid; never part of the animation)" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button><span class="onion-group" id="gridDensityGroup" hidden><span class="seg onion-seg" id="gridDensitySeg" title="How fine the alignment grid is"><span class="seg-slider"></span><button type="button" data-density="coarse" title="Fewer, larger cells">S</button><button type="button" data-density="medium" class="on" title="The default grid">M</button><button type="button" data-density="fine" title="More, smaller cells">L</button></span></span></div>
+          <div class="tune-row" id="tuneLayersRow"><span class="tune-label"><span class="tune-name">Stroke layers</span><span class="tune-hint">keeps see-through strokes from beading</span></span><button type="button" id="strokeLayersBtn" class="onion-tint" role="switch" aria-checked="true" title="Draw each see-through stroke on its own layer, so overlaps inside one stroke do not stack into dark beads" aria-label="Stroke layers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5l9 4.5 9-4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/></svg></button></div>
+          <div class="tune-row" id="tuneMirrorRow"><span class="tune-label"><span class="tune-name">Mirror</span><span class="tune-hint">reflects across the canvas centre</span></span><span class="seg onion-seg" id="mirrorSeg" role="group" aria-label="Mirror drawing"><span class="seg-slider"></span><button type="button" data-mirror="off" class="on" title="No mirroring">Off</button><button type="button" data-mirror="vertical" title="Mirror left to right" aria-label="Mirror left to right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9.5 8 5 12l4.5 4"/><path d="M14.5 8 19 12l-4.5 4"/></svg></button><button type="button" data-mirror="horizontal" title="Mirror top to bottom" aria-label="Mirror top to bottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></button><button type="button" data-mirror="both" title="Four-way mirror" aria-label="Four-way mirror"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M12 3v18M3 12h18" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9 5.5H5.5V9M15 5.5h3.5V9M9 18.5H5.5V15M15 18.5h3.5V15"/></svg></button></span></div>
           <div class="tune-row" id="tuneArcRow"><span class="tune-label"><span class="tune-name">Motion guides</span><span class="tune-hint">path and spacing between pages</span></span><button type="button" id="arcGuideBtn" class="onion-tint" role="switch" aria-checked="false" title="Show the path the drawing travels, and the spacing between pages" aria-label="Motion guides"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18C6 9 14 6.5 19 9" stroke-dasharray="0.5 3.4"/><circle cx="19.4" cy="9.1" r="2.1" fill="currentColor" stroke="none"/></svg></button></div>
           <div class="tune-row" id="tuneOnionRow"><span class="tune-label"><span class="tune-name">Onion skin</span><span class="tune-hint">pages showing behind</span></span><button type="button" id="onion" class="onion-tint" role="switch" aria-checked="false" title="Onion skin — show the pages beneath, so you can line the next one up" aria-label="Onion skin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7.5l9 4.5 9-4.5-9-4.5z"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5 12 21l9-4.5"/></svg></button><span class="onion-group" id="onionGroup" hidden><span class="seg onion-seg" id="onionDepthSeg" title="How many pages back to show"><span class="seg-slider"></span><button type="button" data-depth="1" class="on" title="Show 1 page beneath">1</button><button type="button" data-depth="2" title="Show 2 pages beneath">2</button><button type="button" data-depth="3" title="Show 3 pages beneath">3</button></span><button type="button" id="onionTintBtn" class="onion-tint" role="switch" aria-checked="false" title="Tint onion pages by distance" aria-label="Tint onion pages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 000 17z" fill="currentColor" stroke="none"/></svg></button></span></div>
         </div>
@@ -119,8 +121,21 @@
 
     <div class="flip-tools">
       <div class="color-tool">
-        <button type="button" class="color-current" id="colorCurrent" title="Colors &amp; brush" aria-haspopup="true" aria-expanded="false"></button>
+        {# Flip needed MARKUP where Pad needed only a wrapper: #colorCurrent IS the
+           button, so there was no inner element to become the core. flip.js now writes
+           to #colorCurrentCore instead — see flip.js, the setColor path. #}
+        <button type="button" class="color-current" id="colorCurrent" title="Colours and brush" aria-haspopup="true" aria-expanded="false">
+          <span class="color-ring"><span class="color-core" id="colorCurrentCore"></span></span>
+        </button>
       </div>
+      <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Media" title="Image, music and zoom">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4.5" width="13" height="12" rx="2"/><path d="m4.4 14.5 3.6-3.4 3 2.6"/><circle cx="7.6" cy="8.4" r="1.1"/>
+          <path d="M15.4 20.2v-5.4l4.4-1.1v5.2"/><circle cx="14" cy="20.3" r="1.5"/><circle cx="18.4" cy="18.9" r="1.5"/>
+        </svg>
+        <span id="mediaTabDot" class="tab-dot" hidden></span>
+        <span class="tab-dot-empty" aria-hidden="true"></span>
+      </button>
       <div class="tool-group" id="toolGroup" title="Pen / Eraser">
         <div class="tool-slider" id="toolSlider"></div>
         <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen" title="Draw — shortcut P">
@@ -129,13 +144,13 @@
         </button><button type="button" class="tool-btn" id="eraserToolBtn" data-tool="eraser" title="Erase, at three times the brush size — shortcut E">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
           <span class="tool-btn-label">Eraser</span>
+        </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle or ellipse &mdash; pick which in the Draw drawer; hold Shift for square/circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
+          <span class="tool-btn-label">Shape</span>
         </button>
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
-      <button type="button" class="tool-open magnify-tool" id="magnifyBtn" title="Magnify &mdash; then scroll, or hold Space and drag, to move around" aria-label="Toggle magnify controls" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
-      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
-      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
     </div>
 
     <!-- Drawers open BELOW the toolbar in normal flow: the canvas above stays
@@ -144,6 +159,9 @@
     <div class="flip-drawers" id="flipDrawers">
       <!-- Draw drawer (shared partial — Pad + Flip) -->
       {% with kind='flip' %}{% include 'skribl/_skribl_draw_drawer.html' %}{% endwith %}
+
+  <!-- Media drawer (shared partial - Pad + Flip) -->
+  {% with kind='flip' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
       <!-- Image drawer (drop-up, like the Draw menu). One image per animation. -->
       <!-- Image drawer (shared partial — Pad + Flip) -->
@@ -192,6 +210,18 @@
            app.py — never hardcode it here (the Pad's literal drifted from v96
            to v105 unnoticed). .menu-version is shared styling from styles.css. -->
       <div class="menu-version">Skribl Flip · {{ skribl_version }}</div>
+    </div>
+
+    {# Mirror of Pad's guard. Flip reuses .menu-sheet rather than .flip-menu:
+       this is a modal decision, not a menu, and the two should not look alike. #}
+    <div class="menu-sheet leave-sheet" id="leaveSheet" role="dialog" aria-modal="true"
+         aria-labelledby="leaveSheetTitle" hidden>
+      <h2 class="sheet-title" id="leaveSheetTitle">Leave Flip Mode?</h2>
+      <p class="sheet-body">Your animation hasn&rsquo;t been posted.</p>
+      <div class="sheet-actions">
+        <button type="button" class="sheet-btn" id="leaveCancel">Keep drawing</button>
+        <button type="button" class="sheet-btn danger" id="leaveGo">Leave</button>
+      </div>
     </div>
     <input type="file" id="imageInput" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
     <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
@@ -288,6 +318,13 @@
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/pressure.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/mirror.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/brushes.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/colorselect.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/artwork.js') }}" defer></script>

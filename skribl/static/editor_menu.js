@@ -184,9 +184,27 @@ bindEl('loadDraftItem', 'click', () => {
     }
   }
 
+  // A CANCELLED swipe resets, it does not COMMIT. onTouchEnd closes the menu
+  // when the drag passed 80px, so wiring touchcancel straight to it would let a
+  // gesture the OS took away finish the dismissal the user never completed —
+  // the opposite of what cancellation means. This resets the same state and
+  // stops there.
+  //
+  // Without it the sheet kept `transition: none` and its translateY, and the
+  // next touch carried on dragging a swipe that was already over: reproduced at
+  // translateY(50px) -> translateY(90px) after the cancel.
+  function onTouchCancel() {
+    if (!dragging) return;
+    dragging = false;
+    currentY = 0;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+  }
+
   sheet.addEventListener('touchstart', onTouchStart, { passive: true });
   sheet.addEventListener('touchmove', onTouchMove, { passive: true });
   sheet.addEventListener('touchend', onTouchEnd);
+  sheet.addEventListener('touchcancel', onTouchCancel);
 
   // Tap the handle to close
   if (handle) {

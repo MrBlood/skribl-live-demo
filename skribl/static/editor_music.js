@@ -48,12 +48,21 @@ function dragZoomHandle(handle, isStart) {
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
     }
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onEnd);
     window.addEventListener('touchmove', onMove, { passive: false });
+      // touchcancel, not just touchend. A browser or OS can CANCEL a touch
+      // sequence instead of ending it — a system gesture, an incoming call, a
+      // pointer taken over by scrolling. Cleaning up only on touchend leaves
+      // this drag's touchmove listener installed and the handle flagged
+      // dragging, so the next unrelated touch keeps moving a trim whose gesture
+      // is already over. Reproduced before fixing: after a cancel, trimStart
+      // went 1.129 -> 3.386 on a further move.
     window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
   }
 
   handle.addEventListener('mousedown', onStart);
@@ -233,14 +242,32 @@ musicInput.addEventListener('change', async (e) => {
   // same instant, and a post in the gap saw currentAudioBuffer === null and
   // silently skipped the loop crop, shipping the full source. Same
   // readiness/decode split as Bug A, on the write side.
+  // THE SEQ CHECK HAS TO BE INSIDE THE DECODE, not only before it.
+  // `seq` was captured at the top of this handler and checked twice above, but
+  // both checks run BEFORE decodeAudioData is awaited — so they prove the
+  // selection was current when the decode STARTED, which is not the question.
+  // Select A, select B, let B finish first and A finish last, and A's
+  // completion wrote its buffer over B's: reproduced with A=3.00s and B=9.00s
+  // leaving currentAudioBuffer at 3.00s while audioDuration still read 9.00s.
+  // A split state, not just a stale waveform — the poster crops from
+  // currentAudioBuffer, so the track shown and the audio shipped were different
+  // recordings.
   window._skriblDecodePending = file.arrayBuffer().then(buf => audioCtx.decodeAudioData(buf)).then(audioBuffer => {
+    if (seq !== musicSelectionSeq) return;        // superseded while decoding
     currentAudioBuffer = audioBuffer;
     setTimeout(() => {
+      if (seq !== musicSelectionSeq) return;      // and superseded before the paint
       drawWaveform(audioBuffer);
       drawZoomWaveform();
       updateZoomHandles();
     }, 50);
-  }).catch(() => {}).finally(() => { window._skriblDecodePending = null; });
+  }).catch(() => {}).finally(() => {
+    // Only the CURRENT decode may clear the shared flag. An older completion
+    // clearing it told shareSkribl "nothing is decoding" while the newer decode
+    // was still in flight, which is the same readiness/decode split this flag
+    // was added to close.
+    if (seq === musicSelectionSeq) window._skriblDecodePending = null;
+  });
 });
 
 function validateMusicFile(file) {
@@ -311,11 +338,20 @@ function dragHandle(handle, isStart) {
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
     }
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onEnd);
     window.addEventListener('touchmove', onMove, { passive: false });
+      // touchcancel, not just touchend. A browser or OS can CANCEL a touch
+      // sequence instead of ending it — a system gesture, an incoming call, a
+      // pointer taken over by scrolling. Cleaning up only on touchend leaves
+      // this drag's touchmove listener installed and the handle flagged
+      // dragging, so the next unrelated touch keeps moving a trim whose gesture
+      // is already over. Reproduced before fixing: after a cancel, trimStart
+      // went 1.129 -> 3.386 on a further move.
     window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
   }
 
   handle.addEventListener('mousedown', onStart);
@@ -357,11 +393,20 @@ function dragRangeWindow(rangeEl) {
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
     }
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onEnd);
     window.addEventListener('touchmove', onMove, { passive: false });
+      // touchcancel, not just touchend. A browser or OS can CANCEL a touch
+      // sequence instead of ending it — a system gesture, an incoming call, a
+      // pointer taken over by scrolling. Cleaning up only on touchend leaves
+      // this drag's touchmove listener installed and the handle flagged
+      // dragging, so the next unrelated touch keeps moving a trim whose gesture
+      // is already over. Reproduced before fixing: after a cancel, trimStart
+      // went 1.129 -> 3.386 on a further move.
     window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
   }
   rangeEl.addEventListener('mousedown', onStart);
   rangeEl.addEventListener('touchstart', onStart, { passive: false });

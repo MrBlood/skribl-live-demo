@@ -184,11 +184,21 @@ function syncStateAfterHistoryChange(restoredHasContent) {
   // a finished Skribl (which would silently diverge from play/export/save).
   // If undo removes all recorded strokes, `recorded` is false and it unlocks.
   if (!recording) finishedRecording = recorded;
-  playWrap.hidden = !recorded;
-  postBtn.hidden = !recorded;
+  // A TAKE IN PROGRESS MUST NOT REVEAL THE FINISHED-TAKE CONTROLS.
+  // `recorded` is derived from stroke count alone, so undoing during a
+  // recording (with any stroke still on the canvas) made this reveal Play,
+  // Post and the duration badge — the three things startRecording() had just
+  // deliberately hidden. The header then overflowed, and #recIndicator wrapped
+  // its "1:04 · 0:19 play" text from one line to three, which is the record
+  // pill visibly ballooning mid-take. Undoing all the way to an empty canvas
+  // "fixed" it only because `recorded` went false and the same line re-hid them.
+  // `recorded` still tracks state; only the DOM reveal is gated.
+  const showTakeControls = recorded && !recording;
+  playWrap.hidden = !showTakeControls;
+  postBtn.hidden = !showTakeControls;
   if (recorded) {
     updateDrawingTimeLabels();
-    durationBadge.hidden = false;
+    durationBadge.hidden = !showTakeControls;
   } else {
     durationBadge.hidden = true;
     const matchLabel = document.getElementById('matchDrawingLabel');
@@ -296,6 +306,20 @@ function drawDot(x, y, c, s, erase) {
 }
 
 function drawLine(x1, y1, x2, y2, c, s, erase) {
+  // Paint the reflections alongside, so the mirror is visible WHILE drawing
+  // rather than appearing on release. No points are generated here — the commit
+  // does that from the finished stroke, one group per reflection.
+  if (window.SkriblMirror && SkriblMirror.active() && !_mirrorPainting) {
+    _mirrorPainting = true;
+    try {
+      const _sz = getCanvasLogicalSize();
+      const _a = SkriblMirror.reflect({ x: x1, y: y1 }, _sz.width, _sz.height);
+      const _b = SkriblMirror.reflect({ x: x2, y: y2 }, _sz.width, _sz.height);
+      for (let _i = 0; _i < _a.length; _i++) {
+        drawLine(_a[_i].x, _a[_i].y, _b[_i].x, _b[_i].y, c, s, erase);
+      }
+    } finally { _mirrorPainting = false; }
+  }
   ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
   ctx.beginPath();
   ctx.moveTo(x1, y1);
@@ -524,6 +548,29 @@ let lockToastShown = false;
    PRESSURE_MIN keeps the lightest touch visible instead of vanishing. Erasing
    is exempt — a variable-width eraser leaves streaks you cannot see. */
 const PRESSURE_MIN = 0.35;
+// Eraser width: the pen size times a shared multiplier (lib/erasersize.js).
+// This 3 used to be written out seven times across the two editors, including
+// in the two eraser-CURSOR sites, where a drifted copy would leave the ring
+// lying about how much it erases. Fall back to the shipped 3 so a surface that
+// somehow loads without the lib erases exactly as it always did.
+// Distance from the previously captured point, which is what the pencil and
+// airbrush tapers read as speed. Pixels per POINT, not per millisecond: see the
+// note in lib/brushes.js about 60Hz and 120Hz devices drawing the same gesture
+// differently if a clock were used.
+let _brushLastPt = null;
+function _brushWidth(base, pos, erase) {
+  if (erase || !window.SkriblBrush || SkriblBrush.name() === 'pen') return base;
+  const d = (_brushLastPt && pos)
+    ? Math.hypot(pos.x - _brushLastPt.x, pos.y - _brushLastPt.y) : 0;
+  return SkriblBrush.shape(base, d);
+}
+
+function _eraserSize(size, erase) {
+  return (typeof SkriblEraser !== 'undefined' && SkriblEraser)
+    ? SkriblEraser.sizeFor(size, erase)
+    : (erase ? size * 3 : size);
+}
+
 function pressureSize(e, base, erase) {
   if (erase || !e) return base;
   let raw = 0;
@@ -536,8 +583,13 @@ function pressureSize(e, base, erase) {
   // A stylus commonly reports 0 on the first event of a stroke. Treat that as
   // "no reading yet" rather than as a feather touch, or every line would start
   // at minimum width.
-  if (!(raw > 0)) return base;
-  return base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw));
+  // Curve, floor and on/off live in lib/pressure.js (shared with Flip). Reading
+  // `raw` stays here: Pad is on touch events and Flip on Pointer Events, so the
+  // extraction cannot be shared even though the response can. Fall back to the
+  // shipped curve if the lib is absent.
+  return (typeof SkriblPressure !== 'undefined' && SkriblPressure)
+    ? SkriblPressure.sizeFrom(base, raw)
+    : (raw > 0 ? base * (PRESSURE_MIN + (1 - PRESSURE_MIN) * Math.min(1, raw)) : base);
 }
 // Exposed for the harness: the stylus path cannot be synthesised in Chromium
 // (touchType is an iOS extension with no constructor support), so the mapping
@@ -554,217 +606,21 @@ function bindEl(id, ev, fn, opts) {
   return el;
 }
 
-function startDraw(e) {
-  // Playback surface, never a drawing one. Bound at load, before player-mode
-  // is set, so the guard belongs here. See verify_player_isolation.py.
-  if (document.body.classList.contains('player-mode')) return;
-  // Space held = grab-pan mode; never a stroke (v211).
-  if (window._skriblSpaceHeld && window._skriblSpaceHeld()) return;
-  // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
-  // preventDefault/anything else so it can cleanly abort a nascent 1-finger
-  // stroke that the first finger just began. Guarded on ZoomView so the player
-  // (no zoom) behaves exactly as before.
-  if (ZoomView && e.touches && e.touches.length >= 2) { beginPinch(e); return; }
-  e.preventDefault();
-  _autoArmedThisStroke = false;
-  // Ignore non-primary mouse buttons (right/middle click). A right-click
-  // mousedown would otherwise enter here mid-stroke and reset currentStroke,
-  // wiping the in-progress stroke from the replay array (still painted live,
-  // but gone on playback). Touch events have no .button, so guard on != null
-  // so touch drawing still works.
-  if (e.button != null && e.button !== 0) return;
-  // A preview is playing (or being scrubbed): the canvas is a playback surface,
-  // not a drawing surface. Block every pointer-initiated action so a stray tap
-  // can't start a stroke, sample, or reposition mid-replay. (Record/Play/Stop
-  // still work via their own buttons.)
-  if (playing) return;
-  // Eyedropper (fallback path): consume this tap to sample a pixel instead of
-  // starting a stroke. Allowed even on a locked canvas — it only reads.
-  if (pickingColor) { const p = getPos(e); sampleColorAt(p.x, p.y); return; }
-  // Photo reposition mode: this drag moves the background, never the drawing.
-  // Returns before the lock check and the undo push, so it can't start a stroke,
-  // fire the lock toast, or create an undo entry. Ignored during recording so a
-  // take is never blocked.
-  if (repositioning && !recording) { beginPhotoDrag(e); return; }
-  // Tapping the canvas while a drawer is open just dismisses it (no stray dot).
-  // After the eyedropper/reposition checks so those keep working.
-  if (['drawPanel', 'musicPanel', 'photoPanel']
-      .some(i => { const p = document.getElementById(i); return p && !p.hidden; })) {
-    openDrawer(null);
-    return;
-  }
-  // Post-record lock: the completed replay can't be drawn over.
-  if (finishedRecording && !recording) {
-    if (!lockToastShown) {
-      showToast('Recording done — Record again to add another take, or Clear to restart', recordBtn);
-      lockToastShown = true;
-      setTimeout(() => { lockToastShown = false; }, 3000);
-    }
-    return;
-  }
-  // Auto-arm: on a blank, unlocked canvas the first stroke starts recording on
-  // its own, so a first-time user who "just draws" still gets a replay to post
-  // without knowing to press Record first. Only fires when nothing is drawn yet
-  // and no take is in progress or finished; every other entry path is unchanged.
-  // beginRecording captures the (blank) base and flips `recording` true before we
-  // read `t` below, so this first point lands at t≈0 like a normal take start.
-  if (!recording && !finishedRecording && !hasContent) {
-    beginRecording(false);
-    _autoArmedThisStroke = true;
-  }
-  const pos = getPos(e);
-  drawing = true;
-  document.body.classList.add('stroking');
-  lastPos = pos;
-  smoothPt = { x: pos.x, y: pos.y };
-  lastRawPos = { x: pos.x, y: pos.y };
-  currentStroke = [];
-  undoStack.push(makeHistoryState());
-  if (undoStack.length > 30) undoStack.shift();
-  undoBtn.disabled = false;
-  redoStack = [];
-  redoBtn.disabled = true;
-  const t = recording ? Date.now() - startTime : 0;
-  const erase = tool === 'eraser';
-  const drawColor = erase ? bgColor : penColorFor(color);
-  const drawSize = pressureSize(e, erase ? size * 3 : size, erase);
-  const point = { x: pos.x, y: pos.y, color: drawColor, size: drawSize, t, start: true, erase };
-  currentStroke.push(point);
-  _slActive = strokeLayersOn() && !erase && parseStrokeAlpha(drawColor) < 1;
-  if (_slActive) {
-    beginWetStroke(pos.x, pos.y, drawColor, drawSize);
-  } else {
-    drawDot(pos.x, pos.y, drawColor, drawSize, erase);
-  }
-  hasContent = true;
-  updateClearVisibility();
-  updateEmptyHint();
-}
 
-function continueDraw(e) {
-  e.preventDefault();
-  if (pinching) return;
-  if (!drawing) return;
-  const pos = getPos(e);
-  lastRawPos = pos;
-  // Stabilizer: ease the drawn point toward the raw position. At smoothingAlpha
-  // === 1 this is a no-op (dp === pos), so "Off" is byte-identical to before.
-  // The smoothed point is what gets stored, so replay reproduces it exactly.
-  if (!smoothPt) smoothPt = { x: lastPos.x, y: lastPos.y };
-  smoothPt = {
-    x: smoothPt.x + (pos.x - smoothPt.x) * smoothingAlpha,
-    y: smoothPt.y + (pos.y - smoothPt.y) * smoothingAlpha
-  };
-  const dp = smoothingAlpha >= 1 ? pos : smoothPt;
-  const t = recording ? Date.now() - startTime : 0;
-  const erase = tool === 'eraser';
-  const drawColor = erase ? bgColor : penColorFor(color);
-  const drawSize = pressureSize(e, erase ? size * 3 : size, erase);
-  const point = { x: dp.x, y: dp.y, color: drawColor, size: drawSize, t, erase };
-  currentStroke.push(point);
-  if (_slActive) {
-    drawLineOn(_wetCtx, lastPos.x, lastPos.y, dp.x, dp.y, solidStrokeColor(drawColor), drawSize);
-    presentWet();
-  } else {
-    drawLine(lastPos.x, lastPos.y, dp.x, dp.y, drawColor, drawSize, erase);
-  }
-  lastPos = dp;
-}
-
-// With smoothing on, the drawn line lags the finger, so a stroke would end
-// slightly short of where you lifted. Extend it to the true final point on
-// release. No-op when smoothing is off or already there. Runs before the stroke
-// is committed, so the final point rides into the replay array normally.
-function snapStrokeToFinal() {
-  if (!drawing || smoothingAlpha >= 1) return;
-  if (!currentStroke.length || !lastRawPos || !lastPos) return;
-  const dx = lastRawPos.x - lastPos.x, dy = lastRawPos.y - lastPos.y;
-  if (dx * dx + dy * dy < 0.25) return;   // within ~0.5px: nothing to add
-  const t = recording ? Date.now() - startTime : 0;
-  const erase = tool === 'eraser';
-  const drawColor = erase ? bgColor : penColorFor(color);
-  // Carry the stroke's final captured width. This read the nominal slider value,
-  // which was invisible at constant width but with pressure would snap the last
-  // point back to full thickness — a blob on the end of every tapered stroke.
-  const _lastPt = currentStroke[currentStroke.length - 1];
-  const drawSize = (_lastPt && typeof _lastPt.size === 'number') ? _lastPt.size : (erase ? size * 3 : size);
-  currentStroke.push({ x: lastRawPos.x, y: lastRawPos.y, color: drawColor, size: drawSize, t, erase });
-  if (_slActive) {
-    drawLineOn(_wetCtx, lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, solidStrokeColor(drawColor), drawSize);
-    presentWet();
-  } else {
-    drawLine(lastPos.x, lastPos.y, lastRawPos.x, lastRawPos.y, drawColor, drawSize, erase);
-  }
-  lastPos = lastRawPos;
-}
-
-function endDraw() {
-  if (!drawing) return;
-  snapStrokeToFinal();
-  drawing = false;
-  document.body.classList.remove('stroking');
-  _slActive = false;
-  if (recording && currentStroke.length > 0) {
-    strokes = strokes.concat(currentStroke);
-    strokeGroups.push(currentStroke.length);
-  }
-  currentStroke = [];
-}
-
-// Commit an in-progress stroke into the replay array WITHOUT a normal mouseup —
-// for when a context menu, focus loss, or off-canvas release interrupts the
-// drag before endDraw fires. Idempotent with endDraw (both bail when !drawing),
-// so a stroke can never be double-added.
-function commitActiveStroke() {
-  if (!drawing) return;
-  snapStrokeToFinal();
-  drawing = false;
-  document.body.classList.remove('stroking');
-  _slActive = false;
-  if (recording && currentStroke.length > 0) {
-    strokes = strokes.concat(currentStroke);
-    strokeGroups.push(currentStroke.length);
-  }
-  currentStroke = [];
-}
-
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mousemove', continueDraw);
-canvas.addEventListener('mouseup', endDraw);
-/* NO mouseleave -> endDraw.
- *
- * It ended the stroke the moment the cursor crossed the canvas edge, so
- * sweeping a line out past the border and back produced two strokes with a gap
- * — and a stroke that ends where you did not lift the button is a stroke you
- * did not draw. Touch never had this, because there is no mouseleave, which is
- * why the same gesture behaved differently on a phone.
- *
- * Continuing outside is the drawing-app convention: the line follows the
- * pointer, the canvas clips what falls outside, and coming back resumes the
- * same stroke. The window handlers below still commit on mouseup anywhere and
- * on losing focus, so a stroke can never be left painted but unrecorded. */
-window.addEventListener('mousemove', (e) => { if (drawing) continueDraw(e); });
-canvas.addEventListener('touchstart', startDraw);
-canvas.addEventListener('touchmove', continueDraw);
-canvas.addEventListener('touchend', endDraw);
-canvas.addEventListener('touchcancel', endDraw);
-
-// Right-click on the canvas: commit the current stroke, then suppress the
-// browser context menu so it can't interrupt drawing mid-stroke.
-canvas.addEventListener('contextmenu', (e) => {
-  commitActiveStroke();
-  e.preventDefault();
-});
-// Releasing the mouse outside the canvas, or the window losing focus, also
-// commits — otherwise an interrupted stroke stays painted but unrecorded.
-window.addEventListener('mouseup', () => { if (drawing) endDraw(); });
-window.addEventListener('blur', () => { if (drawing) commitActiveStroke(); });
-
+const toolGroupEl = document.getElementById('toolGroup');
 function setTool(nextTool) {
   tool = nextTool;
   const penBtn = document.getElementById('penToolBtn');
   const eraserBtn = document.getElementById('eraserToolBtn');
-  const activeBtn = nextTool === 'pen' ? penBtn : eraserBtn;
+  const shapeBtn = document.getElementById('shapeToolBtn');
+  const selectBtn = document.getElementById('selectToolBtn');
+  const activeBtn = nextTool === 'pen' ? penBtn
+                  : nextTool === 'shape' ? (shapeBtn || penBtn)
+                  : nextTool === 'select' ? (selectBtn || penBtn)
+                  : eraserBtn;
+  // Leaving the tool drops the selection: an invisible selection that a later
+  // drag would move is worse than making the user re-pick.
+  if (nextTool !== 'select' && window.SkriblSelectTool) window.SkriblSelectTool.clear();
   document.querySelectorAll('.tool-btn').forEach(btn => {
     btn.classList.toggle('active', btn === activeBtn);
   });
@@ -775,10 +631,16 @@ function setTool(nextTool) {
     canvas.style.cursor = nextTool === 'eraser' ? 'none' : '';
   }
   if (nextTool !== 'eraser') eraserCursor.style.display = 'none';
-  if (toolSlider) {
+  if (toolSlider && activeBtn) {
+    // Measured from the button's own offsetLeft rather than summed from the
+    // widths before it. The old form was `pen ? 0 : penWidth`, which is not a
+    // two-button special case so much as a two-button ASSUMPTION: a third tool
+    // parked the pill under the second one and it looked like the wrong tool
+    // was selected. offsetLeft is what the browser actually laid out, so this
+    // is right for any number of tools and for any label width.
     toolSlider.style.width = activeBtn.offsetWidth + 'px';
     toolSlider.style.transform =
-      nextTool === 'pen' ? 'translateX(0)' : `translateX(${penBtn.offsetWidth}px)`;
+      `translateX(${activeBtn.offsetLeft - (toolGroupEl ? toolGroupEl.offsetLeft : 0)}px)`;
   }
 }
 
@@ -877,6 +739,14 @@ customColorInput.addEventListener('input', (e) => {
 // stored coordinates. Neither adds a timeline loop or changes the save format.
 
 function penColorFor(hex) {
+  // Brush presets shape opacity here rather than at each call site, so every
+  // path that already asks for "the pen colour" — strokes, shapes, mirrors,
+  // the settle points — picks the brush up for free. lib/brushes.js returns
+  // the same two shapes this function always has ('#rrggbb' or 'rgba(...)'),
+  // which is what parseStrokeAlpha and the nib tint parse.
+  if (window.SkriblBrush && SkriblBrush.name() !== 'pen') {
+    return SkriblBrush.colorFor(hex, strokeOpacity);
+  }
   // Full opacity keeps the plain hex, so 100% is byte-identical to old behavior.
   if (strokeOpacity >= 1) return hex;
   const h = (hex || '#ffffff').replace('#', '');
@@ -1019,6 +889,30 @@ function stopPicking() {
     attachSegSlider(smoothSeg);
   }
 
+  // Eraser width — the shared multiplier (lib/erasersize.js). Repainting the
+  // cursor on change matters: the ring is what the user aims with, so a size
+  // that only took effect on the next stroke would be a cursor that lies.
+  const eraserSeg = document.getElementById('eraserSeg');
+  if (eraserSeg && window.SkriblEraser) {
+    window.SkriblEraser.create({
+      seg: eraserSeg,
+      onChange: () => { if (typeof updateEraserCursor === 'function') updateEraserCursor(); },
+    });
+    attachSegSlider(eraserSeg);
+  }
+
+  const brushSeg = document.getElementById('brushSeg');
+  if (brushSeg && window.SkriblBrush) {
+    window.SkriblBrush.create({ seg: brushSeg });
+    attachSegSlider(brushSeg);
+  }
+
+  const pressureSeg = document.getElementById('pressureSeg');
+  if (pressureSeg && window.SkriblPressure) {
+    window.SkriblPressure.create({ seg: pressureSeg });
+    attachSegSlider(pressureSeg);
+  }
+
   // Shared with Flip via lib/eyedropper.js. The native window.EyeDropper
   // branch that used to live here is GONE: it existed only on Chromium, so the
   // tap-to-sample path had to exist anyway, and keeping both shipped two
@@ -1103,7 +997,17 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
     if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
     if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
-    if (name === 'music') updateDrawingTimeLabels();
+    if (name === 'music') {
+      updateDrawingTimeLabels();
+      // Nothing else re-calls drawWaveform — the decode chain is its only
+      // caller — so opening the drawer is the one moment the strip can recover
+      // a paint it missed while the panel had no layout. TWO frames: one for
+      // the [hidden] removal to take effect, a second for the panel to be laid
+      // out, so musicTrack reports its real width rather than 0.
+      if (currentAudioBuffer) {
+        requestAnimationFrame(() => requestAnimationFrame(() => drawWaveform(currentAudioBuffer)));
+      }
+    }
     // Drawer opens below the bar; scroll just enough to reveal it (keeps max
     // canvas in frame), and scroll back to rest when everything closes. Honor
     // the user's reduced-motion preference — the CSS sets scroll-behavior:auto
@@ -1145,6 +1049,32 @@ function formatDuration(ms) {
   return m + ':' + String(s).padStart(2, '0');
 }
 
+// ---- Pause handling ---------------------------------------------------
+// The 50ms cap below was hardcoded at BOTH gap sites and never surfaced, so
+// the single largest thing separating "how it was drawn" from "how it plays
+// back" was a magic number no one could see or change: a drawing made with
+// long thinking pauses replayed with those pauses silently squeezed out.
+//
+// IT TRAVELS IN THE PAYLOAD, deliberately. The PLAYER builds its timeline with
+// this same function, so a device-local setting would mean the editor's Play
+// and a viewer's shared link disagreed about the same Skribl. serializeSkribl()
+// writes `pauseMode` and loadSkribl() adopts it, which makes the choice part of
+// the work rather than part of the browser.
+//
+// `tight` is 50 — the shipped behaviour — so an unset or unknown value replays
+// exactly as before.
+const PAUSE_CAPS = { keep: Infinity, trim: 250, tight: 50 };
+let pauseMode = 'tight';
+function pauseCapMs() {
+  return Object.prototype.hasOwnProperty.call(PAUSE_CAPS, pauseMode)
+    ? PAUSE_CAPS[pauseMode] : PAUSE_CAPS.tight;
+}
+function setPauseMode(m) {
+  if (!Object.prototype.hasOwnProperty.call(PAUSE_CAPS, m)) return pauseMode;
+  pauseMode = m;
+  return pauseMode;
+}
+
 // True playback duration: sums the gaps between strokes exactly the way
 // the replay does (capping any gap at 50ms), so long idle pauses don't count.
 // Build a compact playback timeline: same capped-gap logic as preview, so the
@@ -1155,7 +1085,7 @@ function buildPlaybackTimeline() {
   const timeline = [{ x: strokes[0].x, y: strokes[0].y, color: strokes[0].color, size: strokes[0].size, erase: strokes[0].erase, start: strokes[0].start, playT: 0, i: 0 }];
   for (let i = 1; i < strokes.length; i++) {
     const gap = strokes[i].t - strokes[i - 1].t;
-    if (gap > 0) playT += Math.min(gap, 50);
+    if (gap > 0) playT += Math.min(gap, pauseCapMs());
     const s = strokes[i];
     timeline.push({ x: s.x, y: s.y, color: s.color, size: s.size, erase: s.erase, start: s.start, playT: playT, i: i });
   }
@@ -1167,7 +1097,7 @@ function getPlaybackDuration() {
   let total = 0;
   for (let i = 1; i < strokes.length; i++) {
     const gap = strokes[i].t - strokes[i - 1].t;
-    if (gap > 0) total += Math.min(gap, 50);
+    if (gap > 0) total += Math.min(gap, pauseCapMs());
   }
   return total;
 }
@@ -1238,7 +1168,10 @@ function beginRecording(continueTake) {
 }
 
 function endRecordingTake() {
-  commitActiveStroke();   // capture a stroke still in progress when Stop is hit
+  // Guarded, not assumed: commitActiveStroke lives in editor_draw.js, which
+  // the player does not load. The player never reaches Stop, but a bare
+  // call would be a ReferenceError waiting for the first path that does.
+  if (window.SkriblCapture) window.SkriblCapture.commitActiveStroke();   // capture a stroke still in progress when Stop is hit
   recording = false;
   recorded = strokes.length > 0;
   // Lock the canvas only if we actually captured a replay.
@@ -1403,6 +1336,31 @@ function clearAndRestore(callback) {
 
 // ---- Editor replay + scrubbable play bar ----
 // Hoisted state so the seek + scrub handlers (outside the click closure) share it.
+// ---- Replay speed -----------------------------------------------------
+// PREVIEW ONLY, and deliberately NOT in the payload — unlike pauseMode, which
+// IS. The distinction is whether the setting describes the WORK or the act of
+// reviewing it: pause handling changes what the drawing is, so a viewer must
+// get the author's choice; speed is a way of looking at your own take, like
+// zoom, and posting it would impose your review habits on everyone who opens
+// the link. serializeSkribl() must never learn about this, and there is a pin
+// on exactly that.
+//
+// The stored `t` values are never touched. Only the replay CLOCK is scaled, so
+// a fast preview cannot rewrite the timing that is the artifact.
+const REPLAY_RATES = [0.5, 1, 2];
+let replayRate = 1;
+try {
+  const _rr = parseFloat(localStorage.getItem('skribl_replay_rate'));
+  if (REPLAY_RATES.indexOf(_rr) !== -1) replayRate = _rr;
+} catch (e) {}
+function setReplayRate(r) {
+  r = parseFloat(r);
+  if (REPLAY_RATES.indexOf(r) === -1) return replayRate;
+  replayRate = r;
+  try { localStorage.setItem('skribl_replay_rate', String(r)); } catch (e) {}
+  return replayRate;
+}
+
 let playTimeline = null, playTotal = 0, playStart = 0, playIndex = 0, playComp = null;
 const playScrub = document.getElementById('playScrub');
 const playScrubFill = document.getElementById('playScrubFill');
@@ -1444,7 +1402,10 @@ function hideScrub() {
 function editorReplayFrame() {
   if (!playing) return;
   if (scrubbing) { requestAnimationFrame(editorReplayFrame); return; }  // frozen at the scrub position
-  const elapsed = performance.now() - playStart;
+  // Scaled CLOCK, not scaled data: elapsed wall time is converted into position
+  // along the drawing's own timeline. The badge and the scrub bar therefore keep
+  // reading in the drawing's time, which is what the author is judging.
+  const elapsed = (performance.now() - playStart) * replayRate;
   if (durationBadge && !durationBadge.hidden) {
     durationBadge.textContent = formatDuration(Math.min(elapsed, playTotal));
   }
@@ -1514,7 +1475,10 @@ playBtn.addEventListener('click', () => {
       requestAnimationFrame(editorReplayFrame);
     };
     if (audioEl && musicEnabled) {
-      playMusicLooped(playTotal, beginFrames);
+      // WALL-CLOCK duration, so a 2x preview stops the music when the
+      // drawing ends rather than half a take later. The source's own
+      // playbackRate is scaled to match in startWebAudioLoop().
+      playMusicLooped(playTotal / replayRate, beginFrames);
     } else {
       beginFrames();
     }
@@ -1543,7 +1507,9 @@ if (playScrub) {
   const endScrub = () => {
     if (!scrubbing) return;
     scrubbing = false;
-    playStart = performance.now() - lastTargetMs;   // resume from the released position
+    // Divided by the rate for the same reason the multiply above exists:
+    // lastTargetMs is in the drawing's time, playStart is wall time.
+    playStart = performance.now() - lastTargetMs / replayRate;   // resume from the released position
   };
   playScrub.addEventListener('pointerup', endScrub);
   playScrub.addEventListener('pointercancel', endScrub);
@@ -1991,7 +1957,25 @@ function drawZoomWaveform() {
 }
 
 function drawWaveform(audioBuffer) {
+  if (!audioBuffer || !musicTrack || !waveformCanvas) return;
   const rect = musicTrack.getBoundingClientRect();
+  // THE THIRD "sized from a rect with no layout yet" BUG IN THIS DRAWER, and
+  // the first one that left a canvas permanently blank rather than briefly
+  // wrong. Sizing a canvas from a 0-wide rect is not a no-op: it sets
+  // canvas.width = 0, which CLEARS the bitmap, and the loop below then paints
+  // zero peaks. The decode chain calls this exactly once, so if the music
+  // drawer happened to be shut at that instant — a draft reload, or picking a
+  // file and closing the drawer before decode lands, both slower and so easier
+  // to hit on a phone — the strip stayed empty for the rest of the session.
+  //
+  // drawZoomWaveform() has carried this same guard for a while and therefore
+  // never showed the bug: it is re-called from updateTrimUI(), so any trim
+  // nudge, drag or label refresh repaints it. That asymmetry is what a user
+  // sees — Loop Detail drawn, the strip above it blank, one decoded buffer
+  // behind both. Bailing here keeps the last good bitmap instead of wiping it;
+  // openDrawer()'s music branch is what schedules the repaint once the panel
+  // has real layout.
+  if (!rect.width) return;
   waveformCanvas.width = rect.width;
   waveformCanvas.height = rect.height;
 
@@ -2477,7 +2461,7 @@ function updateEraserCursor(x, y) {
   const rect = canvas.getBoundingClientRect();
   const lg = getCanvasLogicalSize();
   const scale = lg.width > 0 && rect.width > 0 ? rect.width / lg.width : 1;
-  const cursorSize = size * 3 * scale;
+  const cursorSize = _eraserSize(size, true) * scale;
   eraserCursor.style.width = cursorSize + 'px';
   eraserCursor.style.height = cursorSize + 'px';
   eraserCursor.style.left = x + 'px';
@@ -2893,11 +2877,16 @@ function dragZoomPan(wrap) {
       window.removeEventListener('mouseup', onEnd);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
     }
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onEnd);
     window.addEventListener('touchmove', onMove, { passive: false });
+    // touchcancel too — see the note in editor_music.js. A cancelled
+    // sequence never fires touchend, so cleanup keyed only to touchend
+    // leaves the move listener installed and the drag state set.
     window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
   }
   wrap.addEventListener('mousedown', onStart);
   wrap.addEventListener('touchstart', onStart, { passive: false });
@@ -3348,6 +3337,7 @@ function serializeSkribl() {
     version: 2,             // format marker: drawing lives under frames[]
     schemaVersion: 2,
     playbackMode: 'replay', // 1 frame ⇒ timed replay
+    pauseMode: pauseMode,   // how idle gaps replay; see PAUSE_CAPS
     fps: null,              // replay Skribls don't use fps
     frames: [ frame ],
     draftId: 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
@@ -3457,6 +3447,12 @@ function startWebAudioLoop(onFail) {
     if (gen !== _waGen || !audioCtx || audioCtx.state !== 'running') return false;
     const src = audioCtx.createBufferSource();
     src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = buf.duration;
+    // Keep the music in lockstep with a sped-up preview. It pitch-shifts,
+    // which is the honest trade: music running at its own rate against a
+    // 2x drawing drifts a whole take out of sync, and that is worse to
+    // review against than a chipmunk. Only the preview is affected — the
+    // posted clip and the export are untouched.
+    try { src.playbackRate.value = (typeof replayRate === 'number' ? replayRate : 1); } catch (e) {}
     src.connect(audioCtx.destination);
     try { src.start(); } catch (e) { return false; }
     _waLoopSource = src; _waLoopStartCtx = audioCtx.currentTime; _waLoopDuration = buf.duration;
@@ -3612,10 +3608,31 @@ function resetMediaForLoad() {
   if (typeof updateRepositionUI === 'function') updateRepositionUI();
 }
 
+// Document-load generation. Every asynchronous completion loadSkribl() starts —
+// the base-snapshot Image, the music fetch, loadedmetadata, the decode, and the
+// deferred writeAutosave — belongs to ONE document load, and any of them can
+// land after the user has opened a different Skribl.
+//
+// Reproduced before this existed: load draft A (3s music), load draft B (9s),
+// let B's decode finish and then A's, and A rewrote currentAudioBuffer,
+// audioDuration AND trimEnd to A's values while B was the document on screen.
+// The user's open loop window was silently replaced by one from a draft they
+// had already navigated away from.
+//
+// A generation token checked at EVERY completion is preferable to a guard per
+// callback: the failure mode is a callback nobody remembered to guard, so the
+// rule has to be uniform enough that omitting it is visible.
+let skriblLoadSeq = 0;
+
 function loadSkribl(data) {
   // Validate the raw payload has a recognizable format marker, THEN canonicalize.
   if (!data || (data.version == null && data.schemaVersion == null && !data.frames)) { showToast('That file isn\'t a valid draft', menuBtn); return; }
+  const loadSeq = ++skriblLoadSeq;   // this document load owns every callback below
   data = normalizeSkribl(data);
+  // Adopt the drawing's own pause handling BEFORE any timeline is built,
+  // so the player replays it the way it was posted rather than the way
+  // this browser happens to be set.
+  if (data.pauseMode) setPauseMode(data.pauseMode);
   clearCanvas();
   resetMediaForLoad();
 
@@ -3651,6 +3668,11 @@ function loadSkribl(data) {
     preRecordSnapshot = strokes.length ? data.baseSnapshot : null;
     const baseImg = new Image();
     baseImg.onload = () => {
+      // Pinned by V214e's base-snapshot scenario: two payloads with known
+      // snapshot colours, A released last. Remove this line and the open
+      // document's blue canvas is overwritten by A's red — a silent overwrite
+      // of the drawing itself, not of media metadata.
+      if (loadSeq !== skriblLoadSeq) return;   // a later Skribl is on screen
       ctx.drawImage(baseImg, 0, 0, cw, ch);
       renderStrokes();
     };
@@ -3756,6 +3778,7 @@ function loadSkribl(data) {
     loopCrossfadeMs = data.music.crossfadeMs != null ? data.music.crossfadeMs : 0;
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     fetch(data.music.data).then(r => r.arrayBuffer()).then(buf => {
+      if (loadSeq !== skriblLoadSeq) return;   // superseded before the bytes arrived
       if (audioEl && audioEl._objectUrl) URL.revokeObjectURL(audioEl._objectUrl);
       const blob = new Blob([buf]);
       const url = URL.createObjectURL(blob);
@@ -3764,6 +3787,7 @@ function loadSkribl(data) {
       audioEl._draftData = data.music.data;
       audioEl._fileName = data.music.name || 'Music from draft';
       audioEl.addEventListener('loadedmetadata', () => {
+        if (loadSeq !== skriblLoadSeq) return;   // this element belongs to an older load
         // UI/element refresh only. The authoritative loop state was installed
         // synchronously above and is finalised on decode (BUG A) — do not move
         // trim assignment back in here.
@@ -3784,6 +3808,7 @@ function loadSkribl(data) {
         }
       });
       audioCtx.decodeAudioData(buf.slice(0)).then(audioBuffer => {
+        if (loadSeq !== skriblLoadSeq) return;   // THE ONE THAT BIT: see the note above
         currentAudioBuffer = audioBuffer;
         // BUG A: the decoded buffer is the authoritative duration source. It
         // arrives independently of the <audio> element, so a post whose
@@ -3818,7 +3843,17 @@ function loadSkribl(data) {
     showToast('Draft loaded', menuBtn);
     // The loaded draft is now the active work — refresh autosave so a later
     // restore prompt reflects this, not a stale previous session.
-    setTimeout(() => { if (typeof writeAutosave === 'function') writeAutosave(); }, 300);
+    setTimeout(() => {
+      // UNPINNED, deliberately labelled, and for a reason worth keeping:
+      // with the four guards above holding, the state at 300ms IS the
+      // current document, so a stale timer would autosave the RIGHT thing
+      // and no assertion can see the difference. Pinning it would need a
+      // compound mutation (this guard AND another removed), which is
+      // weaker evidence than none. It earns its place only if one of the
+      // others is ever removed.
+      if (loadSeq !== skriblLoadSeq) return;   // do not autosave a superseded draft
+      if (typeof writeAutosave === 'function') writeAutosave();
+    }, 300);
   }
 }
 
@@ -4598,7 +4633,10 @@ function showPlayerError(msg) {
       window.addEventListener('mousemove', onScrubMove);
       window.addEventListener('mouseup', onScrubEnd);
       window.addEventListener('touchmove', onScrubMove, { passive: false });
+      // touchcancel too: a cancelled scrub otherwise leaves playback
+      // frozen at the scrub position with the listener still live.
       window.addEventListener('touchend', onScrubEnd);
+      window.addEventListener('touchcancel', onScrubEnd);
     };
     const onScrubMove = (e) => {
       if (!scrubbing) return;
@@ -4612,6 +4650,7 @@ function showPlayerError(msg) {
       window.removeEventListener('mouseup', onScrubEnd);
       window.removeEventListener('touchmove', onScrubMove);
       window.removeEventListener('touchend', onScrubEnd);
+      window.removeEventListener('touchcancel', onScrubEnd);
       // Resume only if not already at the very end.
       if (wasRunning && idx < timeline.length) play();
     };
@@ -4743,6 +4782,9 @@ function beginPinch(e) {
   if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) {
     if (typeof ZoomView.enable === 'function') ZoomView.enable();
   }
+  // Show the HUD too, not just the zoom: Fit lives there, and on a skinny phone
+  // the magnify button that would otherwise reveal it is hidden.
+  if (window._skriblRevealZoomHud) window._skriblRevealZoomHud();
   if (!e.touches || e.touches.length < 2) return;
   if (typeof e.preventDefault === 'function') e.preventDefault();
   abortStrokeForPinch();
@@ -4876,6 +4918,13 @@ window.addEventListener('touchcancel', _pinchEnd);
     if (!on) ZoomView.fit();     // return the canvas to 100% when hiding controls
   }
   if (magnifyBtn) magnifyBtn.addEventListener('click', function () { setMagnify(!magnifyOn); });
+  // Published so a PINCH can reveal the zoom HUD. On a skinny phone the magnify
+  // button is hidden (there is no room for nine controls in one row), and the
+  // HUD is where Fit lives — so without this a pinch-zoomed user would have no
+  // way back to 100%: zoomed in, no button, no Fit, and pinching out is fiddly
+  // to land exactly. Hiding a control is only safe when nothing reachable only
+  // through it becomes unreachable.
+  window._skriblRevealZoomHud = function () { if (!magnifyOn) setMagnify(true); };
 
   // Click the % to type an exact zoom — the precise path for desktop (no pinch),
   // and a numeric-keypad shortcut on touch. Enter/blur commits, Escape cancels.
@@ -5232,3 +5281,147 @@ if (window.SkriblReport) window.SkriblReport.init();
 
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();
+
+/* ===================================================================
+   v215 — media dot, paint target, inspector, seg pills, Flip guard
+   =================================================================== */
+
+// One dot, two sources. Amber beats green: amber is the only state that asks
+// anything of the user ("the file is remembered but missing"), and a merged
+// signal that averaged them would hide the one worth acting on. DERIVED from
+// the per-item dots rather than tracked separately — a second copy of this
+// state is how the toolbar and the drawer end up disagreeing.
+function updateMediaDot() {
+  const dot = document.getElementById('mediaTabDot');
+  if (!dot) return;
+  const items = ['photoTabDot', 'musicTabDot']
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+  const present = items.filter(d => !d.hidden);
+  const pending = present.filter(d => d.classList.contains('pending'));
+  dot.hidden = present.length === 0;
+  // !! is load-bearing: classList.toggle(name, undefined) TOGGLES rather than
+  // forcing off, which is what left two colour swatches ringed at once.
+  dot.classList.toggle('pending', !!pending.length);
+  // Mirror onto the drawer rows: the toolbar generalises, these localise.
+  [['photoTabDot', 'photoRowDot'], ['musicTabDot', 'musicRowDot']].forEach(([src, dst]) => {
+    const a = document.getElementById(src), b = document.getElementById(dst);
+    if (!a || !b) return;
+    b.hidden = a.hidden;
+    b.classList.toggle('pending', !!a.classList.contains('pending'));
+  });
+}
+
+// Paint target. Swaps WHICH grid is shown, not what the sheet shows: size,
+// opacity and brush stay put underneath and never move.
+(function initPaintTarget() {
+  const seg = document.getElementById('paintTargetSeg');
+  if (!seg) return;
+  seg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-target]');
+    if (!btn) return;
+    const target = btn.dataset.target;
+    seg.querySelectorAll('button').forEach(b => {
+      const on = b === btn;
+      b.classList.toggle('active', !!on);
+      b.setAttribute('aria-pressed', String(!!on));
+    });
+    ['colorGroup', 'bgGroup'].forEach(id => {
+      const g = document.getElementById(id);
+      if (g) g.hidden = g.dataset.target !== target;
+    });
+    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  });
+  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+})();
+
+// The inspector describes the ACTIVE MODE only. Absent, not greyed: a greyed
+// control still costs a glance and still invites a tap, and showing colour or
+// brush while the eraser is selected is a small lie about what the tool does.
+function syncInspectorToTool(nextTool) {
+  const eraser = nextTool === 'eraser';
+  ['colorGroup', 'bgGroup', 'paintTargetSeg', 'brushRow', 'opacityRow'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'colorGroup')      el.hidden = eraser || el.dataset.target !== currentPaintTarget();
+    else if (id === 'bgGroup')    el.hidden = eraser || el.dataset.target !== currentPaintTarget();
+    else                          el.hidden = eraser;
+  });
+  const er = document.getElementById('eraserRow');
+  if (er) er.hidden = !eraser;
+}
+function currentPaintTarget() {
+  const on = document.querySelector('#paintTargetSeg button.active');
+  return on ? on.dataset.target : 'stroke';
+}
+
+// The draw drawer's segmented rows now carry a pill on BOTH surfaces. track()
+// rather than a one-shot place(): the drawer ships `hidden`, so at init the
+// buttons have no layout and any single call bails, leaving the pill at
+// opacity 0 — the exact bug lib/segslider.js was written for.
+(function trackDrawerSegs() {
+  ['smoothSeg', 'brushSeg', 'shapeSeg', 'pressureSeg', 'eraserSeg'].forEach(id => {
+    const seg = document.getElementById(id);
+    if (seg && window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  });
+})();
+
+// Media drawer rows route to the existing photo/music drawers. A router, so
+// nothing about their internals changes.
+(function initMediaRows() {
+  const go = (id, drawer) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', () => {
+      const panel = document.getElementById('mediaPanel');
+      if (panel) panel.hidden = true;
+      const opener = document.querySelector('[data-drawer="' + drawer + '"]');
+      if (opener && opener !== el) opener.click();
+    });
+  };
+  go('mediaAddImage', 'photo');
+  go('mediaAddMusic', 'music');
+  const zoom = document.getElementById('mediaZoom');
+  if (zoom) zoom.addEventListener('click', () => {
+    const panel = document.getElementById('mediaPanel');
+    if (panel) panel.hidden = true;
+    // Reveal the zoom HUD, which is where Fit lives. beginPinch() already does
+    // this for the gesture; this is the same reveal for people without one.
+    if (typeof revealZoomHud === 'function') revealZoomHud();
+  });
+})();
+
+// Flip was a bare <a href>, so leaving Pad was a plain navigation with nothing
+// in its way: one tap and an unposted drawing was gone. Deliberately NOT
+// beforeunload — that fires on reload and tab-close too, where the browser
+// shows its own untranslatable string and cannot say WHICH work is at risk.
+(function guardFlipNavigation() {
+  const flipBtn     = document.getElementById('flipBtn');
+  const leaveSheet  = document.getElementById('leaveSheet');
+  const leaveGo     = document.getElementById('leaveGo');
+  const leaveCancel = document.getElementById('leaveCancel');
+  if (!flipBtn || !leaveSheet || !leaveGo || !leaveCancel) return;
+
+  // Only guard when there is something to lose. A guard that fires on an empty
+  // canvas trains people to dismiss it unread, which is worse than none.
+  const atRisk = () => recording || hasContent || recorded;
+  let released = false;
+
+  flipBtn.addEventListener('click', (e) => {
+    if (released || !atRisk()) return;
+    e.preventDefault();
+    leaveSheet.hidden = false;
+    leaveCancel.focus();   // focus the SAFE choice
+  });
+  const close = () => { leaveSheet.hidden = true; flipBtn.focus(); };
+  leaveCancel.addEventListener('click', close);
+  leaveGo.addEventListener('click', () => {
+    released = true;
+    // Navigate directly rather than re-clicking the anchor: a synthetic click
+    // re-enters this handler, and `released` is all that stops the loop.
+    window.location.href = flipBtn.getAttribute('href');
+  });
+  leaveSheet.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); close(); }
+  });
+})();

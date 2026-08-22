@@ -56,6 +56,9 @@ BATCHES = [
     # batch 1 was never written and every re-invoke restarted from the top.
     # It gets a batch of its own; the three it shared with move to batch 2.
     ["verify_ux.py"],
+    # verify_tools.py holds the v213 tool work, split out of verify_ux when that
+    # suite outgrew a single invocation. Its own batch for the same reason.
+    ["verify_tools.py"],
     ["verify_move.py", "verify_pages.py", "verify_hold.py"],
     ["verify_review.py", "verify_help.py", "verify_tips.py"],
     ["verify_exportui.py", "verify_exopts.py", "verify_dots.py", "verify_fix.py"],

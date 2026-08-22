@@ -61,6 +61,7 @@ def read_run():
     return {
         "assertions": total,
         "suites": len(oks),
+        "names": [n for n, _ in re.findall(r"^\s+(\S+): (ok|FAIL|ERROR|skip)", text, re.M)],
         "skipped": [s for s in skipped],
         "problems": problems,
         "version": grab(r"SKRIBL_VERSION\s+:\s*(\S+)", "unknown"),
@@ -129,14 +130,89 @@ def apply(path, text, check):
     return "updated"
 
 
+def _release_assertions(frozen_tree):
+    """Assertion total recorded in harness/RELEASE.md, if it describes THIS tree.
+
+    Returns None when there is no release record, or when it was generated on a
+    different tree — in which case it says nothing about the run being stamped
+    and must not gate it.
+
+    ASSERTIONS, not suite counts. read_run() counts only suites that REPORTED
+    (len(oks)), while RELEASE.md's "suites reported" includes skips — 59 against
+    61 on this very tree, so a suite-count comparison refuses a legitimate full
+    release. The assertion total is the one figure both generators compute the
+    same way, because a skipped suite contributes zero to each.
+    """
+    rel = ROOT / "harness" / "RELEASE.md"
+    if not rel.is_file():
+        return None
+    body = rel.read_text(encoding="utf-8")
+    m = re.search(r"tree hash\s+([0-9a-f]{12,64})", body)
+    if not m or not frozen_tree or m.group(1)[:12] != frozen_tree[:12]:
+        return None
+    a = re.search(r"^\s*assertions\s+(\d+)\s*$", body, re.M)
+    return int(a.group(1)) if a else None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true",
                     help="exit 1 if any stanza is stale; write nothing")
+    ap.add_argument("--force", action="store_true",
+                    help="stamp even if it would NARROW a release-wide record")
     args = ap.parse_args()
 
     run = read_run()
     text = stanza(run)
+
+    # SCRATCH PROBES MUST NOT BE PUBLISHED AS THE PROJECT'S RESULT.
+    #
+    # Anything run through run_harness.sh gets stamped, including a one-off
+    # `_probe_*.py` written to look at a screenshot. At v213 that put
+    # "RUN NOT GREEN — 1 suite(s) failed: _probe_mir.py. 0 assertions passed"
+    # into README, START-HERE, HANDOFF and harness/README — four docs claiming
+    # the project was failing because a throwaway probe had no assertions.
+    #
+    # The v212 narrowing guard did not catch it: that only engages when
+    # RELEASE.md describes the CURRENT tree, and a scratch probe is usually run
+    # mid-change when it does not. This is the cheaper, more general rule —
+    # a run whose suite names start with '_' is not a result about the project.
+    _scratch = [n for n in run.get("names", []) if n.startswith("_")]
+    if _scratch and not args.check:
+        print("REFUSED: this run includes scratch probe(s): " + ", ".join(_scratch))
+        print("         A throwaway _probe_*.py is not a result about the "
+              "project and must not be stamped into the docs.")
+        return 0    # not an error: the probe itself ran fine
+
+    # DO NOT LET A ONE-BATCH RUN OVERWRITE A RELEASE-WIDE RECORD.
+    #
+    # release_run.py already fixed this from one side: it drives run_harness.sh
+    # one batch at a time, so the record left behind described only the final
+    # batch, and it now rewrites LAST-RUN.txt to cover every batch before
+    # re-stamping. But that only holds while the release run is the LAST harness
+    # invocation. Any bare `run_harness.sh verify_docs.py` afterwards rewrites
+    # LAST-RUN.txt and re-stamps from it — observed at the v212 seal, publishing
+    # "36 assertions across 1 suites" beside a RELEASE.md saying 2400 across 61.
+    #
+    # That is worse than a hand-typed number, not better: it is machine-
+    # generated, so it carries exactly the authority this project grants
+    # generated figures, and it is wrong. The generated-not-typed rule assumes
+    # one generator; there are two, and they can disagree.
+    #
+    # So: a stamp that would NARROW the record for the SAME tree is refused.
+    # --force is the deliberate override. A different tree does not gate at all,
+    # because then the release record describes something else.
+    if not args.check:
+        rel_total = _release_assertions(run.get("tree", ""))
+        if rel_total and run["assertions"] < rel_total and not args.force:
+            print(f"REFUSED: harness/LAST-RUN.txt records {run['assertions']} "
+                  f"assertion(s), but harness/RELEASE.md records {rel_total} on "
+                  f"this same tree ({run.get('tree', '')[:12]}).")
+            print("         Stamping would replace release-wide evidence with a "
+                  "single batch.")
+            print("         Re-run the release (harness/release_run.py) so it is "
+                  "the LAST invocation, or pass --force.")
+            return 1
 
     stale, touched, unmarked = [], [], []
     for path in TARGETS:

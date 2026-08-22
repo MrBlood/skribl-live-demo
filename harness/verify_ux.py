@@ -1721,6 +1721,102 @@ with _sp() as _p4:
             _s.close()
     _b.close()
 
+
+# ---------------------------------------------------------------------------
+# V213 — undo during a take must not reveal the finished-take controls.
+#
+# syncStateAfterHistoryChange() derives `recorded` from stroke count alone, then
+# unhid #playWrap, #postBtn and #durationBadge from it — the three things
+# startRecording() had just deliberately hidden. So undoing mid-recording, with
+# ANY stroke still on the canvas, put Play / Post / the duration badge back into
+# a header with no room for them: the row overflowed and #recIndicator wrapped
+# its "1:04 · 0:19 play" text onto three lines, which is the record pill
+# visibly ballooning. Undoing to an empty canvas appeared to "fix" it only
+# because `recorded` went false and the same line re-hid them — which is why the
+# report said it happens only while something is still drawn.
+#
+# Measured before the fix at 900x900: the pill went 133x29 -> 66x74 and the
+# header overflowed by 16px. Asserted on RENDERED GEOMETRY as well as the hidden
+# flags, because `hidden` alone would pass against a build that showed the
+# controls without overflowing, and the overflow is what the user saw.
+#
+# The v213 TOOL work lives in verify_tools.py — these two stay here because they
+# are behaviour fixes to recording and drawing, not new tools.
+print("\nV213 — undo mid-take keeps the finished-take controls hidden")
+
+_HDR = """() => {
+  const g = id => document.getElementById(id);
+  const rec = g('recIndicator').getBoundingClientRect();
+  const hdr = document.querySelector('.header');
+  return {
+    recording: recording, strokes: strokes.length,
+    play: g('playWrap').hidden, post: g('postBtn').hidden,
+    dur: g('durationBadge').hidden,
+    recH: Math.round(rec.height),
+    overflow: hdr.scrollWidth - hdr.clientWidth,
+  };
+}"""
+
+with sync_playwright() as _b13:
+    _br13 = _b13.chromium.launch()
+    _c13 = _br13.new_context(viewport={"width": 900, "height": 900})
+    _p13 = _c13.new_page()
+    _p13.goto(BASE + "/", wait_until="load"); _p13.wait_for_timeout(700)
+    _p13.evaluate("() => localStorage.clear()")
+    _p13.click("#recordBtn"); _p13.wait_for_timeout(350)
+    _baseline = _p13.evaluate(_HDR)
+
+    def _stroke13(x0, y0, x1, y1):
+        _bx = _p13.locator("#canvas").bounding_box()
+        _p13.mouse.move(_bx["x"] + x0, _bx["y"] + y0); _p13.mouse.down()
+        for _i in range(1, 15):
+            _p13.mouse.move(_bx["x"] + x0 + (x1 - x0) * _i / 14,
+                            _bx["y"] + y0 + (y1 - y0) * _i / 14)
+        _p13.mouse.up(); _p13.wait_for_timeout(120)
+
+    _stroke13(60, 60, 200, 160)
+    _stroke13(60, 300, 220, 380)
+    _p13.click("#undoBtn"); _p13.wait_for_timeout(400)
+    _mid = _p13.evaluate(_HDR)
+
+    check("V213 gate: still recording with a stroke remaining after the undo",
+          _mid["recording"] is True and _mid["strokes"] > 0,
+          f"recording={_mid['recording']}, strokes={_mid['strokes']}")
+    check("V213 undo mid-take leaves Play, Post and the duration badge HIDDEN",
+          _mid["play"] and _mid["post"] and _mid["dur"],
+          f"play hidden={_mid['play']}, post hidden={_mid['post']}, "
+          f"duration hidden={_mid['dur']}")
+    check("V213 ...and the record pill does not grow, nor the header overflow "
+          "(the wrap is what the pill ballooning actually is)",
+          _mid["recH"] == _baseline["recH"] and _mid["overflow"] <= 0,
+          f"pill height {_baseline['recH']} -> {_mid['recH']}, "
+          f"header overflow {_mid['overflow']}px")
+
+    # V213b — one mousemove must capture ONE point.
+    #
+    # continueDraw was bound on the canvas AND on the window (the window one so
+    # a stroke keeps following the pointer off-canvas). Over the canvas the
+    # element handler runs and the SAME event then bubbles to the window, so
+    # every move was captured twice: 21 events -> 41 points, measured. No wrong
+    # pixel results, which is why it survived — but the replay array and the
+    # posted payload carried double the points, and the stabiliser lerped twice
+    # per event, so the smoothing slider meant one thing over the canvas and
+    # another outside it.
+    _p13.evaluate("() => { strokes = []; strokeGroups = []; }")
+    _bx13 = _p13.locator("#canvas").bounding_box()
+    _p13.mouse.move(_bx13["x"] + 100, _bx13["y"] + 400); _p13.mouse.down()
+    _N13 = 20
+    for _i in range(1, _N13 + 1):
+        _p13.mouse.move(_bx13["x"] + 100 + _i * 6, _bx13["y"] + 400 + _i * 3)
+    _p13.mouse.up(); _p13.wait_for_timeout(250)
+    _pts13 = _p13.evaluate("() => strokeGroups.slice(-1)[0] || 0")
+    check("V213b one mousemove over the canvas captures ONE point "
+          "(the window fallback must not re-handle a bubbled event)",
+          _N13 <= _pts13 <= _N13 + 2,
+          f"{_N13} moves -> {_pts13} points (double-capture would give ~{_N13 * 2})")
+    _p13.close(); _c13.close()
+    _br13.close()
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:

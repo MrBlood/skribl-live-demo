@@ -851,3 +851,13 @@
    character), sized to sit on the label's baseline. */
 .addbtn { display: inline-flex; align-items: center; gap: 6px; }
 .addbtn .addbtn-ic { width: 13px; height: 13px; flex: none; }
+
+/* ---------- v213: Flip's tool row holds THREE tools ----------
+   Same change as Pad's. Flip was only 4-5px over at 375/390 rather than Pad's
+   52, because its buttons were already tighter — so the gap alone buys it back
+   and the tap targets stay untouched. Labels already hide below 640px. */
+@media (max-width: 640px) {
+  .flip-tools { gap: 3px; padding: 12px 6px; }
+  .flip-tools #toolGroup .tool-btn { padding: 6px 8px; }
+  .flip-tools #toolGroup .tool-btn svg { width: 21px; height: 21px; }
+}
