@@ -5373,25 +5373,24 @@ function currentPaintTarget() {
 // Media drawer rows route to the existing photo/music drawers. A router, so
 // nothing about their internals changes.
 (function initMediaRows() {
-  const go = (id, drawer) => {
+  // Call the drawer controller DIRECTLY. The first version looked up
+  // document.querySelector('[data-drawer="photo"]') and clicked it — but the
+  // only element carrying that attribute is now the row itself, since the old
+  // toolbar buttons were merged away. It found itself, the `!== el` guard
+  // skipped it, and the drawer just closed with nothing opening.
+  const go = (id, name) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('click', () => {
-      const panel = document.getElementById('mediaPanel');
-      if (panel) panel.hidden = true;
-      const opener = document.querySelector('[data-drawer="' + drawer + '"]');
-      if (opener && opener !== el) opener.click();
+      if (typeof openDrawer === 'function') openDrawer(name);
     });
   };
   go('mediaAddImage', 'photo');
   go('mediaAddMusic', 'music');
   const zoom = document.getElementById('mediaZoom');
   if (zoom) zoom.addEventListener('click', () => {
-    const panel = document.getElementById('mediaPanel');
-    if (panel) panel.hidden = true;
-    // Reveal the zoom HUD, which is where Fit lives. beginPinch() already does
-    // this for the gesture; this is the same reveal for people without one.
-    if (typeof revealZoomHud === 'function') revealZoomHud();
+    if (typeof openDrawer === 'function') openDrawer(null);
+    if (typeof setMagnify === 'function') setMagnify(true);
   });
 })();
 

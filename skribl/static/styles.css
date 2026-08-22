@@ -4700,13 +4700,9 @@ body.playing .flip-grid { display: none; }
    let each report itself and the rule disappears. Measured: the row goes
    308px -> 340px and still fits one line at 375px. */
 #mediaOpenBtn { width: 66px; }
-#mediaOpenBtn svg { width: 56px; height: 28px; }
-/* The note is FILLED, not stroked. A stroke-drawn note at this size turns to
-   mush — solid shapes survive downscaling where thin outlines do not. The
-   photo frame stays outlined so it matches Pen, Eraser and Shape. */
-#mediaOpenBtn svg g[fill="currentColor"] { stroke: none; }
+#mediaOpenBtn svg { width: 54px; height: 26px; }
 #mediaOpenBtn .tab-dot { position: absolute; top: 5px; }
-#mediaOpenBtn .tab-dot.for-photo { left: 21px; right: auto; }
+#mediaOpenBtn .tab-dot.for-photo { left: 20px; right: auto; }
 #mediaOpenBtn .tab-dot.for-music { right: 7px; }
 
 /* Magnify returns, on desktop only. The button exists where the GESTURE does

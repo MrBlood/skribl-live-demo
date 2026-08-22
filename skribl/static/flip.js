@@ -3668,15 +3668,12 @@ function updateMediaDot() {
 })();
 
 (function initMediaRows(){
-  const go=(id,drawer)=>{
+  // Direct controller call — see the note in app.js: the old lookup found the
+  // row itself and opened nothing.
+  const go=(id,name)=>{
     const el=document.getElementById(id);
     if(!el) return;
-    el.addEventListener('click',()=>{
-      const panel=document.getElementById('mediaPanel');
-      if(panel) panel.hidden=true;
-      const opener=document.querySelector('[data-drawer="'+drawer+'"]');
-      if(opener&&opener!==el) opener.click();
-    });
+    el.addEventListener('click',()=>{ if(_flipDrawerCtl) _flipDrawerCtl.open(name); });
   };
   go('mediaAddImage','photo');
   go('mediaAddMusic','music');

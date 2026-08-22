@@ -51,6 +51,22 @@ re-adding. Two separate glyphs keep the honest signal.
 radius and stroke rhythm, so they read as one control rather than two mismatched
 icons.
 
+## Fixed in v216e
+
+**The media rows opened nothing.** Tapping Add image or Add music closed the
+drawer and did nothing else. `initMediaRows` looked up
+`document.querySelector('[data-drawer="photo"]')` and clicked it — but the only
+element carrying that attribute was the ROW ITSELF, since the old toolbar
+buttons had been merged away. It found itself, the `!== el` guard skipped it,
+and nothing opened. The rows now call the drawer controller directly, and
+`data-drawer` is off the rows so nothing else can match them.
+
+**The media glyphs are now the drawer's own icons**, placed side by side in one
+viewBox — the same paths already used by the Add image and Add music rows, and
+by v214's toolbar buttons. Three hand-drawn attempts (compound, matched-weight,
+filled note) were all worse than the icons that were already there and already
+read well. Reuse beat redrawing.
+
 ## Changes
 
 **1. Select removed from Pad.** Pad captures a performance; Select edits points
