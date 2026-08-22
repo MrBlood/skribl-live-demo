@@ -991,12 +991,7 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
   panels: {
     draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
     photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
-    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' },
-    // The media button was inert without this: the toolbar click handler calls
-    // toggle(btn.dataset.drawer), and 'media' was not a registered panel, so the
-    // call resolved to nothing at all — a button that looked fine and did
-    // nothing. Registering it is the whole fix.
-    media: { panel: 'mediaPanel', button: 'mediaOpenBtn', openClass: 'open' }
+    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' }
   },
   reveal(panel, name) {
     if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
@@ -5291,19 +5286,6 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    v215 — media dot, paint target, inspector, seg pills, Flip guard
    =================================================================== */
 
-// SUPERSEDED. The toolbar now carries a dot per item (photo and music each
-// have their own), so there is nothing to merge and the amber-beats-green
-// precedence rule is gone with it. The per-item dots are updated by the
-// existing photo/music code; this only mirrors them onto the drawer rows.
-function updateMediaDot() {
-  [['photoTabDot', 'photoRowDot'], ['musicTabDot', 'musicRowDot']].forEach(function (pair) {
-    var src = document.getElementById(pair[0]), dst = document.getElementById(pair[1]);
-    if (!src || !dst) return;
-    dst.hidden = src.hidden;
-    // !! is load-bearing: toggle(name, undefined) TOGGLES rather than forcing off.
-    dst.classList.toggle('pending', !!src.classList.contains('pending'));
-  });
-}
 
 // Paint target. Swaps WHICH grid is shown, not what the sheet shows: size,
 // opacity and brush stay put underneath and never move.
@@ -5372,27 +5354,6 @@ function currentPaintTarget() {
 
 // Media drawer rows route to the existing photo/music drawers. A router, so
 // nothing about their internals changes.
-(function initMediaRows() {
-  // Call the drawer controller DIRECTLY. The first version looked up
-  // document.querySelector('[data-drawer="photo"]') and clicked it — but the
-  // only element carrying that attribute is now the row itself, since the old
-  // toolbar buttons were merged away. It found itself, the `!== el` guard
-  // skipped it, and the drawer just closed with nothing opening.
-  const go = (id, name) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('click', () => {
-      if (typeof openDrawer === 'function') openDrawer(name);
-    });
-  };
-  go('mediaAddImage', 'photo');
-  go('mediaAddMusic', 'music');
-  const zoom = document.getElementById('mediaZoom');
-  if (zoom) zoom.addEventListener('click', () => {
-    if (typeof openDrawer === 'function') openDrawer(null);
-    if (typeof setMagnify === 'function') setMagnify(true);
-  });
-})();
 
 // Flip was a bare <a href>, so leaving Pad was a plain navigation with nothing
 // in its way: one tap and an unposted drawing was gone. Deliberately NOT

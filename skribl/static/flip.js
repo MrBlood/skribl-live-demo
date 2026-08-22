@@ -1715,9 +1715,7 @@ const _flipDrawerCtl = skriblDrawers({
     photo: { panel: photoPanel, button: imageBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaUI(); requestAnimationFrame(positionFitSlider); } },
     music: { panel: musicPanel, button: musicBtn, openClass: 'open', aria: true,
-             onOpen(){ syncMediaUI(); } },
-    media: { panel: document.getElementById('mediaPanel'), button: document.getElementById('mediaOpenBtn'),
-             openClass: 'open', aria: true }
+             onOpen(){ syncMediaUI(); } }
   },
   reveal(open){
     if(!open) return;
@@ -1739,14 +1737,12 @@ function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null)
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('draw'); });
-// GUARDED. #imageBtn and #musicBtn no longer exist — they merged into the single
-// #mediaOpenBtn — and these two lines were unguarded, so they threw a TypeError
-// at load and every line of flip.js after them never ran. Flip was dead on
-// arrival and nothing in the build checked for it.
+// Guarded deliberately. These were briefly unguarded while image/music were
+// merged into one control, and the resulting TypeError at load killed every
+// line of flip.js after them. The buttons are back, but the guard stays: a
+// null check costs nothing and a missing element should never take down a file.
 if (imageBtn) imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
 if (musicBtn) musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
-const mediaOpenBtn=document.getElementById('mediaOpenBtn');
-if (mediaOpenBtn) mediaOpenBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('media'); });
 document.addEventListener('click',e=>{ const t=e.target;
   // The file inputs (#imageInput/#musicInput/#draftInput) live at the PAGE
   // ROOT on Flip, outside the drawer panels (the shared drawer partials omit
@@ -3614,19 +3610,6 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
    other lacked. This is the Flip half.
    =================================================================== */
 
-// SUPERSEDED. The toolbar now carries a dot per item (photo and music each
-// have their own), so there is nothing to merge and the amber-beats-green
-// precedence rule is gone with it. The per-item dots are updated by the
-// existing photo/music code; this only mirrors them onto the drawer rows.
-function updateMediaDot() {
-  [['photoTabDot', 'photoRowDot'], ['musicTabDot', 'musicRowDot']].forEach(function (pair) {
-    var src = document.getElementById(pair[0]), dst = document.getElementById(pair[1]);
-    if (!src || !dst) return;
-    dst.hidden = src.hidden;
-    // !! is load-bearing: toggle(name, undefined) TOGGLES rather than forcing off.
-    dst.classList.toggle('pending', !!src.classList.contains('pending'));
-  });
-}
 
 (function initPaintTarget(){
   const seg=document.getElementById('paintTargetSeg');
@@ -3667,17 +3650,6 @@ function updateMediaDot() {
   });
 })();
 
-(function initMediaRows(){
-  // Direct controller call — see the note in app.js: the old lookup found the
-  // row itself and opened nothing.
-  const go=(id,name)=>{
-    const el=document.getElementById(id);
-    if(!el) return;
-    el.addEventListener('click',()=>{ if(_flipDrawerCtl) _flipDrawerCtl.open(name); });
-  };
-  go('mediaAddImage','photo');
-  go('mediaAddMusic','music');
-})();
 
 // The mirror of Pad's guard: Flip's link back to Pad loses unposted work the
 // same way, and a fix on one surface only is the shape of bug this codebase
