@@ -120,12 +120,7 @@
     </div>
 
     <div class="flip-tools">
-    {# The shape picker lives ON the Shape button, not buried in the drawer.
-       Tapping Shape selects the tool AND opens this; tapping a kind sets it and
-       closes. Tapping Shape again re-opens it to switch. Same #shapeSeg id and
-       same data-shape buttons as before, so editor_shapes.js binds unchanged —
-       this is a RELOCATION, not a rewrite. #}
-    <div class="shape-pop" id="shapePop" role="dialog" aria-label="Shape kind" hidden>
+      <div class="shape-pop" id="shapePop" role="dialog" aria-label="Shape kind" hidden>
       <div class="smooth-seg" id="shapeSeg" role="group" aria-label="Shape kind">
         <span class="seg-slider"></span>
         <button type="button" class="smooth-btn active" data-shape="line" aria-pressed="true" title="Straight line">Line</button>
@@ -133,17 +128,10 @@
         <button type="button" class="smooth-btn" data-shape="ellipse" aria-pressed="false" title="Ellipse &mdash; hold Shift for a circle">Oval</button>
       </div>
     </div>
-
-      <div class="color-tool">
-        {# Flip needed MARKUP where Pad needed only a wrapper: #colorCurrent IS the
-           button, so there was no inner element to be the core. flip.js writes to
-           #colorCurrentCore instead. #}
-        <button type="button" class="color-current" id="colorCurrent" title="Colours and brush" aria-haspopup="true" aria-expanded="false">
-          <span class="color-ring"><span class="color-core" id="colorCurrentCore"></span></span>
-        </button>
-      </div>
-      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
-      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
+      {# ORDER MATCHES PAD: tools, then undo/redo, then colour and media. Flip
+         had colour and media first, so the two editors read left-to-right
+         differently for the same controls and muscle memory built on one
+         aimed at the wrong thing on the other. #}
       <div class="tool-group" id="toolGroup" title="Pen / Eraser">
         <div class="tool-slider" id="toolSlider"></div>
         <button type="button" class="tool-btn active" id="penToolBtn" data-tool="pen" title="Draw — shortcut P">
@@ -159,6 +147,23 @@
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
+      <span class="tool-sep"></span>
+      <div class="color-tool">
+        {# Flip needed MARKUP where Pad needed only a wrapper: #colorCurrent IS the
+           button, so there was no inner element to be the core. flip.js writes to
+           #colorCurrentCore instead. #}
+        <button type="button" class="color-current" id="colorCurrent" title="Colours and brush" aria-haspopup="true" aria-expanded="false">
+          <span class="color-ring"><span class="color-core" id="colorCurrentCore"></span></span>
+        </button>
+      </div>
+      <span class="tool-sep"></span>
+      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
+      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
+{# The shape picker lives ON the Shape button, not buried in the drawer.
+       Tapping Shape selects the tool AND opens this; tapping a kind sets it and
+       closes. Tapping Shape again re-opens it to switch. Same #shapeSeg id and
+       same data-shape buttons as before, so editor_shapes.js binds unchanged —
+       this is a RELOCATION, not a rewrite. #}
     </div>
 
     <!-- Drawers open BELOW the toolbar in normal flow: the canvas above stays

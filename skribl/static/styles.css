@@ -4527,11 +4527,18 @@ body.playing .flip-grid { display: none; }
      max-width and wraps rather than overflowing. So the room went into SPACING
      — the gap and the separators — rather than into size, which is where it
      shows anyway: the icons read as cramped because they were 1px apart. */
-  #toolGroup .tool-btn { padding: 9px 8px; }
+  /* SIZED FOR 360px, not 375. 360 is a very common Android width, and at the
+     previous spacing the row wrapped there — a two-row bar on a large share of
+     phones rather than a rare fallback. Measured: 326px, one row from 360 up.
+
+     The 10px came from the tool-group's internal button padding, NOT from the
+     controls: they stay at 34px. Shrinking them to 33px reached the same width
+     while making the tap targets worse, and they are already under target. */
+  #toolGroup .tool-btn { padding: 9px 7px; }
   #toolGroup .tool-btn svg { width: 22px; height: 22px; }
   .tool-open, .toolbar .undo-btn { width: 34px; }
-  .toolbar { gap: 3px; padding: 6px; }
-  .tool-sep { margin: 0 3px; }
+  .toolbar { gap: 2px; padding: 6px; }
+  .tool-sep { margin: 0 2px; }
 }
 
 /* ---------- v213: the tool row holds FOUR tools ----------
@@ -4713,4 +4720,17 @@ body.playing .flip-grid { display: none; }
      a centred popover would hang off the edge. */
   .shape-pop { left: 8px; transform: none; }
   .shape-pop::after { left: 64px; }
+}
+
+/* ---------- Second phone tier, from 393px ----------
+   The 640px block is sized for the NARROWEST supported phone. Every current
+   iPhone is 393px or wider and has measured room the 375px squeeze was denying
+   it. 393 is the breakpoint because it is where the larger sizing first fits:
+   at 390px this same row wraps, measured, so the tier cannot start lower. */
+@media (min-width: 393px) and (max-width: 640px) {
+  #toolGroup .tool-btn { padding: 9px 9px; }
+  #toolGroup .tool-btn svg { width: 22px; height: 22px; }
+  .tool-open, .toolbar .undo-btn { width: 36px; }
+  .toolbar { gap: 3px; padding: 6px; }
+  .tool-sep { margin: 0 3px; }
 }

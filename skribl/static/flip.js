@@ -1630,9 +1630,29 @@ function positionToolSlider(){
   // offsetLeft, not a sum of the widths before it. The old form was
   // `erasing ? penWidth : 0` — a two-button ASSUMPTION, not a special case —
   // and a third tool parked the pill under the second. Same bug as Pad's.
+  // offsetLeft is ALREADY relative to #toolGroup, which is position:relative and
+  // therefore the button's offsetParent. Subtracting the GROUP's own offsetLeft
+  // on top of that is a double subtraction. On Pad it was off by a couple of
+  // pixels because the toolbar's padding happened to be close to the group's;
+  // here the group sits after the colour and media controls, so grp.offsetLeft
+  // is large and the pill was thrown clear off its button — which reads as the
+  // slider simply not working. Measure against the group's own padding, which
+  // is what .tool-slider's `left` is matched to.
+  const padL = parseFloat(getComputedStyle(grp || document.body).paddingLeft) || 0;
   sl.style.width = active.offsetWidth+'px';
-  sl.style.transform = 'translateX('+(active.offsetLeft - (grp?grp.offsetLeft:0))+'px)';
+  sl.style.transform = 'translateX('+(active.offsetLeft - padL)+'px)';
 }
+// One call at init is not enough on a phone: the bar is often laid out later and
+// the pill ends up measured against zero widths. Same treatment Pad got.
+(function keepToolSliderPlaced(){
+  const grp=document.getElementById('toolGroup');
+  if(!grp) return;
+  const replace=()=>positionToolSlider();
+  if(typeof ResizeObserver!=='undefined') new ResizeObserver(replace).observe(grp);
+  window.addEventListener('resize',replace);
+  window.addEventListener('orientationchange',replace);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(replace);
+})();
 function setTool(t){
   flipTool = (t === 'eraser' || t === 'shape') ? t : 'pen';
   erasing = (flipTool === 'eraser');

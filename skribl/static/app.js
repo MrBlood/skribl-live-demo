@@ -26,6 +26,39 @@ eraserCursor.style.cssText = `
 `;
 canvasWrap.appendChild(eraserCursor);
 
+// A small badge that follows the pointer while the Shape tool is active, so the
+// kind you are about to draw is visible at the point you are drawing it. The
+// shape picker lives on the toolbar button, and once you have drawn a few and
+// looked away there is otherwise nothing on screen saying whether the next drag
+// makes a line, a rectangle or an oval.
+const shapeCursor = document.createElement('div');
+shapeCursor.id = 'shapeCursor';
+shapeCursor.style.cssText = `
+  position: absolute;
+  pointer-events: none;
+  display: none;
+  transform: translate(14px, 14px);
+  z-index: 11;
+  opacity: .85;
+`;
+canvasWrap.appendChild(shapeCursor);
+
+const _SHAPE_GLYPH = {
+  line:    '<line x1="3" y1="15" x2="15" y2="3"/>',
+  rect:    '<rect x="3" y="4.5" width="12" height="9" rx="1.5"/>',
+  ellipse: '<ellipse cx="9" cy="9" rx="6.5" ry="5"/>'
+};
+function updateShapeCursor(x, y) {
+  const kind = (typeof shapeKind !== 'undefined') ? shapeKind : 'line';
+  shapeCursor.innerHTML =
+    '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" ' +
+    'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ' +
+    'style="filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))">' +
+    (_SHAPE_GLYPH[kind] || _SHAPE_GLYPH.line) + '</svg>';
+  shapeCursor.style.left = x + 'px';
+  shapeCursor.style.top = y + 'px';
+}
+
 let bgColor = '#0d0f14';
 let photoBg = null;
 let photoFit = 'cover';
@@ -631,6 +664,7 @@ function setTool(nextTool) {
     canvas.style.cursor = nextTool === 'eraser' ? 'none' : '';
   }
   if (nextTool !== 'eraser') eraserCursor.style.display = 'none';
+  if (nextTool !== 'shape' && typeof shapeCursor !== 'undefined') shapeCursor.style.display = 'none';
   if (toolSlider && activeBtn) {
     // Measured from the button's own offsetLeft rather than summed from the
     // widths before it. The old form was `pen ? 0 : penWidth`, which is not a
@@ -638,9 +672,16 @@ function setTool(nextTool) {
     // parked the pill under the second one and it looked like the wrong tool
     // was selected. offsetLeft is what the browser actually laid out, so this
     // is right for any number of tools and for any label width.
+    // offsetLeft is ALREADY relative to .tool-group, which is position:relative
+    // and therefore the button's offsetParent. The old form subtracted the
+    // GROUP's own offsetLeft on top of that — a double subtraction that only
+    // looked correct while the toolbar's left padding happened to equal the
+    // group's. Changing the toolbar padding shifted the pill off its button.
+    // Measure against the group's padding, which is what .tool-slider's own
+    // `left` is matched to.
+    const padL = parseFloat(getComputedStyle(toolGroupEl || document.body).paddingLeft) || 0;
     toolSlider.style.width = activeBtn.offsetWidth + 'px';
-    toolSlider.style.transform =
-      `translateX(${activeBtn.offsetLeft - (toolGroupEl ? toolGroupEl.offsetLeft : 0)}px)`;
+    toolSlider.style.transform = `translateX(${activeBtn.offsetLeft - padL}px)`;
   }
 }
 
@@ -648,6 +689,18 @@ function initToolSlider() {
   setTool(tool || 'pen');
 }
 setTimeout(initToolSlider, 50);
+// A single timed call is not enough: on a phone the bar is often laid out after
+// that 50ms, and the pill then sits at a position measured against zero widths.
+// Re-place it whenever the group actually changes size, and on orientation
+// change. Same failure lib/segslider.js was written for, different element.
+(function keepToolSliderPlaced() {
+  if (!toolGroupEl) return;
+  const replace = () => setTool(tool || 'pen');
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(replace).observe(toolGroupEl);
+  window.addEventListener('resize', replace);
+  window.addEventListener('orientationchange', replace);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(replace);
+})();
 
 document.querySelectorAll('.tool-btn').forEach(btn => {
   btn.addEventListener('click', () => {

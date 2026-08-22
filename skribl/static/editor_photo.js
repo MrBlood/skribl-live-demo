@@ -14,6 +14,16 @@
 // LOAD ORDER: classic script reading globals app.js declares. After app.js, and
 // out of skribl_player.html.
 canvasWrap.addEventListener('mousemove', (e) => {
+  // The shape badge rides the same pointer tracking as the eraser ring: the
+  // shape kind is chosen on the toolbar, so without this there is nothing at
+  // the point of drawing saying what the next drag will make.
+  if (tool === 'shape' && typeof shapeCursor !== 'undefined') {
+    if (finishedRecording && !recording) { shapeCursor.style.display = 'none'; return; }
+    const r = canvas.getBoundingClientRect();
+    updateShapeCursor(e.clientX - r.left, e.clientY - r.top);
+    shapeCursor.style.display = 'block';
+    return;
+  }
   if (tool !== 'eraser') return;
   if (finishedRecording && !recording) { eraserCursor.style.display = 'none'; return; }
   const rect = canvas.getBoundingClientRect();
@@ -23,9 +33,18 @@ canvasWrap.addEventListener('mousemove', (e) => {
 
 canvasWrap.addEventListener('mouseleave', () => {
   eraserCursor.style.display = 'none';
+  if (typeof shapeCursor !== 'undefined') shapeCursor.style.display = 'none';
 });
 
 canvasWrap.addEventListener('touchmove', (e) => {
+  if (tool === 'shape' && typeof shapeCursor !== 'undefined') {
+    if (finishedRecording && !recording) { shapeCursor.style.display = 'none'; return; }
+    const r = canvas.getBoundingClientRect();
+    const t0 = e.touches[0];
+    updateShapeCursor(t0.clientX - r.left, t0.clientY - r.top);
+    shapeCursor.style.display = 'block';
+    return;
+  }
   if (tool !== 'eraser') return;
   if (finishedRecording && !recording) { eraserCursor.style.display = 'none'; return; }
   const rect = canvas.getBoundingClientRect();
@@ -38,7 +57,13 @@ canvasWrap.addEventListener('touchmove', (e) => {
 // the eraser ring stayed painted on the canvas with no finger near it. Stale
 // visual state rather than a stuck gesture, but the same lifecycle mistake —
 // and the ring is what the user aims with.
-function hideEraserCursor() { eraserCursor.style.display = 'none'; }
+function hideEraserCursor() {
+  eraserCursor.style.display = 'none';
+  // Same lifecycle rule for the shape badge: a cancelled touch never fires
+  // touchend, and a badge left painted with no finger near it is the same stale
+  // visual state the ring used to have.
+  if (typeof shapeCursor !== 'undefined') shapeCursor.style.display = 'none';
+}
 canvasWrap.addEventListener('touchend', hideEraserCursor);
 canvasWrap.addEventListener('touchcancel', hideEraserCursor);
 

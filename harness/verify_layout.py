@@ -52,9 +52,18 @@ ONE_ROW_MAX_PX = 80
 # raising it is a deliberate edit here, which is the point of pinning it.
 MIN_TOUCH_PX = 34
 
-# Widths the project supports. 320 is Display Zoom on a modern iPhone, not a
-# legacy device, so it is expected to WRAP gracefully rather than fit.
-FIT_WIDTHS = [375, 390, 393, 402, 430, 440, 600, 641, 768]
+# THE WIDTH POLICY, pinned here so it cannot drift back into folklore.
+#
+#   360px is the DESIGN TARGET — the narrowest width the layout must serve
+#   properly, on one row, with nothing shrunk past the decided floor. It is a
+#   very common Android width, so a two-row bar there is not a rare fallback.
+#
+#   320px is the SAFETY NET — not a design target. It is Display Zoom on a
+#   modern iPhone, an accessibility setting rather than a legacy device, so it
+#   must DEGRADE rather than break: wrap to a taller bar, clip nothing, spill
+#   nothing off the page. A layout that survives 320 without breaking components
+#   or spilling text works anywhere.
+FIT_WIDTHS = [360, 375, 390, 393, 402, 430, 440, 600, 641, 768]
 DEGRADE_WIDTHS = [320]
 
 results = []
@@ -136,10 +145,21 @@ with sync_playwright() as p:
     # target, but it must DEGRADE rather than clip: a taller bar is honest,
     # a clipped one hides controls with no cue that anything is missing.
     for w in DEGRADE_WIDTHS:
-        g = measure(ctx, "/", w)
-        check(f"Pad @{w}px degrades by wrapping, never by clipping",
-              g is not None and g["overflow"] <= 0,
-              "clipping hides controls silently; wrapping does not")
+        for surface, path in (("Pad", "/"), ("Flip", "/flip")):
+            g = measure(ctx, path, w)
+            check(f"{surface} @{w}px degrades by wrapping, never by clipping",
+                  g is not None and g["overflow"] <= 0,
+                  "clipping hides controls silently; wrapping does not")
+            # The whole point of the safety net: nothing spills off the page.
+            pg = ctx.new_page()
+            pg.set_viewport_size({"width": w, "height": 800})
+            pg.goto(BASE + path, wait_until="load")
+            pg.wait_for_timeout(120)
+            spill = pg.evaluate("() => document.documentElement.scrollWidth "
+                                "- document.documentElement.clientWidth")
+            pg.close()
+            check(f"{surface} @{w}px does not spill horizontally",
+                  spill <= 0, f"page is {spill}px wider than the viewport")
 
     # ------------------------------------------------------------ section 2
     print("\nLAYOUT 2 — the header fits in every state")

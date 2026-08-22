@@ -80,7 +80,26 @@ function selOutline(r, dashed) {
 // the copy still shows the artwork where it USED to be.
 function selRepaint() {
   clearAndRestore(() => {
-    replayTimelineToCanvas(buildPlaybackTimeline(), 0, Infinity, drawDot, drawLine);
+    // THROUGH THE COMPOSITOR, not the raw painters. This was the one repaint in
+    // the editor still passing drawDot/drawLine straight to the replay loop, so
+    // every see-through stroke was re-painted segment by segment and its own
+    // overlaps stacked back into beads — the exact thing stroke layers exists to
+    // prevent, undone by a repaint. Live drawing looked right because it takes
+    // the wet path; the beads appeared the moment anything called this.
+    //
+    // And setTool() calls SkriblSelectTool.clear() on EVERY tool change, so
+    // simply picking the eraser re-beaded the whole canvas without erasing
+    // anything. Preview, playback and all three export paths already route
+    // through makeStrokeCompositor; this is the one that did not.
+    const tl = buildPlaybackTimeline();
+    if (strokeLayersOn()) {
+      const comp = makeStrokeCompositor(ctx, canvas);
+      replayTimelineToCanvas(tl, 0, Infinity, comp.dotFn, comp.lineFn);
+      comp.finish();
+      comp.present();
+    } else {
+      replayTimelineToCanvas(tl, 0, Infinity, drawDot, drawLine);
+    }
     selCaptureBase();
     const b = window.SkriblSelect && SkriblSelect.bounds(strokes, selOrigin);
     if (b) selOutline({ x: b.x - 6, y: b.y - 6, w: b.w + 12, h: b.h + 12 }, true);
@@ -88,8 +107,13 @@ function selRepaint() {
 }
 
 function selClear() {
+  // Nothing selected means nothing to erase from the canvas, so a full repaint
+  // is pure cost — and setTool() calls this on every tool change. Pad no longer
+  // has a Select tool at all, so without this guard the common case was
+  // repainting the entire drawing to remove a marquee that was never there.
+  const had = selGroups.length > 0 || selOrigin;
   selGroups = []; selOrigin = null; selDx = selDy = 0; selPushed = false;
-  selRepaint();
+  if (had) selRepaint();
 }
 
 window.SkriblSelectTool = {

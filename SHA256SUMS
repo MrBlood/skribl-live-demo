@@ -12,7 +12,7 @@ d6dfc9be0b1af53236f6600b833c501d08cf2988949e796aed86d0281897a34c  ./README.md
 926fe67275c5530aad6184f33e717aa23ea0dab10c678790fe94607f036dd0c0  ./REVIEW-RESPONSE.md
 69308c2bfab053cd2b0f56e5ded6bb75d4530d2d1fb0f736db5558a069703052  ./START-HERE.md
 0348fc750f79e6504b1945cad27f3ef1589c80380f4409965acf2160781726c0  ./V215-CHANGES.md
-7eff9e6e7d1e8fb405b8138d0c33c756f0f32b6173f88e3b7e9a166358a01b95  ./V218-CHANGES.md
+b054bc4a671a00f3f965e4847d2a719579986412f64f72bdef7df88c6c4f613e  ./V218-CHANGES.md
 20be7a75e6b56abb6157853f8a78716f37453ca4d4d63358bcdf161970fa1443  ./alembic.ini
 579fa5fde7aadfc8211a1ea5cf35e5fc0117cb63ebd2b08826904ebe1b887b17  ./app.py
 581fde18fe5cfa80032d8e2e512ac148ecdba385eb3c858839cd895962f5aea7  ./constraints.txt
@@ -81,7 +81,7 @@ cfd2b3e32fe1d92359082bc88d464253b58c2832fc15c271bd44e8a906c17dc8  ./harness/veri
 893f8f66d36527693210ad5558769d7c8085827477855b057df362d2fa563aa4  ./harness/verify_integration.py
 2af191fb89bc737a29814017970f3e0cde7dcca28e022b8bdf5298ca3e3020bc  ./harness/verify_jsstrip.py
 98ceb98a088b65f8e4d1f4374fddee074317037ba88fe28d6a5d1707f7da13bb  ./harness/verify_keys.py
-ad1db0918be2e9a367b7deaa5a613c0f4730dcd4fbbc3dfa307cfeb11f537564  ./harness/verify_layout.py
+6d4a1cebfa61e9d7ff7c2cd46ab221470387ddff2ca761e9b9255ba46c473a3b  ./harness/verify_layout.py
 5548890b6fdb96a6a1e06055d1d96274f258b6ef85876fb7a786fe90a701c43b  ./harness/verify_lib.py
 55b5d74238ba47aa3573bfc58206b381c91f488357a96bea7704a065d203b841  ./harness/verify_loopcap.py
 c07a320ce59117e5bcf77543e39a7f0c3b618fc4b4e3b79d3ed236b6cbd4e357  ./harness/verify_media.py
@@ -119,7 +119,7 @@ abf058429f8059e3fc8804c2b775ab8977500bd408d858d1096f4a99de887643  ./harness/veri
 8859016a90bb84536a4c5a0b42840cf9ab7c32631cf230df7f9b00689e075a9f  ./harness/verify_visual.py
 32580d0c8d36bc96366921bfb8bdf2ea99937e6186fdcbb92a34117b7e03eac2  ./requirements.txt
 0517b0b945539928f2218fccab69da5e607433631ca28b817f29e020c22b6a92  ./skribl/__init__.py
-706b5e27293a14098bb6b8784fdaee085c8ed8d73d9cf42b77003cb9b7de4ce2  ./skribl/core.py
+9e63432fc01da37a3acd392bea8de6f2003be2d62296378c34957b3a68cd4e89  ./skribl/core.py
 b7dac1670cdc482da1452eccfc8dc6a1013a8c85c0e09c56e45c58865d4eeb5d  ./skribl/jsstrip.py
 051b52e67c2c4301166e5cb29a4381d982805ad236347b173170a3ab1bb66580  ./skribl/migrations/RELEASED.txt
 de6a2b8dbd914957a247be04686c33b970d652cf7a95e410e3d4e6ce0262978f  ./skribl/migrations/env.py
@@ -138,17 +138,17 @@ eca1461367bfa31ab5b4882548c143bc5183d74438024e6962644f14d1863b66  ./skribl/migra
 5d1b67957837e5df11e9728c55d5e3692dce391512836471659514f8ae001b28  ./skribl/ratelimit.py
 09691f44cde49b21670d3e5779718d05645f7cb0ed07fad705b3d7380854a29e  ./skribl/routes.py
 870d27ae029c374e47a349b4ce7740c2c16355bbb21d5658bf93b372f9866675  ./skribl/security.py
-4bd268227d23f97bece1b69343525aacf7d0235c96c932e97f6dbc1fabd133ed  ./skribl/static/app.js
-ae63c95037bfa9ec15949af3693886f87d5628d17b91be246a6c3808b706e6e1  ./skribl/static/editor_draw.js
+e003dc5a7e6fc067e93c04cf4c359cc879adf1fb1c91b10a516e58b520bb5b1c  ./skribl/static/app.js
+0f463de31e656ac819d7c0b770640ddf77e47f90c2a01e516845c768d3e14646  ./skribl/static/editor_draw.js
 fcd0fa24aa975910a1ab96977404d5e7922e4781ee5902ebdbaa2b8c98c679e8  ./skribl/static/editor_export.js
 ae7164e970d1a446c4704a617592f405dc045ad0ce33a91f7f8f950d24661460  ./skribl/static/editor_menu.js
 6c9a710711fadbd3e3ba41154f060024564d06aa2b170bc0be25fe055510797f  ./skribl/static/editor_music.js
-2e9eec9c046c20d135b685961d37f3a15cf9e4f11970ff06fd672d3375d1b3f0  ./skribl/static/editor_photo.js
+b36b1b6d085001d61f469772c8ec1a0df562ac13e6da0dd72159eb35b5f71697  ./skribl/static/editor_photo.js
 dd16fe66d5fa4229e54c56c7df5d31d1fdd64c4565a3f09320c431b00f28b8d5  ./skribl/static/editor_post.js
 1c3c711bf88bd1e2e2d1552e2f4613af63940957d5978a1e8822e1eaf43f0a9e  ./skribl/static/editor_shapes.js
 4808a725433732494b21a2b272e3ffb99d74d1cf7effd78db543fb82d44bfb93  ./skribl/static/editor_tune.js
-acaea0577f9ca7726d5f8589f4f4236154e3d59421767acac22ac1dce966b330  ./skribl/static/flip.css
-d2524eea349337751e3b6ed0fe33af6b570d6385117fbed736c73f4931b817ac  ./skribl/static/flip.js
+c0760eb6e9dc192f125d2c319a3d2a401a79b3a8fbeb734f6a9974fc0dccd54e  ./skribl/static/flip.css
+5d50ed87e14923ac3f6577b7e201691eee3780e25d2e15d78610aef37a6e428b  ./skribl/static/flip.js
 b65d30f6cbec65e6b6abc52144e4ebe4c64e215624357fab404048d0343250fd  ./skribl/static/gifenc.min.js
 7b779a0c1470ea93b1cea5722a14027822d63c936b29253c31c231ad8c55caea  ./skribl/static/lib/artwork.js
 fb1d17f0a55c4cb1a407387311568475322f68d4db14143e01ac4b7c941fc855  ./skribl/static/lib/audioloop.js
@@ -181,7 +181,7 @@ d81b2cac6cb04ca878d1f90ddac0e9f35520ff74d0b7660872cc0a81a29b38f3  ./skribl/stati
 23696c3869c78ae0743a9231e6940b357aaddf563a6bc7cc5b3c58303c0b5ef5  ./skribl/static/mp4-muxer.min.js
 9bd122f314d3561b6d8ea6b500ffeba47e8bf5c262b62de4d5f0f74175100ae5  ./skribl/static/og-card.png
 d941924415487dc3c33cc83b19a54dbb428f3f4d6da11acf16fa7dfec47bff52  ./skribl/static/player.css
-3a2932ac8c0c85c6e752ef71b3bd930d745f167a1ee3f62892e67299c9a04b48  ./skribl/static/styles.css
+31aab4558c9bbffbd977ab1804bf76e59c2afd3a0a52ca9bac589f51d4f166e9  ./skribl/static/styles.css
 fa3a853e69665ba107c46ceb79322185dbab3adf48a68eb765860a96e87a5e40  ./skribl/storage.py
 62533f1846ef059ca7d41e47cfe81c3f05bd0f3bb07b39796f191350d210af29  ./skribl/templates/skribl/_skribl_draw_drawer.html
 7e23355964389309c46879685ad55194fb06eadbaa8229c0d28ac4003b708698  ./skribl/templates/skribl/_skribl_export.html
@@ -194,6 +194,6 @@ f2ef0ee0416af73e2a80576a568ee3b365bb4c3d1c2e4f9619b7f8cbb2bbe78d  ./skribl/templ
 307ddfa5efaf48fd456fc1024e4c4e3fe737c12e12407a32ae029d67d94fae82  ./skribl/templates/skribl/_skribl_vendor.html
 ca41b3ffa41c2bb3387e0acf18d736417918780bc0e7062328a11db453cfca0c  ./skribl/templates/skribl/_skribl_zoom_hud.html
 3d90fc89e52e367ebaae758ab02d350be2a95ee39f8b8db4a5159140fef3b465  ./skribl/templates/skribl/skribl_editor.html
-488873ef959b4a793f81d17612c85c9df95b35fcb4c5e59dde9d830dbf77226e  ./skribl/templates/skribl/skribl_flip.html
+8dbb1894e065619f50874157126dc11d6c4d8f674e600709ac8d68074589ec46  ./skribl/templates/skribl/skribl_flip.html
 41e4b8ece09c5ddb6c7293f0cf3f18338f817163039ffdf0b841e8235821c6a4  ./skribl/templates/skribl/skribl_player.html
 bd6f46edcee25cb1c384ed90054890a57567eec2a895a281df8e2c5495be7a23  ./skribl/validation.py

@@ -175,10 +175,18 @@
      which keeps Flip's flex layout from reflowing. Moving Brush size in here frees
      the bottom row of its old size pill. */
   .color-tool { position: relative; display: inline-flex; }
+  /* The white border and inset highlight predate the spectrum ring. They gave
+     the swatch its edge back when it was a plain disc; with the ring inside,
+     they stack into three concentric circles — white border, rainbow, white
+     core — where Pad has one clean ring. The ring IS the edge now. */
   .color-current { width: 34px; height: 34px; border-radius: 50%; padding: 0; cursor: pointer;
-    border: 2px solid var(--text-primary);
-    box-shadow: 0 0 0 1px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.15);
+    border: 0; background: none;
+    display: grid; place-items: center;
     transition: transform .12s var(--spring); }
+  /* Fill the button: 30px ring, 3px band, so it matches Pad's proportions at
+     Flip's slightly larger control size. */
+  .color-current .color-ring { width: 30px; height: 30px; }
+  .color-current .color-core { width: 24px; height: 24px; }
   .color-current:hover { transform: scale(1.06); }
   .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--accent); }
   /* Drawers are normal in-flow blocks living in .flip-drawers, directly below the
