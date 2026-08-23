@@ -1,5 +1,29 @@
 # v218 — the shape picker moved onto the Shape button
 
+## v218f — the leave guard was warning about the wrong thing
+
+Flip staying silent on the way back to Pad turned out to be correct, and finding
+out why showed the Pad guard was wrong.
+
+**Pad's autosave keeps strokes, not media.** `writeAutosave` says it directly:
+photo and audio bytes never fit in localStorage, which is why the status pill
+reads *"Saved without media"* whenever either is attached. So leaving Pad does
+not lose the drawing. It loses the photo and the music.
+
+The guard fired on `recording || hasContent || recorded` — any drawing at all —
+so it warned about work that was never at risk. **A confirm that is usually
+wrong is one people learn to dismiss unread, and then it fails on the occasion
+that mattered.** That was the argument for only guarding real risk in the first
+place, applied to the wrong condition.
+
+Now it fires only when `photoBg` or `currentAudioBuffer` is set, and says what
+is actually lost: *"Your drawing is saved, but the photo and music aren't —
+you'll need to add them again."*
+
+**Flip's guard is removed entirely**, markup included. Flip persists pages,
+music and the background image, so a confirm there could only ever be a false
+alarm. The asymmetry is now deliberate and commented on both sides.
+
 ## v218e — Flip's tool pill, and the two editors now read the same
 
 **Flip's pen/eraser/shape pill did not work — same bug as Pad's, worse.**

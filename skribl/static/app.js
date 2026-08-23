@@ -5426,9 +5426,17 @@ function currentPaintTarget() {
   const leaveCancel = document.getElementById('leaveCancel');
   if (!flipBtn || !leaveSheet || !leaveGo || !leaveCancel) return;
 
-  // Only guard when there is something to lose. A guard that fires on an empty
-  // canvas trains people to dismiss it unread, which is worse than none.
-  const atRisk = () => recording || hasContent || recorded;
+  // Guard what is ACTUALLY at risk, which is NOT the drawing. Pad autosaves
+  // strokes to localStorage, so leaving and coming back restores them — the
+  // status pill says "Saved". What autosave CANNOT hold is media: photo and
+  // audio bytes never fit in localStorage, which is exactly why the pill says
+  // "Saved without media" whenever either is attached.
+  //
+  // The first version fired on `recording || hasContent || recorded` — any
+  // drawing at all — so it warned about work that was never going to be lost.
+  // A confirm that is usually wrong is the kind people learn to dismiss without
+  // reading, and then it fails on the one occasion it mattered.
+  const atRisk = () => !!photoBg || !!currentAudioBuffer;
   let released = false;
 
   flipBtn.addEventListener('click', (e) => {

@@ -3687,36 +3687,7 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
 })();
 
 
-// The mirror of Pad's guard: Flip's link back to Pad loses unposted work the
-// same way, and a fix on one surface only is the shape of bug this codebase
-// keeps producing.
-(function guardPadNavigation(){
-  const back=document.querySelector('#padBtn, .pad-btn, a[href="/"]');
-  const sheet=document.getElementById('leaveSheet');
-  const go=document.getElementById('leaveGo');
-  const cancel=document.getElementById('leaveCancel');
-  if(!back||!sheet||!go||!cancel) return;
-  const atRisk=()=>{
-    try { return (typeof pages!=='undefined' && pages.some(p=>p&&p.strokes&&p.strokes.length)); }
-    catch(_) { return true; }   // unsure means guard: a false prompt beats lost work
-  };
-  let released=false;
-  back.addEventListener('click',e=>{
-    if(released||!atRisk()) return;
-    e.preventDefault();
-    sheet.hidden=false;
-    const scrim=document.getElementById('leaveScrim');
-    if(scrim) scrim.hidden=false;
-    cancel.focus();
-  });
-  const close=()=>{ sheet.hidden=true;
-    const scrim=document.getElementById('leaveScrim');
-    if(scrim) scrim.hidden=true;
-    back.focus(); };
-  cancel.addEventListener('click',close);
-  go.addEventListener('click',()=>{
-    released=true;
-    window.location.href=back.getAttribute('href')||'/';
-  });
-  sheet.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.stopPropagation(); close(); } });
-})();
+// NO NAVIGATION GUARD ON FLIP, deliberately. Flip persists pages, music and the
+// background image, so leaving for Pad loses nothing and a confirm here would be
+// a prompt that is always wrong. Pad needs one because its autosave holds
+// strokes but NOT media bytes — see the note on atRisk() in app.js.
