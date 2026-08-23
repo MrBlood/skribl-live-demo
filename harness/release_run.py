@@ -105,6 +105,17 @@ BATCHES = [
      "verify_mimeparity.py"],
     ["verify_jsstrip.py"],
     ["verify_s3.py"],
+    # v219. Same story as the v199 suites above, and the coverage check caught it
+    # the same way: verify_layout.py was written during the v219 build, the build
+    # was never run, and so nothing ever noticed it belonged to no batch. The
+    # first release run after it was added refused to start. That refusal is the
+    # feature — a suite on disk and in no batch is a suite whose absence would
+    # have read as an absence of failures.
+    #
+    # Alone, and deliberately: it measures rendered geometry at eight viewport
+    # widths across both editors, and a browser sharing its batch is a browser
+    # competing for CPU while it takes those measurements.
+    ["verify_layout.py"],
 ]
 
 

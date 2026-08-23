@@ -646,7 +646,14 @@ function setTool(nextTool) {
   const penBtn = document.getElementById('penToolBtn');
   const eraserBtn = document.getElementById('eraserToolBtn');
   const shapeBtn = document.getElementById('shapeToolBtn');
-  const selectBtn = document.getElementById('selectToolBtn');
+  // #selectToolBtn is DELIBERATELY absent from the template: v219 removed Select
+  // from Pad, because it edited points that were already recorded and replay
+  // then drew a stroke at its NEW position at its OLD timestamp. The lookup and
+  // the 'select' branch stay because SkriblSelectTool is still loaded and other
+  // code may still ask for the tool by name; both fall back to the pen rather
+  // than to `undefined`, so setTool('select') is a no-op instead of a crash.
+  // If Select ever returns, put the button back and this works unchanged.
+  const selectBtn = document.getElementById('selectToolBtn');   // null by design
   const activeBtn = nextTool === 'pen' ? penBtn
                   : nextTool === 'shape' ? (shapeBtn || penBtn)
                   : nextTool === 'select' ? (selectBtn || penBtn)

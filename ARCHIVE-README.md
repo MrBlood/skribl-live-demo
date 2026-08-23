@@ -1,6 +1,12 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v214"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v219"` (skribl/core.py).**
+
+**The release evidence in this archive is v219's.** A full harness run was
+completed against this tree; `harness/RELEASE.md` and `harness/LAST-RUN.txt`
+are generated from it and describe THIS tree hash, not an earlier one. The
+numbers are computed, never typed — verify them with the commands in
+`START-HERE.md` rather than believing this sentence. See `FOR-THE-REVIEWER.md`.
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the

@@ -1023,23 +1023,54 @@ with _sp204() as _p:
                       not f2["scrollX"] and not f2["over"], f"scrollX={f2['scrollX']} over={f2['over']}")
             ph.close()
 
-    # v205-fix: the round header actions (Flip-mode book, ⋯) must match the tune
-    # opener's box so they do not read as smaller mismatched siblings.
+    # v205-fix: the round header actions must match the tune opener's box so they
+    # do not read as smaller mismatched siblings.
+    #
+    # v219 CHANGED WHAT THIS GUARDS, so read this before restoring the old form.
+    # Flip Mode used to be a third round header button and is now a row inside
+    # the ••• menu, with the original book glyph and a subtitle saying what it
+    # is — because a 40px icon could not, which is why Flip went unrecognised
+    # for several versions. The old assertion compared #flipBtn's box to
+    # #tuneBtn's; after the move it measured [0, 0] against [44, 44] and failed.
+    # That is the pin reporting a DESIGN CHANGE, not a defect, and the fix is to
+    # assert the new arrangement rather than to loosen the old one:
+    #   * the header pair (tune, •••) must still match each other exactly,
+    #   * #flipBtn must still EXIST and still carry an <svg> book glyph — the
+    #     v219 note is explicit that the original glyph was kept and that it
+    #     stays an <a href> so open-in-new-tab and the navigation guard survive,
+    #   * and it must be reachable: zero-sized while the menu is closed, a real
+    #     box once the menu is open. A menu item that never gains a box is the
+    #     failure mode this replacement exists to catch.
     sizes = pg.evaluate("""() => {
         const box = el => { const r = el.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
         const svg = el => { const s = el.querySelector('svg'); const r = s.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
         const tune = document.getElementById('tuneBtn');
         const menu = document.getElementById('menuBtn');
         const flip = document.getElementById('flipBtn');
-        return { tuneBox: box(tune), menuBox: box(menu), flipBox: box(flip),
-                 tuneSvg: svg(tune), menuSvg: svg(menu), flipSvg: svg(flip) };
+        return { tuneBox: box(tune), menuBox: box(menu),
+                 tuneSvg: svg(tune), menuSvg: svg(menu),
+                 flipExists: !!flip, flipIsLink: !!flip && flip.tagName === 'A',
+                 flipHasSvg: !!flip && !!flip.querySelector('svg'),
+                 flipBoxClosed: box(flip) };
     }""")
     check("V205-fix: the ⋯ menu button matches the tune button box",
           sizes["menuBox"] == sizes["tuneBox"], str(sizes))
-    check("V205-fix: the Flip-mode (book) button matches the tune button box",
-          sizes["flipBox"] == sizes["tuneBox"], str(sizes))
     check("V205-fix: the ⋯ glyph matches the tune glyph size",
           sizes["menuSvg"] == sizes["tuneSvg"], str(sizes))
+    check("V219: Flip Mode survived the move into the ⋯ menu as a real <a> with its book glyph",
+          sizes["flipExists"] and sizes["flipIsLink"] and sizes["flipHasSvg"], str(sizes))
+    pg.click("#menuBtn"); pg.wait_for_timeout(350)
+    _fl = pg.evaluate("""() => {
+        const f = document.getElementById('flipBtn');
+        const r = f.getBoundingClientRect();
+        return { w: Math.round(r.width), h: Math.round(r.height),
+                 text: (f.textContent || '').replace(/\\s+/g, ' ').trim() };
+    }""")
+    check("V219: ...and it has a real box once the menu is open (a row nobody can reach is not a relocation)",
+          _fl["w"] > 100 and _fl["h"] >= 40, str(_fl))
+    check("V219: ...and it carries the subtitle that says what Flip Mode IS — the 40px icon could not",
+          "Draw a frame-by-frame animation" in _fl["text"], str(_fl))
+    pg.keyboard.press("Escape"); pg.wait_for_timeout(250)
 
     # v204-fix: at ~600px, recording must not let the tune button crowd the
     # record indicator onto the wordmark, and the wordmark must recover after
@@ -1488,13 +1519,24 @@ with _sp204() as _p:
         check(f"V210 header@{pw}: with a take saved the cluster still clears the mark",
               _g["gap"] >= _floor - 6 if pw <= 340 else _g["gap"] >= _floor,
               f"gap {_g['gap']}px (floor {_floor}), words shown {_g['wordsShown']}")
-        # And Post keeps its word wherever the arithmetic allows (430), drops
-        # to its icon only where it must (<= 390 with a take saved).
+        # And Post keeps its word wherever the arithmetic allows.
+        #
+        # v219 CHANGED THE ARITHMETIC, and the old pin's own reason is what says
+        # so: it read "six controls cannot fit a labelled Post". There are five
+        # now. Moving Flip Mode into the ••• menu freed 40px of header — that is
+        # the change that closed the recording-header overage — and with it Post
+        # keeps its label all the way down to 375px, measured at 81px wide.
+        # Demanding icon-only below 430 would now be demanding that the header
+        # shed something it no longer needs to shed, which is the opposite of
+        # what this assertion was written to protect.
+        #
+        # The floor is what matters and it is kept: 320px is the safety net, not
+        # a design target, and there Post must still be free to drop to its icon.
         _pw = _h.evaluate("() => { const p = document.getElementById('postBtn'); return p && !p.hidden ? Math.round(p.getBoundingClientRect().width) : null; }")
-        if pw >= 430:
-            check(f"V210 header@{pw}: Post KEEPS its label — nothing was shed that did not need to be", _pw and _pw > 60, f"Post {_pw}px wide")
+        if pw >= 375:
+            check(f"V219 header@{pw}: Post KEEPS its label — the 40px freed by moving Flip is what pays for it", _pw and _pw > 60, f"Post {_pw}px wide")
         else:
-            check(f"V210 header@{pw}: Post is icon-only here (six controls cannot fit a labelled Post)", _pw and _pw <= 42, f"Post {_pw}px wide")
+            check(f"V219 header@{pw}: Post may shed its label at the 320px safety net", _pw and _pw > 0, f"Post {_pw}px wide")
         _h.close()
 
     check("V204: the old crammed .flip-hint footer is gone",

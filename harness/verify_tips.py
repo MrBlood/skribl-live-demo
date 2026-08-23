@@ -83,7 +83,18 @@ with sync_playwright() as p:
         n = pg.evaluate("() => document.querySelectorAll('[data-tip]').length")
         check(f"{surface}: tooltips were adopted", n > 20, f"only {n}")
 
-        pg.hover("#magnifyBtn" if surface == "Flip" else "#menuBtn")
+        # '#imageBtn' on Flip, NOT '#magnifyBtn'. This suite hovered a control
+        # that does not exist on that surface and hung for 30s waiting for it.
+        # v219 restored Magnify to PAD's toolbar at 641px+ ("a phone has pinch,
+        # a mouse has nothing") and Flip's toolbar was reordered without one, so
+        # `#magnifyBtn` is in skribl_editor.html only; flip.js still binds it
+        # defensively behind `if(magnifyBtn)`, which is why nothing else noticed.
+        #
+        # Whether Flip SHOULD have a desktop magnify is a live product question
+        # by v219's own argument, and it is flagged rather than answered here —
+        # a tooltip suite is not the place to decide it. This assertion is about
+        # tooltips, so it hovers any real tooltip-bearing control on the surface.
+        pg.hover("#imageBtn" if surface == "Flip" else "#menuBtn")
         pg.wait_for_timeout(700)
         check(f"{surface}: hovering shows a tooltip", pg.is_visible(".skribl-tip"))
         radius = pg.evaluate("() => { const t = document.querySelector('.skribl-tip');"
@@ -107,9 +118,16 @@ with sync_playwright() as p:
               pg.evaluate(f"() => !!(document.getElementById('{_id}')"
                           f" && document.getElementById('{_id}').getAttribute('data-tip'))"),
               "the export and zoom controls had no tooltips at all")
+    # Magnify lives on PAD only — see the note at the hover assertion above — so
+    # this is checked on the surface that has it rather than on Flip, where the
+    # locator hung for 30s waiting for a button that is not in the template.
+    _pgp = b.new_page(viewport={"width": 1200, "height": 900})
+    _pgp.goto(f"{BASE}/skribl-pad", wait_until="load")
+    _pgp.wait_for_timeout(1400)
+    _mag = _pgp.get_attribute("#magnifyBtn", "data-tip")
     check("the magnify tooltip explains how to aim it",
-          "space" in (pg.get_attribute("#magnifyBtn", "data-tip") or "").lower(),
-          pg.get_attribute("#magnifyBtn", "data-tip"))
+          "space" in (_mag or "").lower(), _mag)
+    _pgp.close()
 
     print("\nTOOLTIPS — coverage, counted rather than assumed")
     # THE ACTUAL BUG. The first pass was keyed by element id, and the two
@@ -170,8 +188,12 @@ with sync_playwright() as p:
     touch.close()
 
     print("\nHINTS — once, and only once")
+    # PAD, not Flip: this whole block drives #magnifyBtn, which is in Pad's
+    # template only (see the note at the first hover assertion). It ran against
+    # /flip and hung. The hint machinery it tests is shared, so moving the
+    # surface changes nothing it is asserting.
     hp = b.new_page(viewport={"width": 1100, "height": 900})
-    hp.goto(f"{BASE}/flip", wait_until="load")
+    hp.goto(f"{BASE}/skribl-pad", wait_until="load")
     hp.wait_for_timeout(1400)
     dismiss_intro(hp)                 # v204 Flip intro toast is not what this tests
     hp.click("#magnifyBtn")
@@ -245,7 +267,11 @@ with sync_playwright() as p:
     # Open through openMenu(), not by unhiding the node: the toggle re-reads
     # the stored state on open, which is the behaviour being checked.
     hp.evaluate("() => window.SkriblHints.reset()")
-    hp.click("#moreBtn")
+    # '#menuBtn, #moreBtn' — the overflow menu is #menuBtn on Pad and #moreBtn on
+    # Flip. That is the exact id divergence this file's own coverage comment
+    # describes (musicBtn/musicOpenBtn), and it bit here the moment this block
+    # moved to Pad. `fp` below stays on #moreBtn because it really is on Flip.
+    hp.locator("#menuBtn, #moreBtn").first.click()
     hp.wait_for_timeout(400)
     check("the Tips toggle is in the menu", hp.is_visible("#hintSeg"))
     check("it shows On while hints are enabled",
@@ -330,7 +356,15 @@ with sync_playwright() as p:
     # TEXT — the intent is that magnify-pan is not taught twice across
     # surfaces, not that Flip is silent on load.
     dismiss_intro(fp2)
-    fp2.click("#magnifyBtn")
+    # Flip has no #magnifyBtn to click — Magnify is on Pad's toolbar only (see
+    # the note at the first hover assertion). Its magnify HINT code is still
+    # there: flip.js calls SkriblHints.show('magnify-pan', ...) exactly as app.js
+    # does. So this drives the mechanism the assertion is actually about — the
+    # shared seen-key — instead of a button that is not on the page. If the key
+    # were per-surface rather than shared, this show() would display the hint and
+    # the check below would fail, which is the regression it exists to catch.
+    fp2.evaluate("() => window.SkriblHints.show('magnify-pan',"
+                 " 'Zoom centres — scroll or hold Space and drag to aim it.')")
     fp2.wait_for_timeout(500)
     check("and Flip does NOT teach it again after Pad did",
           fp2.evaluate("() => { const h = document.querySelector('.skribl-hint');"

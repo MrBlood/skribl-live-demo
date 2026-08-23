@@ -235,7 +235,12 @@
   .t-btn svg { width: 19px; height: 19px; }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
   /* Pad's pen/eraser toggle, sized to sit in Flip's 40px tool row. */
-  .flip-tools .tool-group { height: 40px; box-sizing: border-box; align-items: center; }
+  /* min-height + auto, never a FIXED height. The group is `overflow: hidden`, so a
+     fixed height plus padding clipped the bottom of its own 44px buttons — the
+     button's rect said 44px while the visible, hit-testable area was 36px. A
+     control whose measured size and touchable size disagree is worse than a
+     small one, because measurement says it is fine. */
+  .flip-tools .tool-group { min-height: 44px; height: auto; box-sizing: border-box; align-items: center; }
   .flip-tools .tool-btn { padding: 6px 14px; }
 
   /* ---- Desktop parity with Skribl Pad (>640px) ---------------------------
@@ -251,7 +256,7 @@
     .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; }
     .grid-tool, #moreBtn { width: 36px; height: 36px; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 44px; height: 44px; }
-    .flip-tools .tool-group { height: 44px; }
+    .flip-tools .tool-group { min-height: 44px; height: auto; }
   }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
@@ -265,9 +270,15 @@
   .flip-tools .magnify-tool.open { color: var(--accent-bright); background: rgba(124,92,255,0.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,0.45); }
   /* Keep the bottom tool row on ONE line on phones (music was wrapping). */
   @media (max-width: 560px) {
+    /* `overflow-x: auto` makes this a scroll container, and a scroll container
+       clips VERTICALLY too — which cut the 44px hit band down to the content
+       box. The row is 58px with 10px padding, leaving 38px of content: 6px
+       short. Giving the children a 44px minimum lets the row find its own
+       height (64px) and costs nothing horizontally, which is the axis that is
+       actually scarce here. */
     .flip-tools { gap: 6px; padding: 10px 8px; flex-wrap: nowrap; overflow-x: auto; justify-content: safe center; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 36px; height: 36px; }
-    .flip-tools .tool-group { height: 36px; }
+    .flip-tools .tool-group { min-height: 44px; height: auto; }
     .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
     .flip-tools .tool-btn-label { display: none; }
     .flip-tools .tool-btn { padding: 6px 10px; }
@@ -276,7 +287,7 @@
   @media (max-width: 380px) {
     .flip-tools { gap: 5px; padding: 9px 6px; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 34px; height: 34px; }
-    .flip-tools .tool-group { height: 34px; }
+    .flip-tools .tool-group { min-height: 44px; height: auto; }
   }
   /* v124: 88x62 left the per-page controls at 18x18 — a third of the 44px touch
      target both Apple and Google recommend, on a tile carrying five of them.

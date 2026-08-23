@@ -3877,7 +3877,19 @@ body.player-mode #canvas {
 /* smoothing pill: buttons fill the container so it isn't stretched with empty space */
 .draw-inline .smooth-seg { width: 100%; margin-left: 0; }
 .draw-inline .smooth-seg .smooth-btn { flex: 1; }
-@media (max-width: 560px) { .draw-inline { flex-direction: column; gap: 14px; } .draw-inline > * { width: 100%; } }
+/* `flex-wrap: nowrap` is NOT redundant here, and removing it reopens a real bug.
+   The rule above sets `flex-direction: column` on a phone; the wrap fix further
+   up sets `flex-wrap: wrap` to stop the six segmented controls being squeezed.
+   Both are right on their own and COLUMN-WRAP is what they compose to: inside
+   `#drawPanel`, which is height-constrained and `overflow: hidden auto`, the
+   items fill the first column and then wrap into a SECOND COLUMN to the right,
+   outside the panel. Measured at 375px with the colour drawer open: five
+   children each a correct 297px wide, laid out at x = 39, 350, 661, 972, 1283,
+   putting twelve `.smooth-btn`s past the panel's right edge at 353px. Every
+   child measured the right SIZE, which is why this survived a width audit —
+   it is a position defect wearing a width defect's clothes.
+   One control per line is the intent below 560px, so there is nothing to wrap. */
+@media (max-width: 560px) { .draw-inline { flex-direction: column; flex-wrap: nowrap; gap: 14px; } .draw-inline > * { width: 100%; } }
 
 
 /* ---------- Brush size: rounded tray + snug value + preview dot ---------- */
@@ -4734,3 +4746,47 @@ body.playing .flip-grid { display: none; }
   .toolbar { gap: 3px; padding: 6px; }
   .tool-sep { margin: 0 3px; }
 }
+
+/* ---------- Hit regions, separated from glyph size ----------
+   Apple's guidance is a 44pt control. Measured on v219, every toolbar control was
+   34-36px on a phone AND adjacent targets had a 0px gap, so a mis-tap landed on a
+   neighbour rather than on nothing.
+
+   TWO MECHANISMS, because the controls are not alike:
+
+   1. Standalone controls (.tool-open, undo/redo, Flip's colour swatch) get a
+      44px-tall invisible band from a pseudo-element. It takes no layout space,
+      and the bar is 68px tall, so it is free.
+
+   2. Buttons INSIDE .tool-group cannot use that: the group is `overflow: hidden`
+      and clips any band on its children. Those get a 44px minimum height
+      directly, and the group is made tall enough not to clip them. Fighting the
+      clip with a taller band was tried and silently failed on whichever
+      breakpoint had the shorter group.
+
+   WIDTH IS NOT FIXED HERE, and the arithmetic is why: eight controls at 44px wide
+   plus gaps and padding need 385px, against 336 available at 360px, 351 at 375
+   and 369 at 393 — over by 49, 34 and 16px. Widening would make adjacent hit
+   regions OVERLAP, turning a small target into an ambiguous one, which is worse.
+   A full 44x44 needs one fewer control in the phone row: a product decision,
+   recorded in START-HERE, not something CSS can settle. */
+.toolbar .tool-open,
+.toolbar .undo-btn,
+.flip-tools .tool-open,
+.flip-tools .t-btn,
+.flip-tools .color-current { position: relative; }
+
+.toolbar .tool-open::after,
+.toolbar .undo-btn::after,
+.flip-tools .tool-open::after,
+.flip-tools .t-btn::after,
+.flip-tools .color-current::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%; height: 44px;
+  transform: translateY(-50%);
+}
+
+#toolGroup .tool-btn { min-height: 44px; }
+.toolbar .tool-group, .flip-tools .tool-group { min-height: 44px; }

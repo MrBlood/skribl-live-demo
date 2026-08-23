@@ -689,7 +689,36 @@ with sync_playwright() as sp:
     # link, so it pays for this and benefits from it — a viewer opening a second
     # Skribl before the first finished decoding had the same overwrite.
     # Headroom: 7,680 B.
-    BYTES_RATCHET, BYTES_TARGET = 145_920, 153_600
+    # 150,945 = 145,920 + 5,025 B: v219. RAISED ON THE OWNER'S INSTRUCTION, and
+    # the weakest entry in this log — recorded as such rather than dressed up.
+    #
+    # Every raise above names the feature that bought it and argues why the
+    # PLAYER pays. This one cannot, and the reason is itself the finding: v219
+    # was built without a harness run, so no raise was logged as each change
+    # landed. The 5,025 B is the accumulated cost of a whole release measured in
+    # one lump — correctness and layout work, the leave guard, the magnify
+    # restore, the tool-pill fix — and the per-feature attribution that every
+    # earlier line has is gone for good. That is the concrete price of building
+    # without running, and it is worth more here as a warning than as a number.
+    #
+    # Still inside the 153,600 target. Headroom after this: 2,655 B — the
+    # tightest this project has been, and roughly one feature from the target it
+    # has been told repeatedly not to treat as reachable by extraction.
+    #
+    # CARVE CANDIDATE, MEASURED, FOR WHOEVER NEEDS HEADROOM NEXT: the Pad leave
+    # guard (flipBtn/leaveSheet/leaveGo wiring, app.js ~5,430-5,490) is ~4,021 B
+    # of source and is strictly editor-only — the player's template has no
+    # #flipBtn and no #leaveSheet, so it downloads and parses all of it to run
+    # none of it. It did not go into editor_draw.js here because carving under a
+    # failing ratchet mid-release is how v132 happened: the carve is a real
+    # change and wants its own run, not a scramble to make a number go green.
+    #
+    # AND IT MAY DELETE ITSELF. DESIGN-DIRECTION.md's second item is durable
+    # drafts, after which Pad's guard should be REMOVED rather than moved — it
+    # exists only because localStorage cannot hold media bytes. A session that
+    # lands IndexedDB and then deletes this block should find the ratchet back
+    # under 147,000 without carving anything.
+    BYTES_RATCHET, BYTES_TARGET = 150_945, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

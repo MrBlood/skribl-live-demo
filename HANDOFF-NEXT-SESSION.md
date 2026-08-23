@@ -1,6 +1,18 @@
-# Skribl — Handoff for the next session (written at the v211 seal)
+# Skribl — Handoff for the next session (written at the v219 seal)
 
-**Read this first.** It is the complete state of the project: what shipped,
+**READ `DESIGN-DIRECTION.md` FIRST.** It is the shape the product should take,
+written at the v219 seal from the owner's brief. Everything below is the state of
+the machine; that document is the state of the intent. The v219 session did
+careful work answering *"how do we fit all our features"* — the direction says
+that is the wrong question, and it is right. Start there so the engineering below
+serves it rather than the other way round.
+
+Two items in that document are prerequisites and are also the only outstanding
+correctness/durability defects here: **pointer identity** (`e.touches[0]` assumes
+the first touch is the drawing finger) and **durable drafts** (autosave holds
+strokes but not media bytes). Do those before any visual work.
+
+**Then read this.** It is the complete state of the project: what shipped,
 what is open, what the owner has decided, what the harness protects, and the
 exact procedures. Everything here was verified against the tree, not recalled.
 
@@ -10,9 +22,9 @@ exact procedures. Everything here was verified against the tree, not recalled.
 
 | Thing | Location |
 |---|---|
-| **Sealed, shipped builds** | `/mnt/user-data/outputs/skribl-vNNN-sealed.zip` — v203 … v211 |
-| **Current sealed build** | **v211** — tree `see harness/RELEASE.md`, 61/61, 1 skip (mp4), PG 20/20 (two live workers) |
-| Working tree | `/home/claude/skribl-v211/` (identical to the seal at time of writing) |
+| **Sealed, shipped builds** | `/mnt/user-data/outputs/skribl-vNNN-sealed.zip` — v203 … v219 |
+| **Current sealed build** | **v219** — result, tree hash, suite count, assertion count and skip list all in `harness/RELEASE.md`, which is generated. No number for them is typed here, deliberately: §0 of this document carried v211's figures through the v212–v219 builds unchanged, and every one of them was wrong by the end. |
+| Working tree | `/home/claude/skribl-v219/` |
 | Demo `.skribl` files + previews | `/mnt/user-data/outputs/skribl-demos/` (also `harness/fixtures/` in-tree) |
 | Design mockups (HTML, real pixels) | `/mnt/user-data/outputs/skribl-*.html` |
 | Per-release response docs | `docs/REVIEW-RESPONSE-v200.md` … `v211.md` |
@@ -34,6 +46,8 @@ exact procedures. Everything here was verified against the tree, not recalled.
 | v209 | 2337 | v207 review F2 + F3 closed — failed posts no longer cost quota (tombstoned release + real-lock regression); Pad replay unlocks audio inside the Play gesture (A1 template, order-instrumented, mutation-tested). ⚑ ratchet +510 B. |
 | v210 | *see RELEASE.md* | THE IPHONE BUILD. The phone found shared links silent; two deterministic bugs, both reproduced in-harness before fixing: player loop bounds lived in `loadedmetadata` (Bug A); post-time crop dead on v2 payloads (Bug B). v209 review F1–F4 closed. Three real-device layout defects fixed; phone audit widened. Release language changed: "mechanism corrected; verified on [device]" only. |
 | **v211** | *see RELEASE.md* | **iPhone audio CONFIRMED by the owner.** v210 review closed: Flip Web Audio parity (F1), crop/decode race both editors (F2), failed-post release durable across workers/restarts — PostgreSQL proven with two live gunicorn workers, SQLite via a sidecar journal (F3, option A), `_FK_ENGINES` add after both listeners (F4), player native fallback (H1). Space+drag no longer draws. |
+| v212–v218 | *see RELEASE.md* | The line between the v211 seal and the v214 seal, and the unsealed builds after it. This table was not maintained across them — it is reconstructed only as far as the evidence in-tree supports, and `docs/REVIEW-RESPONSE-*.md` plus `V219-CHANGES.md` are the reliable per-release record. Do not treat a gap in this column as a gap in the work. |
+| **v219** | *see RELEASE.md* | Correctness and layout pass, then sealed. Drawing lag root-caused to a live `conic-gradient` inside a `backdrop-filter` layer (now a pre-rendered PNG); Air-brush beading traced to `selRepaint` bypassing `makeStrokeCompositor`; both editors' tool pills fixed (double-subtracted `offsetLeft`); hit regions separated from glyph size at 44px, which exposed Flip's tool group clipping its own buttons to 36px; Select removed from Pad as off-model; Flip Mode moved into the ••• menu with a subtitle. Full detail and every measurement: `V219-CHANGES.md`. |
 
 Every seal: verified from its own shipped zip (`sha256sum -c`), every fix behind a mutation-tested or counterexample pin.
 
@@ -42,6 +56,8 @@ Every seal: verified from its own shipped zip (`sha256sum -c`), every fix behind
 ## 2. What is OPEN — the actual to-do list
 
 ### 2a. State of the integration contract
+
+**Written at v211 and still true, unless the tree says otherwise — check it.**
 
 **The iPhone is green.** The owner confirmed audio on the device after v210.
 The release wording is now earned: *mechanism corrected; playback verified
@@ -112,8 +128,12 @@ give most of it back.
 
 ## 4. The harness — how it protects you
 
-61 suites, ~2,400 assertions. New in v210: `verify_audiostate` (16) — the two iPhone bugs, behavioural, mutation-tested. The **pixel/behaviour suites are the gate for
-any UI change**: `verify_visual` (76), `verify_parity` (115), `verify_ux`
+Suite and assertion totals live in `harness/RELEASE.md` and are generated; the
+pair that used to be typed here went stale across several builds. New since v211:
+`verify_layout.py`, which asserts toolbar REACHABILITY rather than no-overflow —
+an earlier draft asserted no-overflow and would have failed Flip's deliberate
+scroll row as though a decision were a defect. The **pixel/behaviour suites are
+the gate for any UI change**: `verify_visual` (76), `verify_parity` (115), `verify_ux`
 (264), `verify_cssplit` (17), `verify_player_isolation` (20), `verify_pages`
 (44), `verify_tips` (43), `verify_lib` (8), `verify_hold` (37). Server-side:
 `verify_txcontract` (34, incl. the real-AUTOCOMMIT regression),
@@ -264,10 +284,28 @@ new suites; regenerate SHA256SUMS last; mp4 stays CI-skip.
 
 ## 7. First things to do next session
 
-1. Nothing is owed on hardware. The iPhone confirmed audio; the contract is
-   closed. Start from the externalisation in 2a if you want the ratchet back.
-2. Standing items unchanged: S3Store against a real bucket, Pad stylus on a
+**Read `DESIGN-DIRECTION.md` and work its order.** It supersedes the engineering
+backlog below as the frame; the items here serve it rather than compete with it.
+
+1. **Pointer identity.** The only outstanding correctness defect. Pad's
+   `getPos` reads `e.touches[0]`. **Flip has already solved this** — `flip.js`
+   captures `pointerId`, stores `strokePointerId` and rejects foreign pointers —
+   so this is a port from a working in-tree implementation, not a design job.
+   Pad's existing pinch guards do not close it: they guard a touch INDEX, and
+   after the first finger lifts `touches[0]` is a different finger.
+2. **Durable drafts.** Genuinely from scratch — there is **no IndexedDB and no
+   OPFS anywhere in the tree**. Both surfaces share one localStorage key and
+   fail differently: Pad never stores media bytes at all (metadata only, by
+   design), Flip attempts them and falls back on `QuotaExceededError`. Fix the
+   persistence BEFORE deleting the amber "Saved without media" pill — today that
+   pill is a true warning, and hiding it first converts honest ugliness into
+   quiet data loss. The Pad navigation guard fires on `photoBg ||
+   currentAudioBuffer`, which is exactly the set that does not survive a reload;
+   it is deletable only after the persistence lands.
+3. Only then the visual work in `DESIGN-DIRECTION.md` items 3–6.
+4. Standing items unchanged: S3Store against a real bucket, Pad stylus on a
    real iPad, DECISIONS.md #1 + #2 when cookie auth lands.
+5. Externalisation in 2a is still how to give most of the ratchet back.
 
 ## 8. If a temporary on-device diagnostic is ever needed again
 

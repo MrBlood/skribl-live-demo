@@ -691,16 +691,34 @@ with sync_playwright() as _b8:
 
     # The tool slider was `pen ? 0 : penWidth` — a two-button ASSUMPTION, not a
     # two-button special case. A third tool parked the pill under the second.
+    #
+    # THIS ASSERTION USED TO RECOMPUTE THE PILL'S OFFSET AS
+    # `b.offsetLeft - g.offsetLeft`, AND THAT IS THE BUG v219 FIXED, not the
+    # spec. `.tool-group` is `position: relative`, so it is the button's
+    # offsetParent and `offsetLeft` is ALREADY relative to the group —
+    # subtracting the group's own offset is a double subtraction. It was a few
+    # pixels out on Pad and wildly out on Flip, where the group sits after the
+    # colour and media controls, which read as the slider simply not working.
+    # The app now measures against the group's padding, which is what
+    # `.tool-slider`'s `left` is matched to; a pin still carrying the old
+    # arithmetic fails a correct build by exactly the padding.
+    #
+    # So it compares RENDERED RECTANGLES now. What the assertion is actually
+    # about is whether the pill appears under its button, and a rectangle answers
+    # that without agreeing with any particular formula — which is the only way
+    # this pin survives the next change to how the offset is derived.
     _sl = _p8.evaluate("""() => {
       const s=document.getElementById('toolSlider'), b=document.getElementById('shapeToolBtn');
-      const g=document.getElementById('toolGroup');
-      return {x: s.style.transform, left: b.offsetLeft - g.offsetLeft,
-              w: parseFloat(s.style.width), bw: b.offsetWidth};
+      const sr=s.getBoundingClientRect(), br=b.getBoundingClientRect();
+      return {dx: Math.round(sr.left-br.left), dw: Math.round(sr.width-br.width),
+              sx: Math.round(sr.left), bx: Math.round(br.left),
+              transform: s.style.transform};
     }""")
     check("V213j the tool pill sits under the THIRD tool, not the second "
           "(the old slider maths assumed exactly two)",
-          f"translateX({_sl['left']}px)" == _sl["x"] and abs(_sl["w"] - _sl["bw"]) < 1,
-          f"slider {_sl['x']} width {_sl['w']}, button at {_sl['left']} width {_sl['bw']}")
+          abs(_sl["dx"]) <= 1 and abs(_sl["dw"]) <= 1,
+          f"pill at {_sl['sx']} vs button at {_sl['bx']} (dx {_sl['dx']}, "
+          f"width delta {_sl['dw']}, transform {_sl['transform']})")
     _p8.close(); _c8.close()
 
     # ---- the same tool on FLIP. Flip repaints the whole frame every time, so
@@ -727,13 +745,21 @@ with sync_playwright() as _b8:
     check("V213j flip: Shift gives a circle, same shared geometry as Pad",
           _fsq and abs(_fsq["w"] - _fsq["h"]) <= 3,
           f"{_fsq['w']}x{_fsq['h']} from a 240x150 drag")
+    # Rendered rectangles, for the reason spelled out at the Pad assertion above.
+    # Flip is where the double subtraction did visible damage — its tool group
+    # sits after the colour and media controls, so the error was the whole width
+    # of everything to its left.
     _fsl = _p8f.evaluate("""() => { const s=document.getElementById('toolSlider'),
-      b=document.getElementById('shapeToolBtn'), g=document.getElementById('toolGroup');
-      return {x:s.style.transform, left:b.offsetLeft-g.offsetLeft}; }""")
+      b=document.getElementById('shapeToolBtn');
+      const sr=s.getBoundingClientRect(), br=b.getBoundingClientRect();
+      return {dx: Math.round(sr.left-br.left), dw: Math.round(sr.width-br.width),
+              sx: Math.round(sr.left), bx: Math.round(br.left),
+              transform: s.style.transform}; }""")
     check("V213j flip: the tool pill sits under the third tool "
           "(Flip carried the same two-button slider assumption)",
-          f"translateX({_fsl['left']}px)" == _fsl["x"],
-          f"slider {_fsl['x']}, button at {_fsl['left']}")
+          abs(_fsl["dx"]) <= 1 and abs(_fsl["dw"]) <= 1,
+          f"pill at {_fsl['sx']} vs button at {_fsl['bx']} (dx {_fsl['dx']}, "
+          f"width delta {_fsl['dw']}, transform {_fsl['transform']})")
     _p8f.close(); _c8f.close()
     _br8.close()
 
@@ -1023,14 +1049,40 @@ with sync_playwright() as _b11:
 # being wrong. Fixed by snapshotting FIRST and only then swapping the selected
 # points for clones — cloning first captures the clones and fails identically
 # one step later.
-print("\nV213n — selection moves whole strokes, and undo really undoes it")
+# PARKED AT v218, NOT DELETED. Pad no longer has a Select tool — it edited
+# points that were already recorded, so replay drew a stroke at its NEW position
+# at its OLD timestamp, which is a conflict with what Pad is rather than a bug in
+# Select. These seven assertions cannot run without the tool, and they are kept
+# rather than removed because one of them is load-bearing beyond Select:
+#
+#   "undo restores the pre-move coordinates EXACTLY" is the regression test for
+#   the history-stack ALIASING bug. makeHistoryState() does strokes.slice(),
+#   which copies the ARRAY and not the point objects. Every other writer in this
+#   codebase APPENDS, so nothing had ever mutated an existing point and the
+#   aliasing never mattered; Select was the first thing that did, and it edited
+#   the undo snapshot too — undo "succeeding" and changing nothing. The fix
+#   (snapshot FIRST, then swap for clones) is still in the code and MUST STAY.
+#
+# WITH THIS PARKED, THAT FIX IS UNPINNED. Nothing now catches it being undone.
+# Recorded in START-HERE alongside the other unpinned guards. If Select ever
+# returns to Pad, delete the guard below and this block runs again as written.
+_SELECT_TOOL_ON_PAD = False
+
+if not _SELECT_TOOL_ON_PAD:
+    print("\nV213n — selection: SKIPPED, Pad has no Select tool (see the note above)")
+    print("        7 assertions parked. The history-aliasing fix they covered is")
+    print("        now unpinned — it is still in the code and must stay there.")
+
+if _SELECT_TOOL_ON_PAD:
+    print("\nV213n — selection moves whole strokes, and undo really undoes it")
 
 _SEL_Q = """() => ({n:strokes.length, groups:strokeGroups.length,
   sum:strokeGroups.reduce((a,b)=>a+b,0),
   minX:Math.round(Math.min(...strokes.map(p=>p.x))),
   maxX:Math.round(Math.max(...strokes.map(p=>p.x)))})"""
 
-with sync_playwright() as _b12:
+if _SELECT_TOOL_ON_PAD:
+  with sync_playwright() as _b12:
     _br12 = _b12.chromium.launch()
     _c12 = _br12.new_context(viewport={"width": 1200, "height": 950})
     _p12 = _c12.new_page()
