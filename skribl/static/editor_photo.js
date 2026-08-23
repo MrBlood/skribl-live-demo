@@ -258,7 +258,7 @@ updateSliderFill(photoBlurEl);
     '.slider-nudge-wrap input[type=range]{flex:1;min-width:0}' +
     '.slider-nudge-btn{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:#232734;color:#c8cede;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:background .12s}' +
     '.slider-nudge-btn:hover{background:#2c3140}' +
-    '.slider-nudge-btn:active{background:#7c5cff;color:#fff}' +
+    '.slider-nudge-btn:active{background:var(--accent);color:#fff}' +
     '.zoom-pan-row,.crossfade-row{display:flex;align-items:center;gap:10px;margin:8px 0 2px}' +
     '.zoom-pan-label,.crossfade-label{font-size:12px;color:#8a93a6;flex:none;min-width:64px}' +
     '.crossfade-val{font-size:12px;color:#c8cede;flex:none;min-width:38px;text-align:right}' +

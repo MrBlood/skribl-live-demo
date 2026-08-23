@@ -1089,7 +1089,8 @@ with _sp204() as _p:
         const r = document.getElementById('recIndicator');
         if (!b || !r || r.hidden) return false;
         const br = b.getBoundingClientRect(), rr = r.getBoundingClientRect();
-        // brand is collapsed to the logo; its right edge must clear the indicator
+        // brand is collapsed (wordmark hidden — there is no logo any more);
+        // whatever remains of its box must still clear the indicator
         return br.right > rr.left + 1;
     }""")
     check("V204-fix: the record indicator does not overlap the brand at 600px",
@@ -1509,9 +1510,16 @@ with _sp204() as _p:
     # not snug against it (owner's iPhone screenshot). Real click on the real
     # button; the visual audit above cannot see a "gap that is too small".
     _HDR = """() => { const brand = document.querySelector('.brand');
-        const mark = brand.querySelector('svg').getBoundingClientRect();
+        // The brand used to be icon+wordmark; the icon was removed when the
+        // wordmark reduced to PAD (the host site is branded, the header names
+        // the mode). Measure whatever brand content is VISIBLE — with nothing
+        // visible (fully collapsed) the gap is taken from the brand box's own
+        // left edge, i.e. the cluster merely has to stay inside the header.
+        const mark = brand.querySelector('svg');
         const words = [...brand.querySelectorAll(':scope > span')].filter(w => getComputedStyle(w).display !== 'none' && w.getBoundingClientRect().width > 0);
-        const brandRight = words.length ? Math.max(mark.right, ...words.map(w => w.getBoundingClientRect().right)) : mark.right;
+        const edges = words.map(w => w.getBoundingClientRect().right);
+        if (mark) edges.push(mark.getBoundingClientRect().right);
+        const brandRight = edges.length ? Math.max(...edges) : brand.getBoundingClientRect().left;
         const ctrls = [...document.querySelectorAll('.header .actions button')].filter(b => !b.hidden && b.getBoundingClientRect().width > 0);
         const first = Math.min(...ctrls.map(b => b.getBoundingClientRect().left));
         return { wordsShown: words.length, gap: Math.round(first - brandRight) }; }"""

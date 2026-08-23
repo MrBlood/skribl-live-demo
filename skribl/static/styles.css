@@ -126,16 +126,24 @@ body {
 .brand {
   font-weight: 800;
   font-size: 17px;
-  letter-spacing: -0.35px;
+  /* Matches .flip-word: PAD and FLIPMODE are siblings, and the letterform is
+     what says so. (Was -0.35px back when this read "Skribl Pad".) */
+  letter-spacing: .12em;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 10px;
 }
-/* JS (fitBrand) adds this when the "Skribl Pad" text won't fit → logo only. */
+/* JS (fitBrand) adds this when even "PAD" won't fit → header text-free. The
+   icon this used to fall back to was removed with the wordmark reduction: the
+   host site is already branded, so the header only names the MODE. */
 .brand > span { white-space: nowrap; }
 .brand.brand-collapsed > span { display: none; }
 
+/* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark
+   (a shared link travels off the branded host site, so the card stays
+   branded). This rule must stay HERE because player.css is emitted from this
+   file — cssgraph.py --emit — and `.brand svg` is in the player's live set. */
 .brand svg {
   width: 34px;
   height: 34px;
@@ -887,7 +895,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .tool-btn:hover { background: transparent !important; color: #a8b2c1; }
 
 .tool-btn:focus-visible {
-  outline: 2px solid #7c5cff;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -1337,12 +1345,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .music-dropzone:hover {
-  border-color: #7c5cff;
+  border-color: var(--accent);
   color: #a8b2c1;
 }
 
 .music-dropzone.drag-over {
-  border-color: #7c5cff;
+  border-color: var(--accent);
   background: rgba(124, 92, 255, 0.08);
   color: #a8b2c1;
 }
@@ -1511,8 +1519,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   top: 0;
   bottom: 0;
   background: rgba(124, 92, 255, 0.22);
-  border-left: 2px solid #7c5cff;
-  border-right: 2px solid #7c5cff;
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
   z-index: 1;
   border-radius: 0;
   cursor: grab;
@@ -1568,14 +1576,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .music-trim-handle .zoom-handle-line {
   flex: 1;
   width: 1px;
-  background: #7c5cff;
+  background: var(--accent);
   box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
 }
 
 .music-trim-handle .zoom-handle-cap {
   width: 8px;
   height: 5px;
-  background: #7c5cff;
+  background: var(--accent);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -1654,7 +1662,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
-  background: #7c5cff;
+  background: var(--accent);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -1719,7 +1727,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border: none;
   border-radius: 999px;
   padding: 7px 11px;
-  background: #7c5cff;
+  background: var(--accent);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -1791,7 +1799,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 3px 4px;
 }
 
-.step-readout { color: #7c5cff; }
+.step-readout { color: var(--accent); }
 
 .edge-readout {
   min-width: 56px;
@@ -1854,7 +1862,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .nudge-btn:hover { background: #252b37; color: #e7e9ea; }
-.nudge-btn:active { background: #7c5cff; color: #fff; }
+.nudge-btn:active { background: var(--accent); color: #fff; }
 
 .step-control {
   display: inline-flex;
@@ -1879,7 +1887,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   text-align: center;
   font-size: 13px;
   font-weight: 800;
-  color: #7c5cff;
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1930,14 +1938,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .zoom-handle-line {
   flex: 1;
   width: 1px;
-  background: #7c5cff;
+  background: var(--accent);
   box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
 }
 
 .zoom-handle-cap {
   width: 8px;
   height: 5px;
-  background: #7c5cff;
+  background: var(--accent);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -2049,7 +2057,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .slider:focus-visible,
 .opacity-slider:focus-visible {
-  outline: 2px solid #7c5cff;
+  outline: 2px solid var(--accent);
   outline-offset: 4px;
   border-radius: 999px;
 }
@@ -2059,7 +2067,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #7c5cff 0 var(--slider-fill, 100%), #262c38 var(--slider-fill, 100%) 100%);
+  background: linear-gradient(90deg, var(--accent) 0 var(--slider-fill, 100%), #262c38 var(--slider-fill, 100%) 100%);
 }
 
 .slider::-webkit-slider-thumb,
@@ -2071,7 +2079,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 50%;
   background: #12151b;
   margin-top: -6px;
-  border: 2.5px solid #7c5cff;
+  border: 2.5px solid var(--accent);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: box-shadow 0.15s ease;
 }
@@ -2093,14 +2101,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-moz-range-progress {
   height: 4px;
   border-radius: 999px;
-  background: #7c5cff;
+  background: var(--accent);
 }
 
 .slider::-moz-range-thumb,
 .opacity-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border: 2.5px solid #7c5cff;
+  border: 2.5px solid var(--accent);
   border-radius: 50%;
   background: #12151b;
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
@@ -3268,7 +3276,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #7c5cff;
+  background: var(--accent);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -3289,7 +3297,7 @@ button:focus-visible,
 .color-dot:focus-visible,
 .bg-swatch:focus-visible,
 input:focus-visible {
-  outline: 2px solid #7c5cff;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -3357,14 +3365,15 @@ input:focus-visible {
     flex-shrink: 0;
   }
 
+  /* Player-only (see the base .brand svg rule): the editor has no icon. */
   .brand svg {
     width: 32px;
     height: 32px;
     border-radius: 9px;
   }
 
-  /* Logo-only on mobile in every state — the compact (recording) header no
-     longer re-shows the "Skribl Pad" text. */
+  /* 15px on mobile, same tier .flip-word takes below 440 — the phone is not a
+     thinner brand. */
   .brand > span { font-size: 15px; white-space: nowrap; }
   .header.compact .brand-word { display: inline; }
 
@@ -4570,6 +4579,8 @@ body.playing .flip-grid { display: none; }
   .header.rec-collapsed .btn.record,
   .actions:has(#playWrap:not([hidden])) .btn.record,
   .header.post-collapsed .btn.post { width: 36px; height: 36px; min-width: 36px; }
+  /* Player-only now — the editor's icon left the header entirely, which
+     returned its whole 34px+gap to this tier rather than the 4px cut. */
   .header .brand svg { width: 30px; height: 30px; }
   .header.gap-collapsed .actions { gap: 4px; }
   .header.gap-collapsed #menuBtn { margin-left: 2px; margin-right: 0; }

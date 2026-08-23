@@ -139,15 +139,23 @@ body {
 .brand {
   font-weight: 800;
   font-size: 17px;
-  letter-spacing: -0.35px;
+  /* Matches .flip-word: PAD and FLIPMODE are siblings, and the letterform is
+     what says so. (Was -0.35px back when this read "Skribl Pad".) */
+  letter-spacing: .12em;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 10px;
 }
-/* JS (fitBrand) adds this when the "Skribl Pad" text won't fit → logo only. */
+/* JS (fitBrand) adds this when even "PAD" won't fit → header text-free. The
+   icon this used to fall back to was removed with the wordmark reduction: the
+   host site is already branded, so the header only names the MODE. */
 .brand > span { white-space: nowrap; }
 
+/* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark
+   (a shared link travels off the branded host site, so the card stays
+   branded). This rule must stay HERE because player.css is emitted from this
+   file — cssgraph.py --emit — and `.brand svg` is in the player's live set. */
 .brand svg {
   width: 34px;
   height: 34px;
@@ -652,14 +660,15 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     flex-shrink: 0;
   }
 
+  /* Player-only (see the base .brand svg rule): the editor has no icon. */
   .brand svg {
     width: 32px;
     height: 32px;
     border-radius: 9px;
   }
 
-  /* Logo-only on mobile in every state — the compact (recording) header no
-     longer re-shows the "Skribl Pad" text. */
+  /* 15px on mobile, same tier .flip-word takes below 440 — the phone is not a
+     thinner brand. */
   .brand > span { font-size: 15px; white-space: nowrap; }
 
   .actions {

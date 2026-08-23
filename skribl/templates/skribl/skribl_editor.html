@@ -10,18 +10,13 @@
 
  <div class="app">
   <div class="header">
+    {# The host site carries the Skribl branding; the header only needs to say
+       which MODE you are in — PAD here, FLIPMODE in Flip (which already dropped
+       its icon and the word "Skribl" for exactly this reason). Same letterform
+       as .flip-word so the pair reads as siblings. Removing the icon also
+       removed this template's inline copy of the brand gradient. #}
     <div class="brand">
-      <svg viewBox="0 0 100 100">
-        <defs>
-          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7c5cff"/>
-            <stop offset="1" stop-color="#5b8cff"/>
-          </linearGradient>
-        </defs>
-        <rect width="100" height="100" rx="28" fill="url(#g)"/>
-        <polygon fill="#fff" points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/>
-      </svg>
-      <span><span class="brand-word">Skribl</span> <span class="brand-word">Pad</span></span>
+      <span><span class="brand-word">PAD</span></span>
     </div>
 
     <div id="recIndicator" class="rec-indicator" hidden>
