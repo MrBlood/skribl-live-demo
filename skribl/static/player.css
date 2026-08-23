@@ -39,11 +39,32 @@
   --text-muted: #7d8496;
   --text-dim: #575f6e;
 
-  /* Accent */
+  /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
+     "POST is electricity"). After the v220.x demotion the ONLY things still
+     on --accent are: Post and its sheet (.btn.post, .post-submit,
+     .post-watch), Flip's post/share CTAs (.flip-upload, .flip-share-open),
+     and the whole PLAYER surface — a shared link travels off the branded
+     host, so the player stays branded, and verify_ux pins its active fill
+     to this exact colour. Everything else moved to the --ui-* roles below.
+     Recording stays #f4326f (red) and was never accent. */
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
   --accent-glow: rgba(0,0,0,0.32);
+
+  /* Demoted-UI roles (v220.x). One knob each; all drawn from the ramp above.
+     --ui-hi     lit text/icons + slider fills/handles — where the purple used
+                 to SAY "active"; near-text-primary now says it by brightness.
+     --ui-active fills behind white text/icons (sliding highlights, toggles).
+                 An elevated neutral, NOT near-white, so every existing white
+                 glyph on it keeps its contrast without paired ink flips.
+     --ui-line   borders/rings that were accent (hover edges, selection).
+     --focus-ring keyboard focus — light, and deliberately NOT the accent:
+                 focus must be visible on accent-filled controls too. */
+  --ui-hi: #e7e9ea;
+  --ui-active: #414b61;
+  --ui-line: #566079;
+  --focus-ring: rgba(231,233,234,0.85);
 
   /* Radii */
   --r-control: 12px;
@@ -86,9 +107,9 @@
    the player in v81) so there's no gutter toggle during the player's startup. */
 html { scrollbar-gutter: stable both-edges; }
 
-/* Skribl scrollbars — thin, purple thumb on carbon, everywhere (Pad, Flip, player).
+/* Skribl scrollbars — thin, neutral thumb on carbon, everywhere (Pad, Flip, player).
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
-* { scrollbar-width: thin; scrollbar-color: var(--accent) rgba(8, 10, 15, 0.5); }
+* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
 
 body {
   margin: 0;
@@ -527,7 +548,7 @@ body.player-mode .canvas-area { display: contents; }
 .restore-btn.discard:hover { background: rgba(255,255,255,0.05); }
 
 .restore-btn.confirm {
-  background: var(--accent);
+  background: var(--ui-active);
   color: #fff;
 }
 

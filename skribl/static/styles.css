@@ -16,11 +16,32 @@
   --text-muted: #7d8496;
   --text-dim: #575f6e;
 
-  /* Accent */
+  /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
+     "POST is electricity"). After the v220.x demotion the ONLY things still
+     on --accent are: Post and its sheet (.btn.post, .post-submit,
+     .post-watch), Flip's post/share CTAs (.flip-upload, .flip-share-open),
+     and the whole PLAYER surface — a shared link travels off the branded
+     host, so the player stays branded, and verify_ux pins its active fill
+     to this exact colour. Everything else moved to the --ui-* roles below.
+     Recording stays #f4326f (red) and was never accent. */
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --accent-bright: #9179ff;
   --accent-glow: rgba(0,0,0,0.32);
+
+  /* Demoted-UI roles (v220.x). One knob each; all drawn from the ramp above.
+     --ui-hi     lit text/icons + slider fills/handles — where the purple used
+                 to SAY "active"; near-text-primary now says it by brightness.
+     --ui-active fills behind white text/icons (sliding highlights, toggles).
+                 An elevated neutral, NOT near-white, so every existing white
+                 glyph on it keeps its contrast without paired ink flips.
+     --ui-line   borders/rings that were accent (hover edges, selection).
+     --focus-ring keyboard focus — light, and deliberately NOT the accent:
+                 focus must be visible on accent-filled controls too. */
+  --ui-hi: #e7e9ea;
+  --ui-active: #414b61;
+  --ui-line: #566079;
+  --focus-ring: rgba(231,233,234,0.85);
 
   /* Radii */
   --r-control: 12px;
@@ -63,18 +84,18 @@
    the player in v81) so there's no gutter toggle during the player's startup. */
 html { scrollbar-gutter: stable both-edges; }
 
-/* Skribl scrollbars — thin, purple thumb on carbon, everywhere (Pad, Flip, player).
+/* Skribl scrollbars — thin, neutral thumb on carbon, everywhere (Pad, Flip, player).
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
-* { scrollbar-width: thin; scrollbar-color: var(--accent) rgba(8, 10, 15, 0.5); }
+* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: rgba(8, 10, 15, 0.5); border-radius: 999px; }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--accent), var(--accent-bright));
+  background: var(--ui-line);
   border-radius: 999px;
   border: 2px solid transparent;      /* inset → slim thumb with carbon breathing room */
   background-clip: padding-box;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--accent-bright); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--ui-line); background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 body {
@@ -193,7 +214,7 @@ body {
 }
 
 .btn.record svg {
-  color: var(--accent);
+  color: var(--ui-hi);
   filter: none;
 }
 
@@ -430,7 +451,7 @@ body:not(.player-mode) .canvas-area { position: relative; }
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 0%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--ui-hi);
   box-shadow: 0 0 8px rgba(124, 92, 255, 0.55);
   border-radius: 0 0 0 5px;
 }
@@ -495,7 +516,7 @@ body.stroking .zoom-hud { pointer-events: none; }
 .zoom-hud[data-corner="tl"] { left: 12px;   top: 12px; }
 .zoom-hud.dragging {
   opacity: 0.9;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--accent);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--ui-line);
   transition: box-shadow 0.15s var(--ease);
 }
 
@@ -553,7 +574,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   background: var(--surface-control);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--ui-line);
   border-radius: 6px;
   outline: none;
   padding: 1px 0;
@@ -566,7 +587,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   height: 44px;
   border: none;
   background: none;
-  color: var(--accent-bright);
+  color: var(--ui-hi);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -668,7 +689,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   bottom: 0;
   left: 0;
   height: 2.5px;
-  background: var(--accent);
+  background: var(--ui-active);
   border-radius: var(--r-pill);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring);
@@ -789,13 +810,13 @@ body.stroking .zoom-hud { pointer-events: none; }
 .tool-open:hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
 
 /* Magnify tool — lit (accent) when its zoom pill is showing. */
-.magnify-tool.active { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.magnify-tool.active { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 .magnify-tool.active svg { filter: none; }
 /* Drawer-open toggles (color / image / music) light up with the same translucent
    accent as the magnify + onion toggles — one consistent "lit" state across the
    toolbar and across Pad + Flip (Flip's image/music already use these exact values
    via .flip-tools .magnify-tool.open). */
-.tool-open.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.tool-open.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 /* Sizing now comes from .color-ring > .tool-chip below. The old outer white
    ring is gone: it sat between the core and the spectrum and read as a halo. */
 .tool-chip { border-radius: 50%; }
@@ -854,7 +875,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   top: 4px;
   left: 4px;
   height: calc(100% - 8px);
-  background: var(--accent);
+  background: var(--ui-active);
   border-radius: calc(var(--r-seg) - 4px);   /* concentric inside the 4px inset */
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring);
@@ -895,7 +916,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .tool-btn:hover { background: transparent !important; color: #a8b2c1; }
 
 .tool-btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -952,7 +973,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .size-btn[data-size="20"] { width: 36px; height: 36px; }
 
 .size-btn:active { transform: scale(0.9); }
-.size-btn.active { background: var(--accent); }
+.size-btn.active { background: var(--ui-active); }
 
 .size-btn span {
   border-radius: 50%;
@@ -1031,7 +1052,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .bg-swatch:hover { transform: scale(1.08); }
 .bg-swatch:active { transform: scale(0.94); }
-.bg-swatch.active { border-color: var(--accent); }
+.bg-swatch.active { border-color: var(--ui-line); }
 
 /* --- Photo reposition (Fill mode) --- */
 .reposition-btn {
@@ -1045,7 +1066,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .reposition-btn svg { width: 15px; height: 15px; }
 .reposition-btn:hover { background: #1c212c; color: #e7e9ea; }
-.reposition-btn.active { background: var(--accent); color: #fff; border-color: transparent; }
+.reposition-btn.active { background: var(--ui-active); color: #fff; border-color: transparent; }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
@@ -1094,7 +1115,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .eyedropper-btn svg { width: 18px; height: 18px; }  /* v207: tier-2 glyph size, matches drawer toggles */
 .eyedropper-btn:hover { background: #1c212c; color: #c8cede; }
-.eyedropper-btn.picking { background: var(--accent); color: #fff; border-color: transparent; }
+.eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
 
 .recent-row { display: flex; align-items: center; gap: 10px; }
 .recent-label { font-size: 10px; }
@@ -1209,7 +1230,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .seg-slider {
   position: absolute;
   top: 3px; left: 3px; bottom: 3px;
-  background: var(--accent);
+  background: var(--ui-active);
   /* was `inherit`, i.e. the container's radius. Harmless at 999px, visibly
      wrong at 12px: the highlight has to be 3px tighter to sit concentric. */
   border-radius: calc(var(--r-seg) - 3px);
@@ -1221,9 +1242,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .drawer-actions { display: flex; gap: 8px; }
-.clear-undo-btn { color: var(--accent-bright); border-color: rgba(124, 92, 255, 0.4); }
+.clear-undo-btn { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.4); }
 .clear-undo-btn:disabled { opacity: 0.4; cursor: default; color: var(--text-dim); border-color: var(--hairline); }
-.clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--accent); }
+.clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--ui-line); }
 .clear-drawer-btn {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
@@ -1345,12 +1366,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .music-dropzone:hover {
-  border-color: var(--accent);
+  border-color: var(--ui-line);
   color: #a8b2c1;
 }
 
 .music-dropzone.drag-over {
-  border-color: var(--accent);
+  border-color: var(--ui-line);
   background: rgba(124, 92, 255, 0.08);
   color: #a8b2c1;
 }
@@ -1519,8 +1540,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   top: 0;
   bottom: 0;
   background: rgba(124, 92, 255, 0.22);
-  border-left: 2px solid var(--accent);
-  border-right: 2px solid var(--accent);
+  border-left: 2px solid var(--ui-line);
+  border-right: 2px solid var(--ui-line);
   z-index: 1;
   border-radius: 0;
   cursor: grab;
@@ -1576,14 +1597,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .music-trim-handle .zoom-handle-line {
   flex: 1;
   width: 1px;
-  background: var(--accent);
+  background: var(--ui-hi);
   box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
 }
 
 .music-trim-handle .zoom-handle-cap {
   width: 8px;
   height: 5px;
-  background: var(--accent);
+  background: var(--ui-hi);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -1662,7 +1683,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--accent);
+  background: var(--ui-active);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
@@ -1696,7 +1717,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .match-drawing-label {
-  color: var(--accent-bright);
+  color: var(--ui-hi);
   font-weight: 600;
   margin-left: 4px;
 }
@@ -1727,7 +1748,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border: none;
   border-radius: 999px;
   padding: 7px 11px;
-  background: var(--accent);
+  background: var(--ui-active);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -1799,7 +1820,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 3px 4px;
 }
 
-.step-readout { color: var(--accent); }
+.step-readout { color: var(--ui-hi); }
 
 .edge-readout {
   min-width: 56px;
@@ -1862,7 +1883,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .nudge-btn:hover { background: #252b37; color: #e7e9ea; }
-.nudge-btn:active { background: var(--accent); color: #fff; }
+.nudge-btn:active { background: var(--ui-active); color: #fff; }
 
 .step-control {
   display: inline-flex;
@@ -1887,7 +1908,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   text-align: center;
   font-size: 13px;
   font-weight: 800;
-  color: var(--accent);
+  color: var(--ui-hi);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1938,14 +1959,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .zoom-handle-line {
   flex: 1;
   width: 1px;
-  background: var(--accent);
+  background: var(--ui-hi);
   box-shadow: 0 0 3px rgba(124, 92, 255, 0.5);
 }
 
 .zoom-handle-cap {
   width: 8px;
   height: 5px;
-  background: var(--accent);
+  background: var(--ui-hi);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -1977,7 +1998,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   top: 3px;
   left: 3px;
   height: calc(100% - 6px);
-  background: var(--accent);
+  background: var(--ui-active);
   border-radius: calc(var(--r-seg) - 3px);
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring);
@@ -2057,7 +2078,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .slider:focus-visible,
 .opacity-slider:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 4px;
   border-radius: 999px;
 }
@@ -2067,7 +2088,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent) 0 var(--slider-fill, 100%), #262c38 var(--slider-fill, 100%) 100%);
+  background: linear-gradient(90deg, var(--ui-hi) 0 var(--slider-fill, 100%), #262c38 var(--slider-fill, 100%) 100%);
 }
 
 .slider::-webkit-slider-thumb,
@@ -2079,7 +2100,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 50%;
   background: #12151b;
   margin-top: -6px;
-  border: 2.5px solid var(--accent);
+  border: 2.5px solid var(--ui-line);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: box-shadow 0.15s ease;
 }
@@ -2101,14 +2122,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-moz-range-progress {
   height: 4px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--ui-hi);
 }
 
 .slider::-moz-range-thumb,
 .opacity-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border: 2.5px solid var(--accent);
+  border: 2.5px solid var(--ui-line);
   border-radius: 50%;
   background: #12151b;
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
@@ -2315,7 +2336,7 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
 .restore-btn.discard:hover { background: rgba(255,255,255,0.05); }
 
 .restore-btn.confirm {
-  background: var(--accent);
+  background: var(--ui-active);
   color: #fff;
 }
 
@@ -2380,7 +2401,7 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
 .magnify-btn.active {
   background: var(--surface-control);
   border-color: rgba(124, 92, 255, 0.3);
-  color: var(--accent);
+  color: var(--ui-hi);
 }
 .magnify-btn.active svg { filter: none; }
 @media (hover: hover) {
@@ -2574,7 +2595,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   height: 38px;
   border-radius: 10px;
   background: rgba(124,92,255,0.14);
-  color: var(--accent-bright);
+  color: var(--ui-hi);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2653,7 +2674,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-progress-fill {
   height: 100%;
   width: 0%;
-  background: var(--accent);
+  background: var(--ui-hi);
   border-radius: 999px;
   transition: width 0.2s ease;
 }
@@ -2661,7 +2682,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-progress-label {
   display: block;
   font-size: 11px;
-  color: var(--accent-bright);
+  color: var(--ui-hi);
   font-weight: 600;
   margin-top: 6px;
   text-align: center;
@@ -3023,17 +3044,17 @@ html.help-open, html.help-open body { overflow: hidden; }
 /* Sleek skinny scrollbar for the help drawer (desktop pointers only; mobile
    keeps its native auto-hiding overlay bar). */
 @media (min-width: 641px) {
-  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: var(--accent) rgba(8, 10, 15, 0.5); }
+  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
   .help-drawer-inner::-webkit-scrollbar { width: 10px; }
   .help-drawer-inner::-webkit-scrollbar-track { background: transparent; }
   .help-drawer-inner::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--accent), var(--accent-bright));
+    background: var(--ui-line);
     border-radius: 999px;
     border: 3px solid transparent;      /* inset → a slim thumb with breathing room */
     background-clip: padding-box;
   }
   .help-drawer-inner::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-bright);
+    background: var(--ui-line);
     background-clip: padding-box;
   }
 }
@@ -3141,7 +3162,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   height: 32px;
   border-radius: 9px;
   background: rgba(124, 92, 255, 0.12);
-  color: var(--accent-bright);
+  color: var(--ui-hi);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3190,7 +3211,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 
 .accordion-header.open .accordion-chevron {
   transform: rotate(180deg);
-  color: var(--accent-bright);
+  color: var(--ui-hi);
 }
 
 .accordion-body {
@@ -3276,7 +3297,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--ui-active);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -3297,7 +3318,7 @@ button:focus-visible,
 .color-dot:focus-visible,
 .bg-swatch:focus-visible,
 input:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -3927,7 +3948,7 @@ body.player-mode #canvas {
   border-radius: 13px; background: rgba(255,255,255,.16); position: relative; cursor: pointer;
   transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
 .music-dropzone.loaded .layer-toggle { display: inline-block; }   /* appears with the loaded box */
-.layer-toggle.on { background: var(--accent); }
+.layer-toggle.on { background: var(--ui-active); }
 .layer-toggle-knob { position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%;
   background: #fff; transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .layer-toggle.on .layer-toggle-knob { transform: translateX(17px); }
@@ -4120,11 +4141,11 @@ body.player-mode #canvas {
   border-radius: 10px;
 }
 .help-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--ui-line);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.16);
   background: #1a1830;
 }
-.help-search-icon { display: flex; color: var(--accent-bright); }
+.help-search-icon { display: flex; color: var(--ui-hi); }
 .help-search-icon svg { width: 15px; height: 15px; }
 .help-search-input {
   flex: 1 1 auto; min-width: 0;
@@ -4237,7 +4258,7 @@ body.player-mode #canvas {
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 .posted-copy:hover { color: var(--text-primary); }
-.posted-copy.done { color: var(--accent-bright); border-color: rgba(124,92,255,0.4); }
+.posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
   font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
 .posted-del:hover { color: var(--danger, #f4326f); }
@@ -4279,7 +4300,7 @@ body.player-mode #canvas {
 .report-privacy { margin: 0 16px 10px; font-size: 11px; color: var(--text-secondary); }
 .report-actions { display: flex; gap: 8px; padding: 0 14px 12px; }
 .report-actions .panel-btn { flex: 1 1 0; text-align: center; }
-.report-primary { background: var(--accent); border-color: transparent; color: #fff; }
+.report-primary { background: var(--ui-active); border-color: transparent; color: #fff; }
 
 /* ---- tooltips -------------------------------------------------------------
    A native `title` tooltip cannot be styled — not the corners, not the colour,
@@ -4340,7 +4361,7 @@ body.player-mode #canvas {
 .skribl-hint-action {
   display: inline-block; margin-top: 8px;
   border: 0; background: transparent; padding: 4px 8px; border-radius: 8px;
-  color: var(--accent-bright); font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--ui-hi); font: inherit; font-size: 12.5px; font-weight: 600;
   cursor: pointer; text-decoration: none;
 }
 .skribl-hint-action:hover { background: rgba(124, 92, 255, 0.14); }
@@ -4383,7 +4404,7 @@ body.player-mode #canvas {
 .tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; }
 .tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .tune-hint { font-size: 11px; color: var(--text-dim); }
-.tune-tool.open { color: var(--accent-bright); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
+.tune-tool.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
 .flip-grid.on { display: block; }
 body.playing .flip-grid { display: none; }
@@ -4517,7 +4538,7 @@ body.playing .flip-grid { display: none; }
 
 /* v207: help pills show the actual button glyph beside the name — people match
    shapes, not words — using the same SVG the real control renders. */
-.help-pill-ic { display: inline-flex; flex: none; color: var(--accent-bright); }
+.help-pill-ic { display: inline-flex; flex: none; color: var(--ui-hi); }
 .help-pill-ic svg { width: 12px; height: 12px; }
 
 /* ============================================================
@@ -4753,7 +4774,7 @@ body.playing .flip-grid { display: none; }
 .leave-btn:hover { background: rgba(255,255,255,.1); }
 /* The safe choice is the visually quieter one, but it takes focus — a mis-tap
    or a stray Enter should keep the work, not discard it. */
-.leave-btn:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
+.leave-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .leave-btn.danger { background: #b3283f; border-color: #b3283f; color: #fff; }
 .leave-btn.danger:hover { background: #c62d46; }
 
