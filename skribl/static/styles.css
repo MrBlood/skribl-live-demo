@@ -29,19 +29,26 @@
   --accent-bright: #9179ff;
   --accent-glow: rgba(0,0,0,0.32);
 
-  /* Demoted-UI roles (v220.x). One knob each; all drawn from the ramp above.
-     --ui-hi     lit text/icons + slider fills/handles — where the purple used
-                 to SAY "active"; near-text-primary now says it by brightness.
-     --ui-active fills behind white text/icons (sliding highlights, toggles).
-                 An elevated neutral, NOT near-white, so every existing white
-                 glyph on it keeps its contrast without paired ink flips.
-     --ui-line   borders/rings that were accent (hover edges, selection).
-     --focus-ring keyboard focus — light, and deliberately NOT the accent:
-                 focus must be visible on accent-filled controls too. */
-  --ui-hi: #e7e9ea;
-  --ui-active: #414b61;
-  --ui-line: #566079;
-  --focus-ring: rgba(231,233,234,0.85);
+  /* Demoted-UI roles (v220.x). The CLASSIFICATION below is permanent — every
+     former accent call-site now names its role — but the VALUES are a dial.
+     Currently pointed back AT the accent: the owner tried the full demotion
+     and found it flat, so this is the undo. Three palettes, one edit apart:
+
+       FULL ACCENT (current)       QUIET (tried, too flat)   TINTED QUIET (untried)
+       --ui-hi:     #7c5cff;       --ui-hi:     #e7e9ea;     --ui-hi:     #cfc9f2;
+       --ui-active: #7c5cff;       --ui-active: #414b61;     --ui-active: #453f6b;
+       --ui-line:   #7c5cff;       --ui-line:   #566079;     --ui-line:   #5d5590;
+       --focus-ring: #7c5cff;      --focus-ring: rgba(231,233,234,0.85);
+                                                             --focus-ring: rgba(207,201,242,0.9);
+
+     TINTED QUIET is the usual answer to "quiet reads dead": neutrals carrying
+     the accent's hue at low saturation, so the UI is calm but not gray.
+     Two-stop gradients (scrub/export fills, scrollbars) were flattened to
+     solid fills during the demotion and stay solid at every setting. */
+  --ui-hi: #7c5cff;
+  --ui-active: #7c5cff;
+  --ui-line: #7c5cff;
+  --focus-ring: #7c5cff;
 
   /* Radii */
   --r-control: 12px;
@@ -84,7 +91,7 @@
    the player in v81) so there's no gutter toggle during the player's startup. */
 html { scrollbar-gutter: stable both-edges; }
 
-/* Skribl scrollbars — thin, neutral thumb on carbon, everywhere (Pad, Flip, player).
+/* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
 * { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
 ::-webkit-scrollbar { width: 8px; height: 8px; }

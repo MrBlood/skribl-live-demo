@@ -1,7 +1,7 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-23T21:53:17Z
+UTC timestamp           : 2026-08-23T22:10:55Z
 Host                    : Linux x86_64
-Tree SHA-256            : 4f6354a090c6f886c974363f6a35d338a596d7c1bcad26d23407c69f3f63ff33
+Tree SHA-256            : 7a443c9ff844eeb631fc39ca86058757daf5d3b7afa38d736dc3af5e797fe3ee
 Git commit              : (not a git checkout)
 SKRIBL_VERSION          : v220
 Python                  : 3.12.3
@@ -10,23 +10,18 @@ SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.DFGgiMwOk0/harness.db)
+Database reset          : yes (fresh /tmp/tmp.h5OljKcspz/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_layout.py verify_surfaces.py verify_player_isolation.py verify_lib.py verify_docs.py verify_version.py
+Command                 : harness/run_harness.sh verify_ux.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 6
-  verify_layout.py: ok — 82/82 passed
-  verify_surfaces.py: ok — 7/7 passed
-  verify_player_isolation.py: ok — 22/22 passed
-  verify_lib.py: ok — 8/8 passed
-  verify_docs.py: ok — 40/40 passed
-  verify_version.py: ok — 23/23 passed
-assertions passed: 182   (skipped suites contribute 0)
+suites requested : 1
+  verify_ux.py: ok — 302/302 passed
+assertions passed: 302   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
