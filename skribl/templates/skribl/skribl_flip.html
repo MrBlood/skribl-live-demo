@@ -147,6 +147,20 @@
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
+      {# Magnify. MARKUP ONLY — flip.js already had the whole control: initCanvasZoom()
+         looks up #magnifyBtn, defines setMagnify(), binds the click, toggles .active
+         and aria-pressed. The button was simply never in this template, so all of
+         that bound to null and did nothing. Pad has carried the same button since
+         v74 (skribl_editor.html, right after #redoBtn) — this is the same element in
+         the same position with the same classes and glyph, so the two rows read
+         identically.
+         Why it matters: the zoom HUD was reachable ONLY by pinching. Measured across
+         1280 -> 375, the HUD was hidden at every width, which means magnify was
+         unreachable on any device without a touchscreen and undiscoverable on the
+         ones with it. #}
+      <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify — zoom centres, so scroll or hold Space and drag to aim it" aria-label="Toggle magnify controls" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
       <span class="tool-sep"></span>
       <div class="color-tool">
         {# Flip needed MARKUP where Pad needed only a wrapper: #colorCurrent IS the
@@ -318,6 +332,11 @@
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pressure.js') }}" defer></script>
+  {# eventpoint.js: which touch a gesture owns. Loaded on ALL THREE surfaces —
+     the player needs it too, because the scrub track is a player control and it
+     read the screen-wide touch list. See the file for the rule. #}
+  <script src="{{ skribl_asset('lib/eventpoint.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>

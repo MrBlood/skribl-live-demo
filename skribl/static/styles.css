@@ -26,6 +26,23 @@
   --r-control: 12px;
   --r-frame: 24px;
   --r-pill: 999px;
+  /* Segmented controls — the container of any one-of-N group with a sliding
+     highlight (tool groups, .seg, .smooth-seg). Deliberately NOT --r-pill.
+     ------------------------------------------------------------------------
+     A 999px radius is a promise the control cannot keep once it gets small.
+     At desktop a segmented group is 44px tall and a full round-end reads as a
+     considered pill; at 34px the highlight is simply a CIRCLE, sitting 6px
+     from rounded-square tiles carrying a 12px corner. Radius stops encoding
+     "this is a one-of-N group" and starts reading as an inconsistency —
+     which is exactly where it was reported from, on a phone-width Flip.
+     12px is the tile radius (.t-btn / .tool-open), so a segmented group now
+     shares its neighbours' corner and is told apart by the thing that
+     actually distinguishes it: a shared container with a sliding highlight.
+     That signal survives at 24px; a corner radius does not.
+     Inner radii are derived, never typed: a highlight inset 3px inside a 12px
+     container wants 9px to look concentric, and one inset 4px wants 8px.
+     Setting this to 999px restores every pill in one line. */
+  --r-seg: 12px;
 
   /* Motion */
   --spring: cubic-bezier(0.4, 0.0, 0.2, 1.1);
@@ -816,7 +833,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .tool-group {
   position: relative;
   background: var(--surface-control);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-seg);
   padding: 4px;
   display: inline-flex;
   overflow: hidden;
@@ -830,7 +847,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   left: 4px;
   height: calc(100% - 8px);
   background: var(--accent);
-  border-radius: var(--r-pill);
+  border-radius: calc(var(--r-seg) - 4px);   /* concentric inside the 4px inset */
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring);
   z-index: 0;
@@ -841,7 +858,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: relative;
   z-index: 1;
   border: 0 !important;
-  border-radius: 999px;
+  border-radius: calc(var(--r-seg) - 4px);
   background: transparent !important;
   outline: none;
   box-shadow: none !important;
@@ -1097,12 +1114,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: relative; overflow: hidden;
   display: flex; margin-left: auto;
   background: #171b23; border: 1px solid var(--hairline);
-  border-radius: 999px; padding: 3px;
+  border-radius: var(--r-seg); padding: 3px;
 }
 .smooth-btn {
   position: relative; z-index: 1;
   border: 0; background: transparent; color: #8a93a6;
-  font-size: 12px; font-weight: 500; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */; border-radius: 999px;
+  font-size: 12px; font-weight: 500; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */; border-radius: calc(var(--r-seg) - 3px);
   cursor: pointer; transition: color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1142,7 +1159,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   display: inline-flex;
   background: var(--surface-control);
   border: 1px solid var(--hairline-strong);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-seg);
   padding: 3px;
   /* --seg-h was declared in four places and read in none, so a seg's height
      came from `font: inherit` -> `line-height: inherit`: it was as tall as
@@ -1166,7 +1183,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
      padding, and the label centered in its cell. Not a fixed width (these
      carry text of varying length: "On"/"Off", "16:9"), so each cell sizes to
      its label; only the rhythm and centering are shared. Was 5px 11px. */
-  padding: 5px 14px; border-radius: var(--r-pill);
+  padding: 5px 14px; border-radius: calc(var(--r-seg) - 3px);
   min-width: 34px;
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; font-variant-numeric: tabular-nums;
@@ -1185,7 +1202,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: absolute;
   top: 3px; left: 3px; bottom: 3px;
   background: var(--accent);
-  border-radius: inherit;
+  /* was `inherit`, i.e. the container's radius. Harmless at 999px, visibly
+     wrong at 12px: the highlight has to be 3px tighter to sit concentric. */
+  border-radius: calc(var(--r-seg) - 3px);
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring), opacity 0.18s ease;
   z-index: 0;
@@ -1762,7 +1781,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   gap: 4px;
   background: #161a22;
   border: 1px solid #2e3340;
-  border-radius: 999px;
+  /* Same family as .seg / .tool-group: a bordered container holding controls
+     that act as one unit (− readout +). It has no sliding highlight, so a
+     stylesheet grep for the slider classes missed it; a DOM walk for
+     round-ended containers with two button children found it in the loop
+     fine-tune on both surfaces. Shares --r-seg so it cannot drift from the
+     groups it sits beside. */
+  border-radius: var(--r-seg);
   padding: 3px 4px;
 }
 
@@ -1804,7 +1829,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
      keeps their tap areas from overlapping each other. */
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  /* Derived from the container, like every other cell inside a --r-seg group:
+     .edge-controls is 12px with 3px of padding, so 9px sits concentric. It was
+     a 50% circle, which read as a circle inside a rounded-square the moment the
+     container stopped being a pill.
+     It also settles an inconsistency that predates the squaring: the Scroll and
+     Crossfade nudges in the SAME panel are .slider-nudge-btn at 7px on a 26px
+     box — rounded squares — so the loop panel was already showing two different
+     shapes for the same minus/plus gesture, four rows apart. */
+  border-radius: calc(var(--r-seg) - 3px);
   border: 0;
   background: #252b37;
   color: #a8b2c1;
@@ -1923,7 +1956,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .photo-fit-group {
   position: relative;
   background: #171b23;
-  border-radius: 999px;
+  border-radius: var(--r-seg);
   padding: 3px;
   display: inline-flex;
   overflow: hidden;
@@ -1937,7 +1970,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   left: 3px;
   height: calc(100% - 6px);
   background: var(--accent);
-  border-radius: var(--r-pill);
+  border-radius: calc(var(--r-seg) - 3px);
   box-shadow: 0 2px 8px var(--accent-glow);
   transition: transform 0.42s var(--spring), width 0.42s var(--spring);
   z-index: 0;
@@ -1949,7 +1982,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   z-index: 1;
   flex: 1;
   border: 0 !important;
-  border-radius: 999px;
+  border-radius: calc(var(--r-seg) - 3px);
   background: transparent !important;
   outline: 0 !important;
   box-shadow: none !important;
@@ -3482,18 +3515,43 @@ input:focus-visible {
     flex-direction: column; align-items: stretch; justify-content: flex-start;
     min-width: 0; gap: 6px;
   }
+  /* Centred over the pill it names, matching the >=641px layout, which was
+     already centred. `text-align: left` plus `align-self: flex-start` left the
+     label hanging off the left of its own control: measured centre-to-centre
+     offsets of +23px at 640, +16 at 430 and +68 at 363 — the wider the column
+     got relative to the 128px pill, the further the label drifted from it. */
+  .edge-name { text-align: center; }
+  .edge-controls { flex: none; gap: 4px; padding: 3px; align-self: center; }
+  .edge-readout { min-width: 52px; font-size: 12px; }
+  .nudge-btn { width: 30px; height: 30px; font-size: 16px; }
+
+}
+
+/* Step size joins Start and End as a third column WHENEVER a third column
+   exists, and only takes its own full-width row when it does not.
+   ---------------------------------------------------------------------------
+   `grid-column: 1 / -1` on the third group used to be unconditional inside the
+   max-640 block, so Step size was pushed onto its own row even at widths where
+   auto-fit had already laid out three columns and left one of them empty.
+   Measured: the grid is `repeat(auto-fit, minmax(130px, 1fr))` and it resolves
+   to THREE columns at 640 (173px each), 560 (147px) and 510 (130px), against a
+   control that is 128px wide at every one of them. At 640 that is 45px of room
+   going spare while the label sat alone on a row underneath.
+   auto-fit drops to two columns between 510px and 508px (measured by sweeping
+   the viewport 2px at a time), so 509 is the exact width at which the span
+   becomes necessary rather than merely inherited.
+   Below it the v210 arrangement is kept as it was — Start and End two-up, Step
+   size full width beneath — because that one was measured on the owner's real
+   phone, and the label-left/control-right row is the right shape for a control
+   spanning the full grid. */
+@media (max-width: 509px) {
   .edge-group:nth-child(3) {
     grid-column: 1 / -1;
     flex-direction: row; align-items: center; justify-content: space-between;
     gap: 10px;
   }
-  .edge-name { text-align: left; }
-  .edge-group:nth-child(3) .edge-name { flex: 1; }
-  .edge-controls { flex: none; gap: 4px; padding: 3px; align-self: flex-start; }
+  .edge-group:nth-child(3) .edge-name { flex: 1; text-align: left; }
   .edge-group:nth-child(3) .edge-controls { align-self: center; }
-  .edge-readout { min-width: 52px; font-size: 12px; }
-  .nudge-btn { width: 30px; height: 30px; font-size: 16px; }
-
 }
 
 .music-dropzone[hidden] { display: none; }
@@ -4572,10 +4630,14 @@ body.playing .flip-grid { display: none; }
    stays reachable without the button. Removing it puts the row back on ONE line
    at 375 and 390 with no tap target shrunk.
    Above this width there is room, so the button stays — it is the only zoom
-   affordance for a mouse. */
-@media (max-width: 400px) {
-  #magnifyBtn { display: none; }
-}
+   affordance for a mouse.
+
+   THIS RULE IS NOW DEAD and is kept only as the record of where 400px came
+   from. A later change added a blanket `max-width: 640px` hide that supersedes
+   it, so the number this block measured stopped having any effect. The live
+   floors — 400 for Flip, 430 for Pad, both re-measured — are in the magnify
+   block further down, alongside the pointer:coarse gate that replaced the
+   blanket rule. Do not re-add a width-only hide here. */
 
 /* ===================================================================
    Colour control — spectrum ring, current-colour core            v215
@@ -4691,11 +4753,35 @@ body.playing .flip-grid { display: none; }
 .menu-item { text-decoration: none; }
 
 
-/* Magnify returns, on desktop only. The button exists where the GESTURE does
-   not: a phone has pinch, a mouse has nothing. Below 640px the Zoom row in the
-   media drawer keeps Fit and the presets reachable, so nothing reachable ONLY
-   through this button becomes unreachable. */
-@media (max-width: 640px) { #magnifyBtn { display: none; } }
+/* Magnify is shown wherever the GESTURE is missing and the button FITS.
+   ---------------------------------------------------------------------------
+   This used to be `@media (max-width: 640px) { #magnifyBtn { display: none } }`
+   — width as a stand-in for "this is a phone, it has pinch". Width is a poor
+   proxy for input: a tablet at 810px has pinch, and a desktop window dragged
+   to 500px has a mouse and nothing else. The wide rule also made the v213
+   400px floor below it unreachable — dead code that had carefully measured the
+   one number that actually mattered.
+
+   `pointer: coarse` asks the real question. Where a pinch exists the button is
+   redundant below 640 and stays hidden exactly as before; where it does not,
+   the button survives down to the width at which it physically stops fitting.
+
+   THE FLOORS ARE MEASURED, per surface, forcing the button visible and reading
+   the row's content span against its available width:
+
+       Flip   400px   12px spare  (fails at 375: -2px, and scrolls at 390)
+       Pad    430px   12px spare  (wraps at 414 — Pad's row is the longer one,
+                                   it carries a colour-drawer tile and a second
+                                   separator that Flip does not)
+
+   Below those the button goes regardless of input, because there is nowhere to
+   put it. Between them and 640 a mouse keeps its only zoom affordance — which
+   on Flip is a band 240px wide that previously had none at all. */
+@media (pointer: coarse) and (max-width: 640px) {
+  #magnifyBtn { display: none; }
+}
+@media (max-width: 430px) { .toolbar #magnifyBtn { display: none; } }
+@media (max-width: 400px) { .flip-tools #magnifyBtn { display: none; } }
 
 /* ---------- Shape picker, on the button ----------
    The shape kind used to live in the draw drawer, three taps away from the tool
@@ -4775,6 +4861,17 @@ body.playing .flip-grid { display: none; }
 .flip-tools .tool-open,
 .flip-tools .t-btn,
 .flip-tools .color-current { position: relative; }
+/* No z-index here, and that is deliberate — it was tried and reverted.
+   A tap-target sweep appeared to show these bands never firing (#undo measuring
+   40px effective against a 40px box at 640, 36/36 at 390), which looks exactly
+   like the stacking-context failure the --tap-grow block above documents. It
+   was not. The sweep was probing #undo and #redo on a FRESH page, where they
+   are `disabled` — and a disabled control computes `pointer-events: none`, so
+   elementFromPoint returned the row for the button's own centre, not just for
+   the band. Re-measured after drawing a stroke, every band reads 44px at 640,
+   390, 360 and 320. These controls are direct children of the row rather than
+   overlapping a sibling, so `position: relative` alone is sufficient.
+   If a future sweep reports a dead band here, check `.disabled` first. */
 
 .toolbar .tool-open::after,
 .toolbar .undo-btn::after,
@@ -4788,5 +4885,60 @@ body.playing .flip-grid { display: none; }
   transform: translateY(-50%);
 }
 
-#toolGroup .tool-btn { min-height: 44px; }
-.toolbar .tool-group, .flip-tools .tool-group { min-height: 44px; }
+/* Tool group row height — the shared mechanism for BOTH surfaces.
+   ---------------------------------------------------------------------------
+   These two rules used to be `min-height: 44px`, which gave the tool group its
+   44px tap target by making it ACTUALLY 44px tall. Every other control in the
+   row got the invisible ::after band above instead. Two mechanisms for one
+   rule, and the group drew the one that changes what you see — so when the
+   neighbours shrank at a breakpoint, the group could not follow.
+
+   Measured before this change, group height vs the buttons beside it:
+       Flip  >=641px  54 vs 44      Pad  every width  54 vs 44
+       Flip  <=640px  54 vs 40
+       Flip  <=560px  54 vs 36
+       Flip  <=380px  54 vs 34
+   Flip's mismatch grew as the screen tightened, which is also why the group
+   read as an oblong down there: 121x54 at a full-round radius is a stadium
+   beside 40px tiles. Pad's is a flat +10 at every width because Pad's row
+   does not shrink.
+
+   The group is now exactly --seg-row-h tall and the 44px target comes from the
+   same invisible band the rest of the row uses. Surfaces set the variable;
+   Flip overrides it per breakpoint in flip.css, Pad takes the 44px default. */
+.toolbar .tool-group, .flip-tools .tool-group {
+  /* The 44px default is a var() FALLBACK, deliberately not a declaration here.
+     A custom property set directly on an element beats one inherited from an
+     ancestor no matter the specificity, so `--seg-row-h: 44px` on this rule
+     silently overrode Flip's per-breakpoint value on .flip-tools and put every
+     width below 641 back out of parity — measured +4 at 640, +8 at 560, +10 at
+     375. The fallback only applies when no ancestor sets one, which is exactly
+     Pad. */
+  height: var(--seg-row-h, 44px);
+  min-height: 0;
+  box-sizing: border-box;
+  align-items: center;
+  /* overflow:hidden clipped anything reaching past the group, which is exactly
+     what an expanded tap band must do. .tool-slider carries its own radius, so
+     the clip was belt-and-braces and nothing visual depends on it. */
+  overflow: visible;
+}
+/* 10px = the group's 4px padding top and bottom plus its 1px border. */
+#toolGroup .tool-btn {
+  min-height: calc(var(--seg-row-h, 44px) - 10px);
+  padding-top: 0;
+  padding-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+/* Per BUTTON, not per group: a tap just above the pill has to land on the tool
+   under it, not on the pill at large, which has no handler of its own. z-index
+   for the reason given in the --tap-grow block — without it the parent row
+   wins the hit-test in the overflow band. */
+#toolGroup .tool-btn::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%; height: 44px;
+  transform: translateY(-50%);
+}

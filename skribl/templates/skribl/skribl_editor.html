@@ -330,6 +330,11 @@
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pressure.js') }}" defer></script>
+  {# eventpoint.js: which touch a gesture owns. Loaded on ALL THREE surfaces —
+     the player needs it too, because the scrub track is a player control and it
+     read the screen-wide touch list. See the file for the rule. #}
+  <script src="{{ skribl_asset('lib/eventpoint.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>

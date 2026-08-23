@@ -34,9 +34,9 @@ an absence of failures as an absence of gaps.
 
 ## Verify before believing any of this, including me
 
-    cd skribl-v219 && sha256sum -c SHA256SUMS | grep -c ': OK'   # expect 200
+    cd skribl-v220 && sha256sum -c SHA256SUMS | grep -c ': OK'   # expect 204
     grep -o 'SKRIBL_VERSION = "[^"]*"' skribl/core.py            # expect v219
-    wc -l < SHA256SUMS                                           # expect 200
+    wc -l < SHA256SUMS                                           # expect 204
 
 A NOTE ON THAT FIRST NUMBER, because it is the point. The first draft of this
 file said "expect 198". It was correct when written — and then this very file

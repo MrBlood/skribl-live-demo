@@ -222,11 +222,21 @@ function startDraw(e) {
   if (document.body.classList.contains('player-mode')) return;
   // Space held = grab-pan mode; never a stroke (v211).
   if (window._skriblSpaceHeld && window._skriblSpaceHeld()) return;
-  // Two (or more) fingers → magnify/pan gesture, never a stroke. Handled before
-  // preventDefault/anything else so it can cleanly abort a nascent 1-finger
-  // stroke that the first finger just began. Guarded on ZoomView so the player
-  // (no zoom) behaves exactly as before.
-  if (ZoomView && e.touches && e.touches.length >= 2) { beginPinch(e); return; }
+  // Two (or more) fingers ON THE CANVAS → magnify/pan gesture, never a stroke.
+  // Handled before preventDefault/anything else so it can cleanly abort a
+  // nascent 1-finger stroke that the first finger just began. Guarded on
+  // ZoomView so the player (no zoom) behaves exactly as before.
+  //
+  // targetTouches, NOT touches. `touches` is every contact on the SCREEN,
+  // including ones that never came near the canvas — a thumb resting on the
+  // header while holding the phone, a palm on an iPad. Reading it meant one
+  // resting finger anywhere on the page turned every drawing gesture into a
+  // pinch: measured on a 430px viewport, the drag captured ZERO stroke points
+  // and silently switched the magnifier ON. The user drew and nothing appeared.
+  // `targetTouches` is the subset that started on this element, which is what
+  // "two fingers on the canvas" always meant.
+  const _canvasTouches = e.targetTouches || e.touches;
+  if (ZoomView && _canvasTouches && _canvasTouches.length >= 2) { beginPinch(e); return; }
   e.preventDefault();
   _autoArmedThisStroke = false;
   // Ignore non-primary mouse buttons (right/middle click). A right-click

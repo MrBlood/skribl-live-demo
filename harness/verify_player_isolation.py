@@ -718,7 +718,31 @@ with sync_playwright() as sp:
     # exists only because localStorage cannot hold media bytes. A session that
     # lands IndexedDB and then deletes this block should find the ratchet back
     # under 147,000 without carving anything.
-    BYTES_RATCHET, BYTES_TARGET = 150_945, 153_600
+    # 151,845 = 150,945 + 900 B of SERVED, COMMENT-STRIPPED JavaScript: v220
+    # pointer identity. THE PLAYER PAYS AND THE PLAYER BENEFITS — the scrub is a
+    # player control, and it read `e.touches[0]`, which is the first contact on
+    # the SCREEN rather than the one on the track. A viewer holding the phone
+    # with a thumb touching the glass scrubbed to wherever the thumb was.
+    #
+    # The 900 B is code, not prose: jsstrip removes comments from the response,
+    # so the ~3,480 B of raw growth in app.js costs the player nothing. What it
+    # buys, measured:
+    #   eventPoint()          one helper replacing the positional read at 5 sites
+    #                         in app.js and 5 more in the editor-only files
+    #   _pinchPair()          the pinch owns its two contacts BY IDENTIFIER, so a
+    #                         third finger cannot take a slot mid-gesture
+    #   targetTouches guards  beginPinch/pressureSize/getPos read the element's
+    #                         own contacts rather than the screen's
+    #
+    # The defect this closes, reproduced in-harness before the fix and pinned by
+    # counterexample after it: with a thumb resting off-canvas, a Pad stroke drew
+    # at x=56 (the thumb) instead of x=201 (the drawing finger). Reverting getPos
+    # alone reproduces x=56, so both halves are load-bearing. DESIGN-DIRECTION.md
+    # calls this the first promise a drawing app makes.
+    #
+    # Headroom after this: 1,755 B. Tighter still, and the carve candidate below
+    # is unchanged and now the obvious next move for whoever needs room.
+    BYTES_RATCHET, BYTES_TARGET = 151_845, 153_600
     HTML_RATCHET = 9_000                    # template was 56,716 B before this session
 
     present = pg.evaluate(

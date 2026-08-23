@@ -24,7 +24,7 @@ exact procedures. Everything here was verified against the tree, not recalled.
 |---|---|
 | **Sealed, shipped builds** | `/mnt/user-data/outputs/skribl-vNNN-sealed.zip` — v203 … v219 |
 | **Current sealed build** | **v219** — result, tree hash, suite count, assertion count and skip list all in `harness/RELEASE.md`, which is generated. No number for them is typed here, deliberately: §0 of this document carried v211's figures through the v212–v219 builds unchanged, and every one of them was wrong by the end. |
-| Working tree | `/home/claude/skribl-v219/` |
+| Working tree | `/home/claude/skribl-v220/` |
 | Demo `.skribl` files + previews | `/mnt/user-data/outputs/skribl-demos/` (also `harness/fixtures/` in-tree) |
 | Design mockups (HTML, real pixels) | `/mnt/user-data/outputs/skribl-*.html` |
 | Per-release response docs | `docs/REVIEW-RESPONSE-v200.md` … `v211.md` |

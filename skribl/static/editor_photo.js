@@ -40,7 +40,7 @@ canvasWrap.addEventListener('touchmove', (e) => {
   if (tool === 'shape' && typeof shapeCursor !== 'undefined') {
     if (finishedRecording && !recording) { shapeCursor.style.display = 'none'; return; }
     const r = canvas.getBoundingClientRect();
-    const t0 = e.touches[0];
+    const t0 = SkriblEventPoint.at(e);
     updateShapeCursor(t0.clientX - r.left, t0.clientY - r.top);
     shapeCursor.style.display = 'block';
     return;
@@ -48,7 +48,7 @@ canvasWrap.addEventListener('touchmove', (e) => {
   if (tool !== 'eraser') return;
   if (finishedRecording && !recording) { eraserCursor.style.display = 'none'; return; }
   const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
+  const touch = SkriblEventPoint.at(e);
   updateEraserCursor(touch.clientX - rect.left, touch.clientY - rect.top);
   eraserCursor.style.display = 'block';
 }, { passive: true });

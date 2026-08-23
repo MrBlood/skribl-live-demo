@@ -159,7 +159,7 @@ bindEl('loadDraftItem', 'click', () => {
 
   function onTouchStart(e) {
     // Only engage drag from the top region of the sheet (handle + header area)
-    const touchY = e.touches[0].clientY;
+    const touchY = SkriblEventPoint.at(e).clientY;
     const rect = sheet.getBoundingClientRect();
     if (touchY - rect.top > 60) return; // only near the top
     dragging = true;
@@ -170,7 +170,7 @@ bindEl('loadDraftItem', 'click', () => {
 
   function onTouchMove(e) {
     if (!dragging) return;
-    currentY = Math.max(0, e.touches[0].clientY - dragStartY);
+    currentY = Math.max(0, SkriblEventPoint.at(e).clientY - dragStartY);
     sheet.style.transform = `translateY(${currentY}px)`;
   }
 

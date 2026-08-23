@@ -45,6 +45,23 @@
   .fw-mid, .fw-min { display: none; }
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+  /* Below 640 the shared rule `.header .actions { margin-left: 12px }`
+     (styles.css, inside its own max-width:640 block) replaces that auto
+     margin with a fixed 12px, and the action cluster packs left against the
+     wordmark. Measured at 640: actions sat at x=203 with 256px of empty
+     header to their right.
+     That rule is PAD's. Its comment reasons entirely about Pad — the tune
+     glyph painting over the "d" of "Pad", fitBrand's shed steps, Post's
+     "to Skribl" suffix — but the selector was never scoped to Pad, so Flip
+     inherited a fix for a collision it does not have.
+     Restoring `auto` here costs nothing when the header is over-full: an auto
+     margin resolves to 0 once there is no free space, so the shed-before-
+     overlap behaviour the shared rule protects is unchanged, and flex-shrink
+     is left exactly as it was. Scoped to .flip-app so Pad keeps the shared
+     rule until Pad has been looked at. */
+  @media (max-width: 640px) {
+    .flip-app .header .actions { margin-left: auto; }
+  }
 
   /* .seg / .seg button / .seg button.on MOVED to styles.css. They lived here,
      and Pad does not load flip.css — so when Pad gained a .seg canvas picker
@@ -234,14 +251,13 @@
   .t-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
-  /* Pad's pen/eraser toggle, sized to sit in Flip's 40px tool row. */
-  /* min-height + auto, never a FIXED height. The group is `overflow: hidden`, so a
-     fixed height plus padding clipped the bottom of its own 44px buttons — the
-     button's rect said 44px while the visible, hit-testable area was 36px. A
-     control whose measured size and touchable size disagree is worse than a
-     small one, because measurement says it is fine. */
-  .flip-tools .tool-group { min-height: 44px; height: auto; box-sizing: border-box; align-items: center; }
-  .flip-tools .tool-btn { padding: 6px 14px; }
+  /* Flip's tool row shrinks at each breakpoint; Pad's does not. The MECHANISM
+     (group height, derived cell height, invisible 44px tap band) is shared and
+     lives in styles.css under `.toolbar .tool-group, .flip-tools .tool-group`.
+     All Flip has to do is say how tall the row is at each width — the group
+     inherits --seg-row-h from the row it sits in. */
+  .flip-tools { --seg-row-h: 40px; }
+  .flip-tools .tool-btn { padding-left: 14px; padding-right: 14px; }
 
   /* ---- Desktop parity with Skribl Pad (>640px) ---------------------------
      On desktop, match the Pad's shared design-system sizes exactly so the two
@@ -256,7 +272,7 @@
     .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; }
     .grid-tool, #moreBtn { width: 36px; height: 36px; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 44px; height: 44px; }
-    .flip-tools .tool-group { min-height: 44px; height: auto; }
+    .flip-tools { --seg-row-h: 44px; }
   }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
@@ -278,7 +294,7 @@
        actually scarce here. */
     .flip-tools { gap: 6px; padding: 10px 8px; flex-wrap: nowrap; overflow-x: auto; justify-content: safe center; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 36px; height: 36px; }
-    .flip-tools .tool-group { min-height: 44px; height: auto; }
+    .flip-tools { --seg-row-h: 36px; }
     .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
     .flip-tools .tool-btn-label { display: none; }
     .flip-tools .tool-btn { padding: 6px 10px; }
@@ -287,7 +303,7 @@
   @media (max-width: 380px) {
     .flip-tools { gap: 5px; padding: 9px 6px; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 34px; height: 34px; }
-    .flip-tools .tool-group { min-height: 44px; height: auto; }
+    .flip-tools { --seg-row-h: 34px; }
   }
   /* v124: 88x62 left the per-page controls at 18x18 — a third of the 44px touch
      target both Apple and Google recommend, on a tile carrying five of them.
@@ -548,7 +564,20 @@
    smaller picture. */
 
 .pb-tx { display: none; }
-@media (min-width: 560px) {
+/* 645, not 560. The labels used to switch on at 560px, but a LABELLED page bar
+   needs 620px of bar to lay out — so between 560 and 641 the bar overflowed its
+   own container and Delete, the last button, fell off the right edge. Measured
+   overflow: 80px at 560, 60px at 580, 40px at 600, 20px at 620, and 1px at 641
+   (the odd one out: at exactly 641 a vertical scrollbar takes the pixel that
+   made it fit at 640). The bar is `overflow-x: auto` with the scrollbar hidden,
+   so Delete was still reachable by dragging — with nothing on screen to suggest
+   it. A destructive action that is present, clipped, and gives no hint it can be
+   scrolled to is worse than one that is plainly not there.
+   645 leaves 3px of slack against the widest the bar gets (620 at "Page 24 / 24"
+   with a ×24 hold badge — measured, not assumed; the counter and badge are the
+   only parts whose width varies). Below it every button keeps its glyph and its
+   38px box, which is the same arrangement the bar already used under 560. */
+@media (min-width: 645px) {
   .pb-tx { display: inline; }
   .pb { padding: 0 12px; }
 }
@@ -877,6 +906,44 @@
    and the tap targets stay untouched. Labels already hide below 640px. */
 @media (max-width: 640px) {
   .flip-tools { gap: 3px; padding: 12px 6px; }
-  .flip-tools #toolGroup .tool-btn { padding: 6px 8px; }
+  /* Horizontal only. Vertical padding here would fight the row-height variable
+     above and push the pill back off its neighbours' height. */
+  .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
   .flip-tools #toolGroup .tool-btn svg { width: 21px; height: 21px; }
 }
+
+
+/* ---------- 320-class phones (placed LAST, deliberately) ----------
+   This tier must come after the max-640 and max-400 blocks above, which set
+   .flip-tools and .pagebar gap/padding at the same specificity. Placed with
+   the other breakpoints it was silently overridden by them on source order —
+   the rules parsed fine and changed nothing, which the measurement caught
+   only because it re-read the computed gap rather than trusting the edit.
+
+   Both of Flip's horizontal rows fit EXACTLY at 360 (content 340 against 340
+   available) and overflow below it. Measured shortfall before this tier:
+
+       viewport   page bar   tool row
+          344       15px        8px
+          340       19px       12px
+          320       39px       32px
+
+   Both rows are `overflow-x: auto` with the scrollbar hidden, so the controls
+   that fell off the right edge — Delete on the page bar, Music on the tool row
+   — were still draggable into view with nothing on screen saying so. Same
+   defect class as the 560-641 Delete clip, at the other end of the range. 320
+   is a width this project already treats as in scope: verify_ux pins Pad's
+   header there explicitly.
+
+   No tap target drops below the system minimum: the visual boxes go to 32/33px
+   and --tap-grow rises to match, the same trade the design system already makes
+   for colour dots (30 visual) and nudge buttons (32 visual). */
+@media (max-width: 344px) {
+  .flip-tools { gap: 2px; padding: 9px 4px; }
+  .flip-tools .tool-open, .flip-tools .t-btn { width: 32px; height: 32px; }
+  .flip-tools { --seg-row-h: 32px; }
+  .flip-tools #toolGroup .tool-btn { padding: 0 5px; }
+  .pagebar { gap: 3px; padding: 7px 6px; }
+  .pb { min-width: 33px; padding: 0 5px; --tap-grow: 6px; }
+}
+

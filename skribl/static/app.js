@@ -315,9 +315,20 @@ function makeHistoryState() {
   };
 }
 
+/* eventPoint / pinch helpers live in lib/eventpoint.js — ONE implementation
+ * shared by Pad, Flip and the player. It was briefly written out in both
+ * app.js and flip.js; verify_surfaces.py counts function names defined in both
+ * files and correctly refused the duplicate. See that file for the rule and
+ * the defect it closes. */
+
 function getPos(e) {
   const rect = canvas.getBoundingClientRect();
-  const src = e.touches ? e.touches[0] : e;
+  // See SkriblEventPoint.at() above for why this is not `e.touches[0]`. The stroke path
+  // is where it matters most: every point of a mark landed where a resting
+  // thumb was rather than where the drawing finger went. That was masked until
+  // the pinch guard stopped reading the same screen-wide list — measured, the
+  // stroke drew at x=56 (the thumb) instead of x=201 (the finger).
+  const src = SkriblEventPoint.at(e);
   // The canvas may be displayed smaller than its authored size (letterbox fit),
   // so map the CSS-pixel pointer position back into the fixed logical space.
   const lg = getCanvasLogicalSize();
@@ -609,9 +620,17 @@ function pressureSize(e, base, erase) {
   let raw = 0;
   if (e.pointerType === 'pen' && typeof e.pressure === 'number') {
     raw = e.pressure;                       // Pointer Events, if ever adopted here
-  } else if (e.touches && e.touches.length === 1) {
-    const t = e.touches[0];
-    if (t && t.touchType === 'stylus' && typeof t.force === 'number') raw = t.force;
+  } else if (e.targetTouches || e.touches) {
+    // targetTouches first, for the reason given at the pinch guard in
+    // editor_draw.js: `touches` counts contacts that never touched the canvas,
+    // so a palm resting on an iPad made `length === 1` false and quietly
+    // dropped Apple Pencil pressure back to constant width. The length check
+    // stays — with two fingers ON the canvas this is a pinch, not a stroke.
+    const list = (e.targetTouches && e.targetTouches.length) ? e.targetTouches : e.touches;
+    if (list && list.length === 1) {
+      const t = list[0];
+      if (t && t.touchType === 'stylus' && typeof t.force === 'number') raw = t.force;
+    }
   }
   // A stylus commonly reports 0 on the first event of a stroke. Treat that as
   // "no reading yet" rather than as a feather touch, or every line would start
@@ -1557,7 +1576,7 @@ playBtn.addEventListener('click', () => {
 if (playScrub) {
   const scrubFrac = (e) => {
     const r = playScrub.getBoundingClientRect();
-    const x = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+    const x = SkriblEventPoint.at(e).clientX;
     return (x - r.left) / r.width;
   };
   playScrub.addEventListener('pointerdown', (e) => {
@@ -2916,7 +2935,7 @@ function updateZoomPanSlider() {
 // an edge handle (those resize the loop) so the two never fight.
 function dragZoomPan(wrap) {
   if (!wrap) return;
-  const cx = (e) => (e.touches ? e.touches[0].clientX : e.clientX);
+  const cx = (e) => SkriblEventPoint.at(e).clientX;
   function onStart(e) {
     if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;
     if (e.target.closest('.zoom-handle')) return;   // let the handle drag win
@@ -4563,7 +4582,7 @@ function showPlayerError(msg) {
   }
   function fracFromEvent(e) {
     const rect = pTrack.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientX = SkriblEventPoint.at(e).clientX;
     return (clientX - rect.left) / rect.width;
   }
 
@@ -4849,22 +4868,43 @@ function beginPinch(e) {
   if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) {
     if (typeof ZoomView.enable === 'function') ZoomView.enable();
   }
+  // The two fingers of THIS pinch are the ones on the canvas, not the first two
+  // on the screen. See the note at the call site in editor_draw.js.
+  const _own = SkriblPinch.own(e);
+  if (!_own || _own.length < 2) return;
+  if (typeof e.preventDefault === 'function') e.preventDefault();
   // Show the HUD too, not just the zoom: Fit lives there, and on a skinny phone
   // the magnify button that would otherwise reveal it is hidden.
+  //
+  // AFTER the two-finger check, not before. Enabling the magnifier is a visible
+  // state change and it used to happen on any call that reached this function,
+  // including the ones that then bailed out one line later — so a gesture that
+  // was never a pinch still turned zoom on. Nothing about revealing the HUD
+  // needs to precede knowing that this is a pinch.
+  if (typeof ZoomView.enabled === 'function' && !ZoomView.enabled()) {
+    if (typeof ZoomView.enable === 'function') ZoomView.enable();
+  }
   if (window._skriblRevealZoomHud) window._skriblRevealZoomHud();
-  if (!e.touches || e.touches.length < 2) return;
-  if (typeof e.preventDefault === 'function') e.preventDefault();
   abortStrokeForPinch();
   pinching = true;
-  const t0 = e.touches[0], t1 = e.touches[1];
-  _pinch = { startDist: _touchDist(t0, t1), lastDist: _touchDist(t0, t1), lastMid: _touchMid(t0, t1) };
+  const t0 = _own[0], t1 = _own[1];
+  // Remember WHICH two fingers. _pinchMove is bound to window and reads the
+  // screen-wide list, so a third contact — the resting thumb again — could
+  // otherwise take a slot and the pinch would be computed from a pair that
+  // includes a finger standing still, halving the apparent zoom.
+  _pinch = {
+    ids: [t0.identifier, t1.identifier],
+    startDist: _touchDist(t0, t1), lastDist: _touchDist(t0, t1),
+    lastMid: _touchMid(t0, t1)
+  };
 }
 
 function _pinchMove(e) {
   if (!pinching || !_pinch) return;
-  if (!e.touches || e.touches.length < 2) return;
+  const pair = SkriblPinch.pair(e, _pinch && _pinch.ids);
+  if (!pair) return;
   e.preventDefault();
-  const t0 = e.touches[0], t1 = e.touches[1];
+  const t0 = pair[0], t1 = pair[1];
   const dist = _touchDist(t0, t1);
   const mid = _touchMid(t0, t1);
   if (_pinch.lastDist > 0) {
@@ -4878,10 +4918,14 @@ function _pinchMove(e) {
 
 function _pinchEnd(e) {
   if (!pinching) return;
-  // End the pinch as soon as we drop below two fingers. A single remaining
+  // End the pinch as soon as either of ITS OWN fingers lifts. A single remaining
   // finger will NOT resume drawing (it never fired a fresh touchstart); the user
   // lifts and taps again to draw — standard, and avoids a stray line.
-  if (e.touches && e.touches.length >= 2) return;
+  //
+  // Counting to two instead would leave the pinch live when one of its fingers
+  // lifted while an unrelated resting contact kept the screen-wide total at two:
+  // the gesture would then be steered by a pair that no longer exists.
+  if (SkriblPinch.pair(e, _pinch && _pinch.ids)) return;
   pinching = false;
   _pinch = null;
 }
@@ -5066,7 +5110,7 @@ window.addEventListener('touchcancel', _pinchEnd);
     return best;
   }
   function pointer(ev) {
-    const t = ev.touches ? ev.touches[0] : ev;
+    const t = SkriblEventPoint.at(ev);
     return { x: t.clientX, y: t.clientY };
   }
   function gripStart(ev) {

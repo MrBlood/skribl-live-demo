@@ -154,6 +154,10 @@
      and music drop/change handlers, and both upload buttons and both file
      inputs left with the tab panels — on the player those bindings resolve to
      detached stubs whose handlers can never fire. 7,130 B off every link. #}
+  {# eventpoint.js: which touch a gesture owns. Loaded on ALL THREE surfaces —
+     the player needs it too, because the scrub track is a player control and it
+     read the screen-wide touch list. See the file for the rule. #}
+  <script src="{{ skribl_asset('lib/eventpoint.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>

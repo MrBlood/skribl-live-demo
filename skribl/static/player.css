@@ -49,6 +49,23 @@
   --r-control: 12px;
   --r-frame: 24px;
   --r-pill: 999px;
+  /* Segmented controls — the container of any one-of-N group with a sliding
+     highlight (tool groups, .seg, .smooth-seg). Deliberately NOT --r-pill.
+     ------------------------------------------------------------------------
+     A 999px radius is a promise the control cannot keep once it gets small.
+     At desktop a segmented group is 44px tall and a full round-end reads as a
+     considered pill; at 34px the highlight is simply a CIRCLE, sitting 6px
+     from rounded-square tiles carrying a 12px corner. Radius stops encoding
+     "this is a one-of-N group" and starts reading as an inconsistency —
+     which is exactly where it was reported from, on a phone-width Flip.
+     12px is the tile radius (.t-btn / .tool-open), so a segmented group now
+     shares its neighbours' corner and is told apart by the thing that
+     actually distinguishes it: a shared container with a sliding highlight.
+     That signal survives at 24px; a corner radius does not.
+     Inner radii are derived, never typed: a highlight inset 3px inside a 12px
+     container wants 9px to look concentric, and one inset 4px wants 8px.
+     Setting this to 999px restores every pill in one line. */
+  --r-seg: 12px;
 
   /* Motion */
   --spring: cubic-bezier(0.4, 0.0, 0.2, 1.1);
@@ -1079,4 +1096,33 @@ body.player-mode #canvas {
 @keyframes skribl-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
+}
+
+
+/* Magnify is shown wherever the GESTURE is missing and the button FITS.
+   ---------------------------------------------------------------------------
+   This used to be `@media (max-width: 640px) { #magnifyBtn { display: none } }`
+   — width as a stand-in for "this is a phone, it has pinch". Width is a poor
+   proxy for input: a tablet at 810px has pinch, and a desktop window dragged
+   to 500px has a mouse and nothing else. The wide rule also made the v213
+   400px floor below it unreachable — dead code that had carefully measured the
+   one number that actually mattered.
+
+   `pointer: coarse` asks the real question. Where a pinch exists the button is
+   redundant below 640 and stays hidden exactly as before; where it does not,
+   the button survives down to the width at which it physically stops fitting.
+
+   THE FLOORS ARE MEASURED, per surface, forcing the button visible and reading
+   the row's content span against its available width:
+
+       Flip   400px   12px spare  (fails at 375: -2px, and scrolls at 390)
+       Pad    430px   12px spare  (wraps at 414 — Pad's row is the longer one,
+                                   it carries a colour-drawer tile and a second
+                                   separator that Flip does not)
+
+   Below those the button goes regardless of input, because there is nowhere to
+   put it. Between them and 640 a mouse keeps its only zoom affordance — which
+   on Flip is a band 240px wide that previously had none at all. */
+@media (pointer: coarse) and (max-width: 640px) {
+  #magnifyBtn { display: none; }
 }

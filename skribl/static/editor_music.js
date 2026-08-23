@@ -24,7 +24,7 @@ function dragZoomHandle(handle, isStart) {
     handle.classList.add('dragging');
 
     function onMove(ev) {
-      const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const clientX = SkriblEventPoint.at(ev).clientX;
       const rect = zoomTrackWrap.getBoundingClientRect();
       const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       const zoom = getZoomWindow();
@@ -311,7 +311,7 @@ musicRemove.addEventListener('click', (e) => {
 function dragHandle(handle, isStart) {
   if (!handle) return;   // trim track is editor-only
   function getClientX(e) {
-    return e.touches ? e.touches[0].clientX : e.clientX;
+    return SkriblEventPoint.at(e).clientX;
   }
 
   function onStart(e) {
@@ -365,7 +365,7 @@ dragHandle(handleEnd, false);
 function dragRangeWindow(rangeEl) {
   if (!rangeEl) return;   // trim track is editor-only
   function getClientX(e) {
-    return e.touches ? e.touches[0].clientX : e.clientX;
+    return SkriblEventPoint.at(e).clientX;
   }
   function onStart(e) {
     if (!audioEl || !Number.isFinite(audioDuration) || audioDuration <= 0) return;

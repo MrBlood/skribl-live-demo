@@ -1307,13 +1307,29 @@ with _sp204() as _p:
         _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
         _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         _z.wait_for_timeout(900)
+        # RADIUS IS READ FROM THE TOKEN, NOT TYPED. This asserted the literal
+        # "999px" until v220 squared every segmented control (--r-seg, styles.css).
+        # A literal here meant the pin failed the moment the owner exercised a
+        # decision the token exists to let them make, while still not catching
+        # the thing that actually matters: that these two groups agree with every
+        # other segmented group on the surface. Comparing against the resolved
+        # value of --r-seg keeps the guarantee (both are .seg, both share the
+        # one radius) and lets 12px or 999px both be correct — whichever the
+        # token says. Set --r-seg back to 999px and this passes unchanged.
         _zi = _z.evaluate("""() => { const f = document.querySelector('.zoom-seg[data-role="focus"]'); const m = document.querySelector('.zoom-seg[data-role="mag"]');
             if (!f || !m) return null; const sl = f.querySelector('.seg-slider'); const cs = getComputedStyle(f);
+            const token = getComputedStyle(document.documentElement).getPropertyValue('--r-seg').trim();
+            const other = document.querySelector('#toolGroup');
             return { bothSeg: f.classList.contains('seg') && m.classList.contains('seg'), radius: cs.borderRadius,
+                     token: token, magRadius: getComputedStyle(m).borderRadius,
+                     matchesToolGroup: other ? getComputedStyle(other).borderRadius === cs.borderRadius : null,
                      sliderVisible: sl && getComputedStyle(sl).opacity === '1' && sl.getBoundingClientRect().width > 20,
                      magnifier: !!document.querySelector('.zoom-mag-glyph svg') }; }""")
-        check(f"V207: {nm} loop-detail focus/zoom groups are .seg pills (999px radius)",
-              _zi and _zi["bothSeg"] and _zi["radius"] == "999px", str(_zi))
+        check(f"V207: {nm} loop-detail focus/zoom groups are .seg groups carrying --r-seg",
+              _zi and _zi["bothSeg"] and _zi["radius"] == _zi["token"]
+              and _zi["magRadius"] == _zi["token"], str(_zi))
+        check(f"V207: {nm} loop-detail groups share the tool group's radius",
+              _zi and _zi["matchesToolGroup"] is True, str(_zi))
         check(f"V207: {nm} loop-detail slider highlight is visible on the selected cell", _zi and _zi["sliderVisible"], str(_zi))
         check(f"V207: {nm} zoom group carries a magnifier glyph", _zi and _zi["magnifier"], str(_zi))
         _z.close()

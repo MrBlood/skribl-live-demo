@@ -1018,30 +1018,45 @@ function abortStrokeForPinch(){
   if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
   drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; strokePointerId=null; render();
 }
+/* eventPoint / pinch helpers: lib/eventpoint.js, one implementation shared with
+   Pad and the player. Written out here once and rejected by verify_surfaces.py,
+   which counts names defined in both app.js and flip.js — correctly, since this
+   one reads nothing but its argument. */
 function _touchDist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
 function _touchMid(a,b){ const r=document.querySelector('.flip-wrap').getBoundingClientRect();
   return { x:(a.clientX+b.clientX)/2 - r.left, y:(a.clientY+b.clientY)/2 - r.top }; }
 function beginPinch(e){
   if(playing || reposMode || !ZoomView) return;
   if(ZoomView.enabled && !ZoomView.enabled()) ZoomView.enable();   // pinch turns the magnifier on
-  if(!e.touches || e.touches.length<2) return;
+  // The pinch's two fingers are the ones on the CANVAS, not the first two on
+  // the screen, and it remembers WHICH two: _pinchMove is bound to window and
+  // reads the screen-wide list, so a third contact could otherwise take a slot
+  // and the gesture would be computed from a pair including a finger standing
+  // still. Same fix as app.js's beginPinch.
+  const own = SkriblPinch.own(e);
+  if(!own || own.length<2) return;
   if(e.cancelable) e.preventDefault();
   abortStrokeForPinch(); pinching=true;
-  const t0=e.touches[0], t1=e.touches[1];
-  _pinch={ lastDist:_touchDist(t0,t1), lastMid:_touchMid(t0,t1) };
+  const t0=own[0], t1=own[1];
+  _pinch={ ids:[t0.identifier,t1.identifier], lastDist:_touchDist(t0,t1), lastMid:_touchMid(t0,t1) };
 }
 function _pinchMove(e){
   if(!pinching || !_pinch || !ZoomView) return;
-  if(!e.touches || e.touches.length<2) return;
+  const pair=SkriblPinch.pair(e, _pinch && _pinch.ids);
+  if(!pair) return;
   if(e.cancelable) e.preventDefault();
-  const t0=e.touches[0], t1=e.touches[1];
+  const t0=pair[0], t1=pair[1];
   const dist=_touchDist(t0,t1), mid=_touchMid(t0,t1);
   if(_pinch.lastDist>0) ZoomView.zoomAt(dist/_pinch.lastDist, mid.x, mid.y);
   ZoomView.panBy(mid.x-_pinch.lastMid.x, mid.y-_pinch.lastMid.y);
   _pinch.lastDist=dist; _pinch.lastMid=mid;
 }
-function _pinchEnd(e){ if(!pinching) return; if(e.touches && e.touches.length>=2) return; pinching=false; _pinch=null; }
-pad.addEventListener('touchstart', e=>{ if(e.touches && e.touches.length>=2) beginPinch(e); }, {passive:false});
+// Ends when either of ITS OWN fingers lifts, not when the screen drops below
+// two contacts — an unrelated resting finger must not keep the pinch alive.
+function _pinchEnd(e){ if(!pinching) return; if(SkriblPinch.pair(e, _pinch && _pinch.ids)) return; pinching=false; _pinch=null; }
+// targetTouches: two fingers ON THE PAD is a pinch; a finger resting elsewhere
+// on the page plus one on the pad is a stroke.
+pad.addEventListener('touchstart', e=>{ const t=e.targetTouches||e.touches; if(t && t.length>=2) beginPinch(e); }, {passive:false});
 window.addEventListener('touchmove', _pinchMove, {passive:false});
 window.addEventListener('touchend', _pinchEnd);
 window.addEventListener('touchcancel', _pinchEnd);
@@ -1101,7 +1116,7 @@ window.addEventListener('touchcancel', _pinchEnd);
   function corners(){ const r=flipWrap.getBoundingClientRect(); const pw=hud.offsetWidth, ph=hud.offsetHeight, m=12;
     return { tl:{key:'tl',x:m,y:m}, tr:{key:'tr',x:r.width-pw-m,y:m}, bl:{key:'bl',x:m,y:r.height-ph-m}, br:{key:'br',x:r.width-pw-m,y:r.height-ph-m} }; }
   function nearestCorner(x,y){ const c=corners(); let best=null,bd=Infinity; for(const k in c){ const d=Math.hypot(x-c[k].x,y-c[k].y); if(d<bd){bd=d;best=c[k];} } return best; }
-  function ptr(ev){ const t=ev.touches?ev.touches[0]:ev; return {x:t.clientX,y:t.clientY}; }
+  function ptr(ev){ const t=SkriblEventPoint.at(ev); return {x:t.clientX,y:t.clientY}; }
   function gripStart(ev){ ev.preventDefault(); ev.stopPropagation(); const r=hud.getBoundingClientRect(), wrapR=flipWrap.getBoundingClientRect(), p=ptr(ev);
     grabDX=p.x-r.left; grabDY=p.y-r.top; dragging=true; hud.classList.add('dragging');
     hud.style.right='auto'; hud.style.bottom='auto'; hud.style.left=(r.left-wrapR.left)+'px'; hud.style.top=(r.top-wrapR.top)+'px';
@@ -2702,7 +2717,7 @@ function drawZoomWaveform(){
 }
 
 function dragHandle(handle, isStart){
-  function cx(e){ return e.touches?e.touches[0].clientX:e.clientX; }
+  function cx(e){ return SkriblEventPoint.at(e).clientX; }
   function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
     function onMove(ev){ const rect=musicTrack.getBoundingClientRect(); let pct=(cx(ev)-rect.left)/rect.width; pct=Math.max(0,Math.min(1,pct)); const time=pct*audioDuration;
       // Shared with Pad via lib/looptrim.js. 'constrain': the handle being
@@ -2717,7 +2732,7 @@ function dragHandle(handle, isStart){
 }
 dragHandle(handleStart,true); dragHandle(handleEnd,false);
 function dragRangeWindow(rangeEl){
-  function cx(e){ return e.touches?e.touches[0].clientX:e.clientX; }
+  function cx(e){ return SkriblEventPoint.at(e).clientX; }
   function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(rangeEl.classList.contains('narrow')) return; e.preventDefault(); e.stopPropagation(); rangeEl.classList.add('dragging');
     const rect=musicTrack.getBoundingClientRect(); const loopLength=trimEnd-trimStart; const grabTime=(cx(e)-rect.left)/rect.width*audioDuration; const grabOffset=grabTime-trimStart;
     function onMove(ev){ const time=(cx(ev)-rect.left)/rect.width*audioDuration; let ns=time-grabOffset; ns=Math.max(0,Math.min(ns,audioDuration-loopLength)); trimStart=ns; trimEnd=ns+loopLength; updateTrimUI(); }
@@ -2729,7 +2744,7 @@ function dragRangeWindow(rangeEl){
 dragRangeWindow(musicRange);
 function dragZoomHandle(handle, isStart){
   function onStart(e){ e.preventDefault(); handle.classList.add('dragging');
-    function onMove(ev){ const clientX=ev.touches?ev.touches[0].clientX:ev.clientX; const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
+    function onMove(ev){ const clientX=SkriblEventPoint.at(ev).clientX; const rect=zoomTrackWrap.getBoundingClientRect(); const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width)); const zw=getZoomWindow(); const time=zw.start+pct*(zw.end-zw.start);
       // 'slide': the zoom track pushes the OTHER end to hold the cap. That
       // differs from the main track above — declared, not accidental; see the
       // module header.
@@ -2806,7 +2821,7 @@ testSeamBtn.addEventListener('click',()=>{ stopLoopPreview(); previewingLoop=tru
 
 // Loop Detail scroll + crossfade (injected, like the Pad)
 function updateZoomPanSlider(){ const s=document.getElementById('zoomPanSlider'); if(!s) return; if(!(audioDuration>0)){ s.value=500; return; } const zw=getZoomWindow(); const c=(zw.start+zw.end)/2; s.value=Math.round(Math.max(0,Math.min(1,c/audioDuration))*1000); updateSliderFill(s); }
-function dragZoomPan(wrap){ if(!wrap) return; const cx=(e)=>(e.touches?e.touches[0].clientX:e.clientX);
+function dragZoomPan(wrap){ if(!wrap) return; const cx=(e)=>SkriblEventPoint.at(e).clientX;
   function onStart(e){ if(!audioEl||!(audioDuration>0)) return; if(e.target.closest('.zoom-handle')) return; e.preventDefault(); const rect=wrap.getBoundingClientRect(); const zw=getZoomWindow(); const sc=(zw.start+zw.end)/2; const winDur=zw.duration; const sx=cx(e); wrap.classList.add('panning');
     function onMove(ev){ const dx=cx(ev)-sx; const dt=-(dx/rect.width)*winDur; const half=winDur/2; const lo=half, hi=Math.max(half,audioDuration-half); zoomCenter=Math.max(lo,Math.min(sc+dt,hi)); zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); }
     function onEnd(){ wrap.classList.remove('panning'); window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onEnd); window.removeEventListener('touchmove',onMove); window.removeEventListener('touchend',onEnd); window.removeEventListener('touchcancel',onEnd); }

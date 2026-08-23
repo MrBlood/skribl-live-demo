@@ -47,3 +47,62 @@ it run standalone. The trade is no referential integrity and no cascade delete �
 deleting a user leaves their Skribls addressed to a missing id. If your platform
 wants cascade behaviour, add the constraint in your own migration rather than
 here, so Skribl stays independent.
+
+## 5. Segmented controls are squared (`--r-seg`), labelled actions stay pills
+
+**This reverses a v207-era rule and is the owner's call, made deliberately.**
+The old rule read "pill segment = one-of-N with sliding highlight" and carried
+an explicit "do NOT unify to one shape". That rule is now narrower: shape still
+carries meaning, but corner radius is no longer the thing carrying it.
+
+**The rule now.**
+
+> **Round = an action you press. Squared = a group you choose within.**
+> **Radius follows the container, not the semantics** — a cell inside a
+> segmented group takes the container's derived inner radius, whatever the cell
+> happens to do.
+
+**Why it changed.** A 999px radius is a promise a control cannot keep once it
+gets small. Measured on Flip at phone width: the tool group's active cell was a
+37x24 box at radius 999px — i.e. a **circle** — sitting 6px from rounded-square
+tiles carrying a 12px corner. Radius had stopped encoding "this is a one-of-N
+group" and had started reading as an inconsistency. `--r-seg: 12px` is the tile
+radius (`.t-btn` / `.tool-open`), so a segmented group now shares its
+neighbours' corner and is told apart by the thing that actually distinguishes
+it: a shared container with a sliding highlight. That signal survives at 24px.
+
+**What is squared** (`--r-seg`, inner radii derived as `calc(var(--r-seg) - N)`
+where N is the container's padding — never typed):
+
+| family | where |
+| --- | --- |
+| `.tool-group` | Pad + Flip tool rows |
+| `.seg` | onion depth/tint, fps, mirror, move scope, loop focus, zoom — 7 in Flip, 6 in Pad, 2 shared |
+| `.smooth-seg` | smoothing off/low/high |
+| `.photo-fit-group` | Fill / Fit / Stretch |
+| `.edge-controls` | loop start/end/step nudge groups |
+| `.nudge-btn` | the cells inside `.edge-controls` |
+
+**What stays round, and why each is not an oversight:**
+
+* **Labelled actions** — Post, Record, `loop-btn` (Match Drawing Time / Test
+  Seam / Preview Loop), `dropzone-remove`. These are 4:1 to 8:1 boxes where a
+  round end reads as deliberate rather than as a circle. Post especially: the
+  design direction wants it to be the one loud thing on the surface.
+* **`layer-toggle`** — an on/off switch. Round toggle = on/off is unchanged.
+* **`color-ring`** — a colour swatch. A squared colour dot reads as a chip.
+* **Surfaces** — `.toolbar` (16px), `.menu-sheet` (16px), `.flip-menu` (14px),
+  `.pagebar` (0). You do not choose *within* a surface, so they keep their own
+  radii; squaring a 530px-tall menu sheet to 12px makes it look like a button.
+
+**How to reverse it.** Set `--r-seg: 999px` in `:root` (styles.css) and every
+pill returns in one line. Nothing else needs touching, and the harness pin does
+not need editing either — `verify_ux` reads the resolved token rather than a
+literal, precisely so this decision stays the owner's to make.
+
+**One operational note.** Editing `styles.css` requires re-emitting the derived
+player stylesheet:
+
+    python3 harness/tools/cssgraph.py --emit harness/tools/css_live.json skribl/static/player.css
+
+`verify_cssplit.py` fails if you forget. It caught exactly that during this work.
