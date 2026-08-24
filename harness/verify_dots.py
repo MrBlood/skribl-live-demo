@@ -53,14 +53,35 @@ with sync_playwright() as p:
     c = pg.evaluate(COLOURS, "music")
     check("music dot GREEN while the file is loaded", c["dotBg"] == "rgb(27, 207, 143)" and not c["dotPending"], c["dotBg"])
 
-    pg.reload(wait_until="load"); pg.wait_for_timeout(1600)
+    # CONTRACT CHANGE (v222): with a working IndexedDB the quota spill brings
+    # the media BACK on reload, so the dot is honestly green and there is no
+    # re-add to ask for. The amber palette is still a real state — it now
+    # means the store failed — so those assertions run against a page with
+    # IndexedDB broken, where re-add genuinely is needed.
+    pg.reload(wait_until="load"); pg.wait_for_timeout(4500)   # IDB merge + ~7MB decode
     c = pg.evaluate(COLOURS, "music")
     check("music dot visible after reload", c["dotHidden"] is False)
+    check("music dot GREEN — the media came back from IndexedDB",
+          not c["dotPending"] and c["cardHidden"] is True,
+          f"{c['dotBg']} pending={c['dotPending']} cardHidden={c['cardHidden']}")
+
+    pgB = b.new_page(viewport={"width":1280,"height":900})
+    errsB = []; pgB.on("pageerror", lambda e: errsB.append(str(e)))
+    pgB.add_init_script(
+        "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
+    pgB.goto(BASE+"/flip", wait_until="load"); pgB.wait_for_timeout(700)
+    pgB.evaluate("() => localStorage.clear()")
+    boxB = pgB.locator("#pad").bounding_box()
+    scribble(pgB, boxB, 0.0); pgB.wait_for_timeout(1200)
+    pgB.set_input_files("#musicInput", WAV); pgB.wait_for_timeout(5000)
+    pgB.reload(wait_until="load"); pgB.wait_for_timeout(1600)
+    c = pgB.evaluate(COLOURS, "music")
     check("music dot AMBER when re-add is needed", c["dotBg"] == AMBER and c["dotPending"], c["dotBg"])
     check("re-add card visible", c["cardHidden"] is False)
     check("card border amber", "255, 210, 63" in c["cardBorder"], c["cardBorder"])
     check("Re-add button amber", c["btnBg"] == AMBER, c["btnBg"])
     check("card meta text amber", c["metaColor"] == AMBER, c["metaColor"])
+    pgB.close()
 
     print("\nPAD")
     pg.goto(BASE+"/skribl-pad", wait_until="load"); pg.wait_for_timeout(1200)
@@ -71,9 +92,18 @@ with sync_playwright() as p:
     pg.mouse.up(); pg.wait_for_timeout(1800)
     pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(4500)
     pg.reload(wait_until="load"); pg.wait_for_timeout(2000)
-    pg.locator("#restoreConfirm").click(); pg.wait_for_timeout(2500)   # Pad gates restore behind a banner
+    pg.locator("#restoreConfirm").click(); pg.wait_for_timeout(4000)   # Pad gates restore behind a banner; IDB re-add + decode
+    # CONTRACT CHANGE (v222): restore used to leave an amber pending dot —
+    # the bytes were gone by design and re-adding was the user's job. The
+    # bytes now come back from IndexedDB through the real change pipeline,
+    # so the honest dot is GREEN with the track actually present. The amber
+    # dot still exists and is pinned in verify_amber.py's broken-store
+    # section, where it is true.
     c = pg.evaluate(COLOURS, "music")
-    check("Pad music dot AMBER on re-add", c["dotBg"] == AMBER and c["dotPending"], f"{c['dotBg']} hidden={c['dotHidden']}")
+    got = pg.evaluate("() => !!(audioEl && audioEl._fileName)")
+    check("Pad music dot GREEN after restore — the track came back",
+          got is True and c["dotPending"] is False and c["dotHidden"] is False,
+          f"{c['dotBg']} pending={c['dotPending']} track={got}")
     check("Pad card amber", c["btnBg"] == AMBER, c["btnBg"])
 
     check("no uncaught page errors", not errs, "; ".join(errs[:2]))

@@ -278,19 +278,23 @@ with sync_playwright() as p:
     #    that is not visible. The menu has to be opened first — which is also
     #    what a user does, so the test got MORE faithful, not less.
     #
-    # 2. The guard fires on ATTACHED MEDIA, not on any drawing. app.js is
-    #    explicit that the first version fired on `recording || hasContent ||
-    #    recorded` and was deliberately narrowed to `photoBg ||
-    #    currentAudioBuffer`, because Pad's autosave keeps strokes and does NOT
-    #    keep media bytes — so a stroke is not at risk and a confirm about it is
-    #    a confirm that is usually wrong. This section asserted the REJECTED
-    #    version: draw a stroke, expect a dialog. Pinning a design that was
-    #    considered and turned down is worse than not pinning it, because it
-    #    reads as a regression the next time someone gets it right.
+    # 2. The guard's predicate has now changed TWICE, and this section pinned
+    #    the middle version. History, so nobody re-pins a superseded contract:
+    #      v1: recording || hasContent — any drawing at all; rejected because a
+    #          confirm that is usually wrong is dismissed unread.
+    #      v2: photoBg || currentAudioBuffer — right while media bytes could
+    #          not be stored (localStorage held strokes only).
+    #      v3 (current, editor_draft.js): media bytes persist to IndexedDB, so
+    #          attached media with WORKING storage is not at risk and must
+    #          navigate freely; the guard now fires on MEASURED durability —
+    #          it flushes synchronously and confirms only when the flush could
+    #          not make the draft durable (external review #19). This section
+    #          asserted v2 and failed the moment v3 landed, correctly.
     #
-    # So: strokes alone must navigate freely, and an attached image must confirm.
-    # Both directions are asserted, because a guard that never fires and a guard
-    # that always fires fail this section identically if only one is checked.
+    # So: strokes alone navigate freely, DURABLE media navigates freely, and a
+    # BROKEN store confirms — with focus on the safe choice, and both exits
+    # honoured. Both directions still asserted: a guard that never fires and a
+    # guard that always fires fail this section identically otherwise.
     def open_flip_entry(pg):
         pg.click("#menuBtn")
         pg.wait_for_timeout(250)
@@ -322,18 +326,37 @@ with sync_playwright() as p:
           "/flip" in pg.url, f"landed on {pg.url}")
     pg.close()
 
-    # With media attached: the click must NOT navigate. Media bytes are the thing
-    # localStorage cannot hold, so this is the case where work is genuinely lost.
+    # With media attached and storage WORKING: the bytes are in IndexedDB, the
+    # draft is durable, and the guard staying silent is the point — a confirm
+    # here would be v2's mistake wearing v3's clothes.
     pg = ctx.new_page()
     pg.goto(BASE + "/", wait_until="load")
     draw_a_stroke(pg)
     pg.set_input_files("#photoInput", str(_png_path))
-    pg.wait_for_timeout(700)
+    pg.wait_for_timeout(900)
+    open_flip_entry(pg)
+    check("attached media, working storage — Flip navigates (bytes are durable)",
+          "/flip" in pg.url, f"landed on {pg.url}")
+    pg.close()
+
+    # With storage BROKEN: the flush cannot make the draft durable, and this —
+    # not media presence — is when work is genuinely lost. The drawing itself
+    # is the thing at risk, which is exactly the case v2 waved through.
+    pg = ctx.new_page()
+    pg.add_init_script(
+        "const _si = Storage.prototype.setItem;"
+        "Storage.prototype.setItem = function (k, v) {"
+        "  if (k === 'skribl_autosave_v1') { const e = new Error('quota');"
+        "  e.name = 'QuotaExceededError'; throw e; }"
+        "  return _si.apply(this, arguments); };")
+    pg.goto(BASE + "/", wait_until="load")
+    draw_a_stroke(pg)
+    pg.wait_for_timeout(1500)
     before = pg.url
     open_flip_entry(pg)
-    check("with attached media — Flip does not navigate",
+    check("broken storage — Flip does not navigate",
           pg.url == before,
-          f"navigated to {pg.url} — media that autosave cannot hold was discarded")
+          f"navigated to {pg.url} — an un-durable drawing was discarded")
     sheet = pg.locator("#leaveSheet")
     check("with unposted work — a confirm is shown",
           sheet.count() > 0 and sheet.is_visible())
@@ -376,7 +399,10 @@ with sync_playwright() as p:
     # this comment.
     pg = ctx.new_page()
     pg.goto(BASE + "/flip", wait_until="load")
-    back = pg.locator("#padBtn, .pad-btn, a[href='/']").first
+    # Match on the accessible name, not the href literal: the href is now
+    # url_for-derived (P0-1) and renders as /skribl-pad at the root and as
+    # <prefix>/skribl-pad under a mount — a[href='/'] matched neither.
+    back = pg.locator('#padBtn, .pad-btn, a[aria-label="Back to Skribl Pad"]').first
     if back.count() == 0:
         check("Flip has a link back to Pad to guard", False,
               "no back-link found — update this selector if it was renamed")

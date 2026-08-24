@@ -25,7 +25,12 @@ def summarise_and_exit():
     bad = [r for r in results if not r[0]]
     print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
           ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
-    sys.exit(0)
+    # exit 1 on any failure, like every other summarising suite. This line was
+    # `sys.exit(0)` unconditionally — the only suite with that defect — so a
+    # prefix regression would have been recorded as "ok — 29/33 passed" in a
+    # PASS run. Found by mutation-testing the P0-1 navigation pin: the mutant
+    # failed 4 assertions and the aggregate still said PASS.
+    sys.exit(1 if bad else 0)
 
 # ---------- boot a prefixed instance on its own port ----------
 tmp = tempfile.mkdtemp()
@@ -140,7 +145,51 @@ try:
         check("Flip's player base is prefixed",
               fp.evaluate("() => window.SKRIBL_PLAYER_BASE") == PREFIX + "/s",
               str(fp.evaluate("() => window.SKRIBL_PLAYER_BASE")))
+
+        # ---------- NAVIGATION stays under the prefix (external review P0-1) --
+        # This suite proved every ROUTE resolves under /skribl by navigating to
+        # each one directly — which is exactly how four hardcoded hrefs
+        # (Pad→Flip, Flip→Pad, both player CTAs) stayed green while escaping
+        # the prefix on every real click. A route test proves the destination
+        # exists; only a CLICK proves the link points at it. So: click, then
+        # assert the URL, not the dialog — the verify_layout lesson applied to
+        # its neighbour.
+        print("\nPREFIX — clicked navigation stays under the prefix")
+        # Flip → Pad is the guard-free direction: one real click.
+        back_href = fp.evaluate(
+            "() => { const a = document.querySelector('a[aria-label=\"Back to Skribl Pad\"]');"
+            " return a ? a.getAttribute('href') : null; }")
+        check("Flip's back link is prefix-derived", 
+              back_href is not None and back_href.startswith(PREFIX + "/"),
+              str(back_href))
+        fp.click('a[aria-label="Back to Skribl Pad"]')
+        fp.wait_for_load_state("load")
+        check("clicking it lands under the prefix",
+              fp.url.startswith(BASE + PREFIX + "/"), fp.url)
+        # Pad → Flip goes through guardFlipNavigation, which navigates via
+        # flipBtn.getAttribute('href') — assert the attribute it will read.
+        pad_flip_href = fp.evaluate(
+            "() => { const a = document.getElementById('flipBtn');"
+            " return a ? a.getAttribute('href') : null; }")
+        check("Pad's Flip link is prefix-derived (the href the guard navigates to)",
+              pad_flip_href == PREFIX + "/flip", str(pad_flip_href))
         b.close()
+
+    # ---------- static gate: no internal root-literal hrefs, ever ------------
+    # The four links above were each individually obvious and each individually
+    # missed. The class is cheaper to refuse than the instances are to find:
+    # a Skribl template may not contain href="/..." at all. External links are
+    # absolute (https:) and fragment/JS hrefs don't match, so no allowlist is
+    # needed today; if one ever is, add the specific file+line here with why.
+    print("\nPREFIX — templates contain no internal root-literal hrefs")
+    import re as _re
+    _tpl_dir = ROOT / "skribl" / "templates"
+    _bad = []
+    for _t in sorted(_tpl_dir.rglob("*.html")):
+        for _i, _line in enumerate(_t.read_text(encoding="utf-8").splitlines(), 1):
+            if _re.search(r'href="/', _line):
+                _bad.append(f"{_t.relative_to(ROOT)}:{_i}")
+    check("no template hardcodes an internal root URL", not _bad, "; ".join(_bad[:4]))
 
     print("\nCSP — the policy still applies under the prefix")
     import urllib.request as _u

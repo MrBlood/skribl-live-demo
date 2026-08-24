@@ -281,9 +281,22 @@ for suite in "$@"; do
     fi
   else
     n="${line%%/*}"
-    TOTAL=$((TOTAL + n))
-    SUMMARY="$SUMMARY
+    d="${line#*/}"; d="${d%% *}"
+    # Defence in depth: the summary line is the suite's own count of failures,
+    # so believe it even when the exit code lies. verify_prefix.py exited 0
+    # unconditionally for its whole life; a 4-assertion regression there was
+    # aggregated as "ok — 29/33 passed" inside a PASS run. The exit-code fix
+    # lives in that suite; this check refuses the CLASS: any suite whose own
+    # summary says X/Y with X<Y is a FAIL, whatever it exited with.
+    if [ "$n" -lt "$d" ]; then
+      BAD=$((BAD + 1)); RC=1
+      SUMMARY="$SUMMARY
+  $suite: FAIL — exit $rc but summary reports failures: $line"
+    else
+      TOTAL=$((TOTAL + n))
+      SUMMARY="$SUMMARY
   $suite: ok — $line"
+    fi
   fi
 done
 

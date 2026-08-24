@@ -49,22 +49,66 @@ with sync_playwright() as p:
     s = pg.evaluate(STATE)
     check("green while everything fits", "partial" not in s["cls"], f"{s['text']!r} dot={s['dot']}")
 
+    # CONTRACT CHANGE (v222, external review #3): amber used to mean "media is
+    # attached and localStorage cannot hold it" — a designed limitation, pinned
+    # here as 'amber after the drop' / 'stays amber on later saves'. The quota
+    # fallback now spills the FULL payload to IndexedDB (lib/draftstore.js), so
+    # with a working store the session IS fully recoverable and the honest
+    # light is GREEN. Amber didn't die — it moved to the failure case, and the
+    # old persistence assertions moved with it (broken-store section below).
     pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(5000)
     s = pg.evaluate(STATE)
+    check("GREEN after the drop — the spill made the session recoverable",
+          "partial" not in s["cls"] and "failed" not in s["cls"],
+          f"{s['text']!r} dot={s['dot']}")
+    spilled = pg.evaluate("""() => window.SkriblDraftStore.get('flip:draft')
+        .then(r => !!(r && r.json)).catch(() => false)""")
+    check("because the full payload is in IndexedDB", spilled is True)
+
+    # keep editing — later saves spill again and settle green again
+    scribble(pg, box, 5.5); pg.wait_for_timeout(2600)
+    s = pg.evaluate(STATE)
+    check("stays green on later saves while the store works",
+          "partial" not in s["cls"], f"{s['text']!r}")
+
+    print("\nFLIP — after reload the media comes BACK from IndexedDB")
+    pg.reload(wait_until="load"); pg.wait_for_timeout(4500)   # merge + ~7MB decode
+    m = pg.evaluate("""() => ({ music: typeof musicData === 'string' && musicData.slice(0,10) === 'data:audio',
+        cardHidden: document.getElementById('musicPending').hidden,
+        frames: frames.length })""")
+    check("drawing survived", m["frames"] == 4, f"{m['frames']} pages")
+    check("the track itself is restored — bytes, not a re-add card",
+          m["music"] is True and m["cardHidden"] is True, json.dumps(m))
+
+    print("\nFLIP — with the store BROKEN, the old amber contract holds")
+    # This is where 'amber and STAYS amber' lives now: media attached, quota
+    # hit, and no IndexedDB to spill to — the session genuinely is not fully
+    # recoverable, and the light must say so for as long as it is true.
+    pg2 = b.new_page(viewport={"width":1280,"height":900})
+    errs2 = []; pg2.on("pageerror", lambda e: errs2.append(str(e)))
+    pg2.add_init_script(
+        "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
+    pg2.goto(BASE+"/flip", wait_until="load"); pg2.wait_for_timeout(700)
+    pg2.evaluate("() => localStorage.clear()")
+    box2 = pg2.locator("#pad").bounding_box()
+    scribble(pg2, box2, 0.0)
+    for k in range(1,4):
+        pg2.evaluate("addFrame(false)"); pg2.wait_for_timeout(70); scribble(pg2, box2, k*1.2)
+    pg2.wait_for_timeout(1300)
+    pg2.set_input_files("#musicInput", WAV); pg2.wait_for_timeout(5000)
+    s = pg2.evaluate(STATE)
     check("amber (not green, not red) after the drop", "partial" in s["cls"] and "failed" not in s["cls"],
           f"{s['text']!r} dot={s['dot']}")
     check("dot is yellow", s["dot"] == "rgb(255, 210, 63)", s["dot"])
-
-    # keep editing — the light must STAY amber, not flip back to green
-    scribble(pg, box, 5.5); pg.wait_for_timeout(1400)
-    s = pg.evaluate(STATE)
+    scribble(pg2, box2, 5.5); pg2.wait_for_timeout(1400)
+    s = pg2.evaluate(STATE)
     check("stays amber on later saves", "partial" in s["cls"], f"{s['text']!r}")
 
-    print("\nFLIP — re-add card in the music drawer after reload")
-    pg.reload(wait_until="load"); pg.wait_for_timeout(1500)
-    s = pg.evaluate(STATE)
+    print("\nFLIP — re-add card in the music drawer after reload (store still broken)")
+    pg2.reload(wait_until="load"); pg2.wait_for_timeout(1500)
+    s = pg2.evaluate(STATE)
     check("amber immediately on restore", "partial" in s["cls"], f"{s['text']!r}")
-    card = pg.evaluate("""() => { const c=document.getElementById('musicPending');
+    card = pg2.evaluate("""() => { const c=document.getElementById('musicPending');
         return { hidden: c.hidden, name: document.getElementById('musicPendingName').textContent,
                  meta: document.getElementById('musicPendingMeta').textContent,
                  dropzoneHidden: document.getElementById('musicUploadBtn').hidden }; }""")
@@ -72,19 +116,20 @@ with sync_playwright() as p:
     check("card names the file", "boombap" in card["name"], card["name"])
     check("card shows the saved loop", "Loop" in card["meta"], card["meta"])
     check("dropzone hidden behind the card", card["dropzoneHidden"] is True)
-    check("drawing survived", pg.evaluate("() => frames.length") == 4,
-          f"{pg.evaluate('() => frames.length')} pages")
+    check("drawing survived", pg2.evaluate("() => frames.length") == 4,
+          f"{pg2.evaluate('() => frames.length')} pages")
 
     print("\nFLIP — re-adding the file restores the loop and clears the warning")
-    pg.evaluate("() => { trimStart=0; trimEnd=6; }")   # pretend the saved loop was 0-6s
-    pg.evaluate("() => { pendingMusicMeta = {name:'boombap.wav', trimStart:1, trimEnd:7, crossfadeMs:40, enabled:true}; }")
-    pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(5000)
+    pg2.evaluate("() => { trimStart=0; trimEnd=6; }")   # pretend the saved loop was 0-6s
+    pg2.evaluate("() => { pendingMusicMeta = {name:'boombap.wav', trimStart:1, trimEnd:7, crossfadeMs:40, enabled:true}; }")
+    pg2.set_input_files("#musicInput", WAV); pg2.wait_for_timeout(5000)
     check("saved loop reapplied on re-add",
-          abs(pg.evaluate("() => trimStart") - 1) < 0.01 and abs(pg.evaluate("() => trimEnd") - 7) < 0.01,
-          f"trim {pg.evaluate('() => trimStart.toFixed(2)')}–{pg.evaluate('() => trimEnd.toFixed(2)')}s, "
-          f"crossfade {pg.evaluate('() => loopCrossfadeMs')}ms")
+          abs(pg2.evaluate("() => trimStart") - 1) < 0.01 and abs(pg2.evaluate("() => trimEnd") - 7) < 0.01,
+          f"trim {pg2.evaluate('() => trimStart.toFixed(2)')}–{pg2.evaluate('() => trimEnd.toFixed(2)')}s, "
+          f"crossfade {pg2.evaluate('() => loopCrossfadeMs')}ms")
     check("card hidden once the file is back",
-          pg.evaluate("() => document.getElementById('musicPending').hidden") is True)
+          pg2.evaluate("() => document.getElementById('musicPending').hidden") is True)
+    pg2.close()
 
     print("\nPAD — same honest amber instead of a green light")
     pg.goto(BASE+"/skribl-pad", wait_until="load"); pg.wait_for_timeout(1200)
@@ -97,7 +142,11 @@ with sync_playwright() as p:
     check("Pad green with no media", "partial" not in s["cls"], f"{s['text']!r} dot={s['dot']}")
     pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(4500)
     s = pg.evaluate(STATE)
-    check("Pad amber once a track is attached", "partial" in s["cls"], f"{s['text']!r} dot={s['dot']}")
+    check("Pad GREEN once a track is attached — its bytes are in IndexedDB",
+          "partial" not in s["cls"], f"{s['text']!r} dot={s['dot']}")
+    ok_bytes = pg.evaluate("""() => window.SkriblDraftStore.get('pad:music')
+        .then(r => !!(r && r.blob && r.blob.size > 0)).catch(() => false)""")
+    check("because the attach stored them", ok_bytes is True)
 
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()

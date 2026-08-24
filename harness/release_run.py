@@ -116,6 +116,11 @@ BATCHES = [
     # widths across both editors, and a browser sharing its batch is a browser
     # competing for CPU while it takes those measurements.
     ["verify_layout.py"],
+    # Browser suite with deliberate multi-second settles (IndexedDB puts, a
+    # ~7 MB decode) — like verify_layout it runs alone rather than compete
+    # for CPU during timing-sensitive waits. Added v222 with the durability
+    # work; the refusal above is what flagged it into this list.
+    ["verify_drafts.py"],
 ]
 
 

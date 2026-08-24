@@ -83,7 +83,7 @@
       </button>
       {# A 40px icon could not say what Flip Mode IS. A menu row can. Still an
          <a href> so open-in-new-tab works, still id="flipBtn" so the guard binds. #}
-      <a href="/flip" id="flipBtn" class="menu-item" role="menuitem">
+      <a href="{{ url_for('.skribl_flip') }}" id="flipBtn" class="menu-item" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>
         <span class="menu-item-text">Flip Mode<span class="menu-item-sub">Draw a frame-by-frame animation</span></span>
       </a>
@@ -350,6 +350,7 @@
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
   <script src="{{ skribl_asset('app.js') }}" defer></script>
   {# Editor-only. These were inside app.js, which the PLAYER also loads — so
      every shared link shipped the GIF/WebM encoders and the post composer to
@@ -363,6 +364,7 @@
   <script src="{{ skribl_asset('editor_photo.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_export.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_post.js') }}" defer></script>
+  <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
 </body>
 </html>
 
@@ -371,7 +373,7 @@
 <div class="leave-scrim" id="leaveScrim" hidden></div>
 <div class="leave-sheet" id="leaveSheet" role="dialog" aria-modal="true" aria-labelledby="leaveSheetTitle" hidden>
   <h2 class="leave-title" id="leaveSheetTitle">Leave Pad?</h2>
-  <p class="leave-body">Your drawing is saved, but the photo and music aren&rsquo;t &mdash; you&rsquo;ll need to add them again.</p>
+  <p class="leave-body">This drawing couldn&rsquo;t be saved to your browser&rsquo;s storage &mdash; if you leave now, it may be lost.</p>
   <div class="leave-actions">
     <button type="button" class="leave-btn" id="leaveCancel">Keep drawing</button>
     <button type="button" class="leave-btn danger" id="leaveGo">Leave</button>

@@ -1,12 +1,15 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v221"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v222"` (skribl/core.py).**
 
-**The release evidence in this archive is v221's.** A full harness run was
-completed against this tree; `harness/RELEASE.md` and `harness/LAST-RUN.txt`
-are generated from it and describe THIS tree hash, not an earlier one. The
-numbers are computed, never typed — verify them with the commands in
-`START-HERE.md` rather than believing this sentence. See `FOR-THE-REVIEWER.md`.
+**The release evidence in this archive is v221's, and this tree is v222 —
+unsealed.** `harness/RELEASE.md` and `harness/LAST-RUN.txt` were generated
+from v221's full aggregate run and describe THAT tree, not this one; they are
+deliberately left unstamped because regenerating them without the run would
+make the archive claim evidence it does not have (the v219 lesson,
+`FOR-THE-REVIEWER.md`). The v222 changes and the suites run green against
+them are listed in `V222-CHANGES.md`. To seal: `python3 harness/release_run.py`,
+then regenerate `SHA256SUMS` last.
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the

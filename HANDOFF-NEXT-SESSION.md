@@ -358,3 +358,45 @@ so it never covered controls) and REMOVED it before sealing. It was the single
 most useful thing in the arc. If it comes back: separate file; zero references
 in `app.js`; observe the API, not the app's beliefs; must not ride into the
 player budget; and its useful checks belong in the harness before it goes.
+
+---
+
+## 9. v222 addendum (written mid-arc, tree UNSEALED)
+
+Sections above were written at the v221 seal and kept verbatim. This section
+corrects what v222 changed out from under them; where they disagree, this
+section wins.
+
+**§7 item 2 (durable drafts) is DONE** — see `V222-CHANGES.md` for the full
+narrative, `harness/verify_drafts.py` for the pins. Corrections to §7's
+framing, which was stale in two places even against v221:
+
+- "Both surfaces share one localStorage key" was wrong — Pad uses
+  `skribl_autosave_v1`, Flip `skribl_flip_autosave_v1`. They now also share
+  one IndexedDB database (`skribl-drafts`) with namespaced keys.
+- The Pad guard was not deleted, against the isolation-suite comment that
+  suggested it could be: the external review's #19 is right that storage can
+  FAIL, and a guard keyed to measured durability covers that case. Predicate
+  history v1→v2→v3 is documented at the predicate in `editor_draft.js`.
+
+**§7 item 1 (pointer identity) is now the top open correctness item**, and
+note the ratchet history in `verify_player_isolation.py` records v220
+shipping `eventPoint`/`_pinchPair`/`targetTouches` — so the remaining gap is
+stroke-lifecycle ownership in `editor_draw.js` (capture `touch.identifier`
+at startDraw, filter continueDraw/endDraw), narrower than §7 implies.
+
+**New standing facts:**
+
+- `run_harness.sh` now fails any suite whose own summary reports X/Y with
+  X<Y, whatever it exited with. Do not "fix" a suite by making it exit 0.
+- `editor_draft.js` is editor-only and loads LAST of the editor scripts; the
+  player must never load it or `lib/draftstore.js`.
+- The external review responses beyond the P0s are queued in this order:
+  share state machine (#21/#22, touches editor_draft/editor_post interplay —
+  a failed share must stop clearing the canonical draft), then the two quick
+  wins (drop `"demo-user"` from the API response; reject `change-me`/missing
+  SECRET_KEY outside explicit dev mode), then owner-scale items presented
+  WITH the review document, not implemented unilaterally.
+- Seal procedure unchanged (§5). This tree has not run the full aggregate;
+  `harness/RELEASE.md` still describes v221 on purpose. Finish any doc edits
+  BEFORE the release run — the tree hash covers them.

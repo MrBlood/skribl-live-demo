@@ -344,9 +344,21 @@ function isQuotaError(e){
   return !!e && (e.name === 'QuotaExceededError' || e.code === 22 ||
                  e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 1014);
 }
+let _sessionOwnedDraft = false;   // set on the first non-empty save this session
 function saveNow(){
   const empty = frames.length === 1 && frames[0].strokes.length === 0 && !bgImage && !musicData;
-  if (empty) { try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {} return; }
+  if (empty) {
+    // Only clear the slot if THIS session put real work in it — then an empty
+    // state is a deliberate clear-all. A session that never owned the slot
+    // must leave it alone: flushFlipDraft() runs on visibilitychange, so an
+    // idle fresh tab flushes while still empty, and without this gate that
+    // flush deleted whatever draft was already in storage. (Same fence as
+    // Pad's sessionOwnedDraft in editor_draft.js; found by the v222 release
+    // aggregate when the flush ate verify_strokegroups' planted draft.)
+    if (!_sessionOwnedDraft) return;
+    try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {} return;
+  }
+  _sessionOwnedDraft = true;
   try {
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
     // Stay amber while any media is still outstanding — a green light would claim
@@ -356,21 +368,54 @@ function saveNow(){
   } catch (e) {
     if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
   }
-  // Over quota — retry without the media bytes so the drawing itself still survives.
-  // Remember the settings so the drawers can offer a "Re-add" card right away,
-  // rather than the user only finding out after a reload.
+  // Over quota — localStorage cannot hold the media bytes, but IndexedDB can
+  // (lib/draftstore.js). Ship the FULL payload there, keep the media-less copy
+  // in localStorage for a fast synchronous restore, and let the pill say what
+  // is actually true: green once the IndexedDB write settles, amber only if it
+  // fails. Before this, quota fallback silently created the exact data-loss
+  // condition the "no navigation guard" comment said could not exist
+  // (external review #3) — the drawing survived a mode switch and the media
+  // did not, with the only warning gone after 1.6 seconds.
   if (bgImage) pendingPhotoMeta = { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom,
                                     offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName };
   if (musicData) pendingMusicMeta = { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd,
                                       crossfadeMs:loopCrossfadeMs, name:musicName };
+  const stamp = Date.now();
+  if (window.SkriblDraftStore) {
+    _mediaSpillState = 'saving';
+    SkriblDraftStore.put('flip:draft', { json: JSON.stringify(serializeFlip()), savedAt: stamp })
+      .then(() => { _mediaSpillState = 'durable';
+                    // The session IS fully recoverable now — say so. (Only if
+                    // the pill still shows this save's amber; never conjure.)
+                    const el = document.getElementById('autosaveStatus');
+                    if (el && !el.hidden) showAutosaveStatus('saved'); })
+      .catch((e3) => { _mediaSpillState = 'failed';
+                       console.error('[skribl] media spill to IndexedDB failed:', e3); });
+  } else {
+    _mediaSpillState = 'failed';
+  }
   try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ media: false })));
+    const lite = serializeFlip({ media: false });
+    lite.mediaInIdb = true; lite.idbSavedAt = stamp;
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(lite));
     showAutosaveStatus('saved-no-media');
   } catch (e2) {
     console.error('[skribl] autosave failed even without media:', e2);
     showAutosaveStatus('failed');
   }
 }
+// 'none' until a quota fallback happens; then tracks whether the full payload
+// made it to IndexedDB. 'failed' means the amber pill is telling the truth
+// the old way: settings survive, bytes do not.
+let _mediaSpillState = 'none';
+// Flush NOW — the 800ms debounce must never be a loss window (review P0-2).
+// saveNow() is synchronous for the localStorage half; the IndexedDB half was
+// written at the last quota save and only re-runs if this flush hits quota too.
+function flushFlipDraft(){ clearTimeout(_saveT); try { saveNow(); } catch(_) {} }
+window.addEventListener('pagehide', flushFlipDraft);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushFlipDraft();
+});
 // Autosave status pill (ported from the Pad): "Saving…" while pending, then "Saved".
 function showAutosaveStatus(state){
   const el=document.getElementById('autosaveStatus'), txt=document.getElementById('autosaveStatusText'); if(!el||!txt) return;
@@ -383,7 +428,10 @@ function showAutosaveStatus(state){
   else if(state==='saved-no-media'){ el.classList.add('partial'); txt.textContent='Saved without media'; }
   else { txt.textContent='Saved'; }
   requestAnimationFrame(()=>el.classList.add('show'));
-  if(state!=='saving'){ el._hideTimer=setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>{ el.hidden=true; }, 300); }, 1600); }
+  // 'failed' and 'saved-no-media' STAY UP — each describes an ongoing
+  // durability problem, and a warning that fades claims it was resolved
+  // (review #3). A later successful save replaces them with 'saved'.
+  if(state!=='saving' && state!=='failed' && state!=='saved-no-media'){ el._hideTimer=setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>{ el.hidden=true; }, 300); }, 1600); }
 }
 // Export progress overlay + cancel.
 let _exportAbort=false;
@@ -455,8 +503,65 @@ function tryRestore(){
     if (d.mediaOmitted) {
       pendingMusicMeta = (d.musicMeta && d.musicMeta.name) ? d.musicMeta : null;
       pendingPhotoMeta = (d.photo && d.photo.name) ? d.photo : null;
+      // The bytes may be sitting in IndexedDB from the quota spill. Restore
+      // the media-less payload synchronously below (the drawing appears at
+      // once), then swap in the full payload when the async read lands — but
+      // ONLY if nothing has been edited in the gap and the two records are
+      // from the same save, else the fetch would overwrite live work with a
+      // stale copy. On any miss, the pendingMeta re-add cards above are the
+      // fallback, exactly as before.
+      if (d.mediaInIdb && window.SkriblDraftStore) {
+        const beforeEdits = raw;
+        SkriblDraftStore.get('flip:draft').then((rec) => {
+          if (!rec || !rec.json) return;
+          if (localStorage.getItem(AUTOSAVE_KEY) !== beforeEdits) return;  // edited since
+          const full = JSON.parse(rec.json);
+          // Apply MEDIA ONLY, never the frames. The lite localStorage record
+          // is always the newest drawing: the pagehide flush rewrites it
+          // synchronously while its IndexedDB put can die with the page — so
+          // the full payload here may be one save older, and applying it
+          // wholesale could revert strokes. (A savedAt-equality guard was the
+          // first version of this merge; it refused that dying-flush case
+          // entirely, which meant the media never came back after exactly the
+          // navigation the flush exists to survive.) The bytes are the only
+          // thing the lite record lacks, and their identity is checked by
+          // NAME against the meta the lite record itself carries — a swapped
+          // file has a different name and is refused; same-name bytes from
+          // one save earlier are the same file.
+          let touched = false;
+          if (typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio' &&
+              d.musicMeta && full.musicMeta && full.musicMeta.name === d.musicMeta.name) {
+            musicData = full.music;
+            pendingMusicMeta = null; touched = true;
+          }
+          if (typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
+              d.photo && full.photo && full.photo.name === d.photo.name) {
+            bgImage = full.bgImage;
+            pendingPhotoMeta = null; touched = true;
+          }
+          if (!touched) return;
+          // Mirror the draft-FILE load tail (loadDraftFile below): restore the
+          // image OBJECT and DECODE the audio — without the decode a restored
+          // draft posts the whole sample instead of the cropped loop (measured
+          // there: 3,528,082 B vs 588,082 B for the same 5s loop) and shows a
+          // blank waveform. Then refresh the media UI, or the drawer dots and
+          // re-add cards keep describing the media-less record this replaced.
+          loadBgImageObj(() => { applyBg(); render(); });
+          ensureAudio();
+          if (musicData) decodeForWaveform();
+          fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
+        }).catch(() => {});
+      }
     }
-    return applyPayload(d);
+    const ok = applyPayload(d);
+    // A successful restore is taking OWNERSHIP of the slot: the session now
+    // holds its content, so clearing everything and flushing empty is a
+    // deliberate clear and may remove the key — even inside the first save's
+    // debounce window (verify_fix TEST 5 hits exactly that window). A record
+    // this function REJECTS confers nothing: the tab is still empty, still
+    // doesn't own the slot, and the idle-flush fence keeps protecting it.
+    if (ok) _sessionOwnedDraft = true;
+    return ok;
   } catch (e) { return false; }
 }
 function chip(msg){

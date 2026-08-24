@@ -37,6 +37,17 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width":1280,"height":900})
     pg = ctx.new_page()
+    # SCOPE (v222): this suite pins the media-less FALLBACK contract — bytes
+    # stripped, meta preserved, later edits keep saving, re-add card on
+    # reload. Since the quota spill to IndexedDB landed (lib/draftstore.js),
+    # that fallback is reachable only when the store is unavailable, so this
+    # page runs WITHOUT IndexedDB and the contract stays exactly as written.
+    # The working-store path — spill, green pill, media back on reload — is
+    # pinned in verify_amber.py, verify_dots.py and verify_drafts.py. Tests
+    # 3 and 4 (under-quota fidelity, draft-file serialization) never touch
+    # the store and are unaffected by this.
+    pg.add_init_script(
+        "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
     pgerrs = []
     pg.on("pageerror", lambda e: pgerrs.append(str(e)))
 

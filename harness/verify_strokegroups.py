@@ -258,7 +258,20 @@ try:
         # unshareable, and redrawing cannot fix it because the orphaned points
         # are copied into every later save. This plants the exact numbers from
         # the report and requires the session to load in step AND to share.
-        planted = pg.evaluate("""() => {
+        #
+        # PLANTED VIA INIT SCRIPT, ON A FRESH PAGE — not written into a live
+        # page's localStorage before a reload. That first shape stopped being
+        # equivalent to the user's situation when v222 added the pagehide/
+        # visibilitychange flush: the live session's flush wrote its own state
+        # over the plant on the way out, so the reload restored the flush, not
+        # the reporter's draft. (The v222 aggregate caught it as a one-point
+        # loss here; the same investigation found and fenced the REAL bug in
+        # that shape — an idle fresh tab's flush deleting a pre-existing
+        # draft.) An init script runs before any app script can save, which is
+        # exactly a draft already on disk when the page opens.
+        pg.close()
+        pg = b.new_page(viewport={"width": 1280, "height": 900})
+        pg.add_init_script("""(() => {
             const mk = (n, acct) => {
                 const s = [];
                 for (let i = 0; i < n; i++) s.push({x: 10 + (i % 300), y: 20 + (i % 200),
@@ -272,9 +285,9 @@ try:
                 schemaVersion: 2, version: 2, playbackMode: 'flip', fps: 12,
                 canvasSize: {cssWidth: 1000, cssHeight: 700, dpr: 1},
                 editIdx: 9, frames: frames}));
-            return frames.length;
-        }""")
-        pg.reload(wait_until="load")
+        })()""")
+        planted = 10
+        pg.goto(BASE + "/flip", wait_until="load")
         pg.wait_for_timeout(1500)
         healed = pg.evaluate("""() => ({
             n: frames.length,
