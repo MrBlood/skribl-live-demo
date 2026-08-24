@@ -84,7 +84,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://skribl:skribl@127.0.0.1:5432/skribl
       # verify_postgres.py spawns its own gunicorn and resolves this DSN itself.
-      SKRIBL_PG_DSN: postgresql://skribl:skribl@127.0.0.1:5432/skribl
+      # A SEPARATE database from DATABASE_URL above, created empty by the step
+      # that precedes the harness: this suite migrates from scratch, and the
+      # database the harness itself uses has had create_all() run over it.
+      SKRIBL_PG_DSN: postgresql://skribl:skribl@127.0.0.1:5432/skribl_suite
 
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +110,29 @@ jobs:
           pip install playwright Pillow
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
+      - name: Create the empty database verify_postgres migrates into
+        # verify_postgres.py runs the alembic chain from scratch, so it needs a
+        # database nothing has created tables in behind its back -- the same
+        # requirement the "Verify the migration chain" step below already spells
+        # out for migrations_only, and for the same reason.
+        #
+        # SKRIBL_PG_DSN used to point at `skribl`, the database run_harness.sh
+        # resets with metadata.create_all(). The tables were therefore already
+        # present with no alembic_version row, the baseline revision tried to
+        # create them again, and the suite SKIPPED:
+        #     could not migrate the schema on PostgreSQL
+        # with the server logging `relation "skribl_posts" already exists`.
+        #
+        # It skipped every time, so the one suite that exercises PostgreSQL has
+        # never actually run in CI -- and because run_harness.sh exits non-zero
+        # on any skip, the job went red without a single failing assertion,
+        # which is how it stayed unexamined. Exactly the v209 lesson in
+        # HANDOFF-NEXT-SESSION.md section 5: a run that reports `skipped 1` is
+        # not the run you think it is.
+        run: |
+          PGPASSWORD=skribl psql -h 127.0.0.1 -U skribl -d skribl \
+            -c "DROP DATABASE IF EXISTS skribl_suite;" \
+            -c "CREATE DATABASE skribl_suite OWNER skribl;"
       - name: Run the harness
         # This job BLOCKS. It was non-blocking while the database-backed limiter
         # admitted zero of twelve concurrent posts; that is fixed (per-identity
