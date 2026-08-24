@@ -140,7 +140,19 @@ body {
   padding: 14px 18px;
   margin: 12px;
   border-radius: 16px;
-  border: 1px solid var(--hairline);
+  /* No hairline. The header is made a surface by its fill and its shadow, and
+     a border on top of both was a third cue for one job.
+     What it cost: the canvas carries a 1px ring (--canvas-ring), and the header
+     and toolbar each carried one too, at almost the same radius — three
+     concentric outlined rectangles, with the tool group's own pill inside the
+     toolbar making a fourth. The eye could not tell which was the subject. The
+     canvas is the subject; it should own the only hairline on the screen.
+     rgba(23,26,34,0.78) over the near-black page, plus the 26px-blur shadow
+     below, still reads as raised — verified against an EMPTY dark canvas, which
+     is the state with the fewest edges and therefore the honest test.
+     Shared by Pad and Flip (flip.css only adjusts padding and gap) and
+     inherited by the player through the derived sheet, so the three surfaces
+     stay one design. */
   background: rgba(23, 26, 34, 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);

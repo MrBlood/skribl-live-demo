@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-24T18:48:25Z
+UTC timestamp           : 2026-08-24T21:47:25Z
 Host                    : Linux x86_64
-Tree SHA-256            : b832a1e3a5cd7e0018fc76f90291d1ee409eb3bc0511d5bcddc730451e33af8d
-Git commit              : 337a43a-dirty
+Tree SHA-256            : 1667f40261a67546bc71a31c2c7b0f2df04f5d492017516775cf8005eb7baca0
+Git commit              : 2d12b7c-dirty
 SKRIBL_VERSION          : v222
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,18 +10,25 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.hzjJnwaVln/harness.db)
+Database reset          : yes (fresh /tmp/tmp.lj19uYybB7/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_ux.py
+Command                 : ./harness/run_harness.sh verify_cssplit.py verify_visual.py verify_layout.py verify_ux.py verify_sheetfit.py verify_parity.py verify_surfaces.py verify_tools.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 1
-  verify_ux.py: FAIL — exit 1, 307/308 passed
-assertions passed: 0   (skipped suites contribute 0)
+suites requested : 8
+  verify_cssplit.py: ok — 18/18 passed
+  verify_visual.py: ok — 76/76 passed
+  verify_layout.py: ok — 83/83 passed
+  verify_ux.py: ok — 308/308 passed
+  verify_sheetfit.py: ok — 14/14 passed
+  verify_parity.py: ok — 115/115 passed
+  verify_surfaces.py: ok — 7/7 passed
+  verify_tools.py: ok — 118/118 passed
+assertions passed: 739   (skipped suites contribute 0)
 suites skipped   : 0
-suites with problems: 1
+suites with problems: 0

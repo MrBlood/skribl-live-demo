@@ -249,3 +249,31 @@ is the load-bearing one — the suite runs at 1280px where anything fits, so a
 Reversal: restore the glyph span in editor_music.js and flip.js, restore
 `.zoom-seg[data-role="focus"]{margin-left:24px}` inside the ≤640 media block,
 and raise the budget pin above 409.
+
+**The canvas owns the only hairline; every other surface is made by fill and
+shadow.** The header carried `1px solid var(--hairline)` on top of a
+translucent fill AND a 26px-blur shadow — three cues for one job. With the
+canvas ring (`--canvas-ring`) and the toolbar's own border, that put three
+concentric outlined rectangles at almost the same radius on screen, with the
+tool group's pill inside the toolbar making a fourth, and the eye could not
+tell which was the subject. The canvas is the subject. Its ring stays; the
+header's is gone.
+
+Layout was not the reason and did not suffer: `box-sizing: border-box` is
+global, so dropping the border returns 2px of inner width. Measured across
+320/344/360/375/390/430 in idle and take-saved, every gap moved +2px and no
+policy changed — the mark still seats at 375/390/430 with a take saved and
+sheds at 320/344/360, no overflow, no floor violation. The brand-fit shed is
+2px more comfortable than it was.
+
+Verified against an EMPTY DARK canvas, deliberately: that is the state with the
+fewest edges on screen, where a removed border shows worst. It still reads as a
+raised card there. Also checked with Flip's tune drawer open, where the panel
+tucks under the header and is meant to look like one object with it — the seam
+holds without the header border.
+
+One rule, three surfaces: Pad and Flip share this `.header` (flip.css only
+adjusts padding and gap) and the player inherits it through the derived sheet,
+which must be re-emitted with `cssgraph.py --emit` in the same edit. Reversal:
+restore the one declaration and re-emit. `--hairline` is used 41 times
+elsewhere and is untouched — this is a change to one rule, not to the token.
