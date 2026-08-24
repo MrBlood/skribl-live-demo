@@ -4084,12 +4084,24 @@ body.player-mode #canvas {
   .btn.record.active { width: auto; padding: 0 15px; gap: 7px; }
   .btn.record.active .btn-label { display: inline; }
 
-  /* While recording, collapse the wordmark so the timer + Stop have room and
-     the logo keeps clear space to its right. Same once a take exists — logo +
-     a generous gap + the control cluster reads best. At idle rest (no take) the
-     wordmark shows, since there's only Record + ⋯. */
-  body.recording .brand > span,
-  .header:has(#playWrap:not([hidden])) .brand > span { display: none; }
+  /* While recording, collapse the mark so the timer + Stop have room and the
+     header keeps clear space to its right. That case is static and stays here:
+     recording always needs the room, at every mobile width.
+
+     The take-saved case USED to be hidden here too, by a sibling selector
+     `.header:has(#playWrap:not([hidden])) .brand > span`. It was written at
+     v210 for the old 108px icon+wordmark lockup, which genuinely could not
+     share the bar with a take's controls. The v221 mark is 70px and that
+     premise is gone — but the rule stayed, so on a phone the mark vanished the
+     moment recording stopped and never came back, at EVERY width, including
+     430 where ~89px of room was sitting empty. That is the bug this retires.
+
+     Narrow widths are now owned by initBrandFit()'s `brand-collapsed` shed in
+     app.js, which measures the real gap and hides the mark only where it truly
+     cannot fit. A static rule cannot tell 430 from 320; the measurement can.
+     To reverse: restore the `:has(#playWrap...)` selector below and the shed
+     step becomes dead code for the take-saved state. */
+  body.recording .brand > span { display: none; }
 
   /* Uniform spacing between controls; cluster them to the right so there's a
      generous gap between the logo and the first control (instead of spreading

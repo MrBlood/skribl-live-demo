@@ -1672,15 +1672,32 @@ if (playScrub) {
     const frac = Number.isFinite(first) ? first % 1 : 0;
     if (frac) actions.style.paddingRight = (parseFloat(getComputedStyle(actions).paddingRight) || 0) + frac + 'px';
     // Shed in order of how little it costs, re-measuring after each, and stop
-    // as soon as nothing collides: 1. the wordmark  2. Record's label
-    // 3. the inter-control gap  4. Post's label (icon stays). Measured at
-    // 375: with a take saved, steps 1-2 leave the cluster 6px over-full;
-    // step 3 alone clears it, so Post keeps its word there and only loses it
-    // on narrower phones.
-    if (collides()) brand.classList.add('brand-collapsed');
+    // as soon as nothing collides. The mark is shed LAST, not first: the brand
+    // is logo-only (there is no wordmark behind it), so collapsing it leaves
+    // the header with nothing naming the surface, which costs more than any
+    // button's word. Measured at 390 with a take saved: the mark is 21px
+    // over-full on its own; Record is already icon-only there (the
+    // `:has(#playWrap)` rule), the gap step frees 8, and Post's label frees
+    // 47 — so dropping Post's word is what buys the mark its place (+34).
+    //
+    // Two passes, because "shed the mark last" alone would be worse than the
+    // bug at narrow widths. At 360 the mark cannot fit even with every label
+    // gone (+4 against an 8px floor), so a single ordered pass would spend
+    // Post's word AND still lose the mark. Pass A tries to keep the mark; if
+    // it still does not fit, pass B puts the labels back and drops the mark
+    // instead, which is what 320/344/360 actually want.
     if (collides()) header.classList.add('rec-collapsed');
     if (collides()) header.classList.add('gap-collapsed');
     if (collides()) header.classList.add('post-collapsed');
+    if (collides()) {
+      header.classList.remove('rec-collapsed');
+      header.classList.remove('gap-collapsed');
+      header.classList.remove('post-collapsed');
+      brand.classList.add('brand-collapsed');
+      if (collides()) header.classList.add('rec-collapsed');
+      if (collides()) header.classList.add('gap-collapsed');
+      if (collides()) header.classList.add('post-collapsed');
+    }
   }
   const refit = () => requestAnimationFrame(fit);   // measure after layout settles
   if (typeof ResizeObserver !== 'undefined') {

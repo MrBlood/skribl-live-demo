@@ -1072,13 +1072,6 @@ body.player-mode #canvas {
    =================================================================== */
 @media (max-width: 640px) {
 
-  /* While recording, collapse the wordmark so the timer + Stop have room and
-     the logo keeps clear space to its right. Same once a take exists — logo +
-     a generous gap + the control cluster reads best. At idle rest (no take) the
-     wordmark shows, since there's only Record + ⋯. */
-  body.recording .brand > span,
-  .header:has(#playWrap:not([hidden])) .brand > span { display: none; }
-
   /* Uniform spacing between controls; cluster them to the right so there's a
      generous gap between the logo and the first control (instead of spreading
      edge-to-edge, which pinned Record against the logo). */

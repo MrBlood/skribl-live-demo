@@ -1549,6 +1549,27 @@ with _sp204() as _p:
         check(f"V210 header@{pw}: with a take saved the cluster still clears the mark",
               _g["gap"] >= _floor - 6 if pw <= 340 else _g["gap"] >= _floor,
               f"gap {_g['gap']}px (floor {_floor}), words shown {_g['wordsShown']}")
+        # v223 REGRESSION PIN — the reported iPhone bug: the mark vanished when
+        # recording started (intended) and never came back when it stopped.
+        # This state IS record→stop, so the assertion below is the repro.
+        #
+        # The gap check above could not catch it and never will: with the mark
+        # hidden the probe measures from the brand box's own left edge, so a
+        # missing mark makes the gap LARGER and the assertion greener. Measure
+        # the mark itself. The brand is logo-only — there is no wordmark behind
+        # it — so a hidden mark leaves nothing naming the surface.
+        _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span svg');"
+                          " if (!s) return 0; const r = s.getBoundingClientRect();"
+                          " return r.width > 0 && r.height > 0 ? Math.round(r.width) : 0; }")
+        if pw >= 375:
+            check(f"v223 header@{pw}: after record→stop the MARK IS BACK",
+                  _mk > 0,
+                  f"mark {_mk}px — the v210 take-saved hide is retired; "
+                  f"initBrandFit sheds Record/gap/Post's label to seat it")
+        else:
+            check(f"v223 header@{pw}: the mark stays shed where it genuinely cannot fit",
+                  _mk == 0,
+                  f"mark {_mk}px — at {pw} it does not fit even with every label shed")
         # And Post keeps its word wherever the arithmetic allows.
         #
         # v219 CHANGED THE ARITHMETIC, and the old pin's own reason is what says
@@ -1562,9 +1583,27 @@ with _sp204() as _p:
         #
         # The floor is what matters and it is kept: 320px is the safety net, not
         # a design target, and there Post must still be free to drop to its icon.
+        # v223 NARROWS THIS PIN, deliberately, and the owner made the call. The
+        # v219 reasoning above is still correct on its own terms — the 40px from
+        # moving Flip is real — but it was settled while the take-saved state hid
+        # the mark unconditionally, so Post's word was competing against empty
+        # space. It now competes against the mark, and the mark is the WHOLE
+        # brand: the header carries no wordmark behind it, so shedding it leaves
+        # nothing naming the surface, while Post shedding its word leaves a
+        # labelled icon with a title attribute. Measured at 390 with a take
+        # saved: the mark is 21px over-full, Record is already icon-only there,
+        # the gap step frees 8px, and Post's label frees 47 — Post's word is the
+        # only thing large enough to pay for the mark.
+        #
+        # So the split moves from 375 to 430, and ONLY for the take-saved state
+        # this loop measures; idle is untouched and keeps the word everywhere.
+        # To reverse: restore `pw >= 375` here and drop pass A of the shed in
+        # initBrandFit().
         _pw = _h.evaluate("() => { const p = document.getElementById('postBtn'); return p && !p.hidden ? Math.round(p.getBoundingClientRect().width) : null; }")
-        if pw >= 375:
-            check(f"V219 header@{pw}: Post KEEPS its label — the 40px freed by moving Flip is what pays for it", _pw and _pw > 60, f"Post {_pw}px wide")
+        if pw >= 430:
+            check(f"V219 header@{pw}: Post KEEPS its label — at 430 the mark and the word both fit", _pw and _pw > 60, f"Post {_pw}px wide")
+        elif pw >= 375:
+            check(f"v223 header@{pw}: Post goes icon-only so the mark can be seated", _pw == 40, f"Post {_pw}px wide (icon)")
         else:
             check(f"V219 header@{pw}: Post may shed its label at the 320px safety net", _pw and _pw > 0, f"Post {_pw}px wide")
         _h.close()

@@ -151,3 +151,39 @@ hashes for one archive), and `verify_docs`' parity guard now matches `.log`
 names — the regex blind spot that let the divergence live. Volatile release
 facts (hash, counts) live only in generated documents; prose that quotes
 them goes stale on save, demonstrated twice at v220.
+
+**The mark outranks a button's word, because the mark is the whole brand.**
+A v210 rule hid the header mark whenever a take existed
+(`.header:has(#playWrap:not([hidden])) .brand > span`). It was written for
+the 108px icon+wordmark lockup, which genuinely could not share a phone
+header with a take's controls. The v221 mark is 70px and that premise had
+been gone for two releases, but the rule stayed — so on a phone the mark
+disappeared when recording started (intended) and never came back when it
+stopped (not intended), at EVERY width, including 430 where ~89px of room
+sat empty. Retired. `body.recording` keeps its own hide: recording always
+needs the room, at every mobile width, and that case is genuinely static.
+
+**Narrow widths are decided by measurement, not by a media query.** A static
+rule cannot tell 430 from 320. `initBrandFit()` already measured the real
+gap, so the take-saved case now falls to its `brand-collapsed` shed. The
+shed runs in two passes, and the second one is the point: pass A keeps the
+mark and sheds Record's label, the inter-control gap, then Post's label;
+if the mark STILL does not fit, pass B puts those labels back and sheds the
+mark instead. Without pass B, 360 and below would have spent Post's word and
+lost the mark anyway — worse than the bug. Measured outcome, take-saved:
+mark seated at 375/390/430, shed at 320/344/360; no header overflow and no
+floor violation at any width or state.
+
+**Post goes icon-only at 375–390 with a take saved — a deliberate narrowing
+of the v219 pin, owner's call.** v219 fought to keep Post's word down to
+375px and its reasoning still holds on its own terms; but it was settled
+while the take-saved state hid the mark unconditionally, so Post's word was
+competing against empty space. It now competes against the mark. At 390 the
+mark is 21px over-full, Record is already icon-only there, the gap step
+frees 8px, and Post's label frees 47 — Post's word is the only thing large
+enough to pay for the mark. A shed word leaves a labelled icon with a title
+attribute; a shed mark leaves nothing naming the surface. Idle is untouched
+and keeps the word everywhere. Reversal: restore the `pw >= 375` split in
+verify_ux's V219 block and delete pass A of the shed in `initBrandFit()`;
+restoring the CSS selector named above also reverses it, less cleanly, by
+making the shed dead code for the take-saved state.
