@@ -4176,7 +4176,21 @@ body.player-mode #canvas {
   flex: 1 1 auto; min-width: 0;
   height: 38px; padding: 0;
   background: transparent; border: 0;
-  color: var(--text-primary); font: inherit; font-size: 13px;
+  color: var(--text-primary);
+  /* 16px, for the same reason as .zoom-hud .zoom-val-input above: below it,
+     iOS Safari zooms the whole PAGE on focus and does not reliably zoom back.
+     Reported symptom here — tapping Search in How it works blew the drawer up
+     to roughly double size with half the field off-screen. This field was
+     added after that rule and did not inherit its lesson; it was 13px.
+     Keep it exactly 16px — do NOT lower this.
+     Unconditional rather than behind a phone media query on purpose: iPad
+     Safari does the same thing and reports 768-1024px, so a max-width: 640px
+     guard would leave the tablet broken. The field is 38px tall, so the size
+     costs no layout on any surface.
+     Pad is where this bites. Flip only escapes it because its viewport tag
+     carries maximum-scale=1/user-scalable=no, which suppresses the symptom by
+     disabling pinch-zoom for everyone — not a fix worth copying. */
+  font: inherit; font-size: 16px;
 }
 /* The global `input:focus-visible` rule near the end of this file draws a 2px
    outline at 3px offset. Inside a wrapper that already shows focus via
