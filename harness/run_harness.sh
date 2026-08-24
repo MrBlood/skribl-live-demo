@@ -171,6 +171,26 @@ FLASK_PID=$!
 cleanup() {
   kill "${FLASK_PID:-}" 2>/dev/null || true
   [ -n "${HARNESS_TMP:-}" ] && rm -rf "$HARNESS_TMP"      # round 5, #8
+  # return 0, and it is load-bearing. An EXIT trap's status REPLACES the status
+  # the script exited with, and the line above is the last command in this
+  # function: when HARNESS_TMP is empty the `[ -n ]` test is false, the && short
+  # -circuits, cleanup returns 1, and a run that printed
+  #     RESULT: PASS — every requested suite exited 0
+  # exited 1 anyway.
+  #
+  # HARNESS_TMP is only set on the sqlite path (mktemp -d). A caller that
+  # supplies its own DATABASE_URL never sets it — which is exactly the CI
+  # postgres job, and why that job had NEVER gone green regardless of how many
+  # suites passed. On 2d12b7c it reported 2718 assertions, 0 skipped, 0 suites
+  # with problems, RESULT: PASS, and still failed the step.
+  #
+  # Reproduced locally with one suite: sqlite path exit 0, postgres path exit 1,
+  # same suite, same result line. `bash -x` shows it exactly:
+  #     + exit 0
+  #     + cleanup
+  #     + kill 22475
+  #     + '[' -n '' ']'
+  return 0
 }
 trap cleanup EXIT
 
