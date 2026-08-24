@@ -72,6 +72,23 @@ with sync_playwright() as p:
           bool(page.evaluate("() => typeof pickAvcCodec === 'function' && pickAvcCodec()")),
           "pickAvcCodec returned falsy on a browser that DOES support H.264")
 
+    # mp4-muxer stopped being a <script> tag at v218: it is 9,504 B that only
+    # matters when somebody exports an MP4, so it is fetched on the click via
+    # skriblLoadVendor(). verify_gifenc, verify_muxer and verify_csp were all
+    # updated for that; this suite was not, and kept reading window.Mp4Muxer
+    # directly. It went unnoticed for five releases because the only browsers
+    # that reach this line are ones with H.264 -- which the sandbox does not
+    # have (it skips at the gate above) and which CI never got to run, because
+    # run_harness.sh was not executable and every job died at exit 126. The
+    # first CI run that actually executed failed here:
+    #     TypeError: Cannot destructure property 'Muxer' of 'window.Mp4Muxer'
+    # Ask for the library the same way the export path does.
+    page.evaluate("() => window.skriblLoadVendor('mp4muxer')")
+    page.wait_for_timeout(200)
+    check("the vendored muxer is loaded once asked for",
+          page.evaluate("() => typeof window.Mp4Muxer !== 'undefined'"),
+          "skriblLoadVendor('mp4muxer') did not define window.Mp4Muxer")
+
     # Encode a handful of synthetic frames through the same vendored muxer the
     # export path uses, and inspect the container it produces. This exercises
     # encoder -> muxer -> bytes, which is the half that has never run.

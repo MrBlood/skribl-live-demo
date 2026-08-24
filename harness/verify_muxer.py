@@ -83,20 +83,52 @@ with sync_playwright() as p:
     check("the muxer is served from our own origin", bool(local_muxer),
           local_muxer[0] if local_muxer else "none")
 
-    print("\nCAPABILITY GATE — declines cleanly when avc1 is unsupported")
+    print("\nCAPABILITY GATE — the MP4 path matches what the browser can do")
+    # This block used to ASSERT that the browser lacked avc1 ("this browser
+    # genuinely lacks avc1, so the gate is under test"). That held on the
+    # sandbox Chromium and on the owner's machine, and it is how the suite was
+    # written -- but it is an assertion about the ENVIRONMENT, not about this
+    # code, and it is false on a browser that ships H.264. The first CI run
+    # that ever executed the harness failed exactly here, 15/18, because
+    # GitHub's Chromium does support avc1. A test that only passes on browsers
+    # missing a codec is not testing the gate; it is testing the runner.
+    #
+    # So the capability is now MEASURED and both sides are asserted. Whichever
+    # branch runs, the claim is the same one that always mattered: the code's
+    # answer agrees with the browser's. Each branch contributes two assertions
+    # so the total does not move with the runner.
     h264 = flip.evaluate("""async () => {
         try { const r = await VideoEncoder.isConfigSupported(
                 {codec:'avc1.42001f', width:640, height:460, bitrate:2000000});
               return !!r.supported; } catch (e) { return false; } }""")
-    check("this browser genuinely lacks avc1 (so the gate is under test)", not h264,
-          f"isConfigSupported -> {h264}")
+    print(f"  (this browser {'HAS' if h264 else 'lacks'} avc1)")
 
     picked = flip.evaluate("async () => await pickAvcCodec(640, 460)")
-    check("pickAvcCodec returns falsy, not a bogus codec", not picked, repr(picked))
-
-    gated = flip.evaluate("async () => await exportViaWebCodecsMp4()")
-    check("Flip's MP4 path returns false rather than throwing", gated is False, repr(gated))
-    check("no page errors from the declined export", not flip_errors,
+    # The invariant the old environment assertion was reaching for, stated so
+    # that it holds on any runner: the code's answer tracks the browser's
+    # capability. Offering MP4 where it cannot be encoded, or declining where
+    # it can, are both failures — and this catches either without caring which
+    # browser is running. It also keeps the suite at 18 assertions on every
+    # runner, so the count stays comparable across environments.
+    check("pickAvcCodec's answer agrees with the browser's real capability",
+          bool(picked) == h264, f"isConfigSupported -> {h264}, pickAvcCodec -> {picked!r}")
+    if h264:
+        check("pickAvcCodec returns a real avc1 codec where H.264 exists",
+              isinstance(picked, str) and picked.startswith("avc1"), repr(picked))
+        # Not merely truthy: a codec string the browser itself will accept.
+        # Handing the encoder a plausible-looking profile it cannot use is the
+        # failure this pair exists to catch, in both directions.
+        ok = flip.evaluate("""async (c) => {
+            try { const r = await VideoEncoder.isConfigSupported(
+                    {codec:c, width:640, height:460, bitrate:2000000});
+                  return !!r.supported; } catch (e) { return false; } }""", picked)
+        check("...and the browser accepts the exact profile it picked", ok,
+              f"pickAvcCodec chose {picked!r}, which isConfigSupported rejects")
+    else:
+        check("pickAvcCodec returns falsy, not a bogus codec", not picked, repr(picked))
+        gated = flip.evaluate("async () => await exportViaWebCodecsMp4()")
+        check("Flip's MP4 path returns false rather than throwing", gated is False, repr(gated))
+    check("no page errors from the capability probe", not flip_errors,
           "; ".join(flip_errors[:2]))
 
     # The Pad's export lives in an IIFE, so webcodecsMp4Ready/expectedVideoFormat
