@@ -29,7 +29,13 @@ jobs:
           # The lock is hash-pinned, so it installs on its own; '-r requirements
           # -c constraints' fails because --require-hashes rejects version ranges.
           pip install -r constraints.txt --require-hashes
-          pip install playwright
+          # playwright and Pillow are TEST-only and deliberately absent from
+          # constraints.txt, which is the app's runtime lock (it is what the
+          # Procfile's gunicorn installs) -- neither is imported by skribl/ or
+          # app.py. Pillow backs verify_cssplit's pixel gate, and that suite
+          # exits 1 rather than SKIPping when it is missing, so leaving it out
+          # fails the job rather than degrading it.
+          pip install playwright Pillow
       - name: Install Chromium
         # --with-deps pulls the system libraries headless Chromium needs;
         # without it the browser launches and dies on a missing shared object.
@@ -81,7 +87,13 @@ jobs:
           # The lock is hash-pinned, so it installs on its own; '-r requirements
           # -c constraints' fails because --require-hashes rejects version ranges.
           pip install -r constraints.txt --require-hashes
-          pip install playwright
+          # playwright and Pillow are TEST-only and deliberately absent from
+          # constraints.txt, which is the app's runtime lock (it is what the
+          # Procfile's gunicorn installs) -- neither is imported by skribl/ or
+          # app.py. Pillow backs verify_cssplit's pixel gate, and that suite
+          # exits 1 rather than SKIPping when it is missing, so leaving it out
+          # fails the job rather than degrading it.
+          pip install playwright Pillow
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
       - name: Run the harness
@@ -134,7 +146,13 @@ jobs:
           # The lock is hash-pinned, so it installs on its own; '-r requirements
           # -c constraints' fails because --require-hashes rejects version ranges.
           pip install -r constraints.txt --require-hashes
-          pip install playwright
+          # playwright and Pillow are TEST-only and deliberately absent from
+          # constraints.txt, which is the app's runtime lock (it is what the
+          # Procfile's gunicorn installs) -- neither is imported by skribl/ or
+          # app.py. Pillow backs verify_cssplit's pixel gate, and that suite
+          # exits 1 rather than SKIPping when it is missing, so leaving it out
+          # fails the job rather than degrading it.
+          pip install playwright Pillow
       - name: Install Chromium and real Chrome
         # chromium serves the app for every other suite; chrome supplies the
         # H.264 encoder that Chromium does not ship, which is why the MP4 happy
