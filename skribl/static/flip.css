@@ -38,11 +38,14 @@
   .flip-app .app { min-height: 100dvh; height: auto; }
   .flip-app .header { gap: 8px; justify-content: flex-start; }
 
-  /* Wordmark: just FLIP (logo/Skribl removed to free room on mobile). */
-  .flip-word { font-weight: 800; font-size: 17px; letter-spacing: .12em; color: var(--text-primary); padding-left: 2px; white-space: nowrap; }
-  /* Three tiers, widest that fits wins. Measured: the header has 193px free at
-     760px+, 154 at 440 and 66 at 340; FLIP MODE needs 86, FLIP 34, FM 23. */
-  .fw-mid, .fw-min { display: none; }
+  /* Wordmark: the fanned-stack MARK (v220.x) — the same sheet as Pad's mark,
+     thumbed into a flipbook. One size everywhere: at ~28px it is narrower
+     than the old "FM" fallback ever was, so the three text tiers
+     (FLIPMODE 86px / FLIP 34 / FM 23) retired along with their breakpoints.
+     The aria-label on .flip-word still carries the WORD — the bare-icon
+     lesson from Flip Mode's own history applies to the mark too. */
+  .flip-word { color: var(--text-primary); padding-left: 2px; display: flex; align-items: center; }
+  .flip-word .brand-mark { height: 44px; width: auto; display: block; } /* matches the tallest header element; see styles.css note */
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
   /* Below 640 the shared rule `.header .actions { margin-left: 12px }`
@@ -787,15 +790,8 @@
    reading header.scrollWidth against clientWidth, not by summing child widths:
    flex shrinks the controls first, so an arithmetic "free space" figure hides
    the squeeze and reports room that is not there. */
-@media (max-width: 359px) {
-  .flip-word .fw-full { display: none; }
-  .flip-word .fw-mid { display: inline; }
-}
-/* FM only below 320px — narrower than any phone sold. A true fallback. */
-@media (max-width: 319px) {
-  .flip-word .fw-mid { display: none; }
-  .flip-word .fw-min { display: inline; }
-}
+/* v220.x: the 359/319 wordmark tiers retired — the mark is one size, and it
+   is smaller than the smallest tier was. */
 
   /* ---- move artwork -------------------------------------------------------
      The move bar REPLACES the page bar rather than sitting beside it: on a

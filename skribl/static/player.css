@@ -178,7 +178,7 @@ body {
 /* JS (fitBrand) adds this when even "PAD" won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
    host site is already branded, so the header only names the MODE. */
-.brand > span { white-space: nowrap; }
+.brand > span { white-space: nowrap; display: flex; align-items: center; }
 
 /* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark
    (a shared link travels off the branded host site, so the card stays

@@ -237,15 +237,22 @@ with sync_playwright() as _p:
     # first, so an arithmetic "free space" figure hides the squeeze and reports
     # room that is not there; that is how the first pass concluded FLIPMODE
     # needed 440px when it actually clears at 360.
-    for _w, _want in ((1000, "FLIPMODE"), (430, "FLIPMODE"), (393, "FLIPMODE"),
-                      (375, "FLIPMODE"), (360, "FLIPMODE"),
-                      (340, "FLIP"), (300, "FM")):
+    # v220.x: the three text tiers (FLIPMODE/FLIP/FM) were replaced by a single
+    # ~28px fanned-stack mark, smaller than the smallest tier was. The tier
+    # assertion's INTENT survives: at every width the tiers used to cover,
+    # exactly one visible mark, carrying the word for assistive tech.
+    for _w in (1000, 430, 393, 375, 360, 340, 300):
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
         _pg.wait_for_timeout(1200)
-        _shown = _pg.evaluate("() => document.querySelector('.flip-word').innerText.trim()")
-        check(f"at {_w}px the wordmark reads {_want!r}", _shown == _want,
-              f"shows {_shown!r} — exactly one tier must be visible")
+        _shown = _pg.evaluate("""() => { const w = document.querySelector('.flip-word');
+          const m = w && w.querySelector('.brand-mark');
+          const r = m ? m.getBoundingClientRect() : {width: 0, height: 0};
+          return { visible: !!m && r.width > 10 && r.height > 10,
+                   label: (w && w.getAttribute('aria-label')) || '' }; }""")
+        check(f"at {_w}px the mark is visible and labelled", 
+              _shown["visible"] and _shown["label"].lower() == "flipmode",
+              f"{_shown!r} — exactly one visible mark, aria-label carries the word")
 
         # Real overflow, not arithmetic. A wordmark that "fits" by squeezing
         # the controls or spilling past the edge is not fitting.
@@ -511,11 +518,10 @@ with sync_playwright() as _p:
     _b.close()
 
 print("\nWORDMARK WEIGHT — the phone is not a thinner brand")
-# .flip-word was shrunk to 15px below 440px, part of the same block that gave
-# us "FM" — a header that also held fps, onion, grid and draw-on inline. The
-# controls moved out and the shrink stayed, so the wordmark read visibly
-# lighter on a phone than on a desktop for no remaining reason. Measured, 17px
-# overflows by zero at every phone width.
+# Was a font-size parity check on the text tiers ("15px below 440 for no
+# remaining reason"). v220.x replaced the text with the fanned-stack mark;
+# the intent is unchanged and now reads as RENDERED height: the mark is the
+# same physical size on a phone as on a desktop, and never overflows.
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
     _sizes = {}
@@ -523,19 +529,19 @@ with sync_playwright() as _p:
         _pg = _b.new_page(viewport={"width": _w, "height": 844})
         _pg.goto(f"{BASE}/flip", wait_until="load")
         _pg.wait_for_timeout(1150)
-        _sizes[_w] = _pg.evaluate("""() => { const w = document.querySelector('.flip-word');
+        _sizes[_w] = _pg.evaluate("""() => { const m = document.querySelector('.flip-word .brand-mark');
           const h = document.querySelector('.header');
-          const cs = getComputedStyle(w);
-          return { size: parseFloat(cs.fontSize), weight: cs.fontWeight,
+          const r = m.getBoundingClientRect();
+          return { size: Math.round(r.height * 2) / 2, weight: Math.round(r.width * 2) / 2,
                    overflow: Math.round(h.scrollWidth - h.clientWidth) }; }""")
         _pg.close()
 
     _ref = _sizes[1000]
     for _w, _m in _sizes.items():
-        check(f"at {_w}px the wordmark is full size",
+        check(f"at {_w}px the mark is full size",
               _m["size"] == _ref["size"],
-              f"{_m['size']}px vs {_ref['size']}px on desktop — it reads lighter")
-        check(f"at {_w}px the wordmark keeps its weight",
+              f"{_m['size']}px tall vs {_ref['size']}px on desktop — it reads lighter")
+        check(f"at {_w}px the mark keeps its width",
               _m["weight"] == _ref["weight"], f"{_m['weight']} vs {_ref['weight']}")
         check(f"at {_w}px the full size still does not overflow",
               _m["overflow"] <= 0, f"{_m['overflow']}px past the edge")

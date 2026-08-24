@@ -1,4 +1,47 @@
-# Skribl — Handoff for the next session (written at the v219 seal)
+# Skribl — Handoff for the next session
+
+## v221 addendum — read this first (the v219 body below is history, still true where not superseded)
+
+**Current sealed build: v221.** Result, tree hash, suite/assertion counts and
+skip list are all in `harness/RELEASE.md`, which is generated. No volatile
+number is typed here or anywhere in prose — v220's snapshot quoted its tree
+hash and was stale on save. `RELEASE.md` is the single hash authority.
+
+**Read order for a new session:** `V221-CHANGES.md` (what happened and why),
+then `DESIGN-DIRECTION.md` (unchanged; still the intent), then this file.
+
+**What v221 is:** the identity release. Pad's icon and the word "Skribl" left
+the header; both surfaces now carry owner-approved graffiti piece lockups
+(SKRIBL PAD / FLIP MODE) at 44px with the original logo star as the glints.
+The accent was consolidated into tokens, demoted, rejected as flat, and
+restored in four lines — all three palettes are recorded in `styles.css`
+`:root`. Release hygiene: the two tree-hash implementations were unified,
+the guard that missed their divergence was fixed, and the stray runtime log
+that shipped inside v220 was removed. Full details: `V221-CHANGES.md`.
+
+**Next work, in order:** durable drafts + pointer identity (the direction
+doc's prerequisites, owner-deferred this cycle, still open), then onion-skin
+promotion (filmstrip placement; "hold" vocabulary collision), then the copy
+pass as one batch. `V221-CHANGES.md` §"Open items" has the details per item.
+
+**The sealing order (two v220-era runs were lost to getting this wrong):**
+
+1. Settle EVERY non-generated file first: `SKRIBL_VERSION` in
+   `skribl/core.py`, the archive directory name, `ARCHIVE-README.md`,
+   `FOR-THE-REVIEWER.md`, this file, `DECISIONS.md`, the changes doc.
+2. Run the full aggregate on that frozen tree
+   (`python3 harness/release_run.py --budget 420`, re-invoke until exit 0;
+   it re-verifies the frozen hash on every resume; start PostgreSQL inside
+   each invocation or `verify_postgres` records a skip).
+3. Only then regenerate `SHA256SUMS` and let the run's stamps stand — all on
+   the excluded list, so writing them cannot move the hash.
+4. Zip. Touch nothing in between. The excluded set is defined ONCE per
+   implementation and `verify_docs` now genuinely asserts they match
+   (including `.log` entries — the regex blind spot is fixed).
+
+---
+
+## The v219 handoff body (historical from here down)
 
 **READ `DESIGN-DIRECTION.md` FIRST.** It is the shape the product should take,
 written at the v219 seal from the owner's brief. Everything below is the state of
@@ -23,8 +66,8 @@ exact procedures. Everything here was verified against the tree, not recalled.
 | Thing | Location |
 |---|---|
 | **Sealed, shipped builds** | `/mnt/user-data/outputs/skribl-vNNN-sealed.zip` — v203 … v219 |
-| **Current sealed build** | **v219** — result, tree hash, suite count, assertion count and skip list all in `harness/RELEASE.md`, which is generated. No number for them is typed here, deliberately: §0 of this document carried v211's figures through the v212–v219 builds unchanged, and every one of them was wrong by the end. |
-| Working tree | `/home/claude/skribl-v220/` |
+| **Current sealed build (superseded — see addendum)** | **v219** — result, tree hash, suite count, assertion count and skip list all in `harness/RELEASE.md`, which is generated. No number for them is typed here, deliberately: §0 of this document carried v211's figures through the v212–v219 builds unchanged, and every one of them was wrong by the end. |
+| Working tree | `/home/claude/work/skribl-v221/` (v221) |
 | Demo `.skribl` files + previews | `/mnt/user-data/outputs/skribl-demos/` (also `harness/fixtures/` in-tree) |
 | Design mockups (HTML, real pixels) | `/mnt/user-data/outputs/skribl-*.html` |
 | Per-release response docs | `docs/REVIEW-RESPONSE-v200.md` … `v211.md` |

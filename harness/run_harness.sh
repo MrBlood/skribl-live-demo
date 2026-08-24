@@ -49,9 +49,17 @@ _tree_files() {
   # meant recording a result changed the tree whose hash had just been
   # recorded — the exact defect the three above were excluded for. Anything
   # added to stamp_docs.py's TARGETS must be added here in the same edit.
+  # v221: the two .pg gunicorn logs joined this list because release_run.py's
+  # GENERATED already excluded them and this list did not — so the banner and
+  # RELEASE.md printed DIFFERENT hashes for one tree whenever a PG run had
+  # left a log behind (observed: banner f39f9853…, release_run cd56ff3a… on
+  # the same archive). verify_docs' parity check missed it because its name
+  # regex only matched .md/.txt — also fixed at v221. The two lists must stay
+  # identical, including extensions the regex writer did not think of.
   fi | grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' \
               -e 'README.md' -e 'harness/README.md' -e 'docs/HANDOFF.md' \
               -e 'START-HERE.md' -e 'harness/RELEASE.md' \
+              -e 'harness/.pg_gunicorn.log' -e 'harness/.pg_f3_gunicorn.log' \
      | LC_ALL=C sort
 }
 

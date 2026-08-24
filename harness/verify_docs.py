@@ -141,7 +141,7 @@ _py = (ROOT / "harness" / "release_run.py").read_text(encoding="utf-8")
 _sh_names = {n for n in re.findall(r"-e '([^']+)'", _sh)
              if not n.startswith("^") and not n.startswith("\\.")
              and not n.endswith("/")}
-_py_names = set(re.findall(r'"([A-Za-z0-9_./-]+\.(?:md|txt))"',
+_py_names = set(re.findall(r'"([A-Za-z0-9_./-]+\.(?:md|txt|log))"',
                            re.search(r"GENERATED = \{(.*?)\}", _py, re.S).group(1)))
 _py_names.add("SHA256SUMS")
 check("run_harness.sh and release_run.py exclude the same generated files",

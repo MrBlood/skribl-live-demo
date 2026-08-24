@@ -6,7 +6,11 @@ Written by the assistant that made these changes, for whoever checks them.
 
 ## Before anything else
 
-**This is now a seal. A full harness run stands behind it.**
+**This is the v221 seal. A full harness run stands behind it.** (v221:
+identity release — header piece marks, accent token work, tree-hash
+unification. Narrative and technical notes: `V221-CHANGES.md`. Everything
+below this paragraph was written at the v220 seal and is kept as history;
+its discipline is unchanged.)
 
 For most of its life this file said the opposite, and that was correct at the
 time: v219 was built without a run, and `harness/RELEASE.md` and
@@ -34,9 +38,9 @@ an absence of failures as an absence of gaps.
 
 ## Verify before believing any of this, including me
 
-    cd skribl-v220 && sha256sum -c SHA256SUMS | grep -c ': OK'   # expect 204
+    cd skribl-v221 && sha256sum -c SHA256SUMS | grep -c ': OK'   # expect 203
     grep -o 'SKRIBL_VERSION = "[^"]*"' skribl/core.py            # expect v219
-    wc -l < SHA256SUMS                                           # expect 204
+    wc -l < SHA256SUMS                                           # expect 203
 
 A NOTE ON THAT FIRST NUMBER, because it is the point. The first draft of this
 file said "expect 198". It was correct when written — and then this very file

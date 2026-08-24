@@ -165,7 +165,13 @@ body {
 /* JS (fitBrand) adds this when even "PAD" won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
    host site is already branded, so the header only names the MODE. */
-.brand > span { white-space: nowrap; }
+.brand > span { white-space: nowrap; display: flex; align-items: center; }
+/* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
+   buttons / Flip's back arrow) — one size at every width, per the wordmark
+   parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
+   player-only tier rule `.header .brand svg { 30px }` further down, which
+   otherwise catches this mark too and squashes it to 30x30. */
+.header .brand svg.brand-mark { height: 44px; width: auto; display: block; }
 .brand.brand-collapsed > span { display: none; }
 
 /* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark

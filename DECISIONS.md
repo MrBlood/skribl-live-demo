@@ -106,3 +106,48 @@ player stylesheet:
     python3 harness/tools/cssgraph.py --emit harness/tools/css_live.json skribl/static/player.css
 
 `verify_cssplit.py` fails if you forget. It caught exactly that during this work.
+
+---
+
+# v221 decisions
+
+**The header names the mode, not the brand.** The app ships embedded in an
+already-branded host, so Pad's gradient icon and the word "Skribl" left the
+header (owner call, measured first: the brand block was 108px of a 358px
+phone header). Flip had already made this exact move — no icon, mode-word
+only — so Pad was the inconsistent surface, not the pioneer.
+
+**The wordmarks are graffiti piece lockups, approved by the owner through
+mockup rounds — never integrated without sign-off.** SKRIBL PAD and
+FLIP MODE as stacked throw-ups: spray cloud, block shadow, ink outline,
+brand-gradient fill, shine pass. Eleven pair-concepts were shown and
+rejected or refined on the way; the approval chain ran mockup → style
+choice → reference-image adaptation → star swap → brightness tune →
+integrate. Reversal: the marks are plain inline SVG in the two templates;
+replace the `<svg class="brand-mark">` blocks. The verify_ux pins check
+visibility, aria-label and size parity — not the artwork — precisely so the
+artwork stays the owner's to change.
+
+**The original logo was demoted, not deleted.** The 12-point star (verbatim
+polygon, still on the player's card) is now the glint in both marks, at
+lavender/half-opacity by owner request. One star, three surfaces, one
+family.
+
+**The marks match the tallest header element (44px), one size everywhere.**
+"The phone is not a thinner brand" already had a pin; the mark inherits it.
+The size-up exposed the ≤340 tier rule catching the mark (squashed 30×30);
+the fix is a deliberately higher-specificity selector, commented in place.
+
+**Accent: consolidated, demoted, restored — the classification is the
+asset.** ~43 hardcoded brand hexes were folded into tokens; a full neutral
+demotion shipped and the owner rejected it as flat within one look. Restore
+cost four lines because the demotion was role tokens, not scattered edits.
+All three palettes are recorded in `:root`. Standing guidance for a retry:
+TINTED QUIET plus one loud signature element; quiet must not ship alone.
+
+**One tree, one hash.** `run_harness.sh` and `release_run.py` now exclude
+identical generated sets (the .pg gunicorn logs had diverged, printing two
+hashes for one archive), and `verify_docs`' parity guard now matches `.log`
+names — the regex blind spot that let the divergence live. Volatile release
+facts (hash, counts) live only in generated documents; prose that quotes
+them goes stale on save, demonstrated twice at v220.
