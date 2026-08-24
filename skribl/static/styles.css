@@ -806,6 +806,23 @@ body.stroking .zoom-hud { pointer-events: none; }
 }
 
 /* ---------- Floating tool bar (resting) ---------- */
+/* No tray chrome. Flip's .flip-tools has never had any, and the controls carry
+   their own affordances: the tool group is a pill, undo/redo are bordered
+   tiles, the colour ring is a circle. The tray was a frame drawn around things
+   already framed — and with the canvas ring it made two concentric outlined
+   rectangles competing for the eye. The canvas is the subject; it keeps the
+   only frame. (The header did the same in 31ed04f.)
+   ONLY the chrome goes: border, background, blur and shadow. The LAYOUT stays
+   exactly as measured — fit-content width, the auto margin, max-width, gap and
+   padding, and the whole responsive ladder below. That ladder encodes owner
+   decisions this change has no business touching: v217 measured 343px on one
+   row at 375 with 8px to spare, the sizing is deliberately tuned for 360px
+   because it is a very common Android width, and v213 chose to WRAP rather
+   than shrink because shaving the buttons puts the tap target under the 44px
+   minimum. Flip shrinks to 36px and then 34px at its narrow tiers; that is the
+   trade Pad already considered and declined, and removing a background is not
+   a reason to re-open it. Pad therefore still wraps to two rows at 320-344,
+   deliberately, now without a box drawn around it. */
 .toolbar {
   display: flex;
   align-items: center;
@@ -814,12 +831,6 @@ body.stroking .zoom-hud { pointer-events: none; }
   margin: 12px auto;
   width: fit-content;
   max-width: calc(100% - 24px);
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
-  background: rgba(23, 26, 34, 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
   position: relative;
   z-index: 41;
 }
@@ -3882,10 +3893,24 @@ body.player-mode #canvas {
 }
 
 
-/* ---------- Pass 2: toolbar undo/redo (icon-only) ---------- */
+/* ---------- Pass 2: toolbar undo/redo (icon-only) ----------
+   Filled and bordered as of the tray removal, matching Flip's .t-btn exactly
+   (var(--surface-control) on var(--hairline-strong)). Borderless was right
+   while the tray was there: the tray supplied the surface, and a fill inside a
+   fill would have been a box in a box. With the tray gone these were the only
+   two controls on the row with no affordance of their own — the tool group is
+   a pill, the colour ring is a circle, image and music carry dots — so they
+   read as bare glyphs floating on the page.
+   This is the bordered-action tier the sheet already names at .icon-btn ("the
+   subtle bordered look distinguishes these bordered actions from the
+   borderless .tool-open"). Undo and redo are actions; the tool toggles stay
+   borderless, so the row still says which controls DO something and which
+   SELECT something. Geometry is untouched — 40x44 keeps the measured tap
+   target; only the surface is new. */
 .toolbar .undo-btn {
   width: 40px; height: 44px; padding: 0; border-radius: 12px;
-  background: none; border: none; color: #aeb6c4; cursor: pointer;
+  background: var(--surface-control); border: 1px solid var(--hairline-strong);
+  color: #aeb6c4; cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex: none;
   transition: background .15s ease, color .15s ease;
 }

@@ -277,3 +277,39 @@ adjusts padding and gap) and the player inherits it through the derived sheet,
 which must be re-emitted with `cssgraph.py --emit` in the same edit. Reversal:
 restore the one declaration and re-emit. `--hairline` is used 41 times
 elsewhere and is untouched — this is a change to one rule, not to the token.
+
+**Pad's tool row loses its tray, not its measurements.** Flip's `.flip-tools`
+has never had a tray; Pad's `.toolbar` had a fill, a border, a blur and a
+shadow. With the canvas ring that was two concentric outlined rectangles
+competing for the eye, and the tool group's own pill inside the tray made a
+third. The canvas is the subject and keeps the only frame; the row is now bare,
+as Flip's always was.
+
+ONLY the chrome went. The layout — fit-content width, the auto margin,
+max-width, gap, padding and the whole responsive ladder — is untouched, because
+that ladder encodes decisions this change has no business re-opening: v217
+measured 343px on one row at 375 with 8px to spare, the sizing is tuned for
+360px because it is a very common Android width, and v213 chose to WRAP rather
+than shrink, on the grounds that shaving the buttons puts the tap target under
+the 44px minimum. Flip shrinks to 36px and then 34px at its narrow tiers. That
+is the trade Pad already considered and declined, and removing a background is
+not a reason to reverse it. Pad still wraps to two rows at 320-344, on purpose,
+now without a box drawn around it. Row counts were measured before and after at
+320/344/360/375/390/430/500/700/900 and are identical.
+
+**Undo and redo become filled tiles, because the tray was their surface.**
+`.toolbar .undo-btn` was `background: none; border: none` — correct while the
+tray was behind it, since a fill inside a fill is a box in a box. Without it
+they were the only two controls on the row with no affordance of their own, and
+read as bare glyphs. They now carry `var(--surface-control)` on
+`var(--hairline-strong)`, which is exactly Flip's `.t-btn`. Geometry is
+unchanged at 40x44, so the measured tap target is preserved; only the surface
+is new. This is the tier the sheet already names at `.icon-btn`: bordered =
+action, borderless = tool toggle, so the row still says which controls DO
+something and which SELECT something.
+
+NOT done, and left as an owner call: Flip hides the Pen/Eraser/Shape labels
+below 560px (`.tool-btn-label { display: none }`) and that, with its smaller
+buttons, is how it holds one row at 320. Pad keeps its words. Adopting Flip's
+ladder wholesale would drop them and shrink the tap targets — a UX decision,
+not a consequence of removing a background.
