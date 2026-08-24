@@ -187,3 +187,35 @@ and keeps the word everywhere. Reversal: restore the `pw >= 375` split in
 verify_ux's V219 block and delete pass A of the shed in `initBrandFit()`;
 restoring the CSS selector named above also reverses it, less cleanly, by
 making the shed dead code for the take-saved state.
+
+**A limiter that cannot account for a slot refuses it — 429, not 500.** The
+DB-backed post reservation sets a short `busy_timeout` on purpose, so a
+contended SQLite write surfaces in milliseconds as an `OperationalError`
+instead of blocking. That was half a design: routes.py already treats a `None`
+reservation as "refused" and answers 429, but nothing turned a locked store
+into `None`, so the exception propagated out of
+`post_token = _rate_reserve_post(client_ip)` and Flask answered 500. The
+poster saw a server error for a Skribl that was still safely in their browser.
+
+It stayed invisible because it needs real contention. The harness fires twelve
+concurrent posts at a two-slot quota; on one fast machine that resolves, and
+the suite passes. On a loaded two-core CI runner it reproduces every time —
+the first CI run that ever executed the harness returned
+`[201, 201, 429, 429, 429, 429, 429, 429, 429, 500, 500, 500]` against an
+assertion that admits only 201 and 429. Five releases of local green had never
+touched it, and CI could not report it while every job died at exit 126.
+
+Refusing is the correct direction, and the one the assertion names: "refuses
+the rest under concurrency rather than over-accepting". Handing out a slot the
+limiter cannot record is the failure that matters; making someone retry while
+the store is contended is what 429 already means. Quota still leaks only
+downward, briefly, and the warning line says which. The post-commit tombstone
+sweep is now best-effort for the same reason the janitor beside it already
+was: after the commit the slot exists, and letting a sweep failure reach the
+new guard would refuse a caller for a slot it actually holds.
+
+Reversal: drop the `except sa.exc.OperationalError` in `_db_rate_reserve_post`
+and inline `_db_rate_reserve_post_locked` back into it. The split exists so the
+unguarded path stays callable — the harness probe used it to prove the guard is
+load-bearing, since the inner function must still raise where the outer must
+not.

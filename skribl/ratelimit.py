@@ -619,6 +619,41 @@ def _db_rate_limited(ip, kind):
 
 def _db_rate_reserve_post(ip):
     key_hash = _rate_key(ip)
+    try:
+        return _db_rate_reserve_post_locked(ip, key_hash)
+    except sa.exc.OperationalError:
+        # The store could not be written — on SQLite, essentially always
+        # "database is locked" from another poster holding the write lock.
+        #
+        # _bounded() sets a SHORT busy_timeout precisely so this surfaces in
+        # milliseconds as an exception rather than blocking. That was the
+        # intended half of the design; the other half was missing. The caller
+        # (routes.py: `post_token = _rate_reserve_post(client_ip)`) treats None
+        # as "refused" and returns 429, but nothing translated a locked store
+        # into None, so the exception propagated and Flask answered 500.
+        #
+        # Concurrency this heavy does not arise on a fast single machine, which
+        # is why it was invisible: the harness's twelve-threads-for-two-slots
+        # test passes locally. On a loaded 2-core CI runner it reproduces every
+        # time, and the first CI run that ever executed reported
+        #   [201, 201, 429, 429, 429, 429, 429, 429, 429, 500, 500, 500]
+        # against an assertion demanding only 201 and 429.
+        #
+        # Refusing is the correct direction and the one the suite asks for
+        # ("refuses the rest under concurrency rather than over-accepting"): a
+        # limiter that cannot account for a slot must not hand one out. The
+        # degradation is a poster occasionally told to try again while the
+        # store is contended, which is what 429 means, instead of being shown
+        # a server error for a Skribl that is still safely in their browser.
+        # Quota still leaks only downward, briefly, and the log line says so.
+        current_app.logger.warning(
+            "skribl: limiter store unavailable while reserving a post slot; "
+            "refusing this request (429) rather than granting an unaccounted "
+            "slot.")
+        return None
+
+
+def _db_rate_reserve_post_locked(ip, key_hash):
     with _rate_sessionmaker()() as s:
         _bounded(s)
         _db_lock_identity(s, key_hash)
@@ -633,7 +668,21 @@ def _db_rate_reserve_post(ip):
         token = row.id
         # This session has a writer, which is the thing the failed release
         # lacked — so pay off any deferred releases here (F2).
-        _sweep_tombstones(s)
+        #
+        # Best-effort, for the same reason the janitor below is: the slot is
+        # ALREADY COMMITTED at this point and the token has not reached the
+        # route. An exception escaping here would be caught by the locked-store
+        # guard around this block and turned into a 429, while the committed
+        # pending row went on counting against the poster until the TTL — the
+        # caller would be refused for a slot it actually holds. Paying off
+        # someone else's deferred release is never worth that.
+        try:
+            _sweep_tombstones(s)
+        except Exception:
+            try:
+                s.rollback()
+            except Exception:
+                pass
         # Opportunistic cleanup, BOUNDED. An unbounded delete inside a user
         # request can hold locks and spike latency for whoever happens to
         # trigger it after a quiet period. Capped per request; the remainder is
