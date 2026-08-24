@@ -64,8 +64,19 @@ jobs:
         ports: ["5432:5432"]
         # Without a health check the steps start before the server accepts
         # connections and the first suite fails for the wrong reason.
+        #
+        # -U/-d, not a bare pg_isready: the probe runs as root inside the
+        # container and pg_isready defaults --username to the OS user, so every
+        # 10s probe opened a connection as "root", which this image never
+        # creates. The gate still PASSED -- pg_isready reports the server as
+        # accepting connections even when it rejects the role -- so nothing
+        # broke, but the container logged
+        #     FATAL:  role "root" does not exist
+        # roughly 140 times across a 24-minute run. That is the log someone
+        # reads when a run has genuinely failed, and a wall of FATAL lines in
+        # it invites exactly the wrong diagnosis.
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U skribl -d skribl"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
