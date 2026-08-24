@@ -82,7 +82,7 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
   // v207: the two groups are real .seg pill sliders now (same shell as the
   // tune drawer's Speed / Onion), not the ad-hoc rounded-rect buttons they were.
   // A magnifier glyph labels the 1x-8x group so it reads as "zoom level".
-  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + '<span class="zoom-mag-wrap"><span class="zoom-mag-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span><span class="seg zoom-seg" data-role="mag" title="Zoom level"><button type="button" class="zoom-mag-btn on" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></span></span>';
+  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + '<span class="zoom-mag-wrap"><span class="seg zoom-seg" data-role="mag" title="Zoom level" role="group" aria-label="Zoom level"><button type="button" class="zoom-mag-btn on" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></span></span>';
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
   attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]'));
   attachSegSlider(bar.querySelector('.zoom-seg[data-role="mag"]'));
@@ -98,21 +98,32 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
     updateTrimUI();   // recomputes the window, redraws waveform + handles
   });
   // v207: the groups ARE .seg pills now (styles.css owns the shell + cells),
-  // so the old injected rounded-rect styles are gone. Only the bar layout and
-  // the magnifier glyph beside the zoom group are styled here.
+  // so the old injected rounded-rect styles are gone. Only the bar layout is
+  // styled here.
+  //
+  // The magnifier glyph that used to sit before the 1x-8x group is gone, and
+  // the v210 lead that existed to counteract it went with it. Measured on the
+  // Pad at the widths where this bar lives:
+  //
+  //   focus pill 171.5 + gap 10 + glyph 24 + mag pill 179.3 + lead 24 = 408.8
+  //
+  // so the row needed a 409px bar and dropped to two lines below it. The glyph
+  // cost 24px of that (16px icon + its 8px gap), and the v210 lead cost another
+  // 24 for the sole purpose of pushing the focus pill back into alignment with
+  // the pill the glyph had displaced. Removing the glyph makes the lead
+  // unnecessary rather than merely unused: with nothing before either pill,
+  // both start at the bar's left edge and line up when the bar wraps, which is
+  // exactly what v210 was trying to buy. Requirement met, 48px cheaper, and one
+  // fewer thing to keep in sync.
+  //
+  // 1x/2x/4x/8x reads as zoom on its own; the group keeps title="Zoom level"
+  // and now carries a matching aria-label, so nothing is lost to a screen
+  // reader either.
   const style = document.createElement('style');
   style.textContent =
     '.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}' +
     '.zoom-mag-wrap{display:inline-flex;align-items:center;gap:8px}' +
-    '.zoom-mag-glyph{display:inline-flex;color:var(--text-muted)}' +
-    '.zoom-mag-glyph svg{width:16px;height:16px}' +
-    // v210 (owner's iPhone): on phone the bar wraps to two rows, and the
-    // 16px glyph + 8px gap pushed the 1x-8x segment 24px right of the
-    // Loop/Start/End segment above it, so the two pills did not line up.
-    // Give the focus segment the SAME 24px lead so both start on one line;
-    // the glyph now reads as labelling the row rather than offsetting it.
-    '@media (max-width:640px){.zoom-mag-bar{justify-content:flex-start;gap:8px 10px}' +
-    '.zoom-seg[data-role="focus"]{margin-left:24px}}';
+    '@media (max-width:640px){.zoom-mag-bar{justify-content:flex-start;gap:8px 10px}}';
   document.head.appendChild(style);
 })();
 

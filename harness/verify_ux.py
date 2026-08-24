@@ -1331,14 +1331,46 @@ with _sp204() as _p:
                      token: token, magRadius: getComputedStyle(m).borderRadius,
                      matchesToolGroup: other ? getComputedStyle(other).borderRadius === cs.borderRadius : null,
                      sliderVisible: sl && getComputedStyle(sl).opacity === '1' && sl.getBoundingClientRect().width > 20,
-                     magnifier: !!document.querySelector('.zoom-mag-glyph svg') }; }""")
+                     magLabelled: !!(m.getAttribute('aria-label')
+                       && (m.getAttribute('title') || m.getAttribute('data-tip'))),
+                     rowNeed: (() => {
+                       const bar = document.querySelector('.zoom-mag-bar');
+                       const wrap = document.querySelector('.zoom-mag-wrap');
+                       if (!bar || !wrap) return null;
+                       const gap = parseFloat(getComputedStyle(bar).columnGap) || 0;
+                       const lead = parseFloat(getComputedStyle(f).marginLeft) || 0;
+                       return Math.round(lead + f.getBoundingClientRect().width + gap
+                                         + wrap.getBoundingClientRect().width);
+                     })() }; }""")
         check(f"V207: {nm} loop-detail focus/zoom groups are .seg groups carrying --r-seg",
               _zi and _zi["bothSeg"] and _zi["radius"] == _zi["token"]
               and _zi["magRadius"] == _zi["token"], str(_zi))
         check(f"V207: {nm} loop-detail groups share the tool group's radius",
               _zi and _zi["matchesToolGroup"] is True, str(_zi))
         check(f"V207: {nm} loop-detail slider highlight is visible on the selected cell", _zi and _zi["sliderVisible"], str(_zi))
-        check(f"V207: {nm} zoom group carries a magnifier glyph", _zi and _zi["magnifier"], str(_zi))
+        # v223 REPLACES the old "carries a magnifier glyph" pin, owner's call.
+        # The glyph is gone: it cost 24px of the row (16px icon + 8px gap) and
+        # forced a further 24px lead on the focus pill purely to push it back
+        # into alignment with the pill the glyph had displaced. That 48px was
+        # what dropped Loop/Start/End and 1x-8x onto separate lines at 510px,
+        # which is where the owner reported it.
+        #
+        # What the glyph was FOR is pinned instead -- the zoom group still says
+        # what it is -- plus the thing the glyph was costing. title OR data-tip:
+        # the tooltip layer moves `title` to `data-tip` so the custom tooltip can
+        # own the hover, so a title-only check reads as unlabelled at runtime. A width budget,
+        # not a "same row" check: this page is 1280 wide, where anything fits,
+        # so asserting one row here would pass no matter how much chrome came
+        # back. Measured 361 after the change (171.5 focus + 10 gap + 179.3
+        # mag); 400 leaves headroom for font and token changes while still
+        # failing if another 48px of decoration is added. At 361 the row stays
+        # on one line down to a 361px bar, i.e. a ~465px viewport.
+        check(f"V207: {nm} zoom group says what it is (title + aria-label)",
+              _zi and _zi["magLabelled"], str(_zi))
+        check(f"v223: {nm} loop-detail row stays within its one-line budget",
+              _zi and _zi["rowNeed"] is not None and _zi["rowNeed"] <= 400,
+              f"row needs {_zi and _zi.get('rowNeed')}px (budget 400) — "
+              f"above this the focus and zoom pills split onto two lines on a phone")
         _z.close()
 
     # v207: help pills that name a real tappable control carry that control's

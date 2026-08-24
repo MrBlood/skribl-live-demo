@@ -219,3 +219,33 @@ and inline `_db_rate_reserve_post_locked` back into it. The split exists so the
 unguarded path stays callable — the harness probe used it to prove the guard is
 load-bearing, since the inner function must still raise where the outer must
 not.
+
+**The Loop Detail magnifier glyph is gone, and the lead that propped it up
+with it.** The zoom bar carries two pills — Loop/Start/End and 1×/2×/4×/8× —
+and on a phone they split onto separate lines with room to spare. Measured on
+the Pad: focus pill 171.5 + gap 10 + glyph 24 + zoom pill 179.3 + lead 24 =
+408.8px, so the row needed a 409px bar and wrapped below it.
+
+Two of those numbers were decoration. The 16px glyph and its 8px gap cost 24px,
+and v210 then spent another 24px on a `margin-left` for the focus pill whose
+only job was to shove it back into alignment with the pill the glyph had
+displaced when the bar wrapped. Removing the glyph does not merely free its own
+24px — it makes the lead unnecessary, because with nothing before either pill
+they both start at the bar's left edge and align when wrapped by construction.
+That is precisely what v210 was buying, now had for free. 361px instead of
+409px; one line down to a ~465px viewport instead of ~510px.
+
+It also closed a Pad/Flip divergence nobody had noticed: Flip shipped the glyph
+but never the compensating lead, so Flip's wrapped rows were misaligned by 24px
+the whole time. Both surfaces now measure identically.
+
+1×/2×/4×/8× reads as zoom without an icon, and the group keeps its tooltip plus
+a new aria-label, so the glyph's labelling job is done by the label. verify_ux's
+"carries a magnifier glyph" pin is replaced by two that outlast any redesign:
+the group says what it is, and the row stays within a 400px budget. The budget
+is the load-bearing one — the suite runs at 1280px where anything fits, so a
+"same row" assertion there would pass no matter how much chrome came back.
+
+Reversal: restore the glyph span in editor_music.js and flip.js, restore
+`.zoom-seg[data-role="focus"]{margin-left:24px}` inside the ≤640 media block,
+and raise the budget pin above 409.
