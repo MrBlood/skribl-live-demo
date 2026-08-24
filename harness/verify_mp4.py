@@ -68,9 +68,23 @@ with sync_playwright() as p:
         skip(f"WebCodecs present but no H.264 profile is supported: {caps['codecs']}")
 
     print(f"\nMP4 — encoder available ({', '.join(usable)})")
-    check("the page picks a codec rather than declining",
-          bool(page.evaluate("() => typeof pickAvcCodec === 'function' && pickAvcCodec()")),
-          "pickAvcCodec returned falsy on a browser that DOES support H.264")
+    # WITH DIMENSIONS. pickAvcCodec(w, h) feeds them straight to
+    # VideoEncoder.isConfigSupported, so calling it bare asked the browser
+    # whether it could encode an undefined-by-undefined video, and every
+    # candidate profile was declined -- the function returned null and this
+    # assertion blamed the page for it. 640x460 is what verify_muxer passes;
+    # 320x240 is what the encode block below actually uses, so ask about the
+    # size this suite goes on to encode.
+    #
+    # The mistake survived because this line is unreachable without H.264: the
+    # gate above SKIPs first on every browser the sandbox has, and CI could not
+    # run at all until the exec bit was fixed. Its first real execution failed
+    # here, 11/12, on a browser that does support H.264.
+    picked = page.evaluate(
+        "async () => (typeof pickAvcCodec === 'function') ? await pickAvcCodec(320, 240) : null")
+    check("the page picks a codec rather than declining", bool(picked),
+          f"pickAvcCodec(320, 240) -> {picked!r} on a browser that DOES support "
+          f"H.264 (isConfigSupported reported {usable})")
 
     # mp4-muxer stopped being a <script> tag at v218: it is 9,504 B that only
     # matters when somebody exports an MP4, so it is fetched on the click via
