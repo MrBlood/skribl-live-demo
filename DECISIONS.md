@@ -577,3 +577,35 @@ next to each other, they were eating each other.
 General lesson worth keeping: scaling a stroked icon does not scale its stroke,
 and compensating by thickening the stroke changes every ratio the icon's
 geometry depends on. Draw it at the size it will be shown.
+
+**"Autosave failed" now says WHICH failure, because four words could not be
+diagnosed.** The catch in `writeAutosave()` wraps the whole expression --
+`localStorage.setItem(KEY, JSON.stringify(serializeAutosave()))` -- so a
+QuotaExceededError, a private-mode rejection and a plain TypeError inside
+`serializeAutosave()` all arrived on screen as the identical message. A report
+of "autosave is failing" with a screenshot was therefore not enough to tell a
+full disk from a bug, which is the wrong place for a durability warning to be.
+
+Storage-full is now its own state and its own words -- "Storage full — not
+saved" -- because it is the one the user can act on. Everything else stays
+"Autosave failed". Engines disagree on the name (QuotaExceededError,
+NS_ERROR_DOM_QUOTA_REACHED, code 22, code 1014) so the test is deliberately
+loose. The console additionally gets the exception name and message, the total
+localStorage in use, the key count and the LARGEST key, so the next report
+arrives with its own diagnosis attached.
+
+FOUND WHILE LOOKING, NOT FIXED, AND DELIBERATELY SO: `saveLocalFallback()` in
+editor_post.js writes an entire drawing payload -- media bytes included -- to
+`skribl_post_<id>`, a unique key per save, and NOTHING EVER REMOVES THEM.
+lib/posted.js caps its INDEX at 200 entries, but the index holds metadata; the
+payload blobs are unbounded. Every local save is a permanent megabyte-scale
+tenant of a ~5MB origin quota shared with the autosave key, so a run of them
+starves autosave for every drawing afterwards, however small. That is the most
+plausible cause of the report and it is a real defect on its own terms.
+
+It is not fixed here because the fix is destructive: those blobs ARE the user's
+locally-saved Skribls, reachable at `#skribl=<id>` and listed in the posted
+tray. Evicting the oldest is the obvious cap and it silently deletes work.
+Whoever takes it should decide whether that is eviction with a warning, a cap
+refused at save time, or a "clear local saves" control the user drives -- and
+should not decide it inside a catch block.

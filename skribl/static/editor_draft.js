@@ -142,7 +142,15 @@ function showAutosaveStatus(state) {
   el.hidden = false;
   el.classList.remove('saving', 'failed', 'partial');
   if (state === 'saving') { el.classList.add('saving'); txt.textContent = 'Saving…'; }
+  // 'failed' and 'full' are both red, and the difference matters: 'full' means
+  // the browser's storage for this origin is out of room and the drawing is NOT
+  // saved, which the user can act on; 'failed' is anything else and they cannot.
+  // They used to be one message, and that is exactly why an "Autosave failed"
+  // report could not be diagnosed from the screenshot -- every possible
+  // exception, including a plain TypeError in serializeAutosave(), arrived as
+  // the same four words.
   else if (state === 'failed') { el.classList.add('failed'); txt.textContent = 'Autosave failed'; }
+  else if (state === 'full') { el.classList.add('failed'); txt.textContent = 'Storage full — not saved'; }
   // Amber means: media is attached and its BYTES are not durably stored —
   // the IndexedDB write failed or hasn't settled (lib/draftstore.js). With a
   // working store this state is rare; when it shows, it is true, and it stays
@@ -157,7 +165,7 @@ function showAutosaveStatus(state) {
   // (external review #3: "do not hide the only warning ... when it represents
   // an ongoing durability state"). They clear when a later successful write
   // replaces them with 'saved'.
-  if (state !== 'saving' && state !== 'failed' && state !== 'saved-no-media') {
+  if (state !== 'saving' && state !== 'failed' && state !== 'full' && state !== 'saved-no-media') {
     el._hideTimer = setTimeout(() => {
       el.classList.remove('show');
       setTimeout(() => { el.hidden = true; }, 300);
@@ -216,7 +224,29 @@ function writeAutosave() {
   } catch (e) {
     // Quota or private-mode failure — the pill says so, persistently, and
     // draftIsDurable() stays false, which is what arms the leave guard.
-    showAutosaveStatus('failed');
+    //
+    // TELL THE CONSOLE WHAT ACTUALLY HAPPENED. This catch covers the whole
+    // expression, serializeAutosave() included, so a TypeError in there looked
+    // identical to a full disk and a bug report of "autosave failed" could not
+    // be told apart from "your browser is out of room". Names differ by engine
+    // (QuotaExceededError on Chromium/Firefox, NS_ERROR_DOM_QUOTA_REACHED on
+    // older Gecko, code 22) so the test is deliberately loose.
+    const quota = e && (e.name === 'QuotaExceededError'
+                        || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+                        || e.code === 22 || e.code === 1014);
+    try {
+      let used = 0, biggest = null, biggestLen = 0;
+      for (const k of Object.keys(localStorage)) {
+        const len = (localStorage.getItem(k) || '').length;
+        used += len;
+        if (len > biggestLen) { biggestLen = len; biggest = k; }
+      }
+      console.warn('[skribl] autosave failed:', e && e.name, e && e.message,
+                   '| localStorage', Math.round(used / 1024) + 'KB in',
+                   Object.keys(localStorage).length, 'keys | largest:',
+                   biggest, Math.round(biggestLen / 1024) + 'KB');
+    } catch (_) { console.warn('[skribl] autosave failed:', e && e.name, e && e.message); }
+    showAutosaveStatus(quota ? 'full' : 'failed');
   }
 }
 
