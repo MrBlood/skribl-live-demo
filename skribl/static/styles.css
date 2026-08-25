@@ -785,11 +785,9 @@ body.stroking .zoom-hud { pointer-events: none; }
   flex-shrink: 0;
 }
 .tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
-/* ...but the merged media button carries TWO channels, and that rule would let
-   an image switch off the music channel's grey. Scope the swap per channel and
-   let the per-channel rule win on specificity. */
-.media-light .tab-dot-empty { display: inline-block; }
-.media-light:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
+/* The media button has NO empty state and therefore no .tab-dot-empty: with
+   nothing attached it is simply the icon. The rule above is left for the
+   controls that still pair a grey twin with a green one. */
 
 .tab-panel {
   /* Same reason as .flip-drawers: on iOS Safari the bottom toolbar overlays
@@ -881,8 +879,8 @@ body.stroking .zoom-hud { pointer-events: none; }
 .tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
 /* ---------- v224: the media button's two status lights --------------------
    The photo and music dots moved INSIDE the glyph: the sun is the photo light,
-   the lower note head is the music light. They are the same .tab-dot /
-   .tab-dot-empty elements the two old buttons carried, with the same ids, so
+   the OUTER note head is the music light. They are the same .tab-dot elements
+   the two old buttons carried, with the same ids, so
    every existing show/hide and .pending call site keeps working unchanged --
    there are a dozen across app.js, editor_photo.js, editor_music.js and flip.js
    and rewriting them to drive an SVG attribute would have been the fragile half
@@ -911,18 +909,24 @@ body.stroking .zoom-hud { pointer-events: none; }
 .tool-open .media-light { position: absolute; width: 0; height: 0; }
 .tool-open .media-light.for-photo { left: 34%; top: 34%; right: auto; bottom: auto; }
 .tool-open .media-light.for-music { left: 94%; top: 88%; right: auto; bottom: auto; }
-/* Drawn ON the glyph, so no ground-coloured ring: that ring exists to separate
-   a badge from the surface behind it, and here the surface is the icon. */
-.tool-open .media-light .tab-dot,
-.tool-open .media-light .tab-dot-empty {
+/* 3px, and the size is the whole point: the light sits INSIDE its ring rather
+   than covering it, so the sun still reads as a sun and the note head still
+   reads as a note head. At 6px it swallowed both. The ring's interior is about
+   2.9px across at a 24px icon (r 2.2, stroke 1.5), which is what 3px fills.
+   No ground-coloured border either -- that ring exists to separate a badge from
+   the surface behind it, and here the surface is the icon's own stroke. */
+.tool-open .media-light .tab-dot {
   position: absolute; top: 0; left: 0; right: auto; bottom: auto;
   transform: translate(-50%, -50%);
-  width: 6px; height: 6px; border: 0; box-shadow: none;
+  width: 3px; height: 3px; border: 0; box-shadow: none;
 }
-.tool-open .media-light .tab-dot.pending { box-shadow: 0 0 4px rgba(255, 210, 63, .55); }
+.tool-open .media-light .tab-dot.pending { box-shadow: 0 0 3px rgba(255, 210, 63, .7); }
+/* FLIP only, and measured rather than assumed: Pad's .tool-open svg stays 24px
+   at every width, so a max-width rule shrank the light on a ring that had not
+   shrunk. It is Flip that steps its icons to 21px below 640
+   (.flip-tools .tool-open svg), so the light steps there and only there. */
 @media (max-width: 640px) {
-  .tool-open .media-light .tab-dot,
-  .tool-open .media-light .tab-dot-empty { width: 5px; height: 5px; }
+  .flip-tools .tool-open .media-light .tab-dot { width: 2.6px; height: 2.6px; }
 }
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }

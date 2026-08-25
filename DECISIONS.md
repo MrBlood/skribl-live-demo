@@ -483,3 +483,30 @@ button paints `rgba(124,92,255,.16)` with an inset ring across that whole box â€
 an elongated lit pill next to the square tiles this version just squared. The
 fix is the same one undo/redo took: paint square, keep the 44px band on the
 `::before`.
+
+**The light sits inside the ring, and there is no grey when nothing is
+attached.** Two corrections to the version above, both from the owner looking at
+it.
+
+The dot BECAME the circle: a 6px light over a sun whose outer diameter is 3.2px
+covered it completely, so the icon lost its sun and gained a blob. It is 3px
+now, centred inside the ring, and the ring itself had to make room -- the sun
+goes r=1.5/stroke-2 to r=2.2/stroke-1.5 and both note heads r=3/stroke-3 to
+r=3.3/stroke-2.2. That widening is not decoration: at the original weights there
+was no inside, the stroke ate the whole circle. Both heads move together so the
+note stays symmetrical when nothing is lit. Measured after: the photo light
+lands at (8.16, 8.16) against a sun centred on (8.20, 8.20), and the music light
+at (22.55, 21.11) against a head centred on (22.56, 21.12).
+
+The grey empty state is gone entirely. `.tab-dot-empty` answered "is there no
+media?", which is a question nobody asked of a resting toolbar, and it made the
+merged button noisier than the two it replaced. Nothing attached is now simply
+the icon. The `:has()` swap rule stays for the controls that still pair a grey
+twin with a green one.
+
+One more thing measurement caught: the light's small size was behind a
+`max-width: 640px` query, which shrank it on PAD -- where `.tool-open svg` is
+24px at every width and the ring had not shrunk at all. It is Flip that steps
+its icons to 21px below 640, so that rule is scoped to `.flip-tools` now. A
+media query is not a proxy for "the icon got smaller" when only one surface
+resizes its icons.
