@@ -888,9 +888,26 @@ body.stroking .zoom-hud { pointer-events: none; }
    glyph stroke it now overlaps, so it has to be the colour BEHIND both. */
 .tool-open .tab-dot {
   position: absolute;
-  left: calc(50% + 4.5px);
-  top: calc(50% - 11.5px);
+  /* HALF IN, HALF OUT. The dot's centre sits on the icon box's top-right corner
+     (+12.5, -12.5 from the icon's centre), so it straddles the edge the way it
+     did before v224 -- the old `top: 6px; right: 6px` on a 44px button landed in
+     exactly this place. What changed is the ANCHOR, not the look: measuring from
+     50% tracks the 24px icon, which is centred whatever the button does, so
+     desktop and phone finally agree. Measuring from the button's own edges was
+     the bug, and it is why the dot sat somewhere different at 34px wide.
+     Fully tucked inside (+8, -8) was tried first and read as a mark ON the
+     glyph rather than a badge attached to it. */
+  /* --icon-half tracks the glyph, not the button. The icon is 24px on Pad at
+     every width, but Flip steps its .tool-open svg to 21px below 640 -- with the
+     offsets hard-coded for a 24px icon the dot there sat 2px PAST the corner and
+     read as 5.5 out / 1.5 in, not half and half. One variable, redeclared where
+     the icon changes size, keeps the dot on the corner on both surfaces.
+     -3.5px is half the 7px dot, turning a centre into a left/top edge. */
+  left: calc(50% + var(--icon-half, 12px) - 3.5px);
+  top: calc(50% - var(--icon-half, 12px) - 3.5px);
   right: auto;
+  /* The ring stays: half the dot is over the icon's stroke now, and the ring is
+     what keeps the two from merging. Ground-coloured, so it reads as a gap. */
   border: 1.5px solid #06070a;
 }
 @media (max-width: 640px) {
@@ -5190,4 +5207,31 @@ body.playing .flip-grid { display: none; }
 .flip-lead .icon-btn svg { width: 20px; height: 20px; }
 @media (hover: hover) {
   .flip-lead .icon-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+}
+
+/* ---------- v225: a lit .tool-open must be SQUARE ---------------------------
+   Borderless, .tool-open paints nothing and its box is invisible -- so nobody
+   noticed it was 34x44 or 36x44 on phones. But an OPEN drawer, and magnify
+   while active, fill that box with rgba(124,92,255,.16) and an inset ring, and
+   then the only lit thing in the row is an elongated pill standing beside the
+   square tiles this version spent its time squaring. The shape was always
+   wrong; the fill is just what made it visible.
+
+   Painted square at every tier, with the 44px tap band on the ::before -- the
+   same trade .toolbar .undo-btn and the header's openers already take. Width is
+   untouched, so the row's measured ladder does not move by a pixel.
+
+   Both surfaces: Flip's .flip-tools .tool-open carried the same 36x44 / 34x44 /
+   32x44 pairs, put there deliberately in the spacing pass to hold the tap band
+   before this mechanism was applied to it. */
+.tool-open { position: relative; z-index: 1; }
+.tool-open::before {
+  content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 0px));
+  background: transparent; border-radius: inherit;
+}
+@media (min-width: 393px) and (max-width: 640px) {
+  .toolbar .tool-open { height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
+}
+@media (max-width: 392px) {
+  .toolbar .tool-open { height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
 }

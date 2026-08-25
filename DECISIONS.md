@@ -719,3 +719,45 @@ this version spent its time removing.
 
 Tap band 44 via `--tap-grow: 6px`, verified by hit test: a point 4px outside the
 32px box still resolves to the anchor.
+
+---
+
+## A lit `.tool-open` is square, and the status dot is anchored to the glyph
+
+Two defects that only showed up on a phone, both fixed by making a control's
+*painted* box match the shape the rest of the row settled on.
+
+**The elongated lit state.** `.tool-open` is borderless -- colour, image, music
+and magnify paint nothing at rest -- so nobody noticed its box had stayed
+`36x44` / `34x44` / `32x44` while every tile around it was squared. Measured on
+Pad at 390px with the colour drawer open: `[34, 44]`, filled
+`rgba(124,92,255,.16)` with an inset accent ring. The only lit thing in the row
+was an elongated pill standing beside square neighbours. The shape was always
+wrong; opening a drawer is just what made it visible.
+
+Now square at every tier on both surfaces, with the 44px tap band moved to a
+transparent `::before` -- the same trade `.toolbar .undo-btn` and the header's
+openers already take. Width is untouched, so the measured row ladder does not
+move by a pixel. Verified by hit test at 3px outside the painted edge: 36px
+tier, 34px tier and Flip's 32px tier all still resolve to the button.
+
+**The dot that only fitted one surface.** `.tool-open .tab-dot` positioned
+itself with hard-coded offsets that assumed a 24px glyph. Pad holds 24px at
+every width, but Flip steps `.flip-tools .tool-open svg` to 21px below 640 --
+so the same rule put the dot 2px *past* the corner there: 5.5px outside the
+icon, 1.5px inside, reading as a mark floating beside the glyph rather than a
+badge on it.
+
+The offsets now measure from `--icon-half`, redeclared where the icon changes
+size (`12px` default, `10.5px` in Flip's `<= 640` block). The dot's centre lands
+exactly on the icon box's top-right corner, so a 7px dot sits 3.5px out and
+3.5px in -- half nestled, half proud -- on Pad and Flip alike, at 44px, 36px,
+34px and 32px buttons. The 1.5px ground-coloured ring stays: half the dot now
+overlaps the glyph's stroke, and the ring is what keeps the two from merging.
+
+**How to reverse either.** For the shape, delete the `v225: a lit .tool-open
+must be SQUARE` block in `styles.css` and the three `.flip-tools .tool-open`
+`height` declarations in `flip.css` -- heights return to 44 and the tap band
+comes back from the box itself. For the dot, replace the two `calc()`s in
+`.tool-open .tab-dot` with `left: calc(50% + 9px); top: calc(50% - 16px)`, which
+is where they sat before, and drop the `--icon-half` declaration in `flip.css`.

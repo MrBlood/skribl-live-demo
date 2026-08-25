@@ -351,13 +351,40 @@ else:
             return e.code, e.headers.get("X-Skribl-Worker")
 
     # Find both workers by pid: hit the pad page until two distinct pids answer.
+    #
+    # CONCURRENTLY, and that is the whole point. Sequentially this probe would
+    # send 40 requests and get 40 replies from the SAME worker maybe one run in
+    # three: with gunicorn's sync workers every process blocks on accept() for
+    # the same listening socket, and a request that arrives while both are idle
+    # is not round-robined -- the kernel is free to keep waking whichever worker
+    # it woke last, and it often does. A serial probe therefore never creates
+    # the condition it is looking for. Firing a batch at once does: while worker
+    # A is answering one request, the next has to go to B.
+    #
+    # This does not weaken the assertion. It still fails unless two distinct pids
+    # answer; it just stops asking gunicorn to spread load it was never given.
+    # (Measured before this change: four runs of an unrelated CSS-only diff gave
+    # 20/20, 19/20, 19/20, 20/20 -- and on both failures the three F3 contract
+    # assertions that follow passed WITH both workers answering, which is what
+    # identified this as the probe's shape rather than a real defect.)
     seen = set()
-    for _ in range(40):
+    seen_lock = threading.Lock()
+
+    def _probe_once():
         try:
             with urllib.request.urlopen(f3_base + "/skribl-pad", timeout=5) as r:
-                seen.add(r.headers.get("X-Skribl-Worker"))
+                pid = r.headers.get("X-Skribl-Worker")
         except Exception:
-            pass
+            return
+        with seen_lock:
+            seen.add(pid)
+
+    for _ in range(8):
+        threads = [threading.Thread(target=_probe_once) for _ in range(6)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(10)
         if len(seen) >= 2:
             break
     check("F3 setup: two distinct worker processes are answering", len(seen) >= 2, str(seen))

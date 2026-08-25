@@ -323,10 +323,14 @@
      taller for it. */
   @media (max-width: 640px) {
     .flip-tools { gap: 3px; padding: 6px; flex-wrap: wrap; justify-content: center; }
-    .flip-tools .tool-open { width: 36px; height: 44px; }
+    .flip-tools .tool-open { width: 36px; height: 36px; --tap-grow: 4px; }   /* square when lit; 44 tap */
     .flip-tools .t-btn { width: 36px; height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
     .flip-tools { --seg-row-h: 44px; }
     .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
+    /* The status dot is a badge on the GLYPH, and the glyph just got smaller.
+       --icon-half is what .tool-open .tab-dot measures from, so it has to step
+       here too or the dot lands 2px outside the corner it is meant to straddle. */
+    .flip-tools .tool-open { --icon-half: 10.5px; }
     .flip-tools .tool-btn-label { display: none; }
     .flip-tools .tool-btn { padding: 6px 10px; }
     .color-current { width: 34px; height: 34px; }
@@ -338,7 +342,7 @@
      computed gap at 380px measured 3px rather than the 5px written here. Only
      the widths ever did anything. Same trap the 344-tier block calls out. */
   @media (max-width: 392px) {
-    .flip-tools .tool-open { width: 34px; height: 44px; }
+    .flip-tools .tool-open { width: 34px; height: 34px; --tap-grow: 5px; }   /* square when lit; 44 tap */
     .flip-tools .t-btn { width: 34px; height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
     .flip-tools { --seg-row-h: 44px; }
   }
@@ -988,7 +992,17 @@
    wrapping and un-wrapping as the window narrows. */
 @media (max-width: 359px) {
   .flip-tools { gap: 2px; padding: 6px 4px; }
-  .flip-tools .tool-open { width: 32px; height: 44px; }
+  /* 4px, not the 6px the other tiers use, and the number is the BAR'S PADDING.
+     The tap band is a transparent ::before that grows outward from the box, and
+     the row's last control is a .tool-open -- so at 6px its band reached 2px
+     past the bar's padding edge and turned up as `scrollWidth - clientWidth = 2`.
+     verify_layout reads that as "controls are overflowing with no scroller",
+     which at 320px (Display Zoom) is exactly the failure it exists to catch. It
+     was a 2px transparent rectangle, but the check cannot tell those apart and
+     should not have to. 4px is as far as an edge control can grow and still be
+     inside the bar; the band is 40px here rather than 44, on the one tier where
+     every box has already stepped down to 32px. */
+  .flip-tools .tool-open { width: 32px; height: 32px; --tap-grow: 4px; }   /* square when lit; 40 tap -- see above */
   .flip-tools .t-btn { width: 32px; height: 32px; --tap-grow: 6px; }   /* 32 visual -> 44 tap */
   /* --seg-row-h stays 44 now. It used to drop to 32 here, which made Flip's
      tool pill shorter than Pad's on exactly the phones where a tap target
