@@ -761,3 +761,25 @@ must be SQUARE` block in `styles.css` and the three `.flip-tools .tool-open`
 comes back from the box itself. For the dot, replace the two `calc()`s in
 `.tool-open .tab-dot` with `left: calc(50% + 9px); top: calc(50% - 16px)`, which
 is where they sat before, and drop the `--icon-half` declaration in `flip.css`.
+
+**Follow-up, same version.** Two things the owner caught by looking at the
+running app.
+
+*The merged Play pill was 38 tall, not 36.* `.header .actions .btn` brought
+Record and Post to 36 and Play came with them, but Play is not the outer box --
+it sits inside `.play-wrap`, the shell that merges it with the duration badge,
+and the wrap had no height of its own: it hugged a 36px button and added its own
+1px border top and bottom. Measured at 1280: Record `[100, 36]`, Post
+`[138, 36]`, playWrap `[92, 38]`. The wrap takes the 36 now (border-box) and the
+button inside comes down to 34; the divider needs no rule, `align-self: stretch`
+already follows the wrap's content box. Desktop only -- below 641 the wrap goes
+transparent and borderless and the button carries its own border, so that box
+was already 36.
+
+*The dot's offset is 0.5 of the icon, not 0.375.* Half in / half out of the
+ICON BOX, which is what the pre-v224 rule produced and what the owner's
+reference screenshot of the old look shows. 0.375 was tried in between, on a
+reading of the same phrase as half over the ARTWORK: both glyphs stop at
+`(21, 3)` in their 24-unit viewBox rather than at the box corner, so 9 units
+puts the dot squarely on the stroke. It reads as a mark ON the icon rather than
+a badge attached to it. Recorded so it is not rediscovered as an improvement.

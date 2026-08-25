@@ -1168,3 +1168,25 @@ body.player-mode #canvas {
 @media (pointer: coarse) and (max-width: 640px) {
   #magnifyBtn { display: none; }
 }
+
+/* ---------- v225: the merged Play pill is 36 tall like its neighbours ------
+   `.header .actions .btn { height: 36px }` brought Record and Post to 36, and
+   Play came with them -- but Play is not the outer box. It sits inside
+   `.play-wrap`, the shell that merges it with the duration badge, and the wrap
+   had no height of its own: it hugged a 36px button and added its own 1px
+   border top and bottom. Measured at 1280: Record [100, 36], Post [138, 36],
+   playWrap [92, 38]. Two pixels, on the one control in the row that is a
+   different shape from the others, which is exactly where two pixels show.
+
+   The wrap takes the 36 (border-box, so the border is inside it) and the button
+   inside comes down to 34 to fit. The divider needs no rule -- `.duration-badge`
+   is `align-self: stretch`, so it follows the wrap's content box and stays
+   full-height, as it was at 38.
+
+   Desktop only. Below 641 the wrap goes transparent and borderless and the
+   button carries its own border again, so the outer box is already 36 there and
+   forcing 34 on the button would shrink the one Play the compact header has. */
+@media (min-width: 641px) {
+  .play-wrap { height: 36px; }
+  .play-wrap > #playBtn.btn.play { height: 34px; }
+}

@@ -328,9 +328,9 @@
     .flip-tools { --seg-row-h: 44px; }
     .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
     /* The status dot is a badge on the GLYPH, and the glyph just got smaller.
-       --icon-half is what .tool-open .tab-dot measures from, so it has to step
-       here too or the dot lands 2px outside the corner it is meant to straddle. */
-    .flip-tools .tool-open { --icon-half: 10.5px; }
+       --icon-size is what .tool-open .tab-dot measures from, so it has to step
+       here too or the dot lands outside the corner it is meant to straddle. */
+    .flip-tools .tool-open { --icon-size: 21px; }
     .flip-tools .tool-btn-label { display: none; }
     .flip-tools .tool-btn { padding: 6px 10px; }
     .color-current { width: 34px; height: 34px; }
