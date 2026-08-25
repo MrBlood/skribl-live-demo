@@ -98,7 +98,33 @@ with sync_playwright() as p:
     pill = pg.evaluate("() => { const el = document.getElementById('autosaveStatus');"
                        " const t = document.getElementById('autosaveStatusText');"
                        " return el && !el.hidden ? t.textContent : null; }")
-    check("the failed write is reported", pill == "Autosave failed", str(pill))
+    # v224 splits the message: a QUOTA rejection -- which is what this block
+    # injects -- is the one the user can act on, so it says so. Everything else
+    # stays "Autosave failed". They used to be the same four words, which is
+    # exactly why a real report of this could not be diagnosed from a screenshot.
+    check("a full store is reported as a FULL store, not a generic failure",
+          pill == "Storage full — not saved", str(pill))
+    ctx.close()
+
+    # ...and a non-quota exception must NOT claim the disk is full. Same forced
+    # failure, different cause: this is the half that would have been silently
+    # mislabelled if the split were keyed on anything but the error itself.
+    ctx = b.new_context()
+    pg = ctx.new_page()
+    pg.add_init_script("""
+      const orig = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) {
+        if (k === 'skribl_autosave_v1') throw new TypeError('not a quota problem');
+        return orig.apply(this, arguments);
+      };""")
+    pg.goto(f"{BASE}/", wait_until="load")
+    pg.wait_for_timeout(800)
+    pg.evaluate(DRAW_STROKE)
+    pg.wait_for_timeout(1600)
+    pill = pg.evaluate("() => { const el = document.getElementById('autosaveStatus');"
+                       " const t = document.getElementById('autosaveStatusText');"
+                       " return el && !el.hidden ? t.textContent : null; }")
+    check("any other write failure stays the generic message", pill == "Autosave failed", str(pill))
     pg.wait_for_timeout(2200)   # past the old 1.6s fade
     still = pg.evaluate("() => { const el = document.getElementById('autosaveStatus');"
                         " return el && !el.hidden && el.classList.contains('show'); }")

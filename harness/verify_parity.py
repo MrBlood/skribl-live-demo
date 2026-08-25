@@ -740,15 +740,30 @@ with sync_playwright() as p:
     print("\nPARITY — a photo behaves the same on both")
     IMG, AUD = png_bytes(), wav_bytes()
     vis = "(id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }"
+    # v224: the media state is no longer a visible dot -- #photoTabDot and
+    # #musicTabDot still CARRY the state (every writer in the app still sets
+    # them) but they are not drawn; CSS reads them with :has() and tints the
+    # matching half of the merged glyph. So assert the visible OUTCOME as well
+    # as the flag, which is strictly more than the old offsetParent check did:
+    # a dot that exists but paints nothing would have passed before.
+    marked = """(which) => {
+        const dot = document.getElementById(which === 'photo' ? 'photoTabDot' : 'musicTabDot');
+        const half = document.querySelector(which === 'photo' ? '.half-photo' : '.half-music');
+        if (!dot || !half) return null;
+        return { set: !dot.hidden, stroke: getComputedStyle(half).stroke };
+      }"""
+    GREEN = "rgb(27, 207, 143)"        # --tab-dot green, #1bcf8f
+    def is_marked(r):
+        return bool(r) and r["set"] and r["stroke"] == GREEN
 
     for pg_, finput in ((pad, "#photoInput"), (flip, "#imageInput")):
         open_media(pg_, "photo")
         pg_.set_input_files(finput, {"name": "t.png", "mimeType": "image/png", "buffer": IMG})
         pg_.wait_for_timeout(1300)
 
-    check("loading a photo marks the tab on both",
-          pad.evaluate(vis, "photoTabDot") and flip.evaluate(vis, "photoTabDot"),
-          f"pad={pad.evaluate(vis, 'photoTabDot')}, flip={flip.evaluate(vis, 'photoTabDot')}")
+    _pp, _fp = pad.evaluate(marked, "photo"), flip.evaluate(marked, "photo")
+    check("loading a photo turns the image half green on both",
+          is_marked(_pp) and is_marked(_fp), f"pad={_pp}, flip={_fp}")
     check("and reveals the same fit choices on both",
           pad.text_content("#photoFitGroup").strip()
           == flip.text_content("#photoFitGroup").strip(),
@@ -780,9 +795,9 @@ with sync_playwright() as p:
         pg_.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         pg_.wait_for_timeout(2500)
 
-    check("loading music marks the tab on both",
-          pad.evaluate(vis, "musicTabDot") and flip.evaluate(vis, "musicTabDot"),
-          f"pad={pad.evaluate(vis, 'musicTabDot')}, flip={flip.evaluate(vis, 'musicTabDot')}")
+    _pm, _fm = pad.evaluate(marked, "music"), flip.evaluate(marked, "music")
+    check("loading music turns the note half green on both",
+          is_marked(_pm) and is_marked(_fm), f"pad={_pm}, flip={_fm}")
     check("the trim handles report the same start on both",
           pad.text_content("#handleStart").strip() == flip.text_content("#handleStart").strip(),
           f"pad {pad.text_content('#handleStart').strip()!r} against "
