@@ -64,15 +64,80 @@
     return list;
   }
 
+  // A local save's BYTES live under 'skribl_post_<id>', written by
+  // saveLocalFallback() in editor_post.js. This index is metadata only.
+  var BLOB = 'skribl_post_';
+
+  function dropBlob(id) {
+    try { global.localStorage.removeItem(BLOB + id); } catch (e) {}
+  }
+
   function remove(id) {
     var list = read().filter(function (e) { return e.id !== id; });
     write(list);
+    // ...AND THE PAYLOAD. Removing only the index entry left a multi-megabyte
+    // blob behind that nothing could ever open again -- not listed, not
+    // reachable at #skribl=<id>, and still holding its share of a ~5MB origin
+    // quota. Deleting from the tray and watching storage stay full is exactly
+    // how this was found.
+    dropBlob(id);
     return list;
   }
 
   function clear() {
+    var list = read();
     try { global.localStorage.removeItem(KEY); } catch (e) {}
+    list.forEach(function (e) { dropBlob(e.id); });
+    // Clearing the list is also the moment to collect anything already orphaned
+    // by the old remove().
+    sweepOrphans();
     return [];
+  }
+
+  // Delete every 'skribl_post_*' blob with no entry in the index. Those are
+  // unreachable by definition -- the tray is the only route to one -- so this
+  // frees space without losing anything the user can still get at.
+  // Returns the number of BYTES reclaimed.
+  function sweepOrphans() {
+    var keep = {}, freed = 0;
+    read().forEach(function (e) { keep[BLOB + e.id] = 1; });
+    try {
+      Object.keys(global.localStorage).forEach(function (k) {
+        if (k.indexOf(BLOB) !== 0 || keep[k]) return;
+        freed += (global.localStorage.getItem(k) || '').length;
+        global.localStorage.removeItem(k);
+      });
+    } catch (e) {}
+    return freed;
+  }
+
+  // Last resort, and destructive on purpose: drop the OLDEST local save,
+  // payload and index entry together. Only called when the store is genuinely
+  // full and a drawing is about to be lost for want of room -- an old saved
+  // copy is worth less than the work in front of the user. Returns bytes freed,
+  // or 0 when there is nothing left to give.
+  function evictOldest() {
+    var list = read();
+    var locals = list.filter(function (e) { return String(e.id).indexOf('local_') === 0; });
+    if (!locals.length) return 0;
+    var victim = locals[locals.length - 1];          // the list is newest-first
+    var freed = 0;
+    try { freed = (global.localStorage.getItem(BLOB + victim.id) || '').length; } catch (e) {}
+    dropBlob(victim.id);
+    write(list.filter(function (e) { return e.id !== victim.id; }));
+    return freed;
+  }
+
+  // One call for "make room": sweep first (free), evict only if that was not
+  // enough (destructive). Callers pass how many bytes they need.
+  function reclaim(needBytes) {
+    var freed = sweepOrphans();
+    while (freed < (needBytes || 0)) {
+      var got = evictOldest();
+      if (!got) break;
+      freed += got;
+    }
+    return freed;
   }
 
   // Relative time, coarse on purpose. "3 days ago" is what someone needs to
@@ -101,6 +166,9 @@
     add: add,
     remove: remove,
     clear: clear,
+    sweepOrphans: sweepOrphans,
+    evictOldest: evictOldest,
+    reclaim: reclaim,
     ago: ago,
     absolute: absolute
   };

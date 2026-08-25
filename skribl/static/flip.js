@@ -400,8 +400,25 @@ function saveNow(){
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(lite));
     showAutosaveStatus('saved-no-media');
   } catch (e2) {
-    console.error('[skribl] autosave failed even without media:', e2);
-    showAutosaveStatus('failed');
+    // Last ditch: Flip has already dropped the media bytes and the lite payload
+    // STILL will not fit. Make room the same way Pad does -- sweep orphaned
+    // local-save payloads first (nothing can reach those), then evict the
+    // oldest saved Skribl -- and try once more before saying it failed.
+    let recovered = false;
+    if (window.SkriblPosted && window.SkriblPosted.reclaim) {
+      try {
+        const body = JSON.stringify(lite);
+        if (window.SkriblPosted.reclaim(body.length)) {
+          localStorage.setItem(AUTOSAVE_KEY, body);
+          showAutosaveStatus('saved-no-media');
+          recovered = true;
+        }
+      } catch (e3) { /* fall through to the honest failure below */ }
+    }
+    if (!recovered) {
+      console.error('[skribl] autosave failed even without media:', e2);
+      showAutosaveStatus('failed');
+    }
   }
 }
 // 'none' until a quota fallback happens; then tracks whether the full payload

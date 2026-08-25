@@ -208,7 +208,27 @@ function writeAutosave() {
   // and the durableRev assignment must leave the draft marked not-durable.
   const rev = draftRev;
   try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeAutosave()));
+    // MAKE ROOM RATHER THAN GIVE UP. The origin's ~5MB is shared with Flip's
+    // autosave and with every local save's payload, and a full store used to
+    // mean the drawing in front of the user was simply not written -- for every
+    // stroke, forever, however small the drawing.
+    //
+    // Two passes, cheapest first. SkriblPosted.reclaim() sweeps orphaned
+    // payloads (unreachable: no tray entry can open them, so nothing is lost)
+    // and only then evicts the OLDEST local save, which is destructive and is
+    // why it is second and why it says so in the console. An old saved copy is
+    // worth less than the work on screen.
+    const payload = JSON.stringify(serializeAutosave());
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, payload);
+    } catch (quotaErr) {
+      if (!window.SkriblPosted || !window.SkriblPosted.reclaim) throw quotaErr;
+      const freed = window.SkriblPosted.reclaim(payload.length);
+      if (!freed) throw quotaErr;
+      console.warn('[skribl] storage was full — reclaimed',
+                   Math.round(freed / 1024) + 'KB from saved Skribls to autosave this drawing');
+      localStorage.setItem(AUTOSAVE_KEY, payload);   // still throws if it is not enough
+    }
     durableRev = rev;
     sessionOwnedDraft = true;   // real work written: later empty = deliberate clear
     const hasPhoto = !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)

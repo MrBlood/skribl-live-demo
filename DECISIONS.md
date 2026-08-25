@@ -603,9 +603,30 @@ tenant of a ~5MB origin quota shared with the autosave key, so a run of them
 starves autosave for every drawing afterwards, however small. That is the most
 plausible cause of the report and it is a real defect on its own terms.
 
-It is not fixed here because the fix is destructive: those blobs ARE the user's
-locally-saved Skribls, reachable at `#skribl=<id>` and listed in the posted
-tray. Evicting the oldest is the obvious cap and it silently deletes work.
-Whoever takes it should decide whether that is eviction with a warning, a cap
-refused at save time, or a "clear local saves" control the user drives -- and
-should not decide it inside a catch block.
+FIXED, once the owner's storage listing settled what was actually happening --
+and it was worse than described. `remove()` deleted the INDEX ENTRY and left the
+payload behind, so deleting a Skribl from the tray freed 1KB of metadata and
+stranded two megabytes that nothing could ever reach again. That is why "I
+deleted a skribl from the tray and it still didn't autosave".
+
+Three changes, cheapest first:
+  * `remove()` and `clear()` now drop the payload with the entry.
+  * `sweepOrphans()` deletes any `skribl_post_*` blob with no index entry.
+    Nothing is lost: the tray is the only route to one, so an orphan is already
+    unreachable.
+  * `evictOldest()` drops the oldest local save, payload and entry together.
+    This one IS destructive and is the owner's explicit call. It runs only when
+    the store is genuinely full and a drawing is about to be lost for want of
+    room, and it says what it did in the console. An old saved copy is worth
+    less than the work on screen.
+
+Pad's autosave and Flip's last-ditch write both call `reclaim(needBytes)`, which
+sweeps first and only then evicts. Verified: a forced QuotaExceededError now
+reclaims and the pill reads "Saved" instead of failing.
+
+Still outstanding, and NOT this: on the owner's machine
+`skribl_flip_autosave_v1` alone was 2,763KB -- over half the origin's ~5MB, in
+one key, for one 24-page flip. Flip already degrades to a media-free "lite"
+payload under quota pressure, so it is not broken, but the drawing data itself
+lives in localStorage while the media bytes already live in IndexedDB. Moving it
+there is the real fix for the ceiling and it is a bigger change than this one.
