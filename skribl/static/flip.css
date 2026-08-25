@@ -186,7 +186,15 @@
     font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--ui-hi); }
   body.playing .flip-live { display: inline-flex; }
 
-  .flip-tools { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; flex-wrap: wrap; }
+  /* gap 4 / padding 7 are PAD'S numbers, adopted wholesale in v224. Flip used
+     8 and 12 and was 52px wider and 10px taller than Pad for the same nine
+     controls -- the same row, looser, which read as two different bars rather
+     than one design. Measured after: 615 -> 555 wide, 68 -> 58 tall at 1280.
+     Groups are made of margins now (below), not of .tool-sep lines. */
+  .flip-tools { position: relative; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 7px; flex-wrap: wrap; }
+  .flip-tools .color-tool { margin-left: 8px; }
+  .flip-tools #undo       { margin-left: 14px; }
+  .flip-tools #imageBtn   { margin-left: 14px; }
   /* Colors & brush = the Pad editor's exact Draw menu (Color palette + custom
      picker + eyedropper + recent + Brush size). It reuses the shared design-system
      classes (.tab-panel, .color-group, .color-dot, .color-custom-wrap,
@@ -250,6 +258,12 @@
      Pad's undo/redo are already tiles; Flip's were the one stray circle pair. */
   .t-btn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-control);
     border: 1px solid var(--hairline-strong); color: var(--text-secondary); cursor: pointer; transition: filter .15s ease, color .15s ease; }
+  /* Square at 40 already; the tiers below keep it square rather than letting the
+     box stretch to the row height. See .toolbar .undo-btn in styles.css -- same
+     decision, same --tap-grow mechanism, so the two rows stay identical. */
+  .t-btn { position: relative; z-index: 1; --tap-grow: 2px; }
+  .t-btn::before { content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 2px));
+    background: transparent; border-radius: inherit; }
   .t-btn.on { color: var(--text-primary); border-color: var(--ui-line); }
   .t-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
@@ -260,7 +274,7 @@
      All Flip has to do is say how tall the row is at each width — the group
      inherits --seg-row-h from the row it sits in. */
   .flip-tools { --seg-row-h: 40px; }
-  .flip-tools .tool-btn { padding-left: 14px; padding-right: 14px; }
+  .flip-tools .tool-btn { padding-left: 11px; padding-right: 11px; }
 
   /* ---- Desktop parity with Skribl Pad (>640px) ---------------------------
      On desktop, match the Pad's shared design-system sizes exactly so the two
@@ -275,6 +289,7 @@
     .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; }
     .grid-tool, #moreBtn { width: 36px; height: 36px; }
     .flip-tools .tool-open, .flip-tools .t-btn { width: 44px; height: 44px; }
+    .flip-tools .t-btn { --tap-grow: 0px; }
     .flip-tools { --seg-row-h: 44px; }
   }
 
@@ -287,26 +302,43 @@
   .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); }
   /* image/music share the magnify button's chrome; highlight the same way when open */
   .flip-tools .magnify-tool.open { color: var(--ui-hi); background: rgba(124,92,255,0.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,0.45); }
-  /* Keep the bottom tool row on ONE line on phones (music was wrapping). */
-  @media (max-width: 560px) {
-    /* `overflow-x: auto` makes this a scroll container, and a scroll container
-       clips VERTICALLY too — which cut the 44px hit band down to the content
-       box. The row is 58px with 10px padding, leaving 38px of content: 6px
-       short. Giving the children a 44px minimum lets the row find its own
-       height (64px) and costs nothing horizontally, which is the axis that is
-       actually scarce here. */
-    .flip-tools { gap: 6px; padding: 10px 8px; flex-wrap: nowrap; overflow-x: auto; justify-content: safe center; }
-    .flip-tools .tool-open, .flip-tools .t-btn { width: 36px; height: 36px; }
-    .flip-tools { --seg-row-h: 36px; }
+  /* The bottom tool row WRAPS on phones. It used to scroll.
+     v224: `flex-wrap: nowrap; overflow-x: auto` kept the row on one line by
+     letting Music slide off the right edge, with the scrollbar hidden and
+     nothing on screen saying so — the same defect the 320-tier block below
+     documents, in a wider band. Measured before this change: the row overflowed
+     at 351 (332 against 331 available) and again from 316 down. Pad has always
+     wrapped instead, and a control you can see on a second line beats one you
+     cannot see at all.
+     Taking Pad's gap and padding is what makes the wrap affordable: with them
+     the row fits on ONE line all the way to 321, eleven pixels further down
+     than Pad manages, so the second line is now rarer than the scroll it
+     replaces. It also retires the vertical-clip problem the old comment here
+     described — a wrapping row is not a scroll container, so the 44px tap band
+     is no longer cut and the children can go back to being square. */
+  /* 640, not 560: Pad steps down at 640 and the two rows step together now.
+     Through 561-640 Flip kept 40px buttons against Pad's 36 and stood 4px
+     taller for it. */
+  @media (max-width: 640px) {
+    .flip-tools { gap: 3px; padding: 6px; flex-wrap: wrap; justify-content: center; }
+    .flip-tools .tool-open { width: 36px; height: 44px; }
+    .flip-tools .t-btn { width: 36px; height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
+    .flip-tools { --seg-row-h: 44px; }
     .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
     .flip-tools .tool-btn-label { display: none; }
     .flip-tools .tool-btn { padding: 6px 10px; }
     .color-current { width: 34px; height: 34px; }
   }
-  @media (max-width: 380px) {
-    .flip-tools { gap: 5px; padding: 9px 6px; }
-    .flip-tools .tool-open, .flip-tools .t-btn { width: 34px; height: 34px; }
-    .flip-tools { --seg-row-h: 34px; }
+  /* 392, not 380, and the numbers are Pad's: this is the tier where Pad drops to
+     34px, and the two rows are meant to step together. The old block set gap and
+     padding here too and they NEVER APPLIED — the max-640 block further down
+     this file is later at equal specificity and won on source order, so the
+     computed gap at 380px measured 3px rather than the 5px written here. Only
+     the widths ever did anything. Same trap the 344-tier block calls out. */
+  @media (max-width: 392px) {
+    .flip-tools .tool-open { width: 34px; height: 44px; }
+    .flip-tools .t-btn { width: 34px; height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
+    .flip-tools { --seg-row-h: 44px; }
   }
   /* v124: 88x62 left the per-page controls at 18x18 — a third of the 44px touch
      target both Apple and Google recommend, on a tile carrying five of them.
@@ -901,7 +933,20 @@
    52, because its buttons were already tighter — so the gap alone buys it back
    and the tap targets stay untouched. Labels already hide below 640px. */
 @media (max-width: 640px) {
-  .flip-tools { gap: 3px; padding: 12px 6px; }
+  /* padding 6, not 12px 6px: Pad's number. The 12 made Flip's row 4px taller
+     than Pad's for no reason anyone could see.
+     This block is LATER IN THE FILE than the max-560 and max-392 tiers above at
+     equal specificity, so it wins on source order — which is why the row's phone
+     gap, padding and group margins are declared here and not up there with the
+     widths. Moving them loses them silently; that is exactly how the old
+     max-380 tier's gap came to be dead code. */
+  .flip-tools { gap: 3px; padding: 6px; }
+  /* Even rhythm, not grouping — see the matching note on .toolbar in styles.css.
+     Grouping margins cost Flip the same 8px they cost Pad, and Flip has less to
+     give: it wrapped from 369 down with them. */
+  .flip-tools .color-tool { margin-left: 5px; }
+  .flip-tools #undo       { margin-left: 6px; }
+  .flip-tools #imageBtn   { margin-left: 6px; }
   /* Horizontal only. Vertical padding here would fight the row-height variable
      above and push the pill back off its neighbours' height. */
   .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
@@ -934,10 +979,19 @@
    No tap target drops below the system minimum: the visual boxes go to 32/33px
    and --tap-grow rises to match, the same trade the design system already makes
    for colour dots (30 visual) and nudge buttons (32 visual). */
-@media (max-width: 344px) {
-  .flip-tools { gap: 2px; padding: 9px 4px; }
-  .flip-tools .tool-open, .flip-tools .t-btn { width: 32px; height: 32px; }
-  .flip-tools { --seg-row-h: 32px; }
+/* 359, not 344. At 344 this tier left a ragged 15px band: Flip held one row to
+   360, WRAPPED from 359 to 345, then un-wrapped at 344 when the 32px boxes
+   arrived. Starting the tier where the previous one runs out makes the ladder
+   monotonic — one row all the way to 321, a second line below that — instead of
+   wrapping and un-wrapping as the window narrows. */
+@media (max-width: 359px) {
+  .flip-tools { gap: 2px; padding: 6px 4px; }
+  .flip-tools .tool-open { width: 32px; height: 44px; }
+  .flip-tools .t-btn { width: 32px; height: 32px; --tap-grow: 6px; }   /* 32 visual -> 44 tap */
+  /* --seg-row-h stays 44 now. It used to drop to 32 here, which made Flip's
+     tool pill shorter than Pad's on exactly the phones where a tap target
+     matters most; Pad holds 44 at every width via #toolGroup .tool-btn's
+     min-height. The row wraps below 321 rather than shrinking past this. */
   .flip-tools #toolGroup .tool-btn { padding: 0 5px; }
   .pagebar { gap: 3px; padding: 7px 6px; }
   .pb { min-width: 33px; padding: 0 5px; --tap-grow: 6px; }

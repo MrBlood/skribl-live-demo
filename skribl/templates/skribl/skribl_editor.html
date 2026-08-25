@@ -247,6 +247,19 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
             <span class="tool-btn-label">Shape</span>
           </button>        </div>
+    {# COLOUR SITS AGAINST THE TOOL PILL, not across the row from it (v224).
+       It is the only bare-glyph control in the row's left half, and a bare glyph
+       carries its own inset — the ring is 34px inside a 44px button — so putting
+       it here turns the pill's 4px seam against a bordered undo into two
+       comfortable ones. Grouping and air, same move.
+
+       Ring on .color-ring, NOT on #toolColorChip: app.js writes the colour there
+       as an inline background, and an inline style beats any stylesheet rule. #}
+    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
+      <span class="color-ring">
+        <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
+      </span>
+    </button>
     <button type="button" id="undoBtn" class="undo-btn bar-undo" title="Undo last stroke">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg>
           <span class="undo-label">Undo</span>
@@ -255,18 +268,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
-        <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify — zoom centres, so scroll or hold Space and drag to aim it" aria-label="Toggle magnify controls" aria-pressed="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
-    </button>
-<span class="tool-sep"></span>
-    {# Ring on .color-ring, NOT on #toolColorChip: app.js writes the colour there
-       as an inline background, and an inline style beats any stylesheet rule. #}
-    <button type="button" class="tool-open" id="colorOpenBtn" data-drawer="draw" aria-label="Colours and brush" title="Colour, brush size, opacity and smoothing">
-      <span class="color-ring">
-        <span class="tool-chip" id="toolColorChip" style="background:#ffffff"></span>
-      </span>
-    </button>
-    <span class="tool-sep"></span>
       {# Image, Music and Zoom collapse into one control: Pad goes from 10 controls
        to 8, which fixes wrapping from 360px up. The dot is DERIVED from the
        per-item dots so the toolbar and drawer cannot disagree; amber beats green
@@ -284,6 +285,14 @@
       </svg>
       <span id="musicTabDot" class="tab-dot" hidden></span>
       <span class="tab-dot-empty" aria-hidden="true"></span>
+    </button>
+    {# Magnify ends the row with image and music. It changes how you SEE the
+       drawing, not what is in it, so it belongs with the other two controls
+       that act on the page rather than on the mark. It is also the first
+       control to go on a phone (hidden at 430 and below), and the end of the
+       row is where losing something costs the least. #}
+    <button type="button" id="magnifyBtn" class="tool-open magnify-tool" title="Magnify — zoom centres, so scroll or hold Space and drag to aim it" aria-label="Toggle magnify controls" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
     </button>
 </div>
 

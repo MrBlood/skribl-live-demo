@@ -313,3 +313,95 @@ below 560px (`.tool-btn-label { display: none }`) and that, with its smaller
 buttons, is how it holds one row at 320. Pad keeps its words. Adopting Flip's
 ladder wholesale would drop them and shrink the tap targets — a UX decision,
 not a consequence of removing a background.
+
+**The tool row's separators go; whitespace does the grouping.** `.tool-sep` was
+a 1px line with 5px margins either side, and it was doing two jobs badly:
+drawing a divider in a row that had just lost every other line it owned (the
+tray went in 31ed04f), and standing in for the air that actually separates
+groups. Measured before removing it, a separator plus its own gaps is worth
+about 15px — and the grouping margins that replace it need roughly that much
+anyway. Dropping both saved 2px at 1280 and cost 6px at 390. So this is not a
+width change; it is one fewer line drawn on screen, and the width is a wash.
+Say so plainly, because the question that prompted it was "do we get more play?"
+and the honest answer is no.
+
+Reversal: restore the `.tool-sep` rule in styles.css and the two `<span>`s in
+skribl_editor.html and skribl_flip.html. Nothing else referenced the class.
+
+**The colour ring sits against the tool pill, and the row's rhythm is why.** The
+gap property was uniform across the row; what the eye saw was not. Measured at
+1280 before the change, the visible gap between painted edges ran 4px at the
+left end and 24px at the right, because half the controls paint a box and half
+do not — a bordered neighbour puts its edge on the gap, a bare glyph sits inset
+behind its own padding. The pill against a bordered undo was the 4px seam, and
+it read as crowded next to image-against-music at 24px.
+
+Colour is the one control that can sit next to the pill without two hard edges
+meeting: the ring is 34px inside a 44px button, so it brings 5px of its own air
+to each side. Moving it there turns one 4px seam into two comfortable ones and
+costs nothing — same controls, same count. The row now reads left to right as
+what the mark looks like, what happened to the drawing, and what is on the page
+or how you are looking at it, with magnify joining image and music at the end
+because it changes how you see rather than what is there.
+
+At 1280 the seams go from 4, 4, 14, 19, 18, 18, 19, 24 to 21, 27, 4, 28, 24, 24.
+The one remaining 4 is undo against redo, which is the single place two boxes
+touching is the point.
+
+**On phones the row gives up grouping and keeps even rhythm.** The desktop
+margins (8/14/14) cost 8px that 360-class phones do not have: at 6/10/10 Pad
+needed 336px against the 328 available at 360 and wrapped, breaking a decision
+this file already records — 360 is a very common Android width and the row is
+sized for it, not for 375. The phone tiers therefore run 5/6/6, which lands at
+326: the exact figure the v217 note records, and every seam within a pixel or
+two of 12, which is what two bare glyphs produce unaided. It is not grouping,
+but it is not the 2, 2, 4, 8, 8, 9, 12 it replaced either. Widen these three
+numbers and 360-class phones get a second row; the ladder was measured at
+1280/641/640/560/430/400/390/375/360/351/344/320 before and after.
+
+**Undo and redo are painted square; the 44px tap band moves to the ::before.**
+40x44 on Pad and 36x36-in-a-44-row on Flip both read as stretched rectangles
+beside a pill and a circle — they are the only controls in the row whose exact
+shape is visible, so the shape has to be deliberate. They are now square at
+every tier (40, 36, 34, 32) and the tap target is not given up: it moves to
+`--tap-grow`, the mechanism `.color-dot`, `.onion-tint`, `.smooth-btn` and `.pb`
+have used since v205-fix. Width is unchanged at every width, so this costs the
+row nothing horizontally. Reversal: drop the `height` and `--tap-grow` pairs and
+the two now-shared `::before` selectors.
+
+**Flip adopts Pad's ladder, and wraps where it used to scroll.** Flip's row was
+595px against Pad's 543 for the same nine controls, and 68px tall against 58 —
+the same row, looser, reading as two designs rather than one. It now takes Pad's
+gap, padding, button geometry and tier boundaries wholesale: 615 -> 561 wide and
+68 -> 58 tall at 1280.
+
+The behavioural half matters more. Flip was `flex-wrap: nowrap; overflow-x:
+auto`, which held one line by letting Music slide off the right edge with the
+scrollbar hidden and nothing on screen saying so — the defect the 320-tier block
+in flip.css already documents, in a wider band. Measured: it overflowed at 351
+(332 against 331 available) and again from 316 down. Pad has always wrapped
+instead. A control on a second line beats one you cannot see.
+
+Taking Pad's spacing is what makes the wrap affordable: Flip now holds ONE ROW
+all the way to 320, so the second line is rarer than the scroll it replaces. The
+narrow tier moved from 344 to 359 for the same reason — at 344 it left a ragged
+band where Flip wrapped from 359 to 345 and then un-wrapped, and a ladder that
+wraps and un-wraps as the window narrows is worse than either policy alone.
+
+Two smaller repairs rode along, both found by measuring rather than reading.
+flip.css's `@media (max-width: 380px)` set `gap: 5px; padding: 9px 6px` on
+`.flip-tools` and NEVER APPLIED: the `max-width: 640px` block later in the file
+wins on source order at equal specificity, so the computed gap at 380px measured
+3px. Only the widths in that block ever did anything. It is the same trap the
+344-tier block calls out one tier down, and the phone gap, padding and group
+margins are now declared in the later block for exactly that reason — move them
+back up and they go silent again. Separately, magnify was hidden at 430 on Pad
+and 400 on Flip, so between 401 and 430 one row showed eight controls and the
+other nine; both are 430 now, Pad being the reference.
+
+NOT done, and left where it is: the combined photo-and-music glyph. It is worth
+40-50px and the state can live in the glyph itself (the sun fills for a photo,
+the note heads for a loop, retiring both `.tab-dot` badges), but `#photoPanel`
+and `#musicPanel` are two separate `.tab-panel` partials shared by Pad and Flip,
+and one button cannot open two drawers. That is a drawer merge, not a CSS
+change, and it belongs in its own edit.

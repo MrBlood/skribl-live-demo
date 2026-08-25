@@ -834,7 +834,24 @@ body.stroking .zoom-hud { pointer-events: none; }
   position: relative;
   z-index: 41;
 }
-.tool-sep { width: 1px; height: 26px; background: var(--hairline); margin: 0 5px; align-self: center; flex: none; }
+/* .tool-sep is RETIRED (v224). It was a 1px line with 5px margins either side,
+   and it was doing two jobs badly: drawing a divider in a row that had just lost
+   every other line it owned (the tray went in 31ed04f), and standing in for the
+   whitespace that actually separates groups.
+
+   Measured before removing it: a separator plus its own gaps is worth about
+   15px, and the grouping margins below need roughly that much anyway. Dropping
+   both saved 2px at 1280 and cost 6px at 390 -- so this is NOT a width change,
+   it is a "one fewer line drawn on screen" change, and the width is a wash.
+   Anything wanting a divider back should re-add this rule and the two spans in
+   skribl_editor.html / skribl_flip.html; nothing else referenced the class.
+
+   Groups are now made of air. The row reads: what the mark looks like (the tool
+   pill and the colour ring), what happened to the drawing (undo, redo), and what
+   is on the page or how you are looking at it (image, music, magnify). */
+.toolbar #colorOpenBtn { margin-left: 8px; }
+.toolbar #undoBtn      { margin-left: 14px; }
+.toolbar #imageOpenBtn { margin-left: 14px; }
 .tool-open {
   width: 44px; height: 44px; border-radius: 12px; padding: 0;
   display: flex; align-items: center; justify-content: center;
@@ -3907,8 +3924,15 @@ body.player-mode #canvas {
    borderless, so the row still says which controls DO something and which
    SELECT something. Geometry is untouched — 40x44 keeps the measured tap
    target; only the surface is new. */
+/* 40x40, not 40x44. A bordered box is the only control in this row whose exact
+   shape is visible, and at 40x44 it read as a stretched rectangle sitting beside
+   a pill and a circle. The 44px TAP band is not given up -- it moves to the
+   ::before, the same --tap-grow mechanism .color-dot, .onion-tint and .pb have
+   used since v205-fix (see the block near "Invisible expanded tap area"). Width
+   is unchanged at every tier, so this costs the row nothing. */
 .toolbar .undo-btn {
-  width: 40px; height: 44px; padding: 0; border-radius: 12px;
+  width: 40px; height: 40px; padding: 0; border-radius: 12px;
+  position: relative; z-index: 1; --tap-grow: 2px;
   background: var(--surface-control); border: 1px solid var(--hairline-strong);
   color: #aeb6c4; cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex: none;
@@ -3938,7 +3962,6 @@ body.player-mode #canvas {
   #toolGroup .tool-btn svg { width: 23px; height: 23px; }
   /* Pull the rest in tighter to make the room. */
   .tool-open, .toolbar .undo-btn { width: 36px; }
-  .tool-sep { margin: 0 1px; }
 
   /* D — brand text visibility is decided by fitBrand() (JS), not a fixed rule,
      so "Skribl Pad" shows whenever there's room and drops to logo-only when not. */
@@ -4512,7 +4535,8 @@ body.playing .flip-grid { display: none; }
 .pb,
 .nudge-btn,
 .pending-dismiss,
-.eyedropper-btn { position: relative; z-index: 1; }
+.eyedropper-btn,
+.toolbar .undo-btn { position: relative; z-index: 1; }
 /* z-index:1 matters: the ::before extends OUTSIDE the button's box, over the
    parent row. Without a stacking context the row (painted later / on top)
    wins the hit-test in that overflow band, so a tap there lands on the row
@@ -4525,7 +4549,8 @@ body.playing .flip-grid { display: none; }
 .pb::before,
 .nudge-btn::before,
 .pending-dismiss::before,
-.eyedropper-btn::before {
+.eyedropper-btn::before,
+.toolbar .undo-btn::before {
   content: "";
   position: absolute;
   inset: calc(-1 * var(--tap-grow, 6px));
@@ -4541,6 +4566,8 @@ body.playing .flip-grid { display: none; }
 .nudge-btn  { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (readout between - and + keeps them apart) */
 .pending-dismiss { --tap-grow: 7px; }  /* 32 -> 44+ */
 .eyedropper-btn  { --tap-grow: 8px; }  /* 30 visual (dot-sized, on purpose) -> 44+ tap; it sat beside dots that had it and lacked its own */
+/* .toolbar .undo-btn sets its own --tap-grow per tier: 2px at 40 visual,
+   4px at 36, 5px at 34. Declared next to each width so the pair cannot drift. */
 
 /* Menu rows: already ~44 from padding; pin the minimum so it can't shrink. */
 .menu-item { min-height: 44px; }
@@ -4716,7 +4743,21 @@ body.playing .flip-grid { display: none; }
   #toolGroup .tool-btn svg { width: 22px; height: 22px; }
   .tool-open, .toolbar .undo-btn { width: 34px; }
   .toolbar { gap: 2px; padding: 6px; }
-  .tool-sep { margin: 0 2px; }
+  .toolbar .undo-btn { height: 34px; --tap-grow: 5px; }   /* 34 visual -> 44 tap */
+  /* 5/6/6 — at phone widths the row gives up GROUPING and keeps EVEN RHYTHM.
+     6px of margin puts every seam within a pixel or two of 12, which is what two
+     bare glyphs sitting side by side produce on their own, so the row reads as
+     one evenly spaced run rather than three cramped clusters. That is still a
+     long way from what it replaced: these seams used to be 2, 2, 4, 8, 8, 9, 12.
+
+     The numbers are load-bearing, not taste. At the 6/10/10 this started as, the
+     row needed 336px against the 328 available at 360 and WRAPPED — and the
+     block above says in as many words that 360 must stay on one line, being a
+     very common Android width. 5/6/6 lands at 326, which is the exact figure
+     that comment records. Widen these and 360-class phones get a second row. */
+  .toolbar #colorOpenBtn { margin-left: 5px; }
+  .toolbar #undoBtn      { margin-left: 6px; }
+  .toolbar #imageOpenBtn { margin-left: 6px; }
 }
 
 /* ---------- v213: the tool row holds FOUR tools ----------
@@ -4889,7 +4930,10 @@ body.playing .flip-grid { display: none; }
   #magnifyBtn { display: none; }
 }
 @media (max-width: 430px) { .toolbar #magnifyBtn { display: none; } }
-@media (max-width: 400px) { .flip-tools #magnifyBtn { display: none; } }
+/* 430 on BOTH surfaces now (was 400 on Flip). Two rows meant to read as one
+   design cannot shed the same control at different widths -- between 401 and
+   430 Pad showed eight controls and Flip nine. Pad is the reference. */
+@media (max-width: 430px) { .flip-tools #magnifyBtn { display: none; } }
 
 /* ---------- Shape picker, on the button ----------
    The shape kind used to live in the draw drawer, three taps away from the tool
@@ -4938,7 +4982,11 @@ body.playing .flip-grid { display: none; }
   #toolGroup .tool-btn svg { width: 22px; height: 22px; }
   .tool-open, .toolbar .undo-btn { width: 36px; }
   .toolbar { gap: 3px; padding: 6px; }
-  .tool-sep { margin: 0 3px; }
+  .toolbar .undo-btn { height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
+  /* Same 5/6/6 rhythm as the tier above; see the note there. */
+  .toolbar #colorOpenBtn { margin-left: 5px; }
+  .toolbar #undoBtn      { margin-left: 6px; }
+  .toolbar #imageOpenBtn { margin-left: 6px; }
 }
 
 /* ---------- Hit regions, separated from glyph size ----------
