@@ -673,3 +673,38 @@ reach magnify on a phone, where the button is hidden at 430 and below. That gap
 is not new -- it existed before the merge and is back exactly as it was -- but
 it is the one piece of the router worth stealing if magnify should be reachable
 on a phone at all.
+
+**The header is a 36px row on both surfaces, and tune and ⋯ lose their box.**
+Flip already read this way and Pad did not: Flip draws its tune and ⋯ as bare
+glyphs, Pad drew them as 44px bordered tiles with a fill. Side by side the same
+two controls looked like two different design systems, and the heavier of the
+two was on the surface with more in its header.
+
+The box goes. `.icon-btn`'s border and fill were v205-fix's "bordered action"
+tier and they earned their place while the header sat in a tray — the tray went
+in 31ed04f, and a bordered tile on a bare header is a frame around nothing. The
+class keeps its border everywhere else; only the header's two openers drop it.
+
+36 across the row — tune, ⋯, Record, Play, Post — because that is the size
+Flip's header already used and the one the owner picked looking at both. Flip's
+own tune was 34, two pixels short of the ⋯ beside it for no recorded reason; it
+is 36 now too.
+
+The 44px TAP band is not given up. It moves to the `::before` via `--tap-grow`,
+the mechanism `.color-dot`, `.onion-tint` and `.toolbar .undo-btn` already use.
+verify_ux pins all three facts — the painted box is 36, the hit box is still 44,
+and a tap 3px outside the visual box still lands on the button. That last one
+matters: the ::before extends over the header, and without the stacking context
+the header wins the hit test and the grown target is a fiction. Pinning only the
+visual size is how a shrink quietly costs a tap target.
+
+One number changed in place rather than being overridden:
+`.header.compact .btn.play.btn-icon` carries `height` at (0,4,0), which no
+row-wide rule can reach past. Its comment already said "match Play's height to
+Record/Post"; the row is 36 now, so the intent is preserved by changing the
+number where it lives.
+
+NOT changed: Flip's back arrow is still a bordered `.icon-btn`, and it is now the
+only boxed control in either header. It is a navigation action rather than an
+opener and Pad has no equivalent, so there was nothing to make consistent WITH —
+but if the box looks orphaned there, that is why.

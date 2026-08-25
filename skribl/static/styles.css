@@ -4218,11 +4218,15 @@ body.player-mode #canvas {
   .icon-btn { width: 44px; height: 44px; border-color: var(--hairline); }
   .icon-btn svg { width: 24px; height: 24px; }
 
-  /* Match Play's height to Record/Post (44px) so the whole compact row —
-     Record, Play, Post, and the ⋯ icon button — is one uniform height. Play is
-     a .btn-icon that sized to content (~29px) while Record/Post carry an
-     explicit 44px height, leaving Play visibly short in the row. v205-fix. */
-  .header.compact .btn.play.btn-icon { padding: 7px 14px; height: 44px; }
+  /* Match Play's height to Record/Post so the whole compact row — Record, Play,
+     Post, and the ⋯ icon button — is one uniform height. Play is a .btn-icon
+     that sized to content (~29px) while Record/Post carry an explicit height,
+     leaving Play visibly short in the row. v205-fix.
+     36 since v225: the row came down to Flip's size and this number is what it
+     matches. It is the highest-specificity height on #playBtn (0,4,0), so it
+     decides -- the row-wide rule at the end of the file cannot reach past it,
+     which is why the number changes HERE rather than being overridden there. */
+  .header.compact .btn.play.btn-icon { padding: 7px 14px; height: 36px; }
 }
 
 /* ---- help drawer search ---------------------------------------------------
@@ -5117,3 +5121,44 @@ body.playing .flip-grid { display: none; }
   top: 50%; height: 44px;
   transform: translateY(-50%);
 }
+
+/* ---------- v225: the header is a 36px row, and tune/⋯ have no box ----------
+   Flip's header already read this way and Pad's did not: Flip draws its tune
+   and ⋯ as bare glyphs, Pad drew them as 44px bordered tiles with a fill. Side
+   by side the same two controls looked like two different design systems, and
+   the boxed pair was the heavier of the two on the surface with more in its
+   header.
+
+   The box goes. `.icon-btn`'s border and fill were the v205-fix "bordered
+   action" tier, which earned its place while the header sat in a tray -- the
+   tray went in 31ed04f and a bordered tile on a bare header is a frame around
+   nothing. The class keeps its border everywhere else; only the header's two
+   openers drop it.
+
+   36, not 44, across the whole row -- tune, ⋯, Record, Play, Post -- because
+   that is the size Flip's header already used and the one the owner picked
+   looking at both. The 44px TAP band is not given up: it moves to the ::before,
+   the --tap-grow mechanism .color-dot and .toolbar .undo-btn already use.
+
+   Placed LAST so it beats the per-tier .icon-btn rules above (44 at the default,
+   40 at 3530, 44 again in the compact state at 4218). Those tiers exist to keep
+   the row uniform at each width; the row is uniform at 36 now, so one late rule
+   is simpler than editing four. */
+.header #tuneBtn, .header #menuBtn {
+  width: 36px; height: 36px;
+  border: none; background: none;
+  position: relative; z-index: 1; --tap-grow: 4px;   /* 36 visual -> 44 tap */
+}
+.header #tuneBtn::before, .header #menuBtn::before {
+  content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 4px));
+  background: transparent; border-radius: inherit;
+}
+.header #tuneBtn svg, .header #menuBtn svg { width: 22px; height: 22px; }
+/* Hover keeps a hint of surface so the control still answers the pointer --
+   without it a borderless glyph gives no feedback at all. */
+@media (hover: hover) {
+  .header #tuneBtn:hover, .header #menuBtn:hover { background: rgba(255, 255, 255, 0.05); }
+}
+/* Record, Play and Post come down to meet them. */
+.header .actions .btn { height: 36px; padding: 0 16px; }
+.header .actions .btn.play { height: 36px; }

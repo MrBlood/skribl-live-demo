@@ -74,7 +74,9 @@
      component in each file is what made that possible. */
 
   /* Onion toggle — the pad's own icon-toggle (.tool-open + magnify active state). */
-  .tune-tool { width: 34px; height: 34px; flex: none; }
+  /* 36, matching the ⋯ beside it and Pad's header (v225). It was 34 -- two
+     pixels short of everything else in the row, for no reason anyone recorded. */
+  .tune-tool { width: 36px; height: 36px; flex: none; }
   #moreBtn { width: 34px; height: 34px; border-radius: 50%; }
   #moreBtn svg { width: 19px; height: 19px; }
   /* Level the three action controls to one height so the row lines up. */

@@ -837,10 +837,33 @@ with _sp204() as _p:
     check("V205-fix: the tune button matches the menu button's size",
           sizes.get("tuneBtn") == sizes.get("menuBtn"),
           f"tune {sizes.get('tuneBtn')} vs menu {sizes.get('menuBtn')}")
-    # v205-fix: standardized tier-1 = 44px box on desktop. Lock it so it can't drift.
-    check("V205-fix: header buttons are the standardized 44px tier-1 size",
-          sizes.get("tuneBtn") == [44, 44],
+    # v225: the header row is 36, not 44 — Flip's size, adopted on Pad so the two
+    # headers stop reading as two design systems. The 44px TAP band is not given
+    # up; it moved to the ::before via --tap-grow, so assert BOTH: the painted
+    # box is 36 and the hit box is still at least 44. Pinning only the visual
+    # size is how a shrink quietly costs a tap target.
+    check("V225: header buttons are the 36px row size",
+          sizes.get("tuneBtn") == [36, 36],
           f"tuneBtn {sizes.get('tuneBtn')}")
+    _tap = pg.evaluate("""() => {
+        const el = document.getElementById('tuneBtn');
+        const grow = parseFloat(getComputedStyle(el).getPropertyValue('--tap-grow')) || 0;
+        const r = el.getBoundingClientRect();
+        return { w: Math.round(r.width + grow * 2), h: Math.round(r.height + grow * 2), grow };
+      }""")
+    check("V225: ...and the tap band is still 44 via --tap-grow",
+          _tap["w"] >= 44 and _tap["h"] >= 44,
+          f"{_tap['w']}x{_tap['h']} from a {36}px box with --tap-grow {_tap['grow']}")
+    # A grown hit box is only real if it WINS the hit test — the ::before extends
+    # outside the button, over the header, and without a stacking context the
+    # header takes the tap (the trap the --tap-grow block in styles.css records).
+    _hit = pg.evaluate("""() => {
+        const el = document.getElementById('tuneBtn'), r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left - 3, r.top + r.height / 2);
+        return !!(hit && (hit === el || el.contains(hit) || hit.parentElement === el));
+      }""")
+    check("V225: ...and a tap 3px outside the visual box still lands on the button",
+          _hit, "the ::before is not winning the hit test")
 
     # v205-fix: the compact/recording row (Record, Play, Post, menu) must be one
     # uniform height — Play was a short .btn-icon (~29px) among 44px pills.
