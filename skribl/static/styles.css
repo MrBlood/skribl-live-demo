@@ -785,9 +785,10 @@ body.stroking .zoom-hud { pointer-events: none; }
   flex-shrink: 0;
 }
 .tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
-/* The media button has NO empty state and therefore no .tab-dot-empty: with
-   nothing attached it is simply the icon. The rule above is left for the
-   controls that still pair a grey twin with a green one. */
+/* The media button has no .tab-dot-empty and does not draw its dots at all --
+   it says its state by tinting half the glyph (see the v224 block below). The
+   rule above is left for the controls that still pair a grey twin with a green
+   one. */
 
 .tab-panel {
   /* Same reason as .flip-drawers: on iOS Safari the bottom toolbar overlays
@@ -877,61 +878,38 @@ body.stroking .zoom-hud { pointer-events: none; }
    ring is gone: it sat between the core and the spectrum and read as a halo. */
 .tool-chip { border-radius: 50%; }
 .tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
-/* ---------- v224: the media button's two status lights --------------------
-   The photo and music dots moved INSIDE the glyph: the sun is the photo light,
-   the OUTER note head is the music light. They are the same .tab-dot elements
-   the two old buttons carried, with the same ids, so
-   every existing show/hide and .pending call site keeps working unchanged --
-   there are a dozen across app.js, editor_photo.js, editor_music.js and flip.js
-   and rewriting them to drive an SVG attribute would have been the fragile half
-   of this change. (SVG elements do not implement the `hidden` IDL property at
-   all: `el.hidden = true` on a <circle> sets a JS property that never reaches
-   the attribute, so a CSS rule keyed on [hidden] would silently never fire.
-   Hence HTML spans over the glyph rather than styled SVG circles.)
+/* ---------- v224: the media button says its state IN COLOUR ---------------
+   The image frame goes green when a photo is set and amber when one is
+   remembered but its file is gone; the note does the same for music. Nothing
+   attached leaves the icon in its ordinary grey, which is the point: a resting
+   toolbar should not be answering a question nobody asked.
 
-   PLACED AFTER the .tool-open badge rule above, and scoped through .tool-open
-   so it also outranks it on specificity. Written earlier in the file and at
-   equal weight, `top: 6px; right: 6px` from that rule won on source order and
-   dropped the music light 6px BELOW its note head -- the position was correct
-   in the markup and wrong on screen, which a measurement caught and reading the
-   rule did not.
+   This replaced a 4px light inside the sun and the note head, which is worth
+   recording because the light was measured and still wrong. At 24px a 4px dot
+   is mostly antialiased edge -- about four pixels of true colour -- and reading
+   it took more attention than a toolbar glyph deserves. Tinting a half is
+   unmissable at 1:1 and needs no geometry of its own, so the sun and the note
+   heads are back at the sizes the source icons use.
 
-   Positioned as a PERCENTAGE of the glyph box so the lights ride the icon down
-   the size ladder (24px desktop, 21px phone) without a rule per tier. 34%/34%
-   is the sun at (8.2, 8.2) in the 24-unit viewBox; 94%/88% is the OUTER note
-   head at (22.6, 21.1) -- the note has two, and the outer one is the head that
-   sits clear of the image frame rather than overlapping its corner, so a lit
-   dot there reads as its own light instead of as a mark on the picture. Both
-   percentages exceed the box because the svg is overflow:visible and the note
-   straddles the frame's corner on purpose. */
+   NO JAVASCRIPT CHANGED FOR ANY OF THIS. #photoTabDot and #musicTabDot are
+   still the state, still written by the same dozen call sites in app.js,
+   editor_photo.js, editor_music.js and flip.js; they are simply not drawn any
+   more. :has() reads them and paints the matching half. Keeping the state in
+   the elements the app already maintains is what made three different visual
+   treatments cost three CSS edits between them.
+
+   Order matters: .pending is a MORE specific state than "present" and both
+   selectors match while a file is missing, so amber is written second. */
 .media-glyph { position: relative; display: inline-flex; line-height: 0; }
 .media-glyph > svg { overflow: visible; }
-.tool-open .media-light { position: absolute; width: 0; height: 0; }
-.tool-open .media-light.for-photo { left: 34%; top: 34%; right: auto; bottom: auto; }
-.tool-open .media-light.for-music { left: 94%; top: 88%; right: auto; bottom: auto; }
-/* 4px, and the size is the whole point: the light sits INSIDE its ring rather
-   than covering it, so the sun still reads as a sun and the note head still
-   reads as a note head. At 6px it swallowed both -- and at 3px, which is what
-   this was first built at, it was legible only when the icon was blown up. A
-   1:1 render settled it: 4px is the smallest that still reads as a light at the
-   size the icon actually draws, and the rings widened to match (sun r 2.7 /
-   stroke 1.4, heads r 4.2 / stroke 2.0) so each keeps a visible stroke of its
-   own around the light.
-   No ground-coloured border either -- that ring exists to separate a badge from
-   the surface behind it, and here the surface is the icon's own stroke. */
-.tool-open .media-light .tab-dot {
-  position: absolute; top: 0; left: 0; right: auto; bottom: auto;
-  transform: translate(-50%, -50%);
-  width: 4px; height: 4px; border: 0; box-shadow: none;
-}
-.tool-open .media-light .tab-dot.pending { box-shadow: 0 0 3px rgba(255, 210, 63, .7); }
-/* FLIP only, and measured rather than assumed: Pad's .tool-open svg stays 24px
-   at every width, so a max-width rule shrank the light on a ring that had not
-   shrunk. It is Flip that steps its icons to 21px below 640
-   (.flip-tools .tool-open svg), so the light steps there and only there. */
-@media (max-width: 640px) {
-  .flip-tools .tool-open .media-light .tab-dot { width: 3.5px; height: 3.5px; }
-}
+/* the state carriers, not drawn */
+.media-light { display: none; }
+
+.media-glyph:has(.for-photo .tab-dot:not([hidden])) .half-photo { stroke: #1bcf8f; }
+.media-glyph:has(.for-music .tab-dot:not([hidden])) .half-music { stroke: #1bcf8f; }
+.media-glyph:has(.for-photo .tab-dot.pending)       .half-photo { stroke: #ffd23f; }
+.media-glyph:has(.for-music .tab-dot.pending)       .half-music { stroke: #ffd23f; }
+
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
 }

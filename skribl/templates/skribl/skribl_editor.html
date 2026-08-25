@@ -282,39 +282,35 @@
          cut OUT of the image frame with a dilated mask, so the two shapes read
          as one object with a seam rather than as an overlap.
 
-         The two status lights sit INSIDE the glyph: the sun is the photo light,
-         the OUTER note head is the music light. They are the SAME .tab-dot
-         elements the two old buttons carried, with the same ids, so every
-         existing show/hide and .pending call keeps working untouched -- and it
-         is a lot of call sites (app.js, editor_photo.js, editor_music.js,
-         flip.js). They are positioned as a PERCENTAGE of the glyph box, so they
-         follow the icon down the size ladder without a per-tier rule.
+         STATE IS CARRIED BY COLOUR, on the half it belongs to: the image frame
+         goes green when a photo is set and amber when one is remembered but its
+         file is gone; the note does the same for music. With nothing attached
+         this is the regular icon in the regular grey, which is the point -- a
+         resting toolbar should not be answering questions nobody asked.
 
-         The sun and both note heads are a touch WIDER and THINNER than the
-         icons they came from, and that is not decoration: a light sits INSIDE
-         each ring rather than replacing it, and at the original r=1.5 with a
-         2-wide stroke there was no inside -- the stroke ate the whole circle.
-         Both heads move together so the note stays symmetrical when nothing is
-         lit. The sizes were chosen at 1:1, not magnified: a 3px light inside a
-         matching ring is legible when you blow the icon up 6x and very nearly
-         invisible at the size it actually renders. 4px is the smallest that
-         still reads as a light on screen while leaving the ring a visible
-         stroke of its own.
+         It replaced a 4px light sitting inside the sun and the note head. That
+         worked, but only just: at the size the icon actually draws, a 4px dot is
+         mostly antialiased edge, and reading it took more attention than a
+         toolbar glyph deserves. A tinted half is unmissable at 1:1 and needs no
+         geometry of its own, so the circles are back to the sizes the source
+         icons use.
 
-         There is NO empty state. With nothing attached this is simply the icon;
-         a grey dot for "no media" answered a question nobody asked and made the
-         resting toolbar noisier than the two buttons it replaced. #}
+         #photoTabDot and #musicTabDot are still here and still carry the state,
+         hidden. Every existing call site (app.js, editor_photo.js,
+         editor_music.js, flip.js) writes to them exactly as before; CSS reads
+         them with :has() and paints the half. That is the whole reason a change
+         this visible costs no JavaScript at all. #}
       <span class="media-glyph">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <mask id="mediaCutPad" maskUnits="userSpaceOnUse" x="-4" y="-4" width="32" height="32">
             <rect x="-4" y="-4" width="32" height="32" fill="white"/>
             <g transform="translate(11.4 11.2) scale(0.62)" stroke="black" stroke-width="7.4" fill="black" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="4.2"/><circle cx="18" cy="16" r="4.2"/>
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
             </g>
           </mask>
-          <g mask="url(#mediaCutPad)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 15l-5-5L5 21"/><circle cx="8.2" cy="8.2" r="2.7" stroke-width="1.4"/></g>
-          <g transform="translate(11.4 11.2) scale(0.62)" stroke-width="2.0">
-            <path d="M9 18V5l12-2v13" stroke-width="3.0"/><circle cx="6" cy="18" r="4.2"/><circle cx="18" cy="16" r="4.2"/>
+          <g class="half-photo" mask="url(#mediaCutPad)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 15l-5-5L5 21"/><circle cx="8.5" cy="8.5" r="1.5"/></g>
+          <g class="half-music" transform="translate(11.4 11.2) scale(0.62)" stroke-width="3.0">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
           </g>
         </svg>
         <span class="media-light for-photo">

@@ -525,3 +525,31 @@ One more thing measurement caught: the light's small size was behind a
 its icons to 21px below 640, so that rule is scoped to `.flip-tools` now. A
 media query is not a proxy for "the icon got smaller" when only one surface
 resizes its icons.
+
+**The media button says its state in colour, and the dots are gone.** The image
+frame goes green when a photo is set and amber when one is remembered but its
+file is missing; the note does the same for music. With nothing attached it is
+the ordinary icon in the ordinary grey.
+
+This supersedes both dot attempts above, and the reason is worth keeping because
+the dots were MEASURED and still wrong. A 4px light inside a 24px icon is mostly
+antialiased edge -- about four pixels of true colour -- so reading it took more
+attention than a toolbar glyph is worth, and every judgement about it had to be
+made on a magnified image, which is a judgement about a different picture. A
+tinted half is unmissable at 1:1. It also needs no geometry of its own, so the
+sun and the note heads went back to the sizes the source icons use: r=1.5 and
+r=3, exactly as drawn before any of this started.
+
+An earlier version of this file called the tint "too loud" while looking at it
+enlarged. At the size it renders it is not loud, it is legible, and the earlier
+note was wrong for the same reason the dots were.
+
+NO JAVASCRIPT CHANGED FOR ANY OF THE THREE ATTEMPTS. `#photoTabDot` and
+`#musicTabDot` remain the state and are still written by the same dozen call
+sites; they are simply not drawn any more, and `:has()` reads them to paint the
+matching half. Keeping the state in elements the app already maintains is what
+made three different visual treatments cost three CSS edits between them, and it
+is the part of this design to preserve if the look changes again.
+
+One ordering detail, because both selectors match while a file is missing:
+`.pending` is written after "present", so amber wins over green.
