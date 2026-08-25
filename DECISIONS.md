@@ -553,3 +553,27 @@ is the part of this design to preserve if the look changes again.
 
 One ordering detail, because both selectors match while a file is missing:
 `.pending` is written after "present", so amber wins over green.
+
+**The music note is drawn at final size, because scaling it down is what broke
+it.** The composite took the 24-unit music icon and shrank it with
+`transform: scale(0.62)`, then thickened the stroke back up so it stayed visible
+at that size. That took the stroke-to-radius ratio from the source icon's ~0.67
+to 1.0 -- and at 1.0 each stem's end cap lands exactly on its note head's stroke
+centreline. Both stems meet their heads TANGENTIALLY by design, so the ratio is
+the whole ballgame: at 0.67 it is a clean join, at 1.0 it is a blob, and the
+blob is what "the lines overlap the circles" describes.
+
+Redrawn natively at r=2.3 with a 1.8 stroke (ratio 0.78), no group transform.
+The heads also had to move APART: at the scaled geometry they were tangent to
+each other as well, and two touching rings read as one lumpy shape rather than
+two notes. 5.6 apart at r=2.3 leaves a full unit of gap.
+
+The note now sits far enough outside the frame that the mask cuts a SEAM between
+them instead of biting a piece out of the frame. The scaled version was
+amputating the frame's bottom-right corner and the tip of its mountain, which is
+the other half of what read as "drifting" -- the two shapes were not sitting
+next to each other, they were eating each other.
+
+General lesson worth keeping: scaling a stroked icon does not scale its stroke,
+and compensating by thickening the stroke changes every ratio the icon's
+geometry depends on. Draw it at the size it will be shown.
