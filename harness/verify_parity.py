@@ -52,6 +52,19 @@ except ImportError:
     sys.exit(0)
 
 # canonical name -> (pad selector, flip selector, note)
+# v224 merged Image and Music into ONE #mediaOpenBtn on BOTH surfaces, opening a
+# router drawer whose rows open the real photo/music panels. Reaching a media
+# drawer is therefore two taps -- and it is the SAME two taps on Pad and Flip,
+# which is itself a parity gain: this used to be #imageOpenBtn on one and
+# #imageBtn on the other. Kept as a function so a future change to the route has
+# one place to edit rather than a dozen call sites.
+def open_media(pg, which, settle=350):
+    """which: 'photo' or 'music'."""
+    pg.click("#mediaOpenBtn")
+    pg.wait_for_timeout(200)
+    pg.click("#mediaAddImage" if which == "photo" else "#mediaAddMusic")
+    pg.wait_for_timeout(settle)
+
 CONTROLS = [
     # --- drawing tools ----------------------------------------------------
     ("pen tool",           "#penToolBtn",      "#penToolBtn",     ""),
@@ -74,11 +87,16 @@ CONTROLS = [
     ("brush size readout", "#brushSizeVal",    "#sizeVal",        ""),
     ("smoothing control",  "#smoothSeg",       "#smoothSeg",      ""),
     # --- media ------------------------------------------------------------
-    ("open photo drawer",  "#imageOpenBtn",    "#imageBtn",       ""),
+    # One merged control on both, opening the router that leads to either
+    # panel. The old pair (#imageOpenBtn / #imageBtn) was a naming divergence
+    # for the same job; the merge removed it.
+    ("open media router",  "#mediaOpenBtn",    "#mediaOpenBtn",   ""),
+    ("media row: image",   "#mediaAddImage",   "#mediaAddImage",  ""),
     ("photo file input",   "#photoInput",      "#imageInput",     ""),
     ("photo fit control",  "#photoFitGroup",   "#photoFitGroup",  ""),
     ("reset photo",        "#resetPhotoBtn",   "#resetPhotoBtn",  ""),
-    ("open music drawer",  "#musicOpenBtn",    "#musicBtn",       ""),
+    ("media row: music",   "#mediaAddMusic",   "#mediaAddMusic",  ""),
+    ("media row: zoom",    "#mediaZoom",       "#mediaZoom",      ""),
     ("music waveform",     "#waveformCanvas",  "#waveformCanvas", ""),
     ("music trim start",   "#handleStart",     "#handleStart",    ""),
     ("music trim end",     "#handleEnd",       "#handleEnd",      ""),
@@ -723,10 +741,8 @@ with sync_playwright() as p:
     IMG, AUD = png_bytes(), wav_bytes()
     vis = "(id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }"
 
-    for pg_, opener, finput in ((pad, "#imageOpenBtn", "#photoInput"),
-                                (flip, "#imageBtn", "#imageInput")):
-        pg_.click(opener)
-        pg_.wait_for_timeout(350)
+    for pg_, finput in ((pad, "#photoInput"), (flip, "#imageInput")):
+        open_media(pg_, "photo")
         pg_.set_input_files(finput, {"name": "t.png", "mimeType": "image/png", "buffer": IMG})
         pg_.wait_for_timeout(1300)
 
@@ -759,9 +775,8 @@ with sync_playwright() as p:
           po is not None and po == fo, f"pad {po}, flip {fo}")
 
     print("\nPARITY — music behaves the same on both")
-    for pg_, opener in ((pad, "#musicOpenBtn"), (flip, "#musicBtn")):
-        pg_.click(opener)
-        pg_.wait_for_timeout(350)
+    for pg_ in (pad, flip):
+        open_media(pg_, "music")
         pg_.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         pg_.wait_for_timeout(2500)
 

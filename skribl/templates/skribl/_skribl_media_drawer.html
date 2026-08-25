@@ -1,0 +1,72 @@
+{# Media drawer — shared partial (Pad + Flip).
+
+   A ROUTER, DELIBERATELY. These rows open the existing photo and music drawers;
+   nothing about their internals changes here. The fit slider, trim strip,
+   waveforms and opacity controls all stay where they are. Keeping this a router
+   is what makes it safe to ship on its own.
+
+   Zoom lives here because it is the guaranteed home at every width: the inline
+   magnify button is a DESKTOP affordance (desktop has no pinch), so on a phone
+   this row is how Fit and the presets stay reachable. Hiding a control is only
+   safe when nothing reachable only through it becomes unreachable.
+
+   Row dots localise what the toolbar lights generalise. v224 gives the toolbar
+   glyph one light PER CHANNEL, so it can already say which item is missing --
+   but a 6px light inside a 24px icon says "something is wrong here" and these
+   rows say what and offer the fix. Both, not either.
+
+   RESTORED at v224, unchanged in shape from v216e. It shipped there, passed a
+   full harness run, and was absent from the v217 zip with no note saying why --
+   the uploads are whole-tree snapshots, so there is no revert commit to read.
+   Treated as dropped by accident rather than by decision; if it was deliberate,
+   this comment is where the reason should go. #}
+{% set kind = kind|default('pad') -%}
+{% if kind == 'flip' -%}
+<div class="tab-panel draw-popout media-panel" id="mediaPanel" role="dialog" aria-label="Media" hidden>
+  <span class="draw-section-label">Image, music and zoom</span>
+{%- else -%}
+<div class="tab-panel media-panel" id="mediaPanel" role="dialog" aria-label="Media" hidden>
+  <div class="grabber" aria-hidden="true"></div>
+{%- endif %}
+
+  <button type="button" class="media-row" id="mediaAddImage">
+    <span class="media-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+      </svg>
+    </span>
+    <span class="media-text">
+      <b>Add image<span class="tab-dot" id="photoRowDot" hidden></span></b>
+      <i>Put a photo behind your drawing</i>
+    </span>
+    <span class="media-chev" aria-hidden="true">&rsaquo;</span>
+  </button>
+
+  <button type="button" class="media-row" id="mediaAddMusic">
+    <span class="media-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+    </span>
+    <span class="media-text">
+      <b>Add music<span class="tab-dot" id="musicRowDot" hidden></span></b>
+      <i>A loop that plays underneath</i>
+    </span>
+    <span class="media-chev" aria-hidden="true">&rsaquo;</span>
+  </button>
+
+  {# "Zoom", not "Magnify / Zoom" — one name for one thing. The subtitle names
+     the gesture so pinch is discoverable rather than folklore. #}
+  <button type="button" class="media-row" id="mediaZoom">
+    <span class="media-ico" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>
+      </svg>
+    </span>
+    <span class="media-text">
+      <b>Zoom</b>
+      <i>Fit, 50%, 100%, 200% &mdash; or pinch the canvas</i>
+    </span>
+    <span class="media-chev" aria-hidden="true">&rsaquo;</span>
+  </button>
+</div>

@@ -405,3 +405,81 @@ the note heads for a loop, retiring both `.tab-dot` badges), but `#photoPanel`
 and `#musicPanel` are two separate `.tab-panel` partials shared by Pad and Flip,
 and one button cannot open two drawers. That is a drawer merge, not a CSS
 change, and it belongs in its own edit.
+
+**Image and Music become one control, and the drawer they open is a router.**
+The two buttons went to a single `#mediaOpenBtn` on both surfaces, opening
+`_skribl_media_drawer.html`: three rows — Add image, Add music, Zoom — that open
+the EXISTING photo and music panels. A router, deliberately. Nothing about those
+panels' internals changes: the fit slider, trim strip, waveforms and opacity
+controls all stay where they are, which is what makes a merge of this size safe
+to ship in one edit. Pad's row goes from eight controls to seven and loses 42px
+at 1280 and 24px at 390 — more than the whole spacing pass in this same version
+cost it.
+
+THIS IS A RESTORATION, not a new idea. The partial, the router JS and the merged
+button all shipped at v216e and passed a full harness run there; they were absent
+from the v217 upload with no note saying why. The uploads are whole-tree
+snapshots, so there is no revert commit to read and no reason recorded. Treated
+as dropped by accident. Two fragments survived the drop and are what confirmed
+it: an orphaned comment above `#imageOpenBtn` in skribl_editor.html describing a
+merge that was not there, and the comment block for `initMediaRows` in app.js
+with its function body gone. Both are now attached to working code again. If the
+removal WAS deliberate, the partial's header is where that reason belongs.
+
+The glyph is not v216e's. That drew the image and music icons side by side in a
+50x24 box, which is wide — the point of merging is width. This cuts the music
+note OUT of the image frame with a dilated mask, so the two shapes read as one
+object with a seam rather than as an overlap, in a 24x24 box like every other
+icon in the row.
+
+**The status lights moved inside the glyph, and they are the same elements.**
+The sun is the photo light and the OUTER note head is the music light — outer
+because that head sits clear of the frame, where a lit dot reads as a light
+rather than as a mark on the picture. Grey means nothing attached, green means
+present, amber means remembered but the file is gone: the vocabulary the sheet
+already had, unchanged.
+
+They are literally `#photoTabDot` and `#musicTabDot`, the same ids the two old
+buttons carried, moved and resized. That is the whole reason this was affordable:
+a dozen call sites across app.js, editor_photo.js, editor_music.js and flip.js
+write to those two elements, and not one of them had to change. Styling SVG
+circles instead would have meant rewriting all of them, because SVG elements do
+not implement the `hidden` IDL property — `el.hidden = true` on a `<circle>`
+sets a JS property that never reaches the attribute, so a rule keyed on
+`[hidden]` silently never fires. HTML spans over the glyph, positioned as a
+percentage of the glyph box so they ride the icon down the size ladder.
+
+The router's rows carry their own dots, and those MIRROR the toolbar lights
+rather than deriving state independently — a MutationObserver copies `hidden`
+and `.pending` across. One source of truth, so the toolbar and the drawer cannot
+disagree, which is the failure this arrangement is built to prevent.
+
+Two things the harness caught that reading would not have. A stray `}` left by
+moving a rule block truncated styles.css's cascade: `cssgraph.py` emitted 20,694
+chars instead of 40,451 and `verify_cssplit`'s regeneration assertion failed with
+the exact number. And the light's placement rule was written earlier in the file
+than `.tool-open .tab-dot { top: 6px; right: 6px }` at equal specificity, so that
+rule won on source order and dropped the music light 6px BELOW its note head —
+correct in the markup, wrong on screen. It is now placed after it and scoped
+through `.tool-open` so it outranks it both ways.
+
+**The harness opens a media drawer in two taps now, and the same two on both
+surfaces.** Six suites drove `#imageOpenBtn`/`#musicOpenBtn` on Pad and
+`#imageBtn`/`#musicBtn` on Flip; they now share an `open_media(pg, which)`
+helper. Worth noting what that removed: the old pair was a naming divergence for
+the same job, and `verify_tips` has a comment recording the day it caused a real
+gap. `verify_parity`'s table gained the three router rows, and `verify_ux`'s
+phone audit now opens the router AND both panels it routes to rather than the
+two old buttons — skipping the panels would have quietly narrowed the audit.
+
+The router does not toggle the way one button did. Clicking `#mediaOpenBtn` while
+a panel is open opens the ROUTER, over the canvas; three call sites were using
+the old button's toggle to CLOSE, and turning them into opens left a drawer
+covering `#recordBtn`. Closing is its own `close_media()` now, and says so.
+
+NOT done, and next: `.tool-open` is 36x44 on phones (34x44, then 32x44 at the
+narrow tiers). Borderless it shows nothing, but a drawer-open or magnify-active
+button paints `rgba(124,92,255,.16)` with an inset ring across that whole box —
+an elongated lit pill next to the square tiles this version just squared. The
+fix is the same one undo/redo took: paint square, keep the 44px band on the
+`::before`.

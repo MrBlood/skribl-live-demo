@@ -158,8 +158,34 @@
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
-      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
-      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span><span class="tab-dot-empty" aria-hidden="true"></span></button>
+      {# ONE media control, same as Pad's (v224). Flip keeps .magnify-tool for
+         the shared open-state highlight; the glyph, the ids and the two status
+         lights are identical to skribl_editor.html, because the whole point is
+         that the two rows read the same. #}
+      <button type="button" class="tool-open magnify-tool" id="mediaOpenBtn" title="Image, music and zoom" aria-haspopup="true" aria-expanded="false" aria-label="Image, music and zoom">
+        <span class="media-glyph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <mask id="mediaCutFlip" maskUnits="userSpaceOnUse" x="-4" y="-4" width="32" height="32">
+              <rect x="-4" y="-4" width="32" height="32" fill="white"/>
+              <g transform="translate(11.4 11.2) scale(0.62)" stroke="black" stroke-width="7.4" fill="black" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+              </g>
+            </mask>
+            <g mask="url(#mediaCutFlip)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 15l-5-5L5 21"/></g>
+            <g transform="translate(11.4 11.2) scale(0.62)" stroke-width="3.0">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </g>
+          </svg>
+          <span class="media-light for-photo">
+            <span class="tab-dot-empty" aria-hidden="true"></span>
+            <span id="photoTabDot" class="tab-dot" hidden></span>
+          </span>
+          <span class="media-light for-music">
+            <span class="tab-dot-empty" aria-hidden="true"></span>
+            <span id="musicTabDot" class="tab-dot" hidden></span>
+          </span>
+        </span>
+      </button>
       {# Magnify. MARKUP ONLY — flip.js already had the whole control: initCanvasZoom()
          looks up #magnifyBtn, defines setMagnify(), binds the click, toggles .active
          and aria-pressed. The button was simply never in this template, so all of
@@ -195,6 +221,9 @@
       <!-- Music drawer (drop-up) — the Pad's full music component. One loop per animation. -->
       <!-- Music drawer (shared partial — Pad + Flip) -->
       {% with kind='flip' %}{% include 'skribl/_skribl_music_drawer.html' %}{% endwith %}
+
+      {# Media router — what the one media button opens. #}
+      {% with kind='flip' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
     </div>
 

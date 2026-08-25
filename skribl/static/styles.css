@@ -785,6 +785,11 @@ body.stroking .zoom-hud { pointer-events: none; }
   flex-shrink: 0;
 }
 .tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
+/* ...but the merged media button carries TWO channels, and that rule would let
+   an image switch off the music channel's grey. Scope the swap per channel and
+   let the per-channel rule win on specificity. */
+.media-light .tab-dot-empty { display: inline-block; }
+.media-light:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
 
 .tab-panel {
   /* Same reason as .flip-drawers: on iOS Safari the bottom toolbar overlays
@@ -874,6 +879,51 @@ body.stroking .zoom-hud { pointer-events: none; }
    ring is gone: it sat between the core and the spectrum and read as a halo. */
 .tool-chip { border-radius: 50%; }
 .tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
+/* ---------- v224: the media button's two status lights --------------------
+   The photo and music dots moved INSIDE the glyph: the sun is the photo light,
+   the lower note head is the music light. They are the same .tab-dot /
+   .tab-dot-empty elements the two old buttons carried, with the same ids, so
+   every existing show/hide and .pending call site keeps working unchanged --
+   there are a dozen across app.js, editor_photo.js, editor_music.js and flip.js
+   and rewriting them to drive an SVG attribute would have been the fragile half
+   of this change. (SVG elements do not implement the `hidden` IDL property at
+   all: `el.hidden = true` on a <circle> sets a JS property that never reaches
+   the attribute, so a CSS rule keyed on [hidden] would silently never fire.
+   Hence HTML spans over the glyph rather than styled SVG circles.)
+
+   PLACED AFTER the .tool-open badge rule above, and scoped through .tool-open
+   so it also outranks it on specificity. Written earlier in the file and at
+   equal weight, `top: 6px; right: 6px` from that rule won on source order and
+   dropped the music light 6px BELOW its note head -- the position was correct
+   in the markup and wrong on screen, which a measurement caught and reading the
+   rule did not.
+
+   Positioned as a PERCENTAGE of the glyph box so the lights ride the icon down
+   the size ladder (24px desktop, 21px phone) without a rule per tier. 34%/34%
+   is the sun at (8.2, 8.2) in the 24-unit viewBox; 94%/88% is the OUTER note
+   head at (22.6, 21.1) -- the note has two, and the outer one is the head that
+   sits clear of the image frame rather than overlapping its corner, so a lit
+   dot there reads as its own light instead of as a mark on the picture. Both
+   percentages exceed the box because the svg is overflow:visible and the note
+   straddles the frame's corner on purpose. */
+.media-glyph { position: relative; display: inline-flex; line-height: 0; }
+.media-glyph > svg { overflow: visible; }
+.tool-open .media-light { position: absolute; width: 0; height: 0; }
+.tool-open .media-light.for-photo { left: 34%; top: 34%; right: auto; bottom: auto; }
+.tool-open .media-light.for-music { left: 94%; top: 88%; right: auto; bottom: auto; }
+/* Drawn ON the glyph, so no ground-coloured ring: that ring exists to separate
+   a badge from the surface behind it, and here the surface is the icon. */
+.tool-open .media-light .tab-dot,
+.tool-open .media-light .tab-dot-empty {
+  position: absolute; top: 0; left: 0; right: auto; bottom: auto;
+  transform: translate(-50%, -50%);
+  width: 6px; height: 6px; border: 0; box-shadow: none;
+}
+.tool-open .media-light .tab-dot.pending { box-shadow: 0 0 4px rgba(255, 210, 63, .55); }
+@media (max-width: 640px) {
+  .tool-open .media-light .tab-dot,
+  .tool-open .media-light .tab-dot-empty { width: 5px; height: 5px; }
+}
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
 }
@@ -4832,7 +4882,40 @@ body.playing .flip-grid { display: none; }
 
 /* An explicit display defeats [hidden] — hit three times in this codebase, so
    these are paired rather than trusted. */
-.color-group[hidden], .bg-group[hidden] { display: none; }
+
+
+/* Media drawer rows. The toolbar lights generalise -- a 6px light inside a 24px
+   icon says "this channel needs attention"; these rows say what and offer the
+   fix in the same tap. Restored with the partial at v224. */
+.media-panel .media-row {
+  display: flex; align-items: center; gap: 13px; width: 100%;
+  background: none; border: 0; padding: 12px 15px; cursor: pointer;
+  text-align: left; color: var(--text, #e6e9f0);
+}
+.media-panel .media-row:hover { background: rgba(255,255,255,.03); }
+.media-panel .media-ico {
+  width: 34px; height: 34px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; background: #20242e;
+}
+.media-panel .media-ico svg { width: 19px; height: 19px; }
+.media-panel .media-text { flex: 1; min-width: 0; }
+.media-panel .media-text b {
+  display: flex; align-items: center; font-size: 13.5px; font-weight: 610;
+}
+.media-panel .media-text i {
+  display: block; font-style: normal; font-size: 11.5px;
+  color: #8b93a5; margin-top: 2px;
+}
+/* The row dots are ordinary badges again -- static, beside the label, at the
+   size the rest of the sheet uses. Only the toolbar's are shrunk and placed. */
+.media-panel .media-text .tab-dot {
+  position: static; margin-left: 7px; width: 7px; height: 7px; transform: none;
+}
+.media-panel .media-chev { color: #5f6878; font-size: 17px; flex: none; }
+
+/* An explicit display defeats [hidden] -- hit three times in this codebase, so
+   these are paired rather than trusted. */
+.color-group[hidden], .bg-group[hidden], .media-panel[hidden] { display: none; }
 
 /* Paint-target switcher. Swaps WHICH swatch grid is shown, not what the sheet
    shows: size, opacity and brush stay put underneath and never move. */

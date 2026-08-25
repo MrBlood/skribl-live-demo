@@ -1842,6 +1842,11 @@ _initEyedropper();   // the lib binds the button's own click handler
 
 const photoPanel=document.getElementById('photoPanel'), musicPanel=document.getElementById('musicPanel');
 const imageBtn=document.getElementById('imageBtn'), musicBtn=document.getElementById('musicBtn');
+// v224: image and music merged into ONE toolbar control that opens a router
+// drawer. imageBtn/musicBtn are therefore null here — every use of them below
+// is already guarded (see the note on the click handlers), which is why this
+// merge did not have to touch them.
+const mediaPanel=document.getElementById('mediaPanel'), mediaBtn=document.getElementById('mediaOpenBtn');
 // The exclusive-open machine is lib/drawers.js (shared with Pad); Flip keeps
 // its hooks — eyedropper cancel on draw close, syncMediaUI on media open, the
 // two slider re-positioners — and its reveal. The old openPop/closePop/
@@ -1855,6 +1860,11 @@ const _flipDrawerCtl = skriblDrawers({
     photo: { panel: photoPanel, button: imageBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaUI(); requestAnimationFrame(positionFitSlider); } },
     music: { panel: musicPanel, button: musicBtn, openClass: 'open', aria: true,
+             onOpen(){ syncMediaUI(); } },
+    // The router. syncMediaUI() on open for the same reason photo and music
+    // call it: the row dots read the media model, and opening is the moment
+    // they have to be right.
+    media: { panel: mediaPanel, button: mediaBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaUI(); } }
   },
   reveal(open){
@@ -1876,6 +1886,7 @@ const _flipDrawerCtl = skriblDrawers({
 function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null); }
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
+function hideMedia(){ if(_flipDrawerCtl.isOpen('media')) _flipDrawerCtl.open(null); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('draw'); });
 // Guarded deliberately. These were briefly unguarded while image/music were
 // merged into one control, and the resulting TypeError at load killed every
@@ -1883,6 +1894,7 @@ colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.t
 // null check costs nothing and a missing element should never take down a file.
 if (imageBtn) imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
 if (musicBtn) musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
+if (mediaBtn) mediaBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('media'); });
 document.addEventListener('click',e=>{ const t=e.target;
   // The file inputs (#imageInput/#musicInput/#draftInput) live at the PAGE
   // ROOT on Flip, outside the drawer panels (the shared drawer partials omit
@@ -1896,7 +1908,32 @@ document.addEventListener('click',e=>{ const t=e.target;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#colorCurrent')) closePop();
   if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#imageBtn')) hidePhoto();
   if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#musicBtn')) hideMusic();
+  // The router dismisses like the rest. Its ROWS are inside #mediaPanel, so a
+  // tap on one is not "outside" and the row's own handler gets to run first and
+  // open what it routes to.
+  if(mediaPanel && !mediaPanel.hidden && !t.closest('#mediaPanel') && !t.closest('#mediaOpenBtn')) hideMedia();
 });
+
+// Media router rows. Same shape as Pad's initMediaRows: open the existing
+// drawer, do not reimplement it.
+(function initFlipMediaRows(){
+  const go=(id,name)=>{ const el=document.getElementById(id); if(!el) return;
+    el.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.open(name); }); };
+  go('mediaAddImage','photo');
+  go('mediaAddMusic','music');
+  const zoom=document.getElementById('mediaZoom');
+  if(zoom) zoom.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.open(null);
+    if(typeof setMagnify==='function') setMagnify(true); });
+  // Row dots mirror the toolbar lights — the lights are what flip.js already
+  // writes to (syncMediaUI below), so copying keeps one source of truth.
+  const mirror=(fromId,toId)=>{ const from=document.getElementById(fromId), to=document.getElementById(toId);
+    if(!from||!to) return;
+    const sync=()=>{ to.hidden=from.hidden; to.classList.toggle('pending', from.classList.contains('pending')); };
+    new MutationObserver(sync).observe(from,{attributes:true, attributeFilter:['hidden','class']});
+    sync(); };
+  mirror('photoTabDot','photoRowDot');
+  mirror('musicTabDot','musicRowDot');
+})();
 renderRecent(); setColor(color);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');
