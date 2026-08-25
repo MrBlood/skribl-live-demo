@@ -94,9 +94,7 @@ with sync_playwright() as p:
         # by v219's own argument, and it is flagged rather than answered here —
         # a tooltip suite is not the place to decide it. This assertion is about
         # tooltips, so it hovers any real tooltip-bearing control on the surface.
-        # v224: #imageBtn is gone -- image and music merged into #mediaOpenBtn,
-        # which both surfaces now carry and which has a title of its own.
-        pg.hover("#mediaOpenBtn" if surface == "Flip" else "#menuBtn")
+        pg.hover("#imageBtn" if surface == "Flip" else "#menuBtn")
         pg.wait_for_timeout(700)
         check(f"{surface}: hovering shows a tooltip", pg.is_visible(".skribl-tip"))
         radius = pg.evaluate("() => { const t = document.querySelector('.skribl-tip');"
@@ -133,10 +131,9 @@ with sync_playwright() as p:
 
     print("\nTOOLTIPS — coverage, counted rather than assumed")
     # THE ACTUAL BUG. The first pass was keyed by element id, and the two
-    # surfaces name the SAME controls differently — Flip had musicBtn/imageBtn,
-    # Pad had musicOpenBtn/imageOpenBtn — so Flip got tooltips and Pad got
-    # none. (v224 merged all four into one #mediaOpenBtn shared by both, which
-    # removes this particular divergence but not the lesson.) Two more (addcopy, addblank) are built in flip.js, not the
+    # surfaces name the SAME controls differently — Flip has musicBtn/imageBtn,
+    # Pad has musicOpenBtn/imageOpenBtn — so Flip got tooltips and Pad got
+    # none. Two more (addcopy, addblank) are built in flip.js, not the
     # template, so no template-wide pass could reach them at all.
     #
     # A list of ids to check would have the same blind spot as the pass that

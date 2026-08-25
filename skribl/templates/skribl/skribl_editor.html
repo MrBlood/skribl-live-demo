@@ -268,75 +268,21 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg>
           <span class="undo-label">Redo</span>
         </button>
-      {# Image, Music and Zoom collapse into ONE control, opening a router
-       drawer (_skribl_media_drawer.html). Pad goes from eight controls to
-       seven and the row loses 42px at 1280 / 24px at 390 -- more than the
-       spacing changes in this same version cost it.
-
-       The lights are DERIVED from nothing: they ARE the per-item dots, moved
-       inside the glyph, so the toolbar and the drawer rows cannot disagree
-       because they are reading the same two elements. #}
-    <button type="button" class="tool-open" id="mediaOpenBtn" data-drawer="media" aria-label="Image, music and zoom" title="Image, music and zoom">
-      {# ONE glyph, not two side by side (v216e drew the image and music icons
-         next to each other in a 50x24 box, which was wide). The music note is
-         cut OUT of the image frame with a dilated mask, so the two shapes read
-         as one object with a seam rather than as an overlap.
-
-         STATE IS CARRIED BY COLOUR, on the half it belongs to: the image frame
-         goes green when a photo is set and amber when one is remembered but its
-         file is gone; the note does the same for music. With nothing attached
-         this is the regular icon in the regular grey, which is the point -- a
-         resting toolbar should not be answering questions nobody asked.
-
-         It replaced a 4px light sitting inside the sun and the note head. That
-         worked, but only just: at the size the icon actually draws, a 4px dot is
-         mostly antialiased edge, and reading it took more attention than a
-         toolbar glyph deserves. A tinted half is unmissable at 1:1 and needs no
-         geometry of its own, so the sun is back at the size the source icon uses.
-
-         THE NOTE IS DRAWN AT FINAL SIZE, not scaled down from the 24-unit music
-         icon, and that is what fixes the overlap. Scaling a glyph shrinks its
-         geometry but the stroke had to be thickened back up to stay visible,
-         which took the stroke-to-radius ratio from lucide's ~0.67 to 1.0 -- and
-         at 1.0 the stem's end cap lands exactly on its note head's stroke
-         centreline and the two merge into a blob. Both stems meet their heads
-         tangentially by design, so the ratio is the whole ballgame. Redrawn at
-         r=2.3 with a 1.8 stroke (ratio 0.78) the joins are clean.
-
-         The heads also had to move APART. At r=2.6 with centres 5.2 apart they
-         were exactly tangent to each OTHER as well, and two touching rings read
-         as one lumpy shape. 5.6 apart at r=2.3 leaves a full unit of gap.
-
-         And the note sits far enough out of the frame that the mask cuts a seam
-         between them rather than biting a piece out of the frame's corner --
-         which is what the earlier scaled version did, amputating the bottom-right
-         corner and the tip of the mountain.
-
-         #photoTabDot and #musicTabDot are still here and still carry the state,
-         hidden. Every existing call site (app.js, editor_photo.js,
-         editor_music.js, flip.js) writes to them exactly as before; CSS reads
-         them with :has() and paints the half. That is the whole reason a change
-         this visible costs no JavaScript at all. #}
-      <span class="media-glyph">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <mask id="mediaCutPad" maskUnits="userSpaceOnUse" x="-6" y="-6" width="36" height="36">
-            <rect x="-6" y="-6" width="36" height="36" fill="white"/>
-            <g stroke="black" stroke-width="5.0" fill="black" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M17.5 20.9V12.4l5.6-1.3v8.5"/><circle cx="15.2" cy="20.9" r="2.3"/><circle cx="20.8" cy="19.6" r="2.3"/>
-            </g>
-          </mask>
-          <g class="half-photo" mask="url(#mediaCutPad)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M21 15l-5-5L5 21"/><circle cx="8.5" cy="8.5" r="1.5"/></g>
-          <g class="half-music" stroke-width="1.8">
-            <path d="M17.5 20.9V12.4l5.6-1.3v8.5"/><circle cx="15.2" cy="20.9" r="2.3"/><circle cx="20.8" cy="19.6" r="2.3"/>
-          </g>
-        </svg>
-        <span class="media-light for-photo">
-          <span id="photoTabDot" class="tab-dot" hidden></span>
-        </span>
-        <span class="media-light for-music">
-          <span id="musicTabDot" class="tab-dot" hidden></span>
-        </span>
-      </span>
+      {# Image, Music and Zoom collapse into one control: Pad goes from 10 controls
+       to 8, which fixes wrapping from 360px up. The dot is DERIVED from the
+       per-item dots so the toolbar and drawer cannot disagree; amber beats green
+       because amber is the only state that asks anything of the user. #}
+    <button type="button" class="tool-open" id="imageOpenBtn" data-drawer="photo" aria-label="Image" title="Put a photo behind your drawing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+      </svg>
+      <span id="photoTabDot" class="tab-dot" hidden></span>
+    </button>
+    <button type="button" class="tool-open" id="musicOpenBtn" data-drawer="music" aria-label="Music" title="Add a music loop that plays underneath">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+      <span id="musicTabDot" class="tab-dot" hidden></span>
     </button>
     {# Magnify ends the row with image and music. It changes how you SEE the
        drawing, not what is in it, so it belongs with the other two controls
@@ -358,9 +304,6 @@
 
   <!-- Image drawer (shared partial — Pad + Flip) -->
   {% with kind='pad' %}{% include 'skribl/_skribl_image_drawer.html' %}{% endwith %}
-
-  <!-- Media drawer — the router the toolbar's one media button opens -->
-  {% with kind='pad' %}{% include 'skribl/_skribl_media_drawer.html' %}{% endwith %}
 
 </div>
 

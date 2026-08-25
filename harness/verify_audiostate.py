@@ -27,29 +27,6 @@ import urllib.request
 
 from playwright.sync_api import sync_playwright
 
-# v224 merged Image and Music into ONE #mediaOpenBtn on both surfaces, opening a
-# router drawer whose rows open the real photo/music panels. Reaching a media
-# drawer is two taps now, and the same two on Pad and Flip.
-def open_media(pg, which, settle=350):
-    """which: 'photo' or 'music'."""
-    pg.click("#mediaOpenBtn")
-    pg.wait_for_timeout(200)
-    pg.click("#mediaAddImage" if which == "photo" else "#mediaAddMusic")
-    pg.wait_for_timeout(settle)
-
-
-# The old single button TOGGLED, so the same click opened and closed. The router
-# does not: clicking #mediaOpenBtn while a panel is open opens the ROUTER, which
-# then sits over the canvas -- which is exactly how the first pass at this edit
-# broke, timing out on #recordBtn with a drawer covering it. Closing is its own
-# operation now, and it says so.
-def close_media(pg, settle=250):
-    pg.evaluate("() => { for (const id of ['photoPanel','musicPanel','mediaPanel']) {"
-                " const p = document.getElementById(id); if (p) p.hidden = true; } }")
-    pg.wait_for_timeout(settle)
-
-
-
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 SRC_SECONDS = 30.0
 LOOP_SECONDS = 20.0          # the editor's default trim window
@@ -102,13 +79,14 @@ def wav_duration(raw):
 def post_with_music(pg, audio):
     pg.goto(BASE + "/", wait_until="load")
     pg.wait_for_timeout(700)
-    open_media(pg, "music")
+    pg.click("#musicOpenBtn")
     pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput",
                        {"name": "t.wav", "mimeType": "audio/wav", "buffer": audio})
     pg.wait_for_timeout(3000)
     state = pg.evaluate("() => ({trimStart, trimEnd, dur: audioDuration})")
-    close_media(pg, settle=400)
+    pg.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }")
+    pg.wait_for_timeout(400)
     box = pg.evaluate("() => { const r = document.getElementById('canvas')"
                       ".getBoundingClientRect(); return {x: r.x, y: r.y}; }")
     pg.mouse.move(box["x"] + 80, box["y"] + 80)
@@ -293,7 +271,7 @@ with sync_playwright() as browser_ctx:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     pg.add_init_script(HANG)
     pg.goto(BASE + "/flip", wait_until="load"); pg.wait_for_timeout(700)
-    open_media(pg, "music", settle=300)
+    pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}); pg.wait_for_timeout(2500)
     pg.evaluate("() => { window.__ev = []; document.getElementById('previewLoopBtn').click(); }")
     pg.wait_for_timeout(1200)
@@ -309,7 +287,7 @@ with sync_playwright() as browser_ctx:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     pg.add_init_script(HANG)
     pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(700)
-    open_media(pg, "music", settle=300)
+    pg.click("#musicOpenBtn"); pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD}); pg.wait_for_timeout(2500)
     pg.evaluate("() => { window.__ev = []; document.getElementById('previewLoopBtn').click(); }")
     pg.wait_for_timeout(1200)
@@ -363,16 +341,17 @@ HOLD_DECODE = """
 """
 
 def post_under_held_decode(pg, editor):
-    # Both editors take the same route now -- the merged control is shared, so
-    # the branch this used to need is gone.
-    open_media(pg, "music", settle=300)
+    if editor == "pad":
+        pg.click("#musicOpenBtn"); pg.wait_for_timeout(300)
+    else:
+        pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
     pg.wait_for_timeout(2500)          # FileReader done; decode HELD
     held = pg.evaluate("() => ({busy: (typeof mediaBusy!=='undefined')?mediaBusy:0, buf: !!(typeof currentAudioBuffer!=='undefined' && currentAudioBuffer), rel: !!window.__releaseDecode})")
     check(f"F2 {editor} setup: media read complete but decode still held (the race window)",
           held["busy"] == 0 and not held["buf"] and held["rel"], str(held))
     if editor == "pad":
-        close_media(pg, settle=300)
+        pg.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }"); pg.wait_for_timeout(300)
         box = pg.evaluate("() => { const r = document.getElementById('canvas').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
         pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
         pg.wait_for_timeout(400); pg.click("#recordBtn"); pg.wait_for_timeout(800)
@@ -380,7 +359,7 @@ def post_under_held_decode(pg, editor):
         pg.fill("#postTitleInput", "f2 race")
         pg.click("#postSubmitBtn")
     else:
-        close_media(pg, settle=200)
+        pg.evaluate("() => { const b = document.getElementById('musicBtn'); if (b) b.click(); }"); pg.wait_for_timeout(200)
         box = pg.evaluate("() => { const r = document.getElementById('pad').getBoundingClientRect(); return {x: r.x, y: r.y}; }")
         pg.mouse.move(box["x"] + 80, box["y"] + 80); pg.mouse.down(); pg.mouse.move(box["x"] + 300, box["y"] + 200, steps=10); pg.mouse.up()
         pg.wait_for_timeout(400)

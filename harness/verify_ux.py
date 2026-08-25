@@ -21,24 +21,6 @@ wrong, and therefore the useful one to pin.
 """
 from playwright.sync_api import sync_playwright
 
-# v224 merged Image and Music into ONE #mediaOpenBtn on both surfaces, opening a
-# router drawer whose rows open the real photo/music panels. Two taps now, and
-# the same two on Pad and Flip. close_media() shuts the panel the router opened,
-# which is NOT the router button -- clicking that would re-open the router.
-def open_media(pg, which, settle=350):
-    """which: 'photo' or 'music'."""
-    pg.click("#mediaOpenBtn")
-    pg.wait_for_timeout(200)
-    pg.click("#mediaAddImage" if which == "photo" else "#mediaAddMusic")
-    pg.wait_for_timeout(settle)
-
-
-def close_media(pg, settle=250):
-    pg.evaluate("() => { for (const id of ['photoPanel','musicPanel','mediaPanel']) {"
-                " const p = document.getElementById(id); if (p) p.hidden = true; } }")
-    pg.wait_for_timeout(settle)
-
-
 BASE = "http://127.0.0.1:5001"
 import pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -958,7 +940,7 @@ with _sp204() as _p:
     for pw in (363, 390, 1280):
         mp = _b.new_page(viewport={"width": pw, "height": 844})
         mp.goto(BASE + "/", wait_until="load"); mp.wait_for_timeout(700)
-        open_media(mp, "music", settle=300)
+        mp.click("#musicOpenBtn"); mp.wait_for_timeout(300)
         mp.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); mp.wait_for_timeout(1500)
         mp.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         mp.wait_for_timeout(400)
@@ -1217,19 +1199,19 @@ with _sp204() as _p:
     # read it as "outside" and closed the drawer the instant a file was chosen —
     # which is why it "never opened" for the owner. Headless can't open a real
     # dialog, so dispatch the same click on the input the browser would.
-    open_media(fp, "music", settle=400)
+    fp.click("#musicBtn"); fp.wait_for_timeout(400)
     check("V206: Flip music drawer opens", not fp.evaluate("() => document.getElementById('musicPanel').hidden"))
     fp.evaluate("() => document.getElementById('musicInput').dispatchEvent(new MouseEvent('click', {bubbles: true}))")
     fp.wait_for_timeout(300)
     check("V206: ...and stays open when the file input is clicked (dialog round-trip)",
           not fp.evaluate("() => document.getElementById('musicPanel').hidden"))
-    close_media(fp, settle=300)
-    open_media(fp, "photo", settle=400)
+    fp.click("#musicBtn"); fp.wait_for_timeout(300)  # close
+    fp.click("#imageBtn"); fp.wait_for_timeout(400)
     fp.evaluate("() => document.getElementById('imageInput').dispatchEvent(new MouseEvent('click', {bubbles: true}))")
     fp.wait_for_timeout(300)
     check("V206: Flip image drawer also survives its file-input click",
           not fp.evaluate("() => document.getElementById('photoPanel').hidden"))
-    close_media(fp, settle=300)
+    fp.click("#imageBtn"); fp.wait_for_timeout(300)
 
     # v206: the two demo .skribl fixtures (harness/fixtures/) must load, render,
     # and PLAY in their own editor, and be refused by the other. These are real
@@ -1325,10 +1307,10 @@ with _sp204() as _p:
     # real .seg pill sliders (round shell, sliding highlight) matching the tune
     # drawer's Speed/Onion — not the ad-hoc rounded-rect buttons they were — and
     # a magnifier glyph labels the zoom group. Both editors build the same bar.
-    for path, nm in (("/", "Pad"), ("/flip", "Flip")):
+    for path, nm, opener in (("/", "Pad", "#musicOpenBtn"), ("/flip", "Flip", "#musicBtn")):
         _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); _z.wait_for_timeout(800)
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
-        open_media(_z, "music", settle=300)
+        _z.click(opener); _z.wait_for_timeout(300)
         _z.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _z.wait_for_timeout(1500)
         _z.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }")
         _z.wait_for_timeout(900)
@@ -1542,11 +1524,8 @@ with _sp204() as _p:
                  overlaps: [...new Set(overlaps)].slice(0, 6), clipped: [...new Set(clipped)].slice(0, 6) }; }"""
     _AUDIT_OK = lambda r: not r["scrollX"] and not r["offRight"] and not r["offLeft"] and not r["overlaps"] and not r["clipped"]
     for pw in (375, 390):
-        # v224: image and music are one router now, so the audit opens the router
-        # AND each panel it routes to -- the panels are what could overflow, and
-        # skipping them would have quietly narrowed this audit's coverage.
-        for path, nm, openers in (("/", "Pad", ("#tuneBtn", "#colorOpenBtn", "#mediaOpenBtn")),
-                                  ("/flip", "Flip", ("#tuneBtn", "#colorCurrent", "#mediaOpenBtn"))):
+        for path, nm, openers in (("/", "Pad", ("#tuneBtn", "#colorOpenBtn", "#imageOpenBtn", "#musicOpenBtn")),
+                                  ("/flip", "Flip", ("#tuneBtn", "#colorCurrent", "#imageBtn", "#musicBtn"))):
             _f = _b.new_page(viewport={"width": pw, "height": 844}); _f.goto(BASE + path, wait_until="load"); _f.wait_for_timeout(700)
             _f.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
             _r = _f.evaluate(_AUDIT)
@@ -1556,11 +1535,7 @@ with _sp204() as _p:
                     _f.click(op); _f.wait_for_timeout(350); _r = _f.evaluate(_AUDIT)
                     check(f"PHONE {nm}@{pw}: ...with {op} drawer open", _AUDIT_OK(_r), str(_r))
                     _f.click(op); _f.wait_for_timeout(200)
-            for _which in ("photo", "music"):
-                open_media(_f, _which); _r = _f.evaluate(_AUDIT)
-                check(f"PHONE {nm}@{pw}: ...with the {_which} drawer open", _AUDIT_OK(_r), str(_r))
-                close_media(_f)
-            open_media(_f, "music")
+            _f.click(openers[3]); _f.wait_for_timeout(300)
             _f.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD}); _f.wait_for_timeout(1400)
             _f.evaluate("() => { const t = document.getElementById('fineTuneToggle'); if (t && t.getAttribute('aria-expanded') !== 'true') t.click(); }"); _f.wait_for_timeout(600)
             _r = _f.evaluate(_AUDIT)
@@ -1777,12 +1752,12 @@ with _sp() as _p3:
     _f3.add_init_script(_F3_INIT)
     _f3.goto(BASE + "/", wait_until="load")
     _f3.wait_for_timeout(700)
-    open_media(_f3, "music")
+    _f3.click("#musicOpenBtn")
     _f3.wait_for_timeout(300)
     _f3.set_input_files("#musicInput",
                         {"name": "t.wav", "mimeType": "audio/wav", "buffer": _AUD})
     _f3.wait_for_timeout(1500)
-    open_media(_f3, "music")
+    _f3.evaluate("() => { const c = document.getElementById('musicOpenBtn'); if (c) c.click(); }")
     _f3.wait_for_timeout(200)
 
 

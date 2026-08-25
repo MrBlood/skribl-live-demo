@@ -772,23 +772,15 @@ body.stroking .zoom-hud { pointer-events: none; }
   box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
 }
 
-/* Photo/Music tabs show a small status circle: grey when the tab is empty,
-   swapped for the purple .tab-dot once a file is added. Both are the same size
-   and sit in the same spot, so it reads as one dot changing colour. The swap is
-   pure CSS via :has() — no JS beyond the existing dot show/hide. */
-.tab-dot-empty {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #3a3f4d;
-  flex-shrink: 0;
-}
-.tool-open:has(.tab-dot:not([hidden])) .tab-dot-empty { display: none; }
-/* The media button has no .tab-dot-empty and does not draw its dots at all --
-   it says its state by tinting half the glyph (see the v224 block below). The
-   rule above is left for the controls that still pair a grey twin with a green
-   one. */
+/* .tab-dot-empty is RETIRED. Photo and Music used to carry a grey twin that a
+   :has() rule swapped for the live dot, so an empty tab still showed a circle.
+   It was answering "is there no media?", which is not a question a resting
+   toolbar should be answering, and it put two permanent marks on a row that has
+   just spent a version getting quieter. Nothing attached is now simply the icon;
+   a dot appears only when there is something to say -- green for present, amber
+   for remembered-but-missing.
+   Reversal: restore this rule and the two <span class="tab-dot-empty"> in
+   skribl_editor.html and skribl_flip.html. Nothing else used the class. */
 
 .tab-panel {
   /* Same reason as .flip-drawers: on iOS Safari the bottom toolbar overlays
@@ -877,39 +869,30 @@ body.stroking .zoom-hud { pointer-events: none; }
 /* Sizing now comes from .color-ring > .tool-chip below. The old outer white
    ring is gone: it sat between the core and the spectrum and read as a halo. */
 .tool-chip { border-radius: 50%; }
-.tool-open .tab-dot, .tool-open .tab-dot-empty { position: absolute; top: 6px; right: 6px; border: 1.5px solid #171a22; }
-/* ---------- v224: the media button says its state IN COLOUR ---------------
-   The image frame goes green when a photo is set and amber when one is
-   remembered but its file is gone; the note does the same for music. Nothing
-   attached leaves the icon in its ordinary grey, which is the point: a resting
-   toolbar should not be answering a question nobody asked.
+/* The status dot is anchored to the ICON, not to the button, and that is the
+   whole point of the calc(). `top: 6px; right: 6px` measured from the button's
+   edges -- and the button is 44px wide on desktop but 34px on a phone while the
+   icon stays 24px, so the same rule put the dot in two different places: on
+   desktop it floated ABOVE the icon's top edge and off its right, on a phone it
+   drifted inward over the glyph. Anchoring to the button was the bug; the icon
+   is what the dot is a badge for.
 
-   This replaced a 4px light inside the sun and the note head, which is worth
-   recording because the light was measured and still wrong. At 24px a 4px dot
-   is mostly antialiased edge -- about four pixels of true colour -- and reading
-   it took more attention than a toolbar glyph deserves. Tinting a half is
-   unmissable at 1:1 and needs no geometry of its own, so the sun and the note
-   heads are back at the sizes the source icons use.
+   The icon is 24px and centred both ways, so its box is 50% +/- 12px whatever
+   the button does. The dot's centre lands at (+8, -8) from centre, which is 4px
+   inside the icon's top-right corner on each axis -- tucked INTO the corner,
+   with its outer edge just reaching it, rather than hanging outside.
 
-   NO JAVASCRIPT CHANGED FOR ANY OF THIS. #photoTabDot and #musicTabDot are
-   still the state, still written by the same dozen call sites in app.js,
-   editor_photo.js, editor_music.js and flip.js; they are simply not drawn any
-   more. :has() reads them and paints the matching half. Keeping the state in
-   the elements the app already maintains is what made three different visual
-   treatments cost three CSS edits between them.
-
-   Order matters: .pending is a MORE specific state than "present" and both
-   selectors match while a file is missing, so amber is written second. */
-.media-glyph { position: relative; display: inline-flex; line-height: 0; }
-.media-glyph > svg { overflow: visible; }
-/* the state carriers, not drawn */
-.media-light { display: none; }
-
-.media-glyph:has(.for-photo .tab-dot:not([hidden])) .half-photo { stroke: #1bcf8f; }
-.media-glyph:has(.for-music .tab-dot:not([hidden])) .half-music { stroke: #1bcf8f; }
-.media-glyph:has(.for-photo .tab-dot.pending)       .half-photo { stroke: #ffd23f; }
-.media-glyph:has(.for-music .tab-dot.pending)       .half-music { stroke: #ffd23f; }
-
+   The 1.5px ring is the row's ground, not the old tray colour it inherited from
+   v205. The tray went in 31ed04f; a #171a22 ring against a #06070a row was a
+   faint light halo around every dot. Its job is to separate the dot from the
+   glyph stroke it now overlaps, so it has to be the colour BEHIND both. */
+.tool-open .tab-dot {
+  position: absolute;
+  left: calc(50% + 4.5px);
+  top: calc(50% - 11.5px);
+  right: auto;
+  border: 1.5px solid #06070a;
+}
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
 }
@@ -4868,40 +4851,7 @@ body.playing .flip-grid { display: none; }
 
 /* An explicit display defeats [hidden] — hit three times in this codebase, so
    these are paired rather than trusted. */
-
-
-/* Media drawer rows. The toolbar lights generalise -- a 6px light inside a 24px
-   icon says "this channel needs attention"; these rows say what and offer the
-   fix in the same tap. Restored with the partial at v224. */
-.media-panel .media-row {
-  display: flex; align-items: center; gap: 13px; width: 100%;
-  background: none; border: 0; padding: 12px 15px; cursor: pointer;
-  text-align: left; color: var(--text, #e6e9f0);
-}
-.media-panel .media-row:hover { background: rgba(255,255,255,.03); }
-.media-panel .media-ico {
-  width: 34px; height: 34px; border-radius: 10px; flex: none;
-  display: grid; place-items: center; background: #20242e;
-}
-.media-panel .media-ico svg { width: 19px; height: 19px; }
-.media-panel .media-text { flex: 1; min-width: 0; }
-.media-panel .media-text b {
-  display: flex; align-items: center; font-size: 13.5px; font-weight: 610;
-}
-.media-panel .media-text i {
-  display: block; font-style: normal; font-size: 11.5px;
-  color: #8b93a5; margin-top: 2px;
-}
-/* The row dots are ordinary badges again -- static, beside the label, at the
-   size the rest of the sheet uses. Only the toolbar's are shrunk and placed. */
-.media-panel .media-text .tab-dot {
-  position: static; margin-left: 7px; width: 7px; height: 7px; transform: none;
-}
-.media-panel .media-chev { color: #5f6878; font-size: 17px; flex: none; }
-
-/* An explicit display defeats [hidden] -- hit three times in this codebase, so
-   these are paired rather than trusted. */
-.color-group[hidden], .bg-group[hidden], .media-panel[hidden] { display: none; }
+.color-group[hidden], .bg-group[hidden] { display: none; }
 
 /* Paint-target switcher. Swaps WHICH swatch grid is shown, not what the sheet
    shows: size, opacity and brush stay put underneath and never move. */

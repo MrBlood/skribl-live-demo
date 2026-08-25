@@ -1076,16 +1076,8 @@ setTimeout(() => {
 const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
   panels: {
     draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
-    // The photo and music panels no longer have a toolbar button of their own
-    // -- #mediaOpenBtn opens the router and the router opens them -- so `button`
-    // is null rather than a stale id, which skriblDrawers treats as "no opener
-    // to light up" instead of silently missing an element.
-    photo: { panel: 'photoPanel', button: null, openClass: 'open' },
-    music: { panel: 'musicPanel', button: null, openClass: 'open' },
-    // REGISTERING THIS IS THE WHOLE FIX, learned the hard way at v216d: without
-    // an entry here openDrawer('media') resolved to nothing at all, and the
-    // button looked fine while doing absolutely nothing.
-    media: { panel: 'mediaPanel', button: 'mediaOpenBtn', openClass: 'open' }
+    photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
+    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' }
   },
   reveal(panel, name) {
     if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
@@ -5158,54 +5150,8 @@ function currentPaintTarget() {
   });
 })();
 
-// Media drawer rows route to the existing photo/music drawers. A ROUTER, so
-// nothing about their internals changes -- the fit slider, trim strip,
-// waveforms and opacity controls all stay exactly where they are. That is what
-// makes it safe to ship on its own.
-//
-// The body of this went missing between the v216e and v217 uploads while its
-// comment stayed; restored at v224 with the drawer partial it drives.
-(function initMediaRows() {
-  // Call the drawer controller DIRECTLY. The v216d version looked up
-  // document.querySelector('[data-drawer="photo"]') and clicked it -- but the
-  // only element carrying that attribute is now the ROW itself, since the old
-  // toolbar buttons were merged away. It found itself, the `!== el` guard
-  // skipped it, and the drawer just closed with nothing opening.
-  const go = (id, name) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('click', () => {
-      if (typeof openDrawer === 'function') openDrawer(name);
-    });
-  };
-  go('mediaAddImage', 'photo');
-  go('mediaAddMusic', 'music');
-  // Zoom CLOSES the router rather than routing into another drawer: the magnify
-  // HUD is an overlay on the canvas, not a panel, and leaving the router open
-  // would cover the thing being zoomed.
-  const zoom = document.getElementById('mediaZoom');
-  if (zoom) zoom.addEventListener('click', () => {
-    if (typeof openDrawer === 'function') openDrawer(null);
-    if (typeof setMagnify === 'function') setMagnify(true);
-  });
-  // The row dots MIRROR the toolbar lights rather than deriving their own state
-  // from the photo/music model. The toolbar lights are the canonical elements --
-  // every existing call site writes to them -- so copying keeps exactly one
-  // source of truth and the two can never disagree.
-  const mirror = (fromId, toId) => {
-    const from = document.getElementById(fromId), to = document.getElementById(toId);
-    if (!from || !to) return;
-    const sync = () => {
-      to.hidden = from.hidden;
-      to.classList.toggle('pending', from.classList.contains('pending'));
-    };
-    new MutationObserver(sync).observe(from, { attributes: true,
-      attributeFilter: ['hidden', 'class'] });
-    sync();
-  };
-  mirror('photoTabDot', 'photoRowDot');
-  mirror('musicTabDot', 'musicRowDot');
-})();
+// Media drawer rows route to the existing photo/music drawers. A router, so
+// nothing about their internals changes.
 
 // The Pad leave guard (Flip navigation) moved to editor_draft.js with the
 // rest of the draft-durability machinery — it is now keyed to whether the

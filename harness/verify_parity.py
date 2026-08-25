@@ -52,19 +52,6 @@ except ImportError:
     sys.exit(0)
 
 # canonical name -> (pad selector, flip selector, note)
-# v224 merged Image and Music into ONE #mediaOpenBtn on BOTH surfaces, opening a
-# router drawer whose rows open the real photo/music panels. Reaching a media
-# drawer is therefore two taps -- and it is the SAME two taps on Pad and Flip,
-# which is itself a parity gain: this used to be #imageOpenBtn on one and
-# #imageBtn on the other. Kept as a function so a future change to the route has
-# one place to edit rather than a dozen call sites.
-def open_media(pg, which, settle=350):
-    """which: 'photo' or 'music'."""
-    pg.click("#mediaOpenBtn")
-    pg.wait_for_timeout(200)
-    pg.click("#mediaAddImage" if which == "photo" else "#mediaAddMusic")
-    pg.wait_for_timeout(settle)
-
 CONTROLS = [
     # --- drawing tools ----------------------------------------------------
     ("pen tool",           "#penToolBtn",      "#penToolBtn",     ""),
@@ -87,16 +74,11 @@ CONTROLS = [
     ("brush size readout", "#brushSizeVal",    "#sizeVal",        ""),
     ("smoothing control",  "#smoothSeg",       "#smoothSeg",      ""),
     # --- media ------------------------------------------------------------
-    # One merged control on both, opening the router that leads to either
-    # panel. The old pair (#imageOpenBtn / #imageBtn) was a naming divergence
-    # for the same job; the merge removed it.
-    ("open media router",  "#mediaOpenBtn",    "#mediaOpenBtn",   ""),
-    ("media row: image",   "#mediaAddImage",   "#mediaAddImage",  ""),
+    ("open photo drawer",  "#imageOpenBtn",    "#imageBtn",       ""),
     ("photo file input",   "#photoInput",      "#imageInput",     ""),
     ("photo fit control",  "#photoFitGroup",   "#photoFitGroup",  ""),
     ("reset photo",        "#resetPhotoBtn",   "#resetPhotoBtn",  ""),
-    ("media row: music",   "#mediaAddMusic",   "#mediaAddMusic",  ""),
-    ("media row: zoom",    "#mediaZoom",       "#mediaZoom",      ""),
+    ("open music drawer",  "#musicOpenBtn",    "#musicBtn",       ""),
     ("music waveform",     "#waveformCanvas",  "#waveformCanvas", ""),
     ("music trim start",   "#handleStart",     "#handleStart",    ""),
     ("music trim end",     "#handleEnd",       "#handleEnd",      ""),
@@ -740,30 +722,17 @@ with sync_playwright() as p:
     print("\nPARITY — a photo behaves the same on both")
     IMG, AUD = png_bytes(), wav_bytes()
     vis = "(id) => { const e = document.getElementById(id); return !!e && e.offsetParent !== null; }"
-    # v224: the media state is no longer a visible dot -- #photoTabDot and
-    # #musicTabDot still CARRY the state (every writer in the app still sets
-    # them) but they are not drawn; CSS reads them with :has() and tints the
-    # matching half of the merged glyph. So assert the visible OUTCOME as well
-    # as the flag, which is strictly more than the old offsetParent check did:
-    # a dot that exists but paints nothing would have passed before.
-    marked = """(which) => {
-        const dot = document.getElementById(which === 'photo' ? 'photoTabDot' : 'musicTabDot');
-        const half = document.querySelector(which === 'photo' ? '.half-photo' : '.half-music');
-        if (!dot || !half) return null;
-        return { set: !dot.hidden, stroke: getComputedStyle(half).stroke };
-      }"""
-    GREEN = "rgb(27, 207, 143)"        # --tab-dot green, #1bcf8f
-    def is_marked(r):
-        return bool(r) and r["set"] and r["stroke"] == GREEN
 
-    for pg_, finput in ((pad, "#photoInput"), (flip, "#imageInput")):
-        open_media(pg_, "photo")
+    for pg_, opener, finput in ((pad, "#imageOpenBtn", "#photoInput"),
+                                (flip, "#imageBtn", "#imageInput")):
+        pg_.click(opener)
+        pg_.wait_for_timeout(350)
         pg_.set_input_files(finput, {"name": "t.png", "mimeType": "image/png", "buffer": IMG})
         pg_.wait_for_timeout(1300)
 
-    _pp, _fp = pad.evaluate(marked, "photo"), flip.evaluate(marked, "photo")
-    check("loading a photo turns the image half green on both",
-          is_marked(_pp) and is_marked(_fp), f"pad={_pp}, flip={_fp}")
+    check("loading a photo marks the tab on both",
+          pad.evaluate(vis, "photoTabDot") and flip.evaluate(vis, "photoTabDot"),
+          f"pad={pad.evaluate(vis, 'photoTabDot')}, flip={flip.evaluate(vis, 'photoTabDot')}")
     check("and reveals the same fit choices on both",
           pad.text_content("#photoFitGroup").strip()
           == flip.text_content("#photoFitGroup").strip(),
@@ -790,14 +759,15 @@ with sync_playwright() as p:
           po is not None and po == fo, f"pad {po}, flip {fo}")
 
     print("\nPARITY — music behaves the same on both")
-    for pg_ in (pad, flip):
-        open_media(pg_, "music")
+    for pg_, opener in ((pad, "#musicOpenBtn"), (flip, "#musicBtn")):
+        pg_.click(opener)
+        pg_.wait_for_timeout(350)
         pg_.set_input_files("#musicInput", {"name": "t.wav", "mimeType": "audio/wav", "buffer": AUD})
         pg_.wait_for_timeout(2500)
 
-    _pm, _fm = pad.evaluate(marked, "music"), flip.evaluate(marked, "music")
-    check("loading music turns the note half green on both",
-          is_marked(_pm) and is_marked(_fm), f"pad={_pm}, flip={_fm}")
+    check("loading music marks the tab on both",
+          pad.evaluate(vis, "musicTabDot") and flip.evaluate(vis, "musicTabDot"),
+          f"pad={pad.evaluate(vis, 'musicTabDot')}, flip={flip.evaluate(vis, 'musicTabDot')}")
     check("the trim handles report the same start on both",
           pad.text_content("#handleStart").strip() == flip.text_content("#handleStart").strip(),
           f"pad {pad.text_content('#handleStart').strip()!r} against "

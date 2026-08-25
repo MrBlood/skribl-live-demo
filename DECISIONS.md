@@ -630,3 +630,46 @@ one key, for one 24-page flip. Flip already degrades to a media-free "lite"
 payload under quota pressure, so it is not broken, but the drawing data itself
 lives in localStorage while the media bytes already live in IndexedDB. Moving it
 there is the real fix for the ceiling and it is a bigger change than this one.
+
+**The one media control is REVERTED. Image and Music are two buttons again.**
+Everything above about the merged glyph, the router drawer, the status light and
+the tinted halves describes code that is no longer in the tree. It is kept
+because the reasoning still holds for anyone who tries this again, and because
+the reason it failed is not in any of it.
+
+The merge cost a tap. Opening a photo went from one press to two -- the router,
+then the row -- and the router's own rows were not self-evident enough to pay
+for that. Every media action on both surfaces got slower and less obvious, all
+day, in exchange for width.
+
+And the width no longer needed buying. The merge was drawn up when Pad's row was
+563px at 1280 and wrapping at 352; by the time it landed, the same version's
+spacing work had it at 316px on a phone with headroom to spare. The saving that
+justified the merge had already been won by cheaper means, so what remained was
+purely the cost. A control that trades a tap for pixels is a good trade only
+while the pixels are scarce.
+
+WHAT CAME BACK CHANGED, because the old placement had a bug worth keeping fixed.
+The status dot was anchored to the BUTTON: `top: 6px; right: 6px`. The button is
+44px wide on desktop and 34px on a phone while the icon stays 24px, so one rule
+produced two placements -- floating above the icon's top edge and off its right
+on desktop, drifting inward over the glyph on a phone. It is anchored to the
+ICON now, `left: calc(50% + 4.5px); top: calc(50% - 11.5px)`, which lands the
+dot 4px inside the icon's top-right corner on both. Measured: desktop icon
+corner (34, 10) with the dot at (30, 14); phone corner (29, 10) with the dot at
+(25, 14). The same relationship, which it never was before.
+
+The ring around the dot is the row's ground now (#06070a), not the tray colour
+it inherited from v205. The tray went in 31ed04f and a #171a22 ring on a #06070a
+row was a faint halo around every dot.
+
+`.tab-dot-empty` is retired with it: an empty tab no longer shows a grey circle.
+It answered "is there no media?", which a resting toolbar should not be
+answering, and it put two permanent marks on a row that had just spent a version
+getting quieter. Reversal is in the CSS comment.
+
+ONE THING THE ROUTER DID THAT NOTHING DOES NOW: its Zoom row was the only way to
+reach magnify on a phone, where the button is hidden at 430 and below. That gap
+is not new -- it existed before the merge and is back exactly as it was -- but
+it is the one piece of the router worth stealing if magnify should be reachable
+on a phone at all.
