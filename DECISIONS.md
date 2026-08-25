@@ -489,14 +489,29 @@ attached.** Two corrections to the version above, both from the owner looking at
 it.
 
 The dot BECAME the circle: a 6px light over a sun whose outer diameter is 3.2px
-covered it completely, so the icon lost its sun and gained a blob. It is 3px
+covered it completely, so the icon lost its sun and gained a blob. It is 4px
 now, centred inside the ring, and the ring itself had to make room -- the sun
-goes r=1.5/stroke-2 to r=2.2/stroke-1.5 and both note heads r=3/stroke-3 to
-r=3.3/stroke-2.2. That widening is not decoration: at the original weights there
+goes r=1.5/stroke-2 to r=2.7/stroke-1.4 and both note heads r=3/stroke-3 to
+r=4.2/stroke-2.0. That widening is not decoration: at the original weights there
 was no inside, the stroke ate the whole circle. Both heads move together so the
 note stays symmetrical when nothing is lit. Measured after: the photo light
 lands at (8.16, 8.16) against a sun centred on (8.20, 8.20), and the music light
 at (22.55, 21.11) against a head centred on (22.56, 21.12).
+
+**And the size was decided at 1:1, which is the only place it could be.** The
+first pass was 3px, chosen while looking at the icon blown up six times, where
+it read fine. Rendered at the size it actually draws it was very nearly
+invisible -- a 3px dot is mostly antialiased edge, with a core of about four
+true-colour pixels. 4px is the smallest that still reads as a light on screen
+while leaving each ring a visible stroke of its own. Any judgement about a mark
+this small that is made on a magnified image is a judgement about a different
+picture.
+
+The COLOURS never changed and this is worth recording because it was asked:
+green is `rgb(27, 207, 143)` = #1bcf8f and amber is `rgb(255, 210, 63)` =
+#ffd23f, read back from the computed style and confirmed by sampling the
+rendered pixels. What looks different under magnification is antialiasing around
+a small dot, plus the amber's own glow -- not the hue.
 
 The grey empty state is gone entirely. `.tab-dot-empty` answered "is there no
 media?", which is a question nobody asked of a resting toolbar, and it made the

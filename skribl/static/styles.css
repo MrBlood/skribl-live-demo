@@ -909,16 +909,20 @@ body.stroking .zoom-hud { pointer-events: none; }
 .tool-open .media-light { position: absolute; width: 0; height: 0; }
 .tool-open .media-light.for-photo { left: 34%; top: 34%; right: auto; bottom: auto; }
 .tool-open .media-light.for-music { left: 94%; top: 88%; right: auto; bottom: auto; }
-/* 3px, and the size is the whole point: the light sits INSIDE its ring rather
+/* 4px, and the size is the whole point: the light sits INSIDE its ring rather
    than covering it, so the sun still reads as a sun and the note head still
-   reads as a note head. At 6px it swallowed both. The ring's interior is about
-   2.9px across at a 24px icon (r 2.2, stroke 1.5), which is what 3px fills.
+   reads as a note head. At 6px it swallowed both -- and at 3px, which is what
+   this was first built at, it was legible only when the icon was blown up. A
+   1:1 render settled it: 4px is the smallest that still reads as a light at the
+   size the icon actually draws, and the rings widened to match (sun r 2.7 /
+   stroke 1.4, heads r 4.2 / stroke 2.0) so each keeps a visible stroke of its
+   own around the light.
    No ground-coloured border either -- that ring exists to separate a badge from
    the surface behind it, and here the surface is the icon's own stroke. */
 .tool-open .media-light .tab-dot {
   position: absolute; top: 0; left: 0; right: auto; bottom: auto;
   transform: translate(-50%, -50%);
-  width: 3px; height: 3px; border: 0; box-shadow: none;
+  width: 4px; height: 4px; border: 0; box-shadow: none;
 }
 .tool-open .media-light .tab-dot.pending { box-shadow: 0 0 3px rgba(255, 210, 63, .7); }
 /* FLIP only, and measured rather than assumed: Pad's .tool-open svg stays 24px
@@ -926,7 +930,7 @@ body.stroking .zoom-hud { pointer-events: none; }
    shrunk. It is Flip that steps its icons to 21px below 640
    (.flip-tools .tool-open svg), so the light steps there and only there. */
 @media (max-width: 640px) {
-  .flip-tools .tool-open .media-light .tab-dot { width: 2.6px; height: 2.6px; }
+  .flip-tools .tool-open .media-light .tab-dot { width: 3.5px; height: 3.5px; }
 }
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
