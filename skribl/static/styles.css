@@ -5162,3 +5162,32 @@ body.playing .flip-grid { display: none; }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
 .header .actions .btn.play { height: 36px; }
+
+/* ---------- v225: Flip's back arrow is navigation, not an action -----------
+   It was the last bordered tile in either header once tune and the overflow
+   menu lost theirs, and at 44px it outweighed the wordmark beside it: the
+   heaviest thing in the lead was the control you press least.
+
+   It does NOT simply join the 36px tier with tune and the menu, and that is
+   deliberate. Those two act ON the drawing; this one leaves the surface
+   entirely. Sizing it identically would say they are peers. 32px in a muted
+   grey reads as chrome -- findable, clearly a control, quieter than everything
+   beside it.
+
+   The 44px tap band survives at --tap-grow: 6px, and the ::before needs its
+   z-index for the same reason every other grown target does; see the
+   "Invisible expanded tap area" block. */
+.flip-lead .icon-btn {
+  width: 32px; height: 32px;
+  border: none; background: none;
+  color: #8b93a5;
+  position: relative; z-index: 1; --tap-grow: 6px;   /* 32 visual -> 44 tap */
+}
+.flip-lead .icon-btn::before {
+  content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 6px));
+  background: transparent; border-radius: inherit;
+}
+.flip-lead .icon-btn svg { width: 20px; height: 20px; }
+@media (hover: hover) {
+  .flip-lead .icon-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+}

@@ -704,7 +704,18 @@ row-wide rule can reach past. Its comment already said "match Play's height to
 Record/Post"; the row is 36 now, so the intent is preserved by changing the
 number where it lives.
 
-NOT changed: Flip's back arrow is still a bordered `.icon-btn`, and it is now the
-only boxed control in either header. It is a navigation action rather than an
-opener and Pad has no equivalent, so there was nothing to make consistent WITH —
-but if the box looks orphaned there, that is why.
+Flip's back arrow followed, one step further down. It was the last bordered tile
+in either header and at 44px it outweighed the wordmark beside it: the heaviest
+thing in the lead was the control you press least.
+
+It does NOT join the 36px tier with tune and the overflow menu, and that is the
+point. Those two act ON the drawing; the back arrow leaves the surface entirely.
+Sizing it identically would say they are peers. 32px in a muted grey reads as
+chrome -- findable, clearly a control, quieter than everything beside it. Four
+treatments were rendered in the running header before picking: 44 boxed (the
+old one), 36 bare, 32 muted, tucked tight to the wordmark, and a hairline rule
+in place of the box. The rule was rejected on principle -- it re-draws the edge
+this version spent its time removing.
+
+Tap band 44 via `--tap-grow: 6px`, verified by hit test: a point 4px outside the
+32px box still resolves to the anchor.
