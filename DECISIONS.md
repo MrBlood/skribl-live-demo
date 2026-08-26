@@ -990,3 +990,46 @@ very reload meant to be rid of it. It now also asserts zero points afterwards,
 because a polluted page turns every stroke-index assertion into a coin flip --
 which is exactly how it failed, reporting "the unselected stroke was touched"
 when the real fault was that the selected stroke was not the one the test thought.
+
+## Mirror, duplicate, cut and paste live on a bar that replaces the page bar
+
+`#selbar` appears exactly while a selection exists and takes `#pagebar`'s row --
+the pattern `setMoveMode()` established. Five more actions do not fit on a 320px
+phone as extra chrome; they fit as a different job for the same row. `.pb-tx`
+already hides below 640, so every cell drops to its glyph for free.
+
+**One undo shape for all four: `selframe`,** carrying a before/after pair of that
+page's `strokes` and `strokeGroups`. `selmove` negates its dx/dy and a transform
+restores coordinates, because both leave the arrays the same length. These do
+not -- duplicate appends groups, cut splices them out, paste appends -- and
+undoing an index-range edit whose indices have since moved is exactly the class
+of bug this codebase keeps finding. The entry carries the arrays rather than the
+arithmetic. One page's points is the same order of magnitude the redo stack
+already holds.
+
+**Cut writes to a clipboard, and that is a deliberate widening of the request.**
+Asked for "cut", the narrow reading is remove-the-selection -- but that is
+Delete wearing the wrong name, and a flipbook's real use for cut is taking
+artwork off one page and putting it on the next. So Cut remembers and a Paste
+cell appears; the suite pins the cross-page case specifically. Paste is HIDDEN
+rather than disabled until the clipboard has something: on a bar this tight a
+disabled control is a cell of dead width.
+
+**Duplicate leaves the COPY selected, not the original.** The next thing anyone
+does after duplicating is move the new one, and the two sit on top of each
+other -- selecting the original would move the wrong artwork silently.
+
+**A selection never crosses pages.** `go()` clears it. Spans are index ranges
+into ONE page's strokes array; carried to another page they would point at
+different artwork, or run off the end of a shorter one.
+
+**A note on this file's shape, now that it has bitten three times.** flip.js is
+one ~4000-line classic script with `let` state scattered through it, and
+`setTool()` runs during init. Three separate crashes in this version came from
+the same cause: a function called early reached a `let` declared later, threw
+"Cannot access X before initialization", and killed every line of the file after
+it -- taking the filmstrip, the tool shelf and every later handler with it. A
+`typeof` guard cannot rescue a `let`; only declaration order can. The selection
+state, the move state and the clipboard are all hoisted to the top now, and the
+rule going in is: state any early path can reach belongs with the early state,
+and anything touching state declared further down belongs in the load handler.

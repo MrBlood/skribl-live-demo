@@ -1071,6 +1071,25 @@ Every gesture also recomputes from a snapshot taken on pointerdown rather than
 applying to the previous frame — compounding a ratio sixty times a second walks
 the geometry away from the finger, and a drag out and back would not return.
 
+**Mirror, duplicate, cut and paste (v229)** live on `#selbar`, which REPLACES
+the page bar while a selection exists — the pattern `setMoveMode()` established.
+Five more actions do not fit on a 320px phone as extra chrome; they fit as a
+different job for the same row, and `.pb-tx` already drops the labels below 640.
+
+All four share ONE undo shape, `selframe`, carrying a before/after pair of that
+page's `strokes` and `strokeGroups`. `selmove` negates its dx/dy and a transform
+restores coordinates, because both leave the arrays the same length. These do
+not — duplicate appends, cut splices, paste appends — and undoing an index-range
+edit whose indices have since moved is the class of bug this codebase keeps
+finding. The entry carries the arrays instead of the arithmetic.
+
+Cut writes to a clipboard rather than just deleting: a flipbook's real use for
+cut is taking artwork off one page and putting it on the next, and the suite
+pins that cross-page paste. Paste is hidden until the clipboard has something —
+on a bar this tight a disabled control is a cell of dead width. Duplicate leaves
+the COPY selected, not the original, because the two sit on top of each other
+and moving the wrong one would be silent.
+
 Two properties carry the design and are pinned hardest:
 
 * **Whole strokes, never fragments.** The marquee selects by GROUP, so a box

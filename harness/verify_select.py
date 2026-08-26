@@ -305,6 +305,117 @@ with sync_playwright() as p:
           "an invisible selection that a later drag would move is worse than "
           "making the user re-pick")
 
+    print("\nSELECT — the selection bar replaces the page bar")
+    fresh(page)
+    two_shapes(page)
+    page.evaluate("() => setTool('select')")
+    page.wait_for_timeout(200)
+    check("no selection bar while nothing is selected",
+          page.evaluate("() => document.getElementById('selbar').hidden"))
+    drag(page, (80, 90), (240, 240))
+    check("selecting shows the bar",
+          not page.evaluate("() => document.getElementById('selbar').hidden"))
+    check("and takes the page bar's row rather than adding one",
+          page.evaluate("() => document.getElementById('pagebar').hidden"),
+          "five more actions do not fit on a 320px phone as extra chrome")
+    check("the bar says what is selected",
+          page.evaluate("() => document.getElementById('sbWho').textContent") == "1 stroke",
+          page.evaluate("() => document.getElementById('sbWho').textContent"))
+    check("Paste is absent until there is something to paste",
+          page.evaluate("() => document.getElementById('sbPaste').hidden"),
+          "a disabled control on a bar this tight is a cell of dead width")
+
+    print("\nSELECT — mirror reflects about the selection's own centre")
+    groups = page.evaluate("() => frames[idx].strokeGroups.slice()")
+    n = groups[0]
+    before = page.evaluate(SNAP_FULL)
+    bounds = page.evaluate("() => { const b = selBounds();"
+                           " return [b.x, b.y, b.w, b.h]; }")
+    cx = bounds[0] + bounds[2] / 2
+    page.click("#sbFlipH")
+    page.wait_for_timeout(300)
+    after = page.evaluate(SNAP_FULL)
+    check("every selected point reflects across the centre line",
+          all(abs(after[i][0] - (2 * cx - before[i][0])) < 1e-6 for i in range(n)),
+          "a mirror that is not about the selection's own centre makes the "
+          "artwork jump across the page instead of flipping where it sits")
+    check("mirror leaves y alone",
+          all(after[i][1] == before[i][1] for i in range(n)))
+    check("and leaves stroke weight alone",
+          all(after[i][2] == before[i][2] for i in range(n)),
+          "a reflection does not change how thick a line is, only which way "
+          "it points")
+    check("the unselected stroke is untouched", after[n:] == before[n:])
+    page.evaluate("() => undoStroke()")
+    page.wait_for_timeout(250)
+    check("mirror undoes exactly", page.evaluate(SNAP_FULL) == before)
+
+    print("\nSELECT — duplicate leaves the COPY selected")
+    fresh(page)
+    two_shapes(page)
+    page.evaluate("() => setTool('select')")
+    page.wait_for_timeout(150)
+    drag(page, (80, 90), (240, 240))
+    g0 = page.evaluate("() => frames[idx].strokeGroups.slice()")
+    page.click("#sbDup")
+    page.wait_for_timeout(300)
+    g1 = page.evaluate("() => frames[idx].strokeGroups.slice()")
+    check("a duplicate appends one group per selected stroke",
+          g1 == g0 + [g0[0]], f"{g0} -> {g1}")
+    spans = page.evaluate("() => selSpans.map(s => s.slice())")
+    check("and the COPY is what stays selected",
+          spans and spans[0][0] >= sum(g0),
+          f"{spans} against {sum(g0)} points before the copy — selecting the "
+          f"original would move it instead, silently, since the two overlap")
+    page.evaluate("() => undoStroke()")
+    page.wait_for_timeout(250)
+    check("duplicate undoes back to the original groups",
+          page.evaluate("() => frames[idx].strokeGroups.slice()") == g0)
+
+    print("\nSELECT — cut remembers, and paste can land on another page")
+    fresh(page)
+    two_shapes(page)
+    page.evaluate("() => setTool('select')")
+    page.wait_for_timeout(150)
+    drag(page, (80, 90), (240, 240))
+    g0 = page.evaluate("() => frames[idx].strokeGroups.slice()")
+    n0 = page.evaluate("() => frames[idx].strokes.length")
+    page.click("#sbCut")
+    page.wait_for_timeout(300)
+    check("cut removes the selected group and its points",
+          page.evaluate("() => frames[idx].strokeGroups.slice()") == g0[1:]
+          and page.evaluate("() => frames[idx].strokes.length") == n0 - g0[0],
+          f"{g0} -> {page.evaluate('() => frames[idx].strokeGroups.slice()')}")
+    check("Paste appears once the clipboard has something",
+          not page.evaluate("() => document.getElementById('sbPaste').hidden"),
+          "without a clipboard, Cut would be Delete wearing the wrong name")
+    page.evaluate("() => undoStroke()")
+    page.wait_for_timeout(250)
+    check("cut undoes back to every group",
+          page.evaluate("() => frames[idx].strokeGroups.slice()") == g0)
+    page.evaluate("() => redoStroke()")
+    page.wait_for_timeout(250)
+    check("and redoes", page.evaluate("() => frames[idx].strokeGroups.slice()") == g0[1:])
+    # The point of a clipboard in a flipbook: take artwork off one page and put
+    # it on the next.
+    page.evaluate("() => addFrame(false)")
+    page.wait_for_timeout(300)
+    check("a new page starts empty",
+          page.evaluate("() => frames[idx].strokeGroups.length") == 0)
+    page.evaluate("() => selPaste()")
+    page.wait_for_timeout(300)
+    check("paste lands the cut artwork on THIS page",
+          page.evaluate("() => frames[idx].strokeGroups.slice()") == [g0[0]],
+          str(page.evaluate("() => frames[idx].strokeGroups.slice()")))
+    check("and selects what it pasted",
+          page.evaluate("() => selSpans.length") == 1)
+
+    print("\nSELECT — a selection never crosses pages")
+    check("changing page drops the selection",
+          page.evaluate("() => { go(0); return selSpans.length; }") == 0,
+          "spans are index ranges into ONE page's strokes; carried over they "
+          "would point at different artwork, or run off a shorter page")
+
     print("\nSELECT — Pad still does not have it")
     pad = browser.new_page(viewport={"width": 900, "height": 800})
     pad.goto(BASE + "/", wait_until="load")

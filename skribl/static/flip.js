@@ -214,6 +214,18 @@ let selMarqueeFrom = null, selMoveFrom = null, selDx = 0, selDy = 0;
 // Mirrors `drawing`/`strokePointerId`: a second pointer (a palm, a second
 // finger) must not steer a drag that a different one started.
 let selecting = false, selPointerId = null;
+/* Move mode's state, hoisted here for the same reason as the selection's above.
+   It used to sit 500 lines down, next to setMoveMode() — and syncSelBar() reads
+   moveMode, while setTool() calls selClear() -> syncSelBar() during init. So the
+   first setTool('pen') threw "Cannot access 'moveMode' before initialization"
+   and killed the rest of the file. THIRD time this file's scattered `let` state
+   has done that. State that any early code path can reach belongs up here. */
+let moveMode = false, moveScope = 'one', moveDx = 0, moveDy = 0;
+let moveOrigin = null, moveDragging = false, moveStart = null;
+// What Cut is holding, if anything. Up here for the same reason as the rest:
+// syncSelBar() reads it to decide whether Paste has a cell, and setTool()
+// reaches syncSelBar() during init.
+let selClipboard = null;
 /* v228 transform. selMode names what the current drag is doing; selSnap holds
    the selected points' ORIGINAL x/y/size for the duration of one gesture.
 
@@ -1575,7 +1587,13 @@ function addFrame(copy){ if(moveMode) return; disarmAll(); invalidateClearUndo()
 function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true); }
-function go(i){ if(moveMode) return; idx=i; redoStack.length=0; buildStrip(); render(); }
+function go(i){ if(moveMode) return;
+  // A selection is a set of INDEX RANGES into one page's strokes array. Carrying
+  // it to another page would point those ranges at different artwork — the
+  // frame would move strokes the marquee never touched, and on a shorter page
+  // the ranges would run off the end.
+  if(typeof selClear === 'function') selClear(true);
+  idx=i; redoStack.length=0; buildStrip(); render(); }
 
 /* ---- Instant flip scrub -------------------------------------------------
  * Hold a left/right key and the pages flip past like a thumb riffling paper.
@@ -3425,6 +3443,153 @@ function selRestore(pts){
     p.x = o.x; p.y = o.y; if(o.size != null) p.size = o.size; }
 }
 
+/* ---------- v229: mirror, duplicate, cut and paste -------------------------
+   All four rewrite one page's strokes wholesale rather than editing in place,
+   and all four share ONE undo shape: a before/after pair of that page's strokes
+   and strokeGroups.
+
+   selmove negates its dx/dy and a transform restores coordinates, because both
+   leave the arrays the same length. These do not: duplicate appends groups, cut
+   splices them out, and paste appends. Undoing an index-range edit whose indices
+   have since moved is exactly the class of bug this codebase keeps finding, so
+   the entry carries the arrays instead of the arithmetic. One page's points is
+   the same order of magnitude the redo stack already holds. */
+function selFrameSnap(){
+  const f = frame();
+  return { strokes: f.strokes.map(p => Object.assign({}, p)),
+           groups: f.strokeGroups.slice() };
+}
+function selFrameRestore(i, snap){
+  const f = frames[i]; if(!f) return;
+  f.strokes = snap.strokes.map(p => Object.assign({}, p));
+  f.strokeGroups = snap.groups.slice();
+}
+function selCommitFrame(before, label){
+  redoStack.length = 0;
+  noteAction({ type:'selframe', idx, before, after: selFrameSnap(), label });
+  refreshThumb(idx); scheduleSave(); updateToolState();
+}
+
+/* Mirror about the selection's own centre, so the artwork flips where it sits
+   rather than jumping across the page. `size` is untouched: a reflection does
+   not change how thick a line is, only which way it points. */
+function selMirror(axis){
+  if(!selSpans.length) return;
+  const b = selBounds(); if(!b) return;
+  const before = selFrameSnap();
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, f = frame();
+  for(const [a, z] of selSpans){
+    for(let i = a; i < z && i < f.strokes.length; i++){
+      const p = f.strokes[i];
+      if(axis === 'h') p.x = 2 * cx - p.x; else p.y = 2 * cy - p.y;
+    }
+  }
+  selCommitFrame(before, 'Flip');
+  chip(axis === 'h' ? 'Flipped left to right' : 'Flipped top to bottom');
+  selRender(null);
+}
+
+/* The selected strokes, as whole groups, in document order. Shared by duplicate
+   and cut so the two cannot disagree about what "the selection" is. */
+function selExtract(){
+  const f = frame(), out = [];
+  for(const [a, z] of selSpans){
+    const pts = [];
+    for(let i = a; i < z && i < f.strokes.length; i++) pts.push(Object.assign({}, f.strokes[i]));
+    if(pts.length) out.push(pts);
+  }
+  return out;
+}
+/* Where a run of appended groups lands, so the copy can be selected immediately.
+   Appending keeps the runs contiguous at the end of the array, which is what
+   makes these spans a simple walk. */
+function selSpansForAppended(runs){
+  const f = frame();
+  let at = f.strokes.length - runs.reduce((n, r) => n + r.length, 0);
+  return runs.map(r => { const s = [at, at + r.length]; at += r.length; return s; });
+}
+function selAppend(runs){
+  const f = frame();
+  for(const pts of runs){
+    for(const p of pts) f.strokes.push(Object.assign({}, p));
+    f.strokeGroups.push(pts.length);
+  }
+}
+
+function selDuplicate(){
+  if(!selSpans.length) return;
+  const before = selFrameSnap();
+  const off = selCanvasPx(12);
+  const runs = selExtract().map(r => r.map(p => Object.assign({}, p, { x:p.x + off, y:p.y + off })));
+  selAppend(runs);
+  // Select the COPY, not the original: the next thing you do after duplicating
+  // is move the new one, and leaving the original selected would move that
+  // instead — silently, because the two are sitting on top of each other.
+  selSpans = selSpansForAppended(runs);
+  selCommitFrame(before, 'Duplicate');
+  chip('Duplicated');
+  selRender(null);
+}
+
+/* Cut removes AND remembers. Without the clipboard this would be Delete wearing
+   the wrong name — and a flipbook's real use for cut is taking artwork off one
+   page and putting it on the next, which needs somewhere for it to wait.
+   (selClipboard is declared with the early state; syncSelBar() reads it and
+   setTool() reaches syncSelBar() during init.) */
+function selCut(){
+  if(!selSpans.length) return;
+  const before = selFrameSnap();
+  selClipboard = selExtract();
+  const f = frame();
+  // Back to front: splicing a lower range first would shift every range above
+  // it, and the ranges came from a walk over the array as it was.
+  const spans = selSpans.slice().sort((a, b) => b[0] - a[0]);
+  for(const [a, z] of spans){
+    const n = z - a;
+    f.strokes.splice(a, n);
+    // strokeGroups is a run-length list, not indices: find the run that starts
+    // at `a` by walking the cumulative count.
+    let cum = 0;
+    for(let g = 0; g < f.strokeGroups.length; g++){
+      if(cum === a && f.strokeGroups[g] === n){ f.strokeGroups.splice(g, 1); break; }
+      cum += f.strokeGroups[g];
+    }
+  }
+  selSpans = []; selRect = null;
+  selCommitFrame(before, 'Cut');
+  syncSelBar();
+  chip('Cut — paste it on any page');
+  selRender(null);
+}
+function selPaste(){
+  if(!selClipboard || !selClipboard.length) return;
+  const before = selFrameSnap();
+  selAppend(selClipboard);
+  selSpans = selSpansForAppended(selClipboard);
+  selCommitFrame(before, 'Paste');
+  chip('Pasted');
+  selRender(null);
+}
+
+/* Shown exactly while there is a selection, and it REPLACES the page bar — the
+   pattern setMoveMode() established. Five more actions do not fit on a 320px
+   phone as extra chrome; they fit as a different job for the same row. */
+function syncSelBar(){
+  const on = selSpans.length > 0;
+  const pb = document.getElementById('pagebar'), sb = document.getElementById('selbar');
+  // Move mode owns the row when it is active, and it is mutually exclusive with
+  // Select — so never take the row from it.
+  if(moveMode){ if(sb) sb.hidden = true; return; }
+  if(sb) sb.hidden = !on;
+  if(pb) pb.hidden = on;
+  const who = document.getElementById('sbWho');
+  if(who && on) who.textContent = selSpans.length === 1 ? '1 stroke' : selSpans.length + ' strokes';
+  const paste = document.getElementById('sbPaste');
+  // Paste is hidden until there is something to paste, rather than shown
+  // disabled: a disabled control on a bar this tight is a cell of dead width.
+  if(paste) paste.hidden = !(selClipboard && selClipboard.length);
+}
+
 function selBounds(){
   const f = frame();
   if(!selSpans.length || !window.SkriblSelect) return null;
@@ -3488,6 +3653,7 @@ function selClear(quiet){
   selSpans = []; selRect = null; selOrigin = null; selDx = selDy = 0;
   selMarqueeFrom = null; selMoveFrom = null;
   selMode = null; selSnap = null; selPivot = null; selRef = null;
+  if(typeof syncSelBar === 'function') syncSelBar();
   // Only repaint if there was something to erase. setTool() calls this on EVERY
   // tool change, and repainting the page to remove a marquee that was never
   // there is pure cost — the same guard Pad's selClear() carries.
@@ -3590,6 +3756,7 @@ function selUp(pt){
       selSpans = groups.length ? SkriblSelect.spans(f.strokeGroups, groups) : [];
       selRect = selSpans.length ? r : null;
     }
+    syncSelBar();
     selRender(null);
     if(selSpans.length) chip(selSpans.length === 1 ? '1 stroke selected'
                                                   : selSpans.length + ' strokes selected');
@@ -3633,6 +3800,15 @@ function undoStroke(){
     // A transform restores COORDINATES rather than inverting itself. Negating a
     // translate is exact; dividing by a scale ratio is not, and repeated
     // undo/redo would walk the artwork away from where it started.
+    if(m.type === 'selframe'){
+      if(m.idx !== idx) go(m.idx);
+      selFrameRestore(m.idx, m.before);
+      selSpans = []; selRect = null; syncSelBar();
+      redoStack.push(m);
+      chip((m.label || 'Edit') + ' undone');
+      render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+      return;
+    }
     if(m.type === 'seltransform'){
       const at = idx; if(m.idx !== at) go(m.idx);
       selRestore(m.before);
@@ -3664,6 +3840,17 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'selframe'){
+    const m = redoStack.pop();
+    if(m.idx !== idx) go(m.idx);
+    selFrameRestore(m.idx, m.after);
+    selSpans = []; selRect = null; syncSelBar();
+    actionLog.push(m);
+    chip((m.label || 'Edit') + ' redone');
+    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    return;
+  }
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'seltransform'){
     const m = redoStack.pop();
@@ -3727,8 +3914,7 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
  * coordinates on every pointer event and drift the drawing a fraction at a
  * time over a long drag. Reset is then simply "offset zero".
  */
-let moveMode = false, moveScope = 'one', moveDx = 0, moveDy = 0;
-let moveOrigin = null, moveDragging = false, moveStart = null;
+/* Declared with the other early state; see the note there. */
 
 function moveTargets(){
   if(moveScope === 'after'){
@@ -3865,6 +4051,26 @@ bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
 KeyRegistry.register({surface:'flip', label:'cancel Move artwork',
   keys:['Escape'], scope:()=>moveMode});
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && moveMode) cancelMove(); });
+bindEl('sbFlipH', 'click', ()=>{ if(!playing) selMirror('h'); });
+bindEl('sbFlipV', 'click', ()=>{ if(!playing) selMirror('v'); });
+bindEl('sbDup',   'click', ()=>{ if(!playing) selDuplicate(); });
+bindEl('sbCut',   'click', ()=>{ if(!playing) selCut(); });
+bindEl('sbPaste', 'click', ()=>{ if(!playing) selPaste(); });
+// Done drops the selection but stays on the tool: the common next move is to
+// pick something else, not to go back to the pen.
+bindEl('sbDone',  'click', ()=>{ selClear(); selRender(null); });
+// The bar borrows the page bar's row, so entering Move mode has to take it back
+// — otherwise both would claim the row and the last one to render would win.
+if(typeof setMoveMode === 'function'){
+  const _setMoveMode = setMoveMode;
+  setMoveMode = function(on){ if(on) selClear(); _setMoveMode(on); syncSelBar(); };
+}
+// The first sync happens on load, NOT here. syncSelBar() reads moveMode, whose
+// `let` runs later in this file — calling it at this line threw "Cannot access
+// 'moveMode' before initialization" and killed everything after it, which is the
+// second time this file's scattered `let` state has done exactly that. Anything
+// that touches state declared further down belongs in the load handler.
+
 
 /* ---- typing an exact offset ----------------------------------------------
  * Dragging answers "about there"; typing answers "exactly 40 across". Both
@@ -4202,7 +4408,7 @@ refreshPendingCards();
 
 if (restored) chip('Draft restored');
 requestAnimationFrame(positionSeg);
-window.addEventListener('load', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); });
+window.addEventListener('load', ()=>{ sizeStage(); positionSeg(); positionToolSlider(); syncSelBar(); });
 
 // Report sheet — shared via lib/report.js so the two editors collect the same
 // context. Null-safe: without the lib the menu item simply does nothing.
