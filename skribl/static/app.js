@@ -660,26 +660,54 @@ function bindEl(id, ev, fn, opts) {
 
 
 const toolGroupEl = document.getElementById('toolGroup');
+/* ---------- v226: the tool shelf and its overflow tray --------------------
+   The mechanics live in lib/toolshelf.js and are shared with Flip — see that
+   file's header for why the row needed this at all. What stays here is what is
+   genuinely Pad's: which tools exist, and what applying one does to the canvas.
+
+   WITH THREE TOOLS NOTHING CHANGES. 3 <= SHELF_MAX, so all three keep their
+   cells, the chevron stays hidden and the tray is never built. */
+const SHELF_MAX = 3;
+const toolMoreBtn = document.getElementById('toolMoreBtn');
+const toolTray = document.getElementById('toolTray');
+const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf && toolGroupEl)
+  ? window.SkriblToolShelf.create({
+      group: toolGroupEl,
+      moreBtn: toolMoreBtn,
+      tray: toolTray,
+      shelfMax: SHELF_MAX,
+      // #selectToolBtn is DELIBERATELY absent: v219 removed Select from Pad,
+      // because it edited points that were already recorded and replay then
+      // drew a stroke at its NEW position at its OLD timestamp. It is therefore
+      // not in this list either — the registry describes what the row HAS.
+      tools: [
+        { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
+        { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
+        { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
+      ],
+      currentTool: () => tool,
+      slider: toolSlider,
+      setTool: (id) => setTool(id),
+      closeTray: () => { if (_padDrawerCtl) _padDrawerCtl.open(null); },
+    })
+  : null;
+if (typeof window !== 'undefined') window.SkriblPadTools = toolShelf;
+
 function setTool(nextTool) {
   tool = nextTool;
   const penBtn = document.getElementById('penToolBtn');
-  const eraserBtn = document.getElementById('eraserToolBtn');
-  const shapeBtn = document.getElementById('shapeToolBtn');
-  // #selectToolBtn is DELIBERATELY absent from the template: v219 removed Select
-  // from Pad, because it edited points that were already recorded and replay
-  // then drew a stroke at its NEW position at its OLD timestamp. The lookup and
-  // the 'select' branch stay because SkriblSelectTool is still loaded and other
-  // code may still ask for the tool by name; both fall back to the pen rather
-  // than to `undefined`, so setTool('select') is a no-op instead of a crash.
-  // If Select ever returns, put the button back and this works unchanged.
-  const selectBtn = document.getElementById('selectToolBtn');   // null by design
-  const activeBtn = nextTool === 'pen' ? penBtn
-                  : nextTool === 'shape' ? (shapeBtn || penBtn)
-                  : nextTool === 'select' ? (selectBtn || penBtn)
-                  : eraserBtn;
+  // 'select' is still accepted by name: SkriblSelectTool is loaded on Pad and
+  // other code may still ask for the tool. It has no registry entry and no
+  // button, so btnFor() returns null and the pen takes the highlight — a no-op
+  // rather than a crash, exactly as the old ternary's `selectBtn || penBtn`
+  // fallback did. If Select ever returns, add it to the registry above and this
+  // works unchanged.
+  const activeBtn = (toolShelf && toolShelf.btnFor(nextTool)) || penBtn;
   // Leaving the tool drops the selection: an invisible selection that a later
   // drag would move is worse than making the user re-pick.
   if (nextTool !== 'select' && window.SkriblSelectTool) window.SkriblSelectTool.clear();
+  // Records the MRU, re-syncs the shelf and repaints the tray's pressed state.
+  if (toolShelf) toolShelf.noteUse(nextTool);
   document.querySelectorAll('.tool-btn').forEach(btn => {
     btn.classList.toggle('active', btn === activeBtn);
   });
@@ -691,24 +719,7 @@ function setTool(nextTool) {
   }
   if (nextTool !== 'eraser') eraserCursor.style.display = 'none';
   if (nextTool !== 'shape' && typeof shapeCursor !== 'undefined') shapeCursor.style.display = 'none';
-  if (toolSlider && activeBtn) {
-    // Measured from the button's own offsetLeft rather than summed from the
-    // widths before it. The old form was `pen ? 0 : penWidth`, which is not a
-    // two-button special case so much as a two-button ASSUMPTION: a third tool
-    // parked the pill under the second one and it looked like the wrong tool
-    // was selected. offsetLeft is what the browser actually laid out, so this
-    // is right for any number of tools and for any label width.
-    // offsetLeft is ALREADY relative to .tool-group, which is position:relative
-    // and therefore the button's offsetParent. The old form subtracted the
-    // GROUP's own offsetLeft on top of that — a double subtraction that only
-    // looked correct while the toolbar's left padding happened to equal the
-    // group's. Changing the toolbar padding shifted the pill off its button.
-    // Measure against the group's padding, which is what .tool-slider's own
-    // `left` is matched to.
-    const padL = parseFloat(getComputedStyle(toolGroupEl || document.body).paddingLeft) || 0;
-    toolSlider.style.width = activeBtn.offsetWidth + 'px';
-    toolSlider.style.transform = `translateX(${activeBtn.offsetLeft - padL}px)`;
-  }
+  if (toolShelf) toolShelf.placeSlider(activeBtn);
 }
 
 function initToolSlider() {
@@ -730,6 +741,12 @@ setTimeout(initToolSlider, 50);
 
 document.querySelectorAll('.tool-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    // The chevron is a .tool-btn so it inherits the pill's shape and the sliding
+    // highlight's geometry, but it is NOT a tool: it carries no data-tool.
+    // Without this guard clicking it called setTool(undefined), and Pad assigns
+    // `tool` unconditionally — so opening the tray left the editor with no tool
+    // selected. Flip clamped unknown ids to the pen and merely looked fine.
+    if (!btn.dataset.tool) return;
     setTool(btn.dataset.tool);
     // Shape opens its picker; every other tool closes it. Tapping Shape while
     // it is already the active tool re-opens the picker to switch kind — which
@@ -1077,9 +1094,17 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
   panels: {
     draw:  { panel: 'drawPanel',  button: 'colorOpenBtn',  openClass: 'open' },
     photo: { panel: 'photoPanel', button: 'imageOpenBtn', openClass: 'open' },
-    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' }
+    music: { panel: 'musicPanel', button: 'musicOpenBtn', openClass: 'open' },
+    // The tray joins the drawer set so it is mutually exclusive with draw,
+    // photo and music — opening it closes them, and vice versa. Rebuilt on
+    // every open; see lib/toolshelf.js.
+    tools: { panel: 'toolTray', button: 'toolMoreBtn', openClass: 'open', aria: true }
   },
   reveal(panel, name) {
+    // The tray is anchored ABOVE the toolbar rather than docked below it, so
+    // none of the scroll-to-reveal work below applies: it is already fully on
+    // screen, and scrolling for it would drag the canvas out of frame.
+    if (name === 'tools') { if (toolShelf) { toolShelf.buildTray(); toolShelf.sync(); } return; }
     if (name !== 'photo' && typeof exitReposition === 'function') exitReposition();
     if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
     if (name === 'photo' && typeof updateRepositionUI === 'function') updateRepositionUI();
@@ -1112,6 +1137,22 @@ if (toolBarEl) toolBarEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.tool-open');
   if (btn && _padDrawerCtl) _padDrawerCtl.toggle(btn.dataset.drawer);
 });                                              // pen/eraser use their own setTool binding
+// The chevron is not a .tool-open, so it needs its own binding; the tray is
+// dismissed by tapping away from it or by Escape, like every other overlay.
+if (toolMoreBtn && _padDrawerCtl) {
+  toolMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); _padDrawerCtl.toggle('tools'); });
+}
+function hideToolTray() { if (_padDrawerCtl && _padDrawerCtl.isOpen('tools')) _padDrawerCtl.open(null); }
+document.addEventListener('click', (e) => {
+  if (!toolTray || toolTray.hidden) return;
+  if (e.target.closest('#toolTray') || e.target.closest('#toolMoreBtn')) return;
+  hideToolTray();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideToolTray(); });
+// First paint: with three tools this only hides the chevron, which the template
+// already ships hidden. It is here so the shelf is correct from the registry
+// rather than from the markup happening to agree with it.
+if (toolShelf) toolShelf.sync();
 
 const recordBtn = _authoringCtl('recordBtn');
 const playBtn = document.getElementById('playBtn');

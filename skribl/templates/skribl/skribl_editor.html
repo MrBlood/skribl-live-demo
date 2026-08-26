@@ -246,7 +246,20 @@
           </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle or ellipse &mdash; pick which in the Draw drawer; hold Shift for square/circle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
             <span class="tool-btn-label">Shape</span>
+          </button>{# The shelf's overflow cell. HIDDEN while every tool fits on the
+            shelf, which today is all three of them — so this changes nothing you
+            can see until a fourth tool is registered. lib/toolshelf.js owns the
+            hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"/></svg>
+            <span class="tool-btn-label">More</span>
           </button>        </div>
+    {# Every registered tool, one cell each, filled by lib/toolshelf.js. Empty in
+       the served HTML on purpose: the registry is the single place a tool is
+       declared, and markup that had to be kept in step with it would be a
+       second place. Anchored like #shapePop above — a child of .toolbar
+       (position: relative) rather than of .tool-group, which is overflow: hidden
+       and would clip it. #}
+    <div class="tool-tray" id="toolTray" role="dialog" aria-label="All tools" hidden></div>
     {# COLOUR SITS AGAINST THE TOOL PILL, not across the row from it (v224).
        It is the only bare-glyph control in the row's left half, and a bare glyph
        carries its own inset — the ring is 34px inside a 44px button — so putting
@@ -328,6 +341,7 @@
   <script src="{{ skribl_asset('lib/report.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/segslider.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/drawers.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/toolshelf.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/gridoverlay.js') }}" defer></script>
   {# Shared recent-colour controller. Loaded before the editor script,
      which reads window.SkriblRecentColors at first use. #}

@@ -861,3 +861,38 @@ the chevron never appears; delete `#toolTray`, `#toolMoreBtn`, the `tools` entry
 in `_flipDrawerCtl`, the `.tool-tray*` rules in `flip.css` and
 `harness/verify_tray.py`. `setTool()` and `activeToolBtn()` now read the registry
 rather than a hard-coded roster and are worth keeping either way.
+
+**Follow-up: Pad gets the tray, and the shelf moves to a shared lib.** The
+mechanics are in `skribl/static/lib/toolshelf.js` now and both editors create one
+-- rather than flip.js keeping its copy and app.js gaining a second.
+`verify_surfaces.py` exists because app.js and flip.js define 57 functions with
+the same names and share zero runs of six identical lines; adding a 58th by
+copying would be the exact failure it measures. The CSS moved the same way, from
+flip.css to styles.css, which both templates load.
+
+The ratchet then caught the one thing left behind: extracting Pad's slider
+placement into a named function took the shared-name count from 60 to 61 and
+`verify_surfaces` failed. Both surfaces had arrived at an identical
+`offsetLeft - group padding` by independently fixing the SAME two bugs -- a
+two-button assumption that parked the pill under the wrong cell once a third tool
+existed, and a double subtraction of the group's own offsetLeft. That is
+precisely what the ratchet is for, so the placement moved into the lib too and
+the count went back to 60.
+
+**Two bugs this introduced, both now pinned.** The chevron is a `.tool-btn` --
+it has to be, to inherit the pill's shape and the sliding highlight's geometry --
+so it was swept up by the binding that calls `setTool(btn.dataset.tool)` on every
+tool cell. It carries no `data-tool`, so opening the tray called
+`setTool(undefined)`: Flip clamps unknown ids to the pen and merely looked fine,
+while Pad assigns `tool` unconditionally and was left with **no tool selected at
+all**. And the tray cells were styled `font: 600 10px/1 inherit`, which is an
+invalid shorthand -- the family slot does not accept `inherit` -- so the whole
+declaration was dropped and the labels rendered in the UA default face at ~13px.
+Neither was caught by the first version of `verify_tray.py`, which is why it now
+pins "opening the tray does not change the tool" and the computed font size, on
+both surfaces.
+
+Pad's row already wraps at 320 with three tools, so the width pin there asserts
+that adding a tool does not CHANGE whether it wraps, rather than that it never
+wraps. Measured: Pad 118 -> 118px and Flip 121 -> 121px (103 at 320) with a
+fourth tool registered.

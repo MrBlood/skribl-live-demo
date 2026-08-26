@@ -1754,155 +1754,47 @@ function setColor(hex){
   // swatches ringed at once and the wrong one appearing selected.
   setTool('pen');   // picking a colour returns you to the pen, like the Pad
 }
-/* ---------- v226: the tool registry, the shelf and the tray ---------------
-   The bottom row holds two populations out of one width budget. The document
-   controls — colour, undo, redo, image, music, magnify — are a CLOSED set. The
-   mark-making tools are not: pen, eraser and shape today, with select, fill and
-   text all plausible. Sharing one shelf meant every new tool competed with undo
-   for the same pixels, so each addition became a fresh fitting exercise across
-   six breakpoints and two surfaces. Measured: a fourth cell takes the pill
-   121 -> 158px and wraps the row at 320, 344, 360, 375, 390 and 431.
-
-   TOOLS is now the single place a tool is declared. The shelf shows at most
-   SHELF_MAX cells; anything beyond that lives in #toolTray, reached through the
-   chevron. So the pill's width stops being a function of how many tools exist.
+/* ---------- v226: the tool shelf and its overflow tray --------------------
+   The mechanics live in lib/toolshelf.js and are shared with Pad — see that
+   file's header for why the row needed this at all. What stays here is what is
+   genuinely Flip's: which tools exist, and how a tool is applied.
 
    WITH THREE TOOLS NOTHING CHANGES. 3 <= SHELF_MAX, so all three keep their
-   cells, the chevron stays hidden and the tray is never built. The mechanism is
-   dormant until a fourth tool is registered, at which point the shelf becomes
-   two most-recent cells plus the chevron — and the row does not move by a pixel,
-   because three cells is what it already holds.
-
-   Registering a tool from outside is a real entry point, not a test seam:
-   window.SkriblFlipTools.register({id, label, icon}). It is how the harness
-   exercises the overflow path without this file having to ship a fake tool. */
+   cells, the chevron stays hidden and the tray is never built. */
 const SHELF_MAX = 3;
-const TOOLS = [
-  { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
-  { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
-  { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
-];
-// Most-recently-used, newest first. The ACTIVE tool is always its head, which
-// is what guarantees the active tool is on the shelf — and therefore that
-// positionToolSlider() always has a visible button to sit under.
-let toolMRU = TOOLS.map(t => t.id);
 const toolMoreBtn = document.getElementById('toolMoreBtn');
 const toolTray = document.getElementById('toolTray');
-
-function toolById(id){ return TOOLS.find(t => t.id === id) || null; }
-function toolBtnEl(id){ const t = toolById(id); return t && t.btn ? document.getElementById(t.btn) : null; }
-
-/* A tool registered at runtime has no cell in the template, so it gets one —
-   built to match the static three exactly, including the label span that the
-   phone tiers hide. Inserted BEFORE the chevron so the chevron stays last. */
-function makeShelfBtn(tool){
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'tool-btn';
-  b.id = tool.btn;
-  b.dataset.tool = tool.id;
-  b.title = tool.label;
-  b.innerHTML = (tool.icon || '') + '<span class="tool-btn-label">' + tool.label + '</span>';
-  b.addEventListener('click', () => setTool(tool.id));
-  const grp = document.getElementById('toolGroup');
-  if (grp && toolMoreBtn) grp.insertBefore(b, toolMoreBtn);
-  else if (grp) grp.appendChild(b);
-  return b;
-}
-
-/* Which tools get a shelf cell. Everything fits, or the most recent
-   SHELF_MAX - 1 do and the chevron takes the last slot. */
-function shelfTools(){
-  if (TOOLS.length <= SHELF_MAX) return TOOLS.map(t => t.id);
-  return toolMRU.slice(0, SHELF_MAX - 1);
-}
-
-function syncToolShelf(){
-  const shown = new Set(shelfTools());
-  const overflowing = TOOLS.length > SHELF_MAX;
-  for (const t of TOOLS){
-    const el = toolBtnEl(t.id);
-    if (el) el.hidden = !shown.has(t.id);
-  }
-  if (toolMoreBtn){
-    toolMoreBtn.hidden = !overflowing;
-    // The tray's arrow points at the CHEVRON, not at the row's centre: the tool
-    // group sits at the left end, so a centred arrow would point at the colour
-    // ring. Measured rather than guessed, because the pill's width moves with
-    // the width tier.
-    if (overflowing && toolTray){
-      const r = toolMoreBtn.getBoundingClientRect();
-      const p = toolTray.getBoundingClientRect();
-      if (r.width && p.width) toolTray.style.setProperty('--tray-arrow', Math.round(r.left + r.width / 2 - p.left) + 'px');
-    }
-  }
-  positionToolSlider();
-}
-
-/* Rebuilt on open rather than cached: a tool can be registered at any time, and
-   a stale tray that is missing one is worse than the cost of eight appendChild
-   calls on a control the user has just deliberately opened. */
-function buildToolTray(){
-  if (!toolTray) return;
-  toolTray.innerHTML = '';
-  for (const t of TOOLS){
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tool-tray-btn' + (t.id === flipTool ? ' active' : '');
-    b.dataset.tool = t.id;
-    b.setAttribute('aria-pressed', String(t.id === flipTool));
-    const icon = t.icon || (toolBtnEl(t.id) && toolBtnEl(t.id).querySelector('svg')
-                            ? toolBtnEl(t.id).querySelector('svg').outerHTML : '');
-    b.innerHTML = icon + '<span>' + t.label + '</span>';
-    b.addEventListener('click', e => {
-      e.stopPropagation();
-      setTool(t.id);
-      _flipDrawerCtl.open(null);
-    });
-    toolTray.appendChild(b);
-  }
-}
-
-window.SkriblFlipTools = {
-  register(tool){
-    if (!tool || !tool.id || toolById(tool.id)) return false;
-    const entry = { id: tool.id, label: tool.label || tool.id,
-                    btn: tool.id + 'ToolBtn', icon: tool.icon || '' };
-    TOOLS.push(entry);
-    toolMRU.push(entry.id);
-    makeShelfBtn(entry);
-    syncToolShelf();
-    return true;
-  },
-  list(){ return TOOLS.map(t => t.id); },
-  shelf: shelfTools,
-  overflowing(){ return TOOLS.length > SHELF_MAX; },
-};
+const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
+  ? window.SkriblToolShelf.create({
+      group: document.getElementById('toolGroup'),
+      moreBtn: toolMoreBtn,
+      tray: toolTray,
+      shelfMax: SHELF_MAX,
+      tools: [
+        { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
+        { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
+        { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
+      ],
+      currentTool: () => flipTool,
+      slider: document.getElementById('toolSlider'),
+      setTool: (id) => setTool(id),
+      closeTray: () => { if (_flipDrawerCtl) _flipDrawerCtl.open(null); },
+    })
+  : null;
+window.SkriblFlipTools = toolShelf;
 
 /* Pen / eraser toggle — the Pad's segmented control with the sliding accent pill. */
 function activeToolBtn(){
   // Was a three-way ternary over hard-coded ids. Reads the registry now, so a
   // registered tool gets its highlight without touching this function.
-  return toolBtnEl(flipTool) || document.getElementById('penToolBtn');
+  return (toolShelf && toolShelf.btnFor(flipTool)) || document.getElementById('penToolBtn');
 }
+/* Delegates to lib/toolshelf.js. The body moved there because Pad computed the
+   SAME thing, having independently fixed the same two bugs — a two-button
+   assumption and a double subtraction of the group's offsetLeft. Kept as a named
+   function because six call sites read better than six `toolShelf &&` guards. */
 function positionToolSlider(){
-  const sl=document.getElementById('toolSlider'), grp=document.getElementById('toolGroup');
-  const active=activeToolBtn();
-  if(!active||!sl) return;
-  // offsetLeft, not a sum of the widths before it. The old form was
-  // `erasing ? penWidth : 0` — a two-button ASSUMPTION, not a special case —
-  // and a third tool parked the pill under the second. Same bug as Pad's.
-  // offsetLeft is ALREADY relative to #toolGroup, which is position:relative and
-  // therefore the button's offsetParent. Subtracting the GROUP's own offsetLeft
-  // on top of that is a double subtraction. On Pad it was off by a couple of
-  // pixels because the toolbar's padding happened to be close to the group's;
-  // here the group sits after the colour and media controls, so grp.offsetLeft
-  // is large and the pill was thrown clear off its button — which reads as the
-  // slider simply not working. Measure against the group's own padding, which
-  // is what .tool-slider's `left` is matched to.
-  const padL = parseFloat(getComputedStyle(grp || document.body).paddingLeft) || 0;
-  sl.style.width = active.offsetWidth+'px';
-  sl.style.transform = 'translateX('+(active.offsetLeft - padL)+'px)';
+  if (toolShelf) toolShelf.placeSlider();
 }
 // One call at init is not enough on a phone: the bar is often laid out later and
 // the pill ends up measured against zero widths. Same treatment Pad got.
@@ -1920,19 +1812,12 @@ function setTool(t){
   // roster: a registered tool fell through to the pen and the tray looked
   // broken. The registry decides now, and the fallback still lands on the pen,
   // so an unknown id is a no-op rather than an undefined tool.
-  flipTool = toolById(t) ? t : 'pen';
+  flipTool = (toolShelf && toolShelf.has(t)) ? t : 'pen';
   erasing = (flipTool === 'eraser');
-  // MRU, newest first. The active tool is the head, which is what keeps it on
-  // the shelf however many tools exist.
-  toolMRU = [flipTool].concat(toolMRU.filter(id => id !== flipTool));
-  syncToolShelf();
+  // Records the MRU, re-syncs the shelf and repaints the tray's pressed state.
+  if (toolShelf) toolShelf.noteUse(flipTool);
   const active = activeToolBtn();
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b === active));
-  document.querySelectorAll('.tool-tray-btn').forEach(b => {
-    const on = b.dataset.tool === flipTool;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-pressed', String(on));
-  });
   positionToolSlider();
   pad.style.cursor='none';
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
@@ -2013,9 +1898,9 @@ const _flipDrawerCtl = skriblDrawers({
              onOpen(){ syncMediaUI(); } },
     // The tray joins the drawer set so it is mutually exclusive with colour,
     // photo and music — opening it closes them, and vice versa. Rebuilt on
-    // every open; see buildToolTray().
+    // every open; see toolShelf.buildTray().
     tools: { panel: toolTray, button: toolMoreBtn, openClass: 'open', aria: true,
-             onOpen(){ buildToolTray(); syncToolShelf(); } }
+             onOpen(){ if(toolShelf){ toolShelf.buildTray(); toolShelf.sync(); } } }
   },
   reveal(open, name){
     if(!open) return;
@@ -2071,7 +1956,7 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') hideToolTray(
 // First paint: with three tools this only hides the chevron, which the template
 // already ships hidden. It is here so the shelf is correct from the registry
 // rather than from the markup happening to agree with it.
-syncToolShelf();
+if (toolShelf) toolShelf.sync();
 renderRecent(); setColor(color);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');
@@ -3428,6 +3313,11 @@ function redoStroke(){
 }
 document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener('click',()=>{
   if(playing) return;
+  // The chevron is a .tool-btn so it inherits the pill's shape, but it is NOT a
+  // tool: it carries no data-tool. Without this guard clicking it called
+  // setTool(undefined), which the clamp turned into setTool('pen') — so opening
+  // the tray silently switched you back to the pen.
+  if(!b.dataset.tool) return;
   setTool(b.dataset.tool);
   const pop=document.getElementById('shapePop');
   if(pop) pop.hidden = (b.dataset.tool!=='shape') ? true : !pop.hidden;
