@@ -70,6 +70,13 @@
       return b;
     }
 
+    /* A tool declared in `tools` need not have a cell in the template. The three
+       that shipped with the row do; Select, added in v227, does not — and
+       requiring markup for it would put the roster in two places, which is the
+       thing this registry exists to prevent. Any initial tool whose element is
+       missing gets one built the same way a registered one does. */
+    tools.forEach(function (t) { if (t.btn && !document.getElementById(t.btn)) makeShelfBtn(t); });
+
     function overflowing() { return tools.length > shelfMax; }
 
     /* Which tools get a shelf cell: everything fits, or the most recent

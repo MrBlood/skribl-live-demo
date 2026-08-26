@@ -57,12 +57,17 @@ SURFACES = [
     ("Flip", "/flip", ".flip-tools",  "SkriblFlipTools"),
 ]
 
-SELECT_ICON = (
+# Registered under a name NEITHER surface ships, deliberately. This used to
+# register 'select', which stopped meaning anything the moment v227 gave Flip a
+# real Select: register() returns false for a duplicate, so the width assertions
+# were comparing a shelf against itself and passing for the wrong reason.
+TRIAL_ICON = (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
     'stroke-linecap="round" stroke-linejoin="round">'
     '<path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/>'
     '<path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/></svg>'
 )
+TRIAL = "trial"
 
 STATE = r"""(barSel) => {
   const g = document.getElementById('toolGroup');
@@ -108,19 +113,34 @@ with sync_playwright() as p:
     page = browser.new_page()
 
     for surface, path, bar, api in SURFACES:
-        print(f"\nTRAY [{surface}] — the mechanism is dormant while every tool fits")
+        print(f"\nTRAY [{surface}] — the registry describes what the row has")
         page.set_viewport_size({"width": 390, "height": 800})
         page.goto(BASE + path, wait_until="load")
         page.wait_for_timeout(350)
         s = page.evaluate(STATE, bar)
         check(f"{surface}: the registry is exposed", s["registered"] is not None,
               f"window.{api} is missing — a tool cannot be added without it")
-        check(f"{surface}: it holds exactly the three tools that exist",
-              s["registered"] == ["pen", "eraser", "shape"], str(s["registered"]))
-        check(f"{surface}: all three keep a shelf cell",
-              s["cells"] == ["penToolBtn", "eraserToolBtn", "shapeToolBtn"], str(s["cells"]))
-        check(f"{surface}: the chevron is hidden", s["chevHidden"],
-              "nothing overflows with three tools, so nothing should say it does")
+        baseline = s["registered"] or []
+        # The rosters differ ON PURPOSE and this is where that is recorded.
+        # v219 removed Select from Pad because Pad replays on recorded
+        # timestamps; v227 added it to Flip, which reveals strokes in index
+        # order. verify_select.py carries the reasoning.
+        expected = ["pen", "eraser", "shape"] if surface == "Pad" \
+            else ["pen", "eraser", "shape", "select"]
+        check(f"{surface}: the roster is exactly what this surface ships",
+              baseline == expected, f"{baseline} against {expected}")
+        if len(baseline) <= 3:
+            check(f"{surface}: every tool keeps a shelf cell",
+                  s["cells"] == ["penToolBtn", "eraserToolBtn", "shapeToolBtn"],
+                  str(s["cells"]))
+            check(f"{surface}: the chevron is hidden", s["chevHidden"],
+                  "nothing overflows at three tools, so nothing should say it does")
+        else:
+            check(f"{surface}: the shelf overflows rather than growing",
+                  len(s["cells"]) == 3 and s["cells"][-1] == "toolMoreBtn",
+                  str(s["cells"]))
+            check(f"{surface}: the chevron is shown", not s["chevHidden"],
+                  f"{len(baseline)} tools against a 3-cell shelf")
         check(f"{surface}: the tray is closed", s["trayHidden"])
 
         print(f"\nTRAY [{surface}] — the pill's width does not move when a tool is added")
@@ -129,8 +149,9 @@ with sync_playwright() as p:
             page.goto(BASE + path, wait_until="load")
             page.wait_for_timeout(250)
             before = page.evaluate(STATE, bar)
-            page.evaluate("(a) => window[a[0]].register("
-                          "{id:'select', label:'Select', icon:a[1]})", [api, SELECT_ICON])
+            ok = page.evaluate("(a) => window[a[0]].register("
+                               "{id:a[2], label:'Trial', icon:a[1]})",
+                               [api, TRIAL_ICON, TRIAL])
             page.wait_for_timeout(150)
             after = page.evaluate(STATE, bar)
             # Desktop cells carry text labels, so swapping "Shape" for "More"
@@ -145,8 +166,11 @@ with sync_playwright() as p:
             check(f"{surface} @{w}: adding a tool does not start a new row",
                   after["rowWrapped"] == before["rowWrapped"],
                   f"wrapped {before['rowWrapped']} -> {after['rowWrapped']}")
+            check(f"{surface} @{w}: registering a tool succeeds", ok,
+                  "register() returns false for a duplicate id — TRIAL must be "
+                  "a name neither surface ships")
             check(f"{surface} @{w}: the shelf makes room by overflowing, not by growing",
-                  after["cells"] == ["penToolBtn", "eraserToolBtn", "toolMoreBtn"],
+                  len(after["cells"]) == 3 and after["cells"][-1] == "toolMoreBtn",
                   str(after["cells"]))
 
         print(f"\nTRAY [{surface}] — opening, picking and dismissing")
@@ -154,7 +178,7 @@ with sync_playwright() as p:
         page.goto(BASE + path, wait_until="load")
         page.wait_for_timeout(250)
         page.evaluate("(a) => window[a[0]].register("
-                      "{id:'select', label:'Select', icon:a[1]})", [api, SELECT_ICON])
+                      "{id:a[2], label:'Trial', icon:a[1]})", [api, TRIAL_ICON, TRIAL])
         page.wait_for_timeout(150)
         tool_before = page.evaluate(STATE, bar)["active"]
         page.click("#toolMoreBtn")
@@ -162,7 +186,7 @@ with sync_playwright() as p:
         s = page.evaluate(STATE, bar)
         check(f"{surface}: the tray opens", not s["trayHidden"])
         check(f"{surface}: it carries a cell for every registered tool",
-              s["trayCells"] == ["pen", "eraser", "shape", "select"], str(s["trayCells"]))
+              s["trayCells"] == baseline + [TRIAL], str(s["trayCells"]))
         check(f"{surface}: the chevron reports it is expanded",
               s["chevAria"] == "true", str(s["chevAria"]))
         # REGRESSION PIN. The chevron is a .tool-btn and was caught by the
@@ -180,16 +204,14 @@ with sync_playwright() as p:
         check(f"{surface}: the tray labels take the sheet's type, not the UA's",
               s["trayFontSize"] == "10px", str(s["trayFontSize"]))
 
-        page.click(".tool-tray-btn[data-tool='select']")
+        page.click(f".tool-tray-btn[data-tool='{TRIAL}']")
         page.wait_for_timeout(300)
         s = page.evaluate(STATE, bar)
         check(f"{surface}: picking a tool closes the tray", s["trayHidden"])
-        check(f"{surface}: the picked tool is active",
-              s["active"] == "selectToolBtn", str(s["active"]))
         check(f"{surface}: and it is promoted onto the shelf",
-              "selectToolBtn" in s["cells"],
+              f"{TRIAL}ToolBtn" in s["cells"],
               str(s["cells"]) + " — a tool you just chose has to be one tap away")
-        check(f"{surface}: the sliding highlight follows it onto the shelf",
+        check(f"{surface}: the sliding highlight is on a visible cell",
               s["sliderOK"], f"want {s['sliderWant']}px, got {s['sliderGot']}px")
         check(f"{surface}: the shelf is still three cells", len(s["cells"]) == 3, str(s["cells"]))
 

@@ -896,3 +896,58 @@ Pad's row already wraps at 320 with three tools, so the width pin there asserts
 that adding a tool does not CHANGE whether it wraps, rather than that it never
 wraps. Measured: Pad 118 -> 118px and Flip 121 -> 121px (103 at 320) with a
 fourth tool registered.
+
+---
+
+## Select is a tool on Flip, and still absent from Pad
+
+**The owner's argument settled this, and it reversed mine.** I had proposed
+Select as a third scope on Move's segmented control -- "what does this offset
+apply to?" -- on the grounds that it is not a way of making marks. That holds
+only while the single operation is translate. Transform accompanies Select
+(scale, rotate, mirror), and Move's entire vocabulary is one `(dx, dy)` offset,
+typed as `40, -12` and applied to a page or a run of pages. It cannot express a
+rotation, and "and following" is meaningless for a rotation of a subset --
+different strokes on every page. Bolting transform onto `mbScope` would mean
+rebuilding the move bar into a transform bar, at which point "scope" is the
+wrong frame entirely.
+
+So the division is:
+
+* **Move mode** -- translate a whole page, or a run of pages, by one offset.
+  Cross-page. Typed coordinates.
+* **Select tool** -- pick a subset of THIS page, then transform it. Per-page.
+
+**Why it is safe on Flip and was not on Pad.** v219 removed Select from Pad
+because Pad records a timed performance: moving points that were already
+recorded made replay draw a stroke at its NEW position at its OLD timestamp.
+Flip has no timeline within a page -- playback reveals strokes in index order --
+so moving a point changes only where it is, never when. Flip's Move mode has
+translated whole pages this way since v213. `verify_select.py` asserts Pad's
+registry still does not list the tool, so a future "make the surfaces match"
+cannot quietly reintroduce what v219 removed.
+
+**Undo is an operation, not a snapshot, and that is why this port is short.**
+Pad's Select had to clone the selected point objects BEFORE snapshotting, or
+`strokes.slice()` aliased them and undo silently restored the moved position --
+its own comment is emphatic about the ordering. Flip's `actionLog` stores what
+was done, so undoing a selection move is the same translation negated and there
+is nothing to alias. The entry is `{type:'selmove', idx, spans, dx, dy}` and the
+object branch of `undoStroke()` now dispatches on `type` -- it used to assume
+every object was a Move-mode entry and would have translated the whole page.
+
+**Whole strokes, never fragments.** The marquee selects by GROUP, so a box that
+clips a stroke takes all of it or none. Moving half a stroke would leave
+`strokeGroups` accounting for points that had walked away from their run, which
+is the shape the server rejects on share.
+
+**Transform is NOT in this change.** Scale, rotate and mirror are a separate
+piece of work: the handles, their hit-testing, and the live preview. The model
+is ready for it -- a point is `{x, y, color, size, t, erase}` and `size` is
+per-point, so a scale can scale weight along with position rather than producing
+a stretched outline.
+
+**How to reverse it.** Remove the `select` entry from Flip's tool registry in
+`flip.js` and the tool is gone from both the shelf and the tray; the marquee code
+and `translateSpans()` become dead but harmless. Drop `lib/selection.js` from the
+Flip template and `harness/verify_select.py` to finish.

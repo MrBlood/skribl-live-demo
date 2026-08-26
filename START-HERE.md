@@ -1042,6 +1042,35 @@ six browser contexts (one per mode per surface) and was cut to two by reusing
 one page and resetting the stroke arrays between cases. Reloads are the
 expensive part, not assertions.
 
+## Suites: verify_select.py
+
+Select exists on Flip and **must not** exist on Pad, and this suite pins both
+halves of that.
+
+v219 pulled Select from Pad because Pad records a timed performance: moving
+points that were already recorded made replay draw a stroke at its NEW position
+at its OLD timestamp. Flip has no timeline within a page — playback reveals
+strokes in index order — so moving a point changes only where it is, never when.
+Flip's own Move mode has translated whole pages this way since v213. The last
+section asserts Pad's registry still does not list the tool, so a future "make
+the surfaces match" cannot quietly reintroduce the bug v219 removed.
+
+Two properties carry the design and are pinned hardest:
+
+* **Whole strokes, never fragments.** The marquee selects by GROUP, so a box
+  that clips a stroke takes all of it or none. Moving half a stroke would leave
+  `strokeGroups` accounting for points that had walked away from their run.
+* **Undo is an operation, not a snapshot.** Pad had to clone the selected point
+  objects *before* snapshotting, or `strokes.slice()` aliased them and undo
+  silently restored the moved position. Flip's `actionLog` stores what was done,
+  so undo is the same translation negated and there is nothing to alias. Pinned
+  by moving, undoing and redoing and comparing every point to its original.
+
+Note `fresh()`: Flip autosaves and restores on load, so a section that has just
+drawn leaves its strokes waiting for the next one. Without clearing the draft the
+final marquee caught a restored square as well as the new one and reported two
+selections where the test meant one.
+
 ## Suites: verify_tray.py
 
 Guards a **process**, not a bug. Flip's bottom row was holding two populations
@@ -1056,6 +1085,14 @@ and two surfaces. Measured before the tray: a fourth cell takes the pill
 six widths each:
 **adding a tool does not change the pill's width.** If that stops being true the
 tray has failed at the only job it was built for.
+
+The two rosters differ on purpose and this suite is where that is recorded: Pad
+ships `pen/eraser/shape`, Flip ships those plus `select` since v227, so Pad is
+asserted dormant (three cells, chevron hidden) and Flip asserted overflowing
+(three cells ending in the chevron). The trial tool it registers is called
+`trial` rather than `select` for the same reason — `register()` returns false
+for a duplicate id, so registering `select` on Flip silently stopped testing
+anything and the width assertions compared a shelf against itself.
 
 It also carries two regression pins for bugs the first version did not catch:
 the chevron is a `.tool-btn`, so it was swept up by the binding that calls

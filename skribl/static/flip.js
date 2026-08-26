@@ -202,6 +202,18 @@ let drawing = false, curCount = 0, playing = false, playTimer = null;
 let strokePointerId = null;   // the pointer that owns the stroke in progress
 let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
+/* v227 Select. These live UP HERE, with the other early state, and not beside
+   the functions that use them 3000 lines below. `let` is in its temporal dead
+   zone until its own line executes, and setTool() runs during init — so
+   declaring them next to selClear() meant the very first setTool('pen') threw
+   "Cannot access 'selSpans' before initialization", which aborted the rest of
+   flip.js and took the filmstrip, the tool shelf and every later handler with
+   it. A `typeof` guard cannot rescue a `let`; only the declaration order can. */
+let selSpans = [], selRect = null, selOrigin = null;
+let selMarqueeFrom = null, selMoveFrom = null, selDx = 0, selDy = 0;
+// Mirrors `drawing`/`strokePointerId`: a second pointer (a palm, a second
+// finger) must not steer a drag that a different one started.
+let selecting = false, selPointerId = null;
 let editIdx = 0, armedDel = -1, armedClear = false;
 let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0;   // "draw-on" replay
 
@@ -932,6 +944,14 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
     return;
   }
+  // Select intercepts BEFORE drawing, the same place moveMode does and for the
+  // same reason: dragging a selection must not also lay a stroke through it.
+  if(flipTool === 'select'){
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    selecting = true; selPointerId = e.pointerId;
+    selDown(pos(e));
+    return;
+  }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; strokePointerId=e.pointerId; curCount=1; redoStack.length=0; noteAction('stroke');
   // A stroke belongs to the page it STARTED on. Every later step used frame(),
@@ -957,6 +977,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
+  if(selecting){ if(e.pointerId === selPointerId) selMove(pos(e)); return; }
   if(moveDragging && moveStart){
     e.preventDefault();
     // Screen pixels -> canvas units, so a drag tracks the pointer exactly at
@@ -1054,6 +1075,17 @@ window.addEventListener('pointerup', endMoveDrag);
 window.addEventListener('pointercancel', endMoveDrag);
 window.addEventListener('pointerup', endStroke);
 window.addEventListener('pointercancel', endStroke);
+// On window, not on the pad: releasing outside the canvas has to finish the
+// drag, or the selection stays glued to the pointer. Same reason endStroke and
+// endMoveDrag are bound here.
+function endSelDrag(e){
+  if(!selecting) return;
+  if(e && e.pointerId != null && e.pointerId !== selPointerId) return;
+  selecting = false; selPointerId = null;
+  selUp(e ? pos(e) : { x:0, y:0 });
+}
+window.addEventListener('pointerup', endSelDrag);
+window.addEventListener('pointercancel', endSelDrag);
 
 /* Custom canvas cursors (pad-style). Eraser = a ring at the 3x footprint; pen = a
    ring at the brush footprint with a little crosshair. One handler swaps them; both
@@ -1774,6 +1806,15 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
         { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
         { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
+        // v227. The fourth tool, and the first to arrive through the tray
+        // rather than through a fitting exercise: the shelf drops to
+        // [most recent][next][chevron] on its own and the row does not move.
+        { id: 'select', label: 'Select', btn: 'selectToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/>'
+              + '<path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/>'
+              + '<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>' },
       ],
       currentTool: () => flipTool,
       slider: document.getElementById('toolSlider'),
@@ -1814,6 +1855,9 @@ function setTool(t){
   // so an unknown id is a no-op rather than an undefined tool.
   flipTool = (toolShelf && toolShelf.has(t)) ? t : 'pen';
   erasing = (flipTool === 'eraser');
+  // Leaving Select drops the selection: an invisible selection that a later
+  // drag would move is worse than making the user re-pick.
+  if(flipTool !== 'select') selClear();
   // Records the MRU, re-syncs the shelf and repaints the tray's pressed state.
   if (toolShelf) toolShelf.noteUse(flipTool);
   const active = activeToolBtn();
@@ -3262,6 +3306,147 @@ function translateFrames(idxs, dx, dy){
     for(const pt of f.strokes){ pt.x += dx; pt.y += dy; }
   }
 }
+/* ---------- v227: Select — marquee a subset of THIS page, then drag it ------
+   Ported from Pad's SkriblSelectTool (editor_draw.js), which v219 left in place
+   with its button removed. The geometry is the shared lib/selection.js; what is
+   Flip's is where the points live and how the operation is undone.
+
+   WHY IT IS SAFE HERE AND WAS NOT ON PAD. v219 pulled Select from Pad because
+   Pad records a timed performance: moving points that are already recorded made
+   replay draw a stroke at its NEW position at its OLD timestamp. Flip has no
+   timeline within a page — playback reveals strokes in index order — so moving
+   a point changes only where it is, never when. Flip's own Move mode has
+   translated whole pages this way since v213.
+
+   UNDO IS AN OPERATION, NOT A SNAPSHOT, and that is the whole reason this port
+   is short. Pad had to clone the selected point objects BEFORE snapshotting or
+   `strokes.slice()` aliased them and Ctrl+Z silently restored the moved
+   position. Flip's actionLog stores what was done, so undoing a selection move
+   is the same translation with the sign flipped — there is nothing to alias. */
+
+/* Translate ONLY the points the selection covers. translateFrames() moves whole
+   pages; this is the same operation narrowed to index ranges, and it is what
+   both the live drag and undo/redo go through so they cannot disagree. */
+function translateSpans(frameIdx, spans, dx, dy){
+  if(!dx && !dy) return;
+  const f = frames[frameIdx]; if(!f) return;
+  for(const [a, b] of spans){
+    for(let i = a; i < b && i < f.strokes.length; i++){
+      f.strokes[i].x += dx; f.strokes[i].y += dy;
+    }
+  }
+}
+
+function selBounds(){
+  const f = frame();
+  if(!selSpans.length || !window.SkriblSelect) return null;
+  const pts = [];
+  for(const [a, b] of selSpans){
+    for(let i = a; i < b && i < f.strokes.length; i++) pts.push(f.strokes[i]);
+  }
+  if(!pts.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for(const p of pts){
+    if(p.x < minX) minX = p.x; if(p.y < minY) minY = p.y;
+    if(p.x > maxX) maxX = p.x; if(p.y > maxY) maxY = p.y;
+  }
+  return { x:minX, y:minY, w:maxX - minX, h:maxY - minY };
+}
+
+/* The dashed frame is painted straight onto the pad AFTER render(), because
+   render() clears the canvas. Every path that changes the selection therefore
+   goes through selRender() rather than render(), the same shape Pad's
+   selRepaint() has. */
+function selOutline(r, dashed){
+  if(!r) return;
+  ctx.save();
+  ctx.setLineDash(dashed ? [6, 5] : []);
+  ctx.strokeStyle = 'rgba(124,92,255,0.95)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(r.x, r.y, r.w, r.h);
+  ctx.restore();
+}
+function selRender(marquee){
+  render();
+  if(marquee){ selOutline(marquee, true); return; }
+  const b = selBounds();
+  if(b) selOutline({ x:b.x - 6, y:b.y - 6, w:b.w + 12, h:b.h + 12 }, true);
+}
+function selClear(quiet){
+  const had = selSpans.length > 0;
+  selSpans = []; selRect = null; selOrigin = null; selDx = selDy = 0;
+  selMarqueeFrom = null; selMoveFrom = null;
+  // Only repaint if there was something to erase. setTool() calls this on EVERY
+  // tool change, and repainting the page to remove a marquee that was never
+  // there is pure cost — the same guard Pad's selClear() carries.
+  if(had && !quiet) render();
+}
+
+function selDown(pt){
+  const b = selBounds();
+  // Inside the current selection: start a move. Anywhere else: start a new
+  // marquee, which DISCARDS the old selection — a stray tap keeping a selection
+  // the user has visually moved on from is worse than making them re-pick.
+  if(b && pt.x >= b.x - 8 && pt.x <= b.x + b.w + 8 &&
+          pt.y >= b.y - 8 && pt.y <= b.y + b.h + 8){
+    selMoveFrom = { x:pt.x, y:pt.y };
+    selMarqueeFrom = null;
+    selDx = selDy = 0;
+  } else {
+    selMarqueeFrom = { x:pt.x, y:pt.y };
+    selMoveFrom = null;
+    selSpans = []; selRect = null; selDx = selDy = 0;
+    render();
+  }
+}
+function selMove(pt){
+  if(selMarqueeFrom){
+    selRender(window.SkriblSelect
+      ? SkriblSelect.rect(selMarqueeFrom, pt)
+      : null);
+    return;
+  }
+  if(selMoveFrom && selSpans.length){
+    // Translate by the DELTA since the last move event, so the points carry the
+    // running position and nothing has to be restored from an origin copy.
+    const ndx = pt.x - selMoveFrom.x, ndy = pt.y - selMoveFrom.y;
+    translateSpans(idx, selSpans, ndx - selDx, ndy - selDy);
+    selDx = ndx; selDy = ndy;
+    selRender(null);
+  }
+}
+function selUp(pt){
+  if(selMarqueeFrom){
+    const r = window.SkriblSelect ? SkriblSelect.rect(selMarqueeFrom, pt) : null;
+    selMarqueeFrom = null;
+    const f = frame();
+    if(r && window.SkriblSelect){
+      // groupsIn returns GROUP indices; spans turns those into [start, end)
+      // ranges over `strokes`. Whole strokes, never half of one — a marquee
+      // clipping a stroke in the middle would move a fragment and leave the
+      // rest, which is not what a box round some artwork means.
+      const groups = SkriblSelect.groupsIn(f.strokes, f.strokeGroups, r);
+      selSpans = groups.length ? SkriblSelect.spans(f.strokeGroups, groups) : [];
+      selRect = selSpans.length ? r : null;
+    }
+    selRender(null);
+    if(selSpans.length) chip(selSpans.length === 1 ? '1 stroke selected'
+                                                  : selSpans.length + ' strokes selected');
+    return;
+  }
+  if(selMoveFrom){
+    selMoveFrom = null;
+    if(selDx || selDy){
+      redoStack.length = 0;
+      noteAction({ type:'selmove', idx, spans: selSpans.map(s => s.slice()),
+                   dx: selDx, dy: selDy });
+      refreshThumb(idx); scheduleSave(); updateToolState();
+    }
+    selDx = selDy = 0;
+    selRender(null);
+  }
+}
+
 function noteAction(entry){
   actionLog.push(entry);
   if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
@@ -3274,6 +3459,16 @@ function undoStroke(){
   // a move would silently leave the move in place.
   if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'){
     const m = actionLog.pop();
+    // A selection move touches index ranges on ONE page; a Move-mode move
+    // touches whole pages. The object branch used to assume the second, so
+    // undoing a selection drag would have translated the entire page.
+    if(m.type === 'selmove'){
+      translateSpans(m.idx, m.spans, -m.dx, -m.dy);
+      redoStack.push(m);
+      chip('Selection move undone');
+      render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+      return;
+    }
     translateFrames(m.idxs, -m.dx, -m.dy);
     // A move joined the undo history, so it owes a redo. Without this the
     // button stayed stroke-only: undoing a move left redoStack holding some
@@ -3297,6 +3492,15 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'selmove'){
+    const m = redoStack.pop();
+    translateSpans(m.idx, m.spans, m.dx, m.dy);
+    actionLog.push(m);
+    chip('Selection move redone');
+    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    return;
+  }
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'move'){
     const m = redoStack.pop();
