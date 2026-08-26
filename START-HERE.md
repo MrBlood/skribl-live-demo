@@ -1040,6 +1040,30 @@ six browser contexts (one per mode per surface) and was cut to two by reusing
 one page and resetting the stroke arrays between cases. Reloads are the
 expensive part, not assertions.
 
+## Suites: verify_tray.py
+
+Guards a **process**, not a bug. Flip's bottom row was holding two populations
+out of one width budget: the document controls (colour, undo, redo, image,
+music, magnify), which are a closed set, and the mark-making tools, which are
+not. They shared one shelf, so every new tool competed with undo for the same
+pixels and each addition became a fresh fitting exercise across six breakpoints
+and two surfaces. Measured before the tray: a fourth cell takes the pill
+121 -> 158px and wraps the row at 320, 344, 360, 375, 390 and 431.
+
+`verify_tray.py` is therefore mostly ONE assertion repeated at six widths:
+**adding a tool does not change the pill's width.** If that stops being true the
+tray has failed at the only job it was built for.
+
+The fourth tool is registered through `window.SkriblFlipTools.register()` — the
+real extension point, not a test seam. It is how a tool will actually be added,
+so testing registration is testing the feature, and this file never has to ship
+a fake tool of its own. Nothing here asserts that Select, Fill or Text exist:
+they do not, and the tray was never a promise that they would.
+
+Below 641 the cells are icon-only and the width must not move at all. At 900 the
+labels are visible, so swapping "Shape" for "More" legitimately changes it; that
+width is pinned on not wrapping instead.
+
 ## Suites: verify_tools.py
 
 Split from `verify_ux.py` at v213, which had reached 366 assertions and a dozen

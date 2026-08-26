@@ -1754,11 +1754,136 @@ function setColor(hex){
   // swatches ringed at once and the wrong one appearing selected.
   setTool('pen');   // picking a colour returns you to the pen, like the Pad
 }
+/* ---------- v226: the tool registry, the shelf and the tray ---------------
+   The bottom row holds two populations out of one width budget. The document
+   controls — colour, undo, redo, image, music, magnify — are a CLOSED set. The
+   mark-making tools are not: pen, eraser and shape today, with select, fill and
+   text all plausible. Sharing one shelf meant every new tool competed with undo
+   for the same pixels, so each addition became a fresh fitting exercise across
+   six breakpoints and two surfaces. Measured: a fourth cell takes the pill
+   121 -> 158px and wraps the row at 320, 344, 360, 375, 390 and 431.
+
+   TOOLS is now the single place a tool is declared. The shelf shows at most
+   SHELF_MAX cells; anything beyond that lives in #toolTray, reached through the
+   chevron. So the pill's width stops being a function of how many tools exist.
+
+   WITH THREE TOOLS NOTHING CHANGES. 3 <= SHELF_MAX, so all three keep their
+   cells, the chevron stays hidden and the tray is never built. The mechanism is
+   dormant until a fourth tool is registered, at which point the shelf becomes
+   two most-recent cells plus the chevron — and the row does not move by a pixel,
+   because three cells is what it already holds.
+
+   Registering a tool from outside is a real entry point, not a test seam:
+   window.SkriblFlipTools.register({id, label, icon}). It is how the harness
+   exercises the overflow path without this file having to ship a fake tool. */
+const SHELF_MAX = 3;
+const TOOLS = [
+  { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
+  { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
+  { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
+];
+// Most-recently-used, newest first. The ACTIVE tool is always its head, which
+// is what guarantees the active tool is on the shelf — and therefore that
+// positionToolSlider() always has a visible button to sit under.
+let toolMRU = TOOLS.map(t => t.id);
+const toolMoreBtn = document.getElementById('toolMoreBtn');
+const toolTray = document.getElementById('toolTray');
+
+function toolById(id){ return TOOLS.find(t => t.id === id) || null; }
+function toolBtnEl(id){ const t = toolById(id); return t && t.btn ? document.getElementById(t.btn) : null; }
+
+/* A tool registered at runtime has no cell in the template, so it gets one —
+   built to match the static three exactly, including the label span that the
+   phone tiers hide. Inserted BEFORE the chevron so the chevron stays last. */
+function makeShelfBtn(tool){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tool-btn';
+  b.id = tool.btn;
+  b.dataset.tool = tool.id;
+  b.title = tool.label;
+  b.innerHTML = (tool.icon || '') + '<span class="tool-btn-label">' + tool.label + '</span>';
+  b.addEventListener('click', () => setTool(tool.id));
+  const grp = document.getElementById('toolGroup');
+  if (grp && toolMoreBtn) grp.insertBefore(b, toolMoreBtn);
+  else if (grp) grp.appendChild(b);
+  return b;
+}
+
+/* Which tools get a shelf cell. Everything fits, or the most recent
+   SHELF_MAX - 1 do and the chevron takes the last slot. */
+function shelfTools(){
+  if (TOOLS.length <= SHELF_MAX) return TOOLS.map(t => t.id);
+  return toolMRU.slice(0, SHELF_MAX - 1);
+}
+
+function syncToolShelf(){
+  const shown = new Set(shelfTools());
+  const overflowing = TOOLS.length > SHELF_MAX;
+  for (const t of TOOLS){
+    const el = toolBtnEl(t.id);
+    if (el) el.hidden = !shown.has(t.id);
+  }
+  if (toolMoreBtn){
+    toolMoreBtn.hidden = !overflowing;
+    // The tray's arrow points at the CHEVRON, not at the row's centre: the tool
+    // group sits at the left end, so a centred arrow would point at the colour
+    // ring. Measured rather than guessed, because the pill's width moves with
+    // the width tier.
+    if (overflowing && toolTray){
+      const r = toolMoreBtn.getBoundingClientRect();
+      const p = toolTray.getBoundingClientRect();
+      if (r.width && p.width) toolTray.style.setProperty('--tray-arrow', Math.round(r.left + r.width / 2 - p.left) + 'px');
+    }
+  }
+  positionToolSlider();
+}
+
+/* Rebuilt on open rather than cached: a tool can be registered at any time, and
+   a stale tray that is missing one is worse than the cost of eight appendChild
+   calls on a control the user has just deliberately opened. */
+function buildToolTray(){
+  if (!toolTray) return;
+  toolTray.innerHTML = '';
+  for (const t of TOOLS){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tool-tray-btn' + (t.id === flipTool ? ' active' : '');
+    b.dataset.tool = t.id;
+    b.setAttribute('aria-pressed', String(t.id === flipTool));
+    const icon = t.icon || (toolBtnEl(t.id) && toolBtnEl(t.id).querySelector('svg')
+                            ? toolBtnEl(t.id).querySelector('svg').outerHTML : '');
+    b.innerHTML = icon + '<span>' + t.label + '</span>';
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      setTool(t.id);
+      _flipDrawerCtl.open(null);
+    });
+    toolTray.appendChild(b);
+  }
+}
+
+window.SkriblFlipTools = {
+  register(tool){
+    if (!tool || !tool.id || toolById(tool.id)) return false;
+    const entry = { id: tool.id, label: tool.label || tool.id,
+                    btn: tool.id + 'ToolBtn', icon: tool.icon || '' };
+    TOOLS.push(entry);
+    toolMRU.push(entry.id);
+    makeShelfBtn(entry);
+    syncToolShelf();
+    return true;
+  },
+  list(){ return TOOLS.map(t => t.id); },
+  shelf: shelfTools,
+  overflowing(){ return TOOLS.length > SHELF_MAX; },
+};
+
 /* Pen / eraser toggle — the Pad's segmented control with the sliding accent pill. */
 function activeToolBtn(){
-  const id = flipTool === 'eraser' ? 'eraserToolBtn'
-           : flipTool === 'shape'  ? 'shapeToolBtn' : 'penToolBtn';
-  return document.getElementById(id) || document.getElementById('penToolBtn');
+  // Was a three-way ternary over hard-coded ids. Reads the registry now, so a
+  // registered tool gets its highlight without touching this function.
+  return toolBtnEl(flipTool) || document.getElementById('penToolBtn');
 }
 function positionToolSlider(){
   const sl=document.getElementById('toolSlider'), grp=document.getElementById('toolGroup');
@@ -1791,10 +1916,23 @@ function positionToolSlider(){
   if(document.fonts&&document.fonts.ready) document.fonts.ready.then(replace);
 })();
 function setTool(t){
-  flipTool = (t === 'eraser' || t === 'shape') ? t : 'pen';
+  // Was `(t === 'eraser' || t === 'shape') ? t : 'pen'`, which is a hard-coded
+  // roster: a registered tool fell through to the pen and the tray looked
+  // broken. The registry decides now, and the fallback still lands on the pen,
+  // so an unknown id is a no-op rather than an undefined tool.
+  flipTool = toolById(t) ? t : 'pen';
   erasing = (flipTool === 'eraser');
+  // MRU, newest first. The active tool is the head, which is what keeps it on
+  // the shelf however many tools exist.
+  toolMRU = [flipTool].concat(toolMRU.filter(id => id !== flipTool));
+  syncToolShelf();
   const active = activeToolBtn();
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b === active));
+  document.querySelectorAll('.tool-tray-btn').forEach(b => {
+    const on = b.dataset.tool === flipTool;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
   positionToolSlider();
   pad.style.cursor='none';
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
@@ -1872,10 +2010,19 @@ const _flipDrawerCtl = skriblDrawers({
     photo: { panel: photoPanel, button: imageBtn, openClass: 'open', aria: true,
              onOpen(){ syncMediaUI(); requestAnimationFrame(positionFitSlider); } },
     music: { panel: musicPanel, button: musicBtn, openClass: 'open', aria: true,
-             onOpen(){ syncMediaUI(); } }
+             onOpen(){ syncMediaUI(); } },
+    // The tray joins the drawer set so it is mutually exclusive with colour,
+    // photo and music — opening it closes them, and vice versa. Rebuilt on
+    // every open; see buildToolTray().
+    tools: { panel: toolTray, button: toolMoreBtn, openClass: 'open', aria: true,
+             onOpen(){ buildToolTray(); syncToolShelf(); } }
   },
-  reveal(open){
+  reveal(open, name){
     if(!open) return;
+    // The tray is anchored above the toolbar, not docked below it in flow, so
+    // scrolling it into view would drag the canvas off screen to reveal a panel
+    // that was already fully visible.
+    if(name === 'tools') return;
     // block:'end', not 'nearest'. 'nearest' scrolls the MINIMUM amount, so a
     // drawer that is already partly on screen gets no scroll at all — which on a
     // phone left the colour swatches and the eyedropper permanently sliced by the
@@ -1900,6 +2047,8 @@ colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.t
 // null check costs nothing and a missing element should never take down a file.
 if (imageBtn) imageBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('photo'); });
 if (musicBtn) musicBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('music'); });
+if (toolMoreBtn) toolMoreBtn.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('tools'); });
+function hideToolTray(){ if(_flipDrawerCtl.isOpen('tools')) _flipDrawerCtl.open(null); }
 document.addEventListener('click',e=>{ const t=e.target;
   // The file inputs (#imageInput/#musicInput/#draftInput) live at the PAGE
   // ROOT on Flip, outside the drawer panels (the shared drawer partials omit
@@ -1913,7 +2062,16 @@ document.addEventListener('click',e=>{ const t=e.target;
   if(!drawPanel.hidden  && !t.closest('#drawPanel')  && !t.closest('#colorCurrent')) closePop();
   if(!photoPanel.hidden && !t.closest('#photoPanel') && !t.closest('#imageBtn')) hidePhoto();
   if(!musicPanel.hidden && !t.closest('#musicPanel') && !t.closest('#musicBtn')) hideMusic();
+  if(toolTray && !toolTray.hidden && !t.closest('#toolTray') && !t.closest('#toolMoreBtn')) hideToolTray();
 });
+// Escape closes the tray. The drawers below the row are dismissed by tapping
+// away from them, which is natural for a docked panel; the tray floats over the
+// canvas, so the key that closes every other overlay should close it too.
+document.addEventListener('keydown', e => { if(e.key === 'Escape') hideToolTray(); });
+// First paint: with three tools this only hides the chevron, which the template
+// already ships hidden. It is here so the shelf is correct from the registry
+// rather than from the markup happening to agree with it.
+syncToolShelf();
 renderRecent(); setColor(color);
 const sizeEl=document.getElementById('size'), sizeVal=document.getElementById('sizeVal'), brushDot=document.getElementById('brushSizeDot');
 function sizeFill(){ const min=+sizeEl.min,max=+sizeEl.max; sizeEl.style.setProperty('--slider-fill', ((sizeEl.value-min)/(max-min)*100)+'%');

@@ -808,3 +808,56 @@ where there was never a clearance problem, paid so the dot sits in the same
 place relative to the icon at every width. That is the property the
 button-anchored rule could not hold, and it is the whole reason for the
 re-anchoring.
+
+---
+
+## The tool shelf holds a fixed number of cells; the tray holds the rest
+
+**This is a decision about process, not about a tool.** Flip's bottom row was
+holding two populations out of one width budget. The document controls -- colour,
+undo, redo, image, music, magnify -- are a CLOSED set. The mark-making tools are
+not: pen, eraser and shape today, with select, fill and text all plausible. They
+shared one shelf, so every new tool competed with undo for the same pixels, and
+each addition became a fresh fitting exercise across six breakpoints and two
+surfaces. Measured before the change: a fourth cell takes the pill 121 -> 158px
+and wraps the row at 320, 344, 360, 375, 390 and 431.
+
+`TOOLS` in `flip.js` is now the single place a tool is declared. The shelf shows
+at most `SHELF_MAX` (3) cells; anything beyond lives in `#toolTray` behind a
+chevron. **The pill's width therefore stops being a function of how many tools
+exist** -- verified at 320, 360, 375, 390 and 430: 103 -> 103 and 121 -> 121 when
+a fourth tool is registered.
+
+**With three tools nothing changes.** 3 <= SHELF_MAX, so all three keep their
+cells, the chevron stays hidden and the tray is never built. This was deliberate:
+a tray that immediately demoted Shape to two taps would be a regression paid for
+a benefit that has not arrived yet. The mechanism is dormant until a fourth tool
+exists, and the row does not move when it does -- three cells is what it already
+held.
+
+**Most-recently-used, not fixed.** Once overflowing, the shelf shows the two most
+recent tools plus the chevron. The active tool is always the MRU head, which is
+what guarantees it has a visible cell and therefore that `positionToolSlider()`
+always has a button to sit under. A tool picked from the tray is promoted onto
+the shelf, so the second reach for it is one tap.
+
+**The registry is a real entry point, not a test seam.**
+`window.SkriblFlipTools.register({id, label, icon})` is how a tool will actually
+be added, and it is how `verify_tray.py` exercises the overflow path -- so the
+suite never has to ship a fake tool, and what it tests is what will be used.
+
+**What this does NOT do.** It adds no tools. Fill, Text and Smudge do not exist
+anywhere in the tree; Select exists on Pad only (`editor_draw.js` plus
+`lib/selection.js`) and needs porting to Flip's per-frame model. The eight-cell
+mock that argued for this was showing that the container holds eight, not
+promising them.
+
+**Flip only, for now.** Pad has the same three tools and the same structure, and
+should get the same treatment when it next needs a fourth. Doing both at once
+would have doubled the surface under test for no behaviour change on either.
+
+**How to reverse it.** Set `SHELF_MAX` to a number larger than `TOOLS.length` and
+the chevron never appears; delete `#toolTray`, `#toolMoreBtn`, the `tools` entry
+in `_flipDrawerCtl`, the `.tool-tray*` rules in `flip.css` and
+`harness/verify_tray.py`. `setTool()` and `activeToolBtn()` now read the registry
+rather than a hard-coded roster and are worth keeping either way.
