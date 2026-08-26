@@ -214,6 +214,16 @@ let selMarqueeFrom = null, selMoveFrom = null, selDx = 0, selDy = 0;
 // Mirrors `drawing`/`strokePointerId`: a second pointer (a palm, a second
 // finger) must not steer a drag that a different one started.
 let selecting = false, selPointerId = null;
+/* v228 transform. selMode names what the current drag is doing; selSnap holds
+   the selected points' ORIGINAL x/y/size for the duration of one gesture.
+
+   A scale or a rotation is recomputed from that snapshot on every pointer move,
+   never applied on top of the last frame. Translate could get away with
+   compounding deltas -- it is exact under addition -- but scale and rotation are
+   not: applying a ratio to an already-scaled value, sixty times a second, walks
+   the geometry away from where the finger says it should be, and a drag out and
+   back does not return to where it started. */
+let selMode = null, selSnap = null, selPivot = null, selRef = null;
 let editIdx = 0, armedDel = -1, armedClear = false;
 let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0;   // "draw-on" replay
 
@@ -1083,6 +1093,7 @@ function endSelDrag(e){
   if(e && e.pointerId != null && e.pointerId !== selPointerId) return;
   selecting = false; selPointerId = null;
   selUp(e ? pos(e) : { x:0, y:0 });
+  selMode = null;
 }
 window.addEventListener('pointerup', endSelDrag);
 window.addEventListener('pointercancel', endSelDrag);
@@ -3337,6 +3348,83 @@ function translateSpans(frameIdx, spans, dx, dy){
   }
 }
 
+/* Handles are sized in SCREEN pixels and drawn in canvas units, so they stay
+   finger-sized whatever the canvas resolution or the zoom. pos() already uses
+   this ratio to turn a client point into a canvas point. */
+function selCanvasPx(px){
+  const r = pad.getBoundingClientRect();
+  return r.width ? px * CW / r.width : px;
+}
+
+function selHandles(){
+  const b = selBounds(); if(!b) return null;
+  const m = selCanvasPx(6);
+  const x0 = b.x - m, y0 = b.y - m, x1 = b.x + b.w + m, y1 = b.y + b.h + m;
+  return {
+    box: { x:x0, y:y0, w:x1 - x0, h:y1 - y0 },
+    // Corners only, and the scale they drive is UNIFORM. A point carries one
+    // scalar `size`, so a non-uniform scale has no honest answer for stroke
+    // weight -- widen a drawing horizontally and the strokes would have to be
+    // thicker on the verticals than the horizontals, which one number per point
+    // cannot express. Edge handles are left out rather than shipped lying.
+    corners: [ { id:'nw', x:x0, y:y0 }, { id:'ne', x:x1, y:y0 },
+               { id:'se', x:x1, y:y1 }, { id:'sw', x:x0, y:y1 } ],
+    rotate: { x:(x0 + x1) / 2, y:y0 - selCanvasPx(26) },
+    centre: { x:(x0 + x1) / 2, y:(y0 + y1) / 2 }
+  };
+}
+function selHandleAt(pt){
+  const h = selHandles(); if(!h) return null;
+  const r = selCanvasPx(15);           // generous: a corner square is 5px drawn
+  for(const c of h.corners){
+    if(Math.abs(pt.x - c.x) <= r && Math.abs(pt.y - c.y) <= r) return { kind:'scale', corner:c, h };
+  }
+  if(Math.hypot(pt.x - h.rotate.x, pt.y - h.rotate.y) <= r) return { kind:'rotate', h };
+  return null;
+}
+
+/* One gesture's worth of originals. Captured on pointerdown and thrown away on
+   release, so nothing here has to survive a page change or a save. */
+function selCapture(){
+  const f = frame(); selSnap = [];
+  for(const [a, b] of selSpans){
+    for(let i = a; i < b && i < f.strokes.length; i++){
+      const p = f.strokes[i];
+      selSnap.push({ i, x:p.x, y:p.y, size:p.size });
+    }
+  }
+}
+/* Rotate about the pivot, then scale about it, writing from the snapshot. `size`
+   is multiplied by the scale so a shrunk selection gets thinner strokes rather
+   than the same weight on smaller artwork -- the per-point `size` field is what
+   makes that possible, and it is why scale is worth having at all. */
+function selApply(scale, angle){
+  if(!selSnap || !selPivot) return;
+  const f = frame(), cos = Math.cos(angle), sin = Math.sin(angle);
+  for(const o of selSnap){
+    const p = f.strokes[o.i]; if(!p) continue;
+    const dx = o.x - selPivot.x, dy = o.y - selPivot.y;
+    p.x = selPivot.x + (dx * cos - dy * sin) * scale;
+    p.y = selPivot.y + (dx * sin + dy * cos) * scale;
+    if(o.size != null) p.size = o.size * scale;
+  }
+}
+function selSnapAfter(){
+  const f = frame();
+  return selSnap.map(o => { const p = f.strokes[o.i];
+    return { i:o.i, x:p.x, y:p.y, size:p.size }; });
+}
+/* Restores exact coordinates rather than inverting the transform. A translate is
+   exact under negation, which is why selmove stores dx/dy and flips the sign;
+   a scale is not -- dividing by a ratio does not always land back on the
+   original float, and repeated undo/redo would drift. Spans are one or two
+   strokes, so the snapshot costs tens of points. */
+function selRestore(pts){
+  const f = frame();
+  for(const o of pts){ const p = f.strokes[o.i]; if(!p) continue;
+    p.x = o.x; p.y = o.y; if(o.size != null) p.size = o.size; }
+}
+
 function selBounds(){
   const f = frame();
   if(!selSpans.length || !window.SkriblSelect) return null;
@@ -3366,16 +3454,40 @@ function selOutline(r, dashed){
   ctx.strokeRect(r.x, r.y, r.w, r.h);
   ctx.restore();
 }
+/* The frame, its four corner grips and the rotate grip. Painted onto the pad
+   after render(), which clears the canvas — so every path that changes the
+   selection goes through selRender() rather than render(). */
+function selChrome(){
+  const h = selHandles(); if(!h) return;
+  selOutline(h.box, true);
+  const s = selCanvasPx(5), lw = selCanvasPx(1.5);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(124,92,255,0.95)';
+  ctx.fillStyle = '#06070a';
+  ctx.lineWidth = lw;
+  for(const c of h.corners){
+    ctx.beginPath(); ctx.rect(c.x - s, c.y - s, s * 2, s * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  // The rotate grip sits above the box on a short stem, so it reads as attached
+  // to the selection rather than as a fifth corner floating near it.
+  ctx.beginPath();
+  ctx.moveTo(h.centre.x, h.box.y); ctx.lineTo(h.rotate.x, h.rotate.y + s);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(h.rotate.x, h.rotate.y, s + selCanvasPx(0.5), 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
 function selRender(marquee){
   render();
   if(marquee){ selOutline(marquee, true); return; }
-  const b = selBounds();
-  if(b) selOutline({ x:b.x - 6, y:b.y - 6, w:b.w + 12, h:b.h + 12 }, true);
+  if(selSpans.length) selChrome();
 }
 function selClear(quiet){
   const had = selSpans.length > 0;
   selSpans = []; selRect = null; selOrigin = null; selDx = selDy = 0;
   selMarqueeFrom = null; selMoveFrom = null;
+  selMode = null; selSnap = null; selPivot = null; selRef = null;
   // Only repaint if there was something to erase. setTool() calls this on EVERY
   // tool change, and repainting the page to remove a marquee that was never
   // there is pure cost — the same guard Pad's selClear() carries.
@@ -3383,16 +3495,38 @@ function selClear(quiet){
 }
 
 function selDown(pt){
+  // Handles are tested FIRST and they sit outside the bounds box, so an
+  // inside-the-box test run first would never reach them.
+  const hit = selSpans.length ? selHandleAt(pt) : null;
+  if(hit){
+    selCapture();
+    if(hit.kind === 'scale'){
+      selMode = 'scale';
+      // Pivot is the corner diagonally opposite the one being dragged, so the
+      // rest of the selection stays put and the drag reads as pulling that
+      // corner rather than as the whole thing sliding.
+      const opp = { nw:'se', ne:'sw', se:'nw', sw:'ne' }[hit.corner.id];
+      selPivot = hit.h.corners.find(c => c.id === opp);
+      selRef = Math.hypot(hit.corner.x - selPivot.x, hit.corner.y - selPivot.y) || 1;
+    } else {
+      selMode = 'rotate';
+      selPivot = hit.h.centre;
+      selRef = Math.atan2(pt.y - selPivot.y, pt.x - selPivot.x);
+    }
+    return;
+  }
   const b = selBounds();
   // Inside the current selection: start a move. Anywhere else: start a new
   // marquee, which DISCARDS the old selection — a stray tap keeping a selection
   // the user has visually moved on from is worse than making them re-pick.
   if(b && pt.x >= b.x - 8 && pt.x <= b.x + b.w + 8 &&
           pt.y >= b.y - 8 && pt.y <= b.y + b.h + 8){
+    selMode = 'move';
     selMoveFrom = { x:pt.x, y:pt.y };
     selMarqueeFrom = null;
     selDx = selDy = 0;
   } else {
+    selMode = 'marquee';
     selMarqueeFrom = { x:pt.x, y:pt.y };
     selMoveFrom = null;
     selSpans = []; selRect = null; selDx = selDy = 0;
@@ -3400,6 +3534,20 @@ function selDown(pt){
   }
 }
 function selMove(pt){
+  if(selMode === 'scale'){
+    // 0.05 rather than 0 — a selection dragged through its own pivot would
+    // otherwise collapse to a point with no way back, since every subsequent
+    // ratio multiplies zero.
+    const d = Math.hypot(pt.x - selPivot.x, pt.y - selPivot.y);
+    selApply(Math.max(0.05, d / selRef), 0);
+    selRender(null);
+    return;
+  }
+  if(selMode === 'rotate'){
+    selApply(1, Math.atan2(pt.y - selPivot.y, pt.x - selPivot.x) - selRef);
+    selRender(null);
+    return;
+  }
   if(selMarqueeFrom){
     selRender(window.SkriblSelect
       ? SkriblSelect.rect(selMarqueeFrom, pt)
@@ -3416,6 +3564,19 @@ function selMove(pt){
   }
 }
 function selUp(pt){
+  if(selMode === 'scale' || selMode === 'rotate'){
+    const before = selSnap, after = selSnapAfter();
+    selMode = null; selSnap = null; selPivot = null; selRef = null;
+    const changed = after.some((a, i) =>
+      a.x !== before[i].x || a.y !== before[i].y || a.size !== before[i].size);
+    if(changed){
+      redoStack.length = 0;
+      noteAction({ type:'seltransform', idx, before, after });
+      refreshThumb(idx); scheduleSave(); updateToolState();
+    }
+    selRender(null);
+    return;
+  }
   if(selMarqueeFrom){
     const r = window.SkriblSelect ? SkriblSelect.rect(selMarqueeFrom, pt) : null;
     selMarqueeFrom = null;
@@ -3469,6 +3630,17 @@ function undoStroke(){
       render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
       return;
     }
+    // A transform restores COORDINATES rather than inverting itself. Negating a
+    // translate is exact; dividing by a scale ratio is not, and repeated
+    // undo/redo would walk the artwork away from where it started.
+    if(m.type === 'seltransform'){
+      const at = idx; if(m.idx !== at) go(m.idx);
+      selRestore(m.before);
+      redoStack.push(m);
+      chip('Transform undone');
+      render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+      return;
+    }
     translateFrames(m.idxs, -m.dx, -m.dy);
     // A move joined the undo history, so it owes a redo. Without this the
     // button stayed stroke-only: undoing a move left redoStack holding some
@@ -3492,6 +3664,16 @@ function undoStroke(){
 function redoStroke(){
   invalidateClearUndo();
   if(playing || !redoStack.length) return;
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'seltransform'){
+    const m = redoStack.pop();
+    if(m.idx !== idx) go(m.idx);
+    selRestore(m.after);
+    actionLog.push(m);
+    chip('Transform redone');
+    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    return;
+  }
   if(typeof redoStack[redoStack.length-1] === 'object'
      && redoStack[redoStack.length-1].type === 'selmove'){
     const m = redoStack.pop();

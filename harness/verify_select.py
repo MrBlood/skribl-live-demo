@@ -1,4 +1,4 @@
-"""Select on Flip: marquee a subset of one page, then drag it.
+"""Select on Flip: marquee a subset of one page, then move, scale or rotate it.
 
 WHY THIS IS SAFE ON FLIP AND WAS NOT ON PAD, which is the whole reason the tool
 exists here and nowhere else. v219 pulled Select from Pad because Pad records a
@@ -23,10 +23,27 @@ Two properties carry the design and are pinned hardest:
     translation with the sign flipped and there is nothing to alias. Pinned by
     moving, undoing and redoing and comparing every point against its original.
 
+TRANSFORM SCALES STROKE WEIGHT, and that is the reason it is worth having rather
+than a curiosity. A point is `{x, y, color, size, t, erase}` and `size` is
+PER-POINT, so a scale multiplies weight along with position: shrink a drawing and
+its strokes get thinner, instead of the same-weight outline of a smaller shape.
+Rotation leaves `size` alone. Both are pinned.
+
+Only the four CORNERS scale, and the scale is uniform. One scalar `size` has no
+honest answer for a non-uniform scale — stretch a drawing horizontally and the
+verticals would need to be thicker than the horizontals, which one number cannot
+express — so edge handles are absent by design rather than missing.
+
+Undo for a transform RESTORES COORDINATES rather than inverting itself, unlike
+selmove, which negates its dx/dy. Negating a translate is exact; dividing by a
+scale ratio is not, and repeated undo/redo would walk the artwork off its mark.
+Pinned by comparing every point, including its size, against the original.
+
 PAD MUST NOT GET THE TOOL. v219's reasoning still holds there, so the last
 section asserts Pad's registry does not list it — otherwise a future "make the
 surfaces match" would quietly reintroduce the bug v219 removed.
 """
+import math
 import sys
 
 BASE = "http://127.0.0.1:5001"
@@ -46,6 +63,9 @@ def check(name, ok, detail=""):
 
 
 SNAP = "() => frames[idx].strokes.map(p => [Math.round(p.x), Math.round(p.y)])"
+# Full precision plus size: the transform pins compare weight as well as
+# position, and rounding to whole pixels would hide a scale that missed.
+SNAP_FULL = ("() => frames[idx].strokes.map(p => [p.x, p.y, p.size])")
 
 
 def stroke(page, pts):
@@ -69,15 +89,27 @@ def drag(page, a, b, steps=10):
 
 def fresh(page):
     """Flip autosaves and restores on load, so a section that just drew leaves
-    its strokes waiting for the next one — the marquee in the last section was
-    catching a restored square as well as the new one, and reported two
-    selections where the test meant one. Clear the draft and reload."""
+    its strokes waiting for the next one — the marquee was catching a restored
+    square as well as the new one, and reported two selections where the test
+    meant one.
+
+    Clearing localStorage is NOT enough on its own, and that cost a debugging
+    round: the live page still holds the drawing in memory, and reloading makes
+    it save on the way out — so the draft is written back after the clear and
+    restored by the very reload meant to be rid of it. Empty the document first,
+    then clear, then reload, so the save-on-unload has nothing to write."""
     page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(200)
-    page.evaluate("() => { for (const k of Object.keys(localStorage))"
+    page.wait_for_timeout(250)
+    page.evaluate("() => { frames = [newFrame()]; idx = 0;"
+                  " try { buildStrip(); render(); } catch (e) {}"
+                  " for (const k of Object.keys(localStorage))"
                   " if (k.indexOf('skribl') === 0) localStorage.removeItem(k); }")
     page.reload(wait_until="load")
     page.wait_for_timeout(450)
+    n = page.evaluate("() => frames.reduce((a, f) => a + f.strokes.length, 0)")
+    if n:
+        raise SystemExit(f"fresh() left {n} points behind — the suite cannot "
+                         f"trust any stroke-index assertion after this")
 
 
 def two_shapes(page):
@@ -165,6 +197,92 @@ with sync_playwright() as p:
     page.evaluate("() => redoStroke()")
     page.wait_for_timeout(250)
     check("redo reapplies it exactly", page.evaluate(SNAP) == after)
+
+    print("\nSELECT — the corner handles scale, and weight scales with them")
+    fresh(page)
+    two_shapes(page)
+    groups = page.evaluate("() => frames[idx].strokeGroups.slice()")
+    n = groups[0]
+    before = page.evaluate(SNAP_FULL)
+    page.evaluate("() => setTool('select')")
+    page.wait_for_timeout(200)
+    check("no handles while nothing is selected",
+          page.evaluate("() => selHandles()") is None)
+    drag(page, (80, 90), (240, 240))
+    h = page.evaluate("() => { const h = selHandles(); return h && {"
+                      "corners: h.corners.map(c => ({id:c.id, x:c.x, y:c.y})),"
+                      "rot: h.rotate, c: h.centre }; }")
+    check("a selection gets four corner handles and a rotate grip",
+          h is not None and len(h["corners"]) == 4 and "rot" in h,
+          str(h and [c["id"] for c in h["corners"]]))
+    to_screen = page.evaluate("() => { const r = pad.getBoundingClientRect();"
+                              " return CW / r.width; }")
+    se = next(c for c in h["corners"] if c["id"] == "se")
+    nw = next(c for c in h["corners"] if c["id"] == "nw")
+    # Pull the SE corner out to 1.5x the diagonal from NW, which is the pivot.
+    tgt = {"x": nw["x"] + (se["x"] - nw["x"]) * 1.5,
+           "y": nw["y"] + (se["y"] - nw["y"]) * 1.5}
+    drag(page, (se["x"] / to_screen, se["y"] / to_screen),
+               (tgt["x"] / to_screen, tgt["y"] / to_screen), steps=14)
+    after = page.evaluate(SNAP_FULL)
+
+    def span(rows, ax):
+        return max(r[ax] for r in rows) - min(r[ax] for r in rows)
+
+    grew = span(after[:n], 0) / span(before[:n], 0)
+    check("the selection scaled by the drag ratio", 1.4 < grew < 1.6,
+          f"x{grew:.2f} against a 1.5 drag")
+    weight = (sum(r[2] for r in after[:n]) / sum(r[2] for r in before[:n]))
+    check("and stroke weight scaled with it", abs(weight - grew) < 0.05,
+          f"geometry x{grew:.2f}, size x{weight:.2f} — a scale that leaves size "
+          f"alone gives you a bigger shape drawn with the same pen")
+    check("the unselected stroke was not touched",
+          after[n:] == before[n:], str(after[n:]))
+
+    print("\nSELECT — undo and redo of a transform are exact, size included")
+    entry = page.evaluate("() => actionLog[actionLog.length - 1]")
+    check("the drag left one seltransform entry",
+          isinstance(entry, dict) and entry.get("type") == "seltransform", str(entry))
+    page.evaluate("() => undoStroke()")
+    page.wait_for_timeout(250)
+    check("undo restores every coordinate AND every size",
+          page.evaluate(SNAP_FULL) == before,
+          "a transform restores coordinates rather than inverting itself, "
+          "because dividing by a scale ratio does not always land back")
+    page.evaluate("() => redoStroke()")
+    page.wait_for_timeout(250)
+    check("redo reapplies it exactly", page.evaluate(SNAP_FULL) == after)
+
+    print("\nSELECT — the rotate grip turns the artwork and leaves weight alone")
+    page.evaluate("() => undoStroke()")
+    page.wait_for_timeout(250)
+    h = page.evaluate("() => { const h = selHandles();"
+                      " return h && { rot: h.rotate, c: h.centre }; }")
+    rot, cen = h["rot"], h["c"]
+    radius = math.hypot(rot["x"] - cen["x"], rot["y"] - cen["y"])
+    # Swing the grip from straight up to straight right: a quarter turn.
+    tgt = {"x": cen["x"] + radius, "y": cen["y"]}
+    drag(page, (rot["x"] / to_screen, rot["y"] / to_screen),
+               (tgt["x"] / to_screen, tgt["y"] / to_screen), steps=16)
+    turned = page.evaluate(SNAP_FULL)
+    check("rotation left stroke weight untouched",
+          [r[2] for r in turned[:n]] == [r[2] for r in before[:n]],
+          "only a scale changes size; a rotation must not")
+    # Every selected point should have swung by about the same angle about the
+    # centre. Compare the first and last point's angular change.
+    def ang(r):
+        return math.atan2(r[1] - cen["y"], r[0] - cen["x"])
+
+    deltas = [(ang(a) - ang(b) + math.pi) % (2 * math.pi) - math.pi
+              for a, b in zip(turned[:n], before[:n])]
+    spread = max(deltas) - min(deltas)
+    check("every point turned by the same angle", spread < 0.05,
+          f"spread {spread:.3f} rad — a spread means the rotation was applied "
+          f"on top of itself rather than recomputed from the snapshot")
+    check("and it actually turned about a quarter", 1.3 < abs(deltas[0]) < 1.85,
+          f"{deltas[0]:.2f} rad")
+    check("rotation logged a transform too",
+          page.evaluate("() => actionLog[actionLog.length - 1].type") == "seltransform")
 
     print("\nSELECT — it does not draw, and leaving it drops the selection")
     fresh(page)

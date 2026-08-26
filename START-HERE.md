@@ -1055,6 +1055,22 @@ Flip's own Move mode has translated whole pages this way since v213. The last
 section asserts Pad's registry still does not list the tool, so a future "make
 the surfaces match" cannot quietly reintroduce the bug v219 removed.
 
+**Transform (v228)** adds four corner handles and a rotate grip. Scale is
+UNIFORM and corners-only: a point carries one scalar `size`, so a non-uniform
+scale has no honest answer for stroke weight — stretch a drawing horizontally
+and the verticals would need to be thicker than the horizontals — and edge
+handles are absent by design rather than missing. A scale multiplies `size`
+along with position, which is what makes it worth having: shrink a drawing and
+its strokes get thinner, rather than the same-weight outline of a smaller shape.
+Rotation leaves `size` alone. Both are pinned.
+
+A transform's undo RESTORES COORDINATES rather than inverting itself, unlike
+`selmove`, which negates its dx/dy. Negating a translate is exact; dividing by a
+scale ratio is not, and repeated undo/redo would walk the artwork off its mark.
+Every gesture also recomputes from a snapshot taken on pointerdown rather than
+applying to the previous frame — compounding a ratio sixty times a second walks
+the geometry away from the finger, and a drag out and back would not return.
+
 Two properties carry the design and are pinned hardest:
 
 * **Whole strokes, never fragments.** The marquee selects by GROUP, so a box
@@ -1067,9 +1083,12 @@ Two properties carry the design and are pinned hardest:
   by moving, undoing and redoing and comparing every point to its original.
 
 Note `fresh()`: Flip autosaves and restores on load, so a section that has just
-drawn leaves its strokes waiting for the next one. Without clearing the draft the
-final marquee caught a restored square as well as the new one and reported two
-selections where the test meant one.
+drawn leaves its strokes waiting for the next one. Clearing localStorage is **not
+enough on its own** — the live page still holds the drawing in memory and saves
+on the way out, so the draft is written back after the clear and restored by the
+very reload meant to be rid of it. `fresh()` empties the document first, then
+clears, then reloads, and asserts zero points afterwards; without that last check
+a polluted page turns every stroke-index assertion into a coin flip.
 
 ## Suites: verify_tray.py
 

@@ -951,3 +951,42 @@ a stretched outline.
 `flip.js` and the tool is gone from both the shelf and the tray; the marquee code
 and `translateSpans()` become dead but harmless. Drop `lib/selection.js` from the
 Flip template and `harness/verify_select.py` to finish.
+
+## Transform: uniform scale on corners, rotation on a grip
+
+**Scale is UNIFORM and corners-only, and that is the model's decision, not a
+shortcut.** A point is `{x, y, color, size, t, erase}` and `size` is a single
+scalar. A non-uniform scale has no honest answer for stroke weight: stretch a
+drawing horizontally and its verticals would have to be thicker than its
+horizontals, which one number per point cannot express. Edge handles are absent
+by design rather than missing. If they are ever wanted, `size` has to become a
+pair -- and that is a payload change, so it is a decision, not an afternoon.
+
+**A scale multiplies `size` along with position**, which is what makes it worth
+having at all: shrink a drawing and its strokes get thinner, rather than the
+same-weight outline of a smaller shape. Rotation leaves `size` alone.
+
+**Every gesture recomputes from a snapshot taken on pointerdown**, never on top
+of the previous frame. Translate could get away with compounding deltas -- it is
+exact under addition, and `selmove` does exactly that -- but a ratio applied to
+an already-scaled value sixty times a second walks the geometry away from the
+finger, and a drag out and back would not return to where it started.
+
+**Undo restores coordinates rather than inverting the transform.** Negating a
+translate is exact; dividing by a scale ratio is not, and repeated undo/redo
+would drift. The entry carries `before` and `after` arrays of `{i, x, y, size}`
+for the selected points only -- one or two strokes, so tens of points.
+
+**Still missing from the FlipaClip list this came from:** mirror, clone and cut.
+All three are cheap now that the transform pipeline exists -- mirror is a
+negative scale on one axis, clone is a span copy, cut is a span splice -- and
+none of them needs a new handle.
+
+**One test lesson worth keeping.** `fresh()` in `verify_select.py` clears
+localStorage AND empties the in-memory document before reloading. Clearing
+storage alone does not work: the live page still holds the drawing and saves on
+the way out, so the draft is written back after the clear and restored by the
+very reload meant to be rid of it. It now also asserts zero points afterwards,
+because a polluted page turns every stroke-index assertion into a coin flip --
+which is exactly how it failed, reporting "the unselected stroke was touched"
+when the real fault was that the selected stroke was not the one the test thought.
