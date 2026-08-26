@@ -29,6 +29,78 @@
   --surface-control: #171b23;
   --surface-control-hover: #1c212c;
 
+  /* ---- v230: the rest of the neutral ramp -------------------------------
+     PHASE 1 OF LIGHT MODE, and it changes nothing you can see. Every value
+     below is the literal that used to sit at the call site, moved here
+     unaltered -- 156 of them across the two sheets. The point is that the
+     chrome's colours are now in one place, so a light palette becomes a second
+     block rather than an archaeology exercise.
+
+     DELIBERATELY NOT COLLAPSED. Several of these are within a couple of
+     luminance steps of each other and could merge, but merging them here would
+     be a visual change smuggled into a mechanical one -- and the two are
+     indistinguishable in a diff. The ramp gets designed in phase 2, where a
+     light value has to be chosen for each of these anyway and the duplicates
+     fall out on purpose.
+
+     Two things stayed literal:
+       * #0d0f14 -- the CANVAS default background. That is the document's own
+         colour: saved, shared, exported. A Skribl must not change because the
+         person looking at it prefers a light UI.
+       * #fff -- almost every use is text sitting on a coloured fill, and white
+         on violet stays white in either theme. */
+
+  /* Surfaces */
+  --surface-deep: #06070a;        /* the toolbar row's ground, below base */
+  --surface-sheet: #12151b;
+  --surface-sheet-2: #14171e;
+  --surface-well: #161a22;        /* inset wells */
+  --surface-well-2: #171a22;
+  --surface-pop: #1b1f27;         /* popovers: shape picker, tool tray */
+
+  /* Lines -- solid borders, as opposed to the translucent hairlines below */
+  --line-faint: #232833;
+  --line: #252b37;
+  --line-2: #262c38;
+  --line-mid: #2a2f3d;
+  --line-mid-2: #2c333f;
+  --line-strong: #2e3340;
+  --line-loud: #3a4150;
+
+  /* Text, dimmest first */
+  --text-faint: #5f6675;
+  --text-faint-2: #697080;
+  --text-soft: #8a93a6;
+  --text-soft-2: #8b93a5;
+  --text-soft-3: #8b97a8;
+  --text-tool-3: #a8b0bf;
+  --text-tool-2: #a9b1c1;
+  --text-tool: #a8b2c1;           /* .tool-btn at rest */
+  --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
+  --text-bright-2: #c8cdd6;
+  --text-bright: #c8cede;
+  --text-brightest: #cdd3de;      /* size dots -- deliberately brighter, v205 */
+  --text-strong-2: #e6e9f0;
+  --text-strong-3: #e7e9ee;
+  --text-strong: #e7e9ea;
+  --text-heading: #f2f4f8;
+
+  /* Violet-tinted surfaces -- the accent composited over a dark ground rather
+     than layered with opacity, so the tint does not shift when the ground
+     moves. Neutral-ish, but they carry the brand hue, so they get their own
+     names rather than a slot on the grey ramp. */
+  --surface-tint: #161528;        /* .help-search at rest */
+  --surface-tint-lit: #1a1830;    /* and focused */
+  --text-on-accent-soft: #ece8ff; /* text on a translucent accent fill */
+
+  /* The wash behind every hover fill and translucent hairline. Held as an RGB
+     TRIPLET rather than a colour so call sites keep their own alpha:
+     rgba(var(--wash-rgb), .06) and rgba(var(--wash-rgb), .4) are the same
+     surface at two strengths, and a light theme flips both by changing this one
+     line. Black rgba() was left alone -- those are drop shadows and scrims,
+     which stay dark whichever way the chrome goes. */
+  --wash-rgb: 255,255,255;
+
   /* Hairlines */
   --hairline: rgba(255,255,255,0.055);
   --hairline-strong: rgba(255,255,255,0.09);
@@ -120,8 +192,8 @@ html { scrollbar-gutter: stable both-edges; }
 
 body {
   margin: 0;
-  background: #06070a;
-  color: #e7e9ea;
+  background: var(--surface-deep);
+  color: var(--text-strong);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   display: flex;
   justify-content: center;
@@ -137,7 +209,7 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  color: #e7e9ea;
+  color: var(--text-strong);
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
@@ -235,7 +307,7 @@ body {
 .btn:active:not(:disabled) { transform: scale(0.94); }
 
 .btn.play {
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(var(--wash-rgb), 0.045);
   color: var(--text-primary);
   border: 1px solid var(--hairline-strong);
 }
@@ -342,12 +414,12 @@ body.player-mode .canvas-area { display: contents; }
      simply vanished while the canvas stayed. Inset paints within the border
      box — unclippable at the edge, zero layout change, and every state rule
      below that swaps box-shadow wholesale still re-includes this variable. */
-  --canvas-ring: inset 0 0 0 1px rgba(255,255,255,0.18);
+  --canvas-ring: inset 0 0 0 1px rgba(var(--wash-rgb), 0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
   border-radius: var(--r-frame, 14px);
   box-shadow: var(--canvas-ring),
-              inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 70px rgba(0,0,0,0.4);
+              inset 0 1px 0 rgba(var(--wash-rgb), 0.04), inset 0 0 70px rgba(0,0,0,0.4);
   transition: box-shadow 0.3s ease;
   background-color: #0d0f14;
   overflow: hidden;
@@ -564,7 +636,7 @@ body.player-mode .canvas-area { display: contents; }
   color: var(--text-secondary);
 }
 
-.restore-btn.discard:hover { background: rgba(255,255,255,0.05); }
+.restore-btn.discard:hover { background: rgba(var(--wash-rgb), 0.05); }
 
 .restore-btn.confirm {
   background: var(--ui-active);
@@ -585,7 +657,7 @@ body.player-mode .canvas-area { display: contents; }
   height: 44px;
   border-radius: 12px;
   border: 1px solid var(--hairline-strong);
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(var(--wash-rgb), 0.045);
   color: var(--text-secondary);
   cursor: pointer;
   display: inline-flex;
@@ -610,7 +682,7 @@ body.player-mode .canvas-area { display: contents; }
 @media (hover: hover) {
   .play-wrap:hover,
   .icon-btn:hover {
-    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.02);
+    box-shadow: inset 0 0 0 100px rgba(var(--wash-rgb), 0.02);
   }
   .icon-btn:hover { color: var(--text-primary); }}
 
@@ -667,7 +739,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(var(--wash-rgb), 0.045);
   border: 1px solid var(--hairline-strong);
   border-radius: 999px;
   transition: box-shadow 0.2s ease;
@@ -879,7 +951,7 @@ body.player-mode #canvas {
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
   color: var(--text-secondary);
-  background: rgba(255,255,255,0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   border: 1px solid var(--hairline);
 }
 .player-error-title { font-size: 16px; font-weight: 650; color: var(--text-primary); }
@@ -892,11 +964,11 @@ body.player-mode #canvas {
   text-decoration: none;
   cursor: pointer;
   border: 1px solid var(--hairline);
-  background: rgba(255,255,255,0.04);
+  background: rgba(var(--wash-rgb), 0.04);
   color: var(--text-primary);
   transition: background .15s ease, border-color .15s ease;
 }
-.player-error-btn:hover { background: rgba(255,255,255,0.08); }
+.player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }
 .player-error-btn.primary {
   background: var(--accent);
   border-color: transparent;
@@ -916,7 +988,7 @@ body.player-mode #canvas {
   max-width: 340px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   overflow: hidden;
   cursor: pointer;
   touch-action: none;
@@ -944,7 +1016,7 @@ body.player-mode #canvas {
   transition: color 0.15s ease, background 0.15s ease;
 }
 .player-link svg { width: 15px; height: 15px; }
-.player-link:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.player-link:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), 0.04); }
 
 .player-btn {
   display: flex;
@@ -1039,7 +1111,7 @@ body.player-mode #canvas {
   .play-wrap { background: transparent; border: none; }
   .play-wrap > #playBtn.btn.play {
     border: 1px solid var(--hairline-strong);
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(var(--wash-rgb), 0.045);
   }
   .duration-badge { display: none !important; }}
 

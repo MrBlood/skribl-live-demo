@@ -1033,3 +1033,47 @@ it -- taking the filmstrip, the tool shelf and every later handler with it. A
 state, the move state and the clipboard are all hoisted to the top now, and the
 rule going in is: state any early path can reach belongs with the early state,
 and anything touching state declared further down belongs in the load handler.
+
+## Light mode, phase 1: the chrome's colours move into :root
+
+**I mis-scoped this out loud and the correction is the point.** I said light mode
+was "the tokens exist, it's a palette block". It was not. There were 37 tokens
+and **462 colour literals outside them** -- 225 hex uses across 57 distinct
+values, plus 237 rgb/rgba of which 91 were white or black overlays that have to
+invert. No theme scaffolding existed at all.
+
+Phase 1 moves 179 neutral literals into `:root` **with their values unaltered**.
+All nine rendered scenes -- both editors at two widths, plus the draw drawer, the
+menu, the tune sheet and the overflow menu -- came back pixel-identical, worst
+channel delta 0 against a capture-noise floor of 4 measured on this machine.
+
+**The ramp is deliberately not collapsed.** Several tokens are within a couple of
+luminance steps of each other and could merge, but merging them here would be a
+visual change smuggled inside a mechanical one, and the two are indistinguishable
+in a diff. Phase 2 has to choose a light value for each of these anyway, and the
+duplicates fall out there, on purpose.
+
+**Two things stayed literal.**
+* `#0d0f14` is the CANVAS default background. That is the document's own colour
+  -- saved, shared, exported -- so it must not follow the UI theme. A Skribl
+  cannot change because the person looking at it prefers a light interface.
+  (The owner chose chrome-only when asked.)
+* `#fff` is almost always text on a coloured fill, and white on violet stays
+  white in either theme.
+
+**White washes became a triplet, not a colour.** `rgba(255,255,255,α)` at 52 call
+sites became `rgba(var(--wash-rgb), α)` so each site keeps its own alpha and a
+light theme flips all of them with one line. Black `rgba()` was left alone: those
+are drop shadows and scrims, which stay dark whichever way the chrome goes.
+
+**`verify_surfaces.py` now holds the line.** It fails on any hard-coded neutral
+outside `:root` in either sheet. One grey added next month is one control that
+stays dark when the theme flips, and nothing else would catch it.
+
+**A tooling note worth remembering.** The rewrite script blanked comments and
+`:root` into placeholders before substituting -- comments quote colours in prose,
+and `:root` is where the values are defined. Restoring them in ONE pass corrupted
+both stylesheets into binary: `:root` is stashed after the comments are, so the
+stashed `:root` text still contained comment placeholders, and a single
+`re.sub` left raw NULs in the file. The restore loops to a fixed point now and
+asserts no placeholders survive.

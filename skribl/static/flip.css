@@ -6,14 +6,14 @@
   .flip-export-card { background: var(--surface-panel, #171a22); border: 1px solid var(--hairline); border-radius: 16px;
     padding: 20px; width: min(320px, 84vw); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
   .flip-export-label { font-size: 13px; color: var(--text-primary); font-weight: 600; text-align: center; }
-  .flip-export-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .flip-export-bar { height: 8px; border-radius: 999px; background: rgba(var(--wash-rgb), .08); overflow: hidden; }
   .flip-export-fill { height: 100%; width: 0%; background: var(--ui-hi); border-radius: 999px; transition: width .12s linear; }
   #flipExportCancel { align-self: center; min-width: 96px; }
   .flip-share-card { position: relative; gap: 12px; text-align: center; }
   .flip-share-close { position: absolute; top: 10px; right: 12px; background: none; border: 0; color: var(--text-secondary); cursor: pointer; font-size: 15px; }
   .flip-share-sub { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
   .flip-share-url { width: 100%; box-sizing: border-box; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--hairline-strong);
-    background: #13161c; color: var(--text-primary); font-size: 12.5px; text-align: center; }
+    background: var(--surface-panel); color: var(--text-primary); font-size: 12.5px; text-align: center; }
   /* Compose step. Inherits .flip-share-url's box so the title, caption and the
      result URL all read as one family; the caption relaxes text-align and
      resize, which a single-line readonly URL does not want. */
@@ -99,15 +99,15 @@
   .flip-grid.on { display: block; }
   body.playing .flip-grid { display: none; }
   /* Eraser circle cursor — mirrors the pad's #eraserCursor (3x brush footprint). */
-  .flip-eraser-cursor { position: absolute; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; top: 0; left: 0; will-change: transform;
+  .flip-eraser-cursor { position: absolute; border: 2px solid rgba(var(--wash-rgb), 0.6); border-radius: 50%; top: 0; left: 0; will-change: transform;
     pointer-events: none; display: none; z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
   /* Pen brush cursor — a ring the size of the brush footprint with a little
      crosshair at its centre for precise aiming (crosshair stays a fixed small
      size so it's still usable when the brush ring is tiny or large). */
-  .flip-brush-cursor { position: absolute; border: 1.5px solid rgba(255,255,255,0.7); border-radius: 50%; top: 0; left: 0; will-change: transform;
+  .flip-brush-cursor { position: absolute; border: 1.5px solid rgba(var(--wash-rgb), 0.7); border-radius: 50%; top: 0; left: 0; will-change: transform;
     pointer-events: none; display: none; z-index: 10; box-shadow: 0 0 0 1px rgba(0,0,0,0.3); }
   .flip-brush-cursor::before, .flip-brush-cursor::after { content: ''; position: absolute; top: 50%; left: 50%;
-    background: rgba(255,255,255,0.85); box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
+    background: rgba(var(--wash-rgb), 0.85); box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
   .flip-brush-cursor::before { width: 11px; height: 1px; transform: translate(-50%,-50%); }
   .flip-brush-cursor::after  { width: 1px; height: 11px; transform: translate(-50%,-50%); }
 
@@ -117,7 +117,7 @@
      buttons and the eye had nowhere to land. styles.css calls Post "the one bold
      purple moment"; this is a preview control, so it now matches the Pad's Play:
      subtle fill, hairline border, no glow. */
-  .btn.flip-play { background: rgba(255, 255, 255, 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; min-width: 92px; justify-content: center; }
+  .btn.flip-play { background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); color: var(--text-primary); box-shadow: none; min-width: 92px; justify-content: center; }
   .btn.flip-play:hover:not(:disabled) { background: var(--surface-control-hover); filter: none; }
   /* Playing = stop. Accent-tinted so the active state is unmistakable without
      competing with Post. */
@@ -141,7 +141,7 @@
   }
 
   /* The wrap keeps button + badge as one pill, exactly like the Pad's. */
-  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.045); border: 1px solid var(--hairline-strong); overflow: hidden; }
+  .flip-play-wrap { display: inline-flex; align-items: center; border-radius: var(--r-pill); background: rgba(var(--wash-rgb), 0.045); border: 1px solid var(--hairline-strong); overflow: hidden; }
   .flip-play-wrap .btn.flip-play { background: transparent; border: 0; }
   /* display:inline-flex beats the hidden attribute — without this the wrap
      stays visible no matter what the JS sets. */
@@ -179,8 +179,8 @@
      faint outer ring keeps it legible without turning the canvas into a
      framed picture; the ring is what survives when a display crushes blacks. */
   #pad { display: block; border-radius: var(--r-frame); background: var(--surface-raised);
-    border: 2px solid rgba(255,255,255,.20);
-    box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 20px 50px rgba(0,0,0,.45);
+    border: 2px solid rgba(var(--wash-rgb), .20);
+    box-shadow: 0 0 0 1px rgba(var(--wash-rgb), .05), 0 20px 50px rgba(0,0,0,.45);
     touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
   .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
@@ -297,7 +297,7 @@
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
-    scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(255,255,255,.05); }
+    scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--wash-rgb), .05); }
   .strip::-webkit-scrollbar { height: 7px; }
   .strip::-webkit-scrollbar-track { background: rgba(8,10,15,.7); border-radius: 999px; margin: 0 10px; }
   .strip::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: 999px; border: 1px solid rgba(8,10,15,.6); }

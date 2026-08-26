@@ -128,6 +128,48 @@ check("neither surface hardcodes a link target",
       'target="_blank"' not in flip_html and 'target="_blank"' not in editor_html,
       "a literal here is right by luck and wrong to keep")
 
+print("\nSURFACES — the chrome's colours live in one place")
+# v230 phase 1 of light mode: 179 neutral literals moved out of the call sites
+# and into :root, with their values unaltered — all nine rendered scenes came
+# back pixel-identical. The point of the move is that a light palette is then a
+# second block rather than an archaeology exercise, and the point of THIS
+# assertion is that the move does not quietly erode: one hard-coded grey added
+# next month is one control that stays dark when the theme flips, and nothing
+# else would catch it.
+#
+# `#fff` and `#0d0f14` are excluded deliberately. White is almost always text on
+# a coloured fill, which stays white either way; #0d0f14 is the CANVAS default,
+# which is the document's own colour and must not follow the UI theme at all.
+def neutral_literals(name):
+    css = (STATIC / name).read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)      # prose quotes colours
+    css = re.sub(r":root\s*\{.*?\n\}", "", css, flags=re.S)  # where they are DEFINED
+    out = []
+    for m in re.finditer(r"#[0-9a-fA-F]{3,6}\b", css):
+        h = m.group(0).lower()
+        if h in ("#fff", "#ffffff", "#0d0f14"):
+            continue
+        v = h.lstrip("#")
+        if len(v) == 3:
+            v = "".join(c * 2 for c in v)
+        r, g, b = int(v[0:2], 16), int(v[2:4], 16), int(v[4:6], 16)
+        if max(r, g, b) - min(r, g, b) <= 30:            # neutral enough to need flipping
+            # var(--token, #fallback): the token always resolves, so the literal
+            # after it is unreachable in practice.
+            before = css[max(0, m.start() - 80):m.start()]
+            if re.search(r"var\(\s*--[a-z0-9-]+\s*,\s*$", before):
+                continue
+            out.append(h)
+    return out
+
+stray = {n: neutral_literals(n) for n in ("styles.css", "flip.css")}
+total = sum(len(v) for v in stray.values())
+check("no hard-coded neutral outside :root in either sheet",
+      total == 0,
+      "; ".join(f"{n}: {', '.join(sorted(set(v)))}" for n, v in stray.items() if v)
+      + " — every grey the chrome paints has to be a token, or it will not "
+        "follow a light theme")
+
 print("\nSURFACES — what the player is made to download")
 # Not a pass/fail on size: this is the number the JS-only byte ratchet in
 # verify_player_isolation.py cannot see, reported so it stops being invisible.

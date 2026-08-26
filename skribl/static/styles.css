@@ -6,6 +6,78 @@
   --surface-control: #171b23;
   --surface-control-hover: #1c212c;
 
+  /* ---- v230: the rest of the neutral ramp -------------------------------
+     PHASE 1 OF LIGHT MODE, and it changes nothing you can see. Every value
+     below is the literal that used to sit at the call site, moved here
+     unaltered -- 156 of them across the two sheets. The point is that the
+     chrome's colours are now in one place, so a light palette becomes a second
+     block rather than an archaeology exercise.
+
+     DELIBERATELY NOT COLLAPSED. Several of these are within a couple of
+     luminance steps of each other and could merge, but merging them here would
+     be a visual change smuggled into a mechanical one -- and the two are
+     indistinguishable in a diff. The ramp gets designed in phase 2, where a
+     light value has to be chosen for each of these anyway and the duplicates
+     fall out on purpose.
+
+     Two things stayed literal:
+       * #0d0f14 -- the CANVAS default background. That is the document's own
+         colour: saved, shared, exported. A Skribl must not change because the
+         person looking at it prefers a light UI.
+       * #fff -- almost every use is text sitting on a coloured fill, and white
+         on violet stays white in either theme. */
+
+  /* Surfaces */
+  --surface-deep: #06070a;        /* the toolbar row's ground, below base */
+  --surface-sheet: #12151b;
+  --surface-sheet-2: #14171e;
+  --surface-well: #161a22;        /* inset wells */
+  --surface-well-2: #171a22;
+  --surface-pop: #1b1f27;         /* popovers: shape picker, tool tray */
+
+  /* Lines -- solid borders, as opposed to the translucent hairlines below */
+  --line-faint: #232833;
+  --line: #252b37;
+  --line-2: #262c38;
+  --line-mid: #2a2f3d;
+  --line-mid-2: #2c333f;
+  --line-strong: #2e3340;
+  --line-loud: #3a4150;
+
+  /* Text, dimmest first */
+  --text-faint: #5f6675;
+  --text-faint-2: #697080;
+  --text-soft: #8a93a6;
+  --text-soft-2: #8b93a5;
+  --text-soft-3: #8b97a8;
+  --text-tool-3: #a8b0bf;
+  --text-tool-2: #a9b1c1;
+  --text-tool: #a8b2c1;           /* .tool-btn at rest */
+  --text-tool-lit: #aeb6c4;       /* .tool-open at rest */
+  --text-bright-2: #c8cdd6;
+  --text-bright: #c8cede;
+  --text-brightest: #cdd3de;      /* size dots -- deliberately brighter, v205 */
+  --text-strong-2: #e6e9f0;
+  --text-strong-3: #e7e9ee;
+  --text-strong: #e7e9ea;
+  --text-heading: #f2f4f8;
+
+  /* Violet-tinted surfaces -- the accent composited over a dark ground rather
+     than layered with opacity, so the tint does not shift when the ground
+     moves. Neutral-ish, but they carry the brand hue, so they get their own
+     names rather than a slot on the grey ramp. */
+  --surface-tint: #161528;        /* .help-search at rest */
+  --surface-tint-lit: #1a1830;    /* and focused */
+  --text-on-accent-soft: #ece8ff; /* text on a translucent accent fill */
+
+  /* The wash behind every hover fill and translucent hairline. Held as an RGB
+     TRIPLET rather than a colour so call sites keep their own alpha:
+     rgba(var(--wash-rgb), .06) and rgba(var(--wash-rgb), .4) are the same
+     surface at two strengths, and a light theme flips both by changing this one
+     line. Black rgba() was left alone -- those are drop shadows and scrims,
+     which stay dark whichever way the chrome goes. */
+  --wash-rgb: 255,255,255;
+
   /* Hairlines */
   --hairline: rgba(255,255,255,0.055);
   --hairline-strong: rgba(255,255,255,0.09);
@@ -107,8 +179,8 @@ html { scrollbar-gutter: stable both-edges; }
 
 body {
   margin: 0;
-  background: #06070a;
-  color: #e7e9ea;
+  background: var(--surface-deep);
+  color: var(--text-strong);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   display: flex;
   justify-content: center;
@@ -124,7 +196,7 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  color: #e7e9ea;
+  color: var(--text-strong);
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
@@ -250,7 +322,7 @@ body {
 }
 
 .btn.play {
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(var(--wash-rgb), 0.045);
   color: var(--text-primary);
   border: 1px solid var(--hairline-strong);
 }
@@ -411,12 +483,12 @@ body:not(.player-mode) .canvas-wrap #canvas {
      simply vanished while the canvas stayed. Inset paints within the border
      box — unclippable at the edge, zero layout change, and every state rule
      below that swaps box-shadow wholesale still re-includes this variable. */
-  --canvas-ring: inset 0 0 0 1px rgba(255,255,255,0.18);
+  --canvas-ring: inset 0 0 0 1px rgba(var(--wash-rgb), 0.18);
   /* Rounded to match Flip's canvas. Two editors in one app should not disagree
      about the shape of the thing you draw on. */
   border-radius: var(--r-frame, 14px);
   box-shadow: var(--canvas-ring),
-              inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 70px rgba(0,0,0,0.4);
+              inset 0 1px 0 rgba(var(--wash-rgb), 0.04), inset 0 0 70px rgba(0,0,0,0.4);
   transition: box-shadow 0.3s ease;
   background-color: #0d0f14;
   overflow: hidden;
@@ -430,12 +502,12 @@ body:not(.player-mode) .canvas-wrap #canvas {
   /* Darker ring: a white ring on a white canvas is not an edge. */
   --canvas-ring: inset 0 0 0 1px rgba(0,0,0,0.22);
   box-shadow: var(--canvas-ring),
-              inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 70px rgba(0,0,0,0.06);
+              inset 0 1px 0 rgba(var(--wash-rgb), 0.6), inset 0 0 70px rgba(0,0,0,0.06);
 }
 
 .canvas-wrap.recording {
   box-shadow: var(--canvas-ring),
-              inset 0 1px 0 rgba(255,255,255,0.04), inset 0 0 60px rgba(0,0,0,0.35);
+              inset 0 1px 0 rgba(var(--wash-rgb), 0.04), inset 0 0 60px rgba(0,0,0,0.35);
 }
 
 .canvas-wrap.locked {
@@ -452,7 +524,7 @@ body:not(.player-mode) .canvas-area { position: relative; }
   position: absolute;
   z-index: 7;
   height: 5px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.07);
   /* Fully rounded: the bar is inset to the canvas frame's FLAT bottom span
      (see positionScrub in app.js), so it reads as its own pill rather than trying to
      continue the frame's corners. Spanning the full width put its ends out
@@ -851,13 +923,13 @@ body.stroking .zoom-hud { pointer-events: none; }
 .tool-open {
   width: 44px; height: 44px; border-radius: 12px; padding: 0;
   display: flex; align-items: center; justify-content: center;
-  background: none; border: none; color: #aeb6c4; cursor: pointer; position: relative;
+  background: none; border: none; color: var(--text-tool-lit); cursor: pointer; position: relative;
   flex: none; -webkit-tap-highlight-color: transparent;
   transition: background .15s ease, color .15s ease;
 }
 .tool-open { --icon-size: 24px; }   /* what .tool-open .tab-dot measures from */
 .tool-open svg { width: 24px; height: 24px; }  /* v205-fix: standardized tier-1 icon 21->24 */
-.tool-open:hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+.tool-open:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
 
 /* Magnify tool — lit (accent) when its zoom pill is showing. */
 .magnify-tool.active { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
@@ -944,7 +1016,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   right: auto;
   /* The ring stays: half the dot is over the icon's stroke now, and the ring is
      what keeps the two from merging. Ground-coloured, so it reads as a gap. */
-  border: 1.5px solid #06070a;
+  border: 1.5px solid var(--surface-deep);
 }
 @media (max-width: 640px) {
   .toolbar { width: auto; margin: 12px; align-self: stretch; justify-content: space-between; }
@@ -963,7 +1035,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 /* ---------- Draw panel ---------- */
 .brush-size-inline {
   font-size: 10px;
-  color: #5f6675;
+  color: var(--text-faint);
   font-weight: 500;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -973,7 +1045,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .size-label {
   font-size: 11px;
-  color: #8a93a6;
+  color: var(--text-soft);
   font-weight: 500;
 }
 
@@ -1025,7 +1097,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #a8b2c1;
+  color: var(--text-tool);
   transition: color 0.2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
@@ -1038,7 +1110,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .tool-btn.active { color: #fff; }
-.tool-btn:hover { background: transparent !important; color: #a8b2c1; }
+.tool-btn:hover { background: transparent !important; color: var(--text-tool); }
 
 .tool-btn:focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -1051,7 +1123,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: var(--r-control);
   border: 1px solid var(--hairline);
   background: transparent;
-  color: #5f6675;
+  color: var(--text-faint);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1069,7 +1141,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    stroke, so they no longer carry a text label competing in the tool row. */
 .undo-label { display: none; }
 
-.undo-btn:hover { background: #1c212c; color: #e7e9ea; }
+.undo-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); }
 .undo-btn:disabled { opacity: 0.3; cursor: default; }
 
 .size-group {
@@ -1122,7 +1194,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .draw-section-label {
   font-size: 11px;
-  color: #8a93a6;
+  color: var(--text-soft);
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
@@ -1144,7 +1216,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 0;
   outline: none;
   transition: transform 0.3s var(--spring), border-color 0.12s ease, box-shadow 0.2s ease;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08);
   flex-shrink: 0;
 }
 
@@ -1170,7 +1242,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   cursor: pointer;
   padding: 0;
   outline: none;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.1);
   transition: transform 0.3s var(--spring), border-color 0.12s ease;
   flex-shrink: 0;
 }
@@ -1184,18 +1256,18 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   display: flex; align-items: center; justify-content: center; gap: 7px;
   width: 100%; margin-top: 8px; padding: 9px;
   border: 1px solid var(--hairline); border-radius: 10px;
-  background: #13161c; color: #8a93a6;
+  background: var(--surface-panel); color: var(--text-soft);
   font-size: 12px; font-weight: 500; cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .reposition-btn svg { width: 15px; height: 15px; }
-.reposition-btn:hover { background: #1c212c; color: #e7e9ea; }
+.reposition-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); }
 .reposition-btn.active { background: var(--ui-active); color: #fff; border-color: transparent; }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
-  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: #5f6675;
+  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: var(--text-faint);
 }
 .reposition-hint[hidden] { display: none; }
 
@@ -1208,7 +1280,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .more-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
   width: 100%; padding: 9px; border: 1px solid rgba(124, 92, 255, 0.32);
-  border-radius: 10px; background: rgba(124, 92, 255, 0.08); color: #c8cede;
+  border-radius: 10px; background: rgba(124, 92, 255, 0.08); color: var(--text-bright);
   font-size: 12px; font-weight: 500; cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
@@ -1219,12 +1291,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
   background: #ffffff;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.22),
+    inset 0 0 0 1px rgba(var(--wash-rgb), 0.22),
     0 0 0 1.5px var(--surface-panel),
-    0 0 0 3px rgba(255,255,255,0.85);
+    0 0 0 3px rgba(var(--wash-rgb), 0.85);
 }
-.more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: #e6e9f0; }
-.more-toggle.open { color: #c8cede; }
+.more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
+.more-toggle.open { color: var(--text-bright); }
 .more-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); }
 .more-toggle.open .more-chevron { transform: rotate(180deg); }
 
@@ -1233,13 +1305,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .eyedropper-btn {
   width: 30px; height: 30px; border-radius: 8px; padding: 0;
-  background: #171b23; border: 1px solid var(--hairline); color: #8a93a6;
+  background: var(--surface-control); border: 1px solid var(--hairline); color: var(--text-soft);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
   transition: background .15s ease, color .15s ease;
 }
 .eyedropper-btn svg { width: 18px; height: 18px; }  /* v207: tier-2 glyph size, matches drawer toggles */
-.eyedropper-btn:hover { background: #1c212c; color: #c8cede; }
+.eyedropper-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
 .eyedropper-btn.picking { background: var(--ui-active); color: #fff; border-color: transparent; }
 
 .recent-row { display: flex; align-items: center; gap: 10px; }
@@ -1248,7 +1320,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .recent-swatch {
   width: 22px; height: 22px; border-radius: 50%; padding: 0; border: 0;
   cursor: pointer; flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.08);
   transition: transform .2s var(--spring);
 }
 .recent-swatch:hover { transform: scale(1.12); }
@@ -1259,7 +1331,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .prop-row { display: flex; align-items: center; gap: 12px; }
 .prop-row .draw-section-label { width: 66px; flex-shrink: 0; }
 .prop-val {
-  font-size: 12px; color: #c8cede; font-weight: 500;
+  font-size: 12px; color: var(--text-bright); font-weight: 500;
   width: 40px; text-align: right; flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -1267,12 +1339,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .smooth-seg {
   position: relative; overflow: hidden;
   display: flex; margin-left: auto;
-  background: #171b23; border: 1px solid var(--hairline);
+  background: var(--surface-control); border: 1px solid var(--hairline);
   border-radius: var(--r-seg); padding: 3px;
 }
 .smooth-btn {
   position: relative; z-index: 1;
-  border: 0; background: transparent; color: #8a93a6;
+  border: 0; background: transparent; color: var(--text-soft);
   font-size: 12px; font-weight: 500; padding: 5px 14px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center  /* v206: match .seg cells */; border-radius: calc(var(--r-seg) - 3px);
   cursor: pointer; transition: color .15s ease;
   -webkit-tap-highlight-color: transparent;
@@ -1372,7 +1444,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .clear-undo-btn:not(:disabled):hover { background: rgba(124, 92, 255, 0.14); border-color: var(--ui-line); }
 .clear-drawer-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
+  border: 1px solid var(--hairline); background: var(--surface-panel); color: var(--text-soft);
   font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
@@ -1386,16 +1458,16 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    every drawer's buttons speak one language. */
 .panel-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  border: 1px solid var(--hairline); background: #13161c; color: #8a93a6;
+  border: 1px solid var(--hairline); background: var(--surface-panel); color: var(--text-soft);
   font-size: 12px; font-weight: 500; padding: 9px 12px; border-radius: 10px;
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.panel-btn:hover { background: #1c212c; color: #c8cede; }
+.panel-btn:hover { background: var(--surface-control-hover); color: var(--text-bright); }
 
-.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; background: rgba(124, 92, 255, 0.08); border-color: rgba(124, 92, 255, 0.32); color: #c8cede; }
-.fine-tune-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: #e6e9f0; }
+.fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; background: rgba(124, 92, 255, 0.08); border-color: rgba(124, 92, 255, 0.32); color: var(--text-bright); }
+.fine-tune-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
 .fine-tune-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); flex-shrink: 0; }
 .fine-tune-toggle[aria-expanded="true"] .fine-tune-chevron { transform: rotate(180deg); }
 .fine-tune-body { margin-top: 12px; }
@@ -1436,13 +1508,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #161a22;
-  border: 1px solid #3a4150;
+  background: var(--surface-well);
+  border: 1px solid var(--line-loud);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 7px;
-  color: #a8b2c1;
+  color: var(--text-tool);
   pointer-events: none;
 }
 
@@ -1476,9 +1548,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   gap: 8px;
   padding: 0 16px;
   height: 80px;
-  border: 1px dashed #2a2f3d;
+  border: 1px dashed var(--line-mid);
   border-radius: 12px;
-  color: #5f6675;
+  color: var(--text-faint);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -1492,13 +1564,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .music-dropzone:hover {
   border-color: var(--ui-line);
-  color: #a8b2c1;
+  color: var(--text-tool);
 }
 
 .music-dropzone.drag-over {
   border-color: var(--ui-line);
   background: rgba(124, 92, 255, 0.08);
-  color: #a8b2c1;
+  color: var(--text-tool);
 }
 
 .music-dropzone.loaded {
@@ -1525,7 +1597,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   justify-content: space-between;
   margin-bottom: 10px;
   font-size: 13px;
-  color: #e7e9ea;
+  color: var(--text-strong);
 }
 
 .dropzone-remove {
@@ -1613,7 +1685,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 999px;
   border: none;
   background: #ffd23f;
-  color: #171a22;
+  color: var(--surface-well-2);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1640,12 +1712,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 
-.pending-dismiss:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+.pending-dismiss:hover { background: rgba(var(--wash-rgb), 0.06); color: var(--text-secondary); }
 
 .music-trim-track {
   position: relative;
   height: 48px;
-  background: #161a22;
+  background: var(--surface-well);
   border-radius: 0;
   overflow: visible;
 }
@@ -1682,7 +1754,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 14px;
   height: 14px;
   transform: translate(-50%, -50%);
-  background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1.4px);
+  background-image: radial-gradient(circle, rgba(var(--wash-rgb), 0.55) 1px, transparent 1.4px);
   background-size: 4px 4px;
   background-position: center;
   opacity: 0.7;
@@ -1748,7 +1820,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   background: #fff;
   z-index: 3;
   pointer-events: none;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 6px rgba(var(--wash-rgb), 0.6);
 }
 
 .music-playhead[hidden] { display: none; }
@@ -1758,21 +1830,21 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   justify-content: space-between;
   margin-top: 6px;
   font-size: 11px;
-  color: #5f6675;
+  color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
 
 #trimDurLabel {
-  color: #a8b2c1;
+  color: var(--text-tool);
   font-weight: 600;
 }
 
 .loop-zoom {
   margin-top: 12px;
   padding: 10px;
-  border: 1px solid #252b37;
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: #0f1218;
+  background: var(--surface-raised);
 }
 
 .loop-zoom-head {
@@ -1782,13 +1854,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   margin-bottom: 12px;
   font-size: 11px;
   font-weight: 700;
-  color: #5f6675;
+  color: var(--text-faint);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 #loopZoomLabel {
-  color: #a8b2c1;
+  color: var(--text-tool);
   font-variant-numeric: tabular-nums;
   text-transform: none;
   letter-spacing: 0;
@@ -1800,7 +1872,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 72px;
   display: block;
   border-radius: 0;
-  background: #161a22;
+  background: var(--surface-well);
 }
 
 .trim-bubble {
@@ -1849,7 +1921,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .loop-summary {
   font-size: 12px;
-  color: #a8b2c1;
+  color: var(--text-tool);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1882,8 +1954,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .loop-btn.subtle {
-  background: #1c212c;
-  color: #a8b2c1;
+  background: var(--surface-control-hover);
+  color: var(--text-tool);
 }
 
 .loop-btn:hover { filter: brightness(1.08); }
@@ -1892,12 +1964,12 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .finetune-panel {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #252b37;
+  border-top: 1px solid var(--line);
 }
 
 .finetune-head {
   font-size: 11px;
-  color: #5f6675;
+  color: var(--text-faint);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1923,7 +1995,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .edge-name {
   font-size: 11px;
-  color: #a8b2c1;
+  color: var(--text-tool);
   font-weight: 700;
   white-space: nowrap;
   letter-spacing: 0.01em;
@@ -1933,8 +2005,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #161a22;
-  border: 1px solid #2e3340;
+  background: var(--surface-well);
+  border: 1px solid var(--line-strong);
   /* Same family as .seg / .tool-group: a bordered container holding controls
      that act as one unit (− readout +). It has no sliding highlight, so a
      stylesheet grep for the slider classes missed it; a DOM walk for
@@ -1952,14 +2024,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   text-align: center;
   font-size: 12px;
   font-weight: 700;
-  color: #e7e9ea;
+  color: var(--text-strong);
   font-variant-numeric: tabular-nums;
   padding: 0 2px;
 }
 
 .finetune-divider {
   height: 1px;
-  background: #252b37;
+  background: var(--line);
   margin: 12px 0;
 }
 
@@ -1972,7 +2044,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .step-name {
   font-size: 11px;
-  color: #a8b2c1;
+  color: var(--text-tool);
   font-weight: 600;
 }
 
@@ -1993,8 +2065,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
      shapes for the same minus/plus gesture, four rows apart. */
   border-radius: calc(var(--r-seg) - 3px);
   border: 0;
-  background: #252b37;
-  color: #a8b2c1;
+  background: var(--line);
+  color: var(--text-tool);
   font-size: 17px;
   font-weight: 700;
   cursor: pointer;
@@ -2007,7 +2079,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   flex-shrink: 0;
 }
 
-.nudge-btn:hover { background: #252b37; color: #e7e9ea; }
+.nudge-btn:hover { background: var(--line); color: var(--text-strong); }
 .nudge-btn:active { background: var(--ui-active); color: #fff; }
 
 .step-control {
@@ -2015,15 +2087,15 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   align-items: center;
   gap: 5px;
   padding: 3px 5px;
-  border: 1px solid #2e3340;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: #161a22;
+  background: var(--surface-well);
 }
 
 .step-label {
   font-size: 10px;
   font-weight: 700;
-  color: #5f6675;
+  color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -2042,8 +2114,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 22px;
   border: 0;
   border-radius: 50%;
-  background: #252b37;
-  color: #a8b2c1;
+  background: var(--line);
+  color: var(--text-tool);
   font-size: 15px;
   font-weight: 800;
   line-height: 1;
@@ -2056,7 +2128,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .step-btn:hover {
-  background: #2e3340;
+  background: var(--line-strong);
   color: #fff;
 }
 
@@ -2109,7 +2181,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 /* ---------- Photo tab ---------- */
 .photo-fit-group {
   position: relative;
-  background: #171b23;
+  background: var(--surface-control);
   border-radius: var(--r-seg);
   padding: 3px;
   display: inline-flex;
@@ -2146,7 +2218,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  color: #8a93a6;
+  color: var(--text-soft);
   transition: color 0.2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
@@ -2213,7 +2285,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--ui-hi) 0 var(--slider-fill, 100%), #262c38 var(--slider-fill, 100%) 100%);
+  background: linear-gradient(90deg, var(--ui-hi) 0 var(--slider-fill, 100%), var(--line-2) var(--slider-fill, 100%) 100%);
 }
 
 .slider::-webkit-slider-thumb,
@@ -2223,7 +2295,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #12151b;
+  background: var(--surface-sheet);
   margin-top: -6px;
   border: 2.5px solid var(--ui-line);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -2240,7 +2312,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-moz-range-track {
   height: 4px;
   border-radius: 999px;
-  background: #262c38;
+  background: var(--line-2);
 }
 
 .slider::-moz-range-progress,
@@ -2256,7 +2328,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 16px;
   border: 2.5px solid var(--ui-line);
   border-radius: 50%;
-  background: #12151b;
+  background: var(--surface-sheet);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
 }
 
@@ -2314,7 +2386,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 3px 12px;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--wash-rgb), 0.09);
   color: var(--text-primary);
   font: inherit;
   font-weight: 700;
@@ -2322,7 +2394,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   vertical-align: baseline;
 }
 
-.toast-action:hover { background: rgba(255, 255, 255, 0.16); }
+.toast-action:hover { background: rgba(var(--wash-rgb), 0.16); }
 .toast-action:active { transform: translateY(1px); }
 
 /* ---------- Autosave status (quiet) ---------- */
@@ -2458,7 +2530,7 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
   color: var(--text-secondary);
 }
 
-.restore-btn.discard:hover { background: rgba(255,255,255,0.05); }
+.restore-btn.discard:hover { background: rgba(var(--wash-rgb), 0.05); }
 
 .restore-btn.confirm {
   background: var(--ui-active);
@@ -2479,7 +2551,7 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
   height: 44px;
   border-radius: 12px;
   border: 1px solid var(--hairline-strong);
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(var(--wash-rgb), 0.045);
   color: var(--text-secondary);
   cursor: pointer;
   display: inline-flex;
@@ -2516,7 +2588,7 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
 @media (hover: hover) {
   .play-wrap:hover,
   .icon-btn:hover {
-    box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.02);
+    box-shadow: inset 0 0 0 100px rgba(var(--wash-rgb), 0.02);
   }
   .icon-btn:hover { color: var(--text-primary); }   /* neutral ⋯, no purple */
 }
@@ -2543,7 +2615,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   height: 28px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   color: var(--text-secondary);
   cursor: pointer;
   display: inline-flex;
@@ -2661,7 +2733,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 .menu-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-secondary); }
-.menu-item:hover { background: rgba(255, 255, 255, 0.06); }
+.menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
 .menu-item.danger { color: #f4326f; }
 .menu-item.danger svg { color: #f4326f; }
 .menu-item.armed { background: rgba(244,50,111,.14); color: #f4326f; font-weight: 600; }
@@ -2699,7 +2771,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--hairline);
-  background: rgba(255,255,255,0.02);
+  background: rgba(var(--wash-rgb), 0.02);
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
@@ -2740,7 +2812,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    When the toggle is hidden (GIF unavailable) the group looks like a normal card. */
 .export-opt-group {
   border: 1px solid var(--hairline);
-  background: rgba(255,255,255,0.02);
+  background: rgba(var(--wash-rgb), 0.02);
   border-radius: 12px;
   margin-bottom: 8px;
   overflow: hidden;
@@ -2792,7 +2864,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .export-progress-bar {
   height: 6px;
   border-radius: 999px;
-  background: #1c212c;
+  background: var(--surface-control-hover);
   overflow: hidden;
 }
 
@@ -2906,7 +2978,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .post-input {
   width: 100%;
-  background: rgba(255,255,255,0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--hairline);
   border-radius: 10px;
   padding: 9px 11px;
@@ -3000,7 +3072,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .post-watch {
     background: rgba(124, 92, 255, 0.36);
     border-color: rgba(124, 92, 255, 0.74);
-    color: #ece8ff;
+    color: var(--text-on-accent-soft);
   }
 }
 .post-watch .play-badge {
@@ -3204,9 +3276,9 @@ html.help-open, html.help-open body { overflow: hidden; }
 }
 
 .help-close {
-  background: #252b37;
-  border: 1px solid #3a4150;
-  color: #a8b2c1;
+  background: var(--line);
+  border: 1px solid var(--line-loud);
+  color: var(--text-tool);
   font-size: 16px;
   cursor: pointer;
   line-height: 1;
@@ -3221,7 +3293,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.help-close:hover { background: #2e3340; color: #e7e9ea; }
+.help-close:hover { background: var(--line-strong); color: var(--text-strong); }
 
 .help-steps {
   display: flex;
@@ -3232,7 +3304,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .help-intro {
   font-size: 12.5px;
   line-height: 1.55;
-  color: #8b97a8;
+  color: var(--text-soft-3);
   margin-bottom: 18px;
 }
 
@@ -3260,10 +3332,10 @@ html.help-open, html.help-open body { overflow: hidden; }
   gap: 12px;
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid #232833;
+  border: 1px solid var(--line-faint);
   border-radius: 14px;
-  background: #14171e;
-  color: #e7e9ea;
+  background: var(--surface-sheet-2);
+  color: var(--text-strong);
   cursor: pointer;
   text-align: left;
   transition: background 0.18s ease, border-color 0.18s ease, border-radius 0.28s var(--ease);
@@ -3271,12 +3343,12 @@ html.help-open, html.help-open body { overflow: hidden; }
 }
 
 .accordion-header:hover {
-  background: #171b23;
-  border-color: #2c333f;
+  background: var(--surface-control);
+  border-color: var(--line-mid-2);
 }
 
 .accordion-header.open {
-  background: #171b23;
+  background: var(--surface-control);
   border-color: rgba(124, 92, 255, 0.4);
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
@@ -3312,9 +3384,9 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-count {
   font-size: 10px;
   font-weight: 700;
-  color: #5f6675;
-  background: #1c212c;
-  border: 1px solid #262c38;
+  color: var(--text-faint);
+  background: var(--surface-control-hover);
+  border: 1px solid var(--line-2);
   padding: 3px 8px;
   border-radius: 999px;
   flex-shrink: 0;
@@ -3324,7 +3396,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-chevron {
   width: 18px;
   height: 18px;
-  color: #697080;
+  color: var(--text-faint-2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3342,7 +3414,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-body {
   max-height: 0;
   overflow: hidden;
-  background: #0f1218;
+  background: var(--surface-raised);
   border-radius: 0 0 14px 14px;
   border: 1px solid transparent;
   border-top: none;
@@ -3366,7 +3438,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .help-section-title {
   font-size: 11px;
   font-weight: 700;
-  color: #5f6675;
+  color: var(--text-faint);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -3374,7 +3446,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 
 .help-divider {
   height: 1px;
-  background: #1c212c;
+  background: var(--surface-control-hover);
   margin: 8px 0 20px;
 }
 
@@ -3388,9 +3460,9 @@ html.help-open, html.help-open body { overflow: hidden; }
 .help-pill {
   font-size: 10px;
   font-weight: 700;
-  color: #a8b2c1;
-  background: #1c212c;
-  border: 1px solid #252b37;
+  color: var(--text-tool);
+  background: var(--surface-control-hover);
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 3px 9px;
   white-space: nowrap;
@@ -3401,7 +3473,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 }
 
 .help-tip .help-desc strong {
-  color: #c8cdd6;
+  color: var(--text-bright-2);
   font-weight: 600;
 }
 
@@ -3409,7 +3481,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 4px;
-  color: #e7e9ea;
+  color: var(--text-strong);
 }
 
 .help-step {
@@ -3434,7 +3506,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 
 .help-desc {
   font-size: 12px;
-  color: #8b97a8;
+  color: var(--text-soft-3);
   line-height: 1.5;
 }
 
@@ -3462,7 +3534,7 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(var(--wash-rgb), 0.045);
   border: 1px solid var(--hairline-strong);
   border-radius: 999px;
   transition: box-shadow 0.2s ease;
@@ -3800,8 +3872,8 @@ body.player-mode #canvas {
 .player-nib[hidden] { display: none; }
 /* While erasing, show a hollow ring instead of a bright dot. */
 .player-nib.erase {
-  background: radial-gradient(circle, rgba(255,255,255,0.12) 0 55%, transparent 60%);
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+  background: radial-gradient(circle, rgba(var(--wash-rgb), 0.12) 0 55%, transparent 60%);
+  box-shadow: 0 0 0 1px rgba(var(--wash-rgb), 0.5);
 }
 
 .player-shell {
@@ -3832,7 +3904,7 @@ body.player-mode #canvas {
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
   color: var(--text-secondary);
-  background: rgba(255,255,255,0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   border: 1px solid var(--hairline);
 }
 .player-error-title { font-size: 16px; font-weight: 650; color: var(--text-primary); }
@@ -3845,11 +3917,11 @@ body.player-mode #canvas {
   text-decoration: none;
   cursor: pointer;
   border: 1px solid var(--hairline);
-  background: rgba(255,255,255,0.04);
+  background: rgba(var(--wash-rgb), 0.04);
   color: var(--text-primary);
   transition: background .15s ease, border-color .15s ease;
 }
-.player-error-btn:hover { background: rgba(255,255,255,0.08); }
+.player-error-btn:hover { background: rgba(var(--wash-rgb), 0.08); }
 .player-error-btn.primary {
   background: var(--accent);
   border-color: transparent;
@@ -3869,7 +3941,7 @@ body.player-mode #canvas {
   max-width: 340px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   overflow: hidden;
   cursor: pointer;
   touch-action: none;
@@ -3897,7 +3969,7 @@ body.player-mode #canvas {
   transition: color 0.15s ease, background 0.15s ease;
 }
 .player-link svg { width: 15px; height: 15px; }
-.player-link:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.player-link:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), 0.04); }
 
 .player-btn {
   display: flex;
@@ -4006,22 +4078,22 @@ body.player-mode #canvas {
   width: 40px; height: 40px; padding: 0; border-radius: 12px;
   position: relative; z-index: 1; --tap-grow: 2px;
   background: var(--surface-control); border: 1px solid var(--hairline-strong);
-  color: #aeb6c4; cursor: pointer;
+  color: var(--text-tool-lit); cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex: none;
   transition: background .15s ease, color .15s ease;
 }
 .toolbar .undo-btn .undo-label { display: none; }
 .toolbar .undo-btn svg { width: 20px; height: 20px; }
 .toolbar .undo-btn:disabled { opacity: .32; cursor: default; }
-.toolbar .undo-btn:not(:disabled):hover { color: #e7e9ea; background: rgba(255,255,255,.04); }
+.toolbar .undo-btn:not(:disabled):hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .04); }
 
 /* ---------- Pass 2: brush sizes read as one labeled control ---------- */
 #drawPanel .tool-row { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
 #drawPanel .size-group {
   width: fit-content; justify-content: flex-start; gap: 12px;
-  padding: 7px 12px; border-radius: 12px; background: rgba(255,255,255,.035);
+  padding: 7px 12px; border-radius: 12px; background: rgba(var(--wash-rgb), .035);
 }
-.size-btn span { background: #cdd3de; }              /* brighter dots so the small one reads */
+.size-btn span { background: var(--text-brightest); }              /* brighter dots so the small one reads */
 .size-btn.active span { background: #fff; }
 
 
@@ -4043,7 +4115,7 @@ body.player-mode #canvas {
   .play-wrap { background: transparent; border: none; }
   .play-wrap > #playBtn.btn.play {
     border: 1px solid var(--hairline-strong);
-    background: rgba(255, 255, 255, 0.045);
+    background: rgba(var(--wash-rgb), 0.045);
   }
   .duration-badge { display: none !important; }
 
@@ -4090,7 +4162,7 @@ body.player-mode #canvas {
 
 /* ---------- Image / Music on-off toggle ---------- */
 .layer-toggle { display: none; width: 42px; height: 25px; flex: none; padding: 0; border: none;
-  border-radius: 13px; background: rgba(255,255,255,.16); position: relative; cursor: pointer;
+  border-radius: 13px; background: rgba(var(--wash-rgb), .16); position: relative; cursor: pointer;
   transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
 .music-dropzone.loaded .layer-toggle { display: inline-block; }   /* appears with the loaded box */
 .layer-toggle.on { background: var(--ui-active); }
@@ -4297,14 +4369,14 @@ body.player-mode #canvas {
      static section cards, and it means focus deepens a colour already present
      instead of introducing one. Composited over --surface-raised rather than
      layered with opacity, so it does not shift if the drawer's ground moves. */
-  background: #161528;
+  background: var(--surface-tint);
   border: 1px solid rgba(124, 92, 255, 0.28);
   border-radius: 10px;
 }
 .help-search:focus-within {
   border-color: var(--ui-line);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.16);
-  background: #1a1830;
+  background: var(--surface-tint-lit);
 }
 .help-search-icon { display: flex; color: var(--ui-hi); }
 .help-search-icon svg { width: 15px; height: 15px; }
@@ -4337,7 +4409,7 @@ body.player-mode #canvas {
    `outline: none` earlier in the file loses to the later rule. */
 .help-search .help-search-input:focus,
 .help-search .help-search-input:focus-visible { outline: none; }
-.help-search-input::placeholder { color: #a8b0bf; }
+.help-search-input::placeholder { color: var(--text-tool-3); }
 /* Safari draws its own clear affordance; ours is Esc, which is discoverable
    from the keyboard and does not shift the layout. */
 .help-search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
@@ -4705,7 +4777,7 @@ body.playing .flip-grid { display: none; }
   position: absolute;
   width: 16px; height: 16px;
   top: calc(50% - 8px); left: calc(50% - 8px);
-  border: 2px solid rgba(255, 255, 255, 0.35);
+  border: 2px solid rgba(var(--wash-rgb), 0.35);
   border-top-color: #fff;
   border-radius: 50%;
   animation: skribl-spin 0.8s linear infinite;
@@ -4940,7 +5012,7 @@ body.playing .flip-grid { display: none; }
   position: fixed; z-index: 91;
   left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(340px, calc(100vw - 40px));
-  background: #1b1f27;
+  background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
   border-radius: 18px;
   padding: 22px 22px 18px;
@@ -4951,20 +5023,20 @@ body.playing .flip-grid { display: none; }
 
 .leave-title {
   margin: 0 0 8px; font-size: 18px; font-weight: 640;
-  color: #f2f4f8; letter-spacing: -.01em;
+  color: var(--text-heading); letter-spacing: -.01em;
 }
 .leave-body {
-  margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: #a9b1c1;
+  margin: 0 0 20px; font-size: 14px; line-height: 1.5; color: var(--text-tool-2);
 }
 .leave-actions { display: flex; gap: 10px; }
 .leave-btn {
   flex: 1 1 0; min-height: 44px; padding: 0 14px;
   border-radius: 12px; border: 1px solid var(--hairline, #2a3040);
-  background: rgba(255,255,255,.06); color: #e7e9ee;
+  background: rgba(var(--wash-rgb), .06); color: var(--text-strong-3);
   font: inherit; font-size: 14px; font-weight: 560; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.leave-btn:hover { background: rgba(255,255,255,.1); }
+.leave-btn:hover { background: rgba(var(--wash-rgb), .1); }
 /* The safe choice is the visually quieter one, but it takes focus — a mis-tap
    or a stray Enter should keep the work, not discard it. */
 .leave-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
@@ -4974,7 +5046,7 @@ body.playing .flip-grid { display: none; }
 /* A menu row can explain what a thing is; a 40px icon in the header could not,
    which is the whole reason Flip Mode went unrecognised. */
 .menu-item .menu-item-text { display: flex; flex-direction: column; gap: 2px; text-align: left; }
-.menu-item .menu-item-sub { font-size: 12px; font-weight: 400; color: #8b93a5; line-height: 1.35; }
+.menu-item .menu-item-sub { font-size: 12px; font-weight: 400; color: var(--text-soft-2); line-height: 1.35; }
 .menu-item { text-decoration: none; }
 
 
@@ -5022,7 +5094,7 @@ body.playing .flip-grid { display: none; }
   left: 50%;
   transform: translateX(-50%);
   z-index: 44;
-  background: #1b1f27;
+  background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
   border-radius: 14px;
   padding: 6px;
@@ -5039,7 +5111,7 @@ body.playing .flip-grid { display: none; }
   top: 100%; left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: #1b1f27;
+  border-top-color: var(--surface-pop);
 }
 @media (max-width: 640px) {
   /* Stay inside the viewport on a phone: the Shape button is near the left, so
@@ -5210,7 +5282,7 @@ body.playing .flip-grid { display: none; }
 /* Hover keeps a hint of surface so the control still answers the pointer --
    without it a borderless glyph gives no feedback at all. */
 @media (hover: hover) {
-  .header #tuneBtn:hover, .header #menuBtn:hover { background: rgba(255, 255, 255, 0.05); }
+  .header #tuneBtn:hover, .header #menuBtn:hover { background: rgba(var(--wash-rgb), 0.05); }
 }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
@@ -5233,7 +5305,7 @@ body.playing .flip-grid { display: none; }
 .flip-lead .icon-btn {
   width: 32px; height: 32px;
   border: none; background: none;
-  color: #8b93a5;
+  color: var(--text-soft-2);
   position: relative; z-index: 1; --tap-grow: 6px;   /* 32 visual -> 44 tap */
 }
 .flip-lead .icon-btn::before {
@@ -5242,7 +5314,7 @@ body.playing .flip-grid { display: none; }
 }
 .flip-lead .icon-btn svg { width: 20px; height: 20px; }
 @media (hover: hover) {
-  .flip-lead .icon-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+  .flip-lead .icon-btn:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), 0.05); }
 }
 
 /* ---------- v225: a lit .tool-open must be SQUARE ---------------------------
@@ -5317,7 +5389,7 @@ body.playing .flip-grid { display: none; }
   bottom: calc(100% + 10px);
   left: 8px; right: 8px;
   z-index: 46;                 /* above .shape-pop's 44 — the tray supersedes it */
-  background: #1b1f27;
+  background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
   border-radius: 16px;
   padding: 8px;
@@ -5340,7 +5412,7 @@ body.playing .flip-grid { display: none; }
   left: var(--tray-arrow, 48px);
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: #1b1f27;
+  border-top-color: var(--surface-pop);
 }
 
 .tool-tray-btn {
@@ -5348,7 +5420,7 @@ body.playing .flip-grid { display: none; }
   gap: 4px;
   width: 100%; padding: 9px 2px 7px;
   border: none; border-radius: 12px;
-  background: transparent; color: #aeb6c4;
+  background: transparent; color: var(--text-tool-lit);
   /* Longhand, not `font: 600 10px/1 inherit`. That shorthand is INVALID -- the
      family slot does not accept `inherit` -- so the whole declaration was
      dropped and the cells rendered in the UA default face at ~13px. */
@@ -5362,7 +5434,7 @@ body.playing .flip-grid { display: none; }
   transition: background .15s ease, color .15s ease;
 }
 .tool-tray-btn svg { width: 22px; height: 22px; }
-.tool-tray-btn:hover { color: #e7e9ea; background: rgba(255,255,255,.05); }
+.tool-tray-btn:hover { color: var(--text-strong); background: rgba(var(--wash-rgb), .05); }
 .tool-tray-btn.active { background: var(--ui-active, #7c5cff); color: #fff; }
 .tool-tray-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
