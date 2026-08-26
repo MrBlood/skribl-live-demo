@@ -898,31 +898,49 @@ body.stroking .zoom-hud { pointer-events: none; }
      the bug, and it is why the dot sat somewhere different at 34px wide.
      Fully tucked inside (+8, -8) was tried first and read as a mark ON the
      glyph rather than a badge attached to it. */
-  /* 0.5 -- the dot's centre sits on the ICON BOX's top-right corner. This is a
-     reconstruction, not a fresh choice: the pre-v224 rule was `top: 6px;
-     right: 6px` measured from the BUTTON, and on the 44px desktop button with
-     its 24px icon that resolves to 12.5px from the icon's centre. 0.5 puts it
-     at 12. Half a pixel, and the owner's reference screenshot of the old look
-     is what it is reproducing.
+  /* 0.4 -- the dot's centre sits just inside the ICON BOX's top-right corner,
+     and the number is set by the BUTTON, not by taste.
 
-     Measuring from the button was the bug. The button narrows to 36 and then 34
-     on phones while the icon stays 24, so the same 6px that landed on the corner
-     at 44 landed 3.5px INSIDE the icon's right edge at 36 -- one rule, two
-     looks. Anchoring to the icon holds the corner at every button size.
+     0.5 puts the centre exactly on the icon box corner, which is where the
+     pre-v224 `top: 6px; right: 6px` resolved to on a 44px desktop button. It
+     looks right there and it is what the owner's reference screenshot shows.
+     But the button shrinks to 36 and 34 on phones while the icon stays 24, and
+     .tool-open carries a 12px corner radius, so the dot ran into the rounded
+     corner of the lit box. Measured as diagonal clearance between the dot's
+     outer edge and the corner's painted surface:
 
-     0.375 was tried in between, on a reading of "half in, half out" as half over
-     the ARTWORK: both glyphs stop at (21, 3) in their 24-unit viewBox rather
-     than at the box corner, so 9 units puts the dot squarely on the stroke. It
-     reads as a mark ON the icon rather than a badge attached to it, and it is
-     not the look being asked for. Recorded so it is not rediscovered.
+         tier                    0.5      0.4
+         Pad  desktop  44/24    +5.67    +9.07
+         Pad  393-640  36/24    +0.01    +3.41
+         Pad  <=392    34/24    -1.40    +1.99
+         Flip 393-640  36/21    +2.14    +5.11
+         Flip <=392    34/21    +0.72    +3.69
+         Flip <=359    32/21    -0.69    +2.28
+
+     Two tiers were NEGATIVE: the dot was crossing the accent ring of an open
+     drawer, which is the state it is most visible in. 0.4 is the largest offset
+     that clears every tier by about two pixels. The cost is 2.4px of inward
+     travel on desktop, where there was never a clearance problem -- paid so the
+     dot sits in the same place relative to the icon at every width, which is
+     the property the button-anchored rule could not hold.
+
+     Measuring from the button was the original bug. The same 6px that landed on
+     the corner at 44 landed 3.5px INSIDE the icon's right edge at 36 -- one
+     rule, two looks. Anchoring to the icon holds one look everywhere.
+
+     0.375 was tried too, on a reading of "half in, half out" as half over the
+     ARTWORK: both glyphs stop at (21, 3) in their 24-unit viewBox rather than at
+     the box corner, so 9 units puts the dot squarely on the stroke and it reads
+     as a mark ON the icon rather than a badge attached to it. Rejected on sight.
+     0.4 is 9.6 units -- close in arithmetic, but it clears the stroke.
 
      -3.5px is half the 7px dot, turning a centre into a left/top edge.
 
      --icon-size, not a literal, because Flip steps .tool-open svg to 21px below
      640 while Pad holds 24 at every width. One variable redeclared where the
      icon changes size keeps the dot on the corner on both surfaces. */
-  left: calc(50% + var(--icon-size, 24px) * 0.5 - 3.5px);
-  top: calc(50% - var(--icon-size, 24px) * 0.5 - 3.5px);
+  left: calc(50% + var(--icon-size, 24px) * 0.4 - 3.5px);
+  top: calc(50% - var(--icon-size, 24px) * 0.4 - 3.5px);
   right: auto;
   /* The ring stays: half the dot is over the icon's stroke now, and the ring is
      what keeps the two from merging. Ground-coloured, so it reads as a gap. */

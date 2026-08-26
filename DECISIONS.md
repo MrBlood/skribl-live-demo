@@ -783,3 +783,28 @@ reading of the same phrase as half over the ARTWORK: both glyphs stop at
 `(21, 3)` in their 24-unit viewBox rather than at the box corner, so 9 units
 puts the dot squarely on the stroke. It reads as a mark ON the icon rather than
 a badge attached to it. Recorded so it is not rediscovered as an improvement.
+
+**Follow-up 2: the dot offset is 0.4 of the icon, and the number is the
+button's, not taste.** 0.5 put the dot's centre exactly on the icon box corner
+-- correct on a 44px desktop button, and what the pre-v224 rule resolved to
+there. But `.tool-open` carries a 12px corner radius and shrinks to 36 and 34
+on phones while the icon stays 24, so the dot ran into the rounded corner of the
+LIT box. Diagonal clearance between the dot's outer edge and the corner's
+painted surface, measured per tier:
+
+| tier | 0.5 | 0.4 |
+| --- | --- | --- |
+| Pad desktop 44/24 | +5.67 | +9.07 |
+| Pad 393-640 36/24 | +0.01 | +3.41 |
+| Pad <=392 34/24 | **-1.40** | +1.99 |
+| Flip 393-640 36/21 | +2.14 | +5.11 |
+| Flip <=392 34/21 | +0.72 | +3.69 |
+| Flip <=359 32/21 | **-0.69** | +2.28 |
+
+Two tiers were negative -- the dot crossed the accent ring of an open drawer,
+which is the state it is most visible in. 0.4 is the largest offset that clears
+every tier by about two pixels. The cost is 2.4px of inward travel on desktop,
+where there was never a clearance problem, paid so the dot sits in the same
+place relative to the icon at every width. That is the property the
+button-anchored rule could not hold, and it is the whole reason for the
+re-anchoring.
