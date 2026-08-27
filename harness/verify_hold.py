@@ -17,7 +17,8 @@ check would prove nothing about the encoders.
 """
 from playwright.sync_api import sync_playwright
 
-BASE = "http://127.0.0.1:5001"
+import os
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
 def check(name, ok, detail=""):
@@ -294,6 +295,94 @@ with sync_playwright() as _p:
           _pg.get_attribute("#pbLeft", "aria-label"))
     check("no JS errors at phone width", not _errs, "; ".join(_errs[:2]))
     _b.close()
+
+# ----------------------------------------------------------------------
+# v237 — an expensive frame must not distort its NEIGHBOURS' timing.
+#
+# Everything above this proves a hold is written and read correctly. None of
+# it asks whether the frames come out on screen for the length of time they
+# were promised, and that is where the bug was: the scheduler waited a flat
+# interval AFTER painting, so each frame stayed up for its interval plus
+# whatever the NEXT frame cost to draw. With every page costing the same that
+# is invisible. Put a blurred in-between (~6,000 points) next to a key page
+# (45) and the key page held half again as long as it should.
+#
+# The suites for hold all passed throughout. A suite that only tests the
+# direction a feature works passes forever while the feature is broken.
+# ----------------------------------------------------------------------
+print("\nPLAYBACK EVENNESS — a heavy frame must not stretch its neighbours")
+with sync_playwright() as _p2:
+    _b2 = _p2.chromium.launch()
+    _t = _b2.new_page(viewport={"width": 1000, "height": 860})
+    _terrs = []
+    _t.on("pageerror", lambda e: _terrs.append(str(e)))
+    _t.goto(BASE + "/flip", wait_until="load")
+    _t.wait_for_timeout(1200)
+
+    # Light poses with one genuinely expensive frame between them, built with
+    # the app's own in-between so the cost is the real thing.
+    made = _t.evaluate("""() => {
+      const mk = (dy) => { const pts = [];
+        for (let i = 0; i <= 40; i++)
+          pts.push({ x: 120 + i * 6, y: 200 + dy, color: '#ffffff', size: 6,
+                     t: i * 4, erase: false, start: i === 0 });
+        return { strokes: pts, strokeGroups: [pts.length], hold: 1 }; };
+      const a = mk(0), b = mk(140);
+      const tw = buildTween(a, b);
+      if (!tw) return null;
+      frames = [a, tw, b, mk(70), mk(30)];
+      idx = 0; buildStrip(); render();
+      return { heavy: tw.strokes.length, light: a.strokes.length }; }""")
+    check("a heavy frame was built to test with", made is not None, str(made))
+
+    if made:
+        # Anti-vacuity: if the "heavy" frame is not actually expensive to paint,
+        # evenness is free and the assertions below prove nothing.
+        cost = _t.evaluate("""() => {
+          const one = (i) => { idx = i; const t0 = performance.now();
+            for (let k = 0; k < 4; k++) render();
+            return (performance.now() - t0) / 4; };
+          return { heavy: +one(1).toFixed(2), light: +one(0).toFixed(2) }; }""")
+        check("the heavy frame really is far more expensive to paint",
+              cost["heavy"] > cost["light"] * 8,
+              f"heavy {cost['heavy']}ms vs light {cost['light']}ms — "
+              f"too close for this test to mean anything")
+
+        # Time frames as the viewer sees them: gap between successive paints.
+        rows = _t.evaluate("""() => new Promise(res => {
+          const marks = [], orig = window.render;
+          window.render = function(){ const r = orig.apply(this, arguments);
+            marks.push({ t: performance.now(), i: idx }); return r; };
+          fps = 12; play();
+          setTimeout(() => { stop(); window.render = orig;
+            const out = [];
+            for (let k = 1; k < marks.length; k++)
+              out.push({ i: marks[k-1].i, ms: marks[k].t - marks[k-1].t });
+            res(out); }, 4000); })""")
+        check("playback actually advanced through several frames",
+              len(rows) >= 12, f"only {len(rows)} frame changes")
+
+        if len(rows) >= 12:
+            # Drop the first pass: an unpainted frame's cost is estimated, and
+            # the estimate converges once each frame has been drawn.
+            steady = rows[6:]
+            target = 1000.0 / 12
+            worst = max(abs(r["ms"] - target) for r in steady)
+            heavy = [r["ms"] for r in steady if r["i"] == 1]
+            near = [r["ms"] for r in steady if r["i"] == 0]
+            check("no frame runs more than 25% off its target once warmed up",
+                  worst < target * 0.25,
+                  f"worst deviation {worst:.0f}ms from {target:.0f}ms target")
+            check("the page BEFORE the heavy frame is not stretched by it",
+                  near and abs(sum(near)/len(near) - target) < target * 0.25,
+                  f"held {sum(near)/len(near):.0f}ms against a {target:.0f}ms target"
+                  if near else "never sampled")
+            check("and the heavy frame itself holds its own interval",
+                  heavy and abs(sum(heavy)/len(heavy) - target) < target * 0.25,
+                  f"held {sum(heavy)/len(heavy):.0f}ms against a {target:.0f}ms target"
+                  if heavy else "never sampled")
+    check("no JS errors during timed playback", not _terrs, "; ".join(_terrs[:2]))
+    _b2.close()
 
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 60)

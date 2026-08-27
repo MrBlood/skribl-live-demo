@@ -202,6 +202,17 @@ let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // 
 let zoomMag = 1, zoomFocus = 'loop', zoomCenter = null;                       // Loop Detail magnification
 let musicName = '';                                                          // track filename (shown in the dropzone)
 let drawing = false, curCount = 0, playing = false, playTimer = null;
+// Measured cost of painting each frame, by index, kept as a running average.
+// Playback subtracts it from the wait so a frame's VISIBLE duration is its
+// interval — see runPlayTimer. Declared up here with the rest of the early
+// state: a `let` first reached partway down this file throws during init and
+// silently kills every line after it.
+let framePaintMs = [];
+// A per-point cost, averaged across whatever has been drawn so far, used to
+// ESTIMATE a frame nobody has painted yet. Without it the correction only
+// kicks in on the second time round the loop, so the very first play-through
+// -- the one you actually watch after pressing the button -- still stuttered.
+let msPerPoint = 0;
 let strokePointerId = null;   // the pointer that owns the stroke in progress
 let ZoomView = null, pinching = false, _pinch = null;                        // canvas magnify (pinch/pan)
 let redoStack = [];   // undone strokes for the current frame ({pts,count})
@@ -1925,19 +1936,62 @@ function drawOnTick(){
 function advanceDrawOn(){ dFrame=(dFrame+1)%frames.length; idx=dFrame; startDrawOnFrame(); }   // preview loops
 
 function playStep(){ if(scrubbingFrames) return;
-  idx=playI%frames.length; render(); updatePlayProgress();
+  idx=playI%frames.length;
+  const _t0 = performance.now();
+  render();
+  const _cost = performance.now() - _t0;
+  framePaintMs[idx] = framePaintMs[idx] == null ? _cost
+                                                : framePaintMs[idx] * 0.6 + _cost * 0.4;
+  const _pts = frames[idx] ? frames[idx].strokes.length : 0;
+  if(_pts > 0){
+    const _rate = _cost / _pts;
+    msPerPoint = msPerPoint ? msPerPoint * 0.7 + _rate * 0.3 : _rate;
+  }
+  updatePlayProgress();
   liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; playI++;
 }
 // Was a fixed setInterval. With per-page holds each step has its own delay, so it
 // re-schedules itself. playTimer holds a timeout id now — stop() clears both.
+//
+// The delay used to start counting from the moment a paint FINISHED, which
+// means every frame stayed on screen for its own interval PLUS whatever the
+// NEXT frame cost to draw. That was invisible while every page cost the same;
+// a blurred in-between is ~6,000 points against a key page's 45, and measured
+// at 12fps the page before each blur held 127ms against a target of 83 — half
+// again as long. Watching it, that reads as the animation sticking around the
+// blurred slides, which is exactly how it was reported.
+//
+// The clock is absolute now. Each frame is due at a running target and the wait
+// is whatever is left of that target after the paint, so drawing cost comes out
+// of the interval instead of being added to it.
 function runPlayTimer(){
   clearInterval(playTimer); clearTimeout(playTimer);
-  playStep();
-  const step = () => {
-    playStep();
-    playTimer = setTimeout(step, (1000/fps) * frameHold(frames[playI]));
+  // A frame becomes visible when its paint COMPLETES, so its visible duration
+  // is the wait plus whatever the next frame costs to draw. Scheduling a flat
+  // interval therefore stretches every frame by the cost of the one after it —
+  // invisible while all pages cost the same, obvious once a blurred in-between
+  // (~6,000 points) sits next to a key page (45). Measured at 12fps, the page
+  // before each blur held 127ms against a target of 83.
+  //
+  // So the wait is the interval MINUS what the upcoming paint is expected to
+  // cost, and the expectation is measured rather than assumed. An earlier
+  // version of this accumulated a running due-time and corrected against it,
+  // which drifted: a wrong estimate was banked and the next frame inherited
+  // the error. Each frame now stands on its own.
+  const wait = () => {
+    const d = (1000 / fps) * frameHold(frames[playI]);
+    const ni = playI % frames.length;
+    // An unpainted frame is estimated from its point count at the going rate,
+    // so the FIRST play-through is even too — that is the one you watch after
+    // pressing the button.
+    const est = framePaintMs[ni] != null
+      ? framePaintMs[ni]
+      : (frames[ni] ? frames[ni].strokes.length * msPerPoint : 0);
+    return Math.max(0, d - est);
   };
-  playTimer = setTimeout(step, (1000/fps) * frameHold(frames[playI]));
+  playStep();
+  const step = () => { playStep(); playTimer = setTimeout(step, wait()); };
+  playTimer = setTimeout(step, wait());
 }
 function play(){
   if(playing) return;
