@@ -251,19 +251,10 @@ updateSliderFill(photoOpacityEl);
 updateSliderFill(photoBlurEl);
 
 (function initSliderExtras() {
-  // ---- CSS (injected once) ----
-  const style = document.createElement('style');
-  style.textContent =
-    '.slider-nudge-wrap{display:flex;align-items:center;gap:6px;flex:1;min-width:0}' +
-    '.slider-nudge-wrap input[type=range]{flex:1;min-width:0}' +
-    '.slider-nudge-btn{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:#232734;color:#c8cede;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:background .12s}' +
-    '.slider-nudge-btn:hover{background:#2c3140}' +
-    '.slider-nudge-btn:active{background:var(--accent);color:#fff}' +
-    '.zoom-pan-row,.crossfade-row{display:flex;align-items:center;gap:10px;margin:8px 0 2px}' +
-    '.zoom-pan-label,.crossfade-label{font-size:12px;color:#8a93a6;flex:none;min-width:64px}' +
-    '.crossfade-val{font-size:12px;color:#c8cede;flex:none;min-width:38px;text-align:right}' +
-    '#zoomTrackWrap{cursor:grab}#zoomTrackWrap.panning{cursor:grabbing}';
-  document.head.appendChild(style);
+  // The stylesheet this used to build at runtime now lives in styles.css. It
+  // was duplicated verbatim in flip.js, and being a JS string put it outside
+  // every colour audit — which is how its +/- buttons stayed dark after light
+  // mode shipped.
 
   // ---- (1) Nudgers on existing sliders ----
   ['photoOpacity', 'photoBlur', 'photoZoom', 'opacitySlider'].forEach(id => {

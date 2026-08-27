@@ -1268,3 +1268,63 @@ catch it. So the assertion is: every NEUTRAL colour token must be overridden.
 That lets the accent family through automatically (it is chromatic and does not
 flip by design) along with the radii and easings (not colours), with no
 hand-kept exclusion list to fall out of date.
+
+---
+
+## v234 -- The pen palette: one list, and Riso inks instead of the UI accent
+
+**It was two lists.** Seven `<button>`s in `_skribl_draw_drawer.html` for Pad,
+and a `COLORS` array at the top of `flip.js` for Flip: the same seven hexes in
+the same order, kept in step by hand, with nothing comparing them. The failure
+mode of forgetting one is not an error -- it is two editors quietly offering
+different colours, which nobody notices until someone switches surfaces
+mid-drawing. `lib/palette.js` is the list now, both surfaces build their dots
+from it, and `verify_parity` asserts they render the same colours in the same
+order AND that what they rendered came from the lib rather than from a copy.
+
+**Building the dots at runtime is what made one list possible.** Pad's click
+handler is delegated on `#colorGroup`, so a dot created after load needs no
+listener of its own; Flip passes an `onPick` because it also closes the drawer.
+The custom picker and the eyedropper stay in the markup -- they are controls,
+not colours, and they are what the dots get inserted before.
+
+**The colours are Risograph inks.** Fluorescent pink, hot orange, acid yellow, a
+printed green and a federal blue, plus paper white and a toner black -- what
+small-press zines are actually printed with. What was there before was a purple
+and a blue lifted straight from the UI accent, a mint green and a muddy amber:
+**a drawing palette that matches the chrome is a palette that was never chosen.**
+Riso inks are spot colours mixed to sit on uncoated paper rather than to pass a
+contrast check, so they are strongest on the dark grounds the background
+swatches default to. Acid yellow on white is nearly nothing, which is true of
+the ink as well.
+
+**The lib says WHICH swatches are dark and deliberately not what colour their
+rim is.** A near-black dot on a near-black drawer is an empty hole -- but the
+drawer is near-WHITE in light mode, where the dot needs no help and a light rim
+would be the thing that vanishes. So `dark: true` becomes `[data-ink="dark"]`
+and the rim is a themed token in CSS.
+
+**Every swatch is named now.** Flip labelled its dots with the raw hex, because
+it built them itself and had nothing else to hand. "#ff48b0" is not a colour
+anyone recognises being read aloud.
+
+## v234 -- What the colour ratchets could not see
+
+**The `rgb()` FUNCTION form.** The neutral ratchet only looked for `#hex`, so
+`background: rgb(23, 27, 35)` sat on two controls -- the brush-size tray and a
+segmented row -- and stayed dark in light mode with nothing to say so. Found by
+looking at a screenshot. The ratchet reads both forms now.
+
+**Marks that are white ON PURPOSE.** `#fff` is exempt from the ink ratchet
+because it is nearly always text on a coloured fill, which stays white either
+way. Five marks were white against a surface that FLIPS, and simply disappeared
+in light mode: the brush-size preview dot, the size-preset dots, the music
+playhead, the spinner's leading arc, and the ring around the selected colour
+swatch -- which meant the selected colour stopped looking selected. None of the
+three ratchets can distinguish those cases from the legitimate ones; they were
+found by opening the drawers and looking.
+
+**The lesson, twice in one day:** a static audit tells you what is not a token.
+Only a rendered pixel tells you what is the wrong colour. Both passes are
+needed, and the rendered one has to open the drawers -- a sweep over a hidden
+element measures nothing and passes.

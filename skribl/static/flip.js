@@ -14,7 +14,10 @@ function skriblPostHeaders(){
    frames}), directly consumable by the pad's normalizeSkribl()/loadSkribl().
    That's the marriage: same data, two editors.
    ========================================================================== */
-const COLORS = ["#ffffff","#7c5cff","#5b8cff","#f4326f","#1bcf8f","#ffae42","#000000"]; // Pad editor palette
+// The palette lives in lib/palette.js and is shared with Pad. It was two
+// hand-synchronised lists; the fallback here is only so a missing lib
+// leaves you a pen rather than a blank row.
+const COLORS = (window.SkriblPalette && window.SkriblPalette.hexes) || ["#ffffff","#141414"];
 const DPR = Math.min(window.devicePixelRatio||1, 2);
 let CW = 0, CH = 0;              // mutable since v110 — set from FLIP_SIZES[0] below
 // Canvas presets. The payload has ALWAYS carried canvasSize and the player has
@@ -1977,10 +1980,8 @@ function _initRecent(){
 function addRecent(hex){ _initRecent(); if(_recent) _recent.add(hex); }
 function renderRecent(){ _initRecent(); if(_recent) _recent.render(); }
 // preset dots — inserted before the static custom picker + eyedropper (Pad order)
-COLORS.forEach(col=>{ const b=document.createElement('button'); b.type='button'; b.className='color-dot'; b.style.background=col; b.dataset.color=col;
-  if(col==='#000000') b.style.borderColor='#3a4150';
-  b.setAttribute('aria-label', col);
-  b.addEventListener('click',()=>{ setColor(col); closePop(); }); colorGroup.insertBefore(b, customWrap); });
+if(window.SkriblPalette) window.SkriblPalette.mount(colorGroup, { before: customWrap,
+  onPick:(hex)=>{ setColor(hex); closePop(); } });
 // custom color picker (static markup)
 customInput.addEventListener('input',e=>{ customBtn.style.background=e.target.value; setColor(e.target.value); });
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
@@ -3073,7 +3074,8 @@ function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlid
   // .on not .active: real .seg cells now; the shared slider reads .on.
   bar.addEventListener('click',(e)=>{ const b=e.target.closest('.zoom-mag-btn'); if(!b) return; b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; } if(b.dataset.mag) zoomMag=parseFloat(b.dataset.mag)||1; updateTrimUI(); });
   // v207: shell + cells come from styles.css .seg; only bar layout + the magnifier glyph here.
-  const style=document.createElement('style'); style.textContent='.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}.zoom-mag-wrap{display:inline-flex;align-items:center;gap:8px}'; document.head.appendChild(style);
+  // The bar's layout rules moved to styles.css — this copy had already lost
+  // the 640px rule that editor_music.js's copy still carried.
 })();
 bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-seg').forEach(g=>positionSegSlider(g)); }); } });
 
@@ -3135,7 +3137,9 @@ function addSliderNudgers(el, opts){ opts=opts||{}; const wrap=document.createEl
   wrap.insertBefore(mk('\u2212',-1), el); wrap.appendChild(mk('+',1)); }
 function setCrossfadeUI(){ const s=document.getElementById('crossfadeSlider'), v=document.getElementById('crossfadeVal'); if(s){ s.value=loopCrossfadeMs; updateSliderFill(s); } if(v) v.textContent=loopCrossfadeMs>0?(loopCrossfadeMs+' ms'):'Off'; }
 (function initSliderExtras(){
-  const style=document.createElement('style'); style.textContent='.slider-nudge-wrap{display:flex;align-items:center;gap:6px;flex:1;min-width:0}.slider-nudge-wrap input[type=range]{flex:1;min-width:0}.slider-nudge-btn{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:7px;background:#232734;color:#c8cede;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;transition:background .12s}.slider-nudge-btn:hover{background:#2c3140}.slider-nudge-btn:active{background:var(--accent);color:#fff}.zoom-pan-row,.crossfade-row{display:flex;align-items:center;gap:10px;margin:8px 0 2px}.zoom-pan-label,.crossfade-label{font-size:12px;color:#8a93a6;flex:none;min-width:64px}.crossfade-val{font-size:12px;color:#c8cede;flex:none;min-width:38px;text-align:right}#zoomTrackWrap{cursor:grab}#zoomTrackWrap.panning{cursor:grabbing}'; document.head.appendChild(style);
+  // The stylesheet built here at runtime moved to styles.css: it was the same
+  // string in editor_photo.js, and a JS string is invisible to every colour
+  // ratchet — which is why these buttons stayed dark in light mode.
   const zoomWrap=document.getElementById('zoomTrackWrap');
   if(zoomWrap){ const panRow=document.createElement('div'); panRow.className='zoom-pan-row'; panRow.innerHTML='<span class="zoom-pan-label">Scroll</span><input type="range" id="zoomPanSlider" class="slider" min="0" max="1000" value="500" step="1" aria-label="Scroll the loop detail view">'; zoomWrap.insertAdjacentElement('afterend', panRow);
     const ps=document.getElementById('zoomPanSlider'); ps.addEventListener('input',()=>{ if(!(audioDuration>0)) return; zoomCenter=(parseInt(ps.value,10)/1000)*audioDuration; zoomFocus='free'; syncZoomFocusButtons(); updateTrimUI(); });

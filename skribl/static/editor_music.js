@@ -119,12 +119,8 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
   // 1x/2x/4x/8x reads as zoom on its own; the group keeps title="Zoom level"
   // and now carries a matching aria-label, so nothing is lost to a screen
   // reader either.
-  const style = document.createElement('style');
-  style.textContent =
-    '.zoom-mag-bar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:8px 0 6px;flex-wrap:wrap}' +
-    '.zoom-mag-wrap{display:inline-flex;align-items:center;gap:8px}' +
-    '@media (max-width:640px){.zoom-mag-bar{justify-content:flex-start;gap:8px 10px}}';
-  document.head.appendChild(style);
+  // The bar's layout rules moved to styles.css. Flip built the same sheet in
+  // its own string and had already lost the 640px rule from it.
 })();
 
 (function initFineTuneToggle() {

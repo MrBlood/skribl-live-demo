@@ -756,6 +756,15 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
   });
 });
 
+// The preset dots are built here rather than written into the template, from
+// the same lib/palette.js Flip builds its own from — one list, not two kept in
+// step by hand. The click handler below is delegated on the group, so a dot
+// created at runtime needs no listener of its own.
+(function(){
+  const g = document.getElementById('colorGroup');
+  if (g && window.SkriblPalette) window.SkriblPalette.mount(g, { selectFirst: true });
+})();
+
 bindEl('colorGroup', 'click', (e) => {
   const btn = e.target.closest('.color-dot');
   if (!btn || btn.id === 'customColorBtn') return;

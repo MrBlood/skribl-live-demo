@@ -380,9 +380,34 @@ with sync_playwright() as p:
         return { hitHex: hit && hit.hex, hitMatched: !!(hit && hit.matched),
                  customHex: custom && custom.hex,
                  customMatched: !!(custom && custom.matched) }; }"""
-    presets = pad.evaluate("() => [...document.querySelectorAll("
-                           "'#colorGroup .color-dot[data-color]')]"
-                           ".map(d => d.dataset.color)")
+    # THE PALETTE IS ONE LIST NOW. It was two: seven <button>s in the drawer
+    # partial for Pad and a COLORS array at the top of flip.js for Flip, the
+    # same hexes in the same order kept in step by hand, with nothing comparing
+    # them. The failure mode of forgetting one is not an error — it is two
+    # editors quietly offering different colours, which nobody notices until
+    # someone switches surfaces mid-drawing. Both build from lib/palette.js,
+    # and this is what says so.
+    read_dots = ("() => [...document.querySelectorAll("
+                 "'#colorGroup .color-dot[data-color]')].map(d => d.dataset.color)")
+    presets = pad.evaluate(read_dots)
+    fpresets = flip.evaluate(read_dots)
+    check("both surfaces offer the same pen palette, in the same order",
+          presets == fpresets and len(presets) >= 5,
+          f"pad {presets} vs flip {fpresets}")
+    lib = pad.evaluate("() => (window.SkriblPalette && window.SkriblPalette.hexes) || null")
+    check("...and both build it from lib/palette.js rather than their own copy",
+          lib is not None and lib == presets,
+          f"lib {lib} vs rendered {presets} — a second copy of the list is the "
+          f"thing this replaced")
+    # Every swatch needs a name a screen reader can say. Flip used to label its
+    # dots with the raw hex, because it built them itself and had nothing else
+    # to hand: "#ff48b0" is not a colour anyone recognises being read aloud.
+    labels = pad.evaluate("() => [...document.querySelectorAll("
+                          "'#colorGroup .color-dot[data-color]')]"
+                          ".map(d => d.getAttribute('aria-label') || '')")
+    check("every swatch is named, not just hexed",
+          labels and all(l and not l.startswith("#") for l in labels),
+          f"{labels}")
     preset0 = presets[0] if presets else "#ffffff"
     pcon, fcon = pad.evaluate(contract, preset0), flip.evaluate(contract, preset0)
     check("apply reports a preset as matched and a custom colour as not",

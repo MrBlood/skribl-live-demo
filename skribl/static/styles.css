@@ -5,6 +5,8 @@
   --surface-panel: #13161c;
   --surface-control: #171b23;
   --surface-control-hover: #1c212c;
+  --surface-nudge: #232734;         /* the +/- step buttons beside a slider */
+  --surface-nudge-hover: #2c3140;
 
   /* ---- v230: the rest of the neutral ramp -------------------------------
      PHASE 1 OF LIGHT MODE, and it changes nothing you can see. Every value
@@ -145,6 +147,13 @@
   --ui-active: #7c5cff;
   --ui-line: #7c5cff;
   --focus-ring: #7c5cff;
+
+  /* Ink that sits ON the canvas rather than on the chrome — the empty-state
+     hint. It is deliberately absent from the light ramp: the canvas is the
+     document's own colour and does not follow the interface, so its text must
+     not either. A token rather than a literal so the colour ratchets can see
+     that it was a decision. */
+  --on-canvas-rgb: 246,247,249;
 
   /* Semantic colours (v233). These are the SECOND half of light mode, and the
      half that phase 1 could not see. That pass moved neutrals — greys are what
@@ -778,7 +787,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   justify-content: center;
   gap: 8px;
   pointer-events: none;
-  color: rgba(246,247,249,0.28);
+  color: rgba(var(--on-canvas-rgb), 0.28);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;
@@ -795,7 +804,7 @@ body.stroking .zoom-hud { pointer-events: none; }
 .canvas-empty-sub {
   font-size: 12px;
   font-weight: 500;
-  color: rgba(246,247,249,0.20);
+  color: rgba(var(--on-canvas-rgb), 0.20);
   letter-spacing: 0;
   max-width: 240px;
   text-align: center;
@@ -1231,7 +1240,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   transition: background 0.15s ease;
 }
 
-.size-btn.active span { background: #fff; }
+.size-btn.active span { background: var(--text-primary); }   /* not #fff: a white dot vanishes on a light drawer */
 
 .color-section, .bg-section {
   display: flex;
@@ -1274,10 +1283,19 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .color-dot:hover { transform: scale(1.12); }
 .color-dot:active { transform: scale(0.92); }
+/* A near-black swatch on a near-black drawer is an empty hole, so the palette
+   marks its dark inks and they get a rim. It has to be a token: the drawer is
+   near-WHITE in light mode, where a dark dot needs no help and a light rim
+   would be the thing that vanishes. lib/palette.js says which swatches are
+   dark and deliberately does not say what colour the rim is. */
+.color-dot[data-ink="dark"] { box-shadow: inset 0 0 0 1px var(--line-loud); }
+
 .color-dot.active {
   transform: scale(1.08);
   border-color: transparent;
-  box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px #fff;
+  /* The outer ring was a literal #fff, which is invisible on a white drawer —
+     the selected swatch simply stopped looking selected in light mode. */
+  box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--text-primary);
 }
 
 .bg-group {
@@ -1869,7 +1887,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   top: 0;
   bottom: 0;
   width: 2px;
-  background: #fff;
+  background: var(--text-primary);   /* over a waveform that flips with the theme */
   z-index: 3;
   pointer-events: none;
   box-shadow: 0 0 6px rgba(var(--wash-rgb), 0.6);
@@ -2886,7 +2904,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   width: 100%;
   gap: 2px;
   padding: 3px;
-  background: rgb(23, 27, 35);
+  background: var(--surface-control);
   border: 1px solid var(--hairline);
   border-radius: 999px;
 }
@@ -4146,7 +4164,7 @@ body.player-mode #canvas {
   padding: 7px 12px; border-radius: 12px; background: rgba(var(--wash-rgb), .035);
 }
 .size-btn span { background: var(--text-brightest); }              /* brighter dots so the small one reads */
-.size-btn.active span { background: #fff; }
+.size-btn.active span { background: var(--text-primary); }   /* not #fff: a white dot vanishes on a light drawer */
 
 
 /* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
@@ -4249,9 +4267,48 @@ body.player-mode #canvas {
 @media (max-width: 560px) { .draw-inline { flex-direction: column; flex-wrap: nowrap; gap: 14px; } .draw-inline > * { width: 100%; } }
 
 
+/* ---------- The loop-view zoom bar ---------------------------------------
+   Also two runtime <style> strings — editor_music.js and flip.js — and they
+   had already drifted: only Pad's copy carried the 640px rule, so on a narrow
+   phone the bar justified differently on the two surfaces for no reason anyone
+   chose. That is the whole argument against CSS-in-a-JS-string in one example.
+   The shell and the cells come from .seg; this is bar layout only. */
+.zoom-mag-bar { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin: 8px 0 6px; flex-wrap: wrap; }
+.zoom-mag-wrap { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 640px) { .zoom-mag-bar { justify-content: flex-start; gap: 8px 10px; } }
+
+/* ---------- Slider nudgers, zoom/crossfade rows -------------------------
+   These lived in a STRING, twice: editor_photo.js and flip.js each built the
+   same stylesheet at runtime and appended it to <head>, with the same four
+   hard-coded neutrals in both copies. Nothing compared them, and no colour
+   ratchet could see either — a ratchet reads .css files, and this was
+   JavaScript. It is why the +/- buttons beside every slider stayed dark in
+   light mode after the whole rest of the chrome had flipped.
+
+   CSS belongs in a stylesheet. Moving it here deduplicates it, puts it under
+   every audit, and lets it use tokens. The width overrides further down
+   (.brush-slider-line .slider-nudge-btn) are more specific and still win. */
+.slider-nudge-wrap { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.slider-nudge-wrap input[type=range] { flex: 1; min-width: 0; }
+.slider-nudge-btn {
+  flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px;
+  background: var(--surface-nudge); color: var(--text-bright);
+  font-size: 16px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-user-select: none; user-select: none; touch-action: manipulation;
+  transition: background .12s;
+}
+.slider-nudge-btn:hover { background: var(--surface-nudge-hover); }
+.slider-nudge-btn:active { background: var(--accent); color: #fff; }
+.zoom-pan-row, .crossfade-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; }
+.zoom-pan-label, .crossfade-label { font-size: 12px; color: var(--text-soft); flex: none; min-width: 64px; }
+.crossfade-val { font-size: 12px; color: var(--text-bright); flex: none; min-width: 38px; text-align: right; }
+#zoomTrackWrap { cursor: grab; }
+#zoomTrackWrap.panning { cursor: grabbing; }
+
 /* ---------- Brush size: rounded tray + snug value + preview dot ---------- */
 .brush-slider-line {
-  background: rgb(23, 27, 35);
+  background: var(--surface-control);
   border: 1px solid var(--hairline);
   border-radius: 999px;
   padding: 3px 8px;
@@ -4259,7 +4316,7 @@ body.player-mode #canvas {
 }
 .brush-slider-line .prop-val { width: auto; text-align: left; flex: none; }
 .brush-dot-cell { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; }
-.brush-dot { background: #fff; border-radius: 50%; flex: none; }
+.brush-dot { background: var(--text-primary); border-radius: 50%; flex: none; }  /* the size preview has to show on both themes */
 .brush-slider-line .slider-nudge-btn { width: 24px; height: 24px; }
 
 /* ===================================================================
@@ -4830,7 +4887,7 @@ body.playing .flip-grid { display: none; }
   width: 16px; height: 16px;
   top: calc(50% - 8px); left: calc(50% - 8px);
   border: 2px solid rgba(var(--wash-rgb), 0.35);
-  border-top-color: #fff;
+  border-top-color: var(--text-primary);   /* the leading arc, against a wash of the same ink */
   border-radius: 50%;
   animation: skribl-spin 0.8s linear infinite;
 }
@@ -5547,6 +5604,10 @@ body.playing .flip-grid { display: none; }
   --surface-well-2:          #eaeef4;
   --surface-control:         #edf0f4;
   --surface-control-hover:   #e2e7ee;
+  --surface-nudge:           #dde3ec;   /* a step button sits ON a control, so it
+                                           steps AWAY from it — lighter than its tray
+                                           in dark, darker than it in light */
+  --surface-nudge-hover:     #d1d9e5;
   --surface-pop:             #ffffff;   /* popovers float ABOVE the page: white plus their shadow */
 
   /* Violet-tinted surfaces keep their hue, not just their lightness */

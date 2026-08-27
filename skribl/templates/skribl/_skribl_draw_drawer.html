@@ -30,15 +30,12 @@
       <button type="button" class="smooth-btn" data-target="background" aria-pressed="false">Background</button>
     </div>
     <div class="color-group" id="colorGroup" data-target="stroke">
-      {% if kind != 'flip' -%}
-      <button type="button" class="color-dot active" style="background:#ffffff" data-color="#ffffff" aria-label="White"></button>
-      <button type="button" class="color-dot" style="background:#7c5cff" data-color="#7c5cff" aria-label="Purple"></button>
-      <button type="button" class="color-dot" style="background:#5b8cff" data-color="#5b8cff" aria-label="Blue"></button>
-      <button type="button" class="color-dot" style="background:#f4326f" data-color="#f4326f" aria-label="Pink"></button>
-      <button type="button" class="color-dot" style="background:#1bcf8f" data-color="#1bcf8f" aria-label="Green"></button>
-      <button type="button" class="color-dot" style="background:#ffae42" data-color="#ffae42" aria-label="Orange"></button>
-      <button type="button" class="color-dot" style="background:#000000; border-color:#3a4150;" data-color="#000000" aria-label="Black"></button>
-      {% endif -%}
+      {# The preset dots are built at runtime by lib/palette.js, on BOTH
+         surfaces. They used to be seven static buttons here for Pad and a
+         COLORS array in flip.js for Flip — the same seven hexes in the same
+         order, kept in step by hand, with nothing comparing them. The custom
+         picker and the eyedropper below stay in the markup: they are controls,
+         not colours, and they are what the dots get inserted before. #}
       <label class="color-custom-wrap" title="Custom color">
         <span class="color-dot color-custom" id="customColorBtn" style="background:#ff6b6b;"></span>
         <span class="color-custom-badge">+</span>

@@ -148,6 +148,18 @@ def neutral_literals(name):
     # literals for the same tokens.
     css = re.sub(r":root(?:\[[^\]]*\])?\s*\{.*?\n\}", "", css, flags=re.S)
     out = []
+    # The rgb()/rgba() FUNCTION form is a hard-coded neutral too, and the first
+    # version of this only looked for #hex — so `background: rgb(23, 27, 35)`
+    # sat on two controls and stayed dark in light mode with nothing to say so.
+    # Pure black and pure white are skipped: they are the alpha washes, which
+    # --wash-rgb already flips.
+    for m in re.finditer(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*[,)]", css):
+        r, g, b = (int(m.group(i)) for i in (1, 2, 3))
+        if max(r, g, b) - min(r, g, b) > 30:
+            continue
+        if (r, g, b) in ((0, 0, 0), (255, 255, 255)):
+            continue
+        out.append(f"rgb({r},{g},{b})")
     for m in re.finditer(r"#[0-9a-fA-F]{3,6}\b", css):
         h = m.group(0).lower()
         if h in ("#fff", "#ffffff", "#0d0f14"):
@@ -172,6 +184,27 @@ check("no hard-coded neutral outside :root in either sheet",
       "; ".join(f"{n}: {', '.join(sorted(set(v)))}" for n, v in stray.items() if v)
       + " — every grey the chrome paints has to be a token, or it will not "
         "follow a light theme")
+
+print("\nSURFACES — no stylesheet hides in a JavaScript string")
+# FOUR runtime <style> elements were found here, in two duplicated pairs:
+# editor_photo.js/flip.js built the slider-nudger sheet, editor_music.js/flip.js
+# built the zoom-bar sheet. Being strings put them outside every colour audit —
+# a ratchet reads .css files — which is why the +/- buttons beside every slider
+# stayed dark after the whole rest of the chrome had flipped to light. And the
+# copies had already drifted: only Pad's zoom bar carried its 640px rule.
+#
+# `element.style` is NOT what this bans. Positioning one node is a different
+# thing from shipping a stylesheet; the eraser cursor sets its own cssText and
+# is painted ON the canvas, which follows no theme.
+injectors = []
+for js in sorted((STATIC).glob("*.js")) + sorted((STATIC / "lib").glob("*.js")):
+    body = js.read_text(encoding="utf-8")
+    if re.search(r"createElement\(\s*['\"]style['\"]\s*\)", body):
+        injectors.append(js.name)
+check("no editor script builds a stylesheet at runtime",
+      not injectors,
+      ", ".join(injectors) or "CSS in a string is CSS no audit can read, and "
+      "two copies of it drift with nothing to show the diff")
 
 print("\nSURFACES — what the player is made to download")
 # Not a pass/fail on size: this is the number the JS-only byte ratchet in

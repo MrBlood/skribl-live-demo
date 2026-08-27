@@ -28,6 +28,8 @@
   --surface-panel: #13161c;
   --surface-control: #171b23;
   --surface-control-hover: #1c212c;
+  --surface-nudge: #232734;         /* the +/- step buttons beside a slider */
+  --surface-nudge-hover: #2c3140;
 
   /* ---- v230: the rest of the neutral ramp -------------------------------
      PHASE 1 OF LIGHT MODE, and it changes nothing you can see. Every value
@@ -168,6 +170,13 @@
   --ui-active: #7c5cff;
   --ui-line: #7c5cff;
   --focus-ring: #7c5cff;
+
+  /* Ink that sits ON the canvas rather than on the chrome — the empty-state
+     hint. It is deliberately absent from the light ramp: the canvas is the
+     document's own colour and does not follow the interface, so its text must
+     not either. A token rather than a literal so the colour ratchets can see
+     that it was a decision. */
+  --on-canvas-rgb: 246,247,249;
 
   /* Semantic colours (v233). These are the SECOND half of light mode, and the
      half that phase 1 could not see. That pass moved neutrals — greys are what
@@ -505,7 +514,7 @@ body.player-mode .canvas-area { display: contents; }
   justify-content: center;
   gap: 8px;
   pointer-events: none;
-  color: rgba(246,247,249,0.28);
+  color: rgba(var(--on-canvas-rgb), 0.28);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;
@@ -1149,7 +1158,7 @@ body.player-mode #canvas {
   .player-title { font-size: 15px; }
   .player-caption { font-size: 12px; margin-top: 2px; }
   .player-controls { gap: 8px; }
-  .player-brand { display: none; }}
+  .player-brand { display: none; }}   /* not #fff: a white dot vanishes on a light drawer */
 
 
 /* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */

@@ -107,8 +107,15 @@ check("styles.css defines a light ramp",
 # within 30 of each other, which is precisely the set that has to flip. The
 # accent family (#7c5cff, #5b8cff, #9179ff and the four ui-* aliases of them)
 # is chromatic and stays put by design; radii and easings are not colours.
+# One exemption, and it is a rule rather than a list: a token named for the
+# CANVAS is not chrome. The empty-state hint is painted on the drawing surface,
+# which follows no theme, so its ink must not follow one either — and having it
+# in :root as a named token is what makes that a visible decision rather than a
+# literal somebody missed.
 unflipped = []
 for name, value in dark_tokens.items():
+    if "canvas" in name:
+        continue
     rgb = as_rgb(value)
     if rgb and max(rgb) - min(rgb) <= 30 and name not in light_tokens:
         unflipped.append(name)

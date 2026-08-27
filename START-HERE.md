@@ -1077,6 +1077,63 @@ is **always true** in a browser — `window.frames` is the iframe list. On Flip 
 real top-level `let frames` shadows it and the expression worked by luck; on Pad
 it resolved to `window.frames[0]` and threw.
 
+## The pen palette lives in lib/palette.js
+
+It used to live in two places: seven `<button>`s written into
+`_skribl_draw_drawer.html` for Pad, and a `COLORS` array at the top of `flip.js`
+for Flip — the same seven hexes in the same order, kept in step by hand, with
+nothing comparing them. The failure mode of forgetting one is not an error. It
+is two editors quietly offering different colours, which nobody notices until
+someone switches surfaces mid-drawing. Both build from the lib now, and
+`verify_parity` asserts they render the same list, in the same order, and that
+the list came from the lib rather than from a copy.
+
+**The colours are Risograph inks** — fluorescent pink, hot orange, acid yellow,
+a printed green and a federal blue, plus paper white and a toner black. That is
+what small-press zines are actually printed with, and it is a deliberate
+replacement for what was there: a purple and a blue lifted straight from the UI
+accent, a mint green and a muddy amber. *A drawing palette that matches the
+chrome is a palette that was never chosen.* Riso inks are spot colours, mixed
+to sit on paper rather than to pass a contrast check, so they are strongest on
+the dark grounds the background swatches default to — acid yellow on white is
+nearly nothing, which is true of the ink as well.
+
+The lib marks its dark swatches with `dark: true` and deliberately does **not**
+say what colour their rim is. A near-black dot on a near-black drawer is an
+empty hole, but the drawer is near-*white* in light mode, where the dot needs no
+help and a light rim would be the thing that vanishes — so the rim is CSS,
+keyed off `[data-ink="dark"]`, and follows the theme.
+
+**Building the dots at runtime is what let the two lists become one.** Pad's
+click handler is delegated on `#colorGroup`, so a dot created after load needs
+no listener; Flip passes an `onPick` because it also closes the drawer. The
+custom picker and the eyedropper stay in the markup — they are controls, not
+colours, and they are what the dots get inserted before.
+
+## Colour ratchets: three of them, and each was added after something escaped
+
+1. **Neutrals outside `:root`** (`verify_surfaces`) — every grey the chrome
+   paints must be a token, or it will not follow a light theme.
+2. **Chromatic ink** (`verify_theme`) — stricter: `color`, `fill` and `stroke`
+   may hold no literal at all except `#fff` and `#0d0f14`. A red is not a
+   neutral by any measure, so the grey audit walked straight past `#f4326f` at
+   3.32:1 on a light sheet.
+3. **The `rgb()` function form** (`verify_surfaces`) — the first version of the
+   neutral ratchet only looked for `#hex`, so `background: rgb(23, 27, 35)` sat
+   on two controls and stayed dark in light mode with nothing to say so.
+
+There is one exemption and it is a rule rather than a list: a token named for
+the **canvas** is not chrome. `--on-canvas-rgb` is the empty-state hint, painted
+on the drawing surface, which follows no theme — and naming it in `:root` is
+what makes that a visible decision instead of a literal somebody missed.
+
+**What a ratchet cannot see is a mark that is white on purpose.** `#fff` is
+exempt because it is nearly always text on a coloured fill — but five marks were
+white against a surface that flips, and simply disappeared in light mode: the
+brush-size preview dot, the size-preset dots, the music playhead, the spinner's
+leading arc, and the ring around the selected swatch. Those were found by
+looking, not by asserting.
+
 ## Suites: verify_theme.py
 
 Light mode, and the four things that make a second palette a feature rather
