@@ -1179,6 +1179,43 @@ skips is a guard that lies about coverage.**
 something a person can do with a mouse, in an order a person could do it in. If
 this goes red, some pair of features has stopped composing.
 
+## Suites: verify_pillfit.py
+
+**The autosave pill sat on the pen button, on every phone, on both surfaces.**
+`.autosave-status` is `position: fixed` at bottom-left; on a phone the tool row
+is at the bottom too. Desktop never collides, which is why it lasted — *it is
+invisible on the machine it was built on.*
+
+A rule for a nearby case already existed: the pill fades while a drawer is open,
+because "a pill covering a destructive button is worse than one you cannot see".
+That rule was right and too narrow — it fixed the collision somebody noticed
+rather than the general one, and CSS cannot ask whether two boxes intersect. So
+`lib/pillfit.js` measures it, and the fade is a class the measurement sets.
+
+**A warning is never faded, and that is the point of the suite.** `failed` and
+`partial` (saved without media) stay on screen deliberately — `flip.js` records
+why: *"a warning that fades claims it was resolved."* Hiding one because it
+happened to overlap would trade a cosmetic problem for a durability one,
+silently, in the exact situation where the user most needs telling. Most of the
+assertions here are on that distinction rather than on the easy half.
+
+**The pill has always been `pointer-events: none`**, so none of this was ever
+about blocking taps — it obscures a control without disabling it. That lowers
+the stakes, and it is asserted, so a later change cannot quietly make the pill
+interactive and turn an overlap into a dead button.
+
+**The consequence, stated plainly: "Saved" no longer appears on a phone.** It
+appeared on top of a control before, so this is a change from *visible and in
+the way* to *not shown*, not from visible to hidden. The warnings — the states
+that actually need reading — still show everywhere. If the reassurance turns out
+to be wanted on mobile, the fix is to give the pill somewhere to go rather than
+to weaken this rule.
+
+Two anti-vacuity guards: the suite asserts the pill **does** overlap at phone
+size before asserting that it fades (otherwise the section proves nothing), and
+it resizes a live window to check the verdict is recomputed on layout rather
+than decided once at load — which would leave a rotated phone wrong.
+
 ## Suites: verify_tween.py
 
 **A generated page that looks like a long exposure.** The reference was

@@ -2510,6 +2510,11 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .autosave-status.show { opacity: 1; }
+/* Set by lib/pillfit.js when the pill would sit on a control — on a phone the
+   tool row is at the bottom too, so a fixed bottom-left pill lands on it. AFTER
+   .show and at the same specificity, so it wins by order; the lib only ever
+   applies it to the reassuring states, never to a warning. */
+.autosave-status.blocked { opacity: 0; }
 /* A transient status pill must not sit on top of a control. Fixed at the
    bottom-left, it landed squarely over "Clear all pages" whenever a drawer was
    open — and a pill covering a destructive button is worse than one you cannot

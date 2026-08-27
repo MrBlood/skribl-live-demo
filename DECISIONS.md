@@ -1500,3 +1500,43 @@ spoken one -- and verify_pages, which asserted `"Page " in textContent`, now
 asserts the INTENT (a digit on screen, "Page" in the accessible name) rather
 than the wording. A test that contradicts a change is a claim to be understood
 before it is a blocker to be edited.
+
+---
+
+## v238 -- The autosave pill fades where it would cover a control
+
+**It sat on the pen button, on every phone size, on both surfaces.**
+`.autosave-status` is position:fixed at bottom-left and on a phone the tool row
+is at the bottom too. Desktop never collides -- which is exactly why it lasted:
+IT IS INVISIBLE ON THE MACHINE IT WAS BUILT ON.
+
+**A rule for a nearby case already existed** and had the right instinct: the
+pill fades while a drawer is open, because "a pill covering a destructive button
+is worse than one you cannot see". It fixed the collision somebody noticed
+rather than the general one. CSS cannot ask whether two boxes intersect, so the
+general case needed measuring, and lib/pillfit.js measures it.
+
+**A WARNING IS NEVER FADED.** `failed` and `partial` stay on screen deliberately
+-- flip.js records why: "a warning that fades claims it was resolved". Fading one
+because it happened to overlap would trade a cosmetic problem for a durability
+one, silently, in the exact situation where the user most needs telling. The
+overlap rule applies to the reassuring states only, and most of
+verify_pillfit.py is spent on that distinction rather than on the easy half.
+
+**The pill was already pointer-events:none**, so none of this was ever about
+blocking taps -- it obscures a control without disabling it. Worth establishing
+before weighing the fix, and asserted so a later change cannot make the pill
+interactive and turn an overlap into a dead button.
+
+**THE CONSEQUENCE, STATED RATHER THAN DISCOVERED LATER: "Saved" no longer
+appears on a phone at all.** The owner chose fading over moving it, and on a
+phone the overlap is permanent rather than occasional -- so this is a change
+from "visible and in the way" to "not shown". The states that actually need
+reading still show everywhere. If the reassurance turns out to be wanted on
+mobile, the answer is to give the pill somewhere to go, not to weaken the rule
+about warnings.
+
+**Shared, not written twice.** Both editors show the same pill from their own
+showAutosaveStatus(), and verify_surfaces counts the names those two files define
+in common -- so this is a lib rather than a function added to each. The player
+has no autosave and does not load it.
