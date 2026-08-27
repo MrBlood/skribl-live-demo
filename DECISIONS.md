@@ -1134,3 +1134,44 @@ was stamping itself as missing them.
 `draftstore.js` stores Blobs natively, which would drop the 4/3 encoding
 overhead, but the whole app handles `bgImage` as a data URL string, so that is a
 wider change than this one.
+
+## Each editor script ends by saying it got there
+
+**The most expensive bug in this codebase, measured in debugging rounds, is a
+top-level throw in `flip.js`.** The page still renders, the markup is all there,
+and an arbitrary SUFFIX of the behaviour is missing -- so it presents as several
+unrelated features breaking at once and sends you after whichever one you
+noticed first. Four rounds in a single session, every one the same shape: a
+function that runs during init reaches a `let` declared further down and hits its
+temporal dead zone. `let` and `const` do not hoist the way `function` does, and no
+`typeof` guard can rescue them -- only declaration order can.
+
+So `flip.js` and `app.js` each end with one statement whose only job is to prove
+they reached it, and `verify_boot.py` reads it. That beats a page-error listener
+twice: it also catches a throw something swallowed, and it names WHICH file died
+rather than reporting a symptom three screens away. Verified by reintroducing the
+bug deliberately -- the suite failed with "Cannot access '__tdzCanary' before
+initialization" instead of with a missing filmstrip.
+
+**The rule going in:** state any early path can reach belongs with the early
+state; anything touching state declared further down belongs in the load handler.
+
+**A STATIC checker was tried first and thrown away.** A regex pass over `let`
+and `const` declarations reported 512 hazards in flip.js and 866 in app.js --
+almost all of them property names (`style`, `length`, `width`) and keywords
+(`return`, `true`) that regex cannot tell from identifiers, plus declarations
+inside function bodies it had no way to scope. Scope analysis needs a real
+parser, and the dynamic check is both cheaper and exact: the symptom is always
+"the file stopped", which is one boolean to test.
+
+**One footgun found while writing the suite.** `typeof frames !== 'undefined'` is
+ALWAYS true in a browser -- `window.frames` is the iframe list. On Flip a real
+top-level `let frames` shadows it and the expression worked by luck; on Pad it
+resolved to `window.frames[0]` and threw, which the suite then reported as the
+boot path failing.
+
+**The suite pins a real difference between the surfaces** rather than flattening
+it: Flip restores a draft silently, because it persists pages, media and
+background and has nothing to warn about; Pad offers a "Discard / Restore"
+banner, because its autosave holds strokes but NOT media bytes and a silent
+restore would present a partial drawing as the whole one.

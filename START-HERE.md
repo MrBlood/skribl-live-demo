@@ -1042,6 +1042,41 @@ six browser contexts (one per mode per surface) and was cut to two by reusing
 one page and resetting the stroke arrays between cases. Reloads are the
 expensive part, not assertions.
 
+## Suites: verify_boot.py
+
+**The most expensive bug in this codebase, measured in debugging rounds**, is not
+a wrong pixel. It is `flip.js` throwing at top level and silently abandoning
+every line after the throw. The page still renders, the markup is all there, and
+an arbitrary SUFFIX of the behaviour is missing — so it presents as several
+unrelated features breaking at once and sends you after whichever one you
+noticed first. Four rounds in one session, every one the same shape: a function
+that runs during init (`setTool()` is the usual culprit) reaches a `let` declared
+further down and hits its temporal dead zone. `let` and `const` do not hoist the
+way `function` does, and **no `typeof` guard can rescue them — only declaration
+order can.**
+
+So each editor script ends with one statement whose only job is to say it got
+there — `window.__skriblBoot.flip = true` — and this suite reads it. That beats a
+page-error listener twice over: it also catches a throw something swallowed, and
+it names WHICH file died instead of reporting a symptom three screens away.
+Verified by reintroducing the bug on purpose: the suite fails with *"Cannot
+access '__tdzCanary' before initialization"* rather than with a missing
+filmstrip.
+
+**Rule going in: state any early path can reach belongs with the early state, and
+anything touching state declared further down belongs in the load handler.**
+
+The suite loads each surface twice, empty and restoring a draft, because restore
+is a second load-time path with its own ordering and it is the one a returning
+user takes. It pins the two surfaces' genuinely different behaviour rather than
+flattening it: Flip restores silently, Pad offers a "Discard / Restore" banner
+because its autosave holds strokes but not media bytes.
+
+One trap worth remembering, found while writing it: `typeof frames !== 'undefined'`
+is **always true** in a browser — `window.frames` is the iframe list. On Flip a
+real top-level `let frames` shadows it and the expression worked by luck; on Pad
+it resolved to `window.frames[0]` and threw.
+
 ## Suites: verify_flipdraft.py
 
 Closes the bug the owner reported as "autosave is failing on pad". It was not

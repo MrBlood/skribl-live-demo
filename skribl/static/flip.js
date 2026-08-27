@@ -4532,3 +4532,18 @@ if (window.SkriblTooltip) window.SkriblTooltip.init();
 // background image, so leaving for Pad loses nothing and a confirm here would be
 // a prompt that is always wrong. Pad needs one because its autosave holds
 // strokes but NOT media bytes — see the note on atRisk() in app.js.
+
+/* ---------- boot marker: the last statement in this file --------------------
+   Its only job is to prove that this file reached its end. flip.js and app.js
+   are classic scripts of several thousand lines, and a throw ANYWHERE at top
+   level silently abandons every line after it — the page keeps rendering, the
+   markup is all there, and some arbitrary suffix of the behaviour is simply
+   missing. That failure mode cost four separate debugging rounds in one
+   session, every one of them a `let` declared below a function that setTool()
+   reaches during init, and every one of them presenting as several unrelated
+   features breaking at once.
+
+   verify_boot.py asserts this flag. It is the cheapest possible check for the
+   most expensive possible bug, and unlike a page-error listener it also catches
+   the case where something swallowed the throw. Keep it last. */
+window.__skriblBoot = Object.assign(window.__skriblBoot || {}, { flip: true });
