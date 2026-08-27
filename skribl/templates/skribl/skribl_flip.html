@@ -7,6 +7,7 @@
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
 <link rel="stylesheet" href="{{ skribl_asset('flip.css') }}">
+{% include 'skribl/_skribl_theme_boot.html' %}
 </head>
 <body class="flip-app">
   <div class="app">
@@ -253,6 +254,16 @@
            state visible until you interact with it is a guess. #}
         <span class="seg hint-seg" id="hintSeg" role="group" aria-label="First-use tips"><span class="seg-slider"></span><button type="button" data-hints="on">On</button><button type="button" data-hints="off">Off</button></span>
       </div>
+      {# Light mode is OPT-IN. There is no prefers-color-scheme rule in the
+         stylesheet on purpose: Skribl was drawn dark — palette, brand marks,
+         accent — and following the OS would have flipped everyone on a light
+         desktop to a theme they never chose. The switch is stored per browser
+         and shared by Pad and Flip, like Tips. The CANVAS never follows it;
+         a drawing's ground is part of the drawing. #}
+      <div class="flip-menu-row">
+        <span class="fm-label">Theme</span>
+        <span class="seg theme-seg" id="themeSeg" role="group" aria-label="Interface theme"><span class="seg-slider"></span><button type="button" data-theme="dark">Dark</button><button type="button" data-theme="light">Light</button></span>
+      </div>
       <div class="flip-menu-row">
         <span class="fm-label">Canvas</span>
         <span class="seg canvas-seg" id="canvasSeg"><span class="seg-slider"></span><button type="button" data-size="classic" class="on">4:3</button><button type="button" data-size="wide">16:9</button><button type="button" data-size="square">1:1</button><button type="button" data-size="tall">9:16</button></span>
@@ -383,6 +394,7 @@
   <script src="{{ skribl_asset('lib/keyregistry.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/tooltip.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/hints.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/theme.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>

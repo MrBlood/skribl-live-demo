@@ -3158,6 +3158,7 @@ window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : 
 { const _mi=document.getElementById('miPosted');
   if(_mi) _mi.addEventListener('click', ()=>{ closeMenu(); if(window._skriblPostedUI) window._skriblPostedUI.open(); }); }
 function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
+  if(window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
   moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
 function closeMenu(){ moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); document.dispatchEvent(new CustomEvent('skribl:menu-closed')); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
@@ -3198,6 +3199,28 @@ if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
   // anywhere — another tab, a reset — and a switch showing the opposite of
   // what is stored is worse than no switch.
   window._skriblSyncHintToggle = sync;
+  sync();
+})();
+
+// Theme switch — the SAME stored setting as Pad's. lib/theme.js owns the key
+// and the <html> attribute; this is only the control that drives it.
+(function(){
+  const seg=document.getElementById('themeSeg');
+  if(!seg || !window.SkriblTheme) return;
+  function sync(){
+    const mode=window.SkriblTheme.get();
+    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.theme===mode));
+    if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  }
+  seg.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b || !b.dataset.theme) return;
+    window.SkriblTheme.set(b.dataset.theme);
+  });
+  // Driven by the lib, not by the click, so a change made in another tab moves
+  // this switch too — the setting is per browser, not per page.
+  window.SkriblTheme.onChange(sync);
+  if(window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  window._skriblSyncThemeToggle = sync;
   sync();
 })();
 

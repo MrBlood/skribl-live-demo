@@ -143,7 +143,10 @@ print("\nSURFACES — the chrome's colours live in one place")
 def neutral_literals(name):
     css = (STATIC / name).read_text(encoding="utf-8")
     css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)      # prose quotes colours
-    css = re.sub(r":root\s*\{.*?\n\}", "", css, flags=re.S)  # where they are DEFINED
+    # where they are DEFINED — the bare :root ramp AND any themed override of
+    # it (:root[data-theme="light"]), which is by definition a second block of
+    # literals for the same tokens.
+    css = re.sub(r":root(?:\[[^\]]*\])?\s*\{.*?\n\}", "", css, flags=re.S)
     out = []
     for m in re.finditer(r"#[0-9a-fA-F]{3,6}\b", css):
         h = m.group(0).lower()

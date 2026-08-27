@@ -184,7 +184,7 @@
     touch-action: none; cursor: none; }
   body.playing #pad { cursor: default; }
   .flip-live { position: absolute; top: 12px; left: 12px; z-index: 4; display: none; align-items: center; gap: 6px;
-    background: rgba(9,11,16,.72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 5px 18px;
+    background: rgba(var(--glass-deep-2-rgb), .72); border: 1px solid var(--hairline); border-radius: var(--r-pill); padding: 5px 18px;
     font-size: 12px; font-weight: 700; letter-spacing: .03em; color: var(--ui-hi); }
   body.playing .flip-live { display: inline-flex; }
 
@@ -231,7 +231,7 @@
   .flip-drawers { width: 100%; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
   .draw-popout.tab-panel { position: static; box-sizing: border-box; }
   /* Delete-all lives in the drawer now; it arms red on first tap like the frame delete. */
-  .clear-drawer-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
+  .clear-drawer-btn.armed { color: var(--danger); border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .drawer-actions { gap: 8px; }
   .clear-undo-btn { color: var(--ui-hi); border-color: rgba(124,92,255,.4); }
   .clear-undo-btn[hidden] { display: none; }
@@ -267,7 +267,7 @@
   .t-btn::before { content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 2px));
     background: transparent; border-radius: inherit; }
   .t-btn.on { color: var(--text-primary); border-color: var(--ui-line); }
-  .t-btn.armed { color: #f4326f; border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
+  .t-btn.armed { color: var(--danger); border-color: rgba(244,50,111,.5); background: rgba(244,50,111,.14); }
   .t-btn svg { width: 19px; height: 19px; }
   @media (hover:hover) { .t-btn:hover { filter: brightness(1.12); } }
   /* Flip's tool row shrinks at each breakpoint; Pad's does not. The MECHANISM
@@ -295,12 +295,12 @@
     .flip-tools { --seg-row-h: 44px; }
   }
 
-  .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(10,12,18,.55); }
+  .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(var(--glass-base-rgb), .55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
     scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--wash-rgb), .05); }
   .strip::-webkit-scrollbar { height: 7px; }
-  .strip::-webkit-scrollbar-track { background: rgba(8,10,15,.7); border-radius: 999px; margin: 0 10px; }
-  .strip::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: 999px; border: 1px solid rgba(8,10,15,.6); }
+  .strip::-webkit-scrollbar-track { background: rgba(var(--glass-deep-rgb), .7); border-radius: 999px; margin: 0 10px; }
+  .strip::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: 999px; border: 1px solid rgba(var(--glass-deep-rgb), .6); }
   .strip::-webkit-scrollbar-thumb:hover { background: var(--ui-line); }
   /* image/music share the magnify button's chrome; highlight the same way when open */
   .flip-tools .magnify-tool.open { color: var(--ui-hi); background: rgba(124,92,255,0.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,0.45); }
@@ -372,11 +372,11 @@
   .frame canvas { width: 100%; height: 100%; display: block; }
   /* Top-left, with the hold badge to its right — the ops bar owns the bottom. */
   .frame .num { position: absolute; top: 4px; left: 6px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
-    background: rgba(9,11,16,.7); border-radius: 5px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
+    background: rgba(var(--glass-deep-2-rgb), .7); border-radius: 5px; padding: 1px 5px; font-variant-numeric: tabular-nums; }
   .frame .del { position: absolute; top: 3px; right: 3px; width: 26px; height: 26px; border-radius: 7px; border: 0;
-    background: rgba(9,11,16,.72); color: var(--text-secondary); display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+    background: rgba(var(--glass-deep-2-rgb), .72); color: var(--text-secondary); display: none; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
   .frame .del svg { width: 13px; height: 13px; }
-  .frame .del:hover { color: #ff8a8a; }
+  .frame .del:hover { color: var(--danger-soft-2); }
   .frame:hover .del { display: flex; }
   .addcol { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
   .addbtn { width: 88px; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--text-secondary);
@@ -407,13 +407,13 @@
 
 
   /* Destructive delete uses the editor's two-tap "armed" pattern (red). */
-  .frame .del.armed { display: flex; color: #f4326f; background: rgba(244,50,111,.2); }
+  .frame .del.armed { display: flex; color: var(--danger); background: rgba(244,50,111,.2); }
   /* Touch has no hover: always show delete on the SELECTED frame. */
   .frame.on .del { display: flex; }
   .btn.flip-play:disabled { opacity: .38; cursor: default; box-shadow: none; }
   /* Small transient chip for "Draft restored". */
   .flip-chip { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30;
-    background: rgba(9,11,16,.85); border: 1px solid var(--hairline-strong); color: var(--text-secondary);
+    background: rgba(var(--glass-deep-2-rgb), .85); border: 1px solid var(--hairline-strong); color: var(--text-secondary);
     border-radius: var(--r-pill); padding: 7px 14px; font-size: 12.5px; font-weight: 600;
     opacity: 0; pointer-events: none; transition: opacity .3s var(--ease); }
   .flip-chip.show { opacity: 1; }
@@ -527,7 +527,7 @@
 /* Lighter active state: this is a small secondary toggle next to a segmented
    control, and a strong border plus fill made it the loudest thing in the row.
    The icon colour carries the state; the fill only supports it. */
-.onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
+.onion-tint.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 
 /* --- v124: page toolbar (replaces the in-tile ops bar) ---------------------
    The old .frame-ops overlaid the thumbnail with 18px targets. Controls now act
@@ -540,7 +540,7 @@
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--hairline);
-  background: rgba(14, 17, 24, 0.9);
+  background: rgba(var(--glass-raised-rgb), 0.9);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -565,7 +565,7 @@
   gap: 6px;
   border: 1px solid var(--hairline-strong);
   border-radius: 9px;
-  background: rgba(18, 21, 27, 0.9);
+  background: rgba(var(--surface-sheet-rgb), 0.9);
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 600;
@@ -580,7 +580,7 @@
 
 /* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
    land on Delete — which is exactly what the old 18px overlay allowed. */
-.pb.danger { margin-left: auto; color: #ff9d9d; border-color: rgba(244, 50, 111, 0.3); }
+.pb.danger { margin-left: auto; color: var(--danger-soft); border-color: rgba(244, 50, 111, 0.3); }
 .pb.danger:hover:not(:disabled) { background: rgba(244, 50, 111, 0.16); border-color: rgba(244, 50, 111, 0.55); }
 
 /* A glyph that carries the meaning the LABEL used to. Below 560px every
@@ -666,13 +666,13 @@
    for a measurement on a real device. The dead `--seg-h: 26px` that
    used to sit here rendered nowhere and is gone rather than left to
    look like a decision. */
-.canvas-seg, .hint-seg { margin-left: auto; }
+.canvas-seg, .hint-seg, .theme-seg { margin-left: auto; }
 /* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
    hole between the word "Tips" and its switch while "Canvas" sat snug against
    its own. Matching the widths closes it, and the two rows read as a pair. */
-.hint-seg { width: 147px; }
-.hint-seg button { flex: 1 1 0; }
-.canvas-seg button, .hint-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
+.hint-seg, .theme-seg { width: 147px; }
+.hint-seg button, .theme-seg button { flex: 1 1 0; }
+.canvas-seg button, .hint-seg button, .theme-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 
 /* --- v130: playback settings drawer ---------------------------------------
    Slides down from the header that opens it. The animation is on
@@ -812,7 +812,7 @@
      an unreachable database read as "share does nothing". */
   .flip-share-error {
     text-align: left; font-size: 12px; line-height: 1.5;
-    color: #ff9d9d; background: rgba(244, 50, 111, 0.12);
+    color: var(--danger-soft); background: rgba(244, 50, 111, 0.12);
     border: 1px solid rgba(244, 50, 111, 0.35); border-radius: 10px;
     padding: 9px 11px;
   }
@@ -869,7 +869,7 @@
   }
   .mb-offset-input:focus { border-color: var(--ui-line); }
   /* An unparseable entry is reported, not silently discarded. */
-  .mb-offset-input.bad { border-color: #e0576b; color: #e0576b; }
+  .mb-offset-input.bad { border-color: var(--danger-mid); color: var(--danger-mid); }
 
   /* "And following" reads better than "& after" but costs 23px, which the bar
      does not have below 393px — it is overflow-x:auto, so it does not clip, it
@@ -924,10 +924,10 @@
 
 /* v206: Clear all pages in the ... menu — danger + armed states, matching the
    Pad's .menu-item.danger/.armed so the two editors' menus read the same. */
-.flip-menu-item.danger { color: #f4326f; }
-.flip-menu-item.danger .mi-ic svg { color: #f4326f; }
-.flip-menu-item.armed { background: rgba(244,50,111,.14); color: #f4326f; font-weight: 600; }
-.flip-menu-item.armed .mi-ic svg { color: #f4326f; }
+.flip-menu-item.danger { color: var(--danger); }
+.flip-menu-item.danger .mi-ic svg { color: var(--danger); }
+.flip-menu-item.armed { background: rgba(244,50,111,.14); color: var(--danger); font-weight: 600; }
+.flip-menu-item.armed .mi-ic svg { color: var(--danger); }
 
 /* v207: the add-page buttons' plus is an SVG glyph (was the fullwidth text
    character), sized to sit on the label's baseline. */

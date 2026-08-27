@@ -70,6 +70,30 @@
   --surface-tint-lit: #1a1830;    /* and focused */
   --text-on-accent-soft: #ece8ff; /* text on a translucent accent fill */
 
+  /* Translucent surfaces, held as RGB TRIPLETS for the same reason as
+     --wash-rgb: the call site keeps its own alpha, and one line flips every
+     strength at once. These are the frosted panels -- the header, the page bar,
+     the filmstrip well, the autosave pill -- which are a dark colour at partial
+     opacity over whatever is behind them, and were the last thing in the chrome
+     still painting dark in light mode. Phase 1 missed them because it converted
+     rgba(255,255,255,a) only; these are dark bases, and a hex scan cannot see
+     them at all.
+
+     Five of them ARE the values of tokens above, exactly, so they name the same
+     colour twice on purpose -- rgb(19,22,28) is #13161c is --surface-panel. The
+     -rgb form is what a translucent call site needs; the hex form is what a
+     solid one needs. They must be edited together, which is why they sit
+     together. */
+  --glass-deep-rgb: 8,10,15;
+  --glass-deep-2-rgb: 9,11,16;
+  --glass-base-rgb: 10,12,18;
+  --glass-raised-rgb: 14,17,24;
+  --surface-sheet-rgb: 18,21,27;      /* = #12151b */
+  --surface-panel-rgb: 19,22,28;      /* = #13161c */
+  --surface-well-2-rgb: 23,26,34;     /* = #171a22 */
+  --surface-control-rgb: 23,27,35;    /* = #171b23 */
+  --line-rgb: 37,43,55;               /* = #252b37 */
+
   /* The wash behind every hover fill and translucent hairline. Held as an RGB
      TRIPLET rather than a colour so call sites keep their own alpha:
      rgba(var(--wash-rgb), .06) and rgba(var(--wash-rgb), .4) are the same
@@ -122,6 +146,34 @@
   --ui-line: #7c5cff;
   --focus-ring: #7c5cff;
 
+  /* Semantic colours (v233). These are the SECOND half of light mode, and the
+     half that phase 1 could not see. That pass moved neutrals — greys are what
+     a theme obviously flips — and left every chromatic literal alone. But the
+     danger red, the warn amber and the ok green were all picked to sit on a
+     near-black ground, and on a white one they wash out: #f4326f measures
+     3.32:1 against the menu sheet, which is below AA for body text and is what
+     "Clear all" is written in.
+
+     Values here are the dark ones unchanged, so this block moves no pixel; the
+     light ramp restates them darker at the same hues. The three -soft variants
+     are kept apart rather than collapsed for the same reason --text-soft has
+     three: they are three different call sites that happen to be near each
+     other, and merging them would silently repaint dark mode.
+
+     --danger-fill is the odd one out — a SOLID red button with white text, not
+     text on a surface — so it stays put in both themes. */
+  --danger: #f4326f;
+  --danger-mid: #e0576b;
+  --danger-soft: #ff9d9d;
+  --danger-soft-2: #ff8a8a;
+  --danger-soft-3: #ff8f8f;
+  --danger-fill: #b3283f;
+  --warn: #ffd23f;
+  --warn-2: #ff9f43;
+  --good: #1bcf8f;
+  --accent-tint: #d6ccff;
+  --accent-tint-2: #d5cfff;
+
   /* Radii */
   --r-control: 12px;
   --r-frame: 24px;
@@ -165,9 +217,9 @@ html { scrollbar-gutter: stable both-edges; }
 
 /* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
-* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
+* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--glass-deep-rgb), 0.5); }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(8, 10, 15, 0.5); border-radius: 999px; }
+::-webkit-scrollbar-track { background: rgba(var(--glass-deep-rgb), 0.5); border-radius: 999px; }
 ::-webkit-scrollbar-thumb {
   background: var(--ui-line);
   border-radius: 999px;
@@ -225,7 +277,7 @@ body {
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
      inherited by the player through the derived sheet, so the three surfaces
      stay one design. */
-  background: rgba(23, 26, 34, 0.78);
+  background: rgba(var(--surface-well-2-rgb), 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
@@ -318,7 +370,7 @@ body {
 .btn.record.active {
   background: rgba(244, 50, 111, 0.14);
   border-color: rgba(244, 50, 111, 0.5);
-  color: #f4326f;
+  color: var(--danger);
 }
 
 .btn.play {
@@ -369,14 +421,14 @@ body {
   border: 1px solid rgba(244, 50, 111, 0.25);
   font-size: 13px;
   font-weight: 600;
-  color: #f4326f;
+  color: var(--danger);
 }
 
 .rec-indicator .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f4326f;
+  background: var(--danger);
   display: inline-block;
   animation: pulse 1s infinite;
 }
@@ -592,7 +644,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   display: flex;
   flex-direction: column;
   width: 46px;
-  background: rgba(19, 22, 28, 0.9);
+  background: rgba(var(--surface-panel-rgb), 0.9);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border: 1px solid var(--hairline-strong);
@@ -761,7 +813,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   border: 1px solid var(--hairline);
   border-bottom: none;
   border-radius: 16px 16px 0 0;
-  background: rgba(23, 26, 34, 0.78);
+  background: rgba(var(--surface-well-2-rgb), 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   overflow: hidden;
@@ -829,7 +881,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #1bcf8f;
+  background: var(--good);
   box-shadow: 0 0 3px rgba(27, 207, 143, 0.35);
   flex-shrink: 0;
 }
@@ -840,7 +892,7 @@ body.stroking .zoom-hud { pointer-events: none; }
    Same yellow as the autosave pill, so the toolbar dot, the status light and
    the re-add card all say the same thing. */
 .tab-dot.pending {
-  background: #ffd23f;
+  background: var(--warn);
   box-shadow: 0 0 3px rgba(255, 210, 63, 0.35);
 }
 
@@ -862,7 +914,7 @@ body.stroking .zoom-hud { pointer-events: none; }
   padding: 16px;
   border: 1px solid var(--hairline);
   border-radius: 16px;
-  background: rgba(23, 26, 34, 0.92);
+  background: rgba(var(--surface-well-2-rgb), 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55);
@@ -1297,7 +1349,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 .more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
 .more-toggle.open { color: var(--text-bright); }
-.more-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); }
+.more-chevron { width: 15px; height: 15px; color: var(--accent-bright); transition: transform .25s var(--spring); }
 .more-toggle.open .more-chevron { transform: rotate(180deg); }
 
 .more-drawer { display: flex; flex-direction: column; gap: 12px; }
@@ -1451,8 +1503,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   -webkit-tap-highlight-color: transparent;
 }
 .clear-drawer-btn svg { width: 15px; height: 15px; }
-.clear-drawer-btn:hover { background: rgba(244,50,111,.08); color: #f4326f; border-color: rgba(244,50,111,.3); }
-.clear-drawer-btn.armed { background: rgba(244,50,111,.14); color: #f4326f; border-color: rgba(244,50,111,.5); }
+.clear-drawer-btn:hover { background: rgba(244,50,111,.08); color: var(--danger); border-color: rgba(244,50,111,.3); }
+.clear-drawer-btn.armed { background: rgba(244,50,111,.14); color: var(--danger); border-color: rgba(244,50,111,.5); }
 
 /* Shared secondary button for panel actions (reset, and any future ones) so
    every drawer's buttons speak one language. */
@@ -1468,7 +1520,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .fine-tune-toggle { width: 100%; justify-content: space-between; margin-top: 12px; background: rgba(124, 92, 255, 0.08); border-color: rgba(124, 92, 255, 0.32); color: var(--text-bright); }
 .fine-tune-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
-.fine-tune-chevron { width: 15px; height: 15px; color: #9179ff; transition: transform .25s var(--spring); flex-shrink: 0; }
+.fine-tune-chevron { width: 15px; height: 15px; color: var(--accent-bright); transition: transform .25s var(--spring); flex-shrink: 0; }
 .fine-tune-toggle[aria-expanded="true"] .fine-tune-chevron { transform: rotate(180deg); }
 .fine-tune-body { margin-top: 12px; }
 .fine-tune-body[hidden] { display: none; }
@@ -1579,7 +1631,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-color: rgba(27, 207, 143, 0.4);
   border-radius: 12px;
   background: rgba(27, 207, 143, 0.08);
-  color: #1bcf8f;
+  color: var(--good);
   padding: 12px 16px;
   flex-direction: row;
 }
@@ -1606,7 +1658,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: 999px;
   border: 1px solid rgba(244, 50, 111, 0.4);
   background: rgba(244, 50, 111, 0.1);
-  color: #f4326f;
+  color: var(--danger);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1641,7 +1693,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 34px;
   border-radius: 9px;
   background: rgba(255, 210, 63, 0.16);
-  color: #ffd23f;
+  color: var(--warn);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1669,7 +1721,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .pending-meta {
   font-size: 11px;
-  color: #ffd23f;
+  color: var(--warn);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -1684,7 +1736,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 8px 14px;
   border-radius: 999px;
   border: none;
-  background: #ffd23f;
+  background: var(--warn);
   color: var(--surface-well-2);
   font-size: 12px;
   font-weight: 700;
@@ -2349,7 +2401,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   position: absolute;
   left: 50%;
   transform: translateX(-50%) translateY(-6px);
-  background: rgba(37, 43, 55, 0.82);
+  background: rgba(var(--line-rgb), 0.82);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid var(--hairline-strong);
@@ -2409,7 +2461,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   gap: 7px;
   padding: 6px 11px;
   border-radius: 999px;
-  background: rgba(23, 27, 35, 0.82);
+  background: rgba(var(--surface-control-rgb), 0.82);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border: 1px solid var(--hairline);
@@ -2438,21 +2490,21 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1bcf8f;
+  background: var(--good);
   flex-shrink: 0;
   transition: background 0.2s ease;
 }
 
 .autosave-status.saving .autosave-dot { background: #ffae42; animation: pulse 1s infinite; }
-.autosave-status.failed .autosave-dot { background: #f4326f; }
-.autosave-status.failed { color: #f4326f; }
+.autosave-status.failed .autosave-dot { background: var(--danger); }
+.autosave-status.failed { color: var(--danger); }
 
 /* Saved, but the photo/music files were too big for browser storage — the
    drawing and every setting persisted, the media bytes did not. Distinct from
    green (all safe) and from red (nothing saved): a standing amber warning, not
    the pulsing amber of an in-flight save. */
-.autosave-status.partial .autosave-dot { background: #ffd23f; }
-.autosave-status.partial { color: #ffd23f; }
+.autosave-status.partial .autosave-dot { background: var(--warn); }
+.autosave-status.partial { color: var(--warn); }
 
 /* ---------- Autosave restore banner ---------- */
 .restore-banner {
@@ -2467,7 +2519,7 @@ body:has(#drawPanel:not([hidden])) .autosave-status {
   gap: 16px;
   padding: 12px 14px 12px 18px;
   border-radius: 16px;
-  background: rgba(23, 27, 35, 0.92);
+  background: rgba(var(--surface-control-rgb), 0.92);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid var(--hairline-strong);
@@ -2625,7 +2677,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 .export-cancel svg { width: 15px; height: 15px; }
 @media (hover: hover) {
-  .export-cancel:hover { background: rgba(255, 90, 90, 0.16); color: #ff8f8f; }
+  .export-cancel:hover { background: rgba(255, 90, 90, 0.16); color: var(--danger-soft-3); }
 }
 
 /* Version footer in the ⋯ menu */
@@ -2702,7 +2754,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .menu-sheet {
   position: absolute;
-  background: rgba(23, 27, 35, 0.9);
+  background: rgba(var(--surface-control-rgb), 0.9);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid var(--hairline-strong);
@@ -2734,10 +2786,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .menu-item svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-secondary); }
 .menu-item:hover { background: rgba(var(--wash-rgb), 0.06); }
-.menu-item.danger { color: #f4326f; }
-.menu-item.danger svg { color: #f4326f; }
-.menu-item.armed { background: rgba(244,50,111,.14); color: #f4326f; font-weight: 600; }
-.menu-item.armed svg { color: #f4326f; }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger svg { color: var(--danger); }
+.menu-item.armed { background: rgba(244,50,111,.14); color: var(--danger); font-weight: 600; }
+.menu-item.armed svg { color: var(--danger); }
 .menu-item:disabled { opacity: 0.45; cursor: default; }
 .menu-item.busy { position: relative; }
 
@@ -3041,7 +3093,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   gap: 10px;
   background: rgba(124, 92, 255, 0.28);
   border: 1px solid rgba(124, 92, 255, 0.62);
-  color: #d6ccff;
+  color: var(--accent-tint);
   /* When this button appears it sits where "Post to Skribl" was but now watches
      instead of posts. After a short delay (so the pulse reads as a separate
      "notice me" beat rather than part of the reveal), the BORDER pulses once —
@@ -3056,7 +3108,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    with no transform on the button. */
 @keyframes watchBorderPulse {
   50% {
-    border-color: #9179ff;
+    border-color: var(--accent-bright);
     box-shadow: 0 0 6px 1px rgba(124, 92, 255, 0.4);
   }
 }
@@ -3090,8 +3142,8 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 .post-status { padding: 4px 14px 8px; }
 .post-status[hidden] { display: none; }
-.post-status.error .export-progress-fill { background: #f4326f; }
-.post-status.error .export-progress-label { color: #f4326f; }
+.post-status.error .export-progress-fill { background: var(--danger); }
+.post-status.error .export-progress-label { color: var(--danger); }
 
 .menu-divider {
   height: 1px;
@@ -3187,7 +3239,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   right: 0;
   display: block;
   height: 60px;
-  background: linear-gradient(to bottom, transparent, rgba(19, 22, 28, 0.82));
+  background: linear-gradient(to bottom, transparent, rgba(var(--surface-panel-rgb), 0.82));
   pointer-events: none;
   z-index: 11;
 }
@@ -3226,7 +3278,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   width: 100%;
   height: 100%;
   max-height: none;
-  background: rgba(19, 22, 28, 0.82);
+  background: rgba(var(--surface-panel-rgb), 0.82);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   overflow-y: auto;
@@ -3241,7 +3293,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 /* Sleek skinny scrollbar for the help drawer (desktop pointers only; mobile
    keeps its native auto-hiding overlay bar). */
 @media (min-width: 641px) {
-  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
+  .help-drawer-inner { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--glass-deep-rgb), 0.5); }
   .help-drawer-inner::-webkit-scrollbar { width: 10px; }
   .help-drawer-inner::-webkit-scrollbar-track { background: transparent; }
   .help-drawer-inner::-webkit-scrollbar-thumb {
@@ -3266,7 +3318,7 @@ html.help-open, html.help-open body { overflow: hidden; }
   font-size: 15px;
   position: sticky;
   top: 0;
-  background: rgba(19, 22, 28, 0.72);
+  background: rgba(var(--surface-panel-rgb), 0.72);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   padding: 20px 32px 16px;
@@ -4452,13 +4504,13 @@ body.player-mode #canvas {
   font-weight: 500;
   color: var(--text-secondary);
 }
-.menu-row .canvas-seg, .menu-row .hint-seg { margin-left: auto; }
+.menu-row .canvas-seg, .menu-row .hint-seg, .menu-row .theme-seg { margin-left: auto; }
 /* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
    hole between the word "Tips" and its switch while "Canvas" sat snug against
    its own. Matching the widths closes it, and the two rows read as a pair. */
-.menu-row .hint-seg { width: 147px; }
-.menu-row .hint-seg button { flex: 1 1 0; }
-.menu-row .hint-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
+.menu-row .hint-seg, .menu-row .theme-seg { width: 147px; }
+.menu-row .hint-seg button, .menu-row .theme-seg button { flex: 1 1 0; }
+.menu-row .hint-seg button, .menu-row .theme-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 .menu-row .canvas-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
 .menu-row-note {
   padding: 0 14px 8px;
@@ -4491,7 +4543,7 @@ body.player-mode #canvas {
 .posted-row:hover { background: var(--surface-control-hover); }
 .posted-thumb { width: 42px; height: 34px; border-radius: 8px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
-  font-size: 15px; color: #d5cfff; background: rgba(124,92,255,0.18); }
+  font-size: 15px; color: var(--accent-tint-2); background: rgba(124,92,255,0.18); }
 .posted-thumb-pad { background: rgba(91,140,255,0.18); }
 /* SVG now, not a font glyph: the two characters rendered at whatever weight and
    baseline the system font chose, so they sat unevenly beside each other. */
@@ -4508,7 +4560,7 @@ body.player-mode #canvas {
 .posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
   font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
-.posted-del:hover { color: var(--danger, #f4326f); }
+.posted-del:hover { color: var(--danger, var(--danger)); }
 .posted-empty { text-align: center; padding: 34px 16px; }
 .posted-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 5px; }
 .posted-empty-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
@@ -4628,7 +4680,7 @@ body.player-mode #canvas {
   background: transparent; color: var(--text-secondary); cursor: pointer;
 }
 .onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
-.onion-tint.active { color: #ff9f43; border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
+.onion-tint.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 .tune-shell {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
@@ -5040,7 +5092,7 @@ body.playing .flip-grid { display: none; }
 /* The safe choice is the visually quieter one, but it takes focus — a mis-tap
    or a stray Enter should keep the work, not discard it. */
 .leave-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.leave-btn.danger { background: #b3283f; border-color: #b3283f; color: #fff; }
+.leave-btn.danger { background: var(--danger-fill); border-color: var(--danger-fill); color: #fff; }
 .leave-btn.danger:hover { background: #c62d46; }
 
 /* A menu row can explain what a thing is; a 40px icon in the header could not,
@@ -5442,4 +5494,130 @@ body.playing .flip-grid { display: none; }
    truncating, and a tray whose labels are clipped is worse than one extra row. */
 @media (max-width: 359px) {
   .tool-tray { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- v232: light mode --------------------------------------------
+   PHASE 2. Phase 1 moved every neutral the chrome paints into :root without
+   changing a pixel; this block is what that was for. Nothing here is new
+   plumbing -- it redefines the same tokens and the whole interface follows.
+
+   DARK IS THE BASE, so this inverts the usual pattern: `:root` above stays
+   dark and light is what the stamp opts into. There are two states here, not
+   three: light applies when, and only when, something has put
+   data-theme="light" on <html>. The paragraph below says why there is no
+   third, system-following state.
+
+   THE RAMP IS MIRRORED BY RELATIONSHIP, NOT BY ARITHMETIC. Inverting each
+   luminance mechanically gives you a light theme where every contrast is
+   technically preserved and nothing looks right: the darkest surface is the
+   one the eye reads as furthest back, and in a light interface that is the
+   LIGHTEST. So --surface-deep, the toolbar row's ground, becomes white, and
+   the ramp climbs away from it in the opposite direction. The cool blue-grey
+   hue the dark palette carries (~220deg, low saturation) is kept throughout;
+   a neutral grey here would read as a different product.
+
+   THE CANVAS IS NOT IN THIS BLOCK, deliberately, and that is the owner's call.
+   The drawing's background is the document's own colour -- saved, shared,
+   exported -- so a Skribl looks the same to every viewer whatever their
+   interface is set to.
+
+   The accent family is untouched. #7c5cff sits at L110 and works on both a
+   near-black and a white ground, which is why it was picked. */
+/* NO `@media (prefers-color-scheme: light)` BLOCK, and that is a decision.
+   Adding one was the obvious move and it was wrong: it flips the DEFAULT for
+   every visitor whose OS is set to light, which is most of them, on an app
+   whose whole identity is dark. Skribl would have changed for everyone
+   overnight without anyone asking for it.
+
+   So light is OPT-IN: it applies only when something has stamped
+   data-theme="light" on <html>. Following the system instead is one block --
+   wrap the rule below in `@media (prefers-color-scheme: light)` and guard it
+   with `:root:not([data-theme="dark"])` so an explicit dark choice still wins
+   on a light OS -- but that is the owner's call about the product, not a
+   detail of the implementation. */
+:root[data-theme="light"] {
+  /* Surfaces — the deepest dark becomes the lightest light */
+  --surface-deep:            #ffffff;   /* the toolbar row's ground */
+  --surface-base:            #fbfcfd;
+  --surface-raised:          #f6f8fa;
+  --surface-sheet:           #f3f5f8;
+  --surface-panel:           #f1f3f7;
+  --surface-sheet-2:         #eff2f6;
+  --surface-well:            #eaeef4;   /* inset wells read as recessed, so darker */
+  --surface-well-2:          #eaeef4;
+  --surface-control:         #edf0f4;
+  --surface-control-hover:   #e2e7ee;
+  --surface-pop:             #ffffff;   /* popovers float ABOVE the page: white plus their shadow */
+
+  /* Violet-tinted surfaces keep their hue, not just their lightness */
+  --surface-tint:            #f0edff;
+  --surface-tint-lit:        #e6e0ff;
+
+  /* Lines */
+  --line-faint:              #e6e9ef;
+  --line:                    #e0e5ec;
+  --line-2:                  #dde2ea;
+  --line-mid:                #d5dbe4;
+  --line-mid-2:              #d0d7e1;
+  --line-strong:             #ccd3de;
+  --line-loud:               #b7c0cf;
+
+  /* Text — the brightest becomes the darkest ink */
+  --text-dim:                #8c94a3;
+  --text-faint:              #858d9c;
+  --text-faint-2:            #7a8291;
+  --text-muted:              #6c7483;
+  --text-soft:               #5f6775;
+  --text-soft-2:             #5f6775;
+  --text-soft-3:             #5c6472;
+  --text-secondary:          #545c6a;
+  --text-tool-3:             #4b535f;
+  --text-tool-2:             #4b535f;
+  --text-tool:               #48505d;   /* .tool-btn at rest */
+  --text-tool-lit:           #434b58;   /* .tool-open at rest */
+  --text-bright-2:           #343b47;
+  --text-bright:             #343b47;
+  --text-brightest:          #2d3440;
+  --text-strong-2:           #1f252f;
+  --text-strong-3:           #1f252f;
+  --text-strong:             #1f252f;
+  --text-heading:            #171c25;
+  --text-primary:            #11161e;
+  --text-on-accent-soft:     #3a2a80;   /* text on a translucent accent fill */
+
+  /* Washes and hairlines invert outright */
+  --wash-rgb:                0,0,0;   /* every hover fill and translucent rule flips with this line */
+  --hairline:                rgba(0,0,0,0.09);
+  --hairline-strong:         rgba(0,0,0,0.15);
+  --accent-glow:             rgba(0,0,0,0.16);   /* a glow on dark is a shadow on light */
+  /* Translucent surfaces — near-white frosted panels rather than near-black.
+     These were the last thing in the chrome still painting dark: the header,
+     the page bar, the filmstrip well and the autosave pill are a colour at
+     partial opacity, and phase 1 converted rgba(255,255,255,a) only. */
+  --glass-deep-rgb:          255,255,255;
+  --glass-deep-2-rgb:        253,254,255;
+  --glass-base-rgb:          250,251,253;
+  --glass-raised-rgb:        247,249,251;
+  --surface-sheet-rgb:       243,245,248;
+  --surface-panel-rgb:       241,243,247;
+  --surface-well-2-rgb:      234,238,244;
+  --surface-control-rgb:     237,240,244;
+  --line-rgb:                224,229,236;
+
+  /* Semantic colours, restated for a light ground. Same hues, dropped in
+     luminance until each clears 4.5:1 against the DEEPEST light surface
+     (#edf0f4) — the worst case, so they hold on every lighter one too.
+     Measured: danger 5.34, warn 5.14, warn-2 5.06, good 5.13, tint 7.22.
+     --danger-fill is a solid button in both themes and does not move. */
+  --danger:        #c1104a;
+  --danger-mid:    #b32a45;
+  --danger-soft:   #b81447;
+  --danger-soft-2: #b81447;
+  --danger-soft-3: #b81447;
+  --warn:          #8a5b00;
+  --warn-2:        #96560a;
+  --good:          #0a7350;
+  --accent-tint:   #4c31c4;
+  --accent-tint-2: #4c31c4;
+
 }

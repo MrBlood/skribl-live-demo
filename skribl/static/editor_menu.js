@@ -30,6 +30,7 @@ function openMenu() {
   // changed in another tab, and a switch showing the opposite of what is
   // stored is worse than no switch.
   if (window._skriblSyncHintToggle) window._skriblSyncHintToggle();
+  if (window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
   menuOverlay.hidden = false;
   requestAnimationFrame(() => menuOverlay.classList.add('open'));
 }

@@ -1175,3 +1175,96 @@ it: Flip restores a draft silently, because it persists pages, media and
 background and has nothing to warn about; Pad offers a "Discard / Restore"
 banner, because its autosave holds strokes but NOT media bytes and a silent
 restore would present a partial drawing as the whole one.
+
+---
+
+## v232-v233 -- Light mode: opt-in, chrome only, and the half that greys miss
+
+**Light is OPT-IN. There is no `@media (prefers-color-scheme: light)` rule.**
+Adding one was the obvious move and it was wrong. It flips the DEFAULT for every
+visitor whose OS is set to light -- which is most of them -- on an app whose
+entire identity is dark: the palette, both brand marks and the accent purple
+were all drawn against a near-black ground. Skribl would have changed for
+everyone overnight without anyone asking for it. The rule was written, observed
+to flip the harness's own headless Chromium (which reports `light`), and
+removed. Following the system is one block away and documented in place above
+the light ramp, but it is the owner's call about the product, not a detail of
+the implementation. `verify_theme.py` emulates BOTH OS preferences and asserts
+the default load is dark under each, because a rule that only misfires under one
+of them is exactly what nearly shipped.
+
+**THE CANVAS IS NOT THEMED, and that was the owner's answer to the only
+question worth asking before starting.** A drawing's background is part of the
+drawing -- it is exported, it is posted, it is what other people see -- so a UI
+preference must never repaint it. `#0d0f14` is excluded from the palette and
+from both colour ratchets for that reason, and the assertion is a real pixel
+read from the middle of the canvas in both themes rather than a CSS value,
+because only the bitmap can say whether a token leaked in.
+
+**The theme has to be stamped BEFORE first paint.** The setting lives in
+localStorage, which no stylesheet can read, and every script in both templates
+is deferred (`verify_surfaces` pins that). Applied by `lib/theme.js`, the
+browser paints a dark frame first -- a black flash on every navigation, for the
+people who chose light specifically to avoid one. So a tiny inline script in
+`<head>` does it, shared as a partial rather than copied into two templates
+because the storage key is a contract and a second copy of a contract is a
+second thing to drift. The test serves the page with EVERY external script
+aborted: if the theme is still right, nothing deferred was needed to get it.
+
+**Phase 1 moved 179 neutral literals into `:root` WITHOUT changing a value, and
+that is why phase 2 was a palette rather than an archaeology exercise.** All
+nine rendered scenes came back pixel-identical, worst channel delta 0 against a
+measured capture-noise floor of 4. Splitting the work that way meant the risky
+half was mechanical and provable, and the creative half touched one block.
+
+**Nine surfaces stayed dark after the first pass because they are TRANSLUCENT.**
+Phase 1 converted `rgba(255,255,255,a)` only; the header, the page bar, the
+filmstrip well, the page-bar buttons and the autosave pill are a dark colour at
+partial opacity, which no hex-literal sweep sees. They became RGB-triplet tokens
+(`rgba(var(--surface-well-2-rgb), 0.78)`) across 23 call sites. **A luminance
+sweep over the rendered chrome is what found them** -- the static audit had
+already declared the job done.
+
+**CHROMATIC INK IS THE HALF A GREY AUDIT CANNOT SEE.** Phase 1 moved neutrals,
+because greys are what a theme obviously flips, and walked past every coloured
+literal. But the danger red, the warn amber and the ok green were every one of
+them chosen against a near-black ground: `#f4326f` measures **3.32:1** on the
+light menu sheet, below AA for body text, and it is what "Clear all" is written
+in. v233 tokenised them at their existing dark values (so dark mode resolves to
+exactly the old literals, verified token by token) and restated them darker at
+the same hues for light. **The ratchet for ink is stricter than the one for
+greys: no literal at all**, with `#fff` (text on a coloured fill, white in both
+themes) and `#0d0f14` (the canvas) the only exemptions.
+
+**The legibility threshold is RELATIVE, and getting that wrong cost a round.**
+Demanding 4.5:1 of every label failed on `.menu-version` at 4.42 -- the version
+footer, deliberately tertiary, and dim in BOTH themes. Passing it would have
+meant darkening the upper half of the light text ramp: breaking the mirrored
+relationship on purpose to satisfy a number about something this work never
+touched. What light mode is answerable for is not regressing, so every element
+is measured in both themes -- a 3:1 floor, and a drop fails only if it lands
+under AA and loses more than 15%. `#f4326f` went 5.5 -> 3.32, caught twice over.
+White on the accent (4.35:1) is printed rather than asserted: it is identical in
+both themes and older than this work, so it is a palette question about the
+accent, not a theme one.
+
+**The ramp is mirrored by RELATIONSHIP, not by arithmetic.** Inverting each
+luminance mechanically gives a light theme where every contrast is technically
+preserved and nothing looks right: the darkest surface is the one the eye reads
+as furthest back, and in a light interface that is the LIGHTEST. So
+`--surface-deep` becomes white and the ramp climbs away from it in the opposite
+direction, keeping the cool blue-grey hue (~220deg, low saturation) throughout;
+a neutral grey would read as a different product.
+
+**A sweep over a hidden element measures nothing and passes.** The first
+legibility pass swept a closed menu, found no neutral-ground text on Flip, and
+reported a triumphant 99:1 having measured zero elements. Every sweep now
+asserts the COUNT of laid-out elements before trusting its numbers.
+
+**How the ramp is kept from rotting is structural, not a list.** Add a token to
+`:root` next month, forget the light value, and that one control keeps its dark
+colour while everything around it flips -- silently, and nothing else would
+catch it. So the assertion is: every NEUTRAL colour token must be overridden.
+That lets the accent family through automatically (it is chromatic and does not
+flip by design) along with the radii and easings (not colours), with no
+hand-kept exclusion list to fall out of date.

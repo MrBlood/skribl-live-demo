@@ -93,6 +93,30 @@
   --surface-tint-lit: #1a1830;    /* and focused */
   --text-on-accent-soft: #ece8ff; /* text on a translucent accent fill */
 
+  /* Translucent surfaces, held as RGB TRIPLETS for the same reason as
+     --wash-rgb: the call site keeps its own alpha, and one line flips every
+     strength at once. These are the frosted panels -- the header, the page bar,
+     the filmstrip well, the autosave pill -- which are a dark colour at partial
+     opacity over whatever is behind them, and were the last thing in the chrome
+     still painting dark in light mode. Phase 1 missed them because it converted
+     rgba(255,255,255,a) only; these are dark bases, and a hex scan cannot see
+     them at all.
+
+     Five of them ARE the values of tokens above, exactly, so they name the same
+     colour twice on purpose -- rgb(19,22,28) is #13161c is --surface-panel. The
+     -rgb form is what a translucent call site needs; the hex form is what a
+     solid one needs. They must be edited together, which is why they sit
+     together. */
+  --glass-deep-rgb: 8,10,15;
+  --glass-deep-2-rgb: 9,11,16;
+  --glass-base-rgb: 10,12,18;
+  --glass-raised-rgb: 14,17,24;
+  --surface-sheet-rgb: 18,21,27;      /* = #12151b */
+  --surface-panel-rgb: 19,22,28;      /* = #13161c */
+  --surface-well-2-rgb: 23,26,34;     /* = #171a22 */
+  --surface-control-rgb: 23,27,35;    /* = #171b23 */
+  --line-rgb: 37,43,55;               /* = #252b37 */
+
   /* The wash behind every hover fill and translucent hairline. Held as an RGB
      TRIPLET rather than a colour so call sites keep their own alpha:
      rgba(var(--wash-rgb), .06) and rgba(var(--wash-rgb), .4) are the same
@@ -145,6 +169,34 @@
   --ui-line: #7c5cff;
   --focus-ring: #7c5cff;
 
+  /* Semantic colours (v233). These are the SECOND half of light mode, and the
+     half that phase 1 could not see. That pass moved neutrals — greys are what
+     a theme obviously flips — and left every chromatic literal alone. But the
+     danger red, the warn amber and the ok green were all picked to sit on a
+     near-black ground, and on a white one they wash out: #f4326f measures
+     3.32:1 against the menu sheet, which is below AA for body text and is what
+     "Clear all" is written in.
+
+     Values here are the dark ones unchanged, so this block moves no pixel; the
+     light ramp restates them darker at the same hues. The three -soft variants
+     are kept apart rather than collapsed for the same reason --text-soft has
+     three: they are three different call sites that happen to be near each
+     other, and merging them would silently repaint dark mode.
+
+     --danger-fill is the odd one out — a SOLID red button with white text, not
+     text on a surface — so it stays put in both themes. */
+  --danger: #f4326f;
+  --danger-mid: #e0576b;
+  --danger-soft: #ff9d9d;
+  --danger-soft-2: #ff8a8a;
+  --danger-soft-3: #ff8f8f;
+  --danger-fill: #b3283f;
+  --warn: #ffd23f;
+  --warn-2: #ff9f43;
+  --good: #1bcf8f;
+  --accent-tint: #d6ccff;
+  --accent-tint-2: #d5cfff;
+
   /* Radii */
   --r-control: 12px;
   --r-frame: 24px;
@@ -188,7 +240,7 @@ html { scrollbar-gutter: stable both-edges; }
 
 /* Skribl scrollbars — thin thumb on carbon, everywhere; colour follows --ui-line.
    Matches the Flip frame strip; applies to the help drawer, panels, page scroll, etc. */
-* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(8, 10, 15, 0.5); }
+* { scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--glass-deep-rgb), 0.5); }
 
 body {
   margin: 0;
@@ -238,7 +290,7 @@ body {
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
      inherited by the player through the derived sheet, so the three surfaces
      stay one design. */
-  background: rgba(23, 26, 34, 0.78);
+  background: rgba(var(--surface-well-2-rgb), 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
@@ -346,14 +398,14 @@ body {
   border: 1px solid rgba(244, 50, 111, 0.25);
   font-size: 13px;
   font-weight: 600;
-  color: #f4326f;
+  color: var(--danger);
 }
 
 .rec-indicator .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f4326f;
+  background: var(--danger);
   display: inline-block;
   animation: pulse 1s infinite;
 }
@@ -509,7 +561,7 @@ body.player-mode .canvas-area { display: contents; }
   position: absolute;
   left: 50%;
   transform: translateX(-50%) translateY(-6px);
-  background: rgba(37, 43, 55, 0.82);
+  background: rgba(var(--line-rgb), 0.82);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid var(--hairline-strong);
@@ -544,7 +596,7 @@ body.player-mode .canvas-area { display: contents; }
   gap: 7px;
   padding: 6px 11px;
   border-radius: 999px;
-  background: rgba(23, 27, 35, 0.82);
+  background: rgba(var(--surface-control-rgb), 0.82);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border: 1px solid var(--hairline);
@@ -561,7 +613,7 @@ body.player-mode .canvas-area { display: contents; }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1bcf8f;
+  background: var(--good);
   flex-shrink: 0;
   transition: background 0.2s ease;
 }
@@ -579,7 +631,7 @@ body.player-mode .canvas-area { display: contents; }
   gap: 16px;
   padding: 12px 14px 12px 18px;
   border-radius: 16px;
-  background: rgba(23, 27, 35, 0.92);
+  background: rgba(var(--surface-control-rgb), 0.92);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid var(--hairline-strong);
@@ -714,7 +766,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
    with no transform on the button. */
 @keyframes watchBorderPulse {
   50% {
-    border-color: #9179ff;
+    border-color: var(--accent-bright);
     box-shadow: 0 0 6px 1px rgba(124, 92, 255, 0.4);
   }
 }

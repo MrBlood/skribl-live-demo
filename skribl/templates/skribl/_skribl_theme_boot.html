@@ -1,0 +1,17 @@
+{# Stamps the stored theme on <html> BEFORE first paint.
+
+   This has to be inline, in <head>, and NOT deferred. The setting lives in
+   localStorage; no stylesheet can read it, so if the attribute is applied by
+   a deferred script the browser has already painted the dark frame and a
+   light-mode user sees it flash on every single navigation.
+
+   It is a partial rather than two copies because the KEY is a contract shared
+   with lib/theme.js, and a second copy of a contract is a second thing to
+   drift — which is the whole subject of verify_surfaces.py.
+
+   Kept deliberately tiny and total: any read failure (Safari private mode
+   throws on ACCESS, not just on write) and any unrecognised value leave the
+   attribute off, which is dark, which is the app as it has always looked. #}
+<script nonce="{{ csp_nonce }}">
+(function(){try{if(localStorage.getItem('skribl_theme_v1')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();
+</script>

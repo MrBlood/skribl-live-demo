@@ -5118,6 +5118,30 @@ if (window.SkriblReport) window.SkriblReport.init();
   sync();
 })();
 
+// Theme switch — the SAME stored setting as Flip's. lib/theme.js owns the key
+// and the <html> attribute; this is only the control that drives it.
+(function(){
+  const seg = document.getElementById('themeSeg');
+  if (!seg || !window.SkriblTheme) return;
+  function sync() {
+    const mode = window.SkriblTheme.get();
+    seg.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('on', b.dataset.theme === mode));
+    if (window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
+  }
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b || !b.dataset.theme) return;
+    window.SkriblTheme.set(b.dataset.theme);
+  });
+  // Driven by the lib rather than by the click, so a change made in another
+  // tab moves this switch too — the setting is per browser, not per page.
+  window.SkriblTheme.onChange(sync);
+  if (window.SkriblSegSlider) window.SkriblSegSlider.track(seg);
+  window._skriblSyncThemeToggle = sync;
+  sync();
+})();
+
 // Styled tooltips. Native `title` cannot be rounded; this swaps them out.
 if (window.SkriblTooltip) window.SkriblTooltip.init();
 
