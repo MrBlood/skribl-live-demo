@@ -329,17 +329,17 @@ with sync_playwright() as p:
     sp.close()
 
     # ------------------------------------------------------------------
-    # v237 — the add column is reachable from any page.
+    # v237 — the add controls are reachable from any page.
     #
     # Duplicate / Blank / In-between / Paste all act on the page you are ON:
-    # addFrame() and addTween() both splice at idx+1. But the column is the
-    # last child of a strip that scrolls, so on a long flip you had to scroll
-    # to the far end to insert after page 2 — and then scroll back to see the
-    # result. The column is now sticky.
+    # addFrame() and addTween() both splice at idx+1. They used to be the last
+    # child of the strip, which scrolls, so on a long flip you had to scroll to
+    # the far end to insert after page 2. They now sit ABOVE the strip, outside
+    # the scrolling box entirely.
     #
     # The first check here is the anti-vacuity one: on a strip that does not
-    # overflow, every tile and every button is trivially "visible" and the
-    # rest of this block would pass with the fix removed.
+    # overflow, every tile and every button is trivially "visible" and the rest
+    # of this block would pass with the fix removed.
     # ------------------------------------------------------------------
     ac = br.new_page(viewport={"width": 393, "height": 820})
     ac_errs = []
@@ -358,40 +358,71 @@ with sync_playwright() as p:
       for (const id of ['addcopy', 'addblank', 'addtween']) {
         const el = document.getElementById(id);
         const r = el && el.getBoundingClientRect();
-        seen[id] = !!(r && r.left >= sr.left - 1 && r.right <= sr.right + 1
-                        && r.width > 0);
+        // A hit test, not a bounding-box guess: a button scrolled off the end
+        // of the strip still reports left >= 0, so "is it on screen" has to
+        // mean "does a click at its centre actually land on it".
+        let hit = false;
+        if (r && r.width > 4 && r.height > 4
+            && r.right <= innerWidth && r.bottom <= innerHeight
+            && r.left >= 0 && r.top >= 0) {
+          const t = document.elementFromPoint((r.left + r.right) / 2,
+                                              (r.top + r.bottom) / 2);
+          hit = !!(t && (t === el || el.contains(t)));
+        }
+        seen[id] = hit;
       }
-      const cr = col.getBoundingClientRect();
-      return { seen, overflows: s.scrollWidth > s.clientWidth + 8,
+      return { seen, inStrip: s.contains(col),
+               overflows: s.scrollWidth > s.clientWidth + 8,
                scrollLeft: Math.round(s.scrollLeft),
-               gapFromRight: Math.round(sr.right - cr.right),
-               sticky: getComputedStyle(col).position }; }"""
+               cols: document.querySelectorAll('.addcol').length }; }"""
 
     left = ac.evaluate(PROBE)
     check("the strip overflows, so reachability is a real question",
           left["overflows"],
           "strip fits on screen — the rest of this block would be vacuous")
-    check("the strip is scrolled to the left end", left["scrollLeft"] == 0,
-          str(left["scrollLeft"]))
+    check("the add controls are NOT inside the scrolling strip",
+          not left["inStrip"],
+          "they are a child of the box that scrolls, so they scroll with it")
     for _id, _label in (("addcopy", "Duplicate"), ("addblank", "Blank"),
                         ("addtween", "In-between")):
         check(f"{_label} is on screen while page 2 is being edited",
-              left["seen"][_id],
-              "the button is scrolled off the end of the strip")
-    check("the add column is pinned, not merely last in the strip",
-          left["sticky"] == "sticky", left["sticky"])
+              left["seen"][_id], "the button is not visible")
 
-    # ...and it must not drift when the strip is scrolled to the far end:
-    # the pinned position has to be the SAME place it occupies at rest, or
-    # the column visibly jumps as you reach the last page.
+    # Scroll position must be irrelevant now — that is the whole point.
     ac.evaluate("() => { strip.scrollLeft = strip.scrollWidth; }")
     ac.wait_for_timeout(200)
     right = ac.evaluate(PROBE)
-    check("the column sits in the same place at the far end of the strip",
-          right["gapFromRight"] == left["gapFromRight"],
-          f"{right['gapFromRight']} vs {left['gapFromRight']} px from the edge")
-    check("and its buttons are still on screen there",
+    check("and still on screen at the far end of the strip",
           all(right["seen"].values()), str(right["seen"]))
+
+    # buildStrip() empties `strip`, which used to remove the old column for
+    # free. Outside the strip it has to be removed by hand, so rebuilding the
+    # strip repeatedly is exactly how a duplicate would pile up.
+    ac.evaluate("() => { for (let i = 0; i < 4; i++) buildStrip(); }")
+    ac.wait_for_timeout(300)
+    _cols = ac.evaluate("() => document.querySelectorAll('.addcol').length")
+    check("rebuilding the strip does not leave a second set of controls behind",
+          _cols == 1, f"{_cols} copies of the control row")
+
+    # The row must not clip its labels at any supported width; below ~360px it
+    # is allowed to wrap to a second line, but never to hide a control.
+    for w in (320, 360, 393, 700, 1280):
+        ac.set_viewport_size({"width": w, "height": 820})
+        ac.wait_for_timeout(250)
+        fit = ac.evaluate("""() => {
+          const out = [];
+          for (const id of ['addcopy', 'addblank', 'addtween']) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            out.push({ id: id, clipped: el.scrollWidth > el.clientWidth + 1,
+                       w: Math.round(el.getBoundingClientRect().width) });
+          }
+          return out; }""")
+        check(f"no control is clipped at {w}px",
+              all(not f["clipped"] for f in fit),
+              ", ".join(f"{f['id']} {f['w']}px" for f in fit if f["clipped"]))
+    ac.set_viewport_size({"width": 393, "height": 820})
+    ac.wait_for_timeout(250)
 
     # The reason reachability matters: the control inserts NEXT TO the page you
     # are on, not at the end. If it appended, scrolling to the end would be the
@@ -405,7 +436,7 @@ with sync_playwright() as p:
     check("Blank inserts after the current page, not at the end",
           after["n"] == before + 1 and after["idx"] == 2,
           f"length {before} -> {after['n']}, idx now {after['idx']}")
-    check("no JS errors while using the pinned column", not ac_errs,
+    check("no JS errors while using the add controls", not ac_errs,
           "; ".join(ac_errs[:2]))
     ac.close()
 

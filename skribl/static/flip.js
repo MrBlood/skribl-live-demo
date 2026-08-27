@@ -1656,7 +1656,18 @@ function buildStrip(){
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
     +'<button class="addbtn mini" id="addtween" title="Generate the motion between this page and the next, like a long exposure"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>In-between</button>'
     + (pageClip ? '<button class="addbtn mini" id="addpaste"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Paste</button>' : '');
-  strip.appendChild(col);
+  // The add controls live OUTSIDE the scrolling strip, as a row above the
+  // thumbnails. Inside it they were its last child, so on a long flip they
+  // scrolled away from the very page they act on; pinning them to the right
+  // edge fixed the reach but still spent strip width on them at every size.
+  // Out here they cannot scroll away at any width, need no scrim over the
+  // thumbnails sliding under them, and give the strip its full width back.
+  // buildStrip() empties `strip`, which used to sweep the old column away for
+  // free -- out here the previous one has to be removed explicitly.
+  const stripWrap = strip.parentNode;
+  const prevCol = stripWrap.querySelector(':scope > .addcol');
+  if(prevCol) prevCol.remove();
+  stripWrap.insertBefore(col, strip);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
   col.querySelector('#addtween').addEventListener('click', addTween);

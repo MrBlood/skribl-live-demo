@@ -386,31 +386,28 @@
   .frame .del svg { width: 13px; height: 13px; }
   .frame .del:hover { color: var(--danger-soft-2); }
   .frame:hover .del { display: flex; }
-  /* The add column acts on the page you are ON — addFrame() and addTween()
-     both splice at idx+1 — but it is the last child of a strip that scrolls.
-     On a 43-page flip that meant scrolling to the far end to insert after
-     page 2, then scrolling back to see what you made. Pinning it to the right
-     of the scrollport puts the controls where the hand already is, at every
-     scroll position. The gradient is what makes it legible: thumbnails
-     dissolve under the column instead of colliding with a hard edge. */
-  .addcol { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px;
-    position: sticky; right: 0; z-index: 4;
-    padding-left: 20px; margin-left: -10px;
-    /* A sticky box is clamped to its containing block, so the column cannot
-       reach into the strip's 12px right padding — a sliver of the next
-       thumbnail used to show through there. A spread shadow is not clamped
-       that way, and the scroll container clips it at the padding box: it
-       fills exactly that gap and nothing more. */
-    box-shadow: 14px 0 0 var(--surface-raised);
-    background: linear-gradient(90deg,
-      rgba(var(--glass-base-rgb), 0) 0,
-      var(--surface-raised) 20px,
-      var(--surface-raised) 100%); }
+  /* The add controls sit ABOVE the thumbnails, outside the scrolling strip.
+     They act on the page you are ON -- addFrame() and addTween() both splice
+     at idx+1 -- so being the last child of a box that scrolls was wrong twice
+     over: on a long flip you had to scroll to the far end to insert after
+     page 2, and even pinned they took a column of strip width away from the
+     thumbnails at every size. Out here they are always reachable, cost no
+     horizontal room, and need no gradient scrim.
+     It wraps rather than overflowing: below ~360px a fourth button starts a
+     second line instead of being clipped. */
+  .addcol { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px;
+    padding: 0 12px 10px; align-items: center; }
   .addbtn { width: 88px; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--text-secondary);
     border-radius: 10px; padding: 8px 0; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
   .addbtn:hover { color: var(--text-primary); border-color: var(--ui-line); background: rgba(124,92,255,.06); }
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
+  /* In the row the buttons share the width instead of each claiming 88px, so
+     they stay on one line down to ~360px and wrap to two below that rather
+     than being clipped. Uniform padding here: `mini` sized them differently
+     when they were stacked, which in a row reads as a ragged edge. */
+  .addcol .addbtn { flex: 1 1 76px; width: auto; max-width: 150px;
+    padding: 7px 6px; font-size: 11.5px; }
   /* "More" popover menu (image / music / save / export). */
   .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; min-width: 232px;
     background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
