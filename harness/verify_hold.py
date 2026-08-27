@@ -401,7 +401,11 @@ with sync_playwright() as _p2:
     # The second one is why this has to measure a LATER pass, not the first.
     # ------------------------------------------------------------------
     print("\nHOLD IN PLAYBACK — on the right page, and on every pass")
-    hb = br.new_page(viewport={"width": 900, "height": 820})
+    # _b2, not br: br belongs to an earlier sync_playwright() context that has
+    # already exited, so using it here raises "Event loop is closed". This
+    # block was verified standalone, in its own context, which is precisely
+    # the arrangement that hides the mistake.
+    hb = _b2.new_page(viewport={"width": 900, "height": 820})
     hb_errs = []
     hb.on("pageerror", lambda e: hb_errs.append(str(e)))
     hb.goto(BASE + "/flip", wait_until="load")
