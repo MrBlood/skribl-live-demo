@@ -110,6 +110,14 @@
     background: rgba(var(--wash-rgb), 0.85); box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
   .flip-brush-cursor::before { width: 11px; height: 1px; transform: translate(-50%,-50%); }
   .flip-brush-cursor::after  { width: 1px; height: 11px; transform: translate(-50%,-50%); }
+  /* Smudge reach — dashed, because it marks INFLUENCE rather than footprint.
+     It is several times the brush width (points at the rim barely move), and a
+     solid ring that size would read as a colossal brush about to lay ink. */
+  .flip-smudge-cursor { position: absolute; border: 1.5px dashed rgba(var(--wash-rgb), 0.55); border-radius: 50%;
+    top: 0; left: 0; will-change: transform; pointer-events: none; display: none; z-index: 10; }
+  .flip-smudge-cursor::before { content: ''; position: absolute; top: 50%; left: 50%; width: 3px; height: 3px;
+    border-radius: 50%; background: rgba(var(--wash-rgb), 0.8); transform: translate(-50%,-50%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
 
   .fps-group { display: inline-flex; align-items: center; gap: 7px; }
   .fps-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }

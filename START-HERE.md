@@ -1134,6 +1134,64 @@ brush-size preview dot, the size-preset dots, the music playhead, the spinner's
 leading arc, and the ring around the selected swatch. Those were found by
 looking, not by asserting.
 
+## Suites: verify_smudge.py
+
+**A smudge tool on a document that has no pixels.** Every smudge tool you have
+used pushes colour around a bitmap: sample under the brush, blend, write back.
+Skribl has no bitmap to push. A page is a list of points, and that same list is
+what the player replays, what export walks and what the draft stores.
+Rasterising a page to smudge it would invent a second kind of content that undo,
+export, the draft schema and the player would all have to learn — and it would
+kill replay outright, because a flattened image has no stroke order left to
+animate.
+
+So this smudges the **geometry**. Points inside the brush are dragged along with
+the pointer, weighted by distance from its centre, and the strokes bend. It is a
+warp brush wearing a smudge's clothes, and for a line document that is the more
+honest instrument: it moves the ink you drew rather than averaging it into mud.
+
+**What it costs, stated plainly:** no colour bleed. Two crossing strokes bend
+towards each other but never mix, and nothing in this format can make them mix.
+**What it keeps** is the reason to do it this way — replay, export, the player,
+the draft, and an exact undo. The suite proves that end to end: it smudges a
+page, posts it, and loads the result in the player, which was never taught
+about smudge and does not need to be.
+
+**`SMUDGE_STRENGTH` is what makes it a smear instead of a spike.** At full
+strength a point in the centre of the brush moves the entire delta — which lands
+it back in the centre for the next move event, at weight 1 again. It rides the
+cursor forever, and every line the brush crosses gets dragged to the same single
+point. Measured on three parallel lines: all three converged to one vertex.
+Below 1 the ink lags behind the brush, slides toward the rim, and sheds on its
+own — which is what dragging a finger through wet ink actually does. The suite
+pins the *property* rather than the constant: three parallel lines must still be
+three lines afterwards.
+
+**Undo stores coordinates, not a displacement**, for the reason `selRestore`'s
+comment already gives: a smudge accumulates over dozens of move events at a
+different weight each time, so there is no single delta to negate and
+re-deriving one would walk the artwork further from home on every cycle. Ten
+undo/redo round trips are asserted to leave it bit-identical.
+
+**A smudge belongs to the page it started on.** The frame index is pinned at
+pointerdown, exactly as `strokeFrame` is for a stroke. Changing page mid-drag
+and re-reading `frame()` would apply the back half of the gesture to different
+artwork, at indices that mean something else there, and hand undo a
+before/after pair for strokes nobody touched.
+
+**A tap logs nothing.** Neither does a drag across empty canvas. A no-op on the
+history puts the stroke the user actually wants back one press further away than
+they expect.
+
+**One test-isolation trap, found the hard way and worth repeating.** `fresh()`
+originally reset the document but not the *tool* — so a section that left smudge
+selected made the next section's setup silently draw nothing, and the assertions
+downstream then passed or failed for reasons unrelated to what they named. One
+of them passed *vacuously*: "undo restores the exact coordinates" compared an
+untouched page against itself. `fresh()` now restores the pen and asserts it,
+and `line()` asserts that it actually drew something. **A setup step that
+quietly does nothing is worse than one that fails.**
+
 ## Suites: verify_theme.py
 
 Light mode, and the four things that make a second palette a feature rather

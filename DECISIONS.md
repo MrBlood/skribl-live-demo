@@ -1328,3 +1328,87 @@ found by opening the drawers and looking.
 Only a rendered pixel tells you what is the wrong colour. Both passes are
 needed, and the rendered one has to open the drawers -- a sweep over a hidden
 element measures nothing and passes.
+
+---
+
+## v236 -- Smudge, on a document that has no pixels
+
+**THE ASK CAME AS A QUESTION: "where is smudge".** It had not been built, and my
+first answer was that it could not be -- that smudge is a pixel operation, the
+same class as fill and text, and that all three need a new primitive in the
+frame format which undo, export, the draft schema and the player would have to
+learn. That is true of the USUAL implementation and it is not true of the tool.
+
+**Every smudge tool you have used pushes COLOUR around a bitmap:** sample under
+the brush, blend, write back. Skribl has no bitmap to push. A page is a list of
+points, and that same list is what the player replays, what export walks and
+what the draft stores. Rasterising a page to smudge it would kill replay
+outright -- a flattened image has no stroke order left to animate.
+
+**So this smudges the GEOMETRY.** Points inside the brush are dragged along with
+the pointer, weighted by distance from its centre, and the strokes bend. It is a
+warp brush wearing a smudge's clothes, and for a line document it is the more
+honest instrument: it moves the ink you drew rather than averaging it into mud.
+
+**What it costs, stated plainly:** no colour bleed. Two crossing strokes bend
+towards each other but never mix, and nothing in this format can make them mix.
+**What it keeps** is the entire reason to do it this way: replay, export, the
+player, the draft, and an exact undo. `verify_smudge` proves it end to end --
+it smudges a page, POSTS it, and loads the result in the player, which was never
+taught about smudge and did not need to be.
+
+**THE FIRST VERSION SPIKED INSTEAD OF SMEARING, and the fix is one constant.**
+At full strength a point in the centre of the brush moves the entire delta --
+which lands it back in the centre for the next move event, at weight 1 again. It
+rides the cursor forever, and every line the brush crosses is dragged to the
+same single point. Measured on three parallel lines: all three converged to one
+vertex, a hard V rather than a smear. `SMUDGE_STRENGTH` below 1 makes the ink
+LAG behind the brush; lagging, it sits further from the centre; further, its
+weight drops; and it sheds off the back on its own. That is what dragging a
+finger through wet ink actually does. The suite pins the PROPERTY rather than
+the constant: three parallel lines must still be three lines afterwards.
+
+**The falloff is squared, not linear.** Linear reads as a shove -- the whole
+disc lurches and the rim of the brush leaves a visible crease across the stroke.
+Squaring pulls the centre along and lets the rim off almost untouched.
+
+**Undo stores COORDINATES, not a displacement**, for the reason selRestore's
+comment already gives: a smudge accumulates over dozens of move events at a
+different weight each time, so there is no single delta to negate, and
+re-deriving one would walk the artwork further from home on every cycle. Ten
+undo/redo round trips are asserted bit-identical.
+
+**A smudge belongs to the page it STARTED on.** The frame index is pinned at
+pointerdown, exactly as `strokeFrame` is for a stroke -- the same trap, in the
+same file, for the same reason. Changing page mid-drag and re-reading `frame()`
+would apply the back half of the gesture to different artwork at indices that
+mean something else there, and hand undo a before/after pair for strokes nobody
+touched.
+
+**A tap logs nothing, and neither does a drag across empty canvas.** A no-op on
+the history puts the stroke the user actually wants back one press further away
+than they expect.
+
+**The reach ring is dashed and the reach is wider than the brush paints.** A
+solid ring that size would read as a colossal brush about to lay ink; dashed
+says influence. Reach is tied to the brush slider, so the tool needs no control
+of its own -- the row is already full, and "the size you draw with is the size
+you smudge with" is one less thing to explain.
+
+**THE TRAY EARNED ITS KEEP A SECOND TIME.** Smudge is the fifth tool and the row
+did not have to be re-fitted for it, exactly as the tray was built to allow.
+That is now two features that cost nothing in layout.
+
+## v236 -- A setup step that quietly does nothing is worse than one that fails
+
+`verify_smudge`'s `fresh()` reset the document but not the TOOL. A section that
+left smudge selected made the next section's setup silently draw nothing --
+`line()` smudged an empty page instead of drawing on it -- and three assertions
+downstream then passed or failed for reasons that had nothing to do with what
+they named. One of them passed VACUOUSLY: "undo restores the exact coordinates"
+compared an untouched page against itself and reported 0 points differing.
+
+Two changes, both of which belong in any suite that builds its own fixtures:
+`fresh()` restores the pen and ASSERTS it, and `line()` asserts that the stroke
+count actually went up. The suite is allowed to fail; it is not allowed to
+measure the wrong thing and call it a pass.

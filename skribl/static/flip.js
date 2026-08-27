@@ -225,6 +225,14 @@ let selecting = false, selPointerId = null;
    has done that. State that any early code path can reach belongs up here. */
 let moveMode = false, moveScope = 'one', moveDx = 0, moveDy = 0;
 let moveOrigin = null, moveDragging = false, moveStart = null;
+/* v236 Smudge. Up here with the rest of the early state for the fifth time of
+   asking: setTool() runs during init, reads the tool registry, and anything it
+   can reach must already be initialised. A `let` declared beside the smudge
+   functions 2500 lines below would be in its temporal dead zone at that moment
+   and would take the whole file down with it. */
+let smudging = false, smudgePointerId = null;
+let smudgeSnap = null, smudgeLast = null, smudgeIdx = -1;
+
 // What Cut is holding, if anything. Up here for the same reason as the rest:
 // syncSelBar() reads it to decide whether Paste has a cell, and setTool()
 // reaches syncSelBar() during init.
@@ -1033,6 +1041,15 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
     return;
   }
+  // Smudge intercepts here too, and for the third instance of the same reason:
+  // a tool that drags existing ink must not also lay new ink while it does it.
+  if(flipTool === 'smudge'){
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    smudging = true; smudgePointerId = e.pointerId;
+    redoStack.length = 0;      // a new edit invalidates the redo branch
+    smudgeBegin(pos(e));
+    return;
+  }
   // Select intercepts BEFORE drawing, the same place moveMode does and for the
   // same reason: dragging a selection must not also lay a stroke through it.
   if(flipTool === 'select'){
@@ -1066,6 +1083,12 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   render(); });
 pad.addEventListener('pointermove', e=>{
   if(pinching){ return; }
+  if(smudging){
+    // Guarded on pointerId like every other drag here: a palm or a second
+    // finger must not steer a gesture a different pointer started.
+    if(e.pointerId === smudgePointerId){ e.preventDefault(); if(smudgeMove(pos(e))) render(); }
+    return;
+  }
   if(selecting){ if(e.pointerId === selPointerId) selMove(pos(e)); return; }
   if(moveDragging && moveStart){
     e.preventDefault();
@@ -1167,6 +1190,21 @@ window.addEventListener('pointercancel', endStroke);
 // On window, not on the pad: releasing outside the canvas has to finish the
 // drag, or the selection stays glued to the pointer. Same reason endStroke and
 // endMoveDrag are bound here.
+function endSmudgeDrag(e){
+  if(!smudging) return;
+  if(e && e.pointerId != null && e.pointerId !== smudgePointerId) return;
+  smudging = false; smudgePointerId = null;
+  // smudgeEnd returns the page it committed to, which is not necessarily the
+  // one on screen: releasing after a page change must refresh the thumbnail of
+  // the page that actually changed.
+  const at = smudgeEnd();
+  if(at !== false){
+    render(); refreshThumb(at); updateToolState(); scheduleSave();
+  }
+}
+window.addEventListener('pointerup', endSmudgeDrag);
+window.addEventListener('pointercancel', endSmudgeDrag);
+
 function endSelDrag(e){
   if(!selecting) return;
   if(e && e.pointerId != null && e.pointerId !== selPointerId) return;
@@ -1186,6 +1224,13 @@ document.querySelector('.flip-wrap').appendChild(eraserCursor);
 const brushCursor = document.createElement('div');
 brushCursor.className = 'flip-brush-cursor';
 document.querySelector('.flip-wrap').appendChild(brushCursor);
+/* Smudge's reach is WIDER than the brush paints, so it needs its own ring or
+   the tool lies about what it will catch. Dashed rather than solid to say
+   "influence" instead of "footprint" — a solid ring the size of a smudge would
+   read as an enormous brush. */
+const smudgeCursor = document.createElement('div');
+smudgeCursor.className = 'flip-smudge-cursor';
+document.querySelector('.flip-wrap').appendChild(smudgeCursor);
 /* The brush/eraser ring trailed the ink on a phone, badly enough that a fast
  * scribble showed the ring lagging behind the line it was supposedly marking.
  * Three causes, all in here, all fixed:
@@ -1239,7 +1284,16 @@ function moveBrushCursor(e){
     'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
   brushCursor.style.display = 'block';
 }
-function hideCursors(){ eraserCursor.style.display='none'; brushCursor.style.display='none'; }
+function moveSmudgeCursor(e){
+  const r = _padRectCached();
+  const sz = smudgeRadius() * 2 * (r.width / CW);
+  smudgeCursor.style.width = sz + 'px'; smudgeCursor.style.height = sz + 'px';
+  smudgeCursor.style.transform =
+    'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
+  smudgeCursor.style.display = 'block';
+}
+function hideCursors(){ eraserCursor.style.display='none'; brushCursor.style.display='none';
+  smudgeCursor.style.display='none'; }
 pad.addEventListener('pointermove', e=>{
   // A finger is its own cursor. Anything but a mouse or pen gets nothing.
   if(e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen'){
@@ -1247,8 +1301,11 @@ pad.addEventListener('pointermove', e=>{
   }
   if(playing || picking){ hideCursors(); return; }
   if(ZoomView && ZoomView.isZoomed()){ hideCursors(); return; }   // use a normal cursor while magnified
-  if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; }
-  else { moveBrushCursor(e); eraserCursor.style.display='none'; }
+  if(flipTool === 'smudge'){
+    moveSmudgeCursor(e); eraserCursor.style.display='none'; brushCursor.style.display='none';
+  }
+  else if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; smudgeCursor.style.display='none'; }
+  else { moveBrushCursor(e); eraserCursor.style.display='none'; smudgeCursor.style.display='none'; }
 });
 pad.addEventListener('pointerleave', hideCursors);
 
@@ -1911,6 +1968,15 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/>'
               + '<path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/>'
               + '<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>' },
+        // v236. The fifth, and the tray earns its keep a second time: the row
+        // did not have to be re-fitted for it either. A fingertip dragging a
+        // line out of true is the whole tool in one glyph.
+        { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M3 16c3.5 0 4.5-7 8-7s3 5 6 5"/>'
+              + '<path d="M14.5 18.5c1.6-1.1 2.6-2.2 4.4-2.2 1.3 0 2.1.6 2.1 1.5 0 1.6-2.4 2.6-4.3 2.6"/>'
+              + '</svg>' },
       ],
       currentTool: () => flipTool,
       slider: document.getElementById('toolSlider'),
@@ -1962,6 +2028,9 @@ function setTool(t){
   pad.style.cursor='none';
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
+  // Each ring belongs to one tool; leaving a tool must take its ring with it,
+  // or the last one drawn hangs around over the canvas until the next move.
+  if(typeof smudgeCursor!=='undefined' && flipTool !== 'smudge') smudgeCursor.style.display='none';
   if(picking) setPicking(false);
 }
 // Shared with Pad via lib/recentcolors.js. closePop() stays here: Flip's
@@ -3534,6 +3603,144 @@ function selRestore(pts){
     p.x = o.x; p.y = o.y; if(o.size != null) p.size = o.size; }
 }
 
+/* ---------- v236: smudge -----------------------------------------------------
+   SMUDGE ON A DOCUMENT THAT HAS NO PIXELS.
+
+   Every smudge tool you have used pushes COLOUR around a bitmap: sample under
+   the brush, blend, write back. Skribl has no bitmap to push. A page is a list
+   of points -- {x, y, color, size, t, erase} -- rendered to a canvas that is
+   thrown away and redrawn on every frame, and the same list is what the player
+   replays, what export walks, and what the draft stores. Rasterising a page to
+   smudge it would mean inventing a second kind of content that undo, export,
+   the draft schema and the player would all have to learn, and it would kill
+   replay outright: a flattened image has no stroke order left to animate.
+
+   So this smudges the GEOMETRY instead. Points inside the brush are dragged
+   along with the pointer, weighted by how close to the centre they are, and the
+   strokes bend. It is a warp brush wearing a smudge's clothes, and for a line
+   document that is the more honest instrument -- it moves the ink you drew
+   rather than averaging it into mud.
+
+   What it costs, stated plainly: no colour bleed. Two crossing strokes stay two
+   crossing strokes; they bend towards each other but they do not mix. Nothing
+   in this format can make them mix.
+
+   WHAT IT KEEPS, which is the whole argument: replay (points keep their order
+   and their `t`, so the animation still draws in sequence, just along a bent
+   path), export, the player, the draft, and an undo that is exact. */
+
+/* Reach, in canvas units. Tied to the brush slider so smudge needs no control
+   of its own -- the row is already full, and "the size you draw with is the
+   size you smudge with" is one less thing to explain. The multiplier makes the
+   brush reach wider than it paints, because a warp that only caught the line
+   directly under the cursor would feel like nothing at all. */
+const SMUDGE_REACH = 6;
+function smudgeRadius(){ return Math.max(8, size * SMUDGE_REACH); }
+
+/* THE INK HAS TO SLIP, and this is the number that makes it.
+
+   At full strength a point in the centre of the brush moves the entire delta —
+   which lands it back in the centre for the next move event, at weight 1
+   again. It rides the cursor forever, and every line the brush crosses gets
+   dragged to the same single point: a hard spike, not a smear. Measured on
+   three parallel lines, all three converged to one vertex.
+
+   Below 1 the centre point moves only part of the delta, so it falls behind
+   the brush; being behind, it sits further from the centre; being further, its
+   weight drops; and it sheds off the back on its own. The spike becomes a
+   taper. That is what dragging a finger through wet ink actually does — the
+   ink lags, slides to the rim of the contact patch, and lets go. */
+const SMUDGE_STRENGTH = 0.5;
+
+/* Firm in the middle, nothing at the rim. Linear falloff was tried first and
+   reads as a SHOVE -- the whole disc lurches and the edge of the brush leaves a
+   visible crease across the stroke. Squaring the parabola pulls the centre
+   along and lets the rim off almost untouched, which is what dragging something
+   viscous actually looks like. */
+function smudgeWeight(d2, r2){
+  if(d2 >= r2) return 0;
+  const t = 1 - d2 / r2;
+  return t * t;
+}
+
+/* One gesture's worth of originals, keyed by point index so a point caught on
+   several successive moves is recorded ONCE -- at the position it had before
+   the gesture started, which is the only position undo cares about. Recording
+   per move would snapshot a half-dragged point and undo would land there. */
+function smudgeBegin(pt){
+  smudgeSnap = new Map();
+  smudgeLast = { x: pt.x, y: pt.y };
+  // A smudge belongs to the page it STARTED on, and it is pinned here for the
+  // same reason `strokeFrame` exists: the page can change mid-gesture — a
+  // thumbnail tap, the page bar, a held arrow riffling — and everything after
+  // this point indexes into ONE strokes array. Re-reading frame() per move
+  // would apply the back half of the drag to a different page, at indices that
+  // mean something else there, and hand undo a before/after pair for artwork
+  // that was never touched.
+  smudgeIdx = idx;
+}
+function smudgeFrame(){ return frames[smudgeIdx]; }
+
+/* The warp. Called per pointermove with the CURRENT point; the displacement is
+   the delta since the last move, so speed comes out of the gesture for free --
+   a fast drag moves the ink further than a slow one over the same distance,
+   exactly as a finger through paint would.
+
+   Only the current page is touched. Smudging every page at once is what Move
+   mode's "all pages" scope is for, and conflating the two would make an
+   irreversible-looking mess out of a tool people reach for casually. */
+function smudgeMove(pt){
+  const f = smudgeFrame(); if(!f || !smudgeLast) return false;
+  const dx = pt.x - smudgeLast.x, dy = pt.y - smudgeLast.y;
+  smudgeLast = { x: pt.x, y: pt.y };
+  if(!dx && !dy) return false;
+  const r = smudgeRadius(), r2 = r * r;
+  // Bounding-box reject before the distance test. A page can hold thousands of
+  // points and this runs at the display rate; a hypot per point per frame is
+  // the difference between a tool that tracks the finger and one that does not.
+  const x0 = pt.x - r, x1 = pt.x + r, y0 = pt.y - r, y1 = pt.y + r;
+  const pts = f.strokes;
+  let touched = false;
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    if(p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
+    const ex = p.x - pt.x, ey = p.y - pt.y, d2 = ex * ex + ey * ey;
+    const w = smudgeWeight(d2, r2);
+    if(w <= 0) continue;
+    if(!smudgeSnap.has(i)) smudgeSnap.set(i, { i, x: p.x, y: p.y });
+    p.x += dx * w * SMUDGE_STRENGTH; p.y += dy * w * SMUDGE_STRENGTH;
+    touched = true;
+  }
+  return touched;
+}
+
+/* Nothing caught -> NO undo entry. A tap with the smudge tool selected, or a
+   drag across empty canvas, must not push a no-op onto the history: the next
+   Undo would appear to do nothing and the stroke the user actually wanted back
+   would be one press further away than they expect. */
+function smudgeEnd(){
+  const had = smudgeSnap && smudgeSnap.size;
+  if(!had){ smudgeSnap = null; smudgeLast = null; smudgeIdx = -1; return false; }
+  const f = smudgeFrame();
+  if(!f){ smudgeSnap = null; smudgeLast = null; smudgeIdx = -1; return false; }
+  const before = [], after = [];
+  for(const o of smudgeSnap.values()){
+    const p = f.strokes[o.i]; if(!p) continue;
+    before.push({ i: o.i, x: o.x, y: o.y });
+    after.push({ i: o.i, x: p.x, y: p.y });
+  }
+  const at = smudgeIdx;
+  smudgeSnap = null; smudgeLast = null; smudgeIdx = -1;
+  if(!before.length) return false;
+  // Exact COORDINATES, not an inverse displacement -- the same call selRestore's
+  // comment already argues for. A smudge accumulates over dozens of move events
+  // with a different weight each time; there is no single delta to negate, and
+  // re-deriving one would drift the artwork a little further from home on every
+  // undo/redo cycle.
+  noteAction({ type: 'smudge', idx: at, before, after });
+  return at;
+}
+
 /* ---------- v229: mirror, duplicate, cut and paste -------------------------
    All four rewrite one page's strokes wholesale rather than editing in place,
    and all four share ONE undo shape: a before/after pair of that page's strokes
@@ -3908,6 +4115,16 @@ function undoStroke(){
       render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
       return;
     }
+    // Reuses selRestore because a smudge's before/after is the same shape it
+    // already speaks: exact coordinates per point index, on one page.
+    if(m.type === 'smudge'){
+      if(m.idx !== idx) go(m.idx);
+      selRestore(m.before);
+      redoStack.push(m);
+      chip('Smudge undone');
+      render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+      return;
+    }
     translateFrames(m.idxs, -m.dx, -m.dy);
     // A move joined the undo history, so it owes a redo. Without this the
     // button stayed stroke-only: undoing a move left redoStack holding some
@@ -3939,6 +4156,16 @@ function redoStroke(){
     selSpans = []; selRect = null; syncSelBar();
     actionLog.push(m);
     chip((m.label || 'Edit') + ' redone');
+    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    return;
+  }
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'smudge'){
+    const m = redoStack.pop();
+    if(m.idx !== idx) go(m.idx);
+    selRestore(m.after);
+    actionLog.push(m);
+    chip('Smudge redone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
