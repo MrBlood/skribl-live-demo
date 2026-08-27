@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-27T02:29:46Z
+UTC timestamp           : 2026-08-27T03:34:05Z
 Host                    : Linux x86_64
-Tree SHA-256            : 4162f6bcb3f42ce4ddd5b4a152016f121e13a187fb63c13e7a70554f1317a17a
-Git commit              : c76364d-dirty
+Tree SHA-256            : 1bfe478667ec6f021029c032466e4e938326c24303bc435510bfb8ceae7d7af0
+Git commit              : 47790c1-dirty
 SKRIBL_VERSION          : v222
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.c3mTTNsGKy/harness.db)
+Database reset          : yes (fresh /tmp/tmp.PERCQmwFEU/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -20,7 +20,7 @@ Command                 : harness/run_harness.sh
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 69
+suites requested : 71
   verify_amber.py: ok — 21/21 passed
   verify_apiedges.py: ok — 30/30 passed
   verify_assetcache.py: ok — 12/12 passed
@@ -45,6 +45,7 @@ suites requested : 69
   verify_flipdraft.py: ok — 22/22 passed
   verify_flipmeta.py: ok — 45/45 passed
   verify_flipmotion.py: ok — 27/27 passed
+  verify_fuzz.py: ok — 7/7 passed
   verify_gifenc.py: ok — 38/38 passed
   verify_help.py: ok — 61/61 passed
   verify_hold.py: ok — 37/37 passed
@@ -79,6 +80,7 @@ suites requested : 69
   verify_seam.py: ok — 172/172 passed
   verify_select.py: ok — 55/55 passed
   verify_sheetfit.py: ok — 14/14 passed
+  verify_smudge.py: ok — 28/28 passed
   verify_storage.py: ok — 38/38 passed
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 9/9 passed
@@ -90,6 +92,6 @@ suites requested : 69
   verify_ux.py: ok — 310/310 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 2938   (skipped suites contribute 0)
+assertions passed: 2973   (skipped suites contribute 0)
 suites skipped   : 1
 suites with problems: 0
