@@ -10,9 +10,12 @@ assumed, because it is the property that keeps per-frame duration and variable
 canvas sizes (the two remaining features) honest when they land — those two DO
 change the format, and this suite is the baseline they will have to preserve.
 """
+import os
 from playwright.sync_api import sync_playwright
 
-BASE = "http://127.0.0.1:5001"
+# Overridable so this suite can be pointed at a dev server while the harness
+# holds 5001 — otherwise it silently tests the sweep's checkout, not the tree.
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
 def check(name, ok, detail=""):
@@ -324,6 +327,87 @@ with sync_playwright() as p:
           "scrollLeft is 0 while a late page is active")
     check("no JS errors during restore", not sp_errs, "; ".join(sp_errs[:2]))
     sp.close()
+
+    # ------------------------------------------------------------------
+    # v237 — the add column is reachable from any page.
+    #
+    # Duplicate / Blank / In-between / Paste all act on the page you are ON:
+    # addFrame() and addTween() both splice at idx+1. But the column is the
+    # last child of a strip that scrolls, so on a long flip you had to scroll
+    # to the far end to insert after page 2 — and then scroll back to see the
+    # result. The column is now sticky.
+    #
+    # The first check here is the anti-vacuity one: on a strip that does not
+    # overflow, every tile and every button is trivially "visible" and the
+    # rest of this block would pass with the fix removed.
+    # ------------------------------------------------------------------
+    ac = br.new_page(viewport={"width": 393, "height": 820})
+    ac_errs = []
+    ac.on("pageerror", lambda e: ac_errs.append(str(e)))
+    ac.goto(BASE + "/flip", wait_until="load")
+    ac.wait_for_timeout(900)
+    ac.evaluate("() => { for (let i = 0; i < 14; i++) addFrame(false); go(1); }")
+    ac.wait_for_timeout(400)
+    ac.evaluate("() => { strip.scrollLeft = 0; }")
+    ac.wait_for_timeout(200)
+
+    PROBE = """() => {
+      const s = strip, sr = s.getBoundingClientRect();
+      const col = document.querySelector('.addcol');
+      const seen = {};
+      for (const id of ['addcopy', 'addblank', 'addtween']) {
+        const el = document.getElementById(id);
+        const r = el && el.getBoundingClientRect();
+        seen[id] = !!(r && r.left >= sr.left - 1 && r.right <= sr.right + 1
+                        && r.width > 0);
+      }
+      const cr = col.getBoundingClientRect();
+      return { seen, overflows: s.scrollWidth > s.clientWidth + 8,
+               scrollLeft: Math.round(s.scrollLeft),
+               gapFromRight: Math.round(sr.right - cr.right),
+               sticky: getComputedStyle(col).position }; }"""
+
+    left = ac.evaluate(PROBE)
+    check("the strip overflows, so reachability is a real question",
+          left["overflows"],
+          "strip fits on screen — the rest of this block would be vacuous")
+    check("the strip is scrolled to the left end", left["scrollLeft"] == 0,
+          str(left["scrollLeft"]))
+    for _id, _label in (("addcopy", "Duplicate"), ("addblank", "Blank"),
+                        ("addtween", "In-between")):
+        check(f"{_label} is on screen while page 2 is being edited",
+              left["seen"][_id],
+              "the button is scrolled off the end of the strip")
+    check("the add column is pinned, not merely last in the strip",
+          left["sticky"] == "sticky", left["sticky"])
+
+    # ...and it must not drift when the strip is scrolled to the far end:
+    # the pinned position has to be the SAME place it occupies at rest, or
+    # the column visibly jumps as you reach the last page.
+    ac.evaluate("() => { strip.scrollLeft = strip.scrollWidth; }")
+    ac.wait_for_timeout(200)
+    right = ac.evaluate(PROBE)
+    check("the column sits in the same place at the far end of the strip",
+          right["gapFromRight"] == left["gapFromRight"],
+          f"{right['gapFromRight']} vs {left['gapFromRight']} px from the edge")
+    check("and its buttons are still on screen there",
+          all(right["seen"].values()), str(right["seen"]))
+
+    # The reason reachability matters: the control inserts NEXT TO the page you
+    # are on, not at the end. If it appended, scrolling to the end would be the
+    # honest interaction and there would be nothing to fix.
+    ac.evaluate("() => { go(1); }")
+    ac.wait_for_timeout(200)
+    before = ac.evaluate("() => frames.length")
+    ac.evaluate("() => { document.getElementById('addblank').click(); }")
+    ac.wait_for_timeout(400)
+    after = ac.evaluate("() => ({ n: frames.length, idx: idx })")
+    check("Blank inserts after the current page, not at the end",
+          after["n"] == before + 1 and after["idx"] == 2,
+          f"length {before} -> {after['n']}, idx now {after['idx']}")
+    check("no JS errors while using the pinned column", not ac_errs,
+          "; ".join(ac_errs[:2]))
+    ac.close()
 
     br.close()
 
