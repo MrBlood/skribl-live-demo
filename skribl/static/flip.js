@@ -393,27 +393,65 @@ function saveNow(){
     try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {} return;
   }
   _sessionOwnedDraft = true;
-  try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
-    // Stay amber while any media is still outstanding — a green light would claim
-    // the session is fully recoverable when the files aren't in storage.
-    showAutosaveStatus((pendingPhotoMeta || pendingMusicMeta) ? 'saved-no-media' : 'saved');
-    return;
-  } catch (e) {
-    if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
+  // v231: MEDIA BYTES NEVER GO TO localStorage. They used to, and the spill to
+  // IndexedDB below only happened once the write had already FAILED — which
+  // made a ~5 MB origin quota the thing standing between a user and their
+  // drawing. A background photo and especially a music track are base64 data
+  // URLs, inflated 4/3 by the encoding; a 30s WAV is ~6.7 MB on its own. One
+  // owner-reported symptom was the Pad's autosave failing outright, because
+  // Flip's draft was sitting on 2.7 MB of a shared 5 MB budget.
+  //
+  // So the spill is the NORMAL path now, not the emergency one: strokes and
+  // media METADATA go to localStorage (small, synchronous, fast to restore),
+  // media BYTES go to IndexedDB, whose quota is measured in hundreds of MB.
+  // The restore side already knew how to merge the two — it was written for
+  // the quota case and has been correct all along; all that changed is that it
+  // is now reached on purpose rather than after a failure.
+  //
+  // The Pad reached the same conclusion years earlier by a different route:
+  // serializeAutosave() in app.js stores "metadata only — no bytes". This is
+  // Flip catching up, with the bytes kept rather than dropped.
+  const hasMedia = !!(bgImage || musicData);
+  // BOTH, not just the library. lib/draftstore.js loads and defines its API
+  // whether or not IndexedDB exists — it reports the absence by rejecting, which
+  // is asynchronous and far too late to choose a strategy. Testing only for the
+  // library meant a browser with IndexedDB disabled took the spill path anyway,
+  // the put rejected, and a track small enough to fit perfectly well in
+  // localStorage came back as "Saved without media". verify_fix.py runs its
+  // whole context with window.indexedDB undefined and caught exactly that.
+  const canSpill = !!window.SkriblDraftStore && typeof indexedDB !== 'undefined';
+  if (!hasMedia) {
+    // Nothing to spill: the lite payload IS the full payload, so this is one
+    // synchronous write and no IndexedDB round trip.
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
+      showAutosaveStatus((pendingPhotoMeta || pendingMusicMeta) ? 'saved-no-media' : 'saved');
+      return;
+    } catch (e) {
+      if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
+      // A drawing alone over quota means something else on the origin is
+      // hogging it; fall through to the reclaim path at the bottom.
+    }
+  } else if (!canSpill) {
+    // Private-mode browsers and disabled IndexedDB have nowhere to put the
+    // bytes. Try the old way — the whole payload into localStorage — and let
+    // the quota decide. This is the ONLY route that still attempts it.
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
+      showAutosaveStatus('saved');
+      return;
+    } catch (e) {
+      if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
+    }
   }
-  // Over quota — localStorage cannot hold the media bytes, but IndexedDB can
-  // (lib/draftstore.js). Ship the FULL payload there, keep the media-less copy
-  // in localStorage for a fast synchronous restore, and let the pill say what
-  // is actually true: green once the IndexedDB write settles, amber only if it
-  // fails. Before this, quota fallback silently created the exact data-loss
-  // condition the "no navigation guard" comment said could not exist
-  // (external review #3) — the drawing survived a mode switch and the media
-  // did not, with the only warning gone after 1.6 seconds.
-  if (bgImage) pendingPhotoMeta = { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom,
-                                    offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName };
-  if (musicData) pendingMusicMeta = { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd,
-                                      crossfadeMs:loopCrossfadeMs, name:musicName };
+  // pendingPhotoMeta / pendingMusicMeta are set ONLY when the bytes fail to
+  // reach IndexedDB, in the .catch below. They used to be set here,
+  // unconditionally, which was right when reaching this code meant the bytes
+  // had already been dropped — it is wrong now that reaching it is the normal
+  // way media gets saved. Nothing visible depended on it (every re-add card is
+  // guarded by `&& !bgImage` / `&& !musicData`, and the live values are still in
+  // memory), but serializeFlip() reads them for `mediaOmitted`, so the FULL
+  // record written below would have claimed its own bytes were missing.
   const stamp = Date.now();
   if (window.SkriblDraftStore) {
     _mediaSpillState = 'saving';
@@ -424,6 +462,16 @@ function saveNow(){
                     const el = document.getElementById('autosaveStatus');
                     if (el && !el.hidden) showAutosaveStatus('saved'); })
       .catch((e3) => { _mediaSpillState = 'failed';
+                       // NOW the bytes really are lost, so the next restore has
+                       // to offer the re-add cards. This is the one place that
+                       // is true.
+                       if (bgImage) pendingPhotoMeta = { fit:photoFit, opacity:photoOpacity, blur:photoBlur,
+                                                         zoom:photoZoom, offX:photoOffX, offY:photoOffY,
+                                                         enabled:photoEnabled, name:imageName };
+                       if (musicData) pendingMusicMeta = { enabled:musicEnabled, trimStart:trimStart,
+                                                           trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs,
+                                                           name:musicName };
+                       showAutosaveStatus('saved-no-media');
                        console.error('[skribl] media spill to IndexedDB failed:', e3); });
   } else {
     _mediaSpillState = 'failed';
@@ -562,10 +610,24 @@ function tryRestore(){
       // stale copy. On any miss, the pendingMeta re-add cards above are the
       // fallback, exactly as before.
       if (d.mediaInIdb && window.SkriblDraftStore) {
-        const beforeEdits = raw;
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
-          if (localStorage.getItem(AUTOSAVE_KEY) !== beforeEdits) return;  // edited since
+          // The guard here USED to be `localStorage.getItem(KEY) !== raw` — a
+          // byte comparison of the record as it was when the read started. That
+          // was serviceable while this path only ran after a quota failure, and
+          // it is wrong now that it is how media normally comes back: every
+          // save rewrites `savedAt`, so any autosave landing in the gap made the
+          // string differ and the merge was refused as "edited since". The
+          // media then never returned from a restore that had done nothing
+          // wrong. verify_fix.py caught it the moment the path became normal.
+          //
+          // What actually has to be true is narrower: nothing may overwrite
+          // media the session already has. If bgImage or musicData is set by
+          // the time this lands, the user has loaded something newer and these
+          // bytes are stale — refuse them individually below. Identity is
+          // still checked by NAME against the meta the lite record carries, so
+          // a swapped file is refused and same-name bytes from one save earlier
+          // are the same file.
           const full = JSON.parse(rec.json);
           // Apply MEDIA ONLY, never the frames. The lite localStorage record
           // is always the newest drawing: the pagehide flush rewrites it
@@ -580,12 +642,14 @@ function tryRestore(){
           // file has a different name and is refused; same-name bytes from
           // one save earlier are the same file.
           let touched = false;
-          if (typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio' &&
+          if (!musicData &&
+              typeof full.music === 'string' && full.music.slice(0, 10) === 'data:audio' &&
               d.musicMeta && full.musicMeta && full.musicMeta.name === d.musicMeta.name) {
             musicData = full.music;
             pendingMusicMeta = null; touched = true;
           }
-          if (typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
+          if (!bgImage &&
+              typeof full.bgImage === 'string' && full.bgImage.slice(0, 10) === 'data:image' &&
               d.photo && full.photo && full.photo.name === d.photo.name) {
             bgImage = full.bgImage;
             pendingPhotoMeta = null; touched = true;

@@ -1042,6 +1042,37 @@ six browser contexts (one per mode per surface) and was cut to two by reusing
 one page and resetting the stroke arrays between cases. Reloads are the
 expensive part, not assertions.
 
+## Suites: verify_flipdraft.py
+
+Closes the bug the owner reported as "autosave is failing on pad". It was not
+Pad's fault: localStorage is capped at roughly **5 MB per origin** and both
+editors share it, and Flip was writing its media into that budget as base64 data
+URLs — inflated 4/3 by the encoding, so a 30-second WAV is ~6.7 MB on its own.
+One Flip draft measured 2.7 MB of the shared 5 MB, and Pad's autosave was what
+fell over.
+
+The spill to IndexedDB already existed, but only as an EMERGENCY path reached
+after localStorage had refused the write — which made a 5 MB quota the thing
+standing between a user and their drawing. It is the normal path now: strokes
+and media metadata to localStorage, media bytes to `lib/draftstore.js`. The
+merge on the restore side was written for the quota case and was correct all
+along; what changed is that it is reached on purpose.
+
+The number this suite exists to hold: **the same draft that wrote 1,683,508 B
+to localStorage now writes about 3,500 B.**
+
+Backward compatibility is the last section and is not optional — anyone with a
+draft saved before this has the old full payload sitting in localStorage with
+media inline, and it has to keep restoring.
+
+Two isolation traps are documented in the file itself, because both produced
+failures that lied about their cause. `clean()` must empty the DOCUMENT as well
+as the stores, or the live page saves its media back on the next unload. And the
+legacy section runs on a **fresh page**: `_sessionOwnedDraft` licenses `saveNow()`
+to delete the slot when the document is empty, so emptying a page that had
+already saved made the flush remove the planted record, and the section reported
+0 strokes against a backward-compatibility failure that did not exist.
+
 ## Suites: verify_select.py
 
 Select exists on Flip and **must not** exist on Pad, and this suite pins both

@@ -95,6 +95,22 @@ with sync_playwright() as p:
     check("music re-add card shown in the drawer", card["hidden"] is False, str(card))
 
     # ---------- TEST 3: regression — a track that FITS keeps full fidelity ----------
+    # STILL CORRECT AFTER v231, and worth saying why, because v231 reversed the
+    # contract this looks like it is testing. Media bytes normally go to
+    # IndexedDB now and localStorage keeps strokes and metadata only — but this
+    # suite's context runs the page with `window.indexedDB` undefined (see the
+    # init script above), so there is nowhere to spill to and Flip takes its
+    # no-IndexedDB fallback: the whole payload into localStorage, exactly as
+    # asserted below. That fallback is the reason these assertions were left
+    # alone rather than rewritten.
+    #
+    # v231 also fixed a bug this section exposed: the "can I spill?" test read
+    # `window.SkriblDraftStore`, which is the LIBRARY, and the library loads
+    # fine with indexedDB undefined. So Flip took the spill path, the put
+    # rejected, and a track that fits was reported as "Saved without media".
+    # The check tests for indexedDB itself now.
+    #
+    # verify_flipdraft.py covers the normal, IndexedDB-present path.
     print("\nTEST 3 — regression: 8s track (fits) must still save WITH audio")
     pg.goto(BASE+"/flip", wait_until="load"); pg.wait_for_timeout(500)
     pg.evaluate("() => localStorage.clear()")

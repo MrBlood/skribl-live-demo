@@ -1077,3 +1077,60 @@ both stylesheets into binary: `:root` is stashed after the comments are, so the
 stashed `:root` text still contained comment placeholders, and a single
 `re.sub` left raw NULs in the file. The restore loops to a fixed point now and
 asserts no placeholders survive.
+
+## Flip's draft: strokes in localStorage, media bytes in IndexedDB
+
+**This closes the bug the owner reported as "autosave is failing on pad", and it
+was not Pad's fault.** localStorage is capped at roughly 5 MB PER ORIGIN and both
+editors share it. Flip was writing its media into that budget as base64 data
+URLs, inflated 4/3 by the encoding -- a 30-second WAV is ~6.7 MB on its own. One
+Flip draft measured 2.7 MB of the shared 5 MB, and Pad's autosave was the thing
+that fell over. The reclaim-and-evict fix shipped earlier in this session treated
+the symptom.
+
+The spill to IndexedDB already existed but only as an EMERGENCY path, reached
+after localStorage had refused the write -- which made a 5 MB quota the thing
+standing between a user and their drawing. It is the normal path now. Measured on
+the same draft: **localStorage went from 1,683,508 B to about 3,500 B**, with both
+media intact in IndexedDB.
+
+The merge on the restore side needed no design work: it was written for the quota
+case and had been correct all along. What changed is that it is reached on
+purpose.
+
+**Two bugs surfaced by making the rare path common.**
+
+*The hydration guard was a byte comparison.* It refused to merge the media if
+`localStorage` differed from what it held when the read started -- but every save
+rewrites `savedAt`, so any autosave landing in the gap made the string differ and
+the media never came back from a restore that had done nothing wrong. It is a
+per-medium check now: refuse bytes only if the session already has bytes, with
+the existing name check for identity.
+
+*"Can I spill?" tested for the library, not for IndexedDB.* `lib/draftstore.js`
+loads and defines its API whether or not IndexedDB exists -- it reports the
+absence by rejecting, asynchronously, long after a strategy has to be chosen. So
+a browser with IndexedDB disabled took the spill path anyway, the put rejected,
+and a track that would have fit in localStorage came back as "Saved without
+media". `verify_fix.py` runs its whole context with `window.indexedDB` undefined
+and caught it.
+
+**I nearly broke a correct test.** `verify_fix.py` TEST 3 pins that a track small
+enough to fit stays inline in localStorage, and my first move was to rewrite it
+as out of date. It was not: that suite deliberately disables IndexedDB, so it is
+pinning the FALLBACK contract, which is unchanged and still correct. The test was
+restored and its reasoning written into it. The lesson is the general one -- a
+test that contradicts a change is a claim to be understood before it is a
+blocker to be removed.
+
+**`pendingPhotoMeta` / `pendingMusicMeta` are set only on real failure now.** They
+used to be set on every spill, which was right when reaching that code meant the
+bytes had been dropped and wrong once it became how media is saved. Nothing
+visible depended on it -- every re-add card is guarded by `&& !bgImage` -- but
+`serializeFlip()` reads them for `mediaOmitted`, so the record that HAS the bytes
+was stamping itself as missing them.
+
+**Still worth doing:** the bytes go to IndexedDB as base64 data URLs, not Blobs.
+`draftstore.js` stores Blobs natively, which would drop the 4/3 encoding
+overhead, but the whole app handles `bgImage` as a data URL string, so that is a
+wider change than this one.
