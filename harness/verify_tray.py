@@ -125,8 +125,15 @@ with sync_playwright() as p:
         # v219 removed Select from Pad because Pad replays on recorded
         # timestamps; v227 added it to Flip, which reveals strokes in index
         # order. verify_select.py carries the reasoning.
+        #
+        # v236 added Smudge, to Flip only, on the same division: it edits the
+        # GEOMETRY of strokes already on the page, which is an editing move
+        # rather than a recording one. This equality is deliberately exact so
+        # that adding a tool cannot happen quietly — a new tool is a change to
+        # what the product IS, and it should cost somebody a deliberate edit
+        # here rather than slipping in behind a `>=`.
         expected = ["pen", "eraser", "shape"] if surface == "Pad" \
-            else ["pen", "eraser", "shape", "select"]
+            else ["pen", "eraser", "shape", "select", "smudge"]
         check(f"{surface}: the roster is exactly what this surface ships",
               baseline == expected, f"{baseline} against {expected}")
         if len(baseline) <= 3:
