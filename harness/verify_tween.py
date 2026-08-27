@@ -344,6 +344,102 @@ with sync_playwright() as p:
               f"{fit['sw']}px of content in {fit['w']}px — nowrap, so the overflow "
               f"is a clipped button rather than a second row")
 
+    # ------------------------------------------------------------------
+    # v237 — the in-between is blurred, and the blur is DRAWN.
+    #
+    # The point of interest is that this cost points instead of a format
+    # contract. The load-bearing assertion in this block is the last one: a
+    # blurred in-between must not carry a single field the source strokes did
+    # not already have, because that is what lets a Skribl made here open in a
+    # player that predates the feature.
+    # ------------------------------------------------------------------
+    print("\nBLUR — a drawn falloff, not a render attribute")
+    blur = page.evaluate("""() => {
+      const mk = (dy) => {
+        const pts = [];
+        for (let i = 0; i <= 40; i++)
+          pts.push({ x: 120 + i * 6, y: 200 + dy, color: '#ffffff', size: 6,
+                     t: i * 4, erase: false, start: i === 0 });
+        return { strokes: pts, strokeGroups: [pts.length], hold: 1 };
+      };
+      const a = mk(0), b = mk(120);
+      const tw = buildTween(a, b);
+      if (!tw) return { built: false };
+      const sizes = [...new Set(tw.strokes.map(s => +s.size.toFixed(3)))]
+                      .sort((x, y) => x - y);
+      const alpha = (c) => parseInt(String(c).slice(7, 9) || 'ff', 16);
+      // Keys the tween introduced that the source strokes never had.
+      const src = new Set(Object.keys(a.strokes[0]));
+      const extra = new Set();
+      for (const s of tw.strokes)
+        for (const k of Object.keys(s)) if (!src.has(k)) extra.add(k);
+      return { built: true, points: tw.strokes.length,
+               groups: tw.strokeGroups.length,
+               groupSum: tw.strokeGroups.reduce((x, v) => x + v, 0),
+               sizes: sizes, base: 6,
+               firstSize: +tw.strokes[0].size.toFixed(3),
+               lastSize: +tw.strokes[tw.strokes.length - 1].size.toFixed(3),
+               firstAlpha: alpha(tw.strokes[0].color),
+               lastAlpha: alpha(tw.strokes[tw.strokes.length - 1].color),
+               extraKeys: [...extra],
+               frameKeys: Object.keys(tw).sort(),
+               starts: tw.strokes.filter(s => s.start).length }; }""")
+
+    check("an in-between still builds", blur.get("built"), str(blur)[:120])
+    if blur.get("built"):
+        check("it is drawn at more than one width — there is a falloff at all",
+              len(blur["sizes"]) > 1,
+              f"only one width ({blur['sizes']}) — that is the unblurred exposure")
+        check("every width is a multiple of the brush, none below it",
+              all(sz >= blur["base"] - 1e-6 for sz in blur["sizes"]),
+              str(blur["sizes"]))
+        check("the widest pass is drawn FIRST, so the crisp core lands on top",
+              blur["firstSize"] > blur["lastSize"],
+              f"first {blur['firstSize']} vs last {blur['lastSize']}")
+        check("and the widest pass is the faintest",
+              blur["firstAlpha"] < blur["lastAlpha"],
+              f"alpha {blur['firstAlpha']} vs {blur['lastAlpha']}")
+        # The caps the server enforces. MAX_POINTS_PER_FRAME = 20,000 and
+        # MAX_GROUPS_PER_FRAME = 5,000; a feature that multiplies a page by
+        # samples AND by passes is exactly how a drawing becomes unpostable.
+        check("the blurred frame is within the server's point cap",
+              blur["points"] <= 20000, f"{blur['points']} points")
+        check("and within its group cap — every pass is its own group",
+              blur["groups"] <= 5000, f"{blur['groups']} groups")
+        check("the groups still sum to the stroke count exactly",
+              blur["groupSum"] == blur["points"],
+              f"{blur['groupSum']} vs {blur['points']} — the server refuses this")
+        check("every stroke begins exactly once",
+              blur["starts"] == blur["groups"],
+              f"{blur['starts']} starts for {blur['groups']} groups")
+        # THE one that matters: no new field, so an older player can draw it.
+        check("the blur added NO field the source strokes did not have",
+              blur["extraKeys"] == [],
+              f"introduced {blur['extraKeys']} — that is a format change, and "
+              f"every player would have to honour it")
+        check("and the frame itself is still strokes/strokeGroups/hold",
+              blur["frameKeys"] == ["hold", "strokeGroups", "strokes"],
+              str(blur["frameKeys"]))
+
+    # The budget planner spends leftover budget on blur, never samples on it:
+    # the halo's job is closing the gaps BETWEEN samples, so a coarser exposure
+    # with a richer falloff would be strictly worse.
+    plans = page.evaluate("""() => ({
+        light: tweenPlan(41, 1), mid: tweenPlan(400, 12),
+        heavy: tweenPlan(900, 30), grouphog: tweenPlan(300, 150),
+        absurd: tweenPlan(2400, 90) })""")
+    check("a light page gets the full falloff", plans["light"]["passes"] >= 4,
+          str(plans["light"]))
+    check("a heavier page sheds passes rather than samples",
+          plans["heavy"]["passes"] < plans["light"]["passes"]
+          and plans["heavy"]["n"] >= 6,
+          f"{plans['heavy']} vs {plans['light']}")
+    check("a page of many short strokes is bounded by GROUPS, not points",
+          (plans["grouphog"]["n"] + 1) * 150 * plans["grouphog"]["passes"] <= 5000,
+          str(plans["grouphog"]))
+    check("and a page too heavy for any exposure is refused, not truncated",
+          plans["absurd"] is None, str(plans["absurd"]))
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

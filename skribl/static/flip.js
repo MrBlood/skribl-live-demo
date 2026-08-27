@@ -3688,13 +3688,22 @@ function selRestore(pts){
    to interpolate, and rather than guess at a pairing and produce a mess, this
    refuses and says why.
 
-   NOT BLURRED, deliberately, for now. 26 samples with no blur is most of the
-   way to the photograph and costs nothing; the faint ribbing left over reads as
-   a drawn in-between rather than a photographic one, which suits an app that
-   looks like a printed zine. A real gaussian is one render attribute away
-   (ctx.filter carries it) but that attribute is a contract the PLAYER has to
-   honour too -- the same trap the `pressure` note further up records -- so it
-   is a decision to make on purpose and later, not a default to slide in. */
+   BLURRED as of v237, and NOT via ctx.filter. The note that stood here said a
+   real gaussian was one render attribute away and that the attribute was a
+   contract the PLAYER would have to honour -- true, and the reason it waited.
+   It turned out not to be the only way.
+
+   The thing worth seeing is WHAT was missing. The sample sequence is already a
+   smear ALONG the motion; that is what a long exposure is, and it was never the
+   defect. What made it read as a stack of copies rather than something moving
+   is that every ghost still ended in the crisp round cap of the brush that drew
+   it: there was no softness ACROSS the motion. A blur is a radial falloff, and
+   a radial falloff can be DRAWN -- each sample is emitted as a few concentric
+   passes, widest and faintest first so the crisp core lands on top of its own
+   halo. It costs points instead of a format contract, and every pass is an
+   ordinary stroke, so a Skribl made this way opens in a player that predates
+   the feature. That is the whole reason to prefer it: a format change is the
+   last resort, not the first design. */
 
 /* The point budget again, and for the same reason as liquify's: the server
    refuses a frame over MAX_POINTS_PER_FRAME (20,000), so a feature that
@@ -3706,6 +3715,64 @@ function selRestore(pts){
 const TWEEN_SAMPLES = 26;
 const TWEEN_MIN_SAMPLES = 6;
 const TWEEN_POINT_CAP = 14000;
+/* The server also refuses a frame over MAX_GROUPS_PER_FRAME (5,000) and every
+   pass of every sample is its own group, so the group count has to be budgeted
+   as carefully as the point count. It was not before: a page with many short
+   strokes could pass the point cap and still be unpostable. */
+const TWEEN_GROUP_CAP = 4500;
+
+/* The blur, widest and faintest FIRST -- strokes render in array order, so this
+   puts the crisp core on top of its own halo. `w` scales the brush, `a` scales
+   the exposure alpha. Three passes is the full falloff; a heavy page degrades
+   to the last two, then to the core alone, which is exactly the unblurred
+   exposure this feature started as. Degrading beats refusing. */
+const TWEEN_BLUR = [ { w: 3.4, a: 0.10 }, { w: 2.6, a: 0.18 }, { w: 1.9, a: 0.32 },
+                     { w: 1.4, a: 0.55 }, { w: 1.0, a: 1.00 } ];
+/* Concentric passes lay more ink down than a single one, so the core is pulled
+   back to keep an in-between the same weight it was before it was blurred.
+   Derived by MEASURING mean ink over the lit area at two pass counts and
+   solving for the denominator, not by arithmetic on the alphas: the halo
+   covers more ground than the core, so the sum of the weights is not what the
+   eye ends up reading. A single pass is the unblurred exposure and is left
+   exactly as it was. */
+function tweenTrim(blur){
+  if(blur.length < 2) return 1;
+  let weight = 0;
+  for(const b of blur) weight += b.a;
+  return 1 / (weight + 0.4);
+}
+
+/* Picks the sample count first and the blur second.
+
+   That order is the whole point. The blur's real job is filling the gaps
+   BETWEEN samples -- unblurred, the exposure reads as a stack of separate
+   copies, and what the halo does is close the ribbing between them. So paying
+   for a richer falloff with a coarser exposure is a bad trade at any budget:
+   it would leave WIDER gaps for a slightly softer halo to cover. Blur is only
+   allowed to spend budget the exposure itself does not need.
+
+   Returns null when even a bare, unblurred exposure will not fit. */
+const TWEEN_GOOD_SAMPLES = 16;
+function tweenPlan(per, groupsPer){
+  // The most samples that fit BOTH caps at a given pass count. Groups are
+  // capped separately because every pass of every sample is its own group:
+  // a page of many short strokes can clear the point cap and still be
+  // unpostable, which nothing checked before.
+  const fit = (passes) => {
+    // Both are "-1" because the sample loop runs s = 0..n inclusive and so
+    // emits n+1 samples. Without it the plan overshot its own budget: a
+    // 150-point page planned 14,250 points against a cap of 14,000.
+    const byPoints = Math.floor(TWEEN_POINT_CAP / Math.max(1, per * passes)) - 1;
+    const byGroups = Math.floor(TWEEN_GROUP_CAP / Math.max(1, groupsPer * passes)) - 1;
+    return Math.min(TWEEN_SAMPLES, byPoints, byGroups);
+  };
+  const bare = fit(1);
+  if(bare < TWEEN_MIN_SAMPLES) return null;
+  const keep = Math.min(bare, TWEEN_GOOD_SAMPLES);
+  for(let passes = TWEEN_BLUR.length; passes >= 2; passes--)
+    if(fit(passes) >= keep) return { passes: passes, n: fit(passes) };
+  return { passes: 1, n: bare };
+}
 
 /* Two pages can be interpolated only if their strokes line up: same number of
    groups, same number of points in each. Returns null when they do not, and the
@@ -3765,39 +3832,50 @@ function buildTween(a, b){
   const why = tweenMismatch(a, b);
   if(why){ chip('An in-between needs ' + why); return null; }
   const per = a.strokes.length;
-  let n = Math.min(TWEEN_SAMPLES, Math.floor(TWEEN_POINT_CAP / Math.max(1, per)));
-  if(n < TWEEN_MIN_SAMPLES){
+  const plan = tweenPlan(per, a.strokeGroups.length);
+  if(!plan){
     chip('This page is too heavy for an in-between');
     return null;
   }
+  const n = plan.n;
+  // The blur passes actually used: the LAST `passes` of the table, so dropping
+  // one drops the widest, faintest halo and keeps the core.
+  const blur = TWEEN_BLUR.slice(TWEEN_BLUR.length - plan.passes);
   // Enough per sample that the exposure sums to a readable figure, capped so a
-  // short sample count does not come out as a stack of hard copies.
-  const fade = Math.min(0.30, Math.max(0.06, 2.6 / n));
+  // short sample count does not come out as a stack of hard copies. Trimmed
+  // when there is a halo carrying part of the weight.
+  const fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
   const out = { strokes: [], strokeGroups: [], hold: 1 };
   for(let s = 0; s <= n; s++){
     const t = s / n;
-    let at = 0;
-    for(let g = 0; g < a.strokeGroups.length; g++){
-      const count = a.strokeGroups[g];
-      for(let k = 0; k < count; k++){
-        const pa = a.strokes[at + k], pb = b.strokes[at + k];
-        const q = Object.assign({}, pa);
-        q.x = pa.x + (pb.x - pa.x) * t;
-        q.y = pa.y + (pb.y - pa.y) * t;
-        if(typeof pa.size === 'number' && typeof pb.size === 'number')
-          q.size = pa.size + (pb.size - pa.size) * t;
-        q.color = tweenFade(pa.color, fade);
-        // Every sample is its own stroke, so `start` belongs on its first point
-        // and nowhere else -- copying pa.start wholesale would mint a start
-        // partway through a run, which is the shape the server rejects.
-        if(k === 0) q.start = true; else delete q.start;
-        // Timestamps march across the exposure so REPLAY draws it as a sweep
-        // rather than flashing the whole thing into existence at once.
-        if(typeof pa.t === 'number') q.t = pa.t + (s * 8);
-        out.strokes.push(q);
+    for(let p = 0; p < blur.length; p++){
+      const pass = blur[p];
+      let at = 0;
+      for(let g = 0; g < a.strokeGroups.length; g++){
+        const count = a.strokeGroups[g];
+        for(let k = 0; k < count; k++){
+          const pa = a.strokes[at + k], pb = b.strokes[at + k];
+          const q = Object.assign({}, pa);
+          q.x = pa.x + (pb.x - pa.x) * t;
+          q.y = pa.y + (pb.y - pa.y) * t;
+          if(typeof pa.size === 'number' && typeof pb.size === 'number')
+            q.size = (pa.size + (pb.size - pa.size) * t) * pass.w;
+          else if(typeof pa.size === 'number') q.size = pa.size * pass.w;
+          q.color = tweenFade(pa.color, fade * pass.a);
+          // Every sample is its own stroke, so `start` belongs on its first point
+          // and nowhere else -- copying pa.start wholesale would mint a start
+          // partway through a run, which is the shape the server rejects.
+          if(k === 0) q.start = true; else delete q.start;
+          // Timestamps march across the exposure so REPLAY draws it as a sweep
+          // rather than flashing the whole thing into existence at once. All
+          // passes of one sample share a timestamp: the halo and the core are
+          // one ghost, and staggering them would replay as a pulsing edge.
+          if(typeof pa.t === 'number') q.t = pa.t + (s * 8);
+          out.strokes.push(q);
+        }
+        out.strokeGroups.push(count);
+        at += count;
       }
-      out.strokeGroups.push(count);
-      at += count;
     }
   }
   return out;
