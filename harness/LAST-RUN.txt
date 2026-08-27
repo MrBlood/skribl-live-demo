@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-27T19:34:35Z
+UTC timestamp           : 2026-08-27T20:01:50Z
 Host                    : Linux x86_64
-Tree SHA-256            : 148873714dd40ddf48d1516761a2708e391cac6b76782e9d0a03bd53fa37b1f5
-Git commit              : 76c5515
+Tree SHA-256            : f41824d825e1d51f807f6379247c7987586d12e0dcc06ab13995ee60610b3868
+Git commit              : 4cbf029
 SKRIBL_VERSION          : v222
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.wSaSs3p6Li/harness.db)
+Database reset          : yes (fresh /tmp/tmp.LA7d04w1zN/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -48,7 +48,7 @@ suites requested : 73
   verify_fuzz.py: ok — 7/7 passed
   verify_gifenc.py: ok — 38/38 passed
   verify_help.py: ok — 61/61 passed
-  verify_hold.py: ok — 39/39 passed
+  verify_hold.py: ok — 46/46 passed
   verify_integration.py: ok — 14/14 passed
   verify_jsstrip.py: ok — 27/27 passed
   verify_keys.py: ok — 9/9 passed
@@ -94,6 +94,6 @@ suites requested : 73
   verify_ux.py: ok — 310/310 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 3055   (skipped suites contribute 0)
+assertions passed: 3062   (skipped suites contribute 0)
 suites skipped   : 1
 suites with problems: 0
