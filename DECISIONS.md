@@ -1622,3 +1622,36 @@ compositing ordinary painting would be a worse bug than the one it fixed.
 happens to the data already written. The people most likely to hit the bug again
 are exactly the ones who hit it the first time, because they are the ones with
 the old data.
+
+---
+
+## v241 -- Page holds were saved and then silently thrown away on load
+
+**Found by hand, generating a demo file.** Three key poses were set to a x2 hold
+so they would sit a beat either side of each in-between smear. The .skribl
+contained `hold: [2, null, 2, null, 2]` -- serializeFlip writes it correctly --
+and after loading, every page was back at 1.
+
+applyPayload rebuilds each current-format frame through healFrame, and all four
+of its return paths produced `{strokes, strokeGroups}`. The hold was read out of
+nothing and dropped on the floor. **The same path restores the AUTOSAVE**, so a
+hold did not survive an ordinary reload either -- set a page to x3, come back
+tomorrow, and the timing is gone with nothing to say so.
+
+**WHY verify_hold DID NOT CATCH IT, which is the useful part.** That suite has
+thirty-odd assertions and every one of them is about WRITING: the badge appears,
+the payload gains a `hold` key, unheld pages stay absent, copy/paste carries it,
+the exported GIF has the right frame delays. Not one asked whether a hold comes
+BACK. The feature was verified in the direction it worked.
+
+The new assertion is a genuine round trip -- serialise, WIPE the live state,
+load it back, read the hold off the restored frames. Verified by removing the
+fix: it reports [1, 1, 1, 1] while the other 38 assertions stay green, which is
+exactly how the bug survived.
+
+**The pattern, twice in two days:** verify_tween proved an in-between was
+correct and never asked whether it was fast enough to play; verify_hold proved a
+hold was written and never asked whether it was read. **A suite that only tests
+the direction a feature works will pass forever while the feature is broken.**
+When something is written, test that it comes back. When something is drawn,
+test that it can be played.

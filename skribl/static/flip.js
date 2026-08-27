@@ -316,14 +316,24 @@ function frame(){ return frames[idx]; }
  * would have done, keeps the drawing identical, and makes it undoable.
  */
 function healFrame(f){
+  /* HOLD SURVIVES THE ROUND TRIP, and until v241 it did not. serializeFlip
+     writes `hold` whenever a page is held longer than one beat, and every
+     return here rebuilt the frame as {strokes, strokeGroups} — so the value was
+     written to the .skribl faithfully and thrown away on the way back in. Set a
+     page to x2, save a draft, reopen it, and the timing is silently gone; the
+     same path restores the AUTOSAVE, so it was lost on an ordinary reload too.
+     Found while generating a demo file whose key poses were meant to be held.
+     frameHold() rather than f.hold: it clamps to [1, MAX_HOLD], so a missing,
+     absurd or hand-edited value lands somewhere sane instead of propagating. */
+  const hold = frameHold(f);
   const strokes = Array.isArray(f.strokes) ? f.strokes : [];
   const groups = Array.isArray(f.strokeGroups) ? f.strokeGroups.slice() : [];
   let n = 0;
   for(const c of groups) n += c;
-  if(n === strokes.length) return { strokes: strokes, strokeGroups: groups };
-  if(n < strokes.length){ groups.push(strokes.length - n); return { strokes: strokes, strokeGroups: groups }; }
+  if(n === strokes.length) return { strokes: strokes, strokeGroups: groups, hold: hold };
+  if(n < strokes.length){ groups.push(strokes.length - n); return { strokes: strokes, strokeGroups: groups, hold: hold }; }
   while(groups.length && n > strokes.length) n -= groups.pop();
-  return { strokes: strokes.slice(0, n), strokeGroups: groups };
+  return { strokes: strokes.slice(0, n), strokeGroups: groups, hold: hold };
 }
 
 function balancedPair(f){
@@ -577,7 +587,7 @@ function applyPayload(d){
         t: 0, erase: !!st.erase, start: i === 0 }));
       if (pts.length) groups.push(pts.length);
     });
-    return { strokes: flat, strokeGroups: groups };
+    return { strokes: flat, strokeGroups: groups, hold: frameHold(f) };
   });
   idx = Math.min(d.editIdx != null ? d.editIdx : (d.idx || 0), frames.length - 1);
   const savedBg = (d.frames[0] && d.frames[0].background) || d.background;

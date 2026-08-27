@@ -149,6 +149,31 @@ with sync_playwright() as p:
     check("copy/paste carries the hold with the page",
           pg.evaluate("() => { const c = deepCopy(frames[1]); return frameHold(c); }") == 3)
 
+    # THE HALF THIS SUITE WAS MISSING, and the bug that hid in it for months.
+    # Everything above proves a hold is WRITTEN. Nothing asked whether it comes
+    # BACK — and it did not: applyPayload rebuilt every current-format frame
+    # through healFrame, which returned {strokes, strokeGroups} and dropped the
+    # hold on the floor. Set a page to x3, save a draft, reopen it, and the
+    # timing was silently gone. The same path restores the AUTOSAVE, so an
+    # ordinary reload lost it too. Found by hand while generating a demo file
+    # whose key poses were meant to be held, not by any assertion here.
+    #
+    # A round trip is the only shape that catches this: serialise, throw the
+    # live state away, load it back, and read the hold off the RESTORED frames.
+    payload = pg.evaluate("() => JSON.parse(JSON.stringify(serializeFlip({media:false})))")
+    restored = pg.evaluate("""(d) => {
+      frames.length = 0;
+      frames.push({ strokes: [], strokeGroups: [], hold: 1 });   // wipe the state first
+      applyPayload(d);
+      return frames.map(f => frameHold(f));
+    }""", payload)
+    check("a hold SURVIVES a save and load",
+          restored[1] == 3,
+          f"{restored} — written faithfully and dropped on the way back in is "
+          f"the shape a write-only test cannot see")
+    check("...and the unheld pages come back at the default",
+          restored[0] == 1 and restored[2] == 1, str(restored))
+
     print("\nTIMING — read out of the exported GIF, not off the state")
     fps = pg.evaluate("() => fps")
     base_cs = round(round(1000 / fps) / 10)
