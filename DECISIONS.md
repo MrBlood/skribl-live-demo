@@ -1331,7 +1331,7 @@ element measures nothing and passes.
 
 ---
 
-## v236 -- Smudge, on a document that has no pixels
+## v236 -- Liquify, and why it is not called Smudge
 
 **THE ASK CAME AS A QUESTION: "where is smudge".** It had not been built, and my
 first answer was that it could not be -- that smudge is a pixel operation, the
@@ -1339,30 +1339,50 @@ same class as fill and text, and that all three need a new primitive in the
 frame format which undo, export, the draft schema and the player would have to
 learn. That is true of the USUAL implementation and it is not true of the tool.
 
-**Every smudge tool you have used pushes COLOUR around a bitmap:** sample under
-the brush, blend, write back. Skribl has no bitmap to push. A page is a list of
-points, and that same list is what the player replays, what export walks and
-what the draft stores. Rasterising a page to smudge it would kill replay
-outright -- a flattened image has no stroke order left to animate.
+**IT SHIPPED AS "SMUDGE" AND WAS RENAMED BEFORE IT REACHED MAIN.** The rename is
+the decision worth recording, not a tidy-up. A real smudge is COLOUR TRANSPORT:
+Photoshop, Procreate and Krita's Color Smudge engine sample the pixels under the
+brush, carry that colour along the drag and blend it down. Blending two colours
+and softening a hard edge are precisely what people reach for smudge to do, and
+this does NEITHER. The family it actually belongs to is Photoshop's
+Liquify > Forward Warp, Procreate's Liquify > Push, and Inkscape's Tweak tool in
+"push parts of paths" mode, which displaces path nodes by a distance-weighted
+delta exactly as this does.
 
-**So this smudges the GEOMETRY.** Points inside the brush are dragged along with
-the pointer, weighted by distance from its centre, and the strokes bend. It is a
-warp brush wearing a smudge's clothes, and for a line document it is the more
-honest instrument: it moves the ink you drew rather than averaging it into mud.
+Keeping the name would have been the cheap option, and it would have made the
+control lie about itself: every user arriving with a smudge tool's expectations
+would find a tool that never blends and conclude it was broken. **A control that
+lies about what it does is worse than one that is merely limited.** Renaming it
+also makes a future colour-blending smudge an honest separate feature rather
+than a bug report against this one -- and that feature needs a raster layer in
+the format, which is still the owner's call.
+
+**AND COLOUR TRANSPORT WAS NEVER AVAILABLE HERE ANYWAY.** Blending needs pixels
+to sample and Skribl has none. A page is a list of points, and that same list is
+what the player replays, what export walks and what the draft stores.
+Rasterising a page to blend it would kill replay outright -- a flattened image
+has no stroke order left to animate.
+
+**So this moves the GEOMETRY.** Points inside the brush are dragged along with
+the pointer, weighted by distance from its centre, and the strokes bend. For a
+line document that is the better instrument anyway: it moves the ink you drew
+rather than averaging it into mud, and it is LOSSLESS where a raster smudge is
+not -- ten undo/redo round trips come back bit-identical, which no colour smudge
+can offer.
 
 **What it costs, stated plainly:** no colour bleed. Two crossing strokes bend
 towards each other but never mix, and nothing in this format can make them mix.
 **What it keeps** is the entire reason to do it this way: replay, export, the
-player, the draft, and an exact undo. `verify_smudge` proves it end to end --
-it smudges a page, POSTS it, and loads the result in the player, which was never
-taught about smudge and did not need to be.
+player, the draft, and an exact undo. `verify_liquify` proves it end to end --
+it liquifies a page, POSTS it, and loads the result in the player, which was never
+taught about liquify and did not need to be.
 
 **THE FIRST VERSION SPIKED INSTEAD OF SMEARING, and the fix is one constant.**
 At full strength a point in the centre of the brush moves the entire delta --
 which lands it back in the centre for the next move event, at weight 1 again. It
 rides the cursor forever, and every line the brush crosses is dragged to the
 same single point. Measured on three parallel lines: all three converged to one
-vertex, a hard V rather than a smear. `SMUDGE_STRENGTH` below 1 makes the ink
+vertex, a hard V rather than a smear. `LIQUIFY_STRENGTH` below 1 makes the ink
 LAG behind the brush; lagging, it sits further from the centre; further, its
 weight drops; and it sheds off the back on its own. That is what dragging a
 finger through wet ink actually does. The suite pins the PROPERTY rather than
@@ -1373,12 +1393,12 @@ disc lurches and the rim of the brush leaves a visible crease across the stroke.
 Squaring pulls the centre along and lets the rim off almost untouched.
 
 **Undo stores COORDINATES, not a displacement**, for the reason selRestore's
-comment already gives: a smudge accumulates over dozens of move events at a
+comment already gives: a liquify stroke accumulates over dozens of move events at a
 different weight each time, so there is no single delta to negate, and
 re-deriving one would walk the artwork further from home on every cycle. Ten
 undo/redo round trips are asserted bit-identical.
 
-**A smudge belongs to the page it STARTED on.** The frame index is pinned at
+**A liquify stroke belongs to the page it STARTED on.** The frame index is pinned at
 pointerdown, exactly as `strokeFrame` is for a stroke -- the same trap, in the
 same file, for the same reason. Changing page mid-drag and re-reading `frame()`
 would apply the back half of the gesture to different artwork at indices that
@@ -1393,17 +1413,17 @@ than they expect.
 solid ring that size would read as a colossal brush about to lay ink; dashed
 says influence. Reach is tied to the brush slider, so the tool needs no control
 of its own -- the row is already full, and "the size you draw with is the size
-you smudge with" is one less thing to explain.
+you push with" is one less thing to explain.
 
-**THE TRAY EARNED ITS KEEP A SECOND TIME.** Smudge is the fifth tool and the row
+**THE TRAY EARNED ITS KEEP A SECOND TIME.** Liquify is the fifth tool and the row
 did not have to be re-fitted for it, exactly as the tray was built to allow.
 That is now two features that cost nothing in layout.
 
 ## v236 -- A setup step that quietly does nothing is worse than one that fails
 
-`verify_smudge`'s `fresh()` reset the document but not the TOOL. A section that
-left smudge selected made the next section's setup silently draw nothing --
-`line()` smudged an empty page instead of drawing on it -- and three assertions
+`verify_liquify`'s `fresh()` reset the document but not the TOOL. A section that
+left liquify selected made the next section's setup silently draw nothing --
+`line()` liquified an empty page instead of drawing on it -- and three assertions
 downstream then passed or failed for reasons that had nothing to do with what
 they named. One of them passed VACUOUSLY: "undo restores the exact coordinates"
 compared an untouched page against itself and reported 0 points differing.

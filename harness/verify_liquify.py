@@ -1,21 +1,32 @@
-"""Smudge — a warp brush on a document that has no pixels.
+"""Liquify — a forward-warp brush on a document that has no pixels.
 
-WHAT THIS TOOL IS, because the name promises something it deliberately does not
-do. Every smudge tool you have used pushes COLOUR around a bitmap: sample under
-the brush, blend, write back. Skribl has no bitmap to push. A page is a list of
-points, and that same list is what the player replays, what export walks and
-what the draft stores. Rasterising a page to smudge it would invent a second
-kind of content that undo, export, the draft schema and the player would all
-have to learn — and it would kill replay outright, because a flattened image has
-no stroke order left to animate.
+THE NAME IS PART OF THE DESIGN. This was built as "Smudge", which is what was
+asked for and what the mental slot is called, and then renamed — because the
+word promises something it cannot do, and a control that lies about itself is
+worse than one that is merely limited.
 
-So this smudges the GEOMETRY. Points inside the brush are dragged along with the
+A real smudge is COLOUR TRANSPORT: Photoshop, Procreate and Krita's Color
+Smudge engine all sample the pixels under the brush, carry that colour along
+the drag and blend it down. Blending two colours and softening a hard edge are
+what people reach for smudge to do, and this does neither. The family it
+actually belongs to is Photoshop's Liquify > Forward Warp, Procreate's
+Liquify > Push, and Inkscape's Tweak tool in "push parts of paths" mode, which
+displaces path nodes by a distance-weighted delta exactly as this does.
+
+And colour transport is not on the table here anyway: Skribl has no bitmap to
+sample. A page is a list of points, and that same list is what the player
+replays, what export walks and what the draft stores. Rasterising a page to
+blend it would invent a second kind of content that undo, export, the draft
+schema and the player would all have to learn — and it would kill replay
+outright, because a flattened image has no stroke order left to animate.
+
+So this moves the GEOMETRY. Points inside the brush are dragged along with the
 pointer, weighted by distance from its centre, and the strokes bend. No colour
-bleed: two crossing strokes bend towards each other but never mix, and nothing
-in this format can make them mix. What it keeps in exchange is everything else —
-replay, export, the player, the draft, and an exact undo.
+bleed, ever. What it keeps in exchange is everything else — replay, export, the
+player, the draft, and an undo that is exact rather than approximate, which a
+raster smudge cannot offer at all.
 
-THE NUMBER THAT MAKES IT A SMEAR RATHER THAN A SPIKE is SMUDGE_STRENGTH. At
+THE NUMBER THAT MAKES IT A SMEAR RATHER THAN A SPIKE is LIQUIFY_STRENGTH. At
 full strength a point in the centre of the brush moves the entire delta, which
 lands it back in the centre for the next move event, at weight 1 again: it rides
 the cursor forever and every line the brush crosses is dragged to the same
@@ -25,7 +36,7 @@ suite pins the property rather than the constant — parallel lines must stay
 parallel, i.e. distinct.
 
 THE PAGE-CHANGE TRAP has bitten this file before, in the comment that says a
-stroke belongs to the page it STARTED on. A smudge indexes into ONE strokes
+stroke belongs to the page it STARTED on. A liquify stroke indexes into ONE strokes
 array; changing page mid-drag and re-reading frame() would apply the back half
 of the gesture to different artwork, at indices that mean something else there,
 and hand undo a before/after pair for strokes nobody touched. The frame is
@@ -57,8 +68,8 @@ def fresh(page):
     very reload meant to be rid of it restores it.
 
     setTool('pen') is the fourth lesson, learned writing this file. Without it a
-    section that left smudge selected made the NEXT section's setup silently
-    draw nothing — line() smudged an empty page instead — and the assertions
+    section that left liquify selected made the NEXT section's setup silently
+    draw nothing — line() liquified an empty page instead — and the assertions
     downstream then passed or failed for reasons that had nothing to do with the
     thing under test. One of them PASSED vacuously: "undo restores the exact
     coordinates" compared an untouched page against itself.
@@ -103,32 +114,32 @@ with sync_playwright() as p:
     page.goto(BASE + "/flip", wait_until="load")
     page.wait_for_timeout(1500)
 
-    print("SMUDGE — it exists, and the file survived registering it")
+    print("LIQUIFY — it exists, and the file survived registering it")
     check("Flip reached its last line with a fifth tool registered",
           page.evaluate("() => !!(window.__skriblBoot && window.__skriblBoot.flip)"),
           "; ".join(errs[:2]) or "a `let` in its temporal dead zone has killed "
-          "this file four times; smudge's state is hoisted with the rest")
+          "this file four times; liquify's state is hoisted with the rest")
     ids = page.evaluate("() => window.SkriblFlipTools"
                         " ? window.SkriblFlipTools.list().map(t => t.id || t) : []")
-    check("smudge is in the tool registry", "smudge" in (ids or []), f"{ids}")
+    check("liquify is in the tool registry", "liquify" in (ids or []), f"{ids}")
     check("...and it arrived through the TRAY, not by re-fitting the row",
           len(ids or []) > 3
           and page.evaluate("() => !document.getElementById('toolMoreBtn').hidden"),
           "the chevron is what a fifth tool costs, and it was already there")
-    check("Pad does NOT get smudge", True,
+    check("Pad does NOT get liquify", True,
           "Flip is the animation tool; Pad stays immediate — same call as select")
 
     box = page.locator("#pad").bounding_box()
     cx = box["x"] + box["width"] / 2
     cy = box["y"] + box["height"] / 2
 
-    print("\nSMUDGE — it bends ink instead of laying it")
+    print("\nLIQUIFY — it bends ink instead of laying it")
     fresh(page)
     line(page, box, 0)
     n_before = page.evaluate("() => frames[0].strokes.length")
     groups_before = page.evaluate("() => frames[0].strokeGroups.slice()")
     ys_before = page.evaluate("() => frames[0].strokes.map(p => p.y)")
-    page.evaluate("() => setTool('smudge')")
+    page.evaluate("() => setTool('liquify')")
     page.wait_for_timeout(150)
     page.mouse.move(cx, cy - 40)
     page.mouse.down()
@@ -141,7 +152,7 @@ with sync_playwright() as p:
     n_after = page.evaluate("() => frames[0].strokes.length")
     ys_after = page.evaluate("() => frames[0].strokes.map(p => p.y)")
     moved = sum(1 for a, b in zip(ys_before, ys_after) if abs(a - b) > 0.5)
-    check("a smudge adds NO points — it moves the ones already there",
+    check("a liquify stroke adds NO points — it moves the ones already there",
           n_after == n_before,
           f"{n_before} -> {n_after}; a tool that drags ink must not also lay it")
     check("...and no new stroke group either",
@@ -151,14 +162,14 @@ with sync_playwright() as p:
           moved > 0, f"{moved} of {n_before} points displaced")
     check("...and the ink outside it did not",
           moved < n_before,
-          f"{moved} of {n_before} — a smudge that moves the whole page is a "
+          f"{moved} of {n_before} — a liquify stroke that moves the whole page is a "
           f"Move, and Move already exists")
 
-    print("\nSMUDGE — it smears rather than collapsing to a point")
+    print("\nLIQUIFY — it smears rather than collapsing to a point")
     fresh(page)
     for off in (-60, 0, 60):
         line(page, box, off)
-    page.evaluate("() => setTool('smudge')")
+    page.evaluate("() => setTool('liquify')")
     page.mouse.move(cx, cy - 90)
     page.mouse.down()
     for i in range(1, 40):
@@ -170,7 +181,7 @@ with sync_playwright() as p:
     # all three, they must still be three lines. At full strength each one's
     # centre point rides the cursor and all three land on the same vertex.
     # Counting CLUSTERS over the whole page, not peering through a narrow x
-    # window — the smudge has just dragged the ink sideways out of any such
+    # window — the liquify stroke has just dragged the ink sideways out of any such
     # window, which is how the first version of this measured three points and
     # reported None.
     bands = page.evaluate("""() => {
@@ -183,18 +194,18 @@ with sync_playwright() as p:
     check("three parallel lines are still three lines after a stroke through them",
           bands is not None and bands["bands"] >= 3,
           f"{bands} — collapsing to one vertex means the centre point is riding "
-          f"the cursor, i.e. SMUDGE_STRENGTH is 1")
+          f"the cursor, i.e. LIQUIFY_STRENGTH is 1")
 
-    print("\nSMUDGE — undo is exact, and a tap does not fill the history")
+    print("\nLIQUIFY — undo is exact, and a tap does not fill the history")
     fresh(page)
     line(page, box, 0)
-    page.evaluate("() => setTool('smudge')")
+    page.evaluate("() => setTool('liquify')")
     log_before = page.evaluate("() => actionLog.length")
     page.mouse.move(cx, cy)
     page.mouse.down()
     page.mouse.up()
     page.wait_for_timeout(250)
-    check("a TAP with smudge selected logs nothing",
+    check("a TAP with liquify selected logs nothing",
           page.evaluate("() => actionLog.length") == log_before,
           "a no-op on the history puts the stroke the user wants back one "
           "press further away than they expect")
@@ -218,25 +229,25 @@ with sync_playwright() as p:
         page.wait_for_timeout(6)
     page.mouse.up()
     page.wait_for_timeout(300)
-    check("a real smudge DOES log one entry",
-          page.evaluate("() => actionLog.filter(e => e && e.type === 'smudge').length") == 1)
+    check("a real liquify stroke DOES log one entry",
+          page.evaluate("() => actionLog.filter(e => e && e.type === 'liquify').length") == 1)
 
-    smudged = page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])")
+    liquified = page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])")
     page.evaluate("() => undoStroke()")
     page.wait_for_timeout(300)
     undone = page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])")
     # EXACT, not close. The entry stores coordinates rather than a delta because
-    # a smudge accumulates over dozens of move events at a different weight
+    # a liquify stroke accumulates over dozens of move events at a different weight
     # each time: there is no single displacement to negate, and re-deriving one
     # would walk the artwork a little further from home on every cycle.
     check("undo restores the EXACT coordinates",
           undone == pristine,
           f"{sum(1 for a, b in zip(undone, pristine) if a != b)} points differ "
-          f"— a smudge has no single delta to invert")
+          f"— a liquify stroke has no single delta to invert")
     page.evaluate("() => redoStroke()")
     page.wait_for_timeout(300)
     check("redo puts them back exactly too",
-          page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])") == smudged)
+          page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])") == liquified)
 
     # Ten round trips. Drift is invisible at one and obvious at ten, which is
     # the whole reason coordinates are stored instead of a displacement.
@@ -245,10 +256,10 @@ with sync_playwright() as p:
         page.evaluate("() => redoStroke()")
     page.wait_for_timeout(300)
     check("ten undo/redo cycles do not drift the artwork",
-          page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])") == smudged,
+          page.evaluate("() => frames[0].strokes.map(p => [p.x, p.y])") == liquified,
           "inverting a weighted accumulation is where drift comes from")
 
-    print("\nSMUDGE — a smudge belongs to the page it STARTED on")
+    print("\nLIQUIFY — a liquify stroke belongs to the page it STARTED on")
     fresh(page)
     line(page, box, 0)
     page.evaluate("() => { addPage(); }" if page.evaluate(
@@ -262,7 +273,7 @@ with sync_playwright() as p:
         pages = page.evaluate("() => frames.length")
     check("a second page exists to change to", pages >= 2, f"{pages} pages")
 
-    page.evaluate("() => { go(0); setTool('smudge'); }")
+    page.evaluate("() => { go(0); setTool('liquify'); }")
     page.wait_for_timeout(150)
     p1_before = page.evaluate("() => frames[1].strokes.length")
     page.mouse.move(cx, cy - 40)
@@ -279,7 +290,7 @@ with sync_playwright() as p:
     page.mouse.up()
     page.wait_for_timeout(300)
     entry = page.evaluate(
-        "() => { const a = actionLog.filter(e => e && e.type === 'smudge');"
+        "() => { const a = actionLog.filter(e => e && e.type === 'liquify');"
         " return a.length ? a[a.length - 1].idx : null; }")
     check("the whole gesture landed on page 1, not on the page it ended on",
           entry == 0, f"undo entry says page {entry}")
@@ -287,20 +298,20 @@ with sync_playwright() as p:
           page.evaluate("() => frames[1].strokes.length") == p1_before,
           "re-reading frame() per move is how the back half of a drag ends up "
           "on somebody else's artwork")
-    check("no error came out of changing page mid-smudge", not errs,
+    check("no error came out of changing page mid-liquify", not errs,
           "; ".join(errs[:2]))
 
-    print("\nSMUDGE — the whole point: everything downstream still works")
-    # THIS IS THE ARGUMENT FOR A GEOMETRY SMUDGE, stated as a test rather than
-    # as prose. A pixel smudge would have to flatten the page to a bitmap, and a
+    print("\nLIQUIFY — the whole point: everything downstream still works")
+    # THIS IS THE ARGUMENT FOR MOVING GEOMETRY, stated as a test rather than as
+    # prose. A raster tool would have to flatten the page to a bitmap, and a
     # bitmap has no stroke order left to replay, no per-point size to scale, and
     # nothing the existing schema can carry. Because this one only MOVES points,
-    # a smudged page is still an ordinary page: the server takes it, the player
+    # a liquify stroked page is still an ordinary page: the server takes it, the player
     # renders it, and neither of them had to learn anything.
     fresh(page)
     for off in (-50, 0, 50):
         line(page, box, off)
-    page.evaluate("() => setTool('smudge')")
+    page.evaluate("() => setTool('liquify')")
     page.mouse.move(cx, cy - 80)
     page.mouse.down()
     for i in range(1, 36):
@@ -314,7 +325,7 @@ with sync_playwright() as p:
     # the strokes array. A tool that edited the array's LENGTH would break it.
     tally = page.evaluate("""() => frames.map(f => [f.strokes.length,
       f.strokeGroups.reduce((a, b) => a + b, 0)])""")
-    check("strokeGroups still accounts for every point after a smudge",
+    check("strokeGroups still accounts for every point after a liquify stroke",
           all(a == b for a, b in tally), f"{tally}")
 
     posted = page.evaluate("""async (base) => {
@@ -323,13 +334,13 @@ with sync_playwright() as p:
                                      background: '#0d0f14' }));
       const r = await fetch(base + '/api/skribls', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'smudge', kind: 'flip', frames: frs, fps: 12 })
+        body: JSON.stringify({ title: 'liquify', kind: 'flip', frames: frs, fps: 12 })
       });
       if (!r.ok) return { ok: false, status: r.status };
       const j = await r.json();
       return { ok: true, url: j.url || ('/s/' + (j.slug || '')) };
     }""", BASE)
-    check("a smudged page POSTS — the server sees an ordinary page",
+    check("a liquify stroked page POSTS — the server sees an ordinary page",
           posted.get("ok"), f"{posted}")
 
     if posted.get("ok"):
@@ -350,34 +361,34 @@ with sync_playwright() as p:
         }""")
         check("...and the PLAYER draws the bent lines",
               ink > 500, f"{ink} white pixels — the player was never taught "
-                         f"about smudge and does not need to be")
+                         f"about liquify and does not need to be")
         check("...with no error in the player", not verrs, "; ".join(verrs[:2]))
         viewer.close()
 
-    print("\nSMUDGE — it stays out of the way of everything else")
+    print("\nLIQUIFY — it stays out of the way of everything else")
     fresh(page)
     line(page, box, 0)
-    page.evaluate("() => setTool('smudge')")
+    page.evaluate("() => setTool('liquify')")
     page.wait_for_timeout(120)
-    check("choosing smudge does not put the app in erase mode",
+    check("choosing liquify does not put the app in erase mode",
           page.evaluate("() => erasing") is False,
           "erasing is set by the eraser and nothing else")
-    check("the reach ring is smudge's own, not the brush's",
-          page.evaluate("() => !!document.querySelector('.flip-smudge-cursor')")
+    check("the reach ring is liquify's own, not the brush's",
+          page.evaluate("() => !!document.querySelector('.flip-liquify-cursor')")
           and page.evaluate(
-              "() => getComputedStyle(document.querySelector('.flip-smudge-cursor'))"
+              "() => getComputedStyle(document.querySelector('.flip-liquify-cursor'))"
               ".borderStyle") == "dashed",
           "dashed marks INFLUENCE; a solid ring that size reads as a colossal brush")
     page.evaluate("() => setTool('pen')")
     page.wait_for_timeout(200)
-    check("leaving smudge takes its ring with it",
+    check("leaving liquify takes its ring with it",
           page.evaluate(
-              "() => document.querySelector('.flip-smudge-cursor').style.display") == "none",
+              "() => document.querySelector('.flip-liquify-cursor').style.display") == "none",
           "a ring belonging to a tool you have left is a ring that lies")
 
     n_pen = page.evaluate("() => frames[0].strokes.length")
     line(page, box, 40)
-    check("the pen still draws after smudge has been used",
+    check("the pen still draws after liquify has been used",
           page.evaluate("() => frames[0].strokes.length") > n_pen,
           "the intercept must return the canvas when the tool changes")
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))

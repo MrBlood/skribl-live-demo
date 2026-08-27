@@ -17,7 +17,7 @@ any of them, because each one only appears when two features INTERLEAVE.
 
 So this drives the editor the way a person actually uses it — a shuffled stream
 of draws, erases, page adds and deletes, duplicates, selections, moves,
-transforms, mirrors, cuts, pastes, smudges, undos and redos — and after EVERY
+transforms, mirrors, cuts, pastes, liquifies, undos and redos — and after EVERY
 single operation re-checks the invariants:
 
   * every frame: strokes.length equals the sum of strokeGroups
@@ -163,7 +163,7 @@ with sync_playwright() as p:
     def op_draw():      drag("pen")
     def op_erase():     drag("eraser")
     def op_shape():     drag("shape")
-    def op_smudge():    drag("smudge")
+    def op_liquify():    drag("liquify")
     def op_select():    drag("select")
 
     def op_undo():      page.evaluate("() => undoStroke()")
@@ -192,7 +192,7 @@ with sync_playwright() as p:
 
     # Weighted so drawing dominates, the way real use does — a fuzz that
     # deletes as often as it draws spends its whole budget on an empty page.
-    POOL = ([op_draw] * 9 + [op_erase] * 3 + [op_shape] * 2 + [op_smudge] * 4
+    POOL = ([op_draw] * 9 + [op_erase] * 3 + [op_shape] * 2 + [op_liquify] * 4
             + [op_select] * 4 + [op_undo] * 4 + [op_redo] * 2
             + [op_addpage] * 2 + [op_dup] * 1 + [op_delpage] * 1 + [op_go] * 3
             + [op_mirror] + [op_dupsel] + [op_cut] + [op_paste]

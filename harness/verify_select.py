@@ -131,11 +131,11 @@ with sync_playwright() as p:
           page.evaluate("() => !!window.SkriblSelect"),
           "the geometry lib shipped on Pad only until v227")
     # Exact, not "contains": a roster change is a change to what the product is,
-    # and it should cost a deliberate edit here. Smudge joined at v236 — same
+    # and it should cost a deliberate edit here. Liquify joined at v236 — same
     # division as select, since it edits geometry already on the page.
     check("select is in Flip's tool registry",
           page.evaluate("() => window.SkriblFlipTools.list()")
-          == ["pen", "eraser", "shape", "select", "smudge"],
+          == ["pen", "eraser", "shape", "select", "liquify"],
           str(page.evaluate("() => window.SkriblFlipTools.list()")))
     check("a fourth tool pushed the shelf into overflow",
           page.evaluate("() => window.SkriblFlipTools.overflowing()"),
