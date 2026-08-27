@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-27T18:54:01Z
+UTC timestamp           : 2026-08-27T19:34:35Z
 Host                    : Linux x86_64
-Tree SHA-256            : 82f2ad89a4702af76a32b4c572c3133e4c7dd3f3bbe5a931b339584ac789ccf3
-Git commit              : f18d368-dirty
+Tree SHA-256            : 148873714dd40ddf48d1516761a2708e391cac6b76782e9d0a03bd53fa37b1f5
+Git commit              : 76c5515
 SKRIBL_VERSION          : v222
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.oIBwTg0xVl/harness.db)
+Database reset          : yes (fresh /tmp/tmp.wSaSs3p6Li/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -64,7 +64,7 @@ suites requested : 73
   verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
   verify_muxer.py: ok — 18/18 passed
   verify_padcanvas.py: ok — 26/26 passed
-  verify_pages.py: ok — 54/54 passed
+  verify_pages.py: ok — 58/58 passed
   verify_parity.py: ok — 118/118 passed
   verify_pillfit.py: ok — 18/18 passed
   verify_player_isolation.py: ok — 22/22 passed
@@ -94,6 +94,6 @@ suites requested : 73
   verify_ux.py: ok — 310/310 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 3051   (skipped suites contribute 0)
+assertions passed: 3055   (skipped suites contribute 0)
 suites skipped   : 1
 suites with problems: 0
