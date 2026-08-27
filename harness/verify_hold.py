@@ -386,6 +386,80 @@ with sync_playwright() as _p2:
                   heavy and abs(sum(heavy)/len(heavy) - target) < target * 0.25,
                   f"held {sum(heavy)/len(heavy):.0f}ms against a {target:.0f}ms target"
                   if heavy else "never sampled")
+    # ------------------------------------------------------------------
+    # v239 — a hold must land on the page that DECLARES it, and must keep
+    # working after the first time round the loop.
+    #
+    # Everything above proves a hold is written, read, and round-trips. None of
+    # it watched a hold actually happen during playback, and two defects were
+    # sitting on one line:
+    #   * the delay was taken from frames[playI] AFTER playStep() advanced it,
+    #     so a hold stretched the page BEFORE the one carrying it;
+    #   * playI is never wrapped, so from the second loop on frames[playI] is
+    #     undefined, frameHold() falls back to 1, and every hold in the
+    #     document is silently ignored for the rest of playback.
+    # The second one is why this has to measure a LATER pass, not the first.
+    # ------------------------------------------------------------------
+    print("\nHOLD IN PLAYBACK — on the right page, and on every pass")
+    hb = br.new_page(viewport={"width": 900, "height": 820})
+    hb_errs = []
+    hb.on("pageerror", lambda e: hb_errs.append(str(e)))
+    hb.goto(BASE + "/flip", wait_until="load")
+    hb.wait_for_timeout(900)
+    built = hb.evaluate("""() => {
+      const mk = (dy) => { const p = [];
+        for (let i = 0; i < 8; i++)
+          p.push({ x: 150 + i * 20, y: 150 + dy, color: '#ffffff', size: 10,
+                   t: i * 3, erase: false, start: i === 0 });
+        return { strokes: p, strokeGroups: [p.length], hold: 1 }; };
+      frames = [mk(0), mk(40), mk(80), mk(120), mk(160), mk(200)];
+      frames[2].hold = 2;                     // one page, held double
+      idx = 0; buildStrip(); render();
+      return frames.map(f => f.hold); }""")
+    check("a document with one held page was built", built == [1, 1, 2, 1, 1, 1],
+          str(built))
+
+    rows = hb.evaluate("""() => new Promise(res => {
+      const marks = [], orig = window.render;
+      window.render = function(){ const r = orig.apply(this, arguments);
+        marks.push({ t: performance.now(), i: idx }); return r; };
+      fps = 12; play();
+      setTimeout(() => { stop(); window.render = orig;
+        const out = [];
+        for (let k = 1; k < marks.length; k++)
+          out.push({ i: marks[k-1].i, ms: marks[k].t - marks[k-1].t });
+        res(out); }, 4200); })""")
+
+    # 7 hold-units per loop at 12fps is ~583ms, so 4.2s is several loops. Drop
+    # the first pass entirely: that is the only one the pre-fix code got even
+    # partly right, and measuring it would hide the wrap defect.
+    later = rows[8:]
+    seen = set(r["i"] for r in later)
+    check("playback looped, so a pass AFTER the first was measured",
+          len(rows) >= 16 and len(seen) >= 5,
+          f"{len(rows)} frame changes, {len(seen)} distinct pages — the wrap "
+          f"defect only shows after the first loop")
+
+    def _med(idx_):
+        v = sorted(r["ms"] for r in later if r["i"] == idx_)
+        return v[len(v)//2] if v else None
+
+    target = 1000.0 / 12
+    held, before, plain = _med(2), _med(1), _med(4)
+    check("the held page is on screen for TWO frame slots",
+          held is not None and abs(held - target*2) < target*0.35,
+          f"page 2 held {held:.0f}ms, expected {target*2:.0f}ms"
+          if held else "never sampled")
+    check("and the page BEFORE it is not the one being stretched",
+          before is not None and abs(before - target) < target*0.35,
+          f"page 1 held {before:.0f}ms, expected {target:.0f}ms — the hold "
+          f"landed on the wrong page" if before else "never sampled")
+    check("an ordinary page still gets exactly one slot",
+          plain is not None and abs(plain - target) < target*0.35,
+          f"page 4 held {plain:.0f}ms, expected {target:.0f}ms" if plain else "never sampled")
+    check("no JS errors during held playback", not hb_errs, "; ".join(hb_errs[:2]))
+    hb.close()
+
     check("no JS errors during timed playback", not _terrs, "; ".join(_terrs[:2]))
     _b2.close()
 

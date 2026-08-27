@@ -1979,7 +1979,21 @@ function runPlayTimer(){
   // which drifted: a wrong estimate was banked and the next frame inherited
   // the error. Each frame now stands on its own.
   const wait = () => {
-    const d = (1000 / fps) * frameHold(frames[playI]);
+    // playStep() has ALREADY painted and advanced playI, so the frame on screen
+    // is the one before it -- and playI is never wrapped, it just grows. Both
+    // of those were wrong here, in ways that hid each other:
+    //   * without the -1 the delay came from the NEXT frame's hold, so a hold
+    //     stretched the page BEFORE the one that declared it;
+    //   * without the modulo frames[playI] is undefined from the second time
+    //     round the loop, frameHold() falls back to 1, and every hold in the
+    //     document is silently ignored for the whole rest of playback.
+    // Measured on a 30-page flip with hold=2 on pages 12 and 23: page 11 held
+    // 167.9ms and page 12 held 83.5ms on the first pass, and nothing held at
+    // all on any pass after it. The shared player builds a cumulative hold
+    // table and gets this right, so the editor was disagreeing with what a
+    // viewer actually sees.
+    const cur = (playI - 1 + frames.length) % frames.length;
+    const d = (1000 / fps) * frameHold(frames[cur]);
     const ni = playI % frames.length;
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
