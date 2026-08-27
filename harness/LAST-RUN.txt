@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-27T03:34:05Z
+UTC timestamp           : 2026-08-27T13:10:26Z
 Host                    : Linux x86_64
-Tree SHA-256            : 1bfe478667ec6f021029c032466e4e938326c24303bc435510bfb8ceae7d7af0
-Git commit              : 47790c1-dirty
+Tree SHA-256            : d3e53d40aea1d23ea3a50b9418374ded3e7a295e6f0b96aa7b235cb5ad14e541
+Git commit              : 5303033-dirty
 SKRIBL_VERSION          : v222
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.PERCQmwFEU/harness.db)
+Database reset          : yes (fresh /tmp/tmp.JfD0p3NvSn/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -54,6 +54,7 @@ suites requested : 71
   verify_keys.py: ok — 9/9 passed
   verify_layout.py: ok — 83/83 passed
   verify_lib.py: ok — 8/8 passed
+  verify_liquify.py: ok — 31/31 passed
   verify_loopcap.py: ok — 18/18 passed
   verify_media.py: ok — 24/24 passed
   verify_mediaauthz.py: ok — 43/43 passed
@@ -80,7 +81,6 @@ suites requested : 71
   verify_seam.py: ok — 172/172 passed
   verify_select.py: ok — 55/55 passed
   verify_sheetfit.py: ok — 14/14 passed
-  verify_smudge.py: ok — 28/28 passed
   verify_storage.py: ok — 38/38 passed
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 9/9 passed
@@ -92,6 +92,6 @@ suites requested : 71
   verify_ux.py: ok — 310/310 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 2973   (skipped suites contribute 0)
+assertions passed: 2976   (skipped suites contribute 0)
 suites skipped   : 1
 suites with problems: 0
