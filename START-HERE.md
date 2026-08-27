@@ -1260,6 +1260,19 @@ and accumulates it either way. **221 ms → 5.8 ms, the same picture** (+3% ink
 from the extra accumulation), with no new field, no renderer edit, and nothing
 for the player to learn.
 
+**Fixing the generator was not enough, and that is the lesson.** Writing the
+fade as hex only helps in-betweens made *after* the change. Every one already
+sitting in somebody's draft still carried `rgba()` and still cost 218 ms —
+reported a second time from the phone after the first fix shipped: *"it still
+pauses on the blurred slides."* **A fix that only applies to new data leaves
+every user who already hit the bug still hitting it.**
+
+So `paintStatic` now carries a cost ceiling: layering costs a full-canvas round
+trip per translucent stroke (~1.4 ms measured), so a frame holding more than a
+frame-budget's worth paints direct instead. Old pages **218 ms → 5.1 ms**, and
+a hand-drawn frame with six see-through strokes still layers normally — the
+guard is a ceiling, not a ban, and both halves are asserted.
+
 It is a deliberate use of the form. Teaching `alphaOf` to understand hex would
 make exposures slow again — *not broken, just slow*, which is exactly the kind
 of regression that ships — so the suite pins the **render cost**, which is the

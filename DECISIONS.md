@@ -1590,3 +1590,35 @@ understand hex would make exposures slow again -- not broken, just slow, which
 is the kind of regression that ships. A cost budget catches that; a test on the
 string would not, because the string could stay the same while the heuristic
 around it changed.
+
+---
+
+## v240 -- A fix that only applies to NEW data is half a fix
+
+**Reported a second time, from the same phone, after the first fix had shipped:
+"it still pausing on the blurred slides".** v239 wrote the fade as an 8-digit
+hex so the renderer would stop giving every sample its own full-canvas layer.
+That was the right diagnosis and the right mechanism -- and it changed the
+GENERATOR only. Every in-between already saved in a draft still carried rgba()
+and still cost 218 ms. Measured side by side on one page: 5.2 ms as hex, 218.4
+ms after rewriting the same colours back to rgba().
+
+**I shipped it, verified it on a page I had just generated, and called it
+fixed.** The verification was real and the sample was wrong: the only pages that
+could show the bug were the ones that already existed, and I tested a new one.
+
+paintStatic now carries a COST CEILING. Layering costs a full-canvas round trip
+per translucent stroke -- about 1.4 ms at 816x612 -- so a frame holding more
+than a frame-budget's worth of them paints direct. Old pages 218 ms -> 5.1 ms.
+It covers pages saved before v239, hand-edited pages, and any future content
+heavy enough to stall, none of which a generator-side fix can reach.
+
+**The ceiling is a ceiling, not a ban**, and the suite asserts both halves: an
+old-format in-between must render fast, AND a hand-drawn frame with six
+see-through strokes must still get its layers. A guard that silently stopped
+compositing ordinary painting would be a worse bug than the one it fixed.
+
+**The habit worth keeping:** when a fix changes how data is WRITTEN, ask what
+happens to the data already written. The people most likely to hit the bug again
+are exactly the ones who hit it the first time, because they are the ones with
+the old data.

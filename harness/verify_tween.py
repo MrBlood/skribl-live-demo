@@ -159,6 +159,48 @@ with sync_playwright() as p:
           f"{ms:.1f} ms against a {budget:.0f} ms frame — layered it was 221 ms, "
           f"and the stall showed on the page BEFORE it because the render blocks "
           f"the play timer")
+    # AND THE PAGES ALREADY SAVED IN PEOPLE'S DRAFTS. Writing the fade as hex
+    # fixed the GENERATOR, which does nothing for an in-between made before that
+    # change — it carries rgba() in the draft and still costs 218 ms. Reported a
+    # second time from the phone, after the first fix had shipped: "it still
+    # pauses on the blurred slides". paintStatic now refuses to layer a frame
+    # holding more translucent strokes than a frame budget can pay for, which
+    # covers old pages, hand-edited ones, and anything else heavy.
+    old_ms = page.evaluate("""() => {
+      const f = frames[1];
+      for (const q of f.strokes) {
+        const m = /^#([0-9a-f]{6})([0-9a-f]{2})$/i.exec(q.color || '');
+        if (m) { const n = parseInt(m[1], 16), a = parseInt(m[2], 16) / 255;
+          q.color = 'rgba(' + ((n>>16)&255) + ', ' + ((n>>8)&255) + ', '
+                  + (n&255) + ', ' + a.toFixed(3) + ')'; }
+      }
+      go(1);
+      const t0 = performance.now();
+      for (let k = 0; k < 10; k++) render();
+      return (performance.now() - t0) / 10;
+    }""")
+    check("an in-between saved in the OLD rgba form renders fast too",
+          old_ms < budget / 2,
+          f"{old_ms:.1f} ms — fixing only the generator leaves every page already "
+          f"in somebody's draft broken, which is how this got reported twice")
+    check("...but a hand-drawn translucent frame still gets its layers",
+          page.evaluate("""() => {
+            const st = [], g = [];
+            for (let k = 0; k < 6; k++) {
+              st.push({x:100+k*40, y:100, color:'rgba(255,255,255,0.35)', size:10,
+                       t:k, erase:false, start:true});
+              st.push({x:120+k*40, y:300, color:'rgba(255,255,255,0.35)', size:10,
+                       t:k+1, erase:false});
+              g.push(2);
+            }
+            return layerableCount(st) <= LAYER_BUDGET;
+          }"""),
+          "the guard is a cost ceiling, not a ban — six see-through strokes must "
+          "still composite properly or the guard has broken ordinary painting")
+
+    page.evaluate(POSES, 150)
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
     form = page.evaluate("() => frames[1].strokes[0].color")
     check("...because the fade is an 8-digit hex, not rgba()",
           isinstance(form, str) and form.startswith("#") and len(form) == 9,

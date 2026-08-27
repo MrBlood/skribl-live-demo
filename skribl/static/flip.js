@@ -737,7 +737,36 @@ function paintSeg(c, seg, solid){
     else { const pv = seg[i-1]; drawLine(c, pv.x, pv.y, p.x, p.y, col, p.size, p.erase); }
   }
 }
+/* HOW MUCH LAYERING ONE FRAME CAN AFFORD.
+
+   Layering costs a full-canvas round trip per translucent stroke -- clear,
+   redraw, composite -- so its price is per STROKE and it scales with nothing
+   the user can see. Measured at 816x612: about 1.4 ms each. A frame with a
+   dozen is free; a frame with 162 spends 220 ms and cannot be played, which is
+   how an in-between generated before v239 behaves. Those pages are already
+   saved in people's drafts, so fixing the generator was not enough on its own.
+
+   Past the budget the whole frame paints direct. The difference that gives up
+   is beading where a stroke crosses itself -- measured at a median of 3 per
+   channel and +3% ink on a real exposure, against a stall you cannot miss. The
+   guard is deliberately well above anything hand-drawn: a frame would need two
+   dozen separate see-through strokes to reach it, and at that point the frame
+   is compositing more than it is drawing. */
+const LAYER_BUDGET = 24;
+function layerableCount(strokeArr){
+  let n = 0, i = 0;
+  while (i < strokeArr.length) {
+    let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;
+    const p = strokeArr[i];
+    if (p && !p.erase && alphaOf(p.color) < 1) n++;
+    if (n > LAYER_BUDGET) return n;      // no need to count the rest
+    i = j;
+  }
+  return n;
+}
+
 function paintStatic(c, strokeArr){
+  const _overBudget = layerableCount(strokeArr) > LAYER_BUDGET;
   let i = 0;
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
@@ -746,8 +775,8 @@ function paintStatic(c, strokeArr){
     // straight through, so a see-through stroke compounds at its own overlaps
     // — which is exactly what the layer exists to prevent, and now visible
     // rather than a global only a console could reach.
-    const _layered = (typeof window.SKRIBL_STROKE_LAYERS === 'undefined')
-      || window.SKRIBL_STROKE_LAYERS !== false;
+    const _layered = ((typeof window.SKRIBL_STROKE_LAYERS === 'undefined')
+      || window.SKRIBL_STROKE_LAYERS !== false) && !_overBudget;
     const a = (seg[0].erase || !_layered) ? 1 : alphaOf(seg[0].color);
     if (a >= 1) { paintSeg(c, seg, false); }
     else {
