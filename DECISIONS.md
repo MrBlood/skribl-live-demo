@@ -1540,3 +1540,53 @@ about warnings.
 showAutosaveStatus(), and verify_surfaces counts the names those two files define
 in common -- so this is a lib rather than a function added to each. The player
 has no autosave and does not load it.
+
+---
+
+## v239 -- The in-between stalled playback, and the fix was the colour FORM
+
+**REPORTED FROM A PHONE, on work that had already shipped to main: "it takes 2
+seconds to play 3 frames".** The in-between rendered, but it could not be
+played, which for an animation tool is most of the point.
+
+**The cause.** paintStatic gives every translucent stroke its own offscreen
+layer -- clear a full canvas, redraw, composite it back -- so that a see-through
+stroke does not bead at its own overlaps. That is right for a stroke somebody
+drew. An exposure is 27 samples of EVERY stroke, so a six-limb figure is 162
+translucent strokes and roughly 486 full-canvas operations per frame. Measured:
+**221 ms to render one in-between against a 12 fps budget of 83 ms**, and worse
+on a denser drawing -- the owner's was worse. render() is synchronous and runs
+before the next frame's timer is armed, so the PREVIOUS frame sits on screen for
+the duration. That is why the stall appeared on the page before the in-between
+as well as on it, which is exactly how it was reported and is the detail that
+identified the mechanism.
+
+**AND THE LAYERING WAS WRONG FOR THIS CONTENT ANYWAY.** It exists to stop a
+stroke compounding at its own overlaps. An exposure IS compounding overlaps --
+the density where samples pile up is the effect.
+
+**Two fixes were tried and rejected before the right one.** Opaque samples on a
+brightness ramp: 40x faster and it looks like a solid white wedge, because
+opaque strokes cover rather than accumulate. Fewer samples: the cost is per
+STROKE, so a six-limb figure would need about three samples to fit the budget,
+which is three copies rather than a smear.
+
+**THE FIX IS THE COLOUR FORM.** Both renderers decide whether to layer by
+matching the rgba() FUNCTION form -- alphaOf here, parseStrokeAlpha in app.js,
+which is also the player's renderer -- and neither matches an 8-digit hex.
+Canvas honours #rrggbbaa and accumulates it either way (verified: two passes of
+#ffffff21 over black give 33 then 61). **221 ms -> 5.8 ms, the same picture**
+(+3.3% ink mass from the extra intra-stroke accumulation, median pixel delta 3),
+with NO new field, NO renderer edit, and NOTHING for the player to learn.
+
+**This is why it was worth looking again rather than asking.** The fix I had
+lined up needed a per-stroke marker both renderers would have to honour -- the
+format contract the owner has repeatedly reserved. Being pushed to find a
+cheaper answer produced one that needs no decision at all. A format change is a
+last resort, and "I cannot see another way" is not the same as "there is none".
+
+**The assertion is on the COST, not on the colour string.** Teaching alphaOf to
+understand hex would make exposures slow again -- not broken, just slow, which
+is the kind of regression that ships. A cost budget catches that; a test on the
+string would not, because the string could stay the same while the heuristic
+around it changed.

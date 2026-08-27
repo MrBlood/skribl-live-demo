@@ -3680,21 +3680,43 @@ function tweenMismatch(a, b){
   return null;
 }
 
-/* Opacity rides INSIDE the colour as rgba() -- see alphaOf/solidOf above. This
-   multiplies whatever alpha a point already carries rather than replacing it,
-   so a stroke the user already drew see-through stays proportionally fainter in
-   the exposure instead of being promoted to full strength. */
+/* Opacity rides INSIDE the colour, and the FORM it is written in is the whole
+   difference between an exposure that plays and one that stalls.
+
+   THE BUG THIS FIXES, reported from a phone: "it takes 2 seconds to play 3
+   frames". paintStatic gives every translucent stroke its own offscreen layer
+   -- clear a full canvas, redraw, composite it back -- to stop a see-through
+   stroke beading at its own overlaps. That is right for a stroke somebody drew.
+   An exposure is 27 samples of every limb, so a six-limb figure is 162
+   translucent strokes and ~486 full-canvas operations PER FRAME. Measured: 221
+   ms to render one in-between against a 12 fps budget of 83 ms, and worse on a
+   denser drawing. The render blocks the timer, so the previous frame sits on
+   screen while it works -- which is exactly what the pauses were.
+
+   AND THE LAYERING IS WRONG FOR THIS CONTENT ANYWAY. It exists to stop a stroke
+   compounding at its own overlaps; an exposure IS compounding overlaps. The
+   density where samples pile up is the effect.
+
+   So the fade is written as an 8-digit hex (#rrggbbaa) rather than rgba(). Both
+   renderers decide whether to layer by matching the rgba() FUNCTION form --
+   alphaOf here, parseStrokeAlpha in app.js, which is also the player's renderer
+   -- and neither matches a hex. Canvas honours the alpha either way and
+   accumulates it (verified: two passes of #ffffff21 over black give 33 then
+   61). Result: 221 ms -> 5.6 ms, the same picture, and NOTHING else changes --
+   no new field, no renderer edit, no contract for the player to learn.
+
+   IT IS A DELIBERATE USE OF THE FORM, not an accident of one. Teaching alphaOf
+   to understand hex would make exposures slow again -- not broken, just slow --
+   so verify_tween pins the render cost, which is the assertion that would catch
+   it. Anything a user draws still arrives as rgba() and still gets its layer. */
 function tweenFade(col, mul){
   const solid = solidOf(col);
-  const a = alphaOf(col) * mul;
+  const a = Math.max(0, Math.min(1, alphaOf(col) * mul));
+  const hx = n => ('0' + Math.round(n).toString(16)).slice(-2);
   const m = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(solid);
-  if(m) return 'rgba(' + m[1] + ', ' + m[2] + ', ' + m[3] + ', ' + a.toFixed(3) + ')';
+  if(m) return '#' + hx(+m[1]) + hx(+m[2]) + hx(+m[3]) + hx(a * 255);
   const h = /^#([0-9a-f]{6})$/i.exec(String(col).trim());
-  if(h){
-    const n = parseInt(h[1], 16);
-    return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', '
-         + (n & 255) + ', ' + a.toFixed(3) + ')';
-  }
+  if(h) return '#' + h[1].toLowerCase() + hx(a * 255);
   return col;
 }
 

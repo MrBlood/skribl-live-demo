@@ -1239,6 +1239,33 @@ player already honours it. So the generated page is editable, erasable,
 exportable and postable like any other, and the suite proves that end to end
 rather than asserting it.
 
+**The fade is an 8-digit hex, and that is a performance decision, not a style
+one.** Reported from a phone: *"it takes 2 seconds to play 3 frames."*
+`paintStatic` gives every translucent stroke its own offscreen layer — clear a
+full canvas, redraw, composite back — to stop a see-through stroke beading at
+its own overlaps. An exposure is 27 samples of *every* stroke, so a six-limb
+figure is **162 translucent strokes and ~486 full-canvas operations per frame**:
+measured at **221 ms against a 12 fps budget of 83 ms**. The render blocks the
+play timer, so the *previous* frame sits on screen while it works — which is why
+the stall appeared on the page **before** the in-between as well as on it.
+
+The layering is also simply wrong for this content: it exists to stop a stroke
+compounding at its own overlaps, and an exposure *is* compounding overlaps —
+the density where samples pile up is the whole effect.
+
+Both renderers decide whether to layer by matching the `rgba()` **function**
+form — `alphaOf` in `flip.js`, `parseStrokeAlpha` in `app.js`, which is also the
+**player's** renderer — and neither matches a hex. Canvas honours `#rrggbbaa`
+and accumulates it either way. **221 ms → 5.8 ms, the same picture** (+3% ink
+from the extra accumulation), with no new field, no renderer edit, and nothing
+for the player to learn.
+
+It is a deliberate use of the form. Teaching `alphaOf` to understand hex would
+make exposures slow again — *not broken, just slow*, which is exactly the kind
+of regression that ships — so the suite pins the **render cost**, which is the
+assertion that catches it. A test on the colour string would not: the string
+could stay the same while the heuristic around it changed.
+
 **The point budget is the hazard.** Multiplying a page by 27 is precisely how a
 feature makes a drawing unpostable: the server refuses a frame over 20,000
 points, and it would refuse it at the moment the user tried to share, with no

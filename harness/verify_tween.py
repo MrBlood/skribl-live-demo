@@ -30,6 +30,7 @@ redraws have nothing to pair, and inventing a pairing would produce a mess that
 looks like a bug in the tool rather than a limit of the idea.
 """
 import os
+import re
 import sys
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
@@ -108,9 +109,61 @@ with sync_playwright() as p:
           f"{sum(1 for q in tw['strokes'] if q.get('start'))} starts for "
           f"{len(tw['strokeGroups'])} groups — a start partway through a run is "
           f"the shape the server rejects")
+    # Asserted on the ALPHA, not on the string form. This checked for "rgba" in
+    # the colour until the fade moved to an 8-digit hex for the render cost —
+    # the intent (the samples are faded) never changed, only the spelling. A
+    # test that pins a spelling fails for the wrong reason and teaches nothing.
+    def _alpha(c):
+        c = str(c or "")
+        if c.startswith("#") and len(c) == 9:
+            return int(c[7:9], 16) / 255
+        m = re.search(r"rgba\([^)]*,\s*([\d.]+)\s*\)", c)
+        return float(m.group(1)) if m else 1.0
+    faded = [_alpha(q.get("color")) for q in tw["strokes"]]
     check("the samples are faded, not solid",
-          all("rgba" in str(q.get("color", "")) for q in tw["strokes"]),
-          "opacity rides inside the colour; solid samples would read as copies")
+          faded and all(0 < a < 0.5 for a in faded),
+          f"alphas {sorted(set(round(a, 3) for a in faded))[:4]} — solid samples "
+          f"would read as stacked copies, not an exposure")
+
+    print("\nIN-BETWEEN — it has to be cheap enough to PLAY")
+    # REPORTED FROM A PHONE: "it takes 2 seconds to play 3 frames". paintStatic
+    # gives every translucent stroke its own offscreen layer — clear a full
+    # canvas, redraw, composite back — to stop a see-through stroke beading at
+    # its own overlaps. An exposure is 27 samples of every stroke, so a six-limb
+    # figure is 162 translucent strokes and ~486 full-canvas ops PER FRAME:
+    # measured at 221 ms against a 12 fps budget of 83 ms. The render blocks the
+    # timer, so the PREVIOUS frame sits on screen while it works, which is what
+    # the pauses were.
+    #
+    # The fade is written as an 8-digit hex rather than rgba() because both
+    # renderers decide whether to layer by matching the rgba() FUNCTION form —
+    # alphaOf here, parseStrokeAlpha in app.js, which is also the PLAYER's
+    # renderer — and neither matches a hex. Canvas honours it and accumulates
+    # it either way. 221 ms -> 5.8 ms with no new field and nothing for the
+    # player to learn.
+    #
+    # THIS ASSERTION IS THE ONE THAT KEEPS IT. Teaching alphaOf to understand
+    # hex would make exposures slow again — not broken, just slow, which is
+    # exactly the kind of regression that ships. A cost budget catches it; an
+    # assertion about the colour string would not, because the string could stay
+    # the same while the heuristic around it changed.
+    ms = page.evaluate("""() => {
+      go(1);
+      const t0 = performance.now();
+      for (let k = 0; k < 10; k++) render();
+      return (performance.now() - t0) / 10;
+    }""")
+    budget = 1000 / 12
+    check("an in-between renders well inside one frame at 12 fps",
+          ms < budget / 2,
+          f"{ms:.1f} ms against a {budget:.0f} ms frame — layered it was 221 ms, "
+          f"and the stall showed on the page BEFORE it because the render blocks "
+          f"the play timer")
+    form = page.evaluate("() => frames[1].strokes[0].color")
+    check("...because the fade is an 8-digit hex, not rgba()",
+          isinstance(form, str) and form.startswith("#") and len(form) == 9,
+          f"{form!r} — rgba() would send every sample through its own "
+          f"full-canvas layer, in the editor AND in the player")
 
     print("\nIN-BETWEEN — the blur is UNEVEN, which is the whole effect")
     # THE PROPERTY THAT MATTERS. The arm travels 150px and the foot 2px, so the
