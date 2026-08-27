@@ -1526,7 +1526,19 @@ function syncFlipDuration(){
 function syncPagebar(){
   if(!pagebar) return;
   const f=frames[idx], n=frames.length;
-  if(pbWho) pbWho.textContent='Page '+(idx+1)+(n>1?' / '+n:'');
+  /* "21/43", not "Page 21 / 43". The word cost 40px in a bar that was ALREADY
+     overflowing: nowrap, and at 360 its contents measured 369px inside 340,
+     so the Delete button was being clipped off the end before any of tonight's
+     work went near it. In a bar whose every other control is a page operation,
+     sitting directly above a filmstrip of numbered pages, "Page" is a word
+     spending real estate to say what the context already says.
+     The ACCESSIBLE name keeps the full sentence — terse to look at, complete to
+     listen to, which is the trade a visual abbreviation should always make. */
+  if(pbWho){
+    pbWho.textContent = (idx+1) + (n>1 ? '/' + n : '');
+    pbWho.setAttribute('aria-label', 'Page ' + (idx+1) + (n>1 ? ' of ' + n : ''));
+    pbWho.title = 'Page ' + (idx+1) + (n>1 ? ' of ' + n : '');
+  }
   if(pbLeft) pbLeft.disabled = playing || idx===0;
   if(pbRight) pbRight.disabled = playing || idx===n-1;
   if(pbCopy) pbCopy.disabled = playing;
@@ -1603,10 +1615,12 @@ function buildStrip(){
   // SVG icons in the page bar beside it.
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
+    +'<button class="addbtn mini" id="addtween" title="Generate the motion between this page and the next, like a long exposure"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>In-between</button>'
     + (pageClip ? '<button class="addbtn mini" id="addpaste"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Paste</button>' : '');
   strip.appendChild(col);
   col.querySelector('#addcopy').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(true); });
   col.querySelector('#addblank').addEventListener('click',()=>{ if(playing) return; if(moveMode){ chip('Finish or cancel the move first'); return; } addFrame(false); });
+  col.querySelector('#addtween').addEventListener('click', addTween);
   syncPagebar();
   syncFlipDuration();
   if(typeof syncMoveLabel === 'function') syncMoveLabel();
@@ -3607,6 +3621,139 @@ function selRestore(pts){
   const f = frame();
   for(const o of pts){ const p = f.strokes[o.i]; if(!p) continue;
     p.x = o.x; p.y = o.y; if(o.size != null) p.size = o.size; }
+}
+
+/* ---------- v237: the in-between -------------------------------------------
+   A GENERATED PAGE THAT LOOKS LIKE A LONG EXPOSURE.
+
+   The reference is stop-motion: a puppet photographed while it MOVED, so one
+   frame integrates the whole path between two poses. What sells it is not the
+   blur -- it is that the blur is UNEVEN. The feet, which barely travelled, come
+   out nearly sharp; the arms, which swung furthest, smear away to nothing.
+
+   That gradient is the reason this can be done honestly here. Sample the motion
+   between two pages at N steps and draw every step faintly: a point that hardly
+   moves lays all N of its copies on top of each other and stays crisp, and a
+   point that travels far spreads them along its path and goes soft. Nobody has
+   to author the falloff. It is what integrating a motion MEANS, and it falls
+   out of the arithmetic.
+
+   IT IS ORDINARY STROKE DATA. No new field, no raster layer, no change the
+   player has to learn -- opacity already rides inside each point's rgba() and
+   the player already honours it. The generated page is a page like any other:
+   editable, erasable, exportable, postable, and drawn by the replay in order.
+
+   WHAT IT NEEDS FROM YOU is two pages whose strokes CORRESPOND -- the same
+   strokes, moved. That is exactly what Duplicate then drag produces, which is
+   already the way the app is used. Two freehand redraws have no correspondence
+   to interpolate, and rather than guess at a pairing and produce a mess, this
+   refuses and says why.
+
+   NOT BLURRED, deliberately, for now. 26 samples with no blur is most of the
+   way to the photograph and costs nothing; the faint ribbing left over reads as
+   a drawn in-between rather than a photographic one, which suits an app that
+   looks like a printed zine. A real gaussian is one render attribute away
+   (ctx.filter carries it) but that attribute is a contract the PLAYER has to
+   honour too -- the same trap the `pressure` note further up records -- so it
+   is a decision to make on purpose and later, not a default to slide in. */
+
+/* The point budget again, and for the same reason as liquify's: the server
+   refuses a frame over MAX_POINTS_PER_FRAME (20,000), so a feature that
+   MULTIPLIES a page by N can make a drawing unpostable at the moment somebody
+   tries to share it. N adapts to the page instead of being a constant: a light
+   page gets the full 26 samples, a heavy one gets fewer and a coarser exposure,
+   and a page too heavy for even a handful says so rather than producing a
+   frame the server will reject. */
+const TWEEN_SAMPLES = 26;
+const TWEEN_MIN_SAMPLES = 6;
+const TWEEN_POINT_CAP = 14000;
+
+/* Two pages can be interpolated only if their strokes line up: same number of
+   groups, same number of points in each. Returns null when they do not, and the
+   caller turns that into a sentence rather than a shrug. */
+function tweenMismatch(a, b){
+  if(!a || !b) return 'two pages';
+  if(!a.strokes.length || !b.strokes.length) return 'two pages with drawing on them';
+  if(a.strokeGroups.length !== b.strokeGroups.length) return 'the same strokes on both';
+  for(let i = 0; i < a.strokeGroups.length; i++)
+    if(a.strokeGroups[i] !== b.strokeGroups[i]) return 'the same strokes on both';
+  return null;
+}
+
+/* Opacity rides INSIDE the colour as rgba() -- see alphaOf/solidOf above. This
+   multiplies whatever alpha a point already carries rather than replacing it,
+   so a stroke the user already drew see-through stays proportionally fainter in
+   the exposure instead of being promoted to full strength. */
+function tweenFade(col, mul){
+  const solid = solidOf(col);
+  const a = alphaOf(col) * mul;
+  const m = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(solid);
+  if(m) return 'rgba(' + m[1] + ', ' + m[2] + ', ' + m[3] + ', ' + a.toFixed(3) + ')';
+  const h = /^#([0-9a-f]{6})$/i.exec(String(col).trim());
+  if(h){
+    const n = parseInt(h[1], 16);
+    return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', '
+         + (n & 255) + ', ' + a.toFixed(3) + ')';
+  }
+  return col;
+}
+
+/* Builds the exposure between pages A and B. Returns a frame, or null with the
+   reason already chipped. */
+function buildTween(a, b){
+  const why = tweenMismatch(a, b);
+  if(why){ chip('An in-between needs ' + why); return null; }
+  const per = a.strokes.length;
+  let n = Math.min(TWEEN_SAMPLES, Math.floor(TWEEN_POINT_CAP / Math.max(1, per)));
+  if(n < TWEEN_MIN_SAMPLES){
+    chip('This page is too heavy for an in-between');
+    return null;
+  }
+  // Enough per sample that the exposure sums to a readable figure, capped so a
+  // short sample count does not come out as a stack of hard copies.
+  const fade = Math.min(0.30, Math.max(0.06, 2.6 / n));
+  const out = { strokes: [], strokeGroups: [], hold: 1 };
+  for(let s = 0; s <= n; s++){
+    const t = s / n;
+    let at = 0;
+    for(let g = 0; g < a.strokeGroups.length; g++){
+      const count = a.strokeGroups[g];
+      for(let k = 0; k < count; k++){
+        const pa = a.strokes[at + k], pb = b.strokes[at + k];
+        const q = Object.assign({}, pa);
+        q.x = pa.x + (pb.x - pa.x) * t;
+        q.y = pa.y + (pb.y - pa.y) * t;
+        if(typeof pa.size === 'number' && typeof pb.size === 'number')
+          q.size = pa.size + (pb.size - pa.size) * t;
+        q.color = tweenFade(pa.color, fade);
+        // Every sample is its own stroke, so `start` belongs on its first point
+        // and nowhere else -- copying pa.start wholesale would mint a start
+        // partway through a run, which is the shape the server rejects.
+        if(k === 0) q.start = true; else delete q.start;
+        // Timestamps march across the exposure so REPLAY draws it as a sweep
+        // rather than flashing the whole thing into existence at once.
+        if(typeof pa.t === 'number') q.t = pa.t + (s * 8);
+        out.strokes.push(q);
+      }
+      out.strokeGroups.push(count);
+      at += count;
+    }
+  }
+  return out;
+}
+
+/* Inserts the exposure between this page and the next. */
+function addTween(){
+  if(playing) return;
+  if(moveMode){ chip('Finish or cancel the move first'); return; }
+  const a = frames[idx], b = frames[idx + 1];
+  if(!b){ chip('An in-between goes BETWEEN two pages — add the next pose first'); return; }
+  const t = buildTween(a, b);
+  if(!t) return;
+  invalidateClearUndo(); redoStack.length = 0;
+  frames.splice(idx + 1, 0, t); idx++;
+  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+  chip('In-between added');
 }
 
 /* ---------- v236: liquify ----------------------------------------------------

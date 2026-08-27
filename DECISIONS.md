@@ -1432,3 +1432,71 @@ Two changes, both of which belong in any suite that builds its own fixtures:
 `fresh()` restores the pen and ASSERTS it, and `line()` asserts that the stroke
 count actually went up. The suite is allowed to fail; it is not allowed to
 measure the wrong thing and call it a pass.
+
+---
+
+## v237 -- The in-between, and what the reference photograph was actually showing
+
+**THE OWNER ASKED FOR A REAL SMUDGE, "used to simulate motion", and then sent a
+stop-motion reference:** three frames of a wire puppet, the middle one blurred.
+Reading that photograph properly is what produced this feature, and my earlier
+answers had all been aimed at the wrong target.
+
+What sells that middle frame is NOT blur. It is that the blur is UNEVEN -- the
+feet, which barely travelled, are nearly sharp; the arms, which swung furthest,
+smear away to nothing. It is one long exposure integrating the path between two
+poses, and the sharpness gradient IS the motion information.
+
+**That is why it can be done honestly in a stroke document.** Sample the motion
+between two pages at N steps and draw every step faintly. A point that hardly
+moves lays all N of its copies on top of each other and stays crisp; a point
+that travels far spreads them along its path and goes soft. Nobody authors the
+falloff -- it is what integrating a motion MEANS. Measured in the suite: the arm
+tip spans 150px across the exposure and the foot spans 2px.
+
+**NO FORMAT CHANGE AT ALL, which is the part I got wrong three times before
+getting right.** I said blur needed a raster layer; then that it needed a render
+attribute the player must learn. Neither is true of THIS. Opacity already rides
+inside each point's rgba() and the player already honours it, so an exposure is
+just strokes -- editable, erasable, exportable, postable, replayed in order like
+anything else. The player was never told about it and did not need to be.
+
+**The blur is still available and still a decision.** ctx.filter carries a real
+gaussian and it works in this engine (measured). 26 samples unblurred is most of
+the way to the photograph; the faint ribbing left over reads as a DRAWN
+in-between rather than a photographic one, which suits an app that looks like a
+printed zine. Adding the gaussian means a render attribute the PLAYER has to
+honour -- the same trap the `pressure` note records -- so it waits for the owner
+to see this in the app first.
+
+**THE POINT BUDGET IS THE HAZARD, again.** Multiplying a page by 27 is exactly
+how a feature makes a drawing unpostable: the server refuses a frame over 20,000
+points, and it would refuse at the moment the user tried to share, with no
+earlier warning. N adapts -- a 900-point page that would have produced 24,300
+points produces 14,400 instead. Third feature in a row where the cap was the
+thing that needed designing around rather than discovering.
+
+**It refuses rather than guessing.** Interpolation needs corresponding strokes,
+which Duplicate-then-drag produces and two freehand redraws do not. Inventing a
+pairing would produce a mess that reads as a bug in the tool rather than a limit
+of the idea, so it says "An in-between needs the same strokes on both".
+
+## v237 -- "Page 21 / 43" was clipping the Delete button
+
+The counter cost 69px against 30px for "21/43", in a `nowrap` bar whose contents
+already measured **369px inside 340** at a 360px viewport. The last button was
+being cut off, and had been for some time -- found while answering the owner's
+question about whether there was room for a new button, which there was, because
+the new button is in the FILMSTRIP and never competed with this bar at all.
+
+In a bar whose every other control is a page operation, directly above a
+filmstrip of numbered pages, "Page" was spending real estate to say what the
+context already said.
+
+**The accessible name keeps the full sentence** (`aria-label="Page 21 of 43"`).
+An abbreviation may shorten how a control LOOKS; it may never shorten its
+accessible name. Both halves are asserted, so a later tidy-up cannot drop the
+spoken one -- and verify_pages, which asserted `"Page " in textContent`, now
+asserts the INTENT (a digit on screen, "Page" in the accessible name) rather
+than the wording. A test that contradicts a change is a claim to be understood
+before it is a blocker to be edited.

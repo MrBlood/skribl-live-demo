@@ -172,9 +172,19 @@ with sync_playwright() as p:
     flip.evaluate("() => go(frames.length-1)"); flip.wait_for_timeout(250)
     check("Move-right is disabled on the last page",
           flip.evaluate("() => document.getElementById('pbRight').disabled"))
-    check("the toolbar names the selected page",
-          "Page " in flip.evaluate("() => document.getElementById('pbWho').textContent"),
-          flip.evaluate("() => document.getElementById('pbWho').textContent"))
+    # The VISIBLE text lost the word "Page" at v237 — it read "Page 21 / 43" and
+    # cost 69px in a nowrap bar whose contents already measured 369px inside
+    # 340 at a 360px viewport, so the Delete button was clipped off the end. The
+    # intent of this assertion is that the bar tells you which page is selected,
+    # and that is still true: the number is on screen and the ACCESSIBLE name
+    # still reads "Page 21 of 43". Asserting the intent rather than the wording,
+    # and asserting BOTH halves so a future tidy-up cannot drop the spoken one.
+    _who = flip.evaluate("""() => { const e = document.getElementById('pbWho');
+        return { txt: e.textContent.trim(), aria: e.getAttribute('aria-label') }; }""")
+    check("the toolbar names the selected page, on screen and to a screen reader",
+          any(c.isdigit() for c in _who["txt"]) and "Page" in (_who["aria"] or ""),
+          f"{_who} — an abbreviation may shorten how a control LOOKS, never its "
+          f"accessible name")
     check("no controls overlay the thumbnail any more",
           flip.evaluate("() => !document.querySelector('.frame-ops')"))
     # VISIBLE targets only. This selected every .pb on the page, which now

@@ -1,0 +1,258 @@
+"""The in-between: a generated page that looks like a long exposure.
+
+WHAT IT IMITATES. Stop-motion shot with the shutter open while the puppet moves,
+so one frame integrates the whole path between two poses. What sells that look is
+not blur — it is that the blur is UNEVEN. The feet, which barely travelled, come
+out nearly sharp; the arms, which swung furthest, smear away to nothing.
+
+That gradient is why this can be done honestly in a stroke document. Sample the
+motion between two pages at N steps and draw every step faintly: a point that
+hardly moves lays all N copies on top of each other and stays crisp; a point that
+travels far spreads them along its path and goes soft. Nobody authors the
+falloff. It is what integrating a motion MEANS, and it falls out of the
+arithmetic — which is the property this suite pins, because it is the one that
+would be quietly lost if somebody "optimised" the sampling later.
+
+IT IS ORDINARY STROKE DATA. No new field, no raster layer, nothing the player
+must learn: opacity already rides inside each point's rgba() and the player
+already honours it. So the generated page posts and replays like any other, and
+this suite proves that end to end rather than asserting it.
+
+THE POINT BUDGET IS THE HAZARD. Multiplying a page by 27 is exactly how a
+feature makes a drawing unpostable — the server refuses a frame over
+MAX_POINTS_PER_FRAME (20,000), and it would refuse it at the moment the user
+tries to share, having given no earlier warning. N adapts to the page instead of
+being a constant, and there are assertions here for both ends of that.
+
+IT REFUSES RATHER THAN GUESSES. Interpolation needs the two pages to correspond
+— same strokes, moved — which is what Duplicate-then-drag produces. Two freehand
+redraws have nothing to pair, and inventing a pairing would produce a mess that
+looks like a bug in the tool rather than a limit of the idea.
+"""
+import os
+import sys
+
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
+
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    print("SKIP: playwright is not installed")
+    sys.exit(0)
+
+results = []
+
+
+def check(name, ok, detail=""):
+    results.append((bool(ok), name))
+    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+
+
+# Two corresponding poses, built by writing the arrays directly. Drawing them by
+# mouse would be more realistic and less honest: what matters here is that the
+# two pages CORRESPOND, and constructing them makes that explicit rather than
+# hoping two mouse gestures happened to produce the same structure.
+POSES = """(spread) => {
+  // one 'limb' of 3 points, plus a 'foot' of 3 that barely moves
+  const mk = (armY, footY) => ({
+    strokes: [
+      { x: 100, y: 100,    color: '#ffffff', size: 6, t: 0, erase: false, start: true },
+      { x: 150, y: armY,   color: '#ffffff', size: 6, t: 1, erase: false },
+      { x: 200, y: armY,   color: '#ffffff', size: 6, t: 2, erase: false },
+      { x: 100, y: 300,    color: '#ffffff', size: 6, t: 3, erase: false, start: true },
+      { x: 120, y: footY,  color: '#ffffff', size: 6, t: 4, erase: false },
+      { x: 140, y: footY,  color: '#ffffff', size: 6, t: 5, erase: false }
+    ],
+    strokeGroups: [3, 3], hold: 1
+  });
+  frames.length = 0;
+  frames.push(mk(200, 320));            // arm low,  foot at 320
+  frames.push(mk(200 - spread, 322));   // arm HIGH, foot moved 2px
+  idx = 0; actionLog.length = 0; redoStack.length = 0;
+  buildStrip(); render();
+}"""
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page(viewport={"width": 1100, "height": 900})
+    errs = []
+    page.on("pageerror", lambda e: errs.append(str(e)))
+    page.goto(BASE + "/flip", wait_until="load")
+    page.wait_for_timeout(1500)
+
+    print("IN-BETWEEN — it generates a page between two poses")
+    check("Flip booted", page.evaluate("() => !!(window.__skriblBoot && window.__skriblBoot.flip)"),
+          "; ".join(errs[:2]))
+    page.evaluate(POSES, 150)
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
+    check("a page was inserted BETWEEN the two poses",
+          page.evaluate("() => frames.length") == 3
+          and page.evaluate("() => idx") == 1,
+          f"{page.evaluate('() => frames.length')} pages, at index "
+          f"{page.evaluate('() => idx')}")
+    check("...and the two poses are untouched either side of it",
+          page.evaluate("() => frames[0].strokes.length") == 6
+          and page.evaluate("() => frames[2].strokes.length") == 6,
+          "an in-between must not edit what it interpolates")
+
+    tw = page.evaluate("() => frames[1]")
+    check("the generated page is made of ordinary strokes",
+          len(tw["strokes"]) > 6 and len(tw["strokeGroups"]) > 2,
+          f"{len(tw['strokes'])} points in {len(tw['strokeGroups'])} groups")
+    check("strokeGroups accounts for every point",
+          len(tw["strokes"]) == sum(tw["strokeGroups"]),
+          f"{len(tw['strokes'])} vs {sum(tw['strokeGroups'])} — the share-blocking bug")
+    check("every sample carries exactly one start flag",
+          sum(1 for q in tw["strokes"] if q.get("start")) == len(tw["strokeGroups"]),
+          f"{sum(1 for q in tw['strokes'] if q.get('start'))} starts for "
+          f"{len(tw['strokeGroups'])} groups — a start partway through a run is "
+          f"the shape the server rejects")
+    check("the samples are faded, not solid",
+          all("rgba" in str(q.get("color", "")) for q in tw["strokes"]),
+          "opacity rides inside the colour; solid samples would read as copies")
+
+    print("\nIN-BETWEEN — the blur is UNEVEN, which is the whole effect")
+    # THE PROPERTY THAT MATTERS. The arm travels 150px and the foot 2px, so the
+    # arm's samples must spread and the foot's must pile up. If a future change
+    # made sampling uniform in SPACE rather than in TIME, or clamped the spread,
+    # this is what would catch it — and the picture would silently stop looking
+    # like a long exposure while every other assertion here still passed.
+    spread = page.evaluate("""() => {
+      const f = frames[1];
+      const arm = [], foot = [];
+      let at = 0;
+      for (let g = 0; g < f.strokeGroups.length; g++) {
+        const n = f.strokeGroups[g];
+        // group 0 of each sample is the arm, group 1 is the foot
+        (g % 2 === 0 ? arm : foot).push(f.strokes[at + 2].y);
+        at += n;
+      }
+      const rng = a => Math.max(...a) - Math.min(...a);
+      return { arm: rng(arm), foot: rng(foot) };
+    }""")
+    check("the part that moved FAR is spread across the exposure",
+          spread["arm"] > 100, f"arm tip spans {spread['arm']:.0f}px")
+    check("...and the part that barely moved stays piled up (nearly sharp)",
+          spread["foot"] < 6, f"foot spans {spread['foot']:.0f}px")
+    check("the ratio is the falloff, and nobody authored it",
+          spread["arm"] > spread["foot"] * 20,
+          f"{spread['arm']:.0f}px against {spread['foot']:.0f}px — this is what "
+          f"makes it read as a long exposure rather than a smudge")
+
+    print("\nIN-BETWEEN — it refuses rather than guessing")
+    page.evaluate("""() => {
+      frames.length = 0;
+      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
+                              {x:90,y:90,color:'#fff',size:6,t:1,erase:false}],
+                    strokeGroups: [2], hold: 1 });
+      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
+                              {x:50,y:50,color:'#fff',size:6,t:1,erase:false},
+                              {x:90,y:90,color:'#fff',size:6,t:2,erase:false}],
+                    strokeGroups: [3], hold: 1 });
+      idx = 0; buildStrip(); render();
+    }""")
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(300)
+    check("two pages that do NOT correspond produce no page",
+          page.evaluate("() => frames.length") == 2,
+          "inventing a pairing would produce a mess that reads as a bug in the "
+          "tool rather than a limit of the idea")
+    check("...and the refusal says what is needed",
+          "same strokes" in (page.evaluate(
+              "() => (document.getElementById('flipChip')||{}).textContent") or ""),
+          page.evaluate("() => (document.getElementById('flipChip')||{}).textContent"))
+
+    page.evaluate(POSES, 150)
+    page.evaluate("() => go(1)")          # last page: nothing to interpolate TO
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(300)
+    check("on the last page it explains there is no next pose",
+          page.evaluate("() => frames.length") == 2
+          and "BETWEEN" in (page.evaluate(
+              "() => (document.getElementById('flipChip')||{}).textContent") or ""),
+          page.evaluate("() => (document.getElementById('flipChip')||{}).textContent"))
+
+    print("\nIN-BETWEEN — the point budget, at both ends")
+    # A page heavy enough that 26 samples would blow the server's 20,000 cap.
+    page.evaluate("""() => {
+      const pts = [];
+      for (let i = 0; i < 900; i++)
+        pts.push({ x: 100 + i * 0.5, y: 100 + (i % 40), color: '#ffffff',
+                   size: 6, t: i, erase: false, start: i === 0 });
+      const mk = dy => ({ strokes: pts.map(q => Object.assign({}, q, {y: q.y + dy})),
+                          strokeGroups: [900], hold: 1 });
+      frames.length = 0; frames.push(mk(0)); frames.push(mk(120));
+      idx = 0; buildStrip(); render();
+    }""")
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(500)
+    made = page.evaluate("() => frames.length === 3 ? frames[1].strokes.length : 0")
+    check("a heavy page still gets an in-between",
+          made > 0, "refusing outright would be worse than a coarser exposure")
+    check("...and it stays under the server's 20,000-point cap",
+          0 < made < 20000,
+          f"{made} points — 27 samples of this page would be {900*27}, which the "
+          f"server would refuse at the moment the user tried to share")
+
+    print("\nIN-BETWEEN — and the server takes it")
+    page.evaluate(POSES, 150)
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
+    posted = page.evaluate("""async (base) => {
+      const frs = frames.map(f => ({ strokes: f.strokes, strokeGroups: f.strokeGroups,
+                                     background: '#0d0f14' }));
+      const r = await fetch(base + '/api/skribls', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'tween', kind: 'flip', frames: frs, fps: 12 }) });
+      let body = null; try { body = await r.json(); } catch (e) {}
+      return { ok: r.ok, status: r.status, body: body };
+    }""", BASE)
+    check("a document containing an in-between POSTS",
+          posted.get("ok"), f"{posted.get('status')} {str(posted.get('body'))[:160]}")
+    if posted.get("ok"):
+        url = (posted["body"] or {}).get("url") or "/s/" + ((posted["body"] or {}).get("slug") or "")
+        viewer = browser.new_page(viewport={"width": 900, "height": 800})
+        verrs = []
+        viewer.on("pageerror", lambda e: verrs.append(str(e)))
+        viewer.goto(BASE + url, wait_until="load")
+        viewer.wait_for_timeout(2400)
+        check("...and the player renders it, having learnt nothing",
+              not verrs, "; ".join(verrs[:2]))
+        viewer.close()
+
+    print("\nPAGE BAR — the counter earns its width")
+    # "Page 21 / 43" cost 69px in a nowrap bar whose contents already measured
+    # 369px inside 340 at 360px wide — the Delete button was clipped off the end
+    # before the in-between button existed. This is that fix, pinned.
+    page.evaluate("""() => { frames.length = 0;
+      for (let i = 0; i < 9; i++) frames.push({strokes:[],strokeGroups:[],hold:1});
+      idx = 3; buildStrip(); render(); }""")
+    page.wait_for_timeout(300)
+    lbl = page.evaluate("""() => { const e = document.getElementById('pbWho');
+      return { txt: e.textContent.trim(), aria: e.getAttribute('aria-label'),
+               w: Math.round(e.getBoundingClientRect().width) }; }""")
+    check("the counter is terse to look at", lbl["txt"] == "4/9", f"{lbl['txt']!r}")
+    check("...and complete to listen to",
+          lbl["aria"] == "Page 4 of 9",
+          f"{lbl['aria']!r} — an abbreviation may shorten the LOOK of a control, "
+          f"never its accessible name")
+
+    for w in (320, 360, 393):
+        page.set_viewport_size({"width": w, "height": 880})
+        page.wait_for_timeout(300)
+        fit = page.evaluate("""() => { const b = document.getElementById('pagebar');
+          return { w: Math.round(b.getBoundingClientRect().width),
+                   sw: Math.round(b.scrollWidth) }; }""")
+        check(f"the page bar fits at {w}px",
+              fit["sw"] <= fit["w"],
+              f"{fit['sw']}px of content in {fit['w']}px — nowrap, so the overflow "
+              f"is a clipped button rather than a second row")
+
+    check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
+    browser.close()
+
+bad = [r for r in results if not r[0]]
+print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
+      + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))
+sys.exit(1 if bad else 0)
