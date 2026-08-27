@@ -1134,6 +1134,51 @@ brush-size preview dot, the size-preset dots, the music playhead, the spinner's
 leading arc, and the ring around the selected swatch. Those were found by
 looking, not by asserting.
 
+## Suites: verify_fuzz.py
+
+**Every other suite here tests a feature. This one tests the document**, against
+the single rule that has broken three separate times for three unrelated
+reasons:
+
+```
+'frames[9].strokeGroups' accounts for 317 points, but the strokes array contains 318.
+```
+
+That is the server refusing a share. It is not cosmetic — the user has finished
+a drawing and the app will not let them post it — and all three occurrences were
+found the same way: in production, by the owner, on a phone. The causes were a
+second pointer landing mid-stroke, a page change mid-stroke, and a shape
+committing its group before its points. **Nothing they had in common was visible
+in a diff, and no feature suite would have caught any of them, because each one
+only appears when two features interleave.**
+
+So this drives the editor the way a person actually uses it — a shuffled stream
+of draws, erases, page adds and deletes, duplicates, selections, moves, mirrors,
+cuts, pastes, smudges, undos and redos — and re-checks the invariants after
+**every** operation: strokes length equals the sum of strokeGroups, every group
+count is a positive integer, the page index is in range, every coordinate is
+finite. Then it posts the result and requires the server to take it. That last
+step is the one that matters: **the invariants are this file's model of the
+rule; the POST is the rule.** If `validation.py` and this file ever disagree,
+that assertion is what says so.
+
+**The seed is fixed and printed**, and the last dozen operations are dumped on
+failure. A fuzz failure that cannot be replayed is a story, not a bug report.
+
+**Two anti-vacuity assertions, and they are not decoration.** The first version
+guessed the page-operation names (`addPage`, `dupPage`, `delPage`; the real ones
+are `addFrame(copy)` and `delFrame(i)`) and wrapped them in
+`typeof fn === 'function'` guards. Every page operation became a silent no-op:
+the fuzz spent its whole budget on one page and reported a confident pass having
+never changed page at all — while the invariants, which an untouched empty
+document satisfies trivially, stayed green throughout. So the suite now asserts
+that it drew something *and* that it used more than one page. **A guard that
+skips is a guard that lies about coverage.**
+
+**A failure here does not mean "the fuzzer is flaky."** Every operation is
+something a person can do with a mouse, in an order a person could do it in. If
+this goes red, some pair of features has stopped composing.
+
 ## Suites: verify_smudge.py
 
 **A smudge tool on a document that has no pixels.** Every smudge tool you have
