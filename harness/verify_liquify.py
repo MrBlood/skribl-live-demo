@@ -42,9 +42,15 @@ of the gesture to different artwork, at indices that mean something else there,
 and hand undo a before/after pair for strokes nobody touched. The frame is
 pinned at pointerdown and there is an assertion for it here.
 """
+import os
 import sys
 
-BASE = "http://127.0.0.1:5001"
+# Overridable like verify_parity's and verify_fuzz's, so this can be pointed at
+# a scratch instance while the main harness holds 5001. Without it, a run
+# against a worktree silently tests the OTHER checkout — which is exactly what
+# happened once, reporting "liquifySubdivide is not defined" for code that was
+# sitting right there on disk.
+BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 try:
     from playwright.sync_api import sync_playwright
@@ -84,6 +90,16 @@ def fresh(page):
     }""")
     assert page.evaluate("() => frames[0].strokes.length") == 0
     assert page.evaluate("() => flipTool") == "pen"
+
+
+INK = """() => {
+  const c = document.getElementById('pad');
+  const g = c.getContext('2d', { willReadFrequently: true });
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  let lit = 0, mass = 0;
+  for (let i = 0; i < d.length; i += 4) { if (d[i] > 128) lit++; mass += d[i]; }
+  return { lit: lit, mass: mass };
+}"""
 
 
 def line(page, box, y_off, n=100, step=5):
@@ -152,18 +168,95 @@ with sync_playwright() as p:
     n_after = page.evaluate("() => frames[0].strokes.length")
     ys_after = page.evaluate("() => frames[0].strokes.map(p => p.y)")
     moved = sum(1 for a, b in zip(ys_before, ys_after) if abs(a - b) > 0.5)
-    check("a liquify stroke adds NO points — it moves the ones already there",
-          n_after == n_before,
-          f"{n_before} -> {n_after}; a tool that drags ink must not also lay it")
-    check("...and no new stroke group either",
-          page.evaluate("() => frames[0].strokeGroups") == groups_before,
-          "a group without points is what the server rejects on share")
+    # It MAY add points — subdivision inserts them so a coarse stroke can bend
+    # into a curve instead of a corner — but never a new stroke GROUP, and never
+    # a point off the line it split. "Adds no points" was the assertion here
+    # until subdivision existed; it was right about the intent and became wrong
+    # about the mechanism, so it is replaced by the two properties that actually
+    # matter rather than loosened.
+    check("a liquify stroke adds no new stroke GROUP",
+          len(page.evaluate("() => frames[0].strokeGroups")) == len(groups_before),
+          f"{groups_before} -> {page.evaluate('() => frames[0].strokeGroups')}; a "
+          f"tool that drags ink must not also lay a new stroke")
+    check("...and strokeGroups still accounts for every point",
+          page.evaluate("""() => frames[0].strokes.length
+              === frames[0].strokeGroups.reduce((a, b) => a + b, 0)"""),
+          "inserting points without adjusting the owning group is exactly the "
+          "share-blocking bug this codebase keeps finding")
     check("the ink under the brush actually moved",
           moved > 0, f"{moved} of {n_before} points displaced")
     check("...and the ink outside it did not",
           moved < n_before,
           f"{moved} of {n_before} — a liquify stroke that moves the whole page is a "
           f"Move, and Move already exists")
+
+    print("\nLIQUIFY — resolution is added where it bends, and only there")
+    # THE DEFECT THIS SECTION IS FOR: the tool moves vertices, so a stroke with
+    # two vertices in the brush can only bend into a corner. A line sampled at
+    # 101 points gave a smooth dip; the same line at 7 points gave a hard V —
+    # and 7 points is what drawing FAST produces, so the tool was good on
+    # careful strokes and bad on quick ones, which is backwards.
+    fresh(page)
+    line(page, box, 0, n=6, step=80)          # deliberately coarse
+    coarse = page.evaluate("() => frames[0].strokes.length")
+    page.evaluate("() => { window.__pre = frames[0].strokes.map(p => ({x: p.x, y: p.y})); }")
+    ink_before = page.evaluate(INK)
+    page.evaluate("() => setTool('liquify')")
+    page.mouse.move(cx, cy - 40)
+    page.mouse.down()
+    for i in range(1, 30):
+        page.mouse.move(cx, cy - 40 + i * 4)
+        page.wait_for_timeout(6)
+    page.mouse.up()
+    page.wait_for_timeout(300)
+    dense = page.evaluate("() => frames[0].strokes.length")
+    check("a coarse stroke gains resolution where the brush passes",
+          dense > coarse,
+          f"{coarse} -> {dense} points; without this the bend is a corner")
+
+    # Subdivision on its own, with NO warp, so the geometry claim is measured
+    # against the untouched original rather than against a bent line.
+    fresh(page)
+    line(page, box, 0, n=6, step=80)
+    page.evaluate("() => { window.__pre = frames[0].strokes.map(p => ({x: p.x, y: p.y})); }")
+    ink_before = page.evaluate(INK)
+    page.evaluate("""() => { const f = frames[0];
+      for (let x = 0; x < CW; x += 40) for (let y = 0; y < CH; y += 40)
+        liquifySubdivide(f, x, y, 60);
+      render(); }""")
+    page.wait_for_timeout(350)
+    ink_after = page.evaluate(INK)
+    dev = page.evaluate("""() => {
+      const pre = window.__pre, cur = frames[0].strokes;
+      const d2 = (px, py, ax, ay, bx, by) => {
+        const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy;
+        let t = l2 ? ((px - ax) * vx + (py - ay) * vy) / l2 : 0;
+        t = t < 0 ? 0 : (t > 1 ? 1 : t);
+        const dx = px - (ax + vx * t), dy = py - (ay + vy * t);
+        return dx * dx + dy * dy;
+      };
+      let worst = 0;
+      for (const p of cur) { let best = Infinity;
+        for (let i = 0; i + 1 < pre.length; i++)
+          best = Math.min(best, d2(p.x, p.y, pre[i].x, pre[i].y, pre[i+1].x, pre[i+1].y));
+        worst = Math.max(worst, Math.sqrt(best)); }
+      return worst; }""")
+    # EXACT, and it can be: an inserted point is a + (b-a)*t, so it lies on the
+    # segment by construction. Measured 0.000000 — this is the claim that
+    # subdivision does not move the drawing, and it is provable rather than
+    # eyeballed.
+    check("every inserted point lies exactly ON the line it split",
+          dev < 1e-6,
+          f"max deviation {dev} canvas units from the original polyline")
+    grew = (ink_after["mass"] - ink_before["mass"]) / max(1, ink_before["mass"])
+    # NOT bit-identical, and pretending otherwise would be the easy lie.
+    # paintSeg strokes each segment separately, so splitting one lays two
+    # anti-aliased rims where there was one and the line gains a hair of weight.
+    # Bounded, named, and asserted as a tolerance rather than waved through.
+    check("...and the render changes only by an anti-aliasing seam (<2% ink)",
+          0 <= grew < 0.02,
+          f"ink mass moved {grew*100:+.3f}% — a shape change would be far larger "
+          f"and would show at the corners rather than along the edges")
 
     print("\nLIQUIFY — it smears rather than collapsing to a point")
     fresh(page)

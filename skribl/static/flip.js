@@ -231,7 +231,13 @@ let moveOrigin = null, moveDragging = false, moveStart = null;
    functions 2500 lines below would be in its temporal dead zone at that moment
    and would take the whole file down with it. */
 let liquifying = false, liquifyPointerId = null;
-let liquifySnap = null, liquifyLast = null, liquifyIdx = -1;
+let liquifyLast = null, liquifyIdx = -1;
+/* A WHOLE-FRAME snapshot, not a map of touched indices, because subdividing
+   INSERTS points and every index after an insertion shifts. The index-keyed
+   version was correct right up until the tool started changing the length of
+   the array it was indexing into. Same shape selframe already uses for mirror,
+   duplicate and cut, which change the length for the same reason. */
+let liquifyBefore = null, liquifyTouched = false;
 
 // What Cut is holding, if anything. Up here for the same reason as the rest:
 // syncSelBar() reads it to decide whether Paste has a cell, and setTool()
@@ -3681,18 +3687,120 @@ function liquifyWeight(d2, r2){
    the gesture started, which is the only position undo cares about. Recording
    per move would snapshot a half-dragged point and undo would land there. */
 function liquifyBegin(pt){
-  liquifySnap = new Map();
   liquifyLast = { x: pt.x, y: pt.y };
+  liquifyTouched = false;
   // A liquify stroke belongs to the page it STARTED on, and is pinned here for
-  // same reason `strokeFrame` exists: the page can change mid-gesture — a
-  // thumbnail tap, the page bar, a held arrow riffling — and everything after
-  // this point indexes into ONE strokes array. Re-reading frame() per move
-  // would apply the back half of the drag to a different page, at indices that
-  // mean something else there, and hand undo a before/after pair for artwork
-  // that was never touched.
+  // the same reason `strokeFrame` exists: the page can change mid-gesture -- a
+  // thumbnail tap, the page bar, a held arrow riffling -- and everything after
+  // this point works on ONE strokes array. Re-reading frame() per move would
+  // apply the back half of the drag to a different page.
   liquifyIdx = idx;
+  const f = frames[liquifyIdx];
+  liquifyBefore = f ? { strokes: f.strokes.map(q => Object.assign({}, q)),
+                        groups: f.strokeGroups.slice() } : null;
 }
+
 function liquifyFrame(){ return frames[liquifyIdx]; }
+
+/* ---- resolution ----------------------------------------------------------
+   THE DEFECT THIS FIXES, in one sentence: this tool moves VERTICES, so a
+   stroke with only two vertices inside the brush can only bend into a corner.
+
+   Measured side by side: the same pull across a line sampled at 101 points
+   gives a smooth dip, and across the same line sampled at 7 points gives a
+   hard angular V. Seven points is not a pathological case -- it is what
+   drawing FAST produces, and drawing fast is normal drawing. So the tool was
+   quietly good on careful strokes and bad on quick ones, which is exactly
+   backwards from what a expressive tool should be.
+
+   The fix is to add resolution where the brush is about to bend something:
+   split any segment passing near the brush until its pieces are short relative
+   to the brush radius. Inserted points sit exactly ON the segment they split --
+   measured deviation from the original polyline is 0.000000 canvas units, and
+   verify_liquify asserts it rather than taking my word for it.
+
+   WHAT IT IS NOT is bit-identical on screen, and the first version of this
+   comment claimed it was. paintSeg draws every segment as its own stroke()
+   call, so splitting one into pieces makes the renderer lay down two
+   anti-aliased rims where there had been one, and abutting coverage does not
+   composite to exactly the same alpha. Measured: +0.9% lit pixels, +0.37% ink
+   mass, deltas scattered along the EDGES of lines rather than at corners. A
+   line gets a hair heavier and nothing moves. That is a real difference and
+   worth naming, but it is a rasteriser artifact rather than a change to the
+   drawing, which is why the assertion is on the geometry and only a bounded
+   tolerance on the pixels.
+
+   THE POINT BUDGET IS NOT OPTIONAL. The server refuses a frame over
+   MAX_POINTS_PER_FRAME (20,000), so a tool that inserts points can make a
+   drawing unpostable -- and it would do it silently, at the moment the user
+   tries to share. Subdivision stops well under that ceiling and simply
+   declines to add more; the result on an already-dense page is the old
+   behaviour, which was never wrong, only coarse. */
+const LIQUIFY_SEG = 0.30;         // target piece length, as a fraction of the radius
+const LIQUIFY_SPLIT_MAX = 12;     // per segment, so one huge line cannot explode
+const LIQUIFY_POINT_CAP = 16000;  // headroom under the server's 20,000
+
+/* Squared distance from a point to a SEGMENT, not to its endpoints. A long
+   line whose ends are both far from the brush can still pass straight through
+   it, and testing endpoints alone would skip exactly the segment most in need
+   of splitting. */
+function _segDist2(px, py, ax, ay, bx, by){
+  const vx = bx - ax, vy = by - ay;
+  const len2 = vx * vx + vy * vy;
+  let t = len2 ? ((px - ax) * vx + (py - ay) * vy) / len2 : 0;
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  const dx = px - (ax + vx * t), dy = py - (ay + vy * t);
+  return dx * dx + dy * dy;
+}
+
+function liquifySubdivide(f, px, py, r){
+  if(f.strokes.length >= LIQUIFY_POINT_CAP) return false;
+  const target = Math.max(2, r * LIQUIFY_SEG), target2 = target * target;
+  // A little wider than the brush: a segment just outside it this frame is
+  // about to be inside it on the next one, and splitting it late shows up as a
+  // kink that appears halfway through the drag.
+  const reach = r * 1.4, reach2 = reach * reach;
+  const out = [], groups = [];
+  let at = 0, changed = false;
+  for(let g = 0; g < f.strokeGroups.length; g++){
+    const n = f.strokeGroups[g];
+    let count = 0;
+    for(let k = 0; k < n; k++){
+      const a = f.strokes[at + k];
+      out.push(a); count++;
+      if(k === n - 1) break;
+      const b = f.strokes[at + k + 1];
+      if(_segDist2(px, py, a.x, a.y, b.x, b.y) > reach2) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy;
+      if(d2 <= target2) continue;
+      if(out.length >= LIQUIFY_POINT_CAP) continue;
+      const pieces = Math.min(LIQUIFY_SPLIT_MAX,
+                              Math.ceil(Math.sqrt(d2) / target));
+      for(let sIdx = 1; sIdx < pieces; sIdx++){
+        const t = sIdx / pieces;
+        const mid = Object.assign({}, a);
+        mid.x = a.x + dx * t;
+        mid.y = a.y + dy * t;
+        if(typeof a.size === 'number' && typeof b.size === 'number')
+          mid.size = a.size + (b.size - a.size) * t;
+        // Interpolated so REPLAY still draws the stroke at the pace it was
+        // drawn. Copying `a.t` would stack every inserted point at one instant
+        // and the line would jump rather than travel.
+        if(typeof a.t === 'number' && typeof b.t === 'number')
+          mid.t = a.t + (b.t - a.t) * t;
+        // Only the FIRST point of a stroke carries `start`. Object.assign
+        // copied it off `a`, so splitting the opening segment of a stroke would
+        // have minted a second start point inside it and broken the run.
+        delete mid.start;
+        out.push(mid); count++; changed = true;
+      }
+    }
+    groups.push(count);
+    at += n;
+  }
+  if(changed){ f.strokes = out; f.strokeGroups = groups; }
+  return changed;
+}
 
 /* The warp. Called per pointermove with the CURRENT point; the displacement is
    the delta since the last move, so speed comes out of the gesture for free --
@@ -3708,6 +3816,10 @@ function liquifyMove(pt){
   liquifyLast = { x: pt.x, y: pt.y };
   if(!dx && !dy) return false;
   const r = liquifyRadius(), r2 = r * r;
+  // Resolution BEFORE displacement, every move: a segment only needs splitting
+  // once, and after that this is a cheap no-op on it. Splitting after the warp
+  // would bend the coarse line first and interpolate the kink.
+  if(liquifySubdivide(f, pt.x, pt.y, r)) liquifyTouched = true;
   // Bounding-box reject before the distance test. A page can hold thousands of
   // points and this runs at the display rate; a hypot per point per frame is
   // the difference between a tool that tracks the finger and one that does not.
@@ -3720,10 +3832,10 @@ function liquifyMove(pt){
     const ex = p.x - pt.x, ey = p.y - pt.y, d2 = ex * ex + ey * ey;
     const w = liquifyWeight(d2, r2);
     if(w <= 0) continue;
-    if(!liquifySnap.has(i)) liquifySnap.set(i, { i, x: p.x, y: p.y });
     p.x += dx * w * LIQUIFY_STRENGTH; p.y += dy * w * LIQUIFY_STRENGTH;
     touched = true;
   }
+  if(touched) liquifyTouched = true;
   return touched;
 }
 
@@ -3732,25 +3844,22 @@ function liquifyMove(pt){
    Undo would appear to do nothing and the stroke the user actually wanted back
    would be one press further away than they expect. */
 function liquifyEnd(){
-  const had = liquifySnap && liquifySnap.size;
-  if(!had){ liquifySnap = null; liquifyLast = null; liquifyIdx = -1; return false; }
-  const f = liquifyFrame();
-  if(!f){ liquifySnap = null; liquifyLast = null; liquifyIdx = -1; return false; }
-  const before = [], after = [];
-  for(const o of liquifySnap.values()){
-    const p = f.strokes[o.i]; if(!p) continue;
-    before.push({ i: o.i, x: o.x, y: o.y });
-    after.push({ i: o.i, x: p.x, y: p.y });
-  }
   const at = liquifyIdx;
-  liquifySnap = null; liquifyLast = null; liquifyIdx = -1;
-  if(!before.length) return false;
-  // Exact COORDINATES, not an inverse displacement -- the same call selRestore's
-  // comment already argues for. A liquify stroke accumulates over dozens of moves
-  // with a different weight each time; there is no single delta to negate, and
-  // re-deriving one would drift the artwork a little further from home on every
-  // undo/redo cycle.
-  noteAction({ type: 'liquify', idx: at, before, after });
+  const before = liquifyBefore;
+  const f = frames[at];
+  const touched = liquifyTouched;
+  liquifyBefore = null; liquifyLast = null; liquifyIdx = -1; liquifyTouched = false;
+  /* Nothing caught -> NO undo entry. A tap with the liquify tool selected, or a
+     drag across empty canvas, must not push a no-op onto the history: the next
+     Undo would appear to do nothing and the stroke the user actually wants back
+     would be one press further away than they expect. */
+  if(!touched || !before || !f) return false;
+  // Whole-frame before/after, because subdivision changes the LENGTH of the
+  // array -- an index-keyed diff cannot describe an insertion. selframe has
+  // carried this shape since mirror/duplicate/cut for exactly the same reason.
+  noteAction({ type: 'liquify', idx: at, before: before,
+               after: { strokes: f.strokes.map(q => Object.assign({}, q)),
+                        groups: f.strokeGroups.slice() } });
   return at;
 }
 
@@ -4128,11 +4237,12 @@ function undoStroke(){
       render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
       return;
     }
-    // Reuses selRestore because liquify's before/after is the same shape it
-    // already speaks: exact coordinates per point index, on one page.
+    // selFrameRestore, not selRestore: liquify subdivides, so its before/after
+    // is a whole page rather than a set of indexed coordinates. Restoring by
+    // index cannot undo an insertion.
     if(m.type === 'liquify'){
       if(m.idx !== idx) go(m.idx);
-      selRestore(m.before);
+      selFrameRestore(m.idx, m.before);
       redoStack.push(m);
       chip('Liquify undone');
       render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
@@ -4176,7 +4286,7 @@ function redoStroke(){
      && redoStack[redoStack.length-1].type === 'liquify'){
     const m = redoStack.pop();
     if(m.idx !== idx) go(m.idx);
-    selRestore(m.after);
+    selFrameRestore(m.idx, m.after);
     actionLog.push(m);
     chip('Liquify redone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
