@@ -3787,12 +3787,29 @@ const TWEEN_POINT_CAP = 14000;
 const TWEEN_GROUP_CAP = 4500;
 
 /* The blur, widest and faintest FIRST -- strokes render in array order, so this
-   puts the crisp core on top of its own halo. `w` scales the brush, `a` scales
-   the exposure alpha. Three passes is the full falloff; a heavy page degrades
-   to the last two, then to the core alone, which is exactly the unblurred
-   exposure this feature started as. Degrading beats refusing. */
-const TWEEN_BLUR = [ { w: 3.4, a: 0.10 }, { w: 2.6, a: 0.18 }, { w: 1.9, a: 0.32 },
-                     { w: 1.4, a: 0.55 }, { w: 1.0, a: 1.00 } ];
+   puts the crisp core on top of its own halo. `a` scales the exposure alpha and
+   `d` is a FRACTION OF THE SOFT EDGE, which is added to the brush rather than
+   multiplying it.
+
+   That distinction is the whole of v238. The first version multiplied: the
+   widest pass was 3.4x the brush. On a 6px test stroke that is a 7px soft edge
+   and it looked right, which is the only size it was checked at. On a 60px ball
+   it is a 200px cloud -- the ball INFLATES instead of smearing, and reads as a
+   lumpy blob rather than something moving fast. Motion blur does not fatten an
+   object. It smears it ALONG its travel, which the sample sequence already
+   does, and leaves the edge ACROSS the travel nearly sharp. So the halo has to
+   be a small, near-fixed softness, and the smoothness along the path comes from
+   sample COUNT, not from halo width.
+
+   Three passes is the full falloff; a heavy page degrades to the last two, then
+   to the core alone, which is exactly the unblurred exposure this feature
+   started as. Degrading beats refusing. */
+const TWEEN_BLUR = [ { d: 1.00, a: 0.10 }, { d: 0.66, a: 0.18 }, { d: 0.38, a: 0.32 },
+                     { d: 0.17, a: 0.55 }, { d: 0.00, a: 1.00 } ];
+/* How wide the soft edge is, in canvas pixels, for a given brush. Scales gently
+   with the brush so a hairline does not get a disproportionate halo, and is
+   bounded at both ends so a big ball gets a soft EDGE rather than a cloud. */
+function tweenSoftEdge(size){ return Math.max(4, Math.min(14, size * 0.5)); }
 /* Concentric passes lay more ink down than a single one, so the core is pulled
    back to keep an in-between the same weight it was before it was blurred.
    Derived by MEASURING mean ink over the lit area at two pass counts and
@@ -3804,7 +3821,12 @@ function tweenTrim(blur){
   if(blur.length < 2) return 1;
   let weight = 0;
   for(const b of blur) weight += b.a;
-  return 1 / (weight + 0.4);
+  // The "+ 0.4" that used to be here was fitted when the halo was a MULTIPLE of
+  // the brush and so covered far more ground than the core. With a soft edge of
+  // a few pixels the halo barely spreads, and that term made the exposure come
+  // out at 0.85x the weight of an unblurred one -- visibly washed out. Measured
+  // again at brush 8, 30 and 60: the plain reciprocal lands within 1%.
+  return 1 / weight;
 }
 
 /* Picks the sample count first and the blur second.
@@ -3923,9 +3945,11 @@ function buildTween(a, b){
           const q = Object.assign({}, pa);
           q.x = pa.x + (pb.x - pa.x) * t;
           q.y = pa.y + (pb.y - pa.y) * t;
-          if(typeof pa.size === 'number' && typeof pb.size === 'number')
-            q.size = (pa.size + (pb.size - pa.size) * t) * pass.w;
-          else if(typeof pa.size === 'number') q.size = pa.size * pass.w;
+            if(typeof pa.size === 'number'){
+            const base = (typeof pb.size === 'number')
+              ? pa.size + (pb.size - pa.size) * t : pa.size;
+            q.size = base + tweenSoftEdge(base) * pass.d;
+          }
           q.color = tweenFade(pa.color, fade * pass.a);
           // Every sample is its own stroke, so `start` belongs on its first point
           // and nowhere else -- copying pa.start wholesale would mint a start

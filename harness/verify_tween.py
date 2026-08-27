@@ -390,9 +390,39 @@ with sync_playwright() as p:
         check("it is drawn at more than one width — there is a falloff at all",
               len(blur["sizes"]) > 1,
               f"only one width ({blur['sizes']}) — that is the unblurred exposure")
-        check("every width is a multiple of the brush, none below it",
+        check("no pass is drawn thinner than the brush itself",
               all(sz >= blur["base"] - 1e-6 for sz in blur["sizes"]),
               str(blur["sizes"]))
+
+        # v238 — the halo is a soft EDGE, not a dilation. This is the assertion
+        # this suite was missing: the first blur multiplied the brush by up to
+        # 3.4x, which reads as a soft edge on a 6px test stroke and as a 200px
+        # cloud on a 60px ball. Everything above passed throughout, because
+        # nothing asked how wide the halo got RELATIVE to what was blurred.
+        # Motion blur does not fatten an object; it smears it along its travel.
+        spread = page.evaluate("""() => {
+          const mk = (dy, size) => { const pts = [];
+            for (let i = 0; i < 10; i++)
+              pts.push({ x: 200 + i * 0.5, y: 200 + dy, color: '#ffffff',
+                         size: size, t: i * 3, erase: false, start: i === 0 });
+            return { strokes: pts, strokeGroups: [pts.length], hold: 1 }; };
+          const out = [];
+          for (const size of [8, 30, 60, 120]) {
+            const tw = buildTween(mk(0, size), mk(150, size));
+            if (!tw) { out.push({ size: size, built: false }); continue; }
+            const widest = Math.max(...tw.strokes.map(s => s.size));
+            out.push({ size: size, built: true, widest: +widest.toFixed(1),
+                       grew: +(widest - size).toFixed(1) });
+          }
+          return out; }""")
+        for _s in spread:
+            check(f"a {_s['size']}px brush keeps its shape — the halo is an edge, not a cloud",
+                  _s.get("built") and _s["grew"] <= 16.0,
+                  f"widest pass {_s.get('widest')} on a {_s['size']}px brush "
+                  f"(+{_s.get('grew')}px) — it inflates instead of smearing")
+        check("and the soft edge does not vanish on a fine brush",
+              spread[0].get("grew", 0) >= 1.5,
+              f"only +{spread[0].get('grew')}px on an 8px brush — no falloff left")
         check("the widest pass is drawn FIRST, so the crisp core lands on top",
               blur["firstSize"] > blur["lastSize"],
               f"first {blur['firstSize']} vs last {blur['lastSize']}")
