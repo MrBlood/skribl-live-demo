@@ -267,6 +267,29 @@ with sync_playwright() as p:
               "black flash on every single navigation")
         naked.close()
 
+        # THE WORDMARK IS NOT A TILE. `.brand svg` carries a 34px rounded tile
+        # with a drop shadow, meant for the PLAYER's logo — and it was catching
+        # Pad's wordmark too. On the near-black header a black shadow over a
+        # black ground is invisible, so the mistake survived; light mode drew it
+        # as a pale rounded rectangle around the mark's bounding box and SKRIBL
+        # PAD looked like a sticker stuck onto the header. Reported from a
+        # phone, which is where the two surfaces sit side by side. The pin is
+        # PARITY rather than a literal: whatever the marks wear, they wear the
+        # same thing, which is the property that was actually broken.
+        mark = page.evaluate("""() => {
+          const m = document.querySelector('.brand svg.brand-mark')
+                 || document.querySelector('.flip-word svg.brand-mark');
+          if (!m) return null;
+          const cs = getComputedStyle(m);
+          return { shadow: cs.boxShadow, radius: cs.borderRadius };
+        }""")
+        check(f"{label}: the wordmark wears no tile — no plate, no drop shadow",
+              mark is not None
+              and mark["shadow"] in ("none", "")
+              and mark["radius"] in ("0px", "", "0px 0px 0px 0px"),
+              f"{mark} — a shadow that is invisible on a dark ground is a "
+              f"sticker on a light one, and Flip never had one")
+
         print(f"THEME [{label}] — the chrome flips and the canvas does not")
         dark_px = None
         shots = {}

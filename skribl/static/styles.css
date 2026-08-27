@@ -316,7 +316,25 @@ body {
    parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
    player-only tier rule `.header .brand svg { 30px }` further down, which
    otherwise catches this mark too and squashes it to 30x30. */
-.header .brand svg.brand-mark { height: 44px; width: auto; display: block; }
+/* ...and this is where the wordmark opts OUT of it. "PLAYER-ONLY" above was
+   true of the intent and false of the selector: Pad's wordmark is also a
+   `.brand svg`, so it was inheriting a 34px tile's rounded corners and drop
+   shadow. On the near-black header a black shadow over a black ground is
+   invisible and nobody could see the mistake — light mode rendered it as a
+   pale rounded rectangle around the wordmark's bounding box, and SKRIBL PAD
+   looked like a sticker stuck onto the header. Flip was never affected: its
+   mark lives in .flip-word, not .brand.
+   Undone HERE rather than by narrowing `.brand svg` itself, because cssgraph
+   matches emitted blocks by comparing selector STRINGS against a recorded live
+   set — rewriting that selector drops the whole block out of player.css and
+   takes the player's own logo tile with it. */
+.header .brand svg.brand-mark {
+  height: 44px;
+  width: auto;
+  display: block;
+  border-radius: 0;
+  box-shadow: none;
+}
 .brand.brand-collapsed > span { display: none; }
 
 /* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark
