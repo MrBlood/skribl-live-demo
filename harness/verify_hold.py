@@ -365,7 +365,12 @@ with sync_playwright() as _p2:
         if len(rows) >= 12:
             # Drop the first pass: an unpainted frame's cost is estimated, and
             # the estimate converges once each frame has been drawn.
-            steady = rows[6:]
+            # Drop the first pass (an unpainted frame's cost is estimated, and
+            # the estimate converges once each frame has been drawn) AND the
+            # last sample, which straddles the stop() call and so measures
+            # teardown rather than a frame. Leaving it in made this a flake:
+            # it read 253ms on one run and passed on the next by timing luck.
+            steady = rows[6:-1]
             target = 1000.0 / 12
             worst = max(abs(r["ms"] - target) for r in steady)
             heavy = [r["ms"] for r in steady if r["i"] == 1]
