@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 
 from flask import current_app
 
+from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS
 from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         ForeignKey, ForeignKeyConstraint, Index, Integer, JSON,
                         String)
@@ -305,8 +306,10 @@ class SkriblPost(SkriblBase):
     id = Column(Integer, primary_key=True)
     public_id = Column(String(32), unique=True, nullable=False, index=True)
     user_id = Column(Integer, nullable=True)
-    title = Column(String(80), nullable=False)
-    caption = Column(String(300), nullable=True)
+    # Widths come from core so the API check, the editors' maxlength and the
+    # column cannot drift apart again — see the note there.
+    title = Column(String(MAX_TITLE_CHARS), nullable=False)
+    caption = Column(String(MAX_CAPTION_CHARS), nullable=True)
     payload_json = Column(JSON, nullable=False)
     has_audio = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True),

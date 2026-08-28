@@ -304,9 +304,9 @@
       <div id="flipShareCompose">
         <span class="flip-export-label">Share your Skribl</span>
         <p class="flip-share-sub">Give it a name so you can find it again.</p>
-        <input type="text" id="flipShareTitle" class="flip-share-url" maxlength="60"
+        <input type="text" id="flipShareTitle" class="flip-share-url" maxlength="{{ skribl_limits.title }}"
                placeholder="Untitled Skribl" autocomplete="off">
-        <textarea id="flipShareCaption" class="flip-share-url flip-share-caption" maxlength="280"
+        <textarea id="flipShareCaption" class="flip-share-url flip-share-caption" maxlength="{{ skribl_limits.caption }}"
                   rows="3" placeholder="Say something about it…"></textarea>
         <span class="flip-share-count" id="flipShareCount">0 / 280</span>
         {# A failed post used to report itself only as a transient chip. On a

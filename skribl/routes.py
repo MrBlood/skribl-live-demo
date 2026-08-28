@@ -22,8 +22,9 @@ import hashlib
 import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 
-from .core import (MAX_CARD_BYTES, OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE,
-                   SKRIBL_VERSION, _og_meta, _valid_public_id)
+from .core import (MAX_CAPTION_CHARS, MAX_CARD_BYTES, MAX_TITLE_CHARS,
+                   OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
+                   _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
                      _visibility_policy, as_utc, session, visibility_values,
                      feed_filter, author_dict)
@@ -449,8 +450,21 @@ def register_routes(bp, *, index_route=False):
                 "error": "A private Skribl needs a signed-in author."
             }), 400
 
-        title = (payload.get("title") or "Untitled Skribl").strip()[:80]
-        caption = (payload.get("caption") or "").strip()[:300]
+        # REJECT, don't truncate (outside review, low severity). [:80] returned
+        # 201 for an over-length title and stored half a sentence, so the caller
+        # was told it succeeded and the user lost text with nothing to see. Every
+        # other over-limit field on this endpoint answers 400 with the limit in
+        # the message; these two now do the same. Both editors cap input at
+        # exactly these numbers, so nothing the client can produce hits this.
+        title = (payload.get("title") or "Untitled Skribl").strip()
+        caption = (payload.get("caption") or "").strip()
+        for _field, _value, _cap in (("title", title, MAX_TITLE_CHARS),
+                                     ("caption", caption, MAX_CAPTION_CHARS)):
+            if len(_value) > _cap:
+                return jsonify({
+                    "error": f"'{_field}' is too long ({len(_value)} characters; "
+                             f"limit {_cap})."
+                }), 400
         # True only when there are actual audio bytes, whether stored top-level
         # (legacy) or inside a frame (frame-format). See _payload_has_audio.
         has_audio = _payload_has_audio(payload)

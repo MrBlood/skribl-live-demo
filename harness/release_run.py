@@ -163,6 +163,12 @@ BATCHES = [
     # throwaway apps over one temp SQLite file, like verify_privacy — no
     # server, no browser, so it costs almost nothing to run.
     ["verify_hostseams.py"],
+    # v224. The three configuration defects from the review's low list: the
+    # title/caption limit stated in three disagreeing places, production
+    # detection that only knew Render, and the per-process rate limiter behind
+    # multiple workers. It boots app.py in eleven scrubbed subprocesses, which
+    # is cheap, and posts a handful of payloads to the shared server.
+    ["verify_hostconfig.py"],
 ]
 
 

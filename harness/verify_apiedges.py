@@ -8,7 +8,8 @@ Two kinds of assertion live here, and they fail for opposite reasons:
      buggy client actually reaches. If one of these starts returning 201, a
      server-side check was lost.
 
-  2. THE CAPTION PAIR. The UI caps captions at 280; the server truncates at 300.
+  2. THE CAPTION LIMIT. One number since v224 — the UI's 280 and the server's
+     silent truncation at 300 were the same defect from two ends.
      Captions of length 281-300 are accepted BY DESIGN (documented in
      skribl_flip.html): the gap is deliberate slack so the two numbers can be
      changed independently without a deploy-order dance. This suite pins the gap
@@ -22,9 +23,15 @@ produces 6/12/24; the server accepts 1..60, bools and strings excluded.
 import base64
 import json
 import math
+import os
 import sys
 import urllib.error
 import urllib.request
+
+# On the path so the caption limit can be READ from core.py rather than typed
+# here — a suite that hard-codes the number it is checking cannot notice the
+# number moving, which is the exact failure this section used to encode.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 BASE = "http://127.0.0.1:5001"
 
@@ -117,29 +124,38 @@ check("so is a per-frame one, with its frame named",
 st, _ = post({"frames": [dict(frame, baseSnapshot=None)]})
 check("Flip's explicit baseSnapshot:null still accepted", st == 201, f"{st}")
 
-print("\nCAPTION — 280 and 300 are different numbers ON PURPOSE")
-# skribl_flip.html documents the pair: the UI caps input at 280, the server
-# truncates at 300. 281-300 therefore passes the server untouched. If either
-# assertion here fails, someone changed one number without the other.
+print("\nCAPTION — one limit now, and over it is an error")
+# BEHAVIOUR CHANGE, v224, FLAGGED. This block used to be headed "280 and 300 are
+# different numbers ON PURPOSE" and asserted that a 350-character caption was
+# ACCEPTED and silently truncated to 300. The outside review called the split a
+# defect and it is right: the UI's 280 meant a caption between 281 and 300 could
+# not be typed but could be posted, and the server's truncation meant anything
+# longer came back 201 with text quietly missing. Nothing told the caller.
+#
+# There is one number now (core.MAX_CAPTION_CHARS, which is also the column
+# width and the rendered maxlength), and over it is a 400. The old assertions
+# are gone rather than adjusted, because what they pinned was the drift itself.
+# verify_hostconfig.py holds the replacement contract in full.
+from skribl.core import MAX_CAPTION_CHARS as _CAP   # noqa: E402
+
 cap290 = "c" * 290
 st, body = post({"frames": [frame], "caption": cap290})
-check("caption of 290 (past the UI cap) accepted by the server", st == 201, f"{st}")
+check("a 290-character caption is accepted — inside the single limit",
+      st == 201, f"{st}")
 if st == 201:
     st2, fetched = get(f"/api/skribls/{body['id']}")
     check("and stored untruncated", st2 == 200 and fetched.get("caption") == cap290,
           f"stored len {len(fetched.get('caption') or '')}")
 else:
     check("and stored untruncated", False, "post failed, nothing to fetch")
-cap350 = "d" * 350
-st, body = post({"frames": [frame], "caption": cap350})
-check("caption of 350 accepted (server truncates, does not refuse)", st == 201, f"{st}")
-if st == 201:
-    st2, fetched = get(f"/api/skribls/{body['id']}")
-    check("truncated to exactly 300", st2 == 200
-          and (fetched.get("caption") or "") == "d" * 300,
-          f"stored len {len(fetched.get('caption') or '')}")
-else:
-    check("truncated to exactly 300", False, "post failed, nothing to fetch")
+
+st, body = post({"frames": [frame], "caption": "d" * _CAP})
+check(f"exactly {_CAP} is accepted", st == 201, f"{st}")
+st, body = post({"frames": [frame], "caption": "d" * 350})
+check("a 350-character caption is REFUSED, not quietly shortened",
+      st == 400, f"{st} {str(body)[:80]}")
+check("…and the refusal names the field and the limit",
+      "caption" in str(body) and str(_CAP) in str(body), str(body)[:100])
 
 print("\nTIMEZONE — createdAt leaves the API labelled as the UTC it is")
 st, body = post({"frames": [frame]})

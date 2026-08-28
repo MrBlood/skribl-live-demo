@@ -232,7 +232,14 @@ def create_blueprint(session=None, url_prefix=None,
     # the blueprint — the same BuildError as the context processor above.
     @bp.context_processor
     def _expose_asset_helper():
-        return {"skribl_asset": lambda filename: asset_url(bp, filename)}
+        # skribl_limits so the editors' maxlength attributes render from the
+        # same constants the API enforces and the columns hold, rather than
+        # being typed into the HTML and drifting (they had, to 60/280 against
+        # an 80/300 column — outside review, low severity).
+        from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS
+        return {"skribl_asset": lambda filename: asset_url(bp, filename),
+                "skribl_limits": {"title": MAX_TITLE_CHARS,
+                                  "caption": MAX_CAPTION_CHARS}}
     register_routes(bp, index_route=index_route)
     register_security(bp, SKRIBL_VERSION, player_target=player_target)
     return bp
