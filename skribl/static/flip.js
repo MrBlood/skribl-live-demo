@@ -3831,6 +3831,43 @@ function tweenSoftEdge(size){ return Math.max(4, Math.min(14, size * 0.5)); }
    covers more ground than the core, so the sum of the weights is not what the
    eye ends up reading. A single pass is the unblurred exposure and is left
    exactly as it was. */
+/* THE HALO CANNOT CARRY A COLOUR IT HAS NO BITS FOR.
+
+   Canvas composites through PREMULTIPLIED 8-bit alpha: a channel is stored as
+   round(channel * alpha), so a blur pass at alpha 2/255 turns #ffb020's blue
+   (32) into round(0.25) = 0 before any compositing happens. The blue is gone,
+   and the halo around an orange ball renders RED. Measured on the canvas, not
+   inferred: a plain ball reads (255,176,32) and the same ball blurred peaked at
+   (240,134,2).
+
+   Which pass survives depends on the ink, so the test has to be per-drawing:
+   `channel * alpha` for the darkest channel the ink actually carries. Measured
+   across three inks at nine alphas, hue holds from about 1.2 upward and is
+   visibly wrong below it — and at alpha 1/255 it is wrong for EVERY ink,
+   including near-white, which is worth knowing on its own.
+
+   A zero channel is exempt: pure red has no blue to lose. */
+const TWEEN_HUE_MIN = 1.2;
+function darkestChannel(col){
+  const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(String(col));
+  let ch;
+  if(m) ch = [+m[1], +m[2], +m[3]];
+  else {
+    const h = /^#([0-9a-f]{6})/i.exec(String(col).trim());
+    if(!h) return 255;
+    ch = [parseInt(h[1].slice(0,2),16), parseInt(h[1].slice(2,4),16), parseInt(h[1].slice(4,6),16)];
+  }
+  const lit = ch.filter(v => v > 0);
+  return lit.length ? Math.min.apply(null, lit) : 255;
+}
+/* The darkest channel anywhere on the page, so one saturated stroke does not
+   get a broken halo just because the rest of the drawing is pale. */
+function frameDarkest(f){
+  let d = 255;
+  for(const p of f.strokes){ const v = darkestChannel(solidOf(p.color)); if(v < d) d = v; }
+  return d;
+}
+
 function tweenTrim(blur){
   if(blur.length < 2) return 1;
   let weight = 0;
@@ -3941,11 +3978,24 @@ function buildTween(a, b){
   const n = plan.n;
   // The blur passes actually used: the LAST `passes` of the table, so dropping
   // one drops the widest, faintest halo and keeps the core.
-  const blur = TWEEN_BLUR.slice(TWEEN_BLUR.length - plan.passes);
+  let blur = TWEEN_BLUR.slice(TWEEN_BLUR.length - plan.passes);
   // Enough per sample that the exposure sums to a readable figure, capped so a
   // short sample count does not come out as a stack of hard copies. Trimmed
   // when there is a halo carrying part of the weight.
-  const fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+  let fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+  // Shed any pass too faint to carry this drawing's colour — see
+  // TWEEN_HUE_MIN. The core is always kept: it is the drawing, not the halo.
+  // Coarsening the exposure instead would trade smoothness for colour on every
+  // page; this costs the halo only, and only on the pages that cannot hold one.
+  const dark = frameDarkest(a);
+  const keep = blur.filter((p, i) => i === blur.length - 1
+                                  || fade * p.a * dark >= TWEEN_HUE_MIN);
+  if(keep.length !== blur.length){
+    blur = keep;
+    // Fewer passes lay down less ink, so the core is re-trimmed for the set
+    // that actually survived.
+    fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+  }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
   for(let s = 0; s <= n; s++){
     const t = s / n;

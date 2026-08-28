@@ -420,6 +420,68 @@ with sync_playwright() as p:
                   _s.get("built") and _s["grew"] <= 16.0,
                   f"widest pass {_s.get('widest')} on a {_s['size']}px brush "
                   f"(+{_s.get('grew')}px) — it inflates instead of smearing")
+        # v240 — a blur pass must be able to CARRY the ink's colour.
+        #
+        # Canvas composites through premultiplied 8-bit alpha, so a pass at
+        # alpha 2/255 stores round(32 * 2/255) = 0 for #ffb020's blue: the blue
+        # is gone before compositing starts and an orange ball grows a RED
+        # halo. Measured on the canvas — a plain ball reads (255,176,32), the
+        # same ball blurred peaked at (240,134,2).
+        #
+        # Nothing above this asked what COLOUR the blur came out. Every
+        # assertion in this block would have passed while the halo was the
+        # wrong hue, because they all measure geometry and alpha.
+        hue = page.evaluate("""() => {
+          const mk = (dy, col) => { const p = [];
+            for (let i = 0; i < 10; i++)
+              p.push({ x: 250 + i*2, y: 200 + dy, color: col, size: 56,
+                       t: i*3, erase: false, start: i === 0 });
+            return { strokes: p, strokeGroups: [p.length], hold: 1 }; };
+          const out = {};
+          for (const col of ['#ffb020', '#f7f2e8']) {
+            const tw = buildTween(mk(0, col), mk(150, col));
+            frames = [tw]; idx = 0; render();
+            const cv = document.getElementById('pad'), g = cv.getContext('2d');
+            const W = cv.width, H = cv.height, d = g.getImageData(0,0,W,H).data;
+            // The WORST blue/red ratio over pixels that are clearly ink. The
+            // core is barely affected by the defect — it is the halo that
+            // loses the channel entirely, so a core-only measurement passes
+            // while the smear is visibly red. (It did, on the first draft of
+            // this check.)
+            let worst = 1e9, lit = 0;
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+              const i = (y*W+x)*4, r = d[i], b = d[i+2];
+              if (r < 60) continue;
+              lit++; const br = b / r; if (br < worst) worst = br;
+            }
+            out[col] = { worstBR: +worst.toFixed(3), lit: lit,
+                         alphas: [...new Set(tw.strokes.map(s => String(s.color).slice(7)))].sort(),
+                         dark: frameDarkest(mk(0, col)) };
+          }
+          return out; }""")
+
+        _o = hue["#ffb020"]; _n = hue["#f7f2e8"]
+        check("the smear has ink in it at all",
+              _o["lit"] > 4000, f"only {_o['lit']} lit pixels — nothing measured")
+        # #ffb020 is B/R = 32/255 = 0.125. Measured 0.069 with the guard and
+        # 0.004 without it: the blue is not dimmed, it is gone.
+        check("a saturated ink keeps its darkest channel through the blur",
+              _o["worstBR"] > 0.04,
+              f"worst B/R {_o['worstBR']} against a true 0.125 — the halo has "
+              f"eaten the blue and the smear renders red")
+        # Anti-vacuity: if the pale ink did not keep several passes, "fewer
+        # passes on a saturated ink" would be true for a blur that never runs.
+        check("a pale ink still gets a real falloff",
+              len(_n["alphas"]) >= 3,
+              f"only {len(_n['alphas'])} pass(es) on #f7f2e8 — nothing to shed")
+        check("and a saturated ink sheds the passes it cannot colour",
+              len(_o["alphas"]) < len(_n["alphas"]),
+              f"#ffb020 kept {len(_o['alphas'])} of the pale ink's "
+              f"{len(_n['alphas'])} — darkest channel {_o['dark']} vs {_n['dark']}")
+        check("no pass is emitted at alpha 1/255, which is wrong for every ink",
+              all("01" not in v["alphas"] for v in (_o, _n)),
+              f"{_o['alphas']} / {_n['alphas']}")
+
         check("and the soft edge does not vanish on a fine brush",
               spread[0].get("grew", 0) >= 1.5,
               f"only +{spread[0].get('grew')}px on an 8px brush — no falloff left")

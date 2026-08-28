@@ -1655,3 +1655,77 @@ hold was written and never asked whether it was read. **A suite that only tests
 the direction a feature works will pass forever while the feature is broken.**
 When something is written, test that it comes back. When something is drawn,
 test that it can be played.
+
+## v242 -- The blur inflated big objects, and nobody had measured a big object
+
+Reported as "that looks terrible", with screenshots of a bouncing ball. It was.
+
+The blur's halo was a MULTIPLE of the brush -- the widest pass 3.4x. On the 6px
+stroke every earlier measurement used, that is a 7px soft edge and it looks
+right. On a 60px ball it is a 204px cloud: the ball INFLATES instead of
+smearing, and reads as a lumpy blob rather than something moving fast.
+
+**Only one brush size was ever checked, and it was the size that hides the
+defect.** verify_tween had eleven assertions about the blur and every one of
+them passed while objects were being fattened by 288px, because they all asked
+WHETHER there was a falloff and none asked how wide it got RELATIVE to what was
+being blurred. The new checks span 8 to 120px.
+
+The model was wrong, not just the constant. Motion blur does not fatten an
+object: it smears it ALONG its travel -- which the sample sequence already did,
+and which was never the problem -- and leaves the edge ACROSS the travel nearly
+sharp. So the halo is a small bounded softness ADDED to the brush, and
+smoothness along the path comes from sample COUNT, not from halo width.
+
+## v243 -- A blur pass cannot carry a colour it has no bits for
+
+Found while making a demo: an orange ball grew a RED halo. Measured off the
+canvas rather than guessed -- a plain ball reads (255,176,32), the same ball
+blurred peaked at (240,134,2). The blue was not dimmed. It was gone.
+
+Canvas composites through PREMULTIPLIED 8-bit alpha: a channel is stored as
+round(channel * alpha). A halo pass at alpha 2/255 turns #ffb020's blue (32)
+into round(0.25) = 0 before any compositing happens. Same mechanism dashed a
+static ground line drawn inside a tween: #5b6472 at alpha 1/255 premultiplies to
+(0,0,0) and contributes nothing at all.
+
+Measured across three inks at nine alphas: hue holds from about
+`darkest_channel * alpha >= 1.2` and is visibly wrong below it -- and **alpha
+1/255 is wrong for every ink, including near-white.** Which pass survives
+therefore depends on the drawing, so the test is per-frame.
+
+The fix sheds passes the ink cannot colour, always keeping the core. A
+saturated ink gets a sharper exposure; a pale one keeps the full falloff.
+Coarsening the exposure instead would have traded smoothness for colour on
+every page, including the ones with no problem.
+
+**Why every earlier measurement missed it:** they all used white or near-white
+ink, whose channels are equal and high, and which is the one case where
+premultiplied rounding cannot shift a hue. The test that would have caught it is
+the one that varies the input along the axis the code is sensitive to -- here,
+saturation -- rather than the axis that is convenient to draw.
+
+## v244 -- Verified standalone is not verified in place
+
+run275 failed on verify_hold with "Event loop is closed! Is Playwright already
+stopped?". The new block called `br.new_page()`, but `br` belonged to a
+sync_playwright() context that had exited long before.
+
+The block had been checked standalone, in a script that opened its OWN
+Playwright context -- an arrangement where that bug cannot exist. Passing in
+isolation said nothing about passing in place, and it was taken as evidence for
+both. A full sweep was spent finding out.
+
+`run_harness.sh` takes a suite name as an argument, so checking one suite where
+it actually lives costs about a minute. **Extracting code to test it changes the
+thing being tested.** Run it where it will run.
+
+## v245 -- An eraser takes away whatever is under it
+
+The first pass at a drawn-in-Pad demo put a mistake-and-erase late in the
+sequence, so the scrub went through finished artwork down to the paper and left
+a white band across the face. Obvious once seen, and not obvious while writing
+it: the mental model was "undo the wrong stroke", but an eraser is not undo.
+
+Mistakes in a replay demo belong in the layer that is still on top -- during
+construction, before anything is painted over them.
