@@ -1907,3 +1907,65 @@ now prints, beside each skip, the CI job that covers it or the words NOT COVERED
 -- generated from a table, never typed -- and `verify_docs.py` checks that each
 named job really exists in the workflow and really invokes that suite, so the
 sentence cannot outlive the lane.
+
+## v254 -- A control belongs where its OBJECT is, not where its neighbours are
+
+Flip's page bar held six controls. Five acted on a page; the sixth, "Move
+artwork", moved the DRAWING. It had sat there since v124 for one reason: it was
+added at the same time as the others, and a row already existed.
+
+Nothing about it fitted. It takes a drag on the canvas, it has a mode, it
+disables the strip while it runs, and it sits beside Select and Liquify in every
+respect except where it was filed. It is now a tool in the tool shelf, which
+cost a registry entry, a `setTool` branch, and one flagged ratchet edit in
+`verify_tray.py` -- the roster there is deliberately exact so that a change to
+what the product IS costs somebody a deliberate line.
+
+**⚑ OWNER, FLAGGED:** that ratchet now reads six tools for Flip. Read it as a
+control moving house, not as a new tool.
+
+One bug fell out of the move and is worth recording, because it is the shape
+these always take. `setTool` ended with `pad.style.cursor='none'` for the custom
+brush cursor -- unconditional, and correct for every tool that existed when it
+was written. Entering Artwork through `setTool` meant `setMoveMode` set the grab
+cursor and then, four lines later in the same function, the old line wiped it:
+the mode was live and the canvas did not say so. **Moving a feature into a
+shared code path subjects it to every unconditional line already in that path.**
+
+## v255 -- The badge was already drawn; it just was not a control
+
+The page bar's ×hold button cycled a value that the filmstrip was ALREADY
+displaying, on the tile it applied to. Two pieces of interface for one fact,
+and the one that was better positioned was the one you could not press.
+
+Making the badge the control removed the button. The only real design question
+was what to do at hold = 1, where the badge did not render at all -- which is
+why the button had to exist, since there was no way to START a hold from the
+strip. It renders always now, and CSS hides the ×1 state unless the tile is
+active, hovered or focused: exactly the rule the delete ✕ on the same tile
+already followed. One idea about when per-tile controls exist, instead of two.
+
+`focus-within` rather than `:hover` alone, because a control that appears only
+under a pointer is a control keyboard users do not have.
+
+The same reasoning retired the Paste button. A button in the add column could
+say WHAT but not WHERE -- "after the current page" was a rule you had to know.
+A dashed ghost tile standing in the gap the pages will fill says both at once,
+and disappears with the clipboard.
+
+## v256 -- Hover was spending the brand colour
+
+`.pb:hover` tinted 16% violet and pulled its border to the accent. So did
+`.addbtn:hover`. Six controls above a filmstrip, each lighting up in the one
+colour the design direction wants spent almost nowhere, so that POST reads as
+electricity.
+
+Hover means "this is live", and a neutral lift says that. The accent is kept for
+`:focus-visible`, where it is doing work no other signal does. The labels also
+moved from `--text-primary`/600 to `--text-secondary`/500: chrome around
+artwork should sit under it, and six full-contrast labels above a strip whose
+job is to show DRAWINGS read as six things demanding attention.
+
+Geometry was deliberately NOT touched -- 38px, 9px radius, and the invisible
+44pt tap expander all stay. `.pb` is "labelled pill = named action" in the
+documented shape language (DECISIONS #5) and its radius is not a tone question.

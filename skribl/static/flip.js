@@ -1662,7 +1662,8 @@ if(pbLeft) pbLeft.addEventListener('click',()=>{ if(pbLeft.disabled) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; } spanMove(-1); });
 if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) spanMove(1); });
 if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return; spanCopy(); });
-if(pbHold) pbHold.addEventListener('click',()=>{ if(pbHold.disabled) return; spanHold(); });
+// pbHold retired in v226: the hold badge on the tile is the control now, and it
+// was already drawn there showing the value the button was cycling.
 if(pbDel) pbDel.addEventListener('click',()=>{ if(pbDel.disabled) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; } spanDelete(); });
 
@@ -1682,9 +1683,19 @@ function buildStrip(){
       if(i === _sp.to) el.classList.add('span-last');
     }
     const _numTxt = (_sp && i === _sp.from) ? SkriblPageSpan.label(_sp) : String(i+1);
+    // THE BADGE IS THE CONTROL (v226, stage 2). It used to render only when the
+    // hold was above 1, which made it a readout: there was no way to START a
+    // hold from the strip, so a page-bar button existed to do it. Now it is
+    // always a button — and CSS keeps a ×1 badge hidden unless the tile is the
+    // active one, hovered or focused, which is exactly the rule the delete ✕
+    // already follows. A page with no hold still shows nothing.
+    const _h = frameHold(f);
     el.innerHTML='<div class="num">'+_numTxt+'</div>'
       +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
-      + (frameHold(f)>1 ? '<div class="holdbadge">\u00d7'+frameHold(f)+'</div>' : '')
+      +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
+        +'title="Hold this page longer — tap to cycle" '
+        +'aria-label="Hold page '+(i+1)+', currently '+_h+' frame'+(_h===1?'':'s')+'">'
+        +'\u00d7'+_h+'</button>'
       +'<canvas></canvas>';   // per-page controls now live in #pagebar (v124)
     el.addEventListener('pointerdown',ev=>{
       if(playing) return;
@@ -1694,7 +1705,7 @@ function buildStrip(){
       // one page operation that failed in complete silence.
       if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(frames.length<2) return;
-      if(ev.target.closest('.del')) return;
+      if(ev.target.closest('.del') || ev.target.closest('.holdbadge')) return;
       // Shift is the desktop gesture: "…through here", from wherever you are.
       if(ev.shiftKey){ ev.preventDefault(); extendSpanTo(i); return; }
       // And touch gets the same reach without a modifier key: hold still for a
@@ -1727,6 +1738,11 @@ function buildStrip(){
       if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(_pdragSuppressClick) return;
       if(_spanSweep){ _spanSweep = false; return; }   // the sweep already chose
+      if(ev.target.closest('.holdbadge')){
+        ev.stopPropagation();
+        holdCycle(i);
+        return;
+      }
       const del = ev.target.closest('.del');
       if(del){
         if(f.strokes.length && armedDel !== i){
@@ -1744,6 +1760,22 @@ function buildStrip(){
       go(i);
     });
     strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
+    // THE PASTE GHOST (v226, stage 2). A button in the add column said WHAT;
+    // it could not say WHERE, and "after the current page" is a rule the user
+    // had to know rather than see. A dashed tile standing in the gap the pages
+    // will occupy says both at once, and it disappears with the clipboard.
+    if(pageClip && pageClip.length && i === idx && !playing && !moveMode){
+      const n = pageClip.length;
+      const g = document.createElement('button');
+      g.type = 'button';
+      g.className = 'frame ghost-paste';
+      g.title = 'Paste ' + (n>1 ? n + ' copied pages' : 'the copied page') + ' here';
+      g.setAttribute('aria-label', g.title);
+      g.innerHTML = '<span class="ghost-plus" aria-hidden="true">+</span>'
+                  + (n>1 ? '<span class="ghost-n">'+n+'</span>' : '');
+      g.addEventListener('click', ev => { ev.stopPropagation(); spanPaste(); });
+      strip.appendChild(g);
+    }
   });
   const col=document.createElement('div'); col.className='addcol';
   // Built here rather than in the template, which is why a template-wide
@@ -1755,10 +1787,7 @@ function buildStrip(){
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
     +'<button class="addbtn mini" id="addtween" title="Generate the motion between this page and the next, like a long exposure"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>In-between</button>'
-    + (pageClip && pageClip.length ? '<button class="addbtn mini" id="addpaste" title="Paste '
-        + (pageClip.length>1 ? pageClip.length+' copied pages' : 'the copied page')
-        + ' after this one"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Paste'
-        + (pageClip.length>1 ? ' '+pageClip.length : '') + '</button>' : '');
+    ;   // Paste is no longer here — see the ghost tile in buildStrip (v226).
   // The add controls live OUTSIDE the scrolling strip, as a row above the
   // thumbnails. Inside it they were its last child, so on a long flip they
   // scrolled away from the very page they act on; pinning them to the right
@@ -1777,8 +1806,6 @@ function buildStrip(){
   syncPagebar();
   syncFlipDuration();
   if(typeof syncMoveLabel === 'function') syncMoveLabel();
-  const pasteBtn=col.querySelector('#addpaste');
-  if(pasteBtn) pasteBtn.addEventListener('click', spanPaste);
   updateToolState();
 }
 /* ESCAPE DISMISSES THE TOPMOST THING, and a page range is the least topmost.
@@ -2040,6 +2067,18 @@ function spanDelete(){
   clearSpan(true);
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
   chip(n + ' pages deleted');
+}
+/* Cycle the hold on ONE tile — or on the whole run, if that tile is part of a
+   selected one. Scoping it to what the tile belongs to is the same rule every
+   other re-scoped control follows, so tapping a badge inside a range does not
+   silently break the range apart. */
+function holdCycle(i){
+  if(playing || moveMode) return;
+  const sp = pageSpan();
+  if(sp && SkriblPageSpan.contains(sp, i)) return spanHold();
+  invalidateClearUndo();
+  frames[i].hold = (frameHold(frames[i]) % MAX_HOLD) + 1;
+  buildStrip(); scheduleSave(); syncFlipDuration();
 }
 function spanHold(){
   // One tap sets EVERY page in the span to the same hold, cycling from the
@@ -2435,6 +2474,17 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<path d="M3 16c3.5 0 4.5-7 8-7s3 5 6 5"/>'
               + '<path d="M14.5 18.5c1.6-1.1 2.6-2.2 4.4-2.2 1.3 0 2.1.6 2.1 1.5 0 1.6-2.4 2.6-4.3 2.6"/>'
               + '</svg>' },
+        // v226. Move artwork was in the PAGE BAR — a row about pages, holding a
+        // control that moves the drawing. It never belonged there: it takes a
+        // drag on the canvas, it has a mode, and it sits beside Select and
+        // Liquify in every way except where it was filed. Reclassifying it is a
+        // filing correction, not a redesign; the behaviour below is untouched.
+        { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M12 4v16M4 12h16M12 4l-2.5 2.5M12 4l2.5 2.5'
+              + 'M12 20l-2.5-2.5M12 20l2.5-2.5M4 12l2.5-2.5M4 12l2.5 2.5'
+              + 'M20 12l-2.5-2.5M20 12l-2.5 2.5"/></svg>' },
       ],
       currentTool: () => flipTool,
       slider: document.getElementById('toolSlider'),
@@ -2478,12 +2528,23 @@ function setTool(t){
   // Leaving Select drops the selection: an invisible selection that a later
   // drag would move is worse than making the user re-pick.
   if(flipTool !== 'select') selClear();
+  // Artwork IS the move mode (v226). Entering and leaving it through the shelf
+  // rather than through a page-bar toggle is the whole of the reclassification
+  // — setMoveMode still owns what the mode does. The moveMode checks guard
+  // against re-entering a mode already running, which would re-capture the
+  // origin mid-drag and lose the offset the user had built up.
+  if(flipTool === 'artmove'){ if(!moveMode) setMoveMode(true); }
+  else if(moveMode) setMoveMode(false);
   // Records the MRU, re-syncs the shelf and repaints the tray's pressed state.
   if (toolShelf) toolShelf.noteUse(flipTool);
   const active = activeToolBtn();
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b === active));
   positionToolSlider();
-  pad.style.cursor='none';
+  // moveMode owns the cursor while it is running. This line used to be an
+  // unconditional 'none' for the custom brush cursor, which clobbered the grab
+  // cursor setMoveMode had set moments earlier in this same function once
+  // Artwork became a tool — the mode was live and the canvas did not say so.
+  pad.style.cursor = moveMode ? 'grab' : 'none';
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
@@ -5213,6 +5274,11 @@ function setMoveMode(on){
   } else {
     moveOrigin = null;
   }
+  // Done and Cancel end the mode without going through the shelf, so the shelf
+  // has to be told — otherwise Artwork stays lit over a canvas that is no
+  // longer in move mode. No recursion: moveMode is already false by here, so
+  // setTool's own `else if(moveMode)` branch does nothing.
+  if(!on && typeof flipTool !== 'undefined' && flipTool === 'artmove') setTool('pen');
   updateToolState();
 }
 function commitMove(){
@@ -5232,7 +5298,8 @@ function cancelMove(){
   setMoveMode(false);
 }
 
-bindEl('pbArt', 'click', ()=>{ disarmAll(); setMoveMode(!moveMode); });
+// pbArt's binding is gone with the button: Artwork is a tool now, reached from
+// the tool shelf like every other one. (v226, stage 1.)
 bindEl('mbDone', 'click', ()=>{ commitMove(); });
 bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
 (function(){

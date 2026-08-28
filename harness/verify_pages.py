@@ -201,24 +201,27 @@ with sync_playwright() as p:
               .every(b => b.getBoundingClientRect().height >= 38)"""))
     # margin-left:auto resolves to a pixel value, so assert the OUTCOME — a real
     # gap between Delete and its neighbour — rather than the declaration.
+    # v226: pbHold retired to the tile's own badge, so Delete's left-hand
+    # neighbour is Copy now. Still asserting the OUTCOME — a real gap —
+    # rather than which button happens to sit beside it.
     check("Delete is visually separated from the other actions",
           flip.evaluate("""() => { const d=document.getElementById('pbDel').getBoundingClientRect();
-              const h=document.getElementById('pbHold').getBoundingClientRect();
+              const h=document.getElementById('pbCopy').getBoundingClientRect();
               return d.left - h.right > 16; }"""),
           flip.evaluate("""() => Math.round(document.getElementById('pbDel').getBoundingClientRect().left
-              - document.getElementById('pbHold').getBoundingClientRect().right) + 'px gap'"""))
+              - document.getElementById('pbCopy').getBoundingClientRect().right) + 'px gap'"""))
 
     flip.evaluate("() => { pageClip = null; buildStrip(); }")
-    check("no paste button before anything is copied",
-          flip.evaluate("() => !document.getElementById('addpaste')"))
+    check("no paste affordance before anything is copied",
+          flip.evaluate("() => !document.querySelector('#strip .ghost-paste')"))
     flip.click("#pbCopy")
     flip.wait_for_timeout(300)
     check("copy fills the clipboard", flip.evaluate("() => !!pageClip"))
-    check("and the paste button appears", flip.evaluate("() => !!document.getElementById('addpaste')"))
+    check("and a ghost tile appears on the strip", flip.evaluate("() => !!document.querySelector('#strip .ghost-paste')"))
 
     n0 = flip.evaluate("() => frames.length")
     at = flip.evaluate("() => idx")
-    flip.click("#addpaste")
+    flip.click("#strip .ghost-paste")
     flip.wait_for_timeout(300)
     check("paste inserts a page", flip.evaluate("() => frames.length") == n0 + 1,
           f"{n0} -> {flip.evaluate('() => frames.length')}")
@@ -227,7 +230,7 @@ with sync_playwright() as p:
 
     # The clipboard must hand out independent copies, or editing one pasted page
     # silently edits every other paste of it.
-    flip.click("#addpaste")
+    flip.click("#strip .ghost-paste")
     flip.wait_for_timeout(300)
     check("pasting twice gives two independent pages",
           flip.evaluate("""() => {

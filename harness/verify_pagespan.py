@@ -165,10 +165,11 @@ with sync_playwright() as p:
         check("...and says so to a screen reader in full words",
               "Pages 1 to 3 of 6" in page.evaluate("() => pbWho.getAttribute('aria-label')"),
               page.evaluate("() => pbWho.getAttribute('aria-label')"))
+        # pbHold left the page bar in v226 — the hold badge on the tile is
+        # the control now, and it has its own section below.
         for el, want in (("pbDel", "Delete these 3 pages"),
                          ("pbCopy", "Copy these 3 pages"),
-                         ("pbLeft", "Move these 3 pages left"),
-                         ("pbHold", "Hold these 3 pages longer")):
+                         ("pbLeft", "Move these 3 pages left")):
             check(f"{el} re-scopes its own label", 
                   page.evaluate(f"() => {el}.title") == want,
                   page.evaluate(f"() => {el}.title"))
@@ -186,12 +187,26 @@ with sync_playwright() as p:
         page.wait_for_timeout(80)
         check("copying a run takes the whole run",
               page.evaluate("() => pageClip.length") == 3)
-        check("the paste control offers the count rather than a bare verb",
-              "3" in (page.evaluate(
-                  "() => { const b = document.getElementById('addpaste');"
-                  " return b ? b.textContent : ''; }") or ""),
-              page.evaluate("() => { const b=document.getElementById('addpaste');"
-                            " return b ? b.textContent.trim() : 'MISSING'; }"))
+        # v226: paste is a ghost tile standing in the gap it will fill, not a
+        # button in a column. It has to say WHERE as much as what, so its
+        # POSITION is the assertion that matters.
+        ghost = page.evaluate("""() => {
+          const g = document.querySelector('#strip .ghost-paste');
+          if (!g) return null;
+          const kids = [...strip.children];
+          return { at: kids.indexOf(g), idx: idx,
+                   n: (g.querySelector('.ghost-n') || {}).textContent || '',
+                   label: g.getAttribute('aria-label') };
+        }""")
+        check("paste is a ghost tile on the strip, not a button in a column",
+              ghost is not None, "no .ghost-paste tile was rendered")
+        check("...standing in the gap it will fill, right after the current page",
+              bool(ghost) and ghost["at"] == ghost["idx"] + 1,
+              f"tile slot {ghost and ghost['at']} against page {ghost and ghost['idx']}")
+        check("...and it carries the count",
+              bool(ghost) and ghost["n"] == "3"
+              and "3 copied pages" in (ghost["label"] or ""),
+              str(ghost and ghost["label"]))
         page.evaluate("() => spanPaste()")
         page.wait_for_timeout(100)
         check("pasting inserts the whole run after the current page",
@@ -205,11 +220,45 @@ with sync_playwright() as p:
                 return frames[0].strokes[0].x; }""") == 0,
               "editing the paste must not edit the original")
 
+        print("\nTHE BADGE — the hold control now lives on the tile")
+        fresh(page)
+        check("every tile carries a hold badge, idle ones marked as such",
+              page.evaluate("() => document.querySelectorAll("
+                            "'#strip .frame .holdbadge').length") == 6
+              and page.evaluate("() => document.querySelectorAll("
+                                "'#strip .frame .holdbadge.idle').length") == 6,
+              "a badge that appears only once a hold is set cannot START one")
+        # An idle badge is display:none until its tile is active, hovered or
+        # focused — so the test has to hover the tile, which is what a person
+        # does. Playwright cannot click through the hidden state, and that
+        # failing IS the reveal rule working.
+        _t2 = page.locator("#strip .frame").nth(2)
+        check("an idle badge is hidden until the tile is pointed at",
+              not _t2.locator(".holdbadge").is_visible(),
+              "×1 on every tile would be noise on a strip that shows drawings")
+        _t2.hover()
+        page.wait_for_timeout(80)
+        check("...and hovering the tile reveals it",
+              _t2.locator(".holdbadge").is_visible())
+        _t2.locator(".holdbadge").click()
+        page.wait_for_timeout(120)
+        check("tapping a badge cycles that page's hold",
+              page.evaluate("() => frames[2].hold") == 2,
+              page.evaluate("() => frames.map(f => f.hold).join(',')"))
+        check("...and does NOT also select that page",
+              page.evaluate("() => idx") == 0,
+              "the badge is a control on the tile, not a second route to it")
+        check("...and it stops being idle once it has something to say",
+              page.evaluate("() => !strip.children[2]"
+                            ".querySelector('.holdbadge').classList.contains('idle')"))
+
         fresh(page)
         page.evaluate("() => { spanAnchor = 1; idx = 3; buildStrip(); }")
-        page.evaluate("() => pbHold.click()")
-        page.wait_for_timeout(80)
-        check("×hold applies ONE value across the run",
+        _t = page.locator("#strip .frame").nth(2)
+        _t.hover(); page.wait_for_timeout(60)
+        _t.locator(".holdbadge").click()
+        page.wait_for_timeout(120)
+        check("a badge inside a run applies ONE value across the whole run",
               page.evaluate("() => frames.slice(1,4).map(f => f.hold).join(',')") == "2,2,2",
               page.evaluate("() => frames.map(f => f.hold).join(',')")
               + " — cycling each page independently would scatter them")

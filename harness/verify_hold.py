@@ -122,18 +122,32 @@ with sync_playwright() as p:
     print("\nHOLD — the UI cycles and shows it")
     pg.evaluate("() => { go(0); }")
     pg.wait_for_timeout(200)
+    # v226: the page-bar Hold button retired and the BADGE on the tile is the
+    # control. It was already showing the value the button cycled, on the tile
+    # the value belonged to — two pieces of interface for one fact, and the
+    # better-placed one was the one you could not press.
     seq = []
     for _ in range(5):
-        pg.click("#pbHold")          # v124: hold moved to the page toolbar
+        pg.locator("#strip .frame").nth(0).locator(".holdbadge").click()
         pg.wait_for_timeout(180)
         seq.append(pg.evaluate("() => frameHold(frames[0])"))
-    check("the toolbar Hold button cycles 2,3,4 then wraps to 1", seq == [2, 3, 4, 1, 2], str(seq))
-    check("a held page shows a badge without hovering",
-          pg.evaluate("() => !!strip.children[0].querySelector('.holdbadge')"))
+    check("the tile's hold badge cycles 2,3,4 then wraps to 1", seq == [2, 3, 4, 1, 2], str(seq))
+    check("a held page shows its badge without hovering",
+          pg.evaluate("() => !!strip.children[0].querySelector('.holdbadge')")
+          and pg.locator("#strip .frame").nth(0).locator(".holdbadge").is_visible())
     pg.evaluate("() => { frames[0].hold = 1; buildStrip(); }")
     pg.wait_for_timeout(150)
-    check("no badge at the default hold",
-          pg.evaluate("() => !strip.children[0].querySelector('.holdbadge')"))
+    # The badge still EXISTS at hold 1 — it has to, or there would be no way to
+    # start a hold from the strip, which is exactly why a button used to. What
+    # changes is that it is marked idle and CSS hides it unless the tile is
+    # active, hovered or focused. Page 0 is the active page here, so it shows.
+    check("at the default hold the badge is marked idle, not removed",
+          pg.evaluate("() => strip.children[0]"
+                      ".querySelector('.holdbadge').classList.contains('idle')"),
+          "a badge that only appears once a hold is set cannot START one")
+    check("...and an idle badge on a NON-active tile is hidden",
+          not pg.locator("#strip .frame").nth(1).locator(".holdbadge").is_visible(),
+          "x1 on every tile would be noise on a strip that shows drawings")
 
     print("\nPAYLOAD — additive in both directions")
     plain = pg.evaluate("() => JSON.stringify(serializeFlip({media:false}))")
@@ -243,16 +257,20 @@ with sync_playwright() as _p:
     _pg.evaluate("() => { addFrame(false); addFrame(false); }")
     _pg.wait_for_timeout(400)
 
+    # This section is about the PAGE BAR at phone width: when the labels go, the
+    # glyphs are all that is left, so they have to be there and laid out. It
+    # used to measure #pbHold, which v226 retired to the tile badge; #pbCopy
+    # carries the same glyph+label structure and makes the same point.
     check("labels really are hidden at phone width",
           _pg.evaluate("() => getComputedStyle("
-                       "document.querySelector('#pbHold .pb-tx')).display") == "none",
+                       "document.querySelector('#pbCopy .pb-tx')).display") == "none",
           "this section proves nothing if the labels are visible")
 
-    check("#pbHold carries a repeat glyph when its label is hidden",
-          _pg.evaluate("() => !!document.querySelector('#pbHold .pb-glyph svg')"),
-          "a bare count is not self-explanatory")
-    check("#pbHold's glyph is actually rendered",
-          _pg.evaluate("() => { const g = document.querySelector('#pbHold .pb-glyph');"
+    check("#pbCopy carries a glyph when its label is hidden",
+          _pg.evaluate("() => !!document.querySelector('#pbCopy .pb-glyph svg')"),
+          "a bare button is not self-explanatory")
+    check("#pbCopy's glyph is actually rendered",
+          _pg.evaluate("() => { const g = document.querySelector('#pbCopy .pb-glyph');"
                        " return g && g.offsetParent !== null"
                        " && g.getBoundingClientRect().width > 4; }"),
           "present in markup but not laid out")
@@ -273,23 +291,30 @@ with sync_playwright() as _p:
               "move" in (_pg.get_attribute(f"#{_id}", "aria-label") or "").lower(),
               _pg.get_attribute(f"#{_id}", "aria-label"))
 
-    # flip.js rewrites .pb-ic's textContent on every render. A glyph placed
-    # inside it would survive the first paint and vanish on the first page
-    # change — which is exactly the kind of bug a single-state check misses.
-    _pg.click("#pbHold")
+    # The original concern here was that flip.js rewrites .pb-ic's textContent on
+    # every render, so a glyph placed inside it would survive the first paint
+    # and vanish on the first page change. v226 moved the hold to the tile, and
+    # the concern moved with it and got SHARPER: buildStrip() rebuilds every
+    # badge from scratch on every render, so the value has to come from the
+    # frame each time rather than from the DOM that was there before.
+    _pg.evaluate("() => { idx = 0; buildStrip(); render(); }")
+    _pg.wait_for_timeout(200)
+    _pg.locator("#strip .frame").nth(0).locator(".holdbadge").click()
     _pg.wait_for_timeout(250)
     # pbLeft, not pbRight: two addFrame() calls leave idx on the LAST page, so
     # "move right" is correctly disabled there and Playwright waits forever.
+    _pg.evaluate("() => { idx = frames.length - 1; buildStrip(); render(); }")
     _pg.click("#pbLeft")
     _pg.wait_for_timeout(250)
     _pg.evaluate("() => { idx = 0; buildStrip(); render(); }")
     _pg.wait_for_timeout(300)
-    check("the repeat glyph survives re-renders and page changes",
-          _pg.evaluate("() => !!document.querySelector('#pbHold .pb-glyph svg')"),
-          "a glyph inside .pb-ic is wiped when flip.js rewrites its textContent")
-
+    check("the hold survives re-renders and page changes",
+          _pg.evaluate("() => frameHold(frames[0])") == 2,
+          "buildStrip rebuilds every badge, so the value must come from the frame")
     check("the hold count still reads as a multiplier",
-          "\u00d7" in _pg.inner_text("#pbHold"), _pg.inner_text("#pbHold"))
+          "\u00d7" in (_pg.locator("#strip .frame").nth(0)
+                       .locator(".holdbadge").inner_text() or ""),
+          _pg.locator("#strip .frame").nth(0).locator(".holdbadge").inner_text())
     check("aria-label still names the action for screen readers",
           "move" in (_pg.get_attribute("#pbLeft", "aria-label") or "").lower(),
           _pg.get_attribute("#pbLeft", "aria-label"))

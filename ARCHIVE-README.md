@@ -407,12 +407,24 @@ transform in the app, and deliberately the SIMPLEST one: the whole page moves,
 nothing is selected. Copy a page, nudge the drawing, repeat — the pegbar
 workflow that frame-by-frame animation has used for a century.
 
-**It lives in the PAGE BAR, not the tool row.** Moving a page's artwork is a
-page operation, and it belongs with Copy, Hold and Delete; the tool row is also
-full on a phone. Entering the mode REPLACES the page bar with a transform bar
-rather than adding one, because a second bar would push the filmstrip off
-screen exactly when it is needed to judge the move. Labelled "Artwork" because
-"Move" already means reorder, two buttons to its left.
+**It lived in the PAGE BAR, and as of v226 it does not.** The original argument,
+kept because the second half of it is still load-bearing: *moving a page's
+artwork is a page operation, and it belongs with Copy, Hold and Delete; the tool
+row is also full on a phone. Entering the mode REPLACES the page bar with a
+transform bar rather than adding one, because a second bar would push the
+filmstrip off screen exactly when it is needed to judge the move.*
+
+The first clause was wrong and the second stopped being true. It is not a page
+operation — it moves the DRAWING, which is the one thing in that row that was
+not a page. And the tool row is no longer full: the tool shelf overflows into a
+tray, so a sixth tool costs no width at any size. Artwork is a tool now, beside
+Select and Liquify. The transform-bar behaviour above is unchanged.
+
+It kept the name "Artwork" rather than becoming "Move" — originally because the
+page bar's two reorder buttons were both labelled "Move", which v226 also fixed
+by labelling them Left and Right. The name stays anyway: in a shelf of verbs
+(Pen, Eraser, Shape, Select, Liquify) the noun is what distinguishes moving the
+art from moving the page.
 
 **Undo stores the INVERSE OFFSET, not a snapshot.** A translation is exactly
 reversible, so undoing is applying -dx,-dy to the same points. With `& after`

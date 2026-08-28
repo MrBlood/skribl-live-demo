@@ -134,8 +134,17 @@ with sync_playwright() as p:
         # that adding a tool cannot happen quietly — a new tool is a change to
         # what the product IS, and it should cost somebody a deliberate edit
         # here rather than slipping in behind a `>=`.
+        #
+        # ⚑ RATCHET RAISED, v226, FLAGGED FOR THE OWNER. Flip gains a sixth
+        # entry, "artmove" — and it is NOT a new capability. Move artwork has
+        # shipped since v124; it lived in the PAGE BAR, a row about pages,
+        # holding the one control there that moves the drawing rather than the
+        # page. Reclassifying it is a filing correction. The roster is still
+        # what the product IS, and it did just change, so this edit is the cost
+        # the comment above intends — but read it as a control moving house,
+        # not as a new tool.
         expected = ["pen", "eraser", "shape"] if surface == "Pad" \
-            else ["pen", "eraser", "shape", "select", "liquify"]
+            else ["pen", "eraser", "shape", "select", "liquify", "artmove"]
         check(f"{surface}: the roster is exactly what this surface ships",
               baseline == expected, f"{baseline} against {expected}")
         if len(baseline) <= 3:

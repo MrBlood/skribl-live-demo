@@ -414,6 +414,21 @@
      judgeable — but stops being operable. Dimming the add column signals that
      without hiding the thumbnails you are lining the drawing up against. */
   body.move-locked .addcol { opacity: .4; }
+  /* The paste ghost stands in the gap the pasted pages will fill. Dashed and
+     unfilled because it is not a page yet — the strip should read as "there is
+     room here", not as an empty frame somebody drew nothing on. */
+  .frame.ghost-paste {
+    border-style: dashed; border-color: var(--ui-line); background: transparent;
+    display: grid; place-items: center; gap: 0; padding: 0; cursor: pointer;
+    color: var(--ui-line); font-family: inherit;
+  }
+  .frame.ghost-paste:hover { background: rgba(var(--glass-deep-2-rgb), .35); }
+  .frame.ghost-paste:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 2px; }
+  .frame.ghost-paste .ghost-plus { font-size: 20px; font-weight: 600; line-height: 1; }
+  .frame.ghost-paste .ghost-n {
+    position: absolute; bottom: 5px; right: 6px; font-size: 10px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--text-secondary);
+  }
   .frame canvas { width: 100%; height: 100%; display: block; }
   /* Top-left, with the hold badge to its right — the ops bar owns the bottom. */
   .frame .num { position: absolute; top: 4px; left: 6px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
@@ -437,7 +452,11 @@
   .addbtn { width: 88px; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--text-secondary);
     border-radius: 10px; padding: 8px 0; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-  .addbtn:hover { color: var(--text-primary); border-color: var(--ui-line); background: rgba(124,92,255,.06); }
+  /* Same tone pass as .pb: a neutral lift rather than an accent tint, so the
+     two rows around the strip agree about how loud chrome is allowed to be. */
+  .addbtn:hover { color: var(--text-primary); border-color: var(--hairline-strong);
+    background: rgba(var(--wash-rgb), .05); }
+  .addbtn:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
   /* In the row the buttons share the width instead of each claiming 88px, so
      they stay on one line down to ~360px and wrap to two below that rather
@@ -471,6 +490,15 @@
   .frame .del.armed { display: flex; color: var(--danger); background: rgba(244,50,111,.2); }
   /* Touch has no hover: always show delete on the SELECTED frame. */
   .frame.on .del { display: flex; }
+  /* The idle (×1) badge follows the same rule as the ✕ above. focus-within so
+     it is reachable by keyboard, which a hover-only control never is. */
+  .frame .holdbadge.idle { display: none; }
+  .frame:hover .holdbadge.idle,
+  .frame.on .holdbadge.idle,
+  .frame:focus-within .holdbadge.idle { display: block; }
+  .frame .holdbadge.idle { background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary); }
+  .frame .holdbadge:hover { filter: brightness(1.12); }
+  .frame .holdbadge:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
   .btn.flip-play:disabled { opacity: .38; cursor: default; box-shadow: none; }
   /* Small transient chip for "Draft restored". */
   .flip-chip { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30;
@@ -615,6 +643,21 @@
   margin-right: 2px;
 }
 
+/* v226 TONE PASS. Geometry is untouched — 38px tall, 9px radius, and the
+   invisible 44pt ::before tap expander declared in styles.css all stay, because
+   `.pb` is "labelled pill = named action" in the documented shape language and
+   its radius is not mine to reinterpret. What changed is how loudly it speaks.
+
+   THE LABEL IS SECONDARY, NOT PRIMARY. Six controls at full-contrast weight 600
+   read as six things demanding attention above a strip whose job is to show
+   DRAWINGS. Chrome around artwork should sit under it. The glyph and the label
+   carry the same weight as each other now, and neither competes with the page.
+
+   AND HOVER NO LONGER SPENDS THE ACCENT. It used to tint 16% violet and pull
+   the border to --ui-line, which is the brand colour — the direction counts 88
+   uses of that accent and wants ONE, spent almost nowhere, so that POST reads
+   as electricity. A neutral lift says "this is live" without spending it. The
+   accent is kept for :focus-visible, where it is doing real work. */
 .pb {
   flex: 0 0 auto;
   height: 38px;
@@ -627,22 +670,31 @@
   border: 1px solid var(--hairline-strong);
   border-radius: 9px;
   background: rgba(var(--surface-sheet-rgb), 0.9);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .pb .pb-ic { font-size: 13px; line-height: 1; }
-.pb:hover:not(:disabled) { background: rgba(124, 92, 255, 0.16); border-color: var(--ui-line); }
+.pb:hover:not(:disabled) {
+  background: rgba(var(--wash-rgb), 0.07);
+  border-color: var(--hairline-strong);
+  color: var(--text-primary);
+}
+.pb:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
 .pb:active:not(:disabled) { transform: translateY(1px); }
 .pb:disabled { opacity: 0.3; cursor: default; }
 .pb.on { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.5); background: rgba(124, 92, 255, 0.14); }
 
 /* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
    land on Delete — which is exactly what the old 18px overlay allowed. */
-.pb.danger { margin-left: auto; color: var(--danger-soft); border-color: rgba(244, 50, 111, 0.3); }
-.pb.danger:hover:not(:disabled) { background: rgba(244, 50, 111, 0.16); border-color: rgba(244, 50, 111, 0.55); }
+.pb.danger { margin-left: auto; color: var(--danger-soft); }
+.pb.danger:hover:not(:disabled) {
+  color: var(--danger-soft-2);
+  background: rgba(244, 50, 111, 0.12);
+  border-color: rgba(244, 50, 111, 0.4);
+}
 
 /* A glyph that carries the meaning the LABEL used to. Below 560px every
    .pb-tx is hidden, which left "×1" bare and — worse — left Move as two
@@ -697,6 +749,14 @@
   left: 30px;             /* was right:24px, which crowded the ✕. Sits after the
                              page number instead, clear of both. */
   z-index: 2;
+  /* v226: a <button>, not a <div> — the badge cycles the hold now. Button UA
+     styles have to be undone explicitly or it inherits a system border and the
+     platform font. */
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
   padding: 1px 5px;
   font-size: 10px;
   font-weight: 700;
@@ -704,6 +764,12 @@
   border-radius: 5px;
   color: #0d0f14;
   background: var(--ui-active);
+  /* A hold of 1 is the default, so showing ×1 on every tile would be noise on a
+     strip whose job is to show DRAWINGS. It appears on the tile you are on, the
+     one under the pointer, or the one with focus — the same rule the delete ✕
+     follows, so the strip has one idea about when per-tile controls exist
+     rather than two. Once a hold is set the badge stays: it is information at
+     that point, not just a control. */
 }
 
 /* --- v110: canvas size picker in the ⋯ menu -------------------------------- */
