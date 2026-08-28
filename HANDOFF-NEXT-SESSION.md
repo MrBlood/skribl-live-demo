@@ -108,10 +108,11 @@ restored in four lines — all three palettes are recorded in `styles.css`
 the guard that missed their divergence was fixed, and the stray runtime log
 that shipped inside v220 was removed. Full details: `V221-CHANGES.md`.
 
-**Next work, in order:** durable drafts + pointer identity (the direction
-doc's prerequisites, owner-deferred this cycle, still open), then onion-skin
-promotion (filmstrip placement; "hold" vocabulary collision), then the copy
-pass as one batch. `V221-CHANGES.md` §"Open items" has the details per item.
+**Next work, in order (historical — this was the v221 plan, and its first two
+items are done):** durable drafts + pointer identity (the direction doc's
+prerequisites, open at the time; shipped in v222 and v221 respectively), then
+onion-skin promotion (filmstrip placement; "hold" vocabulary collision), then
+the copy pass as one batch. `V221-CHANGES.md` §"Open items" has the details.
 
 **The sealing order (two v220-era runs were lost to getting this wrong):**
 

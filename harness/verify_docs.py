@@ -602,7 +602,7 @@ CURRENT_DOCS = ["FOR-THE-REVIEWER.md", "START-HERE.md", "DESIGN-DIRECTION.md",
 # is how DESIGN-DIRECTION.md keeps a superseded brief verbatim beside what
 # shipped, which is worth more than deleting it.
 EXEMPT = re.compile(r"SUPERSEDED|\(history\)|\(historical|historical from here|"
-                    r"was DECLARED|used to (say|read|be)|no longer|"
+                    r"was DECLARED|used to (say|read|be|end|state|claim)|no longer|"
                     r"requirement, as written|"
                     r"until v\d|before v\d|as of v\d", re.I)
 
@@ -652,16 +652,40 @@ def _proof_holds(path, needle):
 
 
 def _denials(text, patterns):
-    """Line numbers whose text denies a capability and is not marked historical."""
+    """Where a capability is denied, by PARAGRAPH, not by line.
+
+    The first version of this matched line by line and missed the first thing it
+    was pointed at afterwards: FUTURE.md still listed "Selection and transform.
+    Lasso, move, scale, rotate ... every mistake is currently undo-and-redraw"
+    as ship-worthy, months after all of it shipped, and the gate passed it
+    because the phrase wraps between "is" and "currently". Markdown wraps at
+    eighty columns, so nearly every multi-word claim straddles a line and a
+    line-scoped matcher would have missed most of what this exists to catch.
+
+    Paragraphs are the unit prose is actually written in, so whitespace is
+    normalised across the whole paragraph before matching and the reported line
+    is where the paragraph starts. The exemption window is the paragraph itself
+    plus the six lines above it, which is how a "SUPERSEDED" note above a block
+    still covers the block.
+    """
     lines = text.splitlines()
     hits = []
-    for i, line in enumerate(lines):
-        if not any(re.search(pat, line, re.I) for pat in patterns):
+    start = None
+    for i in range(len(lines) + 1):
+        blank = i >= len(lines) or not lines[i].strip()
+        if not blank:
+            if start is None:
+                start = i
             continue
-        window = "\n".join(lines[max(0, i - 6):i + 1])
-        if EXEMPT.search(window):
+        if start is None:
             continue
-        hits.append((i + 1, line.strip()[:90]))
+        para_lines = lines[start:i]
+        para = re.sub(r"\s+", " ", " ".join(para_lines))
+        if any(re.search(pat, para, re.I) for pat in patterns):
+            window = "\n".join(lines[max(0, start - 6):i])
+            if not EXEMPT.search(window):
+                hits.append((start + 1, para.strip()[:100]))
+        start = None
     return hits
 
 
@@ -693,6 +717,17 @@ for _entry in CLAIMS:
 _probe = "Pad's autosave holds strokes but not media bytes, so drafts are lossy."
 check("MUTATION: the matcher catches the sentence that actually shipped",
       len(_denials(_probe, CLAIMS[0][2])) == 1, _probe)
+# The regression for the hole above: the same sentence, wrapped the way a
+# markdown document wraps it. A line-scoped matcher scores zero here.
+_wrapped = ("Pad's autosave holds strokes but not\nmedia bytes, so drafts are "
+            "lossy.")
+check("MUTATION: ...and catches it WRAPPED across lines, which is how prose is",
+      len(_denials(_wrapped, CLAIMS[0][2])) == 1,
+      "markdown wraps at 80 columns; a line-scoped matcher misses most claims")
+check("MUTATION: a denial split across a blank line is NOT one paragraph",
+      not _denials("Pad's autosave holds strokes but not\n\nmedia bytes.",
+                   CLAIMS[0][2]),
+      "paragraphs are the unit, so unrelated neighbours cannot be glued together")
 check("...and an explicitly superseded line is exempt, so history stays sayable",
       not _denials("This is SUPERSEDED:\n" + _probe, CLAIMS[0][2]),
       "a changelog must be able to state what used to be true")
