@@ -115,11 +115,39 @@ with sync_playwright() as p:
               str(page.evaluate("() => window.__sizeEvents"))
               + " — one write per real change, not per pixel")
 
-        print("\nTHE MIGRATION WAS A NO-OP — the whole claim of this step")
-        # `.flip-app .header .actions { margin-left: auto }` moved from a
-        # max-width query to the size class. Same boundary, so the computed
-        # style must break at exactly the same place it used to.
-        for w, expect in ((641, "compact-off"), (640, "compact-on")):
+        print("\nTHE CONTAINER, NOT THE WINDOW — v227, deliberately")
+        # The host site reserves a COLUMN for Pad and Flip, around 510px. Inside
+        # a wide window that is the case that decides how this measures: a
+        # viewport reading would say `regular` and lay a persistent command row
+        # into a space that cannot hold one. Simulated by narrowing the ROOT
+        # while the window stays wide, which is exactly the embedded shape.
+        page.set_viewport_size({"width": 1400, "height": 900})
+        page.wait_for_timeout(200)
+        check("a wide window on its own is regular",
+              page.evaluate("() => document.body.getAttribute('data-size')") == "regular")
+        page.evaluate("() => { document.body.style.width = '510px'; }")
+        page.wait_for_timeout(250)
+        check("A 510px COLUMN IN A 1400px WINDOW IS COMPACT",
+              page.evaluate("() => document.body.getAttribute('data-size')") == "compact",
+              "viewport measurement would say regular here and break the layout")
+        page.evaluate("() => { document.body.style.width = ''; }")
+        page.wait_for_timeout(250)
+        check("...and releasing the column returns it to regular",
+              page.evaluate("() => document.body.getAttribute('data-size')") == "regular")
+
+        print("\nTHE COST OF THAT, ASSERTED RATHER THAN DISCOVERED")
+        # getBoundingClientRect excludes the scrollbar, so the element-measured
+        # boundary sits a scrollbar-width below the viewport one. That band is
+        # taken knowingly; pinning it means nobody meets it as a surprise.
+        band = page.evaluate("""() => {
+          const w = window.innerWidth, b = document.body.getBoundingClientRect().width;
+          return { viewport: w, element: Math.round(b), gap: Math.round(w - b) };
+        }""")
+        check("the element is narrower than the window by the scrollbar",
+              band["gap"] >= 0, str(band))
+
+        print("\nTHE MIGRATED RULE still breaks where the class does")
+        for w, expect in ((700, "compact-off"), (600, "compact-on")):
             page.set_viewport_size({"width": w, "height": 900})
             page.wait_for_timeout(220)
             got = page.evaluate("""() => {
@@ -128,11 +156,11 @@ with sync_playwright() as p:
             }""")
             size = page.evaluate("() => document.body.getAttribute('data-size')")
             if expect == "compact-on":
-                check(f"at {w}px the rule applies, as the media query did",
+                check(f"at {w}px the rule applies",
                       size == "compact" and got not in (None, "0px"),
                       f"data-size={size}, margin-left={got}")
             else:
-                check(f"at {w}px it does not, as the media query did not",
+                check(f"at {w}px it does not",
                       size == "regular", f"data-size={size}, margin-left={got}")
 
         # The MIGRATED rule specifically must no longer live inside a media

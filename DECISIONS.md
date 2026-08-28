@@ -2015,3 +2015,86 @@ An assertion that names the remaining work makes the narrowing permanent and
 visible instead of conversational. It will fail, deliberately, when someone
 finishes the migration -- and finishing it should cost a deliberate edit here,
 the same way `verify_tray`'s exact tool roster does.
+
+## v259 -- The host column is the case that decides how "small" is measured
+
+**⚑ OWNER INPUT, and it reversed a decision made one release earlier.** The
+social site reserves a COLUMN for Pad and Flip -- **around 510px, to be
+confirmed by the owner.**
+
+v257 chose to measure `window.innerWidth`, because the claim being made at the
+time was that migrating a rule off `max-width: 640px` onto a size class was a
+no-op, and innerWidth is what the CSS `width` feature uses. That was right for
+that claim. It is wrong for the product.
+
+A 510px column inside a 1400px window measures 1400 by the viewport and 510 by
+the element. Viewport measurement therefore classifies the app REGULAR and lays
+a persistent command row into a space that cannot hold one -- wrong in the
+primary embedding, and wrong in the direction that breaks the layout rather than
+the direction that wastes space. It measures the element now.
+
+What that costs is asserted rather than discovered: `getBoundingClientRect()`
+excludes the scrollbar, so a standalone window between about 641 and 655 now
+classifies compact where a media query would say regular. Inside that band the
+one migrated rule and the fourteen unmigrated queries disagree. **That is an
+argument for finishing the migration, not for measuring the wrong thing in the
+meantime.**
+
+**STILL TO DISCUSS, once the owner confirms the number.** If the column really
+is ~510px then Skribl inside the host is ALWAYS compact and never sees the
+regular surface at all -- the persistent command row would exist only in the
+standalone app. Two things follow, and both are the owner's call:
+
+  * **Is 640 the right threshold for a column?** It was inherited from the
+    existing breakpoints, which were written about phone viewports. A column has
+    different arithmetic: no browser chrome, no address bar, and a known width.
+  * **Is a second breakpoint worth having between 510 and 640?** A ~510 column
+    is not a phone. It has a mouse, hover, and a keyboard, and it can afford
+    controls a 360px phone cannot even if it cannot afford the full row. The
+    compact/regular pair may want to become compact/column/regular -- which is
+    a real design question and should not be answered by whoever next touches
+    a stylesheet.
+
+Nothing here should be built until the width is confirmed. `SkriblSize.COMPACT_MAX`
+is one constant in one file precisely so that changing the answer is one edit.
+
+## v260 -- Stage 4 shipped because its condition was met, not because it looked good
+
+The compact surface drops the page bar for a ⋯ on the active tile. The design
+note set one gate on this and it was not visual: **every operation must stay
+reachable and announced**, because a filmstrip you can only operate by dragging
+is a filmstrip some people cannot operate at all.
+
+So the trigger is a real button with `aria-haspopup` on a tile in the tab order,
+opening a `role="menu"` of real buttons; focus moves in on open, arrows walk it,
+Escape returns focus to the trigger, and the items are no smaller than the `.pb`
+buttons they replace. Each of those is an assertion, not a description. There is
+also one proving the REGULAR surface was untouched -- **a change scoped to one
+surface is only correct if it left the other alone**, and nothing else would
+have caught it if stage 4 had quietly hidden the desktop row too.
+
+The visible scope goes in `aria-label`, not `title`: `lib/tooltip.js` adopts
+every `[title]` into `data-tip` and REMOVES the attribute so a styled tooltip can
+replace the native one. A screen reader hears "Move these 3 pages left" while
+the menu still reads "Move left".
+
+## v261 -- Removing a surface makes the rules that styled it unreachable
+
+Stage 4 hides the page bar on compact. Compact is every width at or below 640 --
+which is every width the `.pb-tx` label-hiding rules applied to. **The bar is
+therefore never icon-only any more, and those rules are dead.**
+
+verify_hold had a whole section built on that premise: it ran at a 390px
+viewport precisely because the labels were hidden there. After stage 4 that
+section measured a bar inside a `display:none` ancestor, and `querySelector`
+finds hidden markup perfectly well -- so most of its assertions kept PASSING,
+vacuously, and only the one that asked about LAYOUT (`offsetParent`) noticed
+anything had changed.
+
+That is the failure mode this project keeps meeting from new angles: a test that
+reads structure passes forever after the structure stops being rendered. The
+section runs at a regular width now, asserts the compact half explicitly, and
+says in a comment that the premise inverted rather than quietly reversing it.
+
+The dead CSS is FLAGGED, not removed -- it goes with the rest of the breakpoint
+migration, not piecemeal.

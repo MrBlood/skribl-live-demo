@@ -241,15 +241,41 @@ with sync_playwright() as p:
 
     br.close()
 
-print("\nPAGE BAR — the icon-only bar still says what each button does")
-# Below 560px every .pb-tx label is hidden, which left "×1" bare and left Move
-# as two unlabelled arrows in a bar that also reads "Page 10 / 12" — so they
-# looked like page navigation while actually reordering the animation. Checked
-# at a PHONE viewport, because at 1280px the labels are present and every
-# assertion below would pass for the wrong reason.
+print("\nPAGE BAR — what it says, and where it now exists at all")
+# HISTORY, because the premise of this section inverted. It was written when
+# every .pb-tx label hid below 560px, which left "×1" bare and left Move as two
+# unlabelled arrows in a bar that also read "Page 10 / 12" — they looked like
+# page navigation while actually reordering the animation. It therefore ran at a
+# PHONE viewport, where the labels were gone.
+#
+# v227 removed the page bar from the compact surface entirely, and compact is
+# every width at or below 640 — which is every width the label-hiding rules
+# applied to. So the bar is never icon-only any more, and running this section
+# at 390px measured a bar inside a display:none ancestor: querySelector still
+# finds hidden markup, so most of these assertions were passing VACUOUSLY and
+# only the one that asked about LAYOUT noticed.
+#
+# ⚑ FOLLOW-UP, worth a look but not fixed here: the `.pb` label-hiding rules in
+# flip.css are now unreachable for the same reason. Dead CSS, to be removed with
+# the rest of the breakpoint migration rather than piecemeal.
+#
+# It runs at a REGULAR width now, where the bar exists — and the compact half of
+# the claim is asserted first, since "the bar is gone here" is the change.
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
-    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _pgc = _b.new_page(viewport={"width": 390, "height": 844})
+    _pgc.goto(f"{BASE}/flip", wait_until="load")
+    _pgc.wait_for_timeout(1300)
+    check("at phone width there is no page bar to be icon-only",
+          _pgc.evaluate("() => getComputedStyle("
+                        "document.getElementById('pagebar')).display") == "none",
+          "v227: the compact surface carries these operations on the tile")
+    check("...and the tile carries the operations instead",
+          _pgc.evaluate("() => document.querySelectorAll('#strip .pageops').length") > 0,
+          "verify_compactops.py holds that surface in full")
+    _pgc.close()
+
+    _pg = _b.new_page(viewport={"width": 900, "height": 844})
     _errs = []
     _pg.on("pageerror", lambda e: _errs.append(str(e)))
     _pg.goto(f"{BASE}/flip", wait_until="load")
@@ -257,18 +283,17 @@ with sync_playwright() as _p:
     _pg.evaluate("() => { addFrame(false); addFrame(false); }")
     _pg.wait_for_timeout(400)
 
-    # This section is about the PAGE BAR at phone width: when the labels go, the
-    # glyphs are all that is left, so they have to be there and laid out. It
-    # used to measure #pbHold, which v226 retired to the tile badge; #pbCopy
-    # carries the same glyph+label structure and makes the same point.
-    check("labels really are hidden at phone width",
+    check("the bar is here at a regular width",
           _pg.evaluate("() => getComputedStyle("
-                       "document.querySelector('#pbCopy .pb-tx')).display") == "none",
-          "this section proves nothing if the labels are visible")
-
-    check("#pbCopy carries a glyph when its label is hidden",
+                       "document.getElementById('pagebar')).display") != "none",
+          "everything below measures the bar, so it has to be laid out")
+    check("its labels are visible, which is the premise that inverted",
+          _pg.evaluate("() => getComputedStyle("
+                       "document.querySelector('#pbCopy .pb-tx')).display") != "none",
+          "the icon-only case no longer exists — see the note above")
+    check("#pbCopy carries a glyph beside its label",
           _pg.evaluate("() => !!document.querySelector('#pbCopy .pb-glyph svg')"),
-          "a bare button is not self-explanatory")
+          "the glyphs still do work even with the words present")
     check("#pbCopy's glyph is actually rendered",
           _pg.evaluate("() => { const g = document.querySelector('#pbCopy .pb-glyph');"
                        " return g && g.offsetParent !== null"

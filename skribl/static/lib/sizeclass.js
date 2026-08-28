@@ -13,24 +13,36 @@
  * refer to. Migrating the existing queries onto it is incremental work with
  * verify_layout.py as the safety net; this file is what they migrate TO.
  *
- * IT MEASURES THE VIEWPORT, DELIBERATELY, AND THAT IS NOT THE OBVIOUS CHOICE.
- * The interesting question is whether THIS app has room, not how wide the
- * window is — Skribl is a blueprint a host mounts, possibly beside its own
- * chrome — so the first version measured the root element. verify_sizeclass
- * caught what that costs: `getBoundingClientRect()` on the body excludes the
- * scrollbar, so a 641px viewport measured ~626 and classified COMPACT where the
- * media query it replaces said regular. The boundary moved by ~15px.
+ * IT MEASURES THE ELEMENT, NOT THE VIEWPORT — and that is a DELIBERATE
+ * BEHAVIOUR CHANGE, taken in v227 for a specific reason, not a refactor.
  *
- * A migration that moves the boundary is not a migration; it is a design change
- * wearing a refactor's clothes, and this project has a suite for that habit.
- * The `width` media feature includes the scrollbar and so does
- * `window.innerWidth`, so measuring the viewport makes the migrated rules
- * behave identically — which is the entire claim of this step.
+ * The history matters because the reasoning reversed. v226 measured
+ * `window.innerWidth`, on the grounds that a migration must not move the
+ * boundary: the CSS `width` feature includes the scrollbar and so does
+ * innerWidth, whereas `getBoundingClientRect()` on the body excludes it, so an
+ * element-measured 641px viewport read ~626 and classified COMPACT where the
+ * query it replaced said regular. verify_sizeclass caught that at the time and
+ * the viewport won, correctly, because the claim being made was "no-op".
  *
- * Container-awareness is still the better long-run answer, and it is a
- * BEHAVIOUR CHANGE to be taken deliberately once the rules have moved: at that
- * point the boundary shifts for embedded hosts on purpose, with the layout
- * suite re-measured, rather than silently on the way past.
+ * THE OWNER THEN SUPPLIED THE CASE THAT SETTLES IT. The host site reserves a
+ * COLUMN for Pad and Flip — around 510px, to be confirmed. Inside a 1400px
+ * window that column is 510px wide, and `window.innerWidth` says 1400: the app
+ * would classify REGULAR and lay out a persistent command row into a space that
+ * cannot hold one. Viewport measurement is not merely less good there, it is
+ * wrong in the product's primary embedding, and wrong in the direction that
+ * breaks the layout rather than the direction that wastes space.
+ *
+ * So the question this asks is the one those eight rules always meant: does THIS
+ * app have room. What it costs is the ~15px band the earlier note describes —
+ * a standalone desktop window between 641 and about 655 now classifies compact
+ * where a media query would say regular. That band is taken knowingly, it is
+ * asserted below rather than discovered later, and the layout suite was
+ * re-measured across it.
+ *
+ * WHILE THE MIGRATION IS PARTIAL the migrated rule and the remaining media
+ * queries therefore disagree inside that band. That is the honest cost of a
+ * half-finished migration and an argument for finishing it, not for measuring
+ * the wrong thing in the meantime.
  *
  * ONE THRESHOLD, NAMED ONCE. 640 is not a new opinion: it is the boundary the
  * existing rules already used, so migrating a query onto this class is a no-op
@@ -59,11 +71,22 @@
     return width > COMPACT_MAX ? 'regular' : 'compact';
   }
 
-  function apply(width) {
+  function apply(width, quiet) {
     var next = classify(width);
     if (next === current) return;          // one write per real change
     current = next;
     if (root) root.setAttribute('data-size', next);
+    // THE FIRST CLASSIFICATION DOES NOT ANNOUNCE ITSELF, and that is not a
+    // nicety. `skribl:size` means "the class CHANGED"; going from nothing to a
+    // value while the page is still parsing is not a change anyone can act on,
+    // and acting on it is actively unsafe: flip.js is a classic script, and a
+    // listener that rebuilds the strip during init reaches `updateToolState()`
+    // and through it a `const` declared 250 lines further down. That threw
+    // "Cannot access 'playBtn' before initialization" — the exact temporal-dead-
+    // zone hazard this file's own header warns about — and took every handler
+    // after it with it. The attribute is still stamped, which is all the initial
+    // classification is for; the surfaces build themselves during init anyway.
+    if (quiet) return;
     try {
       document.dispatchEvent(new CustomEvent('skribl:size', {
         detail: { size: next, width: width }
@@ -72,20 +95,20 @@
   }
 
   function measure() {
-    // innerWidth, not the root's rect: see the note above. It is the number the
-    // `width` media feature uses, scrollbar included, so every rule migrated
-    // onto this class breaks at exactly the pixel it always did.
-    var w = window.innerWidth || 0;
+    // The ELEMENT, so an app given a 510px column inside a 1400px window knows
+    // it has 510px. See the note above for what this costs and why it is worth
+    // it. Fractional on purpose: a layout landing on 640.4 is not 640.
+    var w = root ? root.getBoundingClientRect().width : 0;
     if (w > 0) return w;
-    // Only if the window cannot answer — a detached document in a test harness,
-    // say — fall back to the element, which is better than classifying zero.
-    return root ? root.getBoundingClientRect().width : 0;
+    // A detached or display:none root measures 0, which would stamp `compact`
+    // as an answer nobody asked for. The window is the only other thing known.
+    return window.innerWidth || 0;
   }
 
   function observe(el) {
     root = el || document.body;
     if (!root) return null;
-    apply(measure());
+    apply(measure(), true);        // stamp, do not announce — see apply()
     if (typeof ResizeObserver === 'function') {
       if (ro) ro.disconnect();
       ro = new ResizeObserver(function () { apply(measure()); });

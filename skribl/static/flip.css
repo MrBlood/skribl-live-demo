@@ -494,6 +494,28 @@
   .frame .del.armed { display: flex; color: var(--danger); background: rgba(244,50,111,.2); }
   /* Touch has no hover: always show delete on the SELECTED frame. */
   .frame.on .del { display: flex; }
+  /* ---- compact page actions (v227, stage 4) --------------------------------
+     On the compact surface the persistent page bar is gone and the active tile
+     carries a ⋯ instead. Same visibility rule as the ✕ beside it — the tile you
+     are on, or the one you are pointing at — so the strip has one idea about
+     when per-tile controls exist. focus-within, so it is reachable without a
+     pointer, which is the condition this whole stage waited on. */
+  .frame .pageops {
+    position: absolute; bottom: 3px; left: 4px; z-index: 2;
+    width: 24px; height: 20px; border-radius: 5px; border: 0; padding: 0;
+    background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary);
+    display: none; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .frame .pageops svg { width: 15px; height: 15px; }
+  .frame:hover .pageops,
+  .frame.on .pageops,
+  .frame:focus-within .pageops { display: flex; }
+  .frame .pageops:hover { color: var(--text-primary); }
+  .frame .pageops:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
+  /* The row itself is what stage 4 removes. Only on compact — the regular
+     surface keeps it permanently, which was the owner's correction to the
+     design note and is the whole reason this rule is scoped rather than global. */
+  .flip-app[data-size="compact"] #pagebar { display: none; }
   /* The idle (×1) badge follows the same rule as the ✕ above. focus-within so
      it is reachable by keyboard, which a hover-only control never is. */
   .frame .holdbadge.idle { display: none; }
@@ -504,6 +526,30 @@
   .frame .holdbadge:hover { filter: brightness(1.12); }
   .frame .holdbadge:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
   .btn.flip-play:disabled { opacity: .38; cursor: default; box-shadow: none; }
+  /* The menu the ⋯ opens. Fixed rather than absolute so it escapes the strip's
+     own overflow — a popover clipped by the scroller it belongs to is a popover
+     you cannot read on the last tile. */
+  .pageops-menu {
+    position: fixed; z-index: 80; min-width: 168px; padding: 5px;
+    display: flex; flex-direction: column; gap: 2px;
+    background: var(--surface-raised); border: 1px solid var(--hairline-strong);
+    border-radius: 11px; box-shadow: 0 10px 28px rgba(0, 0, 0, .42);
+  }
+  .pageops-item {
+    appearance: none; -webkit-appearance: none;
+    border: 0; background: transparent; color: var(--text-secondary);
+    font: inherit; font-size: 13px; font-weight: 500; text-align: left;
+    padding: 9px 11px; border-radius: 7px; cursor: pointer;
+    /* 38px like .pb, so the compact surface is not a smaller target than the
+       one it replaces. */
+    min-height: 38px;
+  }
+  .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); color: var(--text-primary); }
+  .pageops-item:focus-visible { outline: 2px solid var(--ui-line); outline-offset: -2px; }
+  .pageops-item:disabled { opacity: .35; cursor: default; }
+  .pageops-item.danger { color: var(--danger-soft); }
+  .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); }
+
   /* Small transient chip for "Draft restored". */
   .flip-chip { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30;
     background: rgba(var(--glass-deep-2-rgb), .85); border: 1px solid var(--hairline-strong); color: var(--text-secondary);

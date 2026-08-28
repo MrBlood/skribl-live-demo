@@ -27,6 +27,19 @@ docs, because the finding came from a docstring.
 durable drafts v222) and the section now says so while keeping the original brief
 verbatim. Do not start either.
 
+**⚑ WAITING ON THE OWNER: the host column width.** The social site reserves a
+column for Pad and Flip — around **510px**, unconfirmed. It is why
+`lib/sizeclass.js` measures the ELEMENT rather than the window (v259): a 510px
+column in a 1400px window reads 1400 by the viewport, classifies regular, and
+lays a persistent command row into a space that cannot hold one. If the number
+is confirmed near 510, two questions open that are the owner's, not the next
+session's: whether 640 is the right threshold for a COLUMN (it was inherited
+from rules written about phone viewports), and whether a third class belongs
+between them — a 510px column has a mouse, hover and a keyboard, and can afford
+what a 360px phone cannot. Do not build either until the width is confirmed.
+`SkriblSize.COMPACT_MAX` is one constant in one file so that changing the answer
+stays one edit.
+
 **Still true from v223, and it has now fired five times:** `release_run.py`
 refuses to start when a suite on disk belongs to no batch. Add the `BATCHES` line
 when you add the suite.

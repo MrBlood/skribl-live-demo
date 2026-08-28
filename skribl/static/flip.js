@@ -1695,7 +1695,13 @@ function buildStrip(){
         +'title="Hold this page longer — tap to cycle" '
         +'aria-label="Hold page '+(i+1)+', currently '+_h+' frame'+(_h===1?'':'s')+'">'
         +'\u00d7'+_h+'</button>'
-      +'<canvas></canvas>';   // per-page controls now live in #pagebar (v124)
+      + (_compactStrip() ? '<button class="pageops" aria-haspopup="menu" '
+          + 'aria-expanded="false" title="Page actions" '
+          + 'aria-label="Actions for page ' + (i+1) + '">'
+          + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+          + '<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/>'
+          + '<circle cx="19" cy="12" r="1.7"/></svg></button>' : '')
+      +'<canvas></canvas>';   // per-page controls: #pagebar on regular, the ⋯ on compact
     el.addEventListener('pointerdown',ev=>{
       if(playing) return;
       // Speak here, not only in the click handler: a real drag sets
@@ -1704,7 +1710,8 @@ function buildStrip(){
       // one page operation that failed in complete silence.
       if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(frames.length<2) return;
-      if(ev.target.closest('.del') || ev.target.closest('.holdbadge')) return;
+      if(ev.target.closest('.del') || ev.target.closest('.holdbadge')
+         || ev.target.closest('.pageops')) return;
       // Shift is the desktop gesture: "…through here", from wherever you are.
       if(ev.shiftKey){ ev.preventDefault(); extendSpanTo(i); return; }
       // And touch gets the same reach without a modifier key: hold still for a
@@ -1740,6 +1747,13 @@ function buildStrip(){
       if(ev.target.closest('.holdbadge')){
         ev.stopPropagation();
         holdCycle(i);
+        return;
+      }
+      const ops = ev.target.closest('.pageops');
+      if(ops){
+        ev.stopPropagation();
+        if(i !== idx) go(i);              // act on the page you opened it from
+        openPageOps(ops, i);
         return;
       }
       const del = ev.target.closest('.del');
@@ -1839,6 +1853,105 @@ function flipOverlayOpen(){
   }catch(_){ /* a surface that does not exist on this page is not open */ }
   return false;
 }
+
+/* ---- compact page actions (v227, stage 4) ----------------------------------
+ * On the compact surface the persistent page bar is gone and this menu carries
+ * what it carried. The design note is explicit that this step waits on ONE
+ * thing: every operation must stay reachable and announced, because a filmstrip
+ * you can only operate by dragging is a filmstrip some people cannot operate.
+ *
+ * So it is a real <button> with aria-haspopup on a tile that is in the tab
+ * order, opening a real role="menu" of real buttons. Focus moves in on open and
+ * returns to the trigger on close. Nothing here is hover-only and nothing is a
+ * gesture — the gestures exist alongside it for people who find them, which is
+ * the whole shape of the compact/regular split.
+ *
+ * It is only rendered on compact. On regular the page bar is still there and a
+ * second route to the same five operations would be clutter, not redundancy.
+ */
+function _compactStrip(){
+  return !!(window.SkriblSize && SkriblSize.isCompact());
+}
+let _opsMenu = null, _opsTrigger = null;
+function closePageOps(refocus){
+  if(!_opsMenu) return;
+  _opsMenu.remove(); _opsMenu = null;
+  if(_opsTrigger){
+    _opsTrigger.setAttribute('aria-expanded', 'false');
+    if(refocus) try{ _opsTrigger.focus(); }catch(_){}
+  }
+  _opsTrigger = null;
+}
+function openPageOps(trigger, i){
+  closePageOps(false);
+  const sp = pageSpan();
+  const many = sp && SkriblPageSpan.contains(sp, i);
+  const what = many ? 'these ' + SkriblPageSpan.count(sp) + ' pages' : 'this page';
+  const n = frames.length;
+  const items = [
+    ['Move left',  'Move ' + what + ' left',  () => spanMove(-1),
+     sp ? sp.from === 0 : i === 0],
+    ['Move right', 'Move ' + what + ' right', () => spanMove(1),
+     sp ? sp.to === n - 1 : i === n - 1],
+    ['Copy',       'Copy ' + what,            () => spanCopy(),  false],
+    ['Delete',     'Delete ' + what,          () => spanDelete(),
+     n <= 1 || (sp && SkriblPageSpan.count(sp) >= n)],
+  ];
+  const m = document.createElement('div');
+  m.className = 'pageops-menu';
+  m.setAttribute('role', 'menu');
+  m.setAttribute('aria-label', 'Actions for ' + what);
+  items.forEach(([label, title, run, disabled], k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pageops-item' + (label === 'Delete' ? ' danger' : '');
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    // The visible label stays short ("Move left"); the SCOPE goes in the
+    // accessible name, so a screen reader hears "Move these 3 pages left" while
+    // the menu stays scannable. title as well, for the pointer tooltip — note
+    // lib/tooltip.js adopts [title] into data-tip and REMOVES the attribute, so
+    // aria-label is also the only one of the two that survives to be read back.
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    b.disabled = !!disabled;
+    b.addEventListener('click', () => { closePageOps(false); run(); });
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  // Anchored to the trigger and clamped to the window, so a menu opened on the
+  // last tile of a scrolled strip does not hang off the edge.
+  const r = trigger.getBoundingClientRect(), mr = m.getBoundingClientRect();
+  let left = Math.min(r.left, window.innerWidth - mr.width - 8);
+  m.style.left = Math.max(8, left) + 'px';
+  m.style.top = Math.max(8, r.top - mr.height - 6) + 'px';
+  trigger.setAttribute('aria-expanded', 'true');
+  _opsMenu = m; _opsTrigger = trigger;
+  const first = m.querySelector('.pageops-item:not(:disabled)');
+  if(first) try{ first.focus(); }catch(_){}
+  // Arrow keys walk the menu, Escape returns you where you were. A menu you can
+  // open with the keyboard and not leave with it is worse than no menu.
+  m.addEventListener('keydown', e => {
+    const btns = [...m.querySelectorAll('.pageops-item:not(:disabled)')];
+    const at = btns.indexOf(document.activeElement);
+    if(e.key === 'Escape'){ e.preventDefault(); closePageOps(true); return; }
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      const nx = e.key === 'ArrowDown' ? at + 1 : at - 1;
+      const t = btns[(nx + btns.length) % btns.length];
+      if(t) t.focus();
+    }
+  });
+}
+document.addEventListener('pointerdown', e => {
+  if(_opsMenu && !e.target.closest('.pageops-menu') && !e.target.closest('.pageops')){
+    closePageOps(false);
+  }
+});
+// The strip is rebuilt when the class flips, because the ⋯ exists on one side of
+// the boundary and not the other. Without this a window resized past 640 keeps
+// whichever surface it happened to load with.
+document.addEventListener('skribl:size', () => { closePageOps(false); buildStrip(); });
 
 /* Keyboard. This is where a range earns its keep on desktop: shift-arrow to
    grow one, Escape to drop it, and the copy/paste pair everyone already has in

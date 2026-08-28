@@ -184,6 +184,10 @@ BATCHES = [
     # computed style on both sides of one pixel, so it wants a batch that is not
     # also running a second Chromium competing for the frame.
     ["verify_sizeclass.py"],
+    # v227. Stage 4: the compact surface drops the page bar for a per-tile menu.
+    # It resizes across the boundary and drives a keyboard through a popover, so
+    # it wants the same quiet CPU verify_sizeclass does.
+    ["verify_compactops.py"],
 ]
 
 
