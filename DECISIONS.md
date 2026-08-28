@@ -1729,3 +1729,81 @@ it: the mental model was "undo the wrong stroke", but an eraser is not undo.
 
 Mistakes in a replay demo belong in the layer that is still on top -- during
 construction, before anything is painted over them.
+
+## v246 -- A warning is the wrong instrument when the safe state is "did not notice"
+
+`current_user_id` without a CSRF verifier logged a warning, on the reasoning
+that a bearer-token host does not need CSRF and should not be refused. The
+reasoning was right and the mechanism was wrong. The failure mode is "any
+third-party page can post as your logged-in user"; the warning went to a logger
+the host may never have configured, at import time, in a stream nobody reads
+during a deploy. The state you got by not noticing was the unsafe one.
+
+It refuses now. **What makes refusing acceptable is that there is an explicit
+declaration for the legitimate case** -- `csrf=False`, meaning "my
+authentication is not cookie-based". Without that opt-out the refusal would be
+punishing a correct configuration, which is how a hard error earns a reputation
+for being wrong and gets worked around.
+
+The rule generalises: a warning is right when the reader can act on it and the
+default is safe. When the default is unsafe, the choice is refuse-with-an-
+opt-out, not warn.
+
+## v247 -- A number stated three times is stated zero times
+
+Title and caption lengths lived in three places: `String(80)`/`String(300)` on
+the columns, `[:80]`/`[:300]` truncating in the create endpoint, and
+`maxlength="60"`/`"280"` in both editors. No two agreed, and an earlier session
+had written a harness block headed "280 and 300 are different numbers ON
+PURPOSE" -- pinning the drift as if it were a design.
+
+It was not a design. A caption of 290 could not be typed into the editor but
+posted fine; one of 350 came back **201** with fifty characters silently gone.
+
+**OWNER, FLAGGED:** this reverses that earlier decision, and two assertions in
+`verify_apiedges.py` were removed rather than adjusted, because what they
+asserted was the drift. There is one constant per field in `core.py` now; the
+columns are declared from it, the endpoint rejects with a 400 naming the limit,
+and the templates render `maxlength` from it through the context processor.
+
+The general form: when the same fact appears in N places, N-1 of them are
+documentation of the other one, and only the one that can refuse is real.
+
+## v248 -- A cap on bytes is not a cap on cost
+
+Media validation proved the declared type matched the leading bytes and that the
+base64 was under a size cap. Neither says anything about what decoding costs. A
+66-byte PNG whose IHDR declares 30000x30000 passed everything, and every browser
+that opened the post then allocated about 3.6 GB.
+
+Bytes cannot be a proxy for decode cost, because the entire point of a
+decompression bomb is that it is small. The dimensions are in the header of all
+four accepted formats, so they read without a decoder and without a dependency.
+
+Two choices inside it worth keeping. **An unparseable header ACCEPTS** -- a file
+that will not parse does not decode either, and rejecting on "unparseable" turns
+every rare corner of these formats into a 400 for no gain. And **the parser must
+not become the attack** -- the JPEG segment walk is bounded by segment count and
+byte offset, or a crafted file makes the scan itself the denial of service.
+
+## v249 -- A maintenance function nothing can run is a maintenance plan, not a job
+
+`sweep_orphans` reclaimed disk since v180 and was documented as the answer to
+orphaned media. Nothing shipped could invoke it. Every deployment was left to
+resolve its own app, find the store the host passed in, get a session, and get
+the argument order right on a function whose third positional argument deletes
+user data.
+
+It was also unobservable: returning only the removed keys meant a run that
+removed nothing looked identical whether there was nothing to reclaim, the
+credentials were pointed at the wrong prefix, or the grace period was swallowing
+everything. Every branch that DECLINES to delete is now counted separately,
+which is what makes a zero interpretable.
+
+And it was fragile: `delete_key` ran uncaught, so one object a bucket policy
+refuses aborted the run and left every later orphan in place -- while the key
+was already in the returned list, reporting a deletion that never happened.
+
+The test for "is this operable" is not "does the function work". It is: can
+someone schedule it, can they tell what it did, and does it survive one object
+going wrong.

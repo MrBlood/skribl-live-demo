@@ -1,6 +1,47 @@
 # Skribl — Handoff for the next session
 
-## v223 addendum — read this first (everything below is history, still true where not superseded)
+## v224 addendum — read this first (everything below is history, still true where not superseded)
+
+**Current sealed build: v224.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
+typed here.
+
+**Read order for a new session:** `V224-CHANGES.md` (what happened and why),
+then `FOR-THE-REVIEWER.md`, then `DESIGN-DIRECTION.md` (unchanged; still the
+intent), then this file.
+
+**v224 answered an outside review of the v223 archive in full** — eight numbered
+findings and three low-severity items, each with a regression suite. There is no
+carried-over review backlog. Four new suites: `verify_medialimits`,
+`verify_sweepjob`, `verify_hostseams`, `verify_hostconfig`.
+
+**Two things changed that will affect what you write next.**
+
+*Fixtures must declare their CSRF posture.* `create_blueprint`/`init_skribl`
+now RAISE when `current_user_id` is set and `csrf` is not. A harness fixture
+that authenticates with a closure rather than a cookie passes `csrf=False`;
+five existing ones were updated. If a new fixture refuses to build, that is the
+rule, not a bug.
+
+*One constant per text limit.* `core.MAX_TITLE_CHARS` / `MAX_CAPTION_CHARS` are
+the column widths, the API check and the rendered `maxlength`. Do not type a
+length beside them anywhere. **OWNER, FLAGGED:** this reversed an earlier
+decision that the UI's 280 and the server's 300 were "different numbers ON
+PURPOSE", and removed the two `verify_apiedges` assertions that pinned the
+drift. See DECISIONS.md v247 if that split was intentional.
+
+**The lesson this arc paid for** (DECISIONS.md v246–v249): a warning is the
+wrong instrument when the safe state is "did not notice"; a number stated three
+times is stated zero times; a cap on bytes is not a cap on cost; and a
+maintenance function nothing can run is a maintenance plan, not a job. The test
+for operability is not "does the function work" — it is whether someone can
+schedule it, tell what it did, and survive one object going wrong.
+
+**Still true from v223, and it has now fired four times:** `release_run.py`
+refuses to start when a suite on disk belongs to no batch. Add the `BATCHES`
+line when you add the suite.
+
+## v223 addendum (history)
 
 **Current sealed build: v223.** Result, tree hash, suite/assertion counts and
 skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
@@ -147,9 +188,12 @@ and the per-backend mechanism.
 ### 2b. Standing owner items (unchanged for many builds)
 
 - **DECISIONS.md #1** (visibility default `unlisted`) and **#2** (CSRF default
-  off) — deliberately UNFLIPPED until authentication exists. A CSRF/auth
-  tripwire warns when `current_user_id` is configured without `csrf` (tested
-  both directions). Flip both together when cookie auth lands.
+  off) — deliberately UNFLIPPED until authentication exists. **v224 changed the
+  tripwire, not the default:** `current_user_id` without `csrf` no longer warns,
+  it RAISES, with `csrf=False` as the explicit declaration for a
+  token-authenticated host. The default for an *unauthenticated* deployment is
+  untouched. Flip #1 and #2 together when cookie auth lands. (DECISIONS.md v246
+  is why a warning was the wrong instrument.)
 - **Hardware before any media-backend flip on live data:** S3Store has never
   run against a real bucket/MinIO (the suite verifies signatures only); Pad
   stylus path needs real-iPad minutes; A1's iOS audio fix and F3 above need

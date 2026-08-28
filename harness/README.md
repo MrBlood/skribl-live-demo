@@ -68,11 +68,40 @@ Then, from `harness/`:
 - `verify_assetcache.py` — a fabricated `?v=` buys no lexing, no gzip and no
   cache entry (the fake-bust CPU DoS), and the strip/gzip caches are app-local.
 - `verify_apiedges.py` — endpoint-level pins: empty-frames and fps refusals,
-  NaN/zero-group/hold-0/visibility refusals, baseSnapshot validation, the
-  caption 280/300 pair, idempotent replay, and the `createdAt` UTC wire format.
+  NaN/zero-group/hold-0/visibility refusals, baseSnapshot validation, the single
+  caption limit (v224 — it used to pin the 280/300 drift), idempotent replay,
+  and the `createdAt` UTC wire format.
 - `verify_mimeparity.py` — every MIME spelling validation accepts maps to a
   real extension and canonical serve type; no accepted upload can fall through
   to `application/octet-stream`.
+
+### v224 outside-review suites
+
+- `verify_medialimits.py` — media resource limits. A container check proves the
+  declared type matches the leading bytes and says nothing about decode cost, so
+  a 66-byte PNG declaring 30000x30000 used to sail through. Runs four ways: the
+  reject cases; a 4x4 sweep proving real Chromium/gifenc/`wave` output parses to
+  the size its encoder was asked for; the documented gaps (an unparseable header
+  is ACCEPTED, compressed-audio duration is bounded only by bytes) asserted
+  rather than promised; and a mutation pass that lifts each cap and requires
+  every reject to turn back into a pass. Drives a browser only to build
+  fixtures.
+- `verify_sweepjob.py` — the orphan sweep as an operable job: every counter in
+  `sweep_orphans_report` gets an object planted to land in it and nowhere else,
+  the counters are cross-checked to sum to the listed total, a store that
+  refuses one delete must not abort the run, and `python -m skribl.sweep` is
+  driven as a real subprocess so the exit codes asserted are the ones cron
+  sees. No server, no browser — one of the cheapest suites here.
+- `verify_hostseams.py` — the four host seams: the SQL `feed_filter` (including
+  that a filtered feed still returns FULL pages and a cursor pointing at a row
+  the viewer saw), `csrf=False` producing a working app, `visibility_values`,
+  and `author_resolver` (the id is not overridable). In-process throwaway apps
+  over one temp SQLite file, like `verify_privacy.py`.
+- `verify_hostconfig.py` — the configuration defects: one title/caption limit
+  shared by the column, the endpoint and the rendered `maxlength`; production
+  detection across eleven platform markers, each exercised by booting `app.py`
+  in a scrubbed subprocess because the raise happens at import time; and the
+  host defaulting a deployment to the durable rate limiter.
 
 - `verify_amber.py` / `verify_dots.py` synthesize their over-quota WAV rather
   than reading an uploaded file (the original boom-bap loop is gone). A 30s

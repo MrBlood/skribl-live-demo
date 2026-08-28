@@ -14,7 +14,9 @@ directory listing. A number typed here is a number that goes stale silently.
 
 Verify before believing anything in prose, including this file:
 
-    cd skribl-v223 && sha256sum -c SHA256SUMS | grep -c ': OK'    # expect 225
+    cd skribl-v224                                  # the name derives from SKRIBL_VERSION
+    grep -Ec '^[0-9a-f]{64} ' SHA256SUMS            # N: the manifest's own entry count
+    sha256sum -c SHA256SUMS | grep -c ': OK'        # must equal N
     grep -m1 'tree hash' harness/RELEASE.md
     python3 -c "import sys;sys.path.insert(0,'harness');import release_run as r;print(r.tree_hash())"
 
@@ -203,14 +205,17 @@ the pin, the lock and the interpreter running the harness disagree.
 
 **Verify the archive first, in one command:**
 
-    cd skribl-v223 && sha256sum -c SHA256SUMS | grep -c ': OK'      # expect 225
-    # Compare against the manifest, not against this number — the manifest is
-    # generated, this line is typed, and typed numbers are what drift. The
-    # explanation that used to sit here listed which files had joined since
-    # some earlier count, and was itself three sessions stale; the manifest
-    # already says which files exist, so the prose said nothing the tree did
-    # not, less accurately. `verify_docs.py` checks this number against
-    # SHA256SUMS on every run.
+    cd skribl-v224
+    grep -Ec '^[0-9a-f]{64} ' SHA256SUMS            # N: the manifest's own entry count
+    sha256sum -c SHA256SUMS | grep -c ': OK'        # must equal N
+
+    # v224: the expected count is no longer TYPED here at all. It used to be,
+    # with a note explaining that you should compare against the manifest
+    # rather than against the number — which is an odd thing to write beside a
+    # number, and it went stale anyway every time the file set changed. The
+    # manifest already states its own size; asking it is strictly better than
+    # asserting it. `verify_docs.py` still checks any count that IS typed
+    # elsewhere against SHA256SUMS.
 
 ---
 

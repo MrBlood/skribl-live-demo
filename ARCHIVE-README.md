@@ -1,14 +1,18 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v223"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v224"` (skribl/core.py).**
 
 **The release evidence in this archive is THIS tree's.**
 `harness/RELEASE.md` and `harness/LAST-RUN.txt` are generated from a full
-aggregate run executed against the tree in this archive: PASS, 3134 assertions,
-74/74 suites reporting, 1 skipped (`verify_mp4.py`, no H.264 profile in the
-build container). The tree hash in `RELEASE.md` is computed, and every file
-here is listed in `SHA256SUMS`, so both claims are checkable without trusting
-this sentence. What changed and why: `V223-CHANGES.md`.
+aggregate run executed against the tree in this archive. **Read the totals
+there, not here** — the result, the assertion count, the suites reporting and
+anything skipped are all stated in `harness/RELEASE.md`, and restating them in
+this paragraph is how a number goes stale one release later while still
+sounding authoritative. (`verify_mp4.py` skips in any build container without
+an H.264 profile; a skipped suite contributes zero assertions and is not
+evidence of coverage.) The tree hash in `RELEASE.md` is computed, and every
+file here is listed in `SHA256SUMS`, so both claims are checkable without
+trusting this sentence. What changed and why: `V224-CHANGES.md`.
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
