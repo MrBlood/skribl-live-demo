@@ -1,13 +1,13 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v222"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v223"` (skribl/core.py).**
 
-**The release evidence in this archive is v221's, and this tree is v222 —
+**The release evidence in this archive is v221's, and this tree is v223 —
 unsealed.** `harness/RELEASE.md` and `harness/LAST-RUN.txt` were generated
 from v221's full aggregate run and describe THAT tree, not this one; they are
 deliberately left unstamped because regenerating them without the run would
 make the archive claim evidence it does not have (the v219 lesson,
-`FOR-THE-REVIEWER.md`). The v222 changes and the suites run green against
+`FOR-THE-REVIEWER.md`). The v223 changes and the suites run green against
 them are listed in `V222-CHANGES.md`. To seal: `python3 harness/release_run.py`,
 then regenerate `SHA256SUMS` last.
 
