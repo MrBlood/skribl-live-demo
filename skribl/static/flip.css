@@ -62,9 +62,13 @@
      overlap behaviour the shared rule protects is unchanged, and flex-shrink
      is left exactly as it was. Scoped to .flip-app so Pad keeps the shared
      rule until Pad has been looked at. */
-  @media (max-width: 640px) {
-    .flip-app .header .actions { margin-left: auto; }
-  }
+  /* MIGRATED to the size class (v226, stage 3). Identical boundary — the class
+     is defined at the same 640px this query used — so this is a no-op in
+     behaviour and a real change in structure: the app now asks ONE question
+     about its own width instead of each rule asking the window separately.
+     lib/sizeclass.js has the argument; the remaining max-width rules in this
+     file migrate the same way, one at a time, with verify_layout as the net. */
+  .flip-app[data-size="compact"] .header .actions { margin-left: auto; }
 
   /* .seg / .seg button / .seg button.on MOVED to styles.css. They lived here,
      and Pad does not load flip.css — so when Pad gained a .seg canvas picker
@@ -741,8 +745,12 @@
 }
 
 /* --- v109: per-page hold ---------------------------------------------------- */
-/* The badge is always visible (unlike the ops bar) so the timing of an animation
-   is readable at a glance without hovering every page. */
+/* A badge that SAYS something (hold above 1) is always visible, so the timing of
+   an animation is readable at a glance without hovering every page. Since v226
+   the badge is also the control that sets the hold, so it renders at ×1 too —
+   marked .idle, and hidden by the rule further down unless its tile is active,
+   hovered or focused. This comment used to say "always visible" flatly, which
+   stopped being true the moment the badge became a button. */
 .frame .holdbadge {
   position: absolute;
   top: 4px;

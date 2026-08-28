@@ -1969,3 +1969,49 @@ job is to show DRAWINGS read as six things demanding attention.
 Geometry was deliberately NOT touched -- 38px, 9px radius, and the invisible
 44pt tap expander all stay. `.pb` is "labelled pill = named action" in the
 documented shape language (DECISIONS #5) and its radius is not a tone question.
+
+## v257 -- A refactor that moves the boundary is not a refactor
+
+Flip's stylesheet carried eight `max-width` rules -- 359, 360, 392, 400, 440,
+559, 560, 640 -- and styles.css had its own set. Not a responsive design: eight
+patches, each correct on the day it was written, none of them agreeing about
+where "small" begins. The measured cost is in this project's own review notes:
+one pixel of resize takes Pad's toolbar from 398px to 565px, and 560-640px gets
+the phone layout on a viewport with room to spare.
+
+`lib/sizeclass.js` is the one decision those rules migrate onto. **What is worth
+recording is the mistake made building it.**
+
+The first version measured the ROOT ELEMENT rather than the viewport, on a good
+argument: what every one of those rules actually wants to know is whether THIS
+app has room, and Skribl is a blueprint a host mounts, possibly beside its own
+chrome. But `getBoundingClientRect()` excludes the scrollbar, so a 641px viewport
+measured ~626 and classified COMPACT where the media query it replaced said
+regular. **The boundary moved by fifteen pixels inside a change announced as a
+no-op.** The suite caught it because the no-op claim was the thing it was
+pointed at hardest -- an assertion at 640 and another at 641, either side of one
+pixel.
+
+It measures `window.innerWidth` now, which is what the CSS `width` feature uses,
+scrollbar included. Container-awareness is still the better long-run answer and
+is recorded in the file as a BEHAVIOUR CHANGE to be taken deliberately once the
+rules have moved, with the layout suite re-measured -- not slipped in on the way
+past.
+
+The general form, and this session has now produced it twice in two different
+disguises: **when a change is sold as structural, the assertion that earns its
+keep is the one that would fail if it were not.** Everything else in that suite
+would have passed with the boundary in the wrong place.
+
+## v258 -- Say what did NOT move
+
+`verify_sizeclass.py` asserts that fourteen `max-width` queries REMAIN in
+flip.css. That looks like an odd thing to test until you ask what the suite is
+for: this step was announced as "replace the eight breakpoints" and delivered as
+"add the class and migrate one as proof". Those are different sizes of work, and
+the difference is exactly the kind that gets quietly forgotten between sessions.
+
+An assertion that names the remaining work makes the narrowing permanent and
+visible instead of conversational. It will fail, deliberately, when someone
+finishes the migration -- and finishing it should cost a deliberate edit here,
+the same way `verify_tray`'s exact tool roster does.

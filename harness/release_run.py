@@ -180,6 +180,10 @@ BATCHES = [
     # with nothing only because the two suites either side of it are already
     # alone for timing reasons.
     ["verify_pagespan.py"],
+    # v226. The size class. It resizes the viewport repeatedly and asserts a
+    # computed style on both sides of one pixel, so it wants a batch that is not
+    # also running a second Chromium competing for the frame.
+    ["verify_sizeclass.py"],
 ]
 
 

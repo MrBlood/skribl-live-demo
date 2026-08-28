@@ -1571,7 +1571,7 @@ function disarmAll(){
 const pagebar=document.getElementById('pagebar');
 const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pbLeft'),
       pbRight=document.getElementById('pbRight'), pbCopy=document.getElementById('pbCopy'),
-      pbHold=document.getElementById('pbHold'), pbDel=document.getElementById('pbDel');
+      pbDel=document.getElementById('pbDel');
 // The Pad shows the recorded length beside Play; Flip can state its animation
 // length exactly — total hold units over fps. Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
@@ -1651,12 +1651,11 @@ function syncPagebar(){
   if(pbCopy){ pbCopy.disabled = playing; pbCopy.title = 'Copy ' + these; }
   if(pbDel){ pbDel.disabled = playing || n<=1 || cnt>=n;
     pbDel.title = 'Delete ' + these; }
-  if(pbHold){
-    pbHold.disabled = playing;
-    const ic=pbHold.querySelector('.pb-ic'); if(ic) ic.textContent='\u00d7'+frameHold(f);
-    pbHold.classList.toggle('on', frameHold(f)>1);
-    pbHold.title = 'Hold ' + these + ' longer';
-  }
+  // pbHold's sync block lived here until v226. It was inert the moment the
+  // button left the template — every line behind an `if(pbHold)` that could
+  // never be true — and dead code that cannot run is worse than dead code that
+  // can: it reads as a live feature to anyone scanning the function. The hold
+  // is the tile's badge now, rebuilt by buildStrip from the frame each time.
 }
 if(pbLeft) pbLeft.addEventListener('click',()=>{ if(pbLeft.disabled) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; } spanMove(-1); });
@@ -1998,6 +1997,12 @@ document.addEventListener('pointercancel', ()=>{
   if(!_pdrag) return;
   _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
 });
+/* The app's ONE size decision. Started here, near the top, because every
+   migrated CSS rule keys off the attribute it stamps — an unclassified root
+   gets the compact form of all of them, which on a desktop is the 641px cliff
+   this is meant to end. */
+if(window.SkriblSize) SkriblSize.observe(document.body);
+
 /* ---- page spans ------------------------------------------------------------
  * A run of pages, selected on the strip and operated on by the controls that
  * were already there. DESIGN-DIRECTION is explicit that page management is
