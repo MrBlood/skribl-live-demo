@@ -35,6 +35,7 @@ byte is a different key.
 import base64
 import copy
 import datetime
+import email.utils
 import hashlib
 import hmac
 import os
@@ -195,7 +196,26 @@ class LocalDiskStore(MediaStore):
     def put_bytes(self, raw, content_type, key):
         sub, path, type_path = self._paths(key)
         if os.path.exists(path):
-            return                      # content-addressed: already identical
+            # Content-addressed: the bytes are already identical, so there is
+            # nothing to write — but the object's AGE is load-bearing, and
+            # returning here used to leave it untouched.
+            #
+            # OUTSIDE REVIEW v223 #1, a data-loss race. sweep_orphans treats age
+            # as the only thing separating "abandoned" from "not finished yet".
+            # Reusing an object older than the grace period therefore handed the
+            # sweeper a key that looks long dead while a post is actively
+            # claiming it: the association row is still inside the caller's
+            # uncommitted transaction, the sweeper's query cannot see it, and the
+            # bytes are deleted a moment before the post commits. The post
+            # succeeds and its media 404s forever.
+            #
+            # Touching it makes the reuse look exactly like a fresh write, which
+            # is what it is as far as the grace period is concerned.
+            try:
+                os.utime(path, None)
+            except OSError:
+                pass          # read-only or exotic fs; stat_key still re-checks
+            return
         os.makedirs(sub, exist_ok=True)
         # Write to a temp name and rename, so a crash mid-write cannot leave a
         # truncated file sitting at a key that claims to be complete.
@@ -260,6 +280,15 @@ class LocalDiskStore(MediaStore):
                     continue
                 yield name, os.path.getmtime(full)
 
+    def stat_key(self, key):
+        """Current mtime of one key, or None. The sweeper re-checks this
+        immediately before deleting, so an object reused between being LISTED
+        and being deleted is spared. Cheap: one stat."""
+        try:
+            return os.path.getmtime(self._paths(key)[1])
+        except OSError:
+            return None
+
     def delete_key(self, key):
         _, path, type_path = self._paths(key)
         for target in (path, type_path):
@@ -282,10 +311,25 @@ class LocalDiskStore(MediaStore):
             return fh.read(), content_type
 
 
-#: A stored key is exactly a hex digest plus a known extension. Anything else is
-#: rejected before it can reach the filesystem — this is the path-traversal
-#: guard, and it is an allowlist rather than a "../" blocklist on purpose.
-KEY_RE = re.compile(r"^[0-9a-f]{64}\.[a-z0-9]{2,4}$")
+#: A stored key is exactly a hex digest plus an extension THIS MODULE CAN
+#: WRITE. Anything else is rejected before it can reach the filesystem — this is
+#: the path-traversal guard, and it is an allowlist rather than a "../"
+#: blocklist on purpose.
+#:
+#: OUTSIDE REVIEW v223 #2. This was `[a-z0-9]{2,4}`, which is not "a known
+#: extension" however firmly the comment said so: it admits .html, .txt, .json,
+#: .exe and several hundred other strings Skribl cannot emit. That matters
+#: because sweep_orphans uses this as its OWNERSHIP guard before deleting — see
+#: its NAMESPACE GUARD note — so in a shared root, or under an S3 prefix shorter
+#: than a co-tenant's, a hex-named object of theirs with any short extension was
+#: ours to delete. The existing co-tenant test passed throughout because both
+#: objects it plants are rejected for other reasons (a slash, a non-hex stem);
+#: neither varies the one field that decides this.
+#:
+#: Derived from _TYPE_FOR_EXT so the two cannot drift: an extension Skribl can
+#: write is servable, and nothing else is.
+KEY_RE = re.compile(r"^[0-9a-f]{64}\.(?:%s)$"
+                    % "|".join(re.escape(e[1:]) for e in sorted(_TYPE_FOR_EXT)))
 
 
 def externalise_payload(payload, store, iter_media):
@@ -545,6 +589,18 @@ def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
         for key in chunk:
             if key in referenced:
                 continue
+            # RE-CHECK THE AGE, immediately before deleting. Listing and
+            # deleting are separated by a reference query over up to 500 keys;
+            # a post can reuse a listed object inside that window, and reuse now
+            # refreshes the object's age (see put_bytes). Without this, the
+            # touch only narrows the race rather than closing the ordering the
+            # outside review described. A store that cannot answer says None and
+            # gets the old behaviour.
+            _stat = getattr(store, "stat_key", None)
+            if _stat is not None:
+                _now = _stat(key)
+                if _now is not None and _now > cutoff:
+                    continue        # became young: a reuse is in flight
             removed.append(key)
             if not dry_run:
                 store.delete_key(key)
@@ -677,11 +733,30 @@ class S3Store(MediaStore):
     # -- MediaStore ------------------------------------------------------------
     def put_bytes(self, raw, content_type, key):
         # Content-addressed: identical bytes are already there under the same
-        # key, so a HEAD that finds one turns a repost into no upload at all.
-        # The same skip the local store gets from os.path.exists.
+        # key. The HEAD used to turn a repost into no upload at all — and left
+        # the object's LastModified untouched, which is the S3 half of OUTSIDE
+        # REVIEW v223 #1: sweep_orphans reads age as "abandoned vs not finished
+        # yet", so reusing an old orphan handed the sweeper bytes that look long
+        # dead while a post was mid-commit on them. See LocalDiskStore.put_bytes.
+        #
+        # A SELF-COPY, not a re-upload. Both refresh LastModified; the copy
+        # keeps the property this dedupe exists for — a repost costs no upload
+        # — which verify_s3 asserts outright. The first draft of this fix
+        # re-PUT the bytes and broke that assertion, which is the repo's rule
+        # about not moving a ratchet to fit your own commit doing its job: the
+        # answer was to make the fix testable rather than to relax the test, so
+        # the S3 double now implements COPY.
         status, _body, _h = self._request("HEAD", self._path(key))
         if status == 200:
-            return
+            status, body, _h = self._request(
+                "PUT", self._path(key),
+                extra_headers={"x-amz-copy-source": self._path(key),
+                               "x-amz-metadata-directive": "REPLACE",
+                               "content-type": content_type or "application/octet-stream"})
+            if status in (200, 201):
+                return
+            # A backend without COPY must not silently skip the refresh, or the
+            # race this fixes comes back invisibly. Fall through and re-upload.
         status, body, _h = self._request(
             "PUT", self._path(key), body=raw,
             extra_headers={"content-type": content_type or "application/octet-stream"})
@@ -753,6 +828,29 @@ class S3Store(MediaStore):
             token = root.findtext(f"{ns}NextContinuationToken")
             if not token:
                 return
+
+    def stat_key(self, key):
+        """Current LastModified of one key as epoch seconds, or None.
+
+        The sweeper re-checks this immediately before deleting, so an object
+        reused between being LISTED and being deleted is spared. An
+        unparseable or missing stamp reads as NOW for the same reason
+        iter_keys does it: the safe direction is "too new to touch".
+        """
+        status, _body, headers = self._request("HEAD", self._path(key))
+        if status != 200:
+            return None
+        stamp = ""
+        for k, v in (headers or {}).items():
+            if k.lower() == "last-modified":
+                stamp = v
+                break
+        if not stamp:
+            return time.time()
+        try:
+            return email.utils.parsedate_to_datetime(stamp).timestamp()
+        except (TypeError, ValueError):
+            return time.time()
 
     def delete_key(self, key):
         status, body, _h = self._request("DELETE", self._path(key))
