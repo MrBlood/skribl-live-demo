@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-28T14:33:33Z
+UTC timestamp           : 2026-08-28T14:37:18Z
 Host                    : Linux x86_64
 Tree SHA-256            : f2e4b4eef8af63d1dbdc733c4d8112492e588f73d4d01a115f9f0bf2e624c857
-Git commit              : 0b2af0f-dirty
+Git commit              : 7276c7c-dirty
 SKRIBL_VERSION          : v224
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,19 +10,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.yBQjMPwNVK/harness.db)
+Database reset          : yes (fresh /tmp/tmp.vMFantZ6wm/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_docs.py verify_lib.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_tools.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 2
-  verify_docs.py: ok — 40/40 passed
-  verify_lib.py: ok — 8/8 passed
-assertions passed: 48   (skipped suites contribute 0)
+suites requested : 1
+  verify_tools.py: ok — 118/118 passed
+assertions passed: 118   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
