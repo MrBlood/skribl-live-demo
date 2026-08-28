@@ -97,8 +97,21 @@ st, _ = post({"caption": {}, "frames": [frame]})
 check("caption={} -> 400", st == 400)
 st, _ = post({"title": None, "caption": None, "frames": [frame]})
 check("explicit nulls still accepted", st == 201)
-st, _ = post({"title": "x" * 500, "frames": [frame]})
-check("overlength title still accepted and truncated", st == 201)
+# BEHAVIOUR CHANGE, v224, FLAGGED — this assertion used to read "overlength
+# title still accepted and truncated" and pinned st == 201. The outside review
+# called the truncation a defect: a 500-character title came back 201 with 420
+# characters silently gone, and the caller was told it had succeeded. There is
+# one limit now (core.MAX_TITLE_CHARS, which is also the column width and the
+# rendered maxlength) and over it is a 400. The sibling assertion in
+# verify_apiedges.py changed for the same reason; verify_hostconfig.py holds the
+# replacement contract in full. If the truncation was wanted, these are the
+# assertions to change back.
+from skribl.core import MAX_TITLE_CHARS as _MAXT   # noqa: E402
+st, body = post({"title": "x" * 500, "frames": [frame]})
+check("overlength title is REFUSED, not quietly shortened", st == 400,
+      f"{st} {str(body)[:70]}")
+st, _ = post({"title": "x" * _MAXT, "frames": [frame]})
+check(f"exactly {_MAXT} characters is still accepted", st == 201, str(st))
 
 print("\n#2 — media validation skipped past frame 200")
 bad_media = {"photo": {"data": "not-a-data-url"}}
