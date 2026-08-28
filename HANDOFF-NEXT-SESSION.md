@@ -1,6 +1,37 @@
 # Skribl — Handoff for the next session
 
-## v225 addendum — read this first (everything below is history, still true where not superseded)
+## v227 addendum — read this first (everything below is history, still true where not superseded)
+
+**Current sealed build: v227.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated.
+
+**Read order:** `V227-CHANGES.md`, then `FOR-THE-REVIEWER.md`, then
+`DESIGN-DIRECTION.md`, then this file.
+
+**What v226/v227 did.** Flip's filmstrip got page RANGES, and the four-stage
+plan from the strip-chrome design note landed: Artwork became a tool, the hold
+badge and Paste became controls on the tile, one size class replaced the first
+of eight breakpoints, and the COMPACT surface dropped the page bar for a ⋯ menu
+on the active tile. The page bar went from six buttons to three on desktop and
+to none on a phone, and nothing became unreachable.
+
+**The correction that shaped it, and it came from the owner.** The first design
+note argued for hiding the bar at every size. Two objections stood: buttons are
+good on a big screen, where hiding a control to reclaim space you already have
+is affectation; and gestures teach nobody, while a visible row teaches every
+operation without anyone discovering anything. The result is two surfaces, not
+one design with a fallback.
+
+**Four new suites:** `verify_pagespan`, `verify_sizeclass`, `verify_compactops`,
+and (from v225) `verify_beading`.
+
+**Three traps this arc paid for, all recorded in DECISIONS.md v254–v261:**
+moving a feature into a shared code path subjects it to every unconditional line
+already there; removing a surface makes the CSS that styled it dead AND makes
+tests of it pass vacuously, because `querySelector` finds hidden markup; and a
+refactor that moves a boundary is not a refactor.
+
+## v225 addendum (history)
 
 **Current sealed build: v225.** Result, tree hash, suite/assertion counts and
 skip list are in `harness/RELEASE.md`, which is generated. No volatile number is

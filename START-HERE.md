@@ -14,7 +14,7 @@ directory listing. A number typed here is a number that goes stale silently.
 
 Verify before believing anything in prose, including this file:
 
-    cd skribl-v225                                  # the name derives from SKRIBL_VERSION
+    cd skribl-v227                                  # the name derives from SKRIBL_VERSION
     grep -Ec '^[0-9a-f]{64} ' SHA256SUMS            # N: the manifest's own entry count
     sha256sum -c SHA256SUMS | grep -c ': OK'        # must equal N
     grep -m1 'tree hash' harness/RELEASE.md
@@ -205,7 +205,7 @@ the pin, the lock and the interpreter running the harness disagree.
 
 **Verify the archive first, in one command:**
 
-    cd skribl-v225
+    cd skribl-v227
     grep -Ec '^[0-9a-f]{64} ' SHA256SUMS            # N: the manifest's own entry count
     sha256sum -c SHA256SUMS | grep -c ': OK'        # must equal N
 

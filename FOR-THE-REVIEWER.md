@@ -6,21 +6,21 @@ Written by the assistant that made these changes, for whoever checks them.
 
 ## Before anything else
 
-**This is v225, SEALED.** The full release aggregate HAS been executed against
+**This is v227, SEALED.** The full release aggregate HAS been executed against
 this tree: `harness/RELEASE.md` is generated from it and records the result, the
 assertion count, the suites reporting and anything skipped. Read those there —
 they are computed by `release_run.py` and are deliberately not restated here,
 because a number in prose is a number that goes stale one release later while
 still sounding authoritative. (`verify_mp4.py` skips in any container without an
 H.264 profile in its Chromium.) Narrative and technical notes:
-`V225-CHANGES.md`.
+`V227-CHANGES.md`.
 
 **v225 answers an outside review of the sealed v224 archive.** That review found
 no new critical or high-severity vulnerability and would not have blocked v224 on
 one. Its strongest finding was about this project's own process: several current
 reviewer documents still described shipped work as open, and one stale docstring
 sent it hunting for a test that has existed since v211. All six findings are
-addressed — see the table in `V225-CHANGES.md` — and the two that were already
+addressed — see the table in `V227-CHANGES.md` — and the two that were already
 covered are now *visible* in the evidence rather than merely true.
 
 Read the skip line before treating an absence of failures as an absence of
@@ -80,7 +80,7 @@ an absence of failures as an absence of gaps.
 
 ## Verify before believing any of this, including me
 
-    cd skribl-v225                            # the name is DERIVED from SKRIBL_VERSION
+    cd skribl-v227                            # the name is DERIVED from SKRIBL_VERSION
     grep -Ec '^[0-9a-f]{64} ' SHA256SUMS      # N: the manifest's own entry count
     sha256sum -c SHA256SUMS | grep -c ': OK'  # must equal N, no line missing or extra
     grep -o 'SKRIBL_VERSION = "[^"]*"' skribl/core.py     # compare the next line
