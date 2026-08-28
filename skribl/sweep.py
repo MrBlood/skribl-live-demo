@@ -47,6 +47,7 @@ import importlib
 import json
 import sys
 
+from .models import session as resolve_session
 from .storage import sweep_orphans_report
 
 EXIT_OK = 0
@@ -198,9 +199,8 @@ def main(argv=None, out=None):
         return EXIT_OK
 
     with app.app_context():
-        from .models import session as _session
         try:
-            sess = _session()
+            sess = resolve_session()
         except RuntimeError as exc:
             _die(f"No database session: {exc}")
         try:
