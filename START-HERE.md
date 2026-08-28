@@ -14,7 +14,7 @@ directory listing. A number typed here is a number that goes stale silently.
 
 Verify before believing anything in prose, including this file:
 
-    cd skribl-v222 && sha256sum -c SHA256SUMS | grep -c ': OK'    # expect 208
+    cd skribl-v223 && sha256sum -c SHA256SUMS | grep -c ': OK'    # expect 225
     grep -m1 'tree hash' harness/RELEASE.md
     python3 -c "import sys;sys.path.insert(0,'harness');import release_run as r;print(r.tree_hash())"
 
@@ -203,7 +203,7 @@ the pin, the lock and the interpreter running the harness disagree.
 
 **Verify the archive first, in one command:**
 
-    cd skribl-v222 && sha256sum -c SHA256SUMS | grep -c ': OK'      # expect 208
+    cd skribl-v223 && sha256sum -c SHA256SUMS | grep -c ': OK'      # expect 225
     # Compare against the manifest, not against this number — the manifest is
     # generated, this line is typed, and typed numbers are what drift. The
     # explanation that used to sit here listed which files had joined since

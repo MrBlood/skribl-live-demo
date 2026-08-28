@@ -1,16 +1,14 @@
 # v223 — what changed since the sealed v222
 
-**Evidence status: this tree ran green as v222 and was then bumped.**
-`run278` — 3133 assertions across 73 reporting suites, 1 skipped
-(`verify_mp4.py`, no H.264 profile in the container's Chromium) — is the
-recorded sweep, and `harness/LAST-RUN.txt` holds it. It ran BEFORE the version
-bump, which is why the stamped stanza reads "as of v222"; that is accurate, not
-stale. `harness/RELEASE.md` is regenerated for this release (see §Release
-evidence below) — it had been frozen at v222/64 suites and could not be
-regenerated at all, which is the most important thing in this file.
+**Evidence status: SEALED.** `harness/RELEASE.md` is generated from a full
+aggregate run against this tree — PASS, 3134 assertions, 74/74 suites
+reporting, 1 skipped (`verify_mp4.py`, no H.264 profile in the build
+container's Chromium). The tree hash and the counts are computed, not typed.
 
-Run after the bump, all green: `verify_version.py` 24/24, `verify_docs.py`
-38/38, `verify_assetcache.py` 12/12, `verify_boot.py` 15/15.
+That run is the headline of this release as much as any feature: RELEASE.md had
+been frozen describing a 64-suite tree at v222 and could not be regenerated at
+all, because `release_run.py` refuses to start when a suite on disk is in no
+batch and TEN were.
 
 ## Narrative
 

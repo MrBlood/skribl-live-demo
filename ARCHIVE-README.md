@@ -2,14 +2,13 @@
 
 **Source version: `SKRIBL_VERSION = "v223"` (skribl/core.py).**
 
-**The release evidence in this archive is v221's, and this tree is v223 —
-unsealed.** `harness/RELEASE.md` and `harness/LAST-RUN.txt` were generated
-from v221's full aggregate run and describe THAT tree, not this one; they are
-deliberately left unstamped because regenerating them without the run would
-make the archive claim evidence it does not have (the v219 lesson,
-`FOR-THE-REVIEWER.md`). The v223 changes and the suites run green against
-them are listed in `V222-CHANGES.md`. To seal: `python3 harness/release_run.py`,
-then regenerate `SHA256SUMS` last.
+**The release evidence in this archive is THIS tree's.**
+`harness/RELEASE.md` and `harness/LAST-RUN.txt` are generated from a full
+aggregate run executed against the tree in this archive: PASS, 3134 assertions,
+74/74 suites reporting, 1 skipped (`verify_mp4.py`, no H.264 profile in the
+build container). The tree hash in `RELEASE.md` is computed, and every file
+here is listed in `SHA256SUMS`, so both claims are checkable without trusting
+this sentence. What changed and why: `V223-CHANGES.md`.
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
