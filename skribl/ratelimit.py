@@ -334,8 +334,11 @@ def _db_lock_identity(s, key_hash):
     SQLite hid this completely: its single-writer lock serialises the commits, so
     requests effectively queue and the count each one sees is correct. On
     PostgreSQL, which actually runs them in parallel, the window is wide open.
-    That is why `RateEvent`'s docstring said "verified under SQLite and threads;
-    NOT yet verified on PostgreSQL across processes" — the guarantee did not hold.
+    That is why `RateEvent`'s docstring used to say "verified under SQLite and
+    threads; NOT yet verified on PostgreSQL across processes" — the guarantee
+    did not hold. (It no longer says that: verify_postgres.py has proven it
+    across four gunicorn worker processes since v211, and the docstring was
+    corrected in v225 after an outside reviewer believed the stale version.)
 
     A transaction-scoped advisory lock serialises only requests sharing an
     identity, so unrelated posters never contend. It is released automatically on

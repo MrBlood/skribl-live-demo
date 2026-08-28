@@ -30,7 +30,7 @@ the eight findings share, and it is the same shape as the previous release's
 headline bug: *something stated in two places, where only one of them could
 enforce anything.* The docs said a host could add a visibility state without a
 migration while the endpoint rejected every one. The docs said `sweep_orphans`
-reclaimed orphaned media while nothing shipped could run it. Three files stated
+reclaimed orphaned media while, until v224, nothing shipped could run it. Three files stated
 the caption limit and no two agreed. `RELEASE.md` described a 64-suite tree
 because the process that regenerates it had silently stopped being run.
 
@@ -206,10 +206,18 @@ Judge them as real defects today. But if you are weighing whether to demand a fi
 now, the honest answer is that fixing them individually would be motion rather
 than progress.
 
-Two items in that document are NOT deferrable and are stated there as
-prerequisites: **pointer identity** (the stray-line defect) and **durable drafts**
-(autosave holds strokes but not media bytes). Those are correctness and data
-trust, and no amount of visual restraint substitutes for them.
+That document named two items as NOT deferrable prerequisites — **pointer
+identity** and **durable drafts** — and **both have since shipped**: contact
+ownership in `lib/eventpoint.js` (v221), media bytes in IndexedDB via
+`lib/draftstore.js` (v222, pinned by `verify_drafts.py`).
+
+This paragraph used to still call them open, two releases after they landed, and
+the v224 outside review caught it. That was the review's strongest finding and it
+was right: the sentence, not the code, was the defect. `verify_docs.py` now gates
+a set of capability claims against the suites that prove them, so a document
+cannot describe shipped work as pending. **One remainder is genuinely open** and
+is listed below: the v213 stray-line report has never been shown to be the
+contact-identity defect that was fixed.
 
 ## Known-open, carried honestly
 

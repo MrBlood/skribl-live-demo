@@ -61,14 +61,39 @@ class RateEvent(SkriblBase):
     limiting does not need to know who anyone is, and storing addresses in a
     posts database is a privacy cost with no operational benefit.
 
-    Concurrency: a slot is INSERTed and committed first, then counted. Racing
-    workers therefore both see both rows and the loser deletes its own, which
-    biases towards over-rejection. **This is insert-then-count, not a database
-    constraint** — there is no row lock or advisory lock enforcing "at most N
-    active slots", and the exact behaviour under PostgreSQL depends on commit
-    order and isolation. Verified under SQLite and threads; NOT yet verified on
-    PostgreSQL across processes. Treat the guarantee as "biased safe", not proven.
-    (Review round 7, #5)
+    Concurrency: reservation is insert-then-count, which is NOT a database
+    constraint — no unique index or CHECK enforces "at most N active slots".
+    What makes it correct on PostgreSQL is a TRANSACTION-SCOPED ADVISORY LOCK
+    keyed on the client identity (`pg_advisory_xact_lock`, see
+    ratelimit._rate_reserve_post): requests sharing an identity serialise, so
+    the count each one runs is taken with no other reservation for that identity
+    in flight, while unrelated posters never contend. It releases on commit or
+    rollback, including if the process dies mid-request. On SQLite it is a no-op
+    because writes are already serialised by the single-writer lock.
+
+    Without it the failure was not over-admission but the opposite: twelve
+    concurrent posts against a quota of two all inserted before any count ran,
+    every request saw 12 > 2, every request withdrew, and ZERO were admitted.
+    SQLite hid that completely. (Review round 7, #5)
+
+    VERIFIED ON POSTGRESQL ACROSS PROCESSES since v211 — `verify_postgres.py`
+    runs four real gunicorn WORKER PROCESSES against live PostgreSQL, releases
+    twelve requests through a barrier against a quota of two, and asserts both
+    no over-admission (exactly two post rows) and no under-admission (the quota
+    was actually used), with worker PIDs compared before and after so a respawn
+    cannot mask the result. It holds for THAT configuration only — one
+    PostgreSQL version, default isolation, gunicorn's default worker model, one
+    burst, no induced failures — and the suite prints that scope itself.
+
+    This docstring used to end "Verified under SQLite and threads; NOT yet
+    verified on PostgreSQL across processes", and used to deny that any advisory
+    lock existed — both written before the fix above and never revisited. An
+    outside reviewer of the v224 archive read them, took them at face value, and
+    filed a MEDIUM finding asking for a test that already existed, against a
+    mechanism described as weaker than it is. Stale prose does not just mislead
+    a reader — it spends a reviewer's attention on work already done, and it
+    understated a security-relevant guarantee. `verify_docs.py` now gates this
+    claim against the assertion that proves it, and scans this file to do it.
 
     Crash window (CLOSED in v122): the slot is still written before the post row,
     but as state='pending'. Pending rows only count while they are younger than

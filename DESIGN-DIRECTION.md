@@ -150,31 +150,53 @@ reveals itself because you earned the next action.
 
 ---
 
-## Two things that must come FIRST, and why
+## Two things that had to come FIRST — BOTH NOW DONE (v222/v224)
 
-The calm this direction wants is not achievable as a skin. Two structural items
-are prerequisites, and both are already known-open:
+> **STATUS, v224: both prerequisites below are SHIPPED.** The requirement text is
+> kept verbatim because the reasoning is the valuable part and a deleted
+> requirement cannot be checked against what was built. Read the two items as the
+> brief they were, not as open work. An outside review of the v224 archive found
+> this section still reading as current and filed it as a MEDIUM finding — the
+> stale sentence, not the code, was the defect. `verify_docs.py` now gates these
+> claims against the suites that prove them.
 
-**1. Pointer identity.** `getPos` uses `e.touches[0]` and assumes the first touch
-is the drawing finger. A second finger — a pinch beginning mid-stroke — can
-redirect the mark. Migrate to Pointer Events with `pointerId` capture: a stroke
-owns exactly one pointer from `pointerdown` to `pointerup`/`cancel`, and gestures
-are a separate state machine.
+**1. Pointer identity — DONE.** The requirement, as written: *`getPos` uses
+`e.touches[0]` and assumes the first touch is the drawing finger. A second finger
+— a pinch beginning mid-stroke — can redirect the mark. Migrate to Pointer Events
+with `pointerId` capture: a stroke owns exactly one pointer from `pointerdown` to
+`pointerup`/`cancel`, and gestures are a separate state machine.*
 
 **"My mark goes where my finger went" is the first promise a drawing app makes.**
 No amount of restraint elsewhere compensates for breaking it.
 
-**2. Durable drafts.** Pad's autosave stores strokes but not media bytes, because
-localStorage cannot hold them; Flip drops media when the quota is exceeded. Move
-drafts to IndexedDB or OPFS with blobs stored separately, and make the save atomic
-at the document level.
+*What shipped:* `lib/eventpoint.js` — one implementation shared by Pad, Flip and
+the player — reads `targetTouches` (the contacts that began on the element)
+rather than `touches[0]` (the first contact on the screen). The defect was
+measured, not argued: with a thumb resting off-canvas, a Pad stroke drew at x=56
+— the thumb — instead of x=201 where the drawing finger was. Flip captures
+`pointerId` per stroke. **One honest remainder:** the original v213 stray-line
+bug report is still unexplained, and it has never been shown to be *this* defect.
+Contact identity is closed; that report is not.
+
+**2. Durable drafts — DONE (v222).** The requirement, as written: *Pad's autosave
+stores strokes but not media bytes, because localStorage cannot hold them; Flip
+drops media when the quota is exceeded. Move drafts to IndexedDB or OPFS with
+blobs stored separately, and make the save atomic at the document level.*
+
+*What shipped:* `lib/draftstore.js` — strokes and media *metadata* to
+localStorage, media *bytes* to IndexedDB, as the normal path rather than the old
+emergency spill. Restore drives the stored bytes back through the real `<input>`
+change pipeline via `DataTransfer`, so there is no second attach path to keep
+correct. `verify_drafts.py` pins photo bytes surviving a reload. The same draft
+that wrote 1,683,508 B to localStorage now writes about 3,500 B.
 
 The direction says *"Autosaved: maybe don't even tell me. Just save it."* That is
-right, and it is only right AFTER this. Today the amber "Saved without media" pill
-is not decoration — it is a true warning. Hiding it before persistence is fixed
-would convert honest ugliness into quiet data loss. **Solve the persistence, then
-delete the status, then delete the navigation guard that exists only because
-persistence is partial.**
+right, and it was only right AFTER the above. The amber "Saved without media"
+pill is still in the code and is still a true warning — but it now fires only
+when storage is genuinely broken, which is the end state this section asked for.
+**What remains of this item is cosmetic and is the owner's call: delete the
+status, then delete the navigation guard that now exists only for the
+broken-storage case.**
 
 ---
 

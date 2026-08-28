@@ -108,10 +108,12 @@ careful work answering *"how do we fit all our features"* — the direction says
 that is the wrong question, and it is right. Start there so the engineering below
 serves it rather than the other way round.
 
-Two items in that document are prerequisites and are also the only outstanding
-correctness/durability defects here: **pointer identity** (`e.touches[0]` assumes
-the first touch is the drawing finger) and **durable drafts** (autosave holds
-strokes but not media bytes). Do those before any visual work.
+That document named two prerequisites — **pointer identity** and **durable
+drafts** — and both are DONE: `lib/eventpoint.js` reads `targetTouches` rather
+than `touches[0]` (v221), and `lib/draftstore.js` puts media bytes in IndexedDB
+(v222). Neither is outstanding work; do not start either. The one honest
+remainder is that the v213 stray-line report has never been shown to be the
+contact-identity defect that was fixed.
 
 **Then read this.** It is the complete state of the project: what shipped,
 what is open, what the owner has decided, what the harness protects, and the
