@@ -144,6 +144,14 @@ BATCHES = [
     ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
+    # v224. Media resource limits (outside review #5). It drives a browser only
+    # to BUILD fixtures — real PNG/JPEG/WebP out of Chromium's encoders and a
+    # real GIF out of vendored gifenc — then does everything else against the
+    # pure functions and the API, so it is fast and shares CPU well. It posts
+    # four rejected payloads and one accepted one to the shared server, which is
+    # why it stays away from verify_deletion_foundation's batch: that suite
+    # sweeps orphans for real.
+    ["verify_medialimits.py"],
 ]
 
 

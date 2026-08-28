@@ -63,9 +63,9 @@ def _payload_has_audio(payload):
 # is whatever audio file the user picked (mpeg/wav/ogg/mp4/flac/…), and narrowing
 # that would reject legitimate uploads for no security gain.
 #
-# NOT covered here: dimensions and duration, which need real decoding (Pillow /
-# an audio decoder) and a dependency this app does not have. Bytes and type are
-# the cheap 90%.
+# Dimensions and audio duration are covered too, as far as they can be read from
+# a header without a decoder — see the resource-limit section below for exactly
+# where that stops.
 MAX_AUDIO_BYTES = _env_int("SKRIBL_MAX_AUDIO_BYTES", 12_000_000, minimum=1024)
 MAX_IMAGE_BYTES = _env_int("SKRIBL_MAX_IMAGE_BYTES", 8_000_000, minimum=1024)
 
@@ -89,11 +89,11 @@ def _valid_image_signature(sub_type, raw):
 
     This proves the declared subtype matches the leading bytes. It does NOT prove
     the file decodes, and a truncated b"\x89PNG\r\n\x1a\n" with no IHDR passes.
-    Dimensions, pixel count, decompression cost and completeness are NOT checked;
-    doing so needs a real decoder (Pillow) with resource limits, which is a
-    deliberate follow-up rather than something to imply here. The error message
-    says "does not match the declared container" for the same reason.
-    (Review round 4, #3)
+    Completeness and decompression cost are still NOT checked; that needs a real
+    decoder (Pillow) with resource limits. Declared DIMENSIONS are checked, but
+    separately and from the header only — see _image_dimensions. The error
+    message says "does not match the declared container" for that reason.
+    (Review round 4, #3; dimensions added in v224.)
     """
     if sub_type == "png":
         return raw.startswith(b"\x89PNG\r\n\x1a\n")
@@ -151,6 +151,180 @@ def _valid_audio_signature(sub_type, raw):
     return False
 
 
+# --- Media resource limits (outside review, #5) ------------------------------
+# The container checks above prove the declared type matches the leading bytes.
+# They say nothing about what DECODING the file costs. A 40 kB PNG can declare
+# 30000x30000 in its IHDR — the classic decompression bomb — and every browser
+# that opens the post then allocates ~3.6 GB for it. Bytes are not a proxy for
+# that: the whole point of a bomb is that it is small.
+#
+# Dimensions sit in the header of all four accepted image formats, so they can be
+# read WITHOUT a decoder and without a new dependency. The parsers below are
+# fixed-offset (png/gif/webp) or bounded-scan (jpeg), read-only, and never
+# allocate beyond the slice they were handed — a crafted file cannot turn the
+# scan into the denial of service the scan exists to prevent.
+#
+# Where this stops, stated as plainly as the signature checks state theirs:
+#   - A parser that cannot locate the header returns None and the item is
+#     ACCEPTED. These caps reject DECLARED bombs, not malformed files. A file
+#     whose header will not parse does not decode either, and rejecting on
+#     "unparseable" would turn every rarer corner of these formats into a 400.
+#   - The declared size is not proof of the encoded size. A truncated PNG still
+#     declares its full dimensions; that is exactly the case this rejects.
+#   - Audio duration is parseable for WAV ONLY, whose header states the byte rate
+#     outright. For compressed audio (mp3/aac/ogg/opus/flac/webm) duration is
+#     bounded ONLY by MAX_AUDIO_BYTES, because deriving it needs a real decoder.
+#     A 12 MB Opus file can be an hour long and is accepted by design.
+MAX_IMAGE_EDGE = _env_int("SKRIBL_MAX_IMAGE_EDGE", 8192, minimum=16)
+MAX_IMAGE_PIXELS = _env_int("SKRIBL_MAX_IMAGE_PIXELS", 40_000_000, minimum=1024)
+MAX_AUDIO_SECONDS = _env_int("SKRIBL_MAX_AUDIO_SECONDS", 900, minimum=1)
+
+
+def _png_dimensions(raw):
+    # IHDR is mandatory and must be the FIRST chunk, so the offsets are fixed.
+    if len(raw) < 24 or raw[12:16] != b"IHDR":
+        return None
+    return (int.from_bytes(raw[16:20], "big"), int.from_bytes(raw[20:24], "big"))
+
+
+def _gif_dimensions(raw):
+    # Logical screen descriptor, little-endian, immediately after the signature.
+    if len(raw) < 10:
+        return None
+    return (int.from_bytes(raw[6:8], "little"), int.from_bytes(raw[8:10], "little"))
+
+
+def _webp_dimensions(raw):
+    # Three sub-formats share the RIFF/WEBP container and each states its size
+    # differently. VP8X (extended: animation, alpha) is checked first because its
+    # CANVAS size is what a decoder allocates, whatever the frames inside do.
+    if len(raw) < 21:
+        return None
+    fourcc = raw[12:16]
+    if fourcc == b"VP8X":
+        if len(raw) < 30:
+            return None
+        return (int.from_bytes(raw[24:27], "little") + 1,
+                int.from_bytes(raw[27:30], "little") + 1)
+    if fourcc == b"VP8 ":
+        # Lossy: 3-byte frame tag, the 0x9d012a start code, then 14-bit w/h.
+        if len(raw) < 30 or raw[23:26] != b"\x9d\x01\x2a":
+            return None
+        return (int.from_bytes(raw[26:28], "little") & 0x3FFF,
+                int.from_bytes(raw[28:30], "little") & 0x3FFF)
+    if fourcc == b"VP8L":
+        if len(raw) < 25 or raw[20] != 0x2F:
+            return None
+        bits = int.from_bytes(raw[21:25], "little")
+        return ((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1)
+    return None
+
+
+# A JPEG states its size in an SOF segment, which sits after an arbitrary number
+# of metadata segments (EXIF, ICC, comments). The walk is bounded twice — by
+# segment count and by byte offset — so the scan cost stays flat regardless of
+# what the file claims.
+_JPEG_MAX_SEGMENTS = 64
+_JPEG_MAX_SCAN = 1 << 20            # 1 MB of headers before an SOF is already absurd
+# 0xC0-0xCF are SOF markers EXCEPT C4 (Huffman tables), C8 (reserved) and CC
+# (arithmetic coding conditioning), which are not frame headers.
+_JPEG_SOF_MARKERS = frozenset(
+    list(range(0xC0, 0xC4)) + list(range(0xC5, 0xC8))
+    + list(range(0xC9, 0xCC)) + list(range(0xCD, 0xD0))
+)
+
+
+def _jpeg_dimensions(raw):
+    i, segments, n = 2, 0, len(raw)
+    while i + 9 <= n and i < _JPEG_MAX_SCAN and segments < _JPEG_MAX_SEGMENTS:
+        if raw[i] != 0xFF:
+            return None                          # not where a marker should be
+        marker = raw[i + 1]
+        if marker == 0xFF:                       # fill byte; markers may be padded
+            i += 1
+            continue
+        if marker == 0x01 or 0xD0 <= marker <= 0xD8:
+            i += 2                               # standalone: carries no length
+            continue
+        if marker in (0xD9, 0xDA):
+            return None                          # entropy data begins; no SOF seen
+        length = int.from_bytes(raw[i + 2:i + 4], "big")
+        if length < 2:
+            return None
+        if marker in _JPEG_SOF_MARKERS:
+            # SOF payload: length(2) precision(1) height(2) width(2).
+            return (int.from_bytes(raw[i + 7:i + 9], "big"),
+                    int.from_bytes(raw[i + 5:i + 7], "big"))
+        i += 2 + length
+        segments += 1
+    return None
+
+
+def _image_dimensions(sub_type, raw):
+    """(width, height) read from the header, or None when it cannot be read.
+
+    None means ACCEPT — see the section note. Callers must not treat it as zero.
+
+    A non-positive result reads as UNPARSEABLE, not as a rejection. A 0x0 image
+    is degenerate, not a bomb: the client draws nothing and moves on, while a
+    header full of zeros is exactly what a stub fixture or a truncated file
+    looks like. Rejecting it would spend a 400 on the one case that costs
+    nothing to render.
+    """
+    if sub_type == "png":
+        dims = _png_dimensions(raw)
+    elif sub_type == "gif":
+        dims = _gif_dimensions(raw)
+    elif sub_type == "webp":
+        dims = _webp_dimensions(raw)
+    elif sub_type in ("jpeg", "jpg"):
+        dims = _jpeg_dimensions(raw)
+    else:
+        return None
+    if dims is None or dims[0] < 1 or dims[1] < 1:
+        return None
+    return dims
+
+
+_WAV_MAX_CHUNKS = 32
+
+
+def _wav_duration_seconds(raw):
+    """Seconds from the WAV header, or None when it cannot be read cheaply.
+
+    `fmt ` states the byte rate outright, so duration is data-chunk size over
+    byte rate with nothing decoded. The chunk walk is bounded like the JPEG one.
+    """
+    n, i, chunks = len(raw), 12, 0
+    byte_rate = data_bytes = None
+    while i + 8 <= n and chunks < _WAV_MAX_CHUNKS:
+        cid = raw[i:i + 4]
+        size = int.from_bytes(raw[i + 4:i + 8], "little")
+        body = i + 8
+        if cid == b"fmt " and size >= 16 and body + 16 <= n:
+            byte_rate = int.from_bytes(raw[body + 8:body + 12], "little")
+        elif cid == b"data":
+            # A streamed WAV declares 0, and a crafted one can declare a size
+            # past the end. What actually ARRIVED is the honest number for both.
+            data_bytes = min(size, n - body) if size else (n - body)
+            break
+        i = body + size + (size & 1)             # RIFF chunks are word-aligned
+        chunks += 1
+    if not byte_rate or data_bytes is None:
+        return None
+    return data_bytes / float(byte_rate)
+
+
+def _audio_duration_seconds(sub_type, raw):
+    """Seconds, or None when the container does not state it cheaply (see above).
+
+    None means ACCEPT: for every compressed container the only cap is bytes.
+    """
+    if sub_type in ("wav", "x-wav", "wave", "vnd.wave"):
+        return _wav_duration_seconds(raw)
+    return None
+
+
 def _validate_media_data_url(value, expected_type, max_bytes, label):
     # Returns None if acceptable, else a human-readable error string. Pure and
     # import-light (re + base64) so it can be unit-tested headless.
@@ -186,11 +360,24 @@ def _validate_media_data_url(value, expected_type, max_bytes, label):
             return f"'{label}' has an unsupported image format ({sub_type})."
         if not _valid_image_signature(sub_type, raw):
             return f"'{label}' does not match the declared {sub_type} container."
+        dims = _image_dimensions(sub_type, raw)
+        if dims is not None:
+            w, h = dims
+            if w > MAX_IMAGE_EDGE or h > MAX_IMAGE_EDGE:
+                return (f"'{label}' is too large ({w}x{h}; limit "
+                        f"{MAX_IMAGE_EDGE} px per side).")
+            if w * h > MAX_IMAGE_PIXELS:
+                return (f"'{label}' has too many pixels ({w * h}; limit "
+                        f"{MAX_IMAGE_PIXELS}).")
     if top == "audio":
         if sub_type not in ALLOWED_AUDIO_SUBTYPES:
             return f"'{label}' has an unsupported audio format ({sub_type})."
         if not _valid_audio_signature(sub_type, raw):
             return f"'{label}' does not match the declared {sub_type} container."
+        seconds = _audio_duration_seconds(sub_type, raw)
+        if seconds is not None and seconds > MAX_AUDIO_SECONDS:
+            return (f"'{label}' is too long ({int(seconds)}s; limit "
+                    f"{MAX_AUDIO_SECONDS}s).")
     return None
 
 
