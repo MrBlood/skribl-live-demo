@@ -2098,3 +2098,33 @@ says in a comment that the premise inverted rather than quietly reversing it.
 
 The dead CSS is FLAGGED, not removed -- it goes with the rest of the breakpoint
 migration, not piecemeal.
+
+## v262 -- Removing a surface silently retires the assertions about it
+
+Stage 4 hid the page bar on compact. Three suites then had assertions that no
+longer meant anything, and only ONE of them failed.
+
+`verify_tips` clicked `#pbLeft` at 390px and crashed on an invisible element --
+loud, obvious, fixed in a minute. `verify_hold` measured the bar's glyphs at
+390px and mostly kept PASSING, because `querySelector` finds hidden markup
+perfectly well; only its one `offsetParent` assertion noticed. And `verify_move`
+asserted at 393px that entering move mode "replaces the page bar, not adds to
+it" -- which stayed green while proving nothing, because the bar was already
+`display:none` before the mode started.
+
+That last one is the sharpest version. Its own comment, four lines above, warns
+that the assertion had previously passed for four versions against a visibly
+broken surface "because it asked the DOM what it had been told, not what it
+drew". It was rewritten to measure layout. **Measuring layout was not enough**:
+once the element is unconditionally hidden, a layout assertion about it is
+vacuous too. The claim needed a width where the bar exists, so it now has its
+own page at 1100px, and the 393px section asserts the thing that is meaningful
+there -- that the move bar appeared.
+
+**The rule this arc adds: when a surface stops rendering, grep for every suite
+that names it.** Not for the ones that fail -- the failures find themselves. For
+the ones that keep passing.
+
+Practically: `grep` the suites for the ids of anything removed, cross-referenced
+against the viewport widths each file uses. Three suites named page-bar ids at
+compact widths here; one crashed and two went quiet.

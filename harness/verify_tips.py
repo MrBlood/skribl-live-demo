@@ -241,11 +241,21 @@ with sync_playwright() as p:
     dismiss_intro(mp)                 # reset re-arms flip-intro; this tests page-move
     mp.evaluate("() => { addFrame(true); addFrame(true); }")
     mp.wait_for_timeout(400)
-    mp.click("#pbLeft")
+    # v227: at 390px this is the COMPACT surface and there is no page bar — the
+    # move happens through the ⋯ on the active tile. The viewport stays at phone
+    # width because the assertion below it is about the hint not covering the
+    # filmstrip, which is a phone-layout concern.
+    mp.locator("#strip .frame.on .pageops").click()
+    mp.wait_for_timeout(200)
+    mp.locator(".pageops-item", has_text="Move left").click()
     mp.wait_for_timeout(450)
-    check("moving a page explains what the arrows do", mp.is_visible(".skribl-hint"))
+    check("moving a page explains what the control does", mp.is_visible(".skribl-hint"))
     _txt = mp.inner_text(".skribl-hint").lower()
-    check("the hint says the arrows REORDER", "reorder" in _txt, _txt)
+    check("the hint says it REORDERS", "reorder" in _txt, _txt)
+    # It must not name a control this surface does not have. The copy is
+    # surface-aware for exactly this reason.
+    check("...and does NOT talk about arrows on a surface with none",
+          "arrow" not in _txt, _txt)
     check("and points at the thumbnails for changing page",
           "thumbnail" in _txt, _txt)
 

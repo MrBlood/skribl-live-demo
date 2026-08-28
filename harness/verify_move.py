@@ -115,11 +115,16 @@ with sync_playwright() as p:
     # is a UA rule and `.pagebar{display:flex}` is an author rule, so the author
     # rule won. This assertion passed for four versions against a visibly broken
     # surface because it asked the DOM what it had been told, not what it drew.
-    check("the page bar is replaced, not added to",
-          pg.evaluate("() => { const pb = document.getElementById('pagebar');"
-                      " return pb.offsetParent === null"
-                      " && pb.getBoundingClientRect().height === 0"
-                      " && getComputedStyle(pb).display === 'none'; }") is True
+    #
+    # ⚑ AND IT WENT VACUOUS AGAIN IN v227, the same way. This page is 393px wide,
+    # which is now the COMPACT surface, where the page bar is display:none at all
+    # times — so "the move mode hid it" proved nothing. What is meaningful HERE
+    # is that the move bar appeared; the replace/restore pair is asserted at a
+    # regular width further down, where there is a bar to replace.
+    check("the move bar appears",
+          pg.evaluate("() => { const mb = document.getElementById('movebar');"
+                      " return !!mb && mb.offsetParent !== null"
+                      " && mb.getBoundingClientRect().height > 0; }") is True
           and pg.is_visible("#movebar"),
           "two bars would push the filmstrip off a phone screen")
     check("the canvas advertises the drag", "grab" in pg.evaluate(
@@ -174,8 +179,9 @@ with sync_playwright() as p:
     pg.click("#mbDone")
     pg.wait_for_timeout(300)
     check("Done commits the move", same(pts(pg), moved))
-    check("and restores the page bar",
-          pg.evaluate("() => document.getElementById('pagebar').hidden") is False)
+    check("and takes the move bar away again",
+          pg.evaluate("() => { const mb = document.getElementById('movebar');"
+                      " return !mb || mb.offsetParent === null; }") is True)
 
     print("\nMOVE — undo is an exact inverse, and respects order")
     pg.click("#undo")
@@ -633,6 +639,35 @@ with sync_playwright() as p:
     pg.wait_for_timeout(250)
 
     check("no JS errors across the composed transitions", not errs, "; ".join(errs[:2]))
+
+    # ---- the replace/restore pair, at a width where there is a bar to replace
+    # This suite runs at 393px, which since v227 is the COMPACT surface with no
+    # page bar at all — so "entering the mode hid it" was true before the mode
+    # started and proved nothing. The claim is real, it just needs a REGULAR
+    # width to be testable, so it gets its own page rather than being dropped.
+    print("\nMOVE — the bar is REPLACED, not added to (regular width)")
+    rp = b.new_page(viewport={"width": 1100, "height": 900})
+    rp.goto(f"{BASE}/flip", wait_until="load")
+    rp.wait_for_timeout(1200)
+    _shown = lambda sel: rp.evaluate(
+        "(s) => { const e = document.querySelector(s);"
+        " return !!e && e.offsetParent !== null"
+        " && e.getBoundingClientRect().height > 0"
+        " && getComputedStyle(e).display !== 'none'; }", sel)
+    check("the page bar is on screen before the move starts", _shown("#pagebar"),
+          "otherwise 'it was replaced' is true of a bar that was never there")
+    rp.evaluate("() => setTool('artmove')")
+    rp.wait_for_timeout(350)
+    check("entering the mode REPLACES it with the move bar",
+          _shown("#movebar") and not _shown("#pagebar"),
+          "both halves: a second bar would push the filmstrip off screen, which "
+          "is the whole reason this replaces rather than adds")
+    rp.click("#mbDone")
+    rp.wait_for_timeout(350)
+    check("leaving restores the page bar and takes the move bar away",
+          _shown("#pagebar") and not _shown("#movebar"))
+    rp.close()
+
     b.close()
 
 summarise_and_exit()

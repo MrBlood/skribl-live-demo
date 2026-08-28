@@ -2011,8 +2011,13 @@ function movePage(i,dir){
   // legible even if you were not watching the strip.
   if(window.SkriblHints){
     const to = i + dir + 1;
+    // The hint has to name the control the user actually pressed. On the
+    // compact surface there are no arrows — the move came from the tile's ⋯
+    // menu (v227) — and a hint that describes a control the surface does not
+    // have is worse than no hint: it sends the reader looking for it.
+    const via = _compactStrip() ? 'This' : 'These arrows';
     window.SkriblHints.show('page-move',
-      'Moved this page to position ' + to + '. These arrows REORDER pages — '
+      'Moved this page to position ' + to + '. ' + via + ' REORDERS pages — '
       + 'tap a thumbnail below to change which page you are on.');
   }
   movePageTo(i, i+dir);
