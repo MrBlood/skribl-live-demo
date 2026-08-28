@@ -6,14 +6,22 @@ Written by the assistant that made these changes, for whoever checks them.
 
 ## Before anything else
 
-**This is v224, SEALED.** The full release aggregate HAS been executed against
+**This is v225, SEALED.** The full release aggregate HAS been executed against
 this tree: `harness/RELEASE.md` is generated from it and records the result, the
 assertion count, the suites reporting and anything skipped. Read those there —
 they are computed by `release_run.py` and are deliberately not restated here,
 because a number in prose is a number that goes stale one release later while
 still sounding authoritative. (`verify_mp4.py` skips in any container without an
 H.264 profile in its Chromium.) Narrative and technical notes:
-`V224-CHANGES.md`.
+`V225-CHANGES.md`.
+
+**v225 answers an outside review of the sealed v224 archive.** That review found
+no new critical or high-severity vulnerability and would not have blocked v224 on
+one. Its strongest finding was about this project's own process: several current
+reviewer documents still described shipped work as open, and one stale docstring
+sent it hunting for a test that has existed since v211. All six findings are
+addressed — see the table in `V225-CHANGES.md` — and the two that were already
+covered are now *visible* in the evidence rather than merely true.
 
 Read the skip line before treating an absence of failures as an absence of
 gaps. One suite contributing zero assertions is one suite's worth of unknown.
@@ -72,11 +80,18 @@ an absence of failures as an absence of gaps.
 
 ## Verify before believing any of this, including me
 
-    cd skribl-v224                            # the name is DERIVED from SKRIBL_VERSION
+    cd skribl-v225                            # the name is DERIVED from SKRIBL_VERSION
     grep -Ec '^[0-9a-f]{64} ' SHA256SUMS      # N: the manifest's own entry count
     sha256sum -c SHA256SUMS | grep -c ': OK'  # must equal N, no line missing or extra
     grep -o 'SKRIBL_VERSION = "[^"]*"' skribl/core.py     # compare the next line
     grep SKRIBL_VERSION harness/RELEASE.md    # the evidence must name the SAME version
+
+**These commands prove internal consistency, not provenance** — the manifest
+ships inside the archive it authenticates, so an actor who can replace one can
+replace both (v224 review, R5). For provenance, compare `sha256sum` of the
+**zip** against the hash recorded in the sealing git commit, which travelled by
+a different route than the file did. That is the honest strength of what exists;
+a signed tag would be stronger and does not exist yet.
 
 (These commands deliberately carry no hardcoded file count, and since v223 no
 hardcoded VERSION either — the last two lines compare the source against the
@@ -185,10 +200,27 @@ like preview, playback and all three export paths already did.
 
 I verified the mechanism synthetically (one 22%-alpha stroke painted both ways:
 alpha spread 153 direct against 50 composited) and the owner confirmed it by eye
-on device. **It is not pinned by an assertion.** The right test compares the
-pixel profile of a translucent stroke before and after a tool change and requires
-it not to change — that is a pixel comparison, which `verify_layout.py` cannot
-do, and it is the gap I would close first.
+on device. It was **not pinned by an assertion**, I said so here, and the v224
+outside review correctly ranked that as its second finding — saying a fix is
+untested is not a substitute for testing it.
+
+**It is pinned now: `verify_beading.py`, 16 assertions.** It draws one Air-brush
+stroke with the mouse, then repaints it three ways and compares ALPHA profiles —
+through the marquee-selection repaint, through the tool-change path that made
+picking the eraser re-bead the canvas, and through the raw painters that were
+the pre-fix code. It asserts the strokes are byte-identical across every
+repaint, so a pixel difference can only be a rendering difference. The mutation
+is the load-bearing part: the raw-painter path must come back WORSE, or the
+compositor is doing nothing and the rest is decoration. Measured in-harness:
+composited mean alpha 51, raw 118, and the composited path heals it back to 51.
+
+Two things about measuring it are worth stealing. It reads the ALPHA channel,
+not the colour channels: the canvas is transparent-backed, so `getImageData`
+returns straight RGBA and a 22% white stroke reads r=255, a=56 — the colour
+channels are saturated and carry no coverage at all. The first draft measured
+red and reported a spread of zero on a visibly correct stroke. And it ignores
+non-grey pixels, because a marquee paints a purple outline that is not ink;
+counting it reported a spread of 138 for a repaint that was perfect.
 
 ---
 

@@ -1815,3 +1815,95 @@ was already in the returned list, reporting a deletion that never happened.
 The test for "is this operable" is not "does the function work". It is: can
 someone schedule it, can they tell what it did, and does it survive one object
 going wrong.
+
+## v250 -- A number that goes stale is caught; a sentence that goes stale is not
+
+`verify_docs.py` has guarded this project's volatile facts for many releases:
+suite counts, file counts, assertion totals, tree hashes, version strings. Every
+one of them is a NUMBER, and numbers are what it can compare.
+
+It never occurred to anyone -- me included -- that the same rot happens to
+prose, and prose is what people actually act on. `FOR-THE-REVIEWER.md` called
+durable drafts and pointer identity "NOT deferrable prerequisites" two releases
+after both shipped. `DESIGN-DIRECTION.md` stated the draft problem as current.
+`START-HERE.md` said Pad's autosave "holds strokes but not media bytes" seven
+hundred lines above its own paragraph explaining that the bytes go to IndexedDB.
+A 3,328-assertion harness saw none of it.
+
+**The cost was not embarrassment, it was a reviewer's time.** An outside review
+of v224 read a stale docstring in `models.py` claiming the database limiter was
+"NOT yet verified on PostgreSQL across processes" and filed a MEDIUM finding
+asking for a test `verify_postgres.py` had been running since v211 -- four
+gunicorn worker processes, twelve barrier-released requests, quota two. The same
+docstring also denied that any advisory lock existed while `ratelimit.py` runs
+`pg_advisory_xact_lock` on every reservation, so it UNDERSTATED a
+security-relevant guarantee. Stale prose does not merely mislead a reader; it
+spends the attention of the one person paid to find real problems.
+
+The gate now pairs a capability with the artifact that PROVES it shipped and the
+phrasings that would only appear if it had not. Two design choices are the
+useful part. It scans SOURCE FILES as well as documents, because the finding
+came from a docstring and code comments are read more literally than prose, not
+less -- and that extension immediately found two more instances nobody had
+reported. And its exemption list is a small CLOSED set of explicit markers, so a
+changelog can still say what used to be true and adding an escape hatch is a
+decision rather than a slide.
+
+Stated in the code, because overclaiming here would be the same sin: it catches
+denials it has PATTERNS for. A newly-invented stale sentence sails through
+exactly as before.
+
+## v251 -- Saying a fix is untested is not a substitute for testing it
+
+The Air-brush beading fix shipped with an honest note in the reviewer document:
+the mechanism was verified synthetically, the owner confirmed it by eye, and
+**it is not pinned by an assertion**. That disclosure felt like diligence. The
+v224 outside review ranked it as the second-most-important finding, and was
+right to: an unpinned rendering fix is one refactor away from silently
+returning, and the honesty in the document does nothing to stop that.
+
+Why nothing else could see it: the STROKES ARE BYTE-IDENTICAL before and after
+the repaint. It is not a geometry change, not a structural one, not a data one.
+Only the pixels differ, and no suite here read pixels for this.
+
+Two things about measuring it are worth keeping. **Read the alpha channel, not
+the colour channels.** The canvas is transparent-backed -- the dark ground is
+CSS behind it -- so `getImageData` returns STRAIGHT, un-premultiplied RGBA, and
+a 22%-alpha white stroke reads r=255, a=56. The first draft measured red and
+reported a spread of zero on a visibly correct stroke. That is the third time
+this project has met premultiplied-vs-straight alpha in a new disguise. And
+**exclude what is not ink**: a marquee paints a purple outline, and counting it
+reported a spread of 138 for a repaint that was perfect.
+
+The mutation is what makes the suite worth anything. It repaints through the raw
+painters -- the pre-fix code path -- and REQUIRES the result to come back worse.
+Composited mean alpha 51, raw 118. Without that, every other assertion could
+pass on a canvas that never repainted at all.
+
+## v252 -- "Sealed" is corruption detection, not provenance
+
+`SHA256SUMS` lives inside the archive it authenticates, and so does the tree hash
+in `RELEASE.md`. Anyone who can replace the archive can replace both. The v224
+review said so and it is correct: the seal proves this archive is internally
+consistent and the evidence describes this tree. It proves nothing about who
+built it.
+
+The honest fix available here is to publish the hash of the ZIP through a channel
+that did not travel with the zip -- the git commit that seals each release. A
+signed tag or a CI attestation would be stronger, and neither exists. The
+documents now say which of those is true rather than letting "sealed" imply the
+stronger one.
+
+## v253 -- Evidence that does not name its own coverage invites a false finding
+
+`RELEASE.md` recorded `skipped 1 (verify_mp4.py)` and stopped there. The v224
+reviewer filed that as an open gap and recommended a CI lane with real H.264 --
+which `.github/workflows/harness.yml` has run since v103, and which FAILS if the
+suite merely skips. **The lane was shipping inside the archive under review.**
+
+The finding was not careless; the evidence simply never pointed at the thing that
+closed the gap, and a reviewer is not obliged to go looking for it. `RELEASE.md`
+now prints, beside each skip, the CI job that covers it or the words NOT COVERED
+-- generated from a table, never typed -- and `verify_docs.py` checks that each
+named job really exists in the workflow and really invokes that suite, so the
+sentence cannot outlive the lane.

@@ -516,6 +516,36 @@ with _tf.TemporaryDirectory() as _td:
           f"exit {_r3.returncode}: {(_r3.stdout or _r3.stderr).strip().splitlines()[:1]}")
 
 
+# --- v225: a documented skip must name a lane that really exists -------------
+# release_run.SKIP_COVERAGE lets RELEASE.md say "this skip is covered by the
+# `mp4` CI job". That sentence is worth exactly as much as the job's existence,
+# so the job name is checked against the workflow rather than trusted. The v224
+# outside review filed the MP4 skip as an open gap while the lane that closes it
+# was shipping inside the archive it reviewed — the lane was real and the
+# evidence never mentioned it.
+print("\nDOCS — every claimed skip-coverage lane exists in the workflow")
+_wf = ROOT / ".github" / "workflows" / "harness.yml"
+check("the CI workflow is in the tree", _wf.is_file(), str(_wf.relative_to(ROOT)))
+if _wf.is_file():
+    _wf_text = _wf.read_text(encoding="utf-8")
+    sys.path.insert(0, str(ROOT / "harness"))
+    import release_run as _rr
+    check("some skip actually claims coverage", bool(_rr.SKIP_COVERAGE),
+          "an empty table would make every assertion below vacuous")
+    for _suite, _job in sorted(_rr.SKIP_COVERAGE.items()):
+        check(f"the '{_job}' job exists for {_suite}",
+              re.search(r"^  %s:$" % re.escape(_job), _wf_text, re.M) is not None,
+              "claimed in release_run.SKIP_COVERAGE")
+        check(f"...and the '{_job}' job actually runs {_suite}",
+              _suite in _wf_text,
+              "a job that never invokes the suite covers nothing")
+    check("the mp4 lane FAILS on a skip rather than reporting green",
+          "SKIPPED on the job that exists to run it" in _wf_text,
+          "a lane that tolerates the skip it exists to prevent is not a lane")
+    check("a suite claiming coverage is not itself missing from disk",
+          all((ROOT / "harness" / s).is_file() for s in _rr.SKIP_COVERAGE))
+
+
 # --- v225: capability claims, not just counts --------------------------------
 # WHY THIS SECTION EXISTS, and it is the most useful thing in this file.
 #

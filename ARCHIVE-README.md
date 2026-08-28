@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v224"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v225"` (skribl/core.py).**
 
 **The release evidence in this archive is THIS tree's.**
 `harness/RELEASE.md` and `harness/LAST-RUN.txt` are generated from a full
@@ -12,7 +12,22 @@ sounding authoritative. (`verify_mp4.py` skips in any build container without
 an H.264 profile; a skipped suite contributes zero assertions and is not
 evidence of coverage.) The tree hash in `RELEASE.md` is computed, and every
 file here is listed in `SHA256SUMS`, so both claims are checkable without
-trusting this sentence. What changed and why: `V224-CHANGES.md`.
+trusting this sentence. What changed and why: `V225-CHANGES.md`.
+
+**WHAT "SEALED" DOES NOT MEAN.** It means this archive is internally consistent:
+every file matches the manifest, and the manifest matches the tree the evidence
+was produced from. It is **not** provenance. `SHA256SUMS` lives inside the
+archive it authenticates, and so does `harness/RELEASE.md`'s tree hash — anyone
+who can replace the archive can replace both. The seal detects corruption and
+accidental substitution; it does not prove who built this or that it is the
+build someone approved. (v224 outside review, R5.)
+
+If you need provenance, take the hash of the **zip** from a channel that did not
+travel with the zip. This project publishes it in the git commit that seals each
+release, on the branch the archive was built from — compare
+`sha256sum skribl-v225-sealed.zip` against the value in that commit message. A
+signed tag or a CI attestation would be stronger and neither exists yet; the
+git-history channel is what is actually here, and saying so beats implying more.
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the

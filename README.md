@@ -3,7 +3,7 @@
 Server-backed Flask app for **Skribl Pad** (record-and-replay drawing) and
 **Skribl Flip** (frame-by-frame animation), plus a public player for sharing.
 
-Current version: **v224** (`SKRIBL_VERSION` in `skribl/core.py`; the archive filename is derived from it)
+Current version: **v225** (`SKRIBL_VERSION` in `skribl/core.py`; the archive filename is derived from it)
 
 ## Dropping Skribl into your own Flask app — start here
 

@@ -169,7 +169,23 @@ BATCHES = [
     # multiple workers. It boots app.py in eleven scrubbed subprocesses, which
     # is cheap, and posts a handful of payloads to the shared server.
     ["verify_hostconfig.py"],
+    # v225. The translucent-stroke pixel regression (outside review R2). Draws
+    # one Air-brush stroke, repaints it three ways and compares ALPHA profiles,
+    # so it needs a browser and a quiet CPU: a repaint measured while another
+    # Chromium competes is still correct, but the reason it is alone here is
+    # that it reads the full canvas four times.
+    ["verify_beading.py"],
 ]
+
+
+#: A skip that some OTHER lane proves. Keyed by suite, valued by the CI job in
+#: .github/workflows/harness.yml that runs it in an environment where it cannot
+#: skip. Adding a suite here is a claim that the job exists and gates on it —
+#: verify_docs.py checks the job name is really in the workflow.
+SKIP_COVERAGE = {
+    "verify_mp4.py": "mp4",
+    "verify_postgres.py": "postgres",
+}
 
 
 def tree_files():
@@ -380,6 +396,25 @@ def main():
         "",
         "A skip is not coverage. Suites that skip are listed above by name so "
         "that an absence of failures is never read as an absence of gaps.", "",
+    ]
+    # Where a skip IS covered, say where — generated from the table below, not
+    # typed into prose. The v224 outside review filed the MP4 skip as a finding
+    # and recommended a CI lane with real H.264, which .github/workflows has run
+    # since v103 and which FAILS if the suite merely skips. The lane shipped
+    # inside the reviewed archive; nothing in the evidence pointed at it, so a
+    # reader of this file had no way to know the gap was already closed. An
+    # uncovered skip still says so, loudly.
+    for name in skipped:
+        lane = SKIP_COVERAGE.get(name)
+        lines += [f"  * `{name}` — " + (
+            f"covered by the `{lane}` CI job in .github/workflows/harness.yml, "
+            "which installs the environment this one lacks and fails if the "
+            "suite skips there too."
+            if lane else
+            "NOT covered anywhere. This is a real gap in the release.")]
+    if skipped:
+        lines += [""]
+    lines += [
         "| suite | result | detail |", "| --- | --- | --- |",
     ]
     lines += [f"| `{n}` | {s} | {d} |" for n, s, d in sorted(rows)]

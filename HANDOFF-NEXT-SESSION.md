@@ -1,6 +1,37 @@
 # Skribl — Handoff for the next session
 
-## v224 addendum — read this first (everything below is history, still true where not superseded)
+## v225 addendum — read this first (everything below is history, still true where not superseded)
+
+**Current sealed build: v225.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
+typed here.
+
+**Read order for a new session:** `V225-CHANGES.md`, then `FOR-THE-REVIEWER.md`,
+then `DESIGN-DIRECTION.md`, then this file.
+
+**v225 answered an outside review of the v224 archive.** No new critical or
+high-severity vulnerability was found. All six findings are addressed; there is
+no review backlog. One new suite: `verify_beading.py`.
+
+**The lesson, and it will affect what you write next.** `verify_docs.py` guarded
+every volatile NUMBER in this project and could not see a stale SENTENCE. Four
+current documents described shipped work as open, and a stale docstring in
+`models.py` sent an outside reviewer hunting for a test that has existed since
+v211 — it also understated a security-relevant guarantee by denying the advisory
+lock that `ratelimit.py` actually takes. There is now a capability-claims gate in
+`verify_docs.py`. **Adding a capability means adding an entry to `CLAIMS`**, and
+nothing but that file's own comment says so. It scans source files as well as
+docs, because the finding came from a docstring.
+
+**`DESIGN-DIRECTION.md`'s two prerequisites are DONE** (pointer identity v221,
+durable drafts v222) and the section now says so while keeping the original brief
+verbatim. Do not start either.
+
+**Still true from v223, and it has now fired five times:** `release_run.py`
+refuses to start when a suite on disk belongs to no batch. Add the `BATCHES` line
+when you add the suite.
+
+## v224 addendum (history)
 
 **Current sealed build: v224.** Result, tree hash, suite/assertion counts and
 skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
