@@ -531,7 +531,13 @@ function makeStrokeCompositor(visCtx, visCanvas) {
 // when the flag is on (low-opacity strokes match playback), else the direct path.
 // Uses the same start/continuation dispatch as replayTimelineToCanvas.
 function paintStrokesStatic(strokeArr) {
-  if (strokeLayersOn()) {
+  // The player draws a Flip document's frames through here. Flip's editor has
+  // capped how much one frame may spend on layering since the playback stall;
+  // this path never did, so a frame full of see-through strokes played fine
+  // while authoring and stalled for the viewer. Same ceiling, same module.
+  const _sl = (typeof window !== 'undefined') ? window.SkriblStrokeLayers : null;
+  const _over = !!(_sl && _sl.overBudget && _sl.overBudget(strokeArr, parseStrokeAlpha));
+  if (strokeLayersOn() && !_over) {
     const comp = makeStrokeCompositor(ctx, canvas);
     for (let i = 0; i < strokeArr.length; i++) {
       const p = strokeArr[i];
@@ -4075,14 +4081,24 @@ function showPlayerError(msg) {
   // Per-page hold (v109): a page occupies `hold` base-fps slots instead of one.
   // Read defensively — a payload written before v109 has no hold field at all, so
   // every page reads as 1 and playback is bit-for-bit what it always was.
-  const flipHolds = isFlip ? flipFrames.map(f => {
-    const h = Math.round(Number(f && f.hold));
-    return (isFinite(h) && h >= 1) ? Math.min(h, 4) : 1;
-  }) : null;
-  const flipUnits = isFlip ? flipHolds.reduce((a, b) => a + b, 0) : 0;
-  const flipDurMs = isFlip ? Math.max(1, (flipUnits / flipFps) * 1000) : 0;
+  // lib/holdtiming.js owns the clamp and the cumulative table; the Flip editor
+  // reads the same module, so a hold means one thing on both surfaces. The 4
+  // used to be written out here as a literal, a copy of flip.js's MAX_HOLD with
+  // nothing forcing them to agree. Inline fallback kept, as the other libs do.
+  const _hold = (typeof window !== 'undefined' && window.SkriblHold) ? window.SkriblHold : null;
+  const flipHolds = isFlip
+    ? (_hold ? _hold.table(flipFrames) : flipFrames.map(f => {
+        const h = Math.round(Number(f && f.hold));
+        return (isFinite(h) && h >= 1) ? Math.min(h, 4) : 1;
+      }))
+    : null;
+  const flipUnits = isFlip ? (_hold ? _hold.units(flipHolds) : flipHolds.reduce((a, b) => a + b, 0)) : 0;
+  const flipDurMs = isFlip
+    ? (_hold ? _hold.durationMs(flipHolds, flipFps) : Math.max(1, (flipUnits / flipFps) * 1000))
+    : 0;
   // Map elapsed time -> page index through the cumulative hold table.
   function flipIndexAt(cycT) {
+    if (_hold) return _hold.indexAt(flipHolds, flipFps, cycT);
     let u = Math.floor((cycT / 1000) * flipFps);
     if (!(u >= 0)) u = 0;
     let acc = 0;

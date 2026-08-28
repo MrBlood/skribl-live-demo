@@ -161,6 +161,17 @@
   <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
+  {# Flip playback in the player reads its per-page holds through this; the
+     Flip editor reads the same module, so the preview and what a viewer
+     gets cannot drift apart. #}
+  <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
+  {# And the layering ceiling, which lives beside the stroke-layers setting.
+     Without this the player has no cap on how much one frame may spend
+     compositing see-through strokes — the stall Flip's editor was fixed for.
+     Loading it also means the viewer's own stroke-layers preference applies
+     to playback, which is what that setting has always meant locally; it
+     defaults ON when unset, so a first visit renders exactly as before. #}
+  <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('app.js') }}" defer></script>
 </body>
 </html>

@@ -271,8 +271,13 @@ function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
 // Per-page hold: how many base-fps slots this page occupies. ALWAYS read through
 // this — never trust f.hold to exist. Pages loaded from a pre-v109 payload have no
 // hold field at all and must read as 1, which is what makes the change additive.
-const MAX_HOLD = 4;
+// Owned by lib/holdtiming.js, which both this editor and the player read, so
+// the clamp cannot drift between what you preview and what a viewer gets.
+// Inline fallback for a surface that somehow loads without the lib.
+const MAX_HOLD = (typeof window !== 'undefined' && window.SkriblHold)
+  ? window.SkriblHold.MAX_HOLD : 4;
 function frameHold(f){
+  if(typeof window !== 'undefined' && window.SkriblHold) return window.SkriblHold.holdOf(f);
   const h = Math.round(Number(f && f.hold));
   return (isFinite(h) && h >= 1) ? Math.min(h, MAX_HOLD) : 1;
 }
@@ -749,7 +754,34 @@ function drawLine(c, x1,y1,x2,y2, col, s, erase){
 // alpha < 1 is drawn SOLID onto a temp layer, then composited ONCE at that alpha, so
 // overlapping dots/joints within the stroke don't stack into darker blobs (the pad's
 // wet/dry idea). Fully-opaque and erase strokes draw straight through as before.
-function alphaOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\([^)]*,\s*([\d.]+)\s*\)/i); if(m) return parseFloat(m[1]); } return 1; }
+/* ANCHORED, and rgba only. Unanchored `rgba?\([^)]*,\s*([\d.]+)\s*\)` also
+   matched rgb(): the greedy [^)]* let the BLUE channel land in the alpha group,
+   so alphaOf('rgb(255,176,32)') returned 32. Harmless for the layering decision
+   it was written for — 32 is not < 1, so the stroke read as opaque, which is
+   correct — and quietly wrong everywhere else. tweenFade multiplied by it and
+   clamped, so an in-between of any drawing whose colours were stored as rgb()
+   came out FULLY OPAQUE: a stack of solid copies with no exposure at all. Not
+   reachable through Flip's own pen, which is always hex, but strokes also
+   arrive from loaded .skribl files and posted payloads, and the server does not
+   validate colour strings.
+   app.js's parseStrokeAlpha has always been anchored. This is the same rule. */
+function alphaOf(col){
+  if(typeof col !== 'string') return 1;
+  const m = col.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i);
+  return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : 1;
+}
+/* The alpha a stroke carries in ANY form the payload may hold it in, including
+   the 8-digit hex the in-between itself writes. Deliberately separate from
+   alphaOf(): alphaOf drives the LAYERING decision, and teaching it about
+   #rrggbbaa would put every in-between back on the expensive per-stroke path
+   that made playback stall. This one is for composing colours, not costing
+   them. */
+function strokeAlphaOf(col){
+  if(typeof col !== 'string') return 1;
+  const h = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(col.trim());
+  if(h) return parseInt(h[1], 16) / 255;
+  return alphaOf(col);
+}
 function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
 function paintSeg(c, seg, solid){
   for (let i = 0; i < seg.length; i++) {
@@ -787,7 +819,12 @@ function layerableCount(strokeArr){
 }
 
 function paintStatic(c, strokeArr){
-  const _overBudget = layerableCount(strokeArr) > LAYER_BUDGET;
+  // The ceiling lives in lib/strokelayers.js, beside the setting it qualifies,
+  // so the player applies the same one. Inline fallback as elsewhere.
+  const _overBudget = (typeof window !== 'undefined' && window.SkriblStrokeLayers
+                       && window.SkriblStrokeLayers.overBudget)
+    ? window.SkriblStrokeLayers.overBudget(strokeArr, alphaOf)
+    : layerableCount(strokeArr) > LAYER_BUDGET;
   let i = 0;
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
@@ -1993,7 +2030,11 @@ function runPlayTimer(){
     // table and gets this right, so the editor was disagreeing with what a
     // viewer actually sees.
     const cur = (playI - 1 + frames.length) % frames.length;
-    const d = (1000 / fps) * frameHold(frames[cur]);
+    // slotMs takes the FRAME, not a hold read off it, so this cannot go back
+    // to reading the hold off the wrong page — which is what it used to do.
+    const d = (typeof window !== 'undefined' && window.SkriblHold)
+      ? window.SkriblHold.slotMs(frames[cur], fps)
+      : (1000 / fps) * frameHold(frames[cur]);
     const ni = playI % frames.length;
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
@@ -3955,11 +3996,14 @@ function tweenMismatch(a, b){
    it. Anything a user draws still arrives as rgba() and still gets its layer. */
 function tweenFade(col, mul){
   const solid = solidOf(col);
-  const a = Math.max(0, Math.min(1, alphaOf(col) * mul));
+  // strokeAlphaOf, not alphaOf: an 8-digit hex is what an in-between writes, so
+  // this is the path taken when someone makes an in-between OF an in-between.
+  // Reading its alpha as 1 left those samples at their existing alpha, unfaded.
+  const a = Math.max(0, Math.min(1, strokeAlphaOf(col) * mul));
   const hx = n => ('0' + Math.round(n).toString(16)).slice(-2);
-  const m = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(solid);
+  const m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(solid);
   if(m) return '#' + hx(+m[1]) + hx(+m[2]) + hx(+m[3]) + hx(a * 255);
-  const h = /^#([0-9a-f]{6})$/i.exec(String(col).trim());
+  const h = /^#([0-9a-f]{6})(?:[0-9a-f]{2})?$/i.exec(String(col).trim());
   if(h) return '#' + h[1].toLowerCase() + hx(a * 255);
   return col;
 }

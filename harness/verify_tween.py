@@ -513,6 +513,105 @@ with sync_playwright() as p:
               blur["frameKeys"] == ["hold", "strokeGroups", "strokes"],
               str(blur["frameKeys"]))
 
+    # ------------------------------------------------------------------
+    # v246 — SWEEP the axes the renderer is sensitive to.
+    #
+    # Both blur defects that reached the user lived on axes nothing varied.
+    # Every measurement of this feature used a 6px stroke in white ink:
+    #   * the halo was a MULTIPLE of the brush, so a 60px ball inflated into a
+    #     204px cloud — invisible at 6px, where 3.4x is a 7px soft edge;
+    #   * white ink has equal, high channels, the one case where premultiplied
+    #     8-bit alpha cannot shift a hue, so the red halo on saturated ink
+    #     could not appear.
+    # Eleven assertions passed through both. Asserting a feature works at one
+    # input says almost nothing; these are invariants over a grid.
+    # ------------------------------------------------------------------
+    print("\nSWEEP — size x saturation, the two axes the blur bends on")
+    grid = page.evaluate("""() => {
+      const SIZES = [6, 12, 24, 48, 96, 160];
+      const INKS = ['#f7f2e8', '#ffb020', '#2fa8a0', '#14120f', '#ff0000'];
+      const mk = (dy, size, col) => { const p = [];
+        for (let i = 0; i < 10; i++)
+          p.push({ x: 250 + i*2, y: 180 + dy, color: col, size: size,
+                   t: i*3, erase: false, start: i === 0 });
+        return { strokes: p, strokeGroups: [p.length], hold: 1 }; };
+      const srcKeys = new Set(['x','y','color','size','t','erase','start']);
+      const out = [];
+      for (const size of SIZES) for (const col of INKS) {
+        const a = mk(0, size, col), b = mk(140, size, col);
+        const tw = buildTween(a, b);
+        if (!tw) { out.push({ size, col, built: false }); continue; }
+        const sizes = tw.strokes.map(s => s.size);
+        const alphas = [...new Set(tw.strokes.map(s => parseInt(String(s.color).slice(7), 16)))];
+        const extra = new Set();
+        for (const s of tw.strokes) for (const k of Object.keys(s)) if (!srcKeys.has(k)) extra.add(k);
+        // render and read the worst surviving ratio of the ink's darkest channel
+        frames = [tw]; idx = 0; render();
+        const cv = document.getElementById('pad'), g = cv.getContext('2d');
+        const W = cv.width, H = cv.height, d = g.getImageData(0,0,W,H).data;
+        const m = /^#(..)(..)(..)$/.exec(col).slice(1).map(h => parseInt(h,16));
+        const mx = m.indexOf(Math.max(...m));
+        let dk = -1, dkv = 1e9;
+        for (let c = 0; c < 3; c++) if (m[c] > 0 && m[c] < dkv) { dkv = m[c]; dk = c; }
+        const trueRatio = dk >= 0 ? m[dk] / m[mx] : null;
+        let worst = 1e9, lit = 0;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+          const i = (y*W+x)*4;
+          if (d[i+mx] < 60) continue;
+          lit++;
+          if (dk >= 0) { const r = d[i+dk] / d[i+mx]; if (r < worst) worst = r; }
+        }
+        out.push({ size, col, built: true, lit,
+                   widest: +Math.max(...sizes).toFixed(2),
+                   thinnest: +Math.min(...sizes).toFixed(2),
+                   minAlpha: Math.min(...alphas), passes: alphas.length,
+                   points: tw.strokes.length, groups: tw.strokeGroups.length,
+                   groupSum: tw.strokeGroups.reduce((x,v) => x+v, 0),
+                   extra: [...extra],
+                   trueRatio: trueRatio === null ? null : +trueRatio.toFixed(3),
+                   worstRatio: (dk >= 0 && worst < 1e9) ? +worst.toFixed(3) : null });
+      }
+      return out; }""")
+
+    _built = [c for c in grid if c.get("built")]
+    check("every point on the grid produced an in-between",
+          len(_built) == len(grid) and len(grid) == 30,
+          f"{len(_built)} of {len(grid)} built (expected 30 cells)")
+
+    def _bad(pred):
+        return [f"{c['size']}px {c['col']}" for c in _built if pred(c)]
+
+    # THE assertion the inflation bug needed: the halo is a soft EDGE, and how
+    # wide it is must not scale with the object.
+    _fat = _bad(lambda c: c["widest"] - c["size"] > 16.0)
+    check("the halo stays a bounded edge at every brush size",
+          not _fat,
+          "inflated at: " + ", ".join(_fat[:6]) +
+          f"  (worst +{max((c['widest']-c['size']) for c in _built):.0f}px)")
+    check("and no pass is ever drawn thinner than the brush",
+          not _bad(lambda c: c["thinnest"] < c["size"] - 1e-6), "")
+
+    # THE assertion the hue bug needed.
+    _hued = [c for c in _built if c["worstRatio"] is not None and c["lit"] > 500]
+    check("the sweep actually rendered ink to measure",
+          len(_hued) >= 18, f"only {len(_hued)} cells had measurable ink")
+    _lost = [f"{c['size']}px {c['col']} ({c['worstRatio']} vs {c['trueRatio']})"
+             for c in _hued if c["worstRatio"] < c["trueRatio"] * 0.35]
+    check("every ink keeps its darkest channel through the blur",
+          not _lost, "channel lost at: " + "; ".join(_lost[:5]))
+    check("no cell emits a pass at alpha 1/255, which is wrong for every ink",
+          not _bad(lambda c: c["minAlpha"] < 2), "")
+
+    # Format and cap invariants, over the whole grid rather than one sample.
+    check("strokeGroups sum to the stroke count in every cell",
+          not _bad(lambda c: c["groupSum"] != c["points"]), "")
+    check("no cell exceeds the server's point or group caps",
+          not _bad(lambda c: c["points"] > 20000 or c["groups"] > 5000),
+          f"worst {max(c['points'] for c in _built)} points, "
+          f"{max(c['groups'] for c in _built)} groups")
+    check("no cell introduces a field the source strokes lacked",
+          not _bad(lambda c: c["extra"]), "")
+
     # The budget planner spends leftover budget on blur, never samples on it:
     # the halo's job is closing the gaps BETWEEN samples, so a coarser exposure
     # with a richer falloff would be strictly worse.

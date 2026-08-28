@@ -1179,6 +1179,48 @@ skips is a guard that lies about coverage.**
 something a person can do with a mouse, in an order a person could do it in. If
 this goes red, some pair of features has stopped composing.
 
+## Suites: verify_sharedrules.py
+
+**verify_parity.py guards the CONTROLS Pad and Flip share. This guards the
+RULES.** Three of them had two implementations apiece, and all three had
+drifted:
+
+| rule | Flip editor | player |
+| --- | --- | --- |
+| what a `hold` means | `frameHold` + `runPlayTimer` | `flipHolds` + `flipIndexAt` |
+| what one frame may spend layering | `LAYER_BUDGET` | *no ceiling at all* |
+| what alpha a stroke carries | `alphaOf` | `parseStrokeAlpha` |
+
+The hold: the player's cumulative table was right; the editor's timer read its
+delay off the page AFTER the one on screen and never wrapped its index, so a
+hold stretched the wrong page and stopped working after the first loop. The
+ceiling: Flip's editor caps compositing cost, the player never did, so a
+document could play smoothly while authoring and stall for a viewer. The alpha:
+Flip's regex was unanchored and matched `rgb()` too, so the greedy body let the
+BLUE channel land in the alpha group — `alphaOf('rgb(255,176,32)')` returned 32,
+and `tweenFade` multiplied by it and clamped, making an in-between of any such
+drawing fully opaque.
+
+`lib/holdtiming.js` and the budget in `lib/strokelayers.js` own the rules now.
+The two mechanisms stay different where they should — the player maps a clock to
+an index, the editor reschedules a timer — so the suite asserts not shared code
+but that they cannot disagree about the ANSWER, over a grid of hold tables and
+frame rates.
+
+**The recurring shape, and why it costs more than an ordinary bug:** when the
+EDITOR and the PLAYER disagree, nothing an author can see reveals it. The
+preview is not the product. The suite's first block checks that every surface
+actually loads the modules, because `skribl_player.html` loads a handful of libs
+rather than the editors' thirty-odd — a new dependency is easy to add everywhere
+except the surface that needs it most. That happened twice while writing it.
+
+One block is a SOURCE check rather than a behavioural one, annotated as such:
+the behavioural version was tried first and cannot work on that canvas, because
+Pad's draw path strips a colour's alpha and leans on a `globalAlpha` that is 1
+outside a live stroke — so layered and un-layered frames come out pixel-identical
+there. Asserting the wiring is honest; asserting something weaker and calling it
+behavioural would not be.
+
 ## Suites: verify_pillfit.py
 
 **The autosave pill sat on the pen button, on every phone, on both surfaces.**
