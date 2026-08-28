@@ -175,6 +175,11 @@ BATCHES = [
     # Chromium competes is still correct, but the reason it is alone here is
     # that it reads the full canvas four times.
     ["verify_beading.py"],
+    # v226. Page spans on Flip's strip. Browser-driven but cheap — it drives
+    # the strip and reads array order rather than pixels — so it shares a batch
+    # with nothing only because the two suites either side of it are already
+    # alone for timing reasons.
+    ["verify_pagespan.py"],
 ]
 
 

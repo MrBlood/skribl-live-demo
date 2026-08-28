@@ -373,6 +373,43 @@
     content: ''; position: absolute; inset: 0; pointer-events: none;
     border-radius: 10px; background: var(--ui-active); opacity: .14;
   }
+  /* A RANGE OF PAGES reads as one stretch of film, not as N ticked items.
+     The run lifts together, shares a wash, and carries a strip of tape along
+     its bottom edge that is rounded only at the two OUTER ends — so the shape
+     of the selection is legible from the ends alone and nobody has to count
+     highlighted tiles. The leading tile's number becomes the range ("4–7"),
+     which is the one place DESIGN-DIRECTION reserves for a hand-set moment.
+
+     The 10px gaps are deliberately NOT bridged. `.frame` sets overflow:hidden
+     so a bridging element would be clipped anyway, and a contact sheet reads
+     as continuous across its gutters — the eye closes them. Faking a solid bar
+     would also mean the run stopped looking like separate frames, which is the
+     one thing the strip exists to show.
+
+     Distinct from .on (the page you are drawing on) and from .in-scope (a live
+     move's preview), because during a range operation two of the three can be
+     true of the same tile and they have to stay tellable apart. */
+  .frame.inspan { transform: translateY(-2px); border-color: var(--ui-line); }
+  .frame.inspan::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+    pointer-events: none; background: var(--ui-line);
+  }
+  .frame.inspan.span-first::after { border-top-left-radius: 2px; border-bottom-left-radius: 2px; left: 3px; }
+  .frame.inspan.span-last::after { border-top-right-radius: 2px; border-bottom-right-radius: 2px; right: 3px; }
+  .frame.inspan::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: var(--ui-active); opacity: .10;
+  }
+  /* The current page inside a run keeps its own ring, so "which page am I
+     drawing on" survives having a range selected. */
+  .frame.inspan.on { box-shadow: 0 0 0 1px var(--ui-line); }
+  .frame.inspan .num { color: var(--text-primary); }
+  /* The page readout picks up the same line colour while it is showing a range,
+     so the bar and the strip agree at a glance about what is selected. */
+  .pb-who.span { color: var(--text-primary); }
+  @media (prefers-reduced-motion: reduce) {
+    .frame.inspan { transform: none; }
+  }
   /* The strip stays VISIBLE during a move — it is what makes the move
      judgeable — but stops being operable. Dimming the add column signals that
      without hiding the thumbnails you are lining the drawing up against. */

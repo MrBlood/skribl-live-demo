@@ -140,9 +140,13 @@ and puts the tool in front of people who already exist.
    storage backend"; that stopped being true when media externalised. The real
    blocker is the PAYLOAD SCHEMA — a layer is a field the player must honour,
    so it is an owner decision, not an engineering one.*
-3. **A real timeline.** Drag to reorder SHIPPED, and holds already existed —
-   the hard half. Still missing: select a RANGE of pages, and copy/paste page
-   spans. Frames are a plain array, so this touches no format.
+3. ~~**A real timeline.**~~ **SHIPPED (v226).** Drag to reorder and holds
+   already existed — the hard half. Range selection and page-span copy/paste
+   landed on the strip rather than in a management cluster, per the direction:
+   shift-click or hold-and-sweep to select a run, and Copy / Delete / ×hold /
+   the arrows re-scope to it instead of multiplying. `lib/pagespan.js`,
+   `verify_pagespan.py`. What is still absent is a scrubbable time RULER —
+   this bought range editing, not a timeline view.
 4. **Import a reference.** Draw over a video frame or image sequence. Still
    missing entirely; a still image per page is all there is.
 
