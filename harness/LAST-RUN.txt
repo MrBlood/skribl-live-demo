@@ -1,25 +1,26 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-28T01:26:25Z
+UTC timestamp           : 2026-08-28T03:37:54Z
 Host                    : Linux x86_64
-Tree SHA-256            : 19f349cfdd4ac281a08f8fda5048ee047199dedada6a8a84de52f48a77a4ee00
-Git commit              : a9971f2
-SKRIBL_VERSION          : v222
+Tree SHA-256            : 03dbd36c6d172deebbecd718e28274fc6e21f8ce0c401a9407a956955d86abc4
+Git commit              : 3461e20-dirty
+SKRIBL_VERSION          : v223
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.sZ8mV7THhu/harness.db)
+Database reset          : yes (fresh /tmp/tmp.opE1uQlF8g/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh 
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_tray.py verify_select.py verify_pillfit.py verify_flipdraft.py verify_fuzz.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
+# whole release run: 28 batches recorded as one run
 suites requested : 74
   verify_amber.py: ok — 21/21 passed
   verify_apiedges.py: ok — 30/30 passed
@@ -34,7 +35,7 @@ suites requested : 74
   verify_cssplit.py: ok — 18/18 passed
   verify_deletion_foundation.py: ok — 13/13 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 38/38 passed
+  verify_docs.py: ok — 39/39 passed
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 17/17 passed
   verify_exopts.py: ok — 26/26 passed
@@ -95,6 +96,6 @@ suites requested : 74
   verify_ux.py: ok — 310/310 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 3133   (skipped suites contribute 0)
+assertions passed: 3134   (skipped suites contribute 0)
 suites skipped   : 1
 suites with problems: 0
