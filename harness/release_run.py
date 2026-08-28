@@ -152,6 +152,12 @@ BATCHES = [
     # why it stays away from verify_deletion_foundation's batch: that suite
     # sweeps orphans for real.
     ["verify_medialimits.py"],
+    # v224. The orphan-sweep job (outside review #6). Entirely in-process
+    # against a temp SQLite file and a temp media root — no server, no browser
+    # — and it drives `python -m skribl.sweep` as a real subprocess so the exit
+    # codes asserted are the ones cron would see. Isolated by construction, so
+    # it shares a batch with the other cheap v224 suite.
+    ["verify_sweepjob.py"],
 ]
 
 

@@ -538,6 +538,17 @@ def backfill_media(store, session, iter_media, batch=100, after_id=0,
 def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
     """Delete stored objects that no post references. Returns the keys.
 
+    A thin wrapper over sweep_orphans_report() kept at its original signature
+    and return type, because every existing caller wants exactly the list.
+    Anything running this as a scheduled job wants the counts instead — see
+    sweep_orphans_report and the `python -m skribl.sweep` entry point.
+    """
+    return sweep_orphans_report(store, session, older_than_seconds, dry_run)["removed"]
+
+
+def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True):
+    """The sweep, plus the numbers that make it operable. (Outside review, #6.)
+
     WHY THIS IS NEEDED. Media is written BEFORE the transaction that records
     the association commits. The association rows are transactional; the object
     store is not. A failed or abandoned commit therefore leaves bytes nothing
@@ -575,19 +586,41 @@ def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
     Do NOT try to make the object store and the database one distributed
     transaction. Objects are immutable, associations are authoritative, and a
     periodic sweep is the honest reconciliation.
+
+    WHY THE COUNTS EXIST. Returning only the removed keys made the sweep
+    unobservable in the one way that matters: a run that removes nothing is
+    indistinguishable from a run that never saw anything, and a store view
+    listing a co-tenant's namespace looked exactly like an empty bucket. Every
+    branch that DECLINES to delete is now counted separately, so a deployment
+    can tell "nothing to reclaim" from "the credentials see the wrong prefix"
+    from "the grace period is swallowing everything" without adding logging to
+    a library. Every value is JSON-serialisable so a job can ship the dict
+    straight to whatever collects its metrics.
+
+    A FAILED DELETE IS NO LONGER A FAILED SWEEP. `store.delete_key` used to run
+    uncaught, so one object a bucket policy refuses aborted the whole run and
+    left every later orphan in place — and the key was already in the returned
+    list, which reported a deletion that did not happen. Failures are collected
+    per key and the sweep continues; `removed` now means removed.
     """
-    cutoff = time.time() - max(0, older_than_seconds)
+    started = time.time()
+    cutoff = started - max(0, older_than_seconds)
     removed = []
+    errors = []
+    stats = {"listed": 0, "skipped_foreign": 0, "skipped_young": 0,
+             "skipped_referenced": 0, "skipped_reused": 0, "chunks": 0}
     chunk = []
 
     def flush_chunk():
         if not chunk:
             return
+        stats["chunks"] += 1
         referenced = {row[0] for row in
                       session.query(SkriblPostMedia.media_key)
                       .filter(SkriblPostMedia.media_key.in_(chunk)).all()}
         for key in chunk:
             if key in referenced:
+                stats["skipped_referenced"] += 1
                 continue
             # RE-CHECK THE AGE, immediately before deleting. Listing and
             # deleting are separated by a reference query over up to 500 keys;
@@ -600,20 +633,50 @@ def sweep_orphans(store, session, older_than_seconds=86400, dry_run=True):
             if _stat is not None:
                 _now = _stat(key)
                 if _now is not None and _now > cutoff:
+                    stats["skipped_reused"] += 1
                     continue        # became young: a reuse is in flight
-            removed.append(key)
-            if not dry_run:
+            if dry_run:
+                removed.append(key)
+                continue
+            try:
                 store.delete_key(key)
+            except Exception as exc:
+                # Deliberately broad: the store is host-supplied and may raise
+                # anything. The sweep's job is to reclaim what it can and report
+                # what it could not, not to decide which backend errors are
+                # fatal. No key material or credential is in the message.
+                errors.append({"key": key, "error": f"{type(exc).__name__}: {exc}"})
+                continue
+            removed.append(key)
         chunk.clear()
 
     for key, mtime in store.iter_keys():
-        if not KEY_RE.match(key or "") or mtime > cutoff:
+        stats["listed"] += 1
+        if not KEY_RE.match(key or ""):
+            stats["skipped_foreign"] += 1
+            continue
+        if mtime > cutoff:
+            stats["skipped_young"] += 1
             continue
         chunk.append(key)
         if len(chunk) >= 500:
             flush_chunk()
     flush_chunk()
-    return removed
+    report = {
+        "dry_run": bool(dry_run),
+        "older_than_seconds": max(0, older_than_seconds),
+        "removed": removed,
+        "removed_count": len(removed),
+        "delete_errors": errors,
+        "delete_error_count": len(errors),
+        "duration_seconds": round(time.time() - started, 3),
+    }
+    report.update(stats)
+    # Candidates are what survived BOTH cheap filters and reached the reference
+    # query — derived rather than counted so it can never disagree with them.
+    report["candidates"] = (stats["listed"] - stats["skipped_foreign"]
+                            - stats["skipped_young"])
+    return report
 
 
 # --- S3 -----------------------------------------------------------------------
