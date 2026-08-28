@@ -1,6 +1,23 @@
 # Skribl — Handoff for the next session
 
-## v221 addendum — read this first (the v219 body below is history, still true where not superseded)
+## v223 addendum — read this first (everything below is history, still true where not superseded)
+
+**Current sealed build: v223.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
+typed here.
+
+**Read order for a new session:** `V223-CHANGES.md` (what happened and why),
+then `DESIGN-DIRECTION.md` (unchanged; still the intent), then this file.
+
+**One thing to know before writing a suite:** `harness/release_run.py` keeps a
+`BATCHES` list, and a suite on disk that appears in no batch stops the release
+from starting at all. That refusal has fired three times now (v199, v219, v223)
+and each time the cause was the same — a suite written without a line added to
+that list. v223 found TEN of them, which is why `harness/RELEASE.md` had been
+frozen describing a 64-suite tree while 74 suites were passing. Add the line
+when you add the suite.
+
+## v221 addendum (history)
 
 **Current sealed build: v221.** Result, tree hash, suite/assertion counts and
 skip list are all in `harness/RELEASE.md`, which is generated. No volatile

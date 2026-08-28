@@ -121,6 +121,29 @@ BATCHES = [
     # for CPU during timing-sensitive waits. Added v222 with the durability
     # work; the refusal above is what flagged it into this list.
     ["verify_drafts.py"],
+    # v223. TEN suites were on disk and in no batch — verify_boot, flipdraft,
+    # fuzz, liquify, pillfit, select, sharedrules, theme, tray, tween — so
+    # RELEASE.md could not be regenerated at all and stayed frozen describing a
+    # 64-suite tree at v222 while 74 suites were passing. Every other doc points
+    # at RELEASE.md for volatile facts, so the authority was the stale one.
+    #
+    # That is the third time this has happened (v199, v219, now v223) and the
+    # refusal worked every time; what fails is remembering to place a suite when
+    # writing it. Adding a suite means adding a line here, and nothing but this
+    # comment says so.
+    #
+    # Alone: it renders a 6x5 grid of in-betweens — thirty full canvas reads —
+    # and shares nothing well while doing it.
+    ["verify_tween.py"],
+    # Alone for the same reason: liquify subdivides strokes and diffs the canvas
+    # pixel by pixel.
+    ["verify_liquify.py"],
+    # sharedrules posts and then opens the PLAYER, so it needs the whole
+    # authoring path; theme screenshots both stylesheets. Grouped with the two
+    # small structural suites rather than the timing-sensitive ones.
+    ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
+    ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
+     "verify_flipdraft.py", "verify_fuzz.py"],
 ]
 
 

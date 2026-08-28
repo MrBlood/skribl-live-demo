@@ -1179,6 +1179,61 @@ skips is a guard that lies about coverage.**
 something a person can do with a mouse, in an order a person could do it in. If
 this goes red, some pair of features has stopped composing.
 
+## The shared modules, all of them
+
+`skribl/static/lib/` is where a rule lives once instead of twice. The two
+editors are separate controllers — app.js and flip.js — so anything they both
+obey drifts unless something owns it, and `verify_parity.py` exists because it
+did. Eight of these had never been named in any document, which is how a
+module gets forgotten and reimplemented.
+
+Surfaces are read from the template `<script>` tags; the descriptions are each
+file's own opening line. `verify_docs.py` fails if a lib here is named nowhere.
+
+| module | loaded on | what it owns |
+| --- | --- | --- |
+| `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
+| `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
+| `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
+| `canvassizes.js` | Pad+Flip | Canvas presets — the one table both editors read. |
+| `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
+| `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
+| `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
+| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both |
+| `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |
+| `eventpoint.js` | Pad+Flip+player | Which contact a gesture belongs to — shared by Pad, Flip and the player. |
+| `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
+| `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
+| `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
+| `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
+| `holdtiming.js` | Pad+Flip+player | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip |
+| `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things |
+| `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
+| `media_validation.js` | Pad+Flip+player | media_validation.js — one owner for media format policy and byte verification. |
+| `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
+| `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
+| `photofit.js` | Pad+Flip+player | Photo fit geometry — the part both editors and the player must agree on. |
+| `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
+| `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
+| `posted.js` | Pad+Flip | Your Skribls — a local record of what you have posted. |
+| `postedui.js` | Pad+Flip | Your Skribls — rendering. The store is lib/posted.js; this draws it. |
+| `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
+| `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
+| `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
+| `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
+| `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
+| `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
+| `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
+| `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
+| `theme.js` | Pad+Flip | Light/dark chrome — the stored setting, and the one place that applies it. |
+| `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
+| `tooltip.js` | Pad+Flip | Styled tooltips, replacing the browser's. |
+
+Two are worth calling out because they were extracted after a bug, not before:
+`holdtiming.js` (the editor and the player disagreed about what a hold means)
+and the budget inside `strokelayers.js` (the editor capped its compositing cost
+and the player did not). Both are covered by `verify_sharedrules.py`.
+
 ## Suites: verify_sharedrules.py
 
 **verify_parity.py guards the CONTROLS Pad and Flip share. This guards the

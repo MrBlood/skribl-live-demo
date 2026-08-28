@@ -88,6 +88,19 @@ check("every harness suite on disk is named in at least one .md",
       not _undocumented,
       ", ".join(_undocumented) + " — add each to harness/README.md at least")
 
+# v223: the same rule for the SHARED MODULES, and for the same reason. lib/ is
+# where a rule lives once instead of twice, so a module nobody can find is a
+# module that gets reimplemented in one of the two editors — which is the exact
+# drift verify_parity.py and verify_sharedrules.py exist to catch. Eight of the
+# thirty-six were named in no document at all when this check was written, among
+# them pressure.js and brushes.js, which both editors depend on.
+_undoc_libs = sorted(
+    p.name for p in (ROOT / "skribl" / "static" / "lib").glob("*.js")
+    if p.name not in _all_md_text)
+check("every shared module in lib/ is named in at least one .md",
+      not _undoc_libs,
+      ", ".join(_undoc_libs) + " — START-HERE.md carries the index of all of them")
+
 # The suite-name check above would not have caught START-HERE.md naming
 # `v179-client.patch`, because that is not a verify_*.py. A document that tells
 # you how to deploy by applying a patch, and names a patch that is not in the
