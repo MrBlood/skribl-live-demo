@@ -422,6 +422,11 @@ try:
         d.init_app(a)
         skribl.init_skribl(
             a, session=lambda: d.session, current_user_id=(lambda: viewer),
+            # v224: identity here is a closure over a local variable, not a
+            # cookie, so this fixture is not CSRF-able. csrf=False is how a host
+            # declares that, and the fail-closed rule (outside review #4)
+            # requires it to be said rather than assumed.
+            csrf=False,
             media_store=S3Store(BUCKET, lambda key: url_for("skribl.media", key=key),
                                 region=REGION, endpoint=f"http://127.0.0.1:{S3_PORT}",
                                 access_key=AK, secret_key=SK, prefix="media/"))

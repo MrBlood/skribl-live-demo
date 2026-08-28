@@ -25,7 +25,8 @@ from sqlalchemy.exc import IntegrityError
 from .core import (MAX_CARD_BYTES, OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE,
                    SKRIBL_VERSION, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
-                     _visibility_policy, as_utc, session)
+                     _visibility_policy, as_utc, session, visibility_values,
+                     feed_filter, author_dict)
 from .storage import KEY_RE, LocalDiskStore, externalise_payload
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
@@ -429,7 +430,13 @@ def register_routes(bp, *, index_route=False):
         # so existing clients that never send this field keep their current
         # behaviour instead of silently becoming feed content.
         visibility = payload.get("visibility", "unlisted")
-        if visibility not in SkriblPost.VISIBILITIES:
+        # models.visibility_values() = Skribl's three plus anything the host
+        # registered with set_visibility_values(). The model has no DB CHECK
+        # constraint precisely so a host can add "draft" or "moderated" without
+        # a migration, and the docs said so, while THIS line rejected every one
+        # of them — so the documented extensibility only worked for rows the
+        # host inserted behind Skribl's back (outside review #7).
+        if visibility not in visibility_values():
             return jsonify({"error": "Unknown visibility."}), 400
         author_id = bp.skribl_current_user_id()
         # "private" means "the author only", so it is meaningless without an
@@ -797,6 +804,18 @@ def register_routes(bp, *, index_route=False):
             q = q.filter(sa.tuple_(SkriblPost.created_at, SkriblPost.id)
                          < sa.tuple_(c_created, c_id))
 
+        # HOST AUTHORIZATION, IN SQL. Everything above filters on the
+        # visibility COLUMN. The host's visibility policy — which guards the
+        # payload endpoint, the player, the share card and media — was never
+        # consulted here, so a post the policy denies still disclosed its
+        # existence, title, caption, author and public id through the listing
+        # (outside review #3). It has to be part of the QUERY: this feed is
+        # keyset-paginated, and dropping rows after the fetch returns short
+        # pages and a next_cursor pointing at a row the viewer never saw.
+        _ff = feed_filter()
+        if _ff is not None:
+            q = _ff(q, viewer)
+
         q = q.order_by(SkriblPost.created_at.desc(), SkriblPost.id.desc())
 
         # Over-fetch by one to learn whether another page exists, without a
@@ -841,9 +860,10 @@ def register_routes(bp, *, index_route=False):
             "caption": post.caption,
             "hasAudio": post.has_audio,
             "createdAt": as_utc(post.created_at).isoformat(),
-            "author": {
-                "id": post.user_id,
-                "username": "demo-user"
-            },
+            # Skribl has no user table. It used to answer "demo-user" for
+            # every author in every deployment while returning the real id
+            # beside it (outside review #8); a host now supplies whatever it
+            # knows through models.set_author_resolver().
+            "author": author_dict(post.user_id),
             "skribl": payload
         })

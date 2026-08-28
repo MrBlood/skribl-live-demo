@@ -232,32 +232,53 @@ finally:
 with host.app_context():
     db.session.rollback()
 
-print("\nTRIPWIRE — auth configured without CSRF logs a warning")
-import logging
-
-
-class _Trap(logging.Handler):
-    def __init__(self):
-        super().__init__()
-        self.hits = []
-
-    def emit(self, record):
-        self.hits.append(record.getMessage())
-
-
-_trap = _Trap()
-logging.getLogger("skribl").addHandler(_trap)
+print("\nFAIL CLOSED — auth configured without CSRF now REFUSES to build")
+# v224, outside review #4. This used to log a warning. A warning is the wrong
+# instrument for this: `current_user_id` plus cookie authentication and no CSRF
+# verifier means any third-party page can post as the logged-in user, and the
+# warning went to a logger a host may not have configured, at import time, in a
+# stream nobody reads during a deploy. The configuration is now refused.
+#
+# What makes refusing acceptable is that there IS a legitimate configuration it
+# would otherwise break: token/header authentication is not CSRF-able, and such
+# a host is not wrong to pass current_user_id with no verifier. So `csrf=False`
+# exists to DECLARE that, and the three cases below are the whole contract —
+# omitted raises, a verifier is accepted, and the explicit declination is
+# accepted. Two of the three are the reason this is not simply a hard error.
 try:
     skribl.create_blueprint(session=False, current_user_id=lambda: 7)
-    check("current_user_id without csrf trips the warning",
-          any("csrf" in m.lower() for m in _trap.hits), str(_trap.hits[:1]))
-    _trap.hits.clear()
+    check("current_user_id without csrf is refused", False,
+          "create_blueprint returned instead of raising")
+except RuntimeError as exc:
+    check("current_user_id without csrf is refused", True, str(exc)[:80])
+    check("…and the message names both ways out",
+          "csrf=skribl.security.double_submit_csrf" in str(exc)
+          and "csrf=False" in str(exc),
+          "a refusal that does not say what to do is just an outage")
+
+try:
     skribl.create_blueprint(session=False, current_user_id=lambda: 7,
                             csrf=("h", lambda: "t", lambda _r: True))
-    check("supplying a csrf verifier silences it", not _trap.hits,
-          str(_trap.hits[:1]))
-finally:
-    logging.getLogger("skribl").removeHandler(_trap)
+    check("supplying a csrf verifier is accepted", True)
+except RuntimeError as exc:
+    check("supplying a csrf verifier is accepted", False, str(exc)[:100])
+
+try:
+    skribl.create_blueprint(session=False, current_user_id=lambda: 7, csrf=False)
+    check("csrf=False declares non-cookie auth and is accepted", True,
+          "a token-authenticated host is not CSRF-able and must not be blocked")
+except RuntimeError as exc:
+    check("csrf=False declares non-cookie auth and is accepted", False, str(exc)[:100])
+
+# The mutation check: an unauthenticated blueprint must be unaffected. If this
+# ALSO raised, the refusal above would be triggering on something other than
+# the condition it claims to detect.
+try:
+    skribl.create_blueprint(session=False)
+    check("a blueprint with no current_user_id is untouched by the rule", True)
+except RuntimeError as exc:
+    check("a blueprint with no current_user_id is untouched by the rule", False,
+          str(exc)[:100])
 
 print("\nTEARDOWN COMMIT — why the contract says before-response, not teardown")
 # v201 review, F1: a host committing in teardown_request is OUT OF CONTRACT,

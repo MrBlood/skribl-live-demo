@@ -158,6 +158,11 @@ BATCHES = [
     # codes asserted are the ones cron would see. Isolated by construction, so
     # it shares a batch with the other cheap v224 suite.
     ["verify_sweepjob.py"],
+    # v224. The four host seams from the outside review (#3 feed filter, #4
+    # csrf=False, #7 visibility values, #8 author resolver). In-process
+    # throwaway apps over one temp SQLite file, like verify_privacy — no
+    # server, no browser, so it costs almost nothing to run.
+    ["verify_hostseams.py"],
 ]
 
 
