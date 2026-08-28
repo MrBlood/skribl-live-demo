@@ -319,8 +319,14 @@ whole ~7-invocation run again. v209 paid that twice.
 (4) confirm `python3 -c "import sys;sys.path.insert(0,'harness');import release_run as r;print(r.tree_hash())"` == RELEASE.md's tree hash; (5) `cd /home/claude && zip -rq skribl-vNNN-sealed.zip skribl-vNNN -x "*__pycache__*" -x "*/instance/*"`, copy to `/mnt/user-data/outputs/`; (6) extract the shipped zip and `sha256sum -c SHA256SUMS | grep -c ": OK$"` must equal the manifest count.
 
 **On a version bump** update: `skribl/core.py` `SKRIBL_VERSION`, README.md,
-ARCHIVE-README.md, START-HERE.md (the "expect NNN" manifest count appears
-TWICE and must match the real file count; `verify_docs` checks it).
+ARCHIVE-README.md, START-HERE.md, FOR-THE-REVIEWER.md — the `cd skribl-vNNN`
+lines and the "source version" line.
+
+v224 removed the two hand-typed manifest counts this note used to warn about
+("expect NNN", which appeared TWICE in START-HERE and went stale on every build
+that changed the file set). The verify block now asks the manifest for its own
+entry count instead. If you add a typed count anywhere, `verify_docs` will check
+it against SHA256SUMS — but the better move is not to type one.
 
 **Standing rules:** never raise a ratchet to fit your own commit without
 flagging it for the owner; check the tree, not recollection; mutation-test
@@ -452,12 +458,14 @@ at startDraw, filter continueDraw/endDraw), narrower than §7 implies.
   X<Y, whatever it exited with. Do not "fix" a suite by making it exit 0.
 - `editor_draft.js` is editor-only and loads LAST of the editor scripts; the
   player must never load it or `lib/draftstore.js`.
-- The external review responses beyond the P0s are queued in this order:
+- The external review responses beyond the P0s were queued in this order:
   share state machine (#21/#22, touches editor_draft/editor_post interplay —
-  a failed share must stop clearing the canonical draft), then the two quick
-  wins (drop `"demo-user"` from the API response; reject `change-me`/missing
-  SECRET_KEY outside explicit dev mode), then owner-scale items presented
-  WITH the review document, not implemented unilaterally.
+  a failed share must stop clearing the canonical draft), then two quick wins,
+  then owner-scale items presented WITH the review document, not implemented
+  unilaterally. **Both quick wins landed in v224**: the API no longer invents an
+  author name (`set_author_resolver`, id-only default), and a missing SECRET_KEY
+  is refused wherever the process looks like a deployment rather than only on
+  Render. The share state machine is still open.
 - Seal procedure unchanged (§5). This tree has not run the full aggregate;
   `harness/RELEASE.md` still describes v221 on purpose. Finish any doc edits
   BEFORE the release run — the tree hash covers them.

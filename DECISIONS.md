@@ -32,7 +32,15 @@ existing clients. Turning it on by default broke 24 assertions across other
 suites, every one a token-less POST correctly getting a 403.
 
 **A host that authenticates POST /api/skribls with a cookie MUST switch it on.**
-Without it, any page on the internet can post as the logged-in user.
+Without it, any third-party page can post as the logged-in user.
+
+**v224: this is now enforced, not advised.** Passing `current_user_id` without
+a `csrf` verifier RAISES at blueprint construction. The default above is
+untouched — it is the default for an *unauthenticated* deployment, which is
+what standalone Skribl is — but the combination "authenticated and unprotected"
+can no longer be reached by not noticing a log line. `csrf=False` is the
+explicit declaration for a host whose authentication is not cookie-based, and
+its existence is what makes refusing fair rather than presumptuous. See v246.
 
 ## 3. Media storage defaults to `inline`
 

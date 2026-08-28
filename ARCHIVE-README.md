@@ -1206,6 +1206,19 @@ NotImplementedError on purpose: an object store answers `iter_keys` with a
 paginated LIST, and a generic implementation would invite one that loads a
 bucket into memory. Do not try to make S3 and SQL one distributed transaction.
 
+**v224 made it a job rather than a plan.** Nothing shipped could invoke any of
+this: each deployment had to resolve its own app, find the store the host passed
+to `init_skribl`, get a session, and get the argument order right on a function
+whose third positional argument deletes user data. `python -m skribl.sweep
+--app module:factory` is that entry point — dry by default, `--delete` spelled
+out in full, and a second interlock on a grace period under an hour.
+`sweep_orphans_report()` returns the same work plus a count for every branch
+that DECLINED to delete (foreign namespace, inside grace, referenced, reused
+mid-sweep), because otherwise a run that reclaims nothing is indistinguishable
+from credentials pointed at the wrong prefix. And a `delete_key` that raises no
+longer aborts the run: failures are collected per key and `removed` now means
+removed. `verify_sweepjob.py`.
+
 **`SKRIBL_FORCE_SECURE_COOKIES=1`.** The CSRF cookie used `secure=request.is_secure`,
 which is only true if Flask can SEE the original scheme. Behind a
 TLS-terminating proxy that is a deployment setting, not something this package
