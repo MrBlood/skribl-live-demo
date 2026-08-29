@@ -191,6 +191,7 @@ BATCHES = [
     # v230. Fill is its own batch for the same reason the others are: it drives
     # a real canvas and reads pixels back, which does not share a page well.
     ["verify_fill.py"],
+    ["verify_input.py"],
 ]
 
 

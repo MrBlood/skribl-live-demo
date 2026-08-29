@@ -1246,22 +1246,67 @@ pad.addEventListener('pointermove', e=>{
     render(); return; }
   if(!drawing) return; e.preventDefault();
   const raw=pos(e); lastRaw={x:raw.x,y:raw.y};
-  let px, py;
-  if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
+  // Shape reads only the CURRENT position — it is a rubber band between two
+  // corners, not a trail — so it takes the last sample and returns before any
+  // of the per-point work below.
   if(flipTool==='shape'){
     _constrainActive = !!(e && e.shiftKey);
     _shapePrev = {a:_shapeAnchor, b:{x:raw.x,y:raw.y}, sq:_constrainActive};
     render(); return;
   }
-  else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
-  // Shift-to-constrain — same shared helper and same stroke-start anchor as Pad.
-  _constrainActive = !!(e && e.shiftKey);
-  if(_constrainActive && typeof SkriblConstrain !== 'undefined'){
-    const _sf = (strokeFrame || frame()).strokes, _a = _sf.length ? _sf[_sf.length - curCount] : null;
-    if(_a){ const _c = SkriblConstrain.apply(_a, {x:px,y:py}, true); px=_c.x; py=_c.y; }
+  // EVERY SAMPLE THE BROWSER ACTUALLY CAPTURED, not just the one per frame it
+  // hands to this listener. lib/inputsamples.js explains why at length; the
+  // short version is that a pointermove arrives once per animation frame while
+  // the digitiser samples at 120-240Hz, so a fast circle was being recorded as
+  // a ~24-sided polygon and a slow one as a smooth curve. Reported from the
+  // live demo in exactly those words.
+  //
+  // The events are passed through whole rather than reduced to coordinates:
+  // sizeFor() reads pressure off the event, and taking positions from the batch
+  // while taking pressure from the last event would flatten every taper.
+  const _samples = (typeof SkriblInputSamples !== 'undefined')
+    ? SkriblInputSamples.extract(e) : [e];
+  const _mapped = [];
+  for(let _i=0;_i<_samples.length;_i++){
+    const _q = pos(_samples[_i]);
+    _mapped.push({ ev:_samples[_i], x:_q.x, y:_q.y });
   }
-  curCount++; const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), {x:px,y:py}, erasing); const pcol = erasing ? color : penColorFor(color); _brushLastPt = {x:px, y:py};
-  (strokeFrame || frame()).strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
+  // Thinned from the last point actually COMMITTED, so the filter carries
+  // across event boundaries instead of restarting every frame.
+  const _kept = (typeof SkriblInputSamples !== 'undefined')
+    ? SkriblInputSamples.thin(_mapped, _brushLastPt, SkriblInputSamples.MIN_DIST)
+    : _mapped;
+  for(let _i=0;_i<_kept.length;_i++){
+    const _s = _kept[_i];
+    let px, py;
+    // The stabilizer, and the fix to a bug this rewrite exposed. This was:
+    //     if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }
+    //     if(flipTool==='shape'){ ... return; }
+    //     else { smoothPt=...; px=smoothPt.x; py=smoothPt.y; }
+    // where the `else` bound to the SHAPE test, not the smoothing one. So with
+    // the stabilizer on, an eraser stroke had its precise point overwritten by
+    // the smoothed one, directly contradicting the comment that said "erasing
+    // stays precise". It was invisible at the default (stabilizer off, where
+    // the smoothed point equals the raw one), which is why it survived.
+    if(smoothingAlpha>=1 || erasing){ px=_s.x; py=_s.y; }
+    else { smoothPt={x: smoothPt.x+(_s.x-smoothPt.x)*smoothingAlpha,
+                     y: smoothPt.y+(_s.y-smoothPt.y)*smoothingAlpha};
+           px=smoothPt.x; py=smoothPt.y; }
+    // Shift-to-constrain — same shared helper and same stroke-start anchor as Pad.
+    _constrainActive = !!(e && e.shiftKey);
+    if(_constrainActive && typeof SkriblConstrain !== 'undefined'){
+      const _sf = (strokeFrame || frame()).strokes, _a = _sf.length ? _sf[_sf.length - curCount] : null;
+      if(_a){ const _c = SkriblConstrain.apply(_a, {x:px,y:py}, true); px=_c.x; py=_c.y; }
+    }
+    curCount++;
+    const dsize = _brushWidth(sizeFor(_s.ev, _eraserSize(size, erasing)), {x:px,y:py}, erasing);
+    const pcol = erasing ? color : penColorFor(color);
+    _brushLastPt = {x:px, y:py};
+    (strokeFrame || frame()).strokes.push({ x:px, y:py, color: pcol, size: dsize,
+                                            t: performance.now(), erase: erasing });
+  }
+  // ONE render for the whole batch, not one per sample: painting is the
+  // expensive half and the frame is only shown once anyway.
   render(); });
 function endStroke(){
   invalidateClearUndo();   // review #4: new work invalidates a pending clear-undo
