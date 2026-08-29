@@ -232,14 +232,56 @@ The policy is enforced on the payload endpoint and on the share card — the car
 *is* the drawing, so serving it for a hidden post would leak the content itself,
 not merely its existence.
 
-**One declared limitation.** The feed listing filters on `visibility ==
-'public'` in SQL and does **not** call your policy. Running a Python predicate
-over a keyset-paginated query would break the pagination it depends on. So a
-post your policy refuses can still appear in the feed *as metadata* — title,
-author id, timestamp. No payload, no image. If your site needs the feed itself
-to obey the policy, that wants a `feed_filter` seam contributing SQL, not a
-Python filter; it does not exist yet. `verify_integration.py` pins this
-behaviour so it cannot change silently.
+**The feed does not call your policy — install a filter if it must.** The
+listing filters on `visibility == 'public'` in SQL and stops there. Running your
+Python predicate over the fetched rows would break the keyset pagination the
+feed depends on: short pages, and a `next_cursor` describing a row the viewer
+never saw. So authorization that pages correctly has to be part of the *query*,
+and since v224 you can contribute one:
+
+```python
+from skribl.models import SkriblPost
+
+def hide_blocked(query, viewer_id):
+    return query.filter(SkriblPost.user_id.notin_(blocked_authors_for(viewer_id)))
+
+skribl.init_skribl(app, ..., feed_filter=hide_blocked)   # or set_feed_filter(fn, app=app)
+```
+
+Your callable receives the query with Skribl's own visibility filter already
+applied and returns a query. Raising is **not** caught — a broken feed filter
+should fail loudly rather than fall back to listing everything.
+
+Whether you need one depends on your policy. If it only restricts private and
+unlisted posts, the feed already excludes those and there is nothing to do. If
+it can deny a **public** post — a block list, a moderation queue — then without
+a filter that post still appears as metadata (title, caption, author id,
+timestamp; never payload or image). `verify_hostseams.py` pins both directions.
+
+**Two smaller seams alongside it.**
+
+```python
+skribl.init_skribl(
+    app, ...,
+    # Extra visibility states. Skribl's three (public/unlisted/private) are
+    # always accepted and cannot be removed; the column is String(16), so
+    # values are 1-16 characters. A custom state is invisible to the built-in
+    # feed unless your feed_filter includes it.
+    visibility_values=("draft", "moderated"),
+    # Skribl has no user table, so the author block is {"id": <user_id>} and
+    # nothing else. Add what you know. The id is not overridable: it is the
+    # value your own visibility policy is handed.
+    author_resolver=lambda uid: {"username": name_of(uid)},
+)
+```
+
+**CSRF is required once you pass `current_user_id`, and refusing is the point.**
+Cookie authentication plus no CSRF verifier means any third-party page can post
+as your logged-in user, so `create_blueprint`/`init_skribl` now **raises** for
+that combination rather than logging a warning nobody reads. Pass
+`csrf=skribl.security.double_submit_csrf(...)`, or `csrf=False` to declare that
+your authentication is not cookie-based (a bearer token cannot be ridden, and
+such a host is not wrong).
 
 ## Database and migrations
 
@@ -255,19 +297,70 @@ Do not do both for the same tables.
 
 ## Configuration
 
-Twenty-two `SKRIBL_*` environment variables cover ceilings (frames, points,
-canvas edge, audio and image bytes), rate limiting, CSP, CSRF, embed origins,
-trusted proxies and the media backend. They are listed with their defaults in
-`skribl/validation.py` and `skribl/ratelimit.py`.
+The `SKRIBL_*` environment variables cover ceilings (frames, points, canvas
+edge, image bytes/dimensions/pixels, audio bytes and WAV duration), rate
+limiting, CSP, CSRF, embed origins, trusted proxies and the media backend. Each
+is defined with its default beside the code that reads it — `skribl/core.py`,
+`skribl/validation.py`, `skribl/ratelimit.py`, `skribl/storage.py` — rather than
+counted here, because a count typed in prose is a number that rots.
 
 Two notes worth having in advance:
 
 * `SKRIBL_MODE` is **not** a server switch. It is a client-side template flag
   distinguishing editor from player, and it gates nothing on the server.
 * Every ceiling is **process-wide**. There is no per-user quota seam yet.
-* The 20-second audio loop ceiling is enforced in the CLIENT only. The server
-  caps audio *bytes*, not duration — a crafted payload can store a longer loop.
-  Treat it as an interface affordance, not policy.
+* The 20-second audio loop ceiling is enforced in the CLIENT only. Since v224
+  the server also caps duration (`SKRIBL_MAX_AUDIO_SECONDS`, default 900) — but
+  **for WAV only**, whose header states its byte rate outright. For every
+  compressed container (mp3, aac, ogg, opus, flac, webm) duration is bounded by
+  `SKRIBL_MAX_AUDIO_BYTES` alone, because deriving it needs a real decoder. A 12
+  MB Opus file can be an hour long and is accepted by design. Treat the 20
+  seconds as an interface affordance, not policy.
+* Image *dimensions* are capped as well as bytes (`SKRIBL_MAX_IMAGE_EDGE`,
+  `SKRIBL_MAX_IMAGE_PIXELS`), read from the container header without a decoder.
+  This rejects a declared decompression bomb — a 66-byte PNG whose IHDR says
+  30000x30000. An image whose header cannot be parsed is **accepted**: a file
+  that will not parse does not decode either, and a 400 on every rarer corner of
+  these formats costs more than it buys.
+* Title and caption have ONE limit each (`skribl.core.MAX_TITLE_CHARS`,
+  `MAX_CAPTION_CHARS`), which is also the column width and the rendered
+  `maxlength`. Over it is a 400. Before v224 the server silently truncated,
+  which returned 201 with the user's text quietly missing.
+
+## Maintenance jobs
+
+**Reclaiming orphaned media.** Media bytes are written *before* the transaction
+recording their association commits, so a failed or abandoned post leaves
+objects nothing points at. Content addressing means this never corrupts valid
+data — an orphan is simply unreachable — but at scale it accumulates.
+
+```bash
+python -m skribl.sweep --app yourapp:create_app                 # rehearse
+python -m skribl.sweep --app yourapp:create_app --json          # for metrics
+python -m skribl.sweep --app yourapp:create_app --delete        # reclaim
+```
+
+`--app` takes `module:attribute` like `FLASK_APP` does; a callable attribute is
+called as a factory. It reads the store *your app is using* rather than
+rebuilding one from the environment, which could point at a different root.
+
+Dry run is the default and `--delete` is spelled out in full, because the
+failure mode of getting it wrong is gone user media. `--older-than` (default
+86400) is the grace period, and it is the safety that matters most: an object
+minutes old may belong to a post being created right now, so combining
+`--delete` with a grace period under an hour additionally requires
+`--i-know-the-grace-period-is-short`. Do not run a short sweep while a
+`backfill_media` is in flight.
+
+Exit codes, because a scheduled job is read by its status: **0** it ran
+(including "found nothing", including a dry run), **1** it ran and at least one
+delete failed, **2** it could not run at all. `--json` prints one object with
+the removed keys and a count for every branch that *declined* to delete —
+foreign namespace, inside grace, referenced, reused mid-sweep — so a run that
+reclaims nothing tells you which. Call `storage.sweep_orphans_report()` directly
+if you would rather schedule it in-process.
+
+This is not a daemon and does not schedule itself; cadence is your cron's job.
 
 ## What stays yours
 

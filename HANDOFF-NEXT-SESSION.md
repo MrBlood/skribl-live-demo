@@ -1,6 +1,150 @@
 # Skribl — Handoff for the next session
 
-## v223 addendum — read this first (everything below is history, still true where not superseded)
+## v228 addendum — read this first (everything below is history, still true where not superseded)
+
+**Current sealed build: v228.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated.
+
+**Read order:** `V228-CHANGES.md`, then `V227-CHANGES.md`, then
+`FOR-THE-REVIEWER.md`, then `DESIGN-DIRECTION.md`, then this file.
+
+**What v228 did.** It finished the size-class migration v227 left partial. Every
+rule deciding where compact BEGINS now reads `[data-size]`; seven tiers below
+the boundary stay as media queries because they answer a different question.
+Doing it exposed a real defect: the class measured the element and the queries
+measured the viewport, so from 641 to 660 viewport px the page bar was hidden
+while the tool row kept its desktop sizing. 7 of 29 probed widths disagreed
+before; 0 after.
+
+**The trap it paid for, and it is the third of its kind in this arc.** The
+migration had to go through `:where()`. `flip.css` resolves its phone ladder by
+SOURCE ORDER at equal specificity, so a bare attribute prefix would have
+outranked every tier below and flattened the 320px gap from 2px to 3px — a phone
+regression inside a change announced as a no-op. **Adding a prefix to an
+existing selector is a specificity change before it is anything else.**
+
+**And the suite could not see any of it**, because it asserted that SOME queries
+remained rather than that none of them *disagreed*. A progress counter is not an
+invariant. `verify_sizeclass` is now structural: nothing at or above the
+boundary, so a query cannot reach it to contradict it. 18 assertions → 34.
+
+## v227 addendum (history)
+
+**Current sealed build: v227.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated.
+
+**Read order:** `V227-CHANGES.md`, then `FOR-THE-REVIEWER.md`, then
+`DESIGN-DIRECTION.md`, then this file.
+
+**What v226/v227 did.** Flip's filmstrip got page RANGES, and the four-stage
+plan from the strip-chrome design note landed: Artwork became a tool, the hold
+badge and Paste became controls on the tile, one size class replaced the first
+of eight breakpoints, and the COMPACT surface dropped the page bar for a ⋯ menu
+on the active tile. The page bar went from six buttons to three on desktop and
+to none on a phone, and nothing became unreachable.
+
+**The correction that shaped it, and it came from the owner.** The first design
+note argued for hiding the bar at every size. Two objections stood: buttons are
+good on a big screen, where hiding a control to reclaim space you already have
+is affectation; and gestures teach nobody, while a visible row teaches every
+operation without anyone discovering anything. The result is two surfaces, not
+one design with a fallback.
+
+**Four new suites:** `verify_pagespan`, `verify_sizeclass`, `verify_compactops`,
+and (from v225) `verify_beading`.
+
+**Three traps this arc paid for, all recorded in DECISIONS.md v254–v261:**
+moving a feature into a shared code path subjects it to every unconditional line
+already there; removing a surface makes the CSS that styled it dead AND makes
+tests of it pass vacuously, because `querySelector` finds hidden markup; and a
+refactor that moves a boundary is not a refactor.
+
+## v225 addendum (history)
+
+**Current sealed build: v225.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
+typed here.
+
+**Read order for a new session:** `V225-CHANGES.md`, then `FOR-THE-REVIEWER.md`,
+then `DESIGN-DIRECTION.md`, then this file.
+
+**v225 answered an outside review of the v224 archive.** No new critical or
+high-severity vulnerability was found. All six findings are addressed; there is
+no review backlog. One new suite: `verify_beading.py`.
+
+**The lesson, and it will affect what you write next.** `verify_docs.py` guarded
+every volatile NUMBER in this project and could not see a stale SENTENCE. Four
+current documents described shipped work as open, and a stale docstring in
+`models.py` sent an outside reviewer hunting for a test that has existed since
+v211 — it also understated a security-relevant guarantee by denying the advisory
+lock that `ratelimit.py` actually takes. There is now a capability-claims gate in
+`verify_docs.py`. **Adding a capability means adding an entry to `CLAIMS`**, and
+nothing but that file's own comment says so. It scans source files as well as
+docs, because the finding came from a docstring.
+
+**`DESIGN-DIRECTION.md`'s two prerequisites are DONE** (pointer identity v221,
+durable drafts v222) and the section now says so while keeping the original brief
+verbatim. Do not start either.
+
+**⚑ WAITING ON THE OWNER: the host column width.** The social site reserves a
+column for Pad and Flip — around **510px**, unconfirmed. It is why
+`lib/sizeclass.js` measures the ELEMENT rather than the window (v259): a 510px
+column in a 1400px window reads 1400 by the viewport, classifies regular, and
+lays a persistent command row into a space that cannot hold one. If the number
+is confirmed near 510, two questions open that are the owner's, not the next
+session's: whether 640 is the right threshold for a COLUMN (it was inherited
+from rules written about phone viewports), and whether a third class belongs
+between them — a 510px column has a mouse, hover and a keyboard, and can afford
+what a 360px phone cannot. Do not build either until the width is confirmed.
+`SkriblSize.COMPACT_MAX` is one constant in one file so that changing the answer
+stays one edit.
+
+**Still true from v223, and it has now fired five times:** `release_run.py`
+refuses to start when a suite on disk belongs to no batch. Add the `BATCHES` line
+when you add the suite.
+
+## v224 addendum (history)
+
+**Current sealed build: v224.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
+typed here.
+
+**Read order for a new session:** `V224-CHANGES.md` (what happened and why),
+then `FOR-THE-REVIEWER.md`, then `DESIGN-DIRECTION.md` (unchanged; still the
+intent), then this file.
+
+**v224 answered an outside review of the v223 archive in full** — eight numbered
+findings and three low-severity items, each with a regression suite. There is no
+carried-over review backlog. Four new suites: `verify_medialimits`,
+`verify_sweepjob`, `verify_hostseams`, `verify_hostconfig`.
+
+**Two things changed that will affect what you write next.**
+
+*Fixtures must declare their CSRF posture.* `create_blueprint`/`init_skribl`
+now RAISE when `current_user_id` is set and `csrf` is not. A harness fixture
+that authenticates with a closure rather than a cookie passes `csrf=False`;
+five existing ones were updated. If a new fixture refuses to build, that is the
+rule, not a bug.
+
+*One constant per text limit.* `core.MAX_TITLE_CHARS` / `MAX_CAPTION_CHARS` are
+the column widths, the API check and the rendered `maxlength`. Do not type a
+length beside them anywhere. **OWNER, FLAGGED:** this reversed an earlier
+decision that the UI's 280 and the server's 300 were "different numbers ON
+PURPOSE", and removed the two `verify_apiedges` assertions that pinned the
+drift. See DECISIONS.md v247 if that split was intentional.
+
+**The lesson this arc paid for** (DECISIONS.md v246–v249): a warning is the
+wrong instrument when the safe state is "did not notice"; a number stated three
+times is stated zero times; a cap on bytes is not a cap on cost; and a
+maintenance function nothing can run is a maintenance plan, not a job. The test
+for operability is not "does the function work" — it is whether someone can
+schedule it, tell what it did, and survive one object going wrong.
+
+**Still true from v223, and it has now fired four times:** `release_run.py`
+refuses to start when a suite on disk belongs to no batch. Add the `BATCHES`
+line when you add the suite.
+
+## v223 addendum (history)
 
 **Current sealed build: v223.** Result, tree hash, suite/assertion counts and
 skip list are in `harness/RELEASE.md`, which is generated. No volatile number is
@@ -36,10 +180,11 @@ restored in four lines — all three palettes are recorded in `styles.css`
 the guard that missed their divergence was fixed, and the stray runtime log
 that shipped inside v220 was removed. Full details: `V221-CHANGES.md`.
 
-**Next work, in order:** durable drafts + pointer identity (the direction
-doc's prerequisites, owner-deferred this cycle, still open), then onion-skin
-promotion (filmstrip placement; "hold" vocabulary collision), then the copy
-pass as one batch. `V221-CHANGES.md` §"Open items" has the details per item.
+**Next work, in order (historical — this was the v221 plan, and its first two
+items are done):** durable drafts + pointer identity (the direction doc's
+prerequisites, open at the time; shipped in v222 and v221 respectively), then
+onion-skin promotion (filmstrip placement; "hold" vocabulary collision), then
+the copy pass as one batch. `V221-CHANGES.md` §"Open items" has the details.
 
 **The sealing order (two v220-era runs were lost to getting this wrong):**
 
@@ -67,10 +212,12 @@ careful work answering *"how do we fit all our features"* — the direction says
 that is the wrong question, and it is right. Start there so the engineering below
 serves it rather than the other way round.
 
-Two items in that document are prerequisites and are also the only outstanding
-correctness/durability defects here: **pointer identity** (`e.touches[0]` assumes
-the first touch is the drawing finger) and **durable drafts** (autosave holds
-strokes but not media bytes). Do those before any visual work.
+That document named two prerequisites — **pointer identity** and **durable
+drafts** — and both are DONE: `lib/eventpoint.js` reads `targetTouches` rather
+than `touches[0]` (v221), and `lib/draftstore.js` puts media bytes in IndexedDB
+(v222). Neither is outstanding work; do not start either. The one honest
+remainder is that the v213 stray-line report has never been shown to be the
+contact-identity defect that was fixed.
 
 **Then read this.** It is the complete state of the project: what shipped,
 what is open, what the owner has decided, what the harness protects, and the
@@ -147,9 +294,12 @@ and the per-backend mechanism.
 ### 2b. Standing owner items (unchanged for many builds)
 
 - **DECISIONS.md #1** (visibility default `unlisted`) and **#2** (CSRF default
-  off) — deliberately UNFLIPPED until authentication exists. A CSRF/auth
-  tripwire warns when `current_user_id` is configured without `csrf` (tested
-  both directions). Flip both together when cookie auth lands.
+  off) — deliberately UNFLIPPED until authentication exists. **v224 changed the
+  tripwire, not the default:** `current_user_id` without `csrf` no longer warns,
+  it RAISES, with `csrf=False` as the explicit declaration for a
+  token-authenticated host. The default for an *unauthenticated* deployment is
+  untouched. Flip #1 and #2 together when cookie auth lands. (DECISIONS.md v246
+  is why a warning was the wrong instrument.)
 - **Hardware before any media-backend flip on live data:** S3Store has never
   run against a real bucket/MinIO (the suite verifies signatures only); Pad
   stylus path needs real-iPad minutes; A1's iOS audio fix and F3 above need
@@ -275,8 +425,14 @@ whole ~7-invocation run again. v209 paid that twice.
 (4) confirm `python3 -c "import sys;sys.path.insert(0,'harness');import release_run as r;print(r.tree_hash())"` == RELEASE.md's tree hash; (5) `cd /home/claude && zip -rq skribl-vNNN-sealed.zip skribl-vNNN -x "*__pycache__*" -x "*/instance/*"`, copy to `/mnt/user-data/outputs/`; (6) extract the shipped zip and `sha256sum -c SHA256SUMS | grep -c ": OK$"` must equal the manifest count.
 
 **On a version bump** update: `skribl/core.py` `SKRIBL_VERSION`, README.md,
-ARCHIVE-README.md, START-HERE.md (the "expect NNN" manifest count appears
-TWICE and must match the real file count; `verify_docs` checks it).
+ARCHIVE-README.md, START-HERE.md, FOR-THE-REVIEWER.md — the `cd skribl-vNNN`
+lines and the "source version" line.
+
+v224 removed the two hand-typed manifest counts this note used to warn about
+("expect NNN", which appeared TWICE in START-HERE and went stale on every build
+that changed the file set). The verify block now asks the manifest for its own
+entry count instead. If you add a typed count anywhere, `verify_docs` will check
+it against SHA256SUMS — but the better move is not to type one.
 
 **Standing rules:** never raise a ratchet to fit your own commit without
 flagging it for the owner; check the tree, not recollection; mutation-test
@@ -408,12 +564,14 @@ at startDraw, filter continueDraw/endDraw), narrower than §7 implies.
   X<Y, whatever it exited with. Do not "fix" a suite by making it exit 0.
 - `editor_draft.js` is editor-only and loads LAST of the editor scripts; the
   player must never load it or `lib/draftstore.js`.
-- The external review responses beyond the P0s are queued in this order:
+- The external review responses beyond the P0s were queued in this order:
   share state machine (#21/#22, touches editor_draft/editor_post interplay —
-  a failed share must stop clearing the canonical draft), then the two quick
-  wins (drop `"demo-user"` from the API response; reject `change-me`/missing
-  SECRET_KEY outside explicit dev mode), then owner-scale items presented
-  WITH the review document, not implemented unilaterally.
+  a failed share must stop clearing the canonical draft), then two quick wins,
+  then owner-scale items presented WITH the review document, not implemented
+  unilaterally. **Both quick wins landed in v224**: the API no longer invents an
+  author name (`set_author_resolver`, id-only default), and a missing SECRET_KEY
+  is refused wherever the process looks like a deployment rather than only on
+  Render. The share state machine is still open.
 - Seal procedure unchanged (§5). This tree has not run the full aggregate;
   `harness/RELEASE.md` still describes v221 on purpose. Finish any doc edits
   BEFORE the release run — the tree hash covers them.

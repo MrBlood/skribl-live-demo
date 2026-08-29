@@ -128,14 +128,27 @@ and puts the tool in front of people who already exist.
 
 **Ship-worthy now:**
 
-1. **Selection and transform.** Lasso, move, scale, rotate. The single most
-   frustrating limitation for anyone actually animating — every mistake is
-   currently undo-and-redraw.
+1. ~~**Selection and transform.**~~ **SHIPPED.** Marquee select, move, uniform
+   scale from the corners, rotate from a grip, cut/duplicate/paste and flip
+   H/V — `verify_select.py`, 56 assertions. Lasso specifically was not built:
+   selection is by stroke GROUP rather than by point, because moving half a
+   stroke splits a line down the middle and bakes a connecting segment into the
+   replay. A lasso over whole groups would be a nicer marquee, not a new
+   capability.
 2. **Two layers, not a layer stack.** Rough and clean. Most of the workflow
-   benefit at a fraction of the complexity. *Blocked on the storage backend.*
-3. **A real timeline.** Drag to reorder, select a range, copy/paste page spans.
-   Holds already exist, which is the hard half.
-4. **Import a reference.** Draw over a video frame or image sequence.
+   benefit at a fraction of the complexity. *This used to say "blocked on the
+   storage backend"; that stopped being true when media externalised. The real
+   blocker is the PAYLOAD SCHEMA — a layer is a field the player must honour,
+   so it is an owner decision, not an engineering one.*
+3. ~~**A real timeline.**~~ **SHIPPED (v226).** Drag to reorder and holds
+   already existed — the hard half. Range selection and page-span copy/paste
+   landed on the strip rather than in a management cluster, per the direction:
+   shift-click or hold-and-sweep to select a run, and Copy / Delete / ×hold /
+   the arrows re-scope to it instead of multiplying. `lib/pagespan.js`,
+   `verify_pagespan.py`. What is still absent is a scrubbable time RULER —
+   this bought range editing, not a timeline view.
+4. **Import a reference.** Draw over a video frame or image sequence. Still
+   missing entirely; a still image per page is all there is.
 
 **Speculative, and interesting:**
 

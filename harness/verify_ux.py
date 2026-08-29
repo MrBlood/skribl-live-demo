@@ -1447,7 +1447,7 @@ with _sp204() as _p:
     _s = _b.new_page(viewport={"width": 1280, "height": 900}); _s.goto(BASE + "/flip", wait_until="load"); _s.wait_for_timeout(800)
     _s.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); addFrame(true); }")
     _s.wait_for_timeout(300)
-    _ic2 = _s.evaluate("""() => { const ids = ['pbLeft','pbRight','pbCopy','pbHold','pbArt','pbDel'];
+    _ic2 = _s.evaluate("""() => { const ids = ['pbLeft','pbRight','pbCopy','pbDel'];
         const pb = ids.map(i => { const b = document.getElementById(i); return { id: i, svg: !!b.querySelector('svg') }; });
         const iconOnlyText = ['pbLeft','pbRight','pbCopy','pbDel'].some(i => document.getElementById(i).querySelector('.pb-ic'));
         const adds = [...document.querySelectorAll('.addbtn')].map(a => ({ svg: !!a.querySelector('svg.addbtn-ic'), hasFullwidthPlus: a.textContent.includes('\uFF0B') }));

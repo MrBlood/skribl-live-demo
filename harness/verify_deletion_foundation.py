@@ -262,6 +262,71 @@ with app.app_context():
         os.remove(_alien1)
         os.remove(_alien2)
 
+    # --- OUTSIDE REVIEW v223 #2: the guard's extension set -----------------
+    # The two objects planted above are rejected for reasons that have nothing
+    # to do with their extension: one carries a slash, the other is not 64 hex.
+    # They prove the guard works in the two shapes somebody thought of and say
+    # nothing about the one where the EXTENSION is the only thing separating a
+    # co-tenant's object from ours.
+    #
+    # KEY_RE was `[0-9a-f]{64}\.[a-z0-9]{2,4}`, so <64hex>.html and <64hex>.txt
+    # match it exactly while being nothing Skribl can emit — the writable set is
+    # _TYPE_FOR_EXT, twelve extensions. In a shared root or under a short S3
+    # prefix, a wet sweep deleted them.
+    if _root:
+        _alien3 = os.path.join(_root, "ab", "cd")
+        os.makedirs(_alien3, exist_ok=True)
+        _planted = []
+        for _ext in ("html", "txt", "json", "exe"):
+            _pth = os.path.join(_alien3, "ab" + "cd" + "e" * 60 + "." + _ext)
+            with open(_pth, "wb") as _f:
+                _f.write(b"a co-tenant's object, hex-named by coincidence")
+            os.utime(_pth, (_old, _old))
+            _planted.append((_ext, _pth))
+        _wet3 = storage.sweep_orphans(store, db.session,
+                                      older_than_seconds=0, dry_run=False)
+        _eaten = [e for e, pth in _planted if not os.path.exists(pth)]
+        check("a hex-named co-tenant object with a non-Skribl extension survives",
+              not _eaten,
+              f"deleted {_eaten} — KEY_RE admits any 2-4 char extension, but "
+              f"Skribl only ever writes {sorted(storage._TYPE_FOR_EXT)}")
+        for _e, _pth in _planted:
+            if os.path.exists(_pth):
+                os.remove(_pth)
+
+    # --- OUTSIDE REVIEW v223 #1: reuse of an OLD orphan ---------------------
+    # The sweep's grace period assumes age separates "abandoned" from "not
+    # finished yet". Content addressing breaks that: put_bytes() returns early
+    # when the key already exists, so reusing a long-dead orphan does not make
+    # it young again. A sweep running while the new association is still
+    # uncommitted sees an old, unreferenced object and deletes bytes that a
+    # committing post is about to point at — a successful post whose media 404s.
+    #
+    # Reproduced without threads: the association row is written in a session
+    # that has NOT committed, and the sweep runs on a different connection, so
+    # it cannot see the row. That is exactly the visibility the race has.
+    _raw = b"bytes that already existed as an orphan " + os.urandom(16)
+    _key = store.key_for(_raw, "image/png")
+    store.put_bytes(_raw, "image/png", _key)
+    if _root:
+        _kp = store._paths(_key)[1]
+        os.utime(_kp, (_old, _old))          # a long-dead orphan
+        check("the reused object starts out older than any grace period",
+              time.time() - os.path.getmtime(_kp) > 86400,
+              "the setup did not age the object, so this proves nothing")
+
+        store.put_bytes(_raw, "image/png", _key)     # the new post re-uploads it
+
+        _swept = storage.sweep_orphans(store, db.session,
+                                       older_than_seconds=86400, dry_run=False)
+        check("an object a new post is re-using is not swept out from under it",
+              os.path.exists(_kp),
+              f"deleted {_key[:12]}… — put_bytes() returned early on the existing "
+              f"object and left its age untouched, so the grace period never "
+              f"applied to the reuse")
+        if os.path.exists(_kp):
+            os.remove(_kp)
+
     # --- BLAST RADIUS -----------------------------------------------------
     # The cascade above is only enforced on SQLite because Skribl installs a
     # PRAGMA listener. That listener used to be attached to SQLAlchemy's Engine

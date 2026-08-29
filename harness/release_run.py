@@ -144,7 +144,61 @@ BATCHES = [
     ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
+    # v224. Media resource limits (outside review #5). It drives a browser only
+    # to BUILD fixtures — real PNG/JPEG/WebP out of Chromium's encoders and a
+    # real GIF out of vendored gifenc — then does everything else against the
+    # pure functions and the API, so it is fast and shares CPU well. It posts
+    # four rejected payloads and one accepted one to the shared server, which is
+    # why it stays away from verify_deletion_foundation's batch: that suite
+    # sweeps orphans for real.
+    ["verify_medialimits.py"],
+    # v224. The orphan-sweep job (outside review #6). Entirely in-process
+    # against a temp SQLite file and a temp media root — no server, no browser
+    # — and it drives `python -m skribl.sweep` as a real subprocess so the exit
+    # codes asserted are the ones cron would see. Isolated by construction, so
+    # it shares a batch with the other cheap v224 suite.
+    ["verify_sweepjob.py"],
+    # v224. The four host seams from the outside review (#3 feed filter, #4
+    # csrf=False, #7 visibility values, #8 author resolver). In-process
+    # throwaway apps over one temp SQLite file, like verify_privacy — no
+    # server, no browser, so it costs almost nothing to run.
+    ["verify_hostseams.py"],
+    # v224. The three configuration defects from the review's low list: the
+    # title/caption limit stated in three disagreeing places, production
+    # detection that only knew Render, and the per-process rate limiter behind
+    # multiple workers. It boots app.py in eleven scrubbed subprocesses, which
+    # is cheap, and posts a handful of payloads to the shared server.
+    ["verify_hostconfig.py"],
+    # v225. The translucent-stroke pixel regression (outside review R2). Draws
+    # one Air-brush stroke, repaints it three ways and compares ALPHA profiles,
+    # so it needs a browser and a quiet CPU: a repaint measured while another
+    # Chromium competes is still correct, but the reason it is alone here is
+    # that it reads the full canvas four times.
+    ["verify_beading.py"],
+    # v226. Page spans on Flip's strip. Browser-driven but cheap — it drives
+    # the strip and reads array order rather than pixels — so it shares a batch
+    # with nothing only because the two suites either side of it are already
+    # alone for timing reasons.
+    ["verify_pagespan.py"],
+    # v226. The size class. It resizes the viewport repeatedly and asserts a
+    # computed style on both sides of one pixel, so it wants a batch that is not
+    # also running a second Chromium competing for the frame.
+    ["verify_sizeclass.py"],
+    # v227. Stage 4: the compact surface drops the page bar for a per-tile menu.
+    # It resizes across the boundary and drives a keyboard through a popover, so
+    # it wants the same quiet CPU verify_sizeclass does.
+    ["verify_compactops.py"],
 ]
+
+
+#: A skip that some OTHER lane proves. Keyed by suite, valued by the CI job in
+#: .github/workflows/harness.yml that runs it in an environment where it cannot
+#: skip. Adding a suite here is a claim that the job exists and gates on it —
+#: verify_docs.py checks the job name is really in the workflow.
+SKIP_COVERAGE = {
+    "verify_mp4.py": "mp4",
+    "verify_postgres.py": "postgres",
+}
 
 
 def tree_files():
@@ -355,6 +409,25 @@ def main():
         "",
         "A skip is not coverage. Suites that skip are listed above by name so "
         "that an absence of failures is never read as an absence of gaps.", "",
+    ]
+    # Where a skip IS covered, say where — generated from the table below, not
+    # typed into prose. The v224 outside review filed the MP4 skip as a finding
+    # and recommended a CI lane with real H.264, which .github/workflows has run
+    # since v103 and which FAILS if the suite merely skips. The lane shipped
+    # inside the reviewed archive; nothing in the evidence pointed at it, so a
+    # reader of this file had no way to know the gap was already closed. An
+    # uncovered skip still says so, loudly.
+    for name in skipped:
+        lane = SKIP_COVERAGE.get(name)
+        lines += [f"  * `{name}` — " + (
+            f"covered by the `{lane}` CI job in .github/workflows/harness.yml, "
+            "which installs the environment this one lacks and fails if the "
+            "suite skips there too."
+            if lane else
+            "NOT covered anywhere. This is a real gap in the release.")]
+    if skipped:
+        lines += [""]
+    lines += [
         "| suite | result | detail |", "| --- | --- | --- |",
     ]
     lines += [f"| `{n}` | {s} | {d} |" for n, s, d in sorted(rows)]

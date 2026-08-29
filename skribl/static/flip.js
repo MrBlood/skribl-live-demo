@@ -150,7 +150,14 @@ const ARC_WINDOW = 12;         // pages either side; bounds both cost and clutte
 
 const ONION_ALPHAS = [0.30, 0.17, 0.10];          // nearer frame = more visible
 const ONION_TINTS  = ['#ff5f6d', '#ff9f43', '#ffd76a'];   // warmer = further back
-let pageClip = null;                              // copied page, for paste
+/* Copied pages, for paste. An ARRAY since v226 — a single-page copy is just a
+   span of one, which is why nothing downstream needed a second code path. */
+let pageClip = null;
+/* SPAN STATE, hoisted here for the reason spelled out above the selection's:
+   flip.js is a classic script, and a `let` reached during init throws and
+   silently kills every line after it. `spanAnchor` is where a range began;
+   `idx` is always its other end, so a span needs exactly one extra number. */
+let spanAnchor = null, _spanSweep = false, _spanHoldTimer = null;
 // Selection tokens — see the note in app.js. Flip is more exposed than the Pad
 // because it clears the input immediately, so a second pick during a slow decode
 // is easy. Bumped on selection AND removal. (Review round 9, #1)
@@ -1564,7 +1571,7 @@ function disarmAll(){
 const pagebar=document.getElementById('pagebar');
 const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pbLeft'),
       pbRight=document.getElementById('pbRight'), pbCopy=document.getElementById('pbCopy'),
-      pbHold=document.getElementById('pbHold'), pbDel=document.getElementById('pbDel');
+      pbDel=document.getElementById('pbDel');
 // The Pad shows the recorded length beside Play; Flip can state its animation
 // length exactly — total hold units over fps. Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
@@ -1621,41 +1628,80 @@ function syncPagebar(){
      spending real estate to say what the context already says.
      The ACCESSIBLE name keeps the full sentence — terse to look at, complete to
      listen to, which is the trade a visual abbreviation should always make. */
+  // With a span lit, every control here means "these pages". Nothing is added
+  // or hidden — the readout and the titles change, which is the whole of the
+  // affordance. A control that silently changed scope would be worse than a
+  // new button; one that says so is better than both.
+  const sp = pageSpan();
+  const cnt = sp ? SkriblPageSpan.count(sp) : 1;
+  const these = sp ? 'these ' + cnt + ' pages' : 'this page';
   if(pbWho){
-    pbWho.textContent = (idx+1) + (n>1 ? '/' + n : '');
-    pbWho.setAttribute('aria-label', 'Page ' + (idx+1) + (n>1 ? ' of ' + n : ''));
-    pbWho.title = 'Page ' + (idx+1) + (n>1 ? ' of ' + n : '');
+    pbWho.textContent = sp ? SkriblPageSpan.label(sp) + '/' + n
+                           : (idx+1) + (n>1 ? '/' + n : '');
+    const say = sp ? 'Pages ' + (sp.from+1) + ' to ' + (sp.to+1) + ' of ' + n
+                   : 'Page ' + (idx+1) + (n>1 ? ' of ' + n : '');
+    pbWho.setAttribute('aria-label', say);
+    pbWho.title = say + (sp ? ' selected — Esc to drop the range' : '');
+    pbWho.classList.toggle('span', !!sp);
   }
-  if(pbLeft) pbLeft.disabled = playing || idx===0;
-  if(pbRight) pbRight.disabled = playing || idx===n-1;
-  if(pbCopy) pbCopy.disabled = playing;
-  if(pbDel) pbDel.disabled = playing || n<=1;
-  if(pbHold){
-    pbHold.disabled = playing;
-    const ic=pbHold.querySelector('.pb-ic'); if(ic) ic.textContent='\u00d7'+frameHold(f);
-    pbHold.classList.toggle('on', frameHold(f)>1);
-  }
+  if(pbLeft){ pbLeft.disabled = playing || (sp ? sp.from===0 : idx===0);
+    pbLeft.title = 'Move ' + these + ' left'; }
+  if(pbRight){ pbRight.disabled = playing || (sp ? sp.to===n-1 : idx===n-1);
+    pbRight.title = 'Move ' + these + ' right'; }
+  if(pbCopy){ pbCopy.disabled = playing; pbCopy.title = 'Copy ' + these; }
+  if(pbDel){ pbDel.disabled = playing || n<=1 || cnt>=n;
+    pbDel.title = 'Delete ' + these; }
+  // pbHold's sync block lived here until v226. It was inert the moment the
+  // button left the template — every line behind an `if(pbHold)` that could
+  // never be true — and dead code that cannot run is worse than dead code that
+  // can: it reads as a live feature to anyone scanning the function. The hold
+  // is the tile's badge now, rebuilt by buildStrip from the frame each time.
 }
 if(pbLeft) pbLeft.addEventListener('click',()=>{ if(pbLeft.disabled) return;
-  if(moveMode){ chip('Finish or cancel the move first'); return; } movePage(idx,-1); });
-if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) movePage(idx,1); });
-if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return;
-  pageClip=deepCopy(frames[idx]); buildStrip(); chip('Page copied — use ＋ Paste'); });
-if(pbHold) pbHold.addEventListener('click',()=>{ if(pbHold.disabled) return;
-  invalidateClearUndo(); frames[idx].hold=(frameHold(frames[idx]) % MAX_HOLD)+1;
-  buildStrip(); scheduleSave(); });
+  if(moveMode){ chip('Finish or cancel the move first'); return; } spanMove(-1); });
+if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) spanMove(1); });
+if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return; spanCopy(); });
+// pbHold retired in v226: the hold badge on the tile is the control now, and it
+// was already drawn there showing the value the button was cycling.
 if(pbDel) pbDel.addEventListener('click',()=>{ if(pbDel.disabled) return;
-  if(moveMode){ chip('Finish or cancel the move first'); return; } delFrame(idx); });
+  if(moveMode){ chip('Finish or cancel the move first'); return; } spanDelete(); });
 
 function buildStrip(){
   armedDel = -1;
   strip.innerHTML='';
   frames.forEach((f,i)=>{
     const el=document.createElement('div'); el.className='frame'+(i===idx?' on':'');
-    el.innerHTML='<div class="num">'+(i+1)+'</div>'
+    // A span is drawn as ONE stretch of film, not as N ticked items: the run
+    // shares a single outline, rounded only at its two outer ends, and the
+    // number on the leading tile becomes the range. Reading "4–7" once beats
+    // reading four highlighted tiles and counting them.
+    const _sp = pageSpan();
+    if(_sp && SkriblPageSpan.contains(_sp, i)){
+      el.classList.add('inspan');
+      if(i === _sp.from) el.classList.add('span-first');
+      if(i === _sp.to) el.classList.add('span-last');
+    }
+    const _numTxt = (_sp && i === _sp.from) ? SkriblPageSpan.label(_sp) : String(i+1);
+    // THE BADGE IS THE CONTROL (v226, stage 2). It used to render only when the
+    // hold was above 1, which made it a readout: there was no way to START a
+    // hold from the strip, so a page-bar button existed to do it. Now it is
+    // always a button — and CSS keeps a ×1 badge hidden unless the tile is the
+    // active one, hovered or focused, which is exactly the rule the delete ✕
+    // already follows. A page with no hold still shows nothing.
+    const _h = frameHold(f);
+    el.innerHTML='<div class="num">'+_numTxt+'</div>'
       +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
-      + (frameHold(f)>1 ? '<div class="holdbadge">\u00d7'+frameHold(f)+'</div>' : '')
-      +'<canvas></canvas>';   // per-page controls now live in #pagebar (v124)
+      +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
+        +'title="Hold this page longer — tap to cycle" '
+        +'aria-label="Hold page '+(i+1)+', currently '+_h+' frame'+(_h===1?'':'s')+'">'
+        +'\u00d7'+_h+'</button>'
+      + (_compactStrip() ? '<button class="pageops" aria-haspopup="menu" '
+          + 'aria-expanded="false" title="Page actions" '
+          + 'aria-label="Actions for page ' + (i+1) + '">'
+          + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+          + '<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/>'
+          + '<circle cx="19" cy="12" r="1.7"/></svg></button>' : '')
+      +'<canvas></canvas>';   // per-page controls: #pagebar on regular, the ⋯ on compact
     el.addEventListener('pointerdown',ev=>{
       if(playing) return;
       // Speak here, not only in the click handler: a real drag sets
@@ -1664,7 +1710,24 @@ function buildStrip(){
       // one page operation that failed in complete silence.
       if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(frames.length<2) return;
-      if(ev.target.closest('.del')) return;
+      if(ev.target.closest('.del') || ev.target.closest('.holdbadge')
+         || ev.target.closest('.pageops')) return;
+      // Shift is the desktop gesture: "…through here", from wherever you are.
+      if(ev.shiftKey){ ev.preventDefault(); extendSpanTo(i); return; }
+      // And touch gets the same reach without a modifier key: hold still for a
+      // beat, then sweep. The two gestures cannot collide because they are
+      // separated by what the finger does FIRST — move within 450ms and it is a
+      // reorder, stay put and it becomes a sweep. Committing on the timer
+      // rather than on movement is what makes it feel decided rather than
+      // ambiguous, and the tile lifts so the change of mode is visible.
+      clearTimeout(_spanHoldTimer);
+      _spanHoldTimer = setTimeout(()=>{
+        if(!_pdrag || _pdrag.moved) return;
+        _pdrag = null; _spanSweep = true;
+        setSpanAnchor(i);
+        if(i !== idx) extendSpanTo(i); else buildStrip();
+        if(navigator.vibrate) try{ navigator.vibrate(8); }catch(_){}
+      }, 450);
       _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false, centers:stripTileCenters() };
     });
     el.addEventListener('click',ev=>{
@@ -1680,6 +1743,19 @@ function buildStrip(){
       if(playing) return;
       if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(_pdragSuppressClick) return;
+      if(_spanSweep){ _spanSweep = false; return; }   // the sweep already chose
+      if(ev.target.closest('.holdbadge')){
+        ev.stopPropagation();
+        holdCycle(i);
+        return;
+      }
+      const ops = ev.target.closest('.pageops');
+      if(ops){
+        ev.stopPropagation();
+        if(i !== idx) go(i);              // act on the page you opened it from
+        openPageOps(ops, i);
+        return;
+      }
       const del = ev.target.closest('.del');
       if(del){
         if(f.strokes.length && armedDel !== i){
@@ -1689,9 +1765,30 @@ function buildStrip(){
         }
         delFrame(i); return;
       }
-      disarmAll(); go(i);
+      disarmAll();
+      // A plain tap means "this page", so it retires the range rather than
+      // quietly keeping one the user has visually moved past — the same rule
+      // the stroke selection follows for a stray tap outside its box.
+      if(!ev.shiftKey) clearSpan(true);
+      go(i);
     });
     strip.appendChild(el); drawThumb(el.querySelector('canvas'), f);
+    // THE PASTE GHOST (v226, stage 2). A button in the add column said WHAT;
+    // it could not say WHERE, and "after the current page" is a rule the user
+    // had to know rather than see. A dashed tile standing in the gap the pages
+    // will occupy says both at once, and it disappears with the clipboard.
+    if(pageClip && pageClip.length && i === idx && !playing && !moveMode){
+      const n = pageClip.length;
+      const g = document.createElement('button');
+      g.type = 'button';
+      g.className = 'frame ghost-paste';
+      g.title = 'Paste ' + (n>1 ? n + ' copied pages' : 'the copied page') + ' here';
+      g.setAttribute('aria-label', g.title);
+      g.innerHTML = '<span class="ghost-plus" aria-hidden="true">+</span>'
+                  + (n>1 ? '<span class="ghost-n">'+n+'</span>' : '');
+      g.addEventListener('click', ev => { ev.stopPropagation(); spanPaste(); });
+      strip.appendChild(g);
+    }
   });
   const col=document.createElement('div'); col.className='addcol';
   // Built here rather than in the template, which is why a template-wide
@@ -1703,7 +1800,7 @@ function buildStrip(){
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
     +'<button class="addbtn mini" id="addtween" title="Generate the motion between this page and the next, like a long exposure"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>In-between</button>'
-    + (pageClip ? '<button class="addbtn mini" id="addpaste"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Paste</button>' : '');
+    ;   // Paste is no longer here — see the ghost tile in buildStrip (v226).
   // The add controls live OUTSIDE the scrolling strip, as a row above the
   // thumbnails. Inside it they were its last child, so on a long flip they
   // scrolled away from the very page they act on; pinning them to the right
@@ -1722,15 +1819,183 @@ function buildStrip(){
   syncPagebar();
   syncFlipDuration();
   if(typeof syncMoveLabel === 'function') syncMoveLabel();
-  const pasteBtn=col.querySelector('#addpaste');
-  if(pasteBtn) pasteBtn.addEventListener('click',()=>{
-    if(playing || moveMode || !pageClip) return;
-    invalidateClearUndo(); redoStack.length=0;
-    frames.splice(idx+1,0,deepCopy(pageClip)); idx++;
-    buildStrip(); render(); scheduleSave();
-  });
   updateToolState();
 }
+/* ESCAPE DISMISSES THE TOPMOST THING, and a page range is the least topmost.
+ *
+ * Every other Escape claim in this file is "some surface is open", and those are
+ * mutually exclusive in practice — one sheet at a time. A page range is not: it
+ * can be selected while the overflow menu, the export sheet, the tune panel or
+ * the help drawer is open, and without this guard one press would both close
+ * the sheet AND silently drop a selection the user had not finished with.
+ * KeyRegistry.collisions() exists to catch exactly that shape, and verify_keys
+ * drives it.
+ *
+ * Read lazily, at press time: every one of these is declared further down the
+ * file than this function, which is fine to REFERENCE from a body that only runs
+ * after init but would throw if evaluated now.
+ */
+function flipOverlayOpen(){
+  try{
+    if(typeof moveMode !== 'undefined' && moveMode) return true;
+    const menu = document.getElementById('moreMenu');
+    if(menu && !menu.hidden) return true;
+    const exp = document.getElementById('exportOverlay');
+    if(exp && !exp.hidden) return true;
+    if(typeof tuneIsOpen === 'function' && tuneIsOpen()) return true;
+    // Read through the same variable the help drawer's own Escape claim reads,
+    // so the two cannot drift. It is a `const` declared far below this line, and
+    // `typeof` does NOT protect a const in its temporal dead zone — it throws
+    // like any other access. That is what the try/catch around this body is for:
+    // called at press time it is long since initialised, and called earlier
+    // (which nothing does) it answers "not open" instead of taking the file down.
+    if(helpDrawer && !helpDrawer.hidden) return true;
+  }catch(_){ /* a surface that does not exist on this page is not open */ }
+  return false;
+}
+
+/* ---- compact page actions (v227, stage 4) ----------------------------------
+ * On the compact surface the persistent page bar is gone and this menu carries
+ * what it carried. The design note is explicit that this step waits on ONE
+ * thing: every operation must stay reachable and announced, because a filmstrip
+ * you can only operate by dragging is a filmstrip some people cannot operate.
+ *
+ * So it is a real <button> with aria-haspopup on a tile that is in the tab
+ * order, opening a real role="menu" of real buttons. Focus moves in on open and
+ * returns to the trigger on close. Nothing here is hover-only and nothing is a
+ * gesture — the gestures exist alongside it for people who find them, which is
+ * the whole shape of the compact/regular split.
+ *
+ * It is only rendered on compact. On regular the page bar is still there and a
+ * second route to the same five operations would be clutter, not redundancy.
+ */
+function _compactStrip(){
+  return !!(window.SkriblSize && SkriblSize.isCompact());
+}
+let _opsMenu = null, _opsTrigger = null;
+function closePageOps(refocus){
+  if(!_opsMenu) return;
+  _opsMenu.remove(); _opsMenu = null;
+  if(_opsTrigger){
+    _opsTrigger.setAttribute('aria-expanded', 'false');
+    if(refocus) try{ _opsTrigger.focus(); }catch(_){}
+  }
+  _opsTrigger = null;
+}
+function openPageOps(trigger, i){
+  closePageOps(false);
+  const sp = pageSpan();
+  const many = sp && SkriblPageSpan.contains(sp, i);
+  const what = many ? 'these ' + SkriblPageSpan.count(sp) + ' pages' : 'this page';
+  const n = frames.length;
+  const items = [
+    ['Move left',  'Move ' + what + ' left',  () => spanMove(-1),
+     sp ? sp.from === 0 : i === 0],
+    ['Move right', 'Move ' + what + ' right', () => spanMove(1),
+     sp ? sp.to === n - 1 : i === n - 1],
+    ['Copy',       'Copy ' + what,            () => spanCopy(),  false],
+    ['Delete',     'Delete ' + what,          () => spanDelete(),
+     n <= 1 || (sp && SkriblPageSpan.count(sp) >= n)],
+  ];
+  const m = document.createElement('div');
+  m.className = 'pageops-menu';
+  m.setAttribute('role', 'menu');
+  m.setAttribute('aria-label', 'Actions for ' + what);
+  items.forEach(([label, title, run, disabled], k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pageops-item' + (label === 'Delete' ? ' danger' : '');
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    // The visible label stays short ("Move left"); the SCOPE goes in the
+    // accessible name, so a screen reader hears "Move these 3 pages left" while
+    // the menu stays scannable. title as well, for the pointer tooltip — note
+    // lib/tooltip.js adopts [title] into data-tip and REMOVES the attribute, so
+    // aria-label is also the only one of the two that survives to be read back.
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    b.disabled = !!disabled;
+    b.addEventListener('click', () => { closePageOps(false); run(); });
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  // Anchored to the trigger and clamped to the window, so a menu opened on the
+  // last tile of a scrolled strip does not hang off the edge.
+  const r = trigger.getBoundingClientRect(), mr = m.getBoundingClientRect();
+  let left = Math.min(r.left, window.innerWidth - mr.width - 8);
+  m.style.left = Math.max(8, left) + 'px';
+  m.style.top = Math.max(8, r.top - mr.height - 6) + 'px';
+  trigger.setAttribute('aria-expanded', 'true');
+  _opsMenu = m; _opsTrigger = trigger;
+  const first = m.querySelector('.pageops-item:not(:disabled)');
+  if(first) try{ first.focus(); }catch(_){}
+  // Arrow keys walk the menu, Escape returns you where you were. A menu you can
+  // open with the keyboard and not leave with it is worse than no menu.
+  m.addEventListener('keydown', e => {
+    const btns = [...m.querySelectorAll('.pageops-item:not(:disabled)')];
+    const at = btns.indexOf(document.activeElement);
+    if(e.key === 'Escape'){ e.preventDefault(); closePageOps(true); return; }
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      const nx = e.key === 'ArrowDown' ? at + 1 : at - 1;
+      const t = btns[(nx + btns.length) % btns.length];
+      if(t) t.focus();
+    }
+  });
+}
+document.addEventListener('pointerdown', e => {
+  if(_opsMenu && !e.target.closest('.pageops-menu') && !e.target.closest('.pageops')){
+    closePageOps(false);
+  }
+});
+// The strip is rebuilt when the class flips, because the ⋯ exists on one side of
+// the boundary and not the other. Without this a window resized past 640 keeps
+// whichever surface it happened to load with.
+document.addEventListener('skribl:size', () => { closePageOps(false); buildStrip(); });
+
+/* Keyboard. This is where a range earns its keep on desktop: shift-arrow to
+   grow one, Escape to drop it, and the copy/paste pair everyone already has in
+   their fingers. None of it adds a pixel of interface, which is the only reason
+   a feature this size fits the direction at all.
+
+   Registered with KeyRegistry so the shortcut sheet lists them; the handler is
+   bound separately, as every other shortcut here is. */
+if(window.KeyRegistry){
+  KeyRegistry.register({surface:'flip', label:'select a run of pages',
+    keys:['Shift+ArrowLeft','Shift+ArrowRight'], scope:()=>frames.length>1});
+  KeyRegistry.register({surface:'flip', label:'drop the page range',
+    keys:['Escape'], scope:()=>pageSpan()!==null && !flipOverlayOpen()});
+  KeyRegistry.register({surface:'flip', label:'copy the page or range',
+    keys:['Mod+c'], scope:()=>!playing});
+  KeyRegistry.register({surface:'flip', label:'paste copied pages',
+    keys:['Mod+v'], scope:()=>!!(pageClip && pageClip.length)});
+}
+document.addEventListener('keydown', e=>{
+  if(playing || moveMode) return;
+  // Never steal a key from a text field — the share sheet's title and caption
+  // inputs live on this page, and Cmd+C in one of them must copy the TEXT.
+  // typingTarget() is the existing answer to this question in this file; a
+  // second copy of the same predicate is how the two drift apart.
+  if(typeof typingTarget === 'function' && typingTarget(e.target)) return;
+  if(e.key === 'Escape' && pageSpan() && !flipOverlayOpen()){
+    e.preventDefault(); clearSpan(); render(); return;
+  }
+  if(e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
+    if(frames.length < 2) return;
+    e.preventDefault();
+    extendSpanTo(idx + (e.key === 'ArrowLeft' ? -1 : 1));
+    return;
+  }
+  const mod = e.metaKey || e.ctrlKey;
+  if(mod && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C')){
+    e.preventDefault(); spanCopy(); return;
+  }
+  if(mod && !e.shiftKey && !e.altKey && (e.key === 'v' || e.key === 'V')){
+    if(!(pageClip && pageClip.length)) return;
+    e.preventDefault(); spanPaste(); return;
+  }
+});
+
 function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent'; const c=cv.getContext('2d');
   c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); drawBackdrop(c); paintFrame(c, f.strokes); }
 function refreshAllThumbs(){ [...strip.children].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
@@ -1746,8 +2011,13 @@ function movePage(i,dir){
   // legible even if you were not watching the strip.
   if(window.SkriblHints){
     const to = i + dir + 1;
+    // The hint has to name the control the user actually pressed. On the
+    // compact surface there are no arrows — the move came from the tile's ⋯
+    // menu (v227) — and a hint that describes a control the surface does not
+    // have is worse than no hint: it sends the reader looking for it.
+    const via = _compactStrip() ? 'This' : 'These arrows';
     window.SkriblHints.show('page-move',
-      'Moved this page to position ' + to + '. These arrows REORDER pages — '
+      'Moved this page to position ' + to + '. ' + via + ' REORDERS pages — '
       + 'tap a thumbnail below to change which page you are on.');
   }
   movePageTo(i, i+dir);
@@ -1780,15 +2050,31 @@ function stripTileCenters(){
     const r=el.getBoundingClientRect(); return r.left + r.width/2;
   });
 }
+/* A sweep extends the span to whichever tile the finger is over. Hit-testing
+   the tile under the pointer rather than accumulating dx means a sweep that
+   wanders vertically off the strip and back still lands on the right pages. */
+document.addEventListener('pointermove', ev=>{
+  if(!_spanSweep) return;
+  const el = document.elementFromPoint(ev.clientX, ev.clientY);
+  const tile = el && el.closest && el.closest('#strip .frame');
+  if(!tile) return;
+  const i = [...strip.children].indexOf(tile);
+  if(i >= 0 && i !== idx){ ev.preventDefault(); extendSpanTo(i); }
+});
+document.addEventListener('pointerup', ()=>{ _spanSweep = false; });
+document.addEventListener('pointercancel', ()=>{ _spanSweep = false; });
 document.addEventListener('pointermove', ev=>{
   if(!_pdrag) return;
   const dx=ev.clientX-_pdrag.startX;
   if(!_pdrag.moved && Math.abs(dx)<6) return;
+  // Moving cancels the pending sweep: this is a reorder, decided by the finger.
+  clearTimeout(_spanHoldTimer);
   if(!_pdrag.moved){ _pdrag.moved=true; _pdrag.el.classList.add('dragging'); }
   ev.preventDefault();
   _pdrag.el.style.transform='translateX('+dx+'px)';
 });
 document.addEventListener('pointerup', ()=>{
+  clearTimeout(_spanHoldTimer);
   if(!_pdrag) return;
   const d=_pdrag; _pdrag=null;
   d.el.style.transform=''; d.el.classList.remove('dragging');
@@ -1801,15 +2087,160 @@ document.addEventListener('pointerup', ()=>{
   const centers=d.centers, x=d.lastX;
   let target=0;
   for(let k=0;k<centers.length;k++){ if(x>centers[k]) target=k+1; }
+  // Dropping a tile that is part of a span moves the whole run. Anything else
+  // would mean dragging one page out of a selection you just made, which is
+  // never the intention — and lib/pagespan owns the index arithmetic that makes
+  // a rightward move land where it looks like it should.
+  const sp = pageSpan();
+  if(sp && SkriblPageSpan.contains(sp, d.i)){
+    let before = 0;
+    for(let k=0;k<centers.length;k++){ if(x>centers[k]) before=k+1; }
+    const keep = idx - sp.from, n = SkriblPageSpan.count(sp);
+    const moved = SkriblPageSpan.moveSpan(frames, sp, before);
+    if(moved.length === frames.length){
+      frames = moved;
+      const landed = before <= sp.from ? before : before - n;
+      setSpanAnchor(landed); idx = landed + keep;
+      buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+    }
+    return;
+  }
   if(target>d.i) target--;
   target=Math.max(0, Math.min(frames.length-1, target));
   movePageTo(d.i, target);
 });
 document.addEventListener('pointermove', ev=>{ if(_pdrag) _pdrag.lastX=ev.clientX; });
 document.addEventListener('pointercancel', ()=>{
+  clearTimeout(_spanHoldTimer);
   if(!_pdrag) return;
   _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
 });
+/* The app's ONE size decision. Started here, near the top, because every
+   migrated CSS rule keys off the attribute it stamps — an unclassified root
+   gets the compact form of all of them, which on a desktop is the 641px cliff
+   this is meant to end. */
+if(window.SkriblSize) SkriblSize.observe(document.body);
+
+/* ---- page spans ------------------------------------------------------------
+ * A run of pages, selected on the strip and operated on by the controls that
+ * were already there. DESIGN-DIRECTION is explicit that page management is
+ * direct manipulation on the film and NOT a management cluster — "the object
+ * itself is manipulable" — so this adds no button. What it adds is that Copy,
+ * Delete, ×hold and the two arrows mean "these pages" instead of "this page"
+ * whenever more than one is lit.
+ *
+ * The geometry lives in lib/pagespan.js, headless and tested there. What lives
+ * HERE is only the two numbers that say which pages, and the rule that keeps
+ * them honest: `idx` is always one end of the span, so moving the current page
+ * moves the span with it and there is no way to have a selection that does not
+ * include the page you are looking at. That rule is what makes re-scoping the
+ * existing controls safe rather than surprising — every one of them already
+ * acted on `idx`, and it still does.
+ */
+function pageSpan(){
+  if(spanAnchor == null || !window.SkriblPageSpan) return null;
+  const s = SkriblPageSpan.normalise(spanAnchor, idx, frames.length);
+  return s && s.from !== s.to ? s : null;         // one page is not a span
+}
+function spanOrCurrent(){
+  const s = pageSpan();
+  return s || { from: idx, to: idx };
+}
+function setSpanAnchor(a){
+  spanAnchor = (a == null) ? null : Math.max(0, Math.min(frames.length - 1, a));
+}
+function clearSpan(quiet){
+  if(spanAnchor == null) return false;
+  spanAnchor = null; _spanSweep = false;
+  if(!quiet){ buildStrip(); }
+  return true;
+}
+/* Extend to `i`, anchoring at the page you are on if nothing is anchored yet.
+   Shift-click reads as "…through here", which only means anything relative to
+   where you already are. */
+function extendSpanTo(i){
+  if(playing || moveMode) return;
+  if(spanAnchor == null) setSpanAnchor(idx);
+  const to = Math.max(0, Math.min(frames.length - 1, i));
+  if(to !== idx){ if(typeof selClear === 'function') selClear(true); idx = to; }
+  buildStrip(); render(); scrollStripToActive(true);
+}
+function spanCopy(){
+  const s = spanOrCurrent();
+  pageClip = SkriblPageSpan.extract(frames, s).map(deepCopy);
+  buildStrip();
+  chip(pageClip.length > 1
+    ? pageClip.length + ' pages copied — use ＋ Paste'
+    : 'Page copied — use ＋ Paste');
+}
+function spanDelete(){
+  const s = pageSpan();
+  if(!s) return delFrame(idx);                    // unchanged single-page path
+  if(SkriblPageSpan.count(s) >= frames.length){
+    // Deleting every page would leave a pageless flipbook. delFrame's own
+    // one-page case already answers this: reset to a single blank rather than
+    // refuse, so "clear the whole thing" stays reachable.
+    chip('That is every page — use Clear all');
+    return;
+  }
+  invalidateClearUndo(); redoStack.length = 0;
+  const n = SkriblPageSpan.count(s);
+  frames = SkriblPageSpan.remove(frames, s);
+  idx = Math.max(0, Math.min(frames.length - 1, s.from));
+  clearSpan(true);
+  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+  chip(n + ' pages deleted');
+}
+/* Cycle the hold on ONE tile — or on the whole run, if that tile is part of a
+   selected one. Scoping it to what the tile belongs to is the same rule every
+   other re-scoped control follows, so tapping a badge inside a range does not
+   silently break the range apart. */
+function holdCycle(i){
+  if(playing || moveMode) return;
+  const sp = pageSpan();
+  if(sp && SkriblPageSpan.contains(sp, i)) return spanHold();
+  invalidateClearUndo();
+  frames[i].hold = (frameHold(frames[i]) % MAX_HOLD) + 1;
+  buildStrip(); scheduleSave(); syncFlipDuration();
+}
+function spanHold(){
+  // One tap sets EVERY page in the span to the same hold, cycling from the
+  // first page's value. Cycling each page independently would make the second
+  // tap scatter them, which is the opposite of what selecting a range is for.
+  const s = spanOrCurrent();
+  invalidateClearUndo();
+  const next = (frameHold(frames[s.from]) % MAX_HOLD) + 1;
+  for(let i = s.from; i <= s.to; i++) frames[i].hold = next;
+  buildStrip(); scheduleSave();
+  if(s.from !== s.to) chip('×' + next + ' on ' + (s.to - s.from + 1) + ' pages');
+}
+/* Nudge the span one slot. `dir` is -1 or +1. The span keeps its selection and
+   `idx` keeps its page, so holding an arrow walks a run across the film. */
+function spanMove(dir){
+  const s = pageSpan();
+  if(!s) return movePage(idx, dir);               // unchanged single-page path
+  const to = dir < 0 ? s.from - 1 : s.to + 2;     // insert before this original
+  if(to < 0 || to > frames.length) return;
+  const n = SkriblPageSpan.count(s), keep = idx - s.from;
+  frames = SkriblPageSpan.moveSpan(frames, s, to);
+  const landed = dir < 0 ? s.from - 1 : s.from + 1;
+  setSpanAnchor(landed);
+  idx = landed + keep;
+  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+}
+function spanPaste(){
+  if(playing || moveMode || !pageClip || !pageClip.length) return;
+  invalidateClearUndo(); redoStack.length = 0;
+  const pages = pageClip.map(deepCopy);
+  frames = SkriblPageSpan.insert(frames, idx + 1, pages);
+  // The pasted run lands selected. A paste you then have to re-select before
+  // moving is two gestures for one intention.
+  setSpanAnchor(idx + 1);
+  idx = idx + pages.length;
+  if(pages.length === 1) clearSpan(true);
+  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+}
+
 function deepCopy(f){ const b = balancedPair(f);
   return { strokes: b.strokes.map(p=>Object.assign({},p)), strokeGroups: b.strokeGroups, hold: frameHold(f) }; }
 // buildStrip() rebuilds the strip's children, which resets its scrollLeft to 0.
@@ -1824,9 +2255,15 @@ function scrollStripToActive(smooth){
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }
 }
-function addFrame(copy){ if(moveMode) return; disarmAll(); invalidateClearUndo(); redoStack.length=0; const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
+function addFrame(copy){ if(moveMode) return; disarmAll(); invalidateClearUndo(); redoStack.length=0; clearSpan(true); const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   scrollStripToActive(true); }
-function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.length=0; if(frames.length===1){ frames[0]=newFrame(); idx=0; }
+function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.length=0;
+  // A range is a pair of INDICES, so any page count change that this function
+  // makes invalidates it. Dropping it here rather than trying to fix it up is
+  // deliberate: the same reasoning the stroke selection uses when you change
+  // page — a stale range would operate on artwork the user never picked.
+  clearSpan(true);
+  if(frames.length===1){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true); }
 function go(i){ if(moveMode) return;
@@ -1913,7 +2350,11 @@ function endFlipHold(rebuild){
 KeyRegistry.register({surface:'flip', label:'hold to riffle pages',
   keys:['ArrowLeft','ArrowRight']});
 window.addEventListener('keydown', e=>{
-  if(typingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Shift joins the modifiers this declines because Shift+Arrow now EXTENDS a
+  // page range (v226). Without it both handlers ran and a single press moved
+  // two pages — the range grew twice as fast as the key was pressed, which
+  // reads as the selection being broken rather than as two features colliding.
+  if(typingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
   const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
   if(!dir) return;
   e.preventDefault();
@@ -2156,6 +2597,17 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<path d="M3 16c3.5 0 4.5-7 8-7s3 5 6 5"/>'
               + '<path d="M14.5 18.5c1.6-1.1 2.6-2.2 4.4-2.2 1.3 0 2.1.6 2.1 1.5 0 1.6-2.4 2.6-4.3 2.6"/>'
               + '</svg>' },
+        // v226. Move artwork was in the PAGE BAR — a row about pages, holding a
+        // control that moves the drawing. It never belonged there: it takes a
+        // drag on the canvas, it has a mode, and it sits beside Select and
+        // Liquify in every way except where it was filed. Reclassifying it is a
+        // filing correction, not a redesign; the behaviour below is untouched.
+        { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M12 4v16M4 12h16M12 4l-2.5 2.5M12 4l2.5 2.5'
+              + 'M12 20l-2.5-2.5M12 20l2.5-2.5M4 12l2.5-2.5M4 12l2.5 2.5'
+              + 'M20 12l-2.5-2.5M20 12l-2.5 2.5"/></svg>' },
       ],
       currentTool: () => flipTool,
       slider: document.getElementById('toolSlider'),
@@ -2199,12 +2651,23 @@ function setTool(t){
   // Leaving Select drops the selection: an invisible selection that a later
   // drag would move is worse than making the user re-pick.
   if(flipTool !== 'select') selClear();
+  // Artwork IS the move mode (v226). Entering and leaving it through the shelf
+  // rather than through a page-bar toggle is the whole of the reclassification
+  // — setMoveMode still owns what the mode does. The moveMode checks guard
+  // against re-entering a mode already running, which would re-capture the
+  // origin mid-drag and lose the offset the user had built up.
+  if(flipTool === 'artmove'){ if(!moveMode) setMoveMode(true); }
+  else if(moveMode) setMoveMode(false);
   // Records the MRU, re-syncs the shelf and repaints the tray's pressed state.
   if (toolShelf) toolShelf.noteUse(flipTool);
   const active = activeToolBtn();
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.toggle('active', b === active));
   positionToolSlider();
-  pad.style.cursor='none';
+  // moveMode owns the cursor while it is running. This line used to be an
+  // unconditional 'none' for the custom brush cursor, which clobbered the grab
+  // cursor setMoveMode had set moments earlier in this same function once
+  // Artwork became a tool — the mode was live and the canvas did not say so.
+  pad.style.cursor = moveMode ? 'grab' : 'none';
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
@@ -4934,6 +5397,11 @@ function setMoveMode(on){
   } else {
     moveOrigin = null;
   }
+  // Done and Cancel end the mode without going through the shelf, so the shelf
+  // has to be told — otherwise Artwork stays lit over a canvas that is no
+  // longer in move mode. No recursion: moveMode is already false by here, so
+  // setTool's own `else if(moveMode)` branch does nothing.
+  if(!on && typeof flipTool !== 'undefined' && flipTool === 'artmove') setTool('pen');
   updateToolState();
 }
 function commitMove(){
@@ -4953,7 +5421,8 @@ function cancelMove(){
   setMoveMode(false);
 }
 
-bindEl('pbArt', 'click', ()=>{ disarmAll(); setMoveMode(!moveMode); });
+// pbArt's binding is gone with the button: Artwork is a tool now, reached from
+// the tool shelf like every other one. (v226, stage 1.)
 bindEl('mbDone', 'click', ()=>{ commitMove(); });
 bindEl('mbReset', 'click', ()=>{ moveDx = moveDy = 0; applyMoveOffset(); });
 (function(){

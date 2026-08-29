@@ -157,11 +157,11 @@
         <div class="post-fields">
           <label class="post-field">
             <span class="post-field-label">Title</span>
-            <input type="text" id="postTitleInput" class="post-input" maxlength="60" placeholder="Untitled Skribl" autocomplete="off">
+            <input type="text" id="postTitleInput" class="post-input" maxlength="{{ skribl_limits.title }}" placeholder="Untitled Skribl" autocomplete="off">
           </label>
           <label class="post-field">
             <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
-            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="280" rows="3" placeholder="Say something about it…"></textarea>
+            <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" placeholder="Say something about it…"></textarea>
             <span class="post-char-count" id="postCharCount">0 / 280</span>
           </label>
         </div>

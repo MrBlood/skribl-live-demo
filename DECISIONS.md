@@ -32,7 +32,15 @@ existing clients. Turning it on by default broke 24 assertions across other
 suites, every one a token-less POST correctly getting a 403.
 
 **A host that authenticates POST /api/skribls with a cookie MUST switch it on.**
-Without it, any page on the internet can post as the logged-in user.
+Without it, any third-party page can post as the logged-in user.
+
+**v224: this is now enforced, not advised.** Passing `current_user_id` without
+a `csrf` verifier RAISES at blueprint construction. The default above is
+untouched — it is the default for an *unauthenticated* deployment, which is
+what standalone Skribl is — but the combination "authenticated and unprotected"
+can no longer be reached by not noticing a log line. `csrf=False` is the
+explicit declaration for a host whose authentication is not cookie-based, and
+its existence is what makes refusing fair rather than presumptuous. See v246.
 
 ## 3. Media storage defaults to `inline`
 
@@ -1729,3 +1737,448 @@ it: the mental model was "undo the wrong stroke", but an eraser is not undo.
 
 Mistakes in a replay demo belong in the layer that is still on top -- during
 construction, before anything is painted over them.
+
+## v246 -- A warning is the wrong instrument when the safe state is "did not notice"
+
+`current_user_id` without a CSRF verifier logged a warning, on the reasoning
+that a bearer-token host does not need CSRF and should not be refused. The
+reasoning was right and the mechanism was wrong. The failure mode is "any
+third-party page can post as your logged-in user"; the warning went to a logger
+the host may never have configured, at import time, in a stream nobody reads
+during a deploy. The state you got by not noticing was the unsafe one.
+
+It refuses now. **What makes refusing acceptable is that there is an explicit
+declaration for the legitimate case** -- `csrf=False`, meaning "my
+authentication is not cookie-based". Without that opt-out the refusal would be
+punishing a correct configuration, which is how a hard error earns a reputation
+for being wrong and gets worked around.
+
+The rule generalises: a warning is right when the reader can act on it and the
+default is safe. When the default is unsafe, the choice is refuse-with-an-
+opt-out, not warn.
+
+## v247 -- A number stated three times is stated zero times
+
+Title and caption lengths lived in three places: `String(80)`/`String(300)` on
+the columns, `[:80]`/`[:300]` truncating in the create endpoint, and
+`maxlength="60"`/`"280"` in both editors. No two agreed, and an earlier session
+had written a harness block headed "280 and 300 are different numbers ON
+PURPOSE" -- pinning the drift as if it were a design.
+
+It was not a design. A caption of 290 could not be typed into the editor but
+posted fine; one of 350 came back **201** with fifty characters silently gone.
+
+**OWNER, FLAGGED:** this reverses that earlier decision, and two assertions in
+`verify_apiedges.py` were removed rather than adjusted, because what they
+asserted was the drift. There is one constant per field in `core.py` now; the
+columns are declared from it, the endpoint rejects with a 400 naming the limit,
+and the templates render `maxlength` from it through the context processor.
+
+The general form: when the same fact appears in N places, N-1 of them are
+documentation of the other one, and only the one that can refuse is real.
+
+## v248 -- A cap on bytes is not a cap on cost
+
+Media validation proved the declared type matched the leading bytes and that the
+base64 was under a size cap. Neither says anything about what decoding costs. A
+66-byte PNG whose IHDR declares 30000x30000 passed everything, and every browser
+that opened the post then allocated about 3.6 GB.
+
+Bytes cannot be a proxy for decode cost, because the entire point of a
+decompression bomb is that it is small. The dimensions are in the header of all
+four accepted formats, so they read without a decoder and without a dependency.
+
+Two choices inside it worth keeping. **An unparseable header ACCEPTS** -- a file
+that will not parse does not decode either, and rejecting on "unparseable" turns
+every rare corner of these formats into a 400 for no gain. And **the parser must
+not become the attack** -- the JPEG segment walk is bounded by segment count and
+byte offset, or a crafted file makes the scan itself the denial of service.
+
+## v249 -- A maintenance function nothing can run is a maintenance plan, not a job
+
+`sweep_orphans` reclaimed disk since v180 and was documented as the answer to
+orphaned media. Nothing shipped could invoke it. Every deployment was left to
+resolve its own app, find the store the host passed in, get a session, and get
+the argument order right on a function whose third positional argument deletes
+user data.
+
+It was also unobservable: returning only the removed keys meant a run that
+removed nothing looked identical whether there was nothing to reclaim, the
+credentials were pointed at the wrong prefix, or the grace period was swallowing
+everything. Every branch that DECLINES to delete is now counted separately,
+which is what makes a zero interpretable.
+
+And it was fragile: `delete_key` ran uncaught, so one object a bucket policy
+refuses aborted the run and left every later orphan in place -- while the key
+was already in the returned list, reporting a deletion that never happened.
+
+The test for "is this operable" is not "does the function work". It is: can
+someone schedule it, can they tell what it did, and does it survive one object
+going wrong.
+
+## v250 -- A number that goes stale is caught; a sentence that goes stale is not
+
+`verify_docs.py` has guarded this project's volatile facts for many releases:
+suite counts, file counts, assertion totals, tree hashes, version strings. Every
+one of them is a NUMBER, and numbers are what it can compare.
+
+It never occurred to anyone -- me included -- that the same rot happens to
+prose, and prose is what people actually act on. `FOR-THE-REVIEWER.md` called
+durable drafts and pointer identity "NOT deferrable prerequisites" two releases
+after both shipped. `DESIGN-DIRECTION.md` stated the draft problem as current.
+`START-HERE.md` said Pad's autosave "holds strokes but not media bytes" seven
+hundred lines above its own paragraph explaining that the bytes go to IndexedDB.
+A 3,328-assertion harness saw none of it.
+
+**The cost was not embarrassment, it was a reviewer's time.** An outside review
+of v224 read a stale docstring in `models.py` claiming the database limiter was
+"NOT yet verified on PostgreSQL across processes" and filed a MEDIUM finding
+asking for a test `verify_postgres.py` had been running since v211 -- four
+gunicorn worker processes, twelve barrier-released requests, quota two. The same
+docstring also denied that any advisory lock existed while `ratelimit.py` runs
+`pg_advisory_xact_lock` on every reservation, so it UNDERSTATED a
+security-relevant guarantee. Stale prose does not merely mislead a reader; it
+spends the attention of the one person paid to find real problems.
+
+The gate now pairs a capability with the artifact that PROVES it shipped and the
+phrasings that would only appear if it had not. Two design choices are the
+useful part. It scans SOURCE FILES as well as documents, because the finding
+came from a docstring and code comments are read more literally than prose, not
+less -- and that extension immediately found two more instances nobody had
+reported. And its exemption list is a small CLOSED set of explicit markers, so a
+changelog can still say what used to be true and adding an escape hatch is a
+decision rather than a slide.
+
+Stated in the code, because overclaiming here would be the same sin: it catches
+denials it has PATTERNS for. A newly-invented stale sentence sails through
+exactly as before.
+
+## v251 -- Saying a fix is untested is not a substitute for testing it
+
+The Air-brush beading fix shipped with an honest note in the reviewer document:
+the mechanism was verified synthetically, the owner confirmed it by eye, and
+**it is not pinned by an assertion**. That disclosure felt like diligence. The
+v224 outside review ranked it as the second-most-important finding, and was
+right to: an unpinned rendering fix is one refactor away from silently
+returning, and the honesty in the document does nothing to stop that.
+
+Why nothing else could see it: the STROKES ARE BYTE-IDENTICAL before and after
+the repaint. It is not a geometry change, not a structural one, not a data one.
+Only the pixels differ, and no suite here read pixels for this.
+
+Two things about measuring it are worth keeping. **Read the alpha channel, not
+the colour channels.** The canvas is transparent-backed -- the dark ground is
+CSS behind it -- so `getImageData` returns STRAIGHT, un-premultiplied RGBA, and
+a 22%-alpha white stroke reads r=255, a=56. The first draft measured red and
+reported a spread of zero on a visibly correct stroke. That is the third time
+this project has met premultiplied-vs-straight alpha in a new disguise. And
+**exclude what is not ink**: a marquee paints a purple outline, and counting it
+reported a spread of 138 for a repaint that was perfect.
+
+The mutation is what makes the suite worth anything. It repaints through the raw
+painters -- the pre-fix code path -- and REQUIRES the result to come back worse.
+Composited mean alpha 51, raw 118. Without that, every other assertion could
+pass on a canvas that never repainted at all.
+
+## v252 -- "Sealed" is corruption detection, not provenance
+
+`SHA256SUMS` lives inside the archive it authenticates, and so does the tree hash
+in `RELEASE.md`. Anyone who can replace the archive can replace both. The v224
+review said so and it is correct: the seal proves this archive is internally
+consistent and the evidence describes this tree. It proves nothing about who
+built it.
+
+The honest fix available here is to publish the hash of the ZIP through a channel
+that did not travel with the zip -- the git commit that seals each release. A
+signed tag or a CI attestation would be stronger, and neither exists. The
+documents now say which of those is true rather than letting "sealed" imply the
+stronger one.
+
+## v253 -- Evidence that does not name its own coverage invites a false finding
+
+`RELEASE.md` recorded `skipped 1 (verify_mp4.py)` and stopped there. The v224
+reviewer filed that as an open gap and recommended a CI lane with real H.264 --
+which `.github/workflows/harness.yml` has run since v103, and which FAILS if the
+suite merely skips. **The lane was shipping inside the archive under review.**
+
+The finding was not careless; the evidence simply never pointed at the thing that
+closed the gap, and a reviewer is not obliged to go looking for it. `RELEASE.md`
+now prints, beside each skip, the CI job that covers it or the words NOT COVERED
+-- generated from a table, never typed -- and `verify_docs.py` checks that each
+named job really exists in the workflow and really invokes that suite, so the
+sentence cannot outlive the lane.
+
+## v254 -- A control belongs where its OBJECT is, not where its neighbours are
+
+Flip's page bar held six controls. Five acted on a page; the sixth, "Move
+artwork", moved the DRAWING. It had sat there since v124 for one reason: it was
+added at the same time as the others, and a row already existed.
+
+Nothing about it fitted. It takes a drag on the canvas, it has a mode, it
+disables the strip while it runs, and it sits beside Select and Liquify in every
+respect except where it was filed. It is now a tool in the tool shelf, which
+cost a registry entry, a `setTool` branch, and one flagged ratchet edit in
+`verify_tray.py` -- the roster there is deliberately exact so that a change to
+what the product IS costs somebody a deliberate line.
+
+**⚑ OWNER, FLAGGED:** that ratchet now reads six tools for Flip. Read it as a
+control moving house, not as a new tool.
+
+One bug fell out of the move and is worth recording, because it is the shape
+these always take. `setTool` ended with `pad.style.cursor='none'` for the custom
+brush cursor -- unconditional, and correct for every tool that existed when it
+was written. Entering Artwork through `setTool` meant `setMoveMode` set the grab
+cursor and then, four lines later in the same function, the old line wiped it:
+the mode was live and the canvas did not say so. **Moving a feature into a
+shared code path subjects it to every unconditional line already in that path.**
+
+## v255 -- The badge was already drawn; it just was not a control
+
+The page bar's ×hold button cycled a value that the filmstrip was ALREADY
+displaying, on the tile it applied to. Two pieces of interface for one fact,
+and the one that was better positioned was the one you could not press.
+
+Making the badge the control removed the button. The only real design question
+was what to do at hold = 1, where the badge did not render at all -- which is
+why the button had to exist, since there was no way to START a hold from the
+strip. It renders always now, and CSS hides the ×1 state unless the tile is
+active, hovered or focused: exactly the rule the delete ✕ on the same tile
+already followed. One idea about when per-tile controls exist, instead of two.
+
+`focus-within` rather than `:hover` alone, because a control that appears only
+under a pointer is a control keyboard users do not have.
+
+The same reasoning retired the Paste button. A button in the add column could
+say WHAT but not WHERE -- "after the current page" was a rule you had to know.
+A dashed ghost tile standing in the gap the pages will fill says both at once,
+and disappears with the clipboard.
+
+## v256 -- Hover was spending the brand colour
+
+`.pb:hover` tinted 16% violet and pulled its border to the accent. So did
+`.addbtn:hover`. Six controls above a filmstrip, each lighting up in the one
+colour the design direction wants spent almost nowhere, so that POST reads as
+electricity.
+
+Hover means "this is live", and a neutral lift says that. The accent is kept for
+`:focus-visible`, where it is doing work no other signal does. The labels also
+moved from `--text-primary`/600 to `--text-secondary`/500: chrome around
+artwork should sit under it, and six full-contrast labels above a strip whose
+job is to show DRAWINGS read as six things demanding attention.
+
+Geometry was deliberately NOT touched -- 38px, 9px radius, and the invisible
+44pt tap expander all stay. `.pb` is "labelled pill = named action" in the
+documented shape language (DECISIONS #5) and its radius is not a tone question.
+
+## v257 -- A refactor that moves the boundary is not a refactor
+
+Flip's stylesheet carried eight `max-width` rules -- 359, 360, 392, 400, 440,
+559, 560, 640 -- and styles.css had its own set. Not a responsive design: eight
+patches, each correct on the day it was written, none of them agreeing about
+where "small" begins. The measured cost is in this project's own review notes:
+one pixel of resize takes Pad's toolbar from 398px to 565px, and 560-640px gets
+the phone layout on a viewport with room to spare.
+
+`lib/sizeclass.js` is the one decision those rules migrate onto. **What is worth
+recording is the mistake made building it.**
+
+The first version measured the ROOT ELEMENT rather than the viewport, on a good
+argument: what every one of those rules actually wants to know is whether THIS
+app has room, and Skribl is a blueprint a host mounts, possibly beside its own
+chrome. But `getBoundingClientRect()` excludes the scrollbar, so a 641px viewport
+measured ~626 and classified COMPACT where the media query it replaced said
+regular. **The boundary moved by fifteen pixels inside a change announced as a
+no-op.** The suite caught it because the no-op claim was the thing it was
+pointed at hardest -- an assertion at 640 and another at 641, either side of one
+pixel.
+
+It measures `window.innerWidth` now, which is what the CSS `width` feature uses,
+scrollbar included. Container-awareness is still the better long-run answer and
+is recorded in the file as a BEHAVIOUR CHANGE to be taken deliberately once the
+rules have moved, with the layout suite re-measured -- not slipped in on the way
+past.
+
+The general form, and this session has now produced it twice in two different
+disguises: **when a change is sold as structural, the assertion that earns its
+keep is the one that would fail if it were not.** Everything else in that suite
+would have passed with the boundary in the wrong place.
+
+## v258 -- Say what did NOT move
+
+`verify_sizeclass.py` asserts that fourteen `max-width` queries REMAIN in
+flip.css. That looks like an odd thing to test until you ask what the suite is
+for: this step was announced as "replace the eight breakpoints" and delivered as
+"add the class and migrate one as proof". Those are different sizes of work, and
+the difference is exactly the kind that gets quietly forgotten between sessions.
+
+An assertion that names the remaining work makes the narrowing permanent and
+visible instead of conversational. It will fail, deliberately, when someone
+finishes the migration -- and finishing it should cost a deliberate edit here,
+the same way `verify_tray`'s exact tool roster does.
+
+## v259 -- The host column is the case that decides how "small" is measured
+
+**⚑ OWNER INPUT, and it reversed a decision made one release earlier.** The
+social site reserves a COLUMN for Pad and Flip -- **around 510px, to be
+confirmed by the owner.**
+
+v257 chose to measure `window.innerWidth`, because the claim being made at the
+time was that migrating a rule off `max-width: 640px` onto a size class was a
+no-op, and innerWidth is what the CSS `width` feature uses. That was right for
+that claim. It is wrong for the product.
+
+A 510px column inside a 1400px window measures 1400 by the viewport and 510 by
+the element. Viewport measurement therefore classifies the app REGULAR and lays
+a persistent command row into a space that cannot hold one -- wrong in the
+primary embedding, and wrong in the direction that breaks the layout rather than
+the direction that wastes space. It measures the element now.
+
+What that costs is asserted rather than discovered: `getBoundingClientRect()`
+excludes the scrollbar, so a standalone window between about 641 and 655 now
+classifies compact where a media query would say regular. Inside that band the
+one migrated rule and the fourteen unmigrated queries disagree. **That is an
+argument for finishing the migration, not for measuring the wrong thing in the
+meantime.**
+
+**STILL TO DISCUSS, once the owner confirms the number.** If the column really
+is ~510px then Skribl inside the host is ALWAYS compact and never sees the
+regular surface at all -- the persistent command row would exist only in the
+standalone app. Two things follow, and both are the owner's call:
+
+  * **Is 640 the right threshold for a column?** It was inherited from the
+    existing breakpoints, which were written about phone viewports. A column has
+    different arithmetic: no browser chrome, no address bar, and a known width.
+  * **Is a second breakpoint worth having between 510 and 640?** A ~510 column
+    is not a phone. It has a mouse, hover, and a keyboard, and it can afford
+    controls a 360px phone cannot even if it cannot afford the full row. The
+    compact/regular pair may want to become compact/column/regular -- which is
+    a real design question and should not be answered by whoever next touches
+    a stylesheet.
+
+Nothing here should be built until the width is confirmed. `SkriblSize.COMPACT_MAX`
+is one constant in one file precisely so that changing the answer is one edit.
+
+## v260 -- Stage 4 shipped because its condition was met, not because it looked good
+
+The compact surface drops the page bar for a ⋯ on the active tile. The design
+note set one gate on this and it was not visual: **every operation must stay
+reachable and announced**, because a filmstrip you can only operate by dragging
+is a filmstrip some people cannot operate at all.
+
+So the trigger is a real button with `aria-haspopup` on a tile in the tab order,
+opening a `role="menu"` of real buttons; focus moves in on open, arrows walk it,
+Escape returns focus to the trigger, and the items are no smaller than the `.pb`
+buttons they replace. Each of those is an assertion, not a description. There is
+also one proving the REGULAR surface was untouched -- **a change scoped to one
+surface is only correct if it left the other alone**, and nothing else would
+have caught it if stage 4 had quietly hidden the desktop row too.
+
+The visible scope goes in `aria-label`, not `title`: `lib/tooltip.js` adopts
+every `[title]` into `data-tip` and REMOVES the attribute so a styled tooltip can
+replace the native one. A screen reader hears "Move these 3 pages left" while
+the menu still reads "Move left".
+
+## v261 -- Removing a surface makes the rules that styled it unreachable
+
+Stage 4 hides the page bar on compact. Compact is every width at or below 640 --
+which is every width the `.pb-tx` label-hiding rules applied to. **The bar is
+therefore never icon-only any more, and those rules are dead.**
+
+verify_hold had a whole section built on that premise: it ran at a 390px
+viewport precisely because the labels were hidden there. After stage 4 that
+section measured a bar inside a `display:none` ancestor, and `querySelector`
+finds hidden markup perfectly well -- so most of its assertions kept PASSING,
+vacuously, and only the one that asked about LAYOUT (`offsetParent`) noticed
+anything had changed.
+
+That is the failure mode this project keeps meeting from new angles: a test that
+reads structure passes forever after the structure stops being rendered. The
+section runs at a regular width now, asserts the compact half explicitly, and
+says in a comment that the premise inverted rather than quietly reversing it.
+
+The dead CSS is FLAGGED, not removed -- it goes with the rest of the breakpoint
+migration, not piecemeal.
+
+## v262 -- Removing a surface silently retires the assertions about it
+
+Stage 4 hid the page bar on compact. Three suites then had assertions that no
+longer meant anything, and only ONE of them failed.
+
+`verify_tips` clicked `#pbLeft` at 390px and crashed on an invisible element --
+loud, obvious, fixed in a minute. `verify_hold` measured the bar's glyphs at
+390px and mostly kept PASSING, because `querySelector` finds hidden markup
+perfectly well; only its one `offsetParent` assertion noticed. And `verify_move`
+asserted at 393px that entering move mode "replaces the page bar, not adds to
+it" -- which stayed green while proving nothing, because the bar was already
+`display:none` before the mode started.
+
+That last one is the sharpest version. Its own comment, four lines above, warns
+that the assertion had previously passed for four versions against a visibly
+broken surface "because it asked the DOM what it had been told, not what it
+drew". It was rewritten to measure layout. **Measuring layout was not enough**:
+once the element is unconditionally hidden, a layout assertion about it is
+vacuous too. The claim needed a width where the bar exists, so it now has its
+own page at 1100px, and the 393px section asserts the thing that is meaningful
+there -- that the move bar appeared.
+
+**The rule this arc adds: when a surface stops rendering, grep for every suite
+that names it.** Not for the ones that fail -- the failures find themselves. For
+the ones that keep passing.
+
+Practically: `grep` the suites for the ids of anything removed, cross-referenced
+against the viewport widths each file uses. Three suites named page-bar ids at
+compact widths here; one crashed and two went quiet.
+
+## v263 -- Adding a prefix to a selector is a specificity change first
+
+Finishing the size-class migration meant putting `[data-size="compact"]` in
+front of rules that already existed. That reads like a scoping change. It is
+first of all a **specificity** change: `.flip-tools` is (0,1,0) and
+`[data-size="compact"] .flip-tools` is (0,2,0), and every rule the original lost
+to, the prefixed one now beats.
+
+`flip.css` is exactly the file where that matters, and it knew it. Its own
+comment at the max-640 block reads: *"This block is LATER IN THE FILE than the
+max-560 and max-392 tiers above at equal specificity, so it wins on source order
+-- which is why the row's phone gap, padding and group margins are declared here
+and not up there with the widths. Moving them loses them silently; that is
+exactly how the old max-380 tier's gap came to be dead code."*
+
+So the ladder is held together by source order among rules that are all
+(0,1,0). Prefixing the boundary rules lifts them out of that contest and they
+win at every width. **Measured, not reasoned: the 320px tier's gap went 2px ->
+3px** -- a phone regression, inside a change whose entire claim was "no-op".
+
+The fix is `:where()`, which contributes zero specificity, so source order still
+decides. The mutation is in `verify_sizeclass`: strip the `:where` and the 320px
+assertion fails. That mutation is the point -- without it the `:where` looks
+like a stylistic tic and the next person deletes it.
+
+**The general rule: before prefixing an existing selector, ask what it currently
+LOSES to.** If the answer is "rules at equal specificity, decided by order",
+a prefix is a rewrite of the cascade and `:where()` is how you avoid it.
+
+## v264 -- A progress counter is not an invariant
+
+`verify_sizeclass` asserted `left > 0`: some `max-width` queries still exist.
+The comment beside it was honest about why -- asserting their absence would fail
+for the honest reason that the migration was incremental.
+
+It was still the wrong assertion, and it stayed green through a real defect. It
+is equally true of a migration 1/8 done and 7/8 done, so it measures **how far
+along** the work is, and nobody was in doubt about that. What it could not see
+is whether the queries left behind **disagreed** with the class -- and they did.
+The class measured the element, the queries measured the viewport, and from 641
+to 660 viewport px the page bar was hidden while the tool row kept its 44px
+desktop sizing: the compact surface wearing the regular toolbar, shipped in
+v227, with a passing suite.
+
+The replacement is structural rather than a count: **no width query may sit at
+or above `COMPACT_MAX`.** A query below the boundary can only refine the layout
+inside compact; it cannot reach the edge to contradict the class. That holds at
+1/8 done and at 8/8, it does not need editing as work proceeds, and it is false
+exactly when the defect is present.
+
+**The rule: when a migration is incremental, assert the INVARIANT that survives
+every intermediate state, not the progress through them.** "Some remain" is a
+status line. "None of the remainder can contradict the decision" is a test.

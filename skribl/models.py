@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 
 from flask import current_app
 
+from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS
 from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         ForeignKey, ForeignKeyConstraint, Index, Integer, JSON,
                         String)
@@ -60,14 +61,39 @@ class RateEvent(SkriblBase):
     limiting does not need to know who anyone is, and storing addresses in a
     posts database is a privacy cost with no operational benefit.
 
-    Concurrency: a slot is INSERTed and committed first, then counted. Racing
-    workers therefore both see both rows and the loser deletes its own, which
-    biases towards over-rejection. **This is insert-then-count, not a database
-    constraint** — there is no row lock or advisory lock enforcing "at most N
-    active slots", and the exact behaviour under PostgreSQL depends on commit
-    order and isolation. Verified under SQLite and threads; NOT yet verified on
-    PostgreSQL across processes. Treat the guarantee as "biased safe", not proven.
-    (Review round 7, #5)
+    Concurrency: reservation is insert-then-count, which is NOT a database
+    constraint — no unique index or CHECK enforces "at most N active slots".
+    What makes it correct on PostgreSQL is a TRANSACTION-SCOPED ADVISORY LOCK
+    keyed on the client identity (`pg_advisory_xact_lock`, see
+    ratelimit._rate_reserve_post): requests sharing an identity serialise, so
+    the count each one runs is taken with no other reservation for that identity
+    in flight, while unrelated posters never contend. It releases on commit or
+    rollback, including if the process dies mid-request. On SQLite it is a no-op
+    because writes are already serialised by the single-writer lock.
+
+    Without it the failure was not over-admission but the opposite: twelve
+    concurrent posts against a quota of two all inserted before any count ran,
+    every request saw 12 > 2, every request withdrew, and ZERO were admitted.
+    SQLite hid that completely. (Review round 7, #5)
+
+    VERIFIED ON POSTGRESQL ACROSS PROCESSES since v211 — `verify_postgres.py`
+    runs four real gunicorn WORKER PROCESSES against live PostgreSQL, releases
+    twelve requests through a barrier against a quota of two, and asserts both
+    no over-admission (exactly two post rows) and no under-admission (the quota
+    was actually used), with worker PIDs compared before and after so a respawn
+    cannot mask the result. It holds for THAT configuration only — one
+    PostgreSQL version, default isolation, gunicorn's default worker model, one
+    burst, no induced failures — and the suite prints that scope itself.
+
+    This docstring used to end "Verified under SQLite and threads; NOT yet
+    verified on PostgreSQL across processes", and used to deny that any advisory
+    lock existed — both written before the fix above and never revisited. An
+    outside reviewer of the v224 archive read them, took them at face value, and
+    filed a MEDIUM finding asking for a test that already existed, against a
+    mechanism described as weaker than it is. Stale prose does not just mislead
+    a reader — it spends a reviewer's attention on work already done, and it
+    understated a security-relevant guarantee. `verify_docs.py` now gates this
+    claim against the assertion that proves it, and scans this file to do it.
 
     Crash window (CLOSED in v122): the slot is still written before the post row,
     but as state='pending'. Pending rows only count while they are younger than
@@ -138,6 +164,156 @@ def set_visibility_policy(fn, app=None):
     _VISIBILITY_POLICY = fn
 
 
+#: Extra visibility states a host has taught this application about. The model
+#: deliberately has no DB CHECK constraint so a host can add "draft",
+#: "moderated" or "scheduled" without a Skribl migration — but until v224 the
+#: CREATE API rejected anything outside VISIBILITIES, so the documented
+#: extensibility only worked for rows the host wrote itself. Outside review #7
+#: called that contradiction, correctly. This is the seam that resolves it.
+_EXTRA_VISIBILITIES = ()
+
+
+def set_visibility_values(values, app=None):
+    """Widen the set of visibility strings POST /api/skribls will accept.
+
+    Same app-local shape as set_visibility_policy: with `app`, only that
+    application sees them. Skribl's own three are always accepted and cannot be
+    removed — narrowing the built-ins would change what an existing payload
+    means, which is not an extension.
+
+    A host adding a state is also taking on what it MEANS: visible_to() decides
+    reads through the visibility policy, and the built-in feed lists only
+    "public". A custom state is invisible to the feed unless the host also
+    installs a feed filter (see set_feed_filter).
+    """
+    vals = tuple(str(v) for v in (values or ()))
+    for v in vals:
+        # 16 because that is String(16) on SkriblPost.visibility. A longer
+        # value would be accepted here and then truncated or rejected by the
+        # database at INSERT — a configuration error surfacing as a 500 on
+        # somebody's first post rather than at the line that made it.
+        if not v or len(v) > 16:
+            raise ValueError(
+                f"visibility value {v!r} must be 1-16 characters — the column "
+                "holding it is String(16)")
+    if app is not None:
+        app.extensions.setdefault("skribl", {})["visibility_values"] = vals
+        return
+    global _EXTRA_VISIBILITIES
+    _EXTRA_VISIBILITIES = vals
+
+
+def visibility_values():
+    """Every visibility string this application accepts on create."""
+    extra = _EXTRA_VISIBILITIES
+    try:
+        from flask import current_app
+        local = current_app.extensions.get("skribl", {}).get(
+            "visibility_values", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            extra = local
+    except (ImportError, RuntimeError):
+        pass
+    return tuple(SkriblPost.VISIBILITIES) + tuple(extra or ())
+
+
+#: A host-supplied SQL predicate for the FEED, applied inside the query.
+_FEED_FILTER = None
+
+
+def set_feed_filter(fn, app=None):
+    """Install `fn(query, viewer_id) -> query` for GET /api/skribls.
+
+    WHY THIS EXISTS AND WHY IT IS SQL. visible_to() — and through it the host's
+    visibility policy — guards the payload endpoint, the player page, the share
+    card and the media endpoint. It did NOT guard the feed, which filtered on
+    the visibility COLUMN alone. A host policy that denies a viewer therefore
+    still disclosed the post's existence, title, caption, author id, timestamp
+    and public id through the listing (outside review #3).
+
+    The fix cannot be "run the policy over the rows we fetched": the feed is
+    keyset-paginated, so dropping rows after the fact returns short pages,
+    makes `next_cursor` describe a row the viewer never saw, and turns "no
+    results" into an ambiguity between "end of feed" and "everything on this
+    page was denied". Authorization that pages correctly has to be part of the
+    query. The host contributes a predicate; Skribl composes it.
+
+    The callable receives the SQLAlchemy query with Skribl's own visibility
+    filter already applied, and must return a query. Raising is not caught:
+    a broken feed filter should fail loudly, not fall back to showing
+    everything.
+    """
+    if fn is not None and not callable(fn):
+        raise TypeError("feed filter must be callable or None")
+    if app is not None:
+        app.extensions.setdefault("skribl", {})["feed_filter"] = fn
+        return
+    global _FEED_FILTER
+    _FEED_FILTER = fn
+
+
+def feed_filter():
+    try:
+        from flask import current_app
+        local = current_app.extensions.get("skribl", {}).get(
+            "feed_filter", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            return local
+    except (ImportError, RuntimeError):
+        pass
+    return _FEED_FILTER
+
+
+#: A host-supplied author serialiser. Skribl knows a user_id and nothing else.
+_AUTHOR_RESOLVER = None
+
+
+def set_author_resolver(fn, app=None):
+    """Install `fn(user_id) -> dict` to describe a post's author.
+
+    The API used to return {"id": <real id>, "username": "demo-user"} for every
+    post in every deployment (outside review #8) — a literal left from the demo,
+    contradicting the real id beside it. Skribl has no user table and cannot
+    invent a name, so the honest default is to return the id alone and let the
+    host add what it knows.
+
+    `id` IS NOT OVERRIDABLE. Whatever the resolver returns, the id in the
+    response stays the user_id Skribl stored on the post. It is the value the
+    host's own visibility policy is handed and the value it wrote; letting a
+    display-name lookup silently change it would make the identifier in the
+    response mean something different from the identifier the authorization
+    decisions used. A host that wants to publish a different handle adds its
+    own key for it.
+    """
+    if fn is not None and not callable(fn):
+        raise TypeError("author resolver must be callable or None")
+    if app is not None:
+        app.extensions.setdefault("skribl", {})["author_resolver"] = fn
+        return
+    global _AUTHOR_RESOLVER
+    _AUTHOR_RESOLVER = fn
+
+
+def author_dict(user_id):
+    """{"id": ...} plus whatever the host's resolver adds."""
+    fn = _AUTHOR_RESOLVER
+    try:
+        from flask import current_app
+        local = current_app.extensions.get("skribl", {}).get(
+            "author_resolver", _POLICY_UNSET)
+        if local is not _POLICY_UNSET:
+            fn = local
+    except (ImportError, RuntimeError):
+        pass
+    out = {"id": user_id}
+    if fn is not None:
+        extra = fn(user_id)
+        if isinstance(extra, dict):
+            out.update(extra)
+            out["id"] = user_id      # authoritative — see the docstring
+    return out
+
+
 def _visibility_policy():
     try:
         from flask import current_app
@@ -155,8 +331,10 @@ class SkriblPost(SkriblBase):
     id = Column(Integer, primary_key=True)
     public_id = Column(String(32), unique=True, nullable=False, index=True)
     user_id = Column(Integer, nullable=True)
-    title = Column(String(80), nullable=False)
-    caption = Column(String(300), nullable=True)
+    # Widths come from core so the API check, the editors' maxlength and the
+    # column cannot drift apart again — see the note there.
+    title = Column(String(MAX_TITLE_CHARS), nullable=False)
+    caption = Column(String(MAX_CAPTION_CHARS), nullable=True)
     payload_json = Column(JSON, nullable=False)
     has_audio = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True),

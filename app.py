@@ -26,20 +26,90 @@ from skribl.core import _env_int
 db = SQLAlchemy()
 
 
+# Markers that say "this is not somebody's laptop". Detection used to be
+# `RENDER` or `FLASK_ENV=production` — two names for one platform and one
+# convention — so a deployment on Fly, Heroku, Cloud Run, App Service, ECS or a
+# plain gunicorn on a VM silently got an EPHEMERAL SECRET_KEY, different in
+# every worker. Nothing announces that; it shows up as sessions that drop,
+# CSRF tokens rejected by the worker that did not mint them, and a rate limiter
+# whose identity HMAC differs per process. (Outside review, low severity.)
+#
+# The detection is deliberately POSITIVE — it looks for evidence of a
+# deployment rather than for evidence of a laptop. A missing marker therefore
+# still gets the permissive dev path, which is what keeps `python -c "from app
+# import app"` and one-off scripts working. Adding a marker tightens; it never
+# loosens.
+_PLATFORM_MARKERS = (
+    "RENDER",                       # Render
+    "DYNO",                         # Heroku
+    "FLY_APP_NAME",                 # Fly.io
+    "K_SERVICE",                    # Google Cloud Run
+    "WEBSITE_SITE_NAME",            # Azure App Service
+    "KUBERNETES_SERVICE_HOST",      # any Kubernetes pod
+    "ECS_CONTAINER_METADATA_URI",   # AWS ECS
+    "ECS_CONTAINER_METADATA_URI_V4",
+    "AWS_EXECUTION_ENV",            # AWS Lambda / Fargate
+)
+
+#: Application servers that mean "more than one worker is plausible". The
+#: Werkzeug dev server is deliberately absent: it is the one that means the
+#: opposite. The ASGI names are here because this app is reachable through an
+#: adapter, and a deployment that bothered with one is not a laptop.
+_APP_SERVERS = ("gunicorn", "uwsgi", "waitress", "mod_wsgi", "hypercorn",
+                "uvicorn")
+
+
+def _looks_like_production():
+    if os.environ.get("SKRIBL_ALLOW_EPHEMERAL_SECRET") == "1":
+        return False                        # deliberate single-process opt-out
+    if os.environ.get("SKRIBL_ENV", "").strip().lower() == "production":
+        return True
+    if os.environ.get("FLASK_ENV", "").strip().lower() == "production":
+        return True
+    if any(os.environ.get(name) for name in _PLATFORM_MARKERS):
+        return True
+    # gunicorn and uWSGI both advertise themselves here, and both have already
+    # imported this module by the time create_app() runs under them.
+    software = os.environ.get("SERVER_SOFTWARE", "").lower()
+    if any(name in software for name in _APP_SERVERS):
+        return True
+    import sys
+    return any(name in sys.modules for name in ("gunicorn", "uwsgi"))
+
+
 def create_app():
     app = Flask(__name__)
 
-    # SECRET_KEY: never fall back to a shared, guessable constant. Require it in
-    # production (Render sets RENDER=true); in local/dev generate a strong random
-    # per-process key so `flask run` still works without configuration.
+    # SECRET_KEY: never fall back to a shared, guessable constant. Require it
+    # wherever this looks like a real deployment; in local/dev generate a strong
+    # random per-process key so `flask run` still works without configuration.
     import secrets
     secret_key = os.environ.get("SECRET_KEY")
     if not secret_key:
-        in_production = bool(os.environ.get("RENDER")) or os.environ.get("FLASK_ENV") == "production"
-        if in_production:
-            raise RuntimeError("SECRET_KEY must be set in production.")
+        if _looks_like_production():
+            raise RuntimeError(
+                "SECRET_KEY must be set in production. This process looks like "
+                "a real deployment (see _looks_like_production), and an "
+                "ephemeral per-process key breaks anything that must agree "
+                "between workers: Flask sessions, the CSRF double-submit token, "
+                "and the rate limiter's identity HMAC. Set SECRET_KEY, or set "
+                "SKRIBL_ALLOW_EPHEMERAL_SECRET=1 if this really is a "
+                "single-process throwaway.")
         secret_key = secrets.token_urlsafe(32)
     app.config["SECRET_KEY"] = secret_key
+
+    # RATE LIMITER: the library defaults to the in-memory backend, which is
+    # per-PROCESS. Behind two gunicorn workers that is two independent limiters
+    # granting twice the configured budget, and it resets on every deploy. The
+    # library keeps that default because it is right for a single-process
+    # unauthenticated dev run and changing it would alter existing deployments;
+    # choosing for a DEPLOYMENT is the host's job, and this is the host.
+    #
+    # So: where this looks like production and the operator has not chosen, pick
+    # the durable shared backend. An explicit SKRIBL_RATE_BACKEND always wins,
+    # including an explicit "memory". (Outside review, low severity.)
+    if _looks_like_production() and not os.environ.get("SKRIBL_RATE_BACKEND"):
+        app.config["SKRIBL_RATE_BACKEND"] = "db"
 
     database_url = os.environ.get("DATABASE_URL", "sqlite:///skribl_demo.db")
 

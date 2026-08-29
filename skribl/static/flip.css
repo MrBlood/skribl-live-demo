@@ -62,9 +62,13 @@
      overlap behaviour the shared rule protects is unchanged, and flex-shrink
      is left exactly as it was. Scoped to .flip-app so Pad keeps the shared
      rule until Pad has been looked at. */
-  @media (max-width: 640px) {
-    .flip-app .header .actions { margin-left: auto; }
-  }
+  /* MIGRATED to the size class (v226, stage 3). Identical boundary — the class
+     is defined at the same 640px this query used — so this is a no-op in
+     behaviour and a real change in structure: the app now asks ONE question
+     about its own width instead of each rule asking the window separately.
+     lib/sizeclass.js has the argument; the remaining max-width rules in this
+     file migrate the same way, one at a time, with verify_layout as the net. */
+  .flip-app[data-size="compact"] .header .actions { margin-left: auto; }
 
   /* .seg / .seg button / .seg button.on MOVED to styles.css. They lived here,
      and Pad does not load flip.css — so when Pad gained a .seg canvas picker
@@ -138,10 +142,8 @@
      from 641px the WRAP pulses so the ring follows the whole "Stop · 4.4s" pill
      instead of drawing an oval around half of it. */
   .btn.flip-play.playing { animation: playGlow 1.8s ease-in-out infinite; }
-  @media (min-width: 641px) {
-    .flip-play-wrap:has(.btn.flip-play.playing) { animation: playGlow 1.8s ease-in-out infinite; }
-    .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { animation: none; }
-  }
+  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) { animation: playGlow 1.8s ease-in-out infinite; }
+  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { animation: none; }
   /* Reduced motion: keep the accent tint, drop the pulse. */
   @media (prefers-reduced-motion: reduce) {
     .btn.flip-play.playing,
@@ -294,14 +296,16 @@
      dense header on one line down to ~330px — is left completely untouched, i.e.
      no wrap regression. The color swatch keeps its own size (distinct round-
      swatch design, not the Pad's chip-in-square). */
-  @media (min-width: 641px) {
-    .flip-actions .seg, .flip-actions .grid-tool,
-    .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; }
-    .grid-tool, #moreBtn { width: 36px; height: 36px; }
-    .flip-tools .tool-open, .flip-tools .t-btn { width: 44px; height: 44px; }
-    .flip-tools .t-btn { --tap-grow: 0px; }
-    .flip-tools { --seg-row-h: 44px; }
-  }
+  :where(body[data-size="regular"]) .flip-actions .seg,
+  :where(body[data-size="regular"]) .flip-actions .grid-tool,
+  :where(body[data-size="regular"]) .flip-actions .btn.flip-play,
+  :where(body[data-size="regular"]) .flip-actions .btn.post { height: 36px; }
+  :where(body[data-size="regular"]) .grid-tool,
+  :where(body[data-size="regular"]) #moreBtn { width: 36px; height: 36px; }
+  :where(body[data-size="regular"]) .flip-tools .tool-open,
+  :where(body[data-size="regular"]) .flip-tools .t-btn { width: 44px; height: 44px; }
+  :where(body[data-size="regular"]) .flip-tools .t-btn { --tap-grow: 0px; }
+  :where(body[data-size="regular"]) .flip-tools { --seg-row-h: 44px; }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(var(--glass-base-rgb), .55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
@@ -329,20 +333,19 @@
   /* 640, not 560: Pad steps down at 640 and the two rows step together now.
      Through 561-640 Flip kept 40px buttons against Pad's 36 and stood 4px
      taller for it. */
-  @media (max-width: 640px) {
-    .flip-tools { gap: 3px; padding: 6px; flex-wrap: wrap; justify-content: center; }
-    .flip-tools .tool-open { width: 36px; height: 36px; --tap-grow: 4px; }   /* square when lit; 44 tap */
-    .flip-tools .t-btn { width: 36px; height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
-    .flip-tools { --seg-row-h: 44px; }
-    .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
-    /* The status dot is a badge on the GLYPH, and the glyph just got smaller.
-       --icon-size is what .tool-open .tab-dot measures from, so it has to step
-       here too or the dot lands outside the corner it is meant to straddle. */
-    .flip-tools .tool-open { --icon-size: 21px; }
-    .flip-tools .tool-btn-label { display: none; }
-    .flip-tools .tool-btn { padding: 6px 10px; }
-    .color-current { width: 34px; height: 34px; }
-  }
+  :where(body[data-size="compact"]) .flip-tools { gap: 3px; padding: 6px; flex-wrap: wrap; justify-content: center; }
+  :where(body[data-size="compact"]) .flip-tools .tool-open { width: 36px; height: 36px; --tap-grow: 4px; }/* square when lit; 44 tap */
+  :where(body[data-size="compact"]) .flip-tools .t-btn { width: 36px; height: 36px; --tap-grow: 4px; }/* 36 visual -> 44 tap */
+  :where(body[data-size="compact"]) .flip-tools { --seg-row-h: 44px; }
+  :where(body[data-size="compact"]) .flip-tools .magnify-tool svg,
+  :where(body[data-size="compact"]) .flip-tools .tool-open svg { width: 21px; height: 21px; }
+  /* The status dot is a badge on the GLYPH, and the glyph just got smaller.
+     --icon-size is what .tool-open .tab-dot measures from, so it has to step
+     here too or the dot lands outside the corner it is meant to straddle. */
+  :where(body[data-size="compact"]) .flip-tools .tool-open { --icon-size: 21px; }
+  :where(body[data-size="compact"]) .flip-tools .tool-btn-label { display: none; }
+  :where(body[data-size="compact"]) .flip-tools .tool-btn { padding: 6px 10px; }
+  :where(body[data-size="compact"]) .color-current { width: 34px; height: 34px; }
   /* 392, not 380, and the numbers are Pad's: this is the tier where Pad drops to
      34px, and the two rows are meant to step together. The old block set gap and
      padding here too and they NEVER APPLIED — the max-640 block further down
@@ -373,10 +376,62 @@
     content: ''; position: absolute; inset: 0; pointer-events: none;
     border-radius: 10px; background: var(--ui-active); opacity: .14;
   }
+  /* A RANGE OF PAGES reads as one stretch of film, not as N ticked items.
+     The run lifts together, shares a wash, and carries a strip of tape along
+     its bottom edge that is rounded only at the two OUTER ends — so the shape
+     of the selection is legible from the ends alone and nobody has to count
+     highlighted tiles. The leading tile's number becomes the range ("4–7"),
+     which is the one place DESIGN-DIRECTION reserves for a hand-set moment.
+
+     The 10px gaps are deliberately NOT bridged. `.frame` sets overflow:hidden
+     so a bridging element would be clipped anyway, and a contact sheet reads
+     as continuous across its gutters — the eye closes them. Faking a solid bar
+     would also mean the run stopped looking like separate frames, which is the
+     one thing the strip exists to show.
+
+     Distinct from .on (the page you are drawing on) and from .in-scope (a live
+     move's preview), because during a range operation two of the three can be
+     true of the same tile and they have to stay tellable apart. */
+  .frame.inspan { transform: translateY(-2px); border-color: var(--ui-line); }
+  .frame.inspan::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+    pointer-events: none; background: var(--ui-line);
+  }
+  .frame.inspan.span-first::after { border-top-left-radius: 2px; border-bottom-left-radius: 2px; left: 3px; }
+  .frame.inspan.span-last::after { border-top-right-radius: 2px; border-bottom-right-radius: 2px; right: 3px; }
+  .frame.inspan::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: var(--ui-active); opacity: .10;
+  }
+  /* The current page inside a run keeps its own ring, so "which page am I
+     drawing on" survives having a range selected. */
+  .frame.inspan.on { box-shadow: 0 0 0 1px var(--ui-line); }
+  .frame.inspan .num { color: var(--text-primary); }
+  /* The page readout picks up the same line colour while it is showing a range,
+     so the bar and the strip agree at a glance about what is selected. */
+  .pb-who.span { color: var(--text-primary); }
+  @media (prefers-reduced-motion: reduce) {
+    .frame.inspan { transform: none; }
+  }
   /* The strip stays VISIBLE during a move — it is what makes the move
      judgeable — but stops being operable. Dimming the add column signals that
      without hiding the thumbnails you are lining the drawing up against. */
   body.move-locked .addcol { opacity: .4; }
+  /* The paste ghost stands in the gap the pasted pages will fill. Dashed and
+     unfilled because it is not a page yet — the strip should read as "there is
+     room here", not as an empty frame somebody drew nothing on. */
+  .frame.ghost-paste {
+    border-style: dashed; border-color: var(--ui-line); background: transparent;
+    display: grid; place-items: center; gap: 0; padding: 0; cursor: pointer;
+    color: var(--ui-line); font-family: inherit;
+  }
+  .frame.ghost-paste:hover { background: rgba(var(--glass-deep-2-rgb), .35); }
+  .frame.ghost-paste:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 2px; }
+  .frame.ghost-paste .ghost-plus { font-size: 20px; font-weight: 600; line-height: 1; }
+  .frame.ghost-paste .ghost-n {
+    position: absolute; bottom: 5px; right: 6px; font-size: 10px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--text-secondary);
+  }
   .frame canvas { width: 100%; height: 100%; display: block; }
   /* Top-left, with the hold badge to its right — the ops bar owns the bottom. */
   .frame .num { position: absolute; top: 4px; left: 6px; font-size: 10px; font-weight: 700; color: var(--text-secondary);
@@ -400,7 +455,11 @@
   .addbtn { width: 88px; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--text-secondary);
     border-radius: 10px; padding: 8px 0; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-  .addbtn:hover { color: var(--text-primary); border-color: var(--ui-line); background: rgba(124,92,255,.06); }
+  /* Same tone pass as .pb: a neutral lift rather than an accent tint, so the
+     two rows around the strip agree about how loud chrome is allowed to be. */
+  .addbtn:hover { color: var(--text-primary); border-color: var(--hairline-strong);
+    background: rgba(var(--wash-rgb), .05); }
+  .addbtn:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
   /* In the row the buttons share the width instead of each claiming 88px, so
      they stay on one line down to ~360px and wrap to two below that rather
@@ -434,7 +493,62 @@
   .frame .del.armed { display: flex; color: var(--danger); background: rgba(244,50,111,.2); }
   /* Touch has no hover: always show delete on the SELECTED frame. */
   .frame.on .del { display: flex; }
+  /* ---- compact page actions (v227, stage 4) --------------------------------
+     On the compact surface the persistent page bar is gone and the active tile
+     carries a ⋯ instead. Same visibility rule as the ✕ beside it — the tile you
+     are on, or the one you are pointing at — so the strip has one idea about
+     when per-tile controls exist. focus-within, so it is reachable without a
+     pointer, which is the condition this whole stage waited on. */
+  .frame .pageops {
+    position: absolute; bottom: 3px; left: 4px; z-index: 2;
+    width: 24px; height: 20px; border-radius: 5px; border: 0; padding: 0;
+    background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary);
+    display: none; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .frame .pageops svg { width: 15px; height: 15px; }
+  .frame:hover .pageops,
+  .frame.on .pageops,
+  .frame:focus-within .pageops { display: flex; }
+  .frame .pageops:hover { color: var(--text-primary); }
+  .frame .pageops:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
+  /* The row itself is what stage 4 removes. Only on compact — the regular
+     surface keeps it permanently, which was the owner's correction to the
+     design note and is the whole reason this rule is scoped rather than global. */
+  .flip-app[data-size="compact"] #pagebar { display: none; }
+  /* The idle (×1) badge follows the same rule as the ✕ above. focus-within so
+     it is reachable by keyboard, which a hover-only control never is. */
+  .frame .holdbadge.idle { display: none; }
+  .frame:hover .holdbadge.idle,
+  .frame.on .holdbadge.idle,
+  .frame:focus-within .holdbadge.idle { display: block; }
+  .frame .holdbadge.idle { background: rgba(var(--glass-deep-2-rgb), .82); color: var(--text-secondary); }
+  .frame .holdbadge:hover { filter: brightness(1.12); }
+  .frame .holdbadge:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
   .btn.flip-play:disabled { opacity: .38; cursor: default; box-shadow: none; }
+  /* The menu the ⋯ opens. Fixed rather than absolute so it escapes the strip's
+     own overflow — a popover clipped by the scroller it belongs to is a popover
+     you cannot read on the last tile. */
+  .pageops-menu {
+    position: fixed; z-index: 80; min-width: 168px; padding: 5px;
+    display: flex; flex-direction: column; gap: 2px;
+    background: var(--surface-raised); border: 1px solid var(--hairline-strong);
+    border-radius: 11px; box-shadow: 0 10px 28px rgba(0, 0, 0, .42);
+  }
+  .pageops-item {
+    appearance: none; -webkit-appearance: none;
+    border: 0; background: transparent; color: var(--text-secondary);
+    font: inherit; font-size: 13px; font-weight: 500; text-align: left;
+    padding: 9px 11px; border-radius: 7px; cursor: pointer;
+    /* 38px like .pb, so the compact surface is not a smaller target than the
+       one it replaces. */
+    min-height: 38px;
+  }
+  .pageops-item:hover:not(:disabled) { background: rgba(var(--wash-rgb), .07); color: var(--text-primary); }
+  .pageops-item:focus-visible { outline: 2px solid var(--ui-line); outline-offset: -2px; }
+  .pageops-item:disabled { opacity: .35; cursor: default; }
+  .pageops-item.danger { color: var(--danger-soft); }
+  .pageops-item.danger:hover:not(:disabled) { color: var(--danger-soft-2); background: rgba(244, 50, 111, .12); }
+
   /* Small transient chip for "Draft restored". */
   .flip-chip { position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30;
     background: rgba(var(--glass-deep-2-rgb), .85); border: 1px solid var(--hairline-strong); color: var(--text-secondary);
@@ -446,12 +560,10 @@
      Two circle toggles + fps + Flip-it + back + info + wordmark is a lot for a
      phone, so tiers shed width progressively. */
   /* Wordmark: FLIP MODE only with real room, else FLIP, else FM. */
-  @media (max-width: 640px) {
-    /* Full size kept. The 15px shrink belonged to the header that also held
-       fps, onion, grid and draw-on inline; measured now, 17px overflows by
-       ZERO at 360, 375, 393 and 430, so the phone was reading thinner than the
-       desktop for no remaining reason. */
-  }
+  /* Full size kept. The 15px shrink belonged to the header that also held
+  fps, onion, grid and draw-on inline; measured now, 17px overflows by
+  ZERO at 360, 375, 393 and 430, so the phone was reading thinner than the
+  desktop for no remaining reason. */
   /* Mobile chrome: Flip-it AND Post collapse to their icons; tighter header. */
   @media (max-width: 560px) {
     .flip-play span, .btn.post .btn-label { display: none; }
@@ -578,6 +690,21 @@
   margin-right: 2px;
 }
 
+/* v226 TONE PASS. Geometry is untouched — 38px tall, 9px radius, and the
+   invisible 44pt ::before tap expander declared in styles.css all stay, because
+   `.pb` is "labelled pill = named action" in the documented shape language and
+   its radius is not mine to reinterpret. What changed is how loudly it speaks.
+
+   THE LABEL IS SECONDARY, NOT PRIMARY. Six controls at full-contrast weight 600
+   read as six things demanding attention above a strip whose job is to show
+   DRAWINGS. Chrome around artwork should sit under it. The glyph and the label
+   carry the same weight as each other now, and neither competes with the page.
+
+   AND HOVER NO LONGER SPENDS THE ACCENT. It used to tint 16% violet and pull
+   the border to --ui-line, which is the brand colour — the direction counts 88
+   uses of that accent and wants ONE, spent almost nowhere, so that POST reads
+   as electricity. A neutral lift says "this is live" without spending it. The
+   accent is kept for :focus-visible, where it is doing real work. */
 .pb {
   flex: 0 0 auto;
   height: 38px;
@@ -590,22 +717,31 @@
   border: 1px solid var(--hairline-strong);
   border-radius: 9px;
   background: rgba(var(--surface-sheet-rgb), 0.9);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .pb .pb-ic { font-size: 13px; line-height: 1; }
-.pb:hover:not(:disabled) { background: rgba(124, 92, 255, 0.16); border-color: var(--ui-line); }
+.pb:hover:not(:disabled) {
+  background: rgba(var(--wash-rgb), 0.07);
+  border-color: var(--hairline-strong);
+  color: var(--text-primary);
+}
+.pb:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
 .pb:active:not(:disabled) { transform: translateY(1px); }
 .pb:disabled { opacity: 0.3; cursor: default; }
 .pb.on { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.5); background: rgba(124, 92, 255, 0.14); }
 
 /* Destructive action lives at the far end, so a mis-tap on Hold or Move cannot
    land on Delete — which is exactly what the old 18px overlay allowed. */
-.pb.danger { margin-left: auto; color: var(--danger-soft); border-color: rgba(244, 50, 111, 0.3); }
-.pb.danger:hover:not(:disabled) { background: rgba(244, 50, 111, 0.16); border-color: rgba(244, 50, 111, 0.55); }
+.pb.danger { margin-left: auto; color: var(--danger-soft); }
+.pb.danger:hover:not(:disabled) {
+  color: var(--danger-soft-2);
+  background: rgba(244, 50, 111, 0.12);
+  border-color: rgba(244, 50, 111, 0.4);
+}
 
 /* A glyph that carries the meaning the LABEL used to. Below 560px every
    .pb-tx is hidden, which left "×1" bare and — worse — left Move as two
@@ -642,24 +778,34 @@
    with a ×24 hold badge — measured, not assumed; the counter and badge are the
    only parts whose width varies). Below it every button keeps its glyph and its
    38px box, which is the same arrangement the bar already used under 560. */
-@media (min-width: 645px) {
-  .pb-tx { display: inline; }
-  .pb { padding: 0 12px; }
-}
+:where(body[data-size="regular"]) .pb-tx { display: inline; }
+:where(body[data-size="regular"]) .pb { padding: 0 12px; }
 @media (max-width: 400px) {
   .pagebar { gap: 6px; padding: 7px 10px; }
   .pb { padding: 0 8px; }
 }
 
 /* --- v109: per-page hold ---------------------------------------------------- */
-/* The badge is always visible (unlike the ops bar) so the timing of an animation
-   is readable at a glance without hovering every page. */
+/* A badge that SAYS something (hold above 1) is always visible, so the timing of
+   an animation is readable at a glance without hovering every page. Since v226
+   the badge is also the control that sets the hold, so it renders at ×1 too —
+   marked .idle, and hidden by the rule further down unless its tile is active,
+   hovered or focused. This comment used to say "always visible" flatly, which
+   stopped being true the moment the badge became a button. */
 .frame .holdbadge {
   position: absolute;
   top: 4px;
   left: 30px;             /* was right:24px, which crowded the ✕. Sits after the
                              page number instead, clear of both. */
   z-index: 2;
+  /* v226: a <button>, not a <div> — the badge cycles the hold now. Button UA
+     styles have to be undone explicitly or it inherits a system border and the
+     platform font. */
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
   padding: 1px 5px;
   font-size: 10px;
   font-weight: 700;
@@ -667,6 +813,12 @@
   border-radius: 5px;
   color: #0d0f14;
   background: var(--ui-active);
+  /* A hold of 1 is the default, so showing ×1 on every tile would be noise on a
+     strip whose job is to show DRAWINGS. It appears on the tile you are on, the
+     one under the pointer, or the one with focus — the same rule the delete ✕
+     follows, so the strip has one idea about when per-tile controls exist
+     rather than two. Once a hold is set the badge stays: it is information at
+     that point, not just a control. */
 }
 
 /* --- v110: canvas size picker in the ⋯ menu -------------------------------- */
@@ -962,26 +1114,24 @@
    Same change as Pad's. Flip was only 4-5px over at 375/390 rather than Pad's
    52, because its buttons were already tighter — so the gap alone buys it back
    and the tap targets stay untouched. Labels already hide below 640px. */
-@media (max-width: 640px) {
-  /* padding 6, not 12px 6px: Pad's number. The 12 made Flip's row 4px taller
-     than Pad's for no reason anyone could see.
-     This block is LATER IN THE FILE than the max-560 and max-392 tiers above at
-     equal specificity, so it wins on source order — which is why the row's phone
-     gap, padding and group margins are declared here and not up there with the
-     widths. Moving them loses them silently; that is exactly how the old
-     max-380 tier's gap came to be dead code. */
-  .flip-tools { gap: 3px; padding: 6px; }
-  /* Even rhythm, not grouping — see the matching note on .toolbar in styles.css.
-     Grouping margins cost Flip the same 8px they cost Pad, and Flip has less to
-     give: it wrapped from 369 down with them. */
-  .flip-tools .color-tool { margin-left: 5px; }
-  .flip-tools #undo       { margin-left: 6px; }
-  .flip-tools #imageBtn   { margin-left: 6px; }
-  /* Horizontal only. Vertical padding here would fight the row-height variable
-     above and push the pill back off its neighbours' height. */
-  .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
-  .flip-tools #toolGroup .tool-btn svg { width: 21px; height: 21px; }
-}
+/* padding 6, not 12px 6px: Pad's number. The 12 made Flip's row 4px taller
+   than Pad's for no reason anyone could see.
+   This block is LATER IN THE FILE than the max-560 and max-392 tiers above at
+   equal specificity, so it wins on source order — which is why the row's phone
+   gap, padding and group margins are declared here and not up there with the
+   widths. Moving them loses them silently; that is exactly how the old
+   max-380 tier's gap came to be dead code. */
+:where(body[data-size="compact"]) .flip-tools { gap: 3px; padding: 6px; }
+/* Even rhythm, not grouping — see the matching note on .toolbar in styles.css.
+   Grouping margins cost Flip the same 8px they cost Pad, and Flip has less to
+   give: it wrapped from 369 down with them. */
+:where(body[data-size="compact"]) .flip-tools .color-tool { margin-left: 5px; }
+:where(body[data-size="compact"]) .flip-tools #undo { margin-left: 6px; }
+:where(body[data-size="compact"]) .flip-tools #imageBtn { margin-left: 6px; }
+/* Horizontal only. Vertical padding here would fight the row-height variable
+   above and push the pill back off its neighbours' height. */
+:where(body[data-size="compact"]) .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
+:where(body[data-size="compact"]) .flip-tools #toolGroup .tool-btn svg { width: 21px; height: 21px; }
 
 
 /* ---------- 320-class phones (placed LAST, deliberately) ----------

@@ -86,8 +86,17 @@ with sync_playwright() as sp:
           "; ".join(f"{r['label']}: {r['scopeError']}"
                     for r in reg if r.get("scopeError")))
     escapes = [r for r in reg if "Escape" in r["keys"]]
-    check("all five Escape claims are scoped, none unconditional",
-          len(escapes) == 5 and all(r["scoped"] for r in escapes),
+    # RATCHET RAISED 5 -> 6, v226, FLAGGED. The new claim is "drop the page
+    # range". The count is deliberately a ratchet rather than a >= : adding an
+    # Escape claim to a surface that already has five should be a visible act,
+    # because Escape is the one key every dismissible thing wants. What makes
+    # this one admissible is that it is scoped to LAST — a page range is the
+    # least topmost thing on the page, so its scope also requires that no menu,
+    # sheet, panel or drawer is open. Without that it would have been live at
+    # the same time as four of the other five, which is exactly the collision
+    # KeyRegistry.collisions() is for.
+    check("all six Escape claims are scoped, none unconditional",
+          len(escapes) == 6 and all(r["scoped"] for r in escapes),
           f"{len(escapes)} Escape claims: "
           + ", ".join(r["label"] for r in escapes))
 

@@ -122,18 +122,32 @@ with sync_playwright() as p:
     print("\nHOLD — the UI cycles and shows it")
     pg.evaluate("() => { go(0); }")
     pg.wait_for_timeout(200)
+    # v226: the page-bar Hold button retired and the BADGE on the tile is the
+    # control. It was already showing the value the button cycled, on the tile
+    # the value belonged to — two pieces of interface for one fact, and the
+    # better-placed one was the one you could not press.
     seq = []
     for _ in range(5):
-        pg.click("#pbHold")          # v124: hold moved to the page toolbar
+        pg.locator("#strip .frame").nth(0).locator(".holdbadge").click()
         pg.wait_for_timeout(180)
         seq.append(pg.evaluate("() => frameHold(frames[0])"))
-    check("the toolbar Hold button cycles 2,3,4 then wraps to 1", seq == [2, 3, 4, 1, 2], str(seq))
-    check("a held page shows a badge without hovering",
-          pg.evaluate("() => !!strip.children[0].querySelector('.holdbadge')"))
+    check("the tile's hold badge cycles 2,3,4 then wraps to 1", seq == [2, 3, 4, 1, 2], str(seq))
+    check("a held page shows its badge without hovering",
+          pg.evaluate("() => !!strip.children[0].querySelector('.holdbadge')")
+          and pg.locator("#strip .frame").nth(0).locator(".holdbadge").is_visible())
     pg.evaluate("() => { frames[0].hold = 1; buildStrip(); }")
     pg.wait_for_timeout(150)
-    check("no badge at the default hold",
-          pg.evaluate("() => !strip.children[0].querySelector('.holdbadge')"))
+    # The badge still EXISTS at hold 1 — it has to, or there would be no way to
+    # start a hold from the strip, which is exactly why a button used to. What
+    # changes is that it is marked idle and CSS hides it unless the tile is
+    # active, hovered or focused. Page 0 is the active page here, so it shows.
+    check("at the default hold the badge is marked idle, not removed",
+          pg.evaluate("() => strip.children[0]"
+                      ".querySelector('.holdbadge').classList.contains('idle')"),
+          "a badge that only appears once a hold is set cannot START one")
+    check("...and an idle badge on a NON-active tile is hidden",
+          not pg.locator("#strip .frame").nth(1).locator(".holdbadge").is_visible(),
+          "x1 on every tile would be noise on a strip that shows drawings")
 
     print("\nPAYLOAD — additive in both directions")
     plain = pg.evaluate("() => JSON.stringify(serializeFlip({media:false}))")
@@ -227,15 +241,41 @@ with sync_playwright() as p:
 
     br.close()
 
-print("\nPAGE BAR — the icon-only bar still says what each button does")
-# Below 560px every .pb-tx label is hidden, which left "×1" bare and left Move
-# as two unlabelled arrows in a bar that also reads "Page 10 / 12" — so they
-# looked like page navigation while actually reordering the animation. Checked
-# at a PHONE viewport, because at 1280px the labels are present and every
-# assertion below would pass for the wrong reason.
+print("\nPAGE BAR — what it says, and where it now exists at all")
+# HISTORY, because the premise of this section inverted. It was written when
+# every .pb-tx label hid below 560px, which left "×1" bare and left Move as two
+# unlabelled arrows in a bar that also read "Page 10 / 12" — they looked like
+# page navigation while actually reordering the animation. It therefore ran at a
+# PHONE viewport, where the labels were gone.
+#
+# v227 removed the page bar from the compact surface entirely, and compact is
+# every width at or below 640 — which is every width the label-hiding rules
+# applied to. So the bar is never icon-only any more, and running this section
+# at 390px measured a bar inside a display:none ancestor: querySelector still
+# finds hidden markup, so most of these assertions were passing VACUOUSLY and
+# only the one that asked about LAYOUT noticed.
+#
+# ⚑ FOLLOW-UP, worth a look but not fixed here: the `.pb` label-hiding rules in
+# flip.css are now unreachable for the same reason. Dead CSS, to be removed with
+# the rest of the breakpoint migration rather than piecemeal.
+#
+# It runs at a REGULAR width now, where the bar exists — and the compact half of
+# the claim is asserted first, since "the bar is gone here" is the change.
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
-    _pg = _b.new_page(viewport={"width": 390, "height": 844})
+    _pgc = _b.new_page(viewport={"width": 390, "height": 844})
+    _pgc.goto(f"{BASE}/flip", wait_until="load")
+    _pgc.wait_for_timeout(1300)
+    check("at phone width there is no page bar to be icon-only",
+          _pgc.evaluate("() => getComputedStyle("
+                        "document.getElementById('pagebar')).display") == "none",
+          "v227: the compact surface carries these operations on the tile")
+    check("...and the tile carries the operations instead",
+          _pgc.evaluate("() => document.querySelectorAll('#strip .pageops').length") > 0,
+          "verify_compactops.py holds that surface in full")
+    _pgc.close()
+
+    _pg = _b.new_page(viewport={"width": 900, "height": 844})
     _errs = []
     _pg.on("pageerror", lambda e: _errs.append(str(e)))
     _pg.goto(f"{BASE}/flip", wait_until="load")
@@ -243,16 +283,19 @@ with sync_playwright() as _p:
     _pg.evaluate("() => { addFrame(false); addFrame(false); }")
     _pg.wait_for_timeout(400)
 
-    check("labels really are hidden at phone width",
+    check("the bar is here at a regular width",
           _pg.evaluate("() => getComputedStyle("
-                       "document.querySelector('#pbHold .pb-tx')).display") == "none",
-          "this section proves nothing if the labels are visible")
-
-    check("#pbHold carries a repeat glyph when its label is hidden",
-          _pg.evaluate("() => !!document.querySelector('#pbHold .pb-glyph svg')"),
-          "a bare count is not self-explanatory")
-    check("#pbHold's glyph is actually rendered",
-          _pg.evaluate("() => { const g = document.querySelector('#pbHold .pb-glyph');"
+                       "document.getElementById('pagebar')).display") != "none",
+          "everything below measures the bar, so it has to be laid out")
+    check("its labels are visible, which is the premise that inverted",
+          _pg.evaluate("() => getComputedStyle("
+                       "document.querySelector('#pbCopy .pb-tx')).display") != "none",
+          "the icon-only case no longer exists — see the note above")
+    check("#pbCopy carries a glyph beside its label",
+          _pg.evaluate("() => !!document.querySelector('#pbCopy .pb-glyph svg')"),
+          "the glyphs still do work even with the words present")
+    check("#pbCopy's glyph is actually rendered",
+          _pg.evaluate("() => { const g = document.querySelector('#pbCopy .pb-glyph');"
                        " return g && g.offsetParent !== null"
                        " && g.getBoundingClientRect().width > 4; }"),
           "present in markup but not laid out")
@@ -273,23 +316,30 @@ with sync_playwright() as _p:
               "move" in (_pg.get_attribute(f"#{_id}", "aria-label") or "").lower(),
               _pg.get_attribute(f"#{_id}", "aria-label"))
 
-    # flip.js rewrites .pb-ic's textContent on every render. A glyph placed
-    # inside it would survive the first paint and vanish on the first page
-    # change — which is exactly the kind of bug a single-state check misses.
-    _pg.click("#pbHold")
+    # The original concern here was that flip.js rewrites .pb-ic's textContent on
+    # every render, so a glyph placed inside it would survive the first paint
+    # and vanish on the first page change. v226 moved the hold to the tile, and
+    # the concern moved with it and got SHARPER: buildStrip() rebuilds every
+    # badge from scratch on every render, so the value has to come from the
+    # frame each time rather than from the DOM that was there before.
+    _pg.evaluate("() => { idx = 0; buildStrip(); render(); }")
+    _pg.wait_for_timeout(200)
+    _pg.locator("#strip .frame").nth(0).locator(".holdbadge").click()
     _pg.wait_for_timeout(250)
     # pbLeft, not pbRight: two addFrame() calls leave idx on the LAST page, so
     # "move right" is correctly disabled there and Playwright waits forever.
+    _pg.evaluate("() => { idx = frames.length - 1; buildStrip(); render(); }")
     _pg.click("#pbLeft")
     _pg.wait_for_timeout(250)
     _pg.evaluate("() => { idx = 0; buildStrip(); render(); }")
     _pg.wait_for_timeout(300)
-    check("the repeat glyph survives re-renders and page changes",
-          _pg.evaluate("() => !!document.querySelector('#pbHold .pb-glyph svg')"),
-          "a glyph inside .pb-ic is wiped when flip.js rewrites its textContent")
-
+    check("the hold survives re-renders and page changes",
+          _pg.evaluate("() => frameHold(frames[0])") == 2,
+          "buildStrip rebuilds every badge, so the value must come from the frame")
     check("the hold count still reads as a multiplier",
-          "\u00d7" in _pg.inner_text("#pbHold"), _pg.inner_text("#pbHold"))
+          "\u00d7" in (_pg.locator("#strip .frame").nth(0)
+                       .locator(".holdbadge").inner_text() or ""),
+          _pg.locator("#strip .frame").nth(0).locator(".holdbadge").inner_text())
     check("aria-label still names the action for screen readers",
           "move" in (_pg.get_attribute("#pbLeft", "aria-label") or "").lower(),
           _pg.get_attribute("#pbLeft", "aria-label"))

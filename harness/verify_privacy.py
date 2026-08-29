@@ -202,7 +202,11 @@ def _app_as(viewer):
     d = SQLAlchemy()
     d.init_app(a)
     skribl.init_skribl(a, session=lambda: d.session,
-                       current_user_id=(lambda: viewer))
+                       current_user_id=(lambda: viewer),
+                       # v224: identity is a closure over a local variable, not
+                       # a cookie, so this fixture is not CSRF-able. csrf=False
+                       # is how a host declares that (outside review #4).
+                       csrf=False)
     skribl.models.attach_to_metadata(d.metadata)
 
     # Host-owned per-request commit, per the transaction contract. Like the

@@ -58,6 +58,8 @@ def build_app(viewer, public_media_cache=False):
     skribl.init_skribl(
         a, session=lambda: d.session,
         current_user_id=(lambda: viewer),
+        # v224: a closure, not a cookie — see the note in verify_s3.py.
+        csrf=False,
         media_store=LocalDiskStore(_media_root,
                                    lambda key: f"/media/{key}"),
         public_media_cache=public_media_cache)

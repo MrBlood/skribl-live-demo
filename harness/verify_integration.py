@@ -144,7 +144,10 @@ check("attach_to_metadata is what puts Skribl's tables in the host's metadata",
 
 print("\nINTEGRATION — the host owns identity and visibility")
 CURRENT = {"id": 42}
-app4, db4 = host_app(url_prefix="/s", current_user_id=lambda: CURRENT["id"])
+# csrf=False: this pretend host reads its viewer out of a dict, not a cookie.
+# v224 requires that be declared rather than assumed (outside review #4).
+app4, db4 = host_app(url_prefix="/s", current_user_id=lambda: CURRENT["id"],
+                     csrf=False)
 c4 = app4.test_client()
 pid = c4.post("/s/api/skribls", json=payload("owned")).get_json()["id"]
 with app4.app_context():

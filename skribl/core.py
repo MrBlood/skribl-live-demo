@@ -15,7 +15,7 @@ import re
 # skribl_editor.html drifted nine versions (it still read v96 at v105) — nothing
 # forced anyone to touch it. Bump this one line per release; verify_version.py
 # fails if a hardcoded version reappears in a template.
-SKRIBL_VERSION = "v223"
+SKRIBL_VERSION = "v228"
 
 OG_DEFAULT_TITLE = "Skribl Pad"
 OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."
@@ -47,6 +47,23 @@ _PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 
 def _valid_public_id(public_id):
     return isinstance(public_id, str) and bool(_PUBLIC_ID_RE.match(public_id))
+
+
+# Title and caption lengths, defined ONCE (outside review, low severity).
+# Three places used to state a limit and no two agreed: the columns are
+# String(80)/String(300), the create endpoint silently TRUNCATED to [:80]/[:300],
+# and the editors' maxlength attributes were 60/280. A user pasting a 70-
+# character title into a hand-built request got it cut in half a sentence with a
+# 201 and no indication anything had happened, and the same title typed into the
+# editor was impossible to enter at all.
+#
+# The column is the authority — it is the only one of the three that can
+# actually refuse — so these ARE the column widths: models.py declares
+# String(MAX_TITLE_CHARS), routes.py rejects rather than truncates, and the
+# templates render maxlength from the same numbers through the blueprint's
+# context processor. Nothing types a length beside them any more.
+MAX_TITLE_CHARS = 80
+MAX_CAPTION_CHARS = 300
 
 
 # Hard ceiling for the share-card image served by /s/<id>/card.png. A real

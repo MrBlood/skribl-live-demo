@@ -1,14 +1,33 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v223"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v228"` (skribl/core.py).**
 
 **The release evidence in this archive is THIS tree's.**
 `harness/RELEASE.md` and `harness/LAST-RUN.txt` are generated from a full
-aggregate run executed against the tree in this archive: PASS, 3134 assertions,
-74/74 suites reporting, 1 skipped (`verify_mp4.py`, no H.264 profile in the
-build container). The tree hash in `RELEASE.md` is computed, and every file
-here is listed in `SHA256SUMS`, so both claims are checkable without trusting
-this sentence. What changed and why: `V223-CHANGES.md`.
+aggregate run executed against the tree in this archive. **Read the totals
+there, not here** — the result, the assertion count, the suites reporting and
+anything skipped are all stated in `harness/RELEASE.md`, and restating them in
+this paragraph is how a number goes stale one release later while still
+sounding authoritative. (`verify_mp4.py` skips in any build container without
+an H.264 profile; a skipped suite contributes zero assertions and is not
+evidence of coverage.) The tree hash in `RELEASE.md` is computed, and every
+file here is listed in `SHA256SUMS`, so both claims are checkable without
+trusting this sentence. What changed and why: `V227-CHANGES.md`.
+
+**WHAT "SEALED" DOES NOT MEAN.** It means this archive is internally consistent:
+every file matches the manifest, and the manifest matches the tree the evidence
+was produced from. It is **not** provenance. `SHA256SUMS` lives inside the
+archive it authenticates, and so does `harness/RELEASE.md`'s tree hash — anyone
+who can replace the archive can replace both. The seal detects corruption and
+accidental substitution; it does not prove who built this or that it is the
+build someone approved. (v224 outside review, R5.)
+
+If you need provenance, take the hash of the **zip** from a channel that did not
+travel with the zip. This project publishes it in the git commit that seals each
+release, on the branch the archive was built from — compare
+`sha256sum skribl-v228-sealed.zip` against the value in that commit message. A
+signed tag or a CI attestation would be stronger and neither exists yet; the
+git-history channel is what is actually here, and saying so beats implying more.
 
 Read that line first. This archive's contents are built on the **v131** client
 code — `app.js`, `flip.js`, `styles.css` and `flip.css` are v131's, with the
@@ -388,12 +407,24 @@ transform in the app, and deliberately the SIMPLEST one: the whole page moves,
 nothing is selected. Copy a page, nudge the drawing, repeat — the pegbar
 workflow that frame-by-frame animation has used for a century.
 
-**It lives in the PAGE BAR, not the tool row.** Moving a page's artwork is a
-page operation, and it belongs with Copy, Hold and Delete; the tool row is also
-full on a phone. Entering the mode REPLACES the page bar with a transform bar
-rather than adding one, because a second bar would push the filmstrip off
-screen exactly when it is needed to judge the move. Labelled "Artwork" because
-"Move" already means reorder, two buttons to its left.
+**It lived in the PAGE BAR, and as of v226 it does not.** The original argument,
+kept because the second half of it is still load-bearing: *moving a page's
+artwork is a page operation, and it belongs with Copy, Hold and Delete; the tool
+row is also full on a phone. Entering the mode REPLACES the page bar with a
+transform bar rather than adding one, because a second bar would push the
+filmstrip off screen exactly when it is needed to judge the move.*
+
+The first clause was wrong and the second stopped being true. It is not a page
+operation — it moves the DRAWING, which is the one thing in that row that was
+not a page. And the tool row is no longer full: the tool shelf overflows into a
+tray, so a sixth tool costs no width at any size. Artwork is a tool now, beside
+Select and Liquify. The transform-bar behaviour above is unchanged.
+
+It kept the name "Artwork" rather than becoming "Move" — originally because the
+page bar's two reorder buttons were both labelled "Move", which v226 also fixed
+by labelling them Left and Right. The name stays anyway: in a shelf of verbs
+(Pen, Eraser, Shape, Select, Liquify) the noun is what distinguishes moving the
+art from moving the page.
 
 **Undo stores the INVERSE OFFSET, not a snapshot.** A translation is exactly
 reversible, so undoing is applying -dx,-dy to the same points. With `& after`
@@ -1201,6 +1232,19 @@ real sweep.
 NotImplementedError on purpose: an object store answers `iter_keys` with a
 paginated LIST, and a generic implementation would invite one that loads a
 bucket into memory. Do not try to make S3 and SQL one distributed transaction.
+
+**v224 made it a job rather than a plan.** Nothing shipped could invoke any of
+this: each deployment had to resolve its own app, find the store the host passed
+to `init_skribl`, get a session, and get the argument order right on a function
+whose third positional argument deletes user data. `python -m skribl.sweep
+--app module:factory` is that entry point — dry by default, `--delete` spelled
+out in full, and a second interlock on a grace period under an hour.
+`sweep_orphans_report()` returns the same work plus a count for every branch
+that DECLINED to delete (foreign namespace, inside grace, referenced, reused
+mid-sweep), because otherwise a run that reclaims nothing is indistinguishable
+from credentials pointed at the wrong prefix. And a `delete_key` that raises no
+longer aborts the run: failures are collected per key and `removed` now means
+removed. `verify_sweepjob.py`.
 
 **`SKRIBL_FORCE_SECURE_COOKIES=1`.** The CSRF cookie used `secure=request.is_secure`,
 which is only true if Flask can SEE the original scheme. Behind a

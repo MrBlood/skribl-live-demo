@@ -32,6 +32,8 @@ media, and requires a stranger to be refused.
 import base64
 import hashlib
 import hmac
+import email.utils
+from urllib.parse import unquote
 import json
 import os
 import pathlib
@@ -127,10 +129,18 @@ class Bucket(BaseHTTPRequestHandler):
             SEEN.append((self.command, path, signed_headers))
         return None
 
-    def _send(self, code, body=b"", ctype="application/xml"):
+    def _send(self, code, body=b"", ctype="application/xml", last_modified=None):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
+        # Real S3 returns Last-Modified on GET/HEAD, and storage.S3Store.stat_key
+        # reads it to re-check an object's age immediately before the sweeper
+        # deletes it. Without this header stat_key reads every object as NEW —
+        # the safe direction, but it would mean an S3 sweep silently stops
+        # collecting anything, so the double has to serve it.
+        if last_modified is not None:
+            self.send_header("Last-Modified",
+                             email.utils.formatdate(last_modified, usegmt=True))
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
@@ -166,8 +176,28 @@ class Bucket(BaseHTTPRequestHandler):
             hit = OBJECTS.get(key)
             if not hit:
                 return self._send(404, b"<Error><Code>NoSuchKey</Code></Error>")
-            return self._send(200, hit[0], hit[1])
+            return self._send(200, hit[0], hit[1], last_modified=hit[2])
         if self.command == "PUT":
+            # A COPY is a PUT carrying x-amz-copy-source. S3Store uses a
+            # self-copy to REFRESH an object's LastModified when content
+            # addressing means there are no new bytes to write — see
+            # put_bytes and OUTSIDE REVIEW v223 #1. Without COPY here that
+            # fix would be untestable, which is the only reason it was first
+            # written as a full re-upload.
+            src = self.headers.get("x-amz-copy-source")
+            if src:
+                # Keys in OBJECTS carry the prefix, exactly as _key() leaves
+                # them, so strip the copy-source the same way _key() does.
+                _src = unquote(src)
+                _want = f"/{BUCKET}/"
+                src_key = (_src[len(_want):] if _src.startswith(_want)
+                           else _src.lstrip("/"))
+                with LOCK:
+                    hit = OBJECTS.get(src_key)
+                    if not hit:
+                        return self._send(404, b"<Error><Code>NoSuchKey</Code></Error>")
+                    OBJECTS[src_key] = (hit[0], hit[1], time.time())
+                return self._send(200, b"<CopyObjectResult/>")
             with LOCK:
                 OBJECTS[key] = (body, self.headers.get("content-type") or "", time.time())
             return self._send(200)
@@ -215,10 +245,26 @@ check("a missing key reads as None rather than raising",
 
 before = len(SEEN)
 store.put_bytes(WAV, "audio/wav", key)
+# CHANGED IN v224, and deliberately — flagged rather than quietly adjusted.
+# This asserted "no PUT was issued", using the method as a proxy for "the bytes
+# were not re-uploaded". A self-copy IS an HTTP PUT (x-amz-copy-source, empty
+# body), so put_bytes refreshing an object's LastModified to close the sweep
+# race in OUTSIDE REVIEW v223 #1 breaks the proxy while satisfying the intent
+# exactly. The assertion now measures the intent: no request may carry the
+# object's bytes. That is STRICTER than the old form — a body-carrying PUT
+# fails it whatever the method — and it is why the S3 double learned COPY
+# instead of this test learning to accept an upload.
+_uploads = [s for s in SEEN[before:]
+            if s[0] == "PUT" and "x-amz-copy-source" not in (s[2] or "")]
 check("re-storing identical bytes uploads nothing",
-      not [s for s in SEEN[before:] if s[0] == "PUT"],
+      not _uploads,
       f"{[s[0] for s in SEEN[before:]]} — content addressing means a repost "
-      f"costs a HEAD, not an upload")
+      f"costs a HEAD and at most a metadata copy, never an upload")
+check("...and the repost still refreshes the object's age, or the sweep race returns",
+      any(s[0] == "PUT" and "x-amz-copy-source" in (s[2] or "")
+          for s in SEEN[before:]),
+      f"{[s[0] for s in SEEN[before:]]} — an object reused by a new post must "
+      f"stop looking old to sweep_orphans")
 
 listed = dict(store.iter_keys())
 check("LIST pages and strips the prefix back off",
@@ -376,6 +422,11 @@ try:
         d.init_app(a)
         skribl.init_skribl(
             a, session=lambda: d.session, current_user_id=(lambda: viewer),
+            # v224: identity here is a closure over a local variable, not a
+            # cookie, so this fixture is not CSRF-able. csrf=False is how a host
+            # declares that, and the fail-closed rule (outside review #4)
+            # requires it to be said rather than assumed.
+            csrf=False,
             media_store=S3Store(BUCKET, lambda key: url_for("skribl.media", key=key),
                                 region=REGION, endpoint=f"http://127.0.0.1:{S3_PORT}",
                                 access_key=AK, secret_key=SK, prefix="media/"))

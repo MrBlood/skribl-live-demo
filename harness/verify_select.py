@@ -133,9 +133,21 @@ with sync_playwright() as p:
     # Exact, not "contains": a roster change is a change to what the product is,
     # and it should cost a deliberate edit here. Liquify joined at v236 — same
     # division as select, since it edits geometry already on the page.
+    #
+    # ⚑ RATCHET RAISED, v227, FLAGGED FOR THE OWNER — and it is the SECOND copy
+    # of this ratchet. verify_tray.py holds the other one, was updated when
+    # "artmove" joined, and this file was missed until the release run found it.
+    # Two exact rosters in two suites is one more than the mechanism needs;
+    # whether they should be one shared assertion is a real question, and the
+    # answer is not "delete this one", because a ratchet nobody has to edit is a
+    # ratchet that stops meaning anything.
+    #
+    # artmove is NOT a new capability. Move artwork has shipped since v124 and
+    # lived in the PAGE BAR — the one control in a row about pages that moved
+    # the DRAWING. Read it as a control moving house.
     check("select is in Flip's tool registry",
           page.evaluate("() => window.SkriblFlipTools.list()")
-          == ["pen", "eraser", "shape", "select", "liquify"],
+          == ["pen", "eraser", "shape", "select", "liquify", "artmove"],
           str(page.evaluate("() => window.SkriblFlipTools.list()")))
     check("a fourth tool pushed the shelf into overflow",
           page.evaluate("() => window.SkriblFlipTools.overflowing()"),

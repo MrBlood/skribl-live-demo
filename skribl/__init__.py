@@ -180,24 +180,28 @@ def create_blueprint(session=None, url_prefix=None,
     # None keeps v131 behaviour exactly: no token issued, no check performed,
     # which is right for an UNAUTHENTICATED deployment and wrong the moment one
     # authenticates.
+    # csrf=False is the EXPLICIT "not applicable" — a bearer-token host with no
+    # cookie to ride. It is not a validator, so it stores as None; what it does
+    # is record that the integrator decided, which is the difference between a
+    # considered choice and an omission.
+    _csrf_declined = (csrf is False)
+    if _csrf_declined:
+        csrf = None
     bp.skribl_csrf = csrf
-    if current_user_id is not None and csrf is None:
-        # THE TRIPWIRE (DECISIONS.md #2). CSRF-off is correct while posting is
-        # anonymous — there is no session to ride. The moment a host wires in
-        # current_user_id (cookie auth, almost always), CSRF-off means any
-        # webpage on the internet can post as the logged-in user. Those two
-        # seams contradicting is precisely detectable, so it is detected: a
-        # loud warning, not a refusal, because a host may authenticate by
-        # non-cookie means (bearer tokens) where CSRF does not apply — that
-        # host should silence this by passing its verifier or an explicit
-        # csrf=False-equivalent no-op. Everyone else should treat this line in
-        # their logs as a security bug filed against them.
-        import logging
-        logging.getLogger("skribl").warning(
+    if current_user_id is not None and csrf is None and not _csrf_declined:
+        # FAIL CLOSED (outside review #4). This used to be a warning, on the
+        # reasoning that a bearer-token host does not need CSRF and should not
+        # be refused. That reasoning is right and the mechanism was wrong: a
+        # log line is easy to miss, the failure mode is "any page on the
+        # internet can post as your logged-in user", and the safe state was the
+        # one you got by NOT noticing. A host that genuinely does not need it
+        # says so once, in code, with csrf=False.
+        raise RuntimeError(
             "skribl: current_user_id is configured but csrf is not. If your "
-            "authentication uses cookies, any third-party page can post as "
-            "the logged-in user. Pass csrf=... to create_blueprint()/"
-            "init_skribl() (see DECISIONS.md #2).")
+            "authentication uses cookies, any third-party page can post as the "
+            "logged-in user. Pass csrf=skribl.security.double_submit_csrf(...) "
+            "to create_blueprint()/init_skribl(), or csrf=False to declare that "
+            "your authentication is not cookie-based (see DECISIONS.md #2).")
     # Where media lives. Defaults to inline, i.e. exactly v131: the data URL
     # stays in payload_json. A storage change to a system holding real posts is
     # opted into, never inherited by upgrading.
@@ -228,7 +232,14 @@ def create_blueprint(session=None, url_prefix=None,
     # the blueprint — the same BuildError as the context processor above.
     @bp.context_processor
     def _expose_asset_helper():
-        return {"skribl_asset": lambda filename: asset_url(bp, filename)}
+        # skribl_limits so the editors' maxlength attributes render from the
+        # same constants the API enforces and the columns hold, rather than
+        # being typed into the HTML and drifting (they had, to 60/280 against
+        # an 80/300 column — outside review, low severity).
+        from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS
+        return {"skribl_asset": lambda filename: asset_url(bp, filename),
+                "skribl_limits": {"title": MAX_TITLE_CHARS,
+                                  "caption": MAX_CAPTION_CHARS}}
     register_routes(bp, index_route=index_route)
     register_security(bp, SKRIBL_VERSION, player_target=player_target)
     return bp
@@ -239,10 +250,25 @@ def init_skribl(app, **kwargs):
     # App-local visibility policy (see models.set_visibility_policy): popped
     # here because create_blueprint has no app to hang it on.
     _policy = kwargs.pop("visibility_policy", None)
+    # The v224 seams, all app-local for the same reason the policy is: a
+    # process mounting two Skribl apps must not have one host's feed rules,
+    # visibility states or author names decide the other host's posts.
+    _feed = kwargs.pop("feed_filter", None)
+    _vis_values = kwargs.pop("visibility_values", None)
+    _author = kwargs.pop("author_resolver", None)
     bp = create_blueprint(**kwargs)
     if _policy is not None:
         from .models import set_visibility_policy
         set_visibility_policy(_policy, app=app)
+    if _feed is not None:
+        from .models import set_feed_filter
+        set_feed_filter(_feed, app=app)
+    if _vis_values is not None:
+        from .models import set_visibility_values
+        set_visibility_values(_vis_values, app=app)
+    if _author is not None:
+        from .models import set_author_resolver
+        set_author_resolver(_author, app=app)
     # Store the session factory PER APPLICATION. A module-level global meant the
     # most recently initialised app won for the whole process; see
     # skribl.models.session().

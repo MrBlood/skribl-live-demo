@@ -515,6 +515,227 @@ with _tf.TemporaryDirectory() as _td:
           _r3.returncode == 0,
           f"exit {_r3.returncode}: {(_r3.stdout or _r3.stderr).strip().splitlines()[:1]}")
 
+
+# --- v225: a documented skip must name a lane that really exists -------------
+# release_run.SKIP_COVERAGE lets RELEASE.md say "this skip is covered by the
+# `mp4` CI job". That sentence is worth exactly as much as the job's existence,
+# so the job name is checked against the workflow rather than trusted. The v224
+# outside review filed the MP4 skip as an open gap while the lane that closes it
+# was shipping inside the archive it reviewed — the lane was real and the
+# evidence never mentioned it.
+print("\nDOCS — every claimed skip-coverage lane exists in the workflow")
+_wf = ROOT / ".github" / "workflows" / "harness.yml"
+check("the CI workflow is in the tree", _wf.is_file(), str(_wf.relative_to(ROOT)))
+if _wf.is_file():
+    _wf_text = _wf.read_text(encoding="utf-8")
+    sys.path.insert(0, str(ROOT / "harness"))
+    import release_run as _rr
+    check("some skip actually claims coverage", bool(_rr.SKIP_COVERAGE),
+          "an empty table would make every assertion below vacuous")
+    for _suite, _job in sorted(_rr.SKIP_COVERAGE.items()):
+        check(f"the '{_job}' job exists for {_suite}",
+              re.search(r"^  %s:$" % re.escape(_job), _wf_text, re.M) is not None,
+              "claimed in release_run.SKIP_COVERAGE")
+        check(f"...and the '{_job}' job actually runs {_suite}",
+              _suite in _wf_text,
+              "a job that never invokes the suite covers nothing")
+    check("the mp4 lane FAILS on a skip rather than reporting green",
+          "SKIPPED on the job that exists to run it" in _wf_text,
+          "a lane that tolerates the skip it exists to prevent is not a lane")
+    check("a suite claiming coverage is not itself missing from disk",
+          all((ROOT / "harness" / s).is_file() for s in _rr.SKIP_COVERAGE))
+
+
+# --- v225: capability claims, not just counts --------------------------------
+# WHY THIS SECTION EXISTS, and it is the most useful thing in this file.
+#
+# Everything above checks facts that go stale NUMERICALLY — a suite count, a
+# file count, an assertion total, a tree hash, a version string. Every one of
+# those is a number typed once and checked never, and catching them is why this
+# suite was written.
+#
+# It cannot catch a SENTENCE. The v224 outside review found that
+# FOR-THE-REVIEWER.md still called durable drafts and pointer identity
+# "NOT deferrable prerequisites" two releases after both shipped, that
+# DESIGN-DIRECTION.md stated the draft problem as current, and that
+# START-HERE.md said Pad's autosave "holds strokes but not media bytes" seven
+# hundred lines above its own paragraph explaining that the bytes go to
+# IndexedDB. A 3,328-assertion harness did not notice, because not one of those
+# is a number.
+#
+# It cost more than embarrassment: the reviewer read a stale docstring in
+# models.py claiming the database limiter was "NOT yet verified on PostgreSQL
+# across processes" and filed a MEDIUM finding asking for a test that
+# verify_postgres.py has been running for releases — four gunicorn worker
+# PROCESSES, twelve barrier-released requests, quota two, no over-admission and
+# no under-admission. Stale prose does not merely mislead a reader; it spends a
+# reviewer's attention on work already done.
+#
+# THE RULE. Each entry below pairs a capability with the artifact that PROVES it
+# shipped, and with the phrasings that would only appear if it had not. When the
+# proof holds, no current-facing document may deny it.
+#
+# WHAT THIS DOES NOT DO, said plainly because overclaiming here would be the
+# same sin. It catches denials it has PATTERNS for. A newly-invented stale
+# sentence about some other capability sails through exactly as before. This is
+# a ratchet over the claims that have actually rotted, not a semantic
+# understanding of the prose — adding a capability means adding an entry, and
+# nothing but this comment says so.
+print("\nDOCS — a shipped capability may not be described as unshipped")
+
+# Documents that describe the CURRENT state and are read as guidance.
+CURRENT_DOCS = ["FOR-THE-REVIEWER.md", "START-HERE.md", "DESIGN-DIRECTION.md",
+                "README.md", "HANDOFF-NEXT-SESSION.md", "ARCHIVE-README.md",
+                "FUTURE.md", "docs/INTEGRATION.md"]
+# Never scanned: a changelog SHOULD say "before v222 the bytes were lost", and a
+# review response should record what was true at the time. Their whole job is to
+# state a superseded fact accurately.
+#
+# A current-facing document may still carry one, if it says so. A line is exempt
+# when it or the six lines above it carry an explicit marker — which is how
+# docs/HANDOFF.md keeps its v105 media paragraph verbatim under a "BOTH
+# SENTENCES ABOVE ARE SUPERSEDED" note.
+# Deliberately a SMALL CLOSED LIST of explicit markers, not a general notion of
+# past tense. Every entry is an escape hatch, so adding one is a decision: it
+# must be a phrase a writer uses to say "the following is a quotation of, or a
+# statement about, something that is no longer true". "requirement, as written"
+# is how DESIGN-DIRECTION.md keeps a superseded brief verbatim beside what
+# shipped, which is worth more than deleting it.
+EXEMPT = re.compile(r"SUPERSEDED|\(history\)|\(historical|historical from here|"
+                    r"was DECLARED|used to (say|read|be|end|state|claim)|no longer|"
+                    r"requirement, as written|"
+                    r"until v\d|before v\d|as of v\d", re.I)
+
+# (label, proof, denial patterns, extra files to scan beyond CURRENT_DOCS)
+#
+# The `extra` column exists because the v224 reviewer's false finding did not
+# come from a document at all — it came from a docstring in skribl/models.py.
+# A capability claim is release-critical wherever it is written down, and code
+# comments are read more literally than prose, not less. Only the claim that
+# names a file scans it, so validation.py can keep saying (truthfully) that
+# compressed-audio duration is bounded by bytes alone.
+CLAIMS = [
+    ("durable media drafts",
+     ("harness/verify_drafts.py", r"bytes are in the draft store"),
+     [r"autosave[^.\n]{0,60}but not media bytes",
+      r"strokes but not media bytes",
+      r"localStorage cannot hold them",
+      r"drops media when the quota",
+      r"durable drafts[^.\n]{0,80}(prerequisite|not deferrable)"]),
+    ("pointer identity / contact ownership",
+     ("skribl/static/lib/eventpoint.js", r"targetTouches"),
+     [r"Migrate to Pointer Events",
+      r"pointer identity[^.\n]{0,60}(prerequisite|not deferrable|still open)"]),
+    ("PostgreSQL cross-process rate limiting",
+     ("harness/verify_postgres.py", r"no OVER-admission"),
+     [r"NOT yet verified on PostgreSQL across processes",
+      r"not[^.\n]{0,30}verified[^.\n]{0,40}across processes"],
+     ["skribl/models.py", "skribl/ratelimit.py"]),
+    ("media resource limits (dimensions, WAV duration)",
+     ("harness/verify_medialimits.py", r"MAX_IMAGE_PIXELS"),
+     [r"(dimensions and duration|duration and dimensions)[^.\n]{0,60}\bNOT\b"]),
+    ("the feed_filter seam",
+     ("harness/verify_hostseams.py", r"set_feed_filter|feed_filter"),
+     [r"feed_filter[^.\n]{0,40}does not exist yet"]),
+    ("a runnable orphan sweep",
+     ("skribl/sweep.py", r"def main"),
+     [r"nothing shipped could (run|invoke) it"]),
+    ("selection and move in Flip",
+     ("harness/verify_select.py", r"check\("),
+     [r"every mistake is currently undo-and-redraw"]),
+]
+
+
+def _proof_holds(path, needle):
+    f = ROOT / path
+    return f.is_file() and re.search(needle, f.read_text(encoding="utf-8")) is not None
+
+
+def _denials(text, patterns):
+    """Where a capability is denied, by PARAGRAPH, not by line.
+
+    The first version of this matched line by line and missed the first thing it
+    was pointed at afterwards: FUTURE.md still listed "Selection and transform.
+    Lasso, move, scale, rotate ... every mistake is currently undo-and-redraw"
+    as ship-worthy, months after all of it shipped, and the gate passed it
+    because the phrase wraps between "is" and "currently". Markdown wraps at
+    eighty columns, so nearly every multi-word claim straddles a line and a
+    line-scoped matcher would have missed most of what this exists to catch.
+
+    Paragraphs are the unit prose is actually written in, so whitespace is
+    normalised across the whole paragraph before matching and the reported line
+    is where the paragraph starts. The exemption window is the paragraph itself
+    plus the six lines above it, which is how a "SUPERSEDED" note above a block
+    still covers the block.
+    """
+    lines = text.splitlines()
+    hits = []
+    start = None
+    for i in range(len(lines) + 1):
+        blank = i >= len(lines) or not lines[i].strip()
+        if not blank:
+            if start is None:
+                start = i
+            continue
+        if start is None:
+            continue
+        para_lines = lines[start:i]
+        para = re.sub(r"\s+", " ", " ".join(para_lines))
+        if any(re.search(pat, para, re.I) for pat in patterns):
+            window = "\n".join(lines[max(0, start - 6):i])
+            if not EXEMPT.search(window):
+                hits.append((start + 1, para.strip()[:100]))
+        start = None
+    return hits
+
+
+_claim_failures = 0
+for _entry in CLAIMS:
+    label, (proof_path, proof_needle), patterns = _entry[:3]
+    extra = _entry[3] if len(_entry) > 3 else []
+    holds = _proof_holds(proof_path, proof_needle)
+    check(f"the proof for '{label}' is present ({proof_path})", holds,
+          "without it this claim cannot be gated at all")
+    if not holds:
+        continue
+    offenders = []
+    for rel in list(CURRENT_DOCS) + list(extra):
+        doc = ROOT / rel
+        if not doc.is_file():
+            continue
+        for lineno, text in _denials(doc.read_text(encoding="utf-8"), patterns):
+            offenders.append(f"{rel}:{lineno} {text!r}")
+    _claim_failures += len(offenders)
+    _where = "doc" if not extra else "doc or source file"
+    check(f"no current {_where} says '{label}' is unshipped", not offenders,
+          " | ".join(offenders[:3]) + (f" (+{len(offenders)-3} more)"
+                                       if len(offenders) > 3 else ""))
+
+# The gate has to be able to FAIL, or it is decoration. Feed the matcher the
+# exact sentence that shipped in v224 and require a hit; then mark it historical
+# the way a real document would and require the hit to disappear.
+_probe = "Pad's autosave holds strokes but not media bytes, so drafts are lossy."
+check("MUTATION: the matcher catches the sentence that actually shipped",
+      len(_denials(_probe, CLAIMS[0][2])) == 1, _probe)
+# The regression for the hole above: the same sentence, wrapped the way a
+# markdown document wraps it. A line-scoped matcher scores zero here.
+_wrapped = ("Pad's autosave holds strokes but not\nmedia bytes, so drafts are "
+            "lossy.")
+check("MUTATION: ...and catches it WRAPPED across lines, which is how prose is",
+      len(_denials(_wrapped, CLAIMS[0][2])) == 1,
+      "markdown wraps at 80 columns; a line-scoped matcher misses most claims")
+check("MUTATION: a denial split across a blank line is NOT one paragraph",
+      not _denials("Pad's autosave holds strokes but not\n\nmedia bytes.",
+                   CLAIMS[0][2]),
+      "paragraphs are the unit, so unrelated neighbours cannot be glued together")
+check("...and an explicitly superseded line is exempt, so history stays sayable",
+      not _denials("This is SUPERSEDED:\n" + _probe, CLAIMS[0][2]),
+      "a changelog must be able to state what used to be true")
+check("...and an unrelated sentence is not a false positive",
+      not _denials("Pad's autosave stores strokes and media bytes durably.",
+                   CLAIMS[0][2]))
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

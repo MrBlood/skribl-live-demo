@@ -51,6 +51,19 @@ def draw(pg, box, x0=70, y0=70):
     pg.wait_for_timeout(200)
 
 
+def enter_move(pg):
+    """Enter Move-artwork mode through whatever currently opens it.
+
+    v226 moved Artwork out of the page bar and into the tool shelf, and this
+    file clicked `#pbArt` in nine places. What the suite actually tests is the
+    MODE — capture, offset, scope, undo — none of which changed. Routing every
+    entry through one helper means the next time the control moves, this file
+    changes on one line instead of nine.
+    """
+    pg.evaluate("() => setTool('artmove')")
+    assert pg.evaluate("() => moveMode") is True, "move mode did not start"
+
+
 def same(a, b, tol=1e-6):
     """Equal to within a millionth of a canvas unit.
 
@@ -88,22 +101,30 @@ with sync_playwright() as p:
 
     print("MOVE — entering and leaving the mode")
     draw(pg, box)
-    check("the Artwork button is in the page bar",
-          pg.evaluate("() => !!document.querySelector('#pagebar #pbArt')"),
-          "it is a page operation and belongs with Copy, Hold and Delete")
+    check("Artwork lives in the TOOL SHELF, not the page bar (v226)",
+          pg.evaluate("() => !!(window.SkriblFlipTools "
+                      "&& window.SkriblFlipTools.has('artmove'))")
+          and not pg.evaluate("() => !!document.querySelector('#pagebar #pbArt')"),
+          "it moves the DRAWING, not the page — filing it beside Copy, Hold "
+          "and Delete was the mistake v226 corrected")
 
-    pg.click("#pbArt")
+    enter_move(pg)
     pg.wait_for_timeout(350)
     # Measured, not read off the property. `pagebar.hidden` was True in every
     # build of this feature while the bar stayed on screen 55px tall: [hidden]
     # is a UA rule and `.pagebar{display:flex}` is an author rule, so the author
     # rule won. This assertion passed for four versions against a visibly broken
     # surface because it asked the DOM what it had been told, not what it drew.
-    check("the page bar is replaced, not added to",
-          pg.evaluate("() => { const pb = document.getElementById('pagebar');"
-                      " return pb.offsetParent === null"
-                      " && pb.getBoundingClientRect().height === 0"
-                      " && getComputedStyle(pb).display === 'none'; }") is True
+    #
+    # ⚑ AND IT WENT VACUOUS AGAIN IN v227, the same way. This page is 393px wide,
+    # which is now the COMPACT surface, where the page bar is display:none at all
+    # times — so "the move mode hid it" proved nothing. What is meaningful HERE
+    # is that the move bar appeared; the replace/restore pair is asserted at a
+    # regular width further down, where there is a bar to replace.
+    check("the move bar appears",
+          pg.evaluate("() => { const mb = document.getElementById('movebar');"
+                      " return !!mb && mb.offsetParent !== null"
+                      " && mb.getBoundingClientRect().height > 0; }") is True
           and pg.is_visible("#movebar"),
           "two bars would push the filmstrip off a phone screen")
     check("the canvas advertises the drag", "grab" in pg.evaluate(
@@ -147,7 +168,7 @@ with sync_playwright() as p:
           "Escape must abandon, not commit — it means abandon everywhere else here")
     check("and leaves the mode", pg.evaluate("() => moveMode") is False)
 
-    pg.click("#pbArt")
+    enter_move(pg)
     pg.wait_for_timeout(300)
     pg.mouse.move(box["x"] + 180, box["y"] + 140)
     pg.mouse.down()
@@ -158,8 +179,9 @@ with sync_playwright() as p:
     pg.click("#mbDone")
     pg.wait_for_timeout(300)
     check("Done commits the move", same(pts(pg), moved))
-    check("and restores the page bar",
-          pg.evaluate("() => document.getElementById('pagebar').hidden") is False)
+    check("and takes the move bar away again",
+          pg.evaluate("() => { const mb = document.getElementById('movebar');"
+                      " return !mb || mb.offsetParent === null; }") is True)
 
     print("\nMOVE — undo is an exact inverse, and respects order")
     pg.click("#undo")
@@ -170,7 +192,7 @@ with sync_playwright() as p:
     # draw, then move, then undo -> the MOVE goes, the stroke stays.
     draw(pg, box, 90, 100)
     after_draw = pts(pg)
-    pg.click("#pbArt")
+    enter_move(pg)
     pg.wait_for_timeout(300)
     pg.mouse.move(box["x"] + 180, box["y"] + 140)
     pg.mouse.down()
@@ -189,7 +211,7 @@ with sync_playwright() as p:
     pg.evaluate("() => { addFrame(true); addFrame(true); go(0); }")
     pg.wait_for_timeout(350)
     p0, p1 = pts(pg, 0), pts(pg, 1)
-    pg.click("#pbArt")
+    enter_move(pg)
     pg.wait_for_timeout(300)
     pg.click("#mbScope button[data-scope='after']")
     pg.wait_for_timeout(250)
@@ -225,7 +247,7 @@ with sync_playwright() as p:
     pg.set_viewport_size({"width": 900, "height": 1000})
     pg.wait_for_timeout(300)
     if not pg.is_visible("#movebar"):
-        pg.click("#pbArt")
+        enter_move(pg)
         pg.wait_for_timeout(300)
 
     geom = pg.evaluate("""() => {
@@ -294,7 +316,7 @@ with sync_playwright() as p:
     pg.set_viewport_size({"width": 900, "height": 1000})
     pg.wait_for_timeout(250)
     if not pg.is_visible("#movebar"):
-        pg.click("#pbArt")
+        enter_move(pg)
         pg.wait_for_timeout(300)
     pg.click("#mbReset")
     pg.wait_for_timeout(200)
@@ -390,7 +412,7 @@ with sync_playwright() as p:
 
     check("leaving move mode never strands an open entry box",
           pg.evaluate("""() => { const i = document.getElementById('mbOffsetInput');
-              document.getElementById('pbArt').click();
+              setTool('artmove');
               document.getElementById('mbOffset').click();
               document.getElementById('mbDone').click();
               return i.hidden === true; }"""),
@@ -418,7 +440,7 @@ with sync_playwright() as p:
         return sorted({(round(a[0] - c[0], 6), round(a[1] - c[1], 6))
                        for a, c in zip(pts(pg, i), orig)})
 
-    pg.click("#pbArt")
+    enter_move(pg)
     pg.wait_for_timeout(300)
     pg.click("#mbOffset")
     pg.wait_for_timeout(200)
@@ -483,7 +505,7 @@ with sync_playwright() as p:
     # index i stop identifying the captured page. A reorder could apply one
     # page's coordinates to another page's strokes.
     print("\nMOVE — page structure is frozen while a move is live")
-    pg.click("#pbArt")
+    enter_move(pg)
     pg.wait_for_timeout(300)
     pg.click("#mbOffset")
     pg.wait_for_timeout(200)
@@ -539,7 +561,7 @@ with sync_playwright() as p:
     pg.evaluate("() => { idx = 0; buildStrip(); render(); }")
     pg.wait_for_timeout(200)
     if not pg.is_visible("#movebar"):
-        pg.click("#pbArt")
+        enter_move(pg)
         pg.wait_for_timeout(300)
     n_pages = pg.evaluate("() => frames.length")
 
@@ -617,6 +639,35 @@ with sync_playwright() as p:
     pg.wait_for_timeout(250)
 
     check("no JS errors across the composed transitions", not errs, "; ".join(errs[:2]))
+
+    # ---- the replace/restore pair, at a width where there is a bar to replace
+    # This suite runs at 393px, which since v227 is the COMPACT surface with no
+    # page bar at all — so "entering the mode hid it" was true before the mode
+    # started and proved nothing. The claim is real, it just needs a REGULAR
+    # width to be testable, so it gets its own page rather than being dropped.
+    print("\nMOVE — the bar is REPLACED, not added to (regular width)")
+    rp = b.new_page(viewport={"width": 1100, "height": 900})
+    rp.goto(f"{BASE}/flip", wait_until="load")
+    rp.wait_for_timeout(1200)
+    _shown = lambda sel: rp.evaluate(
+        "(s) => { const e = document.querySelector(s);"
+        " return !!e && e.offsetParent !== null"
+        " && e.getBoundingClientRect().height > 0"
+        " && getComputedStyle(e).display !== 'none'; }", sel)
+    check("the page bar is on screen before the move starts", _shown("#pagebar"),
+          "otherwise 'it was replaced' is true of a bar that was never there")
+    rp.evaluate("() => setTool('artmove')")
+    rp.wait_for_timeout(350)
+    check("entering the mode REPLACES it with the move bar",
+          _shown("#movebar") and not _shown("#pagebar"),
+          "both halves: a second bar would push the filmstrip off screen, which "
+          "is the whole reason this replaces rather than adds")
+    rp.click("#mbDone")
+    rp.wait_for_timeout(350)
+    check("leaving restores the page bar and takes the move bar away",
+          _shown("#pagebar") and not _shown("#movebar"))
+    rp.close()
+
     b.close()
 
 summarise_and_exit()
