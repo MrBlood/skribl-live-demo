@@ -290,6 +290,92 @@ with sync_playwright() as p:
           "writeAutosave's clear branch deleted a record another tab wrote after this one loaded")
     ctx.close()
 
+    # ---------- 6. Flip's amber must describe a failure that HAPPENED --------
+    print("\nFLIP PILL — amber is a verdict, not a placeholder")
+    # WHY THIS SECTION EXISTS. Flip's media save writes the drawing to
+    # localStorage and spills the media bytes to IndexedDB. Until v229 it
+    # painted 'saved-no-media' -- an amber warning that deliberately NEVER
+    # fades -- synchronously, before the spill had settled, on the path the
+    # comments themselves call the normal way media is saved. Instrumented:
+    #
+    #     put:start bytes=4215866
+    #     pill:saved-no-media        (+1ms)
+    #     put:RESOLVED / pill:saved  (+13ms)
+    #
+    # 13ms of amber is invisible on a desktop, which is exactly why it shipped
+    # and why the existing pill assertion (Pad, final state only) could not see
+    # it. On a phone writing megabytes it is visible, and if the write is slow
+    # or fails it never clears. The user's report was "the saved without media
+    # stays stuck on flip".
+    #
+    # So this records the WHOLE sequence rather than the resting state. A final
+    # -state check passes on both the broken and the fixed build.
+    ctx = b.new_context()
+    pg = ctx.new_page()
+    f_errors = []
+    pg.on("pageerror", lambda e: f_errors.append(str(e)))
+    pg.goto(f"{BASE}/flip", wait_until="load")
+    pg.wait_for_timeout(900)
+    pg.evaluate("""() => { window.__pill = [];
+      const orig = window.showAutosaveStatus;
+      window.showAutosaveStatus = function (st) { window.__pill.push(st); return orig.apply(this, arguments); };
+    }""")
+    png2 = pg.evaluate(MAKE_PNG_FILE)
+    pg.evaluate("""(bytes) => {
+      const f = new File([new Uint8Array(bytes)], 'flip.png', { type: 'image/png' });
+      const dt = new DataTransfer(); dt.items.add(f);
+      const input = document.getElementById('imageInput');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }""", png2)
+    pg.wait_for_timeout(2600)
+    seq = pg.evaluate("() => window.__pill")
+    check("Flip: the media save is instrumented at all", len(seq) > 0,
+          f"{seq} — an empty sequence makes every check below vacuous")
+    check("Flip: a SUCCESSFUL media save never shows the amber warning",
+          "saved-no-media" not in seq,
+          f"{seq} — amber means the bytes are lost; announcing it before the "
+          f"write has settled is a warning about something that did not happen")
+    check("Flip: it says 'saving' while the spill is in flight",
+          "saving" in seq, f"{seq} — the pending state is what amber replaced")
+    check("Flip: and settles on plain 'Saved'", seq and seq[-1] == "saved",
+          f"{seq}")
+
+    # The other half, and the one that must NOT regress: a real failure still
+    # earns the amber. Without this, "never show amber" is satisfiable by
+    # deleting the warning.
+    pg2 = ctx.new_page()
+    pg2.goto(f"{BASE}/flip", wait_until="load")
+    pg2.wait_for_timeout(900)
+    pg2.evaluate("""() => { window.__pill = [];
+      const orig = window.showAutosaveStatus;
+      window.showAutosaveStatus = function (st) { window.__pill.push(st); return orig.apply(this, arguments); };
+      window.SkriblDraftStore.put = function () { return Promise.reject(new Error('forced')); };
+    }""")
+    png3 = pg2.evaluate(MAKE_PNG_FILE)
+    pg2.evaluate("""(bytes) => {
+      const f = new File([new Uint8Array(bytes)], 'flip.png', { type: 'image/png' });
+      const dt = new DataTransfer(); dt.items.add(f);
+      const input = document.getElementById('imageInput');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }""", png3)
+    pg2.wait_for_timeout(2600)
+    seq2 = pg2.evaluate("() => window.__pill")
+    check("Flip: a FAILED spill still raises the amber warning",
+          "saved-no-media" in seq2,
+          f"{seq2} — the fix must narrow when amber appears, never remove it")
+    stuck = pg2.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+        const t = document.getElementById('autosaveStatusText');
+        return { hidden: el.hidden, text: t.textContent,
+                 opacity: getComputedStyle(el).opacity }; }""")
+    check("Flip: and that warning STAYS on screen",
+          stuck["hidden"] is False and stuck["text"] == "Saved without media"
+          and stuck["opacity"] == "1",
+          f"{stuck} — a warning that fades claims it was resolved")
+    check("Flip: no page error through either path", not f_errors, "; ".join(f_errors[:2]))
+    ctx.close()
+
     b.close()
 
 bad = [r for r in results if not r[0]]

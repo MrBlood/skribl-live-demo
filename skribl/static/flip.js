@@ -530,7 +530,24 @@ function saveNow(){
     const lite = serializeFlip({ media: false });
     lite.mediaInIdb = true; lite.idbSavedAt = stamp;
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(lite));
-    showAutosaveStatus('saved-no-media');
+    // THE DRAWING IS SAFE; THE MEDIA BYTES ARE STILL IN FLIGHT. Until v229 this
+    // painted the amber 'saved-no-media' unconditionally, and that is a warning
+    // about a failure that has not happened and usually never will — reaching
+    // this code is the NORMAL way media is saved, as the comment 80 lines up
+    // says outright. Instrumented, the real sequence was:
+    //     put:start bytes=4215866
+    //     pill:saved-no-media      (+1ms)
+    //     put:RESOLVED / pill:saved (+13ms)
+    // 13ms of amber on a desktop is invisible, which is exactly why it shipped.
+    // On a phone writing multiple megabytes it is visible, and if the write is
+    // slow or never settles it is permanent — an amber durability warning
+    // parked on a session that is fine.
+    //
+    // 'saving' is the honest description of a pending write, it already stays
+    // up without fading, and the .then/.catch above resolve it to 'saved' or to
+    // a 'saved-no-media' that is TRUE. When there is no store to spill to,
+    // _mediaSpillState is already 'failed' and the amber is earned.
+    showAutosaveStatus(_mediaSpillState === 'saving' ? 'saving' : 'saved-no-media');
   } catch (e2) {
     // Last ditch: Flip has already dropped the media bytes and the lite payload
     // STILL will not fit. Make room the same way Pad does -- sweep orphaned
@@ -542,7 +559,9 @@ function saveNow(){
         const body = JSON.stringify(lite);
         if (window.SkriblPosted.reclaim(body.length)) {
           localStorage.setItem(AUTOSAVE_KEY, body);
-          showAutosaveStatus('saved-no-media');
+          // Same reasoning as the write above: reclaiming space says nothing
+          // about whether the media reached IndexedDB.
+          showAutosaveStatus(_mediaSpillState === 'saving' ? 'saving' : 'saved-no-media');
           recovered = true;
         }
       } catch (e3) { /* fall through to the honest failure below */ }

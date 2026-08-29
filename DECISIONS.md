@@ -2182,3 +2182,79 @@ exactly when the defect is present.
 **The rule: when a migration is incremental, assert the INVARIANT that survives
 every intermediate state, not the progress through them.** "Some remain" is a
 status line. "None of the remainder can contradict the decision" is a test.
+
+## v265 -- A remedy that always fires is not a remedy, it is the behaviour
+
+`lib/pillfit.js` faded the autosave pill when it would cover a control. On a
+desktop that condition is rare, so fading reads as a graceful exception. On a
+phone the pill's fixed bottom-left corner overlaps the tool row at EVERY size --
+the file's own header says so, in the sentence right above the fix -- so the
+exception fired every single time and "Saved" was never once visible on a phone.
+
+The file knew the collision was universal on phones and still chose a remedy
+whose cost is proportional to how often it fires. Nobody measured the frequency,
+because on the machine it was written on the answer was "almost never".
+
+**Ask how often a fallback runs before choosing one.** A fallback that fires 1%
+of the time can afford to be lossy. A fallback that fires 100% of the time on an
+entire class of device IS the product's behaviour there, and it has to be as
+good as the primary path -- or it has to be a different fallback. Lifting the
+pill was available the whole time and costs nothing.
+
+**And check what it composes with.** Warnings were exempt from fading, for a
+good reason. Combine "reassurance always hidden on phones" with "warnings never
+hidden" and the emergent behaviour is that a phone shows warnings and nothing
+else -- a stuck amber pill on a healthy session. Neither rule was wrong. The
+pair was, and no test covered the pair.
+
+## v266 -- Do not paint a warning before the thing it warns about has happened
+
+Flip's media autosave showed the amber "Saved without media" -- a pill that by
+design NEVER fades, because a warning that fades claims it was resolved --
+synchronously, before the IndexedDB write it describes had settled. Reaching
+that code is the NORMAL path for saving media; the comments 80 lines up say so
+outright.
+
+Instrumented, the real sequence was:
+
+    put:start bytes=4215866
+    pill:saved-no-media        (+1ms)
+    put:RESOLVED / pill:saved  (+13ms)
+
+**13ms of a false alarm is not visible on the machine that writes the code**, and
+that is the entire reason it shipped. On a phone spilling megabytes the gap is
+long enough to see, and if the write is slow or fails the warning is permanent:
+an amber durability alarm parked on a session that is completely fine.
+
+The honest state for a pending write is "Saving…", which already exists and
+already stays up. Amber should be reachable only from the failure handler.
+
+**The rule: a state that means "something went wrong" may only be set by the
+code that LEARNED something went wrong.** Setting it optimistically and
+correcting it later inverts the cost -- the correction is the fast path on fast
+hardware and the slow path exactly where the user is least able to tolerate it.
+
+**And the test that missed it was checking the resting state.** A resting-state
+assertion passes identically on the broken and the fixed build; only recording
+the whole sequence could tell them apart. When a bug lives in an intermediate
+state, assert the sequence.
+
+## v267 -- Writing an attribute you observe is a loop, even when nothing changes
+
+`pillfit.sync()` writes the pill's `class`; `pillfit` observes the pill's
+`class`. `classList.remove()` sets the attribute even when the token was not
+present, and setting an attribute fires a MutationObserver record even when the
+serialized value is identical. So every unconditional write fed the observer,
+which scheduled another animation frame, forever -- on an idle page, with the
+pill hidden, doing nothing.
+
+Measured on a phone viewport three seconds after everything settled: **133**
+writes before the guard, **364** once lifting added two more per pass, **0**
+after. It predates the v229 work; lifting doubled it, which is the only reason
+it was noticed at all.
+
+**Guard every write behind "would this change anything?"** when the writer and
+the observer are the same component. It is not a micro-optimisation there; it
+is the difference between converging and spinning. And a drawing app that keeps
+a requestAnimationFrame loop alive while the user is doing nothing is spending
+a phone battery to accomplish nothing.
