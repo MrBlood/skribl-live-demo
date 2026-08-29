@@ -2947,3 +2947,69 @@ cannot satisfy that rule", which is what produced v296.
 
 **A reference image is data. Measure it.** It costs one script and it converts an
 argument about taste into an arithmetic fact everyone can check.
+
+## v240 -- A reload is not a clean slate when the app saves on pagehide
+
+A new section of `verify_fill.py` needed an empty page, and did the obvious
+thing: clear localStorage, reload, start fresh. It was not fresh. `reload()`
+fires `pagehide`, `pagehide` runs `flushFlipDraft()`, and the outgoing page
+wrote its drawing straight back into the slot the clear had just emptied.
+
+Everything the previous twenty assertions had drawn came back. The flood under
+test then crossed those old strokes instead of the photograph, and a mutation
+that removed the entire fix still passed -- with 136 runs where the real answer
+was 2.
+
+The order matters and the fix is one line: reload FIRST, then clear, then empty
+the frame explicitly and assert it is empty before proceeding.
+
+**Autosave and test isolation are the same mechanism pointed in opposite
+directions.** In an app that persists aggressively, a fixture has to say what
+state it wants and check it got it -- "I reloaded" is not a statement about
+state.
+
+## v241 -- A mutation that does not apply is a mutation that passes
+
+The same fix was mutation-tested four times and passed every time, which should
+have been the tell. Two separate causes, both silent:
+
+1. `str.replace()` returns the string unchanged when the pattern is absent. The
+   inline `python3 -c` mutations had no assertion, so a pattern that did not
+   match wrote the file back untouched and the suite ran the FIXED code. It
+   reported PASS, which reads exactly like "the assertion is too weak".
+2. The fixture contamination above, which made the real mutation survivable.
+
+The habit that fixes it costs one line: `assert s.count(old) == 1` before every
+mutating replace, and grep the file afterwards to confirm the code is gone. Both
+were already the norm in the heredoc mutations in this session; the shortcut
+form is where it slipped.
+
+**When a mutation passes, suspect the mutation before the test.** A test that
+cannot fail and a mutation that cannot apply produce identical output.
+
+## v242 -- Fill over a photograph, and the rule that did not survive contact
+
+`doFill` sampled the composited canvas -- backdrop, photo and all -- on the
+stated reasoning that this is what the user is pointing at, and that filling
+"the white part" of a photo has to see the photo. Reasonable, and it fails on
+any real photograph.
+
+A photo is texture. The flood is anchored to the SEED colour with a tolerance of
+32 in squared RGBA distance, so on photo grain it stops within a few pixels.
+Measured on a noisy image with a drawn box around the seed: **2 runs against 54**
+for the same tap. Two runs is a speck, and a speck is why it was reported as the
+tool not working.
+
+The tolerance cannot be raised to fix it -- loose enough to cross photo grain is
+loose enough to walk through a drawn line. So with a photo showing, the flood
+runs against the background colour plus this frame's strokes: fill what MY INK
+encloses. Identical behaviour when there is no photo, because then the two
+images are the same.
+
+The original comment was right that this has a cost, and it is written down
+rather than dropped: a tap outside your strokes now floods up to them, over the
+photo. That is what a tap outside a shape has always done on a plain background.
+
+**"What the user is pointing at" is a good rule and it is not the same as "what
+the algorithm can act on".** Test the rule against the messiest real input before
+trusting the reasoning.

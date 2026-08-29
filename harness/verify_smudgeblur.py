@@ -248,6 +248,61 @@ with sync_playwright() as p:
               "gesture, and v230's coalesced sampling raised that rate on "
               "purpose. Accrue per pixel travelled instead.")
 
+        print("\nOVER A PHOTO — the limit, said out loud instead of silently")
+        # These tools move and recolour STROKE POINTS. A photograph is not
+        # strokes, so sweeping one does nothing -- which is correct and looks
+        # broken. Reported from the live demo on a drawing made over a photo.
+        # Softening the photo itself needs a raster layer the frame format does
+        # not have; what CAN be fixed is the silence.
+        page.reload(wait_until="networkidle")
+        page.wait_for_timeout(800)
+        page.evaluate("""() => { localStorage.clear();
+          frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+          idx = 0; render(); }""")
+        noisy = page.evaluate("""async () => {
+          const c = document.createElement('canvas'); c.width = 900; c.height = 700;
+          const g = c.getContext('2d'); const im = g.createImageData(900, 700);
+          for (let i = 0; i < im.data.length; i += 4) {
+            const v = (Math.random() * 255) | 0;
+            im.data[i] = v; im.data[i+1] = (v*7)%255; im.data[i+2] = (v*13)%255;
+            im.data[i+3] = 255;
+          }
+          g.putImageData(im, 0, 0);
+          const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+          return Array.from(new Uint8Array(await blob.arrayBuffer()));
+        }""")
+        page.evaluate("""(bytes) => {
+          const f = new File([new Uint8Array(bytes)], 'noise.png', { type: 'image/png' });
+          const dt = new DataTransfer(); dt.items.add(f);
+          const input = document.getElementById('imageInput');
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }""", noisy)
+        page.wait_for_timeout(1800)
+        check("the photo is on screen and the page has no ink",
+              page.evaluate("() => photoShowing()") is True
+              and page.evaluate("() => frame().strokes.length") == 0,
+              "without both, this section is testing the empty-canvas path")
+
+        b = page.locator("#pad").bounding_box()
+        cx, cy = b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
+        page.evaluate("() => setTool('smudge')")
+        page.wait_for_timeout(200)
+        page.mouse.move(cx - 60, cy)
+        page.mouse.down()
+        for i in range(1, 7):
+            page.mouse.move(cx - 60 + i * 18, cy)
+        page.mouse.up()
+        page.wait_for_timeout(400)
+        note = page.locator("#flipChip").text_content()
+        check("smudging a photo SAYS it works on strokes, not the photo",
+              "photo" in note.lower(),
+              f"{note!r} — the sweep correctly does nothing, and doing nothing "
+              "without saying why is how a tool gets reported as broken")
+        check("...and it still lays no stroke of its own",
+              page.evaluate("() => frame().strokes.length") == 0,
+              "explaining the limit must not turn the tool into a pen")
+
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
         br.close()

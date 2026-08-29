@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T22:24:05Z
+UTC timestamp           : 2026-08-29T23:36:38Z
 Host                    : Linux x86_64
-Tree SHA-256            : fe18db32d3e83faccb6fd321f4c8a323e89e494ff01110510548fd8ee7789e7a
-Git commit              : da06e82-dirty
+Tree SHA-256            : 4c6cb7a7370d5e6a486ae2d6b3d2e1f31d1b80f037696d4d675848b4df25d504
+Git commit              : fa3c53d-dirty
 SKRIBL_VERSION          : v239
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,24 +10,25 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.njXylH2Qpw/harness.db)
+Database reset          : yes (fresh /tmp/tmp.YD8fZqcrSY/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_version.py verify_docs.py verify_icons.py verify_stamps.py verify_amber.py verify_ux.py verify_tray.py
+Command                 : harness/run_harness.sh verify_fill.py verify_smudgeblur.py verify_liquify.py verify_drafts.py verify_media.py verify_icons.py verify_ux.py verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 7
-  verify_version.py: ok — 24/24 passed
-  verify_docs.py: ok — 65/65 passed
+suites requested : 8
+  verify_fill.py: ok — 25/25 passed
+  verify_smudgeblur.py: ok — 22/22 passed
+  verify_liquify.py: ok — 31/31 passed
+  verify_drafts.py: ok — 28/28 passed
+  verify_media.py: ok — 24/24 passed
   verify_icons.py: ok — 35/35 passed
-  verify_stamps.py: ok — 37/37 passed
-  verify_amber.py: ok — 31/31 passed
   verify_ux.py: ok — 310/310 passed
-  verify_tray.py: ok — 93/93 passed
-assertions passed: 595   (skipped suites contribute 0)
+  verify_docs.py: ok — 65/65 passed
+assertions passed: 540   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
