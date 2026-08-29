@@ -2917,24 +2917,27 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<circle cx="12" cy="12" r="6.6" fill="currentColor" stroke="none" opacity=".22"/>'
               + '<circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" opacity=".45"/>'
               + '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>' },
-        // A DROP. Plain outline, no fill level, drawn to the owner's reference.
+        // A TIPPED CAN WITH A DROP BESIDE IT, drawn to the owner's reference.
         //
-        // THE APEX IS THE ICON. A drop is a sharp point over a round body, and it
-        // is the point that makes it a drop: an earlier attempt widened the shape
-        // to fit a size band, blunted the apex doing it, and came out looking like
-        // a peach. The control points here stay near the axis at the top so the
-        // tangent leaving the apex is steep; the proportions were tuned around
-        // that rather than the other way round.
+        // WIDE, NOT TALL. Measured off the reference, its ink box is 129x103 --
+        // an aspect of 1.25, because the drop sits BESIDE the can rather than
+        // under it. Every earlier bucket here was roughly square and the drop
+        // that preceded this one was 0.74; this is the third distinct proportion
+        // the Fill slot has taken, which is precisely why the size rule in
+        // verify_icons.py is an area band and not a per-axis one (v296).
         //
-        // MEASURED AGAINST THE REFERENCE rather than eyeballed: the owner's drop
-        // has an ink box of 116x158, an aspect of 0.734. This is 0.744. That
-        // slenderness is the whole character of the shape and it is why the size
-        // rule in verify_icons.py is an AREA band -- a drop cannot be as wide as
-        // a square glyph without ceasing to be a drop.
+        // THE HANDLE IS A WIRE, and it is drawn thinner than everything else on
+        // purpose. A first attempt drew it as a closed loop, correctly matching
+        // the reference's shape, and at a 2px stroke the loop's hole filled in
+        // solid and it read as a blob. An open arc at 1.7 keeps the wire legible
+        // at 24px, which a faithful-but-solid loop does not.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M12 2.4C12 2.4 14.1 7.52 17.18 10.94C18.72 12.5 19.0 14.25 19.0 14.6A7.0 7.0 0 0 1 5.0 14.6C5.0 14.25 5.28 12.5 6.82 10.94C9.9 7.52 12 2.4 12 2.4Z"/></svg>' },
+              + '<path d="M9.2 7.0L14.28 12.08a1.6 1.6 0 0 1 0 2.24L10.32 18.28a1.6 1.6 0 0 1 -2.24 0L4.12 14.32a1.6 1.6 0 0 1 0 -2.24Z"/>'
+              + '<path d="M5.9 9.9a3.9 3.9 0 0 1 5.5-5.5" stroke-width="1.7"/>'
+              + '<circle cx="10.8" cy="10.6" r="1.05" fill="currentColor" stroke="none"/>'
+              + '<path d="M19.4 9.6C19.4 9.6 20.27 11.95 21.55 13.52C22.18 14.33 22.3 15.05 22.3 15.2A2.9 2.9 0 0 1 16.5 15.2C16.5 15.05 16.62 14.33 17.25 13.52C18.53 11.95 19.4 9.6 19.4 9.6Z" fill="currentColor" stroke="none"/></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
