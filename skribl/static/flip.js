@@ -5007,6 +5007,20 @@ function liquifyMove(pt){
  * statement of what that cannot do. */
 const SMUDGE_STRENGTH = 0.92;   // vs Liquify's 0.5 -- the ink comes with you
 const SMUDGE_SHARP = 2.2;       // vs Liquify's 1 -- a fingertip, not a field
+/* SMEARING, which is what makes this a smudge rather than a warp, and its
+   absence is what the first version got wrong. Displacement alone IS Liquify;
+   changing two constants gives you a sharper Liquify and the report said so in
+   four words: "looks like liquefy".
+   Real smudged paint THINS as it travels -- there is only so much pigment and
+   dragging it spreads that pigment over more area. So the ink a smudge carries
+   also fades toward the ground and widens, in proportion to how far it has been
+   dragged. The result is a softening tail instead of a hard spike, which is the
+   difference a user actually sees. Accrued per pixel travelled for the reason
+   BLUR_RATE gives: per-event accrual makes the effect a property of the
+   hardware. */
+const SMUDGE_SMEAR = 0.010;     // per pixel travelled
+const SMUDGE_FADE_MAX = 0.32;   // gentler than blur: it is a side effect, not the point
+const SMUDGE_SPREAD_MAX = 0.45;
 /* BLUR ACCUMULATES AGAINST THE PRE-DRAG SNAPSHOT, NOT AGAINST ITSELF, and that
    is a correctness point rather than a nicety.
 
@@ -5035,6 +5049,7 @@ const BLUR_SPREAD_MAX = 0.8;    // widest ONE drag can make a point
 let _fieldIdx = -1, _fieldBefore = null, _fieldLast = null,
     _fieldTouched = false, _fieldLabel = '';
 let _blurAcc = null;            // point index -> accumulated weight, this drag
+let _smear = null;              // point OBJECT -> smear state, this drag
 
 function fieldBegin(pt, label){
   // Pinned to the page the gesture STARTED on, for the reason liquifyBegin
@@ -5043,6 +5058,7 @@ function fieldBegin(pt, label){
   _fieldIdx = idx; _fieldLabel = label; _fieldTouched = false;
   _fieldLast = { x: pt.x, y: pt.y };
   _blurAcc = new Map();
+  _smear = new WeakMap();
   const f = frames[_fieldIdx];
   _fieldBefore = f ? { strokes: f.strokes.map(q => Object.assign({}, q)),
                        groups: f.strokeGroups.slice() } : null;
@@ -5052,7 +5068,7 @@ function fieldEnd(){
   const at = _fieldIdx, before = _fieldBefore, f = frames[at];
   const touched = _fieldTouched, label = _fieldLabel;
   _fieldBefore = null; _fieldLast = null; _fieldIdx = -1; _fieldTouched = false;
-  _blurAcc = null;
+  _blurAcc = null; _smear = null;
   // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
   // empty canvas must not push a no-op the user then has to press through.
   if(!touched || !before || !f) return false;
@@ -5067,13 +5083,36 @@ function smudgeMove(pt){
   const dx = pt.x - _fieldLast.x, dy = pt.y - _fieldLast.y;
   _fieldLast = { x: pt.x, y: pt.y };
   if(!dx && !dy) return false;
+  const travel = Math.sqrt(dx * dx + dy * dy);
   const r = liquifyRadius();
   // Resolution BEFORE displacement, exactly as liquifyMove does it: a segment
   // with two vertices in the brush can only bend into a corner, and splitting
   // after the warp interpolates the kink instead of preventing it.
+  //
+  // NOTE the ordering hazard this creates for the smear below: subdividing
+  // INSERTS points, so an index taken before the split refers to a different
+  // point after it. The accumulator is therefore keyed off the CURRENT index
+  // each pass and the original is read from the live point, not the snapshot --
+  // the snapshot's indices stop matching the moment a segment is split.
   if(liquifySubdivide(f, pt.x, pt.y, r)) _fieldTouched = true;
   const hit = SkriblBrushField.each(f.strokes, pt.x, pt.y, r, SMUDGE_SHARP,
-    (p, w) => { p.x += dx * w * SMUDGE_STRENGTH; p.y += dy * w * SMUDGE_STRENGTH; });
+    (p, w) => {
+      p.x += dx * w * SMUDGE_STRENGTH; p.y += dy * w * SMUDGE_STRENGTH;
+      // The smear. Ink that has been dragged thins: it fades toward the ground
+      // and spreads. Without this the tool is Liquify with different numbers.
+      //
+      // The accumulator lives in a WeakMap keyed by the POINT, not in a
+      // property on it. Points are serialised wholesale into the payload and
+      // copied by Object.assign for the undo snapshot, so a scratch field named
+      // `_sm` would ride into every saved draft, every shared Skribl and the
+      // server's validator. Keying off the object also survives
+      // liquifySubdivide inserting points mid-drag, which an index cannot.
+      let st = _smear.get(p);
+      if(!st){ st = { acc: 0, color: p.color, size: p.size }; _smear.set(p, st); }
+      st.acc = Math.min(1, st.acc + w * SMUDGE_SMEAR * travel);
+      p.color = SkriblBrushField.mix(st.color, bgColor, st.acc * SMUDGE_FADE_MAX);
+      p.size = st.size * (1 + st.acc * SMUDGE_SPREAD_MAX);
+    });
   if(hit) _fieldTouched = true;
   return hit;
 }

@@ -2418,3 +2418,45 @@ Here the opinion is that bytes which have not landed in twelve seconds are lost,
 because that is what a reload will find. A late resolve is then ignored on
 purpose: the user has already been told the truth, and flipping the pill back to
 green would un-tell it.
+
+## v275 -- A test whose fixture is too easy is a test that passes on the bug
+
+Two assertions were written for the fill's fringe gap and BOTH were vacuous.
+
+The first drew a BOX. Axis-aligned edges barely anti-alias, so there was no
+fringe for the fill to miss, and the assertion passed on a build with GROW set
+to zero -- the exact defect it was written to catch. The second counted holes in
+the shape's INTERIOR, shrunk by 18%, which excluded precisely the edge band
+where the artefact lives.
+
+Neither was a wrong assertion. Both were the right assertion pointed at a
+fixture that could not exhibit the failure.
+
+**Mutation testing is what caught it, and it is the only thing that could have.**
+The assertions passed on the good build and on the broken one, so nothing about
+running them told you anything. A test's fixture has to be able to FAIL, and the
+cheapest way to know is to break the code and watch.
+
+**Practically: when a bug is reported on a curve, test a curve.** The reproduction
+the user gave is the fixture; simplifying it to a rectangle for convenience
+throws away the property that produced the bug.
+
+## v276 -- A point is a payload field, not a scratchpad
+
+Smudge needed per-point state: how far this point has been smeared, and what its
+colour and size were before the drag started. The obvious place is a property on
+the point.
+
+Points are serialised wholesale into every autosaved draft and every shared
+Skribl, and copied by Object.assign into the undo snapshot. A scratch field
+named `_sm` would have ridden into all of it and arrived at the server's
+validator, on every stroke the user ever smudged.
+
+It lives in a WeakMap keyed by the point object instead -- which also happens to
+be more correct: liquifySubdivide INSERTS points mid-drag, so an index captured
+before a split refers to a different point after it. Keying off identity
+survives that; keying off position does not.
+
+**Anything shaped like a record that leaves the process needs its scratch state
+kept somewhere else,** and the assertion is cheap: no key on a point may begin
+with an underscore.

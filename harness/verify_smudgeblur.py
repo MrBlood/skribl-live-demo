@@ -151,13 +151,34 @@ with sync_playwright() as p:
               after["groups"] == before["groups"],
               f"{before['groups']} -> {after['groups']} groups — a tool that "
               "works on existing ink must not also draw")
+        # THE REPORT THAT SENT THIS BACK: "3rd is smudge. Looks like liquefy."
+        # It did, because it WAS — displacement with two constants changed. Real
+        # smudged paint thins as it travels: there is only so much pigment and
+        # dragging spreads it over more area. So smudge also fades and widens
+        # what it carries, which is the difference a user actually sees.
+        smeared = sum(1 for a, q in zip(after["cols"], before["cols"]) if a != q)
+        check("smudge SMEARS as well as displacing",
+              smeared > 0,
+              f"{smeared} points recoloured — displacement alone is Liquify, "
+              "and changing its constants gives you a sharper Liquify, not a "
+              "different tool")
+
+        # The smear needs per-point scratch state, and points are serialised
+        # wholesale into every saved draft and shared Skribl. A scratch field
+        # parked on the point would ride into the payload and past the server's
+        # validator; it lives in a WeakMap keyed by the point instead.
+        keys = page.evaluate("() => Object.keys(frame().strokes[2] || {})")
+        check("smudge leaves no scratch fields on the points",
+              all(not k.startswith("_") for k in keys),
+              f"{keys} — a point is a payload field, not a scratchpad")
+
         page.evaluate("() => undoStroke()")
         page.wait_for_timeout(400)
         u = page.evaluate(SNAP)
         check("one undo restores the frame exactly",
               u["xs"] == before["xs"] and u["ys"] == before["ys"]
-              and u["pts"] == before["pts"],
-              "the snapshot undo has to cover the inserted points too")
+              and u["pts"] == before["pts"] and u["cols"] == before["cols"],
+              "the snapshot undo has to cover the inserted points AND the smear")
 
         print("\nBLUR — fades and widens, because it cannot convolve")
         page.evaluate("() => { localStorage.clear(); }")

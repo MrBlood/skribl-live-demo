@@ -1,32 +1,31 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T15:22:45Z
+UTC timestamp           : 2026-08-29T15:38:47Z
 Host                    : Linux x86_64
-Tree SHA-256            : 6802a2d06448c3052816dfc57bdb4f67470ceae7d6fe7242e4dc53c8edeb60b9
-Git commit              : 47739e1-dirty
-SKRIBL_VERSION          : v233
+Tree SHA-256            : 17652877866e0b1bd3fa58e91dbe020d7a90c7f9ef629b7506b0907744506a7c
+Git commit              : 03bfa86-dirty
+SKRIBL_VERSION          : v234
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.30Y4htoJD7/harness.db)
+Database reset          : yes (fresh /tmp/tmp.sD3aLkaPUm/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_fill.py verify_drafts.py verify_pillfit.py verify_docs.py verify_smudgeblur.py verify_layout.py
+Command                 : harness/run_harness.sh verify_fill.py verify_smudgeblur.py verify_liquify.py verify_docs.py verify_drafts.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 6
-  verify_fill.py: ok — 19/19 passed
-  verify_drafts.py: ok — 24/24 passed
-  verify_pillfit.py: ok — 20/20 passed
+suites requested : 5
+  verify_fill.py: ok — 20/20 passed
+  verify_smudgeblur.py: ok — 19/19 passed
+  verify_liquify.py: ok — 31/31 passed
   verify_docs.py: ok — 65/65 passed
-  verify_smudgeblur.py: ok — 17/17 passed
-  verify_layout.py: ok — 83/83 passed
-assertions passed: 228   (skipped suites contribute 0)
+  verify_drafts.py: ok — 24/24 passed
+assertions passed: 159   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
