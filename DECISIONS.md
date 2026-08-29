@@ -2771,3 +2771,29 @@ same change I did.
 **A numeric band over a design decision will eventually be satisfied by someone
 who cannot see the design.** Carry the reason in the exemption, in the output,
 where it will be read at the moment it is needed.
+
+## v290 -- At 24px only the silhouette survives, so judge at 24px
+
+The first repair of the Fill icon grew it from 15.0x16.3 to 19.8x18.8 -- into the
+band, measurably fixed -- and the owner said "there's got to be a better one".
+They were right. The size was never the whole complaint. The handle was a 3px
+stub, and a stub does not become a handle by being scaled.
+
+Fifteen candidates were drawn and rendered side by side at 4x AND at the 24px
+the tray actually uses. The 4x row is nearly useless for deciding: a tipped can
+with an open elliptical rim, a bucket pouring into a pool, a region with a drop
+falling into it all read beautifully at 4x and turned to mush at 24px. The pour
+became a desk lamp. The open rim became a rolling pin.
+
+What survives 24px is the SILHOUETTE and nothing else. Which is why the winner
+kept the original diamond-can outline -- already the strongest small shape in the
+set -- and spent every change on the two things that were not legible: the stub
+became a quarter-arc handle, and the drip grew until it stayed a separate shape
+instead of merging into the can's corner.
+
+Solid-bodied variants read better still in isolation, and at ~40% ink coverage
+were twice the weight of anything else in the tray. An icon is not judged alone;
+it is judged in the row it sits in.
+
+**Render every candidate at the size it will actually be used, and decide there.
+A comparison at 4x is a comparison of drawings, not of icons.**

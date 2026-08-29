@@ -2895,23 +2895,33 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<circle cx="12" cy="12" r="8.6" opacity=".28"/></svg>' },
         // THE ICON WAS THE SMALLEST IN THE TRAY. Measured as rendered, its ink
         // filled 15x16 of the 24 box where every other tool sits near 19x18,
-        // and the bucket was a hollow diamond with a 3px stub for a handle —
-        // at tray size it read as a plain tilted square with a dot, which is
-        // what "Fill is a weak icon" meant. It is now a tipped can: a longer
-        // angled handle, which is the line that makes it a BUCKET rather than
-        // a diamond, and paint filling the lower half, which is the thing that
-        // makes it FILL rather than a bucket. 19.8x18.8, and its ink coverage
-        // sits with the rest of the set instead of below it.
+        // and the bucket was a hollow diamond whose handle was a 3px stub — at
+        // tray size, a tilted square with a dot beside it.
+        //
+        // Size alone did not fix it. A first pass grew the can to 19.8x18.8 and
+        // it was still called weak, correctly: the stub was the problem, not
+        // the scale. Fifteen candidates were drawn and rendered at BOTH 4x and
+        // 24px, and the 24px row is the one that decided it — a tipped can with
+        // an open rim, a bucket pouring into a pool, and a region-with-a-drop
+        // all read at 4x and turned to mush at tray size. What survives 24px is
+        // the SILHOUETTE.
+        //
+        // So: the same diamond can, and the stub replaced by a real quarter-arc
+        // handle that is legible at 24px, with a drop big enough to stay a
+        // separate shape rather than merging into the corner. Solid-bodied
+        // variants read even better in isolation and at 40% ink coverage were
+        // twice the weight of anything else here; this stays in the tray's
+        // outline language at 23%.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M4.2 9.8 12.6 2.6l7.2 8.4-7.4 6.3a2 2 0 0 1-2.8-.2'
-              + 'l-5.2-6a2 2 0 0 1 .2-2.8Z"/>'
-              + '<path d="M7.4 13.5h10.1l-5 4.3a2 2 0 0 1-2.7-.2Z" '
+              + '<path d="M11.5 4 19.4 11.9a1.6 1.6 0 0 1 0 2.3l-5.1 5.1'
+              + 'a1.6 1.6 0 0 1-2.3 0L4.1 11.4Z"/>'
+              + '<path d="M8.8 16h8.3l-2.8 2.9a1.6 1.6 0 0 1-2.3 0Z" '
               + 'fill="currentColor" stroke="none"/>'
-              + '<path d="M8.9 5.6 6.4 3.1"/>'
-              + '<path d="M20.6 15s1.8 2.2 1.8 3.3a1.8 1.8 0 0 1-3.6 0'
-              + 'c0-1.1 1.8-3.3 1.8-3.3Z" fill="currentColor" stroke="none"/></svg>' },
+              + '<path d="M8 7.5a3.2 3.2 0 0 1 4.5-4.5l1.7 1.7"/>'
+              + '<path d="M20.2 14.9s1.9 2.4 1.9 3.5a1.9 1.9 0 0 1-3.8 0'
+              + 'c0-1.1 1.9-3.5 1.9-3.5Z" fill="currentColor" stroke="none"/></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
