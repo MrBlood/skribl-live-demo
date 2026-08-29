@@ -317,6 +317,38 @@
   .shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
     min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
 
+  /* ---------- The autosave pill, when it has somewhere to go ----------
+     FLIP ONLY. #autosaveStatus is one shared element across Pad, Flip and the
+     player, and only Flip can lose media bytes it then has to offer back, so
+     the interactive half lives here rather than in styles.css — which also
+     keeps player.css, generated FROM styles.css, out of it entirely.
+
+     pointer-events IS THE WHOLE FIX. The base pill sets `pointer-events: none`
+     so a status that happens to sit over a control cannot eat the tap meant for
+     it. Perfectly right while the pill is only a status, and it is exactly why
+     making it clickable needed a CSS change and not just a listener: the click
+     never reached the element. */
+  .autosave-status.actionable { pointer-events: auto; cursor: pointer; }
+  /* An amber pill that says "tap to re-add" has to LOOK tappable, or it reads
+     as a status that mysteriously responds to being poked. A ring in its own
+     warn colour, so the affordance and the severity are the same signal. */
+  .autosave-status.actionable { box-shadow: 0 0 0 1px var(--warn) inset; }
+  .autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); }
+  .autosave-status.actionable:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+  /* NOT a transform. pillfit LIFTS the pill with `transform: translateY(...)`
+     when it would otherwise sit on the tool row — on a 390px phone that is a
+     209px shift — and this file loads after styles.css, so a `transform` here
+     replaces the lift rather than composing with it. The pill then jumps back
+     down the moment it is pressed, out from under the finger pressing it.
+     Found by a click that timed out: the element kept moving away mid-click,
+     which is also precisely what it would do to a thumb. */
+  .autosave-status.actionable:active { filter: brightness(1.25); }
+  /* pillfit fades the pill to nothing when it cannot lift it clear of a bar.
+     Without this an INVISIBLE pill would still be taking taps in the corner of
+     the screen — the exact bug `pointer-events: none` was there to prevent,
+     reintroduced by the line that turns it back on. */
+  .autosave-status.actionable.blocked { pointer-events: none; }
+
   /* ---------- The stamp shelf ----------
      Anchored exactly like .shape-pop (styles.css) and for the same reason: it
      opens FROM its tool button, so it has to hang off .flip-tools, which is

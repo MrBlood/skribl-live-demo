@@ -221,6 +221,16 @@ let bgImage = null, bgImageObj = null, imageName = '';            // one backgro
 let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
 let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
+/* Media the session has LOST — a photo or track whose bytes never landed, kept
+   so the same file can be re-added with its settings intact. Declared UP HERE
+   with the rest of the media state rather than beside tryRestore(), because
+   showAutosaveStatus() reads them and it is defined, and reachable, well above
+   that point. `typeof x !== 'undefined'` does NOT make that safe: typeof shields
+   you from an UNDECLARED name, not from a `let` in its temporal dead zone, which
+   throws exactly the same ReferenceError. This file has been bitten by that
+   three times (see selClear, moveMode, the stamp shelf) and each time the fix
+   was to move the declaration, not to add a guard that does not guard. */
+let pendingMusicMeta = null, pendingPhotoMeta = null;
 let musicEnabled = true, trimStart = 0, trimEnd = null, audioDuration = 0;   // trim/loop
 const MAX_LOOP_SECONDS = 20;   // hard cap on loop length; enforced at load AND on every drag
 let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // decoded buffer for the waveform
@@ -505,27 +515,31 @@ function saveNow(){
     // synchronous write and no IndexedDB round trip.
     try {
       localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
-      // PLAIN 'saved', even when a pending media record exists — and that is a
-      // correction to v229, not a weakening of it.
+      // v238: 'saved' when this write omitted nothing AND nothing is waiting;
+      // amber when a media record IS waiting to be re-added.
       //
-      // Reaching here means hasMedia is FALSE: there is no photo and no track
-      // on this page, so this save omitted nothing and "Saved without media" is
-      // describing something that did not happen. pendingPhotoMeta is a memo
-      // about a PAST loss, kept so the user can re-add the same image with its
-      // settings intact. It is not a property of this write.
+      // THIS IS NOT A REVERT OF v235, it is the half of it that was missing.
+      // v235 was answering a live report — amber sitting permanently on a
+      // drawing, on every save, with no way to clear it — and it removed the
+      // pill instead of the dead end. The cost showed up in verify_amber: reload
+      // a session whose track genuinely never saved and it said "Saved" with the
+      // track gone. Both states are the SAME state in the draft (mediaOmitted
+      // set, a pending record restored, no bytes), so there is nothing here to
+      // discriminate on. Either the warning is shown or the loss is silent.
       //
-      // The cost of conflating them was reported from the live demo: the amber
-      // sat on screen permanently, on a drawing with no media in it, and the
-      // record round-trips through the draft (serializeFlip writes
-      // `photo: pendingPhotoMeta` when bgImage is null) so a reload brought it
-      // straight back. The only control that clears it lives in a drawer and
-      // measures 0x0 until that drawer is opened — a warning with no reachable
-      // resolution, which is how a user learns to ignore the colour amber.
+      // What made the old amber intolerable was never that it was wrong — it was
+      // that it went nowhere. The only control that clears a pending record is
+      // the re-add card, and that card measures 0x0 until its drawer is opened.
+      // So the pill is now the route to it (see showAutosaveStatus below): the
+      // warning is true, and one tap reaches the Re-add and Dismiss it is
+      // telling you about. Dismissing clears the record, which schedules a save,
+      // which reports plain 'saved' — the amber ends because the situation did.
       //
-      // The real warning is untouched: when media IS attached and its bytes
-      // fail to land, the spill path below still raises amber and still keeps
-      // it up.
-      showAutosaveStatus('saved');
+      // A pending record is checked rather than hasMedia because reaching here
+      // means hasMedia is FALSE: there is no photo and no track on this page, so
+      // this write really did omit nothing. The record is about media the
+      // session is still missing, which is a fact about now, not about history.
+      showAutosaveStatus((pendingPhotoMeta || pendingMusicMeta) ? 'saved-no-media' : 'saved');
       return;
     } catch (e) {
       if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
@@ -664,6 +678,52 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushFlipDraft();
 });
 // Autosave status pill (ported from the Pad): "Saving…" while pending, then "Saved".
+/* Is there media the session has LOST, as opposed to media it merely could not
+   make durable? Only the first has anything to re-add. */
+function _pillPending(){
+  return (pendingMusicMeta && !musicData) || (pendingPhotoMeta && !bgImage);
+}
+
+/* Make the pill a control, or stop it being one.
+   A DIV WITH role="button" RATHER THAN A <button>, deliberately: #autosaveStatus
+   is one shared element across Pad, Flip and the player, and only Flip can ever
+   have media to re-add. Changing the markup would put a button that does nothing
+   on the other two. The role and the tabindex are added exactly while the pill
+   has somewhere to go and removed the moment it does not, which is also the
+   honest answer for a screen reader — it announces a button only when there is
+   one. */
+let _pillBound = false;
+function _pillAction(on){
+  const el = document.getElementById('autosaveStatus');
+  if(!el) return;
+  el.classList.toggle('actionable', !!on);
+  if(on){
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('title', 'Open the drawer holding the missing file');
+  } else {
+    el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('title');
+  }
+  if(_pillBound) return;
+  _pillBound = true;
+  const go = (e) => {
+    if(!el.classList.contains('actionable')) return;
+    // The document-level handler below closes any open drawer on a click
+    // outside it. Without this the drawer would open and shut in the same
+    // event — opened here, closed by the same click still travelling upward.
+    e.stopPropagation();
+    e.preventDefault();
+    refreshPendingCards();
+    // Music first only because a session can be missing both and one drawer has
+    // to come up; the other card is still one tap away and its own dot marks it.
+    _flipDrawerCtl.open((pendingMusicMeta && !musicData) ? 'music' : 'photo');
+  };
+  el.addEventListener('click', go);
+  el.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') go(e);
+  });
+}
+
 function showAutosaveStatus(state){
   const el=document.getElementById('autosaveStatus'), txt=document.getElementById('autosaveStatusText'); if(!el||!txt) return;
   clearTimeout(el._hideTimer); el.hidden=false; el.classList.remove('saving','failed','partial');
@@ -672,8 +732,25 @@ function showAutosaveStatus(state){
   // Drawing + all settings saved; the media files were too large for localStorage.
   // Amber, not green — the session is not fully recoverable and the user should know
   // without having to open a drawer to find out.
-  else if(state==='saved-no-media'){ el.classList.add('partial'); txt.textContent='Saved without media'; }
+  //
+  // TWO WORDINGS, because there are two amber situations and only one of them is
+  // something the user can act on. When a pending record is waiting, the file is
+  // GONE from the session and the re-add card can put it back, so the pill names
+  // the action. When there is no record — a spill with no store to spill to —
+  // the media is still loaded and in front of them; nothing needs re-adding, it
+  // simply will not survive a reload. Offering "tap to re-add" there would send
+  // them to an empty drawer.
+  else if(state==='saved-no-media'){
+    el.classList.add('partial');
+    txt.textContent = _pillPending() ? 'Media missing — tap to re-add'
+                                     : 'Saved without media';
+  }
   else { txt.textContent='Saved'; }
+  // THE ROUTE OUT, and the whole reason the amber is allowed back. Reapplied on
+  // every call rather than bound once, because whether the pill does anything
+  // changes with the state it is showing — and a control that looks tappable
+  // and is not is worse than one that never offered.
+  _pillAction(state === 'saved-no-media' && _pillPending());
   requestAnimationFrame(()=>el.classList.add('show'));
   // 'failed' and 'saved-no-media' STAY UP — each describes an ongoing
   // durability problem, and a warning that fades claims it was resolved
@@ -741,7 +818,6 @@ function applyPayload(d){
 }
 // Media the autosave had to drop (too big for localStorage). Mirrors the Pad:
 // the settings survive, the bytes don't, and the drawers show a "Re-add" card.
-let pendingMusicMeta = null, pendingPhotoMeta = null;
 function tryRestore(){
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);

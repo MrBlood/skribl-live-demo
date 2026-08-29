@@ -2653,42 +2653,77 @@ is the one where the right answer and the wrong answer coincide.** Mutating the
 code is the only way to find those; reading the test will not do it, because the
 test reads correctly.
 
-## v286 -- The amber pill after a restore: a live red suite, and the call is yours
+## v286 -- A warning is only intolerable when it has nowhere to go
 
-`verify_amber.py` is FAILING on `main`, on one assertion, and I caused it. It
-passed at v234 and my v235 change broke it. Nothing in this stamps work touches
-it; I found it running the neighbours and confirmed it by checking out v234's
-`flip.js` and watching the assertion go green again.
+`verify_amber.py` was FAILING on `main`, on one assertion, and I caused it. It
+passed at v234 and my v235 change broke it -- confirmed by checking out v234's
+`flip.js` and watching the assertion go green again. It went unnoticed for three
+merges because each was reviewed against the suites its own diff touched.
 
-**What changed.** v235 answered a live report -- the amber "Saved without media"
-pill sitting permanently on a drawing with no media in it -- by making the save
-status describe only the write it belongs to. Reaching the no-media save path
-means that write omitted nothing, so it now says plain "Saved".
+**What v235 was answering.** A live report: the amber "Saved without media" pill
+sitting permanently on a drawing, coming back on every save, with no way to
+clear it. v235 made the save status describe only the write it belongs to, so
+the no-media path reports plain "Saved".
 
-**What that cost.** Reload a session whose music bytes genuinely never landed
-and the pill says "Saved" while the track is gone. `verify_amber` asserts
-exactly that case and is right to: the loss is real and nothing on screen says
-so. The re-add card in the music drawer still holds the file's name and settings
--- that half works -- but the drawer is shut, and the card measures 0x0 until it
-is opened.
+**What that cost.** Reload a session whose track genuinely never saved and the
+pill says "Saved" with the track gone. And there is nothing in the code to tell
+the two cases apart: in the live report and in the failing test the draft is
+IDENTICAL -- `mediaOmitted` set, a pending record restored, no bytes. Either the
+warning is shown or the loss is silent.
 
-**Why I have not fixed it.** I tried the obvious repair, raising amber at restore
-time, and it does not hold: an automatic save fires within about a second of the
-restore and, correctly under v235, reports "Saved" over it. Every version that
-works from here is a judgement about a warning YOU have already complained about
-once, so it is yours:
+**So the fix was never about which state to show.** What made the old amber
+intolerable was not that it was wrong. It was that it went nowhere: the pill
+said media was missing, and the only controls that could do anything -- Re-add
+and Dismiss, on the pending card -- lived inside a shut drawer, measuring 0x0
+until something opened it. Nothing on screen pointed there. v235 removed the
+warning instead of the dead end.
 
-1. **Revert to v229.** A standing pending record makes every save amber. True,
-   and it is the behaviour you reported as broken -- the pill never went away.
-2. **Keep v235's pill and mark the drawer instead.** A dot on the music/photo
-   drawer button while a re-add card is waiting. The durability pill stays about
-   durability, the loss stays visible, and the marker clears when you re-add the
-   file or dismiss the card. This is what I would build.
-3. **Accept it and change the assertion.** Only if you decide a lost track needs
-   no on-screen marker outside the drawer. I have not done this, because
-   editing a failing assertion to match my own commit is how a suite stops
-   meaning anything.
+The amber is back and the pill is now the route: it reads "Media missing -- tap
+to re-add", it is a control while and only while there is something to re-add,
+and tapping it opens the drawer holding the card. Dismissing clears the record,
+which schedules a save, which reports plain "Saved" -- the warning ends because
+the situation did. Two wordings, because an amber raised when the media is still
+LOADED (no store to spill to) has nothing to re-add and must not promise
+otherwise.
 
-Whichever way it goes, the real defect underneath is older than the pill: the
-pending record is unclearable from anywhere you can see. Option 2 fixes that;
-option 1 does not.
+**A true warning the user cannot act on trains them to ignore the colour.** The
+repair for that is a route, not silence. Deleting the warning makes the screen
+calmer and the product worse, and it is the easier change, which is why it is
+the one that gets made.
+
+Three things this needed that were invisible from the JS:
+
+* `pointer-events: none` on the base pill. Correct -- a floating status must not
+  eat a tap meant for the control beneath it -- and it meant a click listener
+  did nothing at all, because the event never reached the element.
+* `transform` collides. `pillfit` LIFTS the pill with `translateY` (209px on a
+  390px phone); an `:active { transform: scale(.97) }` in a later stylesheet
+  REPLACES that lift, so pressing the pill dropped it 209px out from under the
+  finger pressing it. Found by a click that timed out, which is the same thing a
+  thumb would have experienced.
+* `typeof x !== 'undefined'` does not shield a `let` in its temporal dead zone;
+  it throws the identical ReferenceError. The pending records had to move up to
+  the media state, not acquire a guard that does not guard.
+
+## v287 -- A mutation caught is not a mutation reported
+
+Six mutations of the fix above were all caught. Four of them were caught as
+`ERROR -- crashed before reporting`, with no assertion named.
+
+The cause is that Playwright waits for actionability before clicking. Against a
+pill still carrying `pointer-events: none`, or a Dismiss button sitting 0x0 in a
+drawer that never opened, `page.click` does not fail fast -- it blocks for the
+full default timeout and raises. Both of those are exactly the states the
+section is testing for, so the defect under test was also the thing destroying
+the report of it.
+
+A crash and a failure are not the same signal. A crash reads as an
+infrastructure problem, it names nothing, and this project has a section in
+START-HERE about suites whose failure could not travel through the reporting
+channel. The clicks now go through one guarded helper with a short timeout that
+turns "was never actionable" into an ordinary FAIL with a sentence.
+
+**When the thing you are testing for is also a thing that can wedge your test
+harness, the guard against wedging IS the assertion.** Verify a suite by
+mutation, then look at HOW it failed, not just that it did.
+

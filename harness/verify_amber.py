@@ -25,6 +25,26 @@ STATE = """() => { const el=document.getElementById('autosaveStatus');
              cls: el.className,
              dot: getComputedStyle(dot).backgroundColor }; }"""
 
+def try_click(pg, sel, ms=3000):
+    """Click, and turn "the element was never actionable" into a VALUE rather
+    than an exception.
+
+    Playwright waits for actionability before clicking, so against an element
+    that is invisible, zero-sized or carrying `pointer-events: none` it does not
+    fail fast — it blocks for the full default timeout and then raises, which
+    run_harness.sh records as "crashed before reporting" with no assertion
+    named. Every mutation of the v238 pill fix was caught that way at first:
+    caught, and caught uselessly. Both of the states this section tests for —
+    a pill that takes no taps, a dismiss button sitting 0x0 in a drawer that
+    never opened — are exactly the states that wedge a click, so the guard is
+    not defensiveness, it is the reporting channel for the defect itself."""
+    try:
+        pg.click(sel, timeout=ms)
+        return True, ""
+    except Exception as e:                                   # noqa: BLE001
+        return False, type(e).__name__
+
+
 def scribble(pg, box, seed, n=200):
     cx, cy = box["x"]+box["width"]/2, box["y"]+box["height"]/2
     pg.mouse.move(cx, cy); pg.mouse.down()
@@ -103,6 +123,20 @@ with sync_playwright() as p:
     scribble(pg2, box2, 5.5); pg2.wait_for_timeout(1400)
     s = pg2.evaluate(STATE)
     check("stays amber on later saves", "partial" in s["cls"], f"{s['text']!r}")
+    # THE OTHER AMBER, and the reason there are two wordings. This context has
+    # IndexedDB disabled, so the bytes never spilled — but the photo and the
+    # track are still LOADED, sitting in front of the user. Nothing is missing
+    # and nothing needs re-adding; it simply will not survive a reload. Offering
+    # "tap to re-add" here would send them to a drawer with no card in it.
+    noroute = pg2.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+        return { text: document.getElementById('autosaveStatusText').textContent,
+                 actionable: el.classList.contains('actionable'),
+                 role: el.getAttribute('role') }; }""")
+    check("amber with nothing to re-add does NOT pretend to be a route",
+          noroute["actionable"] is False and noroute["role"] is None
+          and "re-add" not in noroute["text"].lower(),
+          f"{noroute} — the media is still loaded here; a control promising to "
+          "bring it back would open an empty drawer")
 
     print("\nFLIP — re-add card in the music drawer after reload (store still broken)")
     pg2.reload(wait_until="load"); pg2.wait_for_timeout(1500)
@@ -118,6 +152,87 @@ with sync_playwright() as p:
     check("dropzone hidden behind the card", card["dropzoneHidden"] is True)
     check("drawing survived", pg2.evaluate("() => frames.length") == 4,
           f"{pg2.evaluate('() => frames.length')} pages")
+
+    print("\nFLIP — the amber pill is a ROUTE, not a dead end (v238)")
+    # WHY THESE ASSERTIONS EXIST AT ALL, because "amber immediately on restore"
+    # above passes without a single one of them.
+    #
+    # v229 showed this amber. It was TRUE and it was reported from the live demo
+    # as intolerable, because it went nowhere: the pill said media was missing,
+    # the only controls that could do anything about it were the Re-add and
+    # Dismiss buttons on a card inside a shut drawer, and that card measures 0x0
+    # until the drawer is opened. So v235 removed the pill instead of the dead
+    # end, and that is what broke the assertion above.
+    #
+    # The amber is back because the pill now OPENS that drawer. If someone later
+    # deletes the route and keeps the warning, every assertion above still passes
+    # and the product is back to the state its owner already rejected once. These
+    # are the assertions that would fail.
+    pill = pg2.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+        const cs = getComputedStyle(el);
+        return { text: document.getElementById('autosaveStatusText').textContent,
+                 actionable: el.classList.contains('actionable'),
+                 role: el.getAttribute('role'), tab: el.getAttribute('tabindex'),
+                 pe: cs.pointerEvents }; }""")
+    check("the amber pill NAMES the way out",
+          "re-add" in pill["text"].lower(),
+          f"{pill['text']!r} — 'Saved without media' states a problem and offers "
+          "nothing; the only control that resolves it is two taps away in a "
+          "drawer with no sign it is there")
+    check("...and is a real control, not a div that responds to poking",
+          pill["role"] == "button" and pill["tab"] == "0",
+          f"role={pill['role']} tabindex={pill['tab']} — announced as a button "
+          "only while it actually is one")
+    # THE ONE THAT IS EASIEST TO LOSE AND HARDEST TO SEE. The base pill sets
+    # pointer-events:none so a status floating over a control cannot eat the tap
+    # meant for it. A click listener alone therefore does NOTHING — the event
+    # never reaches the element. Nothing about the JS says so.
+    check("...and actually receives taps",
+          pill["pe"] == "auto",
+          f"pointer-events: {pill['pe']} — the base pill is `none` on purpose, so "
+          "a listener without this is a control that silently ignores every tap")
+    pg2.evaluate("() => _flipDrawerCtl.open(null)")
+    pg2.wait_for_timeout(200)
+    clicked, why = try_click(pg2, "#autosaveStatus")
+    pg2.wait_for_timeout(400)
+    check("the pill can be clicked at all",
+          clicked,
+          f"{why} — Playwright refused to click it, which is what an element "
+          "that is not actually interactive looks like from the outside")
+    opened = pg2.evaluate("""() => { const c = document.getElementById('musicPending');
+        const r = c.getBoundingClientRect();
+        return { drawer: _flipDrawerCtl.isOpen('music'), cardHidden: c.hidden,
+                 w: Math.round(r.width), h: Math.round(r.height) }; }""")
+    check("tapping the pill opens the drawer holding the missing file",
+          opened["drawer"] is True and opened["cardHidden"] is False,
+          json.dumps(opened))
+    # 0x0 IS THE WHOLE COMPLAINT. `hidden: false` on a card inside a shut drawer
+    # is what the old code already reported, and it is why the assertion has to
+    # measure the box rather than trust the flag.
+    check("...and the re-add card has a real size once it is there",
+          opened["w"] > 100 and opened["h"] > 20,
+          f"{opened['w']}x{opened['h']} — an element can be `hidden: false` and "
+          "still measure 0x0 inside a collapsed drawer, which is exactly the "
+          "state the owner reported as a warning with no way out")
+    # THE LOOP CLOSES. A warning you can act on but never end is the same dead
+    # end wearing a button.
+    dismissed, dwhy = try_click(pg2, "#musicPendingDismiss")
+    check("the Dismiss on the card is reachable once the drawer is open",
+          dismissed,
+          f"{dwhy} — this button is the ONLY thing that clears a pending record, "
+          "and until v238 it sat 0x0 in a drawer nothing on screen pointed at")
+    pg2.wait_for_timeout(1600)
+    s = pg2.evaluate(STATE)
+    check("dismissing the card ENDS the amber",
+          "partial" not in s["cls"],
+          f"{s['text']!r} — the record is gone, so the next save omits nothing "
+          "and says so; without this the pill outlives the situation it "
+          "describes, which is what made the old one intolerable")
+    check("...and the pill stops being a control when it stops warning",
+          pg2.evaluate("() => document.getElementById('autosaveStatus')"
+                       ".classList.contains('actionable')") is False,
+          "a status that still looks tappable after there is nowhere to go "
+          "sends the user to an empty drawer")
 
     print("\nFLIP — re-adding the file restores the loop and clears the warning")
     pg2.evaluate("() => { trimStart=0; trimEnd=6; }")   # pretend the saved loop was 0-6s
