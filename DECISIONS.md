@@ -2258,3 +2258,57 @@ the observer are the same component. It is not a micro-optimisation there; it
 is the difference between converging and spinning. And a drawing app that keeps
 a requestAnimationFrame loop alive while the user is doing nothing is spending
 a phone battery to accomplish nothing.
+
+## v268 -- A second route to an action orphans the first route's side effects
+
+Shape has a kind picker. It opened from a click handler bound to
+`#toolGroup .tool-btn` -- the tool SHELF -- and that was complete and correct
+until v227 put a TRAY in front of the shelf.
+
+After that, picking Shape from the tray called `setTool('shape')` through
+`lib/toolshelf.js` and never touched the shelf's handler. The tool switched. The
+picker did not open. Shape used whatever kind it already had, which for anyone
+who had never happened to have Shape sitting on the shelf was `line`, forever.
+It shipped in v227 and survived v228, v229 and v230 before a user said "shape is
+not giving a choice, just gives you line".
+
+**Nothing failed.** The action still worked; only its follow-on was missing, and
+only on the new path. That is what made it invisible: no error, no dead control,
+no wrong pixel -- just a dialog that never appeared, in a product where nobody
+knew it was supposed to.
+
+**The rule: when you add a second way to trigger an action, list every side
+effect attached to the first way and move them to where the routes converge.**
+Not "check the new path works" -- it did work. Ask what the OLD path did
+BESIDES the action itself.
+
+Here the convergence point already existed: `lib/toolshelf.js` calls the
+surface's `setTool` for shelf and tray alike. The fix was three lines and the
+diagnosis was the whole job.
+
+And the test has to exercise the NEW route. The shelf route never broke;
+asserting it proves nothing at all.
+
+## v269 -- The union of rows is not the shape, and it perforates every slope
+
+Fill's first version collapsed 6 pixel rows into one band and gave the band the
+UNION of their extents. On a straight edge that is exact, which is why every
+test and every desktop check passed. On a DIAGONAL the union is wider than the
+narrow rows in it; the round-cap inset then pulls each run's ends back by half
+its width; and where the region is narrow the run comes out shorter than its own
+width and hits the short-run fallback, which draws a DOT.
+
+So the first fill on the live demo drew a neat dotted line down the slope of a
+triangle -- the fallback firing correctly, over and over, on geometry the banding
+had misdescribed.
+
+**Fixed-size decomposition of a shape is a guess about the shape.** Six rows is
+right for a rectangle and wrong for everything else, and the wrongness does not
+show up as an error, it shows up as an artefact somewhere nobody was looking.
+
+Grouping rows by their ACTUAL extent removes the guess: a flat region is one run
+however tall it is (48x47 box: 8 runs -> 1), a sloping edge is one run per row,
+and the two cases need no separate handling. Cost follows the perimeter rather
+than the area, which is both cheaper on ordinary shapes and exact on the hard
+ones. **When a decomposition has a tuning constant, ask what the constant is
+standing in for -- often the data already knows the answer.**

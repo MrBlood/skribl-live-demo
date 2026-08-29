@@ -40,12 +40,12 @@ const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
    32 of 255 per channel absorbs the anti-aliased fringe on a drawn line without
    leaking through it; the fringe is what makes a zero-tolerance fill leave a
    halo of un-filled pixels around every stroke it meets.
-   ROW STEP is the band height in CANVAS units, and it is the whole cost model:
-   a fill spends two points per band, so 6px over a 460-tall canvas is about 77
-   bands and 154 points against a server limit of 20,000 per frame. Smaller is
-   more faithful to a curved boundary and linearly more expensive. */
+   There is no row-step knob any more: rows group by their real extent, so a
+   flat region costs one run however tall it is and a sloping edge costs one per
+   row. Cost follows the PERIMETER rather than the area, which is both cheaper
+   on ordinary shapes and exact on diagonals -- a fixed band took the union of
+   its rows and drew a perforated line down every slope. */
 const FILL_TOLERANCE = 32;
-const FILL_ROW_STEP = 6;
 
 const pad = document.getElementById('pad');
 const ctx = pad.getContext('2d');
@@ -2708,7 +2708,25 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
       ],
       currentTool: () => flipTool,
       slider: document.getElementById('toolSlider'),
-      setTool: (id) => setTool(id),
+      // THE SHAPE PICKER OPENS HERE, and it has to, because this is the only
+      // point BOTH selection paths pass through. It used to live on a click
+      // handler bound to '#toolGroup .tool-btn' -- the SHELF -- which was
+      // complete until v227 put a tray in front of the shelf. After that,
+      // choosing Shape from the tray never ran that handler, so the picker
+      // never opened and Shape silently stayed on whatever kind it had:
+      // 'line', for everyone who had never had Shape on the shelf. Reported
+      // from the live demo as "shape is not giving a choice, just gives you
+      // line".
+      //
+      // Toggling only when Shape was ALREADY current keeps the shelf's
+      // press-again-to-close feel without making the first pick a no-op.
+      setTool: (id) => {
+        const was = flipTool;
+        setTool(id);
+        const pop = document.getElementById('shapePop');
+        if (pop) pop.hidden = (id !== 'shape') ? true
+                            : (was === 'shape' ? !pop.hidden : false);
+      },
       closeTray: () => { if (_flipDrawerCtl) _flipDrawerCtl.open(null); },
     })
   : null;
@@ -5279,14 +5297,17 @@ function doFill(p){
   try { img = ctx.getImageData(0, 0, pad.width, pad.height); }
   catch(err){ chip('Fill cannot read this canvas'); return; }
   const res = SkriblFloodFill.runs(img, p.x * DPR, p.y * DPR,
-                                   { tolerance: FILL_TOLERANCE, rowStep: FILL_ROW_STEP * DPR });
+                                   { tolerance: FILL_TOLERANCE });
   if(!res.runs.length){ chip('Nothing to fill there'); return; }
   const col = solidOf(penColorFor(color));
-  const w = res.size / DPR;
   const now = performance.now();
   let groups = 0, t = 0;
   for(const run of res.runs){
-    const pts = SkriblFloodFill.points(run, res.size);
+    // Each run is drawn at ITS OWN height — that is what stops a diagonal edge
+    // coming out perforated. A flat region is one thick line; a sloping edge is
+    // a stack of thin ones.
+    const w = SkriblFloodFill.sizeOf(run) / DPR;
+    const pts = SkriblFloodFill.points(run);
     for(let i = 0; i < pts.length; i++){
       f.strokes.push({ x: pts[i].x / DPR, y: pts[i].y / DPR, color: col, size: w,
                        t: now + (t++), erase: false, start: i === 0 });
@@ -5462,9 +5483,11 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
   // setTool(undefined), which the clamp turned into setTool('pen') — so opening
   // the tray silently switched you back to the pen.
   if(!b.dataset.tool) return;
+  // The picker is NOT opened here any more — lib/toolshelf.js already calls the
+  // surface's setTool for a shelf click, so doing it in both places toggled it
+  // twice and left it shut. It lives in the toolShelf config, which the tray
+  // reaches too.
   setTool(b.dataset.tool);
-  const pop=document.getElementById('shapePop');
-  if(pop) pop.hidden = (b.dataset.tool!=='shape') ? true : !pop.hidden;
 }));
 (function shapePopDismiss(){
   const pop=document.getElementById('shapePop');
