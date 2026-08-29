@@ -1,6 +1,34 @@
 # Skribl — Handoff for the next session
 
-## v227 addendum — read this first (everything below is history, still true where not superseded)
+## v228 addendum — read this first (everything below is history, still true where not superseded)
+
+**Current sealed build: v228.** Result, tree hash, suite/assertion counts and
+skip list are in `harness/RELEASE.md`, which is generated.
+
+**Read order:** `V228-CHANGES.md`, then `V227-CHANGES.md`, then
+`FOR-THE-REVIEWER.md`, then `DESIGN-DIRECTION.md`, then this file.
+
+**What v228 did.** It finished the size-class migration v227 left partial. Every
+rule deciding where compact BEGINS now reads `[data-size]`; seven tiers below
+the boundary stay as media queries because they answer a different question.
+Doing it exposed a real defect: the class measured the element and the queries
+measured the viewport, so from 641 to 660 viewport px the page bar was hidden
+while the tool row kept its desktop sizing. 7 of 29 probed widths disagreed
+before; 0 after.
+
+**The trap it paid for, and it is the third of its kind in this arc.** The
+migration had to go through `:where()`. `flip.css` resolves its phone ladder by
+SOURCE ORDER at equal specificity, so a bare attribute prefix would have
+outranked every tier below and flattened the 320px gap from 2px to 3px — a phone
+regression inside a change announced as a no-op. **Adding a prefix to an
+existing selector is a specificity change before it is anything else.**
+
+**And the suite could not see any of it**, because it asserted that SOME queries
+remained rather than that none of them *disagreed*. A progress counter is not an
+invariant. `verify_sizeclass` is now structural: nothing at or above the
+boundary, so a query cannot reach it to contradict it. 18 assertions → 34.
+
+## v227 addendum (history)
 
 **Current sealed build: v227.** Result, tree hash, suite/assertion counts and
 skip list are in `harness/RELEASE.md`, which is generated.

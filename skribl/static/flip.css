@@ -142,10 +142,8 @@
      from 641px the WRAP pulses so the ring follows the whole "Stop · 4.4s" pill
      instead of drawing an oval around half of it. */
   .btn.flip-play.playing { animation: playGlow 1.8s ease-in-out infinite; }
-  @media (min-width: 641px) {
-    .flip-play-wrap:has(.btn.flip-play.playing) { animation: playGlow 1.8s ease-in-out infinite; }
-    .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { animation: none; }
-  }
+  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) { animation: playGlow 1.8s ease-in-out infinite; }
+  :where(body[data-size="regular"]) .flip-play-wrap:has(.btn.flip-play.playing) > .btn.flip-play { animation: none; }
   /* Reduced motion: keep the accent tint, drop the pulse. */
   @media (prefers-reduced-motion: reduce) {
     .btn.flip-play.playing,
@@ -298,14 +296,16 @@
      dense header on one line down to ~330px — is left completely untouched, i.e.
      no wrap regression. The color swatch keeps its own size (distinct round-
      swatch design, not the Pad's chip-in-square). */
-  @media (min-width: 641px) {
-    .flip-actions .seg, .flip-actions .grid-tool,
-    .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; }
-    .grid-tool, #moreBtn { width: 36px; height: 36px; }
-    .flip-tools .tool-open, .flip-tools .t-btn { width: 44px; height: 44px; }
-    .flip-tools .t-btn { --tap-grow: 0px; }
-    .flip-tools { --seg-row-h: 44px; }
-  }
+  :where(body[data-size="regular"]) .flip-actions .seg,
+  :where(body[data-size="regular"]) .flip-actions .grid-tool,
+  :where(body[data-size="regular"]) .flip-actions .btn.flip-play,
+  :where(body[data-size="regular"]) .flip-actions .btn.post { height: 36px; }
+  :where(body[data-size="regular"]) .grid-tool,
+  :where(body[data-size="regular"]) #moreBtn { width: 36px; height: 36px; }
+  :where(body[data-size="regular"]) .flip-tools .tool-open,
+  :where(body[data-size="regular"]) .flip-tools .t-btn { width: 44px; height: 44px; }
+  :where(body[data-size="regular"]) .flip-tools .t-btn { --tap-grow: 0px; }
+  :where(body[data-size="regular"]) .flip-tools { --seg-row-h: 44px; }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(var(--glass-base-rgb), .55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
@@ -333,20 +333,19 @@
   /* 640, not 560: Pad steps down at 640 and the two rows step together now.
      Through 561-640 Flip kept 40px buttons against Pad's 36 and stood 4px
      taller for it. */
-  @media (max-width: 640px) {
-    .flip-tools { gap: 3px; padding: 6px; flex-wrap: wrap; justify-content: center; }
-    .flip-tools .tool-open { width: 36px; height: 36px; --tap-grow: 4px; }   /* square when lit; 44 tap */
-    .flip-tools .t-btn { width: 36px; height: 36px; --tap-grow: 4px; }   /* 36 visual -> 44 tap */
-    .flip-tools { --seg-row-h: 44px; }
-    .flip-tools .magnify-tool svg, .flip-tools .tool-open svg { width: 21px; height: 21px; }
-    /* The status dot is a badge on the GLYPH, and the glyph just got smaller.
-       --icon-size is what .tool-open .tab-dot measures from, so it has to step
-       here too or the dot lands outside the corner it is meant to straddle. */
-    .flip-tools .tool-open { --icon-size: 21px; }
-    .flip-tools .tool-btn-label { display: none; }
-    .flip-tools .tool-btn { padding: 6px 10px; }
-    .color-current { width: 34px; height: 34px; }
-  }
+  :where(body[data-size="compact"]) .flip-tools { gap: 3px; padding: 6px; flex-wrap: wrap; justify-content: center; }
+  :where(body[data-size="compact"]) .flip-tools .tool-open { width: 36px; height: 36px; --tap-grow: 4px; }/* square when lit; 44 tap */
+  :where(body[data-size="compact"]) .flip-tools .t-btn { width: 36px; height: 36px; --tap-grow: 4px; }/* 36 visual -> 44 tap */
+  :where(body[data-size="compact"]) .flip-tools { --seg-row-h: 44px; }
+  :where(body[data-size="compact"]) .flip-tools .magnify-tool svg,
+  :where(body[data-size="compact"]) .flip-tools .tool-open svg { width: 21px; height: 21px; }
+  /* The status dot is a badge on the GLYPH, and the glyph just got smaller.
+     --icon-size is what .tool-open .tab-dot measures from, so it has to step
+     here too or the dot lands outside the corner it is meant to straddle. */
+  :where(body[data-size="compact"]) .flip-tools .tool-open { --icon-size: 21px; }
+  :where(body[data-size="compact"]) .flip-tools .tool-btn-label { display: none; }
+  :where(body[data-size="compact"]) .flip-tools .tool-btn { padding: 6px 10px; }
+  :where(body[data-size="compact"]) .color-current { width: 34px; height: 34px; }
   /* 392, not 380, and the numbers are Pad's: this is the tier where Pad drops to
      34px, and the two rows are meant to step together. The old block set gap and
      padding here too and they NEVER APPLIED — the max-640 block further down
@@ -561,12 +560,10 @@
      Two circle toggles + fps + Flip-it + back + info + wordmark is a lot for a
      phone, so tiers shed width progressively. */
   /* Wordmark: FLIP MODE only with real room, else FLIP, else FM. */
-  @media (max-width: 640px) {
-    /* Full size kept. The 15px shrink belonged to the header that also held
-       fps, onion, grid and draw-on inline; measured now, 17px overflows by
-       ZERO at 360, 375, 393 and 430, so the phone was reading thinner than the
-       desktop for no remaining reason. */
-  }
+  /* Full size kept. The 15px shrink belonged to the header that also held
+  fps, onion, grid and draw-on inline; measured now, 17px overflows by
+  ZERO at 360, 375, 393 and 430, so the phone was reading thinner than the
+  desktop for no remaining reason. */
   /* Mobile chrome: Flip-it AND Post collapse to their icons; tighter header. */
   @media (max-width: 560px) {
     .flip-play span, .btn.post .btn-label { display: none; }
@@ -781,10 +778,8 @@
    with a ×24 hold badge — measured, not assumed; the counter and badge are the
    only parts whose width varies). Below it every button keeps its glyph and its
    38px box, which is the same arrangement the bar already used under 560. */
-@media (min-width: 645px) {
-  .pb-tx { display: inline; }
-  .pb { padding: 0 12px; }
-}
+:where(body[data-size="regular"]) .pb-tx { display: inline; }
+:where(body[data-size="regular"]) .pb { padding: 0 12px; }
 @media (max-width: 400px) {
   .pagebar { gap: 6px; padding: 7px 10px; }
   .pb { padding: 0 8px; }
@@ -1119,26 +1114,24 @@
    Same change as Pad's. Flip was only 4-5px over at 375/390 rather than Pad's
    52, because its buttons were already tighter — so the gap alone buys it back
    and the tap targets stay untouched. Labels already hide below 640px. */
-@media (max-width: 640px) {
-  /* padding 6, not 12px 6px: Pad's number. The 12 made Flip's row 4px taller
-     than Pad's for no reason anyone could see.
-     This block is LATER IN THE FILE than the max-560 and max-392 tiers above at
-     equal specificity, so it wins on source order — which is why the row's phone
-     gap, padding and group margins are declared here and not up there with the
-     widths. Moving them loses them silently; that is exactly how the old
-     max-380 tier's gap came to be dead code. */
-  .flip-tools { gap: 3px; padding: 6px; }
-  /* Even rhythm, not grouping — see the matching note on .toolbar in styles.css.
-     Grouping margins cost Flip the same 8px they cost Pad, and Flip has less to
-     give: it wrapped from 369 down with them. */
-  .flip-tools .color-tool { margin-left: 5px; }
-  .flip-tools #undo       { margin-left: 6px; }
-  .flip-tools #imageBtn   { margin-left: 6px; }
-  /* Horizontal only. Vertical padding here would fight the row-height variable
-     above and push the pill back off its neighbours' height. */
-  .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
-  .flip-tools #toolGroup .tool-btn svg { width: 21px; height: 21px; }
-}
+/* padding 6, not 12px 6px: Pad's number. The 12 made Flip's row 4px taller
+   than Pad's for no reason anyone could see.
+   This block is LATER IN THE FILE than the max-560 and max-392 tiers above at
+   equal specificity, so it wins on source order — which is why the row's phone
+   gap, padding and group margins are declared here and not up there with the
+   widths. Moving them loses them silently; that is exactly how the old
+   max-380 tier's gap came to be dead code. */
+:where(body[data-size="compact"]) .flip-tools { gap: 3px; padding: 6px; }
+/* Even rhythm, not grouping — see the matching note on .toolbar in styles.css.
+   Grouping margins cost Flip the same 8px they cost Pad, and Flip has less to
+   give: it wrapped from 369 down with them. */
+:where(body[data-size="compact"]) .flip-tools .color-tool { margin-left: 5px; }
+:where(body[data-size="compact"]) .flip-tools #undo { margin-left: 6px; }
+:where(body[data-size="compact"]) .flip-tools #imageBtn { margin-left: 6px; }
+/* Horizontal only. Vertical padding here would fight the row-height variable
+   above and push the pill back off its neighbours' height. */
+:where(body[data-size="compact"]) .flip-tools #toolGroup .tool-btn { padding: 0 8px; }
+:where(body[data-size="compact"]) .flip-tools #toolGroup .tool-btn svg { width: 21px; height: 21px; }
 
 
 /* ---------- 320-class phones (placed LAST, deliberately) ----------

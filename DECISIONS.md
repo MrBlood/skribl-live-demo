@@ -2128,3 +2128,57 @@ the ones that keep passing.
 Practically: `grep` the suites for the ids of anything removed, cross-referenced
 against the viewport widths each file uses. Three suites named page-bar ids at
 compact widths here; one crashed and two went quiet.
+
+## v263 -- Adding a prefix to a selector is a specificity change first
+
+Finishing the size-class migration meant putting `[data-size="compact"]` in
+front of rules that already existed. That reads like a scoping change. It is
+first of all a **specificity** change: `.flip-tools` is (0,1,0) and
+`[data-size="compact"] .flip-tools` is (0,2,0), and every rule the original lost
+to, the prefixed one now beats.
+
+`flip.css` is exactly the file where that matters, and it knew it. Its own
+comment at the max-640 block reads: *"This block is LATER IN THE FILE than the
+max-560 and max-392 tiers above at equal specificity, so it wins on source order
+-- which is why the row's phone gap, padding and group margins are declared here
+and not up there with the widths. Moving them loses them silently; that is
+exactly how the old max-380 tier's gap came to be dead code."*
+
+So the ladder is held together by source order among rules that are all
+(0,1,0). Prefixing the boundary rules lifts them out of that contest and they
+win at every width. **Measured, not reasoned: the 320px tier's gap went 2px ->
+3px** -- a phone regression, inside a change whose entire claim was "no-op".
+
+The fix is `:where()`, which contributes zero specificity, so source order still
+decides. The mutation is in `verify_sizeclass`: strip the `:where` and the 320px
+assertion fails. That mutation is the point -- without it the `:where` looks
+like a stylistic tic and the next person deletes it.
+
+**The general rule: before prefixing an existing selector, ask what it currently
+LOSES to.** If the answer is "rules at equal specificity, decided by order",
+a prefix is a rewrite of the cascade and `:where()` is how you avoid it.
+
+## v264 -- A progress counter is not an invariant
+
+`verify_sizeclass` asserted `left > 0`: some `max-width` queries still exist.
+The comment beside it was honest about why -- asserting their absence would fail
+for the honest reason that the migration was incremental.
+
+It was still the wrong assertion, and it stayed green through a real defect. It
+is equally true of a migration 1/8 done and 7/8 done, so it measures **how far
+along** the work is, and nobody was in doubt about that. What it could not see
+is whether the queries left behind **disagreed** with the class -- and they did.
+The class measured the element, the queries measured the viewport, and from 641
+to 660 viewport px the page bar was hidden while the tool row kept its 44px
+desktop sizing: the compact surface wearing the regular toolbar, shipped in
+v227, with a passing suite.
+
+The replacement is structural rather than a count: **no width query may sit at
+or above `COMPACT_MAX`.** A query below the boundary can only refine the layout
+inside compact; it cannot reach the edge to contradict the class. That holds at
+1/8 done and at 8/8, it does not need editing as work proceeds, and it is false
+exactly when the defect is present.
+
+**The rule: when a migration is incremental, assert the INVARIANT that survives
+every intermediate state, not the progress through them.** "Some remain" is a
+status line. "None of the remainder can contradict the decision" is a test.

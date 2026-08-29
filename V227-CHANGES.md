@@ -111,6 +111,9 @@ recorded as a defect. They say Left and Right now.
   asserts they are still there, so the narrowing is permanent and visible
   rather than conversational, and finishing the migration costs a deliberate
   edit to that assertion.
+  **SUPERSEDED by v228** — the boundary queries are gone and seven sub-boundary
+  tiers remain by choice. See `V228-CHANGES.md`; that work also found the band
+  where the class and the queries disagreed.
 * The **v213 stray-line report** has still never been shown to be the
   contact-identity defect that `lib/eventpoint.js` fixed.
 * A **signed tag or CI attestation** for release provenance does not exist; the

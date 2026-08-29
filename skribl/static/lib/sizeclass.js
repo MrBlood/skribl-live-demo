@@ -1,7 +1,7 @@
 /* One size decision, made once, for the whole app.
  *
- * WHY THIS EXISTS. flip.css alone carries eight `max-width` rules — 359, 360,
- * 392, 400, 440, 559, 560, 640 — and styles.css has its own set. That is not a
+ * WHY THIS EXISTS. flip.css carried eight `max-width` rules — 359, 360, 392,
+ * 400, 440, 559, 560, 640 — and styles.css has its own set. That is not a
  * responsive design; it is eight patches, each correct on the day it was
  * written, none of them agreeing about where "small" begins. The visible cost
  * is recorded in this project's own review notes: **one pixel of resize takes
@@ -9,9 +9,24 @@
  * viewport with room to spare.
  *
  * The fix those notes ask for is size classes rather than a pixel breakpoint,
- * and the honest first step is to make the DECISION exist somewhere a rule can
- * refer to. Migrating the existing queries onto it is incremental work with
- * verify_layout.py as the safety net; this file is what they migrate TO.
+ * and the honest first step was to make the DECISION exist somewhere a rule can
+ * refer to. This file is what the queries migrated TO.
+ *
+ * THE BOUNDARY QUERIES ARE NOW GONE (v228) — every rule that had an opinion
+ * about where compact BEGINS reads this attribute. What remains in flip.css is
+ * seven tiers strictly BELOW the boundary (359 … 560), and they are a different
+ * question: not where compact starts, but how a row keeps fitting once it is
+ * already there. verify_sizeclass asserts that nothing at or above the boundary
+ * ever comes back, which is what stops a second opinion re-appearing.
+ *
+ * They migrated through `:where()`, and that detail is load-bearing rather than
+ * stylistic. flip.css resolves its phone ladder by SOURCE ORDER at equal
+ * specificity — its own comments say so. A bare `[data-size="compact"]` prefix
+ * would have raised those rules to (0,2,0) and let them beat every tier below,
+ * flattening the ladder: measured, the 320px tier's gap went 2px → 3px. That is
+ * exactly the kind of silent break a migration announced as a no-op must not
+ * ship, so the prefix contributes zero specificity and source order still
+ * decides. The mutation is in verify_sizeclass; it fails without the `:where`.
  *
  * IT MEASURES THE ELEMENT, NOT THE VIEWPORT — and that is a DELIBERATE
  * BEHAVIOUR CHANGE, taken in v227 for a specific reason, not a refactor.
@@ -33,16 +48,20 @@
  * breaks the layout rather than the direction that wastes space.
  *
  * So the question this asks is the one those eight rules always meant: does THIS
- * app have room. What it costs is the ~15px band the earlier note describes —
- * a standalone desktop window between 641 and about 655 now classifies compact
- * where a media query would say regular. That band is taken knowingly, it is
- * asserted below rather than discovered later, and the layout suite was
- * re-measured across it.
+ * app have room. What it costs is the band the earlier note describes — a
+ * standalone desktop window from about 641 to 660 classifies compact where a
+ * viewport media query would say regular, because the scrollbar is real estate
+ * the app does not have. That band is taken knowingly, it is asserted rather
+ * than discovered later, and the layout suite was re-measured across it.
  *
- * WHILE THE MIGRATION IS PARTIAL the migrated rule and the remaining media
- * queries therefore disagree inside that band. That is the honest cost of a
- * half-finished migration and an argument for finishing it, not for measuring
- * the wrong thing in the meantime.
+ * THE BAND USED TO BE A CONTRADICTION AND IS NOW ONLY A CHOICE, which is the
+ * whole difference v228 made. While the migration was partial, three boundaries
+ * were live at once — this class at body>640, `min-width:641` on the viewport,
+ * and `min-width:645` on the viewport — so a window in that band HID THE PAGE
+ * BAR while sizing the tool row for desktop: the compact surface wearing the
+ * regular toolbar. Measured across 29 widths, 7 disagreed before the fix and 0
+ * after. Every surface now reads one attribute, so the app can be wrong about
+ * the band only in the way its owner chose, never in two ways at once.
  *
  * ONE THRESHOLD, NAMED ONCE. 640 is not a new opinion: it is the boundary the
  * existing rules already used, so migrating a query onto this class is a no-op
