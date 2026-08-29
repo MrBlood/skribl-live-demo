@@ -2863,3 +2863,41 @@ whatever was nearest.
 
 **Check names against the package, not the mockup.** It took one `npm pack` and
 a loop.
+
+## v294 -- The shape of the thing constrains the shape of the rule
+
+Fill became a drop, on the owner's call, and a drop does not fit a band derived
+from ten square-ish icons. A teardrop that reads as a teardrop is roughly 17:22 --
+a sharp point over a round body -- against a band that wants at least 17.5 wide
+and at most 21 tall.
+
+The first attempt widened it to fit. The apex blunted, and it came out looking
+like a peach. The band was satisfied and the icon was no longer a drop.
+
+What fixed it was inverting the order: the APEX is the icon, so the control
+points were set first to keep the tangent leaving the point steep, and the
+proportions were tuned around that until 18.5x20.8 fell out. Inside the band
+without touching the band, and still unmistakably a drop.
+
+That mattered because the alternative was a third named exemption, three weeks
+into a suite with two. Two exemptions describe a set with two genuinely
+non-square members. Three, each added to admit the change being made at the time,
+describes a rule that no longer constrains anything.
+
+**When a design constraint and a numeric rule collide, try re-deriving the design
+from its essential feature before touching the rule.** The rule is often fine and
+the drawing was simply built in the wrong order.
+
+## v295 -- Blur should look blurry
+
+The Blur glyph was three concentric outlined rings, which reads as a target. The
+reference sets proposed a dashed circle, which reads as a selection marquee.
+Neither is blurry.
+
+It is now a filled core inside progressively larger, fainter filled halos --
+which is what defocus actually looks like, and which survives 24px precisely
+because it has no internal edges to lose. It is the only soft form in a tray of
+line drawings, and that is not an inconsistency to tidy away: it is the only tool
+whose entire subject is softness.
+
+**An icon for a visual effect should exhibit the effect, not diagram it.**

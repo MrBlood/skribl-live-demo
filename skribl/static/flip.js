@@ -2838,7 +2838,9 @@ const toolTray = document.getElementById('toolTray');
  *  lucide-static 1.37.0 — ISC © 2026 Lucide Icons and Contributors
  *  https://github.com/lucide-icons/lucide  (some icons derive from Feather,
  *  MIT © 2013-2017 Cole Bemis). Currently: `paint-bucket` (Fill), `stamp`
- *  (Stamps). Everything else in this registry is drawn for this project.
+ *  (Stamps), `waves` (Liquify), `square-dashed-mouse-pointer` (Select) and
+ *  `shapes` (Shape, in the templates). Everything else here is drawn for
+ *  this project.
  *
  *  WHY THEY ARE SCALED, which was not expected. This project's icon spec is
  *  Lucide's on paper — 24x24 box, 2px stroke, round caps and joins — so these
@@ -2863,97 +2865,78 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
         { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
         { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
-        // v227. The fourth tool, and the first to arrive through the tray
-        // rather than through a fitting exercise: the shelf drops to
-        // [most recent][next][chevron] on its own and the row does not move.
         { id: 'select', label: 'Select', btn: 'selectToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/>'
-              + '<path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/>'
-              + '<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>' },
-        // v236. The fifth, and the tray earns its keep a second time: the row
-        // did not have to be re-fitted for it either. A fingertip dragging a
-        // line out of true is the whole tool in one glyph.
-        // MEASURED AS THE FLATTEST ICON HERE — 20 wide, 13.5 tall — and left
-        // alone on purpose. It was redrawn to fill the box's height and the
-        // taller version reads as a CARET with a detached curl; the gentle
-        // wave is what says 'flow', and a smear genuinely is wide and low.
-        // The number improved and the drawing got worse, so the number loses.
-        { id: 'liquify', label: 'Liquify', btn: 'liquifyToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M3 16c3.5 0 4.5-7 8-7s3 5 6 5"/>'
-              + '<path d="M14.5 18.5c1.6-1.1 2.6-2.2 4.4-2.2 1.3 0 2.1.6 2.1 1.5 0 1.6-2.4 2.6-4.3 2.6"/>'
-              + '</svg>' },
-        // v226. Move artwork was in the PAGE BAR — a row about pages, holding a
-        // control that moves the drawing. It never belonged there: it takes a
-        // drag on the canvas, it has a mode, and it sits beside Select and
-        // Liquify in every way except where it was filed. Reclassifying it is a
-        // filing correction, not a redesign; the behaviour below is untouched.
-        // v230. The seventh, and the first that is not a drag at all -- one tap
-        // and a region changes. It produces STROKES like every other tool
-        // (lib/floodfill.js says why at length): the format has no fill
-        // primitive, adding one is a change the player must honour, and
-        // scanline runs cost two points each, so a fill needs neither.
-        // v232. Smudge and blur are the same sweep with two different verbs;
-        // lib/brushfield.js holds the arithmetic they share and the honest
-        // statement of what a stroke-format blur can and cannot do.
-        { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
-              + '<g transform="translate(12 12) scale(1.12) translate(-12 -12)">'
-              + '<path d="M8 19c-2.2 0-3.5-1.4-3.5-3.2 0-2.6 3.4-4.3 6-6.4C13 7.3 14.6 5 16.5 5'
-              + 'c1.6 0 2.6 1.2 2.6 2.7 0 3.6-6.6 5.1-9 7.4"/>'
-              + '<path d="M6.2 20.4c1.6-.5 3.2-.8 4.9-.9"/></g></svg>' },
-        { id: 'blur', label: 'Blur', btn: 'blurToolBtn',
-          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<circle cx="12" cy="12" r="3"/>'
-              + '<circle cx="12" cy="12" r="5.9" opacity=".55"/>'
-              + '<circle cx="12" cy="12" r="8.6" opacity=".28"/></svg>' },
-        // THE ICON WAS THE SMALLEST IN THE TRAY. Measured as rendered, its ink
-        // filled 15x16 of the 24 box where every other tool sits near 19x18,
-        // and the bucket was a hollow diamond whose handle was a 3px stub — at
-        // tray size, a tilted square with a dot beside it.
-        //
-        // Size alone did not fix it. A first pass grew the can to 19.8x18.8 and
-        // it was still called weak, correctly: the stub was the problem, not
-        // the scale. Fifteen candidates were drawn and rendered at BOTH 4x and
-        // 24px, and the 24px row is the one that decided it — a tipped can with
-        // an open rim, a bucket pouring into a pool, and a region-with-a-drop
-        // all read at 4x and turned to mush at tray size. What survives 24px is
-        // the SILHOUETTE.
-        //
-        // So: the same diamond can, and the stub replaced by a real quarter-arc
-        // handle that is legible at 24px, with a drop big enough to stay a
-        // separate shape rather than merging into the corner. Solid-bodied
-        // variants read even better in isolation and at 40% ink coverage were
-        // twice the weight of anything else here; this stays in the tray's
-        // outline language at 23%.
-        // v239c. LUCIDE'S `paint-bucket`. Three passes were spent on a bespoke
-        // bucket -- 15.0x16.3 and reported weak, then bigger and still weak
-        // because the handle was a stub, then a hand-drawn tipped can that was
-        // genuinely fine. This is the canonical one, it is ISC, and it is a
-        // shape people have already learned somewhere else. Preferring a
-        // standard glyph over my own redraw of the same idea also means nobody
-        // has to maintain the redraw.
-        //
-        // A CLOSE CALL, recorded as such: the bespoke version measured slightly
-        // tidier in isolation. This wins on canon and on not being bespoke, not
-        // by a clear visual margin.
-        { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
               + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
-              + '<path d="M11 7 6 2"/>'
-              + '<path d="M18.992 12H2.041"/>'
-              + '<path d="M21.145 18.38A3.34 3.34 0 0 1 20 16.5a3.3 3.3 0 0 1-1.145 1.88'
-              + 'c-.575.46-.855 1.02-.855 1.595A2 2 0 0 0 20 22a2 2 0 0 0 2-2.025'
-              + 'c0-.58-.285-1.13-.855-1.595"/>'
-              + '<path d="m8.5 4.5 2.148-2.148a1.205 1.205 0 0 1 1.704 0l7.296 7.296'
-              + 'a1.205 1.205 0 0 1 0 1.704l-7.592 7.592a3.615 3.615 0 0 1-5.112 0'
-              + 'l-3.888-3.888a3.615 3.615 0 0 1 0-5.112L5.67 7.33"/></g></svg>' },
+              + '<path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943'
+              + 'l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/>'
+              + '<path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/>'
+              + '<path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/>'
+              + '<path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/>'
+              + '<path d="M3 14v1"/></g></svg>' },
+        // LUCIDE `waves`. Still the flattest icon here by a distance and still
+        // exempt from the height floor, for the same reason the hand-drawn smear
+        // was: a warp is wide and low. Cleaner than the smear at 24px, which is
+        // the size that decides.
+        { id: 'liquify', label: 'Liquify', btn: 'liquifyToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.94) translate(-12 -12)">'
+              + '<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/>'
+              + '<path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/>'
+              + '<path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/></g></svg>' },
+        // A FINGERTIP WITH A FADING TRAIL, which is what the tool literally does.
+        // Drawn here rather than taken from a library: the reference set that
+        // suggested it named a Lucide icon that does not exist, and Phosphor's
+        // equivalent is a FILLED path on a 256 grid, which cannot join a stroked
+        // 24-box set without being redrawn anyway.
+        //
+        // The trail fades in three steps, which is the smudge thinning as it
+        // travels -- the same thing SMUDGE_FADE_MAX does to real ink.
+        { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M8.6 20.8v-5.4l-2.5 1a1.5 1.5 0 0 1-1.7-2.3l3-3.7V6.4'
+              + 'a1.6 1.6 0 0 1 3.2 0v4.3h1.4a2.9 2.9 0 0 1 2.9 2.9v7.2"/>'
+              + '<path d="M17.6 11.4h4.2"/>'
+              + '<path d="M17.6 15h3.2" opacity=".6"/>'
+              + '<path d="M17.6 18.6h2" opacity=".33"/></svg>' },
+        // BLUR SHOULD LOOK BLURRY, which the concentric outlined rings it had did
+        // not -- they read as a target. A filled core inside progressively larger,
+        // fainter filled halos is what defocus actually looks like, and it
+        // survives 24px because it has no internal edges to lose.
+        //
+        // The one icon in the tray that is a soft form rather than a line
+        // drawing, and deliberately so: it is the only tool whose whole subject
+        // is softness. Do not "tidy" it into outlined rings again.
+        { id: 'blur', label: 'Blur', btn: 'blurToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<circle cx="12" cy="12" r="9.2" fill="currentColor" stroke="none" opacity=".13"/>'
+              + '<circle cx="12" cy="12" r="6.6" fill="currentColor" stroke="none" opacity=".22"/>'
+              + '<circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" opacity=".45"/>'
+              + '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>' },
+        // A DROP, not a bucket. Four passes went into the bucket -- weak, then
+        // bigger and still weak, then a hand-drawn tipped can, then Lucide's
+        // canonical `paint-bucket` -- and the owner's answer was that the tool
+        // does not need a container at all.
+        //
+        // THE APEX IS THE WHOLE ICON. A drop is a sharp point over a round body,
+        // and it is the point that makes it a drop: a first attempt widened the
+        // shape to fit the size band, blunted the apex doing it, and came out
+        // looking like a peach. The control points here stay near the axis at the
+        // top so the tangent leaving the apex is steep; the proportions were then
+        // tuned around that rather than the other way round. 18.5x20.8, inside
+        // the band without touching the band.
+        //
+        // The lower half is FILLED, which is the part a plain droplet does not
+        // say: a drop is what you tap with, a fill level is what happens next.
+        { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M12 3.5C12 3.5 14.43 7.87 17.99 10.78C19.78 11.47 20.1 13.5 20.1 13.9A8.1 8.1 0 0 1 3.9 13.9C3.9 13.5 4.22 11.47 6.01 10.78C9.57 7.87 12 3.5 12 3.5Z"/>'
+              + '<path d="M4.1 15.7A8.1 8.1 0 0 0 19.9 15.7Z" fill="currentColor" stroke="none"/></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
