@@ -55,12 +55,33 @@ MIN_W, MAX_W = 17.5, 22.5
 MIN_H, MAX_H = 17.0, 21.0
 CENTRE_TOL = 2.0
 
-# Icons excused from the HEIGHT floor, with the reason, because a shape that is
-# legitimately wide and low is not a defect. An exemption without a sentence is
-# how a band quietly stops meaning anything.
+# Icons excused from ONE axis floor, with the reason, because a shape that is
+# legitimately not square is not a defect. An exemption without a sentence is how
+# a band quietly stops meaning anything, so the values are the reasoning and they
+# print in the assertion's detail.
+#
+# BOTH ENTRIES EXIST BECAUSE THE BAND WAS WRONG ABOUT THEM, not because the icons
+# were. It was derived from ten roughly square glyphs and then met two that are
+# honestly not square in opposite directions.
 FLAT_BY_DESIGN = {
     "Liquify": "a smear is wide and low; the tall redraw read as a caret",
 }
+NARROW_BY_DESIGN = {
+    "Stamps": "a rubber stamp is tall and narrow; Lucide's is 18:22 and no "
+              "uniform scale satisfies both the width floor and the height ceiling",
+}
+# THE FLOOR THAT SURVIVES BOTH EXEMPTIONS, and it is a BACKSTOP rather than the
+# primary guard — the per-axis floors above do the real work. Its only job is to
+# stop an axis exemption becoming a blank cheque: a glyph excused on one axis
+# still has to occupy a comparable amount of the box.
+#
+# The margin is honestly thin and the number is stated rather than rounded to
+# something that looks tidier. Liquify, legitimately flat, is 20.0x13.5 = 270 and
+# is the smallest thing here that has to pass. The Fill that started all this was
+# 15.0x16.3 = 245. There is not much room between those, which is exactly why
+# this is the backstop and not the guard — that Fill also failed BOTH per-axis
+# floors, and would have been caught with this line deleted.
+MIN_AREA = 260
 
 MEASURE = """async () => {
   const out = [];
@@ -117,14 +138,23 @@ with sync_playwright() as p:
         print("\nINK EXTENT — the number the eye is responding to")
         for i in icons:
             flat = i["label"] in FLAT_BY_DESIGN
-            okw = MIN_W <= i["w"] <= MAX_W
+            narrow = i["label"] in NARROW_BY_DESIGN
+            okw = (i["w"] <= MAX_W) if narrow else (MIN_W <= i["w"] <= MAX_W)
             okh = (i["h"] <= MAX_H) if flat else (MIN_H <= i["h"] <= MAX_H)
-            note = f"  [flat by design: {FLAT_BY_DESIGN[i['label']]}]" if flat else ""
+            note = ""
+            if flat:   note = f"  [flat by design: {FLAT_BY_DESIGN[i['label']]}]"
+            if narrow: note = f"  [narrow by design: {NARROW_BY_DESIGN[i['label']]}]"
             check(f"{i['label']}: fills its box like the rest of the set",
                   okw and okh,
                   f"ink {i['w']:.1f}x{i['h']:.1f} against w {MIN_W}-{MAX_W}, "
                   f"h {MIN_H}-{MAX_H}{note} — Fill shipped at 15.0x16.3 and was "
                   "reported as weak; that is the size this floor exists to catch")
+        # Applies to EVERY icon, exempt or not.
+        for i in icons:
+            check(f"{i['label']}: occupies enough of the box however it is shaped",
+                  i["w"] * i["h"] >= MIN_AREA,
+                  f"area {i['w'] * i['h']:.0f} against a floor of {MIN_AREA} — no "
+                  "axis exemption excuses an icon from being big enough overall")
 
         print("\nOPTICALLY CENTRED — an icon adrift reads as the wrong size")
         for i in icons:
@@ -147,7 +177,9 @@ with sync_playwright() as p:
         # here would fail on Liquify's area every time — which is the same
         # pressure to "fix" it that the exemption exists to remove, arriving
         # through a different assertion.
-        judged = [i for i in icons if i["label"] not in FLAT_BY_DESIGN]
+        judged = [i for i in icons
+                  if i["label"] not in FLAT_BY_DESIGN
+                  and i["label"] not in NARROW_BY_DESIGN]
         smallest = min(judged, key=lambda i: i["w"] * i["h"])
         check("...and nothing else has taken its place",
               smallest["w"] * smallest["h"] >= MIN_W * MIN_H,

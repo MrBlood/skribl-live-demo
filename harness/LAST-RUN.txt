@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T19:59:10Z
+UTC timestamp           : 2026-08-29T20:23:48Z
 Host                    : Linux x86_64
-Tree SHA-256            : ded99704dfaece48e68e1e0e2d3c17ae800291bdd831fa82dd7f4dff5f26429c
-Git commit              : 7900549-dirty
+Tree SHA-256            : 5dc0ab893a2124b38917829f8cbef86fe127fa0997b01697bc42564b1a65d684
+Git commit              : a4540e0-dirty
 SKRIBL_VERSION          : v237
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.mXFWi0c7Ir/harness.db)
+Database reset          : yes (fresh /tmp/tmp.Hfnu0deHzk/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -21,13 +21,13 @@ Command                 : harness/run_harness.sh verify_icons.py verify_tray.py 
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 7
-  verify_icons.py: ok — 25/25 passed
+  verify_icons.py: ok — 35/35 passed
   verify_tray.py: ok — 93/93 passed
   verify_tools.py: ok — 120/120 passed
   verify_stamps.py: ok — 37/37 passed
   verify_ux.py: ok — 310/310 passed
   verify_select.py: ok — 55/55 passed
   verify_docs.py: ok — 65/65 passed
-assertions passed: 705   (skipped suites contribute 0)
+assertions passed: 715   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

@@ -2834,6 +2834,25 @@ function setColor(hex){
 const SHELF_MAX = 3;
 const toolMoreBtn = document.getElementById('toolMoreBtn');
 const toolTray = document.getElementById('toolTray');
+/*! Some tool glyphs below are Lucide icons, SCALED (paths otherwise unaltered).
+ *  lucide-static 1.37.0 — ISC © 2026 Lucide Icons and Contributors
+ *  https://github.com/lucide-icons/lucide  (some icons derive from Feather,
+ *  MIT © 2013-2017 Cole Bemis). Currently: `paint-bucket` (Fill), `stamp`
+ *  (Stamps). Everything else in this registry is drawn for this project.
+ *
+ *  WHY THEY ARE SCALED, which was not expected. This project's icon spec is
+ *  Lucide's on paper — 24x24 box, 2px stroke, round caps and joins — so these
+ *  should have dropped straight in. Measured, they did not: Lucide draws to the
+ *  full box and both came in at 22.0-22.2 units of ink against a set that sits
+ *  near 19, which is 15% larger and correspondingly heavier than the eight
+ *  glyphs beside them. In a row of ten that reads as a mistake.
+ *
+ *  So each is scaled 0.88 about the box centre and its authored stroke raised to
+ *  2.27, which lands the RENDERED stroke back on the set's 2px. The drawing is
+ *  Lucide's, untouched; only its size in our box is ours. An icon is judged in
+ *  the row it sits in, and consistency across the row beats fidelity to any one
+ *  glyph's native scale.
+ */
 const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
   ? window.SkriblToolShelf.create({
       group: document.getElementById('toolGroup'),
@@ -2912,23 +2931,37 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // variants read even better in isolation and at 40% ink coverage were
         // twice the weight of anything else here; this stays in the tray's
         // outline language at 23%.
+        // v239c. LUCIDE'S `paint-bucket`. Three passes were spent on a bespoke
+        // bucket -- 15.0x16.3 and reported weak, then bigger and still weak
+        // because the handle was a stub, then a hand-drawn tipped can that was
+        // genuinely fine. This is the canonical one, it is ISC, and it is a
+        // shape people have already learned somewhere else. Preferring a
+        // standard glyph over my own redraw of the same idea also means nobody
+        // has to maintain the redraw.
+        //
+        // A CLOSE CALL, recorded as such: the bespoke version measured slightly
+        // tidier in isolation. This wins on canon and on not being bespoke, not
+        // by a clear visual margin.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M11.5 4 19.4 11.9a1.6 1.6 0 0 1 0 2.3l-5.1 5.1'
-              + 'a1.6 1.6 0 0 1-2.3 0L4.1 11.4Z"/>'
-              + '<path d="M8.8 16h8.3l-2.8 2.9a1.6 1.6 0 0 1-2.3 0Z" '
-              + 'fill="currentColor" stroke="none"/>'
-              + '<path d="M8 7.5a3.2 3.2 0 0 1 4.5-4.5l1.7 1.7"/>'
-              + '<path d="M20.2 14.9s1.9 2.4 1.9 3.5a1.9 1.9 0 0 1-3.8 0'
-              + 'c0-1.1 1.9-3.5 1.9-3.5Z" fill="currentColor" stroke="none"/></svg>' },
+              + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
+              + '<path d="M11 7 6 2"/>'
+              + '<path d="M18.992 12H2.041"/>'
+              + '<path d="M21.145 18.38A3.34 3.34 0 0 1 20 16.5a3.3 3.3 0 0 1-1.145 1.88'
+              + 'c-.575.46-.855 1.02-.855 1.595A2 2 0 0 0 20 22a2 2 0 0 0 2-2.025'
+              + 'c0-.58-.285-1.13-.855-1.595"/>'
+              + '<path d="m8.5 4.5 2.148-2.148a1.205 1.205 0 0 1 1.704 0l7.296 7.296'
+              + 'a1.205 1.205 0 0 1 0 1.704l-7.592 7.592a3.615 3.615 0 0 1-5.112 0'
+              + 'l-3.888-3.888a3.615 3.615 0 0 1 0-5.112L5.67 7.33"/></g></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M9 4.2h6a2 2 0 0 1 2 2v3.4c0 1-.6 1.9-1.5 2.3l-.6.3'
-              + 'c-.6.3-.9.9-.9 1.5v1.1H10v-1.1c0-.6-.3-1.2-.9-1.5l-.6-.3'
-              + 'A2.6 2.6 0 0 1 7 9.6V6.2a2 2 0 0 1 2-2Z"/>'
-              + '<rect x="3.6" y="17" width="16.8" height="2.8" rx="1.4"/></svg>' },
+              + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
+              + '<path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>'
+              + '<path d="M20 15.5a2.5 2.5 0 0 0-2.5-2.5h-11A2.5 2.5 0 0 0 4 15.5V17'
+              + 'a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1z"/>'
+              + '<path d="M5 22h14"/></g></svg>' },
         { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'

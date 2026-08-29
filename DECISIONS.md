@@ -2797,3 +2797,69 @@ it is judged in the row it sits in.
 
 **Render every candidate at the size it will actually be used, and decide there.
 A comparison at 4x is a comparison of drawings, not of icons.**
+
+## v291 -- A shared icon spec on paper is not a shared scale in practice
+
+The tool glyphs are 24x24, 2px stroke, round caps and joins. That is Lucide's
+spec exactly, so dropping two Lucide icons in should have been a copy and paste.
+Measured, it was not: Lucide draws to the full box and `paint-bucket` and `stamp`
+came in at 22.0-22.2 units of ink against a set that sits near 19. Fifteen per
+cent larger, and correspondingly heavier, than the eight glyphs beside them.
+
+Nothing in either SVG says so. Same viewBox, same stroke width, same joins --
+and a visibly different size on screen, because "how much of the box the drawing
+occupies" is not a property either file declares. It is only visible if you
+rasterise and measure, which is the same lesson as v288 arriving from a new
+direction.
+
+Each is now scaled 0.88 about the box centre with its authored stroke raised to
+2.27, so the RENDERED stroke lands back on 2px. The drawing is Lucide's,
+untouched; only its size in our box is ours, and the attribution says so rather
+than claiming the icons are unmodified.
+
+**Matching a spec is not the same as matching a look. Verify the rendering, not
+the declaration.**
+
+## v292 -- Two exemptions is a smell, so make the exemption cost something
+
+`verify_icons.py` now excuses Liquify from the height floor (a smear is wide and
+low) and Stamps from the width floor (a rubber stamp is tall and narrow; Lucide's
+is 18:22 and no uniform scale satisfies both the width floor and the height
+ceiling). Two exemptions in a ten-icon band, the second added to admit a change
+I was making, is exactly the shape of a guard being quietly dismantled.
+
+So the exemption was given a price: an area floor that applies to every icon,
+exempt or not. A glyph excused on one axis still has to occupy a comparable
+amount of the box. Mutation-tested three ways -- the original weak Fill still
+fails, an exempted icon shrunk to nothing still fails, and raw unscaled Lucide
+still fails.
+
+The margin is thin and is written down rather than rounded to something tidier:
+Liquify at 270 is the smallest thing that must pass, the original Fill was 245.
+Which is why the comment says outright that this is a BACKSTOP and not the
+guard -- the per-axis floors do the real work, and that Fill failed both of them
+too.
+
+**When you widen a rule to admit your own change, add a rule that the change
+still has to pass.** An exemption that costs nothing is a deletion with extra
+steps.
+
+## v293 -- A mockup is not a bill of materials
+
+The icon options came as two images: a set of tray mockups and a grid of forty
+named Lucide icons with seven recommended picks. The names were checkable, so
+they got checked against lucide-static 1.37.0.
+
+Fourteen of the forty do not exist. `pen-nib`, `hand-move`, `move-2`,
+`paint-bucket-icon`, `square-fill`, `circle-fill`, `bucket`, `swirl`,
+`wavy-lines`, `ripple`, `distort`, `blur`, `seal`, `picture-frame` -- including
+four of the seven RECOMMENDED picks. And the glyph pictured for Liquify was a
+finger with ripples while the name under it was `waves`, which in Lucide is three
+wavy lines: the picture and the name were different icons.
+
+The two that mattered were real, and both shipped. But a shopping list that is a
+third fiction would have produced a pile of 404s and a quiet substitution of
+whatever was nearest.
+
+**Check names against the package, not the mockup.** It took one `npm pack` and
+a loop.
