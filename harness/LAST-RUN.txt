@@ -1,27 +1,28 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T13:16:51Z
+UTC timestamp           : 2026-08-29T13:44:23Z
 Host                    : Linux x86_64
-Tree SHA-256            : 8d9baa25313a2cd282d858b9ea019b13afd93179aed1a5c2d656d5bffa992bdc
-Git commit              : f831370-dirty
-SKRIBL_VERSION          : v229
+Tree SHA-256            : 60b7ea4cdc95031ed7bdcc65fc3190c3da26276600b135952c1ae9aa19b82223
+Git commit              : f53ac58-dirty
+SKRIBL_VERSION          : v230
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.185rI4hSIS/harness.db)
+Database reset          : yes (fresh /tmp/tmp.E2RMrEelIE/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_docs.py
+Command                 : harness/run_harness.sh verify_docs.py verify_fill.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 1
+suites requested : 2
   verify_docs.py: ok — 65/65 passed
-assertions passed: 65   (skipped suites contribute 0)
+  verify_fill.py: ok — 14/14 passed
+assertions passed: 79   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
