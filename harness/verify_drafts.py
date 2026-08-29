@@ -374,6 +374,74 @@ with sync_playwright() as p:
           and stuck["opacity"] == "1",
           f"{stuck} — a warning that fades claims it was resolved")
     check("Flip: no page error through either path", not f_errors, "; ".join(f_errors[:2]))
+
+    # ---- a spill that never settles, and a warning about a PAST loss --------
+    print("\nFLIP PILL — the two ways it used to get stuck")
+    # A PUT THAT HANGS. IndexedDB on iOS Safari can accept a multi-megabyte
+    # write and then settle NEITHER way. Two handlers look like complete
+    # coverage and are not: the third outcome of an async call to something
+    # outside your process is silence, and without a deadline the pill sat on
+    # "Saving…" for the rest of the session — reported as "saving stays
+    # blinking". Every later save re-entered the same branch, so it was not just
+    # stuck, it was self-renewing.
+    pg3 = ctx2 = b.new_context()
+    pg3 = ctx2.new_page()
+    pg3.goto(f"{BASE}/flip", wait_until="load")
+    pg3.wait_for_timeout(900)
+    pg3.evaluate("() => { window.SkriblDraftStore.put = function(){ return new Promise(()=>{}); }; }")
+    png4 = pg3.evaluate(MAKE_PNG_FILE)
+    pg3.evaluate("""(bytes) => {
+      const f = new File([new Uint8Array(bytes)], 'hang.png', { type: 'image/png' });
+      const dt = new DataTransfer(); dt.items.add(f);
+      const input = document.getElementById('imageInput');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }""", png4)
+    pg3.wait_for_timeout(2500)
+    mid = pg3.evaluate("() => document.getElementById('autosaveStatusText').textContent")
+    check("Flip: a hanging spill says 'Saving…' while it is genuinely pending",
+          mid == "Saving…", f"{mid!r}")
+    pg3.wait_for_timeout(11000)          # past SPILL_TIMEOUT_MS
+    late = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+        return { hidden: el.hidden,
+                 text: document.getElementById('autosaveStatusText').textContent }; }""")
+    check("Flip: ...and does NOT sit there forever",
+          late["text"] == "Saved without media" and late["hidden"] is False,
+          f"{late} — a write that has not landed in twelve seconds is not one a "
+          "reload can count on, and 'Saving…' never fades on its own")
+
+    # A PENDING RECORD IS A MEMO ABOUT A PAST LOSS, NOT A PROPERTY OF THIS SAVE.
+    # v229 showed amber whenever pendingPhotoMeta existed. With no media on the
+    # page, this save omitted NOTHING, so the amber described something that did
+    # not happen — and because serializeFlip round-trips the record through the
+    # draft, a reload brought it straight back. The control that clears it lives
+    # in a drawer and measures 0x0 until opened, so the warning had no reachable
+    # resolution. That is how a user learns to ignore the colour amber.
+    pg4 = ctx2.new_page()
+    pg4.goto(f"{BASE}/flip", wait_until="load")
+    pg4.wait_for_timeout(900)
+    pg4.evaluate("""() => { pendingPhotoMeta = { fit:'cover', opacity:1, blur:0,
+        zoom:1, offX:.5, offY:.5, enabled:true, name:'gone.jpg' }; }""")
+    # A REAL stroke on Flip's canvas. DRAW_STROKE targets Pad's #canvas, so on
+    # Flip it draws nothing, no save is scheduled, and the pill reports whatever
+    # it happened to be showing — which passed as "Saving…" and told us nothing.
+    _pb = pg4.locator("#pad").bounding_box()
+    _px, _py = _pb["x"] + _pb["width"] / 2, _pb["y"] + _pb["height"] / 2
+    pg4.mouse.move(_px - 50, _py)
+    pg4.mouse.down()
+    pg4.mouse.move(_px + 50, _py)
+    pg4.mouse.up()
+    pg4.wait_for_timeout(2500)
+    stale = pg4.evaluate("() => document.getElementById('autosaveStatusText').textContent")
+    check("Flip: a past media loss does not make THIS save report a loss",
+          stale == "Saved",
+          f"{stale!r} with no photo on the page — the save omitted nothing; "
+          "the pending record is a memo so the image can be re-added, not a "
+          "property of this write")
+    check("Flip: ...and the record itself is kept, so re-adding still works",
+          pg4.evaluate("() => !!pendingPhotoMeta") is True,
+          "scoping the pill must not throw away the recovery affordance")
+    ctx2.close()
     ctx.close()
 
     b.close()

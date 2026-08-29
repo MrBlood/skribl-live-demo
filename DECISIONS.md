@@ -2460,3 +2460,41 @@ survives that; keying off position does not.
 **Anything shaped like a record that leaves the process needs its scratch state
 kept somewhere else,** and the assertion is cheap: no key on a point may begin
 with an underscore.
+
+## v277 -- A status is about THIS operation, not about the history
+
+Flip's autosave pill reported "Saved without media" whenever a pending media
+record existed. Reaching that branch means there is no photo and no track on the
+page at all: the save omitted NOTHING. The record is a memo about a past loss,
+kept so the user can re-add the same image with its settings.
+
+Conflating the two put a permanent amber warning on a drawing with no media in
+it. It was permanent because three separate things lined up: the record
+round-trips through the draft, the control that clears it is 0x0 until a drawer
+is opened, and warnings deliberately never fade. A warning with no reachable
+resolution.
+
+**The cost is not the wrong word on a pill; it is the colour.** Amber has to
+carry a real "your bytes are gone", and it can only do that if it is rare and
+true. A status that fires on history teaches people to ignore it, and then the
+one that matters arrives in a colour they have learned means nothing.
+
+**The rule: a status describes the operation that just ran.** If the state is
+about something that happened earlier, it belongs to whatever offers the remedy
+-- here, the re-add card -- not to the indicator for the current write.
+
+## v278 -- A shared test helper is not surface-agnostic just because it is shared
+
+A new Flip assertion used `DRAW_STROKE`, the helper the Pad sections use. It
+targets `#canvas`, which is Pad's element; Flip draws on `#pad`. So on Flip it
+drew nothing, scheduled no save, and the assertion read whatever the pill
+happened to be showing.
+
+It did not error. It reported "Saving..." and failed for a reason that looked
+plausible -- a save still in flight -- which cost a round of chasing the wrong
+thing.
+
+**A helper lifted to the top of a file reads as applying to the whole file.**
+When two surfaces share a suite, anything that touches the DOM has to say which
+surface it is for, or be parameterised by it. The tell is an assertion that fails
+with a value that is merely UNEXPECTED rather than wrong.

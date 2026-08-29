@@ -494,7 +494,27 @@ function saveNow(){
     // synchronous write and no IndexedDB round trip.
     try {
       localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
-      showAutosaveStatus((pendingPhotoMeta || pendingMusicMeta) ? 'saved-no-media' : 'saved');
+      // PLAIN 'saved', even when a pending media record exists — and that is a
+      // correction to v229, not a weakening of it.
+      //
+      // Reaching here means hasMedia is FALSE: there is no photo and no track
+      // on this page, so this save omitted nothing and "Saved without media" is
+      // describing something that did not happen. pendingPhotoMeta is a memo
+      // about a PAST loss, kept so the user can re-add the same image with its
+      // settings intact. It is not a property of this write.
+      //
+      // The cost of conflating them was reported from the live demo: the amber
+      // sat on screen permanently, on a drawing with no media in it, and the
+      // record round-trips through the draft (serializeFlip writes
+      // `photo: pendingPhotoMeta` when bgImage is null) so a reload brought it
+      // straight back. The only control that clears it lives in a drawer and
+      // measures 0x0 until that drawer is opened — a warning with no reachable
+      // resolution, which is how a user learns to ignore the colour amber.
+      //
+      // The real warning is untouched: when media IS attached and its bytes
+      // fail to land, the spill path below still raises amber and still keeps
+      // it up.
+      showAutosaveStatus('saved');
       return;
     } catch (e) {
       if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
