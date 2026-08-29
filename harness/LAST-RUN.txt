@@ -1,33 +1,33 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T14:00:59Z
+UTC timestamp           : 2026-08-29T14:38:38Z
 Host                    : Linux x86_64
-Tree SHA-256            : 5dbd16705ea4d949368dff4563f99434c97ee271540c4588a4f9bdab2cc9e265
-Git commit              : 4160d81-dirty
-SKRIBL_VERSION          : v230
+Tree SHA-256            : ad58f49d51b456ee9052e2b4e98f0103a9358eac2fcaf14f88ab501d40d09fa3
+Git commit              : 9b762a0-dirty
+SKRIBL_VERSION          : v231
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.oVfXPV4yTu/harness.db)
+Database reset          : yes (fresh /tmp/tmp.1MxbZtOcgn/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_docs.py verify_input.py verify_fill.py verify_tools.py verify_ux.py verify_layout.py verify_drafts.py
+Command                 : harness/run_harness.sh verify_docs.py verify_fill.py verify_tray.py verify_input.py verify_tools.py verify_ux.py verify_layout.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 7
   verify_docs.py: ok — 65/65 passed
+  verify_fill.py: ok — 18/18 passed
+  verify_tray.py: ok — 85/85 passed
   verify_input.py: ok — 9/9 passed
-  verify_fill.py: ok — 14/14 passed
   verify_tools.py: ok — 118/118 passed
   verify_ux.py: ok — 310/310 passed
   verify_layout.py: ok — 83/83 passed
-  verify_drafts.py: ok — 24/24 passed
-assertions passed: 623   (skipped suites contribute 0)
+assertions passed: 688   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

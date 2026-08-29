@@ -248,6 +248,58 @@ with sync_playwright() as p:
               page.evaluate(STATE, bar)["trayHidden"],
               "it is registered in the drawer set, so they are mutually exclusive")
 
+    # ---- a tool with its OWN chooser must still get to show it -------------
+    print("\nTRAY [Flip] — picking a tool from the tray runs its follow-on UI")
+    # THE REGRESSION THIS CATCHES, which shipped in v227 and was reported from
+    # the live demo three versions later as "shape is not giving a choice, just
+    # gives you line".
+    #
+    # Shape has a kind picker (line / rect / oval). It was opened by a click
+    # handler bound to '#toolGroup .tool-btn' — the SHELF — which was complete
+    # right up until this tray was put in FRONT of the shelf. After that,
+    # choosing Shape from the tray never ran that handler, the picker never
+    # opened, and Shape silently used whatever kind it already had: 'line', for
+    # everyone who had never happened to have Shape sitting on the shelf.
+    #
+    # The general shape of the bug is worth more than the instance: adding a
+    # SECOND route to an action leaves any side effect attached to the first
+    # route silently unreachable from the second. The fix put it where both
+    # routes converge. This asserts the tray route specifically, because the
+    # shelf route never broke and testing it proves nothing.
+    page = browser.new_page(viewport={"width": 1100, "height": 900})
+    page.goto(BASE + "/flip", wait_until="load")
+    page.wait_for_timeout(1100)
+    hidden = lambda: page.evaluate("() => document.getElementById('shapePop').hidden")
+    check("Flip: the shape picker starts closed", hidden() is True,
+          "it opens on selection, not on load")
+    page.click("#toolMoreBtn")
+    page.wait_for_timeout(300)
+    page.click(".tool-tray-btn[data-tool='shape']")
+    page.wait_for_timeout(400)
+    check("Flip: choosing Shape FROM THE TRAY opens its kind picker",
+          hidden() is False,
+          "the tray is a second route to setTool; a side effect wired only to "
+          "the shelf is unreachable from it")
+    kinds = page.evaluate(
+        "() => [...document.querySelectorAll('#shapeSeg [data-shape]')].map(b => b.dataset.shape)")
+    check("Flip: and it offers every kind, not just the current one",
+          kinds == ["line", "rect", "ellipse"], str(kinds))
+    page.click("#shapeSeg [data-shape='ellipse']")
+    page.wait_for_timeout(300)
+    check("Flip: choosing a kind takes effect and closes the picker",
+          page.evaluate("() => shapeKind") == "ellipse" and hidden() is True,
+          f"shapeKind={page.evaluate('() => shapeKind')}, hidden={hidden()}")
+    # Selecting something else must put the picker away, or it hangs over the
+    # canvas under a tool it has nothing to do with.
+    page.evaluate("() => SkriblFlipTools.list()")
+    page.click("#toolMoreBtn")
+    page.wait_for_timeout(300)
+    page.click(".tool-tray-btn[data-tool='pen']")
+    page.wait_for_timeout(400)
+    check("Flip: leaving Shape closes the picker",
+          hidden() is True, "a chooser for a tool you are no longer using")
+    page.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

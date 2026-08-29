@@ -74,18 +74,84 @@ with sync_playwright() as p:
 
         # A run is two points, and that is the entire cost model. Asserted on
         # the pure function so it cannot drift behind a canvas.
-        pts = page.evaluate("""() => SkriblFloodFill.points({y: 10, x0: 0, x1: 100}, 8)""")
+        pts = page.evaluate("""() => SkriblFloodFill.points({y: 10, x0: 0, x1: 100, h: 7})""")
         check("a run costs TWO points, not one per pixel",
               len(pts) == 2, f"{pts} — per-pixel rasterising would put a single "
               "tap over the server's 20,000-point frame limit")
         check("...and they are inset for the round caps",
               abs(pts[0]["x"] - 4) < 0.01 and abs(pts[1]["x"] - 96) < 0.01,
-              f"{pts} — round caps extend size/2 past each end, so a run drawn "
-              "to its true extent bleeds half a brush past the boundary")
-        short = page.evaluate("""() => SkriblFloodFill.points({y: 5, x0: 0, x1: 3}, 8)""")
+              f"{pts} — round caps extend half the lineWidth past each end, so "
+              "a run drawn to its true extent bleeds past the boundary")
+        short = page.evaluate("""() => SkriblFloodFill.points({y: 5, x0: 0, x1: 1, h: 7})""")
         check("a run shorter than its own width collapses to a dot",
               len(short) == 1, f"{short} — inset past itself it would draw "
               "backwards; drawDot paints one point at the same width")
+
+        # THE REGRESSION THAT SHIPPED. The first version banded every 6 pixel
+        # rows and gave the band the UNION of their extents. On a slope the
+        # union is wider than the narrow rows, the cap inset then pulls each
+        # run's ends back, and where the region is narrow the run comes out
+        # shorter than its own width and collapses to a DOT. Down a diagonal
+        # that is a perforated line, which is what the first fill on the live
+        # demo drew. Grouping by exact extent is what fixes it, and this is the
+        # assertion that says so on the geometry rather than on pixels.
+        tri = page.evaluate("""() => {
+          // a right triangle: row y spans x from 0 to y
+          const W = 64, H = 64;
+          const img = new ImageData(W, H);
+          for (let y = 0; y < H; y++)
+            for (let x = 0; x < W; x++) {
+              const i = (y * W + x) * 4, inside = x <= y;
+              img.data[i] = inside ? 255 : 0; img.data[i+1] = inside ? 255 : 0;
+              img.data[i+2] = inside ? 255 : 0; img.data[i+3] = 255;
+            }
+          const r = SkriblFloodFill.runs(img, 1, 40, { tolerance: 8 });
+          let dots = 0, covered = 0;
+          for (const run of r.runs) {
+            if (SkriblFloodFill.points(run).length === 1) dots++;
+            covered += run.h;
+          }
+          return { runs: r.runs.length, dots: dots, covered: covered,
+                   heights: r.runs.slice(0, 4).map(x => x.h) };
+        }""")
+        check("a diagonal edge produces one run PER ROW, not a banded union",
+              all(h == 1 for h in tri["heights"]),
+              f"heights {tri['heights']} — a run taller than the rows whose "
+              f"extent it shares is the union that perforated the edge")
+        check("...and every row of the region is covered exactly once",
+              tri["covered"] == 64,
+              f"{tri['covered']} rows covered of 64 — a gap here is a hole in "
+              "the fill and an overlap double-darkens a translucent seam")
+        # NOT zero, and the distinction is the whole point. This triangle's top
+        # rows really are one and two pixels wide, so a dot there is an honest
+        # sliver. What the bug produced was a dot in most bands ALONG the slope,
+        # where the region is dozens of pixels wide and only the banded union
+        # made the run look short. Confining them to the apex is the fix.
+        check("collapsed dots are confined to genuinely narrow rows",
+              tri["dots"] <= 3,
+              f"{tri['dots']} of {tri['runs']} runs collapsed to a point — a "
+              "handful at the apex is real geometry; a line of them down the "
+              "edge IS the reported dotted line")
+
+        # A flat region is the other half of the same claim: grouping by extent
+        # has to be CHEAPER on ordinary shapes, or it has just traded one
+        # problem for a bill.
+        box = page.evaluate("""() => {
+          const W = 64, H = 64;
+          const img = new ImageData(W, H);
+          for (let y = 0; y < H; y++)
+            for (let x = 0; x < W; x++) {
+              const i = (y * W + x) * 4, inside = (x > 8 && x < 56 && y > 8 && y < 56);
+              img.data[i] = inside ? 255 : 0; img.data[i+1] = inside ? 255 : 0;
+              img.data[i+2] = inside ? 255 : 0; img.data[i+3] = 255;
+            }
+          const r = SkriblFloodFill.runs(img, 32, 32, { tolerance: 8 });
+          return { runs: r.runs.length, h: r.runs[0] ? r.runs[0].h : 0 };
+        }""")
+        check("a flat region is ONE run however tall it is",
+              box["runs"] == 1 and box["h"] == 47,
+              f"{box} — cost follows the perimeter, not the area; a fixed band "
+              "would have spent eight runs on this")
 
         print("\nTHE TOLERANCE IS ANCHORED TO THE SEED, NOT THE NEIGHBOUR")
         # A horizontal gradient. Neighbour-relative tolerance walks it end to
