@@ -2886,22 +2886,29 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/>'
               + '<path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/>'
               + '<path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/></g></svg>' },
-        // A FINGERTIP WITH A FADING TRAIL, which is what the tool literally does.
-        // Drawn here rather than taken from a library: the reference set that
-        // suggested it named a Lucide icon that does not exist, and Phosphor's
-        // equivalent is a FILLED path on a 256 grid, which cannot join a stroked
-        // 24-box set without being redrawn anyway.
+        // A HAND POINTING DOWN-LEFT, index finger extended, traced from the
+        // owner's reference (ink box 108x140, aspect 0.771).
         //
-        // The trail fades in three steps, which is the smudge thinning as it
-        // travels -- the same thing SMUDGE_FADE_MAX does to real ink.
+        // IT IS A SIMPLIFICATION, and deliberately. The reference has a thumb,
+        // THREE curled fingers, a wrist and an extended index. Drawn out in full
+        // at 24px the curls merge into each other and the whole thing is a dense
+        // blob -- rendered side by side, the faithful trace lost to this one at
+        // tray size and won at 4x, which is the wrong way round for a tool
+        // button. What survives is the silhouette: thumb hook, ONE curl, the
+        // extended finger, the back of the hand.
+        //
+        // The stroke is 1.8 rather than 2 for the same reason -- at 2 the gaps
+        // between the finger and the curl close up and the hand becomes a paddle.
+        //
+        // It replaces a fingertip-with-motion-lines that the owner called weird,
+        // and it was: that one read as a blocky mitten beside three dashes.
         { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M8.6 20.8v-5.4l-2.5 1a1.5 1.5 0 0 1-1.7-2.3l3-3.7V6.4'
-              + 'a1.6 1.6 0 0 1 3.2 0v4.3h1.4a2.9 2.9 0 0 1 2.9 2.9v7.2"/>'
-              + '<path d="M17.6 11.4h4.2"/>'
-              + '<path d="M17.6 15h3.2" opacity=".6"/>'
-              + '<path d="M17.6 18.6h2" opacity=".33"/></svg>' },
+              + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M14.6 2 17.9 3.3 19.8 10.8 16.2 15.4 12.4 16.3"/>'
+              + '<path d="M7.2 3.2 4.5 7.9a1.8 1.8 0 0 0 3.1 1.8"/>'
+              + '<path d="M10.4 8.2 7.6 13a1.8 1.8 0 0 0 3.1 1.8l.7-1.2"/>'
+              + '<path d="M14 8.8 8.3 18.7a2 2 0 1 1-3.46-2"/></svg>' },
         // BLUR SHOULD LOOK BLURRY, which the concentric outlined rings it had did
         // not -- they read as a target. A filled core inside progressively larger,
         // fainter filled halos is what defocus actually looks like, and it
