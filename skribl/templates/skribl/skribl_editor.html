@@ -243,6 +243,21 @@
         <button type="button" class="smooth-btn active" data-shape="line" aria-pressed="true" title="Straight line">Line</button>
         <button type="button" class="smooth-btn" data-shape="rect" aria-pressed="false" title="Rectangle &mdash; hold Shift for a square">Rect</button>
         <button type="button" class="smooth-btn" data-shape="ellipse" aria-pressed="false" title="Ellipse &mdash; hold Shift for a circle">Oval</button>
+        <button type="button" class="smooth-btn" data-shape="poly" aria-pressed="false" title="Regular polygon &mdash; hold Shift to keep it regular">Poly</button>
+      </div>
+      {# Same two knobs Flip carries, and for the same reason each hides rather
+         than greys out: a control you cannot use is still one to read past. #}
+      <div class="shape-knob" id="shapeSidesRow" hidden>
+        <label for="shapeSides">Sides</label>
+        <input type="range" id="shapeSides" min="3" max="12" step="1" value="5"
+               aria-label="Number of sides">
+        <output id="shapeSidesOut">5</output>
+      </div>
+      <div class="shape-knob" id="shapeRadiusRow" hidden>
+        <label for="shapeRadius">Corners</label>
+        <input type="range" id="shapeRadius" min="0" max="60" step="2" value="0"
+               aria-label="Corner rounding">
+        <output id="shapeRadiusOut">0</output>
       </div>
     </div>
 

@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v236"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v237"` (skribl/core.py).**
 
 **The release evidence in this archive is THIS tree's.**
 `harness/RELEASE.md` and `harness/LAST-RUN.txt` are generated from a full
@@ -25,7 +25,7 @@ build someone approved. (v224 outside review, R5.)
 If you need provenance, take the hash of the **zip** from a channel that did not
 travel with the zip. This project publishes it in the git commit that seals each
 release, on the branch the archive was built from — compare
-`sha256sum skribl-v236-sealed.zip` against the value in that commit message. A
+`sha256sum skribl-v237-sealed.zip` against the value in that commit message. A
 signed tag or a CI attestation would be stronger and neither exists yet; the
 git-history channel is what is actually here, and saying so beats implying more.
 

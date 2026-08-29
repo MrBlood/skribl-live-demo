@@ -46,7 +46,11 @@ canvasWrap.appendChild(shapeCursor);
 const _SHAPE_GLYPH = {
   line:    '<line x1="3" y1="15" x2="15" y2="3"/>',
   rect:    '<rect x="3" y="4.5" width="12" height="9" rx="1.5"/>',
-  ellipse: '<ellipse cx="9" cy="9" rx="6.5" ry="5"/>'
+  ellipse: '<ellipse cx="9" cy="9" rx="6.5" ry="5"/>',
+  // A pentagon: enough sides to read as "polygon" at 18px, few enough that the
+  // corners survive. The glyph is deliberately not redrawn per `sides` -- a
+  // cursor that changes shape as a slider moves is noise under the hand.
+  poly:    '<path d="M9 3l6 4.4-2.3 7H5.3L3 7.4z"/>'
 };
 function updateShapeCursor(x, y) {
   const kind = (typeof shapeKind !== 'undefined') ? shapeKind : 'line';
