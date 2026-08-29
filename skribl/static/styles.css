@@ -2511,9 +2511,14 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .autosave-status.show { opacity: 1; }
 /* Set by lib/pillfit.js when the pill would sit on a control — on a phone the
-   tool row is at the bottom too, so a fixed bottom-left pill lands on it. AFTER
-   .show and at the same specificity, so it wins by order; the lib only ever
-   applies it to the reassuring states, never to a warning. */
+   tool row is at the bottom too, so a fixed bottom-left pill lands on it. The
+   lib LIFTS the pill above the bar first and only falls back to fading when
+   there is no room above; fading was the whole remedy until v229, and because
+   the collision is permanent at phone sizes it meant "Saved" was never once
+   visible on a phone. AFTER .show and at the same specificity, so it wins by
+   order; the lib only ever applies it to the reassuring states, never to a
+   warning. */
+.autosave-status.lifted { transform: translateY(calc(-1 * var(--pill-lift, 0px))); }
 .autosave-status.blocked { opacity: 0; }
 /* A transient status pill must not sit on top of a control. Fixed at the
    bottom-left, it landed squarely over "Clear all pages" whenever a drawer was

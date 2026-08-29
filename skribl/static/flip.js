@@ -35,6 +35,18 @@ CW = FLIP_SIZES[0].w; CH = FLIP_SIZES[0].h;
 
 const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
 
+/* Fill's two numbers, named here rather than typed into doFill.
+   TOLERANCE is how far from the tapped colour still counts as the same region.
+   32 of 255 per channel absorbs the anti-aliased fringe on a drawn line without
+   leaking through it; the fringe is what makes a zero-tolerance fill leave a
+   halo of un-filled pixels around every stroke it meets.
+   ROW STEP is the band height in CANVAS units, and it is the whole cost model:
+   a fill spends two points per band, so 6px over a 460-tall canvas is about 77
+   bands and 154 points against a server limit of 20,000 per frame. Smaller is
+   more faithful to a curved boundary and linearly more expensive. */
+const FILL_TOLERANCE = 32;
+const FILL_ROW_STEP = 6;
+
 const pad = document.getElementById('pad');
 const ctx = pad.getContext('2d');
 pad.width = CW*DPR; pad.height = CH*DPR; ctx.scale(DPR,DPR);
@@ -530,7 +542,24 @@ function saveNow(){
     const lite = serializeFlip({ media: false });
     lite.mediaInIdb = true; lite.idbSavedAt = stamp;
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(lite));
-    showAutosaveStatus('saved-no-media');
+    // THE DRAWING IS SAFE; THE MEDIA BYTES ARE STILL IN FLIGHT. Until v229 this
+    // painted the amber 'saved-no-media' unconditionally, and that is a warning
+    // about a failure that has not happened and usually never will — reaching
+    // this code is the NORMAL way media is saved, as the comment 80 lines up
+    // says outright. Instrumented, the real sequence was:
+    //     put:start bytes=4215866
+    //     pill:saved-no-media      (+1ms)
+    //     put:RESOLVED / pill:saved (+13ms)
+    // 13ms of amber on a desktop is invisible, which is exactly why it shipped.
+    // On a phone writing multiple megabytes it is visible, and if the write is
+    // slow or never settles it is permanent — an amber durability warning
+    // parked on a session that is fine.
+    //
+    // 'saving' is the honest description of a pending write, it already stays
+    // up without fading, and the .then/.catch above resolve it to 'saved' or to
+    // a 'saved-no-media' that is TRUE. When there is no store to spill to,
+    // _mediaSpillState is already 'failed' and the amber is earned.
+    showAutosaveStatus(_mediaSpillState === 'saving' ? 'saving' : 'saved-no-media');
   } catch (e2) {
     // Last ditch: Flip has already dropped the media bytes and the lite payload
     // STILL will not fit. Make room the same way Pad does -- sweep orphaned
@@ -542,7 +571,9 @@ function saveNow(){
         const body = JSON.stringify(lite);
         if (window.SkriblPosted.reclaim(body.length)) {
           localStorage.setItem(AUTOSAVE_KEY, body);
-          showAutosaveStatus('saved-no-media');
+          // Same reasoning as the write above: reclaiming space says nothing
+          // about whether the media reached IndexedDB.
+          showAutosaveStatus(_mediaSpillState === 'saving' ? 'saving' : 'saved-no-media');
           recovered = true;
         }
       } catch (e3) { /* fall through to the honest failure below */ }
@@ -1150,6 +1181,14 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     liquifyBegin(pos(e));
     return;
   }
+  // Fill intercepts before drawing too, and for a reason the others do not
+  // have: it is a TAP, not a drag. There is no stroke to lay and nothing to
+  // follow the pointer, so it commits immediately and returns.
+  if(flipTool === 'fill'){
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    doFill(pos(e));
+    return;
+  }
   // Select intercepts BEFORE drawing, the same place moveMode does and for the
   // same reason: dragging a selection must not also lay a stroke through it.
   if(flipTool === 'select'){
@@ -1207,22 +1246,67 @@ pad.addEventListener('pointermove', e=>{
     render(); return; }
   if(!drawing) return; e.preventDefault();
   const raw=pos(e); lastRaw={x:raw.x,y:raw.y};
-  let px, py;
-  if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }         // no stabilizer (off, or erasing stays precise)
+  // Shape reads only the CURRENT position — it is a rubber band between two
+  // corners, not a trail — so it takes the last sample and returns before any
+  // of the per-point work below.
   if(flipTool==='shape'){
     _constrainActive = !!(e && e.shiftKey);
     _shapePrev = {a:_shapeAnchor, b:{x:raw.x,y:raw.y}, sq:_constrainActive};
     render(); return;
   }
-  else { smoothPt={x: smoothPt.x+(raw.x-smoothPt.x)*smoothingAlpha, y: smoothPt.y+(raw.y-smoothPt.y)*smoothingAlpha}; px=smoothPt.x; py=smoothPt.y; }
-  // Shift-to-constrain — same shared helper and same stroke-start anchor as Pad.
-  _constrainActive = !!(e && e.shiftKey);
-  if(_constrainActive && typeof SkriblConstrain !== 'undefined'){
-    const _sf = (strokeFrame || frame()).strokes, _a = _sf.length ? _sf[_sf.length - curCount] : null;
-    if(_a){ const _c = SkriblConstrain.apply(_a, {x:px,y:py}, true); px=_c.x; py=_c.y; }
+  // EVERY SAMPLE THE BROWSER ACTUALLY CAPTURED, not just the one per frame it
+  // hands to this listener. lib/inputsamples.js explains why at length; the
+  // short version is that a pointermove arrives once per animation frame while
+  // the digitiser samples at 120-240Hz, so a fast circle was being recorded as
+  // a ~24-sided polygon and a slow one as a smooth curve. Reported from the
+  // live demo in exactly those words.
+  //
+  // The events are passed through whole rather than reduced to coordinates:
+  // sizeFor() reads pressure off the event, and taking positions from the batch
+  // while taking pressure from the last event would flatten every taper.
+  const _samples = (typeof SkriblInputSamples !== 'undefined')
+    ? SkriblInputSamples.extract(e) : [e];
+  const _mapped = [];
+  for(let _i=0;_i<_samples.length;_i++){
+    const _q = pos(_samples[_i]);
+    _mapped.push({ ev:_samples[_i], x:_q.x, y:_q.y });
   }
-  curCount++; const dsize = _brushWidth(sizeFor(e, _eraserSize(size, erasing)), {x:px,y:py}, erasing); const pcol = erasing ? color : penColorFor(color); _brushLastPt = {x:px, y:py};
-  (strokeFrame || frame()).strokes.push({ x:px, y:py, color: pcol, size: dsize, t: performance.now(), erase: erasing });
+  // Thinned from the last point actually COMMITTED, so the filter carries
+  // across event boundaries instead of restarting every frame.
+  const _kept = (typeof SkriblInputSamples !== 'undefined')
+    ? SkriblInputSamples.thin(_mapped, _brushLastPt, SkriblInputSamples.MIN_DIST)
+    : _mapped;
+  for(let _i=0;_i<_kept.length;_i++){
+    const _s = _kept[_i];
+    let px, py;
+    // The stabilizer, and the fix to a bug this rewrite exposed. This was:
+    //     if(smoothingAlpha>=1 || erasing){ px=raw.x; py=raw.y; }
+    //     if(flipTool==='shape'){ ... return; }
+    //     else { smoothPt=...; px=smoothPt.x; py=smoothPt.y; }
+    // where the `else` bound to the SHAPE test, not the smoothing one. So with
+    // the stabilizer on, an eraser stroke had its precise point overwritten by
+    // the smoothed one, directly contradicting the comment that said "erasing
+    // stays precise". It was invisible at the default (stabilizer off, where
+    // the smoothed point equals the raw one), which is why it survived.
+    if(smoothingAlpha>=1 || erasing){ px=_s.x; py=_s.y; }
+    else { smoothPt={x: smoothPt.x+(_s.x-smoothPt.x)*smoothingAlpha,
+                     y: smoothPt.y+(_s.y-smoothPt.y)*smoothingAlpha};
+           px=smoothPt.x; py=smoothPt.y; }
+    // Shift-to-constrain — same shared helper and same stroke-start anchor as Pad.
+    _constrainActive = !!(e && e.shiftKey);
+    if(_constrainActive && typeof SkriblConstrain !== 'undefined'){
+      const _sf = (strokeFrame || frame()).strokes, _a = _sf.length ? _sf[_sf.length - curCount] : null;
+      if(_a){ const _c = SkriblConstrain.apply(_a, {x:px,y:py}, true); px=_c.x; py=_c.y; }
+    }
+    curCount++;
+    const dsize = _brushWidth(sizeFor(_s.ev, _eraserSize(size, erasing)), {x:px,y:py}, erasing);
+    const pcol = erasing ? color : penColorFor(color);
+    _brushLastPt = {x:px, y:py};
+    (strokeFrame || frame()).strokes.push({ x:px, y:py, color: pcol, size: dsize,
+                                            t: performance.now(), erase: erasing });
+  }
+  // ONE render for the whole batch, not one per sample: painting is the
+  // expensive half and the frame is only shown once anyway.
   render(); });
 function endStroke(){
   invalidateClearUndo();   // review #4: new work invalidates a pending clear-undo
@@ -2602,6 +2686,19 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // drag on the canvas, it has a mode, and it sits beside Select and
         // Liquify in every way except where it was filed. Reclassifying it is a
         // filing correction, not a redesign; the behaviour below is untouched.
+        // v230. The seventh, and the first that is not a drag at all -- one tap
+        // and a region changes. It produces STROKES like every other tool
+        // (lib/floodfill.js says why at length): the format has no fill
+        // primitive, adding one is a change the player must honour, and
+        // scanline runs cost two points each, so a fill needs neither.
+        { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M6.5 10.5 12 5l6.5 6.5a1.5 1.5 0 0 1 0 2.1l-4.9 4.9a1.5 1.5 0 0 1-2.1 0'
+              + 'l-4.9-4.9a1.5 1.5 0 0 1 0-2.1Z"/>'
+              + '<path d="M9.2 7.8 7 5.6"/>'
+              + '<path d="M20 16.5c0 1-.7 1.8-1.6 1.8s-1.6-.8-1.6-1.8c0-.9 1.6-2.8 1.6-2.8s1.6 1.9 1.6 2.8Z" '
+              + 'fill="currentColor" stroke="none"/></svg>' },
         { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -2667,7 +2764,10 @@ function setTool(t){
   // unconditional 'none' for the custom brush cursor, which clobbered the grab
   // cursor setMoveMode had set moments earlier in this same function once
   // Artwork became a tool — the mode was live and the canvas did not say so.
-  pad.style.cursor = moveMode ? 'grab' : 'none';
+  // Fill is a TAP, so it wants a pointer rather than the custom brush ring —
+  // 'none' hides the system cursor for a brush ring that fill never draws,
+  // which left the canvas with no cursor at all under this tool.
+  pad.style.cursor = moveMode ? 'grab' : (flipTool === 'fill' ? 'crosshair' : 'none');
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
@@ -5146,9 +5246,81 @@ function noteAction(entry){
   if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
 }
 
+/* FILL — a region, expressed as strokes, because strokes are the only thing
+   this format has. lib/floodfill.js carries the geometry and the reasoning; this
+   is the part that has to know about canvases, colour and undo.
+
+   IT READS WHAT IS ON SCREEN, backdrop and photo included, because that is what
+   the user is pointing at. Filling "the white part" of a photo has to sample the
+   photo; sampling only the stroke layer would fill regions the user cannot see.
+
+   DEVICE PIXELS IN, CANVAS UNITS OUT. The canvas is scaled by DPR
+   (pad.width = CW*DPR with ctx.scale(DPR,DPR)), so getImageData works in device
+   pixels while strokes are stored in canvas units. The seed is multiplied going
+   in and every run divided coming out. Getting this wrong is invisible at
+   DPR 1 -- a desktop -- and doubles every coordinate on a phone.
+
+   SOLID COLOUR, DELIBERATELY. See the note in lib/floodfill.js: rows overlap by
+   design, so a translucent fill bands at every seam, and each run is its own
+   stroke, so a translucent fill of a hundred runs blows LAYER_BUDGET and flips
+   the whole frame to direct painting. solidOf() avoids both.
+
+   ONE TAP IS ONE UNDO. The fill lands as many stroke groups, which is right for
+   the payload -- the player replays them as a sweep and needs no new primitive
+   -- but wrong for the editor, where popping fifty groups to take back one tap
+   is not undo. The actionLog already carries object entries for moves; a
+   'fill' entry says how many groups the tap produced and undoStroke pops them
+   together. Nothing about the saved format changes. */
+function doFill(p){
+  if(playing) return;
+  if(typeof SkriblFloodFill === 'undefined'){ chip('Fill is unavailable'); return; }
+  const f = frame();
+  let img;
+  try { img = ctx.getImageData(0, 0, pad.width, pad.height); }
+  catch(err){ chip('Fill cannot read this canvas'); return; }
+  const res = SkriblFloodFill.runs(img, p.x * DPR, p.y * DPR,
+                                   { tolerance: FILL_TOLERANCE, rowStep: FILL_ROW_STEP * DPR });
+  if(!res.runs.length){ chip('Nothing to fill there'); return; }
+  const col = solidOf(penColorFor(color));
+  const w = res.size / DPR;
+  const now = performance.now();
+  let groups = 0, t = 0;
+  for(const run of res.runs){
+    const pts = SkriblFloodFill.points(run, res.size);
+    for(let i = 0; i < pts.length; i++){
+      f.strokes.push({ x: pts[i].x / DPR, y: pts[i].y / DPR, color: col, size: w,
+                       t: now + (t++), erase: false, start: i === 0 });
+    }
+    f.strokeGroups.push(pts.length);
+    groups++;
+  }
+  redoStack.length = 0;
+  actionLog.push({ type:'fill', idx: idx, groups: groups });
+  if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+  chip(res.truncated ? 'Filled (area was clipped)' : 'Filled');
+  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+}
+
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
+  // A FILL is one action, and this must be tested BEFORE the generic object
+  // branch below — that branch pops any object entry and then assumes it is a
+  // move, so a fill entry reached it, fell past every m.type check and died on
+  // m.idxs.length. Order is the whole of the fix.
+  if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'
+     && actionLog[actionLog.length-1].type === 'fill'){
+    const m = actionLog.pop();
+    if(m.idx !== idx) go(m.idx);
+    const tf = frame();
+    const counts = tf.strokeGroups.splice(tf.strokeGroups.length - m.groups, m.groups);
+    let total = 0; for(const c of counts) total += c;
+    const pts = tf.strokes.splice(tf.strokes.length - total, total);
+    redoStack.push({ type:'fill', idx: m.idx, pts: pts, counts: counts });
+    chip('Fill undone');
+    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
+    return;
+  }
   // A move is undone only if it was the LAST thing done. Popping strokes past
   // a move would silently leave the move in place.
   if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'){
@@ -5264,6 +5436,18 @@ function redoStroke(){
     actionLog.push(m);            // back on the history it came off
     chip(m.idxs.length > 1 ? 'Move redone on ' + m.idxs.length + ' pages' : 'Move redone');
     render(); m.idxs.forEach(i=>refreshThumb(i)); updateToolState(); scheduleSave();
+    return;
+  }
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'fill'){
+    const m = redoStack.pop();
+    if(m.idx !== idx) go(m.idx);
+    const tf = frame();
+    for(const p of m.pts) tf.strokes.push(p);
+    for(const c of m.counts) tf.strokeGroups.push(c);
+    actionLog.push({ type:'fill', idx: m.idx, groups: m.counts.length });
+    chip('Fill redone');
+    render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
   const f = frame(); const item = redoStack.pop();

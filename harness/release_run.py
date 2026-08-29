@@ -188,6 +188,10 @@ BATCHES = [
     # It resizes across the boundary and drives a keyboard through a popover, so
     # it wants the same quiet CPU verify_sizeclass does.
     ["verify_compactops.py"],
+    # v230. Fill is its own batch for the same reason the others are: it drives
+    # a real canvas and reads pixels back, which does not share a page well.
+    ["verify_fill.py"],
+    ["verify_input.py"],
 ]
 
 
