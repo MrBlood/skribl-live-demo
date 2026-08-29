@@ -2574,3 +2574,121 @@ do, and there is no state where a legal input produces an illegal shape.
 validation belongs to the thing that CAN see it.** A widget-level max is a
 promise about a relationship it has no access to, and it will be wrong in
 exactly the cases nobody tried.
+
+## v283 -- Derive a mode's UI from the mode, do not toggle it at the call site
+
+The stamp shelf has to be on screen for as long as the Stamp tool is selected:
+without an armed stamp the tool does nothing, so "which stamp is loaded" is not
+decoration, it is the tool's only state.
+
+The shape picker, one control along, is the version that toggles. It opens in
+the tool-shelf config, which is where the shelf button and the overflow tray
+both converge -- and that was already a repair. The picker originally opened
+from a click handler bound to the shelf, which was complete until v227 put a
+tray in front of it; after that, choosing Shape from the tray never opened the
+picker and Shape silently stayed on whatever kind it had. That reached the live
+demo as "shape is not giving a choice, just gives you line".
+
+Writing stamps the same way passed every assertion I wrote by hand and failed
+the first one the suite ran, because the suite reached the tool by a route the
+config does not sit on. Two routes had become three.
+
+So the shelf's visibility is DERIVED, in `setTool()`, from which tool is active:
+`hidden = (flipTool !== 'stamp')`. There is no route that can forget it, because
+there is nothing to remember. The only thing left at the call site is the
+deliberate override -- tapping the tool button while its own tool is already
+active puts the shelf away -- and that is applied after the derivation rather
+than instead of it.
+
+**A UI that belongs to a mode should be computed from the mode, not switched on
+by whoever happened to enter it.** Every new entry point is another place to
+forget, and the forgetting is silent: the feature does not break, it just is not
+there for the people who arrived the other way.
+
+## v284 -- A shelf that only grows needs a byte budget, not a slot count
+
+localStorage is ONE allowance, about 5 MB, for the whole origin. v231 has the
+scar: Flip's draft grew to 2.7 MB of it and the Pad's autosave -- an unrelated
+feature on an unrelated page -- started failing, with nothing in either feature
+mentioning the other.
+
+A stamp shelf is that trap by construction, because it only ever grows: every
+stamp you save stays until you delete it. Capping the number of slots is the
+obvious defence and it is a proxy for the thing that matters and a bad one --
+one traced outline is worth fifty doodles. So the cap is on BYTES, the encoding
+is compact enough that the budget buys a useful number of stamps, and the shelf
+lives in its own key so a shelf that will not write can never take the drawing
+down with it.
+
+It also **refuses rather than evicting**. Dropping the oldest stamp to fit a new
+one is the friendlier-looking design and it is the amber-pill failure over
+again: the user's work disappearing with no event they can connect it to. A
+stamp is something they deliberately made. Losing one has to be their decision,
+so a full shelf says it is full.
+
+**When a store only grows, decide what happens at the ceiling before you build
+it, and measure the ceiling in the unit the resource is actually rationed in.**
+
+## v285 -- The fixture is the assertion; two mutations proved it twice in one file
+
+Every assertion in `verify_stamps.py` passed on the first build. Two of them
+also passed on a deliberately broken one.
+
+The undo contract -- one tap is one undo, however many stroke groups the
+placement produced -- was tested with a stamp made from a SINGLE stroke. On a
+build that recorded `groups: 1` instead of the real count, one group and the
+real count are the same number, so the assertion agreed with the bug.
+
+The no-op contract -- a tap with nothing armed places nothing -- was tested
+against an EMPTY shelf. On a build that helpfully armed the first slot for you,
+there was no first slot to arm.
+
+Neither is a missing assertion. Both are assertions whose fixture could not tell
+the two answers apart. The fixes are a two-stroke drawing and a shelf that has a
+stamp on it, and the reasoning is now written into the fixture helper rather than
+next to the check, because that is where the next person will change it.
+
+**An assertion is only as strong as the case it runs on, and the weakest fixture
+is the one where the right answer and the wrong answer coincide.** Mutating the
+code is the only way to find those; reading the test will not do it, because the
+test reads correctly.
+
+## v286 -- The amber pill after a restore: a live red suite, and the call is yours
+
+`verify_amber.py` is FAILING on `main`, on one assertion, and I caused it. It
+passed at v234 and my v235 change broke it. Nothing in this stamps work touches
+it; I found it running the neighbours and confirmed it by checking out v234's
+`flip.js` and watching the assertion go green again.
+
+**What changed.** v235 answered a live report -- the amber "Saved without media"
+pill sitting permanently on a drawing with no media in it -- by making the save
+status describe only the write it belongs to. Reaching the no-media save path
+means that write omitted nothing, so it now says plain "Saved".
+
+**What that cost.** Reload a session whose music bytes genuinely never landed
+and the pill says "Saved" while the track is gone. `verify_amber` asserts
+exactly that case and is right to: the loss is real and nothing on screen says
+so. The re-add card in the music drawer still holds the file's name and settings
+-- that half works -- but the drawer is shut, and the card measures 0x0 until it
+is opened.
+
+**Why I have not fixed it.** I tried the obvious repair, raising amber at restore
+time, and it does not hold: an automatic save fires within about a second of the
+restore and, correctly under v235, reports "Saved" over it. Every version that
+works from here is a judgement about a warning YOU have already complained about
+once, so it is yours:
+
+1. **Revert to v229.** A standing pending record makes every save amber. True,
+   and it is the behaviour you reported as broken -- the pill never went away.
+2. **Keep v235's pill and mark the drawer instead.** A dot on the music/photo
+   drawer button while a re-add card is waiting. The durability pill stays about
+   durability, the loss stays visible, and the marker clears when you re-add the
+   file or dismiss the card. This is what I would build.
+3. **Accept it and change the assertion.** Only if you decide a lost track needs
+   no on-screen marker outside the drawer. I have not done this, because
+   editing a failing assertion to match my own commit is how a suite stops
+   meaning anything.
+
+Whichever way it goes, the real defect underneath is older than the pill: the
+pending record is unclearable from anywhere you can see. Option 2 fixes that;
+option 1 does not.

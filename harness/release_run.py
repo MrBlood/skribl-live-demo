@@ -193,6 +193,10 @@ BATCHES = [
     ["verify_fill.py"],
     ["verify_input.py"],
     ["verify_smudgeblur.py"],
+    # v238. Stamps drive a real canvas twice over — placements onto the pad and
+    # a thumbnail render per shelf slot — so they get the same solitary batch
+    # the other canvas suites do.
+    ["verify_stamps.py"],
 ]
 
 

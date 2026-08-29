@@ -280,6 +280,13 @@ let liquifyBefore = null, liquifyTouched = false;
 // syncSelBar() reads it to decide whether Paste has a cell, and setTool()
 // reaches syncSelBar() during init.
 let selClipboard = null;
+// The stamp shelf, up here for exactly the reason above it: setTool() reaches
+// syncStampPop() during init, and a `let` read before its own line throws
+// rather than reading undefined. Loaded from storage below, once the libs have
+// had a chance to define themselves. (See the block near doStamp().)
+let stampShelf = [];
+let stampArmed = -1;          // index into stampShelf, or -1 for none armed
+let stampScalePct = 100;
 /* v228 transform. selMode names what the current drag is doing; selSnap holds
    the selected points' ORIGINAL x/y/size for the duration of one gesture.
 
@@ -1248,6 +1255,12 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(flipTool === 'fill'){
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
     doFill(pos(e));
+    return;
+  }
+  // Stamp is a tap for the same reason and lands in the same place.
+  if(flipTool === 'stamp'){
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    doStamp(pos(e));
     return;
   }
   // Smudge and blur intercept for Liquify's reason, stated there: a tool that
@@ -2806,6 +2819,17 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<path d="M9.2 7.8 7 5.6"/>'
               + '<path d="M20 16.5c0 1-.7 1.8-1.6 1.8s-1.6-.8-1.6-1.8c0-.9 1.6-2.8 1.6-2.8s1.6 1.9 1.6 2.8Z" '
               + 'fill="currentColor" stroke="none"/></svg>' },
+        // v238. Stamps are the clipboard grown up: persistent, multi-slot, and
+        // placed where you tap rather than back where they were cut from. The
+        // tool button is the SHELF; the only route into the shelf is the
+        // selection bar, because a stamp is made out of a selection.
+        { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M9 4.5h6a2 2 0 0 1 2 2v3.2c0 1-.6 1.9-1.5 2.3l-.6.3'
+              + 'c-.6.3-.9.9-.9 1.5V15H10v-1.2c0-.6-.3-1.2-.9-1.5l-.6-.3'
+              + 'A2.6 2.6 0 0 1 7 9.7V6.5a2 2 0 0 1 2-2Z"/>'
+              + '<rect x="4.5" y="17" width="15" height="3" rx="1"/></svg>' },
         { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -2833,6 +2857,21 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         const pop = document.getElementById('shapePop');
         if (pop) pop.hidden = (id !== 'shape') ? true
                             : (was === 'shape' ? !pop.hidden : false);
+        // THE STAMP SHELF IS NOT HANDLED HERE, and that is the point. setTool()
+        // itself derives the shelf's visibility from which tool is active, so
+        // EVERY route in opens it — shelf, tray, keyboard, a call from another
+        // feature — rather than the three that happen to pass through this
+        // config today. The shape picker above is the version that did not, and
+        // v237 is the bug report: the tray became a second route to Shape and
+        // the picker stopped appearing for anyone who reached it that way.
+        //
+        // All that is left here is the deliberate override: tapping the tool
+        // button while its own tool is already active puts the shelf away.
+        // Rederiving would immediately undo that, so it is applied after.
+        if (id === 'stamp' && was === 'stamp') {
+          const sp = document.getElementById('stampPop');
+          if (sp) sp.hidden = !sp.hidden;
+        }
       },
       closeTray: () => { if (_flipDrawerCtl) _flipDrawerCtl.open(null); },
     })
@@ -2892,7 +2931,20 @@ function setTool(t){
   // Fill is a TAP, so it wants a pointer rather than the custom brush ring —
   // 'none' hides the system cursor for a brush ring that fill never draws,
   // which left the canvas with no cursor at all under this tool.
-  pad.style.cursor = moveMode ? 'grab' : (flipTool === 'fill' ? 'crosshair' : 'none');
+  // THE SHELF IS THE STAMP TOOL'S UI, not a popover that happens to open near
+  // it. Without an armed stamp the tool does nothing at all, so "which stamp is
+  // loaded" has to stay on screen for as long as the tool is selected — and
+  // deriving that from flipTool here, rather than toggling it at whichever call
+  // site the user came through, is what makes a fourth route impossible to
+  // forget. (The shape picker is toggled at a call site and that is exactly how
+  // it went missing when the tray arrived; it is left as it is because its own
+  // routing is settled, not because this is the same problem twice.)
+  const _sp = document.getElementById('stampPop');
+  if(_sp){ _sp.hidden = (flipTool !== 'stamp'); if(!_sp.hidden) syncStampPop(); }
+  // Fill and Stamp are both TAPS and neither draws a brush ring, so 'none'
+  // would leave the canvas with no cursor at all under them.
+  pad.style.cursor = moveMode ? 'grab'
+    : ((flipTool === 'fill' || flipTool === 'stamp') ? 'crosshair' : 'none');
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
@@ -5627,6 +5679,161 @@ function doFill(p){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
+/* ---- stamps -----------------------------------------------------------------
+ * A stamp is the selection clipboard with the three properties an animator
+ * needs and a clipboard does not have: it survives the session, there is more
+ * than one of it, and it lands where you tap. lib/stamps.js holds the encoding,
+ * the budget and the reasoning; this half is the wiring.
+ *
+ * NOTHING ENTERS THE FORMAT. A placed stamp is ordinary stroke groups, exactly
+ * what selPaste() appends, so a Skribl made with stamps opens in a player that
+ * predates them. That is the same choice fill and the tween made, and for the
+ * same reason: a format change is the last resort.
+ *
+ * THE SHELF IS NOT IN THE DRAFT. It is its own localStorage key, so a stamp
+ * never rides in a Skribl the user shares, and so clearing a drawing does not
+ * clear the assets they built for it. It also means the shelf is subject to the
+ * origin quota alongside the draft -- v231's lesson, which lib/stamps.js
+ * answers with a byte budget rather than by hoping.
+ */
+/* Headroom under the server's MAX_POINTS_PER_FRAME (20,000) and
+   MAX_GROUPS_PER_FRAME (5,000), for liquify's reason stated at length above:
+   a tool that ADDS points can make a page unpostable, and it would do it
+   silently, at the moment the user tries to share. */
+const STAMP_POINT_CAP = 16000;
+const STAMP_GROUP_CAP = 4200;
+
+function stampsReady(){ return typeof SkriblStamps !== 'undefined'; }
+
+function loadStampShelf(){
+  stampShelf = stampsReady() ? SkriblStamps.load(null) : [];
+}
+
+/* Save the current selection into the shelf. The ONLY route in — a stamp is
+   made out of a selection and there is nowhere else it could come from, which
+   is why this button lives on the selection bar rather than in the shelf. */
+function stampSaveSelection(){
+  if(playing) return;
+  if(!stampsReady()){ chip('Stamps are unavailable'); return; }
+  if(!selSpans.length){ chip('Pick something first'); return; }
+  const st = SkriblStamps.fromRuns(selExtract(), { at: Date.now() });
+  // fromRuns returns null for an empty selection AND for one over MAX_POINTS,
+  // so the two are separated here rather than reported as one vague failure.
+  if(!st){ chip('That is too big for a stamp'); return; }
+  const why = SkriblStamps.fits(stampShelf, st);
+  if(why === 'big'){ chip('That is too big for a stamp'); return; }
+  // REFUSES, does not evict. Dropping the oldest stamp to fit a new one would
+  // lose work the user deliberately made, with no event they could connect it
+  // to — the amber-pill failure again.
+  if(why){ chip('Stamp shelf is full — delete one first'); return; }
+  // Newest first: the stamp you just made is the one you are about to place.
+  stampShelf.unshift(st);
+  if(!SkriblStamps.store(null, stampShelf)){
+    stampShelf.shift();
+    chip('No room to save that stamp');
+    return;
+  }
+  stampArmed = 0;
+  syncStampPop();
+  chip('Saved to stamps');
+}
+
+function stampDelete(i){
+  if(i < 0 || i >= stampShelf.length) return;
+  stampShelf.splice(i, 1);
+  if(stampsReady()) SkriblStamps.store(null, stampShelf);
+  // The armed index is a position in a list that just got shorter. Leaving it
+  // alone arms whatever slid into the gap, which is a different stamp than the
+  // one with the ring on it.
+  if(stampArmed === i) stampArmed = -1;
+  else if(stampArmed > i) stampArmed--;
+  syncStampPop();
+}
+
+/* Repaint the shelf from stampShelf. The single place the list becomes markup,
+   so there is no second copy of it to fall out of step. */
+function syncStampPop(){
+  const grid = document.getElementById('stampGrid');
+  const empty = document.getElementById('stampEmpty');
+  if(!grid || !stampsReady()) return;
+  grid.textContent = '';
+  if(empty) empty.hidden = stampShelf.length > 0;
+  const ground = bgColor;
+  stampShelf.forEach((st, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'stamp-cell';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stamp-btn';
+    btn.setAttribute('aria-pressed', String(i === stampArmed));
+    btn.title = 'Place this stamp — tap the page';
+    btn.setAttribute('aria-label', 'Stamp ' + (i + 1) + ' of ' + stampShelf.length);
+    // Backing store at 2x so the thumbnail is not soft on a retina phone, which
+    // is the only device the shelf is ever really used on.
+    const cvs = document.createElement('canvas');
+    const box = 62, s = 2;
+    cvs.width = box * s; cvs.height = box * s;
+    const g = cvs.getContext('2d');
+    if(g){
+      g.fillStyle = ground;
+      g.fillRect(0, 0, cvs.width, cvs.height);
+      SkriblStamps.draw(g, st, { x:0, y:0, w:cvs.width, h:cvs.height, pad:8*s, bg:ground });
+    }
+    btn.appendChild(cvs);
+    btn.addEventListener('click', () => {
+      // Tapping the armed stamp DISARMS it, so there is a way back to "no
+      // stamp loaded" without leaving the tool.
+      stampArmed = (stampArmed === i) ? -1 : i;
+      syncStampPop();
+    });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'stamp-del';
+    del.textContent = '×';
+    del.title = 'Delete this stamp';
+    del.setAttribute('aria-label', 'Delete stamp ' + (i + 1));
+    del.addEventListener('click', (e) => { e.stopPropagation(); stampDelete(i); });
+    cell.appendChild(btn);
+    cell.appendChild(del);
+    grid.appendChild(cell);
+  });
+}
+
+/* Place the armed stamp centred on the tap.
+   ONE TAP IS ONE UNDO, the same contract doFill() states: the placement lands
+   as many stroke groups, which is right for the payload and wrong for the
+   editor, so the actionLog carries one entry that knows how many groups to
+   pop. */
+function doStamp(p){
+  if(playing) return;
+  if(!stampsReady()){ chip('Stamps are unavailable'); return; }
+  if(stampArmed < 0 || stampArmed >= stampShelf.length){
+    chip(stampShelf.length ? 'Pick a stamp first' : 'No stamps yet — select something and tap Stamp');
+    return;
+  }
+  const st = stampShelf[stampArmed];
+  const f = frame();
+  const runs = SkriblStamps.toRuns(st, p.x, p.y, stampScalePct / 100, performance.now());
+  let pts = 0;
+  for(const r of runs) pts += r.length;
+  // Checked BEFORE anything is appended. Appending and then trimming would
+  // leave a half-placed stamp on the page, which is worse than not placing it.
+  if(f.strokes.length + pts > STAMP_POINT_CAP
+     || f.strokeGroups.length + runs.length > STAMP_GROUP_CAP){
+    chip('This page is too full for that stamp');
+    return;
+  }
+  for(const r of runs){
+    for(const q of r) f.strokes.push(q);
+    f.strokeGroups.push(r.length);
+  }
+  redoStack.length = 0;
+  actionLog.push({ type:'fill', label:'Stamp', idx: idx, groups: runs.length });
+  if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+  chip('Stamped');
+  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+}
+
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
@@ -5642,8 +5849,11 @@ function undoStroke(){
     const counts = tf.strokeGroups.splice(tf.strokeGroups.length - m.groups, m.groups);
     let total = 0; for(const c of counts) total += c;
     const pts = tf.strokes.splice(tf.strokes.length - total, total);
-    redoStack.push({ type:'fill', idx: m.idx, pts: pts, counts: counts });
-    chip('Fill undone');
+    redoStack.push({ type:'fill', label: m.label, idx: m.idx, pts: pts, counts: counts });
+    // Same entry shape, two producers: a stamp placement is also "N groups
+    // appended at the end, one action", so it reuses this branch rather than
+    // adding a second copy of it that would drift. Only the wording differs.
+    chip((m.label || 'Fill') + ' undone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
@@ -5771,8 +5981,8 @@ function redoStroke(){
     const tf = frame();
     for(const p of m.pts) tf.strokes.push(p);
     for(const c of m.counts) tf.strokeGroups.push(c);
-    actionLog.push({ type:'fill', idx: m.idx, groups: m.counts.length });
-    chip('Fill redone');
+    actionLog.push({ type:'fill', label: m.label, idx: m.idx, groups: m.counts.length });
+    chip((m.label || 'Fill') + ' redone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
@@ -5794,6 +6004,28 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
   // reaches too.
   setTool(b.dataset.tool);
 }));
+loadStampShelf();
+bindEl('sbStamp', 'click', ()=>{ if(!playing) stampSaveSelection(); });
+(function stampScaleKnob(){
+  const sl = document.getElementById('stampScale'), out = document.getElementById('stampScaleOut');
+  if(!sl) return;
+  const apply = ()=>{ stampScalePct = +sl.value || 100;
+                      if(out) out.textContent = stampScalePct + '%'; };
+  sl.addEventListener('input', apply);
+  apply();
+})();
+/* Escape, and NOTHING ELSE — deliberately unlike shapePopDismiss. That function
+   also closes on a click outside itself, which is right for a picker you use
+   once per drawing and wrong here twice over: choosing a stamp does not finish
+   with the shelf (you then place it, and the shelf is the only thing saying
+   which one is armed), and the click that places it lands on the canvas, which
+   is "outside". A shelf that vanished on the first placement would have to be
+   reopened for the second. Leaving the tool closes it; setTool() owns that. */
+(function stampPopEscape(){
+  const pop=document.getElementById('stampPop');
+  if(!pop) return;
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
+})();
 (function shapePopDismiss(){
   const pop=document.getElementById('shapePop');
   if(!pop) return;
