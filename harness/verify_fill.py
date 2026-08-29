@@ -154,7 +154,9 @@ with sync_playwright() as p:
               img.data[i+2] = inside ? 255 : 0; img.data[i+3] = 255;
             }
           const r = SkriblFloodFill.runs(img, 32, 32, { tolerance: 8 });
-          return { runs: r.runs.length, h: r.runs[0] ? r.runs[0].h : 0 };
+          let tallest = 0;
+          for (const run of r.runs) if (run.h > tallest) tallest = run.h;
+          return { runs: r.runs.length, tallest: tallest };
         }""")
         # ⚑ CHANGED, v233. This asserted ONE run for a 47-row box and that was
         # the bug's other half: a group that tall is drawn at lineWidth 48 with
@@ -163,8 +165,13 @@ with sync_playwright() as p:
         # the tallest groups, that read as dashes at the far left and right.
         # Groups are capped at MAX_GROUP_H now, so the claim is bounded height,
         # not minimum count.
-        check("a flat region's runs are capped in height, not maximally tall",
-              box["runs"] == 16 and box["h"] == 3,
+        # Bounded height, NOT an exact run count. The count moves whenever the
+        # cap or the dilation changes -- it has already moved twice -- and an
+        # assertion that has to be edited every time the implementation is
+        # tuned stops meaning anything. What must hold is that no group is tall
+        # enough for round caps to leave its corners bare.
+        check("no run is taller than the cap",
+              box["tallest"] <= 3 and box["runs"] > 1,
               f"{box} — an unbounded group is drawn at its own height with "
               "round caps, and a tall stadium cannot cover a rectangle's corners")
 
@@ -299,6 +306,67 @@ with sync_playwright() as p:
               acc[0] == acc[1],
               f"{acc[0]} of {acc[1]} — the server refuses a share whose groups "
               "and points disagree, and this is the exact shape of that bug")
+
+        # A CURVED boundary, drawn fresh, because the fringe only exists where
+        # anti-aliasing does. The box above is axis-aligned: its edges barely
+        # anti-alias, so a fringe check against it passes on a build with the
+        # bug in it — verified by mutation, which is the only reason this
+        # section exists separately at all.
+        page.evaluate("() => { localStorage.clear(); }")
+        page.reload(wait_until="networkidle")
+        page.wait_for_timeout(800)
+        eb = page.locator("#pad").bounding_box()
+        ecx, ecy = eb["x"] + eb["width"] / 2, eb["y"] + eb["height"] / 2
+        page.evaluate("() => { setTool('shape'); shapeKind = 'ellipse'; }")
+        page.wait_for_timeout(200)
+        page.mouse.move(ecx - 110, ecy - 90)
+        page.mouse.down()
+        page.mouse.move(ecx + 110, ecy + 90)
+        page.mouse.up()
+        page.wait_for_timeout(400)
+        page.evaluate("() => setTool('fill')")
+        page.wait_for_timeout(200)
+        page.mouse.click(ecx, ecy)
+        page.wait_for_timeout(700)
+
+        # THE FRINGE, which is what the third round of this report was about.
+        # A drawn line is anti-aliased, so the flood stops a pixel or two
+        # OUTSIDE its solid core and the two never meet. The fill paints on top
+        # of the line, so wherever it fails to reach, the leftover fringe shows
+        # as a dark thread just inside the edge — ragged, because the flood's
+        # stopping point jitters row to row, which is why it read as DOTTED.
+        # GROW is what closes it. Measured on the real canvas rather than on a
+        # synthetic mask, because the fringe only exists once something has
+        # actually been drawn with anti-aliasing.
+        gap = page.evaluate("""() => {
+          // Walk outward from the centre along several rays. Between the fill
+          // and the stroke there must be no run of BACKGROUND pixels: that gap
+          // is the bug, and its width is how visible it was.
+          const d = ctx.getImageData(0, 0, pad.width, pad.height).data;
+          const W = pad.width, H = pad.height;
+          const cx = Math.round(W / 2), cy = Math.round(H / 2);
+          const dark = (x, y) => { const i = (y * W + x) * 4;
+            return d[i] < 90 && d[i+1] < 90 && d[i+2] < 90; };
+          let worst = 0;
+          for (let a = 0; a < 24; a++) {
+            const th = a * Math.PI / 12;
+            let run = 0, seenInk = false, worstRay = 0;
+            for (let r = 4; r < Math.min(W, H) / 2; r++) {
+              const x = Math.round(cx + Math.cos(th) * r), y = Math.round(cy + Math.sin(th) * r);
+              if (x < 0 || y < 0 || x >= W || y >= H) break;
+              if (dark(x, y)) { run++; }
+              else { if (run > 0 && seenInk) worstRay = Math.max(worstRay, run); run = 0; seenInk = true; }
+            }
+            worst = Math.max(worst, worstRay);
+          }
+          return worst;
+        }""")
+        check("no gap of background survives between the fill and the line",
+              gap <= 2,
+              f"widest run of background pixels enclosed by ink: {gap} — the "
+              "flood stops at the line's anti-aliased fringe, so without GROW "
+              "the fill and the line never meet and the fringe shows through "
+              "as the dotted thread that was reported three times")
 
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:

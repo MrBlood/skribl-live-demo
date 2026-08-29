@@ -91,6 +91,28 @@
      a 460-tall fill spends at most 154 runs, 308 points, against a server limit
      of 20,000. */
   var MAX_GROUP_H = 3;
+
+  /* HOW FAR THE FILL GROWS PAST WHERE THE FLOOD STOPPED, in pixels.
+   *
+   * A drawn line is ANTI-ALIASED: its outermost pixels are a blend of ink and
+   * ground. The flood stops when a pixel stops matching the seed, which is a
+   * pixel or two OUTSIDE the line's solid core, so the fill and the line do not
+   * meet — a hairline of fringe survives between them. Because the fill is
+   * appended to the strokes array it paints ON TOP of that line, so wherever it
+   * fails to reach, the leftover fringe shows through as a dark thread just
+   * inside the edge. Ragged, because the flood's stopping point jitters by a
+   * pixel from row to row, which is why it reads as DOTTED rather than as a
+   * clean outline.
+   *
+   * Growing the region by a couple of pixels tucks the fill under the line
+   * instead. Every paint bucket does some version of this; the alternative is
+   * raising the colour tolerance until the fringe is eaten, which is far less
+   * predictable and leaks through thin boundaries.
+   *
+   * The cost is that a fill covers the innermost pixels of the line bounding
+   * it. On any line thicker than this it is invisible. On a 1px hairline the
+   * fill would swallow it, which is the honest limit of the approach. */
+  var GROW = 2;
   /* A guard, in the spirit of shapes.js MAX_POINTS: a pathological region must
      not emit an unbounded array. Two points per run against a 20,000-point
      server limit leaves this an order of magnitude clear. */
@@ -166,6 +188,27 @@
         if (y > 0 && !seen[(y - 1) * W + m]) { stack.push(m, y - 1); }
         if (y < H - 1 && !seen[(y + 1) * W + m]) { stack.push(m, y + 1); }
       }
+    }
+
+    // Grow the region before grouping. A box dilation over the row extents:
+    // horizontally by GROW, and vertically by taking each row's extent from its
+    // neighbours within GROW, so the top and bottom of a shape grow too rather
+    // than only its sides.
+    if (GROW > 0) {
+      var gMin = new Int32Array(H), gMax = new Int32Array(H);
+      for (var q = 0; q < H; q++) {
+        var lo2 = W, hi2 = -1;
+        for (var d = -GROW; d <= GROW; d++) {
+          var rr = q + d;
+          if (rr < 0 || rr >= H || rowMax[rr] < 0) continue;
+          if (rowMin[rr] < lo2) lo2 = rowMin[rr];
+          if (rowMax[rr] > hi2) hi2 = rowMax[rr];
+        }
+        if (hi2 < 0) { gMin[q] = W; gMax[q] = -1; continue; }
+        gMin[q] = Math.max(0, lo2 - GROW);
+        gMax[q] = Math.min(W - 1, hi2 + GROW);
+      }
+      rowMin = gMin; rowMax = gMax;
     }
 
     // Group CONSECUTIVE rows that share an extent exactly, and draw each group
