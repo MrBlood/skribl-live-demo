@@ -2917,26 +2917,24 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<circle cx="12" cy="12" r="6.6" fill="currentColor" stroke="none" opacity=".22"/>'
               + '<circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" opacity=".45"/>'
               + '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>' },
-        // A DROP, not a bucket. Four passes went into the bucket -- weak, then
-        // bigger and still weak, then a hand-drawn tipped can, then Lucide's
-        // canonical `paint-bucket` -- and the owner's answer was that the tool
-        // does not need a container at all.
+        // A DROP. Plain outline, no fill level, drawn to the owner's reference.
         //
-        // THE APEX IS THE WHOLE ICON. A drop is a sharp point over a round body,
-        // and it is the point that makes it a drop: a first attempt widened the
-        // shape to fit the size band, blunted the apex doing it, and came out
-        // looking like a peach. The control points here stay near the axis at the
-        // top so the tangent leaving the apex is steep; the proportions were then
-        // tuned around that rather than the other way round. 18.5x20.8, inside
-        // the band without touching the band.
+        // THE APEX IS THE ICON. A drop is a sharp point over a round body, and it
+        // is the point that makes it a drop: an earlier attempt widened the shape
+        // to fit a size band, blunted the apex doing it, and came out looking like
+        // a peach. The control points here stay near the axis at the top so the
+        // tangent leaving the apex is steep; the proportions were tuned around
+        // that rather than the other way round.
         //
-        // The lower half is FILLED, which is the part a plain droplet does not
-        // say: a drop is what you tap with, a fill level is what happens next.
+        // MEASURED AGAINST THE REFERENCE rather than eyeballed: the owner's drop
+        // has an ink box of 116x158, an aspect of 0.734. This is 0.744. That
+        // slenderness is the whole character of the shape and it is why the size
+        // rule in verify_icons.py is an AREA band -- a drop cannot be as wide as
+        // a square glyph without ceasing to be a drop.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M12 3.5C12 3.5 14.43 7.87 17.99 10.78C19.78 11.47 20.1 13.5 20.1 13.9A8.1 8.1 0 0 1 3.9 13.9C3.9 13.5 4.22 11.47 6.01 10.78C9.57 7.87 12 3.5 12 3.5Z"/>'
-              + '<path d="M4.1 15.7A8.1 8.1 0 0 0 19.9 15.7Z" fill="currentColor" stroke="none"/></svg>' },
+              + '<path d="M12 2.4C12 2.4 14.1 7.52 17.18 10.94C18.72 12.5 19.0 14.25 19.0 14.6A7.0 7.0 0 0 1 5.0 14.6C5.0 14.25 5.28 12.5 6.82 10.94C9.9 7.52 12 2.4 12 2.4Z"/></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'

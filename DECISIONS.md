@@ -2901,3 +2901,49 @@ line drawings, and that is not an inconsistency to tidy away: it is the only too
 whose entire subject is softness.
 
 **An icon for a visual effect should exhibit the effect, not diagram it.**
+
+## v296 -- Three exceptions is not three exceptions, it is a wrong rule
+
+`verify_icons.py` policed icon size with a per-AXIS band: width 17.5-22.5, height
+17.0-21.0, derived from ten roughly square glyphs. Then three icons in a row
+turned out to be legitimately non-square, and each needed a named exemption:
+
+    Liquify  20.0 x 13.5   a warp is wide and low
+    Stamps   16.5 x 20.0   a rubber stamp is tall and narrow
+    Fill     16.0 x 21.5   a drop is a sharp point over a round body
+
+v292 already called two exemptions "the shape of a guard being dismantled" and
+answered it by making the exemption cost something. That was treating the
+symptom. The third one is the diagnosis: the per-axis floors were never the rule,
+they were a PROXY for it. What the band means is "occupies a comparable amount of
+the box", and none of those three is out of line on that -- 270, 330 and 344
+against a set running 324 to 429.
+
+So the rule now says what it means. An AREA band does the work at both ends, and
+the per-axis limits are reduced to what they can honestly police: collapse in one
+dimension, and overflow of the 24 box. All three exemptions are gone.
+
+Verified by mutation that the new rule is not merely looser: the original 15.0 x
+16.3 Fill still fails (245, under the floor), an icon inflated to fill the box
+still fails (484, over the ceiling), and a 3 x 21 splinter still fails on the
+axis floor that area alone would admit.
+
+**A special case is a fact about your rule, not about the world. One is a
+detail; three in a row is the rule telling you it is measuring the wrong thing.**
+
+## v297 -- Measure the reference instead of squinting at it
+
+The owner sent a photograph of a drop with no text. The obvious reading is "make
+it this", and the obvious next step is to eyeball it.
+
+Instead: threshold the image, take the ink bounding box, get 116 x 158, aspect
+0.734. The shipped drop was 0.889. That is not a nuance, it is a different shape
+-- and the number immediately said what the eyeballing could not, which is that
+matching it at the old band's height gives a width of 15.3, narrower than the
+icon everybody agreed was too small.
+
+That one number turned "they want a slightly different drop" into "this shape
+cannot satisfy that rule", which is what produced v296.
+
+**A reference image is data. Measure it.** It costs one script and it converts an
+argument about taste into an arithmetic fact everyone can check.

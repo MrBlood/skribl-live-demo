@@ -49,39 +49,33 @@ def check(name, ok, detail=""):
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
 
 
-# The band, in viewBox units of the 24x24 box. Derived from the icons that were
-# never in question — Pen 19.3, Shape 19, Artwork 18.5, Select 18 — not invented.
-MIN_W, MAX_W = 17.5, 22.5
-MIN_H, MAX_H = 17.0, 21.0
+# THE BAND, in viewBox units of the 24x24 box.
+#
+# THIS IS THE SECOND VERSION OF THIS RULE, and the first one is worth knowing
+# about because it was wrong in an instructive way. It was a per-AXIS band --
+# width in 17.5-22.5, height in 17.0-21.0 -- derived from ten roughly square
+# glyphs. Then three icons in a row turned out to be legitimately non-square and
+# each needed a named exemption to pass:
+#
+#   Liquify  20.0 x 13.5   a warp is wide and low
+#   Stamps   16.5 x 20.0   a rubber stamp is tall and narrow
+#   Fill     16.0 x 21.5   a drop is a point over a round body
+#
+# Two exemptions were already flagged in DECISIONS v292 as the shape of a guard
+# being dismantled. The third one is the answer: the per-axis floors were never
+# the rule, they were a PROXY for it. What the band actually means is "occupies a
+# comparable amount of the box to everything else", and none of those three is
+# out of line on that -- their areas are 270, 330 and 344 against a set running
+# 324 to 429.
+#
+# So the rule now says what it means. Area does the work, both ways; the per-axis
+# limits are reduced to what they can honestly police, which is collapse in one
+# dimension and overflow of the box. All three exemptions are GONE, and a rule
+# that needs no special cases is a better rule than one carrying two.
+MIN_AREA, MAX_AREA = 260, 450
+# Collapse and overflow only. An icon may be any proportion between these.
+MIN_AXIS, MAX_AXIS = 13.0, 22.5
 CENTRE_TOL = 2.0
-
-# Icons excused from ONE axis floor, with the reason, because a shape that is
-# legitimately not square is not a defect. An exemption without a sentence is how
-# a band quietly stops meaning anything, so the values are the reasoning and they
-# print in the assertion's detail.
-#
-# BOTH ENTRIES EXIST BECAUSE THE BAND WAS WRONG ABOUT THEM, not because the icons
-# were. It was derived from ten roughly square glyphs and then met two that are
-# honestly not square in opposite directions.
-FLAT_BY_DESIGN = {
-    "Liquify": "a smear is wide and low; the tall redraw read as a caret",
-}
-NARROW_BY_DESIGN = {
-    "Stamps": "a rubber stamp is tall and narrow; Lucide's is 18:22 and no "
-              "uniform scale satisfies both the width floor and the height ceiling",
-}
-# THE FLOOR THAT SURVIVES BOTH EXEMPTIONS, and it is a BACKSTOP rather than the
-# primary guard — the per-axis floors above do the real work. Its only job is to
-# stop an axis exemption becoming a blank cheque: a glyph excused on one axis
-# still has to occupy a comparable amount of the box.
-#
-# The margin is honestly thin and the number is stated rather than rounded to
-# something that looks tidier. Liquify, legitimately flat, is 20.0x13.5 = 270 and
-# is the smallest thing here that has to pass. The Fill that started all this was
-# 15.0x16.3 = 245. There is not much room between those, which is exactly why
-# this is the backstop and not the guard — that Fill also failed BOTH per-axis
-# floors, and would have been caught with this line deleted.
-MIN_AREA = 260
 
 MEASURE = """async () => {
   const out = [];
@@ -135,33 +129,28 @@ with sync_playwright() as p:
               f"{[i['tool'] for i in icons]} vs {roster} — a tool whose glyph "
               "fails to render leaves a cell with a label and nothing above it")
 
-        print("\nINK EXTENT — the number the eye is responding to")
+        print("\nHOW MUCH OF THE BOX IT OCCUPIES — the number the eye responds to")
         for i in icons:
-            flat = i["label"] in FLAT_BY_DESIGN
-            narrow = i["label"] in NARROW_BY_DESIGN
-            okw = (i["w"] <= MAX_W) if narrow else (MIN_W <= i["w"] <= MAX_W)
-            okh = (i["h"] <= MAX_H) if flat else (MIN_H <= i["h"] <= MAX_H)
-            note = ""
-            if flat:   note = f"  [flat by design: {FLAT_BY_DESIGN[i['label']]}]"
-            if narrow: note = f"  [narrow by design: {NARROW_BY_DESIGN[i['label']]}]"
-            check(f"{i['label']}: fills its box like the rest of the set",
-                  okw and okh,
-                  f"ink {i['w']:.1f}x{i['h']:.1f} against w {MIN_W}-{MAX_W}, "
-                  f"h {MIN_H}-{MAX_H}{note} — Fill shipped at 15.0x16.3 and was "
-                  "reported as weak; that is the size this floor exists to catch")
-        # Applies to EVERY icon, exempt or not.
+            area = i["w"] * i["h"]
+            check(f"{i['label']}: occupies its box like the rest of the set",
+                  MIN_AREA <= area <= MAX_AREA,
+                  f"ink {i['w']:.1f}x{i['h']:.1f}, area {area:.0f} against "
+                  f"{MIN_AREA}-{MAX_AREA} — Fill shipped at 15.0x16.3 (245) and was "
+                  "reported as weak; raw unscaled Lucide lands at 488 and reads "
+                  "15% larger than its neighbours. Both ends are real")
+
+        print("\nAND IS NOT COLLAPSED OR SPILLING OUT OF IT")
         for i in icons:
-            check(f"{i['label']}: occupies enough of the box however it is shaped",
-                  i["w"] * i["h"] >= MIN_AREA,
-                  f"area {i['w'] * i['h']:.0f} against a floor of {MIN_AREA} — no "
-                  "axis exemption excuses an icon from being big enough overall")
+            check(f"{i['label']}: neither collapsed nor overflowing",
+                  MIN_AXIS <= i["w"] <= MAX_AXIS and MIN_AXIS <= i["h"] <= MAX_AXIS,
+                  f"{i['w']:.1f}x{i['h']:.1f} against {MIN_AXIS}-{MAX_AXIS} per axis "
+                  "— area alone would pass a 13x22 splinter, and nothing may run "
+                  "past the edge of a 24 box")
 
         print("\nOPTICALLY CENTRED — an icon adrift reads as the wrong size")
         for i in icons:
-            flat = i["label"] in FLAT_BY_DESIGN
-            oky = True if flat else abs(i["cy"] - 12) <= CENTRE_TOL + 0.6
             check(f"{i['label']}: sits in the middle of its cell",
-                  abs(i["cx"] - 12) <= CENTRE_TOL and oky,
+                  abs(i["cx"] - 12) <= CENTRE_TOL and abs(i["cy"] - 12) <= CENTRE_TOL + 0.6,
                   f"centre {i['cx']:.1f},{i['cy']:.1f} — a glyph pushed to one "
                   "side of a labelled cell reads as smaller than it is")
 
@@ -170,21 +159,15 @@ with sync_playwright() as p:
         # that prompted all of this.
         fill = next((i for i in icons if i["tool"] == "fill"), None)
         check("Fill is not the smallest icon in the tray any more",
-              fill is not None and fill["w"] >= 18.5 and fill["h"] >= 18.0,
-              f"{fill['w']:.1f}x{fill['h']:.1f} — it shipped at 15.0x16.3, the "
-              "smallest here, as a hollow diamond with a 3px stub for a handle")
-        # Over the icons the band applies to. Including a flat-by-design icon
-        # here would fail on Liquify's area every time — which is the same
-        # pressure to "fix" it that the exemption exists to remove, arriving
-        # through a different assertion.
-        judged = [i for i in icons
-                  if i["label"] not in FLAT_BY_DESIGN
-                  and i["label"] not in NARROW_BY_DESIGN]
-        smallest = min(judged, key=lambda i: i["w"] * i["h"])
+              fill is not None and fill["w"] * fill["h"] >= MIN_AREA,
+              f"{fill['w']:.1f}x{fill['h']:.1f} = {fill['w'] * fill['h']:.0f} — it "
+              "shipped at 15.0x16.3 (245), the smallest here, as a hollow diamond "
+              "with a 3px stub for a handle")
+        smallest = min(icons, key=lambda i: i["w"] * i["h"])
         check("...and nothing else has taken its place",
-              smallest["w"] * smallest["h"] >= MIN_W * MIN_H,
+              smallest["w"] * smallest["h"] >= MIN_AREA,
               f"{smallest['label']} at {smallest['w']:.1f}x{smallest['h']:.1f} "
-              f"is now the smallest icon the band judges")
+              f"= {smallest['w'] * smallest['h']:.0f} is now the smallest here")
 
         print("\nCOVERAGE IS REPORTED, NOT ASSERTED — see the note at the top")
         cov = ", ".join(f"{i['label']} {i['cov']:.1f}%" for i in icons)

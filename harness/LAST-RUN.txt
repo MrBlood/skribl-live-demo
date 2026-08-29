@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T20:48:18Z
+UTC timestamp           : 2026-08-29T21:08:30Z
 Host                    : Linux x86_64
-Tree SHA-256            : dc180b0ec50d662791411826e227eeae3f3e494dcdac34f25f41c4f6ab3cbccf
-Git commit              : 4f000de-dirty
+Tree SHA-256            : f32f6abdce3747e788cedaed9ed5c7433bc2cbff0ebbd3eb40670625ca757de9
+Git commit              : 02d0415-dirty
 SKRIBL_VERSION          : v237
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,27 +10,25 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.gIAsNXCWS5/harness.db)
+Database reset          : yes (fresh /tmp/tmp.PXUqppx4Ip/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_icons.py verify_tray.py verify_tools.py verify_select.py verify_stamps.py verify_ux.py verify_parity.py verify_surfaces.py verify_help.py verify_docs.py
+Command                 : harness/run_harness.sh verify_icons.py verify_tray.py verify_tools.py verify_stamps.py verify_ux.py verify_parity.py verify_surfaces.py verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 10
+suites requested : 8
   verify_icons.py: ok — 35/35 passed
   verify_tray.py: ok — 93/93 passed
   verify_tools.py: ok — 120/120 passed
-  verify_select.py: ok — 55/55 passed
   verify_stamps.py: ok — 37/37 passed
   verify_ux.py: ok — 310/310 passed
   verify_parity.py: ok — 118/118 passed
   verify_surfaces.py: ok — 9/9 passed
-  verify_help.py: ok — 61/61 passed
   verify_docs.py: ok — 65/65 passed
-assertions passed: 903   (skipped suites contribute 0)
+assertions passed: 787   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
