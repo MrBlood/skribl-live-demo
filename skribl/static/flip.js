@@ -261,6 +261,7 @@ let moveOrigin = null, moveDragging = false, moveStart = null;
    functions 2500 lines below would be in its temporal dead zone at that moment
    and would take the whole file down with it. */
 let liquifying = false, liquifyPointerId = null;
+let fieldActive = false, fieldPointerId = null;   // smudge / blur
 let liquifyLast = null, liquifyIdx = -1;
 /* A WHOLE-FRAME snapshot, not a map of touched indices, because subdividing
    INSERTS points and every index after an insertion shifts. The index-keyed
@@ -1189,6 +1190,16 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     doFill(pos(e));
     return;
   }
+  // Smudge and blur intercept for Liquify's reason, stated there: a tool that
+  // works on existing ink must not also lay new ink while it does it.
+  if(flipTool === 'smudge' || flipTool === 'blur'){
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    fieldActive = true; fieldPointerId = e.pointerId;
+    redoStack.length = 0;
+    fieldBegin(pos(e), flipTool === 'smudge' ? 'Smudge' : 'Blur');
+    if(flipTool === 'blur'){ blurMove(pos(e)); render(); }
+    return;
+  }
   // Select intercepts BEFORE drawing, the same place moveMode does and for the
   // same reason: dragging a selection must not also lay a stroke through it.
   if(flipTool === 'select'){
@@ -1226,6 +1237,14 @@ pad.addEventListener('pointermove', e=>{
     // Guarded on pointerId like every other drag here: a palm or a second
     // finger must not steer a gesture a different pointer started.
     if(e.pointerId === liquifyPointerId){ e.preventDefault(); if(liquifyMove(pos(e))) render(); }
+    return;
+  }
+  if(fieldActive){
+    if(e.pointerId === fieldPointerId){
+      e.preventDefault();
+      const moved = (flipTool === 'smudge') ? smudgeMove(pos(e)) : blurMove(pos(e));
+      if(moved) render();
+    }
     return;
   }
   if(selecting){ if(e.pointerId === selPointerId) selMove(pos(e)); return; }
@@ -1388,6 +1407,18 @@ function endLiquifyDrag(e){
 }
 window.addEventListener('pointerup', endLiquifyDrag);
 window.addEventListener('pointercancel', endLiquifyDrag);
+/* Smudge and blur end the same way and for the same reasons: bound to the
+   WINDOW so a release outside the canvas still finishes the gesture, and
+   guarded on pointerId so a second finger cannot end someone else's drag. */
+function endFieldDrag(e){
+  if(!fieldActive) return;
+  if(e && e.pointerId != null && e.pointerId !== fieldPointerId) return;
+  fieldActive = false; fieldPointerId = null;
+  const at = fieldEnd();
+  if(at !== false){ render(); refreshThumb(at); updateToolState(); scheduleSave(); }
+}
+window.addEventListener('pointerup', endFieldDrag);
+window.addEventListener('pointercancel', endFieldDrag);
 
 function endSelDrag(e){
   if(!selecting) return;
@@ -2691,6 +2722,21 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // (lib/floodfill.js says why at length): the format has no fill
         // primitive, adding one is a change the player must honour, and
         // scanline runs cost two points each, so a fill needs neither.
+        // v232. Smudge and blur are the same sweep with two different verbs;
+        // lib/brushfield.js holds the arithmetic they share and the honest
+        // statement of what a stroke-format blur can and cannot do.
+        { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M8 19c-2.2 0-3.5-1.4-3.5-3.2 0-2.6 3.4-4.3 6-6.4C13 7.3 14.6 5 16.5 5'
+              + 'c1.6 0 2.6 1.2 2.6 2.7 0 3.6-6.6 5.1-9 7.4"/>'
+              + '<path d="M6.2 20.4c1.6-.5 3.2-.8 4.9-.9"/></svg>' },
+        { id: 'blur', label: 'Blur', btn: 'blurToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + '<circle cx="12" cy="12" r="3.2"/>'
+              + '<circle cx="12" cy="12" r="6.4" opacity=".55"/>'
+              + '<circle cx="12" cy="12" r="9.4" opacity=".28"/></svg>' },
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
@@ -4907,6 +4953,124 @@ function liquifyMove(pt){
    drag across empty canvas, must not push a no-op onto the history: the next
    Undo would appear to do nothing and the stroke the user actually wanted back
    would be one press further away than they expect. */
+/* ---- smudge and blur: the same sweep, two different verbs ------------------
+ *
+ * Both act on ink already on the page, both use a round brush with a falloff,
+ * and both reuse Liquify's undo shape: a whole-frame before/after snapshot,
+ * because these tools can change the LENGTH of the strokes array (smudge
+ * subdivides) and an index-keyed diff cannot describe an insertion.
+ *
+ * SMUDGE IS NOT LIQUIFY WITH A NEW NAME, and it would have been easy to ship it
+ * as one. Liquify displaces with a smooth shoulder at half strength: it warps a
+ * whole region, like pushing a sheet of rubber. Smudge is a fingertip — a
+ * sharper falloff and nearly full strength, so the ink right under the touch
+ * comes with you and the ink a few pixels away barely moves. Same traversal,
+ * genuinely different gesture.
+ *
+ * BLUR FADES AND WIDENS rather than convolving, because there is no raster
+ * layer to convolve. lib/brushfield.js carries the reasoning and the honest
+ * statement of what that cannot do. */
+const SMUDGE_STRENGTH = 0.92;   // vs Liquify's 0.5 -- the ink comes with you
+const SMUDGE_SHARP = 2.2;       // vs Liquify's 1 -- a fingertip, not a field
+/* BLUR ACCUMULATES AGAINST THE PRE-DRAG SNAPSHOT, NOT AGAINST ITSELF, and that
+   is a correctness point rather than a nicety.
+
+   The obvious way -- fade each point a little on every pointermove -- makes the
+   strength depend on HOW MANY EVENTS FIRED, which depends on the hardware. A
+   240Hz phone would blur several times harder than a 60Hz laptop for the same
+   gesture, and v230's coalesced sampling made that worse by design. Measured
+   before this was fixed: one short swipe took #ffffff to rgb(87,89,92), most of
+   the way to the background, in a single pass.
+
+   So each touched point carries an accumulated weight that saturates at 1, the
+   colour and size are recomputed from the point's ORIGINAL values every time,
+   and -- the part that actually does the work -- the weight accrues PER PIXEL
+   THE BRUSH TRAVELS rather than per event. Saturation alone is not enough: it
+   bounds the maximum but a 4-event sweep still lands somewhere different from a
+   40-event one until they cover the same distance. Distance is the physical
+   quantity a brush actually deposits against, and it is the same number however
+   often the OS sampled the finger.
+
+   Going over the ink a second time still deepens it, because a new drag starts
+   from a new snapshot. */
+const BLUR_RATE = 0.012;        // per PIXEL TRAVELLED, not per event -- see below
+const BLUR_FADE_MAX = 0.55;     // furthest toward the ground ONE drag can go
+const BLUR_SPREAD_MAX = 0.8;    // widest ONE drag can make a point
+
+let _fieldIdx = -1, _fieldBefore = null, _fieldLast = null,
+    _fieldTouched = false, _fieldLabel = '';
+let _blurAcc = null;            // point index -> accumulated weight, this drag
+
+function fieldBegin(pt, label){
+  // Pinned to the page the gesture STARTED on, for the reason liquifyBegin
+  // spells out: the page can change mid-drag and the back half of the gesture
+  // would land somewhere else.
+  _fieldIdx = idx; _fieldLabel = label; _fieldTouched = false;
+  _fieldLast = { x: pt.x, y: pt.y };
+  _blurAcc = new Map();
+  const f = frames[_fieldIdx];
+  _fieldBefore = f ? { strokes: f.strokes.map(q => Object.assign({}, q)),
+                       groups: f.strokeGroups.slice() } : null;
+}
+
+function fieldEnd(){
+  const at = _fieldIdx, before = _fieldBefore, f = frames[at];
+  const touched = _fieldTouched, label = _fieldLabel;
+  _fieldBefore = null; _fieldLast = null; _fieldIdx = -1; _fieldTouched = false;
+  _blurAcc = null;
+  // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
+  // empty canvas must not push a no-op the user then has to press through.
+  if(!touched || !before || !f) return false;
+  noteAction({ type: 'liquify', label: label, idx: at, before: before,
+               after: { strokes: f.strokes.map(q => Object.assign({}, q)),
+                        groups: f.strokeGroups.slice() } });
+  return at;
+}
+
+function smudgeMove(pt){
+  const f = frames[_fieldIdx]; if(!f || !_fieldLast) return false;
+  const dx = pt.x - _fieldLast.x, dy = pt.y - _fieldLast.y;
+  _fieldLast = { x: pt.x, y: pt.y };
+  if(!dx && !dy) return false;
+  const r = liquifyRadius();
+  // Resolution BEFORE displacement, exactly as liquifyMove does it: a segment
+  // with two vertices in the brush can only bend into a corner, and splitting
+  // after the warp interpolates the kink instead of preventing it.
+  if(liquifySubdivide(f, pt.x, pt.y, r)) _fieldTouched = true;
+  const hit = SkriblBrushField.each(f.strokes, pt.x, pt.y, r, SMUDGE_SHARP,
+    (p, w) => { p.x += dx * w * SMUDGE_STRENGTH; p.y += dy * w * SMUDGE_STRENGTH; });
+  if(hit) _fieldTouched = true;
+  return hit;
+}
+
+function blurMove(pt){
+  const f = frames[_fieldIdx]; if(!f) return false;
+  // Distance since the last sample, BEFORE _fieldLast moves. This is what makes
+  // the tool's strength independent of the sample rate; see BLUR_RATE. The
+  // first event of a drag has no previous point, so it gets one nominal step
+  // rather than zero -- a tap should still do something.
+  const dxm = _fieldLast ? (pt.x - _fieldLast.x) : 0;
+  const dym = _fieldLast ? (pt.y - _fieldLast.y) : 0;
+  const travel = _fieldLast ? Math.sqrt(dxm * dxm + dym * dym) : 4;
+  _fieldLast = { x: pt.x, y: pt.y };
+  const r = liquifyRadius();
+  // No subdivision: blur does not move anything, so a coarse segment blurs just
+  // as well as a fine one and splitting it would only cost points.
+  const orig = _fieldBefore ? _fieldBefore.strokes : null;
+  const hit = SkriblBrushField.each(f.strokes, pt.x, pt.y, r, 1, (p, w, i) => {
+    // Saturating accumulation, recomputed from the ORIGINAL point. See the note
+    // on BLUR_RATE: applying a delta per event makes the tool's strength a
+    // property of the device's sample rate.
+    const acc = Math.min(1, (_blurAcc.get(i) || 0) + w * BLUR_RATE * travel);
+    _blurAcc.set(i, acc);
+    const src = (orig && orig[i]) ? orig[i] : p;
+    p.color = SkriblBrushField.mix(src.color, bgColor, acc * BLUR_FADE_MAX);
+    p.size = src.size * (1 + acc * BLUR_SPREAD_MAX);
+  });
+  if(hit) _fieldTouched = true;
+  return hit;
+}
+
 function liquifyEnd(){
   const at = liquifyIdx;
   const before = liquifyBefore;
@@ -5383,7 +5547,7 @@ function undoStroke(){
       if(m.idx !== idx) go(m.idx);
       selFrameRestore(m.idx, m.before);
       redoStack.push(m);
-      chip('Liquify undone');
+      chip((m.label || 'Liquify') + ' undone');
       render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
       return;
     }
@@ -5427,7 +5591,7 @@ function redoStroke(){
     if(m.idx !== idx) go(m.idx);
     selFrameRestore(m.idx, m.after);
     actionLog.push(m);
-    chip('Liquify redone');
+    chip((m.label || 'Liquify') + ' redone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
