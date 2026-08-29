@@ -2362,3 +2362,59 @@ The corollary matters too: the obvious route -- per-point ALPHA -- genuinely is
 not honoured, because `paintStatic` takes alpha from the segment's first point.
 Two neighbouring fields, one usable and one not, and only reading the paint path
 tells you which is which.
+
+## v272 -- Test the renderer, not the plan
+
+`verify_fill` had eighteen assertions and every one of them was about the shape
+of the RUNS: one run per row on a slope, bounded height, every row covered
+exactly once, two points per run. All eighteen passed on a build whose fills
+visibly had holes in them, and the same bug got reported twice.
+
+They passed because none of them knew that `drawLine` paints a STADIUM. Round
+caps curve inward toward the top and bottom of a thick line, so a run's coverage
+is not the rectangle its coordinates describe. The plan was correct and the paint
+was not, and no amount of checking the plan could see it.
+
+The assertion that found it rasterises the runs onto a canvas exactly as flip.js
+draws them, then counts mask pixels the paint missed. It failed on its first run
+-- 52 of 7845 -- and that is how the second half of the fix got found rather
+than shipped a third time.
+
+**When a component hands its output to a renderer, at least one test has to go
+through the renderer.** Geometry tests are cheaper, they localise failures
+better, and they cannot see anything the drawing API does on its own.
+
+## v273 -- Prefer bleed to gaps
+
+Fill's runs were inset by half their lineWidth so round caps would not paint past
+the region's edge. That is careful, correct about the line's centre row, and
+wrong at every other row of a thick line -- which is where the bare corners came
+from.
+
+Drawn to full extent instead, the cap bulges OUTWARD: every pixel of the region
+is covered and the cost is a couple of pixels of bleed sideways, underneath a
+boundary line already wider than that.
+
+**Between an edge that stops short and one that runs over, the one that runs over
+is the one nobody reports.** A gap shows as a hole against the ground; two pixels
+of overlap disappear under the line that was already there. When a rendering
+tolerance has to go one way, take the direction whose failure mode is invisible.
+
+## v274 -- A promise with no timeout is a state machine with no exit
+
+`SkriblDraftStore.put()` was awaited with a .then and a .catch and no deadline.
+IndexedDB on iOS Safari can accept a multi-megabyte write and then settle
+NEITHER way, so `_mediaSpillState` stayed 'saving' for the rest of the session
+and the pill sat on "Saving..." forever. Worse, every subsequent save re-entered
+the same branch and re-reported 'saving', so the stuck state was self-renewing.
+
+Two handlers look like complete coverage and are not: success and failure are
+not the only outcomes of an async call to something outside your process. The
+third is SILENCE, and it has to be handled explicitly or it becomes a state the
+UI can enter and never leave.
+
+**Anything that can hang needs a deadline, and the deadline needs an opinion.**
+Here the opinion is that bytes which have not landed in twelve seconds are lost,
+because that is what a reload will find. A late resolve is then ignored on
+purpose: the user has already been told the truth, and flipping the pill back to
+green would un-tell it.

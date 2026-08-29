@@ -25,11 +25,12 @@
  *
  * THREE THINGS THAT LOOK LIKE DETAILS AND ARE NOT:
  *
- *   ROUND CAPS OVERSHOOT HORIZONTALLY. A run drawn from x0 to x1 extends
- *   half its lineWidth past BOTH ends, so a fill that stops at the region edge
- *   bleeds over the line bounding it. Each run's ends are pulled in by that
- *   much. Note what the inset is measured against: the run's HEIGHT, which is
- *   its lineWidth — not its length. A long thin run is barely shortened.
+ *   ROUND CAPS OVERSHOOT HORIZONTALLY, AND THAT IS ALLOWED TO HAPPEN. Insetting
+ *   each end to compensate is the obvious move and it leaves the group's
+ *   corners bare, because a cap is a semicircle and the stadium narrows toward
+ *   the top and bottom of a thick line. Runs are drawn to their full extent and
+ *   the cap is left to bulge outward: at most MAX_GROUP_H/2 of sideways bleed,
+ *   under a boundary line wider than that. See `points`.
  *
  *   ROWS ARE GROUPED BY THEIR ACTUAL EXTENT, NOT BY A FIXED STEP — and the
  *   first version got this wrong in a way that showed up on the very first
@@ -42,12 +43,18 @@
  *   PERFORATED LINE, which is exactly what the first fill on the live demo
  *   drew and what the report called "a weird dotted line".
  *
- *   So rows are now grouped only while their extent is UNCHANGED, and each
- *   group is drawn at its own height. A rectangle is one run of two points. A
- *   45-degree edge becomes one run per row, which is the honest cost of an
- *   edge that changes every row — and it tiles exactly, because a group of
- *   height h is drawn at lineWidth h centred on its own middle. Cost follows
- *   the PERIMETER rather than the area, which is the right shape for a fill.
+ *   So rows are grouped only while their extent is UNCHANGED, and each group is
+ *   drawn at its own height. A 45-degree edge becomes one run per row, which is
+ *   the honest cost of an edge that changes every row, and it tiles exactly
+ *   because a group of height h is drawn at lineWidth h centred on its middle.
+ *
+ *   GROUPS ARE ALSO CAPPED IN HEIGHT, which the first attempt at this missed
+ *   and which cost a second round of the same bug report. Round caps make a run
+ *   a stadium rather than a rectangle, so a TALL group leaves an uncovered
+ *   wedge at each corner — about 2px on a group of height 7. A circle's widest
+ *   rows repeat their extent and therefore form the tallest groups, so the bare
+ *   corners land exactly at the far left and right of a filled circle. See
+ *   MAX_GROUP_H.
  *
  *   TOLERANCE IS AGAINST THE SEED, NOT THE NEIGHBOUR. Comparing each pixel to
  *   the one it spread from lets a slow gradient walk the whole canvas — every
@@ -69,6 +76,21 @@
   /* Groups tile exactly, so this is only the hairline guard: half a pixel of
      bleed at each end of a group beats an anti-aliased seam between them. */
   var BLEED = 1;
+
+  /* A CAP ON GROUP HEIGHT, and it is not a cost knob — it is what stops the
+     corners of a fill being cut off.
+     drawLine uses ROUND caps, so a run is a stadium, not a rectangle: near the
+     top and bottom of a thick line the ends curve inward. Grouping by exact
+     extent means a circle's widest rows -- where the boundary is nearly
+     vertical and extents repeat -- form the TALLEST groups, and a tall group
+     leaves an uncovered wedge at each of its four corners. Measured on a group
+     of height 7 drawn at lineWidth 8: about 2px bare at the corner. On the live
+     demo that read as small dashes at the far left and far right of a filled
+     circle, at the vertical middle -- precisely where the groups are tallest.
+     At height 3 the same wedge is under a pixel. The cost is bounded and small:
+     a 460-tall fill spends at most 154 runs, 308 points, against a server limit
+     of 20,000. */
+  var MAX_GROUP_H = 3;
   /* A guard, in the spirit of shapes.js MAX_POINTS: a pathological region must
      not emit an unbounded array. Two points per run against a 20,000-point
      server limit leaves this an order of magnitude clear. */
@@ -162,7 +184,8 @@
     };
     for (var r2 = 0; r2 <= H; r2++) {
       var has = r2 < H && rowMax[r2] >= 0;
-      if (has && gStart >= 0 && rowMin[r2] === gLo && rowMax[r2] === gHi) continue;
+      if (has && gStart >= 0 && rowMin[r2] === gLo && rowMax[r2] === gHi
+          && (r2 - gStart) < MAX_GROUP_H) continue;
       if (!flush(r2)) break;
       gStart = has ? r2 : -1;
       if (has) { gLo = rowMin[r2]; gHi = rowMax[r2]; }
@@ -173,21 +196,31 @@
   /* The lineWidth a run is drawn at: its own height plus the hairline guard. */
   function sizeOf(run) { return run.h + BLEED; }
 
-  /* A run as the two points that draw it.
-     THE INSET IS HORIZONTAL ONLY, and that distinction is what the first
-     version missed. Round caps overshoot by size/2 at each END of the line, so
-     the ends are pulled in by that much — but `size` is now the run's HEIGHT,
-     not a proxy for its length, so a long thin run is barely inset at all and
-     never collapses. A run genuinely shorter than its own height still becomes
-     one point, which drawDot paints at the same width; that is a real sliver,
-     not an artefact of over-wide banding. */
+  /* A run as the two points that draw it, drawn to its FULL extent.
+   *
+   * NO INSET, AND THAT IS A REVERSAL. Two earlier versions pulled each end in
+   * by half the lineWidth, reasoning that round caps overshoot and the fill
+   * would otherwise bleed past the boundary. The reasoning is true about the
+   * line's CENTRE row and false everywhere else: a round cap is a semicircle,
+   * so the stadium narrows toward the top and bottom of a thick line. Inset to
+   * the exact extent, the group's four corners end up bare — measured on a
+   * filled circle, 52 of 7845 pixels, showing as dashes at the far left and
+   * right where the groups are tallest.
+   *
+   * Drawn full-extent the cap bulges OUTWARD instead, so every pixel of the
+   * group is covered and the cost is at most MAX_GROUP_H/2 of bleed sideways —
+   * about two pixels, underneath a boundary line that is itself wider than
+   * that. GAPS ARE FAR MORE VISIBLE THAN BLEED, and between a fill that stops
+   * two pixels short and one that runs two pixels over, the one that runs over
+   * is the one nobody reports.
+   *
+   * A zero-length run becomes a single point, which drawDot paints at the same
+   * width; that is a one-pixel sliver of region, not an artefact. */
   function points(run) {
-    var half = sizeOf(run) / 2;
-    var len = run.x1 - run.x0;
-    if (len <= half) {
+    if (run.x1 <= run.x0) {
       return [{ x: (run.x0 + run.x1) / 2, y: run.y }];
     }
-    return [{ x: run.x0 + half, y: run.y }, { x: run.x1 - half, y: run.y }];
+    return [{ x: run.x0, y: run.y }, { x: run.x1, y: run.y }];
   }
 
   var api = { BLEED: BLEED, MAX_RUNS: MAX_RUNS, runs: runs,
