@@ -78,14 +78,22 @@ with sync_playwright() as p:
         check("a run costs TWO points, not one per pixel",
               len(pts) == 2, f"{pts} — per-pixel rasterising would put a single "
               "tap over the server's 20,000-point frame limit")
-        check("...and they are inset for the round caps",
-              abs(pts[0]["x"] - 4) < 0.01 and abs(pts[1]["x"] - 96) < 0.01,
-              f"{pts} — round caps extend half the lineWidth past each end, so "
-              "a run drawn to its true extent bleeds past the boundary")
-        short = page.evaluate("""() => SkriblFloodFill.points({y: 5, x0: 0, x1: 1, h: 7})""")
-        check("a run shorter than its own width collapses to a dot",
-              len(short) == 1, f"{short} — inset past itself it would draw "
-              "backwards; drawDot paints one point at the same width")
+        # ⚑ REVERSED, v233, and deliberately. This used to assert an INSET of
+        # half the lineWidth, to stop round caps bleeding past the boundary.
+        # That is true of the line's centre row and false everywhere else: a cap
+        # is a semicircle, so the stadium narrows toward the top and bottom of a
+        # thick line and an inset run leaves its own corners bare. Measured on a
+        # filled circle, 52 of 7845 pixels. Runs are drawn full-extent now and
+        # the cap bulges outward instead — bleed rather than gaps, which is the
+        # trade nobody reports.
+        check("...and they run to the region's full extent, not inset",
+              abs(pts[0]["x"] - 0) < 0.01 and abs(pts[1]["x"] - 100) < 0.01,
+              f"{pts} — inset to the exact extent, a thick run cannot cover its "
+              "own corners")
+        short = page.evaluate("""() => SkriblFloodFill.points({y: 5, x0: 3, x1: 3, h: 7})""")
+        check("a zero-length run collapses to a dot",
+              len(short) == 1, f"{short} — drawDot paints one point at the same "
+              "width; a one-pixel sliver of region is not an artefact")
 
         # THE REGRESSION THAT SHIPPED. The first version banded every 6 pixel
         # rows and gave the band the UNION of their extents. On a slope the
@@ -148,10 +156,67 @@ with sync_playwright() as p:
           const r = SkriblFloodFill.runs(img, 32, 32, { tolerance: 8 });
           return { runs: r.runs.length, h: r.runs[0] ? r.runs[0].h : 0 };
         }""")
-        check("a flat region is ONE run however tall it is",
-              box["runs"] == 1 and box["h"] == 47,
-              f"{box} — cost follows the perimeter, not the area; a fixed band "
-              "would have spent eight runs on this")
+        # ⚑ CHANGED, v233. This asserted ONE run for a 47-row box and that was
+        # the bug's other half: a group that tall is drawn at lineWidth 48 with
+        # ROUND caps, so it covers a stadium and leaves ~2px of every corner
+        # bare. On a circle, whose widest rows repeat their extent and so form
+        # the tallest groups, that read as dashes at the far left and right.
+        # Groups are capped at MAX_GROUP_H now, so the claim is bounded height,
+        # not minimum count.
+        check("a flat region's runs are capped in height, not maximally tall",
+              box["runs"] == 16 and box["h"] == 3,
+              f"{box} — an unbounded group is drawn at its own height with "
+              "round caps, and a tall stadium cannot cover a rectangle's corners")
+
+        # THE ASSERTION THAT WOULD HAVE CAUGHT THE SECOND ROUND OF THIS BUG.
+        # Everything above is about the runs' GEOMETRY. None of it notices that
+        # drawLine paints a STADIUM, not a rectangle: near the top and bottom of
+        # a thick line the round caps curve inward, so a tall run cannot cover
+        # its own corners. A circle's widest rows repeat their extent and so
+        # form the tallest groups, which is why the bare corners appeared at the
+        # far left and right of a filled circle and nowhere else.
+        #
+        # So this rasterises the runs exactly as flip.js draws them and counts
+        # mask pixels the paint misses. It is the only check here that sees the
+        # renderer rather than the plan.
+        cover = page.evaluate("""() => {
+          const W = 120, H = 120, cx = 60, cy = 60, rr = 50;
+          const img = new ImageData(W, H);
+          for (let y = 0; y < H; y++)
+            for (let x = 0; x < W; x++) {
+              const i = (y * W + x) * 4;
+              const inside = (x - cx) * (x - cx) + (y - cy) * (y - cy) <= rr * rr;
+              img.data[i] = inside ? 255 : 0; img.data[i+1] = inside ? 255 : 0;
+              img.data[i+2] = inside ? 255 : 0; img.data[i+3] = 255;
+            }
+          const r = SkriblFloodFill.runs(img, cx, cy, { tolerance: 8 });
+          const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+          const c = cv.getContext('2d');
+          c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = '#fff';
+          for (const run of r.runs) {
+            const pts = SkriblFloodFill.points(run);
+            c.lineWidth = SkriblFloodFill.sizeOf(run);
+            c.beginPath();
+            if (pts.length === 1) { c.moveTo(pts[0].x, pts[0].y); c.lineTo(pts[0].x, pts[0].y); }
+            else { c.moveTo(pts[0].x, pts[0].y); c.lineTo(pts[1].x, pts[1].y); }
+            c.stroke();
+          }
+          const got = c.getImageData(0, 0, W, H).data;
+          let missed = 0, area = 0, worstY = -1;
+          for (let y = 0; y < H; y++)
+            for (let x = 0; x < W; x++) {
+              if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > rr * rr) continue;
+              area++;
+              if (got[(y * W + x) * 4 + 3] < 40) { missed++; if (worstY < 0) worstY = y; }
+            }
+          return { missed: missed, area: area, runs: r.runs.length };
+        }""")
+        check("the runs actually COVER the region when painted",
+              cover["missed"] <= cover["area"] * 0.002,
+              f"{cover['missed']} of {cover['area']} filled pixels left bare "
+              f"across {cover['runs']} runs — round caps make a run a stadium, "
+              "so a tall group cannot reach its own corners; this is the check "
+              "that sees the renderer rather than the plan")
 
         print("\nTHE TOLERANCE IS ANCHORED TO THE SEED, NOT THE NEIGHBOUR")
         # A horizontal gradient. Neighbour-relative tolerance walks it end to

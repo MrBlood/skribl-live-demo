@@ -55,9 +55,17 @@
      editors; anything not present on a surface is skipped.
      `.addcol` is Flip's Duplicate/Blank/In-between row. It joined the list when
      lifting the pill off the tool row landed it on those buttons instead —
-     clearing one bar is not the job, clearing the stack is. */
+     clearing one bar is not the job, clearing the stack is.
+
+     `#toolTray` and `#shapePop` are POPOVERS rather than bars, and they were
+     missed for exactly that reason: this list read as "the bottom chrome" when
+     what it means is "anything the pill must not cover". A photo from the live
+     demo showed "Saving…" parked squarely on the Pen cell of an open tray.
+     They are tall, so lifting usually cannot clear them and the pill fades
+     instead — which is right: a transient status has no business competing
+     with a menu the user just opened, and a WARNING still refuses to fade. */
   var TARGETS = ['.flip-tools', '.toolbar', '#pagebar', '#selbar', '#strip',
-                 '.addcol'];
+                 '.addcol', '#toolTray', '#shapePop'];
   var WARNING = ['failed', 'partial'];
 
   function isWarning(el) {

@@ -45,6 +45,12 @@ const AUTOSAVE_KEY = 'skribl_flip_autosave_v1';
    row. Cost follows the PERIMETER rather than the area, which is both cheaper
    on ordinary shapes and exact on diagonals -- a fixed band took the union of
    its rows and drew a perforated line down every slope. */
+/* How long the media spill gets before its bytes are called lost. Long enough
+   that a slow phone writing several megabytes finishes honestly; short enough
+   that a write which has silently died does not hold the pill on "Saving..."
+   for the rest of the session. */
+const SPILL_TIMEOUT_MS = 12000;
+
 const FILL_TOLERANCE = 32;
 
 const pad = document.getElementById('pad');
@@ -518,13 +524,42 @@ function saveNow(){
   const stamp = Date.now();
   if (window.SkriblDraftStore) {
     _mediaSpillState = 'saving';
+    // A PUT THAT NEVER SETTLES IS NOT A PUT THAT IS STILL WORKING. IndexedDB on
+    // iOS Safari can accept a multi-megabyte write and then neither resolve nor
+    // reject it, and nothing below has a timeout of its own: the promise simply
+    // never runs, _mediaSpillState stays 'saving' forever, and the pill sits on
+    // "Saving..." for the rest of the session -- reported from the live demo as
+    // "saving stays blinking". Every later save then re-enters this branch and
+    // reports 'saving' again, so the state is not just stuck, it is sticky.
+    //
+    // So the spill races a deadline. Past it the bytes are treated as lost,
+    // which is the truthful reading: a write that has not landed in twelve
+    // seconds is not one a reload can count on. A late resolve is ignored --
+    // `settled` guards both arms -- because by then the amber has already told
+    // the user the truth and flipping it back to green would un-tell it.
+    let settled = false;
+    const spillTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      _mediaSpillState = 'failed';
+      if (bgImage) pendingPhotoMeta = { fit:photoFit, opacity:photoOpacity, blur:photoBlur,
+                                        zoom:photoZoom, offX:photoOffX, offY:photoOffY,
+                                        enabled:photoEnabled, name:imageName };
+      if (musicData) pendingMusicMeta = { enabled:musicEnabled, trimStart:trimStart,
+                                          trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs,
+                                          name:musicName };
+      showAutosaveStatus('saved-no-media');
+      console.error('[skribl] media spill to IndexedDB timed out after ' + SPILL_TIMEOUT_MS + 'ms');
+    }, SPILL_TIMEOUT_MS);
     SkriblDraftStore.put('flip:draft', { json: JSON.stringify(serializeFlip()), savedAt: stamp })
-      .then(() => { _mediaSpillState = 'durable';
+      .then(() => { if (settled) return; settled = true; clearTimeout(spillTimer);
+                    _mediaSpillState = 'durable';
                     // The session IS fully recoverable now — say so. (Only if
                     // the pill still shows this save's amber; never conjure.)
                     const el = document.getElementById('autosaveStatus');
                     if (el && !el.hidden) showAutosaveStatus('saved'); })
-      .catch((e3) => { _mediaSpillState = 'failed';
+      .catch((e3) => { if (settled) return; settled = true; clearTimeout(spillTimer);
+                       _mediaSpillState = 'failed';
                        // NOW the bytes really are lost, so the next restore has
                        // to offer the re-add cards. This is the one place that
                        // is true.
