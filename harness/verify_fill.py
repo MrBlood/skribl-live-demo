@@ -285,6 +285,27 @@ with sync_playwright() as p:
               added_pts == added_grp * 2 and added_pts < 400,
               f"{added_pts} points across {added_grp} bands")
 
+        # THE OVERLAP IS LOAD-BEARING, and it does not look it. A fill is a
+        # stack of thin horizontal strokes; smudge and liquify drag them
+        # through a falloff, so neighbouring runs move by different amounts and
+        # fan apart, showing the ground between them as a comb. How far they
+        # can travel before that happens is exactly how far they overlap.
+        # Measured: 3.1px of slack gaps after ~72px of drag, 5.1px after ~119px.
+        # A future "the runs already tile, why are they wider than the group"
+        # simplification would halve that with nothing visible to show for it.
+        slack = page.evaluate("""() => {
+          const W = 40, H = 40;
+          const img = new ImageData(W, H);
+          for (let i = 0; i < W * H; i++) { img.data[i*4+3] = 255; }
+          const r = SkriblFloodFill.runs(img, 20, 20, { tolerance: 8 });
+          const run = r.runs[0];
+          return { width: SkriblFloodFill.sizeOf(run), h: run.h };
+        }""")
+        check("runs are drawn wider than their group, so a smudged fill has slack",
+              slack["width"] - slack["h"] >= 3,
+              f"{slack} — the overlap is what a fill survives being dragged on; "
+              "at 3.1px of slack it combs after ~72px of drag, at 5.1px ~119px")
+
         print("\nONE TAP IS ONE UNDO")
         page.evaluate("() => undoStroke()")
         page.wait_for_timeout(400)

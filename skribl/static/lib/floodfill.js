@@ -73,9 +73,24 @@
 (function () {
   'use strict';
 
-  /* Groups tile exactly, so this is only the hairline guard: half a pixel of
-     bleed at each end of a group beats an anti-aliased seam between them. */
-  var BLEED = 1;
+  /* HOW MUCH TALLER THAN ITS GROUP EACH RUN IS DRAWN, and it stopped being a
+     hairline guard the moment a fill could be smudged.
+     A fill is a STACK OF THIN HORIZONTAL STROKES, not a region. Drag it through
+     a brush whose weight falls off with distance and neighbouring runs move by
+     slightly different amounts, so they fan apart and the ground shows between
+     them as a comb. Measured: runs 0.9px apart, the smudge falloff varying
+     4.7% across that spacing, so separation grows at ~4.3% of the drag. The
+     only thing standing between that and a visible gap is how far the runs
+     OVERLAP.
+     At BLEED 1 a run is 4px wide over 0.9px spacing -- 3.1px of slack, gone
+     after about 72px of drag. At 3 it is 5.1px of slack and about 119px. The
+     cost is horizontal: a round cap overshoots by half the width, so the fill
+     tucks a further 1px under the line bounding it.
+     THIS IS A MITIGATION AND NOT A CURE. Nothing available here survives a
+     200px pull; the runs would need to overlap by 8px and the fill would spill
+     past its boundary. Combing on a heavily smudged fill is inherent to fills
+     being strokes, and the cure is a format that can hold a region. */
+  var BLEED = 3;
 
   /* A CAP ON GROUP HEIGHT, and it is not a cost knob — it is what stops the
      corners of a fill being cut off.
