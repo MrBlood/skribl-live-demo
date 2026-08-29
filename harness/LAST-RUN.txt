@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T00:53:49Z
+UTC timestamp           : 2026-08-29T01:24:59Z
 Host                    : Linux x86_64
-Tree SHA-256            : a675a541ce639d71469193eeb0d71bb978d2cef395f7251c7b2218acb6028d9a
-Git commit              : 054b2d8-dirty
+Tree SHA-256            : eaf245c6a5cb7be0affaa4de013df5cdc0e807f6cc7a92166241289d233e0fbf
+Git commit              : bd0ceaa-dirty
 SKRIBL_VERSION          : v228
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,18 +10,100 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.aeSEk4oGHd/harness.db)
+Database reset          : yes (fresh /tmp/tmp.C8HYvzUMZi/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_docs.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_compactops.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 1
+# whole release run: 36 batches recorded as one run
+suites requested : 82
+  verify_amber.py: ok — 21/21 passed
+  verify_apiedges.py: ok — 31/31 passed
+  verify_assetcache.py: ok — 12/12 passed
+  verify_audio.py: ok — 9/9 passed
+  verify_audiostate.py: ok — 29/29 passed
+  verify_backfill.py: ok — 23/23 passed
+  verify_beading.py: ok — 16/16 passed
+  verify_boot.py: ok — 15/15 passed
+  verify_canvas.py: ok — 44/44 passed
+  verify_compactops.py: ok — 26/26 passed
+  verify_csp.py: ok — 32/32 passed
+  verify_csrf.py: ok — 15/15 passed
+  verify_cssplit.py: ok — 18/18 passed
+  verify_deletion_foundation.py: ok — 16/16 passed
+  verify_delivery.py: ok — 26/26 passed
   verify_docs.py: ok — 65/65 passed
-assertions passed: 65   (skipped suites contribute 0)
-suites skipped   : 0
+  verify_dots.py: ok — 11/11 passed
+  verify_drafts.py: ok — 17/17 passed
+  verify_exopts.py: ok — 26/26 passed
+  verify_exportui.py: ok — 45/45 passed
+  verify_externalised.py: ok — 13/13 passed
+  verify_feed.py: ok — 25/25 passed
+  verify_fix.py: ok — 18/18 passed
+  verify_flipdraft.py: ok — 22/22 passed
+  verify_flipmeta.py: ok — 45/45 passed
+  verify_flipmotion.py: ok — 27/27 passed
+  verify_fuzz.py: ok — 7/7 passed
+  verify_gifenc.py: ok — 38/38 passed
+  verify_help.py: ok — 61/61 passed
+  verify_hold.py: ok — 56/56 passed
+  verify_hostconfig.py: ok — 43/43 passed
+  verify_hostseams.py: ok — 33/33 passed
+  verify_integration.py: ok — 14/14 passed
+  verify_jsstrip.py: ok — 27/27 passed
+  verify_keys.py: ok — 9/9 passed
+  verify_layout.py: ok — 83/83 passed
+  verify_lib.py: ok — 8/8 passed
+  verify_liquify.py: ok — 31/31 passed
+  verify_loopcap.py: ok — 18/18 passed
+  verify_media.py: ok — 24/24 passed
+  verify_mediaauthz.py: ok — 43/43 passed
+  verify_medialimits.py: ok — 71/71 passed
+  verify_migrations.py: ok — 56/56 passed
+  verify_mimeparity.py: ok — 26/26 passed
+  verify_move.py: ok — 82/82 passed
+  verify_mp4.py: SKIPPED (0 assertions) — WebCodecs present but no H.264 profile is supported: {'avc1.42001f': False, 'avc1.4d0028': False, 'avc1.640028': False}
+  verify_muxer.py: ok — 18/18 passed
+  verify_padcanvas.py: ok — 26/26 passed
+  verify_pages.py: ok — 58/58 passed
+  verify_pagespan.py: ok — 49/49 passed
+  verify_parity.py: ok — 118/118 passed
+  verify_pillfit.py: ok — 18/18 passed
+  verify_player_isolation.py: ok — 22/22 passed
+  verify_player_photo.py: ok — 9/9 passed
+  verify_posted.py: ok — 34/34 passed
+  verify_postgres.py: ok — 20/20 passed
+  verify_prefix.py: ok — 33/33 passed
+  verify_pressure.py: ok — 27/27 passed
+  verify_privacy.py: ok — 45/45 passed
+  verify_race.py: ok — 17/17 passed
+  verify_report.py: ok — 35/35 passed
+  verify_review.py: ok — 281/281 passed
+  verify_s3.py: ok — 26/26 passed
+  verify_scrub.py: ok — 17/17 passed
+  verify_seam.py: ok — 185/185 passed
+  verify_select.py: ok — 55/55 passed
+  verify_sharedrules.py: ok — 43/43 passed
+  verify_sheetfit.py: ok — 14/14 passed
+  verify_sizeclass.py: ok — 34/34 passed
+  verify_storage.py: ok — 38/38 passed
+  verify_strokegroups.py: ok — 24/24 passed
+  verify_surfaces.py: ok — 9/9 passed
+  verify_sweepjob.py: ok — 38/38 passed
+  verify_theme.py: ok — 42/42 passed
+  verify_tips.py: ok — 44/44 passed
+  verify_tools.py: ok — 118/118 passed
+  verify_tray.py: ok — 80/80 passed
+  verify_tween.py: ok — 61/61 passed
+  verify_txcontract.py: ok — 69/69 passed
+  verify_ux.py: ok — 310/310 passed
+  verify_version.py: ok — 24/24 passed
+  verify_visual.py: ok — 76/76 passed
+assertions passed: 3494   (skipped suites contribute 0)
+suites skipped   : 1
 suites with problems: 0
