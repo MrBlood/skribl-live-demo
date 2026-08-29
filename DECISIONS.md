@@ -2498,3 +2498,45 @@ thing.
 When two surfaces share a suite, anything that touches the DOM has to say which
 surface it is for, or be parameterised by it. The tell is an assertion that fails
 with a value that is merely UNEXPECTED rather than wrong.
+
+## v279 -- Ask what the structure survives, not just what it looks like
+
+A fill and a line look identical once drawn: white ink on the page. They behave
+completely differently the moment something drags them, because a line is ONE
+stroke and a fill is a stack of thin horizontal ones. Smudge moves neighbouring
+runs by different amounts -- that is what a falloff IS -- so the stack fans
+apart and the ground shows through as a comb.
+
+The number is small and decides everything: runs 0.9px apart, the falloff
+varying 4.7% across that spacing, so separation grows at ~4.3% of the drag. With
+3.1px of overlap the fill survives 72px of dragging and no further.
+
+**A representation is not finished when it renders correctly.** It has to be
+asked what happens when the OTHER tools touch it. Fill was measured against
+"does it cover the region", and it did, perfectly -- and it was still the wrong
+shape for a canvas where things get pulled around afterwards.
+
+The follow-on is that the mitigation has a ceiling worth stating plainly rather
+than tuning toward: surviving a 200px pull needs 8px of overlap, and the fill
+would spill past its own boundary. Some limits are not bugs to be fixed but
+consequences to be named, so the next person does not spend a day rediscovering
+them.
+
+## v280 -- Pin the constant that does not look load-bearing
+
+`BLEED` reads like a rounding guard: draw each run a pixel taller so adjacent
+ones meet instead of leaving a seam. It is also, and much more importantly, the
+entire budget a filled region has for being smudged, liquified or moved.
+
+Nothing about the name or the value says that. A later reader doing honest
+cleanup -- "the runs already tile exactly, why is this wider than the group?" --
+would halve the drag distance a fill survives, and see nothing wrong in any
+screenshot they took.
+
+So the assertion states the consequence, not the value: runs must be drawn
+wider than their group, and the failure message carries the measurement (3.1px
+of slack combs after ~72px, 5.1px after ~119px).
+
+**When a constant's obvious purpose is not its important one, the test is where
+you say so** -- a comment is read by someone already editing the line, and a
+test is read by someone who just broke it.
