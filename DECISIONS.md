@@ -2312,3 +2312,53 @@ and the two cases need no separate handling. Cost follows the perimeter rather
 than the area, which is both cheaper on ordinary shapes and exact on the hard
 ones. **When a decomposition has a tuning constant, ask what the constant is
 standing in for -- often the data already knows the answer.**
+
+## v270 -- A tool's strength must not be a property of the device's sample rate
+
+Blur's first version faded each touched point a little on every `pointermove`.
+That reads as obviously correct and is obviously wrong the moment you ask how
+many pointermoves there are: a 240Hz digitiser fires several times more often
+than a 60Hz one for the same gesture, so the same swipe blurred several times
+harder on a phone than on a laptop. v230's coalesced sampling had just raised
+that rate ON PURPOSE, so the newer the hardware, the worse it got.
+
+Measured: one short swipe took `#ffffff` to `rgb(87,89,92)`.
+
+**Saturating the accumulation was the obvious repair and it was not enough.** A
+cap bounds the maximum; it does not make a 4-event sweep land where a 40-event
+sweep lands, because neither has reached the cap. The fix is to accrue against
+the physical quantity the tool actually deposits along -- **distance travelled**
+-- which is the same number however often the OS sampled the finger. 117/255
+apart before, 6/255 after, and the residual is arithmetic: a falloff integrated
+from 4 samples cannot equal one integrated from 40.
+
+**The rule: when an effect accumulates over a gesture, accrue it against
+distance or time, never against event count.** Event count is a property of the
+hardware and the browser's scheduling, not of what the user did.
+
+And the assertion that catches this cannot be a screenshot or a "did it blur"
+check -- both pass. It has to run the same gesture at two sample rates and
+compare, which is a strange-looking test until you know why it exists.
+
+## v271 -- Look for what the format already honours before declaring it impossible
+
+Blur looked unbuildable. The format is points; you cannot blur a polyline by
+moving its points; there is no raster layer; adding one is a format change the
+player must honour and therefore the owner's call, not a tool's.
+
+That reasoning was sound and the conclusion was wrong, because of one detail in
+`paintStatic()`: a stroke whose FIRST point is opaque gets painted by
+`paintSeg` with **each point's own colour and own size**. Per-point colour is
+already honoured, already replayed by the player, already in every saved file.
+Blur is then just "fade this point toward the ground and widen it" -- entirely
+sayable, no format change, no player change.
+
+**Before concluding a feature needs a format change, enumerate what the RENDERER
+already reads per point.** The format is not what the schema says; it is what
+the paint path actually honours, and those can differ by more than one feature's
+worth.
+
+The corollary matters too: the obvious route -- per-point ALPHA -- genuinely is
+not honoured, because `paintStatic` takes alpha from the segment's first point.
+Two neighbouring fields, one usable and one not, and only reading the paint path
+tells you which is which.

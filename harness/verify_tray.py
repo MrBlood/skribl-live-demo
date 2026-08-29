@@ -144,7 +144,7 @@ with sync_playwright() as p:
         # the comment above intends — but read it as a control moving house,
         # not as a new tool.
         expected = ["pen", "eraser", "shape"] if surface == "Pad" \
-            else ["pen", "eraser", "shape", "select", "liquify", "fill", "artmove"]
+            else ["pen", "eraser", "shape", "select", "liquify", "smudge", "blur", "fill", "artmove"]
         check(f"{surface}: the roster is exactly what this surface ships",
               baseline == expected, f"{baseline} against {expected}")
         if len(baseline) <= 3:

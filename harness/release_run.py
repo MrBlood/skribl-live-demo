@@ -192,6 +192,7 @@ BATCHES = [
     # a real canvas and reads pixels back, which does not share a page well.
     ["verify_fill.py"],
     ["verify_input.py"],
+    ["verify_smudgeblur.py"],
 ]
 
 

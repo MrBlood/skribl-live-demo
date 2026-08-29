@@ -147,7 +147,7 @@ with sync_playwright() as p:
     # the DRAWING. Read it as a control moving house.
     check("select is in Flip's tool registry",
           page.evaluate("() => window.SkriblFlipTools.list()")
-          == ["pen", "eraser", "shape", "select", "liquify", "fill", "artmove"],
+          == ["pen", "eraser", "shape", "select", "liquify", "smudge", "blur", "fill", "artmove"],
           str(page.evaluate("() => window.SkriblFlipTools.list()")))
     check("a fourth tool pushed the shelf into overflow",
           page.evaluate("() => window.SkriblFlipTools.overflowing()"),
