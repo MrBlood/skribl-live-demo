@@ -2727,3 +2727,47 @@ turns "was never actionable" into an ordinary FAIL with a sentence.
 harness, the guard against wedging IS the assertion.** Verify a suite by
 mutation, then look at HOW it failed, not just that it did.
 
+
+## v288 -- Measure the thing the eye is responding to, not the thing that is easy to measure
+
+"Fill is a weak icon" turned out to be measurable. Rasterise every tray glyph and
+read its ink bounding box off the alpha channel: Fill filled 15.0x16.3 of its 24
+box where every other tool sat near 19x18. It was the smallest thing in the tray,
+and it was a hollow diamond whose handle was a 3px stub, so at tray size it read
+as a tilted square with a dot.
+
+The measurement had to be of the RENDERED icon. Path coordinates say nothing
+about how much of the box a drawing occupies -- stroke width, caps, joins and
+fills all add ink outside the geometry, and two icons with identical viewBoxes
+can differ by a third in apparent size. Reading the SVG source would have found
+nothing.
+
+**Two numbers were available and only one of them was the answer.** Ink EXTENT
+tracked the complaint exactly. Ink COVERAGE -- the share of the box painted --
+did not, and following it did damage: Stamps was "improved" from 24.3% to 19.7%
+coverage and came out visibly worse, because the weight being removed was a solid
+base bar holding the icon together. Two glyphs at the same coverage look nothing
+alike when one is a thin outline over a wide area and the other is a small solid
+mass. The suite reports coverage and refuses to assert it.
+
+## v289 -- An exemption needs a sentence, or the band eats the drawing
+
+Liquify is the flattest icon in the tray by a wide margin: 20 wide, 13.5 tall,
+against an ~18 norm. By the band it is the worst offender in the set. It is also
+correct -- it is a smear, and a smear is wide and low.
+
+I redrew it to fill the box's height. The number improved. The icon became a
+caret with a detached curl, and I only found that by rendering it next to the old
+one and looking. The metric was satisfied and the drawing was worse, so the
+drawing won and the redraw was reverted.
+
+Which leaves a suite whose band Liquify fails. The fix is not to widen the band
+until it passes -- that would re-admit the 15x16 Fill this all started with. It
+is exempt BY NAME, in a dict whose values are the REASON, printed in the
+assertion's detail. The next person to run this finds "a smear is wide and low;
+the tall redraw read as a caret" instead of a red line inviting them to make the
+same change I did.
+
+**A numeric band over a design decision will eventually be satisfied by someone
+who cannot see the design.** Carry the reason in the exemption, in the output,
+where it will be read at the moment it is needed.

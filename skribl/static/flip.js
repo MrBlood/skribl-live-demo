@@ -2856,9 +2856,14 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // v236. The fifth, and the tray earns its keep a second time: the row
         // did not have to be re-fitted for it either. A fingertip dragging a
         // line out of true is the whole tool in one glyph.
+        // MEASURED AS THE FLATTEST ICON HERE — 20 wide, 13.5 tall — and left
+        // alone on purpose. It was redrawn to fill the box's height and the
+        // taller version reads as a CARET with a detached curl; the gentle
+        // wave is what says 'flow', and a smear genuinely is wide and low.
+        // The number improved and the drawing got worse, so the number loses.
         { id: 'liquify', label: 'Liquify', btn: 'liquifyToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
               + '<path d="M3 16c3.5 0 4.5-7 8-7s3 5 6 5"/>'
               + '<path d="M14.5 18.5c1.6-1.1 2.6-2.2 4.4-2.2 1.3 0 2.1.6 2.1 1.5 0 1.6-2.4 2.6-4.3 2.6"/>'
               + '</svg>' },
@@ -2877,35 +2882,43 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // statement of what a stroke-format blur can and cannot do.
         { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+              + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(1.12) translate(-12 -12)">'
               + '<path d="M8 19c-2.2 0-3.5-1.4-3.5-3.2 0-2.6 3.4-4.3 6-6.4C13 7.3 14.6 5 16.5 5'
               + 'c1.6 0 2.6 1.2 2.6 2.7 0 3.6-6.6 5.1-9 7.4"/>'
-              + '<path d="M6.2 20.4c1.6-.5 3.2-.8 4.9-.9"/></svg>' },
+              + '<path d="M6.2 20.4c1.6-.5 3.2-.8 4.9-.9"/></g></svg>' },
         { id: 'blur', label: 'Blur', btn: 'blurToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<circle cx="12" cy="12" r="3.2"/>'
-              + '<circle cx="12" cy="12" r="6.4" opacity=".55"/>'
-              + '<circle cx="12" cy="12" r="9.4" opacity=".28"/></svg>' },
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<circle cx="12" cy="12" r="3"/>'
+              + '<circle cx="12" cy="12" r="5.9" opacity=".55"/>'
+              + '<circle cx="12" cy="12" r="8.6" opacity=".28"/></svg>' },
+        // THE ICON WAS THE SMALLEST IN THE TRAY. Measured as rendered, its ink
+        // filled 15x16 of the 24 box where every other tool sits near 19x18,
+        // and the bucket was a hollow diamond with a 3px stub for a handle —
+        // at tray size it read as a plain tilted square with a dot, which is
+        // what "Fill is a weak icon" meant. It is now a tipped can: a longer
+        // angled handle, which is the line that makes it a BUCKET rather than
+        // a diamond, and paint filling the lower half, which is the thing that
+        // makes it FILL rather than a bucket. 19.8x18.8, and its ink coverage
+        // sits with the rest of the set instead of below it.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M6.5 10.5 12 5l6.5 6.5a1.5 1.5 0 0 1 0 2.1l-4.9 4.9a1.5 1.5 0 0 1-2.1 0'
-              + 'l-4.9-4.9a1.5 1.5 0 0 1 0-2.1Z"/>'
-              + '<path d="M9.2 7.8 7 5.6"/>'
-              + '<path d="M20 16.5c0 1-.7 1.8-1.6 1.8s-1.6-.8-1.6-1.8c0-.9 1.6-2.8 1.6-2.8s1.6 1.9 1.6 2.8Z" '
-              + 'fill="currentColor" stroke="none"/></svg>' },
-        // v238. Stamps are the clipboard grown up: persistent, multi-slot, and
-        // placed where you tap rather than back where they were cut from. The
-        // tool button is the SHELF; the only route into the shelf is the
-        // selection bar, because a stamp is made out of a selection.
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M4.2 9.8 12.6 2.6l7.2 8.4-7.4 6.3a2 2 0 0 1-2.8-.2'
+              + 'l-5.2-6a2 2 0 0 1 .2-2.8Z"/>'
+              + '<path d="M7.4 13.5h10.1l-5 4.3a2 2 0 0 1-2.7-.2Z" '
+              + 'fill="currentColor" stroke="none"/>'
+              + '<path d="M8.9 5.6 6.4 3.1"/>'
+              + '<path d="M20.6 15s1.8 2.2 1.8 3.3a1.8 1.8 0 0 1-3.6 0'
+              + 'c0-1.1 1.8-3.3 1.8-3.3Z" fill="currentColor" stroke="none"/></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M9 4.5h6a2 2 0 0 1 2 2v3.2c0 1-.6 1.9-1.5 2.3l-.6.3'
-              + 'c-.6.3-.9.9-.9 1.5V15H10v-1.2c0-.6-.3-1.2-.9-1.5l-.6-.3'
-              + 'A2.6 2.6 0 0 1 7 9.7V6.5a2 2 0 0 1 2-2Z"/>'
-              + '<rect x="4.5" y="17" width="15" height="3" rx="1"/></svg>' },
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M9 4.2h6a2 2 0 0 1 2 2v3.4c0 1-.6 1.9-1.5 2.3l-.6.3'
+              + 'c-.6.3-.9.9-.9 1.5v1.1H10v-1.1c0-.6-.3-1.2-.9-1.5l-.6-.3'
+              + 'A2.6 2.6 0 0 1 7 9.6V6.2a2 2 0 0 1 2-2Z"/>'
+              + '<rect x="3.6" y="17" width="16.8" height="2.8" rx="1.4"/></svg>' },
         { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
