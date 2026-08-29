@@ -143,8 +143,15 @@ with sync_playwright() as p:
         # what the product IS, and it did just change, so this edit is the cost
         # the comment above intends — but read it as a control moving house,
         # not as a new tool.
+        #
+        # ⚑ RATCHET RAISED, v238, FLAGGED FOR THE OWNER. Flip gains a tenth
+        # entry, "stamp", and this one IS a new capability: a persistent,
+        # multi-slot, tap-to-place clipboard. It adds nothing to the saved
+        # format — a placed stamp is ordinary stroke groups — but it does add a
+        # thing the product can do, so the edit is the cost this ratchet is for.
         expected = ["pen", "eraser", "shape"] if surface == "Pad" \
-            else ["pen", "eraser", "shape", "select", "liquify", "smudge", "blur", "fill", "artmove"]
+            else ["pen", "eraser", "shape", "select", "liquify", "smudge", "blur", "fill",
+            "stamp", "artmove"]
         check(f"{surface}: the roster is exactly what this surface ships",
               baseline == expected, f"{baseline} against {expected}")
         if len(baseline) <= 3:

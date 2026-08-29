@@ -1,32 +1,34 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T16:37:15Z
+UTC timestamp           : 2026-08-29T22:18:34Z
 Host                    : Linux x86_64
-Tree SHA-256            : 29f62a166fb8988b0a97310b434dd49e456230b5c7fc838f14a9054c131f31dc
-Git commit              : e5c42d0-dirty
+Tree SHA-256            : 1f9dcadd6e0aee87829454111b8b3825e846cfff48c114a28f6522ce1415b053
+Git commit              : bc2fcbd-dirty
 SKRIBL_VERSION          : v237
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
-DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.glpOjOq53l/harness.db)
+DATABASE_URL class      : postgresql
+Database reset          : yes (dropped and recreated Skribl's tables in the supplied DATABASE_URL)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_docs.py verify_tools.py verify_tray.py verify_ux.py verify_layout.py verify_surfaces.py
+Command                 : harness/run_harness.sh verify_postgres.py verify_migrations.py verify_storage.py verify_txcontract.py verify_apiedges.py verify_backfill.py verify_posted.py verify_privacy.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 6
-  verify_docs.py: ok — 65/65 passed
-  verify_tools.py: ok — 120/120 passed
-  verify_tray.py: ok — 93/93 passed
-  verify_ux.py: ok — 310/310 passed
-  verify_layout.py: ok — 83/83 passed
-  verify_surfaces.py: ok — 9/9 passed
-assertions passed: 680   (skipped suites contribute 0)
+suites requested : 8
+  verify_postgres.py: ok — 20/20 passed
+  verify_migrations.py: ok — 56/56 passed
+  verify_storage.py: ok — 38/38 passed
+  verify_txcontract.py: ok — 69/69 passed
+  verify_apiedges.py: ok — 31/31 passed
+  verify_backfill.py: ok — 23/23 passed
+  verify_posted.py: ok — 34/34 passed
+  verify_privacy.py: ok — 45/45 passed
+assertions passed: 316   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

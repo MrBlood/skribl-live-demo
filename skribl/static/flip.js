@@ -221,6 +221,16 @@ let bgImage = null, bgImageObj = null, imageName = '';            // one backgro
 let photoFit = 'cover', photoOpacity = 1, photoBlur = 0, photoZoom = 1;   // image adjustments
 let photoOffX = 0.5, photoOffY = 0.5, photoEnabled = true, reposMode = false;
 let musicData = null, audioEl = null, musicMuted = false;         // one music loop per animation
+/* Media the session has LOST — a photo or track whose bytes never landed, kept
+   so the same file can be re-added with its settings intact. Declared UP HERE
+   with the rest of the media state rather than beside tryRestore(), because
+   showAutosaveStatus() reads them and it is defined, and reachable, well above
+   that point. `typeof x !== 'undefined'` does NOT make that safe: typeof shields
+   you from an UNDECLARED name, not from a `let` in its temporal dead zone, which
+   throws exactly the same ReferenceError. This file has been bitten by that
+   three times (see selClear, moveMode, the stamp shelf) and each time the fix
+   was to move the declaration, not to add a guard that does not guard. */
+let pendingMusicMeta = null, pendingPhotoMeta = null;
 let musicEnabled = true, trimStart = 0, trimEnd = null, audioDuration = 0;   // trim/loop
 const MAX_LOOP_SECONDS = 20;   // hard cap on loop length; enforced at load AND on every drag
 let audioCtx = null, currentAudioBuffer = null, loopCrossfadeMs = 0;         // decoded buffer for the waveform
@@ -280,6 +290,13 @@ let liquifyBefore = null, liquifyTouched = false;
 // syncSelBar() reads it to decide whether Paste has a cell, and setTool()
 // reaches syncSelBar() during init.
 let selClipboard = null;
+// The stamp shelf, up here for exactly the reason above it: setTool() reaches
+// syncStampPop() during init, and a `let` read before its own line throws
+// rather than reading undefined. Loaded from storage below, once the libs have
+// had a chance to define themselves. (See the block near doStamp().)
+let stampShelf = [];
+let stampArmed = -1;          // index into stampShelf, or -1 for none armed
+let stampScalePct = 100;
 /* v228 transform. selMode names what the current drag is doing; selSnap holds
    the selected points' ORIGINAL x/y/size for the duration of one gesture.
 
@@ -498,27 +515,31 @@ function saveNow(){
     // synchronous write and no IndexedDB round trip.
     try {
       localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
-      // PLAIN 'saved', even when a pending media record exists — and that is a
-      // correction to v229, not a weakening of it.
+      // v238: 'saved' when this write omitted nothing AND nothing is waiting;
+      // amber when a media record IS waiting to be re-added.
       //
-      // Reaching here means hasMedia is FALSE: there is no photo and no track
-      // on this page, so this save omitted nothing and "Saved without media" is
-      // describing something that did not happen. pendingPhotoMeta is a memo
-      // about a PAST loss, kept so the user can re-add the same image with its
-      // settings intact. It is not a property of this write.
+      // THIS IS NOT A REVERT OF v235, it is the half of it that was missing.
+      // v235 was answering a live report — amber sitting permanently on a
+      // drawing, on every save, with no way to clear it — and it removed the
+      // pill instead of the dead end. The cost showed up in verify_amber: reload
+      // a session whose track genuinely never saved and it said "Saved" with the
+      // track gone. Both states are the SAME state in the draft (mediaOmitted
+      // set, a pending record restored, no bytes), so there is nothing here to
+      // discriminate on. Either the warning is shown or the loss is silent.
       //
-      // The cost of conflating them was reported from the live demo: the amber
-      // sat on screen permanently, on a drawing with no media in it, and the
-      // record round-trips through the draft (serializeFlip writes
-      // `photo: pendingPhotoMeta` when bgImage is null) so a reload brought it
-      // straight back. The only control that clears it lives in a drawer and
-      // measures 0x0 until that drawer is opened — a warning with no reachable
-      // resolution, which is how a user learns to ignore the colour amber.
+      // What made the old amber intolerable was never that it was wrong — it was
+      // that it went nowhere. The only control that clears a pending record is
+      // the re-add card, and that card measures 0x0 until its drawer is opened.
+      // So the pill is now the route to it (see showAutosaveStatus below): the
+      // warning is true, and one tap reaches the Re-add and Dismiss it is
+      // telling you about. Dismissing clears the record, which schedules a save,
+      // which reports plain 'saved' — the amber ends because the situation did.
       //
-      // The real warning is untouched: when media IS attached and its bytes
-      // fail to land, the spill path below still raises amber and still keeps
-      // it up.
-      showAutosaveStatus('saved');
+      // A pending record is checked rather than hasMedia because reaching here
+      // means hasMedia is FALSE: there is no photo and no track on this page, so
+      // this write really did omit nothing. The record is about media the
+      // session is still missing, which is a fact about now, not about history.
+      showAutosaveStatus((pendingPhotoMeta || pendingMusicMeta) ? 'saved-no-media' : 'saved');
       return;
     } catch (e) {
       if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
@@ -657,6 +678,52 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') flushFlipDraft();
 });
 // Autosave status pill (ported from the Pad): "Saving…" while pending, then "Saved".
+/* Is there media the session has LOST, as opposed to media it merely could not
+   make durable? Only the first has anything to re-add. */
+function _pillPending(){
+  return (pendingMusicMeta && !musicData) || (pendingPhotoMeta && !bgImage);
+}
+
+/* Make the pill a control, or stop it being one.
+   A DIV WITH role="button" RATHER THAN A <button>, deliberately: #autosaveStatus
+   is one shared element across Pad, Flip and the player, and only Flip can ever
+   have media to re-add. Changing the markup would put a button that does nothing
+   on the other two. The role and the tabindex are added exactly while the pill
+   has somewhere to go and removed the moment it does not, which is also the
+   honest answer for a screen reader — it announces a button only when there is
+   one. */
+let _pillBound = false;
+function _pillAction(on){
+  const el = document.getElementById('autosaveStatus');
+  if(!el) return;
+  el.classList.toggle('actionable', !!on);
+  if(on){
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('title', 'Open the drawer holding the missing file');
+  } else {
+    el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('title');
+  }
+  if(_pillBound) return;
+  _pillBound = true;
+  const go = (e) => {
+    if(!el.classList.contains('actionable')) return;
+    // The document-level handler below closes any open drawer on a click
+    // outside it. Without this the drawer would open and shut in the same
+    // event — opened here, closed by the same click still travelling upward.
+    e.stopPropagation();
+    e.preventDefault();
+    refreshPendingCards();
+    // Music first only because a session can be missing both and one drawer has
+    // to come up; the other card is still one tap away and its own dot marks it.
+    _flipDrawerCtl.open((pendingMusicMeta && !musicData) ? 'music' : 'photo');
+  };
+  el.addEventListener('click', go);
+  el.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') go(e);
+  });
+}
+
 function showAutosaveStatus(state){
   const el=document.getElementById('autosaveStatus'), txt=document.getElementById('autosaveStatusText'); if(!el||!txt) return;
   clearTimeout(el._hideTimer); el.hidden=false; el.classList.remove('saving','failed','partial');
@@ -665,8 +732,25 @@ function showAutosaveStatus(state){
   // Drawing + all settings saved; the media files were too large for localStorage.
   // Amber, not green — the session is not fully recoverable and the user should know
   // without having to open a drawer to find out.
-  else if(state==='saved-no-media'){ el.classList.add('partial'); txt.textContent='Saved without media'; }
+  //
+  // TWO WORDINGS, because there are two amber situations and only one of them is
+  // something the user can act on. When a pending record is waiting, the file is
+  // GONE from the session and the re-add card can put it back, so the pill names
+  // the action. When there is no record — a spill with no store to spill to —
+  // the media is still loaded and in front of them; nothing needs re-adding, it
+  // simply will not survive a reload. Offering "tap to re-add" there would send
+  // them to an empty drawer.
+  else if(state==='saved-no-media'){
+    el.classList.add('partial');
+    txt.textContent = _pillPending() ? 'Media missing — tap to re-add'
+                                     : 'Saved without media';
+  }
   else { txt.textContent='Saved'; }
+  // THE ROUTE OUT, and the whole reason the amber is allowed back. Reapplied on
+  // every call rather than bound once, because whether the pill does anything
+  // changes with the state it is showing — and a control that looks tappable
+  // and is not is worse than one that never offered.
+  _pillAction(state === 'saved-no-media' && _pillPending());
   requestAnimationFrame(()=>el.classList.add('show'));
   // 'failed' and 'saved-no-media' STAY UP — each describes an ongoing
   // durability problem, and a warning that fades claims it was resolved
@@ -734,7 +818,6 @@ function applyPayload(d){
 }
 // Media the autosave had to drop (too big for localStorage). Mirrors the Pad:
 // the settings survive, the bytes don't, and the drawers show a "Re-add" card.
-let pendingMusicMeta = null, pendingPhotoMeta = null;
 function tryRestore(){
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
@@ -1248,6 +1331,12 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(flipTool === 'fill'){
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
     doFill(pos(e));
+    return;
+  }
+  // Stamp is a tap for the same reason and lands in the same place.
+  if(flipTool === 'stamp'){
+    try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
+    doStamp(pos(e));
     return;
   }
   // Smudge and blur intercept for Liquify's reason, stated there: a tool that
@@ -2745,6 +2834,27 @@ function setColor(hex){
 const SHELF_MAX = 3;
 const toolMoreBtn = document.getElementById('toolMoreBtn');
 const toolTray = document.getElementById('toolTray');
+/*! Some tool glyphs below are Lucide icons, SCALED (paths otherwise unaltered).
+ *  lucide-static 1.37.0 — ISC © 2026 Lucide Icons and Contributors
+ *  https://github.com/lucide-icons/lucide  (some icons derive from Feather,
+ *  MIT © 2013-2017 Cole Bemis). Currently: `paint-bucket` (Fill), `stamp`
+ *  (Stamps), `waves` (Liquify), `square-dashed-mouse-pointer` (Select) and
+ *  `shapes` (Shape, in the templates). Everything else here is drawn for
+ *  this project.
+ *
+ *  WHY THEY ARE SCALED, which was not expected. This project's icon spec is
+ *  Lucide's on paper — 24x24 box, 2px stroke, round caps and joins — so these
+ *  should have dropped straight in. Measured, they did not: Lucide draws to the
+ *  full box and both came in at 22.0-22.2 units of ink against a set that sits
+ *  near 19, which is 15% larger and correspondingly heavier than the eight
+ *  glyphs beside them. In a row of ten that reads as a mistake.
+ *
+ *  So each is scaled 0.88 about the box centre and its authored stroke raised to
+ *  2.27, which lands the RENDERED stroke back on the set's 2px. The drawing is
+ *  Lucide's, untouched; only its size in our box is ours. An icon is judged in
+ *  the row it sits in, and consistency across the row beats fidelity to any one
+ *  glyph's native scale.
+ */
 const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
   ? window.SkriblToolShelf.create({
       group: document.getElementById('toolGroup'),
@@ -2755,57 +2865,94 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         { id: 'pen',    label: 'Pen',    btn: 'penToolBtn' },
         { id: 'eraser', label: 'Eraser', btn: 'eraserToolBtn' },
         { id: 'shape',  label: 'Shape',  btn: 'shapeToolBtn' },
-        // v227. The fourth tool, and the first to arrive through the tray
-        // rather than through a fitting exercise: the shelf drops to
-        // [most recent][next][chevron] on its own and the row does not move.
         { id: 'select', label: 'Select', btn: 'selectToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/>'
-              + '<path d="M20 16v2a2 2 0 0 1-2 2h-2"/><path d="M8 20H6a2 2 0 0 1-2-2v-2"/>'
-              + '<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>' },
-        // v236. The fifth, and the tray earns its keep a second time: the row
-        // did not have to be re-fitted for it either. A fingertip dragging a
-        // line out of true is the whole tool in one glyph.
+              + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
+              + '<path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943'
+              + 'l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/>'
+              + '<path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/>'
+              + '<path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/>'
+              + '<path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/>'
+              + '<path d="M3 14v1"/></g></svg>' },
+        // LUCIDE `waves`. Still the flattest icon here by a distance and still
+        // exempt from the height floor, for the same reason the hand-drawn smear
+        // was: a warp is wide and low. Cleaner than the smear at 24px, which is
+        // the size that decides.
         { id: 'liquify', label: 'Liquify', btn: 'liquifyToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M3 16c3.5 0 4.5-7 8-7s3 5 6 5"/>'
-              + '<path d="M14.5 18.5c1.6-1.1 2.6-2.2 4.4-2.2 1.3 0 2.1.6 2.1 1.5 0 1.6-2.4 2.6-4.3 2.6"/>'
-              + '</svg>' },
-        // v226. Move artwork was in the PAGE BAR — a row about pages, holding a
-        // control that moves the drawing. It never belonged there: it takes a
-        // drag on the canvas, it has a mode, and it sits beside Select and
-        // Liquify in every way except where it was filed. Reclassifying it is a
-        // filing correction, not a redesign; the behaviour below is untouched.
-        // v230. The seventh, and the first that is not a drag at all -- one tap
-        // and a region changes. It produces STROKES like every other tool
-        // (lib/floodfill.js says why at length): the format has no fill
-        // primitive, adding one is a change the player must honour, and
-        // scanline runs cost two points each, so a fill needs neither.
-        // v232. Smudge and blur are the same sweep with two different verbs;
-        // lib/brushfield.js holds the arithmetic they share and the honest
-        // statement of what a stroke-format blur can and cannot do.
+              + 'stroke-width="2.13" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.94) translate(-12 -12)">'
+              + '<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/>'
+              + '<path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/>'
+              + '<path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/></g></svg>' },
+        // A HAND POINTING DOWN-LEFT, index finger extended, traced from the
+        // owner's reference (ink box 108x140, aspect 0.771).
+        //
+        // IT IS A SIMPLIFICATION, and deliberately. The reference has a thumb,
+        // THREE curled fingers, a wrist and an extended index. Drawn out in full
+        // at 24px the curls merge into each other and the whole thing is a dense
+        // blob -- rendered side by side, the faithful trace lost to this one at
+        // tray size and won at 4x, which is the wrong way round for a tool
+        // button. What survives is the silhouette: thumb hook, ONE curl, the
+        // extended finger, the back of the hand.
+        //
+        // The stroke is 1.8 rather than 2 for the same reason -- at 2 the gaps
+        // between the finger and the curl close up and the hand becomes a paddle.
+        //
+        // It replaces a fingertip-with-motion-lines that the owner called weird,
+        // and it was: that one read as a blocky mitten beside three dashes.
         { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M8 19c-2.2 0-3.5-1.4-3.5-3.2 0-2.6 3.4-4.3 6-6.4C13 7.3 14.6 5 16.5 5'
-              + 'c1.6 0 2.6 1.2 2.6 2.7 0 3.6-6.6 5.1-9 7.4"/>'
-              + '<path d="M6.2 20.4c1.6-.5 3.2-.8 4.9-.9"/></svg>' },
+              + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M14.6 2 17.9 3.3 19.8 10.8 16.2 15.4 12.4 16.3"/>'
+              + '<path d="M7.2 3.2 4.5 7.9a1.8 1.8 0 0 0 3.1 1.8"/>'
+              + '<path d="M10.4 8.2 7.6 13a1.8 1.8 0 0 0 3.1 1.8l.7-1.2"/>'
+              + '<path d="M14 8.8 8.3 18.7a2 2 0 1 1-3.46-2"/></svg>' },
+        // BLUR SHOULD LOOK BLURRY, which the concentric outlined rings it had did
+        // not -- they read as a target. A filled core inside progressively larger,
+        // fainter filled halos is what defocus actually looks like, and it
+        // survives 24px because it has no internal edges to lose.
+        //
+        // The one icon in the tray that is a soft form rather than a line
+        // drawing, and deliberately so: it is the only tool whose whole subject
+        // is softness. Do not "tidy" it into outlined rings again.
         { id: 'blur', label: 'Blur', btn: 'blurToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<circle cx="12" cy="12" r="3.2"/>'
-              + '<circle cx="12" cy="12" r="6.4" opacity=".55"/>'
-              + '<circle cx="12" cy="12" r="9.4" opacity=".28"/></svg>' },
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<circle cx="12" cy="12" r="9.2" fill="currentColor" stroke="none" opacity=".13"/>'
+              + '<circle cx="12" cy="12" r="6.6" fill="currentColor" stroke="none" opacity=".22"/>'
+              + '<circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" opacity=".45"/>'
+              + '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>' },
+        // A TIPPED CAN WITH A DROP BESIDE IT, drawn to the owner's reference.
+        //
+        // WIDE, NOT TALL. Measured off the reference, its ink box is 129x103 --
+        // an aspect of 1.25, because the drop sits BESIDE the can rather than
+        // under it. Every earlier bucket here was roughly square and the drop
+        // that preceded this one was 0.74; this is the third distinct proportion
+        // the Fill slot has taken, which is precisely why the size rule in
+        // verify_icons.py is an area band and not a per-axis one (v296).
+        //
+        // THE HANDLE IS A WIRE, and it is drawn thinner than everything else on
+        // purpose. A first attempt drew it as a closed loop, correctly matching
+        // the reference's shape, and at a 2px stroke the loop's hole filled in
+        // solid and it read as a blob. An open arc at 1.7 keeps the wire legible
+        // at 24px, which a faithful-but-solid loop does not.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M6.5 10.5 12 5l6.5 6.5a1.5 1.5 0 0 1 0 2.1l-4.9 4.9a1.5 1.5 0 0 1-2.1 0'
-              + 'l-4.9-4.9a1.5 1.5 0 0 1 0-2.1Z"/>'
-              + '<path d="M9.2 7.8 7 5.6"/>'
-              + '<path d="M20 16.5c0 1-.7 1.8-1.6 1.8s-1.6-.8-1.6-1.8c0-.9 1.6-2.8 1.6-2.8s1.6 1.9 1.6 2.8Z" '
-              + 'fill="currentColor" stroke="none"/></svg>' },
+              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+              + '<path d="M9.2 7.0L14.28 12.08a1.6 1.6 0 0 1 0 2.24L10.32 18.28a1.6 1.6 0 0 1 -2.24 0L4.12 14.32a1.6 1.6 0 0 1 0 -2.24Z"/>'
+              + '<path d="M5.9 9.9a3.9 3.9 0 0 1 5.5-5.5" stroke-width="1.7"/>'
+              + '<circle cx="10.8" cy="10.6" r="1.05" fill="currentColor" stroke="none"/>'
+              + '<path d="M19.4 9.6C19.4 9.6 20.27 11.95 21.55 13.52C22.18 14.33 22.3 15.05 22.3 15.2A2.9 2.9 0 0 1 16.5 15.2C16.5 15.05 16.62 14.33 17.25 13.52C18.53 11.95 19.4 9.6 19.4 9.6Z" fill="currentColor" stroke="none"/></svg>' },
+        { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
+              + '<path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/>'
+              + '<path d="M20 15.5a2.5 2.5 0 0 0-2.5-2.5h-11A2.5 2.5 0 0 0 4 15.5V17'
+              + 'a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1z"/>'
+              + '<path d="M5 22h14"/></g></svg>' },
         { id: 'artmove', label: 'Artwork', btn: 'artmoveToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -2833,6 +2980,21 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         const pop = document.getElementById('shapePop');
         if (pop) pop.hidden = (id !== 'shape') ? true
                             : (was === 'shape' ? !pop.hidden : false);
+        // THE STAMP SHELF IS NOT HANDLED HERE, and that is the point. setTool()
+        // itself derives the shelf's visibility from which tool is active, so
+        // EVERY route in opens it — shelf, tray, keyboard, a call from another
+        // feature — rather than the three that happen to pass through this
+        // config today. The shape picker above is the version that did not, and
+        // v237 is the bug report: the tray became a second route to Shape and
+        // the picker stopped appearing for anyone who reached it that way.
+        //
+        // All that is left here is the deliberate override: tapping the tool
+        // button while its own tool is already active puts the shelf away.
+        // Rederiving would immediately undo that, so it is applied after.
+        if (id === 'stamp' && was === 'stamp') {
+          const sp = document.getElementById('stampPop');
+          if (sp) sp.hidden = !sp.hidden;
+        }
       },
       closeTray: () => { if (_flipDrawerCtl) _flipDrawerCtl.open(null); },
     })
@@ -2892,7 +3054,20 @@ function setTool(t){
   // Fill is a TAP, so it wants a pointer rather than the custom brush ring —
   // 'none' hides the system cursor for a brush ring that fill never draws,
   // which left the canvas with no cursor at all under this tool.
-  pad.style.cursor = moveMode ? 'grab' : (flipTool === 'fill' ? 'crosshair' : 'none');
+  // THE SHELF IS THE STAMP TOOL'S UI, not a popover that happens to open near
+  // it. Without an armed stamp the tool does nothing at all, so "which stamp is
+  // loaded" has to stay on screen for as long as the tool is selected — and
+  // deriving that from flipTool here, rather than toggling it at whichever call
+  // site the user came through, is what makes a fourth route impossible to
+  // forget. (The shape picker is toggled at a call site and that is exactly how
+  // it went missing when the tray arrived; it is left as it is because its own
+  // routing is settled, not because this is the same problem twice.)
+  const _sp = document.getElementById('stampPop');
+  if(_sp){ _sp.hidden = (flipTool !== 'stamp'); if(!_sp.hidden) syncStampPop(); }
+  // Fill and Stamp are both TAPS and neither draws a brush ring, so 'none'
+  // would leave the canvas with no cursor at all under them.
+  pad.style.cursor = moveMode ? 'grab'
+    : ((flipTool === 'fill' || flipTool === 'stamp') ? 'crosshair' : 'none');
   if(typeof eraserCursor!=='undefined' && !erasing) eraserCursor.style.display='none';
   if(typeof brushCursor!=='undefined' && erasing) brushCursor.style.display='none';
   // Each ring belongs to one tool; leaving a tool must take its ring with it,
@@ -5627,6 +5802,161 @@ function doFill(p){
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 
+/* ---- stamps -----------------------------------------------------------------
+ * A stamp is the selection clipboard with the three properties an animator
+ * needs and a clipboard does not have: it survives the session, there is more
+ * than one of it, and it lands where you tap. lib/stamps.js holds the encoding,
+ * the budget and the reasoning; this half is the wiring.
+ *
+ * NOTHING ENTERS THE FORMAT. A placed stamp is ordinary stroke groups, exactly
+ * what selPaste() appends, so a Skribl made with stamps opens in a player that
+ * predates them. That is the same choice fill and the tween made, and for the
+ * same reason: a format change is the last resort.
+ *
+ * THE SHELF IS NOT IN THE DRAFT. It is its own localStorage key, so a stamp
+ * never rides in a Skribl the user shares, and so clearing a drawing does not
+ * clear the assets they built for it. It also means the shelf is subject to the
+ * origin quota alongside the draft -- v231's lesson, which lib/stamps.js
+ * answers with a byte budget rather than by hoping.
+ */
+/* Headroom under the server's MAX_POINTS_PER_FRAME (20,000) and
+   MAX_GROUPS_PER_FRAME (5,000), for liquify's reason stated at length above:
+   a tool that ADDS points can make a page unpostable, and it would do it
+   silently, at the moment the user tries to share. */
+const STAMP_POINT_CAP = 16000;
+const STAMP_GROUP_CAP = 4200;
+
+function stampsReady(){ return typeof SkriblStamps !== 'undefined'; }
+
+function loadStampShelf(){
+  stampShelf = stampsReady() ? SkriblStamps.load(null) : [];
+}
+
+/* Save the current selection into the shelf. The ONLY route in — a stamp is
+   made out of a selection and there is nowhere else it could come from, which
+   is why this button lives on the selection bar rather than in the shelf. */
+function stampSaveSelection(){
+  if(playing) return;
+  if(!stampsReady()){ chip('Stamps are unavailable'); return; }
+  if(!selSpans.length){ chip('Pick something first'); return; }
+  const st = SkriblStamps.fromRuns(selExtract(), { at: Date.now() });
+  // fromRuns returns null for an empty selection AND for one over MAX_POINTS,
+  // so the two are separated here rather than reported as one vague failure.
+  if(!st){ chip('That is too big for a stamp'); return; }
+  const why = SkriblStamps.fits(stampShelf, st);
+  if(why === 'big'){ chip('That is too big for a stamp'); return; }
+  // REFUSES, does not evict. Dropping the oldest stamp to fit a new one would
+  // lose work the user deliberately made, with no event they could connect it
+  // to — the amber-pill failure again.
+  if(why){ chip('Stamp shelf is full — delete one first'); return; }
+  // Newest first: the stamp you just made is the one you are about to place.
+  stampShelf.unshift(st);
+  if(!SkriblStamps.store(null, stampShelf)){
+    stampShelf.shift();
+    chip('No room to save that stamp');
+    return;
+  }
+  stampArmed = 0;
+  syncStampPop();
+  chip('Saved to stamps');
+}
+
+function stampDelete(i){
+  if(i < 0 || i >= stampShelf.length) return;
+  stampShelf.splice(i, 1);
+  if(stampsReady()) SkriblStamps.store(null, stampShelf);
+  // The armed index is a position in a list that just got shorter. Leaving it
+  // alone arms whatever slid into the gap, which is a different stamp than the
+  // one with the ring on it.
+  if(stampArmed === i) stampArmed = -1;
+  else if(stampArmed > i) stampArmed--;
+  syncStampPop();
+}
+
+/* Repaint the shelf from stampShelf. The single place the list becomes markup,
+   so there is no second copy of it to fall out of step. */
+function syncStampPop(){
+  const grid = document.getElementById('stampGrid');
+  const empty = document.getElementById('stampEmpty');
+  if(!grid || !stampsReady()) return;
+  grid.textContent = '';
+  if(empty) empty.hidden = stampShelf.length > 0;
+  const ground = bgColor;
+  stampShelf.forEach((st, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'stamp-cell';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'stamp-btn';
+    btn.setAttribute('aria-pressed', String(i === stampArmed));
+    btn.title = 'Place this stamp — tap the page';
+    btn.setAttribute('aria-label', 'Stamp ' + (i + 1) + ' of ' + stampShelf.length);
+    // Backing store at 2x so the thumbnail is not soft on a retina phone, which
+    // is the only device the shelf is ever really used on.
+    const cvs = document.createElement('canvas');
+    const box = 62, s = 2;
+    cvs.width = box * s; cvs.height = box * s;
+    const g = cvs.getContext('2d');
+    if(g){
+      g.fillStyle = ground;
+      g.fillRect(0, 0, cvs.width, cvs.height);
+      SkriblStamps.draw(g, st, { x:0, y:0, w:cvs.width, h:cvs.height, pad:8*s, bg:ground });
+    }
+    btn.appendChild(cvs);
+    btn.addEventListener('click', () => {
+      // Tapping the armed stamp DISARMS it, so there is a way back to "no
+      // stamp loaded" without leaving the tool.
+      stampArmed = (stampArmed === i) ? -1 : i;
+      syncStampPop();
+    });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'stamp-del';
+    del.textContent = '×';
+    del.title = 'Delete this stamp';
+    del.setAttribute('aria-label', 'Delete stamp ' + (i + 1));
+    del.addEventListener('click', (e) => { e.stopPropagation(); stampDelete(i); });
+    cell.appendChild(btn);
+    cell.appendChild(del);
+    grid.appendChild(cell);
+  });
+}
+
+/* Place the armed stamp centred on the tap.
+   ONE TAP IS ONE UNDO, the same contract doFill() states: the placement lands
+   as many stroke groups, which is right for the payload and wrong for the
+   editor, so the actionLog carries one entry that knows how many groups to
+   pop. */
+function doStamp(p){
+  if(playing) return;
+  if(!stampsReady()){ chip('Stamps are unavailable'); return; }
+  if(stampArmed < 0 || stampArmed >= stampShelf.length){
+    chip(stampShelf.length ? 'Pick a stamp first' : 'No stamps yet — select something and tap Stamp');
+    return;
+  }
+  const st = stampShelf[stampArmed];
+  const f = frame();
+  const runs = SkriblStamps.toRuns(st, p.x, p.y, stampScalePct / 100, performance.now());
+  let pts = 0;
+  for(const r of runs) pts += r.length;
+  // Checked BEFORE anything is appended. Appending and then trimming would
+  // leave a half-placed stamp on the page, which is worse than not placing it.
+  if(f.strokes.length + pts > STAMP_POINT_CAP
+     || f.strokeGroups.length + runs.length > STAMP_GROUP_CAP){
+    chip('This page is too full for that stamp');
+    return;
+  }
+  for(const r of runs){
+    for(const q of r) f.strokes.push(q);
+    f.strokeGroups.push(r.length);
+  }
+  redoStack.length = 0;
+  actionLog.push({ type:'fill', label:'Stamp', idx: idx, groups: runs.length });
+  if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
+  chip('Stamped');
+  render(); refreshThumb(idx); updateToolState(); scheduleSave();
+}
+
 function undoStroke(){
   invalidateClearUndo();
   if(playing) return;
@@ -5642,8 +5972,11 @@ function undoStroke(){
     const counts = tf.strokeGroups.splice(tf.strokeGroups.length - m.groups, m.groups);
     let total = 0; for(const c of counts) total += c;
     const pts = tf.strokes.splice(tf.strokes.length - total, total);
-    redoStack.push({ type:'fill', idx: m.idx, pts: pts, counts: counts });
-    chip('Fill undone');
+    redoStack.push({ type:'fill', label: m.label, idx: m.idx, pts: pts, counts: counts });
+    // Same entry shape, two producers: a stamp placement is also "N groups
+    // appended at the end, one action", so it reuses this branch rather than
+    // adding a second copy of it that would drift. Only the wording differs.
+    chip((m.label || 'Fill') + ' undone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
@@ -5771,8 +6104,8 @@ function redoStroke(){
     const tf = frame();
     for(const p of m.pts) tf.strokes.push(p);
     for(const c of m.counts) tf.strokeGroups.push(c);
-    actionLog.push({ type:'fill', idx: m.idx, groups: m.counts.length });
-    chip('Fill redone');
+    actionLog.push({ type:'fill', label: m.label, idx: m.idx, groups: m.counts.length });
+    chip((m.label || 'Fill') + ' redone');
     render(); refreshThumb(m.idx); updateToolState(); scheduleSave();
     return;
   }
@@ -5794,6 +6127,28 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
   // reaches too.
   setTool(b.dataset.tool);
 }));
+loadStampShelf();
+bindEl('sbStamp', 'click', ()=>{ if(!playing) stampSaveSelection(); });
+(function stampScaleKnob(){
+  const sl = document.getElementById('stampScale'), out = document.getElementById('stampScaleOut');
+  if(!sl) return;
+  const apply = ()=>{ stampScalePct = +sl.value || 100;
+                      if(out) out.textContent = stampScalePct + '%'; };
+  sl.addEventListener('input', apply);
+  apply();
+})();
+/* Escape, and NOTHING ELSE — deliberately unlike shapePopDismiss. That function
+   also closes on a click outside itself, which is right for a picker you use
+   once per drawing and wrong here twice over: choosing a stamp does not finish
+   with the shelf (you then place it, and the shelf is the only thing saying
+   which one is armed), and the click that places it lands on the canvas, which
+   is "outside". A shelf that vanished on the first placement would have to be
+   reopened for the second. Leaving the tool closes it; setTool() owns that. */
+(function stampPopEscape(){
+  const pop=document.getElementById('stampPop');
+  if(!pop) return;
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
+})();
 (function shapePopDismiss(){
   const pop=document.getElementById('shapePop');
   if(!pop) return;

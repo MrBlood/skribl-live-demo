@@ -142,12 +142,16 @@ with sync_playwright() as p:
     # answer is not "delete this one", because a ratchet nobody has to edit is a
     # ratchet that stops meaning anything.
     #
+    # ⚑ RATCHET RAISED, v238 — "stamp", and unlike artmove it IS a new
+    # capability. Both copies raised together this time.
+    #
     # artmove is NOT a new capability. Move artwork has shipped since v124 and
     # lived in the PAGE BAR — the one control in a row about pages that moved
     # the DRAWING. Read it as a control moving house.
     check("select is in Flip's tool registry",
           page.evaluate("() => window.SkriblFlipTools.list()")
-          == ["pen", "eraser", "shape", "select", "liquify", "smudge", "blur", "fill", "artmove"],
+          == ["pen", "eraser", "shape", "select", "liquify", "smudge", "blur", "fill",
+             "stamp", "artmove"],
           str(page.evaluate("() => window.SkriblFlipTools.list()")))
     check("a fourth tool pushed the shelf into overflow",
           page.evaluate("() => window.SkriblFlipTools.overflowing()"),

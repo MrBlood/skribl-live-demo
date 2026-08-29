@@ -317,6 +317,94 @@
   .shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
     min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
 
+  /* ---------- The autosave pill, when it has somewhere to go ----------
+     FLIP ONLY. #autosaveStatus is one shared element across Pad, Flip and the
+     player, and only Flip can lose media bytes it then has to offer back, so
+     the interactive half lives here rather than in styles.css — which also
+     keeps player.css, generated FROM styles.css, out of it entirely.
+
+     pointer-events IS THE WHOLE FIX. The base pill sets `pointer-events: none`
+     so a status that happens to sit over a control cannot eat the tap meant for
+     it. Perfectly right while the pill is only a status, and it is exactly why
+     making it clickable needed a CSS change and not just a listener: the click
+     never reached the element. */
+  .autosave-status.actionable { pointer-events: auto; cursor: pointer; }
+  /* An amber pill that says "tap to re-add" has to LOOK tappable, or it reads
+     as a status that mysteriously responds to being poked. A ring in its own
+     warn colour, so the affordance and the severity are the same signal. */
+  .autosave-status.actionable { box-shadow: 0 0 0 1px var(--warn) inset; }
+  .autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); }
+  .autosave-status.actionable:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
+  /* NOT a transform. pillfit LIFTS the pill with `transform: translateY(...)`
+     when it would otherwise sit on the tool row — on a 390px phone that is a
+     209px shift — and this file loads after styles.css, so a `transform` here
+     replaces the lift rather than composing with it. The pill then jumps back
+     down the moment it is pressed, out from under the finger pressing it.
+     Found by a click that timed out: the element kept moving away mid-click,
+     which is also precisely what it would do to a thumb. */
+  .autosave-status.actionable:active { filter: brightness(1.25); }
+  /* pillfit fades the pill to nothing when it cannot lift it clear of a bar.
+     Without this an INVISIBLE pill would still be taking taps in the corner of
+     the screen — the exact bug `pointer-events: none` was there to prevent,
+     reintroduced by the line that turns it back on. */
+  .autosave-status.actionable.blocked { pointer-events: none; }
+
+  /* ---------- The stamp shelf ----------
+     Anchored exactly like .shape-pop (styles.css) and for the same reason: it
+     opens FROM its tool button, so it has to hang off .flip-tools, which is
+     position: relative. .tool-group is overflow: hidden and would clip it.
+     Its own class rather than a second .shape-pop, because the two differ in
+     the one dimension that matters -- this one holds a grid that grows. */
+  .stamp-pop { position: absolute; bottom: calc(100% + 8px); left: 8px; z-index: 45;
+    width: min(292px, calc(100vw - 24px));
+    background: var(--surface-pop); border: 1px solid var(--hairline, #252a35);
+    border-radius: 14px; padding: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.55); }
+  /* Paired with the rule above: an explicit display defeats [hidden], which
+     this codebase has been bitten by three times. */
+  .stamp-pop[hidden] { display: none; }
+  .stamp-pop::after { content: ''; position: absolute; top: 100%; left: 64px;
+    border: 7px solid transparent; border-top-color: var(--surface-pop); }
+  /* auto-fill, not auto-fit: with one stamp on the shelf auto-fit stretches it
+     to the full width and a single stamp looks like a different control than
+     six do. */
+  .stamp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+    gap: 6px; max-height: 208px; overflow-y: auto; }
+  .stamp-cell { position: relative; }
+  .stamp-btn { display: block; width: 100%; aspect-ratio: 1; padding: 0;
+    background: var(--surface-2, rgba(255,255,255,.04));
+    border: 1px solid var(--hairline); border-radius: 10px; cursor: pointer;
+    overflow: hidden; transition: outline-color .12s ease; }
+  .stamp-btn canvas { display: block; width: 100%; height: 100%; }
+  .stamp-btn:hover { border-color: var(--ui-line); }
+  /* The ARMED stamp, and it has to be unmistakable: the shelf stays open while
+     you place, so between two taps the only thing telling you which stamp is
+     loaded is this ring.
+     OUTLINE, not an inset box-shadow. The canvas is width/height 100% of the
+     button, so it paints OVER an inset shadow and the ring was invisible on
+     every stamp — three slots all reading as armed, which is worse than none
+     of them reading as armed. An outline paints above the content box. */
+  .stamp-btn[aria-pressed="true"] { border-color: var(--ui-hi);
+    outline: 2px solid var(--ui-hi); outline-offset: -2px; }
+  /* Small, but not below the 24px the rest of the app treats as the floor for
+     a destructive control -- the tap that deletes a stamp must not be one a
+     thumb finds by accident while reaching for the stamp under it. */
+  .stamp-del { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px;
+    display: grid; place-items: center; padding: 0; line-height: 1;
+    font-size: 13px; font-weight: 700; color: var(--text-primary);
+    background: var(--surface-pop); border: 1px solid var(--ui-line);
+    border-radius: 50%; cursor: pointer; opacity: .5; transition: opacity .12s ease; }
+  /* ALWAYS PRESENT, dimmed rather than hidden. Revealing it on hover is the
+     tidier design and it makes the only route to deleting a stamp unreachable
+     on a touch screen, which is the device the shelf is actually used on. A
+     `@media (hover: none)` escape hatch would cover the phone and still leave
+     the control invisible on anything that reports both, so the control is
+     simply always there and quiet until you reach for it. */
+  .stamp-cell:hover .stamp-del, .stamp-del:hover, .stamp-del:focus-visible { opacity: 1; }
+  .stamp-empty { margin: 4px 2px 2px; font-size: 11.5px; line-height: 1.45;
+    color: var(--text-muted); }
+  .stamp-empty[hidden] { display: none; }
+  .stamp-empty b { color: var(--text-primary); font-weight: 650; }
+
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(var(--glass-base-rgb), .55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
     scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--wash-rgb), .05); }

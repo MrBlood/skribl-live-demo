@@ -2574,3 +2574,376 @@ do, and there is no state where a legal input produces an illegal shape.
 validation belongs to the thing that CAN see it.** A widget-level max is a
 promise about a relationship it has no access to, and it will be wrong in
 exactly the cases nobody tried.
+
+## v283 -- Derive a mode's UI from the mode, do not toggle it at the call site
+
+The stamp shelf has to be on screen for as long as the Stamp tool is selected:
+without an armed stamp the tool does nothing, so "which stamp is loaded" is not
+decoration, it is the tool's only state.
+
+The shape picker, one control along, is the version that toggles. It opens in
+the tool-shelf config, which is where the shelf button and the overflow tray
+both converge -- and that was already a repair. The picker originally opened
+from a click handler bound to the shelf, which was complete until v227 put a
+tray in front of it; after that, choosing Shape from the tray never opened the
+picker and Shape silently stayed on whatever kind it had. That reached the live
+demo as "shape is not giving a choice, just gives you line".
+
+Writing stamps the same way passed every assertion I wrote by hand and failed
+the first one the suite ran, because the suite reached the tool by a route the
+config does not sit on. Two routes had become three.
+
+So the shelf's visibility is DERIVED, in `setTool()`, from which tool is active:
+`hidden = (flipTool !== 'stamp')`. There is no route that can forget it, because
+there is nothing to remember. The only thing left at the call site is the
+deliberate override -- tapping the tool button while its own tool is already
+active puts the shelf away -- and that is applied after the derivation rather
+than instead of it.
+
+**A UI that belongs to a mode should be computed from the mode, not switched on
+by whoever happened to enter it.** Every new entry point is another place to
+forget, and the forgetting is silent: the feature does not break, it just is not
+there for the people who arrived the other way.
+
+## v284 -- A shelf that only grows needs a byte budget, not a slot count
+
+localStorage is ONE allowance, about 5 MB, for the whole origin. v231 has the
+scar: Flip's draft grew to 2.7 MB of it and the Pad's autosave -- an unrelated
+feature on an unrelated page -- started failing, with nothing in either feature
+mentioning the other.
+
+A stamp shelf is that trap by construction, because it only ever grows: every
+stamp you save stays until you delete it. Capping the number of slots is the
+obvious defence and it is a proxy for the thing that matters and a bad one --
+one traced outline is worth fifty doodles. So the cap is on BYTES, the encoding
+is compact enough that the budget buys a useful number of stamps, and the shelf
+lives in its own key so a shelf that will not write can never take the drawing
+down with it.
+
+It also **refuses rather than evicting**. Dropping the oldest stamp to fit a new
+one is the friendlier-looking design and it is the amber-pill failure over
+again: the user's work disappearing with no event they can connect it to. A
+stamp is something they deliberately made. Losing one has to be their decision,
+so a full shelf says it is full.
+
+**When a store only grows, decide what happens at the ceiling before you build
+it, and measure the ceiling in the unit the resource is actually rationed in.**
+
+## v285 -- The fixture is the assertion; two mutations proved it twice in one file
+
+Every assertion in `verify_stamps.py` passed on the first build. Two of them
+also passed on a deliberately broken one.
+
+The undo contract -- one tap is one undo, however many stroke groups the
+placement produced -- was tested with a stamp made from a SINGLE stroke. On a
+build that recorded `groups: 1` instead of the real count, one group and the
+real count are the same number, so the assertion agreed with the bug.
+
+The no-op contract -- a tap with nothing armed places nothing -- was tested
+against an EMPTY shelf. On a build that helpfully armed the first slot for you,
+there was no first slot to arm.
+
+Neither is a missing assertion. Both are assertions whose fixture could not tell
+the two answers apart. The fixes are a two-stroke drawing and a shelf that has a
+stamp on it, and the reasoning is now written into the fixture helper rather than
+next to the check, because that is where the next person will change it.
+
+**An assertion is only as strong as the case it runs on, and the weakest fixture
+is the one where the right answer and the wrong answer coincide.** Mutating the
+code is the only way to find those; reading the test will not do it, because the
+test reads correctly.
+
+## v286 -- A warning is only intolerable when it has nowhere to go
+
+`verify_amber.py` was FAILING on `main`, on one assertion, and I caused it. It
+passed at v234 and my v235 change broke it -- confirmed by checking out v234's
+`flip.js` and watching the assertion go green again. It went unnoticed for three
+merges because each was reviewed against the suites its own diff touched.
+
+**What v235 was answering.** A live report: the amber "Saved without media" pill
+sitting permanently on a drawing, coming back on every save, with no way to
+clear it. v235 made the save status describe only the write it belongs to, so
+the no-media path reports plain "Saved".
+
+**What that cost.** Reload a session whose track genuinely never saved and the
+pill says "Saved" with the track gone. And there is nothing in the code to tell
+the two cases apart: in the live report and in the failing test the draft is
+IDENTICAL -- `mediaOmitted` set, a pending record restored, no bytes. Either the
+warning is shown or the loss is silent.
+
+**So the fix was never about which state to show.** What made the old amber
+intolerable was not that it was wrong. It was that it went nowhere: the pill
+said media was missing, and the only controls that could do anything -- Re-add
+and Dismiss, on the pending card -- lived inside a shut drawer, measuring 0x0
+until something opened it. Nothing on screen pointed there. v235 removed the
+warning instead of the dead end.
+
+The amber is back and the pill is now the route: it reads "Media missing -- tap
+to re-add", it is a control while and only while there is something to re-add,
+and tapping it opens the drawer holding the card. Dismissing clears the record,
+which schedules a save, which reports plain "Saved" -- the warning ends because
+the situation did. Two wordings, because an amber raised when the media is still
+LOADED (no store to spill to) has nothing to re-add and must not promise
+otherwise.
+
+**A true warning the user cannot act on trains them to ignore the colour.** The
+repair for that is a route, not silence. Deleting the warning makes the screen
+calmer and the product worse, and it is the easier change, which is why it is
+the one that gets made.
+
+Three things this needed that were invisible from the JS:
+
+* `pointer-events: none` on the base pill. Correct -- a floating status must not
+  eat a tap meant for the control beneath it -- and it meant a click listener
+  did nothing at all, because the event never reached the element.
+* `transform` collides. `pillfit` LIFTS the pill with `translateY` (209px on a
+  390px phone); an `:active { transform: scale(.97) }` in a later stylesheet
+  REPLACES that lift, so pressing the pill dropped it 209px out from under the
+  finger pressing it. Found by a click that timed out, which is the same thing a
+  thumb would have experienced.
+* `typeof x !== 'undefined'` does not shield a `let` in its temporal dead zone;
+  it throws the identical ReferenceError. The pending records had to move up to
+  the media state, not acquire a guard that does not guard.
+
+## v287 -- A mutation caught is not a mutation reported
+
+Six mutations of the fix above were all caught. Four of them were caught as
+`ERROR -- crashed before reporting`, with no assertion named.
+
+The cause is that Playwright waits for actionability before clicking. Against a
+pill still carrying `pointer-events: none`, or a Dismiss button sitting 0x0 in a
+drawer that never opened, `page.click` does not fail fast -- it blocks for the
+full default timeout and raises. Both of those are exactly the states the
+section is testing for, so the defect under test was also the thing destroying
+the report of it.
+
+A crash and a failure are not the same signal. A crash reads as an
+infrastructure problem, it names nothing, and this project has a section in
+START-HERE about suites whose failure could not travel through the reporting
+channel. The clicks now go through one guarded helper with a short timeout that
+turns "was never actionable" into an ordinary FAIL with a sentence.
+
+**When the thing you are testing for is also a thing that can wedge your test
+harness, the guard against wedging IS the assertion.** Verify a suite by
+mutation, then look at HOW it failed, not just that it did.
+
+
+## v288 -- Measure the thing the eye is responding to, not the thing that is easy to measure
+
+"Fill is a weak icon" turned out to be measurable. Rasterise every tray glyph and
+read its ink bounding box off the alpha channel: Fill filled 15.0x16.3 of its 24
+box where every other tool sat near 19x18. It was the smallest thing in the tray,
+and it was a hollow diamond whose handle was a 3px stub, so at tray size it read
+as a tilted square with a dot.
+
+The measurement had to be of the RENDERED icon. Path coordinates say nothing
+about how much of the box a drawing occupies -- stroke width, caps, joins and
+fills all add ink outside the geometry, and two icons with identical viewBoxes
+can differ by a third in apparent size. Reading the SVG source would have found
+nothing.
+
+**Two numbers were available and only one of them was the answer.** Ink EXTENT
+tracked the complaint exactly. Ink COVERAGE -- the share of the box painted --
+did not, and following it did damage: Stamps was "improved" from 24.3% to 19.7%
+coverage and came out visibly worse, because the weight being removed was a solid
+base bar holding the icon together. Two glyphs at the same coverage look nothing
+alike when one is a thin outline over a wide area and the other is a small solid
+mass. The suite reports coverage and refuses to assert it.
+
+## v289 -- An exemption needs a sentence, or the band eats the drawing
+
+Liquify is the flattest icon in the tray by a wide margin: 20 wide, 13.5 tall,
+against an ~18 norm. By the band it is the worst offender in the set. It is also
+correct -- it is a smear, and a smear is wide and low.
+
+I redrew it to fill the box's height. The number improved. The icon became a
+caret with a detached curl, and I only found that by rendering it next to the old
+one and looking. The metric was satisfied and the drawing was worse, so the
+drawing won and the redraw was reverted.
+
+Which leaves a suite whose band Liquify fails. The fix is not to widen the band
+until it passes -- that would re-admit the 15x16 Fill this all started with. It
+is exempt BY NAME, in a dict whose values are the REASON, printed in the
+assertion's detail. The next person to run this finds "a smear is wide and low;
+the tall redraw read as a caret" instead of a red line inviting them to make the
+same change I did.
+
+**A numeric band over a design decision will eventually be satisfied by someone
+who cannot see the design.** Carry the reason in the exemption, in the output,
+where it will be read at the moment it is needed.
+
+## v290 -- At 24px only the silhouette survives, so judge at 24px
+
+The first repair of the Fill icon grew it from 15.0x16.3 to 19.8x18.8 -- into the
+band, measurably fixed -- and the owner said "there's got to be a better one".
+They were right. The size was never the whole complaint. The handle was a 3px
+stub, and a stub does not become a handle by being scaled.
+
+Fifteen candidates were drawn and rendered side by side at 4x AND at the 24px
+the tray actually uses. The 4x row is nearly useless for deciding: a tipped can
+with an open elliptical rim, a bucket pouring into a pool, a region with a drop
+falling into it all read beautifully at 4x and turned to mush at 24px. The pour
+became a desk lamp. The open rim became a rolling pin.
+
+What survives 24px is the SILHOUETTE and nothing else. Which is why the winner
+kept the original diamond-can outline -- already the strongest small shape in the
+set -- and spent every change on the two things that were not legible: the stub
+became a quarter-arc handle, and the drip grew until it stayed a separate shape
+instead of merging into the can's corner.
+
+Solid-bodied variants read better still in isolation, and at ~40% ink coverage
+were twice the weight of anything else in the tray. An icon is not judged alone;
+it is judged in the row it sits in.
+
+**Render every candidate at the size it will actually be used, and decide there.
+A comparison at 4x is a comparison of drawings, not of icons.**
+
+## v291 -- A shared icon spec on paper is not a shared scale in practice
+
+The tool glyphs are 24x24, 2px stroke, round caps and joins. That is Lucide's
+spec exactly, so dropping two Lucide icons in should have been a copy and paste.
+Measured, it was not: Lucide draws to the full box and `paint-bucket` and `stamp`
+came in at 22.0-22.2 units of ink against a set that sits near 19. Fifteen per
+cent larger, and correspondingly heavier, than the eight glyphs beside them.
+
+Nothing in either SVG says so. Same viewBox, same stroke width, same joins --
+and a visibly different size on screen, because "how much of the box the drawing
+occupies" is not a property either file declares. It is only visible if you
+rasterise and measure, which is the same lesson as v288 arriving from a new
+direction.
+
+Each is now scaled 0.88 about the box centre with its authored stroke raised to
+2.27, so the RENDERED stroke lands back on 2px. The drawing is Lucide's,
+untouched; only its size in our box is ours, and the attribution says so rather
+than claiming the icons are unmodified.
+
+**Matching a spec is not the same as matching a look. Verify the rendering, not
+the declaration.**
+
+## v292 -- Two exemptions is a smell, so make the exemption cost something
+
+`verify_icons.py` now excuses Liquify from the height floor (a smear is wide and
+low) and Stamps from the width floor (a rubber stamp is tall and narrow; Lucide's
+is 18:22 and no uniform scale satisfies both the width floor and the height
+ceiling). Two exemptions in a ten-icon band, the second added to admit a change
+I was making, is exactly the shape of a guard being quietly dismantled.
+
+So the exemption was given a price: an area floor that applies to every icon,
+exempt or not. A glyph excused on one axis still has to occupy a comparable
+amount of the box. Mutation-tested three ways -- the original weak Fill still
+fails, an exempted icon shrunk to nothing still fails, and raw unscaled Lucide
+still fails.
+
+The margin is thin and is written down rather than rounded to something tidier:
+Liquify at 270 is the smallest thing that must pass, the original Fill was 245.
+Which is why the comment says outright that this is a BACKSTOP and not the
+guard -- the per-axis floors do the real work, and that Fill failed both of them
+too.
+
+**When you widen a rule to admit your own change, add a rule that the change
+still has to pass.** An exemption that costs nothing is a deletion with extra
+steps.
+
+## v293 -- A mockup is not a bill of materials
+
+The icon options came as two images: a set of tray mockups and a grid of forty
+named Lucide icons with seven recommended picks. The names were checkable, so
+they got checked against lucide-static 1.37.0.
+
+Fourteen of the forty do not exist. `pen-nib`, `hand-move`, `move-2`,
+`paint-bucket-icon`, `square-fill`, `circle-fill`, `bucket`, `swirl`,
+`wavy-lines`, `ripple`, `distort`, `blur`, `seal`, `picture-frame` -- including
+four of the seven RECOMMENDED picks. And the glyph pictured for Liquify was a
+finger with ripples while the name under it was `waves`, which in Lucide is three
+wavy lines: the picture and the name were different icons.
+
+The two that mattered were real, and both shipped. But a shopping list that is a
+third fiction would have produced a pile of 404s and a quiet substitution of
+whatever was nearest.
+
+**Check names against the package, not the mockup.** It took one `npm pack` and
+a loop.
+
+## v294 -- The shape of the thing constrains the shape of the rule
+
+Fill became a drop, on the owner's call, and a drop does not fit a band derived
+from ten square-ish icons. A teardrop that reads as a teardrop is roughly 17:22 --
+a sharp point over a round body -- against a band that wants at least 17.5 wide
+and at most 21 tall.
+
+The first attempt widened it to fit. The apex blunted, and it came out looking
+like a peach. The band was satisfied and the icon was no longer a drop.
+
+What fixed it was inverting the order: the APEX is the icon, so the control
+points were set first to keep the tangent leaving the point steep, and the
+proportions were tuned around that until 18.5x20.8 fell out. Inside the band
+without touching the band, and still unmistakably a drop.
+
+That mattered because the alternative was a third named exemption, three weeks
+into a suite with two. Two exemptions describe a set with two genuinely
+non-square members. Three, each added to admit the change being made at the time,
+describes a rule that no longer constrains anything.
+
+**When a design constraint and a numeric rule collide, try re-deriving the design
+from its essential feature before touching the rule.** The rule is often fine and
+the drawing was simply built in the wrong order.
+
+## v295 -- Blur should look blurry
+
+The Blur glyph was three concentric outlined rings, which reads as a target. The
+reference sets proposed a dashed circle, which reads as a selection marquee.
+Neither is blurry.
+
+It is now a filled core inside progressively larger, fainter filled halos --
+which is what defocus actually looks like, and which survives 24px precisely
+because it has no internal edges to lose. It is the only soft form in a tray of
+line drawings, and that is not an inconsistency to tidy away: it is the only tool
+whose entire subject is softness.
+
+**An icon for a visual effect should exhibit the effect, not diagram it.**
+
+## v296 -- Three exceptions is not three exceptions, it is a wrong rule
+
+`verify_icons.py` policed icon size with a per-AXIS band: width 17.5-22.5, height
+17.0-21.0, derived from ten roughly square glyphs. Then three icons in a row
+turned out to be legitimately non-square, and each needed a named exemption:
+
+    Liquify  20.0 x 13.5   a warp is wide and low
+    Stamps   16.5 x 20.0   a rubber stamp is tall and narrow
+    Fill     16.0 x 21.5   a drop is a sharp point over a round body
+
+v292 already called two exemptions "the shape of a guard being dismantled" and
+answered it by making the exemption cost something. That was treating the
+symptom. The third one is the diagnosis: the per-axis floors were never the rule,
+they were a PROXY for it. What the band means is "occupies a comparable amount of
+the box", and none of those three is out of line on that -- 270, 330 and 344
+against a set running 324 to 429.
+
+So the rule now says what it means. An AREA band does the work at both ends, and
+the per-axis limits are reduced to what they can honestly police: collapse in one
+dimension, and overflow of the 24 box. All three exemptions are gone.
+
+Verified by mutation that the new rule is not merely looser: the original 15.0 x
+16.3 Fill still fails (245, under the floor), an icon inflated to fill the box
+still fails (484, over the ceiling), and a 3 x 21 splinter still fails on the
+axis floor that area alone would admit.
+
+**A special case is a fact about your rule, not about the world. One is a
+detail; three in a row is the rule telling you it is measuring the wrong thing.**
+
+## v297 -- Measure the reference instead of squinting at it
+
+The owner sent a photograph of a drop with no text. The obvious reading is "make
+it this", and the obvious next step is to eyeball it.
+
+Instead: threshold the image, take the ink bounding box, get 116 x 158, aspect
+0.734. The shipped drop was 0.889. That is not a nuance, it is a different shape
+-- and the number immediately said what the eyeballing could not, which is that
+matching it at the old band's height gives a width of 15.3, narrower than the
+icon everybody agreed was too small.
+
+That one number turned "they want a slightly different drop" into "this shape
+cannot satisfy that rule", which is what produced v296.
+
+**A reference image is data. Measure it.** It costs one script and it converts an
+argument about taste into an arithmetic fact everyone can check.

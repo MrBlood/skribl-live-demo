@@ -193,6 +193,13 @@ BATCHES = [
     ["verify_fill.py"],
     ["verify_input.py"],
     ["verify_smudgeblur.py"],
+    # v238. Stamps drive a real canvas twice over — placements onto the pad and
+    # a thumbnail render per shelf slot — so they get the same solitary batch
+    # the other canvas suites do.
+    ["verify_stamps.py"],
+    # v239. Rasterises every tray glyph and measures its ink box, so it wants a
+    # page to itself like the other canvas suites.
+    ["verify_icons.py"],
 ]
 
 

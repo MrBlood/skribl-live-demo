@@ -410,13 +410,26 @@ with sync_playwright() as p:
           f"{late} — a write that has not landed in twelve seconds is not one a "
           "reload can count on, and 'Saving…' never fades on its own")
 
-    # A PENDING RECORD IS A MEMO ABOUT A PAST LOSS, NOT A PROPERTY OF THIS SAVE.
-    # v229 showed amber whenever pendingPhotoMeta existed. With no media on the
-    # page, this save omitted NOTHING, so the amber described something that did
-    # not happen — and because serializeFlip round-trips the record through the
-    # draft, a reload brought it straight back. The control that clears it lives
-    # in a drawer and measures 0x0 until opened, so the warning had no reachable
-    # resolution. That is how a user learns to ignore the colour amber.
+    # ⚑ ASSERTION REVERSED, v238, FLAGGED FOR THE OWNER — and it is MY OWN
+    # assertion from v235 that is being reversed, on the owner's decision, not a
+    # ratchet raised to fit a commit.
+    #
+    # v235 read the pending record as "a memo about a PAST loss, not a property
+    # of this save", and asserted the pill stays green. That framing does not
+    # survive: the record means the session is missing media it expects, right
+    # now, and v235's own change made a restored session say "Saved" with the
+    # track gone. verify_amber has been failing on main ever since.
+    #
+    # What was actually wrong with the v229 amber was never that it was untrue.
+    # It was that it went NOWHERE — the only controls that could resolve it,
+    # Re-add and Dismiss, sat 0x0 inside a shut drawer with nothing pointing at
+    # them. v238 makes the pill that route, so the warning is true AND has an
+    # exit, and dismissing the record ends the amber because it ends the
+    # situation. verify_amber owns the route; this owns the status.
+    #
+    # THE SECOND CHECK BELOW IS UNCHANGED and is the one that still constrains
+    # the design either way: whatever the pill says, the record must survive, or
+    # the recovery goes with it.
     pg4 = ctx2.new_page()
     pg4.goto(f"{BASE}/flip", wait_until="load")
     pg4.wait_for_timeout(900)
@@ -433,11 +446,11 @@ with sync_playwright() as p:
     pg4.mouse.up()
     pg4.wait_for_timeout(2500)
     stale = pg4.evaluate("() => document.getElementById('autosaveStatusText').textContent")
-    check("Flip: a past media loss does not make THIS save report a loss",
-          stale == "Saved",
-          f"{stale!r} with no photo on the page — the save omitted nothing; "
-          "the pending record is a memo so the image can be re-added, not a "
-          "property of this write")
+    check("Flip: a save with media still MISSING says so, and offers the way back",
+          stale == "Media missing — tap to re-add",
+          f"{stale!r} with a pending record standing — a session that cannot "
+          "produce the file it says it has is not 'Saved', and the wording has "
+          "to carry the action or the amber is the dead end that got it removed")
     check("Flip: ...and the record itself is kept, so re-adding still works",
           pg4.evaluate("() => !!pendingPhotoMeta") is True,
           "scoping the pill must not throw away the recovery affordance")

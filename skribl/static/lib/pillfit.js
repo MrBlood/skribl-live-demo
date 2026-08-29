@@ -65,7 +65,7 @@
      instead — which is right: a transient status has no business competing
      with a menu the user just opened, and a WARNING still refuses to fade. */
   var TARGETS = ['.flip-tools', '.toolbar', '#pagebar', '#selbar', '#strip',
-                 '.addcol', '#toolTray', '#shapePop'];
+                 '.addcol', '#toolTray', '#shapePop', '#stampPop'];
   var WARNING = ['failed', 'partial'];
 
   function isWarning(el) {

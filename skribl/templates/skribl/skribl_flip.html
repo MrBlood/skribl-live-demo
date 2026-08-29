@@ -114,6 +114,10 @@
         <button type="button" class="pb" id="sbFlipV" title="Flip top to bottom" aria-label="Flip top to bottom"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></span><span class="pb-tx">Flip</span></button>
         <button type="button" class="pb" id="sbDup" title="Duplicate the selection in place" aria-label="Duplicate selection"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span><span class="pb-tx">Copy</span></button>
         <button type="button" class="pb" id="sbCut" title="Cut the selection — paste it on any page" aria-label="Cut selection"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8 7.5 20 18"/><path d="M8 16.5 20 6"/></svg></span><span class="pb-tx">Cut</span></button>
+        {# SAVE, not place. The tray places; this is the only route INTO the
+           shelf, and it lives here because a stamp is made out of a selection
+           and nowhere else. #}
+        <button type="button" class="pb" id="sbStamp" title="Save the selection as a stamp" aria-label="Save selection as a stamp"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5h6a2 2 0 0 1 2 2v3.2c0 1-.6 1.9-1.5 2.3l-.6.3c-.6.3-.9.9-.9 1.5V15H10v-1.2c0-.6-.3-1.2-.9-1.5l-.6-.3A2.6 2.6 0 0 1 7 9.7V6.5a2 2 0 0 1 2-2Z"/><rect x="4.5" y="17" width="15" height="3" rx="1"/></svg></span><span class="pb-tx">Stamp</span></button>
         <button type="button" class="pb" id="sbPaste" title="Paste onto this page" aria-label="Paste" hidden><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M10 4V3h4v1"/><path d="M10 11h4M10 15h4"/></svg></span><span class="pb-tx">Paste</span></button>
         <button type="button" class="pb mb-done" id="sbDone" title="Finish" aria-label="Finish with the selection"><span class="pb-tx">Done</span><span class="pb-ic" aria-hidden="true">&#10003;</span></button>
       </div>
@@ -162,6 +166,25 @@
          second place. Anchored like #shapePop above — a child of .flip-tools
          (position: relative) rather than of .tool-group, which is
          overflow: hidden and would clip it. #}
+      {# THE SHELF. Anchored like #shapePop — a child of .flip-tools, which is
+         position: relative, rather than of .tool-group, which is
+         overflow: hidden and would clip it. Empty in the served HTML: the
+         shelf lives in localStorage and syncStampPop() is the single place
+         that turns it into markup. #}
+      <div class="stamp-pop" id="stampPop" role="dialog" aria-label="Stamps" hidden>
+        <div class="stamp-grid" id="stampGrid"></div>
+        <p class="stamp-empty" id="stampEmpty" hidden>Pick something with Select, then tap <b>Stamp</b> to save it here.</p>
+        {# One knob, and it earns its row: a stamp placed at exactly one size is
+           an asset you can reuse once. Scaling the STROKE WIDTHS with the
+           geometry is what makes a small copy read as a small drawing rather
+           than as the same drawing with a fatter pen. #}
+        <div class="shape-knob" id="stampSizeRow">
+          <label for="stampScale">Size</label>
+          <input type="range" id="stampScale" min="25" max="200" step="5" value="100"
+                 aria-label="Stamp size, as a percentage">
+          <output id="stampScaleOut">100%</output>
+        </div>
+      </div>
       <div class="tool-tray" id="toolTray" role="dialog" aria-label="All tools" hidden></div>
       {# ORDER MATCHES PAD: tools, then undo/redo, then colour and media. Flip
          had colour and media first, so the two editors read left-to-right
@@ -176,7 +199,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a2 2 0 0 1 0-2.8l9.6-9.6a2 2 0 0 1 2.8 0l5.6 5.6a2 2 0 0 1 0 2.8L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
           <span class="tool-btn-label">Eraser</span>
         </button><button type="button" class="tool-btn" id="shapeToolBtn" data-tool="shape" title="Draw a line, rectangle or ellipse &mdash; pick which in the Draw drawer; hold Shift for square/circle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="11" height="11" rx="1"/><circle cx="15.5" cy="8.5" r="5"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
           <span class="tool-btn-label">Shape</span>
         </button>{# The shelf's overflow cell. HIDDEN while every tool fits on the
           shelf, which today is all three of them — so this changes nothing you
@@ -400,6 +423,7 @@
   <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/stamps.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/mirror.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/brushes.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/colorselect.js') }}" defer></script>
