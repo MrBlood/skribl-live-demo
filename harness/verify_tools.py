@@ -653,7 +653,7 @@ with sync_playwright() as _b8:
     _p8.click("#recordBtn"); _p8.wait_for_timeout(300)
 
     _geos = {}
-    for _kind in ("line", "rect", "ellipse"):
+    for _kind in ("line", "rect", "ellipse", "poly"):
         _p8.evaluate("(k) => document.querySelector("
                      "'#shapeSeg [data-shape=\"' + k + '\"]').click()", _kind)
         _p8.wait_for_timeout(150)
@@ -729,7 +729,7 @@ with sync_playwright() as _b8:
     _p8f.goto(BASE + "/flip", wait_until="load"); _p8f.wait_for_timeout(900)
     _p8f.evaluate("() => localStorage.clear()")
     _p8f.reload(wait_until="load"); _p8f.wait_for_timeout(900)
-    for _k in ("line", "rect", "ellipse"):
+    for _k in ("line", "rect", "ellipse", "poly"):
         _p8f.evaluate("(k) => document.querySelector("
                       "'#shapeSeg [data-shape=\"' + k + '\"]').click()", _k)
         _p8f.wait_for_timeout(150)
@@ -740,6 +740,15 @@ with sync_playwright() as _b8:
               _fg and _fg["n"] > 20 and _fg["firstStart"] and _fg["sumGroups"] == _fg["total"],
               f"{_fg['n'] if _fg else 0} pts, groups sum {_fg['sumGroups'] if _fg else 0} "
               f"vs {_fg['total'] if _fg else 0} strokes")
+    # SELECT THE KIND EXPLICITLY. This used to rely on the loop above having
+    # ended on 'ellipse', which was true only because 'ellipse' happened to be
+    # last in the list. Adding 'poly' to that list moved the goalposts and this
+    # started drawing a shifted POLYGON — a real shape, a real bbox, and a
+    # failure that reads like a geometry bug rather than a stale precondition.
+    # A test that depends on the ORDER of a list somebody else maintains is a
+    # test waiting to mean something different.
+    _p8f.evaluate("() => document.querySelector('#shapeSeg [data-shape=\"ellipse\"]').click()")
+    _p8f.wait_for_timeout(150)
     _sdrag(_p8f, "#pad", 90, 400, 330, 550, True)
     _fsq = _p8f.evaluate(_FGEO)
     check("V213j flip: Shift gives a circle, same shared geometry as Pad",

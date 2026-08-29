@@ -52,7 +52,8 @@ function _shapeRestoreBase() {
 function _shapePreview(pos, square) {
   if (!_shapeAnchor || typeof SkriblShapes === 'undefined') return;
   _shapeRestoreBase();
-  const pts = SkriblShapes.points(shapeKind, _shapeAnchor, pos, { square: square });
+  const pts = SkriblShapes.points(shapeKind, _shapeAnchor, pos,
+    { square: square, sides: shapeSides, radius: shapeRadius });
   if (pts.length < 2) return;
   const erase = false;
   const drawColor = penColorFor(color);
@@ -67,7 +68,8 @@ function _shapePreview(pos, square) {
 // carry per-point timing at all.
 function _shapeCommit(pos, square) {
   if (!_shapeAnchor || typeof SkriblShapes === 'undefined') return;
-  const pts = SkriblShapes.points(shapeKind, _shapeAnchor, pos, { square: square });
+  const pts = SkriblShapes.points(shapeKind, _shapeAnchor, pos,
+    { square: square, sides: shapeSides, radius: shapeRadius });
   if (pts.length < 2) { _shapeAnchor = null; _shapeBase = null; return; }
   const drawColor = penColorFor(color);
   const endT = recording ? Date.now() - startTime : 0;
@@ -119,9 +121,47 @@ if (shapeSeg && window.SkriblShapes) {
       x.setAttribute('aria-pressed', String(on));
     });
     setTool('shape');
+    syncShapeKnobs();
   });
   attachSegSlider(shapeSeg);
 }
+
+/* The polygon's sides and the corner rounding, shared with Flip through
+   lib/shapes.js. Sides means nothing for anything but a polygon; rounding means
+   nothing for a line, or for an ellipse, which has no corners. Each row hides
+   rather than greying out. */
+let shapeSides = 5, shapeRadius = 0;
+
+function syncShapeKnobs() {
+  const sidesRow = document.getElementById('shapeSidesRow');
+  const radiusRow = document.getElementById('shapeRadiusRow');
+  if (sidesRow) sidesRow.hidden = (shapeKind !== 'poly');
+  if (radiusRow) radiusRow.hidden = (shapeKind !== 'poly' && shapeKind !== 'rect');
+}
+
+(function shapeKnobs() {
+  const sides = document.getElementById('shapeSides');
+  const sidesOut = document.getElementById('shapeSidesOut');
+  const radius = document.getElementById('shapeRadius');
+  const radiusOut = document.getElementById('shapeRadiusOut');
+  if (sides) {
+    sides.value = String(shapeSides);
+    if (sidesOut) sidesOut.textContent = String(shapeSides);
+    sides.addEventListener('input', () => {
+      shapeSides = Math.max(3, Math.min(12, parseInt(sides.value, 10) || 3));
+      if (sidesOut) sidesOut.textContent = String(shapeSides);
+    });
+  }
+  if (radius) {
+    radius.value = String(shapeRadius);
+    if (radiusOut) radiusOut.textContent = String(shapeRadius);
+    radius.addEventListener('input', () => {
+      shapeRadius = Math.max(0, parseInt(radius.value, 10) || 0);
+      if (radiusOut) radiusOut.textContent = String(shapeRadius);
+    });
+  }
+  syncShapeKnobs();
+})();
 
 
 

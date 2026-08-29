@@ -283,7 +283,7 @@ with sync_playwright() as p:
     kinds = page.evaluate(
         "() => [...document.querySelectorAll('#shapeSeg [data-shape]')].map(b => b.dataset.shape)")
     check("Flip: and it offers every kind, not just the current one",
-          kinds == ["line", "rect", "ellipse"], str(kinds))
+          kinds == ["line", "rect", "ellipse", "poly"], str(kinds))
     page.click("#shapeSeg [data-shape='ellipse']")
     page.wait_for_timeout(300)
     check("Flip: choosing a kind takes effect and closes the picker",
@@ -296,6 +296,75 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     page.click(".tool-tray-btn[data-tool='pen']")
     page.wait_for_timeout(400)
+    # ---- the polygon and the corner knob, on the pure geometry -------------
+    print("\nSHAPES [lib] — the fourth kind, and the knob that clamps itself")
+    geo = page.evaluate("""() => {
+      const S = window.SkriblShapes;
+      const A = {x:0, y:0}, B = {x:100, y:100};
+      const bbox = (pts) => { let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+        for (const p of pts) { x0=Math.min(x0,p.x); x1=Math.max(x1,p.x);
+                               y0=Math.min(y0,p.y); y1=Math.max(y1,p.y); }
+        return {x0,y0,x1,y1}; };
+      const tri = S.points('poly', A, B, {sides:3});
+      const hex = S.points('poly', A, B, {sides:6});
+      const sq  = S.points('rect', A, B, {});
+      const rnd = S.points('rect', A, B, {radius:25});
+      const mad = S.points('rect', A, B, {radius:9999});
+      // A polygon's first point is its TOP vertex, so a triangle points up.
+      const t0 = tri[0];
+      return { triTop: {x: Math.round(t0.x), y: Math.round(t0.y)},
+               triBox: bbox(tri), hexBox: bbox(hex),
+               kinds: S.KINDS,
+               sqN: sq.length, rndN: rnd.length, madN: mad.length,
+               madBox: bbox(mad),
+               low: S.points('poly', A, B, {sides:1}).length,
+               high: S.points('poly', A, B, {sides:99}).length };
+    }""")
+    check("Flip: 'poly' is a registered kind", "poly" in geo["kinds"], str(geo["kinds"]))
+    check("Flip: a triangle points UP",
+          geo["triTop"]["y"] == 0 and 45 <= geo["triTop"]["x"] <= 55,
+          f"first vertex {geo['triTop']} — an unrotated polygon starts at 0 "
+          "radians and gives a triangle lying on its side, which is not what "
+          "anyone means by 'triangle'")
+    check("Flip: sides actually change the shape",
+          geo["triBox"]["y1"] < geo["hexBox"]["y1"],
+          f"tri {geo['triBox']} vs hex {geo['hexBox']} — an inscribed triangle "
+          "cannot reach the bottom of the box and a hexagon can")
+    check("Flip: rounding changes a rectangle's outline",
+          geo["rndN"] != geo["sqN"], f"{geo['sqN']} -> {geo['rndN']} points")
+    # THE KNOB HAS TO CLAMP ITSELF. A slider that lets someone ask for more
+    # rounding than an edge can give folds the shape through itself, and the
+    # value that does it differs with every drag size — so it cannot be a
+    # max on the input. Clamped in the geometry, the slider simply stops
+    # having an effect, which is what running a control to its end should do.
+    check("Flip: an absurd radius clamps instead of folding the shape",
+          geo["madN"] > 8
+          and geo["madBox"]["x0"] >= -1 and geo["madBox"]["x1"] <= 101
+          and geo["madBox"]["y0"] >= -1 and geo["madBox"]["y1"] <= 101,
+          f"{geo['madN']} pts, box {geo['madBox']} — radius 9999 on a 100px box")
+    check("Flip: sides clamp at both ends rather than degenerating",
+          geo["low"] > 8 and geo["high"] > 8,
+          f"sides=1 -> {geo['low']} pts, sides=99 -> {geo['high']} pts")
+
+    # The knobs are only shown where they mean something.
+    page.click("#toolMoreBtn")
+    page.wait_for_timeout(250)
+    page.click(".tool-tray-btn[data-tool='shape']")
+    page.wait_for_timeout(350)
+    rows = lambda: page.evaluate("""() => ({
+        sides: !document.getElementById('shapeSidesRow').hidden,
+        radius: !document.getElementById('shapeRadiusRow').hidden })""")
+    page.click("#shapeSeg [data-shape='line']")
+    page.wait_for_timeout(250)
+    check("Flip: a line offers neither knob", rows() == {"sides": False, "radius": False},
+          str(rows()))
+    page.click("#toolMoreBtn"); page.wait_for_timeout(250)
+    page.click(".tool-tray-btn[data-tool='shape']"); page.wait_for_timeout(350)
+    page.click("#shapeSeg [data-shape='poly']")
+    page.wait_for_timeout(250)
+    check("Flip: a polygon offers both", rows() == {"sides": True, "radius": True},
+          f"{rows()} — a control you cannot use is still one to read past")
+
     check("Flip: leaving Shape closes the picker",
           hidden() is True, "a chooser for a tool you are no longer using")
     page.close()

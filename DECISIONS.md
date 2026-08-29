@@ -2540,3 +2540,37 @@ of slack combs after ~72px, 5.1px after ~119px).
 **When a constant's obvious purpose is not its important one, the test is where
 you say so** -- a comment is read by someone already editing the line, and a
 test is read by someone who just broke it.
+
+## v281 -- A test that depends on list order is a test waiting to change meaning
+
+`verify_tools` checked "Shift gives a circle" on Flip directly after a loop over
+the shape kinds, with no selection of its own. It worked because 'ellipse'
+happened to be last in KINDS. Adding a fourth kind made the loop end on 'poly',
+and the check started drawing a shifted POLYGON -- which has a real bounding
+box, so it failed with plausible-looking numbers rather than an error.
+
+That is the expensive shape of this bug: the failure looked like a geometry
+regression in the code under test, not like a precondition that had gone stale.
+Pad's equivalent assertion selected 'ellipse' explicitly and was untouched.
+
+**State a test's preconditions rather than inheriting them.** Anything a check
+depends on -- the current tool, the current kind, the current page -- has to be
+set by that check, even when the line above happens to leave it right. The cost
+is one line; the alternative is a failure that sends someone into the wrong file.
+
+## v282 -- Clamp in the geometry, not on the control
+
+The corner-rounding slider can be asked for more radius than an edge can give,
+which folds the shape through itself. The obvious guard is a `max` on the range
+input -- and it cannot work, because the limit is half the SHORTEST EDGE of a
+shape the user has not drawn yet. It differs with every kind, every drag size
+and every aspect ratio.
+
+So the clamp lives where the shape is built. Run the slider to its end and
+rounding simply stops increasing, which is what a control at its limit should
+do, and there is no state where a legal input produces an illegal shape.
+
+**When a control's valid range depends on data the control cannot see, the
+validation belongs to the thing that CAN see it.** A widget-level max is a
+promise about a relationship it has no access to, and it will be wrong in
+exactly the cases nobody tried.

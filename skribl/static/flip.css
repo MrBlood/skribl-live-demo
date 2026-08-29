@@ -307,6 +307,16 @@
   :where(body[data-size="regular"]) .flip-tools .t-btn { --tap-grow: 0px; }
   :where(body[data-size="regular"]) .flip-tools { --seg-row-h: 44px; }
 
+  /* The shape popover's two knobs. Laid out as label / slider / value so the
+     number has a fixed column and the slider does not jump as it changes --
+     a readout that resizes drags the control under the finger using it. */
+  .shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0; }
+  .shape-knob label { font-size: 10px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--text-muted); min-width: 46px; }
+  .shape-knob input[type="range"] { flex: 1 1 auto; min-width: 90px; accent-color: var(--ui-hi); }
+  .shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
+    min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
+
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(var(--glass-base-rgb), .55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;
     scrollbar-width: thin; scrollbar-color: var(--ui-line) rgba(var(--wash-rgb), .05); }

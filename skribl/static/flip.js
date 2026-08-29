@@ -406,6 +406,10 @@ let _mirrorPainting = false;
 let _constrainActive = false;
 let flipTool = 'pen';
 let shapeKind = 'line';
+/* The polygon's sides and the corner rounding, in CANVAS units for the radius
+   so it means the same thing at every zoom. Defaults chosen so a first Poly
+   drag draws something recognisable rather than a triangle nobody asked for. */
+let shapeSides = 5, shapeRadius = 0;
 let _shapePrev = null, _shapeAnchor = null;   // 'pen' | 'eraser' | 'shape'; `erasing` stays the fast path
 let _saveT = null;
 function scheduleSave(){ clearTimeout(_saveT); showAutosaveStatus('saving'); _saveT = setTimeout(saveNow, 800); }
@@ -1111,7 +1115,8 @@ function render(){
   // outline is just drawn last — no canvas copy is needed here, unlike Pad,
   // which paints incrementally and has nothing to repaint from.
   if(_shapePrev && typeof SkriblShapes !== 'undefined'){
-    const pts = SkriblShapes.points(shapeKind, _shapePrev.a, _shapePrev.b, {square:_shapePrev.sq});
+    const pts = SkriblShapes.points(shapeKind, _shapePrev.a, _shapePrev.b,
+      {square:_shapePrev.sq, sides:shapeSides, radius:shapeRadius});
     const pcol = penColorFor(color);
     for(let i=1;i<pts.length;i++) drawLine(ctx, pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, pcol, size, false);
   }
@@ -1402,7 +1407,8 @@ function endStroke(){
   if(flipTool==='shape'){
     const tgt = strokeFrame || frame();
     const pts = (_shapeAnchor && _shapePrev && typeof SkriblShapes !== 'undefined')
-      ? SkriblShapes.points(shapeKind, _shapeAnchor, _shapePrev.b, {square:_shapePrev.sq}) : [];
+      ? SkriblShapes.points(shapeKind, _shapeAnchor, _shapePrev.b,
+          {square:_shapePrev.sq, sides:shapeSides, radius:shapeRadius}) : [];
     if(pts.length > 1){
       const pcol = penColorFor(color), now = performance.now();
       for(let i=0;i<pts.length;i++) tgt.strokes.push({ x:pts[i].x, y:pts[i].y, color:pcol,
@@ -3101,8 +3107,49 @@ if(_flipShapeSeg && window.SkriblShapes){
       const on = x===b; x.classList.toggle('on', on); x.classList.toggle('active', on);
       x.setAttribute('aria-pressed', String(on)); });
     setTool('shape');
+    syncShapeKnobs();
   });
 }
+
+/* WHICH KNOBS APPLY TO WHICH KIND. Sides is meaningless for anything but a
+   polygon; rounding is meaningless for a line and for an ellipse, which has no
+   corners to round. Each row hides rather than greying out — a disabled control
+   is still something the eye has to read and dismiss, and this popover is small
+   on a phone. */
+function syncShapeKnobs(){
+  const sidesRow = document.getElementById('shapeSidesRow');
+  const radiusRow = document.getElementById('shapeRadiusRow');
+  if(sidesRow) sidesRow.hidden = (shapeKind !== 'poly');
+  if(radiusRow) radiusRow.hidden = (shapeKind !== 'poly' && shapeKind !== 'rect');
+}
+
+(function shapeKnobs(){
+  const sides = document.getElementById('shapeSides');
+  const sidesOut = document.getElementById('shapeSidesOut');
+  const radius = document.getElementById('shapeRadius');
+  const radiusOut = document.getElementById('shapeRadiusOut');
+  if(sides){
+    sides.value = String(shapeSides);
+    if(sidesOut) sidesOut.textContent = String(shapeSides);
+    sides.addEventListener('input', () => {
+      shapeSides = Math.max(3, Math.min(12, parseInt(sides.value, 10) || 3));
+      if(sidesOut) sidesOut.textContent = String(shapeSides);
+      // A live preview is mid-drag geometry, so redraw it: changing a knob
+      // while the rubber band is up should show the new shape, not the old one.
+      render();
+    });
+  }
+  if(radius){
+    radius.value = String(shapeRadius);
+    if(radiusOut) radiusOut.textContent = String(shapeRadius);
+    radius.addEventListener('input', () => {
+      shapeRadius = Math.max(0, parseInt(radius.value, 10) || 0);
+      if(radiusOut) radiusOut.textContent = String(shapeRadius);
+      render();
+    });
+  }
+  syncShapeKnobs();
+})();
 if(window.SkriblBrush){ window.SkriblBrush.create({ seg: document.getElementById('brushSeg') }); }
 if(window.SkriblPressure){
   window.SkriblPressure.create({ seg: document.getElementById('pressureSeg') });
