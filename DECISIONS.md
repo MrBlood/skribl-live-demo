@@ -3078,3 +3078,59 @@ merely place.
 **A shared class is only shared if using it is easier than not using it.** The
 comment on `.slider` said "any future slider" and three future sliders did not
 use it. A comment cannot enforce anything; the assertion can.
+
+## v245 -- The reference could not become the icon, and that was arithmetic
+
+Smudge took four icons before this one. The last was traced from a reference the
+owner supplied: a hand, thumb hooked, fingers curled, index extended. It reads as
+a hand in the reference because the reference is drawn large.
+
+Traced into a 24 box it does not, and the reason is not craft. Four versions were
+rendered side by side at 86px and at tray size -- faithful, one curl dropped,
+silhouette only, and opened out at the set's weight. Every one was a squiggle at
+24px, and each simplification produced a simpler squiggle rather than a clearer
+hand. The strokes are wider than the gaps between the fingers, so they fuse
+before they are drawn.
+
+**A reference is a picture of what you want, not a promise that it fits.** Test
+the reduction before adopting the reference, not after shipping it.
+
+## v246 -- Matching the spec is not matching the hand
+
+Fill also took four. The size rule in verify_icons.py passed every one of them:
+box, stroke, ink area, centre. The owner rejected all four anyway, and was right
+each time.
+
+What the hand-drawn ones missed was not measurable in any of those terms. The
+four icons in this tray that were never complained about -- Shape, Select,
+Liquify, Stamps -- are Lucide, drawn by one person against a house style with
+conventions no spec here captures: how a corner turns, where a stroke stops short
+of a join, how much air sits inside a closed form. An improvised icon beside a
+professionally drawn set reads as improvised no matter how carefully it is
+measured, and the measurements say it is fine, which is worse than useless
+because it argues with the eye.
+
+Both slots now take Lucide. That is not a defeat of the size rule -- the rule
+caught a genuinely undersized Fill (15.0x16.3, area 245, against a band of
+260-450) and the owner's word for it was "weak", which is the same finding in
+English. The rule is a floor, not a substitute for being drawn by the same hand
+as its neighbours.
+
+## v247 -- A metric that cannot fail the bad case is not a metric
+
+An assertion was attempted for the defect that shipped twice: an icon legible at
+4x and illegible at 24px. The proposed measure was internal holes -- a line
+drawing whose strokes fuse loses them -- counted at both sizes.
+
+Measured across the whole tray it does not discriminate. Liquify and Blur have no
+internal holes at any size and are perfectly legible; the rejected hand also has
+none; the accepted thumbprint reports MORE holes at 24px than at 96px, which is
+antialiasing, not structure.
+
+So no assertion was added. A check that passes the bad case and fails good ones
+would have made the suite longer and the tray no safer, while reading in the diff
+as though the problem had been handled.
+
+**Some defects have no cheap metric, and the honest response is to say so rather
+than ship a plausible-looking one.** The guard here is procedural: render the
+tray at real size and look at it, which is the step that was skipped.
