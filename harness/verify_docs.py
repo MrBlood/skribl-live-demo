@@ -542,6 +542,21 @@ if _wf.is_file():
     check("the mp4 lane FAILS on a skip rather than reporting green",
           "SKIPPED on the job that exists to run it" in _wf_text,
           "a lane that tolerates the skip it exists to prevent is not a lane")
+    # THE MINUTES ARE A FINITE RESOURCE AND THIS PROJECT EXHAUSTED THEM.
+    # Three jobs of 20-30 minutes started on every push; without a concurrency
+    # group the superseded runs finished anyway, against commits nobody would
+    # merge. Pinned here because the symptom -- runs dying in a second with 404
+    # logs -- looks nothing like its cause, and the block is one deletable
+    # stanza that nothing else in the workflow depends on.
+    check("superseded pull-request runs are cancelled rather than paid for",
+          re.search(r"^concurrency:$", _wf_text, re.M) is not None
+          and "cancel-in-progress:" in _wf_text,
+          "no concurrency group — every push leaves the previous three jobs running")
+    check("...and main's runs are NOT cancelled, so each shipped commit keeps "
+          "its own verification record",
+          "github.event_name == 'pull_request'" in _wf_text,
+          "a flat cancel-in-progress: true would drop the run for a commit that "
+          "shipped when the next one lands on top of it")
     check("a suite claiming coverage is not itself missing from disk",
           all((ROOT / "harness" / s).is_file() for s in _rr.SKIP_COVERAGE))
 

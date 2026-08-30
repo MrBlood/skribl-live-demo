@@ -12,6 +12,25 @@ on:
   pull_request:
   workflow_dispatch:
 
+# SUPERSEDED PULL-REQUEST RUNS ARE CANCELLED; MAIN RUNS ARE NOT.
+#
+# Without this, every push to a branch under review started a fresh set of three
+# 20-30 minute jobs and left the previous set running to completion against a
+# commit nobody would ever merge. On a branch that gets four or five pushes in a
+# session that is most of the minutes spent -- and the account ran out of them,
+# free allowance and paid top-up both, which is how this got noticed.
+#
+# The group is per-ref, so two different pull requests never cancel each other.
+#
+# cancel-in-progress is an EXPRESSION rather than a flat true, and that is the
+# point of the block. On a pull request the older run is testing a commit that
+# has been replaced and its result would be read by nobody, so cancelling costs
+# nothing. On main each commit is a thing that shipped: its run is the only
+# record that it was verified, so those queue behind each other instead.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   sqlite:
     name: harness (sqlite)

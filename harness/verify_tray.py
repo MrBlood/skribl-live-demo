@@ -478,6 +478,51 @@ with sync_playwright() as p:
           f"rows={prows()}, hidden={phidden()}")
     pad.close()
 
+    # ---- no control is left to the browser's own painting -----------------
+    # REPORTED FROM THE LIVE DEMO: "the new sliders are for light theme".
+    #
+    # Sides, Corners and stamp Size were added without class="slider", so the
+    # shared custom track never applied and the UA painted its own -- and a UA
+    # control takes the page's color-scheme, which was never declared, so it
+    # defaulted to LIGHT. A white track inside a near-black popover.
+    #
+    # Asserted over EVERY range input rather than the three that were wrong,
+    # because the bug is "a new slider forgot the class" and the next one will
+    # forget it too. appearance:none is what .slider sets and what the UA does
+    # not, so it distinguishes a styled control from a painted one.
+    print("\nTHEME — every range input is ours, not the browser's")
+    for _name, _path in (("Pad", "/"), ("Flip", "/flip")):
+        tp = browser.new_page(viewport={"width": 1200, "height": 950})
+        tp.goto(BASE + _path, wait_until="load")
+        tp.wait_for_timeout(900)
+        info = tp.evaluate("""() => {
+            const els = [...document.querySelectorAll('input[type="range"]')];
+            const bare = els.filter(el => {
+                const a = getComputedStyle(el).appearance;
+                return a !== "none";
+            }).map(el => el.id || el.className || "(anonymous)");
+            return { total: els.length, bare,
+                     scheme: getComputedStyle(document.documentElement).colorScheme };
+        }""")
+        check(f"{_name}: there are range inputs to check at all",
+              info["total"] > 0,
+              "an empty set would make the next assertion vacuous")
+        check(f"{_name}: every range input carries the shared slider styling",
+              info["bare"] == [],
+              f"{info['bare']} fall back to the UA control out of {info['total']}")
+        check(f"{_name}: the document declares a dark color-scheme, so anything "
+              "the UA does paint defaults dark rather than light",
+              info["scheme"] == "dark", f"color-scheme: {info['scheme']}")
+        # And the opt-in light theme has to say so too, or a light-mode user
+        # gets the mirror image of this bug.
+        tp.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
+        tp.wait_for_timeout(150)
+        check(f"{_name}: and it flips to light when the light theme is chosen",
+              tp.evaluate("() => getComputedStyle(document.documentElement).colorScheme")
+              == "light",
+              "a dark color-scheme under a light theme paints dark widgets on white")
+        tp.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]
