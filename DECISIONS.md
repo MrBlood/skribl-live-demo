@@ -3526,3 +3526,33 @@ The assertion now captures how the row is drawn on each surface and requires the
 to be equal. Mutated by moving the rules back to flip.css, it reports Pad as
 display:block, 16px, textTransform:none -- which is exactly the screenshot that
 started this.
+
+## v263 -- The fix was measured on the wrong property
+
+v250 made every slider's hit box 44px and reported it fixed. The owner looked at
+the app and said brush size and opacity still seemed small. They were: the thumb
+was still 16px on a 4px track. A hit area is invisible, so the control became
+easy to grab and looked exactly as it had before.
+
+Both properties are real and independent, and BOTH are now asserted -- reach by
+sampling elementFromPoint across the band, appearance by measuring what is drawn.
+24px on a 6px track: iOS draws roughly a 28pt thumb on a 4pt track, 16 was about
+half that, and 28 crowds the row and makes the track look short beside it. The
+hit box, the flow height and the drawer heights are all unchanged, which is what
+makes this purely a visual change.
+
+**Appearance had to be measured in PIXELS.** getComputedStyle(el,
+'::-webkit-slider-thumb') returns the HOST element's box -- 260x44 here -- so it
+cannot see the thumb at all. Screenshotting the control and reading ink height
+per column gives the thumb as the tallest column and the track as the median,
+and reverting to 16/4 fails three checks by name.
+
+One impurity is recorded rather than papered over: the measurement includes the
+thumb's glow ring when the crop does not clip it, so Pad reads 31 where Flip
+reads 24 for the same CSS. The bounds are wide enough that this does not matter,
+and the direction is what is being tested.
+
+**"Fixed" is a claim about a property, and the user is entitled to a different
+one.** Reporting a tap-target measurement against a question about size was
+answering the wrong question with real numbers, which is more misleading than
+saying nothing.

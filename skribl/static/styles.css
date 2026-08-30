@@ -2408,7 +2408,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 /* WebKit / Blink (Chrome, Safari, Edge) */
 .slider::-webkit-slider-runnable-track,
 .opacity-slider::-webkit-slider-runnable-track {
-  height: 4px;
+  /* 6, not 4. On Opacity the filled portion IS the value, and at 4px it was a
+     hairline you had to look for. */
+  height: 6px;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--ui-hi) 0 var(--slider-fill, 100%), var(--line-2) var(--slider-fill, 100%) 100%);
 }
@@ -2417,11 +2419,17 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .opacity-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  /* 24, not 16. v250 made the HIT AREA 44px, which is invisible -- the control
+     was then easy to grab and looked exactly as small as before, which is what
+     got reported. This is the visible half. iOS draws about a 28pt thumb on a
+     4pt track; 16 was roughly half that. 28 was tried and crowds the row, and
+     makes the track look short beside it.
+     margin-top centres the thumb on the track: (track - thumb) / 2. */
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--surface-sheet);
-  margin-top: -6px;
+  margin-top: -9px;
   border: 2.5px solid var(--ui-line);
   box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18), 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: box-shadow 0.15s ease;
@@ -2449,8 +2457,8 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .slider::-moz-range-thumb,
 .opacity-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border: 2.5px solid var(--ui-line);
   border-radius: 50%;
   background: var(--surface-sheet);
