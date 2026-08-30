@@ -3694,3 +3694,80 @@ of the two runs.
 **A test whose two inputs are identical is testing that the function is
 deterministic, not that it is correct.** Both mutations here were invisible for
 the same reason: with n fixed at 1 there was nothing for the resampler to do.
+
+## v256 -- Blur was a fade, and the vector answer was already in the file
+
+Measured on a vertical slice through a line, the old blur moved the feathered
+transition band from 5 rows to 5 rows while halving the peak and doubling the
+core. It mixed each touched point toward bgColor and widened it: dimmer, fatter,
+same knife-sharp edge. Softening an edge is the one thing the word promises.
+
+Nothing done to a point's COLOUR can feather anything, because a point is drawn
+as a solid round dab. The vector-native blur is expanded translucent copies --
+the same path drawn several times, widest and faintest first, so the crisp core
+lands on its own halo and the overlap of the passes IS the falloff. The
+reference the owner sent says exactly this, and TWEEN_BLUR has been doing it in
+the in-between since v238. The blur brush was the one thing on the surface not
+using the machinery already sitting beside it.
+
+**THE ALPHA IS AN 8-DIGIT HEX AND THAT IS WHAT MAKES IT AFFORDABLE.** Four
+translucent passes per blurred stroke against a LAYER_BUDGET of 24 would flip a
+frame to direct painting after six strokes, changing how every other stroke on
+it looks -- which is what was reported to the owner as a hard limit of about
+five blurred strokes per frame. That was wrong. alphaOf, the layering test, only
+recognises rgba(), while the canvas renders '#rrggbbaa' translucent natively.
+Measured: ten strokes drawn, five hex and five rgba, layerable count 4. The
+in-between had already solved this in v239 for its own reasons.
+
+**DIRECT PAINTING IS WHY DENSITY IS NOT COSMETIC.** Dodging the layered path
+means translucent dabs COMPOUND where they overlap, and at the source line's own
+point spacing that drew a visible string of circles. Resampling each halo run to
+sit well inside a dab width makes the overlap uniform instead of periodic.
+Density then made it too BRIGHT -- peak 254, brighter than the line it was meant
+to soften -- so the alpha is paid back: n dabs of alpha x give 1 - (1-x)^n, so
+the per-dab alpha is 1 - (1-T)^(1/n). Derived, not tuned. The core needed the
+same treatment for the same reason and beaded on its own until it got it.
+
+Final: feathered rows 2 -> 8, peak 255 -> 202, no beading.
+
+## v256 -- Two metrics in a row ranked the broken build as the better one
+
+The beading had to be pinned, and the first two attempts both preferred the bug.
+
+Brightness along the line's CENTRE row scored the beaded build 1.0 and the
+shipped one 6.4 -- backwards, because at the centre a beaded line and a smooth
+one are equally white; the beads bulge at the edges. Lit height per column
+scored them 0.064 and 0.072 -- backwards again, because without the alpha
+compensation the undensified halo is simply more opaque, and a 60/255 threshold
+reads that as a taller, steadier column.
+
+Before either of those, the same measurement across the FULL line width read a
+plain line at 8.1 and a blurred one at 13.6 and looked like proof of beading. It
+was measuring the boundary between the swept span and the untouched ink either
+side of it.
+
+What ships instead is the property densification actually guarantees: the widest
+gap between consecutive samples as a fraction of the dab drawn there, 0.2 shipped
+against about 0.5 undensified. Exact, cheap, and it dies the moment the
+resampling is removed.
+
+**A check that prefers the bug is worse than no check.** Three measurements were
+built and discarded before one separated the cases, and the discarded ones all
+LOOKED like evidence.
+
+## v256 -- A ratio cannot see the difference between 1-to-4 and 2-to-8
+
+"Blur softens the edge" was first asserted as feather >= 2x. Reverting the soft
+edge to the old 0.55x scale measures 1 -> 4 feathered rows; the shipped 2.4x
+scale measures 2 -> 8. Both are 4x, so the mutation that undid the whole visual
+change passed the assertion meant to catch it.
+
+The absolute band is what the eye reads, so there is now a floor as well as a
+ratio -- and beside it the same claim in DATA, where it is exact rather than
+sampled: the widest halo pass against the stroke it softens, 1.55x on the old
+scale and 3.4x on the shipped one. That one is the check that actually kills the
+mutation; the pixel measurement is the one that says it matters.
+
+Its own first version asked for the widest OPAQUE run as the baseline and got
+zero, because after this change the core is translucent too. The baseline is now
+read from the stroke BEFORE the blur.

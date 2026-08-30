@@ -197,15 +197,170 @@ with sync_playwright() as p:
         page.mouse.up()
         page.wait_for_timeout(400)
         after = page.evaluate(SNAP)
-        grew = sum(1 for a, q in zip(after["sizes"], before["sizes"]) if a > q)
-        faded = sum(1 for a, q in zip(after["cols"], before["cols"]) if a != q)
-        check("blur widens the points it touches", grew > 0, f"{grew} widened")
-        check("...and fades them toward the ground", faded > 0, f"{faded} recoloured")
-        check("blur adds and removes NO points",
-              after["pts"] == before["pts"] and after["groups"] == before["groups"],
+        # v256: BLUR IS A HALO NOW, so it emits passes and the arrays grow. The
+        # old shape of this section pinned "adds and removes NO points", which
+        # was correct for a tool that recoloured in place -- and recolouring in
+        # place is precisely why it never softened anything.
+        check("blur emits halo passes rather than only recolouring",
+              after["groups"] > before["groups"] and after["pts"] > before["pts"],
               f"{before['pts']}/{before['groups']} -> {after['pts']}/{after['groups']} "
-              "— it recolours in place; splitting would cost points and blow "
-              "LAYER_BUDGET on translucent strokes")
+              f"— a stroke point is a solid round dab, so nothing done to its "
+              f"colour can feather an edge; expanded translucent copies can")
+        check("...and the page it leaves is well-formed",
+              page.evaluate("""() => { const f = frame();
+                return f.strokeGroups.reduce((a,b)=>a+b,0) === f.strokes.length
+                    && f.strokes.filter(p=>p.start).length === f.strokeGroups.length; }"""),
+              "groups must account for every point and every run start exactly once")
+        # THE COST THAT MADE THIS AFFORDABLE. paintStatic gives every TRANSLUCENT
+        # stroke its own offscreen layer -- clear, redraw, composite -- against a
+        # LAYER_BUDGET of 24, and past the budget the whole frame paints direct
+        # and every other stroke on it changes. Writing the halo's alpha as an
+        # 8-digit hex dodges that entirely: alphaOf, which is the layering test,
+        # only recognises rgba(), while the canvas still renders '#rrggbbaa'
+        # translucent. Four passes per blurred stroke in rgba() form would blow
+        # the budget after six strokes.
+        _cost = page.evaluate("""() => { const f = frame();
+            return { layerable: layerableCount(f.strokes), budget: LAYER_BUDGET,
+                     hexAlpha: f.strokes.some(p => /^#[0-9a-f]{8}$/i.test(p.color)),
+                     rgba: f.strokes.filter(p => /^rgba[(]/i.test(p.color)).length }; }""")
+        check("the halo costs NOTHING against the stroke-layer budget",
+              _cost["layerable"] == 0 and _cost["hexAlpha"] and _cost["rgba"] == 0,
+              f"{_cost} — in rgba() form these same passes would each take an "
+              f"offscreen layer and flip the frame to direct painting")
+
+
+        # ---- THE ASSERTION WHOSE ABSENCE LET A FADE SHIP AS A BLUR ----------
+        # Every check above this point reads POINT DATA -- sizes grew, colours
+        # changed, groups account for their points. All of them passed for years
+        # against a tool that did no blurring at all: it mixed each point toward
+        # the background and widened it, which makes a line dimmer and fatter
+        # with the same knife-sharp edge. Softening an edge is the one thing the
+        # word promises, and no property of the stroke list can see whether it
+        # happened. This one is measured in PIXELS, off a screenshot.
+        #
+        # The metric is the FEATHERED BAND: rows in a vertical slice through the
+        # line whose brightness sits between the background and the core, i.e.
+        # the transition. A real defocus widens it and lowers the peak, because
+        # it spreads the same ink over more area. The old tool measured 5 rows
+        # before a drag and 5 rows after.
+        import io as _io
+        from PIL import Image as _Image
+        def _slice(_png, _x):
+            _im = _Image.open(_io.BytesIO(_png)).convert("RGB")
+            _px = _im.load()
+            return [_px[_x, _y][0] for _y in range(_im.size[1])], _im.size
+        def _feather(_col, _y0, _y1):
+            _seg = _col[_y0:_y1]
+            _lo, _hi = min(_seg), max(_seg)
+            if _hi - _lo < 15: return None
+            _sp = _hi - _lo
+            return { "peak": _hi,
+                     "core": sum(1 for _v in _seg if _v >= _lo + 0.85 * _sp),
+                     "feather": sum(1 for _v in _seg if _lo + 0.15 * _sp <= _v < _lo + 0.85 * _sp) }
+
+        page.reload(wait_until="networkidle"); page.wait_for_timeout(800)
+        _b = page.locator("#pad").bounding_box()
+        _cx, _cy = _b["x"] + _b["width"] / 2, _b["y"] + _b["height"] / 2
+        line(page, _cx, _cy)
+        _shot0 = page.locator("#pad").screenshot()
+        _mid = int((_cx - _b["x"]))
+        _c0, _sz = _slice(_shot0, _mid)
+        _yc = int(_cy - _b["y"])
+        _pre = _feather(_c0, max(0, _yc - 45), min(_sz[1], _yc + 45))
+        # The stroke's own width, read BEFORE the blur. After it, every run is
+        # translucent -- the core included -- so there is nothing left in the
+        # frame to call the baseline; the first version of the check below asked
+        # for the widest opaque run, got 0, and divided by it.
+        _srcSize = page.evaluate("() => Math.max(...frame().strokes.map(p => p.size || 0))")
+        page.evaluate("() => setTool('blur')"); page.wait_for_timeout(200)
+        page.mouse.move(_cx - 80, _cy); page.mouse.down()
+        for _r in range(3):
+            for _i in range(0, 21): page.mouse.move(_cx - 80 + _i * 8, _cy)
+            for _i in range(20, -1, -1): page.mouse.move(_cx - 80 + _i * 8, _cy)
+        page.mouse.up(); page.wait_for_timeout(400)
+        _shot1 = page.locator("#pad").screenshot()
+        _c1, _ = _slice(_shot1, _mid)
+        _post = _feather(_c1, max(0, _yc - 45), min(_sz[1], _yc + 45))
+        check("the line was on screen to measure, before and after",
+              bool(_pre) and bool(_post),
+              f"{_pre} -> {_post} — a slice with no contrast makes every "
+              f"comparison below vacuous")
+        # A RATIO ALONE DOES NOT SEPARATE THE CASES, which is why there is a
+        # floor as well. Restoring the old soft-edge scale (0.55x the brush
+        # instead of 2.4x) measures 1 -> 4 feathered rows against the shipped
+        # 2 -> 8: both are a 4x gain, so a ratio test passes a blur that barely
+        # softens anything. The absolute band is what the eye reads.
+        check("BLUR ACTUALLY SOFTENS THE EDGE",
+              bool(_pre) and bool(_post)
+              and _post["feather"] >= _pre["feather"] * 2 and _post["feather"] >= 6,
+              f"feathered rows {_pre and _pre['feather']} -> {_post and _post['feather']} "
+              f"— the tool this replaced measured 5 -> 5: it dimmed and fattened "
+              f"the line and never touched the transition, which is the whole "
+              f"meaning of the word. The old soft-edge scale reaches 4.")
+        # AND THE SAME THING IN THE DATA, where it is exact rather than sampled.
+        # The widest halo pass has to be meaningfully wider than the stroke it
+        # softens: the old scale put it at 1.55x a 7px line, the shipped one at
+        # 3.4x. This is the check that actually dies when the scale is reverted;
+        # the pixel measurement above is the one that says it MATTERS.
+        _widest = page.evaluate("() => Math.max(...frame().strokes.map(p => p.size || 0))")
+        _spread = { "srcSize": round(_srcSize, 1), "widest": round(_widest, 1),
+                    "ratio": round(_widest / max(0.001, _srcSize), 2) }
+        check("the widest halo pass is far wider than the stroke it softens",
+              _srcSize > 0 and _spread["ratio"] >= 2.5,
+              f"{_spread} — 1.55x on the scale this replaced, 3.4x on the one "
+              f"that ships; below about 2.5x the passes overlap too closely to "
+              f"read as a falloff at all")
+        check("...and the peak comes DOWN, because defocus spreads ink",
+              bool(_pre) and bool(_post) and _post["peak"] < _pre["peak"],
+              f"peak {_pre and _pre['peak']} -> {_post and _post['peak']}")
+        # BEADING IS THE FAILURE MODE OF THE FIX. A hex-alpha pass is painted
+        # direct, so translucent dabs COMPOUND where they overlap; at the source
+        # line's own point spacing that drew a visible string of circles. The
+        # cure is density, and density then needs the alpha paid back or the
+        # line comes out brighter than it started. Ripple along the line's own
+        # axis catches both: a beaded line oscillates, a smooth one does not.
+        # DENSITY, ASSERTED ON ITS OWN CONTRACT RATHER THAN ON A PICTURE.
+        #
+        # A hex-alpha pass is painted DIRECT -- that is the point of writing the
+        # alpha as hex, since the layered path is what costs LAYER_BUDGET -- and
+        # direct painting makes translucent dabs COMPOUND where they overlap. At
+        # the source line's own point spacing that draws a visible string of
+        # circles, so every halo run is resampled until its samples sit well
+        # inside a dab width and the overlap is uniform rather than periodic.
+        #
+        # TWO VISUAL METRICS WERE TRIED FIRST AND BOTH ARE GONE. Brightness along
+        # the centre row scored the beaded build 1.0 and the shipped one 6.4, and
+        # lit-height per column scored them 0.064 and 0.072: both ranked the
+        # BROKEN version as the better one, because at the centre a beaded line
+        # and a smooth one are equally white and the beads bulge at an edge that
+        # a 60/255 threshold barely resolves. A check that prefers the bug is
+        # worse than no check, so what is pinned here is the property
+        # densification actually guarantees -- spacing relative to dab width --
+        # which is exact, cheap, and dies the moment the resampling is removed.
+        _space = page.evaluate("""() => { const f = frame(); let a = 0, worst = 0, runs = 0;
+            for (const n of f.strokeGroups) {
+              const seg = f.strokes.slice(a, a + n); a += n;
+              // Halo passes are the translucent ones; the untouched runs are the
+              // user's own opaque strokes and are deliberately left alone.
+              const al = seg[0] && /^#[0-9a-f]{8}$/i.test(seg[0].color)
+                ? parseInt(seg[0].color.slice(7), 16) / 255 : 1;
+              if (al >= 1 || seg.length < 3) continue;
+              runs++;
+              let wide = 0; for (const q of seg) wide = Math.max(wide, q.size || 0);
+              for (let k = 1; k < seg.length; k++) {
+                const d = Math.hypot(seg[k].x - seg[k-1].x, seg[k].y - seg[k-1].y);
+                worst = Math.max(worst, d / Math.max(0.001, wide));
+              }
+            }
+            return { runs: runs, worstGapOverWidth: +worst.toFixed(3) }; }""")
+        check("there are translucent passes to measure",
+              _space["runs"] > 0,
+              f"{_space} — with no halo runs the spacing check below is vacuous")
+        check("every halo sample sits well inside a dab width",
+              _space["worstGapOverWidth"] < 0.35,
+              f"{_space} — the widest gap between consecutive samples, as a "
+              f"fraction of the dab drawn there; undensified this is about 0.5 "
+              f"and each overlap shows as a bead")
 
         # THE ONE THAT WOULD ROT SILENTLY. One long sweep and one short one over
         # the same ink must land in the same place, or the tool's strength is a
