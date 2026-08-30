@@ -3771,3 +3771,92 @@ mutation; the pixel measurement is the one that says it matters.
 Its own first version asked for the widest OPAQUE run as the baseline and got
 zero, because after this change the core is translucent too. The baseline is now
 read from the stroke BEFORE the blur.
+
+## v257 -- Momentum does not belong in a vector smudge, and here is why
+
+The owner asked for the reference's momentum term. It was built three ways and
+none of them ships. This entry exists so the dead end is not rediscovered.
+
+**THE DESIGN RULE.** In a vector deformation smudge, directional momentum is not
+equivalent to raster pigment momentum. Point coasting increases displacement
+contrast and produces spikes, so smear length should be controlled through the
+existing spread/fade response rather than post-contact inertia.
+
+**Why the reference form is a no-op, provably.** It is
+
+    v_new = lambda*v_old + (1-lambda)*delta,   p += v_new * S * W(d)
+
+and v is a convex combination of unit vectors, so |v| <= 1 and the displacement
+is at most the delta*S*W already applied -- equal when the direction holds,
+SHORTER when it turns. It can shorten or misdirect a vector smear; it cannot
+lengthen one. Measured anyway: a curving drag came out at 14.3 against 14.2
+without it, and three lag settings (10px, 26px and 95px direction half-life)
+were visually identical.
+
+The reason is structural rather than numerical. In a raster smudge the velocity
+carries a sampled colour RESERVOIR forward, and the reservoir's inertia is what
+extends the smear. Here the geometry IS the material: once p += delta*S*W(d) has
+been applied there is no second thing whose inertia could carry anything, and
+filtering the movement vector only changes its direction and magnitude.
+
+**And the obvious workaround is ruled out too.** Letting points coast after the
+brush passes -- the part the reference gates away with W(d) -- does lengthen the
+smear, and it took three iterations to make it honest: per-event decay measured
+183.6 / 187.2 / 193.0 for the same gesture at 4, 20 and 60 events; integrating
+over distance but coasting in-brush points too was still rate-dependent, because
+their budget is refreshed every event so the gain ramp is always sampled at its
+top; coasting only the points behind the brush was finally rate-independent to
+half a pixel.
+
+It still looks wrong, and that is the finding. Points with the strongest prior
+influence coast furthest, which AMPLIFIES the difference against their
+neighbours -- and a large difference between adjacent points is the definition
+of a spike. The smear got longer and pointier. Rendered at three strengths it
+goes from a shallow dip to a hard V.
+
+**The metric rewarded the artefact.** The y-spread of the dragged points rose
+from 14.2 to 18.6 to 37.4 as the coasting got stronger, and every one of those
+numbers is the spike getting longer. Only the picture caught it. That is now
+twice in this area -- see the v256 entry on the beading metrics.
+
+## v257 -- The smear response, raised after looking at three gestures
+
+What DOES improve smudge is the response curve it already has.
+SMUDGE_FADE_MAX / SMUDGE_SPREAD_MAX go 0.32 / 0.45 -> 0.55 / 0.9.
+
+Chosen by rendering three gesture classes at four settings: a single
+perpendicular pull, repeated back-and-forth rubbing across a line, and a tight
+curved scrub. 0.55 / 0.9 was better than the old values in all three; 0.68 /
+1.15 was worse in all three, going muddy against the dark ground and reading as
+a blob rather than as pigment.
+
+This is a response curve, not a mechanism. The deformation field is untouched
+and still rate-independent, no per-point state is added, and there is no new
+failure mode on turns or reversals -- which is exactly what disqualified
+coasting.
+
+**An earlier verdict of mine was wrong and is corrected here.** "Smudge pulls a
+clean spike rather than smearing" came from a single perpendicular pull. Rubbed
+across a line -- the gesture people actually use -- even the old constants read
+as a smudge. The gesture was the wrong test, not the tool.
+
+The suite's own smear check was `smeared > 0`, which passes at every setting
+including the one originally reported as "looks like liquefy". The magnitude is
+now bounded on both constants, and reverting either one alone fails by name.
+
+## v257 -- A reload restores the draft, so it is not a reset
+
+The v256 pixel assertions reloaded the page before drawing their test line. The
+editor persists its draft in IndexedDB, so the reload RESTORED whatever the
+previous section had left -- and clearing localStorage does not touch it.
+
+The blur section then measured a 25.5px "source stroke" against the 7px line it
+had just drawn, because the section in front of it had left blurred halo passes
+in the draft. It had passed for one commit purely because of what happened to
+run before it; inserting a new section ahead of it broke two assertions that
+had nothing to do with the change.
+
+Emptying the frame in the page and pinning the brush size is exact, depends on
+no persistence layer, and reads 7 where it should read 7.
+
+**A test that depends on what ran before it is not passing, it is agreeing.**

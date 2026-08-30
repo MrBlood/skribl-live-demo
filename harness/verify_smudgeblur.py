@@ -163,6 +163,7 @@ with sync_playwright() as p:
               "and changing its constants gives you a sharper Liquify, not a "
               "different tool")
 
+
         # The smear needs per-point scratch state, and points are serialised
         # wholesale into every saved draft and shared Skribl. A scratch field
         # parked on the point would ride into the payload and past the server's
@@ -179,6 +180,78 @@ with sync_playwright() as p:
               u["xs"] == before["xs"] and u["ys"] == before["ys"]
               and u["pts"] == before["pts"] and u["cols"] == before["cols"],
               "the snapshot undo has to cover the inserted points AND the smear")
+
+        # ---- HOW FAR THE SMEAR ACTUALLY GOES --------------------------------
+        # The check above is `smeared > 0`, which passes at every setting there
+        # is -- including the one that sent this tool back with "looks like
+        # liquefy". What a user sees is the MAGNITUDE: how far the dragged ink
+        # gets toward the ground and how much wider it spreads.
+        #
+        # Its own gesture, and a long one on purpose. The smear accrues per pixel
+        # travelled and saturates at 1, so a short drag reaches only part of the
+        # response curve and the numbers below would be measuring the gesture
+        # rather than the constants.
+        # RESET IN-PAGE, NOT BY RELOADING. The editor persists its draft in
+        # IndexedDB, so a reload RESTORES whatever the previous section left --
+        # clearing localStorage does not touch it. The smear section measured a
+        # 25.5px "source stroke" that way, against the 7px line it had just
+        # drawn, because the section before it had left blurred halo passes in
+        # the draft; it passed for one commit purely because of what happened to
+        # run in front of it. Emptying the frame and pinning the brush is exact
+        # and depends on no persistence layer at all.
+        page.evaluate("""() => { frames.forEach(f => { f.strokes.length = 0;
+            f.strokeGroups.length = 0; }); size = 7; setTool('pen'); render(); }""")
+        page.wait_for_timeout(200)
+        _bb = page.locator("#pad").bounding_box()
+        _mx, _my = _bb["x"] + _bb["width"] / 2, _bb["y"] + _bb["height"] / 2
+        line(page, _mx, _my)
+        _src = page.evaluate("""() => { const f = frame();
+            return { size: f.strokes[0].size, col: f.strokes[0].color }; }""")
+        page.evaluate("() => setTool('smudge')"); page.wait_for_timeout(200)
+        page.mouse.move(_mx - 30, _my); page.mouse.down()
+        for _r in range(4):
+            for _i in range(0, 24): page.mouse.move(_mx - 30 + _r * 18, _my + _i * 3)
+            for _i in range(23, -1, -1): page.mouse.move(_mx - 30 + _r * 18, _my + _i * 3)
+        page.mouse.up(); page.wait_for_timeout(350)
+        _mag = page.evaluate("""(src) => {
+            const f = frame();
+            const rgb = (c) => { const m = String(c).match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+              if (m) return [+m[1], +m[2], +m[3]];
+              const h = String(c).replace('#','');
+              return /^[0-9a-f]{6}/i.test(h)
+                ? [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)] : null; };
+            const a = rgb(src.col), g = rgb(bgColor);
+            if (!a || !g) return null;
+            let fade = 0, spread = 0;
+            for (const p of f.strokes) {
+              const c = rgb(p.color);
+              if (c) {
+                // How far this point travelled from the ink toward the ground,
+                // on whichever channel separates them most.
+                let best = 0;
+                for (let k = 0; k < 3; k++) {
+                  const span = g[k] - a[k];
+                  if (Math.abs(span) > 40) best = Math.max(best, (c[k] - a[k]) / span);
+                }
+                fade = Math.max(fade, best);
+              }
+              if (p.size) spread = Math.max(spread, p.size / src.size);
+            }
+            return { fade: +fade.toFixed(3), spread: +spread.toFixed(2) }; }""", _src)
+        check("the rubbed gesture produced a measurable smear at all",
+              _mag is not None and _mag["fade"] > 0 and _mag["spread"] > 1,
+              f"{_mag} — with no smear the two bounds below are vacuous")
+        # 0.32 / 0.45 were the shipped values until v257 and reach 0.32 and 1.45.
+        # 0.55 / 0.9 reach 0.55 and 1.9. The bounds sit between the two pairs, so
+        # reverting the response curve fails here by name rather than silently
+        # making the tool look like Liquify again.
+        check("dragged ink gets far enough toward the ground to READ as smeared",
+              _mag is not None and _mag["fade"] >= 0.45,
+              f"{_mag} — the values this replaced top out at 0.32, which is the "
+              f"setting that was reported as 'looks like liquefy'")
+        check("...and spreads far enough to read as thinning pigment",
+              _mag is not None and _mag["spread"] >= 1.7,
+              f"{_mag} — the values this replaced top out at 1.45x")
 
         print("\nBLUR — fades and widens, because it cannot convolve")
         page.evaluate("() => { localStorage.clear(); }")
@@ -258,7 +331,17 @@ with sync_playwright() as p:
                      "core": sum(1 for _v in _seg if _v >= _lo + 0.85 * _sp),
                      "feather": sum(1 for _v in _seg if _lo + 0.15 * _sp <= _v < _lo + 0.85 * _sp) }
 
-        page.reload(wait_until="networkidle"); page.wait_for_timeout(800)
+        # RESET IN-PAGE, NOT BY RELOADING. The editor persists its draft in
+        # IndexedDB, so a reload RESTORES whatever the previous section left --
+        # clearing localStorage does not touch it. This section measured a
+        # 25.5px "source stroke" that way, against the 7px line it had just
+        # drawn, because the section before it had left blurred halo passes in
+        # the draft; it passed for one commit purely because of what happened to
+        # run in front of it. Emptying the frame and pinning the brush is exact
+        # and depends on no persistence layer at all.
+        page.evaluate("""() => { frames.forEach(f => { f.strokes.length = 0;
+            f.strokeGroups.length = 0; }); size = 7; setTool('pen'); render(); }""")
+        page.wait_for_timeout(200)
         _b = page.locator("#pad").bounding_box()
         _cx, _cy = _b["x"] + _b["width"] / 2, _b["y"] + _b["height"] / 2
         line(page, _cx, _cy)
