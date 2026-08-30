@@ -300,6 +300,85 @@ with sync_playwright() as p:
     finally:
         br.close()
 
+
+# ============================================================================
+# THE GLYPHS IN THE ACTION BARS ARE BIG ENOUGH TO READ
+#
+# Reported from the live demo: "those icons are so small. Do they have to be so
+# small?" They did not. Measured before the change: 13x13 inside a 38x38 button
+# -- over 12px of empty padding on every side -- and the same 13px at EVERY
+# width, while the tool tray beside it draws at 21px.
+#
+# WIDTH WAS NEVER THE CONSTRAINT, which is the part worth pinning: at 430px the
+# six selection-bar buttons used 228 of 410px, and at 320px 198 of 300. So the
+# assertions below check three separate things, because fixing one at the cost
+# of another is the likely regression:
+#
+#   * the glyph is drawn large enough to recognise;
+#   * the 44px tap band --tap-grow builds is UNCHANGED (a bigger drawing must
+#     not have come out of the button box);
+#   * the bar still fits on one row at the narrowest width.
+# ============================================================================
+print("\nGLYPH SIZE — the action bars are readable, still 44px, still one row")
+with sync_playwright() as _gp:
+    _gb = _gp.chromium.launch()
+    try:
+        for _w in (320, 390, 430, 900):
+            gp = _gb.new_page(viewport={"width": _w, "height": 900})
+            gp.goto(BASE + "/flip", wait_until="load")
+            gp.wait_for_timeout(1200)
+            gp.evaluate("() => setTool('pen')")
+            gbox = gp.eval_on_selector(
+                "#pad", "e => { const r = e.getBoundingClientRect();"
+                " return { x: r.x, y: r.y }; }")
+            gp.mouse.move(gbox["x"] + 30, gbox["y"] + 40)
+            gp.mouse.down()
+            for i in range(1, 10):
+                gp.mouse.move(gbox["x"] + 30 + i * 10, gbox["y"] + 40 + i * 5)
+            gp.mouse.up()
+            gp.wait_for_timeout(250)
+            gp.evaluate("() => setTool('select')")
+            gp.mouse.move(gbox["x"] + 15, gbox["y"] + 25)
+            gp.mouse.down()
+            for i in range(1, 10):
+                gp.mouse.move(gbox["x"] + 15 + i * 13, gbox["y"] + 25 + i * 7)
+            gp.mouse.up()
+            gp.wait_for_timeout(500)
+
+            m = gp.evaluate(
+                "() => { const bar = document.getElementById('selbar');"
+                " const bs = [...bar.querySelectorAll('.pb')].filter(x => x.offsetParent);"
+                " const tops = new Set(bs.map(x => Math.round("
+                "   x.getBoundingClientRect().top)));"
+                " const b = document.getElementById('sbStamp');"
+                " const g = b.querySelector('svg');"
+                " const grow = parseFloat(getComputedStyle(b)"
+                "   .getPropertyValue('--tap-grow')) || 0;"
+                " const r = b.getBoundingClientRect();"
+                " let used = 0; bs.forEach(x => used += x.getBoundingClientRect().width);"
+                " return { rows: tops.size,"
+                "          glyph: Math.round(g.getBoundingClientRect().width),"
+                "          tapW: Math.round(r.width + grow * 2),"
+                "          tapH: Math.round(r.height + grow * 2),"
+                "          used: Math.round(used),"
+                "          bar: Math.round(bar.getBoundingClientRect().width) }; }")
+
+            check(f"@{_w}: the selection-bar glyph is big enough to read",
+                  m["glyph"] >= 16,
+                  f"{m['glyph']}px — it shipped at 13 inside a 38px button while "
+                  "the tool tray beside it drew at 21")
+            check(f"@{_w}: ...and the 44px tap band is untouched",
+                  m["tapW"] >= 44 and m["tapH"] >= 44,
+                  f"{m['tapW']}x{m['tapH']} — a bigger drawing must not have been "
+                  "paid for out of the button box")
+            check(f"@{_w}: ...and the bar is still one row",
+                  m["rows"] == 1,
+                  f"{m['rows']} rows, {m['used']}/{m['bar']}px used — the room was "
+                  "always there, and it has to stay there")
+            gp.close()
+    finally:
+        _gb.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

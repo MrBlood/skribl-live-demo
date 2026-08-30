@@ -3311,3 +3311,31 @@ they dismiss hints with `element.click()`, which dispatches directly to the node
 and ignores pointer-events entirely. Every one of them would have stayed green
 with the toast blocking the whole canvas. **A test that reaches past the
 mechanism under test is not testing it.**
+
+## v255 -- The icons were small because nobody had measured them
+
+"Those icons are so small. Do they have to be so small?"
+
+Measured: 13x13 inside a 38x38 button, over 12px of empty padding on every side,
+and the same 13px at EVERY width. The tool tray beside it draws at 21px, so two
+rows of controls of equal importance differed by 62% and had done since the bar
+was written.
+
+Width was never the constraint, which is the part that makes this a mistake
+rather than a trade-off. At 430px the six selection-bar buttons used 228 of
+410px; at 320px, 198 of 300. There was 180px of unused bar sitting next to icons
+too small to read.
+
+18px, not 20: at 20 the glyph starts touching the button's border, and contents
+that reach the edge read as cramped rather than as bigger. The button box is
+untouched, so the 44px tap band --tap-grow builds is untouched with it.
+
+**Three assertions, not one**, because the likely regression is fixing one of
+these at the cost of another: the glyph is large enough to read, the tap band is
+still 44, and the bar still fits on one row at 320. Mutation tested in both
+directions -- shrinking the glyph back to 13 fails four checks, and removing
+--tap-grow to pay for a bigger drawing fails its own.
+
+**A number that has never been questioned is not the same as a number that was
+chosen.** 13px had survived every review of this bar because nobody had put it
+next to the 21px it sits beside.
