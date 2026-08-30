@@ -3629,3 +3629,68 @@ by name: restoring the 8x ceiling ("the ladder climbs 1 to 32 by doubling -- [1,
 **Where an assertion is added is part of the assertion.** The count in the
 summary line is the only thing that says a check was live; a check that prints
 its result after the verdict has been computed is decoration.
+
+## v255 -- The tool for the job already existed and refused the job
+
+The owner said blur and smudge did not seem to work, sent a Photoshop brush-engine
+spec, and then said the thing that actually mattered: "Maybe we don't need to
+rasterize because I like that we can scale up exactly. I just want to be able to
+simulate motion between still frames."
+
+That is not a blur tool. That is the IN-BETWEEN, which has existed since v237 --
+a generated page that integrates the motion between two poses like a long
+exposure, built out of ordinary stroke data. It was refusing the case it exists
+for.
+
+`tweenMismatch` required the two pages to be structurally identical: the same
+number of strokes AND the same number of points in each. That is exactly what
+Duplicate-then-drag produces, and for that workflow the requirement is right.
+But drawing the next pose by hand is what frame-by-frame animation IS, and a
+redraw of the same shape lands a different vertex count every time -- a ball
+drawn twice measured 38 points and 32. So the feature covered the workflow it
+was developed against and declined the ordinary one.
+
+**A stroke is a PATH, not a list of vertices.** Walking it at even spacing along
+its own arc length re-emits the same shape at any vertex count. Resample both
+poses to a common count and they correspond point for point; the exposure
+arithmetic runs completely unchanged. This is not a guess at a pairing -- stroke
+s still pairs with stroke s, exactly as before -- it only stops the VERTEX counts
+from being the thing that decides.
+
+Two hand-drawn poses, one of them squashed, now produce a tapering smear that
+reads the squash. Nothing about the format changed.
+
+**WHAT THE COMPARISON WAS FOR.** FlipaClip has both a Blur and a Smudge brush
+because FlipaClip is raster -- their own knowledge base says so, in the article
+explaining why lasso copies come out blurry. Every layer is already a pixel
+buffer, so blur is a real convolution and smudge is real transport. They pay for
+it with a canvas size fixed at creation, pixelation on zoom, and copies that
+degrade as they are re-transformed. Skribl bought the opposite trade
+deliberately, and the owner named the reason to keep it.
+
+**THE DIAGNOSIS WAS RIGHT AND THE PRESCRIPTION WAS WRONG.** Blur genuinely does
+no low-pass -- measured on a vertical slice through a line, the feathered
+transition band was 5 rows before and 5 rows after, while the peak halved and
+the core doubled. It is a fade. But the fix for that is not a better blur; it is
+noticing that nobody wanted a blur. Four options were drafted and put to the
+owner, and the one they chose was not among them, because all four had taken
+"the tools are wrong" as the requirement instead of asking what the tools were
+being reached for.
+
+## v255 -- The assertion could not fail, because both sides were dots
+
+A single-point run has no arc length to walk, so resampling it has to emit n
+copies of the one point. The first test for this put a dot on BOTH pages -- where
+n is 1 either way, so returning the run untouched and resampling it produce the
+same answer. The mutation that returns `pts.map(...)` instead of `n` copies
+passed the suite untouched.
+
+Pairing the dot against a REAL run in the other pose is the case that can go
+wrong: n is then the other run's count, and the bug leaves the two pages
+mismatched again -- which is the exact defect the change is about. Rewritten
+that way, the same mutation fails by name, and so does resampling to the SPARSER
+of the two runs.
+
+**A test whose two inputs are identical is testing that the function is
+deterministic, not that it is correct.** Both mutations here were invisible for
+the same reason: with n fixed at 1 there was nothing for the resampler to do.

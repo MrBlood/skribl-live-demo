@@ -235,7 +235,87 @@ with sync_playwright() as p:
           f"{spread['arm']:.0f}px against {spread['foot']:.0f}px — this is what "
           f"makes it read as a long exposure rather than a smudge")
 
+    print("\nIN-BETWEEN — a HAND-REDRAWN pose (v255)")
+    # THE CASE THE FEATURE WAS MOST WANTED FOR AND USED TO REFUSE. Until v255
+    # the two pages had to be structurally identical -- same strokes AND the same
+    # number of points in each -- which is what Duplicate-then-drag produces.
+    # Drawing the next pose by hand is what frame-by-frame animation IS, and a
+    # redraw lands a different vertex count every time, so the tool refused the
+    # workflow it exists to serve. A stroke is a PATH: resampled along its own
+    # arc length it keeps its shape at any vertex count, so the two poses
+    # correspond and the exposure arithmetic runs unchanged.
+    page.evaluate("""() => {
+      const arc = (cx, n, r) => { const o = [];
+        for (let i = 0; i <= n; i++) { const a = i * 2 * Math.PI / n;
+          o.push({ x: cx + r*Math.cos(a), y: 200 + r*Math.sin(a),
+                   color: '#ffffff', size: 6, t: i, erase: false, start: i === 0 }); }
+        return o; };
+      frames.length = 0;
+      const A = arc(150, 37, 40), B = arc(420, 31, 40);
+      frames.push({ strokes: A, strokeGroups: [A.length], hold: 1 });
+      frames.push({ strokes: B, strokeGroups: [B.length], hold: 1 });
+      idx = 0; actionLog.length = 0; redoStack.length = 0; buildStrip(); render();
+    }""")
+    _before = page.evaluate("() => [frames[0].strokeGroups.slice(), frames[1].strokeGroups.slice()]")
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
+    _hand = page.evaluate("""() => ({
+        pages: frames.length,
+        mid: frames[1] ? frames[1].strokes.length : 0,
+        poseA: frames[0].strokeGroups.slice(),
+        poseB: frames[2] ? frames[2].strokeGroups.slice() : null,
+        sums: frames[1] ? frames[1].strokeGroups.reduce((a,b)=>a+b,0) === frames[1].strokes.length : false,
+        starts: frames[1] ? frames[1].strokes.filter(p=>p.start).length === frames[1].strokeGroups.length : false })""")
+    check("two HAND-DRAWN poses with different point counts now interpolate",
+          _hand["pages"] == 3 and _hand["mid"] > 0,
+          f"{_before[0]} vs {_before[1]} -> {_hand} — a redrawn pose lands a "
+          f"different vertex count every time; requiring them to match refused "
+          f"the ordinary way people animate")
+    check("...and the two source poses are left exactly as they were drawn",
+          _hand["poseA"] == _before[0] and _hand["poseB"] == _before[1],
+          f"{_hand['poseA']} vs {_before[0]}, {_hand['poseB']} vs {_before[1]} — "
+          f"resampling happens on COPIES; undoing the in-between must not leave "
+          f"the artist's own pages rewritten underneath them")
+    check("...and the generated page is still well-formed",
+          _hand["sums"] and _hand["starts"], str(_hand))
+
+    # A single-point run is an ordinary thing to have on a page, and it has no
+    # arc length to walk. It is paired here against a REAL run in the other
+    # pose, which is the case that can actually go wrong: n is then the other
+    # run's count, and resampling must return that many copies rather than the
+    # one point it started with. Written first with a dot on BOTH sides, where
+    # n is 1 either way -- so returning the run unchanged was indistinguishable
+    # from resampling it, and the assertion could not fail.
+    page.evaluate("""() => {
+      frames.length = 0;
+      frames.push({ strokes: [{x:100,y:100,color:'#ffffff',size:9,t:0,erase:false,start:true}],
+                    strokeGroups: [1], hold: 1 });
+      frames.push({ strokes: [{x:300,y:200,color:'#ffffff',size:9,t:0,erase:false,start:true},
+                              {x:340,y:230,color:'#ffffff',size:9,t:1,erase:false},
+                              {x:380,y:200,color:'#ffffff',size:9,t:2,erase:false}],
+                    strokeGroups: [3], hold: 1 });
+      idx = 0; buildStrip(); render();
+    }""")
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(350)
+    _dot = page.evaluate("""() => { const f = frames[1]; if (!f) return { pages: frames.length };
+        return { pages: frames.length, pts: f.strokes.length,
+                 runs: [...new Set(f.strokeGroups)],
+                 sums: f.strokeGroups.reduce((a,b)=>a+b,0) === f.strokes.length,
+                 starts: f.strokes.filter(p=>p.start).length === f.strokeGroups.length }; }""")
+    check("a dot paired against a real run resamples UP to that run's count",
+          _dot.get("pages") == 3 and _dot.get("runs") == [3],
+          f"{_dot} — the dot has no arc length to walk, so it must be emitted as "
+          f"n copies; returning it unchanged leaves the two poses mismatched, "
+          f"which is the exact bug this change is about")
+    check("...and the page it produces is still well-formed",
+          bool(_dot.get("sums")) and bool(_dot.get("starts")), str(_dot))
+
     print("\nIN-BETWEEN — it refuses rather than guessing")
+    # WHAT IS STILL DECLINED, and it is now the ONLY thing declined: pages with
+    # a different NUMBER of strokes. Pairing three strokes against four means
+    # choosing which one has no partner, and that guess would produce a mess
+    # that reads as a bug in the tool rather than a limit of the idea.
     page.evaluate("""() => {
       frames.length = 0;
       frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
@@ -243,20 +323,38 @@ with sync_playwright() as p:
                     strokeGroups: [2], hold: 1 });
       frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
                               {x:50,y:50,color:'#fff',size:6,t:1,erase:false},
-                              {x:90,y:90,color:'#fff',size:6,t:2,erase:false}],
-                    strokeGroups: [3], hold: 1 });
+                              {x:10,y:80,color:'#fff',size:6,t:2,erase:false,start:true},
+                              {x:90,y:90,color:'#fff',size:6,t:3,erase:false}],
+                    strokeGroups: [2, 2], hold: 1 });
       idx = 0; buildStrip(); render();
     }""")
     page.evaluate("() => addTween()")
     page.wait_for_timeout(300)
-    check("two pages that do NOT correspond produce no page",
+    check("pages with a different NUMBER of strokes produce no page",
           page.evaluate("() => frames.length") == 2,
           "inventing a pairing would produce a mess that reads as a bug in the "
           "tool rather than a limit of the idea")
-    check("...and the refusal says what is needed",
-          "same strokes" in (page.evaluate(
-              "() => (document.getElementById('flipChip')||{}).textContent") or ""),
-          page.evaluate("() => (document.getElementById('flipChip')||{}).textContent"))
+    _msg = page.evaluate("() => (document.getElementById('flipChip')||{}).textContent") or ""
+    check("...and the refusal says what is needed, with the two counts",
+          "number of strokes" in _msg.lower() and "1" in _msg and "2" in _msg,
+          f"{_msg!r} — 'the same strokes on both' did not say WHICH of the two "
+          f"things it meant, and after v255 only one of them is still required")
+
+    # THE HELP HAS TO AGREE WITH THE TOOL. It said "It needs the same strokes on
+    # both pages, so duplicate and move rather than redrawing from scratch" --
+    # advice that was correct until v255 and is now the opposite of true. A wrong
+    # answer in the help is worse than no answer: it tells someone the workflow
+    # they want is unsupported when it is the one that just started working.
+    _help = page.evaluate("""() => {
+      const tips = [...document.querySelectorAll('.help-tip')];
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'In-between');
+      return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
+    check("the help describes the in-between's ACTUAL requirement",
+          _help and "number" in _help.lower() and "same strokes on both" not in _help,
+          f"{(_help or '')[-190:]!r} — the old text told people to duplicate "
+          f"rather than redraw, which is exactly the workflow v255 unblocked")
+    check("...and it still says redrawing the pose is fine",
+          _help and "redraw" in _help.lower(), (_help or "")[-190:])
 
     page.evaluate(POSES, 150)
     page.evaluate("() => go(1)")          # last page: nothing to interpolate TO
