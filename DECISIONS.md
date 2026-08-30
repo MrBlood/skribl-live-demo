@@ -3444,3 +3444,57 @@ One artifact worth recording: the analysis also reported stampScale colliding
 with shapeSides. It does not -- the probe had forced both popovers open at once,
 and through a real route choosing Stamps hides the shape picker. **A collision
 found in a state the app cannot reach is not a collision.**
+
+## v259 -- A 44px box is not a 44px target
+
+The shape knobs were grown to 44px and STILL lost their band: the rows were 6px
+apart, so measured with elementFromPoint only 3 of 9 sample points across Sides
+reached Sides -- the rest went to the kind buttons above and to Corners below.
+17px of row spacing is the first value where all 18 points across both sliders
+land on the slider they belong to; 11 and 14 still leak 3 each. The picker goes
+102px to 181 on Flip, 98 to 201 on Pad, which a popover can afford.
+
+**The first fix went into flip.css, which Pad does not load.** Both surfaces
+render this markup, so Flip read 9/9 while Pad read 4/9 -- and a size-only check
+passed both, because the boxes were 44 on each. The rule moved to styles.css and
+the assertion now samples the band rather than measuring the box.
+
+## v260 -- Three ways a measurement lied, in one sitting
+
+Every one of these produced a confident number that was wrong, and each was
+caught only by disbelieving the instrument:
+
+  * THE "AFTER" WAS MEASURED WITH NO GROWTH ALLOWANCE. The mockup compared a
+    22px slider grown by 11 against a 44px slider grown by 0, so the after state
+    could not report a collision by construction. It printed "5 -> 0" and the
+    zero meant nothing.
+  * GEOMETRY IGNORED STACKING. Counting rect overlap flagged the page bar's
+    Duplicate and Blank buttons as collisions with a popover that sits ON TOP of
+    them and occludes them entirely. The only honest question is which element
+    receives the press, which is elementFromPoint, not arithmetic.
+  * THE FIX FOR A TOAST IN THE WAY DELETED THE THING UNDER TEST. Dismissing the
+    hint with h.click() bubbled to shapePopDismiss -- a click outside #shapePop
+    closes the picker -- so Flip's two checks found no rect and SKIPPED, silently,
+    while Pad's still ran and passed. The suite went green with a third of its
+    new coverage missing. Now the hint is removed rather than clicked, and a
+    check asserts both knobs were on screen at all.
+
+**A check that disappears is worse than one that fails.** Two of these three
+were only visible by reading which assertion names were absent from a passing
+run.
+
+## v261 -- Most of the white space was mine
+
+Asked whether the gaps in the image drawer were all necessary, the honest answer
+was that the drawer being looked at was a MOCKUP: +24px row spacing that this
+session had injected to show what 44px targets would cost. Measured, the shipped
+gaps are 8, 0, 12, 12, 8 and 0 pixels; the mockup's were 48, 24, 24, 24, 48 and
+24. Nothing needed removing.
+
+The one real finding was a duplicated heading, and it is narrower than it looked
+too: the dropzone shows the FILE NAME, and only falls back to "Background image"
+-- directly under a section label reading "Background image" -- when no name was
+stored, which is what a synthetic test image does. The fallback now reads "Image
+added".
+
+**Before treating a screenshot as evidence, check whose CSS is in it.**

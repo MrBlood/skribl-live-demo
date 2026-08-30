@@ -5317,13 +5317,26 @@ body.playing .flip-grid { display: none; }
   background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
   border-radius: 14px;
-  padding: 6px;
+  /* Vertical padding matches the breathing room .shape-knob now takes, so the
+     first and last rows are not tighter against the edge than against each
+     other. Horizontal stays 6. */
+  padding: 20px 6px;
   box-shadow: 0 12px 30px rgba(0,0,0,.55);
 }
 /* Paired: an explicit display defeats [hidden], which this codebase has been
    bitten by three times. */
 .shape-pop[hidden] { display: none; }
 .shape-pop .smooth-seg { margin: 0; }
+/* ROW SPACING FOR THE KNOBS, and it lives HERE rather than in flip.css because
+   BOTH surfaces render this markup and only Flip loads that sheet -- the first
+   version of this fix went in there and left Pad's Sides slider taking 4 of its
+   9 sample points while Flip took 9 of 9.
+
+   17px was swept, not guessed: the rows were 6px apart, which is why Sides and
+   Corners had to ship at 22px. At 11 and 14 the two knobs still steal 3 points
+   from each other; 17 is the first value where every point across both sliders
+   lands on the slider it belongs to. */
+.shape-knob { margin-block: 17px; }
 /* The little arrow, so it reads as belonging to the button below it. */
 .shape-pop::after {
   content: '';

@@ -320,6 +320,14 @@
   /* The shape popover's two knobs. Laid out as label / slider / value so the
      number has a fixed column and the slider does not jump as it changes --
      a readout that resizes drags the control under the finger using it. */
+  /* ROOM FOR A 44px KNOB. The rows were 6px apart, which is why Sides and
+     Corners had to ship at 22px: measured with elementFromPoint, only 3 of 9
+     sample points across Sides' band actually reached Sides -- the rest went to
+     the kind buttons above and to Corners below.
+     17px was found by sweeping, not guessed: at 11 and 14 the two knobs still
+     took 3 of each other's points, and 17 is the first value where all 18
+     points across both sliders land on the slider they belong to. It takes the
+     picker from 102px to 181px, which a popover can afford. */
   .shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0; }
   .shape-knob label { font-size: 10px; font-weight: 600; letter-spacing: .04em;
     text-transform: uppercase; color: var(--text-muted); min-width: 46px; }
