@@ -50,7 +50,7 @@
 
     <div class="photo-opacity-row" id="photoZoomRow"{% if kind != 'flip' %} hidden{% endif %}>
       <span class="size-label slider-label">Zoom</span>
-      <input type="range" id="photoZoom" min="100" max="300" value="100" class="slider slider-tight"{% if kind == 'flip' %} aria-label="Image zoom"{% endif %} title="Scale the photo without moving your drawing">
+      <input type="range" id="photoZoom" min="100" max="300" value="100" class="slider"{% if kind == 'flip' %} aria-label="Image zoom"{% endif %} title="Scale the photo without moving your drawing">
       <span id="photoZoomVal" class="size-label slider-val">100%</span>
     </div>
 
@@ -61,10 +61,10 @@
     </div>
     <div class="photo-opacity-row">
       <span class="size-label slider-label">Blur</span>
-      <input type="range" id="photoBlur" min="0" max="20" value="0" class="slider slider-tight"{% if kind == 'flip' %} aria-label="Image blur"{% endif %} title="Soften the photo so it does not compete with the drawing">
+      <input type="range" id="photoBlur" min="0" max="20" value="0" class="slider"{% if kind == 'flip' %} aria-label="Image blur"{% endif %} title="Soften the photo so it does not compete with the drawing">
       <span id="photoBlurVal" class="size-label slider-val">0px</span>
     </div>
-    <button type="button" id="resetPhotoBtn" class="panel-btn" style="margin-top:8px;width:100%">Reset adjustments</button>
+    <button type="button" id="resetPhotoBtn" class="panel-btn">Reset adjustments</button>
   </div>
   {% if kind == 'flip' %}<p class="flip-drawer-note" id="photoNote">Fills the canvas behind your drawing — one image for the whole animation.</p>{% endif %}
 </div>

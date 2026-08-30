@@ -2333,15 +2333,45 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   gap: 10px;
 }
 
-/* Breathing room only between stacked sliders (not above the first / below the last) */
+/* THE GAP IS 22 BECAUSE THE HIT BAND IS 44 AND THE ROW IS 22.
+   A grown slider is 44px tall with -11px margins top and bottom: the flow keeps
+   its 22, and the box overhangs 11px into whatever sits above and below. Two
+   stacked sliders 12px apart therefore had bands overlapping by 10px, and where
+   two hit areas overlap the winner is DOM order -- so the lower slider was
+   quietly taking the bottom of the upper one's band. 22 is exactly the two
+   overhangs, and it is the number that lets Zoom and Blur drop .slider-tight. */
 .photo-opacity-row + .photo-opacity-row {
-  margin-top: 12px;
+  margin-top: 22px;
 }
 
 /* Space between the Fill/Fit/Stretch capsule and the first slider */
 .photo-fit-group + .photo-opacity-row {
   margin-top: 16px;
 }
+
+/* The hint sat flush against the Zoom row -- a 0px gap, so Zoom's band reached
+   11px past its own box. It matters MOST when the hint is hidden, which is the
+   resting state: the hint is display:none until Reposition is pressed, so what
+   sits 11px above the Zoom row is then the reposition BUTTON, and a button is a
+   pointer target where the hint's prose is not.
+
+   The selector is the HINT's, not the button's, and that is deliberate: the DOM
+   order is button, hint, row, so `.reposition-btn + .photo-opacity-row` never
+   matches -- a hidden element is still a sibling. That rule was written first
+   and was dead on arrival. This one applies in both states.
+
+   16 AND NOT 12, and the difference is the button's OWN band. A 35px button
+   wants 4.5px of clearance below it to reach 44, and the slider overhangs 11px
+   above its row: 12px left them fighting over 3.5px, and the slider won it
+   because it paints later. Measured as repositionBtn 8/9 -- the fix's own first
+   number. Reset gets 16 for the same arithmetic on a 34px button. */
+.reposition-hint + .photo-opacity-row { margin-top: 16px; }
+
+/* Reset is a real button directly under the last slider, and its 8px left
+   Blur's band 3px inside it. This lived as an inline style on the button, which
+   an author rule can only beat with !important -- so it moved here instead,
+   where the number sits beside the other three it has to agree with. */
+#photoDetail .panel-btn { margin-top: 16px; width: 100%; }
 
 .slider-label {
   min-width: 52px;
@@ -2383,12 +2413,17 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    overlap the winner is decided by DOM order and stacking -- so growing them
    would silently move a tap target rather than enlarge it:
 
-     photoZoom   vs Reposition   11px      shapeSides vs Sides/Corners  5-7px
-     photoBlur   vs Reset         3px      shapeSides vs the kind buttons 1-7px
+     shapeSides vs Sides/Corners  5-7px   shapeSides vs the kind buttons 1-7px
 
-   The fix for these is row spacing in the popover and the image drawer, which
-   is a layout change and is not smuggled in here. Until then they keep the
-   22px box they shipped with. */
+   photoZoom and photoBlur were on this list and are not any more: v258 gave the
+   image drawer the row spacing the note asked for -- 22px between sliders, which
+   is exactly the two 11px overhangs, plus clearance above the first and below
+   the last -- and both now carry a full 44px band that belongs to them at every
+   sampled point.
+
+   The fix for the two that remain is row spacing in the shape popover, which is
+   a layout change and is not smuggled in here. Until then they keep the 22px box
+   they shipped with. */
 .slider.slider-tight {
   height: 22px;
   margin-top: 0;
