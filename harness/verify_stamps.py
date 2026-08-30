@@ -618,6 +618,133 @@ with sync_playwright() as _p:
     finally:
         _b.close()
 
+
+# ============================================================================
+# PUTTING THE SHELF AWAY, AND A RING THAT OUTLIVES ITS OWN EXPLANATION
+#
+# Reported from the live demo: "the stamp library doesn't go away until another
+# tool is chosen."
+#
+# Press-again-to-close was WRITTEN and did not WORK, which is the interesting
+# part. #stampToolBtn carried two click listeners: lib/toolshelf.js binds the
+# cells it builds to the registry's setTool, and each surface ALSO bound every
+# '#toolGroup .tool-btn' to its own. A deriving handler survives being run
+# twice; a TOGGLING one does not. The registry's toggle closed the shelf and the
+# surface's setTool re-derived it open in the same click.
+#
+# Two further traps, both hit while fixing it:
+#   * the toggle read stampPop.hidden AFTER setTool had rederived it, so it saw
+#     false every time and could only ever close -- shut on the second tap and
+#     never back on the third;
+#   * the spotlight ran its own 6000ms timer while an ACTION hint dwells
+#     DURATION * 2 = 12400, so the ring went out six seconds before the sentence
+#     calling it "the highlighted button" did.
+# ============================================================================
+print("\nSHELF DISMISSAL — and a ring tied to the sentence that explains it")
+with sync_playwright() as _sp2:
+    _sb = _sp2.chromium.launch()
+    try:
+        sp = _sb.new_page(viewport={"width": 430, "height": 900})
+        sp.goto(BASE + "/flip", wait_until="load")
+        sp.wait_for_timeout(1200)
+        sp.evaluate("() => localStorage.clear()")
+        sp.reload(wait_until="load")
+        sp.wait_for_timeout(1200)
+
+        hidden = lambda: sp.evaluate(
+            "() => document.getElementById('stampPop').hidden")
+        # THE TRAY FIRST, because the shelf is most-recently-used: Stamps has
+        # no cell until it has been chosen once, and this is also the route a
+        # person takes the first time. It is the re-tap of the promoted button
+        # that carried two listeners.
+        sp.click("#toolMoreBtn"); sp.wait_for_timeout(300)
+        sp.click(".tool-tray-btn[data-tool='stamp']"); sp.wait_for_timeout(400)
+        check("choosing Stamps opens the shelf", hidden() is False,
+              f"flipTool={sp.evaluate('() => flipTool')!r}")
+        check("...and it is promoted onto the shelf, so it can be re-tapped",
+              sp.evaluate("() => { const b = document.getElementById"
+                          "('stampToolBtn'); return !!(b && b.offsetParent); }")
+              is True,
+              "without a cell there is nothing to tap again")
+
+        sp.click("#stampToolBtn"); sp.wait_for_timeout(350)
+        check("tapping Stamps again PUTS THE SHELF AWAY",
+              hidden() is True,
+              "the toggle existed but a second click listener re-derived it open")
+        check("...without leaving the tool",
+              sp.evaluate("() => flipTool") == "stamp",
+              f"flipTool={sp.evaluate('() => flipTool')!r} — the shelf covers the "
+              "filmstrip, so dismissing it must not cost you the tool")
+        sp.click("#stampToolBtn"); sp.wait_for_timeout(350)
+        check("...and a third tap brings it back",
+              hidden() is False,
+              "reading .hidden after setTool rederived it makes the toggle "
+              "one-way: it closes and never reopens")
+
+        # The derived behaviour must survive: every OTHER route still opens it,
+        # and leaving the tool still closes it.
+        sp.evaluate("() => setTool('pen')")
+        sp.wait_for_timeout(300)
+        check("leaving the tool still closes the shelf", hidden() is True, "")
+        sp.evaluate("() => setTool('stamp')")
+        sp.wait_for_timeout(300)
+        check("and a route that is not the shelf button still opens it",
+              hidden() is False,
+              "setTool derives this so EVERY way in works; the toggle is only "
+              "an override for re-tapping the button itself")
+
+        # ---- the ring lasts as long as the toast --------------------------
+        sp.evaluate("() => localStorage.clear()")
+        sp.reload(wait_until="load")
+        sp.wait_for_timeout(1200)
+        sp.evaluate("() => setTool('pen')")
+        sbox = sp.eval_on_selector("#pad", "e => { const r = e.getBoundingClientRect();"
+                                   " return { x: r.x, y: r.y }; }")
+        sp.mouse.move(sbox["x"] + 40, sbox["y"] + 50)
+        sp.mouse.down()
+        for i in range(1, 10):
+            sp.mouse.move(sbox["x"] + 40 + i * 12, sbox["y"] + 50 + i * 6)
+        sp.mouse.up()
+        sp.wait_for_timeout(250)
+        sp.evaluate("() => setTool('select')")
+        sp.mouse.move(sbox["x"] + 20, sbox["y"] + 30)
+        sp.mouse.down()
+        for i in range(1, 10):
+            sp.mouse.move(sbox["x"] + 20 + i * 16, sbox["y"] + 30 + i * 8)
+        sp.mouse.up()
+        sp.wait_for_timeout(700)
+
+        ring = lambda: sp.evaluate("() => document.getElementById('sbStamp')"
+                                   ".classList.contains('pb-spot')")
+        up = lambda: sp.evaluate("() => { const h = document.querySelector"
+                                 "('.skribl-hint'); return !!(h && !h.hidden); }")
+        check("the ring and the toast both start", ring() and up(), "")
+        # 8s is past the 6000ms timer the spotlight used to run and comfortably
+        # short of an action hint's DURATION * 2 dwell. Pinned at a point where
+        # the two behaviours DISAGREE rather than at an exact end time, which
+        # would be flaky and would break whenever the dwell is retuned.
+        sp.wait_for_timeout(8000)
+        check("8s in, the toast is still up",
+              up() is True,
+              "an action hint dwells twice the normal duration; if this is "
+              "false the timing assumption below no longer holds")
+        check("...and the ring is still lit",
+              ring() is True,
+              "it used to go out at 6s, leaving a toast saying 'the highlighted "
+              "button' while nothing was highlighted")
+        # And it must not outlive the sentence either.
+        for _ in range(20):
+            if not up():
+                break
+            sp.wait_for_timeout(1000)
+        check("once the toast goes, the ring goes with it",
+              up() is False and ring() is False,
+              f"toast up={up()}, ring={ring()} — a highlight with nothing "
+              "explaining it is just a button that looks broken")
+        sp.close()
+    finally:
+        _sb.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

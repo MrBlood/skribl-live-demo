@@ -66,8 +66,16 @@
     return el;
   }
 
+  /* Run when THIS hint goes away, whichever way it goes -- timer, tap, or a
+     later hint replacing it. It exists so a caller can tie something visual to
+     the toast's lifetime without duplicating the dwell arithmetic: the stamp
+     spotlight used a hard-coded 6000 while an action hint dwells DURATION * 2,
+     so the ring went out six seconds before the sentence explaining it did. */
+  var onHide = null;
   function hide() {
     clearTimeout(timer);
+    var cb = onHide; onHide = null;
+    if (cb) { try { cb(); } catch (e) {} }
     if (el) { el.classList.remove('in'); }
     // Wait out the fade before hiding, or it vanishes instead of fading.
     setTimeout(function () { if (el && !el.classList.contains('in')) el.hidden = true; }, 220);
@@ -82,6 +90,8 @@
    *        pointer-events:none box: the pointer vanished behind it, and its
    *        size/z-index made it easy to leave a dead zone over the toolbar.
    *        Small, timed, tap-to-dismiss, with an optional deeper link. */
+  /* opts.onHide - called when this toast goes away, for anything that has to
+   *        live exactly as long as it does. */
   function show(key, text, opts) {
     if (!key || !text || !isEnabled()) return false;
     var s = seen();
@@ -90,6 +100,7 @@
     write(SEEN_KEY, JSON.stringify(s));
 
     var action = opts && opts.action;
+    onHide = (opts && typeof opts.onHide === 'function') ? opts.onHide : null;
     var node = ensure();
     node.classList.remove('skribl-hint-panel');   // v205 variant, retired
     clearTimeout(timer);

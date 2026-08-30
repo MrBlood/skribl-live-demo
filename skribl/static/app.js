@@ -757,6 +757,11 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
     // `tool` unconditionally — so opening the tray left the editor with no tool
     // selected. Flip clamped unknown ids to the pen and merely looked fine.
     if (!btn.dataset.tool) return;
+    // See the twin of this guard in flip.js: lib/toolshelf.js binds the cells it
+    // builds, and a button carrying both bindings has its second handler undo
+    // the first. Harmless on Pad today -- both routes here merely derive -- and
+    // kept identical so the two surfaces cannot drift into one having the bug.
+    if (btn.dataset.shelfBound) return;
     setTool(btn.dataset.tool);
     // Shape opens its picker; every other tool closes it. Tapping Shape while
     // it is already the active tool re-opens the picker to switch kind — which

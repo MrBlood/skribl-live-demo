@@ -64,6 +64,15 @@
       b.title = tool.label;
       b.innerHTML = (tool.icon || '') +
                     '<span class="tool-btn-label">' + tool.label + '</span>';
+      /* MARKED, so the surface's own '.tool-btn' click binding can skip it.
+         Both bindings used to fire on a button this function created, and a
+         DERIVING handler survives that while a TOGGLING one does not: the
+         registry's setTool closed the stamp shelf on a second tap and the
+         surface's setTool immediately re-derived it open, so the shelf could
+         only be dismissed by leaving the tool. Static cells in the template are
+         not bound here and keep the surface route; every button therefore has
+         exactly one. */
+      b.dataset.shelfBound = '1';
       b.addEventListener('click', function () { cfg.setTool(tool.id); });
       if (group && moreBtn) group.insertBefore(b, moreBtn);
       else if (group) group.appendChild(b);
