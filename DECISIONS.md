@@ -3134,3 +3134,56 @@ as though the problem had been handled.
 **Some defects have no cheap metric, and the honest response is to say so rather
 than ship a plausible-looking one.** The guard here is procedural: render the
 tray at real size and look at it, which is the step that was skipped.
+
+## v248 -- A wrong answer in the help is worse than no answer
+
+Five of Flip's ten tools -- Select, Smudge, Blur, Fill and Stamps -- had no entry
+in How it works. Two of the five were worse than absent. The Background image
+section carries controls named "Fill / Fit / Stretch" and "Blur", the help has a
+search box, and so a reader looking up either TOOL got a confident paragraph
+about framing a photo. They get an answer, it is the wrong one, and they stop
+looking. A missing entry at least leaves someone still searching.
+
+**The link is an attribute, not the label.** Every documented tool now carries
+`data-help-tool="<id>"`, and the assertion walks the tool REGISTRY -- where a
+tool is declared -- and requires an entry for each id. Matching on the label text
+would have paired Fill and Blur with the image controls and reported full
+coverage, which is precisely the failure being fixed. An attribute can only be
+written on purpose.
+
+Three sentences were also stale rather than missing, and every one of them was
+true when it was written:
+
+  * Shape offered "a line, a rectangle or an ellipse". There are four kinds; poly
+    shipped in v237 and was never written down.
+  * Shape said to pick the kind "in the Draw menu". The picker moved onto the
+    tool button in v237, so the help sent the reader to a menu that does not
+    contain it.
+  * The eraser tooltip hard-coded "three times the brush size". The multiplier is
+    [2, 3, 5] and settable -- the help entry beside it had this right.
+
+verify_docs.py catches facts that go stale NUMERICALLY -- versions, counts,
+hashes -- and by construction cannot catch a sentence. Nothing compared the
+roster to the prose, so the prose drifted for seven versions.
+
+**The check that matters is the one tied to the declaration.** A count of help
+entries would have passed throughout. Asserting against the registry means a tool
+added without an explanation fails the suite rather than shipping mute.
+
+## v249 -- A mutation that breaks the template is not a mutation that passed
+
+The orphan assertion was mutation-tested by deleting an `{% if is_flip %}` and
+leaving its `{% endif %}`. The template then failed to render, the page 500'd,
+`page.evaluate` threw, and the suite died before printing anything -- and the
+grep used to read the result looked only for FAIL lines, so it reported nothing
+and looked like a clean pass of the mutation.
+
+Rewritten as `{% if true %}`, which changes the behaviour under test while
+keeping the tags balanced, it fails immediately and names all five leaked
+entries.
+
+This is the v241 lesson arriving a second time by a different route. First time
+the mutation did not apply because a `str.replace` silently matched nothing; this
+time it applied and destroyed the thing under test. **Read the suite's RESULT
+line, not a grep of its failures** -- a crash and a pass are indistinguishable
+through a filter that only shows failures.

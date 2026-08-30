@@ -523,6 +523,55 @@ with sync_playwright() as p:
               "a dark color-scheme under a light theme paints dark widgets on white")
         tp.close()
 
+    # ---- every tool the surface ships is explained in How it works --------
+    # THE GAP THIS CLOSES. Five of Flip's ten tools -- Select, Smudge, Blur,
+    # Fill and Stamps -- had no help entry at all, and two of the five were
+    # worse than missing: the Background image section has controls named
+    # "Fill / Fit / Stretch" and "Blur", so the help SEARCH answered a query
+    # about either tool with a confident paragraph about framing a photo. A
+    # reader gets an answer, it is the wrong one, and they stop looking.
+    #
+    # Matched on data-help-tool rather than on the label text, for exactly that
+    # reason: a text match would have paired both tools with the image controls
+    # and reported full coverage. The attribute is the link, and it can only be
+    # written deliberately.
+    #
+    # Asserted against the REGISTRY, which is where a tool is declared, so a
+    # tool added without a help entry fails here rather than shipping mute.
+    print("\nHELP — no tool ships without an explanation")
+    for _name, _path, _reg in (("Pad", "/", "SkriblPadTools"),
+                               ("Flip", "/flip", "SkriblFlipTools")):
+        hp = browser.new_page(viewport={"width": 1200, "height": 950})
+        hp.goto(BASE + _path, wait_until="load")
+        hp.wait_for_timeout(900)
+        cov = hp.evaluate("""(reg) => {
+            const ids = window[reg].list();   // list() returns ids, not objects
+            const documented = [...document.querySelectorAll("[data-help-tool]")]
+                .map(el => el.getAttribute("data-help-tool"));
+            return { ids,
+                     missing: ids.filter(i => !documented.includes(i)),
+                     orphan: documented.filter(d => !ids.includes(d)),
+                     empty: documented.filter(d => {
+                         const el = document.querySelector(
+                             '[data-help-tool="' + d + '"] .help-desc');
+                         return !el || el.textContent.trim().length < 40;
+                     }) };
+        }""", _reg)
+        check(f"{_name}: the registry has tools to document",
+              len(cov["ids"]) > 0, "an empty roster would pass vacuously")
+        check(f"{_name}: every tool on this surface has a How it works entry",
+              cov["missing"] == [],
+              f"undocumented: {cov['missing']} of {cov['ids']}")
+        check(f"{_name}: and no entry describes a tool this surface does not "
+              "ship", cov["orphan"] == [],
+              f"{cov['orphan']} — a Flip-only tool explained on Pad sends the "
+              "reader looking for a button that is not there")
+        check(f"{_name}: each entry actually says something",
+              cov["empty"] == [],
+              f"{cov['empty']} have under 40 characters of description — a pill "
+              "with no text would satisfy the check above and explain nothing")
+        hp.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]
