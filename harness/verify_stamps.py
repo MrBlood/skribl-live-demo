@@ -443,6 +443,181 @@ with sync_playwright() as p:
     finally:
         br.close()
 
+
+# ============================================================================
+# FINDING THE STAMP BUTTON AT ALL
+#
+# Reported from the live demo: "I didn't know where the stamp was so I kept
+# pushing stamp in the tool menu. I didn't see the stamp button."
+#
+# Three separate things sent them there, and all three had to go:
+#
+#   1. The empty shelf said "tap Stamp to save it here" while the shelf was
+#      OPEN -- and the button it names lives in the SELECTION bar, which does
+#      not exist until something is selected. The instruction was displayed at
+#      the one moment its target could not be on screen.
+#   2. "Stamp" names two things. The tray has a tool called Stamps, which is
+#      where the word IS visible, so the sentence pointed at the wrong control.
+#   3. Below the "regular" size class .pb-tx is display:none, so on a phone the
+#      selection bar is icons only and NO button is labelled "Stamp" at all.
+#      The sentence named a label the surface does not render.
+#
+# So the shelf now offers the step that has to come first, and the button is
+# pointed at rather than described.
+# ============================================================================
+print("\nDISCOVERY — the route into the shelf has to be findable")
+with sync_playwright() as _p:
+    _b = _p.chromium.launch()
+    try:
+        # A PHONE-WIDTH VIEWPORT ON PURPOSE. This is the size where the labels
+        # vanish, so a desktop-width test would pass while the reported bug
+        # stood.
+        pg = _b.new_page(viewport={"width": 430, "height": 900})
+        pg.goto(BASE + "/flip", wait_until="load")
+        pg.wait_for_timeout(1200)
+        pg.evaluate("() => localStorage.clear()")
+        pg.reload(wait_until="load")
+        pg.wait_for_timeout(1200)
+
+        labels = pg.evaluate(
+            "() => getComputedStyle(document.querySelector('#sbStamp .pb-tx')).display")
+        check("the selection bar really is icons-only at this width",
+              labels == "none",
+              f"display:{labels} — if labels show here this suite is testing the "
+              "wrong surface and the reported bug cannot reproduce")
+
+        pg.evaluate("() => setTool('stamp')")
+        pg.wait_for_timeout(400)
+        empty = pg.evaluate(
+            "() => { const e = document.getElementById('stampEmpty');"
+            " return { shown: !e.hidden,"
+            " text: e.textContent.replace(/\\s+/g, ' ').trim() }; }")
+        check("an empty shelf explains itself", empty["shown"], str(empty))
+        check("...and no longer says to tap a word that is not on screen",
+              "tap Stamp" not in empty["text"],
+              f"{empty['text']!r} — that label is display:none at this width")
+        check("...and shows the button's GLYPH inside the sentence",
+              pg.evaluate("() => !!document.querySelector"
+                          "('#stampEmpty .stamp-empty-ic svg')"),
+              "a picture to match against a picture; the word is not rendered")
+        check("...while still reading correctly to a screen reader",
+              "stamp button" in empty["text"],
+              f"{empty['text']!r} — the glyph is aria-hidden, so without this "
+              "the sentence ends mid-clause in speech")
+
+        go = pg.query_selector("#stampEmptyGo")
+        check("the empty shelf offers the step that comes first", go is not None,
+              "a sentence telling someone to go and find a tool is what failed")
+        # Guarded: a regression that deletes the button would otherwise time
+        # out here and kill the suite AFTER its findings, which through a
+        # failures-only filter looks like a clean pass of the mutation.
+        if go:
+            pg.click("#stampEmptyGo")
+            pg.wait_for_timeout(400)
+        check("...and tapping it actually switches to Select",
+              bool(go) and pg.evaluate("() => flipTool") == "select",
+              f"flipTool={pg.evaluate('() => flipTool')!r}"
+              + ("" if go else " (no button to press)"))
+        check("...and gets the shelf out of the way",
+              pg.evaluate("() => document.getElementById('stampPop').hidden") is True,
+              "the shelf cannot fill until a selection exists elsewhere")
+
+        pg.evaluate("() => setTool('pen')")
+        box = pg.eval_on_selector("#pad", "e => { const r = e.getBoundingClientRect();"
+                                  " return { x: r.x, y: r.y, w: r.width, h: r.height }; }")
+        pg.mouse.move(box["x"] + 50, box["y"] + 70)
+        pg.mouse.down()
+        for i in range(1, 12):
+            pg.mouse.move(box["x"] + 50 + i * 14, box["y"] + 70 + (i % 2) * 26)
+        pg.mouse.up()
+        pg.wait_for_timeout(300)
+        pg.evaluate("() => setTool('select')")
+        pg.mouse.move(box["x"] + 30, box["y"] + 40)
+        pg.mouse.down()
+        for i in range(1, 10):
+            pg.mouse.move(box["x"] + 30 + i * 22, box["y"] + 40 + i * 10)
+        pg.mouse.up()
+        pg.wait_for_timeout(700)
+
+        check("the Stamp button is on screen once something is selected",
+              pg.evaluate("() => { const b = document.getElementById('sbStamp');"
+                          " return !!(b && b.offsetParent); }") is True,
+              "the bar it lives in is created by the selection")
+        check("and it is SPOTLIT, not merely present",
+              pg.evaluate("() => document.getElementById('sbStamp')"
+                          ".classList.contains('pb-spot')") is True,
+              "naming it is what failed; pointing at it is what replaces that")
+        hint = pg.evaluate("() => { const h = document.querySelector('.skribl-hint');"
+                           " return h && !h.hidden ? h.textContent : ''; }")
+        check("the hint refers to the highlight rather than to a label",
+              "highlighted" in hint and "tap Stamp" not in hint,
+              f"{hint!r} — 'tap Stamp' is the sentence that sent the reader to "
+              "the tool tray, where that word IS visible")
+        check("the hint offers to do it for you", "Stamp it" in hint, f"{hint!r}")
+
+        # THE TOAST MUST NOT EAT THE CANVAS UNDERNEATH IT. It is position:fixed
+        # over the drawing, and while it was pointer-reactive it swallowed
+        # anything aimed below it -- this hint made verify_select's rotation
+        # drag miss its handle, because the toast was sitting on the handle.
+        #
+        # Asserted with elementFromPoint rather than by clicking, because the
+        # suites dismiss hints with element.click(), which dispatches straight
+        # to the node and ignores pointer-events entirely: a click-based check
+        # would pass whether this were fixed or not.
+        # h.contains(el), NOT the tag name. The first version of this check read
+        # el.tagName and accepted "div" -- and the hint IS a div, so it passed
+        # whether the fix was in place or not. Caught by mutating the CSS back
+        # to pointer-events: auto and watching the suite stay green.
+        thru = pg.evaluate(
+            "() => { const h = document.querySelector('.skribl-hint');"
+            " if (!h || h.hidden) return { up: false };"
+            " const r = h.getBoundingClientRect();"
+            " const el = document.elementFromPoint(r.left + r.width / 2,"
+            "                                      r.top + r.height / 2);"
+            " return { up: true, blocked: !!(el && h.contains(el)),"
+            "          hit: el ? (el.id || el.className || el.tagName) : null }; }")
+        check("the hint is actually on screen for this check to mean anything",
+              thru["up"] is True, "no toast up — the assertion below is vacuous")
+        check("a press in the middle of the hint reaches what is behind it",
+              thru["up"] and thru["blocked"] is False,
+              f"elementFromPoint lands on {thru.get('hit')!r}, inside the toast — "
+              "it is intercepting the drawing surface")
+        check("but its action button still takes a press",
+              pg.evaluate("() => { const a = document.querySelector"
+                          "('.skribl-hint-action');"
+                          " return a ? getComputedStyle(a).pointerEvents : null; }")
+              == "auto",
+              "the panel opting out must not take the button with it")
+
+        pg.click("#sbStamp")
+        pg.wait_for_timeout(400)
+        check("pressing the button ends the spotlight",
+              pg.evaluate("() => document.getElementById('sbStamp')"
+                          ".classList.contains('pb-spot')") is False,
+              "a highlight that survives being obeyed is an alarm, not a hint")
+        check("...and the press actually saved a stamp",
+              pg.evaluate("() => stampShelf.length") == 1,
+              f"shelf holds {pg.evaluate('() => stampShelf.length')}")
+
+        # ONCE PER PERSON. It introduces the shelf; it does not nag.
+        pg.evaluate("() => { stampShelf.length = 0; selSpans = []; selRect = null;"
+                    " syncSelBar(); }")
+        pg.evaluate("() => setTool('select')")
+        pg.mouse.move(box["x"] + 30, box["y"] + 40)
+        pg.mouse.down()
+        for i in range(1, 10):
+            pg.mouse.move(box["x"] + 30 + i * 22, box["y"] + 40 + i * 10)
+        pg.mouse.up()
+        pg.wait_for_timeout(600)
+        check("the spotlight does not fire a second time",
+              pg.evaluate("() => document.getElementById('sbStamp')"
+                          ".classList.contains('pb-spot')") is False,
+              "SkriblHints keeps the once-per-person promise, so the spotlight "
+              "has to be tied to it rather than fired alongside it")
+        pg.close()
+    finally:
+        _b.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(n for _, n in bad)))

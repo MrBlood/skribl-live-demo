@@ -173,7 +173,24 @@
          that turns it into markup. #}
       <div class="stamp-pop" id="stampPop" role="dialog" aria-label="Stamps" hidden>
         <div class="stamp-grid" id="stampGrid"></div>
-        <p class="stamp-empty" id="stampEmpty" hidden>Pick something with Select, then tap <b>Stamp</b> to save it here.</p>
+        {# THE OLD TEXT NAMED A BUTTON THAT WAS NOT ON SCREEN. "Tap Stamp" reads,
+   reasonably, as the Stamp TOOL in the tray -- which is the thing you are
+   already looking at when you read this. The actual button lives in the
+   SELECTION bar, and that bar only exists once something is selected, so
+   at the moment this sentence is read its target does not exist yet.
+   Reported from the live demo: "I didn't know where the stamp was so I
+   kept pushing stamp in the tool menu."
+   So the shelf now hands over to the step that has to come first, rather
+   than describing a control the reader cannot find. #}
+        <p class="stamp-empty" id="stampEmpty" hidden>No stamps yet &mdash; they are made out of a selection.
+          <button type="button" class="stamp-empty-go" id="stampEmptyGo">Pick something with Select</button>
+          {# THE GLYPH, NOT THE WORD. .pb-tx is display:none below the "regular"
+   size class, so on a phone the selection bar is icons only and there is
+   no button labelled "Stamp" anywhere on screen -- which is what sent the
+   owner back to the tool tray, the one place the WORD does appear. A
+   sentence naming a label the surface does not render is worse than no
+   sentence; the same trap is called out on the page-move hint. #}
+          <span class="stamp-empty-then">Then tap <span class="stamp-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5h6a2 2 0 0 1 2 2v3.2c0 1-.6 1.9-1.5 2.3l-.6.3c-.6.3-.9.9-.9 1.5V15H10v-1.2c0-.6-.3-1.2-.9-1.5l-.6-.3A2.6 2.6 0 0 1 7 9.7V6.5a2 2 0 0 1 2-2Z"/><rect x="4.5" y="17" width="15" height="3" rx="1"/></svg></span><span class="vh">the stamp button</span> in the bar along the bottom.</span></p>
         {# One knob, and it earns its row: a stamp placed at exactly one size is
            an asset you can reuse once. Scaling the STROKE WIDTHS with the
            geometry is what makes a small copy read as a small drawing rather
