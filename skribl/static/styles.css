@@ -1,4 +1,15 @@
 :root {
+  /* TELL THE BROWSER WHICH WORLD ITS OWN WIDGETS LIVE IN.
+     Everything Skribl paints itself already follows the tokens below, so this
+     looks redundant until a control the UA paints appears: a range input with
+     no .slider class, a scrollbar, a date picker. Those ignore the tokens and
+     take the color-scheme, which defaults to light -- so a slider that missed
+     its class rendered as a WHITE track inside a near-black popover, reported
+     from the live demo as "the new sliders are for light theme".
+     The class was the bug and it is fixed; this is so the next one that slips
+     through degrades to a dark default instead of a light one. */
+  color-scheme: dark;
+
   /* Surface ramp */
   --surface-base: #0b0d12;
   --surface-raised: #0f1218;
@@ -5621,6 +5632,8 @@ body.playing .flip-grid { display: none; }
    on a light OS -- but that is the owner's call about the product, not a
    detail of the implementation. */
 :root[data-theme="light"] {
+  color-scheme: light;   /* the counterpart of the note on :root */
+
   /* Surfaces — the deepest dark becomes the lightest light */
   --surface-deep:            #ffffff;   /* the toolbar row's ground */
   --surface-base:            #fbfcfd;

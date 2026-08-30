@@ -3053,3 +3053,28 @@ popover in the wrong state, the next `page.click` timed out on a hidden button
 and the run died before printing the assertion that had already failed. Every
 step that needs the picker open now reopens it if it is closed, so a regression
 is reported by name rather than as a Playwright timeout.
+
+## v244 -- A control the browser paints takes the browser's theme, not yours
+
+Sides, Corners and stamp Size were added as bare `<input type="range">` without
+`class="slider"`, so the shared custom track never applied and the UA painted its
+own. A UA-painted control takes the document's `color-scheme`, which this app had
+never declared, so it defaulted to **light**: a white track sitting inside a
+near-black popover. Reported from the live demo as "the new sliders are for light
+theme".
+
+The class was the bug. `color-scheme: dark` on `:root` (and `light` under
+`[data-theme="light"]`) is the second half, and it is the more useful half: it
+does not fix these three sliders, it makes the NEXT control that slips through
+degrade to a dark default instead of a light one. Scrollbars and date pickers
+were already taking the light default and nobody had noticed.
+
+The assertion is written over EVERY range input on both surfaces, not over the
+three that were wrong, because the defect is "a new slider forgot the class" and
+the next one will forget it too. `appearance: none` is what `.slider` sets and
+what the UA does not, which is what distinguishes a control we style from one we
+merely place.
+
+**A shared class is only shared if using it is easier than not using it.** The
+comment on `.slider` said "any future slider" and three future sliders did not
+use it. A comment cannot enforce anything; the assertion can.

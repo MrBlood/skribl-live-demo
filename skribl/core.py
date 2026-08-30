@@ -15,7 +15,7 @@ import re
 # skribl_editor.html drifted nine versions (it still read v96 at v105) — nothing
 # forced anyone to touch it. Bump this one line per release; verify_version.py
 # fails if a hardcoded version reappears in a template.
-SKRIBL_VERSION = "v241"
+SKRIBL_VERSION = "v242"
 
 OG_DEFAULT_TITLE = "Skribl Pad"
 OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."

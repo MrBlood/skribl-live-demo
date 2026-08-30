@@ -149,13 +149,13 @@
          is still a control you have to read past. #}
       <div class="shape-knob" id="shapeSidesRow" hidden>
         <label for="shapeSides">Sides</label>
-        <input type="range" id="shapeSides" min="3" max="12" step="1" value="5"
+        <input type="range" class="slider" id="shapeSides" min="3" max="12" step="1" value="5"
                aria-label="Number of sides">
         <output id="shapeSidesOut">5</output>
       </div>
       <div class="shape-knob" id="shapeRadiusRow" hidden>
         <label for="shapeRadius">Corners</label>
-        <input type="range" id="shapeRadius" min="0" max="60" step="2" value="0"
+        <input type="range" class="slider" id="shapeRadius" min="0" max="60" step="2" value="0"
                aria-label="Corner rounding">
         <output id="shapeRadiusOut">0</output>
       </div>
@@ -180,7 +180,7 @@
            than as the same drawing with a fatter pen. #}
         <div class="shape-knob" id="stampSizeRow">
           <label for="stampScale">Size</label>
-          <input type="range" id="stampScale" min="25" max="200" step="5" value="100"
+          <input type="range" class="slider" id="stampScale" min="25" max="200" step="5" value="100"
                  aria-label="Stamp size, as a percentage">
           <output id="stampScaleOut">100%</output>
         </div>
