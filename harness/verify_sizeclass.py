@@ -536,6 +536,82 @@ if _knob_look.get("Flip") and _knob_look.get("Pad"):
           str(_knob_look["Flip"]) + " — an unstyled .shape-knob is a block, "
           "which puts the label under the slider")
 
+
+# ============================================================================
+# HOW BIG THE SLIDER LOOKS, which is not how big it is to tap
+#
+# v250 made the hit box 44px and the control went on looking exactly as small as
+# before, because the thumb was still 16px on a 4px track. Reported as "brush
+# size and opacity seem small still" -- a fair complaint about a fix that was
+# measured on the wrong property. The two are independent and BOTH are asserted:
+# the hit checks above cover reach, this covers appearance.
+#
+# MEASURED IN PIXELS, not from computed style: getComputedStyle(el,
+# '::-webkit-slider-thumb') returns the HOST element's box (260x44 here), so it
+# cannot see the thumb at all. Screenshotting the control and reading ink height
+# per column gives the thumb as the tallest column and the track as the median.
+# ============================================================================
+print("\nSLIDER APPEARANCE — the thumb and track are big enough to see")
+try:
+    from PIL import Image as _Img
+except ImportError:
+    check("Pillow is available to measure what is drawn", False,
+          "install Pillow; this check reads pixels")
+    _Img = None
+if _Img:
+    with sync_playwright() as _ap:
+        _ab = _ap.chromium.launch()
+        try:
+            for _path, _name, _ctl, _sid in (("/flip", "Flip", "_flipDrawerCtl", "size"),
+                                             ("/", "Pad", "_padDrawerCtl", "brushSizeRange")):
+                ap = _ab.new_page(viewport={"width": 430, "height": 950})
+                ap.goto(BASE + _path, wait_until="load")
+                ap.wait_for_timeout(1200)
+                ap.evaluate(f"() => {_ctl}.open('draw')")
+                ap.wait_for_timeout(700)
+                # Push the thumb to the end so it cannot sit under the label or
+                # off the captured strip.
+                ap.evaluate("(id) => { const s = document.getElementById(id);"
+                            " s.value = s.max;"
+                            " s.dispatchEvent(new Event('input', { bubbles: true })); }", _sid)
+                ap.wait_for_timeout(250)
+                el = ap.query_selector("#" + _sid)
+                bb = el.bounding_box() if el else None
+                check(f"{_name}: the brush-size slider is on screen to measure",
+                      bb is not None and bb["height"] > 0, str(bb))
+                if not bb:
+                    ap.close(); continue
+                shot = f"/tmp/skribl-slider-{_name.lower()}.png"
+                ap.screenshot(path=shot, clip={"x": bb["x"], "y": bb["y"] - 6,
+                                               "width": bb["width"],
+                                               "height": bb["height"] + 12})
+                im = _Img.open(shot).convert("L")
+                w, h = im.size
+                px = im.load()
+                heights = []
+                for x in range(w):
+                    col = [y for y in range(h) if px[x, y] > 70]
+                    heights.append((max(col) - min(col) + 1) if col else 0)
+                nz = sorted(v for v in heights if v > 0)
+                thumb = max(heights) if heights else 0
+                track = nz[len(nz) // 2] if nz else 0
+                check(f"{_name}: the thumb is large enough to see and aim at",
+                      thumb >= 20,
+                      f"{thumb}px tall — it shipped at 16 on a 4px track, which "
+                      "is about half the thumb iOS draws, and a 44px hit box "
+                      "does nothing for how big it LOOKS")
+                check(f"{_name}: the track is thick enough to read the fill",
+                      track >= 5,
+                      f"{track}px — on Opacity the filled portion IS the value, "
+                      "and at 4px it was a hairline")
+                check(f"{_name}: ...and the thumb still fits inside the 44px band",
+                      thumb <= 40,
+                      f"{thumb}px — a thumb that fills the hit box leaves no "
+                      "room to see the track it rides on")
+                ap.close()
+        finally:
+            _ab.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
