@@ -5487,8 +5487,42 @@ const SMUDGE_SHARP = 2.2;       // vs Liquify's 1 -- a fingertip, not a field
    BLUR_RATE gives: per-event accrual makes the effect a property of the
    hardware. */
 const SMUDGE_SMEAR = 0.010;     // per pixel travelled
-const SMUDGE_FADE_MAX = 0.32;   // gentler than blur: it is a side effect, not the point
-const SMUDGE_SPREAD_MAX = 0.45;
+/* NO MOMENTUM HERE, AND THAT IS A DECISION RATHER THAN AN OMISSION.
+
+   In a vector deformation smudge, directional momentum is not equivalent to
+   raster pigment momentum. Point coasting increases displacement contrast and
+   produces spikes, so smear length is controlled through the spread/fade
+   response below rather than through post-contact inertia.
+
+   The reference form, v_new = lambda*v_old + (1-lambda)*delta displaced as
+   p += v_new*S*W(d), is provably a no-op here: v is a convex combination of
+   unit vectors, so |v| <= 1 and the result is at most the delta*S*W already
+   applied. In a raster smudge the velocity carries a sampled colour RESERVOIR
+   and the reservoir's inertia extends the smear; here the geometry IS the
+   material, so there is no second thing to carry. Letting points coast after
+   the brush passes does lengthen the smear and makes it POINTIER, because the
+   points influenced most coast furthest and pull away from their neighbours.
+   Built, measured and discarded; DECISIONS.md v257 has the numbers. */
+
+/* HOW FAR THE SMEAR GOES, raised from 0.32 / 0.45 in v257 after rendering three
+   gesture classes side by side at four settings: a single perpendicular pull,
+   repeated back-and-forth rubbing across a line, and a tight curved scrub.
+
+   0.55 / 0.9 was better than the old values in all three and 0.68 / 1.15 was
+   worse in all three -- at that strength the dragged ink goes muddy against the
+   dark ground and the rubbed patch reads as a blob rather than as pigment.
+
+   JUDGED FROM RENDERS, deliberately. Two scalar metrics in this area have now
+   rewarded the wrong artefact: the y-spread of the dragged points went UP for
+   the coasting-momentum build that visibly turned smears into spikes, and the
+   suite's own smear check is `smeared > 0`, which passes at every setting there
+   is. The magnitude is asserted below so that this pair of numbers cannot
+   quietly drift back.
+
+   This is a response curve, not a mechanism: the deformation field is untouched
+   and still rate-independent. */
+const SMUDGE_FADE_MAX = 0.55;   // gentler than blur: it is a side effect, not the point
+const SMUDGE_SPREAD_MAX = 0.9;
 /* BLUR ACCUMULATES AGAINST THE PRE-DRAG SNAPSHOT, NOT AGAINST ITSELF, and that
    is a correctness point rather than a nicety.
 
