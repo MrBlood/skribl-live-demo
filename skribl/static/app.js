@@ -4049,6 +4049,11 @@ function showPlayerError(msg) {
     canvas.style.width = dispW + 'px';
     canvas.style.height = dispH + 'px';
   }
+  /* Declared HERE, above sizePlayerCanvas, because that function runs
+     immediately on the line after its own definition and resets this -- and a
+     `let` read before its declaration is executed is a temporal-dead-zone
+     throw, not an undefined. Its meaning belongs with drawFlipFrame below. */
+  let lastFlipDrawn = -1;
   function sizePlayerCanvas() {
     const dpr = window.devicePixelRatio || 1;
     layoutPlayerCanvas();
@@ -4056,6 +4061,19 @@ function showPlayerError(msg) {
     canvas.height = Math.round(authorH * dpr);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
+    // Assigning canvas.width CLEARS the bitmap, so whatever drawFlipFrame
+    // believes is on screen is gone and the memo would skip the repaint,
+    // leaving the player blank.
+    //
+    // NOT CURRENTLY REACHABLE, and said so rather than implied: this function
+    // runs once, on the line after its own definition, before any frame has
+    // been drawn. Every resize path goes to layoutPlayerCanvas(), which is CSS
+    // only and deliberately does not clear. Removing this line passes the suite.
+    // It stays because the one thing that would make it reachable -- calling
+    // sizePlayerCanvas() again -- is exactly the change whose failure mode is a
+    // blank player, and the reset costs nothing to keep beside the assignment
+    // that causes it.
+    lastFlipDrawn = -1;
   }
   sizePlayerCanvas();
   // Rotate/resize should refit the display size without clearing the frame the
@@ -4117,11 +4135,33 @@ function showPlayerError(msg) {
     }
     return flipHolds.length - 1;
   }
+  /* A FLIP FRAME IS STATIC, SO PAINTING IT TWICE IS PURE WASTE, and the RAF
+     loop was asking for it about five times per frame: requestAnimationFrame
+     runs at the display's rate while the flipbook advances at fps, so at 12fps
+     on a 60Hz screen four of every five paints redrew a picture already on
+     screen.
+
+     Invisible while every page costs the same. A key page measured 0.4ms, so
+     the extra four cost 1.6ms of a 83ms budget and nobody noticed. A blurred
+     in-between of the same drawing measured 41ms -- 26 samples of every stroke,
+     five passes each -- and five of those is 205ms of work for 83ms of wall
+     clock, which the loop simply cannot deliver. Reported as "it slows way down
+     when it shows the in-between slides", and that is what it was.
+
+     The memo is safe because the backing store is only cleared by
+     sizePlayerCanvas(), which resets it; a plain resize deliberately re-lays
+     out CSS only and leaves the painted frame alone (see below). Seek and the
+     end-of-play paint go through here too and are correct without forcing: if
+     the frame they want is already the one on screen, not repainting it is the
+     right answer. */
   function drawFlipFrame(fi) {
+    const at = Math.max(0, Math.min(flipFrames.length - 1, fi));
+    if (at === lastFlipDrawn) return;
     const s = getCanvasLogicalSize();
     ctx.clearRect(0, 0, s.width, s.height);
-    const fr = flipFrames[Math.max(0, Math.min(flipFrames.length - 1, fi))];
+    const fr = flipFrames[at];
     if (fr && Array.isArray(fr.strokes) && fr.strokes.length) paintStrokesStatic(fr.strokes);
+    lastFlipDrawn = at;
   }
   const totalMs = isFlip ? flipDurMs : (timeline.length ? timeline[timeline.length - 1].playT : 0);
 

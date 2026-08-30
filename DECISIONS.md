@@ -3927,3 +3927,60 @@ one.
 
 Two of the four .slider-tight exceptions are gone. shapeSides and shapeRadius
 remain, for the shape popover's own spacing.
+
+## v259 -- The player repainted a still picture sixty times a second
+
+Reported: the in-between plays, but the flip "slows way down" on the blurred
+pages. It did, and the cause was not the in-between.
+
+requestAnimationFrame runs at the display's rate. A flipbook advances at fps. The
+player's frame loop called drawFlipFrame() on every RAF, so at 12fps on a 60Hz
+screen four repaints in five redrew a picture already on screen. That was
+invisible for as long as every page cost the same: a key page paints in 0.4ms, so
+the waste was 1.6ms of an 83ms slot.
+
+A blurred in-between of the same drawing paints in 41ms -- 26 samples of every
+stroke at several passes each, 8,100 points against the key page's 75 -- and five
+of those is 205ms of work for an 83ms slot, which the loop cannot deliver.
+
+Measured on a 3-page 12fps loop over three seconds, where 36 frames actually
+change: 289 full-canvas repaints before, 73 after, and the median gap between
+repaints went from 14ms -- one per display refresh -- to 81ms, which is the
+flipbook's own rate.
+
+A flip frame is static, so the memo is simply the right thing: paint an index
+only when it differs from the one on screen. Seek and the end-of-play paint go
+through the same function and are correct without forcing, because if the frame
+they want is already displayed then not repainting it is the answer.
+
+**THE EDITOR WAS ALREADY RIGHT, which is worth recording so nobody "fixes" it.**
+Its playback is a setTimeout that subtracts the upcoming paint's measured cost
+from the interval, so each page still occupies its full slot. Instrumented at
+12fps: key pages held 82.2 + 0.8 and 82.3 + 0.7, the in-between held 41.2 + 41.9.
+All three are 83ms. The waste was the player's alone.
+
+## v259 -- What the memo does not fix
+
+41ms for one in-between paint is inside an 83ms slot on a desktop and outside it
+on a phone, which is three to five times slower. The memo removes the repeats; it
+does not make the paint cheap, and no scheduling can -- the editor's compensation
+already clamps to zero and the frame simply takes longer than its slot.
+
+The cost is 8,100 individual line segments, each its own beginPath/stroke,
+because paintSeg draws point to point. Batching a run into one path would be much
+faster and WOULD CHANGE HOW IN-BETWEENS LOOK: the passes are translucent, so
+overlapping round caps compound at every joint, and a single stroked path does
+not. That density is the effect. Trading it for speed is a decision about the
+drawing, not a refactor, and it is left to the owner rather than taken.
+
+## v259 -- A reset that cannot currently run, kept and labelled
+
+sizePlayerCanvas() assigns canvas.width, which clears the bitmap, so it resets
+the memo. Removing that line passes the suite: the function runs once, on the
+line after its own definition, before any frame is drawn, and every resize path
+goes to layoutPlayerCanvas(), which is CSS only.
+
+It stays, and the comment says plainly that it is unreachable rather than
+implying it is load-bearing. The one change that would reach it -- calling
+sizePlayerCanvas() a second time -- has a blank player as its failure mode, and
+the reset costs nothing sitting beside the assignment that causes it.

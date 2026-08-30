@@ -414,6 +414,59 @@ with sync_playwright() as p:
               not verrs, "; ".join(verrs[:2]))
         viewer.close()
 
+        # A FLIP FRAME IS STATIC, SO THE PLAYER MUST NOT REPAINT IT EVERY RAF.
+        #
+        # requestAnimationFrame runs at the display's rate; a flipbook advances
+        # at fps. At 12fps on a 60Hz screen that is four wasted repaints out of
+        # every five, and they were invisible for as long as every page cost the
+        # same -- a key page paints in 0.4ms. A blurred in-between of the same
+        # drawing paints in 41ms, because it is 26 samples of every stroke at
+        # several passes each, and five of those is 205ms of work for an 83ms
+        # slot. Reported as "it slows way down when it shows the in-between
+        # slides", and measured here at 289 full-canvas repaints in three
+        # seconds where 36 frames actually changed.
+        #
+        # Counted through ctx.clearRect, which is what starts every frame paint.
+        # The compositor issues more than one per frame, so this is not a frame
+        # count -- it is a WASTE count, and the two differ by a constant. The
+        # bound is deliberately loose: the fix took it to 73 and the bug sat at
+        # 289, so anything under about four times the real frame changes
+        # separates them without pinning the constant.
+        _lp = browser.new_page(viewport={"width": 900, "height": 800})
+        _lerrs = []
+        _lp.on("pageerror", lambda e: _lerrs.append(str(e)))
+        _lp.goto(BASE + url, wait_until="load")
+        _lp.wait_for_timeout(1800)
+        _lp.evaluate("""() => { window.__t = [];
+            const c = document.querySelector('canvas'); if (!c) return;
+            const g = c.getContext('2d'); const oc = g.clearRect.bind(g);
+            g.clearRect = function () { window.__t.push(performance.now());
+                                        return oc.apply(g, arguments); }; }""")
+        _lp.click("#playerLoopBtn")
+        _lp.wait_for_timeout(150)
+        _lp.click("#playerPlayBtn")
+        _lp.wait_for_timeout(3000)
+        _paints = _lp.evaluate("() => (window.__t || []).length")
+        _spans = _lp.evaluate("""() => { const t = window.__t || []; const g = [];
+            for (let i = 1; i < t.length; i++) g.push(t[i] - t[i - 1]);
+            return g.filter(x => x > 20).sort((a, b) => a - b); }""")
+        _med = round(_spans[len(_spans) // 2], 1) if _spans else None
+        check("the looping player actually ran",
+              _paints > 20 and _med is not None,
+              f"{_paints} paints, median gap {_med} — with no playback the "
+              f"bound below passes by doing nothing")
+        check("the player does NOT repaint a flip frame it has already drawn",
+              _paints < 145,
+              f"{_paints} full-canvas repaints in 3s of a 3-page 12fps loop — "
+              f"about 36 frames actually change; this measured 289 before the "
+              f"memo and 73 after")
+        check("...and the frames land at the flipbook's rate, not the display's",
+              _med is not None and 60 <= _med <= 120,
+              f"median gap {_med}ms — 12fps is 83ms; a gap near 16ms means it "
+              f"is painting once per display refresh")
+        check("no error from the looping player", not _lerrs, "; ".join(_lerrs[:2]))
+        _lp.close()
+
     print("\nPAGE BAR — the counter earns its width")
     # "Page 21 / 43" cost 69px in a nowrap bar whose contents already measured
     # 369px inside 340 at 360px wide — the Delete button was clipped off the end
