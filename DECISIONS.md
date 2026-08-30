@@ -3556,3 +3556,76 @@ and the direction is what is being tested.
 one.** Reporting a tap-target measurement against a question about size was
 answering the wrong question with real numbers, which is more misleading than
 saying nothing.
+
+## v264 -- The zoom control was short on space and short on reach
+
+The loop-detail row carried a four-cell segmented magnification control (1x 2x
+4x 8x) that took 179px and pushed the bar to 74px -- two lines on a phone. The
+owner asked whether the two halves could share a line, and suggested a
+`< 2x >` stepper.
+
+They can, and the stepper is the reason. Three cells of chrome instead of four
+labels is 94px, and the bar collapses to 36px -- one line at both 390 and 430.
+It still wraps at 320, where `Loop | Start | End` alone is 172px of the 220
+available; it wrapped there before too.
+
+**The ceiling was a defect, not a limit.** `halfSpan = (loopDuration / 2 +
+contextSeconds) / zoomMag` has nothing structural stopping it, and the finest
+nudge step is 0.01s. On a 330px waveform at 8x that step moves the marker 0.94px
+on a 20s loop and 0.39px on a 60s one -- the tool offered an adjustment you could
+not see it make. The ladder now runs 1, 2, 4, 8, 16, 32; at 32x that same step is
+11.7px. A stepper can afford six rungs because it costs the same as one; four
+labelled cells could not, which is how a layout constraint had quietly become a
+functional one.
+
+**The magnifier had to BE the button, not sit beside it.** A leading magnifying
+glass with the stepper after it measured 118px and wrapped the bar again at 390,
+which gave back the whole saving. Putting Lucide's zoom-out and zoom-in glyphs
+on the two step buttons identifies the control and steps it with the same pixels.
+
+**It was built on Flip and Pad still had the old one.** This control existed as
+a literal HTML string in `flip.js` and a second literal HTML string in
+`editor_music.js`, and nothing made them agree -- the surfaces would simply have
+offered different zoom ceilings, which is the drift the owner has had to report
+by eye before. It is now `lib/zoomstep.js`, loaded by both editors and not by
+the player, which has no loop-detail panel and should not carry the markup.
+
+The ladder is shared but the WIRING is not: each surface keeps its own click
+handler assigning to its own `zoomMag`. So the behaviour is asserted per surface
+rather than once -- stepping the ladder, the readout, the two end-stops and the
+window actually tightening, on Pad and on Flip. Reversing Pad's step direction
+alone fails four checks on Pad and none on Flip.
+
+**The shell was 11px against a 12px neighbour while the comment above it claimed
+they matched.** The assertion reads `.edge-controls`' radius at runtime and
+compares; a check written against the typed number would have agreed with the
+mistake. Both the shell and its cells now derive from `--r-seg`, the way
+`.nudge-btn` already did.
+
+**One assertion had to be corrected rather than the code.** "Every step narrows
+the window" failed at 1x and 2x -- `getZoomWindow` clamps to the audio, and the
+fixture is a one-second clip, so the first two levels both ask for more than
+exists. That is the clamp working. Pinning "no step ever widens, and the ceiling
+is at least 8x tighter than the floor" tests the control; the original would
+have been pinning the fixture's length.
+
+## v264 -- Nine checks ran where eighteen were written
+
+The new magnification assertions were appended to `verify_audio.py` BELOW the
+line that collects failures:
+
+    bad = [r for r in results if not r[0]]
+
+All eighteen printed. The suite counted nine, and the nine new ones could not
+fail the run no matter what they found -- the list they appended to had already
+been read. A green suite and a full transcript both looked exactly right.
+
+Moving the block above the summary is the whole fix, and four mutations then died
+by name: restoring the 8x ceiling ("the ladder climbs 1 to 32 by doubling -- [1,
+2, 4, 8]"), freezing the readout at 1x, never disabling the ends ("[1, 2, 4, 8,
+16, 32, 32, 32]"), and widening the buttons ("the stepper is the compact one --
+[172, 142]").
+
+**Where an assertion is added is part of the assertion.** The count in the
+summary line is the only thing that says a check was live; a check that prints
+its result after the verdict has been computed is decoration.

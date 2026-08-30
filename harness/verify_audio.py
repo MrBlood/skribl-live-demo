@@ -148,6 +148,101 @@ with sync_playwright() as p:
     check("no editor page errors", not errs, "; ".join(errs[:2]))
     b.close()
 
+# ============================================================================
+# THE LOOP-DETAIL MAGNIFICATION IS A STEPPER, AND IT REACHES 32x
+#
+# It was four cells -- 1x 2x 4x 8x -- costing 179px, which forced the focus row
+# and the zoom row onto separate lines. The stepper is 94px and both fit on one
+# line from 390px up.
+#
+# THE CEILING WAS THE REAL DEFECT. The finest nudge step is 0.01s and the old
+# 8x could not resolve it: on a 330px waveform one step is 0.94px for a 20s loop
+# and 0.39px for a 60s one. The tool offered a nudge you could not see. A
+# four-cell control could not afford two more levels; a stepper extends for
+# free, which is the stronger argument for it.
+#
+# The buttons carry magnifier glyphs rather than plain signs. A leading
+# magnifier beside plain ones was measured at 118px and put the bar back onto
+# two lines at 390 -- identifying the control would have cost the space the
+# change was made to save.
+# ============================================================================
+print("\nZOOM STEPPER — one line, and enough magnification to see a 0.01s step")
+with sync_playwright() as _zp:
+    _zb = _zp.chromium.launch()
+    try:
+        zp = _zb.new_page(viewport={"width": 430, "height": 1200})
+        zp.goto(BASE + "/flip", wait_until="load")
+        zp.wait_for_timeout(1200)
+        zp.set_input_files("#musicInput", WAV)
+        zp.wait_for_timeout(4500)
+        zp.evaluate("() => _flipDrawerCtl.open('music')")
+        zp.wait_for_timeout(700)
+        _t = zp.query_selector("#fineTuneToggle")
+        if _t:
+            _t.click(); zp.wait_for_timeout(800)
+
+        bar = zp.evaluate(
+            "() => { const b = document.querySelector('.zoom-mag-bar');"
+            " if (!b) return null;"
+            " return { h: Math.round(b.getBoundingClientRect().height),"
+            "          kids: [...b.children].map(e =>"
+            "                 Math.round(e.getBoundingClientRect().width)) }; }")
+        check("the loop-detail bar exists", bar is not None, "nothing to measure")
+        if bar:
+            check("focus and zoom share one line at phone width",
+                  bar["h"] < 50,
+                  f"bar is {bar['h']}px tall with children {bar['kids']} — four "
+                  "zoom cells cost 179px and pushed it to two rows")
+            check("...and the stepper is the compact one",
+                  len(bar["kids"]) == 2 and bar["kids"][1] <= 110,
+                  f"{bar['kids']} — a leading magnifier measured 118px and wraps")
+
+        # THE LADDER. Each press must halve the window and move the readout, and
+        # the ends must stop rather than wrap.
+        seen = []
+        for _ in range(8):
+            st = zp.evaluate(
+                "() => ({ mag: zoomMag,"
+                " label: document.getElementById('zoomMagVal').textContent,"
+                " win: +getZoomWindow().duration.toFixed(4),"
+                " outDis: document.getElementById('zoomMagOut').disabled,"
+                " inDis: document.getElementById('zoomMagIn').disabled })")
+            seen.append(st)
+            if st["inDis"]:
+                break
+            zp.click("#zoomMagIn"); zp.wait_for_timeout(200)
+        mags = [s["mag"] for s in seen]
+        check("the ladder climbs 1 to 32 by doubling",
+              mags == [1, 2, 4, 8, 16, 32], str(mags))
+        check("every step actually narrows the window",
+              all(seen[i + 1]["win"] < seen[i]["win"] for i in range(len(seen) - 1)),
+              str([s["win"] for s in seen]) + " — a readout that changes while "
+              "the view does not is worse than no control")
+        check("the readout tracks the level",
+              all(s["label"].startswith(str(s["mag"])) for s in seen),
+              str([(s["mag"], s["label"]) for s in seen]))
+        check("zoom-out is disabled at the bottom and only there",
+              seen[0]["outDis"] is True
+              and all(not s["outDis"] for s in seen[1:]),
+              str([(s["mag"], s["outDis"]) for s in seen]))
+        check("zoom-in is disabled at the top and only there",
+              seen[-1]["inDis"] is True
+              and all(not s["inDis"] for s in seen[:-1]),
+              str([(s["mag"], s["inDis"]) for s in seen]))
+
+        # THE POINT OF 32x: a 0.01s nudge has to be visible on the waveform.
+        px = zp.evaluate(
+            "() => { const w = document.getElementById('zoomTrackWrap');"
+            " const width = w.getBoundingClientRect().width;"
+            " return (0.01 / (getZoomWindow().duration / width)); }")
+        check("at full magnification a 0.01s step is more than a pixel wide",
+              px > 1.5,
+              f"{px:.2f}px — the finest nudge is 0.01s, and at the old 8x "
+              "ceiling that was under a pixel on any loop over ~4s")
+        zp.close()
+    finally:
+        _zb.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
@@ -157,5 +252,8 @@ print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
 # passed" and the aggregate counted it as PASS with a failed assertion inside.
 # Eight suites shared this hole, verify_amber among them — which is very likely
 # what the "flake" earlier in this session actually was.
+
+
+
 import sys
 sys.exit(1 if bad else 0)
