@@ -3283,19 +3283,27 @@ if(_flipShapeSeg && window.SkriblShapes){
       x.setAttribute('aria-pressed', String(on)); });
     setTool('shape');
     syncShapeKnobs();
+    /* CLOSE ON A PICK ONLY WHEN THE PICK LEFT NOTHING TO SET.
+       The old rule closed the popover on every pick, so choosing Poly revealed
+       Sides and Corners and hid them again in the same click, and the only way
+       to reach them was to open the picker a SECOND time. Reported from the
+       live demo: "when you push poly it chooses it, but you have to choose it
+       again to get the menu". Line and Oval still close, because nothing was
+       revealed to stay open for. */
+    const pop = document.getElementById('shapePop');
+    if(pop && !SkriblShapes.knobs(k).length) pop.hidden = true;
   });
 }
 
-/* WHICH KNOBS APPLY TO WHICH KIND. Sides is meaningless for anything but a
-   polygon; rounding is meaningless for a line and for an ellipse, which has no
-   corners to round. Each row hides rather than greying out — a disabled control
-   is still something the eye has to read and dismiss, and this popover is small
-   on a phone. */
+/* WHICH KNOBS APPLY TO WHICH KIND — asked of lib/shapes.js, which holds the
+   only copy of that rule. Each row hides rather than greying out: a disabled
+   control is still something the eye has to read and dismiss, and this popover
+   is small on a phone. */
 function syncShapeKnobs(){
   const sidesRow = document.getElementById('shapeSidesRow');
   const radiusRow = document.getElementById('shapeRadiusRow');
-  if(sidesRow) sidesRow.hidden = (shapeKind !== 'poly');
-  if(radiusRow) radiusRow.hidden = (shapeKind !== 'poly' && shapeKind !== 'rect');
+  if(sidesRow) sidesRow.hidden = !SkriblShapes.hasKnob(shapeKind, 'sides');
+  if(radiusRow) radiusRow.hidden = !SkriblShapes.hasKnob(shapeKind, 'radius');
 }
 
 (function shapeKnobs(){
@@ -6215,10 +6223,13 @@ bindEl('sbStamp', 'click', ()=>{ if(!playing) stampSaveSelection(); });
   if(!pop) return;
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
 })();
+/* Dismiss the shape picker on a tap outside it. Closing on a PICK is decided
+   in the pick handler rather than here, because the decision now depends on
+   whether the chosen kind revealed a knob -- which is the picker's knowledge,
+   not the dismisser's. */
 (function shapePopDismiss(){
   const pop=document.getElementById('shapePop');
   if(!pop) return;
-  pop.addEventListener('click',e=>{ if(e.target.closest('[data-shape]')) pop.hidden=true; });
   document.addEventListener('click',e=>{
     if(pop.hidden) return;
     if(e.target.closest('#shapePop')||e.target.closest('#shapeToolBtn')) return;

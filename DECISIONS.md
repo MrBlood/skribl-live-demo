@@ -3013,3 +3013,43 @@ photo. That is what a tap outside a shape has always done on a plain background.
 **"What the user is pointing at" is a good rule and it is not the same as "what
 the algorithm can act on".** Test the rule against the messiest real input before
 trusting the reasoning.
+
+## v243 -- A picker that closes on every pick throws away what the pick revealed
+
+Choosing a shape kind ran `syncShapeKnobs()`, which reveals Sides for a polygon
+and Corners for a polygon or a rectangle, and then a separate listener closed the
+popover on ANY click that hit a `[data-shape]` button. So picking Poly showed the
+two knobs and hid them again in the same click. Reported from the live demo:
+**"when you push poly it chooses it, but you have to choose it again to get the
+menu."**
+
+The old rule was keyed on the fact that a pick happened. The new one is keyed on
+what the pick DID: if the chosen kind has a knob, the picker stays up, because
+that knob is the only reason it is still needed. Line and Oval still close, and
+that half is asserted too -- a fix that leaves the popover parked over the canvas
+forever is not better than the bug.
+
+**The rule about which kinds have which knobs moved into `lib/shapes.js`.** It
+had been written twice, once in each surface's `syncShapeKnobs`, which was
+tolerable while the only question asked of it was "hide this row". The close
+decision made it a second question, and the first draft of this fix answered it
+with a `shapePickShouldClose()` helper copied into both editors -- a third copy,
+and `verify_surfaces` caught it as the 61st duplicated function name against a
+ceiling of 60.
+
+That ratchet was right and the ceiling was not the thing to change. `knobs(kind)`
+belongs with the shapes because it is shape knowledge, not DOM knowledge, and
+moving it there removed the duplicated helper AND the duplicated rule underneath
+it. It hands out a copy of its list rather than the list, so one caller cannot
+edit the rule out from under the other.
+
+**A duplication ratchet firing on your own fix is information about the fix.**
+The reflex is to read it as the limit being one too tight. It was pointing at a
+rule that wanted a home.
+
+**The assertion has to survive the mutation it is testing.** Three of the six
+mutations here originally crashed the suite instead of failing it: with the
+popover in the wrong state, the next `page.click` timed out on a hidden button
+and the run died before printing the assertion that had already failed. Every
+step that needs the picker open now reopens it if it is closed, so a regression
+is reported by name rather than as a Playwright timeout.

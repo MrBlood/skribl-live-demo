@@ -5252,15 +5252,13 @@ function currentPaintTarget() {
 // current revision is durable, not to whether media is attached.
 
 
-/* Close the shape picker on any choice, and on any tap outside it. Picking a
-   kind is handled in editor_shapes.js — this only dismisses the popover, so the
-   two do not both own the selection. */
+/* Dismiss the shape picker on a tap outside it. Closing on a PICK is decided
+   in the pick handler (editor_shapes.js) rather than here, because the decision
+   now depends on whether the chosen kind has a knob to offer -- which is the
+   picker's business, not the dismisser's. */
 (function shapePopDismiss() {
   const pop = document.getElementById('shapePop');
   if (!pop) return;
-  pop.addEventListener('click', (e) => {
-    if (e.target.closest('[data-shape]')) pop.hidden = true;
-  });
   document.addEventListener('click', (e) => {
     if (pop.hidden) return;
     if (e.target.closest('#shapePop') || e.target.closest('#shapeToolBtn')) return;

@@ -1,34 +1,27 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-29T23:36:38Z
+UTC timestamp           : 2026-08-30T00:27:55Z
 Host                    : Linux x86_64
-Tree SHA-256            : 4c6cb7a7370d5e6a486ae2d6b3d2e1f31d1b80f037696d4d675848b4df25d504
-Git commit              : fa3c53d-dirty
-SKRIBL_VERSION          : v239
+Tree SHA-256            : 80f4fd46d7c9a69874ea19fbdcf58786618ba76afeb1467c6b5b18a53ead5e1e
+Git commit              : 0e21fc5-dirty
+SKRIBL_VERSION          : v241
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.YD8fZqcrSY/harness.db)
+Database reset          : yes (fresh /tmp/tmp.8Ios9Jlgc5/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_fill.py verify_smudgeblur.py verify_liquify.py verify_drafts.py verify_media.py verify_icons.py verify_ux.py verify_docs.py
+Command                 : harness/run_harness.sh verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 8
-  verify_fill.py: ok — 25/25 passed
-  verify_smudgeblur.py: ok — 22/22 passed
-  verify_liquify.py: ok — 31/31 passed
-  verify_drafts.py: ok — 28/28 passed
-  verify_media.py: ok — 24/24 passed
-  verify_icons.py: ok — 35/35 passed
-  verify_ux.py: ok — 310/310 passed
+suites requested : 1
   verify_docs.py: ok — 65/65 passed
-assertions passed: 540   (skipped suites contribute 0)
+assertions passed: 65   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
