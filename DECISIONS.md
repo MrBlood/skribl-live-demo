@@ -4057,6 +4057,7 @@ words that say WHICH guarantee broke never appeared.
 Every read of a plan in that block is null-safe now, and the same mutation names
 all three: the allowance no longer falls with the slot, a postable page was
 refused, and the floor was breached.
+<<<<<<< HEAD
 
 ## v261 -- The rate fix that could not reach the pages that needed it
 
@@ -4117,3 +4118,5 @@ Deleting either rule now fails the check named for it.
 family as v260's saturated measurement and v256's beading metrics: the check ran,
 the number came back clean, and the thing it was supposed to see was hidden
 behind something else.
+=======
+>>>>>>> origin/main

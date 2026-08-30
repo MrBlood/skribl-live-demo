@@ -1,6 +1,10 @@
 # What this archive is
 
+<<<<<<< HEAD
 **Source version: `SKRIBL_VERSION = "v261"` (skribl/core.py).**
+=======
+**Source version: `SKRIBL_VERSION = "v260"` (skribl/core.py).**
+>>>>>>> origin/main
 
 **The release evidence in this archive is THIS tree's.**
 `harness/RELEASE.md` and `harness/LAST-RUN.txt` are generated from a full
