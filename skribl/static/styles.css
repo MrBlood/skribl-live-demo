@@ -5336,7 +5336,13 @@ body.playing .flip-grid { display: none; }
    Corners had to ship at 22px. At 11 and 14 the two knobs still steal 3 points
    from each other; 17 is the first value where every point across both sliders
    lands on the slider it belongs to. */
-.shape-knob { margin-block: 17px; }
+.shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0;
+  margin-block: 17px; }
+.shape-knob label { font-size: 10px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--text-muted); min-width: 46px; }
+.shape-knob input[type="range"] { flex: 1 1 auto; min-width: 90px; accent-color: var(--ui-hi); }
+.shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
+  min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
 /* The little arrow, so it reads as belonging to the button below it. */
 .shape-pop::after {
   content: '';

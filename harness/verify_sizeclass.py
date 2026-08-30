@@ -398,6 +398,7 @@ with sync_playwright() as _gp:
 # exception stays a decision instead of becoming an oversight.
 # ============================================================================
 print("\nSLIDERS — 44px of grab, 22px of layout, and four measured exceptions")
+_knob_look = {}
 with sync_playwright() as _sl:
     _slb = _sl.chromium.launch()
     try:
@@ -500,9 +501,40 @@ with sync_playwright() as _sl:
                       + (str(_v["steal"]) or "nothing")
                       + "; the row spacing lives in styles.css because BOTH "
                         "surfaces render this markup")
+            # HOW THE ROW IS DRAWN, captured per surface and compared below.
+            # The knob rules lived in flip.css, which Pad does not load, so Pad
+            # rendered these rows completely unstyled from the day the knobs
+            # shipped -- label below the slider instead of beside it, at the
+            # wrong size and case. Nothing caught it: the markup was identical,
+            # so a structural check passed, and both surfaces had the same tap
+            # targets once the spacing moved, so the size checks passed too.
+            _knob_look[_name] = lp.evaluate(
+                "() => { const r = document.getElementById('shapeSidesRow');"
+                " if (!r) return null;"
+                " const l = r.querySelector('label'), i = r.querySelector('input');"
+                " const cs = getComputedStyle(r), cl = getComputedStyle(l);"
+                " return { display: cs.display, labelSize: cl.fontSize,"
+                "          labelCase: cl.textTransform,"
+                "          sameRow: Math.abs(l.getBoundingClientRect().top"
+                "                   - i.getBoundingClientRect().top) < 24 }; }")
             lp.close()
     finally:
         _slb.close()
+
+check("the shape knob rows were measured on both surfaces",
+      _knob_look.get("Flip") and _knob_look.get("Pad"),
+      f"{ {k: bool(v) for k, v in _knob_look.items()} } — a missing surface "
+      "would make the comparison below vacuous")
+if _knob_look.get("Flip") and _knob_look.get("Pad"):
+    check("Pad and Flip draw the shape knobs the same way",
+          _knob_look["Flip"] == _knob_look["Pad"],
+          f"Flip {_knob_look['Flip']} vs Pad {_knob_look['Pad']} — these rules "
+          "belong in styles.css; in flip.css they reach one surface and the "
+          "other renders the same markup unstyled")
+    check("...and the row is a row, not a stack",
+          _knob_look["Flip"]["sameRow"] and _knob_look["Flip"]["display"] == "flex",
+          str(_knob_look["Flip"]) + " — an unstyled .shape-knob is a block, "
+          "which puts the label under the slider")
 
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"

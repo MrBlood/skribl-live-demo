@@ -3498,3 +3498,31 @@ stored, which is what a synthetic test image does. The fallback now reads "Image
 added".
 
 **Before treating a screenshot as evidence, check whose CSS is in it.**
+
+## v262 -- Pad had been drawing the shape knobs unstyled since they shipped
+
+The owner put the two surfaces side by side and asked why Flip looked different.
+The whole of `.shape-knob` -- the flex row, the 10px uppercase label, the
+min-widths, the tabular output -- lived in flip.css, which PAD DOES NOT LOAD. Pad
+renders identical markup, so it fell back to a block: label under the slider, at
+16px, in sentence case. It had looked like that since the knobs arrived in v237.
+
+**Nothing caught it, and the reasons are worth listing**, because each is a check
+that exists and was satisfied:
+
+  * the markup is identical, so a structural comparison passes;
+  * both surfaces have the same tap targets once the SPACING moved, so the size
+    checks pass;
+  * verify_surfaces is file-only -- it counts stylesheet bytes and never renders
+    either page, so it cannot see a rule that reaches one surface.
+
+This is the second time in two versions that a fix went into flip.css and missed
+Pad. The first was the 17px row spacing an hour earlier, found only because the
+hit test happened to run on both surfaces. **When both surfaces render the same
+markup, the rule belongs in styles.css, and the way to prove it is to render both
+and compare -- not to compare the files.**
+
+The assertion now captures how the row is drawn on each surface and requires them
+to be equal. Mutated by moving the rules back to flip.css, it reports Pad as
+display:block, 16px, textTransform:none -- which is exactly the screenshot that
+started this.

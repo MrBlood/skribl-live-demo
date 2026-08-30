@@ -328,12 +328,9 @@
      took 3 of each other's points, and 17 is the first value where all 18
      points across both sliders land on the slider they belong to. It takes the
      picker from 102px to 181px, which a popover can afford. */
-  .shape-knob { display: flex; align-items: center; gap: 8px; padding: 6px 4px 0; }
-  .shape-knob label { font-size: 10px; font-weight: 600; letter-spacing: .04em;
-    text-transform: uppercase; color: var(--text-muted); min-width: 46px; }
-  .shape-knob input[type="range"] { flex: 1 1 auto; min-width: 90px; accent-color: var(--ui-hi); }
-  .shape-knob output { font-size: 11px; font-weight: 600; color: var(--text-primary);
-    min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
+  /* The knob rows themselves are styled in styles.css, because BOTH surfaces
+     render them. They lived here until v252 and Pad, which does not load this
+     sheet, had been drawing them unstyled since the knobs shipped. */
 
   /* ---------- The autosave pill, when it has somewhere to go ----------
      FLIP ONLY. #autosaveStatus is one shared element across Pad, Flip and the

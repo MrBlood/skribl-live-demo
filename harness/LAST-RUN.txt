@@ -1,35 +1,34 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-30T13:51:46Z
+UTC timestamp           : 2026-08-30T14:08:45Z
 Host                    : Linux x86_64
-Tree SHA-256            : 5b3072c0b8b1b7a788193dd65a73571a9a45145a1ba24725c4b45cb48838be6e
-Git commit              : efff74c-dirty
-SKRIBL_VERSION          : v251
+Tree SHA-256            : 77e3bc9708d580c5f871eaa058af88ece94b5396f175bb466762b6ed095c95ad
+Git commit              : 3a93a2a-dirty
+SKRIBL_VERSION          : v252
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.7uSDSTvLi1/harness.db)
+Database reset          : yes (fresh /tmp/tmp.vYAbTjlFKD/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_sizeclass.py verify_ux.py verify_tray.py verify_tools.py verify_parity.py verify_surfaces.py verify_cssplit.py verify_stamps.py verify_docs.py
+Command                 : harness/run_harness.sh verify_sizeclass.py verify_ux.py verify_parity.py verify_surfaces.py verify_cssplit.py verify_tray.py verify_tools.py verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 9
-  verify_sizeclass.py: ok — 62/62 passed
+suites requested : 8
+  verify_sizeclass.py: ok — 65/65 passed
   verify_ux.py: ok — 310/310 passed
-  verify_tray.py: ok — 121/121 passed
-  verify_tools.py: ok — 120/120 passed
   verify_parity.py: ok — 118/118 passed
   verify_surfaces.py: ok — 9/9 passed
   verify_cssplit.py: ok — 18/18 passed
-  verify_stamps.py: ok — 70/70 passed
+  verify_tray.py: ok — 121/121 passed
+  verify_tools.py: ok — 120/120 passed
   verify_docs.py: ok — 67/67 passed
-assertions passed: 895   (skipped suites contribute 0)
+assertions passed: 828   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
