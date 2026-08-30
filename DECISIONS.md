@@ -3187,3 +3187,70 @@ the mutation did not apply because a `str.replace` silently matched nothing; thi
 time it applied and destroyed the thing under test. **Read the suite's RESULT
 line, not a grep of its failures** -- a crash and a pass are indistinguishable
 through a filter that only shows failures.
+
+## v250 -- Seven tools wore one cursor
+
+Liquify had its dashed influence ring and the eraser its circle. Smudge, Blur,
+Fill, Select, Stamps, Shape and Artwork all fell through to the PEN's ring, so
+the canvas could not answer "which tool am I holding" and the only way to know
+what a drag would do was to remember what you last tapped. The owner asked
+directly.
+
+The badge is the tool's own glyph, lifted from its shelf button at runtime rather
+than copied into a second table, so there is one drawing of each tool and this is
+it. It rides beside the ring rather than replacing it: the ring says how big, the
+badge says which, and those are different questions.
+
+**The assertion is "it is THIS tool's glyph", not "a badge appears".** One shared
+badge would satisfy the weaker version and tell the user nothing -- mutation
+tested by pointing every tool at the pen's icon, which passes a presence check
+and fails this one on nine tools.
+
+## v251 -- A fix scoped to the case that was reported
+
+v240 gave Smudge, Blur and Liquify a note for one situation: a photo showing.
+That was the case the owner hit, and it was fixed properly. The case UNDERNEATH
+it was left mute -- a drag that simply missed the ink -- and it is the commoner
+one by far. You aim slightly off your line, nothing happens, nothing is said, and
+the tool reads as broken for exactly the reason the photo case did.
+
+Found by driving all ten tools through Playwright rather than reading the code:
+on an empty canvas, three tools did nothing and said nothing. The same audit
+found Fill flooding the whole page through a gap in an outline, silently, adding
+438 points -- which the owner had already reported once as "still not filling
+completely".
+
+Both now speak, and the wording differs by case: "draw something first" is wrong
+and faintly insulting when there is a drawing on screen, so ink-present says
+"needs to be dragged over your lines". Mutation tested by collapsing the two into
+one message, which fails four assertions.
+
+The fill note is a NOTE, not a refusal -- flooding a background on purpose is a
+real thing to want, and a tool that argues with you is worse than one that
+explains itself. It fires above two thirds of the canvas rather than a half,
+because a warning that cries wolf is one nobody reads; both ends are asserted.
+
+**Ask what the reported case is an INSTANCE of.** A fix that closes exactly the
+reported case and none of its siblings will be reported again in a month, wearing
+different clothes.
+
+## v252 -- The audit found more bugs in the audit than in the app
+
+Of five things the first tool audit flagged, three were defects in the audit:
+
+  * "Blur does nothing on a real line" -- the probe compared point positions and
+    counts. Blur changes SIZE and colour and moves nothing, which is precisely
+    what it says it does, so a position check could not see it working.
+  * "Select creates no selection" -- the probe read a global named `selection`.
+    The state is `selSpans` and `selRect`.
+  * "The shape picker will not open after Select" -- a click helper racing the
+    tray, not reproducible when driven directly.
+
+And a fourth was mine at a different layer: the flood-area calculation used
+`sizeOf(run) * points(run).length`, but a run's points are SPACED along it rather
+than one per pixel, so the estimate was an order of magnitude low and the escape
+note never fired. A run is {y, x0, x1, h}; its area is span times height.
+
+**An instrument that disagrees with the thing it measures is usually wrong.**
+Every one of these was found by asking "what would this tool have to do for my
+check to see it?" before believing the check.

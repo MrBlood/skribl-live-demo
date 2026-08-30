@@ -303,6 +303,73 @@ with sync_playwright() as p:
               page.evaluate("() => frame().strokes.length") == 0,
               "explaining the limit must not turn the tool into a pen")
 
+        # ---- SILENCE IS A BUG, and it had one case covered out of two ----
+        # v240 gave these tools a note for a photo showing, because the owner
+        # reported the tool looking broken. The commoner case was left mute:
+        # a drag that simply missed the ink. Same silence, same conclusion,
+        # and no photo required to reach it -- which is why an audit that drove
+        # every tool on an empty canvas found three tools doing nothing and
+        # saying nothing.
+        print("\nSILENCE — a tool that does nothing has to say why")
+        # TAKE THE PHOTO BACK OFF FIRST. The block above deliberately leaves
+        # one attached, and photoShowing() short-circuits to the photo note --
+        # so without this the checks below pass or fail on the WRONG message
+        # and prove nothing about the case they are named for.
+        # Through the app's own removeBgImage(), not by assigning to the
+        # module state: _fieldPhotoNoted is a const and bgImage has a teardown
+        # (thumbnails, autosave) that a bare null assignment skips.
+        page.evaluate("""() => {
+            removeBgImage();
+            for (const k in _fieldPhotoNoted) delete _fieldPhotoNoted[k];
+            for (const k in _fieldMissNoted) delete _fieldMissNoted[k];
+            render();
+        }""")
+        page.wait_for_timeout(250)
+        check("the photo is off again, so these cases test what they name",
+              page.evaluate("() => photoShowing()") is False,
+              "photoShowing() still true — every check below would read the "
+              "photo note instead")
+        chip_now = lambda: page.evaluate(
+            "() => { const e = document.getElementById('flipChip');"
+            " return e.classList.contains('show') ? e.textContent : null; }")
+        pad_box = page.eval_on_selector(
+            "#pad", "e => { const r = e.getBoundingClientRect();"
+            " return { x: r.x, y: r.y, w: r.width, h: r.height }; }")
+
+        for _tool in ("smudge", "blur"):
+            page.evaluate("""() => { frames.length = 1; frames[0].strokes = [];
+                frames[0].strokeGroups = []; fi = 0;
+                for (const k in _fieldMissNoted) delete _fieldMissNoted[k];
+                render(); }""")
+            page.evaluate("(t) => setTool(t)", _tool)
+            line(page, pad_box["x"] + pad_box["w"] / 2, pad_box["y"] + pad_box["h"] / 2)
+            page.wait_for_timeout(200)
+            msg = chip_now()
+            check(f"{_tool}: an EMPTY canvas is explained, not ignored",
+                  bool(msg) and "draw something first" in msg, repr(msg))
+            check(f"{_tool}: ...and explaining it lays no stroke",
+                  page.evaluate("() => frame().strokes.length") == 0,
+                  "a note must not turn the tool into a pen")
+
+        # THE OTHER HALF, and the one a real user hits: ink exists, the drag
+        # missed it. The wording has to differ -- "draw something first" is
+        # wrong and faintly insulting when there is a drawing on screen.
+        for _tool in ("smudge", "blur"):
+            page.evaluate("""() => { frames.length = 1; frames[0].strokes = [];
+                frames[0].strokeGroups = []; fi = 0; render(); setTool("pen"); }""")
+            line(page, pad_box["x"] + pad_box["w"] * 0.35, pad_box["y"] + pad_box["h"] * 0.15)
+            drawn = page.evaluate("() => frame().strokes.length")
+            page.evaluate("() => { for (const k in _fieldMissNoted) delete _fieldMissNoted[k]; }")
+            page.evaluate("(t) => setTool(t)", _tool)
+            line(page, pad_box["x"] + pad_box["w"] * 0.35, pad_box["y"] + pad_box["h"] * 0.85)
+            msg = chip_now()
+            check(f"{_tool}: a drag that MISSED the ink says so",
+                  bool(msg) and "over your lines" in msg,
+                  f"{msg!r} with {drawn} points on the page")
+            check(f"{_tool}: and does not claim the canvas is empty when it "
+                  "is not", not (msg and "draw something first" in msg),
+                  f"{msg!r} — there is a drawing on screen")
+
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
         br.close()

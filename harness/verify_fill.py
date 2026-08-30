@@ -489,6 +489,66 @@ with sync_playwright() as p:
               f"{spread} — the strokes are the walls now that the photo is not; "
               "if they do not hold, the fill covers the photograph")
 
+        # ---- A FLOOD THROUGH A GAP IS THE COMMONEST FILL SURPRISE --------
+        # Reported from the live demo as "still not filling completely": you
+        # tap inside what looks like a shape, the outline has a gap, and the
+        # colour takes the whole page. Measured in the tool audit: an open L
+        # added 438 points and covered the canvas, silently.
+        #
+        # It stays ALLOWED -- flooding a background on purpose is a real thing
+        # to want -- so the fix is a note naming the cause and the remedy. The
+        # pair of assertions matters more than either alone: a note that fires
+        # on every fill would "pass" the first check and be useless.
+        print("\nESCAPE — a fill that leaks says what happened")
+        chip_now = lambda: page.evaluate(
+            "() => { const e = document.getElementById('flipChip');"
+            " return e.classList.contains('show') ? e.textContent : null; }")
+        box = page.eval_on_selector(
+            "#pad", "e => { const r = e.getBoundingClientRect();"
+            " return { x: r.x, y: r.y, w: r.width, h: r.height }; }")
+
+        def _stroke(pts):
+            page.mouse.move(box["x"] + pts[0][0], box["y"] + pts[0][1])
+            page.mouse.down()
+            for x, y in pts[1:]:
+                page.mouse.move(box["x"] + x, box["y"] + y)
+            page.mouse.up()
+            page.wait_for_timeout(220)
+
+        # An OPEN outline: two sides of a box, wide open on the other two.
+        page.evaluate("""() => { frames.length = 1; frames[0].strokes = [];
+            frames[0].strokeGroups = []; fi = 0; render(); setTool("pen"); }""")
+        _stroke([(60, 60), (300, 60), (540, 60)])
+        _stroke([(60, 60), (60, 200), (60, 340)])
+        page.evaluate("() => setTool('fill')")
+        page.mouse.click(box["x"] + box["w"] * 0.5, box["y"] + box["h"] * 0.5)
+        page.wait_for_timeout(650)
+        leaked = chip_now()
+        check("an open outline is reported as a leak, not as success",
+              bool(leaked) and "gap" in leaked, repr(leaked))
+        check("...and the note names the way out",
+              bool(leaked) and "ndo" in leaked,
+              f"{leaked!r} — a diagnosis with no remedy leaves the page ruined")
+
+        # A CLOSED shape must NOT trigger it, or the note is noise and gets
+        # tuned out exactly when it matters.
+        page.evaluate("""() => { frames.length = 1; frames[0].strokes = [];
+            frames[0].strokeGroups = []; fi = 0; render();
+            setTool("shape"); shapeKind = "rect"; syncShapeKnobs(); }""")
+        page.mouse.move(box["x"] + 120, box["y"] + 100)
+        page.mouse.down()
+        for i in range(1, 11):
+            page.mouse.move(box["x"] + 120 + i * 26, box["y"] + 100 + i * 18)
+        page.mouse.up()
+        page.wait_for_timeout(300)
+        page.evaluate("() => setTool('fill')")
+        page.mouse.click(box["x"] + 240, box["y"] + 190)
+        page.wait_for_timeout(650)
+        clean = chip_now()
+        check("a closed shape fills without crying wolf",
+              bool(clean) and "gap" not in clean,
+              f"{clean!r} — a warning on every fill is a warning nobody reads")
+
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
         br.close()

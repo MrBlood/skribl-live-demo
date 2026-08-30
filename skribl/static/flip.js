@@ -1657,7 +1657,38 @@ function moveLiquifyCursor(e){
     'translate3d(' + (e.clientX - r.left) + 'px,' + (e.clientY - r.top) + 'px,0) translate(-50%,-50%)';
   liquifyCursor.style.display = 'block';
 }
-function hideCursors(){ eraserCursor.style.display='none'; brushCursor.style.display='none';
+/* WHICH TOOL AM I HOLDING? Until now the canvas could not answer that. Liquify
+   has its dashed influence ring and the eraser its circle, but Smudge, Blur,
+   Fill, Select, Stamps, Shape and Artwork ALL fell through to the pen's ring --
+   seven tools wearing one cursor, so the only way to know what a drag would do
+   was to remember what you last tapped.
+   
+   The badge is the tool's OWN icon, lifted from its shelf button rather than
+   copied, so it cannot drift from the tray: there is one drawing of each tool
+   and this is it. It rides beside the ring rather than replacing it, because
+   the ring still says how big the brush is and that is a different question.
+   Hidden while the pointer is down -- during a stroke you know what you picked,
+   and a glyph following your hand across your own drawing is in the way. */
+const toolBadge = document.createElement('div');
+toolBadge.className = 'flip-tool-badge';
+document.querySelector('.flip-wrap').appendChild(toolBadge);
+let _badgeFor = null;
+function syncToolBadge(){
+  if(_badgeFor === flipTool) return;
+  _badgeFor = flipTool;
+  const btn = document.getElementById(flipTool + 'ToolBtn');
+  const svg = btn && btn.querySelector('svg');
+  toolBadge.innerHTML = svg ? svg.outerHTML : '';
+}
+function moveToolBadge(e){
+  syncToolBadge();
+  if(!toolBadge.innerHTML){ toolBadge.style.display='none'; return; }
+  const r = pad.getBoundingClientRect();
+  toolBadge.style.transform =
+    'translate(' + (e.clientX - r.left + 13) + 'px,' + (e.clientY - r.top + 13) + 'px)';
+  toolBadge.style.display = 'block';
+}
+function hideCursors(){ toolBadge.style.display='none'; eraserCursor.style.display='none'; brushCursor.style.display='none';
   liquifyCursor.style.display='none'; }
 pad.addEventListener('pointermove', e=>{
   // A finger is its own cursor. Anything but a mouse or pen gets nothing.
@@ -1671,6 +1702,14 @@ pad.addEventListener('pointermove', e=>{
   }
   else if(erasing){ moveEraserCursor(e); brushCursor.style.display='none'; liquifyCursor.style.display='none'; }
   else { moveBrushCursor(e); eraserCursor.style.display='none'; liquifyCursor.style.display='none'; }
+  // The badge is orthogonal to which ring is showing: every tool gets it, and
+  // it is suppressed MID-STROKE rather than mid-tool. `drawing` alone, never
+  // `erasing`: that flag is set from the TOOL (line 3087, `erasing = flipTool
+  // === 'eraser'`), so including it hid the eraser's badge permanently rather
+  // than for the length of a stroke -- caught by the assertion that every tool
+  // shows one, which is why it is written over the whole roster.
+  if(drawing) toolBadge.style.display='none';
+  else moveToolBadge(e);
 });
 pad.addEventListener('pointerleave', hideCursors);
 
@@ -5339,6 +5378,18 @@ function fieldPhotoNote(label){
   _fieldPhotoNoted[k] = true;
   chip(k + ' works on your strokes, not the photo');
 }
+/* "Nothing was under your brush" -- said once per tool per session, on the same
+   budget as the photo note beside it. Once is the right number: it is a hint
+   about aim, and a person who has read it does not need it on every stray drag. */
+const _fieldMissNoted = Object.create(null);   // const, like _fieldPhotoNoted beside it
+function fieldMissNote(label){
+  const k = label || 'This';
+  if(_fieldMissNoted[k]) return;
+  _fieldMissNoted[k] = true;
+  chip(frame() && frame().strokes.length
+       ? k + ' needs to be dragged over your lines'
+       : k + ' works on lines you have drawn \u2014 draw something first');
+}
 function fieldEnd(){
   const at = _fieldIdx, before = _fieldBefore, f = frames[at];
   const touched = _fieldTouched, label = _fieldLabel;
@@ -5347,13 +5398,24 @@ function fieldEnd(){
   // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
   // empty canvas must not push a no-op the user then has to press through.
   if(!touched || !before || !f){
-    // ...but on a PHOTO, "nothing happened" is the tool's honest limit rather
-    // than an empty canvas, and silence makes it look broken. These tools move
+    // ...but SILENCE IS NOT THE SAME AS NOTHING TO SAY. v240 added a note for
+    // one case, a photo showing, because the owner reported the tool looking
+    // broken. The case underneath it is commoner and was left mute: a drag that
+    // simply missed the ink. You aim slightly off your line, nothing happens,
+    // nothing is said, and the tool reads as broken for exactly the same reason.
+    // Both are now explained, the photo case first because it is the more
+    // surprising of the two.
+    //
+    // On a PHOTO, "nothing happened" is the tool's honest limit rather
+    // than an empty canvas. These tools move
     // and recolour STROKE POINTS; a photograph is not strokes, and softening it
     // would need a raster layer the frame format does not have (the long
     // version is in lib/brushfield.js). Said once per tool per session --
     // enough to explain, not enough to nag.
-    if(!touched && photoShowing()) fieldPhotoNote(label);
+    if(!touched){
+      if(photoShowing()) fieldPhotoNote(label);
+      else fieldMissNote(label);
+    }
     return false;
   }
   noteAction({ type: 'liquify', label: label, idx: at, before: before,
@@ -5861,6 +5923,10 @@ function fillSourceImage(f){
   paintStatic(_fillCtx, f.strokes);
   return _fillCtx.getImageData(0, 0, _fillCv.width, _fillCv.height);
 }
+/* Past this share of the canvas, a flood has almost certainly leaked through a
+   gap rather than filled a shape. Two thirds rather than a half: filling a large
+   background on purpose is common, and a note that cries wolf gets ignored. */
+const FILL_ESCAPE_FRACTION = 0.66;
 function doFill(p){
   if(playing) return;
   if(typeof SkriblFloodFill === 'undefined'){ chip('Fill is unavailable'); return; }
@@ -5890,7 +5956,26 @@ function doFill(p){
   redoStack.length = 0;
   actionLog.push({ type:'fill', idx: idx, groups: groups });
   if(actionLog.length > MOVE_UNDO_LIMIT * 4) actionLog.shift();
-  chip(res.truncated ? 'Filled (area was clipped)' : 'Filled');
+  // A FLOOD THAT TAKES MOST OF THE CANVAS IS ALMOST ALWAYS A GAP IN THE
+  // OUTLINE, not what was wanted. Measured on the audit: tapping inside an open
+  // L-shape added 438 points and covered the page, silently, and the owner had
+  // already reported this as "still not filling completely". The area is
+  // already known here -- res.runs carries it -- so the diagnosis is free.
+  //
+  // It is a NOTE, not a refusal. Filling the background deliberately is a real
+  // thing to want, and a tool that argues with you is worse than one that
+  // explains itself. Undo is the remedy and the note says so.
+  // A run is {y, x0, x1, h}, so its area is its span times its height. NOT
+  // sizeOf(run) * points(run).length: points are SPACED along the run rather
+  // than one per pixel, so that product silently undercounts by an order of
+  // magnitude and the note never fires. Measured, not assumed.
+  const _canvasPx = (pad.width * pad.height) || 1;
+  let _filled = 0;
+  for(const run of res.runs) _filled += Math.max(0, run.x1 - run.x0) * Math.max(1, run.h);
+  chip(res.truncated ? 'Filled (area was clipped)'
+       : (_filled / _canvasPx > FILL_ESCAPE_FRACTION
+          ? 'Filled past your lines \u2014 the outline has a gap. Undo to go back'
+          : 'Filled'));
   render(); refreshThumb(idx); updateToolState(); scheduleSave();
 }
 

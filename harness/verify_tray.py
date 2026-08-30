@@ -572,6 +572,68 @@ with sync_playwright() as p:
               "with no text would satisfy the check above and explain nothing")
         hp.close()
 
+    # ---- the canvas says which tool is live -------------------------------
+    # SEVEN TOOLS WORE ONE CURSOR. Liquify has its dashed influence ring and
+    # the eraser its circle; Smudge, Blur, Fill, Select, Stamps, Shape and
+    # Artwork all fell through to the PEN's ring, so the only way to know what
+    # a drag was about to do was to remember what you last tapped. Asked
+    # directly by the owner: "are you showing the tool being used so I know
+    # which tool I am using?"
+    #
+    # The badge is lifted from the tool's own shelf button rather than copied,
+    # so the assertion is not "a badge appears" but "the badge is THIS tool's
+    # glyph" -- a single shared icon would satisfy the weaker version and tell
+    # the user nothing. Checked against the registry so a new tool cannot ship
+    # without one.
+    print("\nCURSOR — the badge names the tool under your hand")
+    bp = browser.new_page(viewport={"width": 1280, "height": 900})
+    bp.goto(BASE + "/flip", wait_until="load")
+    bp.wait_for_timeout(1100)
+    pb = bp.eval_on_selector("#pad", "e => { const r = e.getBoundingClientRect();"
+                             " return { x: r.x, y: r.y, w: r.width, h: r.height }; }")
+    roster = bp.evaluate("() => SkriblFlipTools.list()")
+    seen = {}
+    for tid in roster:
+        bp.evaluate("(t) => setTool(t)", tid)
+        bp.mouse.move(pb["x"] + pb["w"] * 0.5, pb["y"] + pb["h"] * 0.5)
+        bp.wait_for_timeout(160)
+        got = bp.evaluate("""(t) => {
+            const b = document.querySelector(".flip-tool-badge");
+            const shelf = document.getElementById(t + "ToolBtn");
+            const bs = b && b.querySelector("svg");
+            const ss = shelf && shelf.querySelector("svg");
+            return { shown: b && b.style.display === "block",
+                     mine: !!(bs && ss && bs.innerHTML === ss.innerHTML),
+                     ink: bs ? bs.innerHTML.length : 0 };
+        }""", tid)
+        seen[tid] = got
+    check("every tool shows a cursor badge",
+          all(v["shown"] for v in seen.values()),
+          str({k: v["shown"] for k, v in seen.items() if not v["shown"]}))
+    check("and it is THAT tool's own glyph, not one shared badge",
+          all(v["mine"] for v in seen.values()),
+          str({k: v for k, v in seen.items() if not v["mine"]}))
+    check("the glyphs are actually distinct from one another",
+          len({bp.evaluate("(t) => { const s = document.getElementById(t + 'ToolBtn')"
+                           ".querySelector('svg'); return s ? s.innerHTML : ''; }", t)
+               for t in roster}) == len(roster),
+          "two tools drawing the same glyph would pass the check above and "
+          "still leave the user unable to tell them apart")
+    # It must get out of the way while you are actually drawing.
+    bp.evaluate("() => setTool('pen')")
+    bp.mouse.move(pb["x"] + 100, pb["y"] + 100)
+    bp.mouse.down()
+    bp.mouse.move(pb["x"] + 200, pb["y"] + 160)
+    bp.wait_for_timeout(120)
+    mid = bp.evaluate("() => document.querySelector('.flip-tool-badge')"
+                      ".style.display === 'block'")
+    bp.mouse.up()
+    bp.wait_for_timeout(150)
+    check("the badge hides while a stroke is being drawn",
+          mid is False,
+          "a glyph trailing your hand across your own drawing is in the way")
+    bp.close()
+
     browser.close()
 
 bad = [r for r in results if not r[0]]

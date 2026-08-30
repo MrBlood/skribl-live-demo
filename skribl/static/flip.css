@@ -123,6 +123,16 @@
     border-radius: 50%; background: rgba(var(--wash-rgb), 0.8); transform: translate(-50%,-50%);
     box-shadow: 0 0 0 1px rgba(0,0,0,0.35); }
 
+  /* THE TOOL BADGE — which tool is live, said on the canvas where the work is.
+     Sits beside the brush ring rather than replacing it: the ring answers "how
+     big", this answers "which". Muted rather than bright, because it is a
+     reminder and not a control, and it must never compete with the drawing. */
+  .flip-tool-badge { position: absolute; top: 0; left: 0; width: 17px; height: 17px;
+    pointer-events: none; display: none; z-index: 11; will-change: transform;
+    color: rgba(var(--wash-rgb), 0.82); filter: drop-shadow(0 0 1.5px rgba(0,0,0,0.75)); }
+  .flip-tool-badge svg { width: 100%; height: 100%; display: block; }
+  body.playing .flip-tool-badge { display: none !important; }
+
   .fps-group { display: inline-flex; align-items: center; gap: 7px; }
   .fps-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
   /* v126: was accent + glow — identical to .btn.post, so Flip had TWO primary
