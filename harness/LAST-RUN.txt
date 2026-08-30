@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-30T21:25:39Z
+UTC timestamp           : 2026-08-30T21:33:25Z
 Host                    : Linux x86_64
 Tree SHA-256            : b250ffcaf262709e994024a800a333bac7831795c5ca5264a32805503b3fc6bb
-Git commit              : 44fe614-dirty
+Git commit              : c808366
 SKRIBL_VERSION          : v259
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,17 +10,17 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.9s1sHoIh8L/harness.db)
+Database reset          : yes (fresh /tmp/tmp.30LeuSvovz/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_tween.py verify_flipmotion.py verify_hold.py verify_posted.py verify_player_isolation.py verify_player_photo.py verify_ux.py verify_parity.py verify_canvas.py verify_beading.py verify_sizeclass.py verify_exportui.py verify_integration.py verify_docs.py
+Command                 : harness/run_harness.sh verify_tween.py verify_flipmotion.py verify_hold.py verify_posted.py verify_player_isolation.py verify_player_photo.py verify_ux.py verify_parity.py verify_canvas.py verify_beading.py verify_sizeclass.py verify_smudgeblur.py verify_exportui.py verify_integration.py verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 14
+suites requested : 15
   verify_tween.py: ok — 72/72 passed
   verify_flipmotion.py: ok — 27/27 passed
   verify_hold.py: ok — 56/56 passed
@@ -32,9 +32,10 @@ suites requested : 14
   verify_canvas.py: ok — 44/44 passed
   verify_beading.py: ok — 16/16 passed
   verify_sizeclass.py: ok — 89/89 passed
+  verify_smudgeblur.py: ok — 40/40 passed
   verify_exportui.py: ok — 45/45 passed
   verify_integration.py: ok — 14/14 passed
   verify_docs.py: ok — 67/67 passed
-assertions passed: 939   (skipped suites contribute 0)
+assertions passed: 979   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
