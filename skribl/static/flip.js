@@ -5828,6 +5828,23 @@ function selUp(pt){
     selRender(null);
     if(selSpans.length) chip(selSpans.length === 1 ? '1 stroke selected'
                                                   : selSpans.length + ' strokes selected');
+    // THE ONE MOMENT THE STAMP BUTTON EXISTS AND THE SHELF IS STILL EMPTY.
+    // Said here rather than on the shelf because this is when the control is
+    // actually on screen to be pointed at -- the shelf's copy of this sentence
+    // is read while the selection bar does not exist. Once per person: it is
+    // an introduction, not a nag, and SkriblHints keeps that promise.
+    if(selSpans.length && !stampShelf.length && window.SkriblHints){
+      // LIGHT THE BUTTON UP, do not describe it. Below the "regular" size class
+      // the selection bar is icons only (.pb-tx is display:none), so there is
+      // no button labelled "Stamp" to tell anyone to press -- and the word
+      // "Stamp" DOES appear in the tool tray, so a sentence naming it sends the
+      // reader exactly where the owner went and got stuck. The spotlight works
+      // at every size and in every language.
+      const shown = window.SkriblHints.show('stamp-where',
+        'The highlighted button saves this selection to your Stamps shelf.',
+        { action: { label: 'Stamp it', onClick: () => stampSaveSelection() } });
+      if(shown) spotlightStamp();
+    }
     return;
   }
   if(selMoveFrom){
@@ -6306,6 +6323,23 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
 }));
 loadStampShelf();
 bindEl('sbStamp', 'click', ()=>{ if(!playing) stampSaveSelection(); });
+/* The empty shelf's own way forward. It switches to Select and closes itself,
+   because the shelf is the wrong place to be standing: nothing can enter it
+   until a selection exists, and the control that puts one there is a tool. */
+bindEl('stampEmptyGo', 'click', (e)=>{ e.stopPropagation(); setTool('select'); });
+/* A ring around the real control for as long as the hint is up. Removed on the
+   first press as well as on the timer, so it stops the moment it is understood
+   rather than continuing to shout at someone who has already acted. */
+let _spotT = null;
+function spotlightStamp(){
+  const b = document.getElementById('sbStamp');
+  if(!b) return;
+  b.classList.add('pb-spot');
+  clearTimeout(_spotT);
+  const off = () => { b.classList.remove('pb-spot'); clearTimeout(_spotT); };
+  _spotT = setTimeout(off, 6000);
+  b.addEventListener('click', off, { once: true });
+}
 (function stampScaleKnob(){
   const sl = document.getElementById('stampScale'), out = document.getElementById('stampScaleOut');
   if(!sl) return;

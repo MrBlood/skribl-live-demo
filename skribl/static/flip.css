@@ -414,6 +414,44 @@
     color: var(--text-muted); }
   .stamp-empty[hidden] { display: none; }
   .stamp-empty b { color: var(--text-primary); font-weight: 650; }
+  /* The empty shelf's way out. A real button rather than bold text, because the
+     old sentence asked the reader to go and find a control and they could not:
+     this one IS the control. Full width so it cannot be read as a word in the
+     sentence, which is exactly how "tap Stamp" was misread. */
+  .stamp-empty-go { display: block; width: 100%; margin: 7px 0 6px;
+    padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    background: var(--surface-control); color: var(--text-primary);
+    border: 1px solid var(--hairline-strong);
+    font: inherit; font-size: 11.5px; font-weight: 650; text-align: center;
+    transition: background .14s ease, border-color .14s ease; }
+  .stamp-empty-go:hover { background: var(--surface-control-hover);
+    border-color: var(--accent); }
+  .stamp-empty-go:active { filter: brightness(1.2); }
+  .stamp-empty-go:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  .stamp-empty-then { display: block; color: var(--text-dim); }
+  /* The stamp glyph shown INLINE in the sentence, at text size, so the reader is
+     matching a picture against a picture rather than a word against an icon. */
+  .stamp-empty-ic { display: inline-block; width: 15px; height: 15px;
+    vertical-align: -3px; margin: 0 1px; color: var(--text-primary); }
+  .stamp-empty-ic svg { width: 100%; height: 100%; display: block; }
+  /* Available to a screen reader, absent from the layout. The glyph above is
+     aria-hidden, so without this the sentence would end mid-clause in speech. */
+  .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+  /* THE SPOTLIGHT. Points at the control instead of naming it — below the
+     "regular" size class the selection bar carries no labels at all, so a
+     sentence has nothing to refer to. Reduced-motion gets the ring without the
+     pulse: the job is "look here", and that does not require movement. */
+  .pb.pb-spot { border-color: var(--accent); color: var(--text-primary);
+    animation: pbSpot 1.15s ease-in-out infinite; }
+  @keyframes pbSpot {
+    0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    50%      { box-shadow: 0 0 0 5px transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pb.pb-spot { animation: none; box-shadow: 0 0 0 2px var(--accent-glow); }
+  }
 
   .strip-wrap { border-top: 1px solid var(--hairline); background: rgba(var(--glass-base-rgb), .55); }
   .strip { display: flex; gap: 10px; align-items: center; padding: 12px; overflow-x: auto;

@@ -3254,3 +3254,60 @@ note never fired. A run is {y, x0, x1, h}; its area is span times height.
 **An instrument that disagrees with the thing it measures is usually wrong.**
 Every one of these was found by asking "what would this tool have to do for my
 check to see it?" before believing the check.
+
+## v253 -- The instruction was displayed at the one moment its target did not exist
+
+The empty stamp shelf said "Pick something with Select, then tap Stamp to save it
+here." Reported from the live demo: "I didn't know where the stamp was so I kept
+pushing stamp in the tool menu. I didn't see the stamp button."
+
+Three separate faults sent them there, and each alone would have been enough:
+
+  1. THE BUTTON DID NOT EXIST YET. It lives in the SELECTION bar, which is
+     created by a selection -- so at the moment that sentence is read, with the
+     shelf open and nothing selected, its target cannot be on screen.
+  2. "STAMP" NAMES TWO THINGS. The tray has a tool called Stamps, and the tray is
+     the one place the WORD is rendered. The sentence pointed straight at it.
+  3. THE LABEL IS NOT DRAWN AT ALL BELOW "REGULAR". `.pb-tx { display: none }`,
+     so on a phone that bar is icons only and NO button is labelled "Stamp". The
+     sentence named a label the surface does not render.
+
+The first repair repeated fault 3: a hint reading "tap Stamp in the bar along the
+bottom", which is exactly as unfindable. The codebase already carries this
+warning, on the page-move hint -- "a hint that describes a control the surface
+does not have is worse than no hint" -- and it was written for the same reason.
+
+So: the shelf offers the step that must come first as a BUTTON rather than a
+sentence; the sentence shows the glyph inline, because a picture can be matched
+against a picture; and the control is SPOTLIT at the one moment it exists and
+the shelf is still empty. The assertions run at 430px on purpose -- at desktop
+width the labels are drawn and the reported bug cannot reproduce.
+
+**When someone cannot find a control, check whether it is on screen at the moment
+you told them about it, and whether the name you used is rendered anywhere near
+it.** Both answers here were no, and neither is visible from reading the code.
+
+## v254 -- A transient overlay that eats the interaction it comments on
+
+The stamp hint fires the instant a selection is made -- which is also the instant
+the user starts dragging that selection's handles. `.skribl-hint` is
+position: fixed over the canvas and was pointer-reactive, so it swallowed
+anything aimed underneath. It broke verify_select's rotation drag by sitting on
+the handle: a suite that had nothing to do with stamps, failing because of a
+toast.
+
+Hints no longer take the pointer; their action buttons still do. The cost is
+stated rather than buried: tap-anywhere-to-dismiss is gone for a real pointer,
+leaving the timer and the action button.
+
+**And the assertion for it was worthless on the first attempt.** It read
+`elementFromPoint(...).tagName` and accepted "div" -- but the hint IS a div, so
+it passed whether the fix was present or not. Only mutating the CSS back to
+pointer-events: auto exposed that. The working version asks `h.contains(el)`,
+which is the actual question.
+
+Worth noting why the existing suites could not have caught the original defect:
+they dismiss hints with `element.click()`, which dispatches directly to the node
+and ignores pointer-events entirely. Every one of them would have stayed green
+with the toast blocking the whole canvas. **A test that reaches past the
+mechanism under test is not testing it.**

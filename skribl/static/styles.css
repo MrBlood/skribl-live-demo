@@ -4741,10 +4741,26 @@ body.player-mode #canvas {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
   color: var(--text-primary);
   font-size: 12.5px; line-height: 1.5; text-align: center;
-  cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
+  /* THE PANEL DOES NOT TAKE THE POINTER, and that is a fix rather than an
+     omission. It is `position: fixed` over the canvas, so while it was up it
+     swallowed anything aimed underneath it -- caught when a hint added on the
+     selection path made verify_select's rotation drag miss its handle, because
+     the toast was sitting on top of the handle. A transient overlay that eats
+     the interaction it is commenting on is a defect for EVERY hint, not just
+     that one.
+
+     The cost is real and is stated rather than hidden: tap-anywhere-to-dismiss
+     no longer works for a real pointer. The auto-dismiss timer still runs and
+     the action button still takes clicks, which is why it re-enables them. Note
+     that the suites dismiss hints with element.click(), which dispatches
+     directly and ignores pointer-events -- so they would have kept passing
+     either way, and the property that matters is asserted separately: a canvas
+     press under the toast must reach the canvas. */
+  pointer-events: none;
 }
+.skribl-hint-action { pointer-events: auto; }
 .skribl-hint.in { opacity: 1; transform: translate(-50%, 0); }
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
