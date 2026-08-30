@@ -1,16 +1,16 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-30T22:34:09Z
+UTC timestamp           : 2026-08-30T23:11:10Z
 Host                    : Linux x86_64
-Tree SHA-256            : 47b2afee5f01311c16719619d3791c0164c6b7e1749b04501fa69eb66dba5e4e
-Git commit              : f0ac1c6
-SKRIBL_VERSION          : v260
+Tree SHA-256            : c5a367cd04d08c9cc355495d5226d5e95b5d43554a7cb33e95eec82c5e208378
+Git commit              : 39da8f9-dirty
+SKRIBL_VERSION          : v261
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.ECr0JTm3xg/harness.db)
+Database reset          : yes (fresh /tmp/tmp.j0FyBAWnnB/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -21,7 +21,7 @@ Command                 : harness/run_harness.sh verify_tween.py verify_flipmoti
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 16
-  verify_tween.py: ok — 77/77 passed
+  verify_tween.py: ok — 83/83 passed
   verify_flipmotion.py: ok — 27/27 passed
   verify_hold.py: ok — 56/56 passed
   verify_smudgeblur.py: ok — 40/40 passed
@@ -37,6 +37,6 @@ suites requested : 16
   verify_exportui.py: ok — 45/45 passed
   verify_integration.py: ok — 14/14 passed
   verify_docs.py: ok — 67/67 passed
-assertions passed: 1036   (skipped suites contribute 0)
+assertions passed: 1042   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

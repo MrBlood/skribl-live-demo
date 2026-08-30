@@ -5244,6 +5244,84 @@ function buildTween(a, b){
   return out;
 }
 
+/* ---------- v261: rebuilding the in-betweens already on the page -----------
+
+   v260 made the exposure's sample count depend on the document's frame rate,
+   and that only reaches pages made AFTER it. The reported file had 22
+   in-betweens already baked at 27 samples, which is the reason it dragged;
+   deleting and re-adding each of them by hand is the fix nobody should have to
+   perform 22 times.
+
+   NOTHING MARKS A PAGE AS GENERATED, so this has to recognise one, and being
+   wrong means overwriting a drawing. Three things have to agree before a page
+   is touched, and a hand-drawn page fails all three:
+
+     * every point's colour is an 8-digit hex. tweenFade is what writes those,
+       and the pen never does -- it writes '#rrggbb' or an rgba().
+     * the neighbours either side can actually be interpolated, which is what
+       generated the page in the first place.
+     * the run count is an exact MULTIPLE of the previous page's, because an
+       exposure emits the whole run list once per sample per pass. A drawing
+       landing on an exact multiple of its neighbour's run count AND being
+       entirely 8-digit hex is not a coincidence worth worrying about.
+
+   A page already at the right sample count is left alone, so running this twice
+   costs nothing and reports honestly that there was nothing to do. */
+function tweenLooksGenerated(i){
+  const f = frames[i], a = frames[i - 1], b = frames[i + 1];
+  if(!f || !a || !b || !f.strokes.length || !a.strokeGroups.length) return false;
+  if(tweenMismatch(a, b)) return false;
+  const copies = f.strokeGroups.length / a.strokeGroups.length;
+  if(!Number.isInteger(copies) || copies < TWEEN_MIN_SAMPLES) return false;
+  for(let k = 0; k < f.strokes.length; k++)
+    if(!/^#[0-9a-f]{8}$/i.test(String(f.strokes[k].color))) return false;
+  return true;
+}
+/* How many run-copies the CURRENT plan would emit for this page, so an
+   in-between that is already right is skipped rather than rebuilt identically. */
+function tweenPlannedCopies(i){
+  const a = frames[i - 1];
+  const plan = tweenPlan(a.strokes.length, a.strokeGroups.length, fps);
+  return plan ? (plan.n + 1) * plan.passes : null;
+}
+function rebuildTweens(){
+  if(playing) return;
+  if(moveMode){ chip('Finish or cancel the move first'); return; }
+  const found = [];
+  for(let i = 1; i < frames.length - 1; i++) if(tweenLooksGenerated(i)) found.push(i);
+  if(!found.length){ chip('No in-betweens to rebuild'); return; }
+  const stale = found.filter(i => {
+    const want = tweenPlannedCopies(i);
+    return want != null
+        && frames[i].strokeGroups.length / frames[i - 1].strokeGroups.length !== want;
+  });
+  if(!stale.length){
+    chip(found.length + ' in-between' + (found.length === 1 ? ' is' : 's are')
+         + ' already right for ' + fps + ' fps');
+    return;
+  }
+  invalidateClearUndo(); redoStack.length = 0;
+  let done = 0, before = 0, after = 0;
+  for(const i of stale){
+    const t = buildTween(frames[i - 1], frames[i + 1]);
+    if(!t) continue;                      // buildTween has already said why
+    before += frames[i].strokes.length;
+    after += t.strokes.length;
+    // The page keeps its own hold EXACTLY: how long it is shown is the author's,
+    // not something a rebuild gets to reset -- and a page that carried no hold
+    // at all must not come back carrying one. buildTween always returns hold 1,
+    // which is the same as absent to frameHold() but not the same in the file.
+    if(frames[i].hold != null) t.hold = frames[i].hold; else delete t.hold;
+    frames[i] = t;
+    done++;
+  }
+  buildStrip(); render(); scheduleSave();
+  if(!done){ chip('Could not rebuild those in-betweens'); return; }
+  const pct = before ? Math.round((1 - after / before) * 100) : 0;
+  chip('Rebuilt ' + done + ' in-between' + (done === 1 ? '' : 's')
+       + (pct > 0 ? ' — ' + pct + '% lighter' : ''));
+}
+
 /* Inserts the exposure between this page and the next. */
 function addTween(){
   if(playing) return;
@@ -7277,6 +7355,7 @@ let helpCloseTimer=null;
 function openHelpDrawer(){ clearTimeout(helpCloseTimer); document.documentElement.classList.add('help-open'); helpDrawer.hidden=false; helpDrawer.classList.remove('closing'); requestAnimationFrame(()=>helpDrawer.classList.add('open')); }
 function closeHelpDrawer(){ clearTimeout(helpCloseTimer); if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); helpDrawer.classList.add('closing'); helpDrawer.classList.remove('open');
   helpCloseTimer=setTimeout(()=>{ helpDrawer.hidden=true; helpDrawer.classList.remove('closing'); document.documentElement.classList.remove('help-open'); }, 250); }
+bindEl('miRebuildTweens', 'click',()=>{ closeMenu(); rebuildTweens(); });
 bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 // Clear all pages from the ... menu (v206). Same two-tap arm as the Pad's Clear
 // all: first tap arms (menu stays open for the confirm), second tap clears.
