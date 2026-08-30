@@ -898,7 +898,17 @@
    on every render, so an svg inside it would be wiped on the first page
    change. */
 .pb-glyph { display: inline-flex; align-items: center; opacity: .62; }
-.pb-glyph svg { width: 13px; height: 13px; display: block; }
+/* 18, NOT 13. The glyph sat at 13px inside a 38px button -- more than 12px of
+   empty padding on every side -- and it never scaled at any width, while the
+   tool tray next to it draws at 21px. Reported from the live demo: "those icons
+   are so small. Do they have to be so small?"
+
+   They did not. Width was never the constraint: at 430px these six buttons used
+   228 of 410px, and at 320px 198 of 300. The button box, and therefore the 44px
+   tap target --tap-grow builds, is unchanged; only the drawing inside it grew.
+   20px was tried and rejected -- the glyph starts touching the border, and a
+   button whose contents reach its edge reads as cramped rather than as bigger. */
+.pb-glyph svg { width: 18px; height: 18px; display: block; }
 .pb.on .pb-glyph { opacity: 1; }
 /* NO GLYPH ON MOVE, and the attempt is worth recording. A small page rectangle
    beside the arrow was tried and REVERTED: at 11px a plain rounded rect renders
