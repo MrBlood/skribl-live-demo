@@ -2886,29 +2886,41 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/>'
               + '<path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/>'
               + '<path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/></g></svg>' },
-        // A HAND POINTING DOWN-LEFT, index finger extended, traced from the
-        // owner's reference (ink box 108x140, aspect 0.771).
+        // A THUMBPRINT -- Lucide's `fingerprint`, at the set's scale and stroke.
         //
-        // IT IS A SIMPLIFICATION, and deliberately. The reference has a thumb,
-        // THREE curled fingers, a wrist and an extended index. Drawn out in full
-        // at 24px the curls merge into each other and the whole thing is a dense
-        // blob -- rendered side by side, the faithful trace lost to this one at
-        // tray size and won at 4x, which is the wrong way round for a tool
-        // button. What survives is the silhouette: thumb hook, ONE curl, the
-        // extended finger, the back of the hand.
+        // THE HAND DID NOT SURVIVE 24px, AND THE PROBLEM WAS THE REFERENCE, not
+        // the trace. The owner's reference is a hand with a thumb, curled
+        // fingers and an extended index; it reads as a hand because it is drawn
+        // large. Traced into a 24 box the strokes are wider than the gaps
+        // between the fingers, so they fuse. Four versions were rendered at 86px
+        // and at tray size -- faithful, one curl dropped, silhouette only, and
+        // opened out at the set's weight -- and every one of them was a squiggle
+        // at the size that matters. Simplifying further only made a simpler
+        // squiggle. That is arithmetic, not craft, and no further attempt at it
+        // is worth anyone's time.
         //
-        // The stroke is 1.8 rather than 2 for the same reason -- at 2 the gaps
-        // between the finger and the curl close up and the hand becomes a paddle.
+        // A thumbprint is the thing that DOES the smudging, it is one closed
+        // form rather than five thin ones, and its concentric arcs are legible
+        // at any size. It is also unmistakable against its neighbours: Liquify's
+        // three waves run horizontally and Blur's halos are concentric CIRCLES,
+        // where this is an arch open at the bottom.
         //
-        // It replaces a fingertip-with-motion-lines that the owner called weird,
-        // and it was: that one read as a blocky mitten beside three dashes.
+        // THE LESSON, since this slot has now taken four icons: test at 24px
+        // BEFORE shipping, not at 4x. The hand that shipped was admired at 4x
+        // and was never once looked at the size a person actually sees it.
         { id: 'smudge', label: 'Smudge', btn: 'smudgeToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M14.6 2 17.9 3.3 19.8 10.8 16.2 15.4 12.4 16.3"/>'
-              + '<path d="M7.2 3.2 4.5 7.9a1.8 1.8 0 0 0 3.1 1.8"/>'
-              + '<path d="M10.4 8.2 7.6 13a1.8 1.8 0 0 0 3.1 1.8l.7-1.2"/>'
-              + '<path d="M14 8.8 8.3 18.7a2 2 0 1 1-3.46-2"/></svg>' },
+              + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
+              + '<path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>'
+              + '<path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>'
+              + '<path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>'
+              + '<path d="M2 12a10 10 0 0 1 18-6"/>'
+              + '<path d="M2 16h.01"/>'
+              + '<path d="M21.8 16c.2-2 .131-5.354 0-6"/>'
+              + '<path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>'
+              + '<path d="M8.65 22c.21-.66.45-1.32.57-2"/>'
+              + '<path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></g></svg>' },
         // BLUR SHOULD LOOK BLURRY, which the concentric outlined rings it had did
         // not -- they read as a target. A filled core inside progressively larger,
         // fainter filled halos is what defocus actually looks like, and it
@@ -2924,27 +2936,33 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
               + '<circle cx="12" cy="12" r="6.6" fill="currentColor" stroke="none" opacity=".22"/>'
               + '<circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none" opacity=".45"/>'
               + '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>' },
-        // A TIPPED CAN WITH A DROP BESIDE IT, drawn to the owner's reference.
+        // A TIPPED CAN POURING, WITH ONE DROP -- Lucide's `paint-bucket`, at the
+        // set's scale and stroke.
         //
-        // WIDE, NOT TALL. Measured off the reference, its ink box is 129x103 --
-        // an aspect of 1.25, because the drop sits BESIDE the can rather than
-        // under it. Every earlier bucket here was roughly square and the drop
-        // that preceded this one was 0.74; this is the third distinct proportion
-        // the Fill slot has taken, which is precisely why the size rule in
-        // verify_icons.py is an area band and not a per-axis one (v296).
+        // This slot took three hand-drawn versions before this one: a plain
+        // drop, a squarish bucket, and a can traced from the owner's reference
+        // with a wire handle. The traced one was the closest and still wrong --
+        // its body read as a tilted diamond and the open arc of its handle read
+        // as a break in the outline rather than as a wire.
         //
-        // THE HANDLE IS A WIRE, and it is drawn thinner than everything else on
-        // purpose. A first attempt drew it as a closed loop, correctly matching
-        // the reference's shape, and at a 2px stroke the loop's hole filled in
-        // solid and it read as a blob. An open arc at 1.7 keeps the wire legible
-        // at 24px, which a faithful-but-solid loop does not.
+        // WHAT THE HAND-DRAWN ONES ALL MISSED is not shape, it is company. The
+        // four icons in this tray that were never complained about -- Shape,
+        // Select, Liquify, Stamps -- are Lucide, and an improvised icon beside a
+        // professionally drawn set reads as improvised no matter how carefully
+        // it is measured. Matching the SPEC (box, stroke, area band) is not the
+        // same as matching the HAND.
         { id: 'fill', label: 'Fill', btn: 'fillToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-              + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-              + '<path d="M9.2 7.0L14.28 12.08a1.6 1.6 0 0 1 0 2.24L10.32 18.28a1.6 1.6 0 0 1 -2.24 0L4.12 14.32a1.6 1.6 0 0 1 0 -2.24Z"/>'
-              + '<path d="M5.9 9.9a3.9 3.9 0 0 1 5.5-5.5" stroke-width="1.7"/>'
-              + '<circle cx="10.8" cy="10.6" r="1.05" fill="currentColor" stroke="none"/>'
-              + '<path d="M19.4 9.6C19.4 9.6 20.27 11.95 21.55 13.52C22.18 14.33 22.3 15.05 22.3 15.2A2.9 2.9 0 0 1 16.5 15.2C16.5 15.05 16.62 14.33 17.25 13.52C18.53 11.95 19.4 9.6 19.4 9.6Z" fill="currentColor" stroke="none"/></svg>' },
+              + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
+              + '<g transform="translate(12 12) scale(0.88) translate(-12 -12)">'
+              + '<path d="M11 7 6 2"/>'
+              + '<path d="M18.992 12H2.041"/>'
+              + '<path d="M21.145 18.38A3.34 3.34 0 0 1 20 16.5a3.3 3.3 0 0 1-1.145 1.88'
+              + 'c-.575.46-.855 1.02-.855 1.595A2 2 0 0 0 20 22a2 2 0 0 0 2-2.025'
+              + 'c0-.58-.285-1.13-.855-1.595"/>'
+              + '<path d="m8.5 4.5 2.148-2.148a1.205 1.205 0 0 1 1.704 0l7.296 7.296'
+              + 'a1.205 1.205 0 0 1 0 1.704l-7.592 7.592a3.615 3.615 0 0 1-5.112 0'
+              + 'l-3.888-3.888a3.615 3.615 0 0 1 0-5.112L5.67 7.33"/></g></svg>' },
         { id: 'stamp', label: 'Stamps', btn: 'stampToolBtn',
           icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
               + 'stroke-width="2.27" stroke-linecap="round" stroke-linejoin="round">'
