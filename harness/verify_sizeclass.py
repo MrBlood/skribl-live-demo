@@ -379,6 +379,74 @@ with sync_playwright() as _gp:
     finally:
         _gb.close()
 
+
+# ============================================================================
+# SLIDERS ARE GRABBABLE, AND GROWING THEM MOVED NOTHING
+#
+# They shipped 22px tall against Apple's 44pt minimum -- half. A range input
+# cannot use the --tap-grow ::before the buttons use, because pseudo-elements do
+# not render on <input>, so the element itself is 44 and negative margins hand
+# the 22 back to the flow. Two things therefore have to hold at once, and each
+# is the other's likely regression: the box that receives a press is 44, and
+# the space the control occupies is still 22.
+#
+# FOUR SLIDERS ARE DELIBERATELY LEFT SHORT and carry .slider-tight. A 44px box
+# on those overlaps a neighbouring control -- photoZoom vs Reposition by 11px,
+# shapeSides vs Corners by 5-7, shapeSides vs the kind buttons by 1-7 -- and
+# where two hit areas overlap the winner is DOM order, so growing them would
+# move a tap target rather than enlarge it. They are pinned here so the
+# exception stays a decision instead of becoming an oversight.
+# ============================================================================
+print("\nSLIDERS — 44px of grab, 22px of layout, and four measured exceptions")
+with sync_playwright() as _sl:
+    _slb = _sl.chromium.launch()
+    try:
+        for _path, _name, _ctl in (("/flip", "Flip", "_flipDrawerCtl"),
+                                   ("/", "Pad", "_padDrawerCtl")):
+            lp = _slb.new_page(viewport={"width": 430, "height": 950})
+            lp.goto(BASE + _path, wait_until="load")
+            lp.wait_for_timeout(1200)
+            lp.evaluate(f"() => {_ctl}.open('draw')")
+            lp.wait_for_timeout(450)
+            lp.evaluate("() => { setTool('shape'); shapeKind = 'poly';"
+                        " syncShapeKnobs();"
+                        " document.getElementById('shapePop').hidden = false; }")
+            lp.wait_for_timeout(400)
+            found = lp.evaluate(
+                "() => [...document.querySelectorAll('input[type=range]')]"
+                ".map(s => { const b = s.getBoundingClientRect();"
+                "  const cs = getComputedStyle(s);"
+                "  return { id: s.id, on: b.height > 0,"
+                "           box: Math.round(b.height),"
+                "           flow: Math.round(b.height + parseFloat(cs.marginTop)"
+                "                 + parseFloat(cs.marginBottom)),"
+                "           tight: s.classList.contains('slider-tight'),"
+                "           cls: s.className }; })"
+                ".filter(x => x.on)")
+            check(f"{_name}: there are sliders laid out to check",
+                  len(found) > 0, "an empty set passes everything below")
+            check(f"{_name}: every slider carries the shared class",
+                  all("slider" in f["cls"] for f in found),
+                  str([f["id"] for f in found if "slider" not in f["cls"]]))
+            grown = [f for f in found if not f["tight"]]
+            tight = [f for f in found if f["tight"]]
+            check(f"{_name}: a slider without the tight opt-out gives 44px of grab",
+                  all(f["box"] >= 44 for f in grown),
+                  str([(f["id"], f["box"]) for f in grown if f["box"] < 44])
+                  + " — 22px is half the 44pt minimum")
+            check(f"{_name}: ...and still occupies only 22px of layout",
+                  all(f["flow"] == 22 for f in grown),
+                  str([(f["id"], f["flow"]) for f in grown if f["flow"] != 22])
+                  + " — the drawers already reach the bottom of a phone; a "
+                  "taller control has to come out of the negative margin, not "
+                  "out of the page")
+            check(f"{_name}: the marked exceptions are still 22 and unmoved",
+                  all(f["box"] == 22 and f["flow"] == 22 for f in tight),
+                  str([(f["id"], f["box"], f["flow"]) for f in tight]))
+            lp.close()
+    finally:
+        _slb.close()
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'=' * 62}\n{len(results) - len(bad)}/{len(results)} passed"
       + ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

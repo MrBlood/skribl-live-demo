@@ -2358,15 +2358,41 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 /* Shared custom range slider — used by opacity, blur, and any future slider.
    Thin track with a bright purple fill and a white thumb ringed in purple
    with a soft halo. Both -webkit- and -moz- are styled for cross-browser. */
+/* 44px OF GRAB, 22px OF LAYOUT. The control was 22px tall against Apple's 44pt
+   minimum -- half -- and a range input cannot use the --tap-grow ::before the
+   buttons use, because pseudo-elements do not render on <input>. So the element
+   itself is 44 and negative margins give the 22 back to the flow: the box that
+   receives the press is twice as tall, and nothing moves.
+
+   IT IS THE DEFAULT, and the exceptions are marked, because a slider added later
+   should be reachable without anyone remembering to opt in. */
 .slider,
 .opacity-slider {
   -webkit-appearance: none;
   appearance: none;
   flex: 1;
-  height: 22px;
+  height: 44px;
+  margin-top: -11px;
+  margin-bottom: -11px;
   background: transparent;
   cursor: pointer;
-  margin: 0;
+}
+
+/* THE EXCEPTIONS, and each is a measured collision rather than a preference.
+   A 44px box on these overlaps a NEIGHBOURING control, and where two hit areas
+   overlap the winner is decided by DOM order and stacking -- so growing them
+   would silently move a tap target rather than enlarge it:
+
+     photoZoom   vs Reposition   11px      shapeSides vs Sides/Corners  5-7px
+     photoBlur   vs Reset         3px      shapeSides vs the kind buttons 1-7px
+
+   The fix for these is row spacing in the popover and the image drawer, which
+   is a layout change and is not smuggled in here. Until then they keep the
+   22px box they shipped with. */
+.slider.slider-tight {
+  height: 22px;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .slider:focus,

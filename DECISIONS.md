@@ -3409,3 +3409,38 @@ Two layout traps, both from turning a centred block into a row:
 
 **A design that works as one layout does not survive being turned into another.**
 Both of these looked correct in the CSS and only showed up in a screenshot.
+
+## v258 -- 44px of grab, 22px of layout, and four measured exceptions
+
+Every slider in the app was 22px tall against Apple's documented 44pt minimum --
+half. The obvious fix, the --tap-grow ::before the buttons use, DOES NOT WORK
+here: pseudo-elements do not render on <input>. So the element itself is 44 and
+negative margins hand the 22 back to the flow. The box that takes the press is
+twice as tall and nothing moved -- which matters, because the draw drawer is
+already 628px of a 950px phone and both drawers reach the bottom edge.
+
+Both halves are asserted, because each is the other's likely regression: shrink
+the box and four checks fail; drop the negative margin and the layout checks fail
+naming the sliders that grew the page.
+
+FOUR SLIDERS ARE DELIBERATELY LEFT SHORT, measured before the change rather than
+discovered after:
+
+    photoZoom   vs Reposition      11px      shapeSides vs Corners        5-7px
+    photoBlur   vs Reset            3px      shapeSides vs kind buttons   1-7px
+
+Where two hit areas overlap, the winner is DOM order and stacking -- so growing
+these would MOVE a tap target rather than enlarge it, which is worse than leaving
+them small. They carry .slider-tight, the exception is pinned by an assertion so
+it stays a decision, and the real fix is row spacing in the popover and the image
+drawer: mocked at 44px it clears every collision and takes the shape picker from
+102px to 151.
+
+**The default is the correct behaviour and the exceptions are marked.** A slider
+added later is reachable without anyone remembering to opt in, and each opt-out
+carries the measurement that justifies it.
+
+One artifact worth recording: the analysis also reported stampScale colliding
+with shapeSides. It does not -- the probe had forced both popovers open at once,
+and through a real route choosing Stamps hides the shape picker. **A collision
+found in a state the app cannot reach is not a collision.**
