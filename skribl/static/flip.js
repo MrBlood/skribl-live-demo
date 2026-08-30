@@ -4957,24 +4957,60 @@ function tweenTrim(blur){
 
    Returns null when even a bare, unblurred exposure will not fit. */
 const TWEEN_GOOD_SAMPLES = 16;
-function tweenPlan(per, groupsPer){
+/* THE SECOND CEILING: an exposure has to be PAINTED, not just posted.
+
+   TWEEN_POINT_CAP is the server's limit -- what a frame may contain. It says
+   nothing about how long that frame takes to draw, and the drawing happens once
+   per appearance, inside whatever slot the document's own frame rate leaves.
+
+   Reported from a real 46-page flip at fps 24, where 22 of the pages were
+   in-betweens: each was 11,826 points (27 samples of a 438-point drawing, which
+   is what the server cap allows) and measured 50ms against a 41.7ms budget.
+   Every other page overran and the flip dragged. The same document at 12fps
+   would have been comfortable -- 83ms is plenty for 50 -- so this was never a
+   property of the in-between alone, but of the in-between AND the rate it was
+   asked to play at.
+
+   Measured on those frames, by sample count:
+
+       27 -> 50.0ms      18 -> 30.0ms
+       14 -> 23.1ms       9 -> 14.8ms
+
+   So the budget scales with the slot: at 12fps and below the server cap binds
+   and nothing changes, and above it the allowance falls in proportion. 24fps
+   gets half, which put that page at 16 samples and about 26ms.
+
+   IT NEVER CAUSES A REFUSAL. A render heuristic that turned "here is a coarser
+   exposure" into "this page is too heavy for an in-between" would be trading a
+   feature for a frame rate. Below TWEEN_MIN_SAMPLES the render ceiling simply
+   stops applying and the page is drawn at the floor. */
+function tweenRenderCap(atFps){
+  const f = (typeof atFps === 'number' && atFps > 0) ? atFps : 12;
+  if(f <= 12) return TWEEN_POINT_CAP;
+  return Math.max(1, Math.round(TWEEN_POINT_CAP * 12 / f));
+}
+function tweenPlan(per, groupsPer, atFps){
+  const renderCap = tweenRenderCap(typeof atFps === 'number' ? atFps : fps);
   // The most samples that fit BOTH caps at a given pass count. Groups are
   // capped separately because every pass of every sample is its own group:
   // a page of many short strokes can clear the point cap and still be
   // unpostable, which nothing checked before.
-  const fit = (passes) => {
+  const fit = (passes, cap) => {
     // Both are "-1" because the sample loop runs s = 0..n inclusive and so
     // emits n+1 samples. Without it the plan overshot its own budget: a
     // 150-point page planned 14,250 points against a cap of 14,000.
-    const byPoints = Math.floor(TWEEN_POINT_CAP / Math.max(1, per * passes)) - 1;
+    const byPoints = Math.floor(cap / Math.max(1, per * passes)) - 1;
     const byGroups = Math.floor(TWEEN_GROUP_CAP / Math.max(1, groupsPer * passes)) - 1;
     return Math.min(TWEEN_SAMPLES, byPoints, byGroups);
   };
-  const bare = fit(1);
-  if(bare < TWEEN_MIN_SAMPLES) return null;
+  // The SERVER cap decides whether an exposure is possible at all; the render
+  // cap only decides how fine it is.
+  const postable = fit(1, TWEEN_POINT_CAP);
+  if(postable < TWEEN_MIN_SAMPLES) return null;
+  const bare = Math.max(TWEEN_MIN_SAMPLES, Math.min(postable, fit(1, renderCap)));
   const keep = Math.min(bare, TWEEN_GOOD_SAMPLES);
   for(let passes = TWEEN_BLUR.length; passes >= 2; passes--)
-    if(fit(passes) >= keep) return { passes: passes, n: fit(passes) };
+    if(fit(passes, renderCap) >= keep) return { passes: passes, n: fit(passes, renderCap) };
   return { passes: 1, n: bare };
 }
 

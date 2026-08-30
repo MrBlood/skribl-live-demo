@@ -467,6 +467,75 @@ with sync_playwright() as p:
         check("no error from the looping player", not _lerrs, "; ".join(_lerrs[:2]))
         _lp.close()
 
+    print("\nIN-BETWEEN — the exposure is budgeted against the FRAME RATE too")
+    # TWEEN_POINT_CAP is the SERVER's limit: what a frame may contain. It says
+    # nothing about how long that frame takes to DRAW, and the drawing happens
+    # once per appearance inside whatever slot the document's rate leaves.
+    #
+    # Reported from a real 46-page flip at fps 24 where 22 pages were
+    # in-betweens: each was 11,826 points -- 27 samples of a 438-point drawing,
+    # exactly what the server cap allows -- and painted in 50ms against a 41.7ms
+    # budget. Every other page overran and the flip dragged. The same document
+    # at 12fps is comfortable, so this was never the in-between alone but the
+    # in-between AND the rate it was asked to play at.
+    _fp = page.evaluate("""(per) => {
+        const out = {};
+        for (const f of [8, 12, 24, 30, 60])
+          out[f] = { cap: tweenRenderCap(f), plan: tweenPlan(per, 19, f) };
+        return out; }""", 438)
+    _n = lambda k: (_fp[k]["plan"] or {}).get("n")
+    check("at 12fps and below the exposure is exactly what it always was",
+          _fp["8"]["cap"] == _fp["12"]["cap"] and _n("12") is not None
+          and _n("12") == _n("8"),
+          f"{ {k: v['plan'] and v['plan']['n'] for k, v in _fp.items()} } — the "
+          f"server cap binds there, so every in-between already made at 12fps "
+          f"keeps the sample count it was generated with")
+    # Null-safe throughout: the mutation these exist to catch -- a render ceiling
+    # used as the POSTABILITY test -- returns null at 60fps, and indexing that
+    # crashed the suite instead of naming the failure.
+    check("above 12fps the allowance falls with the slot",
+          all(_n(k) is not None for k in ("12", "24", "30", "60"))
+          and _n("24") < _n("12") and _n("30") < _n("24") and _n("60") < _n("30"),
+          f"{ {k: v['plan'] and v['plan']['n'] for k, v in _fp.items()} } — 24fps "
+          f"has half the time 12 does and gets about half the samples")
+    # A RENDER HEURISTIC MUST NOT COST A FEATURE. Turning "here is a coarser
+    # exposure" into "this page is too heavy for an in-between" would trade the
+    # in-between away for a frame rate, so below the floor the render ceiling
+    # simply stops applying.
+    check("the render budget never refuses a page the server would accept",
+          all(_fp[k]["plan"] is not None for k in _fp),
+          f"{ {k: v['plan'] for k, v in _fp.items()} } — a null here is a page "
+          f"that could be posted and was declined for speed")
+    # NULL-SAFE, because the mutation this is here to catch produces nulls: a
+    # render ceiling applied as the postability test refuses 60fps outright, and
+    # indexing into that null crashed the suite instead of naming the failure.
+    check("...and never plans below the floor",
+          all(v["plan"] and v["plan"]["n"] + 1 >= 6 for v in _fp.values()),
+          f"{ {k: (v['plan'] and v['plan']['n'] + 1) for k, v in _fp.items()} } "
+          f"samples — a None is a page that was declined outright")
+    # AND IT REACHES THE GENERATED PAGE, not just the plan.
+    _gen = page.evaluate("""() => {
+        const mk = () => { const s = [], g = [];
+          for (let r = 0; r < 6; r++) { const run = [];
+            for (let k = 0; k < 40; k++) run.push({x: 60 + k * 8 + r * 3, y: 80 + r * 40,
+              color: '#ffffff', size: 5, t: k, erase: false, start: k === 0});
+            s.push(...run); g.push(run.length); }
+          return { strokes: s, strokeGroups: g, hold: 1 }; };
+        const out = {};
+        for (const f of [12, 24]) {
+          frames.length = 0;
+          const a = mk(), b = mk();
+          b.strokes = b.strokes.map(q => ({...q, x: q.x + 200}));
+          frames.push(a, b); idx = 0; fps = f;
+          addTween();
+          out[f] = frames[1].strokes.length;
+        }
+        return out; }""")
+    check("a page generated at 24fps really is lighter than the same one at 12",
+          _gen["24"] < _gen["12"] * 0.75,
+          f"{_gen['12']} points at 12fps vs {_gen['24']} at 24 — the plan has to "
+          f"reach buildTween, not just be computable")
+
     print("\nPAGE BAR — the counter earns its width")
     # "Page 21 / 43" cost 69px in a nowrap bar whose contents already measured
     # 369px inside 340 at 360px wide — the Delete button was clipped off the end

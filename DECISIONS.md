@@ -3984,3 +3984,76 @@ It stays, and the comment says plainly that it is unreachable rather than
 implying it is load-bearing. The one change that would reach it -- calling
 sizePlayerCanvas() a second time -- has a blank player as its failure mode, and
 the reset costs nothing sitting beside the assignment that causes it.
+
+## v260 -- The exposure was budgeted for the server and not for the screen
+
+The owner sent the file. 46 pages at fps 24, 22 of them in-betweens alternating
+with key pages, each in-between 11,826 points against a key page's 438. Measured
+on those exact frames: the key page paints in 1.8ms, the in-between in 46.8ms,
+and the slot at 24fps is 41.7ms. Every other page overran and the flip dragged.
+
+11,826 / 438 is exactly 27, which is TWEEN_POINT_CAP's answer for a page that
+size -- the plan was already at its ceiling, and that ceiling is the SERVER's:
+what a frame may contain. It says nothing about how long the frame takes to
+draw, and the drawing happens once per appearance inside whatever slot the
+document's own rate leaves. The same document at 12fps is comfortable, so this
+was never the in-between alone but the in-between AND the rate.
+
+So the allowance now scales with the slot: at 12fps and below the server cap
+binds and nothing changes, above it the budget falls in proportion. Measured on
+the owner's poses, regenerating the in-between at each rate:
+
+    fps 8   27 samples  11,826 pts  47.0ms of 125ms
+    fps 12  27 samples  11,826 pts  46.3ms of  83ms
+    fps 24  15 samples   6,570 pts  28.9ms of  42ms
+    fps 30  12 samples   5,256 pts  24.0ms of  33ms
+    fps 60   7 samples   3,066 pts  12.6ms of  17ms
+
+**IT NEVER CAUSES A REFUSAL.** Turning "here is a coarser exposure" into "this
+page is too heavy for an in-between" would trade the feature away for a frame
+rate. The server cap still decides whether an exposure is possible; the render
+cap only decides how fine it is, and below TWEEN_MIN_SAMPLES it stops applying.
+
+The cost is honest: 15 samples ribs slightly more visibly than 27. It still
+reads as a smear, and a smear that plays beats a smoother one that stalls.
+
+## v260 -- The optimisation that measured identical and was not
+
+Before this, the fix looked like batching: paintSeg draws a run point to point,
+so an in-between is eleven thousand beginPath/stroke pairs. Stroking each run as
+ONE path took the owner's page from 46.8ms to 27ms, and the equivalence looked
+perfect -- mean pixel difference 1.18/255, ink brightness 235.8 -> 235.8.
+
+Both numbers were measured on the RGB channels of a SATURATED image. An exposure
+is 27 copies of the same runs piled up; the composite is near-opaque wherever
+there is ink, so nothing could move there however much each run changed.
+
+Measuring the ALPHA channel on a bare run instead:
+
+    gap/size 0.2   per-segment 146.7   one path 50.3   -66%
+    gap/size 0.5               102.5             50.7  -51%
+    gap/size 1.0                79.6             50.8  -36%
+    gap/size 2.0                65.7             50.9  -23%
+
+Canvas strokes a path as one shape, so self-overlap is painted once; separate
+segments paint it twice, and consecutive segments ALWAYS share a round cap at
+the vertex between them. Batching therefore removes a third of the ink at the
+spacing an exposure uses, and two thirds at the spacing v256's blur halo is
+densified to. It only looked identical on the one drawing dense enough to hide
+it. Reverted, unshipped.
+
+**A saturated measurement cannot see a change, and it does not say so.** That is
+three times in this area -- the beading metrics in v256, the smudge y-spread in
+v257, and this. The pattern each time: the quantity moved was not the quantity
+measured, and the number came back clean.
+
+## v260 -- A mutation that crashes is not a mutation that named its failure
+
+The render ceiling applied as the POSTABILITY test refuses 60fps outright and
+returns null. Three checks then indexed into that null and the suite ERRORed
+before printing a summary -- caught as a failure by the harness, but the four
+words that say WHICH guarantee broke never appeared.
+
+Every read of a plan in that block is null-safe now, and the same mutation names
+all three: the allowance no longer falls with the slot, a postable page was
+refused, and the floor was breached.
