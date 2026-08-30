@@ -389,6 +389,106 @@ with sync_playwright() as p:
               "the fill and the line never meet and the fringe shows through "
               "as the dotted thread that was reported three times")
 
+        print("\nOVER A PHOTOGRAPH — where the original rule did not survive")
+        # THE FIXTURE IS NOISE, and that is the whole assertion. A flat-colour
+        # PNG floods exactly like a plain background and would pass on the
+        # broken build; what defeats a flood is TEXTURE. This photo is per-pixel
+        # random, which is the worst case and the honest one -- a real
+        # photograph is somewhere between this and flat, and the reported
+        # failure came from a real photograph.
+        # CLEARED AFTER THE RELOAD, NOT BEFORE, and getting this backwards cost
+        # a long detour. reload() fires pagehide, which runs flushFlipDraft() --
+        # so clearing first and then reloading writes the OUTGOING page's
+        # drawing straight back into the slot the clear just emptied. Every
+        # stroke and fill from the sections above came back, the flood crossed
+        # those instead of the photo, and a mutation that should have failed
+        # this section passed with 136 runs. A reload is not a clean slate here;
+        # the frame is emptied explicitly rather than trusted.
+        page.reload(wait_until="networkidle")
+        page.wait_for_timeout(800)
+        page.evaluate("""() => { localStorage.clear();
+          frames.length = 0; frames.push({ strokes: [], strokeGroups: [], hold: 1 });
+          idx = 0; render(); }""")
+        page.wait_for_timeout(200)
+        check("the page really is blank before the photo goes on",
+              page.evaluate("() => frame().strokes.length") == 0,
+              "a reload is not a clean slate -- pagehide flushes the draft back")
+        # SIZED TO THE PAD, and that is load-bearing. A small noise image scaled
+        # up to fill the canvas is INTERPOLATED: each source pixel becomes a
+        # flat block a dozen screen pixels wide, the texture is smoothed away,
+        # and the flood crosses it happily. Measured -- a 64x64 fixture passed
+        # on the broken build with 144 runs, proving nothing. Texture only
+        # defeats a flood if it survives at display scale.
+        noisy = page.evaluate("""async () => {
+          const c = document.createElement('canvas'); c.width = 900; c.height = 700;
+          const g = c.getContext('2d'); const im = g.createImageData(900, 700);
+          for (let i = 0; i < im.data.length; i += 4) {
+            const v = (Math.random() * 255) | 0;
+            im.data[i] = v; im.data[i+1] = (v * 7) % 255; im.data[i+2] = (v * 13) % 255;
+            im.data[i+3] = 255;
+          }
+          g.putImageData(im, 0, 0);
+          const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+          return Array.from(new Uint8Array(await blob.arrayBuffer()));
+        }""")
+        page.evaluate("""(bytes) => {
+          const f = new File([new Uint8Array(bytes)], 'noise.png', { type: 'image/png' });
+          const dt = new DataTransfer(); dt.items.add(f);
+          const input = document.getElementById('imageInput');
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }""", noisy)
+        page.wait_for_timeout(1800)
+        check("the photo is actually on screen",
+              page.evaluate("() => photoShowing()") is True,
+              "if it never rendered, everything below tests the plain-background "
+              "path and proves nothing")
+
+        # A closed box, drawn thick so the flood cannot leak through a corner.
+        b = page.locator("#pad").bounding_box()
+        cx, cy = b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
+        page.evaluate("() => { setTool('pen'); brushSize = 8; }")
+        for a, z in (((-90, -70), (90, -70)), ((90, -70), (90, 70)),
+                     ((90, 70), (-90, 70)), ((-90, 70), (-90, -70))):
+            page.mouse.move(cx + a[0], cy + a[1])
+            page.mouse.down()
+            page.mouse.move(cx + z[0], cy + z[1])
+            page.mouse.up()
+            page.wait_for_timeout(120)
+        before = page.evaluate(STATE)
+        page.evaluate("() => setTool('fill')")
+        page.wait_for_timeout(200)
+        page.mouse.click(cx, cy)
+        page.wait_for_timeout(500)
+        after = page.evaluate(STATE)
+
+        # THE NUMBER THAT MATTERS. On the composite, a flood seeded on noise
+        # stops within a few pixels of the seed: a handful of runs, a speck. The
+        # box here is ~180x140 canvas units, so a real fill is HUNDREDS of runs.
+        # The threshold sits far above a speck and far below the real figure, so
+        # it cannot be satisfied by an accident.
+        made = after["groups"] - before["groups"]
+        check("fill over a photo fills the region, not a speck",
+              made >= 40,
+              f"{made} runs from a tap inside a drawn box over a noisy photo — "
+              "sampling the composite, the flood dies on photo grain within a "
+              "few pixels of the seed and the tool looks broken, which is how "
+              "this was reported")
+
+        # ...and it stayed INSIDE the box. A fill that escaped would cover the
+        # whole canvas, which is a different failure with the same run count.
+        spread = page.evaluate("""([n]) => {
+          const f = frame(), s = f.strokes.slice(f.strokes.length - n);
+          let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+          for (const p of s) { if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+                               if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y; }
+          return { w: x1 - x0, h: y1 - y0, CW: CW, CH: CH };
+        }""", [after["pts"] - before["pts"]])
+        check("...and it stopped at the lines rather than flooding the page",
+              spread["w"] < spread["CW"] * 0.92 and spread["h"] < spread["CH"] * 0.92,
+              f"{spread} — the strokes are the walls now that the photo is not; "
+              "if they do not hold, the fill covers the photograph")
+
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
         br.close()

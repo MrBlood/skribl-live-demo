@@ -51,6 +51,10 @@ def check(name, ok, detail=""):
     print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
 
 
+PAD_ROWS = """() => ({
+    sides: !document.getElementById("shapeSidesRow").hidden,
+    radius: !document.getElementById("shapeRadiusRow").hidden })"""
+
 SURFACES = [
     # name, path, the row that must not wrap, the registry on window
     ("Pad",  "/",     ".toolbar",     "SkriblPadTools"),
@@ -353,6 +357,26 @@ with sync_playwright() as p:
           geo["low"] > 8 and geo["high"] > 8,
           f"sides=1 -> {geo['low']} pts, sides=99 -> {geo['high']} pts")
 
+    # WHICH KINDS OFFER WHICH KNOB is one rule with two consumers — the rows
+    # syncShapeKnobs hides, and the picker deciding whether a pick left
+    # anything worth staying open for — on two surfaces. It lives in the lib
+    # so there is one copy; asserted here on the lib so a surface that starts
+    # restating it has something to disagree with.
+    kn = page.evaluate("""() => {
+        const S = window.SkriblShapes;
+        const out = {};
+        for (const k of S.KINDS) out[k] = S.knobs(k);
+        out.mutable = (S.knobs("poly").push("bogus"), S.knobs("poly"));
+        return out;
+    }""")
+    check("Flip: the lib says which knobs each kind has",
+          {k: kn[k] for k in ("line", "rect", "ellipse", "poly")}
+          == {"line": [], "rect": ["radius"], "ellipse": [], "poly": ["sides", "radius"]},
+          str(kn))
+    check("Flip: and hands out a copy, so a caller cannot edit the rule "
+          "out from under the other caller",
+          kn["mutable"] == ["sides", "radius"], str(kn["mutable"]))
+
     # The knobs are only shown where they mean something.
     page.click("#toolMoreBtn")
     page.wait_for_timeout(250)
@@ -365,16 +389,94 @@ with sync_playwright() as p:
     page.wait_for_timeout(250)
     check("Flip: a line offers neither knob", rows() == {"sides": False, "radius": False},
           str(rows()))
-    page.click("#toolMoreBtn"); page.wait_for_timeout(250)
-    page.click(".tool-tray-btn[data-tool='shape']"); page.wait_for_timeout(350)
+    if hidden():
+        page.click("#toolMoreBtn"); page.wait_for_timeout(250)
+        page.click(".tool-tray-btn[data-tool='shape']"); page.wait_for_timeout(350)
     page.click("#shapeSeg [data-shape='poly']")
     page.wait_for_timeout(250)
     check("Flip: a polygon offers both", rows() == {"sides": True, "radius": True},
           f"{rows()} — a control you cannot use is still one to read past")
 
+    # REPORTED FROM THE LIVE DEMO: "when you push poly it chooses it, but you
+    # have to choose it again to get the menu". The picker closed on EVERY
+    # pick, including the two picks that reveal a knob — so Sides and Corners
+    # were revealed and hidden in the same click, and the only way to reach
+    # them was to reopen the picker you had just used.
+    #
+    # The rule is now derived from what the pick DID rather than from the fact
+    # that a pick happened: if choosing this kind left a knob on screen, the
+    # picker stays up, because that knob is the reason it is still needed.
+    check("Flip: picking Poly LEAVES the picker open, so the knobs it just "
+          "revealed are reachable without opening it a second time",
+          hidden() is False,
+          "closing on a pick throws away the rows syncShapeKnobs just showed")
+    sides = page.evaluate("""() => {
+        const el = document.getElementById("shapeSides");
+        const r = el.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2,
+                                              r.top + r.height / 2);
+        return { onScreen: r.width > 0 && r.height > 0,
+                 reachable: !!(top && (top === el || el.contains(top))) };
+    }""")
+    check("Flip: and the Sides slider is actually hittable where it is drawn, "
+          "not merely un-hidden underneath something else",
+          sides == {"onScreen": True, "reachable": True}, str(sides))
+
+    # The counterpart, and the half that must NOT regress: a kind with nothing
+    # left to set has no reason to keep the picker over the canvas.
+    if hidden():
+        page.click("#toolMoreBtn"); page.wait_for_timeout(250)
+        page.click(".tool-tray-btn[data-tool='shape']"); page.wait_for_timeout(350)
+    page.click("#shapeSeg [data-shape='line']")
+    page.wait_for_timeout(250)
+    check("Flip: picking Line still closes it — nothing was revealed to stay "
+          "open for", hidden() is True,
+          "a picker with no knobs left to offer is finished on the pick")
+
+    # Reopen only if the pick above actually closed it. Written this way so a
+    # regression that leaves the picker open fails the assertion ABOVE rather
+    # than timing out here on a button the tray is covering — a mutation that
+    # crashes the suite is a mutation nobody can read the result of.
+    if hidden():
+        page.click("#toolMoreBtn"); page.wait_for_timeout(250)
+        page.click(".tool-tray-btn[data-tool='shape']"); page.wait_for_timeout(350)
+    page.click("#shapeSeg [data-shape='poly']"); page.wait_for_timeout(250)
+    page.click("#toolMoreBtn"); page.wait_for_timeout(250)
+    page.click(".tool-tray-btn[data-tool='pen']"); page.wait_for_timeout(400)
     check("Flip: leaving Shape closes the picker",
           hidden() is True, "a chooser for a tool you are no longer using")
     page.close()
+
+    # ---- and the same rule on Pad -----------------------------------------
+    # SAID TWICE ON PURPOSE. The two surfaces carry SEPARATE copies of both the
+    # pick handler and the dismisser, so a fix to one is not a fix to the
+    # other, and this bug was reported against only one of them. Asserting it
+    # on Pad alone would have let the copy drift straight back.
+    print("\nSHAPES [Pad] — the same picker, the same rule, a second copy")
+    pad = browser.new_page(viewport={"width": 1200, "height": 950})
+    pad.goto(BASE + "/", wait_until="load")
+    pad.wait_for_timeout(1000)
+    phidden = lambda: pad.evaluate("() => document.getElementById('shapePop').hidden")
+    prows = lambda: pad.evaluate(PAD_ROWS)
+    pad.click("#shapeToolBtn")
+    pad.wait_for_timeout(400)
+    check("Pad: choosing Shape opens its kind picker", phidden() is False,
+          "the picker is how a kind gets chosen at all")
+    if phidden():
+        pad.click("#shapeToolBtn"); pad.wait_for_timeout(350)
+    pad.click("#shapeSeg [data-shape='poly']")
+    pad.wait_for_timeout(300)
+    check("Pad: picking Poly reveals both knobs AND leaves them on screen",
+          prows() == {"sides": True, "radius": True} and phidden() is False,
+          f"rows={prows()}, hidden={phidden()}")
+    if phidden():
+        pad.click("#shapeToolBtn"); pad.wait_for_timeout(350)
+    pad.click("#shapeSeg [data-shape='ellipse']")
+    pad.wait_for_timeout(300)
+    check("Pad: picking Oval closes it — no knob was left to stay open for",
+          prows() == {"sides": False, "radius": False} and phidden() is True,
+          f"rows={prows()}, hidden={phidden()}")
+    pad.close()
 
     browser.close()
 

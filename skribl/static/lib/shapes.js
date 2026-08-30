@@ -198,8 +198,27 @@
     return _line(anchor.x, anchor.y, b.x, b.y);
   }
 
+  /* WHICH KNOBS A KIND HAS, and the only copy of that fact.
+   *
+   * Sides is meaningless for anything but a polygon; rounding is meaningless
+   * for a line and for an ellipse, which has no corners to round. Both editors
+   * used to state that rule in their own syncShapeKnobs, which was fine while
+   * the only consumer was "hide the row" — but the shape picker now also has
+   * to know whether a pick left anything on screen worth staying open for, and
+   * a rule asked two different questions in three places is a rule that drifts.
+   * It is shape knowledge, not DOM knowledge, so it lives with the shapes.
+   */
+  var KNOBS = { line: [], rect: ['radius'], ellipse: [], poly: ['sides', 'radius'] };
+  function knobs(kind) {
+    return (KNOBS[kind] || []).slice();
+  }
+  function hasKnob(kind, name) {
+    return knobs(kind).indexOf(name) !== -1;
+  }
+
   var api = { KINDS: KINDS.slice(), SPACING: SPACING, MAX_POINTS: MAX_POINTS,
-              MIN_SIDES: MIN_SIDES, MAX_SIDES: MAX_SIDES, points: points };
+              MIN_SIDES: MIN_SIDES, MAX_SIDES: MAX_SIDES, points: points,
+              knobs: knobs, hasKnob: hasKnob };
   if (typeof window !== 'undefined') window.SkriblShapes = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

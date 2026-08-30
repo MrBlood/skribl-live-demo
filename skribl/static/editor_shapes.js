@@ -122,21 +122,26 @@ if (shapeSeg && window.SkriblShapes) {
     });
     setTool('shape');
     syncShapeKnobs();
+    /* CLOSE ON A PICK ONLY WHEN THE PICK LEFT NOTHING TO SET. See the twin of
+       this comment in flip.js: closing on every pick hid the knobs the pick
+       had just revealed, and Poly had to be chosen twice to reach them. */
+    const pop = document.getElementById('shapePop');
+    if (pop && !window.SkriblShapes.knobs(kind).length) pop.hidden = true;
   });
   attachSegSlider(shapeSeg);
 }
 
 /* The polygon's sides and the corner rounding, shared with Flip through
-   lib/shapes.js. Sides means nothing for anything but a polygon; rounding means
-   nothing for a line, or for an ellipse, which has no corners. Each row hides
-   rather than greying out. */
+   lib/shapes.js — including WHICH kinds offer which knob, which is asked of the
+   lib rather than restated here. Each row hides rather than greying out: a
+   disabled control is still something the eye has to read and dismiss. */
 let shapeSides = 5, shapeRadius = 0;
 
 function syncShapeKnobs() {
   const sidesRow = document.getElementById('shapeSidesRow');
   const radiusRow = document.getElementById('shapeRadiusRow');
-  if (sidesRow) sidesRow.hidden = (shapeKind !== 'poly');
-  if (radiusRow) radiusRow.hidden = (shapeKind !== 'poly' && shapeKind !== 'rect');
+  if (sidesRow) sidesRow.hidden = !window.SkriblShapes.hasKnob(shapeKind, 'sides');
+  if (radiusRow) radiusRow.hidden = !window.SkriblShapes.hasKnob(shapeKind, 'radius');
 }
 
 (function shapeKnobs() {

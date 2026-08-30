@@ -3283,19 +3283,27 @@ if(_flipShapeSeg && window.SkriblShapes){
       x.setAttribute('aria-pressed', String(on)); });
     setTool('shape');
     syncShapeKnobs();
+    /* CLOSE ON A PICK ONLY WHEN THE PICK LEFT NOTHING TO SET.
+       The old rule closed the popover on every pick, so choosing Poly revealed
+       Sides and Corners and hid them again in the same click, and the only way
+       to reach them was to open the picker a SECOND time. Reported from the
+       live demo: "when you push poly it chooses it, but you have to choose it
+       again to get the menu". Line and Oval still close, because nothing was
+       revealed to stay open for. */
+    const pop = document.getElementById('shapePop');
+    if(pop && !SkriblShapes.knobs(k).length) pop.hidden = true;
   });
 }
 
-/* WHICH KNOBS APPLY TO WHICH KIND. Sides is meaningless for anything but a
-   polygon; rounding is meaningless for a line and for an ellipse, which has no
-   corners to round. Each row hides rather than greying out — a disabled control
-   is still something the eye has to read and dismiss, and this popover is small
-   on a phone. */
+/* WHICH KNOBS APPLY TO WHICH KIND — asked of lib/shapes.js, which holds the
+   only copy of that rule. Each row hides rather than greying out: a disabled
+   control is still something the eye has to read and dismiss, and this popover
+   is small on a phone. */
 function syncShapeKnobs(){
   const sidesRow = document.getElementById('shapeSidesRow');
   const radiusRow = document.getElementById('shapeRadiusRow');
-  if(sidesRow) sidesRow.hidden = (shapeKind !== 'poly');
-  if(radiusRow) radiusRow.hidden = (shapeKind !== 'poly' && shapeKind !== 'rect');
+  if(sidesRow) sidesRow.hidden = !SkriblShapes.hasKnob(shapeKind, 'sides');
+  if(radiusRow) radiusRow.hidden = !SkriblShapes.hasKnob(shapeKind, 'radius');
 }
 
 (function shapeKnobs(){
@@ -5306,6 +5314,13 @@ function fieldBegin(pt, label){
                        groups: f.strokeGroups.slice() } : null;
 }
 
+const _fieldPhotoNoted = Object.create(null);
+function fieldPhotoNote(label){
+  const k = label || 'This';
+  if(_fieldPhotoNoted[k]) return;
+  _fieldPhotoNoted[k] = true;
+  chip(k + ' works on your strokes, not the photo');
+}
 function fieldEnd(){
   const at = _fieldIdx, before = _fieldBefore, f = frames[at];
   const touched = _fieldTouched, label = _fieldLabel;
@@ -5313,7 +5328,16 @@ function fieldEnd(){
   _blurAcc = null; _smear = null;
   // Nothing caught -> NO undo entry, the same rule liquifyEnd states: a tap on
   // empty canvas must not push a no-op the user then has to press through.
-  if(!touched || !before || !f) return false;
+  if(!touched || !before || !f){
+    // ...but on a PHOTO, "nothing happened" is the tool's honest limit rather
+    // than an empty canvas, and silence makes it look broken. These tools move
+    // and recolour STROKE POINTS; a photograph is not strokes, and softening it
+    // would need a raster layer the frame format does not have (the long
+    // version is in lib/brushfield.js). Said once per tool per session --
+    // enough to explain, not enough to nag.
+    if(!touched && photoShowing()) fieldPhotoNote(label);
+    return false;
+  }
   noteAction({ type: 'liquify', label: label, idx: at, before: before,
                after: { strokes: f.strokes.map(q => Object.assign({}, q)),
                         groups: f.strokeGroups.slice() } });
@@ -5748,9 +5772,29 @@ function noteAction(entry){
    this format has. lib/floodfill.js carries the geometry and the reasoning; this
    is the part that has to know about canvases, colour and undo.
 
-   IT READS WHAT IS ON SCREEN, backdrop and photo included, because that is what
-   the user is pointing at. Filling "the white part" of a photo has to sample the
-   photo; sampling only the stroke layer would fill regions the user cannot see.
+   IT READS WHAT IS ON SCREEN when there is no photo, and THE STROKE LAYER when
+   there is. The original rule was the first half alone -- sample the composite,
+   because that is what the user is pointing at, and filling "the white part" of
+   a photo has to see the photo. Sound in the abstract, and it does not survive a
+   real photograph.
+
+   A photo is texture. Adjacent pixels differ by far more than FILL_TOLERANCE
+   (32) almost everywhere, so a flood seeded on one stops within a few pixels and
+   covers a speck. Reported from the live demo on a drawing made over a photo:
+   the tool simply appeared not to work. The tolerance cannot be raised to fix it
+   either -- a value loose enough to cross photo grain is loose enough to walk
+   straight through a drawn line.
+
+   So with a photo showing, the flood runs against the background colour plus
+   this frame's strokes: fill the region MY INK encloses, which is what the tool
+   means when you have drawn on top of something. It is identical to the old
+   behaviour when there is no photo, because then the two images are the same.
+
+   THE COST, stated because the original comment was right that there is one:
+   tapping somewhere your strokes do not enclose now floods everything up to
+   them, painting over the photo. That is exactly what a tap outside a shape has
+   always done on a plain background, so the model is the one users already have
+   -- but it is a real change, and it is reversible in one branch below.
 
    DEVICE PIXELS IN, CANVAS UNITS OUT. The canvas is scaled by DPR
    (pad.width = CW*DPR with ctx.scale(DPR,DPR)), so getImageData works in device
@@ -5769,12 +5813,42 @@ function noteAction(entry){
    is not undo. The actionLog already carries object entries for moves; a
    'fill' entry says how many groups the tap produced and undoStroke pops them
    together. Nothing about the saved format changes. */
+/* Is a photo actually on screen? Not "is one attached" -- an attached photo with
+   its toggle off, or one still decoding, is not something the user is pointing
+   at. Same condition drawBackdrop() paints on, deliberately: if these two ever
+   disagree, fill samples an image the screen is not showing. */
+function photoShowing(){
+  return !!(photoEnabled && bgImageObj && bgImageObj.complete && bgImageObj.naturalWidth);
+}
+let _fillCv = null, _fillCtx = null;
+/* The pixels the flood runs against. Without a photo this is the pad itself, so
+   nothing changes and nothing is allocated. With one, it is the background
+   colour plus this frame's strokes -- built here rather than kept in step with
+   render(), because a cached layer that goes stale fills the shape you drew a
+   moment ago. */
+function fillSourceImage(f){
+  if(!photoShowing()) return ctx.getImageData(0, 0, pad.width, pad.height);
+  if(!_fillCv) _fillCv = document.createElement('canvas');
+  if(_fillCv.width !== pad.width || _fillCv.height !== pad.height){
+    _fillCv.width = pad.width; _fillCv.height = pad.height;
+    _fillCtx = _fillCv.getContext('2d');
+  }
+  // setTransform first: the scale below is applied every call, and without the
+  // reset it would compound into DPR^n on the second fill of a session.
+  _fillCtx.setTransform(1, 0, 0, 1, 0, 0);
+  _fillCtx.clearRect(0, 0, _fillCv.width, _fillCv.height);
+  _fillCtx.scale(DPR, DPR);
+  _fillCtx.fillStyle = bgColor;
+  _fillCtx.fillRect(0, 0, CW, CH);
+  paintStatic(_fillCtx, f.strokes);
+  return _fillCtx.getImageData(0, 0, _fillCv.width, _fillCv.height);
+}
 function doFill(p){
   if(playing) return;
   if(typeof SkriblFloodFill === 'undefined'){ chip('Fill is unavailable'); return; }
   const f = frame();
   let img;
-  try { img = ctx.getImageData(0, 0, pad.width, pad.height); }
+  try { img = fillSourceImage(f); }
   catch(err){ chip('Fill cannot read this canvas'); return; }
   const res = SkriblFloodFill.runs(img, p.x * DPR, p.y * DPR,
                                    { tolerance: FILL_TOLERANCE });
@@ -6149,10 +6223,13 @@ bindEl('sbStamp', 'click', ()=>{ if(!playing) stampSaveSelection(); });
   if(!pop) return;
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
 })();
+/* Dismiss the shape picker on a tap outside it. Closing on a PICK is decided
+   in the pick handler rather than here, because the decision now depends on
+   whether the chosen kind revealed a knob -- which is the picker's knowledge,
+   not the dismisser's. */
 (function shapePopDismiss(){
   const pop=document.getElementById('shapePop');
   if(!pop) return;
-  pop.addEventListener('click',e=>{ if(e.target.closest('[data-shape]')) pop.hidden=true; });
   document.addEventListener('click',e=>{
     if(pop.hidden) return;
     if(e.target.closest('#shapePop')||e.target.closest('#shapeToolBtn')) return;
