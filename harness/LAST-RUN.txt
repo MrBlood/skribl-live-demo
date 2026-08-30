@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-30T20:51:03Z
+UTC timestamp           : 2026-08-30T21:01:10Z
 Host                    : Linux x86_64
 Tree SHA-256            : 9e94da4d66c2ff5aa1512f28f939fdc0f8155ef942cda4dab858a18962b2c1b4
-Git commit              : f366332-dirty
+Git commit              : 3b006c7
 SKRIBL_VERSION          : v258
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,17 +10,17 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.e5RIPzSUKk/harness.db)
+Database reset          : yes (fresh /tmp/tmp.AGfT6RSdnT/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_sizeclass.py verify_ux.py verify_cssplit.py verify_layout.py verify_parity.py verify_surfaces.py verify_tray.py verify_smudgeblur.py verify_tween.py verify_canvas.py verify_drafts.py verify_exportui.py verify_help.py verify_theme.py verify_docs.py
+Command                 : harness/run_harness.sh verify_sizeclass.py verify_ux.py verify_cssplit.py verify_layout.py verify_parity.py verify_surfaces.py verify_tray.py verify_smudgeblur.py verify_tween.py verify_canvas.py verify_drafts.py verify_exportui.py verify_help.py verify_theme.py verify_audio.py verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 15
+suites requested : 16
   verify_sizeclass.py: ok — 89/89 passed
   verify_ux.py: ok — 326/326 passed
   verify_cssplit.py: ok — 18/18 passed
@@ -35,7 +35,8 @@ suites requested : 15
   verify_exportui.py: ok — 45/45 passed
   verify_help.py: ok — 61/61 passed
   verify_theme.py: ok — 42/42 passed
+  verify_audio.py: ok — 18/18 passed
   verify_docs.py: ok — 67/67 passed
-assertions passed: 1159   (skipped suites contribute 0)
+assertions passed: 1177   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
