@@ -536,6 +536,99 @@ with sync_playwright() as p:
           f"{_gen['12']} points at 12fps vs {_gen['24']} at 24 — the plan has to "
           f"reach buildTween, not just be computable")
 
+    print("\nREBUILD IN-BETWEENS — bringing already-baked pages to the current rate")
+    # v260 made the sample count depend on fps, and that only reaches pages made
+    # AFTER it. The reported file had 22 in-betweens already baked at 27 samples,
+    # which is the reason it dragged. Deleting and re-adding each by hand is the
+    # fix nobody should have to perform 22 times.
+    #
+    # NOTHING MARKS A PAGE AS GENERATED, so this recognises one -- and being
+    # wrong means overwriting a drawing. Three things must agree, and the checks
+    # below are mostly about the ones that must NOT be touched.
+    _rb = page.evaluate("""() => {
+        const mkKey = (dx) => { const s = [], g = [];
+          for (let r = 0; r < 4; r++) { const run = [];
+            for (let k = 0; k < 30; k++) run.push({x: 60 + k * 7 + dx, y: 70 + r * 40,
+              color: '#ffffff', size: 5, t: k, erase: false, start: k === 0});
+            s.push(...run); g.push(run.length); }
+          return { strokes: s, strokeGroups: g }; };
+        // Three key poses at 12fps with an in-between between each pair, then
+        // the document is moved to 24 and rebuilt -- exactly the reported shape.
+        frames.length = 0;
+        frames.push(mkKey(0), mkKey(120), mkKey(240));
+        idx = 0; fps = 12; buildStrip();
+        addTween();                       // between 0 and 1
+        idx = 2; addTween();              // between the next pair
+        const heavy = frames.map(f => f.strokes.length);
+        const keyBefore = [frames[0], frames[2], frames[4]].map(f => f.strokes.length);
+        fps = 24;
+        const found = [];
+        for (let i = 1; i < frames.length - 1; i++) if (tweenLooksGenerated(i)) found.push(i);
+        rebuildTweens();
+        const light = frames.map(f => f.strokes.length);
+        const keyAfter = [frames[0], frames[2], frames[4]].map(f => f.strokes.length);
+        const firstChip = (document.getElementById('flipChip') || {}).textContent;
+        rebuildTweens();
+        const twice = frames.map(f => f.strokes.length);
+        return { pages: frames.length, found: found, heavy: heavy, light: light,
+                 keyBefore: keyBefore, keyAfter: keyAfter,
+                 idempotent: light.every((v, i) => v === twice[i]),
+                 firstChip: firstChip,
+                 secondChip: (document.getElementById('flipChip') || {}).textContent }; }""")
+    check("the fixture has in-betweens to find",
+          len(_rb["found"]) == 2 and _rb["pages"] == 5,
+          f"{_rb} — with none found every check below passes by doing nothing")
+    check("rebuilding at a higher rate makes the in-betweens lighter",
+          all(_rb["light"][i] < _rb["heavy"][i] for i in _rb["found"]),
+          f"{_rb['heavy']} -> {_rb['light']} at pages {_rb['found']}")
+    check("...and does not touch a single hand-drawn page",
+          _rb["keyAfter"] == _rb["keyBefore"],
+          f"{_rb['keyBefore']} -> {_rb['keyAfter']} — the detector's whole job is "
+          f"to be sure, because being wrong here overwrites a drawing")
+    check("running it twice changes nothing the second time",
+          _rb["idempotent"] and "already right" in (_rb["secondChip"] or ""),
+          f"first {_rb['firstChip']!r}, second {_rb['secondChip']!r}")
+    # THE DETECTOR, ONE HALF AT A TIME. A single fake page cannot test both
+    # rules: the first version built a drawing with the SAME run count as its
+    # source, so `copies` came out at 1 and the multiple test rejected it before
+    # the colour test was ever consulted -- and removing the colour test left
+    # the suite green. Each rule now gets a page only IT can reject.
+    _safe = page.evaluate("""() => {
+        const src = frames[0];
+        const runs = src.strokeGroups.length;
+        // (a) shaped exactly like an exposure -- a clean multiple of the source's
+        //     run list -- but DRAWN, so its colours are ordinary. Only the colour
+        //     rule can reject this one.
+        const drawnLikeExposure = { strokes: [], strokeGroups: [] };
+        for (let c = 0; c < 8; c++) for (const n of src.strokeGroups) {
+          for (let k = 0; k < n; k++) drawnLikeExposure.strokes.push({x: 40 + k, y: 60 + c,
+            color: '#26b0ff', size: 3, t: k, erase: false, start: k === 0});
+          drawnLikeExposure.strokeGroups.push(n); }
+        // (b) 8-digit hex throughout, but NOT a multiple of the source's run
+        //     list. Only the multiple rule can reject this one.
+        const hexButWrongShape = { strokes: [], strokeGroups: [] };
+        for (let r = 0; r < runs * 8 + 1; r++) {
+          for (let k = 0; k < 5; k++) hexButWrongShape.strokes.push({x: 40 + k, y: 60 + r,
+            color: '#26b0ff80', size: 3, t: k, erase: false, start: k === 0});
+          hexButWrongShape.strokeGroups.push(5); }
+        const keep = frames[1];
+        frames[1] = drawnLikeExposure; const a = tweenLooksGenerated(1);
+        frames[1] = hexButWrongShape;  const b = tweenLooksGenerated(1);
+        frames[1] = keep;
+        return { drawnLikeExposure: a, hexButWrongShape: b,
+                 aRuns: drawnLikeExposure.strokeGroups.length,
+                 bRuns: hexButWrongShape.strokeGroups.length, srcRuns: runs }; }""")
+    check("a DRAWING shaped exactly like an exposure is still rejected",
+          _safe["drawnLikeExposure"] is False
+          and _safe["aRuns"] % _safe["srcRuns"] == 0,
+          f"{_safe} — its run count is a clean multiple, so only the colour rule "
+          f"stands between this page and being overwritten")
+    check("...and hex ink alone is not enough either",
+          _safe["hexButWrongShape"] is False
+          and _safe["bRuns"] % _safe["srcRuns"] != 0,
+          f"{_safe} — every point is 8-digit hex, so only the run-multiple rule "
+          f"rejects it; a blurred drawing is exactly this shape")
+
     print("\nPAGE BAR — the counter earns its width")
     # "Page 21 / 43" cost 69px in a nowrap bar whose contents already measured
     # 369px inside 340 at 360px wide — the Delete button was clipped off the end

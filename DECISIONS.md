@@ -4057,3 +4057,63 @@ words that say WHICH guarantee broke never appeared.
 Every read of a plan in that block is null-safe now, and the same mutation names
 all three: the allowance no longer falls with the slot, a postable page was
 refused, and the floor was breached.
+
+## v261 -- The rate fix that could not reach the pages that needed it
+
+v260 budgets the exposure against the document's frame rate, and it does that
+where the exposure is BUILT. Every in-between already sitting in a file was
+built under the old budget and keeps it forever: the reported 46-page document
+was 22 in-betweens baked at 27 samples, and opening it in v260 changed nothing
+about why it dragged. The fix existed and could not reach the only pages that
+had the problem.
+
+"Rebuild in-betweens" in the ... menu re-runs buildTween over every generated
+page at the current rate. On the owner's file: 22 found, 270,692 -> 155,060
+points, 44% lighter, about a second.
+
+The hard part is not rebuilding, it is KNOWING WHICH PAGES TO REBUILD. Nothing
+in the format marks a page as generated -- an in-between is an ordinary frame of
+ordinary strokes -- and a false positive does not degrade anything, it
+OVERWRITES A DRAWING. So three independent things have to agree:
+
+  * every point's colour is an 8-digit hex. tweenFade writes those; the pen
+    writes '#rrggbb' or an rgba(), never both halves of that.
+  * the neighbours either side still interpolate, which is what produced the
+    page to begin with.
+  * the run count is an exact multiple of the previous page's, at least
+    TWEEN_MIN_SAMPLES of them, because an exposure emits the whole run list
+    once per sample per pass.
+
+A page already at the right count is skipped, so the action is idempotent and
+says so: run it twice and the second run reports "22 in-betweens are already
+right for 24 fps" rather than rebuilding them identically.
+
+One thing the rebuild must not do is edit the timing. buildTween always returns
+`hold: 1`, which frameHold() reads the same as absent but the FILE does not, so
+the page's own hold is copied back on and a page that carried none has it
+deleted. How long a page is shown is the author's, and a rebuild is not an
+occasion to have an opinion about it.
+
+## v261 -- One fake page cannot test two rules
+
+The detector has two rules that each stand alone against overwriting a drawing:
+the ink must be 8-digit hex, and the run count must be a multiple of the
+source's. The first safety check built ONE page that broke both at once and
+asserted it was rejected.
+
+Dropping the colour rule left that check green. The fake had the same run count
+as its source, so `copies` came out at 1, the multiple rule rejected it first,
+and the colour rule was never consulted -- the check passed through a rule it
+was not testing. Rebuilding every page instead of only the stale ones also
+survived, for its own reason.
+
+There are two fixtures now, each rejectable by exactly one rule: a page shaped
+like a clean 8x multiple of the source's run list but drawn in ordinary
+'#26b0ff' (only the colour rule can refuse it), and a page of pure '#26b0ff80'
+whose run count is deliberately one off a multiple (only the shape rule can).
+Deleting either rule now fails the check named for it.
+
+**A test whose input fails for several reasons only tests the first one.** Same
+family as v260's saturated measurement and v256's beading metrics: the check ran,
+the number came back clean, and the thing it was supposed to see was hidden
+behind something else.
