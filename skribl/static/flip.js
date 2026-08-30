@@ -4044,7 +4044,11 @@ const photoTabDot=document.getElementById('photoTabDot'), musicTabDot=document.g
 function syncPhotoUI(){
   const hasImg=!!bgImage;
   photoUploadBtn.classList.toggle('loaded', hasImg);
-  photoBtnLabel.textContent = hasImg ? (imageName || 'Background image') : 'Add an image';
+  // NOT 'Background image' as the fallback: the panel already carries that
+  // as its section heading, so an image with no stored name printed it twice
+  // in a row. Normally this shows the file name and there is no repetition;
+  // the fallback is for a restored draft that never saved one.
+  photoBtnLabel.textContent = hasImg ? (imageName || 'Image added') : 'Add an image';
   photoRemove.hidden=!hasImg; photoNote.hidden=hasImg; photoDetail.hidden=!hasImg;
   photoToggle.classList.toggle('on', photoEnabled); photoToggle.setAttribute('aria-checked', String(photoEnabled));
   photoTabDot.hidden = !hasImg;                                                       // green dot when an image is set

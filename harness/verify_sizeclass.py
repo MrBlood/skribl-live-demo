@@ -443,6 +443,63 @@ with sync_playwright() as _sl:
             check(f"{_name}: the marked exceptions are still 22 and unmoved",
                   all(f["box"] == 22 and f["flow"] == 22 for f in tight),
                   str([(f["id"], f["box"], f["flow"]) for f in tight]))
+
+            # A 44px BOX IS NOT A 44px TARGET. Size alone says nothing about who
+            # actually receives the press: the shape knobs were grown and still
+            # lost points to the kind buttons above and to each other, because
+            # the rows were 6px apart. And the first fix for that went into
+            # flip.css, which Pad does not load -- Flip read 9/9 while Pad read
+            # 4/9, and a size check passed both. So this samples the band and
+            # asks elementFromPoint who would get the tap.
+            # Put any hint away first. A toast is transient and dismissible and
+            # its action button legitimately takes the pointer, so leaving one up
+            # measures the wrong thing -- the question here is whether the RESTING
+            # layout hands each slider its own band.
+            # REMOVE it, do not click it. Clicking bubbled to shapePopDismiss --
+            # a click outside #shapePop closes the picker -- so Flip's two checks
+            # found no rect and skipped silently while Pad's still ran. A check
+            # that disappears is worse than one that fails.
+            lp.evaluate("() => { const h = document.querySelector('.skribl-hint');"
+                        " if (h) h.remove(); }")
+            lp.wait_for_timeout(200)
+            hit = lp.evaluate(
+                "(ids) => { const out = {};"
+                " for (const id of ids) {"
+                "   const s = document.getElementById(id);"
+                "   if (!s) { out[id] = null; continue; }"
+                "   const r = s.getBoundingClientRect();"
+                "   if (!r.height) { out[id] = null; continue; }"
+                "   const pad = Math.max(0, (44 - r.height) / 2);"
+                "   const xs = [r.left + 8, r.left + r.width / 2, r.right - 8];"
+                "   const ys = [r.top - pad + 1, r.top + r.height / 2,"
+                "               r.bottom + pad - 1];"
+                "   let mine = 0, total = 0; const steal = {};"
+                "   for (const y of ys) for (const x of xs) {"
+                "     const el = document.elementFromPoint(x, y); total++;"
+                "     if (!el) { mine++; continue; }"
+                "     if (el === s || s.contains(el) || el.contains(s)) { mine++; continue; }"
+                "     const act = el.closest('button,input,a,[role=button]');"
+                "     if (!act) { mine++; continue; }"
+                "     const k = act.id || act.className.toString().trim().split(/\\s+/)[0]"
+                "               || act.tagName;"
+                "     steal[k] = (steal[k] || 0) + 1; }"
+                "   out[id] = { mine, total, steal }; }"
+                " return out; }",
+                ["shapeSides", "shapeRadius"])
+            check(f"{_name}: both knobs are on screen for the hit test",
+                  all(v is not None for v in hit.values()),
+                  f"{[k for k, v in hit.items() if v is None]} had no rect — the "
+                  "picker closed, so the checks below would have vanished rather "
+                  "than failed")
+            for _k, _v in hit.items():
+                if not _v:
+                    continue
+                check(f"{_name}: every point across {_k}'s band reaches {_k}",
+                      _v["mine"] == _v["total"],
+                      f"{_v['mine']}/{_v['total']} — stolen by "
+                      + (str(_v["steal"]) or "nothing")
+                      + "; the row spacing lives in styles.css because BOTH "
+                        "surfaces render this markup")
             lp.close()
     finally:
         _slb.close()
