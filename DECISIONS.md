@@ -3860,3 +3860,70 @@ Emptying the frame in the page and pinning the brush size is exact, depends on
 no persistence layer, and reads 7 where it should read 7.
 
 **A test that depends on what ran before it is not passing, it is agreeing.**
+
+## v258 -- The image drawer's sliders were half-size because the rows were too close
+
+photoZoom and photoBlur carried .slider-tight -- the marker for "we know this
+one is 22px against a 44pt minimum" -- because a 44px box on either overlapped a
+neighbour. The note beside them said the fix was row spacing in the image
+drawer, "a layout change and not smuggled in here". This is that change.
+
+THE ARITHMETIC, which is the whole of it. A grown slider is a 44px box with
+-11px margins: the flow keeps its 22 and the box overhangs 11px above and below.
+
+  * Two stacked sliders therefore need 22px between rows -- exactly the two
+    overhangs. They had 12, so every pair overlapped by 10 and the LOWER slider
+    took the top of the upper one's band, because where two hit areas overlap
+    the winner is paint order.
+  * A 35px button next to one needs 4.5px of its own to reach 44, so the gap
+    above the first slider and below the last is 11 + 5 = 16.
+
+Rows 12 -> 22, clearance above and below 0/8 -> 16/16. The drawer grows 251px to
+295px on Flip, and it reads as breathing room rather than padding: before, Zoom
+was jammed under the reposition hint and Blur against Reset.
+
+Reset's 8px lived as an inline style on the button, where an author rule can
+only beat it with !important. It moved into styles.css beside the other three
+numbers it has to agree with.
+
+## v258 -- The check could only ever find the slider
+
+The first version asserted the fix from the slider's side: sample the 44px band,
+ask elementFromPoint who gets each tap. It reported 9/9 everywhere and it could
+not have reported anything else.
+
+`pad` is (44 - height) / 2, so for a slider that is ALREADY 44 it is zero and
+the grid never leaves the slider's own box. And when a band does overlap a
+button, the slider WINS -- it paints later. So the control that loses points is
+never the one being measured. The .slider-tight note had said this exactly:
+growing them "would silently move a tap target rather than enlarge it". The
+moved target is the neighbour's.
+
+Sampling repositionBtn and resetPhotoBtn as well found the shipped fix was still
+wrong: repositionBtn read 8/9 with one point taken by photoZoom, because 12px of
+clearance left the button's own 4.5px band and the slider's 11px overhang
+fighting over 3.5px. 16px settles it.
+
+**Assert the fix from the side that can lose.** Three mutations now fail by
+name: rows back to 12 (photoOpacity 9/9 -> stolen), the top clearance back to 12
+(repositionBtn and resetPhotoBtn), the bottom back to 8 (resetPhotoBtn).
+
+## v258 -- A hidden element is still a sibling, and the resting state is the one to test
+
+Two smaller things, both of which passed before they were right.
+
+`.reposition-btn + .photo-opacity-row` was written to give the Zoom row
+clearance when the reposition hint is hidden. It never matched: the DOM order is
+button, hint, row, and `display:none` does not remove an element from the
+sibling chain. The rule was dead on arrival and the hint's own selector, which
+applies in both states, is what does the work.
+
+And the test forced the hint VISIBLE. That is the wrong layout: with the hint
+present the thing above the Zoom row is a paragraph, and the sampler counts a
+non-interactive element as "mine" because no tap is stolen. The hint is
+display:none until Reposition is pressed, so the resting neighbour is the
+button. Removing the clearance passed in the shown state and fails in the hidden
+one.
+
+Two of the four .slider-tight exceptions are gone. shapeSides and shapeRadius
+remain, for the shape popover's own spacing.

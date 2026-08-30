@@ -397,6 +397,36 @@ with sync_playwright() as _gp:
 # move a tap target rather than enlarge it. They are pinned here so the
 # exception stays a decision instead of becoming an oversight.
 # ============================================================================
+# THE BAND SAMPLER, shared by every hit check below rather than pasted into
+# each one. A 44px BOX IS NOT A 44px TARGET: size alone says nothing about who
+# receives the press. For each id it samples a 3x3 grid across the band the
+# control WOULD have at 44 -- so a still-tight 22px slider is measured over the
+# 44 it is not using -- and asks elementFromPoint who would get each tap.
+HIT_JS = (
+"(ids) => { const out = {};"
+                " for (const id of ids) {"
+                "   const s = document.getElementById(id);"
+                "   if (!s) { out[id] = null; continue; }"
+                "   const r = s.getBoundingClientRect();"
+                "   if (!r.height) { out[id] = null; continue; }"
+                "   const pad = Math.max(0, (44 - r.height) / 2);"
+                "   const xs = [r.left + 8, r.left + r.width / 2, r.right - 8];"
+                "   const ys = [r.top - pad + 1, r.top + r.height / 2,"
+                "               r.bottom + pad - 1];"
+                "   let mine = 0, total = 0; const steal = {};"
+                "   for (const y of ys) for (const x of xs) {"
+                "     const el = document.elementFromPoint(x, y); total++;"
+                "     if (!el) { mine++; continue; }"
+                "     if (el === s || s.contains(el) || el.contains(s)) { mine++; continue; }"
+                "     const act = el.closest('button,input,a,[role=button]');"
+                "     if (!act) { mine++; continue; }"
+                "     const k = act.id || act.className.toString().trim().split(/\\s+/)[0]"
+                "               || act.tagName;"
+                "     steal[k] = (steal[k] || 0) + 1; }"
+                "   out[id] = { mine, total, steal }; }"
+                " return out; }"
+)
+
 print("\nSLIDERS — 44px of grab, 22px of layout, and four measured exceptions")
 _knob_look = {}
 with sync_playwright() as _sl:
@@ -463,30 +493,7 @@ with sync_playwright() as _sl:
             lp.evaluate("() => { const h = document.querySelector('.skribl-hint');"
                         " if (h) h.remove(); }")
             lp.wait_for_timeout(200)
-            hit = lp.evaluate(
-                "(ids) => { const out = {};"
-                " for (const id of ids) {"
-                "   const s = document.getElementById(id);"
-                "   if (!s) { out[id] = null; continue; }"
-                "   const r = s.getBoundingClientRect();"
-                "   if (!r.height) { out[id] = null; continue; }"
-                "   const pad = Math.max(0, (44 - r.height) / 2);"
-                "   const xs = [r.left + 8, r.left + r.width / 2, r.right - 8];"
-                "   const ys = [r.top - pad + 1, r.top + r.height / 2,"
-                "               r.bottom + pad - 1];"
-                "   let mine = 0, total = 0; const steal = {};"
-                "   for (const y of ys) for (const x of xs) {"
-                "     const el = document.elementFromPoint(x, y); total++;"
-                "     if (!el) { mine++; continue; }"
-                "     if (el === s || s.contains(el) || el.contains(s)) { mine++; continue; }"
-                "     const act = el.closest('button,input,a,[role=button]');"
-                "     if (!act) { mine++; continue; }"
-                "     const k = act.id || act.className.toString().trim().split(/\\s+/)[0]"
-                "               || act.tagName;"
-                "     steal[k] = (steal[k] || 0) + 1; }"
-                "   out[id] = { mine, total, steal }; }"
-                " return out; }",
-                ["shapeSides", "shapeRadius"])
+            hit = lp.evaluate(HIT_JS, ["shapeSides", "shapeRadius"])
             check(f"{_name}: both knobs are on screen for the hit test",
                   all(v is not None for v in hit.values()),
                   f"{[k for k, v in hit.items() if v is None]} had no rect — the "
@@ -501,6 +508,98 @@ with sync_playwright() as _sl:
                       + (str(_v["steal"]) or "nothing")
                       + "; the row spacing lives in styles.css because BOTH "
                         "surfaces render this markup")
+            # THE IMAGE DRAWER, which is where two of the four exceptions lived.
+            # photoZoom and photoBlur carried .slider-tight because a 44px box on
+            # them overlapped a neighbour, and the note in styles.css said the fix
+            # was row spacing. v258 did that -- 22px between sliders, which is
+            # exactly the two 11px overhangs, plus clearance above the first and
+            # below the last -- so both now take a full band and are checked here
+            # by the same elementFromPoint sampling as the shape knobs.
+            #
+            # WHAT THIS CAUGHT, and it was Pad-only: at 12px spacing Pad measured
+            # photoZoom 6/9 (3 points taken by photoOpacity) and photoBlur 3/9
+            # (3 by photoOpacity, 3 by resetPhotoBtn), while FLIP read 9/9 for
+            # both. A size-only check passed both surfaces, and the surface that
+            # was broken was the one nobody was looking at.
+            #
+            # The panel is forced open the way this suite already forces
+            # #shapePop open: #photoDetail is hidden until an image is loaded,
+            # and the question here is the RESTING GEOMETRY of the rows, not the
+            # upload path. The "laid out to check" guard below is what stops a
+            # panel that failed to open from passing everything silently.
+            lp.evaluate(f"() => {_ctl}.open('photo')")
+            lp.wait_for_timeout(400)
+            # THE HINT STAYS HIDDEN, because that is the resting state: it is
+            # display:none until Reposition is pressed. Measuring with it shown
+            # was the first version of this and it tested the wrong layout --
+            # with the hint present, the thing 11px above the Zoom row is a
+            # paragraph, and the sampler counts a non-interactive element as
+            # "mine" because no tap is stolen. Hidden, the neighbour is the
+            # reposition BUTTON, which is a real pointer target. Removing the
+            # clearance passed the suite in the shown state and fails in this one.
+            lp.evaluate("""() => {
+                const d = document.getElementById('photoDetail'); if (d) d.hidden = false;
+                const z = document.getElementById('photoZoomRow'); if (z) z.hidden = false;
+                const r = document.getElementById('repositionBtn'); if (r) r.hidden = false;
+                const h = document.getElementById('repositionHint'); if (h) h.hidden = true; }""")
+            lp.wait_for_timeout(350)
+            lp.evaluate("() => { const h = document.querySelector('.skribl-hint');"
+                        " if (h) h.remove(); }")
+            _photo_ids = ["photoZoom", "photoOpacity", "photoBlur"]
+            _ph = lp.evaluate(HIT_JS, _photo_ids)
+            check(f"{_name}: the image drawer's sliders are laid out to check",
+                  all(_ph.get(i) for i in _photo_ids),
+                  f"{[i for i in _photo_ids if not _ph.get(i)]} had no rect — the "
+                  "panel did not open, so every check below would vanish rather "
+                  "than fail")
+            _pbox = lp.evaluate(
+                "(ids) => ids.map(id => { const s = document.getElementById(id);"
+                " if (!s) return [id, null];"
+                " const r = s.getBoundingClientRect(); const cs = getComputedStyle(s);"
+                " return [id, { box: Math.round(r.height),"
+                "   flow: Math.round(r.height + parseFloat(cs.marginTop)"
+                "         + parseFloat(cs.marginBottom)),"
+                "   tight: s.classList.contains('slider-tight') }]; })", _photo_ids)
+            check(f"{_name}: no image slider is still opted out of the band",
+                  all(v and not v["tight"] for _, v in _pbox),
+                  f"{_pbox} — .slider-tight was the marker for 'we know this one "
+                  "is too small'; the spacing that made it necessary is gone")
+            check(f"{_name}: each image slider gives 44px of grab for 22px of layout",
+                  all(v and v["box"] >= 44 and v["flow"] == 22 for _, v in _pbox),
+                  f"{_pbox} — a taller control has to come out of the negative "
+                  "margin, not out of the page")
+            # AND THE NEIGHBOURS KEEP THEIR OWN AREA, which is the half the
+            # sampler cannot see from the slider's side. `pad` is (44 - height)/2,
+            # so for a slider that is ALREADY 44 it is zero and the grid stays
+            # inside the slider's own box -- the check can only ever find the
+            # slider. When a band does overlap a button the slider wins, because
+            # it paints later, so the control that loses points is the BUTTON.
+            # That is precisely what the .slider-tight note meant by "growing
+            # them would silently move a tap target rather than enlarge it", and
+            # asserting it from the slider's side alone would have missed it:
+            # removing the clearance above the Zoom row passed every check above
+            # and fails here.
+            _nb = lp.evaluate(HIT_JS, ["repositionBtn", "resetPhotoBtn"])
+            for _k, _v in _nb.items():
+                if not _v:
+                    continue
+                check(f"{_name}: {_k} keeps its own tap area",
+                      _v["mine"] == _v["total"],
+                      f"{_v['mine']}/{_v['total']} — stolen by "
+                      + (str(_v["steal"]) or "nothing")
+                      + "; a slider band that reaches into a button does not "
+                        "enlarge anything, it hands the button's edge away")
+
+            for _k in _photo_ids:
+                _v = _ph.get(_k)
+                if not _v:
+                    continue
+                check(f"{_name}: every point across {_k}'s band reaches {_k}",
+                      _v["mine"] == _v["total"],
+                      f"{_v['mine']}/{_v['total']} — stolen by "
+                      + (str(_v["steal"]) or "nothing")
+                      + f"; before the spacing, Pad read 6/9 here for photoZoom "
+                        f"and 3/9 for photoBlur while Flip read 9/9 for both")
             # HOW THE ROW IS DRAWN, captured per surface and compared below.
             # The knob rules lived in flip.css, which Pad does not load, so Pad
             # rendered these rows completely unstyled from the day the knobs
