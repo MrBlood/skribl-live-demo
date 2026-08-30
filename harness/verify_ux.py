@@ -1326,10 +1326,12 @@ with _sp204() as _p:
           _col["active"] and _col["color"] == "rgb(255, 159, 67)", str(_col))
     _o.close()
 
-    # v207: the loop-detail Focus (Loop/Start/End) and Zoom (1x-8x) groups are
-    # real .seg pill sliders (round shell, sliding highlight) matching the tune
-    # drawer's Speed/Onion — not the ad-hoc rounded-rect buttons they were — and
-    # a magnifier glyph labels the zoom group. Both editors build the same bar.
+    # The loop-detail Focus group (Loop/Start/End) is a real .seg pill slider
+    # matching the tune drawer's Speed/Onion. The magnification half is NOT:
+    # v254 made it a stepper wearing .edge-controls' shell, which is where both
+    # the one-line row and the ceiling above 8x came from. Both editors build
+    # this bar, so every check below runs on both — Pad was still drawing the
+    # old four-cell control when the stepper shipped on Flip.
     for path, nm, opener in (("/", "Pad", "#musicOpenBtn"), ("/flip", "Flip", "#musicBtn")):
         _z = _b.new_page(viewport={"width": 1280, "height": 900}); _z.goto(BASE + path, wait_until="load"); _z.wait_for_timeout(800)
         _z.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
@@ -1346,54 +1348,113 @@ with _sp204() as _p:
         # value of --r-seg keeps the guarantee (both are .seg, both share the
         # one radius) and lets 12px or 999px both be correct — whichever the
         # token says. Set --r-seg back to 999px and this passes unchanged.
-        _zi = _z.evaluate("""() => { const f = document.querySelector('.zoom-seg[data-role="focus"]'); const m = document.querySelector('.zoom-seg[data-role="mag"]');
-            if (!f || !m) return null; const sl = f.querySelector('.seg-slider'); const cs = getComputedStyle(f);
+        _zi = _z.evaluate("""() => { const f = document.querySelector('.zoom-seg[data-role="focus"]');
+            const m = document.querySelector('.mag-step'); if (!f || !m) return null;
+            const sl = f.querySelector('.seg-slider'); const cs = getComputedStyle(f);
             const token = getComputedStyle(document.documentElement).getPropertyValue('--r-seg').trim();
             const other = document.querySelector('#toolGroup');
-            return { bothSeg: f.classList.contains('seg') && m.classList.contains('seg'), radius: cs.borderRadius,
-                     token: token, magRadius: getComputedStyle(m).borderRadius,
+            const edge = document.querySelector('.edge-controls');
+            const btns = [...m.querySelectorAll('.mag-step-btn')];
+            const bar = document.querySelector('.zoom-mag-bar');
+            return { focusSeg: f.classList.contains('seg'), radius: cs.borderRadius, token: token,
                      matchesToolGroup: other ? getComputedStyle(other).borderRadius === cs.borderRadius : null,
                      sliderVisible: sl && getComputedStyle(sl).opacity === '1' && sl.getBoundingClientRect().width > 20,
-                     magLabelled: !!(m.getAttribute('aria-label')
-                       && (m.getAttribute('title') || m.getAttribute('data-tip'))),
+                     stepRadius: getComputedStyle(m).borderRadius,
+                     edgeRadius: edge ? getComputedStyle(edge).borderRadius : null,
+                     stepLabelled: !!(m.getAttribute('role') === 'group' && m.getAttribute('aria-label')),
+                     btnCount: btns.length,
+                     btnsLabelled: btns.length === 2 && btns.every(b => !!b.getAttribute('aria-label')),
+                     btnsGlyphed: btns.length === 2 && btns.every(b => {
+                       const s = b.querySelector('svg');
+                       return !!s && !!s.querySelector('circle') && s.getBoundingClientRect().width > 8; }),
                      rowNeed: (() => {
-                       const bar = document.querySelector('.zoom-mag-bar');
-                       const wrap = document.querySelector('.zoom-mag-wrap');
-                       if (!bar || !wrap) return null;
+                       if (!bar) return null;
                        const gap = parseFloat(getComputedStyle(bar).columnGap) || 0;
                        const lead = parseFloat(getComputedStyle(f).marginLeft) || 0;
                        return Math.round(lead + f.getBoundingClientRect().width + gap
-                                         + wrap.getBoundingClientRect().width);
+                                         + m.getBoundingClientRect().width);
                      })() }; }""")
-        check(f"V207: {nm} loop-detail focus/zoom groups are .seg groups carrying --r-seg",
-              _zi and _zi["bothSeg"] and _zi["radius"] == _zi["token"]
-              and _zi["magRadius"] == _zi["token"], str(_zi))
-        check(f"V207: {nm} loop-detail groups share the tool group's radius",
+        check(f"V207: {nm} loop-detail focus group is a .seg carrying --r-seg",
+              _zi and _zi["focusSeg"] and _zi["radius"] == _zi["token"], str(_zi))
+        check(f"V207: {nm} loop-detail focus group shares the tool group's radius",
               _zi and _zi["matchesToolGroup"] is True, str(_zi))
         check(f"V207: {nm} loop-detail slider highlight is visible on the selected cell", _zi and _zi["sliderVisible"], str(_zi))
-        # v223 REPLACES the old "carries a magnifier glyph" pin, owner's call.
-        # The glyph is gone: it cost 24px of the row (16px icon + 8px gap) and
-        # forced a further 24px lead on the focus pill purely to push it back
-        # into alignment with the pill the glyph had displaced. That 48px was
-        # what dropped Loop/Start/End and 1x-8x onto separate lines at 510px,
-        # which is where the owner reported it.
-        #
-        # What the glyph was FOR is pinned instead -- the zoom group still says
-        # what it is -- plus the thing the glyph was costing. title OR data-tip:
-        # the tooltip layer moves `title` to `data-tip` so the custom tooltip can
-        # own the hover, so a title-only check reads as unlabelled at runtime. A width budget,
-        # not a "same row" check: this page is 1280 wide, where anything fits,
-        # so asserting one row here would pass no matter how much chrome came
-        # back. Measured 361 after the change (171.5 focus + 10 gap + 179.3
-        # mag); 400 leaves headroom for font and token changes while still
-        # failing if another 48px of decoration is added. At 361 the row stays
-        # on one line down to a 361px bar, i.e. a ~465px viewport.
-        check(f"V207: {nm} zoom group says what it is (title + aria-label)",
-              _zi and _zi["magLabelled"], str(_zi))
-        check(f"v223: {nm} loop-detail row stays within its one-line budget",
-              _zi and _zi["rowNeed"] is not None and _zi["rowNeed"] <= 400,
-              f"row needs {_zi and _zi.get('rowNeed')}px (budget 400) — "
-              f"above this the focus and zoom pills split onto two lines on a phone")
+        # v254: the magnification half is a STEPPER, not a .seg, so it is pinned
+        # against the shell it was deliberately given instead — .edge-controls,
+        # the "step this value" control sitting directly below it in the same
+        # panel. Reading edgeRadius rather than typing 11px keeps that stated as
+        # a relationship; a literal would pass while the two drifted apart.
+        # edgeRadius is asserted non-null first so a missing .edge-controls
+        # cannot make the comparison vacuously true.
+        check(f"V254: {nm} the zoom stepper wears the same shell as the step controls below it",
+              _zi and _zi["edgeRadius"] is not None and _zi["stepRadius"] == _zi["edgeRadius"],
+              f"stepper {_zi and _zi.get('stepRadius')} vs .edge-controls {_zi and _zi.get('edgeRadius')}")
+        # WHAT THE OLD MAGNIFIER GLYPH WAS FOR is still pinned, by the thing that
+        # replaced it: the two step buttons ARE magnifiers. The glyph check looks
+        # for the lens (a <circle>) and a drawn size, so swapping in bare +/-
+        # signs fails here rather than silently un-labelling the control.
+        check(f"V254: {nm} the zoom stepper says what it is (group label + two labelled buttons)",
+              _zi and _zi["stepLabelled"] and _zi["btnCount"] == 2 and _zi["btnsLabelled"], str(_zi))
+        check(f"V254: {nm} the step buttons carry the magnifier lens, not bare signs",
+              _zi and _zi["btnsGlyphed"], str(_zi))
+        # A WIDTH BUDGET, NOT A "SAME ROW" CHECK: this page is 1280 wide, where
+        # anything fits, so asserting one row here would pass no matter how much
+        # chrome came back. v223 measured 361 (171.5 focus + 10 gap + 179.3 mag)
+        # and set the budget at 400. v254 replaced the four labelled cells with
+        # a 94px stepper and the row now needs ~274, so 400 would no longer fail
+        # if the old control returned. TIGHTENED to 300: that leaves headroom for
+        # font and token changes and still fails the moment four cells, or a
+        # leading magnifier glyph, come back. verify_audio.py owns the phone-width
+        # one-line check; this one owns the budget.
+        check(f"v254: {nm} loop-detail row stays within its one-line budget",
+              _zi and _zi["rowNeed"] is not None and _zi["rowNeed"] <= 300,
+              f"row needs {_zi and _zi.get('rowNeed')}px (budget 300) — "
+              f"above this the focus and zoom controls split onto two lines on a phone")
+        # THE LADDER IS SHARED; THE WIRING IS NOT. lib/zoomstep.js is one copy of
+        # the rungs, but each surface has its own click handler assigning to its
+        # own zoomMag, and every check above is static — markup and geometry.
+        # A surface whose handler never fired, or stepped the wrong way, would
+        # pass all of them. verify_audio.py drives this control but only on
+        # Flip, so the behaviour is pinned HERE, where the loop covers both.
+        _zb = _z.evaluate("""() => {
+            const inb = document.getElementById('zoomMagIn');
+            const out = document.getElementById('zoomMagOut');
+            const val = document.getElementById('zoomMagVal');
+            const seen = [], spans = [], reads = [];
+            const note = () => { seen.push(zoomMag); reads.push(val.textContent.trim());
+                                 spans.push(+getZoomWindow().duration.toFixed(4)); };
+            note();
+            for (let i = 0; i < 5; i++) { inb.click(); note(); }
+            const topStuck = (inb.click(), zoomMag);          // + at the ceiling is inert
+            const atTop = { dis: inb.disabled, outDis: out.disabled };
+            for (let i = 0; i < 5; i++) out.click();
+            const atBot = { mag: zoomMag, dis: out.disabled, inDis: inb.disabled };
+            out.click();                                      // - at the floor is inert
+            return { seen, reads, spans, topStuck, atTop, atBot, floorStuck: zoomMag }; }""")
+        check(f"V254: {nm} stepping in climbs 1 to 32 by doubling",
+              _zb and _zb["seen"] == [1, 2, 4, 8, 16, 32], str(_zb and _zb.get("seen")))
+        # NOT "every step narrows": getZoomWindow clamps the window to the audio,
+        # and this fixture is a 1-second clip, so 1x and 2x both ask for more
+        # than exists and both get the whole clip. That is the clamp working,
+        # not the stepper failing, and an assertion that called it a failure
+        # would be pinning the fixture's length rather than the control. What
+        # IS the contract: no step ever WIDENS the window, and by the ceiling it
+        # is far tighter than at the floor -- which is the whole point of
+        # raising the ceiling, so a stepper that moved the readout without
+        # moving the window still fails here.
+        check(f"V254: {nm} no zoom step ever widens the loop window",
+              _zb and all(a >= b for a, b in zip(_zb["spans"], _zb["spans"][1:])), str(_zb and _zb.get("spans")))
+        check(f"V254: {nm} the ceiling is a far tighter window than the floor",
+              _zb and _zb["spans"][0] >= _zb["spans"][-1] * 8, str(_zb and _zb.get("spans")))
+        check(f"V254: {nm} the readout tracks the level it set",
+              _zb and _zb["reads"] == ["1×", "2×", "4×", "8×", "16×", "32×"],
+              str(_zb and _zb.get("reads")))
+        check(f"V254: {nm} zoom-in disables at the ceiling and nowhere else",
+              _zb and _zb["atTop"]["dis"] is True and _zb["atTop"]["outDis"] is False
+              and _zb["topStuck"] == 32 and _zb["atBot"]["inDis"] is False, str(_zb))
+        check(f"V254: {nm} zoom-out disables at the floor and nowhere else",
+              _zb and _zb["atBot"]["mag"] == 1 and _zb["atBot"]["dis"] is True
+              and _zb["floorStuck"] == 1, str(_zb))
         _z.close()
 
     # v207: help pills that name a real tappable control carry that control's

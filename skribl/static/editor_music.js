@@ -79,48 +79,47 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
   if (!zoomTrackWrap || !zoomTrackWrap.parentNode) return;
   const bar = document.createElement('div');
   bar.className = 'zoom-mag-bar';
-  // v207: the two groups are real .seg pill sliders now (same shell as the
-  // tune drawer's Speed / Onion), not the ad-hoc rounded-rect buttons they were.
-  // A magnifier glyph labels the 1x-8x group so it reads as "zoom level".
-  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + '<span class="zoom-mag-wrap"><span class="seg zoom-seg" data-role="mag" title="Zoom level" role="group" aria-label="Zoom level"><button type="button" class="zoom-mag-btn on" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></span></span>';
+  // The focus pill is a real .seg pill slider (same shell as the tune drawer's
+  // Speed / Onion). The magnification half is NOT a .seg any more: v254 made it
+  // a stepper, which is where the ladder above 8x and the one-line row both
+  // came from. Its markup is lib/zoomstep.js's, not a literal here, because
+  // this control used to exist as two literal strings -- one in this file and
+  // one in flip.js -- that nothing forced to agree.
+  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + window.SkriblZoomStep.markup();
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
   attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]'));
-  attachSegSlider(bar.querySelector('.zoom-seg[data-role="mag"]'));
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('.zoom-mag-btn');
-    if (!b) return;
-    // .on, not .active: these are .seg pill cells now, and the shared seg
-    // slider positions its highlight from the .on button.
-    b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x => x.classList.remove('on'));
-    b.classList.add('on');
-    if (b.dataset.focus) { zoomFocus = b.dataset.focus; zoomCenter = null; }
-    if (b.dataset.mag) zoomMag = parseFloat(b.dataset.mag) || 1;
-    updateTrimUI();   // recomputes the window, redraws waveform + handles
+    if (b) {
+      // .on, not .active: these are .seg pill cells now, and the shared seg
+      // slider positions its highlight from the .on button.
+      b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      if (b.dataset.focus) { zoomFocus = b.dataset.focus; zoomCenter = null; }
+      updateTrimUI();   // recomputes the window, redraws waveform + handles
+      return;
+    }
+    const step = e.target.closest('.mag-step-btn');
+    if (!step || step.disabled) return;
+    const m = window.SkriblZoomStep.next(zoomMag, step.id === 'zoomMagIn' ? 1 : -1);
+    if (m === zoomMag) return;
+    zoomMag = m;
+    window.SkriblZoomStep.sync(zoomMag);
+    updateTrimUI();
   });
+  window.SkriblZoomStep.sync(zoomMag);
   // v207: the groups ARE .seg pills now (styles.css owns the shell + cells),
   // so the old injected rounded-rect styles are gone. Only the bar layout is
-  // styled here.
-  //
-  // The magnifier glyph that used to sit before the 1x-8x group is gone, and
-  // the v210 lead that existed to counteract it went with it. Measured on the
-  // Pad at the widths where this bar lives:
-  //
-  //   focus pill 171.5 + gap 10 + glyph 24 + mag pill 179.3 + lead 24 = 408.8
-  //
-  // so the row needed a 409px bar and dropped to two lines below it. The glyph
-  // cost 24px of that (16px icon + its 8px gap), and the v210 lead cost another
-  // 24 for the sole purpose of pushing the focus pill back into alignment with
-  // the pill the glyph had displaced. Removing the glyph makes the lead
-  // unnecessary rather than merely unused: with nothing before either pill,
-  // both start at the bar's left edge and line up when the bar wraps, which is
-  // exactly what v210 was trying to buy. Requirement met, 48px cheaper, and one
-  // fewer thing to keep in sync.
-  //
-  // 1x/2x/4x/8x reads as zoom on its own; the group keeps title="Zoom level"
-  // and now carries a matching aria-label, so nothing is lost to a screen
-  // reader either.
-  // The bar's layout rules moved to styles.css. Flip built the same sheet in
+  // styled here, and it is styled in styles.css: Flip built the same sheet in
   // its own string and had already lost the 640px rule from it.
+  //
+  // WHAT v254 REPLACED. The magnification half was four labelled cells,
+  // 1x/2x/4x/8x, costing 179px; with the 171.5px focus pill and the gap the row
+  // needed 361px and split onto two lines on a phone. The stepper is 94px and
+  // the bar is one line at 390 and 430. The ceiling went 8x -> 32x in the same
+  // change, because six rungs cost a stepper nothing and 8x was too coarse to
+  // show the panel's own finest nudge step -- see lib/zoomstep.js for that
+  // arithmetic. Both surfaces now build this from the same function.
 })();
 
 (function initFineTuneToggle() {

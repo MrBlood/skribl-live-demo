@@ -3910,17 +3910,28 @@ input:focus-visible {
    auto-fit drops to two columns between 510px and 508px (measured by sweeping
    the viewport 2px at a time), so 509 is the exact width at which the span
    becomes necessary rather than merely inherited.
-   Below it the v210 arrangement is kept as it was — Start and End two-up, Step
-   size full width beneath — because that one was measured on the owner's real
-   phone, and the label-left/control-right row is the right shape for a control
-   spanning the full grid. */
+   Below it Start and End stay two-up with Step size full width beneath, which
+   is right: Step size is a MODIFIER -- it changes what Start and End do -- so it
+   should not look like a third edge.
+
+   WHAT CHANGED IN v254 is where that row puts things. It was
+   `justify-content: space-between` with `flex: 1` on the label, which pins the
+   name to the far left and its control to the far right and leaves the eye to
+   cross the whole panel to connect them. Note that it MEASURES snug -- the flex
+   gap really is 10px -- because `flex: 1` stretches the label's BOX while its
+   text stays left-aligned inside it; the numbers and the screenshot disagreed,
+   and the screenshot was right.
+
+   This revises a v210 decision that was taken deliberately and checked on a real
+   phone. It is revised because the owner looked at it again and said it read as
+   wrong, which is the same evidence that put it there. */
 @media (max-width: 509px) {
   .edge-group:nth-child(3) {
     grid-column: 1 / -1;
-    flex-direction: row; align-items: center; justify-content: space-between;
+    flex-direction: row; align-items: center; justify-content: center;
     gap: 10px;
   }
-  .edge-group:nth-child(3) .edge-name { flex: 1; text-align: left; }
+  .edge-group:nth-child(3) .edge-name { flex: 0 0 auto; text-align: center; }
   .edge-group:nth-child(3) .edge-controls { align-self: center; }
 }
 
@@ -4346,8 +4357,34 @@ body.player-mode #canvas {
    phone the bar justified differently on the two surfaces for no reason anyone
    chose. That is the whole argument against CSS-in-a-JS-string in one example.
    The shell and the cells come from .seg; this is bar layout only. */
-.zoom-mag-bar { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin: 8px 0 6px; flex-wrap: wrap; }
-.zoom-mag-wrap { display: inline-flex; align-items: center; gap: 8px; }
+.zoom-mag-bar { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin: 8px 0 6px; flex-wrap: wrap; }
+.zoom-mag-bar > .zoom-seg { flex: 0 0 auto; }
+/* THE ZOOM STEPPER. Same shell as .edge-controls below it -- well, hairline,
+   --r-seg radius -- because this panel already says "step this value" three
+   times and a fourth should not look like a new kind of control. The BUTTONS
+   carry magnifier glyphs rather than plain signs: a leading magnifier beside
+   plain ones measured 118px and put the bar back onto two lines at 390, so the
+   icon had to be the button rather than an addition to it.
+
+   RADIUS COMES FROM THE TOKEN, both here and on the cells. This shipped with a
+   typed 11px against .edge-controls' 12px while the comment above it claimed
+   the two matched, and the assertion that reads .edge-controls at runtime is
+   what caught it -- a check written against the typed number would have agreed
+   with the mistake. The cells use the same calc(--r-seg - 3px) as .nudge-btn:
+   3px of padding, so the corner sits concentric inside the shell's. */
+.mag-step { display: flex; align-items: center; gap: 2px; padding: 3px;
+  background: var(--surface-well); border: 1px solid var(--line-strong);
+  border-radius: var(--r-seg); flex: 0 0 auto; }
+.mag-step-btn { width: 28px; height: 28px; border-radius: calc(var(--r-seg) - 3px); border: 0;
+  background: transparent; color: var(--text-primary); cursor: pointer;
+  display: grid; place-items: center; padding: 0;
+  transition: background .14s ease, opacity .14s ease; }
+.mag-step-btn svg { width: 17px; height: 17px; display: block; }
+.mag-step-btn:hover:not(:disabled) { background: var(--surface-control-hover); }
+.mag-step-btn:disabled { opacity: .32; cursor: default; }
+.mag-step-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.mag-step-val { min-width: 26px; text-align: center; font-size: 12px;
+  font-weight: 700; color: var(--ui-hi); font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .zoom-mag-bar { justify-content: flex-start; gap: 8px 10px; } }
 
 /* ---------- Slider nudgers, zoom/crossfade rows -------------------------

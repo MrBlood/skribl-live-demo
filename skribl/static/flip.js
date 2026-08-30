@@ -809,7 +809,7 @@ function applyPayload(d){
   trimEnd = typeof mm.trimEnd==='number' ? mm.trimEnd : null;
   loopCrossfadeMs = typeof mm.crossfadeMs==='number' ? mm.crossfadeMs : 0;
   musicName = typeof mm.name==='string' ? mm.name : '';
-  currentAudioBuffer = null; zoomMag = 1; zoomFocus = 'loop'; zoomCenter = null;
+  currentAudioBuffer = null; zoomMag = 1; zoomFocus = 'loop'; zoomCenter = null; if(typeof syncZoomMagStep==='function') syncZoomMagStep();
   if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
     fps = d.fps;
     [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
@@ -3533,7 +3533,7 @@ function ensureAudio(){
 }
 function setMusic(dataURL){ musicData=dataURL; if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
   musicEnabled=true; musicMuted=false; trimStart=0; trimEnd=null; audioDuration=0; loopCrossfadeMs=0; currentAudioBuffer=null;
-  zoomMag=1; zoomFocus='loop'; zoomCenter=null;
+  zoomMag=1; zoomFocus='loop'; zoomCenter=null; if(typeof syncZoomMagStep==='function') syncZoomMagStep();
   ensureAudio(); decodeForWaveform(); syncMediaUI(); scheduleSave(); }
 function removeMusic(){ musicSelectionSeq++; if(typeof stopLoopPreview==='function') stopLoopPreview(); if(audioEl){ try{audioEl.pause();}catch(_){}} audioEl=null;
   musicData=null; musicName=''; currentAudioBuffer=null; loopCrossfadeMs=0; pendingMusicMeta=null;
@@ -4294,17 +4294,61 @@ dragZoomHandle(zoomHandleStart,true); dragZoomHandle(zoomHandleEnd,false);
 function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.placeAttached(group); }
 // Both editors carried an equivalent of this; it lives in lib/segslider.js now.
 function attachSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSlider.attach(group); }
+/* THE MAGNIFICATION IS A STEPPER, not a row of levels, and it climbs to 32x.
+ *
+ * TWO REASONS, and the second is the one that matters.
+ *
+ * SPACE: four cells cost 179px and forced the focus row and the zoom row onto
+ * separate lines (74px of bar). A stepper is 94px and both fit on one line at
+ * 390 and up -- 36px of bar. At 320 it still wraps, because Loop/Start/End is
+ * 172px of the 220 available and nothing useful fits beside it; it wrapped
+ * there before too.
+ *
+ * REACH: the finest nudge step is 0.01s, and the OLD CEILING COULD NOT RESOLVE
+ * IT. On a 330px waveform at 8x, one step is 0.94px for a 20s loop and 0.39px
+ * for a 60s one -- you were nudging by an amount you could not see. 32x puts a
+ * step at 3.8px and 1.6px respectively. A four-cell segmented control could not
+ * afford two more levels; a stepper costs nothing to extend, which is the real
+ * argument for it.
+ *
+ * The buttons carry magnifier glyphs rather than plain minus and plus. A
+ * leading magnifier next to plain signs was tried and measured 118px, which
+ * puts the bar back onto two lines at 390 -- identifying the control would have
+ * cost exactly the space the change was made to save.
+ */
+/* The ladder, the chrome and the step rule live in lib/zoomstep.js so Pad and
+ * Flip cannot offer different zoom levels. Only the wiring is local. */
+function syncZoomMagStep(){ window.SkriblZoomStep.sync(zoomMag); }
+function stepZoomMag(dir){
+  const m = window.SkriblZoomStep.next(zoomMag, dir);
+  if(m === zoomMag) return;
+  zoomMag = m;
+  syncZoomMagStep();
+  updateTrimUI();
+}
 (function initZoomMagControl(){ if(!zoomTrackWrap||!zoomTrackWrap.parentNode) return;
   const bar=document.createElement('div'); bar.className='zoom-mag-bar';
-  // v207: real .seg pill sliders + a magnifier glyph on the zoom group (matches Pad).
-  bar.innerHTML='<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>'+'<span class="zoom-mag-wrap"><span class="seg zoom-seg" data-role="mag" title="Zoom level" role="group" aria-label="Zoom level"><button type="button" class="zoom-mag-btn on" data-mag="1">1&times;</button><button type="button" class="zoom-mag-btn" data-mag="2">2&times;</button><button type="button" class="zoom-mag-btn" data-mag="4">4&times;</button><button type="button" class="zoom-mag-btn" data-mag="8">8&times;</button></span></span>';
+  bar.innerHTML='<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on">'
+    + '<button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button>'
+    + '<button type="button" class="zoom-mag-btn" data-focus="start">Start</button>'
+    + '<button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>'
+    + window.SkriblZoomStep.markup();
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
-  attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]')); attachSegSlider(bar.querySelector('.zoom-seg[data-role="mag"]'));
+  attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]'));
   // .on not .active: real .seg cells now; the shared slider reads .on.
-  bar.addEventListener('click',(e)=>{ const b=e.target.closest('.zoom-mag-btn'); if(!b) return; b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('on')); b.classList.add('on'); if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; } if(b.dataset.mag) zoomMag=parseFloat(b.dataset.mag)||1; updateTrimUI(); });
-  // v207: shell + cells come from styles.css .seg; only bar layout + the magnifier glyph here.
-  // The bar's layout rules moved to styles.css — this copy had already lost
-  // the 640px rule that editor_music.js's copy still carried.
+  bar.addEventListener('click',(e)=>{
+    const b=e.target.closest('.zoom-mag-btn');
+    if(b){
+      b.parentNode.querySelectorAll('.zoom-mag-btn').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      if(b.dataset.focus){ zoomFocus=b.dataset.focus; zoomCenter=null; }
+      updateTrimUI();
+      return;
+    }
+    const step=e.target.closest('.mag-step-btn');
+    if(step && !step.disabled) stepZoomMag(step.id === 'zoomMagIn' ? 1 : -1);
+  });
+  syncZoomMagStep();
 })();
 bindEl('fineTuneToggle', 'click',()=>{ const body=document.getElementById('fineTuneBody'); const t=document.getElementById('fineTuneToggle'); const open=body.hidden; body.hidden=!open; t.setAttribute('aria-expanded', open?'true':'false'); if(open){ requestAnimationFrame(()=>{ updateTrimUI(); document.querySelectorAll('.zoom-seg').forEach(g=>positionSegSlider(g)); }); } });
 
