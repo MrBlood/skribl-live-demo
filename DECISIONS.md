@@ -3339,3 +3339,41 @@ directions -- shrinking the glyph back to 13 fails four checks, and removing
 **A number that has never been questioned is not the same as a number that was
 chosen.** 13px had survived every review of this bar because nobody had put it
 next to the 21px it sits beside.
+
+## v256 -- A toggle written, and undone by a second listener on the same button
+
+"The stamp library doesn't go away until another tool is chosen." Press-again-to-
+close was already in the code and had never worked.
+
+#stampToolBtn carried TWO click listeners. lib/toolshelf.js binds the cells it
+builds to the registry's setTool; each surface ALSO bound every
+'#toolGroup .tool-btn' to its own. A DERIVING handler survives being run twice --
+which is why nothing else showed a symptom -- and a TOGGLING one does not: the
+registry's toggle closed the shelf and the surface's setTool re-derived it open
+in the same click.
+
+Static cells in the template were never bound by the registry, so they only ever
+had one route; the cells the registry BUILDS had both. The fix marks what the
+registry binds and has each surface skip it, so every button has exactly one
+route. The guard is in Pad too, where it changes nothing today -- both of Pad's
+routes merely derive -- because the two surfaces drifting is how one of them
+acquires this bug later.
+
+**Idempotence is what let this hide.** A double-fired handler is invisible until
+something stateful runs inside it, and then it looks like the feature was never
+written.
+
+Two further traps, both hit while fixing it and both worth the same warning:
+
+  * The toggle read `stampPop.hidden` AFTER setTool had rederived it, so it saw
+    `false` every time and could only ever CLOSE -- shut on the second tap and
+    never back on the third. Read the state before the call that changes it.
+  * The spotlight ran its own 6000ms timer while an ACTION hint dwells
+    DURATION * 2 = 12400, so the ring went out six seconds before the sentence
+    calling it "the highlighted button" did. It now ends through an `onHide`
+    callback on the hint, so the two cannot disagree even if the dwell is
+    retuned -- the number is not copied, it is not known here at all.
+
+The timing assertion is pinned at 8s, where the OLD and NEW behaviours disagree,
+rather than at an exact end time that would be flaky and would break on every
+retune.

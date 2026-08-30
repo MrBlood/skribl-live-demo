@@ -3033,6 +3033,12 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
       // press-again-to-close feel without making the first pick a no-op.
       setTool: (id) => {
         const was = flipTool;
+        // READ THE SHELF BEFORE setTool REDERIVES IT. setTool() sets
+        // stampPop.hidden from the active tool, so a toggle written after the
+        // call sees false every time and can only ever CLOSE -- the shelf would
+        // shut on the second tap and never come back on the third.
+        const _spWas = document.getElementById('stampPop');
+        const _spWasHidden = _spWas ? _spWas.hidden : true;
         setTool(id);
         const pop = document.getElementById('shapePop');
         if (pop) pop.hidden = (id !== 'shape') ? true
@@ -3046,11 +3052,13 @@ const toolShelf = (typeof window !== 'undefined' && window.SkriblToolShelf)
         // the picker stopped appearing for anyone who reached it that way.
         //
         // All that is left here is the deliberate override: tapping the tool
-        // button while its own tool is already active puts the shelf away.
-        // Rederiving would immediately undo that, so it is applied after.
-        if (id === 'stamp' && was === 'stamp') {
-          const sp = document.getElementById('stampPop');
-          if (sp) sp.hidden = !sp.hidden;
+        // button while its own tool is already active TOGGLES the shelf, so it
+        // can be put away without leaving the tool -- reported from the live
+        // demo as "the stamp library doesn't go away until another tool is
+        // chosen". Applied after setTool, against the state read before it.
+        if (id === 'stamp' && was === 'stamp' && _spWas) {
+          _spWas.hidden = !_spWasHidden;
+          if (!_spWas.hidden) syncStampPop();
         }
       },
       closeTray: () => { if (_flipDrawerCtl) _flipDrawerCtl.open(null); },
@@ -5840,10 +5848,16 @@ function selUp(pt){
       // "Stamp" DOES appear in the tool tray, so a sentence naming it sends the
       // reader exactly where the owner went and got stuck. The spotlight works
       // at every size and in every language.
-      const shown = window.SkriblHints.show('stamp-where',
+      // onHide rather than a timer of its own. The ring is what the sentence
+      // MEANS by "the highlighted button", so it has to outlive the sentence or
+      // match it -- and it used to go out at 6s while an action hint dwells
+      // DURATION * 2, leaving six seconds of a toast pointing at nothing.
+      // Tying it to the toast keeps them in step even if the dwell changes.
+      window.SkriblHints.show('stamp-where',
         'The highlighted button saves this selection to your Stamps shelf.',
-        { action: { label: 'Stamp it', onClick: () => stampSaveSelection() } });
-      if(shown) spotlightStamp();
+        { action: { label: 'Stamp it', onClick: () => stampSaveSelection() },
+          onHide: () => unspotlightStamp() })
+        && spotlightStamp();
     }
     return;
   }
@@ -6315,6 +6329,10 @@ document.querySelectorAll('#toolGroup .tool-btn').forEach(b=>b.addEventListener(
   // setTool(undefined), which the clamp turned into setTool('pen') — so opening
   // the tray silently switched you back to the pen.
   if(!b.dataset.tool) return;
+  // lib/toolshelf.js already routes the cells IT built through the registry's
+  // setTool. Running this one too fired both, and the second call re-derived
+  // what the first had toggled.
+  if(b.dataset.shelfBound) return;
   // The picker is NOT opened here any more — lib/toolshelf.js already calls the
   // surface's setTool for a shelf click, so doing it in both places toggled it
   // twice and left it shut. It lives in the toolShelf config, which the tray
@@ -6330,15 +6348,18 @@ bindEl('stampEmptyGo', 'click', (e)=>{ e.stopPropagation(); setTool('select'); }
 /* A ring around the real control for as long as the hint is up. Removed on the
    first press as well as on the timer, so it stops the moment it is understood
    rather than continuing to shout at someone who has already acted. */
-let _spotT = null;
+function unspotlightStamp(){
+  const b = document.getElementById('sbStamp');
+  if(b) b.classList.remove('pb-spot');
+}
 function spotlightStamp(){
   const b = document.getElementById('sbStamp');
   if(!b) return;
   b.classList.add('pb-spot');
-  clearTimeout(_spotT);
-  const off = () => { b.classList.remove('pb-spot'); clearTimeout(_spotT); };
-  _spotT = setTimeout(off, 6000);
-  b.addEventListener('click', off, { once: true });
+  // No timer here: the toast owns the lifetime and calls unspotlightStamp
+  // through onHide. A press still ends it early, because once the button has
+  // been found the ring has done its job.
+  b.addEventListener('click', unspotlightStamp, { once: true });
 }
 (function stampScaleKnob(){
   const sl = document.getElementById('stampScale'), out = document.getElementById('stampScaleOut');
