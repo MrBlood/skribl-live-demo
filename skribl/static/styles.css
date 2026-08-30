@@ -4761,6 +4761,36 @@ body.player-mode #canvas {
   pointer-events: none;
 }
 .skribl-hint-action { pointer-events: auto; }
+/* The glyph a hint can carry, drawn in the SAME accent the spotlight ring uses
+   so the toast and the button read as one thing rather than two. Boxed like the
+   button it depicts, at text scale. */
+.skribl-hint-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 7px;
+  border: 1px solid rgba(124, 92, 255, 0.55);
+  color: var(--text-primary); flex: 0 0 auto;
+}
+.skribl-hint-ic svg { width: 17px; height: 17px; display: block; }
+/* A HINT CARRYING A GLYPH LAYS OUT AS A ROW. .skribl-hint-text is display:block,
+   so an inline icon before it lands on its own line and the sentence starts
+   underneath -- which reads as a caption over a paragraph rather than as one
+   sentence about that button. Scoped with :has() so a hint WITHOUT an icon keeps
+   the centred single-column layout every other hint was written for. */
+.skribl-hint:has(.skribl-hint-ic) {
+  display: flex; align-items: center; gap: 9px; text-align: left;
+  /* WIDTH, not just max-width. The toast is position:fixed with no width, so it
+     shrink-wraps -- fine for a centred block whose text fills to max-width, and
+     wrong for a flex row, where the items shrink instead and the sentence ends
+     up four words tall next to a two-line button. */
+  width: min(360px, calc(100vw - 32px));
+}
+.skribl-hint:has(.skribl-hint-ic) .skribl-hint-text { flex: 1 1 auto; }
+/* The action is a label, not a paragraph: it takes the width it needs and the
+   sentence takes the rest. Without this the row shares space evenly and breaks
+   a two-word button across two lines. */
+.skribl-hint:has(.skribl-hint-ic) .skribl-hint-action {
+  flex: 0 0 auto; white-space: nowrap;
+}
 .skribl-hint.in { opacity: 1; transform: translate(-50%, 0); }
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }

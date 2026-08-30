@@ -91,7 +91,9 @@
    *        size/z-index made it easy to leave a dead zone over the toolbar.
    *        Small, timed, tap-to-dismiss, with an optional deeper link. */
   /* opts.onHide - called when this toast goes away, for anything that has to
-   *        live exactly as long as it does. */
+   *        live exactly as long as it does.
+   * opts.icon - raw SVG markup shown before the text, aria-hidden. Lift it from
+   *        the control being described rather than drawing it again. */
   function show(key, text, opts) {
     if (!key || !text || !isEnabled()) return false;
     var s = seen();
@@ -105,6 +107,19 @@
     node.classList.remove('skribl-hint-panel');   // v205 variant, retired
     clearTimeout(timer);
     node.textContent = '';
+    /* An optional glyph, shown BEFORE the text. It exists because a hint that
+       says "the highlighted button" is describing something the reader still has
+       to find: the ring narrows it down, and the picture settles it. Raw SVG
+       markup, aria-hidden, so the sentence still reads correctly in speech --
+       the caller lifts it from the real control rather than drawing a second
+       copy, which is what keeps the two from ever disagreeing. */
+    if (opts && opts.icon) {
+      var ic = document.createElement('span');
+      ic.className = 'skribl-hint-ic';
+      ic.setAttribute('aria-hidden', 'true');
+      ic.innerHTML = opts.icon;
+      node.appendChild(ic);
+    }
     var span = document.createElement('span');
     span.className = 'skribl-hint-text';
     span.textContent = text;

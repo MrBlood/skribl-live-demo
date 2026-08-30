@@ -549,10 +549,16 @@ with sync_playwright() as _p:
               "naming it is what failed; pointing at it is what replaces that")
         hint = pg.evaluate("() => { const h = document.querySelector('.skribl-hint');"
                            " return h && !h.hidden ? h.textContent : ''; }")
-        check("the hint refers to the highlight rather than to a label",
-              "highlighted" in hint and "tap Stamp" not in hint,
-              f"{hint!r} — 'tap Stamp' is the sentence that sent the reader to "
-              "the tool tray, where that word IS visible")
+        # The requirement is NOT a particular word. It is that the hint never
+        # sends the reader to a label that is not drawn: below "regular" the
+        # selection bar has none, and the word "Stamp" IS rendered in the tool
+        # tray, so naming it points at the wrong control. Identification is the
+        # glyph's job now -- asserted separately below -- which is why this no
+        # longer insists on the word "highlighted" that used to carry it.
+        check("the hint never names a label the surface does not draw",
+              "tap Stamp" not in hint and "Stamp button" not in hint,
+              f"{hint!r} — that phrasing sent the reader to the tool tray, "
+              "where the word IS visible")
         check("the hint offers to do it for you", "Stamp it" in hint, f"{hint!r}")
 
         # THE TOAST MUST NOT EAT THE CANVAS UNDERNEATH IT. It is position:fixed
@@ -719,6 +725,43 @@ with sync_playwright() as _sp2:
         up = lambda: sp.evaluate("() => { const h = document.querySelector"
                                  "('.skribl-hint'); return !!(h && !h.hidden); }")
         check("the ring and the toast both start", ring() and up(), "")
+
+        # THE TOAST SHOWS THE BUTTON, it does not only describe it. "The
+        # highlighted button" only works if the highlight is noticed; the glyph
+        # identifies the subject even when it is not. Lifted from #sbStamp
+        # rather than redrawn, so the two cannot end up depicting different
+        # buttons -- asserted by comparing the markup, not by its presence.
+        icon = sp.evaluate(
+            "() => { const h = document.querySelector('.skribl-hint');"
+            " const ic = h && h.querySelector('.skribl-hint-ic svg');"
+            " const sb = document.querySelector('#sbStamp svg');"
+            " return { has: !!ic,"
+            "          same: !!(ic && sb && ic.innerHTML === sb.innerHTML) }; }")
+        check("the toast carries a glyph", icon["has"] is True,
+              "a sentence about a button the reader still has to find")
+        check("...and it is the SAME drawing as the button it points at",
+              icon["same"] is True,
+              "a second copy would drift the moment either icon is changed")
+        # It has to read as one sentence, not a caption stacked over a paragraph:
+        # .skribl-hint-text is display:block, so an icon before it lands on its
+        # own line unless the toast lays out as a row.
+        row = sp.evaluate(
+            "() => { const h = document.querySelector('.skribl-hint');"
+            " const ic = h.querySelector('.skribl-hint-ic');"
+            " const tx = h.querySelector('.skribl-hint-text');"
+            " const a = h.querySelector('.skribl-hint-action');"
+            " const ir = ic.getBoundingClientRect(), tr = tx.getBoundingClientRect();"
+            " return { sameRow: Math.abs(ir.top - tr.top) < 30,"
+            "          w: Math.round(h.getBoundingClientRect().width),"
+            "          actionLines: a ? Math.round("
+            "            a.getBoundingClientRect().height / 20) : 0 }; }")
+        check("the glyph sits beside the sentence, not above it",
+              row["sameRow"] is True,
+              "an icon over a paragraph reads as a caption, not as one sentence")
+        check("...and the toast keeps its width rather than shrink-wrapping",
+              row["w"] >= 300,
+              f"{row['w']}px — position:fixed with no width shrink-wraps, which "
+              "is fine for a centred block and wrong for a flex row")
         # 8s is past the 6000ms timer the spotlight used to run and comfortably
         # short of an action hint's DURATION * 2 dwell. Pinned at a point where
         # the two behaviours DISAGREE rather than at an exact end time, which

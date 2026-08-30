@@ -5853,10 +5853,17 @@ function selUp(pt){
       // match it -- and it used to go out at 6s while an action hint dwells
       // DURATION * 2, leaving six seconds of a toast pointing at nothing.
       // Tying it to the toast keeps them in step even if the dwell changes.
+      // THE GLYPH COMES OUT OF THE BUTTON ITSELF. "The highlighted button" is
+      // only useful if the highlight is noticed; showing the icon means the
+      // sentence identifies its own subject even if the ring is missed, and
+      // lifting it rather than redrawing it means the toast cannot end up
+      // showing a picture of a button that no longer looks like that.
+      const _sbIcon = document.querySelector('#sbStamp svg');
       window.SkriblHints.show('stamp-where',
-        'The highlighted button saves this selection to your Stamps shelf.',
+        'saves this selection to your Stamps shelf.',
         { action: { label: 'Stamp it', onClick: () => stampSaveSelection() },
-          onHide: () => unspotlightStamp() })
+          onHide: () => unspotlightStamp(),
+          icon: _sbIcon ? _sbIcon.outerHTML : '' })
         && spotlightStamp();
     }
     return;
