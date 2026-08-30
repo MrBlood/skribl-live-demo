@@ -9,33 +9,36 @@
  * make different.
  *
  * WHY BLUR IS EXPRESSIBLE AT ALL, which is not obvious and was nearly a
- * blocker. A frame is `{strokes, strokeGroups}` — a flat array of
- * `{x, y, color, size, t, erase, start}` — and you cannot blur a polyline by
+ * blocker. A frame is `{strokes, strokeGroups}` -- a flat array of
+ * `{x, y, color, size, t, erase, start}` -- and you cannot blur a polyline by
  * moving its points. There is no raster layer to convolve and adding one is a
  * format change the player must honour.
  *
- * The way through is a detail of paintStatic(): a stroke whose FIRST point is
- * opaque is painted by paintSeg with each point's OWN colour and OWN size. So
- * per-point colour is honoured, and "blur" becomes a thing that can be said in
- * this format after all — fade a point toward the ground it sits on and widen
- * it, and the line goes faint and soft exactly where the brush passed. It reads
- * as defocus on line art, it composes when you go over it twice, and the player
- * renders it identically because the player runs the same paint path.
+ * The way through is EXPANDED TRANSLUCENT COPIES: draw the same path several
+ * times, widest and faintest first, so the crisp core lands on top of its own
+ * halo and the overlap of the passes is the falloff. flip.js's blurRebuild owns
+ * that, and the in-between has used the same shape since v238.
  *
- * WHAT THAT IS NOT. It is not a convolution: it cannot soften a photograph
- * underneath, and it fades toward the page's background colour rather than
- * toward whatever pixels happen to be behind the line. On a photo background a
- * blurred line goes toward the page colour, not toward the photo. That is a
- * real limit, it is the honest boundary of doing this without a format change,
- * and it is written here rather than discovered later.
+ * WHAT THAT IS NOT, and the limit is unchanged: it is not a convolution. It
+ * cannot soften a photograph underneath, because it only ever redraws strokes
+ * -- there are no pixels beneath to sample. On a photo background a blurred
+ * line gets its own soft edge and the photo stays exactly as sharp as it was.
+ * That is the honest boundary of doing this without a format change, and it is
+ * written here rather than discovered later.
  *
- * ALPHA IS DELIBERATELY UNTOUCHED. Reducing a stroke's alpha would be the
- * obvious way to fade it, and it is the wrong one twice over: paintStatic takes
- * a stroke's alpha from its FIRST point, so a per-point change would not apply;
- * and translucent strokes are composited one at a time against LAYER_BUDGET
- * (24), so a blur that made a dozen of them would flip the whole frame to
- * direct painting and change how every other stroke on it looks. Mixing toward
- * the background gets the same appearance with none of that.
+ * THIS FILE'S `mix` IS SMUDGE'S, NOT BLUR'S -- a note that used to say the
+ * opposite. Blur fades a pass by ALPHA now, written as an 8-digit hex so that
+ * paintStatic's layering test (alphaOf, which only matches rgba()) reads it as
+ * opaque while the canvas still renders it translucent; that is what keeps four
+ * passes per stroke from spending LAYER_BUDGET. Smudge still mixes toward the
+ * ground, because smudged pigment genuinely thins as it is dragged, and that IS
+ * a colour change rather than a transparency one.
+ *
+ * The paragraph here previously argued that per-point alpha could not work at
+ * all, on the grounds that paintStatic takes a stroke's alpha from its FIRST
+ * point. True of rgba(), and false of '#rrggbbaa': that form is honoured per
+ * point by the canvas itself. The reasoning was sound about the mechanism it
+ * had in mind and wrong about the conclusion it drew.
  */
 (function () {
   'use strict';

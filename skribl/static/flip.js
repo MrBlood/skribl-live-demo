@@ -5511,8 +5511,11 @@ const SMUDGE_SPREAD_MAX = 0.45;
    Going over the ink a second time still deepens it, because a new drag starts
    from a new snapshot. */
 const BLUR_RATE = 0.012;        // per PIXEL TRAVELLED, not per event -- see below
-const BLUR_FADE_MAX = 0.55;     // furthest toward the ground ONE drag can go
-const BLUR_SPREAD_MAX = 0.8;    // widest ONE drag can make a point
+/* BLUR_FADE_MAX and BLUR_SPREAD_MAX lived here and are gone with v256. They
+   were how far one drag could push a point toward the ground and how much
+   wider it could make it -- the two numbers of a tool that dimmed and fattened
+   a line rather than softening it. The halo replaces both: BLUR_CORE_KEEP is
+   how much contrast the core gives up, and BLUR_PASSES is the falloff. */
 
 let _fieldIdx = -1, _fieldBefore = null, _fieldLast = null,
     _fieldTouched = false, _fieldLabel = '';
@@ -5624,6 +5627,220 @@ function smudgeMove(pt){
   return hit;
 }
 
+/* ---------- v256: blur that actually softens an edge -------------------------
+
+   WHAT SHIPPED UNTIL NOW WAS A FADE. The old blur mixed each touched point
+   toward bgColor and widened it. Measured on a vertical slice through a line:
+   the feathered transition band was 5 rows before the drag and 5 rows after,
+   while the peak halved and the solid core doubled. Softening an edge is the
+   one thing the word promises and it did none of it -- it made the line dimmer
+   and fatter, with the same knife-sharp edge, because a stroke point is drawn
+   as a solid round dab and nothing about recolouring it can feather anything.
+
+   THE VECTOR-NATIVE BLUR IS EXPANDED TRANSLUCENT COPIES. Draw the same path
+   several times, widest and faintest first, so the crisp core lands on top of
+   its own halo; the overlap of the passes IS the falloff. It is not a
+   convolution and it cannot soften a photograph underneath -- that limit is
+   unchanged and lib/brushfield.js still states it -- but on line art it reads
+   as defocus, which is what the tool is for.
+
+   THE MACHINERY ALREADY EXISTED, in the in-between: TWEEN_BLUR is this exact
+   stack and has been drawing halos since v238. The blur brush was the one
+   thing on the surface not using it.
+
+   THE ALPHA IS AN 8-DIGIT HEX, and that is what makes this affordable. A halo
+   written as rgba() is a translucent stroke, and paintStatic gives every
+   translucent stroke its own offscreen layer -- clear, redraw, composite --
+   against a LAYER_BUDGET of 24. Four passes per blurred stroke would blow that
+   after six strokes and flip the whole frame to direct painting, changing how
+   every other stroke on it looks. alphaOf, which is the layering test, only
+   recognises rgba(), so a '#rrggbbaa' pass is budgeted as opaque while the
+   canvas still renders it translucent. Measured: ten strokes drawn, five hex
+   and five rgba, and the layerable count was 4.
+
+   IT REBUILDS FROM THE PRE-DRAG SNAPSHOT ON EVERY MOVE rather than editing in
+   place. That keeps the accumulate-against-the-original property BLUR_RATE
+   argues for, makes the operation idempotent (going over the same ink twice in
+   one drag cannot compound), and means the live preview is built by the same
+   code as the committed result -- so there is nothing to jump at pointer-up.
+   The hit test therefore runs against the SNAPSHOT, whose indices are stable,
+   not against the frame being rebuilt underneath it. */
+
+/* Widest and faintest first; the last entry is the core and is always kept.
+   `d` is a fraction of the soft edge ADDED to the brush, never a multiple of
+   it -- v238 learned that the hard way: multiplying made a 60px ball into a
+   200px cloud, which inflates rather than softens. */
+const BLUR_PASSES = [ { d: 1.00, a: 0.13 }, { d: 0.62, a: 0.22 },
+                      { d: 0.30, a: 0.38 }, { d: 0.00, a: 1.00 } ];
+/* How wide the soft edge is in canvas pixels. Same shape as tweenSoftEdge: it
+   scales gently with the brush and is bounded at both ends, so a hairline does
+   not get a disproportionate halo and a fat brush gets a soft EDGE rather than
+   a cloud. */
+/* MEASURED, not guessed. Feathered rows across a mid-line slice of a 7px line,
+   before -> after one blur pass, at five multipliers:
+
+       0.55  1 -> 4     1.8  1 -> 7      3.2  1 -> 13
+       1.2   1 -> 5     2.4  1 -> 10
+
+   2.4 takes the softened band from 1 row to 10 and puts the widest pass at
+   23.8px against a 7px core -- soft, and still recognisably a line. 3.2 is a
+   cloud at that size.
+
+   THE CAP IS WHAT KEEPS v238's LESSON. Above roughly an 11px brush the
+   multiplier stops mattering and the soft edge is a flat 26px, so a 24px stroke
+   goes to 50 and a 60px ball to 86 -- a soft EDGE either way, never the 200px
+   cloud that multiplying without a bound produced. Both were measured: at 24px
+   and at 60px the feather is 16 and 14 rows and the multiplier makes no
+   difference, because both are already on the cap. */
+function blurSoftEdge(size){ return Math.max(6, Math.min(26, size * 2.4)); }
+/* How much contrast the core gives up where the brush passed. A blurred line
+   loses punch; it does not vanish. */
+const BLUR_CORE_KEEP = 0.42;
+/* Below this the point was barely brushed and gets no halo -- otherwise every
+   drag mints a halo pass over the entire stroke it grazed. */
+const BLUR_EPS = 0.02;
+/* The server refuses a frame over MAX_POINTS_PER_FRAME (20,000) and
+   MAX_GROUPS_PER_FRAME (5,000), and this multiplies the blurred RUNS by the
+   pass count. Passes are shed rather than the blur refused: the last entry is
+   the core, so shedding always drops the widest, faintest halo first and the
+   worst case degrades to exactly the fade this replaced. */
+const BLUR_POINT_CAP = 15000, BLUR_GROUP_CAP = 4000;
+/* Samples per dab width along a halo run. Five is enough that the overlap is
+   uniform rather than periodic -- which is what stops the beading -- without
+   spending points nobody can see. It is also the n that the alpha compensation
+   below divides by, so the two numbers are the same number on purpose. */
+const BLUR_OVERLAP = 5;
+function blurPasses(extraPts, extraRuns, basePts, baseRuns){
+  for(let n = BLUR_PASSES.length; n > 1; n--){
+    const halos = n - 1;
+    if(basePts + extraPts * halos <= BLUR_POINT_CAP
+       && baseRuns + extraRuns * halos <= BLUR_GROUP_CAP)
+      return BLUR_PASSES.slice(BLUR_PASSES.length - n);
+  }
+  return BLUR_PASSES.slice(-1);
+}
+
+/* Densify a run so its dabs overlap uniformly, and pay the alpha back for the
+   density. BOTH HALVES ARE REQUIRED and each one breaks without the other.
+
+   A hex-alpha stroke is painted DIRECT -- that is the point of writing the
+   alpha as hex, since the layered path is what costs LAYER_BUDGET -- and direct
+   painting makes translucent ink COMPOUND where consecutive dabs overlap. A
+   line of 38 points over 440px drawn at 24px wide overlaps its neighbour in a
+   lens shape, and the first version of this drew a visible string of circles.
+   Spacing the samples well inside the dab width makes that overlap uniform
+   along the run rather than periodic, which is why the in-between's halo has
+   never beaded: an exposure is dense everywhere.
+
+   Density alone then makes it too BRIGHT -- measured, a peak of 254 and a
+   ten-row core, brighter than the line it was meant to soften. n dabs of alpha
+   x compositing over each other give 1 - (1-x)^n, so the per-dab alpha that
+   accumulates to the intended weight is 1 - (1-T)^(1/n). Derived, not tuned,
+   and n is the overlap the run ACTUALLY ended up with rather than the one it
+   asked for. */
+function blurDensify(seg){
+  if(seg.length < 2) return seg;
+  let len = 0;
+  for(let k = 1; k < seg.length; k++)
+    len += Math.hypot(seg[k].x - seg[k-1].x, seg[k].y - seg[k-1].y);
+  if(!(len > 0)) return seg;
+  const wide = seg.reduce((m, q) => Math.max(m, q.size || 0), 0);
+  const want = Math.ceil(len / Math.max(1, wide / BLUR_OVERLAP)) + 1;
+  if(want > seg.length) seg = tweenResample(seg, Math.min(want, seg.length * 12));
+  const spacing = len / Math.max(1, seg.length - 1);
+  const n = Math.max(1, Math.min(BLUR_OVERLAP * 2, wide / Math.max(0.001, spacing)));
+  if(n > 1) for(const q of seg){
+    const t = strokeAlphaOf(q.color);
+    if(t > 0 && t < 1)
+      q.color = tweenFade(q.color, (1 - Math.pow(1 - t, 1 / n)) / t);
+  }
+  return seg;
+}
+
+/* Rebuilds the frame from the snapshot plus the accumulated per-point weights.
+   Halo passes for every blurred sub-run first, then the original runs with the
+   core faded where the brush went -- array order is paint order, so the core
+   lands on top of its own halo. */
+function blurRebuild(f){
+  const snap = _fieldBefore;
+  if(!snap) return;
+  const orig = snap.strokes, groups = snap.groups;
+  // Contiguous stretches of brushed points, per run. A run the brush crossed in
+  // two places gets two halos rather than one spanning the gap between them.
+  const runs = [];
+  let at = 0, extraPts = 0, extraRuns = 0;
+  for(let g = 0; g < groups.length; g++){
+    const count = groups[g];
+    let s = -1;
+    for(let k = 0; k <= count; k++){
+      const acc = k < count ? (_blurAcc.get(at + k) || 0) : 0;
+      if(acc > BLUR_EPS && s < 0) s = k;
+      else if((acc <= BLUR_EPS || k === count) && s >= 0){
+        // One point either side, so the halo does not stop dead mid-line.
+        const a0 = Math.max(0, s - 1), a1 = Math.min(count - 1, k);
+        runs.push({ at: at, from: a0, to: a1 });
+        extraPts += (a1 - a0 + 1); extraRuns++;
+        s = -1;
+      }
+    }
+    at += count;
+  }
+  const passes = blurPasses(extraPts, extraRuns, orig.length, groups.length);
+  const halo = passes.slice(0, passes.length - 1);
+  const out = [], outG = [];
+  for(let p = 0; p < halo.length; p++){
+    const pass = halo[p];
+    for(const r of runs){
+      let seg = [];
+      for(let k = r.from; k <= r.to; k++){
+        const src = orig[r.at + k];
+        // An eraser stroke has no colour to fade and punches a hole; haloing it
+        // would smear the hole outward, which is not what softening a line means.
+        if(src.erase){ seg.length = 0; break; }
+        const acc = Math.min(1, _blurAcc.get(r.at + k) || 0);
+        const q = Object.assign({}, src);
+        const base = typeof src.size === 'number' ? src.size : 1;
+        q.size = base + blurSoftEdge(base) * pass.d * acc;
+        q.color = tweenFade(src.color, pass.a * acc);
+        seg.push(q);
+      }
+      seg = blurDensify(seg);
+      if(seg.length){
+        seg[0].start = true;
+        for(let k = 1; k < seg.length; k++) delete seg[k].start;
+        out.push(...seg); outG.push(seg.length);
+      }
+    }
+  }
+  for(let g = 0, a = 0; g < groups.length; g++){
+    const count = groups[g];
+    let core = [], touched = false;
+    for(let k = 0; k < count; k++){
+      const src = orig[a + k];
+      const acc = Math.min(1, _blurAcc.get(a + k) || 0);
+      const q = Object.assign({}, src);
+      if(acc > 0 && !src.erase){
+        const base = typeof src.size === 'number' ? src.size : 1;
+        q.size = base + blurSoftEdge(base) * 0.18 * acc;
+        q.color = tweenFade(src.color, 1 - (1 - BLUR_CORE_KEEP) * acc);
+        touched = true;
+      }
+      core.push(q);
+    }
+    /* The core is translucent where the brush went, and a translucent run beads
+       at its own dab spacing exactly as a halo pass does -- this was drawn as a
+       string of bright circles before the same treatment was applied to it.
+       Untouched runs are left ALONE: they are the user's strokes, still opaque,
+       and resampling them would rewrite geometry the blur never reached. */
+    if(touched) core = blurDensify(core);
+    core[0].start = true;
+    for(let k = 1; k < core.length; k++) delete core[k].start;
+    out.push(...core); outG.push(core.length);
+    a += count;
+  }
+  f.strokes = out; f.strokeGroups = outG;
+}
+
 function blurMove(pt){
   const f = frames[_fieldIdx]; if(!f) return false;
   // Distance since the last sample, BEFORE _fieldLast moves. This is what makes
@@ -5637,18 +5854,20 @@ function blurMove(pt){
   const r = liquifyRadius();
   // No subdivision: blur does not move anything, so a coarse segment blurs just
   // as well as a fine one and splitting it would only cost points.
-  const orig = _fieldBefore ? _fieldBefore.strokes : null;
-  const hit = SkriblBrushField.each(f.strokes, pt.x, pt.y, r, 1, (p, w, i) => {
-    // Saturating accumulation, recomputed from the ORIGINAL point. See the note
-    // on BLUR_RATE: applying a delta per event makes the tool's strength a
+  //
+  // THE HIT TEST RUNS AGAINST THE SNAPSHOT, not against f.strokes. blurRebuild
+  // replaces the frame's arrays on every move -- it inserts halo passes ahead
+  // of the original runs -- so an index taken from the live frame would refer
+  // to a different point on the next event, and the accumulator is keyed by
+  // index. The snapshot is the one array that does not move under it.
+  if(!_fieldBefore) return false;
+  const hit = SkriblBrushField.each(_fieldBefore.strokes, pt.x, pt.y, r, 1, (p, w, i) => {
+    // Saturating accumulation against the ORIGINAL point. See the note on
+    // BLUR_RATE: applying a delta per event makes the tool's strength a
     // property of the device's sample rate.
-    const acc = Math.min(1, (_blurAcc.get(i) || 0) + w * BLUR_RATE * travel);
-    _blurAcc.set(i, acc);
-    const src = (orig && orig[i]) ? orig[i] : p;
-    p.color = SkriblBrushField.mix(src.color, bgColor, acc * BLUR_FADE_MAX);
-    p.size = src.size * (1 + acc * BLUR_SPREAD_MAX);
+    _blurAcc.set(i, Math.min(1, (_blurAcc.get(i) || 0) + w * BLUR_RATE * travel));
   });
-  if(hit) _fieldTouched = true;
+  if(hit){ _fieldTouched = true; blurRebuild(f); }
   return hit;
 }
 
