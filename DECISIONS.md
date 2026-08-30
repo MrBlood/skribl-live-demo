@@ -3377,3 +3377,35 @@ Two further traps, both hit while fixing it and both worth the same warning:
 The timing assertion is pinned at 8s, where the OLD and NEW behaviours disagree,
 rather than at an exact end time that would be flaky and would break on every
 retune.
+
+## v257 -- Show the control, do not only describe it
+
+The stamp hint said "The highlighted button saves this selection to your Stamps
+shelf." That sentence works only if the highlight is noticed. The owner asked the
+obvious question: why not put the icon in the toast?
+
+So hints can now carry a glyph, and this one shows #sbStamp's OWN svg, lifted at
+runtime rather than redrawn. The assertion compares the markup rather than
+checking that an icon exists, because a second copy is only correct until either
+side changes -- pointing the toast at the pen's icon passes a presence check and
+fails this one.
+
+The wording dropped "The highlighted button" with it. The requirement was never a
+particular WORD: it is that the hint must not name a label the surface does not
+draw, since below the "regular" size class the selection bar has none and the
+word "Stamp" IS rendered in the tool tray. The assertion now states that rule
+directly instead of insisting on the word that used to imply it.
+
+Two layout traps, both from turning a centred block into a row:
+
+  * `.skribl-hint-text` is display:block, so an inline icon before it lands on
+    its own line and the toast reads as a caption over a paragraph. Fixed with
+    a flex row, scoped by :has() so hints WITHOUT an icon keep the centred
+    layout they were written for.
+  * The toast is position:fixed with no width, so it shrink-wraps. Harmless for
+    a block whose text fills to max-width, wrong for a flex row: the items
+    shrank instead and a two-word action button broke across two lines. The row
+    variant sets an explicit width.
+
+**A design that works as one layout does not survive being turned into another.**
+Both of these looked correct in the CSS and only showed up in a screenshot.
