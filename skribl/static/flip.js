@@ -4981,12 +4981,108 @@ function tweenPlan(per, groupsPer){
 /* Two pages can be interpolated only if their strokes line up: same number of
    groups, same number of points in each. Returns null when they do not, and the
    caller turns that into a sentence rather than a shrug. */
+/* ---------- v255: making the in-between accept HAND-DRAWN poses -------------
+
+   WHAT REFUSED, AND WHY IT WAS TOO STRICT. tweenMismatch demanded that the two
+   pages be structurally identical -- the same number of strokes AND the same
+   number of points in each. That is what Duplicate-then-drag produces, and for
+   that workflow it is exactly right. But drawing the next pose by hand is what
+   frame-by-frame animation IS, and a redraw of the same shape lands a different
+   number of points every time: a ball drawn twice came out 38 and 32, so the
+   feature refused the case it is most wanted for.
+
+   A STROKE IS A PATH, NOT A LIST OF VERTICES. Walking it at even spacing along
+   its own arc length and re-emitting it gives the same shape with whatever
+   vertex count you ask for. Resample both poses to a common count and they
+   correspond point-for-point; the exposure arithmetic below then runs
+   completely unchanged. It is not a guess at a pairing -- stroke s still pairs
+   with stroke s, exactly as before -- it only stops the VERTEX counts from
+   being the thing that decides.
+
+   NO FORMAT CHANGE, and that is the point. Rasterising would have bought a real
+   correspondence and cost exact scaling, which is the property this app is for.
+   Interpolating polylines keeps it: an in-between made this way is ordinary
+   stroke data at any zoom.
+
+   WHAT STILL REFUSES: two pages with a DIFFERENT NUMBER OF STROKES. Pairing
+   three strokes against four means deciding which one has no partner, and that
+   is the guess the v237 note declined to make. It is still declined here, and
+   now it is the only thing that refuses rather than one of two. */
+
+/* One run, resampled to exactly n points by arc length. */
+function tweenResample(pts, n){
+  if(n < 1) return [];
+  // A dot, or a run that never moved: n copies of the one point. Returning the
+  // run unchanged here would leave the two pages mismatched again, which is the
+  // whole bug -- and a dot is a perfectly ordinary thing to have on a page.
+  if(pts.length < 2) return Array.from({ length: n }, () => Object.assign({}, pts[0]));
+  const d = [0];
+  let total = 0;
+  for(let i = 1; i < pts.length; i++){
+    total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    d.push(total);
+  }
+  if(!(total > 0)) return Array.from({ length: n }, () => Object.assign({}, pts[0]));
+  const out = [];
+  let j = 1;
+  for(let k = 0; k < n; k++){
+    const target = total * (n === 1 ? 0 : k / (n - 1));
+    while(j < d.length - 1 && d[j] < target) j++;
+    const span = d[j] - d[j - 1];
+    const t = span > 0 ? (target - d[j - 1]) / span : 0;
+    const pa = pts[j - 1], pb = pts[j];
+    // Object.assign from the NEARER point carries colour, erase and t; only the
+    // geometry is interpolated. Blending colour along a run would invent shades
+    // the drawing never had.
+    const q = Object.assign({}, t < 0.5 ? pa : pb);
+    q.x = pa.x + (pb.x - pa.x) * t;
+    q.y = pa.y + (pb.y - pa.y) * t;
+    if(typeof pa.size === 'number' && typeof pb.size === 'number')
+      q.size = pa.size + (pb.size - pa.size) * t;
+    if(k === 0) q.start = true; else delete q.start;
+    out.push(q);
+  }
+  return out;
+}
+
+/* Splits a frame into its runs. */
+function tweenRuns(f){
+  const out = [];
+  let i = 0;
+  for(const n of f.strokeGroups){ out.push(f.strokes.slice(i, i + n)); i += n; }
+  return out;
+}
+
+/* Both pages resampled onto a shared structure. Returns {a, b} frame-shaped
+   COPIES -- the user's pages are never touched, so an in-between they undo
+   leaves the poses exactly as they drew them. Null when the stroke counts
+   differ, which is the one case still declined. */
+function tweenAlign(a, b){
+  const ra = tweenRuns(a), rb = tweenRuns(b);
+  if(ra.length !== rb.length) return null;
+  const A = { strokes: [], strokeGroups: [] };
+  const B = { strokes: [], strokeGroups: [] };
+  for(let s = 0; s < ra.length; s++){
+    // The denser of the two, so the pose that was drawn more carefully is the
+    // one that keeps its detail.
+    const n = Math.max(ra[s].length, rb[s].length);
+    const pa = tweenResample(ra[s], n), pb = tweenResample(rb[s], n);
+    A.strokes.push(...pa); A.strokeGroups.push(pa.length);
+    B.strokes.push(...pb); B.strokeGroups.push(pb.length);
+  }
+  return { a: A, b: B };
+}
+
 function tweenMismatch(a, b){
   if(!a || !b) return 'two pages';
   if(!a.strokes.length || !b.strokes.length) return 'two pages with drawing on them';
-  if(a.strokeGroups.length !== b.strokeGroups.length) return 'the same strokes on both';
-  for(let i = 0; i < a.strokeGroups.length; i++)
-    if(a.strokeGroups[i] !== b.strokeGroups[i]) return 'the same strokes on both';
+  /* v255: the POINT counts are no longer part of this. They used to be, and
+     that made a hand-redrawn pose refuse -- see the tweenAlign note above.
+     The stroke COUNT still is: pairing three strokes against four means
+     choosing which one has no partner, and that guess is still declined. */
+  if(a.strokeGroups.length !== b.strokeGroups.length)
+    return 'the same NUMBER of strokes on both pages — this one has '
+         + a.strokeGroups.length + ', the next has ' + b.strokeGroups.length;
   return null;
 }
 
@@ -5038,6 +5134,15 @@ function tweenFade(col, mul){
 function buildTween(a, b){
   const why = tweenMismatch(a, b);
   if(why){ chip('An in-between needs ' + why); return null; }
+  /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
+     them index for index, so aligning HERE leaves all of it unchanged. The
+     budget is computed on the aligned count, not the original: resampling
+     takes the denser of the two runs, so the exposure can be built from more
+     points than either page holds and budgeting on the source would let it
+     past the server's cap. */
+  const aligned = tweenAlign(a, b);
+  if(!aligned){ chip('An in-between needs the same number of strokes on both pages'); return null; }
+  a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
   const plan = tweenPlan(per, a.strokeGroups.length);
   if(!plan){

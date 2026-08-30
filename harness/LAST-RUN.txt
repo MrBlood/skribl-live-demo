@@ -1,38 +1,40 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-30T16:40:53Z
+UTC timestamp           : 2026-08-30T18:08:46Z
 Host                    : Linux x86_64
-Tree SHA-256            : 9c12a8d1099bb922cc1f9a59b6e9f22f0eec62f58c365244ac8a8b69af0d6e66
-Git commit              : ffc0ae8-dirty
-SKRIBL_VERSION          : v254
+Tree SHA-256            : f62fb0e074e496b7e038e988811bf6f5470a40d568735baaaf822b7a0c13240f
+Git commit              : 8b2e4be
+SKRIBL_VERSION          : v255
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.j6Gxcz9RIS/harness.db)
+Database reset          : yes (fresh /tmp/tmp.OCfccSZaYY/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_ux.py verify_audio.py verify_jsstrip.py verify_icons.py verify_tools.py verify_cssplit.py verify_parity.py verify_surfaces.py verify_sizeclass.py verify_tray.py verify_stamps.py verify_docs.py
+Command                 : harness/run_harness.sh verify_tween.py verify_help.py verify_flipmotion.py verify_liquify.py verify_smudgeblur.py verify_audio.py verify_surfaces.py verify_ux.py verify_parity.py verify_drafts.py verify_canvas.py verify_apiedges.py verify_exportui.py verify_docs.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 12
-  verify_ux.py: ok — 326/326 passed
+suites requested : 14
+  verify_tween.py: ok — 68/68 passed
+  verify_help.py: ok — 61/61 passed
+  verify_flipmotion.py: ok — 27/27 passed
+  verify_liquify.py: ok — 31/31 passed
+  verify_smudgeblur.py: ok — 31/31 passed
   verify_audio.py: ok — 18/18 passed
-  verify_jsstrip.py: ok — 27/27 passed
-  verify_icons.py: ok — 35/35 passed
-  verify_tools.py: ok — 120/120 passed
-  verify_cssplit.py: ok — 18/18 passed
-  verify_parity.py: ok — 118/118 passed
   verify_surfaces.py: ok — 9/9 passed
-  verify_sizeclass.py: ok — 73/73 passed
-  verify_tray.py: ok — 121/121 passed
-  verify_stamps.py: ok — 70/70 passed
+  verify_ux.py: ok — 326/326 passed
+  verify_parity.py: ok — 118/118 passed
+  verify_drafts.py: ok — 28/28 passed
+  verify_canvas.py: ok — 44/44 passed
+  verify_apiedges.py: ok — 31/31 passed
+  verify_exportui.py: ok — 45/45 passed
   verify_docs.py: ok — 67/67 passed
-assertions passed: 1002   (skipped suites contribute 0)
+assertions passed: 904   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
