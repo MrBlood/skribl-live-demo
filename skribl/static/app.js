@@ -3064,6 +3064,75 @@ function dragZoomPan(wrap) {
 
 
 
+// ---------- Skribl name (title) ----------
+// A skribl gets a real name from the header's name tab. It becomes serializeSkribl's
+// title, which drives the .skribl download filename, the draft label, and the
+// posted title. When the user leaves it blank we AUTO-FILL a readable default
+// (name + creation time) so two saves never collide as "date" and "date (1)".
+// The default is computed ONCE per session so the name is stable while editing.
+var _skriblDefaultName = (function () {
+  try {
+    var d = new Date();
+    var day = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    var tm = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return 'Skribl · ' + day + ' ' + tm;
+  } catch (e) { return 'Untitled Skribl'; }
+})();
+function currentSkriblTitle() {
+  var el = document.getElementById('skriblName');
+  var v = el && el.value ? el.value.trim() : '';
+  return v || _skriblDefaultName;
+}
+// Let a draft/autosave restore push its saved title back into the tab.
+function setSkriblTitle(t) {
+  var el = document.getElementById('skriblName');
+  if (el && typeof t === 'string') { el.value = t; if (el._syncLabel) el._syncLabel(); }
+}
+(function setupNameTab() {
+  var tab = document.getElementById('nameTab');
+  var shell = document.getElementById('nameShell');
+  var input = document.getElementById('skriblName');
+  var lbl = document.getElementById('nameLbl');
+  var done = document.getElementById('nameDone');
+  if (!tab || !shell || !input || !lbl) return;
+  input.placeholder = _skriblDefaultName;
+  function syncLabel() {
+    var v = input.value.trim();
+    // Empty => show the auto-name (muted) so it reads as already-named, not blank.
+    lbl.textContent = v || _skriblDefaultName;
+    lbl.classList.toggle('empty', !v);
+  }
+  input._syncLabel = syncLabel;
+  function setOpen(o) {
+    shell.classList.toggle('open', o);
+    shell.setAttribute('aria-hidden', String(!o));
+    tab.classList.toggle('open', o);
+    tab.setAttribute('aria-expanded', String(o));
+    if (o) {
+      // One drawer at a time: close Tune if it happens to be open.
+      var ts = document.getElementById('tuneShell');
+      if (ts && ts.classList.contains('open')) {
+        ts.classList.remove('open'); ts.setAttribute('aria-hidden', 'true');
+        var tb = document.getElementById('tuneBtn');
+        if (tb) { tb.classList.remove('open'); tb.setAttribute('aria-expanded', 'false'); }
+      }
+      setTimeout(function () { input.focus(); input.select(); }, 120);
+    }
+  }
+  tab.addEventListener('click', function () { setOpen(!shell.classList.contains('open')); });
+  input.addEventListener('input', syncLabel);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); setOpen(false); }
+    else if (e.key === 'Escape') { setOpen(false); tab.focus(); }
+  });
+  if (done) done.addEventListener('click', function () { setOpen(false); });
+  document.addEventListener('click', function (e) {
+    if (shell.classList.contains('open') && !shell.contains(e.target) && !tab.contains(e.target)) setOpen(false);
+  });
+  syncLabel();
+})();
+
+
 // ---------- Draft save / load ----------
 // serializeSkribl() produces one self-contained object. The same object shape
 // will POST to skribls.net later — only the transport changes.
@@ -3260,7 +3329,7 @@ function serializeSkribl() {
     userId: null,               // server stamps this later
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    title: 'Untitled Skribl',
+    title: currentSkriblTitle(),
     canvasSize: (() => {
       // The authored logical size (backing store in CSS px), NOT the fitted
       // display rect — otherwise a post made while rotated would record the
