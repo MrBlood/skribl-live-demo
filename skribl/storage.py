@@ -428,6 +428,30 @@ from .models import SkriblPost, SkriblPostMedia, SkriblPendingMedia  # noqa: E40
 import sqlalchemy as _sa  # noqa: E402
 
 
+_pending_media_ready = None
+
+
+def pending_media_ready(engine):
+    """Whether the skribl_pending_media table exists, cached for the process.
+
+    The claim path (v266) writes and deletes rows in this table. On a database
+    where the v203 migration has NOT been applied it does not exist, and on
+    PostgreSQL a single missing-table error ABORTS THE WHOLE TRANSACTION until
+    rollback — so an unguarded claim DELETE inside a post's transaction 500s the
+    post at the next statement (observed in production). Gate every claim
+    operation on this so it no-ops cleanly instead. Re-checked only on restart,
+    which every deploy performs; a database that gains the table mid-process
+    picks it up on the next deploy.
+    """
+    global _pending_media_ready
+    if _pending_media_ready is None:
+        try:
+            _pending_media_ready = _sa.inspect(engine).has_table("skribl_pending_media")
+        except Exception:
+            _pending_media_ready = False
+    return bool(_pending_media_ready)
+
+
 def claim_media(engine, keys, ttl_seconds):
     """Write a short-TTL COMMITTED reservation for each key, closing the sweep
     race (H3). The claim must be visible to the orphan sweeper BEFORE the post's
@@ -448,7 +472,7 @@ def claim_media(engine, keys, ttl_seconds):
     the write path stays a plain insert with no read-modify-write.
     """
     keys = [k for k in dict.fromkeys(keys or []) if k]
-    if not keys or engine is None:
+    if not keys or engine is None or not pending_media_ready(engine):
         return 0
     exp = (datetime.datetime.now(datetime.timezone.utc)
            + datetime.timedelta(seconds=max(1, int(ttl_seconds))))
