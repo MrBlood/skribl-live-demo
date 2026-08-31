@@ -29,7 +29,8 @@ from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
                      SkriblPendingMedia,
                      _visibility_policy, as_utc, session, visibility_values,
                      feed_filter, author_dict)
-from .storage import KEY_RE, LocalDiskStore, claim_media, externalise_payload
+from .storage import (KEY_RE, LocalDiskStore, claim_media, externalise_payload,
+                      pending_media_ready)
 from .core import MEDIA_CLAIM_TTL
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
@@ -565,7 +566,16 @@ def register_routes(bp, *, index_route=False):
                         # the post is later deleted; on rollback the delete
                         # reverts with everything else and the claim survives as
                         # the crashed-poster backstop until its TTL. (v266.)
-                        if media_keys:
+                        # Gate on the table existing. Where the v203 migration
+                        # has NOT been applied (e.g. a production database still
+                        # to be migrated) skribl_pending_media is absent, no
+                        # claim was ever written, and there is nothing to clear —
+                        # but the DELETE runs on the HOST session, so on
+                        # PostgreSQL a missing-table error here aborts the whole
+                        # transaction and the post's later statements (and the
+                        # rate-limiter insert) 500 with PendingRollbackError.
+                        # The gate makes it a clean no-op until the table exists.
+                        if media_keys and pending_media_ready(session().get_bind()):
                             session().query(SkriblPendingMedia).filter(
                                 SkriblPendingMedia.media_key.in_(media_keys)
                             ).delete(synchronize_session=False)
