@@ -200,6 +200,14 @@ def register_routes(bp, *, index_route=False):
         # folds into the pad as an in-app mode in a later phase).
         return render_template("skribl/skribl_flip.html")
 
+    @bp.get("/library")
+    def skribl_library():
+        # CONCEPT PREVIEW — a per-user library with an inline player that replays
+        # each skribl. Served as a real route so it can be seen live and the
+        # player iterated on; the tiles are self-contained demo drawings, not yet
+        # backed by GET /api/skribls. Not part of the sealed feature set.
+        return render_template("skribl/skribl_library.html")
+
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
         # Server-render Open Graph / Twitter card metadata so shared links unfurl
