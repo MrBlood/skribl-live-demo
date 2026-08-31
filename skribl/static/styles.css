@@ -4955,19 +4955,21 @@ body.player-mode #canvas {
    Tune drawer's exact grid-rows motion. Shared by Pad and Flip.
    ============================================================ */
 .name-tab {
-  position: absolute; left: 50%; bottom: 0;
-  transform: translateX(-50%) translateY(86%); z-index: 1;
+  /* Hangs into the ~12px gap between the header and the canvas — NOT over the
+     canvas (bottom keeps ~2px clearance). SOLID surface-panel, which is exactly
+     what the translucent header composites to over the near-black page, so the
+     tab matches the header instead of tinting toward the canvas behind it. */
+  position: absolute; left: 50%; bottom: -10px;
+  transform: translateX(-50%); z-index: 1;
   display: inline-flex; align-items: center; gap: 6px;
-  height: 24px; padding: 0 10px 0 11px; max-width: min(58%, 300px);
-  /* same surface as .header, so it reads as one piece, not a bordered chip */
-  background: rgba(var(--surface-well-2-rgb), 0.92);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  height: 23px; padding: 0 10px 0 11px; max-width: min(58%, 300px);
+  background: var(--surface-panel);
   border: 0; border-radius: 0 0 11px 11px; cursor: pointer;
   color: var(--text-secondary);
-  box-shadow: 0 7px 12px rgba(0, 0, 0, 0.30);
-  transition: color 0.14s, background 0.14s, transform 0.2s;
+  box-shadow: 0 4px 9px rgba(0, 0, 0, 0.30);
+  transition: color 0.14s, background 0.14s;
 }
-.name-tab:hover { background: rgba(var(--surface-control-rgb), 0.96); color: var(--text-primary); }
+.name-tab:hover { background: var(--surface-control); color: var(--text-primary); }
 .name-pen { width: 12px; height: 12px; color: var(--ui-hi); flex: none; }
 .name-lbl { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .name-lbl.empty { color: var(--text-dim); font-weight: 500; }
