@@ -4386,3 +4386,62 @@ residual (an unlisted platform with no SKRIBL_ENV gets the dev secret) is an
 operator-configuration matter, and `.env.example` now documents setting
 SKRIBL_ENV=production explicitly. The owner confirmed: docs, not a runtime
 behaviour change. This is a stance, stated, not an oversight.
+
+## v266 -- The sweep race is closed: a claim the sweeper can see
+
+Three releases circled this, and v265 shipped it deliberately open with a plan.
+Here is the fix: a committed pending-media reservation, the one mechanism that
+gives the orphan sweeper durable ownership to look at.
+
+The race was never a missing re-check; it was that the thing to check -- the
+post's SkriblPostMedia association -- commits in the HOST's transaction AFTER
+the bytes are written, so at delete time it does not yet exist to be seen. No
+number of stat re-reads can see an uncommitted row. So the poster now writes a
+short-TTL claim to `skribl_pending_media` the instant after it writes the bytes,
+COMMITTED on its own connection (independent of the host transaction, so it is
+durable and visible immediately), and the sweeper spares any object carrying an
+unexpired claim. The claim ages out by `expires_at` -- a post finishes in
+milliseconds, so the TTL only bounds a poster that died between claiming and
+committing -- and a rolled-back post's claim simply expires, so nothing has to
+delete it on the happy path.
+
+Two checks, for the two orderings. The batch reference query unions claims, so
+an object claimed before the sweep is spared outright. And a FINAL per-key claim
+re-check runs immediately before the delete -- the analogue of the age re-check
+-- because a claim can be committed in the up-to-500-key window between the
+batch query and the delete. That per-key re-check is the half that closes the
+reviewer's exact ordering: sweeper lists old, poster claims and reuses, sweeper
+reaches delete. The deterministic reproduction they asked for is in
+verify_sweepjob and fails the moment that re-check is removed.
+
+Read the claim on a FRESH connection, not the sweeper's session. The claim is
+committed on a different connection, and the sweeper's session may hold a
+transaction whose snapshot predates it -- SQLite is snapshot-isolated per
+transaction -- so a query through the session could miss a claim that is already
+durably committed, which is the whole race. A new connection reads the latest
+committed state on both backends.
+
+What is honestly bounded: the CLAIM WRITE is best-effort on SQLite. In rollback-
+journal mode a second writer blocks while the sweeper holds a read, so a claim
+written during a concurrent sweep may not land, and there the v264 age re-check
+still narrows the window. This does not matter where it is load-bearing:
+production is PostgreSQL, where MVCC lets the separate connection write and be
+read immediately, and single-file SQLite is single-process and does not run a
+sweeper against its own live writer. The test commits the claim through the
+session to exercise the sweeper's re-check deterministically on SQLite, and
+tests the real claim_media write path separately.
+
+The claim is internal reservation state -- no foreign key, pruned by expiry, and
+never seen by the player -- so it is not a payload or format change. It is a
+table plus a migration, confirmed as the owner's call before landing.
+
+## v266 -- A git checkout in a mutation test ate the fix, twice
+
+Worth recording because it happened twice this run and both times the release
+aggregate caught it. Mutation-testing an UNCOMMITTED change by editing a file
+and then `git checkout -- <file>` restores the file to HEAD -- which discards
+the real fix along with the injected mutant, because the fix was never
+committed. The first time (H1, v264) the full run failed on a missing sentinel;
+the second (this fix) on a missing `claim_media` import. The lesson is cheap:
+commit the fix before mutation-testing it, so the checkout reverts only the
+mutant. The safety-point commit is now part of the loop.

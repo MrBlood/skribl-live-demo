@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v265"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v266"` (skribl/core.py).**
 
 This is the sealed delivery of the Skribl source tree — the same files as the
 repository, packaged with the evidence of the run they were tested by.
