@@ -15,7 +15,7 @@ import re
 # skribl_editor.html drifted nine versions (it still read v96 at v105) — nothing
 # forced anyone to touch it. Bump this one line per release; verify_version.py
 # fails if a hardcoded version reappears in a template.
-SKRIBL_VERSION = "v265"
+SKRIBL_VERSION = "v266"
 
 OG_DEFAULT_TITLE = "Skribl Pad"
 OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."
@@ -102,3 +102,8 @@ RATE_CLEANUP_BATCH = _env_int("SKRIBL_RATE_CLEANUP_BATCH", 500, minimum=1)
 # How long an unresolved reservation keeps occupying a slot. Long enough for a
 # slow post to finish, short enough that a killed process costs seconds not hours.
 RATE_PENDING_TTL = _env_int("SKRIBL_RATE_PENDING_TTL", 120, minimum=5)
+# How long a pending-media claim protects a freshly-referenced object from the
+# orphan sweep. A post finishes in milliseconds; this only bounds a poster that
+# crashed between claiming an object and committing its association, after which
+# the object is fair game again. Minutes, not the media grace period.
+MEDIA_CLAIM_TTL = _env_int("SKRIBL_MEDIA_CLAIM_TTL", 300, minimum=10)

@@ -226,39 +226,18 @@ list gets easier once the bytes are out of the database.
 
 ---
 
-## 6b. The one known correctness gap: close the orphan-sweep race (v265 → next)
+## 6b. The orphan-sweep race — CLOSED in v266
 
-An outside review found, and a deterministic test confirms, a TOCTOU in orphan
-media sweeping: the media bytes are written before the post's association row,
-and that row commits inside the HOST's transaction, so between the sweeper's
-reference check and its delete a concurrent post can reuse an old object that
-the sweeper then deletes — leaving a committed post whose media 404s forever.
-`put_bytes`' touch and the sweeper's pre-delete re-stat narrow the window but
-cannot close it; no delete-time check can see an uncommitted association.
-
-**The fix to build: a committed pending-media reservation.** Right after
-`externalise_payload` writes the bytes, the poster records each `media_key` in a
-short-TTL claim that is COMMITTED independently of the host transaction (a
-separate connection, so it is durable and visible immediately). The sweeper's
-reference check unions committed `SkriblPostMedia` rows with unexpired claims;
-an object with a live claim is never swept. The claim ages out by TTL (a post
-completes in milliseconds; the TTL only bounds a crashed poster), so no explicit
-cleanup is required — the same shape as the rate limiter's pending reservation.
-
-Why this over the alternatives: it is backend-agnostic (identical for local disk
-and S3, and correct across hosts, unlike a filesystem lock), it leaves the
-`MediaStore` interface untouched (unlike a quarantine protocol, which every host
-integrator would then have to implement and which is awkward on S3's no-atomic-
-rename object model), and it matches a durability pattern already in the tree.
-Cost: one table plus an Alembic migration, and one small committed write per
-media post.
-
-**The acceptance test already exists in spec.** A store that performs the reuse
-at the `stat_key` seam, driven through `sweep_orphans_report`, must leave the
-reused object on disk. That test fails on today's code and must pass on the fix.
-
-This is internal server state, not a payload change the player sees — but it is
-a schema addition, so confirm the migration with the owner before landing it.
+This section documented the one known correctness gap: an orphan-media sweep
+could delete an object a concurrent post had just reused, because the post's
+association row commits in the host transaction after the bytes are written and
+no delete-time check could see it. It is fixed. A poster now writes a short-TTL
+COMMITTED pending-media claim (skribl_pending_media) the moment after it writes
+the bytes; the sweeper unions unexpired claims into its reference check and
+re-checks per key immediately before deleting. The deterministic reproduction —
+a claim committed at the stat seam must spare the object — lives in
+verify_sweepjob and fails if the per-key re-check is removed. See DECISIONS.md
+(v266) for the design and the honest SQLite bound.
 
 ## 7. The honest state
 

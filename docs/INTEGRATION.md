@@ -285,8 +285,9 @@ such a host is not wrong).
 
 ## Database and migrations
 
-Skribl ships Alembic migrations for its own four tables (`skribl_posts`,
-`skribl_post_media`, `skribl_rate_events`, `skribl_idempotency`). Two supported approaches:
+Skribl ships Alembic migrations for its own five tables (`skribl_posts`,
+`skribl_post_media`, `skribl_rate_events`, `skribl_idempotency`,
+`skribl_pending_media`). Two supported approaches:
 
 * **You own migrations.** Call `attach_to_metadata(db.metadata)` and let your
   Alembic autogenerate pick the tables up with everything else.

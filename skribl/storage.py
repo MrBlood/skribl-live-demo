@@ -424,7 +424,48 @@ def externalise_payload(payload, store, iter_media):
 # Module level, not inside the function: models does not import storage, so
 # there is no cycle, and verify_seam.py's name resolution cannot see imports
 # hidden inside a function body — which is exactly what it is there to catch.
-from .models import SkriblPost, SkriblPostMedia  # noqa: E402
+from .models import SkriblPost, SkriblPostMedia, SkriblPendingMedia  # noqa: E402
+import sqlalchemy as _sa  # noqa: E402
+
+
+def claim_media(engine, keys, ttl_seconds):
+    """Write a short-TTL COMMITTED reservation for each key, closing the sweep
+    race (H3). The claim must be visible to the orphan sweeper BEFORE the post's
+    association commits — and the association commits in the HOST's transaction,
+    which this must not touch — so the write goes on a FRESH connection that
+    commits on its own, independent of the caller's transaction.
+
+    Best-effort by design. On PostgreSQL (the concurrent-sweeper case this
+    guards) a separate connection writes immediately under MVCC. On SQLite the
+    host may hold the single writer; a bounded busy-timeout lets a brief hold
+    clear, and past that this gives up rather than stalling the request — a
+    single-file SQLite deployment is single-process and not running a sweeper
+    against itself, and there the v264 age re-check still narrows the window.
+    Returns the number of claims written (0 on give-up).
+
+    A claim is never updated or deleted here: duplicates are harmless (the
+    sweeper only asks 'is there an unexpired claim?') and expiry prunes them, so
+    the write path stays a plain insert with no read-modify-write.
+    """
+    keys = [k for k in dict.fromkeys(keys or []) if k]
+    if not keys or engine is None:
+        return 0
+    exp = (datetime.datetime.now(datetime.timezone.utc)
+           + datetime.timedelta(seconds=max(1, int(ttl_seconds))))
+    try:
+        with engine.connect() as conn:
+            if conn.dialect.name == "sqlite":
+                try:
+                    conn.exec_driver_sql("PRAGMA busy_timeout=2000")
+                except Exception:
+                    pass
+            conn.execute(_sa.insert(SkriblPendingMedia.__table__),
+                         [{"media_key": k, "expires_at": exp} for k in keys])
+            conn.commit()
+        return len(keys)
+    except Exception:
+        return 0
+
 
 def backfill_media(store, session, iter_media, batch=100, after_id=0,
                    limit=None, dry_run=True):
@@ -633,8 +674,37 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
     removed = []
     errors = []
     stats = {"listed": 0, "skipped_foreign": 0, "skipped_young": 0,
-             "skipped_referenced": 0, "skipped_reused": 0, "chunks": 0}
+             "skipped_referenced": 0, "skipped_reused": 0, "skipped_claimed": 0,
+             "chunks": 0}
     chunk = []
+
+    def _now_utc():
+        return datetime.datetime.now(datetime.timezone.utc)
+
+    def _claimed(keys):
+        """Keys carrying an UNEXPIRED pending-media claim — durable ownership a
+        concurrent poster wrote before its association could commit (H3).
+
+        Read on a FRESH connection, not the sweeper's own session. The claim is
+        committed by the poster on a separate connection; the sweeper's session
+        may hold a transaction whose snapshot predates it (SQLite is snapshot-
+        isolated per transaction), so querying through the session could miss a
+        claim that is already durably committed — the exact race this closes.
+        A new connection reads the latest committed state on both backends. A
+        store/session without the table (older schema) simply reports none."""
+        keys = list(keys)
+        if not keys:
+            return set()
+        try:
+            tbl = SkriblPendingMedia.__table__
+            with session.get_bind().connect() as conn:
+                rows = conn.execute(
+                    _sa.select(tbl.c.media_key).where(
+                        tbl.c.media_key.in_(keys),
+                        tbl.c.expires_at > _now_utc())).fetchall()
+            return {r[0] for r in rows}
+        except Exception:
+            return set()
 
     def flush_chunk():
         if not chunk:
@@ -643,9 +713,13 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
         referenced = {row[0] for row in
                       session.query(SkriblPostMedia.media_key)
                       .filter(SkriblPostMedia.media_key.in_(chunk)).all()}
+        claimed = _claimed(chunk)
         for key in chunk:
             if key in referenced:
                 stats["skipped_referenced"] += 1
+                continue
+            if key in claimed:
+                stats["skipped_claimed"] += 1
                 continue
             # RE-CHECK THE AGE, immediately before deleting. Listing and
             # deleting are separated by a reference query over up to 500 keys;
@@ -660,6 +734,16 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
                 if _now is not None and _now > cutoff:
                     stats["skipped_reused"] += 1
                     continue        # became young: a reuse is in flight
+            # FINAL per-key claim re-check, immediately before deleting — the
+            # analogue of the age re-check above, and the half that actually
+            # closes H3. The batch `claimed` set was read up to 500 keys ago; a
+            # poster can have committed a claim for THIS key in that window
+            # (exactly the reviewer's ordering: sweeper lists old, poster claims
+            # + reuses, sweeper reaches the delete). Re-reading the single key's
+            # claim here catches that. Cheap: one indexed equality lookup.
+            if _claimed((key,)):
+                stats["skipped_claimed"] += 1
+                continue
             if dry_run:
                 removed.append(key)
                 continue
@@ -687,6 +771,23 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
         if len(chunk) >= 500:
             flush_chunk()
     flush_chunk()
+    # Prune expired claims (housekeeping). A claim only ever protects; an expired
+    # one is dead weight, and pruning here keeps the table bounded without a
+    # second job. Never touches the caller's transaction on failure. Skipped on
+    # a dry run — a rehearsal reclaims nothing, real or reserved.
+    pruned = 0
+    if not dry_run:
+        try:
+            pruned = (session.query(SkriblPendingMedia)
+                      .filter(SkriblPendingMedia.expires_at <= _now_utc())
+                      .delete(synchronize_session=False))
+            session.commit()
+        except Exception:
+            try:
+                session.rollback()
+            except Exception:
+                pass
+            pruned = 0
     report = {
         "dry_run": bool(dry_run),
         "older_than_seconds": max(0, older_than_seconds),
@@ -694,6 +795,7 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
         "removed_count": len(removed),
         "delete_errors": errors,
         "delete_error_count": len(errors),
+        "claims_pruned": pruned,
         "duration_seconds": round(time.time() - started, 3),
     }
     report.update(stats)
