@@ -24,6 +24,11 @@
 (function () {
   'use strict';
 
+  // Computed FRESH at save time (get/filename), not cached: two blank saves a
+  // minute apart then get distinct names. It is deliberately NOT shown in the
+  // resting tab — a live timestamp there renders differently between two frames
+  // and makes any pixel comparison of the editor flaky (verify_cssplit). The tab
+  // shows a static "Untitled"; the auto-name surfaces as the input's placeholder.
   function computeDefault() {
     try {
       var d = new Date();
@@ -32,7 +37,6 @@
       return 'Skribl · ' + day + ' ' + tm;
     } catch (e) { return 'Untitled Skribl'; }
   }
-  var DEFAULT = computeDefault();
   var lbl = null;
 
   function inputEl() { return document.getElementById('skriblName'); }
@@ -41,8 +45,8 @@
     var el = inputEl();
     if (!el || !lbl) return;
     var v = el.value.trim();
-    // Blank => show the auto-name (muted) so the tab reads as already-named.
-    lbl.textContent = v || DEFAULT;
+    // Static when blank — deterministic to render. The auto-name lives on save.
+    lbl.textContent = v || 'Untitled';
     lbl.classList.toggle('empty', !v);
   }
 
@@ -50,7 +54,7 @@
     get: function () {
       var el = inputEl();
       var v = el && el.value ? el.value.trim() : '';
-      return v || DEFAULT;
+      return v || computeDefault();
     },
     set: function (t) {
       var el = inputEl();
@@ -73,7 +77,7 @@
     lbl = document.getElementById('nameLbl');
     if (!tab || !shell || !el || !lbl) return;   // no tab on this surface (player)
 
-    el.placeholder = DEFAULT;
+    el.placeholder = computeDefault();
 
     function setOpen(open) {
       shell.classList.toggle('open', open);

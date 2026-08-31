@@ -1,32 +1,30 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-31T21:50:32Z
+UTC timestamp           : 2026-08-31T22:38:47Z
 Host                    : Linux x86_64
-Tree SHA-256            : 31728d27c65672387d163864f7cac23a8d0c2c75b2fe127c4bae0560bf947c0d
-Git commit              : 9ad12e9-dirty
-SKRIBL_VERSION          : v267
+Tree SHA-256            : 19a1aecbd7be3a6f4b262ce843aa744c3907e726a312198a833881ea5897233b
+Git commit              : 3423ff5-dirty
+SKRIBL_VERSION          : v268
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.daUShM9WEM/harness.db)
+Database reset          : yes (fresh /tmp/tmp.qcgdci4Gfu/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_boot.py verify_lib.py verify_jsstrip.py verify_seam.py verify_csp.py verify_version.py
+Command                 : ./harness/run_harness.sh verify_cssplit.py verify_theme.py verify_surfaces.py verify_nametab.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 6
-  verify_boot.py: ok — 15/15 passed
-  verify_lib.py: ok — 8/8 passed
-  verify_jsstrip.py: ok — 27/27 passed
-  verify_seam.py: ok — 211/211 passed
-  verify_csp.py: ok — 32/32 passed
-  verify_version.py: ok — 25/25 passed
-assertions passed: 318   (skipped suites contribute 0)
+suites requested : 4
+  verify_cssplit.py: ok — 18/18 passed
+  verify_theme.py: ok — 42/42 passed
+  verify_surfaces.py: ok — 9/9 passed
+  verify_nametab.py: ok — 21/21 passed
+assertions passed: 90   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

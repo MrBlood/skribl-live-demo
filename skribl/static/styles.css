@@ -433,6 +433,7 @@ body {
    invisible there); the softer .post-watch chip is excluded so its light text
    stays clean; tabs use a purple underline (text on dark), so they're out too. */
 .btn.post,
+.name-done,
 .post-submit:not(.post-watch),
 .btn.play.playing,
 .player-cta,
@@ -4998,7 +4999,7 @@ body.recording .name-tab, body.playing .name-tab { display: none; }
 .name-input:focus { border-color: var(--ui-hi); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18); }
 .name-done {
   height: 38px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
-  font-weight: 700; font-size: 13px; color: #0b0713;
+  font-weight: 700; font-size: 13px; color: var(--text-primary);
   background: linear-gradient(150deg, var(--accent-2), var(--accent));
 }
 .name-done:hover { filter: brightness(1.06); }
