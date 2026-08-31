@@ -509,6 +509,35 @@ class SkriblPostMedia(SkriblBase):
                              name="fk_post_media_post", ondelete="CASCADE"),
     )
 
+class SkriblPendingMedia(SkriblBase):
+    """A short-lived, COMMITTED claim on a media object during a post.
+
+    THE RACE IT CLOSES (outside review of v263/v264/v265, H3). Media bytes are
+    written to the store BEFORE the post's SkriblPostMedia association row, and
+    that row commits inside the HOST's transaction — so between the orphan
+    sweeper's reference check and its delete, a post can reuse an object the
+    sweeper listed as long-dead, and the sweeper deletes it a moment before the
+    association commits. No delete-time check can see an UNCOMMITTED association,
+    so touch-and-re-check (v223/v264) narrows the window but cannot close it.
+
+    A pending claim is the durable ownership the sweeper CAN see: the poster
+    writes one — committed independently of the host transaction, so it is
+    visible immediately — for every object it is about to reference, and the
+    sweeper spares any object carrying an unexpired claim. The claim ages out by
+    `expires_at` (a post completes in milliseconds; the TTL only bounds a poster
+    that crashed between claiming and committing), so nothing has to delete it
+    on the happy path and a rolled-back post's claim simply expires.
+
+    No foreign key: a claim names an object, not a post, and outlives neither —
+    it is transient reservation state, pruned by expiry, not post lifecycle.
+    """
+    __tablename__ = "skribl_pending_media"
+
+    id = Column(Integer, primary_key=True)
+    media_key = Column(String(80), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+
 # --- the session seam -------------------------------------------------------
 # A callable, not a session: Flask-SQLAlchemy's `db.session` is a scoped session
 # proxy that must be resolved inside an application context, so binding the

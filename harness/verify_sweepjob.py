@@ -57,7 +57,7 @@ os.environ.update(ENV)
 
 from app import create_app                                        # noqa: E402
 import skribl.storage as storage                                  # noqa: E402
-from skribl.models import SkriblPost, SkriblPostMedia, session    # noqa: E402
+from skribl.models import SkriblPost, SkriblPostMedia, SkriblPendingMedia, session  # noqa: E402
 
 app = create_app()
 with app.app_context():
@@ -159,6 +159,7 @@ check("removed_count agrees with the list it summarises",
 check("every listed object is accounted for exactly once",
       rep["listed"] == (rep["skipped_foreign"] + rep["skipped_young"]
                         + rep["skipped_referenced"] + rep["skipped_reused"]
+                        + rep["skipped_claimed"]
                         + rep["removed_count"] + rep["delete_error_count"]),
       json.dumps({k: v for k, v in rep.items() if k != "removed"}))
 check("candidates is what survived both cheap filters",
@@ -365,6 +366,117 @@ check("the dry run and the wet run leave DIFFERENT disks behind",
       before == after_dry == 6 and after_wet == 3,
       f"{before} planted, {after_dry} after dry, {after_wet} after wet — "
       "the three survivors are the referenced, young and foreign objects")
+
+
+
+print("\nPENDING CLAIMS (v266) — the ownership that closes the sweep race (H3)")
+# OUTSIDE REVIEW OF v263/v264/v265. Media bytes are written before the post's
+# association row, which commits in the HOST's transaction — so no delete-time
+# check can see it, and touch-and-re-check cannot close the window. A poster now
+# writes a COMMITTED pending-media claim before its association commits, and the
+# sweeper spares any object carrying an unexpired one.
+
+
+def _add_claim(k, ttl_seconds):
+    exp = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=ttl_seconds)
+    s = session()
+    s.add(SkriblPendingMedia(media_key=k, expires_at=exp))
+    s.commit()
+
+
+import datetime  # noqa: E402
+
+# (1) An unexpired claim spares an orphan the sweep would otherwise reclaim.
+reset_store()
+K_CLAIMED = key("claimed")
+plant(K_CLAIMED, age_seconds=3 * DAY)          # old and unreferenced: a sure orphan
+with app.app_context():
+    session().query(SkriblPendingMedia).delete(); session().commit()
+    _add_claim(K_CLAIMED, 300)
+with app.test_request_context():
+    rep_c = storage.sweep_orphans_report(store_now(), session(), older_than_seconds=DAY,
+                                         dry_run=False)
+check("an object with an unexpired claim is spared and counted as claimed",
+      K_CLAIMED not in rep_c["removed"] and rep_c["skipped_claimed"] == 1
+      and K_CLAIMED in on_disk(),
+      f"skipped_claimed={rep_c['skipped_claimed']} removed={rep_c['removed']}")
+
+# (2) MUTATION-BY-DATA: an EXPIRED claim must NOT protect — otherwise the check
+# above passes for a build that skips every claimed key regardless of expiry,
+# which would leak orphans forever.
+reset_store()
+plant(K_CLAIMED, age_seconds=3 * DAY)
+with app.app_context():
+    session().query(SkriblPendingMedia).delete(); session().commit()
+    _add_claim(K_CLAIMED, -10)                 # already expired
+with app.test_request_context():
+    rep_e = storage.sweep_orphans_report(store_now(), session(), older_than_seconds=DAY,
+                                         dry_run=False)
+check("an EXPIRED claim does not protect — the object is reclaimed",
+      K_CLAIMED in rep_e["removed"] and K_CLAIMED not in on_disk(),
+      f"removed={rep_e['removed']}")
+check("…and the sweep prunes the expired claim it stepped over",
+      rep_e["claims_pruned"] >= 1, f"pruned={rep_e['claims_pruned']}")
+
+# (3) THE DETERMINISTIC REPRODUCTION the reviewer asked for: the sweeper lists an
+# object as old, a concurrent poster CLAIMS (committed) and reuses it inside the
+# window, and the sweeper reaches its delete. On v265 the object is deleted and
+# its committed post 404s; the per-key claim re-check must now spare it.
+reset_store()
+K_RACE = key("race")
+plant(K_RACE, age_seconds=3 * DAY)
+_race_path = store_now()._paths(K_RACE)[1]
+with app.app_context():
+    session().query(SkriblPendingMedia).delete(); session().commit()
+_old = time.time() - 3 * DAY
+
+
+class ClaimsAtStatSeam(storage.LocalDiskStore):
+    def stat_key(self, k):
+        if k == K_RACE:
+            # the concurrent poster, at the exact TOCTOU seam: COMMIT a claim
+            # then reuse the object, and report the pre-touch age so the sweeper
+            # still believes it is deletable. The claim is committed through the
+            # session here rather than claim_media's separate connection because
+            # SQLite's rollback-journal lock would block a second writer while
+            # this sweep holds a read — the write-path contention that makes the
+            # claim best-effort on SQLite and fully effective on PostgreSQL,
+            # where this race actually occurs. What is under test is the
+            # SWEEPER's per-key recheck honouring a claim that appears after the
+            # batch query, which this reproduces deterministically.
+            s = session()
+            s.add(SkriblPendingMedia(
+                media_key=K_RACE,
+                expires_at=datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(seconds=300)))
+            s.commit()
+            self.put_bytes(b"reused-bytes", "image/png", K_RACE)
+            return _old                        # sweeper still holds the age it read
+        return super().stat_key(k)
+
+
+with app.test_request_context():
+    rep_r = storage.sweep_orphans_report(
+        ClaimsAtStatSeam(MEDIA_ROOT, lambda k: "/m/" + k),
+        session(), older_than_seconds=DAY, dry_run=False)
+check("REVIEWER ORDERING: claim-at-seam spares the reused object from deletion",
+      os.path.exists(_race_path) and K_RACE not in rep_r["removed"]
+      and rep_r["skipped_claimed"] >= 1,
+      f"survived={os.path.exists(_race_path)} skipped_claimed={rep_r['skipped_claimed']}")
+
+# (4) claim_media writes durable rows visible to a fresh reader (it is what the
+# poster relies on being seen before its own transaction commits).
+reset_store()
+with app.app_context():
+    session().query(SkriblPendingMedia).delete(); session().commit()
+    eng = session().get_bind()
+    n = storage.claim_media(eng, [key("w1"), key("w2"), key("w2")], 120)   # dup collapses
+    n_empty = storage.claim_media(eng, [], 120)
+with app.app_context():
+    seen = {r[0] for r in session().query(SkriblPendingMedia.media_key).all()}
+check("claim_media writes one committed row per distinct key",
+      n == 2 and seen == {key("w1"), key("w2")}, f"n={n} seen={len(seen)}")
+check("claim_media with no keys writes nothing", n_empty == 0)
 
 
 shutil.rmtree(DB_DIR, ignore_errors=True)

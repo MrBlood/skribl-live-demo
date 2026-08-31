@@ -28,7 +28,8 @@ from .core import (MAX_CAPTION_CHARS, MAX_CARD_BYTES, MAX_TITLE_CHARS,
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
                      _visibility_policy, as_utc, session, visibility_values,
                      feed_filter, author_dict)
-from .storage import KEY_RE, LocalDiskStore, externalise_payload
+from .storage import KEY_RE, LocalDiskStore, claim_media, externalise_payload
+from .core import MEDIA_CLAIM_TTL
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
 from .validation import (_decode_data_url_image, _iter_media_items,
@@ -501,6 +502,18 @@ def register_routes(bp, *, index_route=False):
             # rate-limit slot still held for the whole window.
             stored_payload, media_keys = externalise_payload(
                 payload, bp.skribl_media_store, _iter_media_items)
+
+            # Reserve the objects we just wrote BEFORE the association commits
+            # (H3). The claim is committed on its own connection, so the orphan
+            # sweeper sees it immediately and spares these objects during the
+            # window between the bytes landing and this request's transaction
+            # committing. Best-effort — a claim that cannot be written degrades
+            # to the pre-v266 age re-check and never fails the post.
+            if media_keys:
+                try:
+                    claim_media(session().get_bind(), media_keys, MEDIA_CLAIM_TTL)
+                except Exception:
+                    pass
 
             for _attempt in range(5):
                 candidate = secrets.token_urlsafe(8)
