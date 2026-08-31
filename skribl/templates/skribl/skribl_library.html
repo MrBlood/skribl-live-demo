@@ -93,7 +93,10 @@
     }
     .avatar canvas { display: block; width: 100%; height: 100%; }
     .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-    .who .name { font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
+    .who .name { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 20px; letter-spacing: -.01em; }
+    .verified { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%;
+      background: linear-gradient(150deg, var(--accent-bright), var(--accent)); color: #0b0616;
+      font-size: 11px; font-weight: 900; box-shadow: 0 2px 8px var(--accent-glow); }
     .who .handle { font-family: var(--font-mono); color: var(--accent-tint); font-size: 13px; }
     .who .bio { color: var(--text-2); font-size: 13.5px; margin-top: 2px; }
     .stats { display: flex; gap: 22px; margin-left: auto; }
@@ -160,6 +163,17 @@
     .card .ct { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; margin-bottom: 5px; }
     .card .cm { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
     .card .cm .dur { color: var(--text-2); }
+    /* Social counts — the skribls.net post model (like / repost / reply). */
+    .st { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-family: var(--font-mono);
+      font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .st span { display: inline-flex; align-items: center; gap: 4px; }
+    .st svg { width: 13px; height: 13px; }
+    .st .like { color: #ff7fb2; }
+    .pstats { display: flex; align-items: center; gap: 16px; margin-top: 10px; font-family: var(--font-mono);
+      font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+    .pstats span { display: inline-flex; align-items: center; gap: 6px; }
+    .pstats svg { width: 15px; height: 15px; }
+    .pstats .like { color: #ff7fb2; }
   
     .empty { grid-column: 1 / -1; text-align: center; color: var(--text-3); font-family: var(--font-mono); font-size: 13px; padding: 40px 0; }
     .more-wrap { display: flex; justify-content: center; margin-top: 16px; }
@@ -183,17 +197,19 @@
     <div class="ghost">concept · library view</div>
   </div>
 
+  <!-- PLACEHOLDER IDENTITY — mirrors a skribls.net profile (display name, verified
+       badge, @handle). Wire to the signed-in user when this leaves concept. -->
   <div class="profile">
     <div class="avatar"><canvas id="avatarCanvas" width="124" height="124"></canvas></div>
     <div class="who">
-      <div class="name">mrblood</div>
-      <div class="handle">@mrblood</div>
+      <div class="name">Mr. B <span class="verified" title="Verified account" aria-label="Verified">✓</span></div>
+      <div class="handle">@bigballbaron</div>
       <div class="bio">Timed drawings & frame loops. Mostly at 3am.</div>
     </div>
     <div class="stats">
       <div class="stat"><b id="statCount">0</b><span>skribls</span></div>
-      <div class="stat"><b>1.4k</b><span>plays</span></div>
-      <div class="stat"><b>’26</b><span>since</span></div>
+      <div class="stat"><b id="statLikes">0</b><span>likes</span></div>
+      <div class="stat"><b>418</b><span>followers</span></div>
     </div>
   </div>
 
@@ -211,6 +227,7 @@
           <span class="kind" id="pKind"></span>
           <span id="pMeta"></span>
         </div>
+        <div class="pstats" id="pStats"></div>
       </div>
       <div class="scrub" id="scrub"><div class="fill" id="scrubFill"></div></div>
       <div class="transport">

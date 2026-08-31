@@ -158,23 +158,28 @@ function draw(canvas, sk, p){
 }
 
 /* ---- the library data: real-looking skribls -------------------------------*/
+/* Each row: title, motif, kind, dur, pages, date, likes, reposts, replies.
+   The last three are the skribls.net post model — every skribl is a post, so it
+   carries the same engagement counts a post does. Placeholders until the library
+   is wired to GET /api/skribls (which returns the real counts per post). */
 const RAW = [
-  ['Pirate Frequency','bolt','pad',41,null,'2d'],
-  ['3AM Transmission','wave','flip',12,24,'4d'],
-  ['Acid Regular','smiley','pad',18,null,'6d'],
-  ['Dubplate','cassette','pad',33,null,'1w'],
-  ['Third Eye Open','eye','flip',9,18,'1w'],
-  ['Blockparty','boombox','pad',52,null,'2w'],
-  ['Nightmoth','moth','flip',7,14,'2w'],
-  ['Respect','hand','pad',28,null,'3w'],
-  ['Soundsystem','stack','flip',15,30,'3w'],
-  ['Bloom','flower','pad',22,null,'1mo'],
-  ['Untitled Tag','tag','pad',19,null,'1mo'],
-  ['No Signal','static','flip',6,12,'2mo'],
+  ['Pirate Frequency','bolt','pad',41,null,'2d',  128, 22, 14],
+  ['3AM Transmission','wave','flip',12,24,'4d',    76,  9,  6],
+  ['Acid Regular','smiley','pad',18,null,'6d',     54,  6,  8],
+  ['Dubplate','cassette','pad',33,null,'1w',       91, 12,  5],
+  ['Third Eye Open','eye','flip',9,18,'1w',       210, 41, 19],
+  ['Blockparty','boombox','pad',52,null,'2w',     167, 28, 11],
+  ['Nightmoth','moth','flip',7,14,'2w',            38,  4,  3],
+  ['Respect','hand','pad',28,null,'3w',            72,  8,  9],
+  ['Soundsystem','stack','flip',15,30,'3w',       119, 17,  7],
+  ['Bloom','flower','pad',22,null,'1mo',           63,  5,  4],
+  ['Untitled Tag','tag','pad',19,null,'1mo',       47,  6,  2],
+  ['No Signal','static','flip',6,12,'2mo',         29,  3,  1],
 ];
 let ID = 0;
 const SKRIBLS = RAW.map((r,i) => ({
   id:'sk'+(ID++), title:r[0], motif:r[1], kind:r[2], dur:r[3], pages:r[4], date:r[5],
+  likes:r[6], reposts:r[7], replies:r[8],
   seed: (i*2654435761)>>>0, ground: GROUNDS[i%GROUNDS.length],
   strokes: MOTIFS[r[1]](),
 }));
@@ -182,6 +187,15 @@ const SKRIBLS = RAW.map((r,i) => ({
 /* ---- icons ---------------------------------------------------------------*/
 const IC_PAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 const IC_FLIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>';
+
+/* Social action glyphs, matched to skribls.net: filled heart (like), the
+   two-arrow repost, and the speech-bubble reply. */
+const IC_LIKE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.2-4.7-9.7-9.2C.7 8.3 2.6 5 6 5c2.1 0 3.3 1.2 4 2.3C10.7 6.2 11.9 5 14 5c3.4 0 5.3 3.3 3.7 6.8C19.2 16.3 12 21 12 21z"/></svg>';
+const IC_REPOST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+const IC_REPLY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L4 20l1.1-4.3A8.4 8.4 0 1 1 21 11.5z"/></svg>';
+const statInner = sk => '<span class="like">'+IC_LIKE+sk.likes+'</span>'
+  + '<span>'+IC_REPOST+sk.reposts+'</span>'
+  + '<span>'+IC_REPLY+sk.replies+'</span>';
 const fmt = s => Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 const metaLine = sk => sk.kind==='flip' ? (sk.pages+' pages · '+sk.dur+' fps') : ('plays '+fmt(sk.dur));
 
@@ -210,6 +224,7 @@ function buildGrid(){
       '</div>'+
       '<div class="body"><div class="ct">'+sk.title+'</div>'+
         '<div class="cm"><span class="dur">'+(sk.kind==='flip'?sk.pages+'p':fmt(sk.dur))+'</span><span>·</span><span>'+sk.date+'</span></div>'+
+        '<div class="st">'+statInner(sk)+'</div>'+
       '</div>';
     el.addEventListener('click', () => load(sk, true));
     grid.appendChild(el);
@@ -243,6 +258,7 @@ function load(sk, autoplay){
   const k = document.getElementById('pKind');
   k.className = 'kind '+sk.kind; k.innerHTML = (sk.kind==='flip'?IC_FLIP:IC_PAD)+(sk.kind==='flip'?'Flip':'Pad');
   document.getElementById('pMeta').textContent = metaLine(sk);
+  document.getElementById('pStats').innerHTML = statInner(sk);
   playDurMs = (sk.kind==='flip' ? Math.max(3.2, sk.pages/sk.dur*4) : Math.min(7, Math.max(3.5, sk.dur/8))) * 1000;
   setActiveCard();
   stop(); draw(stage, sk, 1); setScrub(1); setElapsed(1);
@@ -298,6 +314,8 @@ window.addEventListener('resize', ()=>{ drawAvatar(); if(!playing) draw(stage,cu
 const AVATAR = {seed:99, ground:'#14122b', strokes: MOTIFS.bolt()};
 function drawAvatar(){ draw(document.getElementById('avatarCanvas'), AVATAR, null); }
 document.getElementById('statCount').textContent = SKRIBLS.length;
+{ const tot = SKRIBLS.reduce((a,s)=>a+s.likes,0);
+  document.getElementById('statLikes').textContent = tot>=1000 ? (tot/1000).toFixed(1)+'k' : tot; }
 
 /* boot — draw after a frame so the canvases have their laid-out size */
 buildGrid();
