@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-31T16:14:47Z
+UTC timestamp           : 2026-08-31T17:12:04Z
 Host                    : Linux x86_64
-Tree SHA-256            : a63c554145965e834c8b3d15157e86be0dd3acb20b9c3e1b9814f9d10d88bc8d
-Git commit              : 641f0ad-dirty
+Tree SHA-256            : 8563a47b466f0207fce220271d3a05deecb612d493c476a397e1a2b2d167b6e6
+Git commit              : 24d4968-dirty
 SKRIBL_VERSION          : v267
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,7 +10,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.jookRapquY/harness.db)
+Database reset          : yes (fresh /tmp/tmp.Hji3XofYEM/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -37,7 +37,7 @@ suites requested : 88
   verify_cssplit.py: ok — 18/18 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: FAIL — exit 1, 62/65 passed  FAILURES: ARCHIVE-README states the real source version up front, README.md states the real version, ARCHIVE-README.md states the real version
+  verify_docs.py: ok — 65/65 passed
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 28/28 passed
   verify_exopts.py: ok — 26/26 passed
@@ -110,6 +110,6 @@ suites requested : 88
   verify_ux.py: ok — 326/326 passed
   verify_version.py: ok — 25/25 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 3849   (skipped suites contribute 0)
+assertions passed: 3914   (skipped suites contribute 0)
 suites skipped   : 2
-suites with problems: 1
+suites with problems: 0
