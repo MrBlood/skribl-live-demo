@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-31T03:00:04Z
+UTC timestamp           : 2026-08-31T03:35:41Z
 Host                    : Linux x86_64
-Tree SHA-256            : 6770833887e0e42137eca97ec3d62d0fa0d945287ee20efafa4b204cc5bc5223
-Git commit              : 7825a01-dirty
+Tree SHA-256            : 7e099a7686a692eb82df577bca612c68757f06c7060266be8ed31fb9cd7543bc
+Git commit              : 51ceb56-dirty
 SKRIBL_VERSION          : v264
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -10,20 +10,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.MGhuNh7S7M/harness.db)
+Database reset          : yes (fresh /tmp/tmp.GyQLbC7ioc/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_medialimits.py verify_hostconfig.py verify_sweepjob.py
+Command                 : harness/run_harness.sh verify_hold.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 3
-  verify_medialimits.py: ok — 76/76 passed
-  verify_hostconfig.py: ok — 55/55 passed
-  verify_sweepjob.py: ok — 42/42 passed
-assertions passed: 173   (skipped suites contribute 0)
+suites requested : 1
+  verify_hold.py: ok — 56/56 passed
+assertions passed: 56   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0

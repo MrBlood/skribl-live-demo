@@ -59,7 +59,12 @@ BATCHES = [
     # verify_tools.py holds the v213 tool work, split out of verify_ux when that
     # suite outgrew a single invocation. Its own batch for the same reason.
     ["verify_tools.py"],
-    ["verify_move.py", "verify_pages.py", "verify_hold.py"],
+    ["verify_move.py", "verify_pages.py"],
+    # verify_hold times a real playback loop and asserts frame-pacing evenness,
+    # so — like verify_player_isolation below — it must not share a batch with a
+    # browser competing for the same CPU, or a contention spike reads as a
+    # pacing failure. (Its own flake in the v264 release run.)
+    ["verify_hold.py"],
     ["verify_review.py", "verify_help.py", "verify_tips.py"],
     ["verify_exportui.py", "verify_exopts.py", "verify_dots.py", "verify_fix.py"],
     ["verify_amber.py", "verify_posted.py", "verify_report.py", "verify_canvas.py"],
