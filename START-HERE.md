@@ -249,8 +249,17 @@ Check the version label in the app footer before diagnosing anything.
 ## Decisions that are the user's, not the assistant's
 
 **The migration chain collapse is CLOSED.** It required that no database had
-run v135-v141. The live Postgres is stamped at head `f0a3d81b47e2`. Do not
+run v135-v141. The live Postgres has run at least through `f0a3d81b47e2`. Do not
 propose collapsing it again.
+
+**The deploy now runs `alembic upgrade head` (v267).** As of v267 the Procfile
+migrates before serving, so production converges to the chain head on every
+deploy rather than depending on someone applying migrations by hand — which is
+what left `skribl_pending_media` (head `f7c2e0a934d1`) absent and 500'ing media
+posts. The FIRST deploy carrying this change applies whatever the live database
+was behind by. That is expected and idempotent; watch the deploy log the once,
+since a chain of never-applied additive migrations is applied against populated
+tables in that single boot.
 
 **THE PAD/FLIP GUARD ASYMMETRY IS DELIBERATE.** Pad confirms before leaving for
 Flip; Flip does NOT confirm on the way back. That is not an oversight and should
@@ -2270,6 +2279,14 @@ bytes.
     pip install -r constraints.txt --require-hashes    # the pinned lock
     python -m alembic upgrade head                     # NOT create_all()
     gunicorn app:app
+
+The `Procfile` now does the middle two together — `web: python -m alembic
+upgrade head && gunicorn app:app` — so a deploy applies the chain before it
+serves. Before v267 the start command was a bare `gunicorn app:app`; the
+migration step was documented here but wired into nothing, which is how
+production drifted a release behind head and 500'd every media post (DECISIONS
+v267). If you ever run more than one web instance, move the migrate to a Render
+`preDeployCommand` so two boots cannot race the same `upgrade head`.
 
     ./harness/run_harness.sh verify_move.py            # name them; a bare run hangs
     python3 harness/stamp_docs.py                      # docs from LAST-RUN.txt

@@ -508,6 +508,35 @@ try:
 except Exception as _e5:    # noqa: BLE001
     check("the v180 invariants are testable", False, repr(_e5))
 
+# ── the deploy actually APPLIES the chain (v267) ─────────────────────────────
+# A migration chain that never runs is decoration. Production drifted a whole
+# release behind head and the missing skribl_pending_media table 500'd every
+# media-carrying post, because `db.create_all()` lives only in the init-db CLI
+# and the deploy start command was a bare `gunicorn app:app` with no migration
+# step. The fix is one line in the Procfile: run `alembic upgrade head` before
+# serving, so every deploy converges the schema to head. These assertions pin
+# that wiring so it cannot silently regress to bare gunicorn again.
+try:
+    _procfile = (ROOT / "Procfile").read_text()
+    _web = next((ln for ln in _procfile.splitlines()
+                 if ln.strip().startswith("web:")), "")
+    check("the Procfile's web process runs `alembic upgrade head`",
+          "alembic upgrade head" in _web, _web.strip() or "(no web: line)")
+    check("it still starts gunicorn to serve", "gunicorn" in _web,
+          _web.strip())
+    # Order matters: the schema must be at head BEFORE the app accepts a request,
+    # so the migrate has to come first and gate the server on its success.
+    _mig_at = _web.find("alembic upgrade head")
+    _gun_at = _web.find("gunicorn")
+    check("the migration runs BEFORE the server starts",
+          _mig_at != -1 and _gun_at != -1 and _mig_at < _gun_at,
+          f"migrate@{_mig_at} gunicorn@{_gun_at}")
+    check("the server is gated on the migration succeeding (chained with &&)",
+          "&&" in _web and _web.find("&&") > _mig_at and _web.find("&&") < _gun_at,
+          "a bad schema must fail the deploy, not serve on it")
+except Exception as _e6:    # noqa: BLE001
+    check("the deploy's migration wiring is inspectable", False, repr(_e6))
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

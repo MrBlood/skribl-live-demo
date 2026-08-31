@@ -4445,3 +4445,59 @@ committed. The first time (H1, v264) the full run failed on a missing sentinel;
 the second (this fix) on a missing `claim_media` import. The lesson is cheap:
 commit the fix before mutation-testing it, so the checkout reverts only the
 mutant. The safety-point commit is now part of the loop.
+
+## v267 -- The migration that never ran, and the deploy that now runs it
+
+v266 added `skribl_pending_media` and a migration to create it. Production never
+got the table, and every `POST /api/skribls` carrying a photo or audio loop
+started returning 500. The claim path writes a reservation and then, inside the
+post's savepoint, DELETEs it once the association row exists -- and that DELETE
+runs on the HOST session. On PostgreSQL one missing-table error aborts the
+entire transaction, so the rate-limiter's next INSERT failed with
+`PendingRollbackError` and the whole post fell over. It passed every SQLite test
+because SQLite does not abort the transaction on a failed statement: the same
+code there raises a plain `no such table` from the DELETE and nothing downstream
+is poisoned. A Postgres-only failure mode that the SQLite suite is structurally
+blind to -- the recurring shape of this project's transaction bugs.
+
+The root cause was not the DELETE; it was that **the migration was never
+applied.** `db.create_all()` lives only in the `init-db` CLI, and the deploy's
+start command was a bare `gunicorn app:app` with no migration step, so the
+schema in production only ever changed when someone ran Alembic by hand. Every
+release since has depended on remembering to do that, and v203 is the one that
+got missed. START-HERE has said for a dozen versions that the startup sequence
+begins with `alembic upgrade head` -- it just was not wired into anything that
+runs on a deploy.
+
+Two changes, and the second is the one that matters:
+
+1. **Gate the claim path on the table existing.** `storage.pending_media_ready`
+   is a cached `has_table("skribl_pending_media")` check, re-evaluated every
+   process start (i.e. every deploy). `claim_media` returns 0 when it is absent,
+   and the host-session DELETE in routes.py is gated on it too, so it can never
+   issue a statement against a missing table. Where the table is absent the
+   claim path is a clean no-op -- posting works, and the H3 sweep protection is
+   simply inactive until the schema catches up. This shipped first, unsealed, to
+   stop the bleeding.
+
+2. **Wire the migration into the deploy.** The Procfile's web process is now
+   `python -m alembic upgrade head && gunicorn app:app`. Every deploy converges
+   the schema to head before the app accepts a request, and a migration that
+   fails takes the deploy down with it rather than serving on a broken schema --
+   which is the correct failure. On the single Starter instance there is no
+   concurrency to worry about: the start command runs once per container boot,
+   before gunicorn forks its workers. If this ever scales past one web instance,
+   move the migrate to a Render `preDeployCommand` so two instances cannot race
+   the same `upgrade head`; `alembic upgrade head` is idempotent, so the race is
+   wasteful rather than dangerous, but a pre-deploy phase is the right home for
+   it at that point.
+
+`verify_migrations.py` now pins the Procfile wiring (migrate present, before
+gunicorn, chained with `&&`), so a future edit cannot quietly regress it to bare
+gunicorn. `verify_sweepjob.py` drops the table and proves a media-carrying POST
+still returns 201 -- the exact production case, reproduced deterministically.
+
+The honest bound: the gate reads the schema once per process. A database that
+gains the table while the process is live keeps no-oping until the next deploy
+restarts it -- which, since the same deploy is what applies the migration, is
+exactly when it should start working. The two are wired to the same event.

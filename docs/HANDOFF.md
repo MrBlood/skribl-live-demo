@@ -500,7 +500,8 @@ deploy; `git add static/skribl/lib/audioloop.js` fixes it once the rule is ancho
 They previously existed only inside handoff zips — 148 assertions and the entire
 project history riding on files passed hand to hand, which is precisely how v101
 lost `app.py`. Both directories are now part of the tree. The harness is dev-only
-and does not affect the deploy; `Procfile` still runs `gunicorn app:app`.
+and does not affect the deploy; `Procfile` runs `python -m alembic upgrade head &&
+gunicorn app:app` as of v267 (it migrates before it serves — see DECISIONS v267).
 
 ## v103 — Flip loads the vendored mp4-muxer (template-only change)
 The Pad already vendored mp4-muxer (`skribl_editor.html`, classic `<script src>`).
