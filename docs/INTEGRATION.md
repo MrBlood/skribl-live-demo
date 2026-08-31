@@ -9,7 +9,7 @@ mounts Skribl into a throwaway host application — not into the demo — and ho
 it to this contract. If the guide and the suite ever disagree, the suite is
 right.
 
-The planning record that used to live here is now `docs/INTEGRATION-HISTORY.md`.
+The planning record that used to live here was retired in the v263 cleanup; it lives in git history.
 
 ---
 

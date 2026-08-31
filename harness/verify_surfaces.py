@@ -78,7 +78,7 @@ shared = sorted(app_fns & flip_fns)
 # Pad got it in v209. That is exactly the "fix made twice" this ratchet exists
 # to count, and it is counted honestly rather than hidden behind a different
 # name in one file. The cure is the externalisation of the editor-only Web
-# Audio loop into a shared lib (HANDOFF-NEXT-SESSION.md), which would take
+# Audio loop into a shared lib (an old handoff's suggestion), which would take
 # startWebAudioLoop, stopWebAudioLoop, webAudioLoopSongTime, and this
 # fallback OUT of both files and move this number the right way.
 # v213: 58 -> 60. The two new shared names are _eraserSize and _brushWidth.

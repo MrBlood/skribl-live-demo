@@ -74,6 +74,9 @@ BATCHES = [
     ["verify_player_photo.py"],
     ["verify_visual.py"],
     ["verify_flipmotion.py"],
+    # v263: the playback bitmap cache. Browser-heavy (it plays loops on both
+    # surfaces and times them), so it gets a batch of its own.
+    ["verify_framecache.py"],
     ["verify_parity.py"],
     ["verify_audio.py", "verify_seam.py", "verify_loopcap.py", "verify_audiostate.py"],
     ["verify_gifenc.py", "verify_muxer.py", "verify_mp4.py", "verify_flipmeta.py"],

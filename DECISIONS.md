@@ -4174,3 +4174,40 @@ replace are provably far apart is right after the FIRST blit, where a blend
 still carries >=60% of the stale cost. The assertion moved there and the
 mutation dies by name now. Same lesson as v261's detector, from the other
 side: WHEN a property is measured is part of what is measured.
+
+## v263 -- The tree is the product now, so the tree got the cleanup
+
+The owner is taking this public on a fresh repository and asked for no loose
+ends. Thirty-five files left the tree, in four families, every one preserved
+in git history rather than destroyed:
+
+  * sixteen V2xx-CHANGES.md changelogs -- per-seal narratives whose job passed
+    to docs/HANDOFF.md and the commit log;
+  * thirteen review-thread documents (REVIEW-RESPONSE.md, the
+    docs/REVIEW-RESPONSE-v2xx set, REVIEW-RETORT-v207) -- each one records
+    what was true AT THE TIME of a review that is over;
+  * two superseded briefs, FOR-THE-REVIEWER.md ("This is v227, SEALED") and
+    HANDOFF-NEXT-SESSION.md ("Current sealed build: v228") -- both were still
+    on verify_docs' CURRENT_DOCS list, which is exactly how a stale doc stays
+    authoritative: a ratchet was pointing readers at them as guidance
+    thirty-five versions after they stopped describing anything;
+  * the workshop leavings -- INTEGRATION-HISTORY.md (self-declared
+    historical), ROADMAP.md (checkboxes superseded by START-HERE's open list),
+    UI-PROPOSALS.html, and four v17x/v18x patch files for trees that no
+    longer exist.
+
+ARCHIVE-README.md was rewritten rather than removed: 1,589 lines of v131-era
+delivery narrative ("this archive is built on the v131 client code...") down
+to 58 that describe the archive that actually ships. SHA256SUMS left the
+repository and is generated into the archive at seal time -- a checksum
+manifest committed to a live tree is stale from the next commit onward, and
+verify_docs already treated it as optional.
+
+Two rules governed every deletion. A file was removed only if its content is
+either superseded by a living document or preserved verbatim in git history --
+usually both. And every reference TO a removed file was repaired in the same
+change, because the check that would have caught a dangling path only scans
+four docs: the rest were found by grep, which is the tool the check exists to
+replace. docs/REFACTOR-v132.md stayed for that same reason in reverse -- two
+live suites cite it as the explainer of the blueprint seam, so it is not a
+vestige, it is documentation.

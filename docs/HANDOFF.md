@@ -1,11 +1,8 @@
 # Skribl — Handoff (v131)
 
-> **v111–v131 are summarised below and documented in full in `REVIEW-RESPONSE.md`**
-> **(historical). The CURRENT review responses are `docs/REVIEW-RESPONSE-v201.md`**
-> **and `docs/REVIEW-RESPONSE-v200.md`.**
-> That file is the primary record for everything after v110: it was written round
-> by round against an external code review, so it carries the reasoning, the
-> measurements and the things that turned out to be wrong. Read it alongside this.
+> **v111–v131 are summarised below.** The round-by-round review records that
+> documented them in full were retired from the tree in the v263 cleanup; they
+> live in git history. This file remains the reverse-chronological narrative.
 
 ## v111–v131 at a glance
 
