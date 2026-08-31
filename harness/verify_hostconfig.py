@@ -192,6 +192,27 @@ code, out, err = boot(RENDER="true", SKRIBL_ALLOW_EPHEMERAL_SECRET="1")
 check("and a deliberate single-process deployment can opt out", code == 0,
       f"exit {code} — {err.strip()[-100:]}")
 
+# OUTSIDE REVIEW OF v263, H2. An EMPTY SECRET_KEY was refused; the KNOWN
+# PLACEHOLDER was not. `.env.example` shipped `SECRET_KEY=change-me`, and
+# copied verbatim that is a publicly-known signing key that passed the
+# `if not secret_key` guard and booted — session and CSRF forgery for anyone
+# who has read this repo. Production must refuse the placeholders too.
+for ph in ("change-me", "CHANGE-ME", "changeme", "'change-me'", "placeholder"):
+    code, out, err = boot(RENDER="true", SECRET_KEY=ph)
+    check(f"a production boot refuses the placeholder SECRET_KEY {ph!r}",
+          code != 0, f"exit {code} — booted on a known key")
+    check(f"…and says why for {ph!r}",
+          "SECRET_KEY" in err, err.strip().splitlines()[-1][:90] if err.strip() else "")
+# NO FALSE POSITIVE: a real key that merely contains a placeholder word is fine.
+code, out, err = boot(RENDER="true", SECRET_KEY="change-me-NOT-" + "x" * 30)
+check("a real key that is not exactly a placeholder still boots", code == 0,
+      f"exit {code} — the check is an exact-value blocklist, not a substring ban")
+# And the opt-out still overrides even a placeholder, for a real throwaway.
+code, out, err = boot(RENDER="true", SECRET_KEY="change-me",
+                      SKRIBL_ALLOW_EPHEMERAL_SECRET="1")
+check("the ephemeral opt-out still overrides a placeholder", code == 0,
+      f"exit {code}")
+
 
 print("\nRATE LIMITER — a deployment gets the shared backend, not a per-worker one")
 code, out, err = boot(RENDER="true", SECRET_KEY="a-real-key")

@@ -40,19 +40,25 @@ This is the ceiling on every feature. Layers multiply it. Longer animations
 multiply it. A thousand posts is half a gigabyte in the database *and* in every
 backup.
 
-`skribl/storage.py` already has the seam: `InlineStore` (default, v131
-behaviour), `LocalDiskStore`, and an S3 hook that is a subclass stub rather than
-an implementation. **Implementing the S3 backend is the single highest-leverage
-piece of work left**, because it is the precondition for layers, for longer
-animations, and for more than a handful of users.
+`skribl/storage.py` has three real backends: `InlineStore` (default, v131
+behaviour), `LocalDiskStore`, and `S3Store` — the S3 path is a full
+implementation (hand-rolled SigV4 signing, content-addressed PUT/GET/LIST/DELETE
+over `urllib`, no new dependency), wired in `app.py` behind
+`SKRIBL_MEDIA_BACKEND=s3` and exercised by `harness/verify_s3.py`. So the
+externalisation seam is DONE; what remains is a product decision, not a backend:
+whether to raise the payload ceiling (layers, longer animations) now that the
+bytes no longer have to live in `payload_json`.
 
-Do it before any feature that increases payload size. Not after.
+Externalise before any feature that increases payload size. The mechanism is
+ready; the schema decision is the owner's.
 
-### `app.js` is 6,600 lines and serves both the editor and the player
+### `app.js` serves both the editor and the player
 
-Every *viewer* of a shared Skribl downloads the entire authoring surface — 292 KB
-of JS plus 104 KB of CSS — to watch a drawing play. On a social feed, viewers
-outnumber authors by orders of magnitude.
+`app.js` is ~5,400 lines. Every *viewer* of a shared Skribl downloads the entire
+authoring surface — roughly 245 KB of JS plus 220 KB of CSS in `styles.css`
+alone — to watch a drawing play. On a social feed, viewers outnumber authors by
+orders of magnitude. (Sizes drift with every change; re-measure rather than
+trusting this line.)
 
 A split was attempted and reverted (see `docs/REFACTOR-v132.md`): the regex call
 graph misclassified functions the player needs. **Use an AST. `node` is
@@ -209,12 +215,14 @@ all shipped for months.
 
 ## 6. If you do only one thing
 
-Implement the S3 storage backend.
+Turn on media externalisation in the deployment.
 
-It is unglamorous, it changes nothing a user can see, and it is the precondition
-for layers, for longer animations, for more than a handful of users, and for
-anyone else being willing to host this. Everything else on the list gets easier
-after it, and several things are impossible before it.
+The S3 backend is already built and tested; the remaining work is operational,
+not code — set `SKRIBL_MEDIA_BACKEND=s3` (or `local`) with its credentials so
+new posts stop writing base64 blobs into `payload_json`. That is the
+precondition for layers, for longer animations, for more than a handful of
+users, and for anyone else being willing to host this. Everything else on the
+list gets easier once the bytes are out of the database.
 
 ---
 

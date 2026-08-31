@@ -4211,3 +4211,112 @@ four docs: the rest were found by grep, which is the tool the check exists to
 replace. docs/REFACTOR-v132.md stayed for that same reason in reverse -- two
 live suites cite it as the explainer of the blueprint seam, so it is not a
 vestige, it is documentation.
+
+## v264 -- An outside review of v263, and what a bounded scan must do when it gives up
+
+A reviewer went over the sealed v263 archive and reproduced one real defect,
+raised two more worth code, and filed a set of documentation and configuration
+findings. What follows is what changed and, as important, what did not.
+
+### H1 -- a bomb check that fails open at its own safety cap (fixed)
+
+`_jpeg_dimensions` reads the declared size out of a JPEG's SOF segment to reject
+a declared decompression bomb before a browser allocates W x H x 4 for it. The
+walk is bounded -- by segment count and byte offset -- so a crafted file cannot
+turn the scan itself into the DoS. The bug was in what happened at the bound: it
+returned None, and None means ACCEPT. So 64 empty APP0 segments followed by a
+real SOF0 declaring 65535x65535 slipped through -- the scan quit one segment
+early, and the browser, which has no such limit, decoded the bomb.
+
+The reviewer's own repro is now a regression fixture. The fix distinguishes the
+two ways a walk can end. Ran out of data -> the file is truncated, a browser
+cannot decode it into a bomb either -> None -> accept, unchanged. Hit a safety
+cap before an SOF -> the dimensions are UNKNOWN AND AN SOF MAY SIT JUST PAST
+WHERE WE STOPPED -> a new `_UNSCANNABLE` sentinel -> refuse. A scan that stops
+at its own cap must fail CLOSED, or the cap is the bypass. The segment cap was
+also raised from 64 to 128 so the reviewer's exact file is now rejected on its
+real declared size rather than merely refused as unscannable -- the stronger
+outcome, a real number caught -- while the sentinel still closes the general
+case of an SOF buried past any finite cap.
+
+**A bounded resource check has two exits, and only one of them is "safe".**
+Accepting on give-up turned the cost bound into the vulnerability.
+
+### H2 -- production booted on the placeholder SECRET_KEY (fixed)
+
+The secret-key guard refused an EMPTY key in production but not the known
+placeholder `.env.example` ships (`SECRET_KEY=change-me`). Copied verbatim, that
+is a publicly-known signing key: anyone who read the repo could forge a session
+cookie or a CSRF token. The guard now rejects an allow-list of known
+placeholders as well as the empty string wherever it detects a real deployment,
+`.env.example` ships the key BLANK with a generate command beside it, and the
+ephemeral-secret opt-out still overrides for a genuine throwaway. An empty
+value was treated as dangerous; a value that is dangerous in exactly the same
+way was not, because it was non-empty.
+
+### H3 -- the sweep reuse race, narrowed and stated honestly (partially fixed)
+
+The reviewer held that a data-loss TOCTOU remains in orphan sweeping despite the
+v223 touch-and-re-check fix. They are right, and the honest response is to close
+what is cheaply closable and document the rest rather than claim victory.
+`put_bytes` reuses an existing blob by touching its mtime; between the exists()
+check and the utime() the sweeper can delete the object it listed as old, and
+the old code swallowed the resulting FileNotFoundError and returned as if the
+reuse had worked -- leaving the committing post pointing at deleted bytes. Since
+`put_bytes` holds the bytes, that race now REWRITES them. This does not close
+the whole window (the sweeper can still delete after a successful touch; that
+residue is bounded by the 24h grace period and the sweeper's own pre-delete
+re-stat), and fully eliminating it needs a reservation/lease the association can
+be checked against, which is tracked as future work. Severity in practice is
+lower than filed: it requires reusing a 24h-old object within microseconds of
+the sweeper deleting that exact key.
+
+### The configuration findings that were real (fixed)
+
+  * M1 -- the ephemeral-secret opt-out silently also reverted the rate limiter
+    to the per-process backend, because production detection short-circuited on
+    it. The flag now affects ONLY the secret; a deployment that opts into an
+    ephemeral key still gets the shared rate backend it needs.
+  * M2 -- `.env.example` shipped `SKRIBL_RATE_BACKEND=memory`, which overrode the
+    production-safe auto-selection. Commented out, so production auto-picks `db`.
+  * M3 -- an unknown `SKRIBL_MEDIA_BACKEND` silently fell back to inline DB
+    blobs; a typo like `S3` stored every blob in Postgres. It now fails fast.
+  * M5 -- `LocalDiskStore.delete_key` swallowed every OSError, so a delete the
+    filesystem refused was counted as a removal. Only "already gone" is a silent
+    success now; any other error propagates and the sweep records it.
+  * M7 -- the final doc-stamping subprocess in the release run was unchecked; a
+    failed stamp would have left stale counts under a PASS. Its exit code is
+    checked and fails the release.
+
+### The findings answered in prose, not code
+
+  * M4 -- production detection is positive-only by design (a missing marker gets
+    the permissive dev path so `python -c "from app import app"` keeps working).
+    The residual -- an unlisted platform with no SKRIBL_ENV gets a dev config --
+    is real; the answer is to set `SKRIBL_ENV=production` explicitly, now
+    documented, not to guess a laptop apart from a server by heuristic alone.
+  * M6 -- the frozen release tree hash excludes the stamped docs and SHA256SUMS
+    because a doc cannot contain the hash of a tree that includes itself. This
+    was already true and compensated (verify_docs keeps them in step, SHA256SUMS
+    covers their final bytes); RELEASE.md now says so outright.
+  * L4/L5 -- S3 credentials are validated lazily on first use, not at boot (no
+    boot dependency on bucket liveness); the harness needs network to fetch
+    pinned wheels and Chromium. Both are accepted as designed.
+
+### The documentation that had rotted (fixed)
+
+M8 (README "all optional" -- SECRET_KEY is required in production), M9
+(START-HERE named v219/v227 as if current, in the file that preaches against
+typed version numbers), M10 and L2 (FUTURE.md called the S3 backend "a subclass
+stub" and "the single highest-leverage piece of work left" -- it is a full,
+tested implementation; the line counts and byte sizes were stale), L1 (README's
+layout diagram predated the blueprint refactor and showed a flat tree), and L3
+(the stamp said "86 suites" while RELEASE.md said "88" with nothing saying
+86 = 88 - 2). All corrected. Going public is exactly when a reader trusts the
+prose, so a stale doc is a defect on that day even when the code is right.
+
+### L6 -- a Python invalid-escape warning in a test's embedded JS regex (fixed)
+
+`verify_smudgeblur.py` held a JS regex in a plain triple-quoted string, so `\(`
+warned. The string is raw now. The warning never affected a result; it is the
+kind of residue a public repo should not ship.

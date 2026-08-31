@@ -213,6 +213,68 @@ check("and it still did not touch the referenced, young or foreign objects",
       f"{sorted(left)}")
 
 
+print("\nDELETE_KEY MEANS DELETE — a real failure is not a silent success")
+# OUTSIDE REVIEW OF v263, M5. LocalDiskStore.delete_key swallowed EVERY OSError,
+# so a delete the filesystem refused (permissions, read-only) was invisible to
+# the sweep and the key was counted as removed while its bytes stayed on disk.
+# Only 'already gone' is a legitimate silent success now; anything else raises
+# and the sweep records it (proven by the RefusesOne block above, which now
+# rides on the base class actually propagating).
+reset_store()
+_st = store_now()
+_missing = key("never-existed")
+try:
+    _st.delete_key(_missing)
+    _missing_ok = True
+except OSError:
+    _missing_ok = False
+check("deleting an already-gone key is a silent success", _missing_ok,
+      "FileNotFoundError is the one OSError that means 'done'")
+# Force a non-ENOENT OSError deterministically (works even as root, unlike a
+# chmod): put a DIRECTORY where the body file would be, so os.remove raises
+# IsADirectoryError.
+_k = key("is-a-dir")
+_sub = os.path.join(MEDIA_ROOT, _k[:2], _k[2:4])
+os.makedirs(os.path.join(_sub, _k), exist_ok=True)
+try:
+    _st.delete_key(_k)
+    _raised = False
+except OSError:
+    _raised = True
+check("a delete the filesystem refuses now RAISES instead of being swallowed",
+      _raised, "M5: swallowing it reported a removal that did not happen")
+
+print("\nREUSE RACING THE SWEEP — an object deleted mid-reuse is rewritten")
+# OUTSIDE REVIEW OF v263, H3. put_bytes reuses an existing object by touching
+# its mtime, but between the exists() check and the utime() the sweeper can
+# delete the file it listed as old. The touch then raises FileNotFoundError;
+# the old code swallowed it and returned, leaving the committing post pointing
+# at bytes that are gone. We hold the bytes, so that race now rewrites them.
+reset_store()
+_st = store_now()
+_rk = key("racy")
+_st.put_bytes(b"hello-bytes", "image/png", _rk)
+_bpath = _st._paths(_rk)[1]
+check("the object was written the first time", os.path.exists(_bpath))
+_real_utime = os.utime
+def _racing_utime(p, times):
+    # the sweeper wins the race: the object we just found is deleted here,
+    # right before the touch that was going to refresh its age.
+    try:
+        os.remove(_bpath)
+    except OSError:
+        pass
+    return _real_utime(p, times)          # now raises FileNotFoundError
+os.utime = _racing_utime
+try:
+    _st.put_bytes(b"hello-bytes", "image/png", _rk)   # the reuse path
+finally:
+    os.utime = _real_utime
+check("a reuse whose object is deleted mid-touch rewrites the bytes",
+      os.path.exists(_bpath) and open(_bpath, "rb").read() == b"hello-bytes",
+      "the post must not be left pointing at deleted media")
+
+
 print("\nTHE CLI — driven as a subprocess, so these are the codes cron sees")
 
 

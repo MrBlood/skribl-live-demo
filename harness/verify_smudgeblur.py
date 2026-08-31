@@ -213,7 +213,7 @@ with sync_playwright() as p:
             for _i in range(0, 24): page.mouse.move(_mx - 30 + _r * 18, _my + _i * 3)
             for _i in range(23, -1, -1): page.mouse.move(_mx - 30 + _r * 18, _my + _i * 3)
         page.mouse.up(); page.wait_for_timeout(350)
-        _mag = page.evaluate("""(src) => {
+        _mag = page.evaluate(r"""(src) => {
             const f = frame();
             const rgb = (c) => { const m = String(c).match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
               if (m) return [+m[1], +m[2], +m[3]];

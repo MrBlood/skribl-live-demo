@@ -60,8 +60,16 @@ _APP_SERVERS = ("gunicorn", "uwsgi", "waitress", "mod_wsgi", "hypercorn",
 
 
 def _looks_like_production():
-    if os.environ.get("SKRIBL_ALLOW_EPHEMERAL_SECRET") == "1":
-        return False                        # deliberate single-process opt-out
+    # PURE DETECTION. This used to return False when
+    # SKRIBL_ALLOW_EPHEMERAL_SECRET=1, which coupled two unrelated decisions:
+    # the flag is a promise about the SECRET KEY ("this is single-process, an
+    # ephemeral key is fine"), but folding it in here also silently reverted the
+    # rate limiter to the per-process memory backend on a real multi-worker
+    # deploy — N times the configured budget, with no signal. (Outside review of
+    # v263, M1.) The flag is now consulted ONLY where the secret is chosen, so a
+    # deployment that opts into an ephemeral secret still gets the shared rate
+    # backend it needs. A genuine single-process throwaway on a laptop is not
+    # detected as production here anyway, so it keeps the light memory backend.
     if os.environ.get("SKRIBL_ENV", "").strip().lower() == "production":
         return True
     if os.environ.get("FLASK_ENV", "").strip().lower() == "production":
@@ -85,14 +93,32 @@ def create_app():
     # random per-process key so `flask run` still works without configuration.
     import secrets
     secret_key = os.environ.get("SECRET_KEY")
-    if not secret_key:
-        if _looks_like_production():
+    # A PLACEHOLDER is as dangerous as an empty value, and more so, because it
+    # passes the `if not secret_key` guard and boots. `.env.example` ships
+    # `SECRET_KEY=change-me`; copied verbatim it is a PUBLICLY KNOWN signing
+    # key, and anyone who has read this repo can forge a session cookie or a
+    # CSRF token against a deployment running it. So production must reject the
+    # known placeholders too, not only the empty string. (Outside review of
+    # v263, H2.) Match is case-insensitive and trims quotes/space a .env leaves.
+    _placeholder = (secret_key or "").strip().strip("'\"").lower() in {
+        "", "change-me", "changeme", "change_me", "changemetoo",
+        "your-secret-key", "your-secret-key-here", "secret", "secret-key",
+        "replace-me", "todo", "xxx", "placeholder",
+    }
+    if _placeholder:
+        # The ephemeral opt-out lives HERE, not in _looks_like_production, so it
+        # affects only the secret and never the rate backend (M1).
+        _opt_out = os.environ.get("SKRIBL_ALLOW_EPHEMERAL_SECRET") == "1"
+        if _looks_like_production() and not _opt_out:
             raise RuntimeError(
-                "SECRET_KEY must be set in production. This process looks like "
-                "a real deployment (see _looks_like_production), and an "
-                "ephemeral per-process key breaks anything that must agree "
-                "between workers: Flask sessions, the CSRF double-submit token, "
-                "and the rate limiter's identity HMAC. Set SECRET_KEY, or set "
+                "SECRET_KEY must be set to a real secret in production. This "
+                "process looks like a real deployment (see "
+                "_looks_like_production), and either an empty value or the "
+                "known placeholder from .env.example is unsafe: a shared or "
+                "guessable key lets anyone forge a Flask session, a CSRF "
+                "double-submit token, or the rate limiter's identity HMAC. "
+                "Generate one, e.g. `python -c \"import secrets; "
+                "print(secrets.token_urlsafe(32))\"`, or set "
                 "SKRIBL_ALLOW_EPHEMERAL_SECRET=1 if this really is a "
                 "single-process throwaway.")
         secret_key = secrets.token_urlsafe(32)
@@ -175,6 +201,15 @@ def create_app():
             secret_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
             session_token=os.environ.get("AWS_SESSION_TOKEN"),
             prefix=os.environ.get("SKRIBL_S3_PREFIX", ""))
+    elif _backend != "inline":
+        # An unrecognised backend used to leave media_store None, which is the
+        # 'inline' path — so `SKRIBL_MEDIA_BACKEND=S3` or a typo silently stored
+        # every blob back in the database instead of the bucket the operator
+        # asked for, discovered only when payload_json started ballooning.
+        # Fail fast on an unknown value. (Outside review of v263, M3.)
+        raise RuntimeError(
+            f"Unknown SKRIBL_MEDIA_BACKEND {_backend!r}; expected one of "
+            f"'inline', 'local', 's3'.")
 
     skribl.init_skribl(app, session=lambda: db.session,
                        url_prefix=url_prefix, static_url_path=static_url_path,

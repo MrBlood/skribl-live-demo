@@ -1,16 +1,16 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-31T01:35:53Z
+UTC timestamp           : 2026-08-31T04:09:50Z
 Host                    : Linux x86_64
-Tree SHA-256            : c53f469766d9b018cfc570c20ea79477450955414af662a382531c5b8820d38a
-Git commit              : 99aba52-dirty
-SKRIBL_VERSION          : v263
+Tree SHA-256            : 7e099a7686a692eb82df577bca612c68757f06c7060266be8ed31fb9cd7543bc
+Git commit              : a284074-dirty
+SKRIBL_VERSION          : v264
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.eohu8Gc78K/harness.db)
+Database reset          : yes (fresh /tmp/tmp.Z9bENEGVRK/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -20,7 +20,7 @@ Command                 : /home/user/skribl-live-demo/harness/run_harness.sh ver
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 42 batches recorded as one run
+# whole release run: 43 batches recorded as one run
 suites requested : 88
   verify_amber.py: ok — 31/31 passed
   verify_apiedges.py: ok — 31/31 passed
@@ -54,7 +54,7 @@ suites requested : 88
   verify_gifenc.py: ok — 38/38 passed
   verify_help.py: ok — 61/61 passed
   verify_hold.py: ok — 56/56 passed
-  verify_hostconfig.py: ok — 43/43 passed
+  verify_hostconfig.py: ok — 55/55 passed
   verify_hostseams.py: ok — 33/33 passed
   verify_icons.py: ok — 35/35 passed
   verify_input.py: ok — 9/9 passed
@@ -67,7 +67,7 @@ suites requested : 88
   verify_loopcap.py: ok — 18/18 passed
   verify_media.py: ok — 24/24 passed
   verify_mediaauthz.py: ok — 43/43 passed
-  verify_medialimits.py: ok — 71/71 passed
+  verify_medialimits.py: ok — 76/76 passed
   verify_migrations.py: ok — 56/56 passed
   verify_mimeparity.py: ok — 26/26 passed
   verify_move.py: ok — 82/82 passed
@@ -100,7 +100,7 @@ suites requested : 88
   verify_storage.py: ok — 38/38 passed
   verify_strokegroups.py: ok — 24/24 passed
   verify_surfaces.py: ok — 9/9 passed
-  verify_sweepjob.py: ok — 38/38 passed
+  verify_sweepjob.py: ok — 42/42 passed
   verify_theme.py: ok — 42/42 passed
   verify_tips.py: ok — 44/44 passed
   verify_tools.py: ok — 120/120 passed
@@ -110,6 +110,6 @@ suites requested : 88
   verify_ux.py: ok — 326/326 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 3865   (skipped suites contribute 0)
+assertions passed: 3886   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0

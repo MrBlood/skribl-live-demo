@@ -303,6 +303,48 @@ for sub in ("mpeg", "ogg", "flac", "webm", "mp4"):
           "deriving it needs a decoder; MAX_AUDIO_BYTES is the only cap")
 
 
+print("\nFAIL CLOSED — an SOF buried past the scan cap is refused, not accepted")
+# OUTSIDE REVIEW OF v263, H1 — reproduced from the reviewer's own fixture. A
+# JPEG is legal with any number of metadata segments before its SOF, and a
+# browser has no segment limit, so it decodes the frame however far in it sits.
+# The bounded scan stops at a cap; the bug was that stopping returned None and
+# None was ACCEPTED. Two files exercise the two ways an SOF can sit past a cap.
+#
+# (a) exactly the reviewer's shape: 64 empty APP0 then an SOF0 declaring
+#     65535x65535. With the cap raised to 128 the scan now REACHES this SOF and
+#     rejects it on its declared size — the strongest possible outcome, a real
+#     number refused.
+_review_bomb = b"\xff\xd8" + b"\xff\xe0\x00\x02" * 64 \
+    + b"\xff\xc0\x00\x0b\x08\xff\xff\xff\xff\x01\x01\x11\x00"
+check("the reviewer's 64-segment JPEG bomb is refused",
+      V._validate_media_data_url(durl("image/jpeg", _review_bomb), "image",
+                                 V.MAX_IMAGE_BYTES, "photo.data") is not None,
+      "64 APP0 segments then SOF0 65535x65535 — the v263 bypass")
+check("…and it is refused on its real declared size, not merely unscannable",
+      V._jpeg_dimensions(_review_bomb) == (65535, 65535),
+      "the raised cap reaches the SOF the old cap quit before")
+
+# (b) the general case the sentinel exists for: bury the SOF past the cap. The
+#     scan cannot read it, and MUST refuse rather than accept an unknown.
+_buried = b"\xff\xd8" + b"\xff\xe0\x00\x02" * 200 \
+    + b"\xff\xc0\x00\x0b\x08\xff\xff\xff\xff\x01\x01\x11\x00"
+check("an SOF buried past the segment cap yields the refuse sentinel",
+      V._image_dimensions("jpeg", _buried) is V._UNSCANNABLE)
+check("…and the item is refused, closing the fail-open for good",
+      V._validate_media_data_url(durl("image/jpeg", _buried), "image",
+                                 V.MAX_IMAGE_BYTES, "photo.data") is not None,
+      "None here would be the original bug: a cap-stop read as 'safe'")
+
+# ANTI-VACUITY / NO FALSE POSITIVE. A real, small JPEG whose SOF sits early must
+# still be ACCEPTED — the fix must not turn every JPEG into a refusal.
+_real = b"\xff\xd8" \
+    + b"\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00" \
+    + b"\xff\xc0\x00\x0b\x08\x00\x08\x00\x08\x01\x01\x11\x00"     # 8x8
+check("a real 8x8 JPEG is still accepted (the fix did not become a ban)",
+      V._jpeg_dimensions(_real) == (8, 8)
+      and V._validate_media_data_url(durl("image/jpeg", _real), "image",
+                                     V.MAX_IMAGE_BYTES, "photo.data") is None)
+
 print("\nMUTATION — lift the cap and every reject above must turn into a pass")
 # The point of this project's v240 lesson: an assertion that still passes with
 # the feature disabled was never testing the feature. Each cap is raised in turn
@@ -336,8 +378,13 @@ import time  # noqa: E402  (only needed for this one assertion)
 _t0 = time.time()
 _res = V._jpeg_dimensions(_pathological)
 _ms = (time.time() - _t0) * 1000
+# v264: the walk still stops in bounded time, but a walk that STOPS at its cap
+# now reports _UNSCANNABLE, not None. None used to mean "accepted", and that was
+# the outside review's H1 bypass — a bomb hides its real SOF just past the cap
+# so the scan quits and the None is read as "safe". A cap-stop must fail closed.
 check("a 800 kB chain of empty JPEG segments is walked in bounded time",
-      _res is None and _ms < 50, f"{_ms:.2f} ms over {len(_pathological)} bytes")
+      _res is V._UNSCANNABLE and _ms < 50,
+      f"{_ms:.2f} ms over {len(_pathological)} bytes, result {_res!r}")
 
 _wav_pathological = b"RIFF\x00\x00\x00\x00WAVE" + (b"junk\x00\x00\x00\x00" * 100_000)
 _t0 = time.time()
