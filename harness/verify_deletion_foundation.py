@@ -186,7 +186,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 os.environ.setdefault("SKRIBL_MEDIA_BACKEND", "local")
 from app import app, db                                    # noqa: E402
 import skribl.storage as storage                            # noqa: E402
-from skribl.models import SkriblPost, SkriblPostMedia       # noqa: E402
+from skribl.models import SkriblPost, SkriblPostMedia, SkriblPendingMedia  # noqa: E402
 
 with app.app_context():
     post_row = db.session.query(SkriblPost).filter_by(public_id=public_id).one()
@@ -204,6 +204,14 @@ with app.app_context():
         lambda k: "/media/" + k)
     on_disk_before = any(k == key for k, _ in store.iter_keys())
     check("and the bytes are on disk", on_disk_before)
+
+    # v266: the pending-media claim the post wrote to bridge the sweep race is
+    # cleared when the post commits — the association protects the object from
+    # here. If it lingered, it would keep protecting the media for its whole TTL
+    # even after the post is deleted below, and the sweep could not reclaim it.
+    _claims = db.session.query(SkriblPendingMedia).filter_by(media_key=key).count()
+    check("a committed post leaves no lingering pending-media claim",
+          _claims == 0, f"{_claims} claim row(s) survived the commit")
 
     # --- what delete_skribl() would do ------------------------------------
     db.session.delete(post_row)

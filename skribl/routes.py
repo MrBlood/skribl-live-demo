@@ -26,6 +26,7 @@ from .core import (MAX_CAPTION_CHARS, MAX_CARD_BYTES, MAX_TITLE_CHARS,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
+                     SkriblPendingMedia,
                      _visibility_policy, as_utc, session, visibility_values,
                      feed_filter, author_dict)
 from .storage import KEY_RE, LocalDiskStore, claim_media, externalise_payload
@@ -548,6 +549,18 @@ def register_routes(bp, *, index_route=False):
                         for _key in media_keys:
                             session().add(SkriblPostMedia(post_id=post.id,
                                                           media_key=_key))
+                        # The pending-media claim has done its job the moment the
+                        # association is in this transaction: from here the
+                        # association is what protects the object, so drop the
+                        # claim IN THE SAME SAVEPOINT. On commit the claim is
+                        # gone and does not linger to protect the object after
+                        # the post is later deleted; on rollback the delete
+                        # reverts with everything else and the claim survives as
+                        # the crashed-poster backstop until its TTL. (v266.)
+                        if media_keys:
+                            session().query(SkriblPendingMedia).filter(
+                                SkriblPendingMedia.media_key.in_(media_keys)
+                            ).delete(synchronize_session=False)
                         if idem_hash is not None:
                             # Same savepoint, same (host-owned) transaction as
                             # the post: durable together or not at all, which

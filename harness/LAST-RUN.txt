@@ -1,28 +1,27 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-31T13:08:22Z
+UTC timestamp           : 2026-08-31T13:53:02Z
 Host                    : Linux x86_64
-Tree SHA-256            : f0a062da7ff7a58171f6dbfcb88b3c4ced2fcdd979ad2f59168120fe863883fc
-Git commit              : 8f84af4-dirty
-SKRIBL_VERSION          : v265
+Tree SHA-256            : 4fef6886e583155a30b0a53d96ede252267503bb40ecce2516ef3cdc50aead98
+Git commit              : cd7a023-dirty
+SKRIBL_VERSION          : v266
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.v5IyYsHbez/harness.db)
+Database reset          : yes (fresh /tmp/tmp.Ci25RoQoYa/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : harness/run_harness.sh verify_docs.py verify_integration.py
+Command                 : harness/run_harness.sh verify_deletion_foundation.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 2
-  verify_docs.py: ok — 65/65 passed
-  verify_integration.py: ok — 14/14 passed
-assertions passed: 79   (skipped suites contribute 0)
+suites requested : 1
+  verify_deletion_foundation.py: ok — 17/17 passed
+assertions passed: 17   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
