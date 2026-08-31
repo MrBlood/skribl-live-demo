@@ -73,6 +73,7 @@ function applyCanvasSize(w, h, opts){
   if(!(w > 0 && h > 0 && w <= MAX_CANVAS_EDGE && h <= MAX_CANVAS_EDGE)) return false;
   if(w === CW && h === CH) return false;
   CW = w; CH = h;
+  playBitmaps = null;   // captures are CW x CH composites; a resize orphans them
   const layers = [[pad, ctx], [onionCv, octx], [tmpCv, tctx], [frameCv, fctx],
                   [artCv, actx]];   // the artwork stage resizes with the rest
   for(const pair of layers){
@@ -2717,17 +2718,63 @@ function drawOnTick(){
 }
 function advanceDrawOn(){ dFrame=(dFrame+1)%frames.length; idx=dFrame; startDrawOnFrame(); }   // preview loops
 
+/* v262: a page is rasterised at most ONCE per playback. Repainting a generated
+   in-between costs ~123ms at 4x CPU throttle (a mid-range phone) even after the
+   v261 rebuild, against a 41.7ms slot at 24fps — no point budget makes
+   re-rasterising the same static picture every loop fit. So the first paint of
+   a heavy page is captured as a bitmap and every later visit blits it (~1ms).
+   The rule — which pages earn a bitmap, the memory ceiling, the capture
+   resolution — lives in lib/framebitmap.js, shared with the player, so the two
+   surfaces cannot drift on it. The store lives from play() to stop() and is
+   keyed by the frame OBJECT: any path that replaces a page misses safely, and
+   nothing that mutates a page in place can run while playing. */
+let playBitmaps = null;
+/* A blit's measured cost, kept apart from framePaintMs: the moment a page is
+   captured, its recorded paint cost describes a rasterisation that will never
+   happen again, and feeding that stale number to the scheduler makes every
+   cached loop RUSH — measured at 1.5s for a 1.92s loop, visibly fast. wait()
+   asks which book the upcoming frame is in. */
+let blitMs = null;
+function playPaint(){
+  const f = frames[idx];
+  const FB = window.SkriblFrameBitmap;
+  const hit = FB ? FB.get(playBitmaps, f) : null;
+  if(hit){
+    ctx.clearRect(0,0,CW,CH);
+    ctx.drawImage(hit, 0, 0, CW, CH);
+    return true;
+  }
+  render();
+  if(FB && f && playBitmaps){
+    // Captured from the visible pad AFTER its own render, so the bitmap is the
+    // exact composite this playback just showed — at the resolution it was
+    // shown at, which is what bounds the memory (see the lib header).
+    const rect = pad.getBoundingClientRect();
+    const sz = FB.captureSize(CW * DPR, CH * DPR, rect.width * DPR, rect.height * DPR);
+    if(FB.wants(playBitmaps, f.strokes.length, sz.w, sz.h))
+      FB.capture(playBitmaps, f, pad, sz.w, sz.h);
+  }
+  return false;
+}
 function playStep(){ if(scrubbingFrames) return;
   idx=playI%frames.length;
   const _t0 = performance.now();
-  render();
+  const _blit = playPaint();
   const _cost = performance.now() - _t0;
-  framePaintMs[idx] = framePaintMs[idx] == null ? _cost
-                                                : framePaintMs[idx] * 0.6 + _cost * 0.4;
-  const _pts = frames[idx] ? frames[idx].strokes.length : 0;
-  if(_pts > 0){
-    const _rate = _cost / _pts;
-    msPerPoint = msPerPoint ? msPerPoint * 0.7 + _rate * 0.3 : _rate;
+  if(_blit){
+    // A blit REPLACES the frame's book entry rather than blending in: the EMA
+    // exists to smooth noisy repaint costs, and a 215ms rasterisation blended
+    // 60/40 with a 15ms blit stays wrong for three more loops.
+    blitMs = blitMs == null ? _cost : blitMs * 0.6 + _cost * 0.4;
+    framePaintMs[idx] = _cost;
+  } else {
+    framePaintMs[idx] = framePaintMs[idx] == null ? _cost
+                                                  : framePaintMs[idx] * 0.6 + _cost * 0.4;
+    const _pts = frames[idx] ? frames[idx].strokes.length : 0;
+    if(_pts > 0){
+      const _rate = _cost / _pts;
+      msPerPoint = msPerPoint ? msPerPoint * 0.7 + _rate * 0.3 : _rate;
+    }
   }
   updatePlayProgress();
   liveBadge.textContent='\u25B6 '+(idx+1)+' / '+frames.length; playI++;
@@ -2784,9 +2831,17 @@ function runPlayTimer(){
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
     // pressing the button.
-    const est = framePaintMs[ni] != null
-      ? framePaintMs[ni]
-      : (frames[ni] ? frames[ni].strokes.length * msPerPoint : 0);
+    // A frame with a bitmap will BLIT, whatever its book says: its recorded
+    // cost may describe the rasterisation that filled the cache, and using it
+    // makes every cached loop rush. First blit of a playback has no measured
+    // cost yet — a small constant beats a 200ms lie.
+    const cachedNext = playBitmaps && window.SkriblFrameBitmap
+      && window.SkriblFrameBitmap.get(playBitmaps, frames[ni]);
+    const est = cachedNext
+      ? (blitMs != null ? blitMs : 8)
+      : framePaintMs[ni] != null
+        ? framePaintMs[ni]
+        : (frames[ni] ? frames[ni].strokes.length * msPerPoint : 0);
     return Math.max(0, d - est);
   };
   playStep();
@@ -2803,10 +2858,12 @@ function play(){
   if(flipPlayer){ flipPlayer.hidden=false; requestAnimationFrame(()=>flipPlayer.classList.add('show')); }
   startMusic();
   startFlipElapsed();
+  playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
   if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); }
   else { playI=idx; runPlayTimer(); }
 }
 function stop(){
+  playBitmaps = null;                 // playback-scoped: freed the moment it ends
   playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
   clearInterval(playTimer); playTimer=null; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null;

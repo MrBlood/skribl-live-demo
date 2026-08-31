@@ -4054,6 +4054,11 @@ function showPlayerError(msg) {
      `let` read before its declaration is executed is a temporal-dead-zone
      throw, not an undefined. Its meaning belongs with drawFlipFrame below. */
   let lastFlipDrawn = -1;
+  /* Same placement rule as lastFlipDrawn, same reason. Created lazily inside
+     drawFlipFrame — the frames it caches are immutable for the life of the
+     page, so index keys are safe and the store never needs invalidating except
+     by the backing-store reset below. */
+  let flipBitmaps = null;
   function sizePlayerCanvas() {
     const dpr = window.devicePixelRatio || 1;
     layoutPlayerCanvas();
@@ -4074,6 +4079,7 @@ function showPlayerError(msg) {
     // blank player, and the reset costs nothing to keep beside the assignment
     // that causes it.
     lastFlipDrawn = -1;
+    flipBitmaps = null;   // captures describe the old backing store
   }
   sizePlayerCanvas();
   // Rotate/resize should refit the display size without clearing the frame the
@@ -4154,13 +4160,36 @@ function showPlayerError(msg) {
      end-of-play paint go through here too and are correct without forcing: if
      the frame they want is already the one on screen, not repainting it is the
      right answer. */
+  /* v262: and a frame is rasterised at most ONCE per loaded document. The memo
+     above stops repaints of the frame already on screen; this stops repaints of
+     a frame the player has ALREADY shown once. A generated in-between is
+     thousands of points and repainting it on every loop costs ~100-200ms on a
+     phone — the same stall the editor had, fixed by the same shared rule
+     (lib/framebitmap.js): first paint is captured at the displayed resolution,
+     every later visit is one drawImage. Keys are frame indices because the
+     player's frames never change; the store is dropped only with the backing
+     store (sizePlayerCanvas), whose captures it describes. */
   function drawFlipFrame(fi) {
     const at = Math.max(0, Math.min(flipFrames.length - 1, fi));
     if (at === lastFlipDrawn) return;
     const s = getCanvasLogicalSize();
+    const FB = window.SkriblFrameBitmap;
+    if (FB && !flipBitmaps) flipBitmaps = FB.store();
+    const hit = FB ? FB.get(flipBitmaps, at) : null;
     ctx.clearRect(0, 0, s.width, s.height);
+    if (hit) { ctx.drawImage(hit, 0, 0, s.width, s.height); lastFlipDrawn = at; return; }
     const fr = flipFrames[at];
-    if (fr && Array.isArray(fr.strokes) && fr.strokes.length) paintStrokesStatic(fr.strokes);
+    if (fr && Array.isArray(fr.strokes) && fr.strokes.length) {
+      paintStrokesStatic(fr.strokes);
+      if (FB) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        const sz = FB.captureSize(canvas.width, canvas.height,
+                                  rect.width * dpr, rect.height * dpr);
+        if (FB.wants(flipBitmaps, fr.strokes.length, sz.w, sz.h))
+          FB.capture(flipBitmaps, at, canvas, sz.w, sz.h);
+      }
+    }
     lastFlipDrawn = at;
   }
   const totalMs = isFlip ? flipDurMs : (timeline.length ? timeline[timeline.length - 1].playT : 0);
