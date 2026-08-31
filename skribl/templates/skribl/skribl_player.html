@@ -172,6 +172,11 @@
      to playback, which is what that setting has always meant locally; it
      defaults ON when unset, so a first visit renders exactly as before. #}
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
+  {# Frame bitmaps: a flip frame is rasterised at most once per loaded
+     document. Without this a viewer repaints every generated in-between on
+     every loop — the phone stall the editor was fixed for, on the surface a
+     shared link actually plays on. #}
+  <script src="{{ skribl_asset('lib/framebitmap.js') }}" defer></script>
   <script src="{{ skribl_asset('app.js') }}" defer></script>
 </body>
 </html>

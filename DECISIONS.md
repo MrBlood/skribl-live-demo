@@ -4117,3 +4117,60 @@ Deleting either rule now fails the check named for it.
 family as v260's saturated measurement and v256's beading metrics: the check ran,
 the number came back clean, and the thing it was supposed to see was hidden
 behind something else.
+
+## v262 -- The picture does not change, so painting it twice was the bug
+
+Third report of the same stall, after two fixes: "it takes about 5.5 seconds
+to play 46 slides at 24 fps." The file behind it told the whole story -- saved
+at 12 fps, in-betweens re-added by hand before v261 shipped, every one back at
+27 samples and 11,826 points, the exact totals of the original file. At 12 fps
+the v260 budget thins nothing, because nothing needs thinning ON THE MACHINE
+THE BUDGET WAS CALIBRATED ON.
+
+That calibration is the real finding. Measured at 4x CPU throttle, roughly a
+mid-range phone: one of those in-betweens costs ~215ms to paint against a
+41.7ms slot at 24 fps -- 6.2s for a 1.92s loop, which is the report to the
+millisecond. Rebuilding at 24 fps (v261) brings it to ~123ms: better, and
+still three times the slot. No sample budget closes a 5x gap between devices,
+and chasing it down would mean exposures so coarse they stop reading as
+exposures.
+
+The frame is STATIC. Rasterising it more than once per playback was always
+wasted work; it just took a phone to make the waste visible. So the first
+paint of a heavy page is captured as a bitmap and every later visit is one
+drawImage (~1ms at the same throttle): the first loop costs what it always
+did and fills the cache; every loop after plays on time. Measured on the same
+file, same throttle: cached loops of 1911ms and 1916ms against 1917 nominal.
+
+The rule lives in lib/framebitmap.js and BOTH surfaces load it, because the
+editor getting fast while every shared link stayed slow is this codebase's
+signature failure. The editor's store lives from play() to stop() and is
+keyed by frame object, so a replaced page misses safely; the player's is
+keyed by index, because its frames never change.
+
+The memory ceiling is the design, not a guard: bitmaps are how canvases die
+on phones. Only pages past 1,500 points earn one; captures are taken at the
+displayed resolution, not the backing store, which is what keeps a 46-page
+phone cache tens of MB instead of hundreds; past a 64MB budget -- or on the
+first failed allocation -- frames simply paint direct, slower but never
+broken.
+
+## v262 -- The scheduler believed a cost that could no longer happen
+
+Shipping the cache alone made cached loops play FAST: 1.5s for a 1.92s loop.
+The play timer subtracts each frame's expected paint cost from its slot, and
+the expectation was the measured rasterisation -- 215ms that would now never
+happen again. The wait clamped to zero and the loop rushed.
+
+Two repairs, both to bookkeeping. The wait asks whether the upcoming frame
+HOLDS A BITMAP and estimates a blit when it does; and a blit's measured cost
+REPLACES the frame's book entry rather than blending in, because an EMA that
+smooths a 215ms rasterisation into a 1ms blit stays wrong for three loops.
+
+The suite's first version of that assertion checked the book after the THIRD
+visit and a blend passed it -- on an unthrottled desktop the EMA decays fast
+enough to sneak under any workable bound by then. The moment where blend and
+replace are provably far apart is right after the FIRST blit, where a blend
+still carries >=60% of the stale cost. The assertion moved there and the
+mutation dies by name now. Same lesson as v261's detector, from the other
+side: WHEN a property is measured is part of what is measured.
