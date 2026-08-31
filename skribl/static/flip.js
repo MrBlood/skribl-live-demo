@@ -441,6 +441,7 @@ function serializeFlip(opts){
     schemaVersion: 2, version: 2,
     playbackMode: 'flip', fps: fps,
     canvasSize: { cssWidth: CW, cssHeight: CH, dpr: 1 },
+    title: (window.SkriblName && window.SkriblName.get()) || 'Untitled Skribl',
     savedAt: new Date().toISOString(),
     editIdx: idx,
     mediaOmitted: ((!withMedia && !!(bgImage || musicData)) || !!(pendingPhotoMeta || pendingMusicMeta)) || undefined,
@@ -765,6 +766,8 @@ function exportShow(label){ _exportAbort=false; const o=document.getElementById(
 function exportSet(frac, label){ const f=document.getElementById('flipExportFill'); if(f) f.style.width=(Math.max(0,Math.min(1,frac))*100)+'%'; if(label){ const l=document.getElementById('flipExportLabel'); if(l) l.textContent=label; } }
 function exportHide(){ const o=document.getElementById('flipExport'); if(o) o.hidden=true; }
 function applyPayload(d){
+  // Adopt the loaded draft's name into the tab (blank keeps the auto-default).
+  if(window.SkriblName && d && d.title && !/^Untitled Skribl$/.test(d.title)) window.SkriblName.set(d.title);
   // Restore the saved canvas size first, so frames/thumbs build at the right
   // dimensions. silent: the boot path (and the caller) renders straight after.
   if(d && d.canvasSize && d.canvasSize.cssWidth && d.canvasSize.cssHeight){
@@ -3672,7 +3675,8 @@ function saveDraft(){
   const data=serializeFlip();
   const blob=new Blob([JSON.stringify(data)], { type:'application/json' });
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='skribl-flip-'+new Date().toISOString().slice(0,10)+'.skribl';
+  a.download=(window.SkriblName ? window.SkriblName.filename(data.title)
+    : 'skribl-flip-'+new Date().toISOString().slice(0,10)+'.skribl');
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
   chip('Draft saved');
 }

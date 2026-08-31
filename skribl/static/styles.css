@@ -433,6 +433,7 @@ body {
    invisible there); the softer .post-watch chip is excluded so its light text
    stays clean; tabs use a purple underline (text on dark), so they're out too. */
 .btn.post,
+.name-done,
 .post-submit:not(.post-watch),
 .btn.play.playing,
 .player-cta,
@@ -4946,6 +4947,63 @@ body.player-mode #canvas {
 }
 .tune-shell.open .tune-panel { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
+
+/* ============================================================
+   NAME TAB + DRAWER — give the skribl a title (fixes the date/date(1)
+   filename and the untitled draft). The tab is a SEAMLESS tongue of the
+   header: same surface fill + blur, no top hairline (the header has none),
+   centred on its lower edge. Clicking it drops a title strip down with the
+   Tune drawer's exact grid-rows motion. Shared by Pad and Flip.
+   ============================================================ */
+.name-tab {
+  /* Hangs into the ~12px gap between the header and the canvas — NOT over the
+     canvas (bottom keeps ~2px clearance). SOLID surface-panel, which is exactly
+     what the translucent header composites to over the near-black page, so the
+     tab matches the header instead of tinting toward the canvas behind it. */
+  position: absolute; left: 50%; bottom: -10px;
+  transform: translateX(-50%); z-index: 1;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 23px; padding: 0 10px 0 11px; max-width: min(58%, 300px);
+  background: var(--surface-panel);
+  border: 0; border-radius: 0 0 11px 11px; cursor: pointer;
+  color: var(--text-secondary);
+  box-shadow: 0 4px 9px rgba(0, 0, 0, 0.30);
+  transition: color 0.14s, background 0.14s;
+}
+.name-tab:hover { background: var(--surface-control); color: var(--text-primary); }
+.name-pen { width: 12px; height: 12px; color: var(--ui-hi); flex: none; }
+.name-lbl { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.name-lbl.empty { color: var(--text-dim); font-weight: 500; }
+.name-chev { width: 12px; height: 12px; color: var(--text-dim); flex: none; transition: transform 0.26s; }
+.name-tab.open .name-chev { transform: rotate(180deg); }
+body.recording .name-tab, body.playing .name-tab { display: none; }
+
+.name-shell {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+  margin: -10px 12px 0; background: var(--surface-raised); border: 0; border-radius: 0 0 14px 14px;
+}
+.name-shell.open { grid-template-rows: 1fr; border: 1px solid var(--hairline-strong); border-top: 0; }
+.name-clip { overflow: hidden; min-height: 0; }
+.name-panel {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  opacity: 0; transform: translateY(-4px); transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.name-shell.open .name-panel { opacity: 1; transform: none; }
+.name-input {
+  flex: 1; min-width: 0; height: 38px; padding: 0 12px; border-radius: 10px;
+  background: var(--surface-base); border: 1px solid var(--hairline-strong);
+  color: var(--text-primary); font-size: 15px; font-weight: 600; font-family: inherit; outline: none;
+}
+.name-input::placeholder { color: var(--text-dim); font-weight: 500; }
+.name-input:focus { border-color: var(--ui-hi); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18); }
+.name-done {
+  height: 38px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
+  font-weight: 700; font-size: 13px; color: var(--text-primary);
+  background: linear-gradient(150deg, var(--accent-2), var(--accent));
+}
+.name-done:hover { filter: brightness(1.06); }
+@media (prefers-reduced-motion: reduce) { .name-shell, .name-panel, .name-tab, .name-chev { transition: none; } }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
 .tune-row + .tune-row { border-top: 1px solid var(--hairline); }
 .tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; }

@@ -3064,6 +3064,14 @@ function dragZoomPan(wrap) {
 
 
 
+// ---------- Skribl name (title) ----------
+// The name-tab UI + auto-default naming live in lib/nametab.js, shared with
+// Flip (window.SkriblName). serializeSkribl reads the current title through it.
+function currentSkriblTitle() {
+  return (window.SkriblName && window.SkriblName.get()) || 'Untitled Skribl';
+}
+
+
 // ---------- Draft save / load ----------
 // serializeSkribl() produces one self-contained object. The same object shape
 // will POST to skribls.net later — only the transport changes.
@@ -3260,7 +3268,7 @@ function serializeSkribl() {
     userId: null,               // server stamps this later
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    title: 'Untitled Skribl',
+    title: currentSkriblTitle(),
     canvasSize: (() => {
       // The authored logical size (backing store in CSS px), NOT the fitted
       // display rect — otherwise a post made while rotated would record the
@@ -3440,7 +3448,8 @@ function saveDraft() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (draft.title || 'skribl').replace(/\s+/g, '-').toLowerCase() + '.skribl';
+  a.download = (window.SkriblName ? window.SkriblName.filename(draft.title)
+    : (draft.title || 'skribl').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '.skribl');
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -3549,6 +3558,8 @@ function loadSkribl(data) {
   // so the player replays it the way it was posted rather than the way
   // this browser happens to be set.
   if (data.pauseMode) setPauseMode(data.pauseMode);
+  // Adopt the loaded draft's name into the tab (blank leaves the auto-default).
+  if (window.SkriblName && data.title && !/^Untitled Skribl$/.test(data.title)) window.SkriblName.set(data.title);
   clearCanvas();
   resetMediaForLoad();
 
