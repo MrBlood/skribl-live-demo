@@ -747,6 +747,20 @@ class S3Store(MediaStore):
                  prefix="", timeout=15):
         if not bucket:
             raise RuntimeError("SKRIBL_S3_BUCKET is required for the s3 backend.")
+        # This store signs with STATIC credentials only — _sign builds the
+        # SigV4 Authorization from self.access_key/self.secret_key and has no
+        # instance-role or metadata-service path. Missing keys used to sign with
+        # Credential=None and an empty secret, so the process booted fine and
+        # failed only on its FIRST storage operation, in production, on someone's
+        # first post. Reject them at construction instead. (Outside review of
+        # v264, L4.) A credential-less/anonymous S3 mode would need an explicit
+        # opt-in and a signing path that does not exist here.
+        if not access_key or not secret_key:
+            raise RuntimeError(
+                "The s3 backend requires AWS_ACCESS_KEY_ID and "
+                "AWS_SECRET_ACCESS_KEY: it signs requests with static "
+                "credentials and has no instance-role path. Set both, or use "
+                "SKRIBL_MEDIA_BACKEND=local.")
         self.bucket = bucket
         self._url_builder = url_builder
         self.region = region or "us-east-1"
