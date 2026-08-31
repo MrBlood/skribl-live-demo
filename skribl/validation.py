@@ -220,11 +220,25 @@ def _webp_dimensions(raw):
     return None
 
 
+# Sentinel: the scan gave up at a resource cap before reaching an SOF, so the
+# dimensions are UNKNOWN AND THE FILE IS SUSPICIOUS. This is not the same as
+# None. None means "there is no readable SOF here" — a truncated or structurally
+# broken file, which a browser cannot decode into a bomb either, so it is
+# accepted (see the section note). _UNSCANNABLE means "an SOF may well sit just
+# past where we stopped looking", which is exactly the shape of the outside
+# review's bypass: 64 empty APP0 segments followed by an SOF0 declaring
+# 65535x65535. The browser has no 64-segment limit and decodes the bomb; our
+# bounded scan quit one segment early and, returning None, ACCEPTED it. A scan
+# that stops at its own safety cap must fail CLOSED, or the cap is the bypass.
+_UNSCANNABLE = object()
+
 # A JPEG states its size in an SOF segment, which sits after an arbitrary number
 # of metadata segments (EXIF, ICC, comments). The walk is bounded twice — by
 # segment count and by byte offset — so the scan cost stays flat regardless of
-# what the file claims.
-_JPEG_MAX_SEGMENTS = 64
+# what the file claims. A real photo reaches its SOF in a handful of segments
+# and a few KB; the caps are set far above that, so hitting one is itself the
+# signal that the file is not a real photo.
+_JPEG_MAX_SEGMENTS = 128
 _JPEG_MAX_SCAN = 1 << 20            # 1 MB of headers before an SOF is already absurd
 # 0xC0-0xCF are SOF markers EXCEPT C4 (Huffman tables), C8 (reserved) and CC
 # (arithmetic coding conditioning), which are not frame headers.
@@ -235,8 +249,15 @@ _JPEG_SOF_MARKERS = frozenset(
 
 
 def _jpeg_dimensions(raw):
+    # The cap check is INSIDE the loop and returns the sentinel, so the reason
+    # the walk ended is preserved: ran out of data (truncated -> None -> accept)
+    # is distinguished from hit a safety cap (-> _UNSCANNABLE -> reject). The
+    # old `while ... and segments < CAP` folded both into a single fall-through
+    # None, which is the bypass.
     i, segments, n = 2, 0, len(raw)
-    while i + 9 <= n and i < _JPEG_MAX_SCAN and segments < _JPEG_MAX_SEGMENTS:
+    while i + 9 <= n:
+        if segments >= _JPEG_MAX_SEGMENTS or i >= _JPEG_MAX_SCAN:
+            return _UNSCANNABLE                  # gave up before an SOF — refuse
         if raw[i] != 0xFF:
             return None                          # not where a marker should be
         marker = raw[i + 1]
@@ -257,7 +278,7 @@ def _jpeg_dimensions(raw):
                     int.from_bytes(raw[i + 5:i + 7], "big"))
         i += 2 + length
         segments += 1
-    return None
+    return None                                  # ran out of data, no SOF — accept
 
 
 def _image_dimensions(sub_type, raw):
@@ -281,6 +302,8 @@ def _image_dimensions(sub_type, raw):
         dims = _jpeg_dimensions(raw)
     else:
         return None
+    if dims is _UNSCANNABLE:
+        return _UNSCANNABLE                      # propagate: caller must refuse
     if dims is None or dims[0] < 1 or dims[1] < 1:
         return None
     return dims
@@ -361,6 +384,12 @@ def _validate_media_data_url(value, expected_type, max_bytes, label):
         if not _valid_image_signature(sub_type, raw):
             return f"'{label}' does not match the declared {sub_type} container."
         dims = _image_dimensions(sub_type, raw)
+        if dims is _UNSCANNABLE:
+            # The header could not be scanned within the bomb-check's own cost
+            # bounds. A real photo never needs that many segments; refusing is
+            # the whole point of the bounded scan (outside review of v263, H1).
+            return (f"'{label}' declares more header than can be scanned; "
+                    f"refused as a potential decompression bomb.")
         if dims is not None:
             w, h = dims
             if w > MAX_IMAGE_EDGE or h > MAX_IMAGE_EDGE:
