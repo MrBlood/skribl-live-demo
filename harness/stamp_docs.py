@@ -90,9 +90,14 @@ def _headline(run):
                 f"{', '.join(run['problems'])}. {run['assertions']} assertions "
                 f"passed across {run['suites']} suite(s) that did report, {tail}")
     if run["skipped"]:
+        # "reporting suites" and the on-disk total, spelled out together, so a
+        # reader does not have to reconcile this line's count against
+        # RELEASE.md's "suites on disk" by hand. (Outside review of v263, L3:
+        # the stamp said 86, RELEASE.md said 88, and nothing said 86 = 88 − 2.)
         return (f"**PASS WITH SKIPS — {run['assertions']} assertions across "
-                f"{run['suites']} suites, none failing, "
-                f"{len(run['skipped'])} skipped** {tail}")
+                f"{run['suites']} reporting suites "
+                f"({run['suites'] + len(run['skipped'])} on disk, "
+                f"{len(run['skipped'])} skipped), none failing** {tail}")
     return (f"**{run['assertions']} assertions across {run['suites']} suites, "
             f"all green** {tail}")
 

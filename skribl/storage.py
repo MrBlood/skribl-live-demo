@@ -211,11 +211,25 @@ class LocalDiskStore(MediaStore):
             #
             # Touching it makes the reuse look exactly like a fresh write, which
             # is what it is as far as the grace period is concerned.
+            #
+            # v264, outside review H3: there is still an ordering the touch alone
+            # does not close. Between the os.path.exists above and the os.utime
+            # below, the sweeper can delete the object it listed as old. The
+            # utime then raises FileNotFoundError, and the old code swallowed it
+            # and returned as if the reuse succeeded — leaving the post pointing
+            # at bytes that are gone. We HAVE the bytes (raw), so on that race we
+            # fall through and rewrite them rather than return empty-handed.
+            # This does not close the whole window (the sweeper can still delete
+            # AFTER a successful utime; that residue is bounded by the grace
+            # period and re-checked by stat_key on the sweeper side — see the
+            # note there), but it removes the one sub-window a reuse can detect.
             try:
                 os.utime(path, None)
+                return
+            except FileNotFoundError:
+                pass          # deleted under us mid-reuse — rewrite below
             except OSError:
-                pass          # read-only or exotic fs; stat_key still re-checks
-            return
+                return        # read-only or exotic fs; stat_key still re-checks
         os.makedirs(sub, exist_ok=True)
         # Write to a temp name and rename, so a crash mid-write cannot leave a
         # truncated file sitting at a key that claims to be complete.
@@ -290,12 +304,23 @@ class LocalDiskStore(MediaStore):
             return None
 
     def delete_key(self, key):
+        # The sweep counts a key as REMOVED unless delete_key raises (see
+        # sweep_orphans' "removed now means removed"). Swallowing every OSError
+        # here defeated that: a permission-denied or read-only-fs delete left
+        # the body on disk while the sweep reported it reclaimed. (Outside
+        # review of v263, M5.) So only 'already gone' is swallowed for the body,
+        # which is a legitimate success; any other error propagates and the
+        # sweep records it as a failure rather than a removal. The .type sidecar
+        # is legacy and best-effort — its absence or refusal is never an error.
         _, path, type_path = self._paths(key)
-        for target in (path, type_path):
-            try:
-                os.remove(target)
-            except OSError:
-                pass
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass                          # already gone — a real removal
+        try:
+            os.remove(type_path)
+        except OSError:
+            pass                          # legacy sidecar; never load-bearing
 
     def read(self, key):
         """-> (bytes, content_type), or None. Key is validated by the caller."""

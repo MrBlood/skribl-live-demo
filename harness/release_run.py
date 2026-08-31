@@ -424,6 +424,14 @@ def main():
         "",
         "A skip is not coverage. Suites that skip are listed above by name so "
         "that an absence of failures is never read as an absence of gaps.", "",
+        "The frozen tree hash above deliberately EXCLUDES the docs that carry "
+        "generated counts (README.md, START-HERE.md, docs/HANDOFF.md, "
+        "harness/README.md), this file, harness/LAST-RUN.txt and SHA256SUMS: "
+        "each is written AFTER the run, so a hash covering them would describe "
+        "a tree that no longer exists once they are stamped. Their final bytes "
+        "are covered instead by `SHA256SUMS`, which is regenerated last, and "
+        "`verify_docs.py` fails if any stamped count disagrees with this run. "
+        "(Outside review of v263, M6.)", "",
     ]
     # Where a skip IS covered, say where — generated from the table below, not
     # typed into prose. The v224 outside review filed the MP4 skip as a finding
@@ -502,8 +510,15 @@ def main():
         f"suites with problems: {len(failed) + len(never)}",
         "",
     ]))
-    subprocess.run([sys.executable, str(HARNESS / "stamp_docs.py")],
-                   cwd=str(ROOT), capture_output=True)
+    # The final stamp is part of the release, not an afterthought: if it fails,
+    # the docs keep the PREVIOUS run's counts while RELEASE.md carries this
+    # one's, and nothing said so. (Outside review of v263, M7.) Surface it.
+    _stamp = subprocess.run([sys.executable, str(HARNESS / "stamp_docs.py")],
+                            cwd=str(ROOT), capture_output=True, text=True)
+    if _stamp.returncode != 0:
+        sys.exit("stamp_docs.py failed after the run — the docs were NOT "
+                 "updated and the release is not sealed:\n"
+                 + (_stamp.stderr or _stamp.stdout).strip())
 
     # The run is complete, so the checkpoint has served its purpose. Leaving it
     # behind would make the NEXT release silently resume a finished run and
