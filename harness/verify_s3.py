@@ -294,6 +294,28 @@ check("NEGATIVE CONTROL: a bad secret is refused by the bucket", refused,
       "if this passes, the fake bucket is not checking anything and neither "
       "is this suite")
 
+# OUTSIDE REVIEW OF v264, L4. MISSING credentials must be refused at
+# CONSTRUCTION, not at first use. This store signs with static keys only (no
+# instance-role path), so access_key=None used to sign with Credential=None and
+# boot fine, failing only on someone's first post in production.
+for _ak, _sk, _why in ((None, SK, "no access key"),
+                       (AK, None, "no secret key"),
+                       (None, None, "neither")):
+    _raised = False
+    try:
+        S3Store(BUCKET, lambda k: k, region=REGION, access_key=_ak, secret_key=_sk)
+    except RuntimeError as e:
+        _raised = "AWS_ACCESS_KEY_ID" in str(e) or "AWS_SECRET_ACCESS_KEY" in str(e)
+    check(f"the s3 backend refuses to construct with {_why}", _raised,
+          "boot must fail loudly, not on the first storage operation")
+# NO FALSE POSITIVE: both keys present still constructs.
+_ok = True
+try:
+    S3Store(BUCKET, lambda k: k, region=REGION, access_key=AK, secret_key=SK)
+except RuntimeError:
+    _ok = False
+check("…and with both keys present it constructs normally", _ok)
+
 # --------------------------------------------------------------------------
 # End to end through the app, which is where the security question lives.
 # --------------------------------------------------------------------------

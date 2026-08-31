@@ -28,6 +28,10 @@ import os
 import secrets
 import time
 import weakref
+try:
+    import fcntl                      # POSIX advisory file locks
+except ImportError:                   # pragma: no cover - non-POSIX host
+    fcntl = None
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from threading import Lock
@@ -460,6 +464,55 @@ def _tombstone_ids(store):
 # an append that landed is applied by whoever next reserves, in any process.
 # The journal is SQLite-only: PostgreSQL's release write does not collide, and
 # the cross-worker guarantee there is pinned live in verify_postgres.
+#
+# APPEND AND TAKE MUST NOT INTERLEAVE. take() reads the whole file and then
+# truncates it; without a lock, an append that lands between the read and the
+# truncate is discarded UNREAD — that release record is lost and its pending row
+# counts against the quota until TTL, producing false 429s. (Outside review of
+# v264, #3.) An exclusive advisory lock held across the whole of each append and
+# each take serialises them, so every appended line is read by exactly one take
+# before any truncate. The lock is on a sidecar `.lock` file, not the journal
+# itself, so a truncate can never race a lock held on the fd being truncated.
+def _journal_lock_path(engine):
+    p = _journal_path(engine)
+    return (p + ".lock") if p else None
+
+
+class _JournalLock:
+    """Exclusive advisory lock for the duration of a with-block. A no-op where
+    fcntl is unavailable (non-POSIX) or the lock file cannot be opened, which
+    degrades to the previous best-effort behaviour rather than failing a
+    release."""
+    def __init__(self, engine):
+        self._fh = None
+        if fcntl is None:
+            return
+        path = _journal_lock_path(engine)
+        if not path:
+            return
+        try:
+            self._fh = open(path, "a+")
+        except OSError:
+            self._fh = None
+
+    def __enter__(self):
+        if self._fh is not None:
+            try:
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_EX)
+            except OSError:
+                pass
+        return self
+
+    def __exit__(self, *exc):
+        if self._fh is not None:
+            try:
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
+            finally:
+                self._fh.close()
+                self._fh = None
+        return False
+
+
 def _journal_path(engine):
     try:
         if engine.dialect.name != "sqlite":
@@ -477,10 +530,11 @@ def _journal_append(engine, token):
     if not path:
         return False
     try:
-        with open(path, "a") as fh:
-            fh.write(f"{int(token)} {int(time.time())}\n")
-            fh.flush()
-            os.fsync(fh.fileno())
+        with _JournalLock(engine):
+            with open(path, "a") as fh:
+                fh.write(f"{int(token)} {int(time.time())}\n")
+                fh.flush()
+                os.fsync(fh.fileno())
         return True
     except Exception:
         return False
@@ -516,13 +570,14 @@ def _journal_take(engine):
         return []
     ids, cutoff = [], int(time.time()) - int(RATE_PENDING_TTL)
     try:
-        with open(path, "r+") as fh:
-            for line in fh:
-                parts = line.split()
-                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit() and int(parts[1]) >= cutoff:
-                    ids.append(int(parts[0]))
-            fh.seek(0)
-            fh.truncate()
+        with _JournalLock(engine):
+            with open(path, "r+") as fh:
+                for line in fh:
+                    parts = line.split()
+                    if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit() and int(parts[1]) >= cutoff:
+                        ids.append(int(parts[0]))
+                fh.seek(0)
+                fh.truncate()
     except Exception:
         return []
     return ids

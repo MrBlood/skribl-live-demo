@@ -4320,3 +4320,69 @@ prose, so a stale doc is a defect on that day even when the code is right.
 `verify_smudgeblur.py` held a JS regex in a plain triple-quoted string, so `\(`
 warned. The string is raw now. The warning never affected a result; it is the
 kind of residue a public repo should not ship.
+
+## v265 -- The second review: two more real races, and one held open on purpose
+
+The reviewer came back over v264 and went looking past the explicit fixes for
+adjacent failure modes. Three findings had teeth. Two are fixed here; the third
+is real, architecturally significant, and held open deliberately with a plan.
+
+### #3 -- the release journal could lose an append to a concurrent take (fixed)
+
+The SQLite rate-limiter's durable release journal is read-all-then-truncate.
+`_journal_take` read every line and then `seek(0); truncate()`; an append that
+landed from another worker BETWEEN the read and the truncate was erased unread.
+That release record was lost and its pending reservation kept counting against
+the quota until TTL -- users seeing false 429s, and the journal not delivering
+the durable cross-worker guarantee its own comment promised.
+
+An exclusive advisory lock (`flock` on a sidecar `.lock`, so a truncate never
+races a lock on the fd being truncated) now serialises append against take. It
+degrades to the old best-effort behaviour where `fcntl` is absent, which is
+never the SQLite+single-host deployment this journal is for. Proven two ways:
+the lock blocks a second holder until release, and 500 appends across five
+threads during a spinning taker lose none -- where disabling the lock loses
+~116 of 500.
+
+### #4 -- an S3 deployment booted without credentials and failed on first post (fixed)
+
+`S3Store` required a bucket but accepted `access_key=None`, then signed with
+`Credential=None` and an empty secret. This store signs with STATIC keys only --
+there is no instance-role or metadata path in it -- so a missing key is always
+an error, and the honest place to raise it is construction, not someone's first
+post in production. It now refuses to build without both keys.
+
+### #1 -- the orphan-sweep race is real, and the fix is deferred with a plan
+
+The reviewer is right, and I said as much in v264: touch-and-re-check narrows
+the window but cannot close it, because the association row commits in the
+HOST's transaction AFTER the media is written, so no delete-time check can ever
+see it. The exact ordering -- sweeper reference-check, sweeper stat sees OLD,
+poster utime succeeds, poster returns, sweeper delete, poster commits -- was
+reproduced deterministically (a store that performs the reuse at the stat seam;
+the reused object is deleted, and its committed post 404s forever).
+
+**Repeating stat() cannot eliminate a TOCTOU.** Closing it needs durable
+ownership the sweeper can see: a committed pending-media claim, a per-key lease,
+or a quarantine protocol. The owner's call was to SHIP the current build and fix
+this next rather than land an ownership scheme in a rushed release, and that is
+recorded here rather than papered over. Practical exposure is low but not zero:
+it requires reusing an object older than the 24h grace within the microsecond
+window of the sweeper deleting that exact key.
+
+The chosen approach for the fix, so the next session starts from a decision and
+not a blank page, is in FUTURE.md: a committed pending-media reservation, which
+is backend-agnostic (identical for local disk and S3, correct across hosts),
+keeps the MediaStore interface unchanged, and matches the durable-journal
+pattern this codebase already uses for the rate limiter. The deterministic
+reproduction above is the acceptance test it must turn green.
+
+### M4 -- production detection stays positive by design
+
+The reviewer would prefer detection fail closed on an unrecognised host. The
+project's deliberate choice is positive detection so `python -c "from app
+import app"`, one-off scripts and the harness boot without configuration; the
+residual (an unlisted platform with no SKRIBL_ENV gets the dev secret) is an
+operator-configuration matter, and `.env.example` now documents setting
+SKRIBL_ENV=production explicitly. The owner confirmed: docs, not a runtime
+behaviour change. This is a stance, stated, not an oversight.

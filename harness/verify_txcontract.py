@@ -898,6 +898,75 @@ check("F4: any later session on the same engine is bounded without calling "
       "_bounded() at all (engine-level, cannot be forgotten)",
       _fresh == 200, str(_fresh))
 
+print("\nF3b (v265) — append and take do not interleave, so no release is lost")
+# OUTSIDE REVIEW OF v264, #3. _journal_take read the whole file then truncated
+# it; an append that landed between the read and the truncate was discarded
+# UNREAD — that release record lost, its pending row counting against the quota
+# until TTL (false 429s). An exclusive advisory lock now serialises append
+# against take.
+import threading as _threading
+
+_jdir = tempfile.mkdtemp()
+_jeng = _sa.create_engine(f"sqlite:///{_jdir}/j.db")
+
+# (a) the primitive: a second holder waits until the first releases.
+if _rl3.fcntl is None:
+    check("F3b: journal lock test skipped (no fcntl on this platform)", True,
+          "the flock path is a no-op here and degrades to best-effort")
+else:
+    _got = _threading.Event()
+    _a = _rl3._JournalLock(_jeng)
+    _a.__enter__()
+
+    def _second_holder():
+        with _rl3._JournalLock(_jeng):
+            _got.set()
+
+    _bt = _threading.Thread(target=_second_holder)
+    _bt.start()
+    _blocked_while_held = not _got.wait(0.4)
+    _a.__exit__()
+    _acquired_after = _got.wait(1.0)
+    _bt.join(1.0)
+    check("F3b: an exclusive journal lock blocks a second holder until release",
+          _blocked_while_held and _acquired_after,
+          f"blocked_while_held={_blocked_while_held} acquired_after={_acquired_after}")
+
+# (b) end to end: concurrent appends during a spinning taker lose nothing.
+_appended, _append_lock, _taken = set(), _threading.Lock(), []
+_stop = _threading.Event()
+
+
+def _appender(base):
+    for k in range(100):
+        tok = base * 100000 + k
+        if _rl3._journal_append(_jeng, tok):
+            with _append_lock:
+                _appended.add(tok)
+
+
+def _taker():
+    while not _stop.is_set():
+        _taken.extend(_rl3._journal_take(_jeng))
+
+
+_threads = [_threading.Thread(target=_appender, args=(b,)) for b in range(1, 6)]
+_tk = _threading.Thread(target=_taker)
+_tk.start()
+for _t in _threads:
+    _t.start()
+for _t in _threads:
+    _t.join()
+_stop.set()
+_tk.join(2.0)
+_taken.extend(_rl3._journal_take(_jeng))          # drain the tail
+_lost = _appended - set(_taken)
+check("F3b: every appended release is taken, none lost to a truncate race",
+      not _lost and len(_appended) == 500,
+      f"{len(_lost)} of {len(_appended)} lost (e.g. {sorted(_lost)[:5]})")
+import shutil as _shutil  # noqa: E402
+_shutil.rmtree(_jdir, ignore_errors=True)
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

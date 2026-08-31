@@ -1,16 +1,16 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-08-31T04:09:50Z
+UTC timestamp           : 2026-08-31T11:56:49Z
 Host                    : Linux x86_64
-Tree SHA-256            : 7e099a7686a692eb82df577bca612c68757f06c7060266be8ed31fb9cd7543bc
-Git commit              : a284074-dirty
-SKRIBL_VERSION          : v264
+Tree SHA-256            : d1435672a927fe629b410ff08c0247156c840180005d6ac04140552a89854ce7
+Git commit              : d3ab18a-dirty
+SKRIBL_VERSION          : v265
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.Z9bENEGVRK/harness.db)
+Database reset          : yes (fresh /tmp/tmp.EPjvXetUxi/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -88,7 +88,7 @@ suites requested : 88
   verify_race.py: ok — 17/17 passed
   verify_report.py: ok — 35/35 passed
   verify_review.py: ok — 281/281 passed
-  verify_s3.py: ok — 26/26 passed
+  verify_s3.py: ok — 30/30 passed
   verify_scrub.py: ok — 17/17 passed
   verify_seam.py: ok — 203/203 passed
   verify_select.py: ok — 55/55 passed
@@ -106,10 +106,10 @@ suites requested : 88
   verify_tools.py: ok — 120/120 passed
   verify_tray.py: ok — 121/121 passed
   verify_tween.py: ok — 83/83 passed
-  verify_txcontract.py: ok — 69/69 passed
+  verify_txcontract.py: ok — 71/71 passed
   verify_ux.py: ok — 326/326 passed
   verify_version.py: ok — 24/24 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 3886   (skipped suites contribute 0)
+assertions passed: 3892   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
