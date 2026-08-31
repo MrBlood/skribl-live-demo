@@ -24,6 +24,7 @@ the counters are cross-checked against each other so a miscount cannot hide.
 Runs entirely in-process against a temp SQLite file and a temp media root. No
 server, no browser — it is one of the cheapest suites in the tree.
 """
+import base64
 import hashlib
 import json
 import os
@@ -478,6 +479,53 @@ check("claim_media writes one committed row per distinct key",
       n == 2 and seen == {key("w1"), key("w2")}, f"n={n} seen={len(seen)}")
 check("claim_media with no keys writes nothing", n_empty == 0)
 
+
+# (5) THE PRODUCTION INCIDENT (v267): the claim path must no-op cleanly when the
+# skribl_pending_media table does not exist. Production ran a schema that predated
+# the v203 migration, so the table was absent; the claim DELETE inside the post's
+# savepoint hit a missing table and — on PostgreSQL, which aborts the whole
+# transaction on one failed statement — the rate-limiter's later INSERT then
+# failed with PendingRollbackError and every media-carrying post 500'd. The fix
+# gates the whole claim path on the table existing. Here we DROP the table,
+# reset the process cache the gate uses, and prove: the gate reports absent,
+# claim_media no-ops, and a media-carrying POST still returns 201.
+import sqlalchemy as _sa_probe                                    # noqa: E402
+with app.app_context():
+    session().query(SkriblPendingMedia).delete(); session().commit()
+    SkriblPendingMedia.__table__.drop(_app_module.db.engine)
+    storage._pending_media_ready = None      # force the gate to re-inspect
+    _absent = not _sa_probe.inspect(_app_module.db.engine).has_table("skribl_pending_media")
+check("precondition: the table is really gone", _absent)
+with app.app_context():
+    check("pending_media_ready() reports False when the table is absent",
+          storage.pending_media_ready(_app_module.db.engine) is False)
+    check("claim_media() no-ops (returns 0) when the table is absent",
+          storage.claim_media(_app_module.db.engine, [key("m1")], 120) == 0)
+
+
+def _durl(mime, nbytes=4096):
+    sig = {"image/jpeg": b"\xff\xd8\xff", "audio/wav": b"RIFF\x00\x00\x00\x00WAVE"}.get(mime, b"")
+    body = sig + b"\x00" * max(1, nbytes - len(sig))
+    return f"data:{mime};base64," + base64.b64encode(body).decode()
+
+
+_client = app.test_client()
+
+
+def _post_media(mime, **media):
+    fr = {"strokes": [], "strokeGroups": [], "background": {"color": "#101418"}}
+    fr.update(media)
+    r = _client.post("/api/skribls", data=json.dumps({"frames": [fr]}),
+                     content_type="application/json")
+    return r.status_code
+
+
+_s1 = _post_media("image/jpeg", photo={"data": _durl("image/jpeg"), "fit": "cover"})
+check("a POST carrying a photo returns 201, not 500, with the table absent",
+      _s1 == 201, f"status={_s1}")
+_s2 = _post_media("audio/wav", music={"data": _durl("audio/wav"), "trimStart": 0, "trimEnd": 8})
+check("a second media POST also commits (the transaction was never poisoned)",
+      _s2 == 201, f"status={_s2}")
 
 shutil.rmtree(DB_DIR, ignore_errors=True)
 shutil.rmtree(MEDIA_ROOT, ignore_errors=True)
