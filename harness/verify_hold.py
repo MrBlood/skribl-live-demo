@@ -398,13 +398,19 @@ with sync_playwright() as _p2:
               f"heavy {cost['heavy']}ms vs light {cost['light']}ms — "
               f"too close for this test to mean anything")
 
-        # Time frames as the viewer sees them: gap between successive paints.
+        # Time frames as the viewer sees them: gap between successive
+        # PRESENTATIONS. This used to wrap window.render, which was a proxy for
+        # presentation that v262 broke honestly: a cached frame blits without
+        # calling render at all, so the heavy frame vanished from the samples
+        # after the first loop and its neighbour appeared to hold two slots.
+        # playStep is the presentation itself — it runs once per shown frame,
+        # blit or paint — so it is the thing to mark.
         rows = _t.evaluate("""() => new Promise(res => {
-          const marks = [], orig = window.render;
-          window.render = function(){ const r = orig.apply(this, arguments);
+          const marks = [], orig = window.playStep;
+          window.playStep = function(){ const r = orig.apply(this, arguments);
             marks.push({ t: performance.now(), i: idx }); return r; };
           fps = 12; play();
-          setTimeout(() => { stop(); window.render = orig;
+          setTimeout(() => { stop(); window.playStep = orig;
             const out = [];
             for (let k = 1; k < marks.length; k++)
               out.push({ i: marks[k-1].i, ms: marks[k].t - marks[k-1].t });

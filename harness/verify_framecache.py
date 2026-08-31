@@ -184,13 +184,20 @@ with sync_playwright() as p:
         const _pf = paintFrame;
         window.paintFrame = function(c, strokes) {{ paints.push(strokes.length); return _pf(c, strokes); }};
         const rec = [];
+        let bookAtFirstBlit = null;
         const _step = playStep;
         window.playStep = function() {{
             const t0 = performance.now(); _step();
             rec.push(performance.now() - t0);
+            // The heavy page's FIRST blit is the only moment where replacing
+            // and blending are provably far apart: a 60/40 blend still carries
+            // >=60% of the rasterisation cost here, while by the second blit
+            // the EMA has decayed enough to sneak under any workable bound —
+            // which is exactly how a mutation of this rule survived once.
+            if (rec.length === frames.length + 2) bookAtFirstBlit = framePaintMs[1];
             if (rec.length === frames.length * 3 + 1) {{
                 const heavyCost1 = rec[1];              // heavy page, first paint
-                const heavyBook = framePaintMs[1];       // after two blits
+                const heavyBook = bookAtFirstBlit;
                 const alive = !!playBitmaps;
                 // Restore BEFORE stop(): stop() itself repaints the editor view
                 // through buildStrip()/render(), and counting those would blame
@@ -216,9 +223,10 @@ with sync_playwright() as p:
           f"MIN_POINTS really spared them the cache")
     check("a blit replaces the frame's cost book entry instead of blending in",
           loop["heavyBook"] is not None and loop["heavyBook"] < loop["heavyCost1"] * 0.5,
-          f"book says {loop['heavyBook']:.2f}ms vs {loop['heavyCost1']:.2f}ms first "
-          f"paint — a 60/40 blend of the two makes every cached loop rush, "
-          f"measured at 1.5s for a 1.92s loop")
+          f"book says {loop['heavyBook']:.2f}ms right after the first blit vs "
+          f"{loop['heavyCost1']:.2f}ms first paint — a 60/40 blend keeps >=60% "
+          f"of the stale cost at that moment, and the stale cost is what makes "
+          f"every cached loop rush (measured: 1.5s for a 1.92s loop)")
     check("the store lives during playback and is dropped by stop()",
           loop["aliveDuring"] and loop["droppedAfter"],
           "playback-scoped: the memory is freed the moment it stops earning")
