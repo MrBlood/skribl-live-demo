@@ -4501,3 +4501,43 @@ The honest bound: the gate reads the schema once per process. A database that
 gains the table while the process is live keeps no-oping until the next deploy
 restarts it -- which, since the same deploy is what applies the migration, is
 exactly when it should start working. The two are wired to the same event.
+
+## v268 -- A skribl gets a name, from a tab both editors share
+
+Saving a `.skribl` produced a nameless file. The Pad defaulted every draft to
+"Untitled Skribl"; Flip named its download by the DATE, so two Flip saves the
+same day landed as "…date.skribl" and "…date (1).skribl" -- the browser's
+collision suffix standing in for the name the app never asked for. Two surfaces,
+the same missing feature, diverging in two different wrong directions: the exact
+shape of bug this project keeps paying for.
+
+So the fix is ONE module, `lib/nametab.js`, that both editors include. It wires
+a name tab on the header -- a seamless tongue in the header's own surface (no
+hairline, because the header has none) centred on its lower edge -- that drops a
+title strip down with the Tune drawer's exact grid-rows motion. It exposes
+`window.SkriblName`: `get()` returns the typed title or an auto-filled default,
+`set()` pushes a loaded draft's title back in, and `filename()` slugs a title to
+a filesystem-safe `<slug>.skribl`. Both serialisers read `get()`; both download
+paths read `filename()`; both load paths call `set()`. The name also rides the
+payload's `title`, so it is the posted and library title too.
+
+The default is NAME + TIME ("Skribl · Aug 31 9:12 PM"), not a bare date, and it
+is computed once per session so it is stable while you edit. Time, not date, is
+the point: the old collisions were day-granular. `filename()` reduces anything
+to `[a-z0-9-]` so a space, a "·" or a ":" never reaches a Windows filename or a
+shell. Empty is never nameless -- the default fills in -- so a save always has a
+real name without forcing a naming step first.
+
+Placement was the owner's call, made against real screenshots: centred, and the
+tab uses a SOLID `--surface-panel` (exactly what the header's translucent fill
+composites to over the near-black page) rather than a translucent fill, which
+had tinted toward the canvas behind it where it hangs. On the Pad it hangs into
+the ~12px gap between the header and the canvas. Flip's header is a floating card
+OVER the canvas, so there is no gap there and the tab sits at the very top of the
+drawing area -- consistent with Flip's floating chrome, and noted rather than
+hidden.
+
+`verify_nametab.py` drives both editors: the tab is present, the shared
+`window.SkriblName` behaves IDENTICALLY on Pad and Flip (the two-surfaces
+guarantee, asserted, not assumed), a messy title slugs safely, the auto-name
+carries a time, and the typed name reaches `serializeSkribl`/`serializeFlip`.

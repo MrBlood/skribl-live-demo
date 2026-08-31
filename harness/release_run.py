@@ -150,6 +150,9 @@ BATCHES = [
     # authoring path; theme screenshots both stylesheets. Grouped with the two
     # small structural suites rather than the timing-sensitive ones.
     ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
+  # v268: the shared name tab (Pad + Flip). Browser-driven but light — it drives
+  # both editor headers and reads window.SkriblName, no pixel measurement.
+  ["verify_nametab.py"],
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
     # v224. Media resource limits (outside review #5). It drives a browser only
