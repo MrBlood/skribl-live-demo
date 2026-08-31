@@ -599,8 +599,11 @@ if _wf.is_file():
 print("\nDOCS — a shipped capability may not be described as unshipped")
 
 # Documents that describe the CURRENT state and are read as guidance.
-CURRENT_DOCS = ["FOR-THE-REVIEWER.md", "START-HERE.md", "DESIGN-DIRECTION.md",
-                "README.md", "HANDOFF-NEXT-SESSION.md", "ARCHIVE-README.md",
+# FOR-THE-REVIEWER.md and HANDOFF-NEXT-SESSION.md were on this list until the
+# v263 cleanup retired both files (each described a seal thirty-odd versions
+# stale); the list names what exists, not what used to.
+CURRENT_DOCS = ["START-HERE.md", "DESIGN-DIRECTION.md",
+                "README.md", "ARCHIVE-README.md",
                 "FUTURE.md", "docs/INTEGRATION.md"]
 # Never scanned: a changelog SHOULD say "before v222 the bytes were lost", and a
 # review response should record what was true at the time. Their whole job is to

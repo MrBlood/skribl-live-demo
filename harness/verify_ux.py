@@ -3,7 +3,7 @@
 1. FORMAT DISCLOSURE. The Pad has always labelled its export button with the
    container the browser will actually produce ("Video (MP4)" / "Video (WebM)").
    Flip never did — it said "Video" and then silently handed you WebM on any
-   browser without WebCodecs H.264. Closes the last item in ROADMAP's "Known
+   browser without WebCodecs H.264. Closes the last item in the retired roadmap's "Known
    caveats to close". Flip's label now mirrors exportVideo()'s real decision,
    including the subtle case where music is present but AAC is unavailable, where
    the MP4 path deliberately bails rather than ship a silent video.

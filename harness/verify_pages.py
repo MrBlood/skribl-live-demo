@@ -1,6 +1,6 @@
 """v107 — onion-skin depth + tint, page reorder / copy-paste, and clear redo.
 
-Three items off ROADMAP's Flip and Pad feature lists.
+Three items off the (since-retired) roadmap's Flip and Pad feature lists.
 
 Everything here is view-only or in-memory: onion depth/tint are session state that
 is deliberately NOT persisted or posted, and reorder/paste mutate the existing

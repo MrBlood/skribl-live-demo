@@ -232,3 +232,4 @@ harness/.pg_gunicorn.log
 skribl/migrations/versions/*_scope_probe.py
 skribl/migrations/versions/*_drift_probe.py
 harness/.pg_f3_gunicorn.log
+SHA256SUMS
