@@ -316,7 +316,10 @@ body {
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* 4px, not 10: the signature's exit tail already carries ~5px of air in
+     its own viewBox, so a wide flex gap pushed the mode word visibly away
+     from the name it belongs to. */
+  gap: 4px;
 }
 /* JS (fitBrand) adds this when even the mark won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
@@ -3832,7 +3835,7 @@ input:focus-visible {
 
   .brand {
     font-size: 13px;
-    gap: 6px;
+    gap: 3px;
     flex-shrink: 0;
   }
 
