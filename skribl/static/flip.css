@@ -652,9 +652,10 @@
       padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
       max-height: 88dvh; overflow-y: auto; }
     .flip-menu:not([hidden]) { animation: flip-sheet-up 0.35s var(--spring); }
-    .flip-menu::before { content: ''; display: block; width: 40px; height: 5px;
-      border-radius: 999px; background: var(--text-secondary); opacity: 0.45;
-      margin: 4px auto 10px; }
+    /* The grabber is a REAL .menu-handle element in the markup, same as
+       Pad's sheets — a ::before drew inconsistently on the owner's iPhone.
+       styles.css shows .menu-handle only at sheet widths, so the desktop
+       popover stays clean for free. */
     /* The sheet BODY matches Pad's too — same row height (15px 14px padding),
        same 18px icon column, same divider rhythm. Two menus with the same
        items in the same body should not read as two designs (owner, phone

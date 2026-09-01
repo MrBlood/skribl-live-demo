@@ -4539,6 +4539,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !moreMenu.hidden
 // tapping the dim area dismisses it, which the document handler above only
 // achieves incidentally.
 if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
+// The sheet grabber closes the menu on tap, same as Pad's handles do.
+{ const _h = moreMenu.querySelector('.menu-handle'); if (_h) _h.addEventListener('click', () => closeMenu()); }
 // Bound as early as the function exists, not near the end of the file. Even
 // with bindEl() guarding each lookup, a throw ANYWHERE above here would still
 // have prevented this line from running — and share doing nothing is the worst
