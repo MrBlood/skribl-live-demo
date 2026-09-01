@@ -345,7 +345,7 @@ body {
    any svg inside .brand, and it is later in the file. */
 .brand-tag--icon { padding-top: 6px; }
 .brand .brand-tag--icon svg, .brand-tag--icon svg {
-  width: 21px; height: 21px; display: block;
+  width: 24px; height: 24px; display: block;
   border-radius: 0; box-shadow: none;
 }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
@@ -389,6 +389,10 @@ body {
    step down keeps the signature present with its neighbours intact. */
 @media (max-width: 480px) {
   .header .brand .brand-mark { height: 26px; }
+  /* The tag icon steps with the mark (24 -> 21): at 24px beside the phone
+     cluster, fitBrand shed the tag entirely on Pad — a smaller icon that
+     stays beats a bigger one that vanishes. */
+  .brand .brand-tag--icon svg, .brand-tag--icon svg { width: 21px; height: 21px; }
 }
 .brand.brand-collapsed > span { display: none; }
 
