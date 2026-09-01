@@ -350,19 +350,19 @@ body {
    words are not square. overflow visible, tile opt-outs: same reasons as the
    mark's own rule above — the player-only `.brand svg { 34px tile }` rule
    below catches any svg inside .brand, and it is later in the file. */
-.brand-tag--script { padding-bottom: 2.6px; align-self: flex-end; display: flex;
+.brand-tag--script { align-self: flex-end; display: flex;
   /* The signature's exit tail sweeps through ~9px of air inside its own
      viewBox, so the flex gap alone cannot seat the word next to the ink —
      pull the word back under that air. Net ink-to-ink ≈ one word space. */
   margin-left: -8px;
   /* SAME INK as the signature — owner: "the exact same lettering as skribl".
-     .brand-tag's secondary grey read as a washed-out smudge beside the
-     glowing white mark; the words take the mark's color and its halo, and
-     their stroke-width (3.4 at 24px) matches the mark's rendered 2.76px. */
+     Same color, same halo — and at the SAME 36px of the same 30-unit box
+     with the same stroke-width 2.3, it is literally the same pen: mark and
+     word share one baseline, one x-height band, one line of handwriting. */
   color: var(--text-primary);
   filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30)); }
 .brand .brand-tag--script svg, .brand-tag--script svg {
-  height: 24px; width: auto; display: block; overflow: visible;
+  height: 36px; width: auto; display: block; overflow: visible;
   border-radius: 0; box-shadow: none;
 }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
@@ -406,10 +406,10 @@ body {
    step down keeps the signature present with its neighbours intact. */
 @media (max-width: 480px) {
   .header .brand .brand-mark { height: 26px; }
-  /* The script word steps with the mark (24 -> 17, the mark's own 26/36
-     ratio): a smaller word that stays beats a bigger one fitBrand sheds. */
-  .brand .brand-tag--script svg, .brand-tag--script svg { height: 17px; }
-  .brand-tag--script { padding-bottom: 2px; margin-left: -6px; }
+  /* The script word steps with the mark (36 -> 26, the same step): one line
+     of handwriting stays one line of handwriting on a phone. */
+  .brand .brand-tag--script svg, .brand-tag--script svg { height: 26px; }
+  .brand-tag--script { margin-left: -6px; }
 }
 .brand.brand-collapsed > span { display: none; }
 
