@@ -524,8 +524,17 @@ body {
   min-height: 0;
   /* Matches the 24px Flip's fitPad() reserves. Without it the canvas presses
      against the column edge on a narrow screen — and now that the canvas has a
-     2px ring, the ring sits flush against the app border. */
-  padding: 0 12px;
+     2px ring, the ring sits flush against the app border.
+     22px TOP, same number and same reason as Flip's stage: the two drawer
+     shells above this area (name, tune) each tuck under the header with a
+     -10px margin, pulling the canvas up 20px — more than the header's 12px
+     bottom margin gives back. On desktop the canvas usually has slack, so
+     nobody saw it; on a tall phone the 9:16 preset fills the area exactly and
+     the canvas slid UNDER the floating header (owner's iPhone screenshot).
+     layoutEditorCanvas() and the boot best-fit both derive available space
+     from this computed padding, so the canvas pays with a few px of scale,
+     never overflow. */
+  padding: 22px 12px 0;
   box-sizing: border-box;
 }
 /* In the player the wrap sizes/centers itself (see body.player-mode rules), so
