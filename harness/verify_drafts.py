@@ -180,6 +180,16 @@ with sync_playwright() as p:
     check("after restore, the photo is BACK — bytes, not a re-add card",
           bool(photo and photo["shown"] and photo["hasSrc"] and photo["name"] == "pin.png"),
           str(photo))
+    # A restored drawing is a POSTABLE drawing. v269 made Post ship disabled
+    # from first paint, with every take-producing path clearing the flag —
+    # except restoreAutosave, which still only un-hid the button (the whole
+    # reveal back when Post was hidden-until-take). Reported from the live
+    # demo the day v269 shipped: restore a drawing and Post stays dimmed until
+    # a NEW take is recorded on top of it.
+    post = pg.evaluate("() => { const b = document.getElementById('postBtn');"
+                       " return { hidden: b.hidden, disabled: b.disabled }; }")
+    check("after restore, Post is live — a restored drawing is postable",
+          post == {"hidden": False, "disabled": False}, str(post))
     check("no page errors across the media round-trip", not m_errors, "; ".join(m_errors[:2]))
     ctx.close()
 

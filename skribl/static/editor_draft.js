@@ -419,6 +419,13 @@ function restoreAutosave(data) {
     finishedRecording = true;
     playWrap.hidden = false;
     postBtn.hidden = false;
+    // v269 changed Post's posture: it ships in the header DISABLED from first
+    // paint and every path that produces a postable take clears the flag. This
+    // path predates that and only un-hid the button — which was the whole
+    // reveal back when Post was hidden-until-take — so a restored drawing sat
+    // behind a dimmed Post until the user recorded a NEW take on top of it.
+    // Reported from the live demo the day v269 shipped.
+    postBtn.disabled = false;
     updateDrawingTimeLabels();
     durationBadge.hidden = false;
   } else if (data.baseSnapshot) {
