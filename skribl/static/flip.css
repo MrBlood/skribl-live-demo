@@ -45,7 +45,9 @@
      The aria-label on .flip-word still carries the WORD — the bare-icon
      lesson from Flip Mode's own history applies to the mark too. */
   .flip-word { color: var(--text-primary); padding-left: 2px; display: flex; align-items: center; gap: 9px; }
-  .flip-word .brand-mark { height: 36px; width: auto; display: block; overflow: visible; } /* signature-sized, like Pad's — see styles.css note */
+  .flip-word .brand-mark { height: 36px; width: auto; display: block; overflow: visible;
+    filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30)); } /* signature-sized + subtle halo, like Pad's — see styles.css note */
+  @media (max-width: 480px) { .flip-word .brand-mark { height: 26px; } } /* phone step, same as Pad's */
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
   /* Below 640 the shared rule `.header .actions { margin-left: 12px }`

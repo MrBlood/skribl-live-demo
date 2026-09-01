@@ -378,6 +378,17 @@ body {
   overflow: visible;
   border-radius: 0;
   box-shadow: none;
+  /* The almost-imperceptible lift (owner's spec): one soft 5px halo at 30%
+     accent. Felt more than seen on the dark header; a faint lavender breath
+     on light. A second, wider shadow tips it into neon — deliberately not. */
+  filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30));
+}
+/* Phone step: at 36px the signature is ~78px wide, which at 320-430px forces
+   the shed system to spend Post's label (390) or the mark itself (320) to
+   clear the cluster — the two things v223/v269 pin as never sacrificed. One
+   step down keeps the signature present with its neighbours intact. */
+@media (max-width: 480px) {
+  .header .brand .brand-mark { height: 26px; }
 }
 .brand.brand-collapsed > span { display: none; }
 
