@@ -655,6 +655,16 @@
     .flip-menu::before { content: ''; display: block; width: 40px; height: 5px;
       border-radius: 999px; background: var(--text-secondary); opacity: 0.45;
       margin: 4px auto 10px; }
+    /* The sheet BODY matches Pad's too — same row height (15px 14px padding),
+       same 18px icon column, same divider rhythm. Two menus with the same
+       items in the same body should not read as two designs (owner, phone
+       review: "the menus do not look the same?"). Desktop keeps the compact
+       popover metrics. Prefixed with .flip-menu: the base metric rules sit
+       LATER in this file and win a same-specificity tie. */
+    .flip-menu .flip-menu-item { padding: 15px 14px; gap: 12px; border-radius: 10px; }
+    .flip-menu .flip-menu-item .mi-ic { width: 18px; }
+    .flip-menu .flip-menu-item .mi-ic svg { width: 18px; height: 18px; }
+    .flip-menu .flip-menu-sep { margin: 6px 8px; }
   }
   @keyframes flip-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
   /* Matches Pad's .menu-overlay::before — same alpha, same blur — so the two
