@@ -338,14 +338,18 @@ body {
      same visual baseline. */
   padding-top: 3px;
 }
-/* Icon form of the mode tag: the same quiet secondary voice, drawn in the
-   signature's own stroke (round caps, currentColor) instead of spaced caps.
-   The tile opt-outs (radius, shadow) are needed for the same reason the
-   mark's are: the player-only `.brand svg { 34px tile }` rule below catches
-   any svg inside .brand, and it is later in the file. */
-.brand-tag--icon { padding-top: 6px; }
-.brand .brand-tag--icon svg, .brand-tag--icon svg {
-  width: 30px; height: 30px; display: block;
+/* Script form of the mode tag: "pad" / "flip" hand-lettered by the same pen
+   as the signature (one stroke, same skew), 24px to the mark's 36 — the mode
+   is a word the pen added after signing, not a second logo. Both share the
+   signature's 30-unit box and internal baseline (~23.5), so with bottoms
+   aligned the word's baseline sits 5.2px above its bottom edge vs the mark's
+   7.8 — the 2.6px bottom padding reseats them on ONE ruled line. width auto:
+   words are not square. overflow visible, tile opt-outs: same reasons as the
+   mark's own rule above — the player-only `.brand svg { 34px tile }` rule
+   below catches any svg inside .brand, and it is later in the file. */
+.brand-tag--script { padding-bottom: 2.6px; align-self: flex-end; display: flex; }
+.brand .brand-tag--script svg, .brand-tag--script svg {
+  height: 24px; width: auto; display: block; overflow: visible;
   border-radius: 0; box-shadow: none;
 }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
@@ -389,11 +393,10 @@ body {
    step down keeps the signature present with its neighbours intact. */
 @media (max-width: 480px) {
   .header .brand .brand-mark { height: 26px; }
-  /* The tag icon steps with the mark (30 -> 22): measured at 390px, 23px is
-     the exact width where fitBrand sheds Pad's tag beside Record — 22px is
-     the largest size that stays. A smaller icon that stays beats a bigger
-     one that vanishes. */
-  .brand .brand-tag--icon svg, .brand-tag--icon svg { width: 22px; height: 22px; }
+  /* The script word steps with the mark (24 -> 17, the mark's own 26/36
+     ratio): a smaller word that stays beats a bigger one fitBrand sheds. */
+  .brand .brand-tag--script svg, .brand-tag--script svg { height: 17px; }
+  .brand-tag--script { padding-bottom: 2px; }
 }
 .brand.brand-collapsed > span { display: none; }
 
