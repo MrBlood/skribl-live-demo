@@ -340,13 +340,15 @@ body {
    which room you are in (PAD / FLIP / PLAYER). One system instead of a
    different sticker per mode. */
 .brand-tag {
+  /* Tiny but legible (owner's spec): small, tight, caps. 10px/700 with a
+     modest .12em track — wide tracking at this size read airy, not tight. */
   font-weight: 700;
-  font-size: 12px;
-  letter-spacing: .2em;
+  font-size: 10px;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  /* Optical: the sticker's word sits slightly high in its glow bubble; a nudge
-     seats the tag on the same visual baseline. */
+  /* Optical: the signature sits slightly high; a nudge seats the word on the
+     same visual baseline. */
   padding-top: 3px;
 }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
