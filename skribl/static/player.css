@@ -375,7 +375,7 @@ body {
    ever dressing it up again. overflow visible: the skew and tail sit a hair
    outside the viewBox and must not be clipped. */
 .header .brand .brand-mark {
-  height: 20px;
+  height: 36px;
   width: auto;
   display: block;
   overflow: visible;

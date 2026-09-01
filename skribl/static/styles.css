@@ -338,6 +338,16 @@ body {
      same visual baseline. */
   padding-top: 3px;
 }
+/* Icon form of the mode tag: the same quiet secondary voice, drawn in the
+   signature's own stroke (round caps, currentColor) instead of spaced caps.
+   The tile opt-outs (radius, shadow) are needed for the same reason the
+   mark's are: the player-only `.brand svg { 34px tile }` rule below catches
+   any svg inside .brand, and it is later in the file. */
+.brand-tag--icon { padding-top: 6px; }
+.brand .brand-tag--icon svg, .brand-tag--icon svg {
+  width: 21px; height: 21px; display: block;
+  border-radius: 0; box-shadow: none;
+}
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
    buttons / Flip's back arrow) — one size at every width, per the wordmark
    parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
@@ -362,7 +372,7 @@ body {
    ever dressing it up again. overflow visible: the skew and tail sit a hair
    outside the viewBox and must not be clipped. */
 .header .brand .brand-mark {
-  height: 20px;
+  height: 36px;
   width: auto;
   display: block;
   overflow: visible;
