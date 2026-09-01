@@ -651,6 +651,13 @@ body.player-mode .canvas-area { display: contents; }
   pointer-events: none;
   z-index: 0;
   object-fit: cover;
+  /* Safari does not reliably clip a transformed child ( .zoom-layer carries
+     transform/will-change ) to a parent's rounded overflow:hidden — on the
+     owner's iPhone every photo's square corners punched through the canvas
+     frame's rounded edge ("image covers edge of canvas"). Chromium clips
+     fine, which is why no desktop screenshot ever showed it. Round the
+     image itself so its corners match the frame regardless of who clips. */
+  border-radius: var(--r-frame);
 }
 
 /* ---------- Toast ---------- */

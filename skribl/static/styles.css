@@ -600,6 +600,10 @@ body:not(.player-mode) .canvas-wrap {
   flex: none;
   max-width: 100%;
   max-height: 100%;
+  /* Belt to the photo layer's braces: forces Safari to composite-clip
+     children (the zoom-layer is transformed, and Safari otherwise lets its
+     children escape a rounded overflow:hidden). Visually a no-op. */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
   /* Pre-JS placeholder. layoutEditorCanvas() sets width/height INLINE, and an
      inline style always beats this rule, so these two lines can only ever
      affect the frame BEFORE app.js has run — the settled layout is untouched.
@@ -2610,6 +2614,13 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   pointer-events: none;
   z-index: 0;
   object-fit: cover;
+  /* Safari does not reliably clip a transformed child ( .zoom-layer carries
+     transform/will-change ) to a parent's rounded overflow:hidden — on the
+     owner's iPhone every photo's square corners punched through the canvas
+     frame's rounded edge ("image covers edge of canvas"). Chromium clips
+     fine, which is why no desktop screenshot ever showed it. Round the
+     image itself so its corners match the frame regardless of who clips. */
+  border-radius: var(--r-frame);
 }
 
 /* ---------- Toast ---------- */
