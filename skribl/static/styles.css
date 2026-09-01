@@ -3423,9 +3423,14 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .menu-handle {
     display: block;
     width: 40px;
-    height: 4px;
+    height: 5px;
     border-radius: 999px;
-    background: var(--hairline-strong);
+    /* var(--hairline-strong) rendered ~invisible on the dark sheet — the
+       owner asked where the "typical thing on top" was while it was right
+       there. text-secondary at .45 reads as the standard grabber in both
+       themes. */
+    background: var(--text-secondary);
+    opacity: 0.45;
     margin: 4px auto 10px;
     cursor: pointer;
     position: relative;

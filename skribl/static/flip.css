@@ -641,6 +641,22 @@
     background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
     box-shadow: 0 24px 60px rgba(0,0,0,.55); padding: 6px; }
   .flip-menu[hidden] { display: none; }
+  /* On phones the ⋯ menu is a BOTTOM SHEET, exactly like Pad's — the two
+     menus carried the same items in two different bodies (popover here,
+     sheet there), and the owner rightly asked why. Grabber drawn as ::before
+     so no markup changes; the scrim already closes it, like Pad's. */
+  @media (max-width: 640px) {
+    .flip-menu { position: fixed; top: auto; left: 10px; right: 10px; bottom: 0;
+      min-width: 0; width: auto; box-sizing: border-box;
+      border: 0; border-radius: 20px 20px 0 0;
+      padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+      max-height: 88dvh; overflow-y: auto; }
+    .flip-menu:not([hidden]) { animation: flip-sheet-up 0.35s var(--spring); }
+    .flip-menu::before { content: ''; display: block; width: 40px; height: 5px;
+      border-radius: 999px; background: var(--text-secondary); opacity: 0.45;
+      margin: 4px auto 10px; }
+  }
+  @keyframes flip-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
   /* Matches Pad's .menu-overlay::before — same alpha, same blur — so the two
      surfaces dim identically. z-index sits just under .flip-menu's 60. */
   .flip-menu-scrim { position: fixed; inset: 0; z-index: 59;
