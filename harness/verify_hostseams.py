@@ -223,7 +223,7 @@ c_f = app_f.test_client()
 after = c_f.get("/api/skribls").get_json()
 check("the installed filter removes those rows from the listing",
       all(i["id"] not in ids for i in after["items"]),
-      f"{len(after["items"])} rows survive")
+      f"{len(after['items'])} rows survive")
 check("…and it removed the TITLES too, not just the payloads",
       not any(i["title"].startswith("public-") for i in after["items"]),
       "the disclosure was the listing metadata, not the drawing")
