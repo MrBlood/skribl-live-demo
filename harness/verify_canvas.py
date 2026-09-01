@@ -50,7 +50,10 @@ with sync_playwright() as p:
     # real preset from the table, never a viewport-derived pair.
     _boot = pg.evaluate("""() => {
         const st = document.querySelector('.flip-stage');
-        const best = SkriblCanvasSizes.bestFor(st.clientWidth - 24, st.clientHeight - 6);
+        const cs = getComputedStyle(st);
+        const best = SkriblCanvasSizes.bestFor(
+            st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+            st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
         return { cur: [CW, CH, currentSizeId()], best: [best.w, best.h, best.id] };
     }""")
     check(f"starts at the preset that shows largest in this stage ({_boot['best'][2]})",
@@ -177,7 +180,10 @@ with sync_playwright() as _p:
     # real preset (exact table dimensions), chosen by fit rather than position.
     _dflt = _pg.evaluate("""() => {
         const st = document.querySelector('.flip-stage');
-        const best = SkriblCanvasSizes.bestFor(st.clientWidth - 24, st.clientHeight - 6);
+        const cs = getComputedStyle(st);
+        const best = SkriblCanvasSizes.bestFor(
+            st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+            st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
         return { cur: [CW, CH], best: [best.w, best.h], id: currentSizeId() };
     }""")
     check("the default canvas IS a table preset, chosen by fit (not a hardcoded pair)",
@@ -215,7 +221,10 @@ with sync_playwright() as _p:
             if _name == "Flip":
                 _sizes[_name]["fit"] = _pg.evaluate("""() => {
                     const st = document.querySelector('.flip-stage');
-                    const best = SkriblCanvasSizes.bestFor(st.clientWidth - 24, st.clientHeight - 6);
+                    const cs = getComputedStyle(st);
+                    const best = SkriblCanvasSizes.bestFor(
+                        st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+                        st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
                     return { id: currentSizeId(), bestId: best.id };
                 }""")
             else:

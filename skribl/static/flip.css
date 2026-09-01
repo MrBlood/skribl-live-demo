@@ -178,8 +178,16 @@
      `0 0 auto; height: 52vh` it could not, and the hint below — two lines at
      desktop widths, more as the viewport narrows — pushed .app past 100vh and
      produced a whole-page scrollbar over ~32px. The canvas keeps its aspect
-     ratio, so shrinking the stage costs empty space first. */
-  .flip-stage { flex: 1 1 auto; flex-basis: 52vh; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 6px 12px 0; position: relative; }
+     ratio, so shrinking the stage costs empty space first.
+     22px top, not 6: since v269 the canvas opens at the largest preset that
+     fits, so it genuinely fills the stage and this padding is the ONLY air
+     between the frame and the floating header above it — and the two drawer
+     shells above the stage each tuck under the header with a -10px margin,
+     pulling the stage up 20px. Net minimum air at exact fit: 22 - 20 + the
+     header's 12px bottom margin = 14px; at 6px the frame actually TOUCHED the
+     header's pill. fitPad() derives its reserve from this computed padding,
+     so the canvas pays for the air with a few px of scale, never overflow. */
+  .flip-stage { flex: 1 1 auto; flex-basis: 52vh; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 22px 12px 0; position: relative; }
   .flip-wrap { position: relative; line-height: 0; overflow: hidden; border-radius: var(--r-frame); }
   .zoom-layer { position: relative; line-height: 0; transform-origin: 0 0; will-change: transform; }
   .zoom-layer.zoom-anim { transition: transform .18s cubic-bezier(.22,.61,.36,1); }
@@ -600,9 +608,12 @@
      thumbnails at every size. Out here they are always reachable, cost no
      horizontal room, and need no gradient scrim.
      It wraps rather than overflowing: below ~360px a fourth button starts a
-     second line instead of being clipped. */
+     second line instead of being clipped.
+     Symmetric 10px vertical padding: with 0 on top the dashed row sat flush
+     against the page bar's bottom hairline — 10px of air below it, none
+     above. */
   .addcol { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px;
-    padding: 0 12px 10px; align-items: center; }
+    padding: 10px 12px; align-items: center; }
   .addbtn { width: 88px; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--text-secondary);
     border-radius: 10px; padding: 8px 0; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
