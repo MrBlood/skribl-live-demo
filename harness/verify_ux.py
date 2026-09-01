@@ -75,8 +75,10 @@ with sync_playwright() as p:
         desc: document.getElementById('exportVideoDesc').textContent })""")
     check("Flip labels the button with a container", multi["title"].strip() in ("Video (MP4)", "Video (WebM)"),
           multi["title"])
-    check("Flip's description names it too", ("MP4" in multi["desc"] or "WebM" in multi["desc"]),
-          multi["desc"])
+    # v269: the container lives in the TITLE only — the description carries the
+    # tradeoff, and repeating "WebM" in both lines said it twice.
+    check("Flip's description does NOT repeat the container",
+          "MP4" not in multi["desc"] and "WebM" not in multi["desc"], multi["desc"])
 
     # The label must agree with what this browser can really do.
     truth = flip.evaluate("""async () => {
@@ -105,8 +107,10 @@ with sync_playwright() as p:
         desc: document.getElementById('exportVideoDesc').textContent })""")
     check("Pad labels the container", padlbl["title"].strip() in ("Video (MP4)", "Video (WebM)"),
           padlbl["title"])
-    check("Pad's desc names WebM too, not only MP4 (new in v106)",
-          ("MP4" in padlbl["desc"] or "WebM" in padlbl["desc"]), padlbl["desc"])
+    # v269: same rule as Flip — the title names the container once, the
+    # description keeps to the tradeoff.
+    check("Pad's desc does NOT repeat the container",
+          "MP4" not in padlbl["desc"] and "WebM" not in padlbl["desc"], padlbl["desc"])
     check("both surfaces agree on the format",
           padlbl["title"].strip() == multi["title"].strip(),
           f"pad {padlbl['title']!r} vs flip {multi['title']!r}")
@@ -250,8 +254,11 @@ with sync_playwright() as _p:
           const r = m ? m.getBoundingClientRect() : {width: 0, height: 0};
           return { visible: !!m && r.width > 10 && r.height > 10,
                    label: (w && w.getAttribute('aria-label')) || '' }; }""")
-        check(f"at {_w}px the mark is visible and labelled", 
-              _shown["visible"] and _shown["label"].lower() == "flipmode",
+        # v269: the unified lockup — the shared SKRIBL sticker plus a mode tag —
+        # labels this surface "Skribl Flip" (was "Flipmode" back when each mode
+        # wore its own sticker).
+        check(f"at {_w}px the mark is visible and labelled",
+              _shown["visible"] and _shown["label"].lower() == "skribl flip",
               f"{_shown!r} — exactly one visible mark, aria-label carries the word")
 
         # Real overflow, not arithmetic. A wordmark that "fits" by squeezing
@@ -576,9 +583,20 @@ with sync_playwright() as _p:
           }
           return n;
         }""")
+        # v269: the fresh canvas preset follows the viewport (a 393px phone opens
+        # 9:16), and the grid derives its column count from the canvas ASPECT —
+        # so the expected line count is computed the same way the overlay does,
+        # rather than assuming the old fixed 4:3's 8 columns.
+        _exp = _pg.evaluate("""() => {
+          const g = document.getElementById('flipGrid');
+          const m = SkriblGrid.majors();
+          const cols = g.width >= g.height ? m : Math.max(1, Math.round(m * g.width / g.height));
+          return { fine: cols * 2 + 1, coarse: cols + 1 };
+        }""")
         check(f"at {_w}px the grid includes the fine subdivision",
-              (_lines > 12) == _fine,
-              f"{_lines} vertical lines — 9 majors alone, 17 with the fine layer")
+              (_lines == _exp["fine"]) == _fine,
+              f"{_lines} vertical lines — {_exp['coarse']} majors alone, "
+              f"{_exp['fine']} with the fine layer")
 
         # Evenness is the property that made the fine layer usable at all:
         # equal gaps and one opacity per tier. A denser grid that is uneven is
@@ -1191,8 +1209,17 @@ with _sp204() as _p:
     pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     flip_items = fp.evaluate("() => [...document.querySelectorAll('.flip-menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     def has(items, s): return any(s in x for x in items)
-    check("V206: Pad menu says 'Save draft (.skribl)' like Flip", has(pad_items, "Save draft (.skribl)"), str(pad_items))
-    check("V206: Pad menu says 'Load draft (.skribl)' like Flip", has(pad_items, "Load draft (.skribl)"), str(pad_items))
+    # v269: the extension moved out of the action's name into a sub-label —
+    # "Save draft" is the action, ".skribl" is a detail. Parity still holds:
+    # both editors carry the same words, and neither puts "(.skribl)" back in
+    # the label itself.
+    check("V269: Pad menu says 'Save draft' like Flip", has(pad_items, "Save draft"), str(pad_items))
+    check("V269: Pad menu says 'Open draft…' like Flip", has(pad_items, "Open draft"), str(pad_items))
+    check("V269: Flip menu says 'Save draft' / 'Open draft…' too",
+          has(flip_items, "Save draft") and has(flip_items, "Open draft"), str(flip_items))
+    check("V269: neither menu titles an action with '(.skribl)' any more",
+          not has(pad_items, "(.skribl)") and not has(flip_items, "(.skribl)"),
+          str([x for x in pad_items + flip_items if "(.skribl)" in x]))
     check("V206: Pad menu says 'Export…' like Flip", has(pad_items, "Export\u2026"), str(pad_items))
     check("V206: Flip menu has 'Clear all pages' (was drawer-only)", has(flip_items, "Clear all pages"), str(flip_items))
     check("V206: Pad menu has 'Clear all'", has(pad_items, "Clear all"), str(pad_items))
@@ -1249,8 +1276,11 @@ with _sp204() as _p:
             const d = x.getImageData(0,0,c.width,c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++; return n; }}""")
     dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); dp.wait_for_timeout(600)
     dp.set_input_files("#draftInput", {"name": "demo-galaxy.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
+    # No backslash inside the f-string expression: legal only from Python 3.12,
+    # a SyntaxError that kills the whole suite on 3.11.
+    _nstrokes = dp.evaluate("() => (typeof strokes !== 'undefined' ? strokes.length : -1)")
     check("DEMO: galaxy .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
-          f"strokes={dp.evaluate('() => (typeof strokes!==\'undefined\'?strokes.length:-1)')}")
+          f"strokes={_nstrokes}")
     check("DEMO: galaxy renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
     dp.click("#playBtn"); dp.wait_for_timeout(1200); _a = _ink(dp, "#canvas"); dp.wait_for_timeout(1200); _b2 = _ink(dp, "#canvas")
     check("DEMO: galaxy REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
@@ -1674,18 +1704,20 @@ with _sp204() as _p:
         # missing mark makes the gap LARGER and the assertion greener. Measure
         # the mark itself. The brand is logo-only — there is no wordmark behind
         # it — so a hidden mark leaves nothing naming the surface.
-        _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span svg');"
+        # v269: the mark is an <img class="brand-mark"> (cached static SVG), so
+        # probe the class, not the svg element.
+        _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span .brand-mark');"
                           " if (!s) return 0; const r = s.getBoundingClientRect();"
                           " return r.width > 0 && r.height > 0 ? Math.round(r.width) : 0; }")
-        if pw >= 375:
-            check(f"v223 header@{pw}: after record→stop the MARK IS BACK",
-                  _mk > 0,
-                  f"mark {_mk}px — the v210 take-saved hide is retired; "
-                  f"initBrandFit sheds Record/gap/Post's label to seat it")
-        else:
-            check(f"v223 header@{pw}: the mark stays shed where it genuinely cannot fit",
-                  _mk == 0,
-                  f"mark {_mk}px — at {pw} it does not fit even with every label shed")
+        # v269 CHANGED THE ARITHMETIC AGAIN, in the mark's favour: the brand is
+        # now the ~43px one-stroke signature, a third the old sticker's width,
+        # and it fits EVERY width this loop drives — including the 320px safety
+        # net where the old mark genuinely could not. The "stays shed" branch
+        # is retired with the width problem it described.
+        check(f"v223 header@{pw}: after record→stop the MARK IS BACK",
+              _mk > 0,
+              f"mark {_mk}px — the signature fits at every width; nothing "
+              f"should be hiding it")
         # And Post keeps its word wherever the arithmetic allows.
         #
         # v219 CHANGED THE ARITHMETIC, and the old pin's own reason is what says
@@ -1715,13 +1747,17 @@ with _sp204() as _p:
         # this loop measures; idle is untouched and keeps the word everywhere.
         # To reverse: restore `pw >= 375` here and drop pass A of the shed in
         # initBrandFit().
+        # v269 revisits v223's trade: the signature mark costs ~43px, so Post's
+        # word no longer has to pay for the brand — with a take saved, Post
+        # keeps its label from 390 up (measured 83px there). At 375 the
+        # arithmetic is still ~10px short, so Post may drop to its icon; below
+        # that is the safety net where Post is merely required to exist.
         _pw = _h.evaluate("() => { const p = document.getElementById('postBtn'); return p && !p.hidden ? Math.round(p.getBoundingClientRect().width) : null; }")
-        if pw >= 430:
-            check(f"V219 header@{pw}: Post KEEPS its label — at 430 the mark and the word both fit", _pw and _pw > 60, f"Post {_pw}px wide")
-        elif pw >= 375:
-            check(f"v223 header@{pw}: Post goes icon-only so the mark can be seated", _pw == 40, f"Post {_pw}px wide (icon)")
+        if pw >= 390:
+            check(f"v269 header@{pw}: Post KEEPS its label — the signature mark and the word both fit",
+                  _pw and _pw > 60, f"Post {_pw}px wide")
         else:
-            check(f"V219 header@{pw}: Post may shed its label at the 320px safety net", _pw and _pw > 0, f"Post {_pw}px wide")
+            check(f"v269 header@{pw}: Post is present, label optional at this width", _pw and _pw > 0, f"Post {_pw}px wide")
         _h.close()
 
     check("V204: the old crammed .flip-hint footer is gone",

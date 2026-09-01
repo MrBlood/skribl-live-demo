@@ -149,12 +149,30 @@ function resizeCanvas() {
     // between two people drawing the same thing, and never anything the user
     // chose. A restored draft still re-establishes from its own canvasSize
     // (loadSkribl), so nothing already drawn changes shape.
-    const d = (window.SkriblCanvasSizes && window.SkriblCanvasSizes.DEFAULT) || null;
+    //
+    // WHICH preset, though, follows the device: bestFor() picks the one that
+    // displays largest in the band between header and toolbar, so a portrait
+    // phone starts 9:16 instead of a 4:3 letterbox floating in dead space.
+    // Still a preset — two people on the same kind of screen get the same
+    // shape — and the Canvas picker can change it while the canvas is empty.
+    const t = window.SkriblCanvasSizes || null;
+    let d = t ? t.DEFAULT : null;
+    if (t && t.bestFor) {
+      const areaEl = canvasArea || canvasWrap.parentElement || canvasWrap;
+      const r = areaEl.getBoundingClientRect();
+      const cs = getComputedStyle(areaEl);
+      const availW = r.width - (parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0));
+      const availH = r.height - (parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0));
+      // A degenerate band (display:none boot states, tests without CSS) keeps
+      // the classic default rather than trusting a 0x0 measurement.
+      if (availW > 50 && availH > 50) d = t.bestFor(availW, availH);
+    }
     if (d) establishEditorCanvas(d.w, d.h);
     else {
       const area = (canvasArea || canvasWrap.parentElement || canvasWrap).getBoundingClientRect();
       establishEditorCanvas(area.width || 320, area.height || 320);
     }
+    if (typeof window.syncCanvasSeg === 'function') window.syncCanvasSeg();
   }
   layoutEditorCanvas();
 }
@@ -232,7 +250,13 @@ function syncStateAfterHistoryChange(restoredHasContent) {
   // `recorded` still tracks state; only the DOM reveal is gated.
   const showTakeControls = recorded && !recording;
   playWrap.hidden = !showTakeControls;
-  postBtn.hidden = !showTakeControls;
+  // Post keeps its header slot from first paint — disabled until there is a
+  // take, hidden only DURING one (the recording header is a different mode,
+  // and on a phone the rec pill + Stop need the room). A primary action that
+  // pops in and out makes the header feel unstable; a dimmed one says "this
+  // is where posting will happen" from the start.
+  postBtn.hidden = recording;
+  postBtn.disabled = !showTakeControls;
   if (recorded) {
     updateDrawingTimeLabels();
     durationBadge.hidden = !showTakeControls;
@@ -1304,7 +1328,7 @@ function beginRecording(continueTake) {
   recIndicator.hidden = false;
   playWrap.hidden = true;
   playBtn.innerHTML = ICON_PLAY + LABEL_PLAY;
-  postBtn.hidden = true;
+  postBtn.hidden = true;          // the recording header is its own mode; Post returns on Stop
   durationBadge.hidden = true;
 
   recTimer.textContent = '0:00';
@@ -1314,7 +1338,10 @@ function beginRecording(continueTake) {
     // getPlaybackDuration() sums across ALL strokes, so on a continue-take the
     // "play" readout keeps counting up from the previous takes' total.
     const play = formatDuration(getPlaybackDuration());
-    recTimer.textContent = wall + ' · ' + play + ' play';
+    // Plain words, not a readout: "0:06 · plays 0:01" says the second number is
+    // the replay's length after pause-tightening; "0:06 · 0:01 play" said
+    // nothing a first-time user could parse.
+    recTimer.textContent = wall + ' · plays ' + play;
   }, 200);
 }
 
@@ -1335,7 +1362,8 @@ function endRecordingTake() {
   document.body.classList.remove('recording');
   recIndicator.hidden = true;
   playWrap.hidden = !recorded;
-  postBtn.hidden = !recorded;
+  postBtn.hidden = false;          // back in its slot either way; dimmed if the take was empty
+  postBtn.disabled = !recorded;
   if (!recorded) document.querySelector('.header').classList.remove('compact');
 
   clearInterval(recTimerInterval);
@@ -1379,7 +1407,8 @@ function clearCanvas() {
   redoBtn.disabled = true;
   durationBadge.hidden = true;
   playWrap.hidden = true;
-  postBtn.hidden = true;
+  postBtn.hidden = false;          // stays in its slot, disabled until the next take
+  postBtn.disabled = true;
   document.querySelector('.header').classList.remove('compact');
   updateClearVisibility();
   const matchLabel = document.getElementById('matchDrawingLabel');
@@ -1717,6 +1746,7 @@ if (playScrub) {
     header.classList.remove('rec-collapsed');
     header.classList.remove('gap-collapsed');
     header.classList.remove('post-collapsed');
+    header.classList.remove('tag-collapsed');
     // Pixel-snap the cluster. The wordmark's text width is fractional (the
     // brand's right edge measured 435.65625 at 1280) and justify-content:
     // flex-end hands that fraction straight to the cluster's x (715.609375),
@@ -1751,17 +1781,26 @@ if (playScrub) {
     // Post's word AND still lose the mark. Pass A tries to keep the mark; if
     // it still does not fit, pass B puts the labels back and drops the mark
     // instead, which is what 320/344/360 actually want.
-    if (collides()) header.classList.add('rec-collapsed');
-    if (collides()) header.classList.add('gap-collapsed');
-    if (collides()) header.classList.add('post-collapsed');
+    // Shed order follows which action is CURRENT. While Post is disabled
+    // (nothing to post yet) its word is the cheapest thing on the bar — a
+    // dimmed pill reads fine as an icon, and Record's word is the one a
+    // first-time user needs. Once a take exists the order flips back:
+    // Record is already icon-only by then (the `:has(#playWrap)` rule) and
+    // Post's word is the primary action's name.
+    // The MODE tag ('tag-collapsed') sheds right after the current action's
+    // cheapest word: the sticker still says SKRIBL without it, and its ~55px
+    // is worth more than any remaining label.
+    const pb = document.getElementById('postBtn');
+    const steps = (pb && pb.disabled)
+      ? ['post-collapsed', 'tag-collapsed', 'rec-collapsed', 'gap-collapsed']
+      : ['rec-collapsed', 'tag-collapsed', 'gap-collapsed', 'post-collapsed'];
+    for (const s of steps) if (collides()) header.classList.add(s);
     if (collides()) {
       header.classList.remove('rec-collapsed');
       header.classList.remove('gap-collapsed');
       header.classList.remove('post-collapsed');
       brand.classList.add('brand-collapsed');
-      if (collides()) header.classList.add('rec-collapsed');
-      if (collides()) header.classList.add('gap-collapsed');
-      if (collides()) header.classList.add('post-collapsed');
+      for (const s of steps) if (collides()) header.classList.add(s);
     }
   }
   const refit = () => requestAnimationFrame(fit);   // measure after layout settles
@@ -1776,7 +1815,7 @@ if (playScrub) {
   if (typeof MutationObserver !== 'undefined') {
     new MutationObserver(refit).observe(actions, {
       subtree: true, childList: true, attributes: true,
-      attributeFilter: ['hidden', 'class', 'style'],
+      attributeFilter: ['hidden', 'class', 'style', 'disabled'],
     });
   }
   requestAnimationFrame(fit);
@@ -3615,6 +3654,7 @@ function loadSkribl(data) {
     finishedRecording = true;   // a loaded replay is a finished recording — lock it
     playWrap.hidden = false;
     postBtn.hidden = false;
+    postBtn.disabled = false;
     updateDrawingTimeLabels();
     durationBadge.hidden = false;
   } else if (data.baseSnapshot) {

@@ -42,13 +42,11 @@
       videoDesc.textContent = audioEl ? 'Replay of your drawing with music' : 'Replay of your drawing';
       videoBtn.disabled = false;
       // Label the button with the format this browser will actually output.
+      // The container lives in the TITLE only — the description's job is the
+      // tradeoff, and repeating "WebM" in both lines said it twice.
       if (videoTitle) {
         expectedVideoFormat().then((fmt) => {
           videoTitle.textContent = 'Video (' + fmt + ')';
-          // Name the container in the description too, not just for MP4 — a user
-          // who is getting WebM should be told before they click, not after.
-          const base = audioEl ? 'Replay with music' : 'Replay';
-          videoDesc.textContent = base + (fmt === 'MP4' ? ' · MP4 (H.264)' : ' · WebM');
         }).catch(() => { videoTitle.textContent = 'Video'; });
       }
     }
@@ -73,7 +71,7 @@
         const hasPhoto = photoBgImg && photoBgImg.src && photoBgImg.style.display !== 'none';
         if (gifDesc) gifDesc.textContent = hasPhoto
           ? 'Strokes only · your photo won’t be included (use Video for that)'
-          : 'Just the strokes, animated · silent · loops';
+          : 'Just the strokes — loops, no sound';
         if (gifToggle) gifToggle.hidden = false;
       }
     }

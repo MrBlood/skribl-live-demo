@@ -430,7 +430,13 @@ let shapeKind = 'line';
 let shapeSides = 5, shapeRadius = 0;
 let _shapePrev = null, _shapeAnchor = null;   // 'pen' | 'eraser' | 'shape'; `erasing` stays the fast path
 let _saveT = null;
-function scheduleSave(){ clearTimeout(_saveT); showAutosaveStatus('saving'); _saveT = setTimeout(saveNow, 800); }
+// Quiet autosave: the debounce no longer flashes "Saving…" on every stroke —
+// an autosave that works shouldn't narrate itself. The pill speaks when the
+// save LANDS ("Saved", 1.6s then gone) and for anything long or wrong: the
+// media-spill paths still show "Saving…" while a multi-megabyte write is
+// genuinely pending, and 'failed'/'saved-no-media' still persist.
+function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800);
+  if (typeof updateFlipEmptyHint === 'function') updateFlipEmptyHint(); }
 // media:false drops the base64 bytes but keeps photo/musicMeta, so a restore can
 // rebuild everything except the files themselves and prompt the user to re-add
 // them. Used only by the localStorage autosave, which has a ~5 MB quota; the
@@ -911,6 +917,17 @@ function chip(msg){
   const el = document.getElementById('flipChip');
   el.textContent = msg; el.classList.add('show');
   clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+// The blank-page whisper (Pad's .canvas-empty-hint, same treatment): visible
+// only while the document is genuinely empty — one page, no strokes, no photo.
+// Re-evaluated on every scheduled save, and yanked on pointerdown so it is not
+// sitting under the first stroke while it is being drawn.
+function updateFlipEmptyHint(){
+  const el = document.getElementById('flipEmptyHint'); if(!el) return;
+  const empty = frames.length === 1
+    && (!frames[0] || !frames[0].strokes || !frames[0].strokes.length)
+    && !bgImage;
+  el.classList.toggle('hidden', !empty);
 }
 
 /* ---- render primitives — the pad's exact dispatch (start-flag on flat points) ---- */
@@ -4563,7 +4580,10 @@ if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
 })();
 
 bindEl('postBtn', 'click', openShareCompose);
-bindEl('miSave', 'click',()=>{ closeMenu(); saveDraft(); });
+bindEl('miSave', 'click',()=>{ closeMenu();
+  // Name it as part of saving — the drawer's button reads "Save draft".
+  if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save draft', onConfirm:saveDraft}); }
+  else { saveDraft(); } });
 bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
 /* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to
    Flip's existing encoders. The menu's "Export…" opens it; each format runs the
@@ -4591,8 +4611,8 @@ function openExportSheet(){
       const token = ++_exFmtToken;
       expectedVideoFormat().then(fmt=>{
         if(token!==_exFmtToken) return;
+        // Container in the TITLE only; the description keeps the tradeoff.
         vTitle.textContent='Video ('+fmt+')';
-        if(vDesc) vDesc.textContent = baseDesc + (fmt==='MP4' ? ' · MP4 (H.264)' : ' · WebM');
       }).catch(()=>{});
     }
   }
@@ -4604,7 +4624,7 @@ function openExportSheet(){
   if(gifBtn){
     if(single){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='Add a page or two to export a GIF'; if(gifToggle) gifToggle.hidden=true; }
     else if(!gifReady){ gifBtn.disabled=true; if(gifDesc) gifDesc.textContent='GIF encoder didn\u2019t load — try reloading'; if(gifToggle) gifToggle.hidden=true; }
-    else { gifBtn.disabled=false; if(gifDesc) gifDesc.textContent='Your animation, looping · silent'; if(gifToggle) gifToggle.hidden=false; }
+    else { gifBtn.disabled=false; if(gifDesc) gifDesc.textContent='Your animation — loops, no sound'; if(gifToggle) gifToggle.hidden=false; }
   }
   syncExportOptions();
   clearTimeout(_exCloseT);
@@ -7460,6 +7480,27 @@ onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', 
 if(onionGroup){ onionGroup.hidden=false; const _r=document.getElementById('tuneOnionRow'); if(_r) _r.classList.toggle('muted', !onion); }
 syncCanvasSeg();
 sizeStage(); buildStrip(); render(); sizeFill(); setBg(bgColor);
+updateFlipEmptyHint();
+// Yank the whisper the moment a stroke starts, so it is not sitting under it.
+pad.addEventListener('pointerdown', () => {
+  const _eh = document.getElementById('flipEmptyHint');
+  if (_eh) _eh.classList.add('hidden');
+}, { passive: true });
+// A fresh document (nothing restored) starts on the preset that displays
+// LARGEST in this device's stage — portrait phones get 9:16 instead of a 4:3
+// letterbox floating in dead space; same rule as Pad's resizeCanvas(). Silent:
+// sizing an empty page is not a draft worth claiming the autosave slot for.
+// Measured AFTER sizeStage() above so the stage height is real, with the same
+// 24/6px margins fitPad() reserves.
+if(!restored && window.SkriblCanvasSizes && window.SkriblCanvasSizes.bestFor){
+  const _st = document.querySelector('.flip-stage');
+  if(_st && _st.clientWidth > 50 && _st.clientHeight > 50){
+    const _best = window.SkriblCanvasSizes.bestFor(_st.clientWidth - 24, _st.clientHeight - 6);
+    if(applyCanvasSize(_best.w, _best.h, {silent:true})){
+      sizeStage(); buildStrip(); render(); syncCanvasSeg();
+    }
+  }
+}
 // A restored draft reopens on the page it was left on, so the strip must start
 // there too. Not smooth: on boot an animated scroll from page 1 to page 62 is a
 // second of the strip flying past for no reason. rAF because buildStrip() has
@@ -7475,7 +7516,8 @@ if (window.SkriblHints) {
   // Owner: just the link, no explanatory sentence — the guide is one tap away.
   window.SkriblHints.show('flip-intro',
     'New here?',
-    { action: { label: 'How it works \u2192', onClick: function () { if (typeof openHelpDrawer === 'function') openHelpDrawer(); } } });
+    { anchor: 'top-right',
+      action: { label: 'How it works \u2192', onClick: function () { if (typeof openHelpDrawer === 'function') openHelpDrawer(); } } });
 }
 loadBgImageObj(()=>{ applyBg(); render(); });   // re-hydrate a restored background image
 ensureAudio(); syncMediaUI();

@@ -50,12 +50,15 @@ with sync_playwright() as p:
     b = p.chromium.launch()
 
     # -----------------------------------------------------------------------
-    print("PAD CANVAS — the shape no longer depends on the window")
+    print("PAD CANVAS — the shape is a PRESET, never the raw viewport")
     #
-    # The old behaviour reproduced directly: two viewports, two shapes. This is
-    # the assertion that would have caught it, and it needs two page loads at
-    # different sizes — a single-viewport suite structurally cannot see it.
-    shapes = []
+    # The original bug: establishEditorCanvas() took whatever the viewport rect
+    # was, so any window width produced its own unique shape. v269 refined the
+    # contract: a fresh pad opens on the table preset that DISPLAYS LARGEST in
+    # its band (bestFor) — different devices may pick different presets, but the
+    # shape is always one of the four exact table entries, never a
+    # viewport-derived pair. And once established, the shape must survive a
+    # window resize untouched — that is the part a drawing depends on.
     for w, h in ((1280, 900), (520, 900)):
         pg = b.new_page(viewport={"width": w, "height": h})
         errs = []
@@ -63,13 +66,21 @@ with sync_playwright() as p:
         pg.goto(f"{BASE}/skribl-pad", wait_until="load")
         pg.wait_for_timeout(1400)
         check(f"Pad loads at {w}px with no JS errors", not errs, "; ".join(errs[:2]))
-        shapes.append(tuple(pg.evaluate("() => [authoredW, authoredH]")))
+        fit = pg.evaluate("""() => {
+            const t = window.SkriblCanvasSizes;
+            return { id: t.idFor(authoredW, authoredH), wh: [authoredW, authoredH] };
+        }""")
+        check(f"at {w}px the fresh canvas is an exact table preset ({fit['id']})",
+              fit["id"] != "custom", str(fit))
+        if w == 1280:
+            # Resize the SAME page down: an established canvas must not change.
+            before = tuple(pg.evaluate("() => [authoredW, authoredH]"))
+            pg.set_viewport_size({"width": 520, "height": 900})
+            pg.wait_for_timeout(500)
+            after = tuple(pg.evaluate("() => [authoredW, authoredH]"))
+            check("resizing the window never re-shapes an established canvas",
+                  before == after, f"{before} -> {after}")
         pg.close()
-
-    check("the authored canvas is identical at both window widths",
-          shapes[0] == shapes[1],
-          f"{shapes[0]} at 1280px vs {shapes[1]} at 520px — the canvas is "
-          "still inherited from the viewport")
 
     # -----------------------------------------------------------------------
     print("\nPAD CANVAS — one table, shared with Flip")
@@ -92,10 +103,18 @@ with sync_playwright() as p:
           f"{pad_sizes} vs {flip_sizes}")
     fp.close()
 
-    check("Pad's default canvas is the first preset, not the viewport",
-          tuple(pg.evaluate("() => [authoredW, authoredH]"))
-          == (pad_sizes[0]["w"], pad_sizes[0]["h"]),
-          str(pg.evaluate("() => [authoredW, authoredH]")))
+    # v269: the default is the preset bestFor() picks for Pad's band — a real
+    # table row chosen by fit, never a viewport echo.
+    _pfit = pg.evaluate("""() => {
+        const t = window.SkriblCanvasSizes;
+        const el = document.querySelector('.canvas-area');
+        const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
+        const aw = r.width - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        const ah = r.height - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+        return { id: t.idFor(authoredW, authoredH), bestId: t.bestFor(aw, ah).id };
+    }""")
+    check("Pad's default canvas is the best-fitting preset, not the viewport",
+          _pfit["id"] != "custom" and _pfit["id"] == _pfit["bestId"], str(_pfit))
 
     # The labels are written from the table at runtime; a preset renamed in the
     # table must not leave a stale label in the markup.

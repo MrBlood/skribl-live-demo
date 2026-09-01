@@ -4541,3 +4541,52 @@ hidden.
 `window.SkriblName` behaves IDENTICALLY on Pad and Flip (the two-surfaces
 guarantee, asserted, not assumed), a messy title slugs safely, the auto-name
 carries a time, and the typed name reaches `serializeSkribl`/`serializeFlip`.
+
+## v269 -- Canvas-first, one signature, and naming moves off the canvas
+
+Four decisions in one release, all of them reversals of things v268 and earlier
+had treated as settled.
+
+**The canvas fills the device.** A fresh document now opens on the preset that
+displays LARGEST in the band between header and toolbar (`bestFor()` in
+`lib/canvassizes.js`): a portrait phone gets 9:16 filling ~73% of the screen
+(it was a 4:3 letterbox under a third), the desktop column gets 1:1 or 4:3 by
+window height. Still always an exact table preset -- never a viewport echo --
+so two people on the same kind of screen get the same shape; a stored draft or
+an explicit pick always wins, and resizing never re-shapes an established
+canvas. The old contract ("the default IS the first preset") is retired in
+`verify_canvas`/`verify_padcanvas` in favour of "the default is a real preset,
+chosen by fit, stable under resize".
+
+**Naming lives in the menu, and Save draft goes through it.** The v268 header
+tab was obtrusive over the drawing (worse on phones, where Flip's header floats
+on the canvas). "Name this skribl" is now a menu row whose sub-label echoes the
+title; Save draft opens the same drawer with its button relabelled "Save draft",
+so a draft is named as it is saved. One shared path: `SkriblName.open({label,
+onConfirm})`.
+
+**The brand is a skribl.** The per-mode graffiti stickers are retired (icon /
+avatar duty only). The one mark everywhere is lowercase "skribl" hand-lettered
+as a SINGLE continuous stroke -- the pen lifts once, to dot the i -- shipped as
+inline SVG (`_skribl_brand_mark.html`, ~1.4KB, stroke=currentColor so it is
+real ink in both themes), signature-sized (20px) beside a tiny 10px caps mode
+tag (PAD / FLIP -- words kept until a differentiation direction is chosen). On
+a SHARED page the mark earns its keep: the player's "made with skribl" footer
+line draws itself stroke-by-stroke when the card becomes visible -- triggered
+on visibility, not load, because a transition fired into the still-hidden
+shell applied instantly and the visitor met a finished word. The player's HTML
+byte ratchet moved 9,000 -> 10,500 for exactly this, with the arithmetic in
+the check.
+
+**The header holds still and speaks plainly.** Post occupies its slot from
+first paint (disabled until a take exists) instead of popping in and out, and
+the shed order follows which action is current -- the mode tag is always the
+cheapest shed, so Record keeps its word at rest and Post keeps its word with a
+take from 390px up. The rec pill reads "0:06 · plays 0:01"; the menu says
+"Save draft"/"Open draft…" with the extension demoted to a sub-label; export
+descriptions carry the tradeoff, not the container the title already names;
+Flip's selection-bar duplicate is labelled Duplicate, ending the Copy/Copy
+collision. Generic toggles light in the accent (amber survives only on the
+onion controls, whose pages genuinely tint #ff9f43); autosave stopped
+narrating every stroke; Flip's blank page whispers "Draw page 1"; the dark
+canvas gets a 1px seat in light theme.

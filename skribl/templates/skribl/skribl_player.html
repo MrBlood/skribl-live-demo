@@ -31,19 +31,10 @@
 
   <div class="app">
   <div class="header">
-    <div class="brand">
-      <svg viewBox="0 0 100 100">
-        <defs>
-          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#7c5cff"/>
-            <stop offset="1" stop-color="#5b8cff"/>
-          </linearGradient>
-        </defs>
-        <rect width="100" height="100" rx="28" fill="url(#g)"/>
-        <polygon fill="#fff" points="50,14 56.5,38.7 81.2,32 63,50 81.2,68 56.5,61.3 50,86 43.5,61.3 18.8,68 37,50 18.8,32 43.5,38.7"/>
-      </svg>
-      <span><span class="brand-word">Skribl</span> <span class="brand-word">Pad</span></span>
-    </div>
+    {# The player-mode header is display:none — the player's brand lives in
+       the "made with" footer line (_skribl_player_controls.html), where a
+       shared page actually shows it. #}
+    <div class="brand"></div>
 
     <div id="recIndicator" class="rec-indicator" hidden>
       <span class="dot"></span> <span id="recTimer" class="rec-timer">0:00</span>
@@ -133,6 +124,67 @@
   <!-- Read-only player shell (shown only in player-mode) -->
   <!-- Player shell (shared partial — editor preview + public player) -->
   {% include 'skribl/_skribl_player_controls.html' %}
+  {# The brand moment, PLAYER-ONLY: the "made with" signature draws itself
+     once as the page loads — a shared skribl's first second demonstrates the
+     whole product before the visitor's drawing does the same thing. The
+     editors show the mark at rest; a tool shouldn't perform for its author.
+     Ends fully drawn (deterministic), skipped entirely for reduced-motion. #}
+  {# HOW THE DRAW WORKS (kept here, not in the shipped script — the page has a
+     byte ratchet and every visitor downloads this HTML):
+     - Ink is hidden at PARSE (dashoffset = length), so there is never a flash
+       of the finished word.
+     - The pen fires when the mark is actually ON SCREEN, not at load: the
+       player keeps its shell hidden until the payload arrives, and a
+       transition triggered inside a display:none subtree applies instantly —
+       keyed to load, the pen "drew" into the dark and the visitor met a
+       finished word. An rAF loop waits for a real box; two more rAFs let the
+       reveal paint commit with the ink still hidden, so the stroke starts
+       from zero in front of the viewer. If the shell never appears (error
+       states, ~15s cap) it gives up and shows the finished word.
+     - go() is a self-contained restart, measured to be the ONLY sequence
+       Chromium reliably animates here: reset offsets under transition:none,
+       FLUSH, install the transitions, FLUSH, then change the values. Setting
+       transition and value in one recalc snapped straight to drawn.
+     - SPEED 0.38 viewBox-units/ms ≈ 900ms of pen + a 90ms lift before the
+       i-dot; reduced-motion skips it all and gets the finished word. #}
+  <script nonce="{{ csp_nonce }}">
+  (function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var mark = document.querySelector('.player-brand .brand-mark');
+    if (!mark) return;
+    var plan = [];
+    mark.querySelectorAll('path').forEach(function (p) {
+      var len = p.getTotalLength();
+      p.style.strokeDasharray = len + ' ' + len;
+      p.style.strokeDashoffset = len;
+      plan.push({ p: p, len: len, dot: p.classList.contains('dot') });
+    });
+    function each(f) { plan.forEach(f); }
+    function flush() { void document.body.getBoundingClientRect(); }
+    function raf(f) { requestAnimationFrame(f); }
+    function snap() { each(function (s) { s.p.style.strokeDashoffset = '0'; }); }
+    function go() {
+      each(function (s) { s.p.style.transition = 'none'; s.p.style.strokeDashoffset = s.len; });
+      flush();
+      var t = 250;
+      each(function (s) {
+        if (s.dot) t += 90;
+        var dur = Math.max(30, s.len / 0.38);
+        s.p.style.transition = 'stroke-dashoffset ' + Math.round(dur) + 'ms linear ' + Math.round(t) + 'ms';
+        t += dur;
+      });
+      flush();
+      snap();
+    }
+    var tries = 0;
+    (function wv() {
+      var r = mark.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) raf(function () { raf(go); });
+      else if (++tries > 900) snap();
+      else raf(wv);
+    })();
+  })();
+  </script>
 
 
   {# tab bar removed — authoring surface, never shown on the player #}

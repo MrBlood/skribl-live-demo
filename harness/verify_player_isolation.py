@@ -743,7 +743,14 @@ with sync_playwright() as sp:
     # Headroom after this: 1,755 B. Tighter still, and the carve candidate below
     # is unchanged and now the obvious next move for whoever needs room.
     BYTES_RATCHET, BYTES_TARGET = 151_845, 153_600
-    HTML_RATCHET = 9_000                    # template was 56,716 B before this session
+    # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
+    # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
+    # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
+    # stroke=currentColor (theme ink) and the dash-draw animation are both
+    # impossible through an <img>. Still a ratchet: pinned just above the new
+    # floor so the next kilobyte has to argue for itself like this one did.
+    # (Template was 56,716 B before the editor shell came out.)
+    HTML_RATCHET = 10_500
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",

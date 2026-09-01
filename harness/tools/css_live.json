@@ -104,7 +104,10 @@
   "body.player-mode .canvas-area",
   "body.player-mode .canvas-wrap",
   "body.player-mode .header",
-  "html"
+  "html",
+  ".brand-tag",
+  ".header .brand .brand-mark",
+  ".player-brand .brand-mark"
  ],
  "editor": [
   "#canvas",

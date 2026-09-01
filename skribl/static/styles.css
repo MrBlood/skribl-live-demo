@@ -318,10 +318,26 @@ body {
   align-items: center;
   gap: 10px;
 }
-/* JS (fitBrand) adds this when even "PAD" won't fit → header text-free. The
+/* JS (fitBrand) adds this when even the mark won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
    host site is already branded, so the header only names the MODE. */
 .brand > span { white-space: nowrap; display: flex; align-items: center; }
+/* The MODE half of the lockup — the library treatment, worn by every surface:
+   the shared SKRIBL sticker is the brand, and this quiet spaced-caps word says
+   which room you are in (PAD / FLIP / PLAYER). One system instead of a
+   different sticker per mode. */
+.brand-tag {
+  /* Tiny but legible (owner's spec): small, tight, caps. 10px/700 with a
+     modest .12em track — wide tracking at this size read airy, not tight. */
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  /* Optical: the signature sits slightly high; a nudge seats the word on the
+     same visual baseline. */
+  padding-top: 3px;
+}
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
    buttons / Flip's back arrow) — one size at every width, per the wordmark
    parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
@@ -339,10 +355,17 @@ body {
    matches emitted blocks by comparing selector STRINGS against a recorded live
    set — rewriting that selector drops the whole block out of player.css and
    takes the player's own logo tile with it. */
-.header .brand svg.brand-mark {
-  height: 44px;
+/* v269: the mark is the one-stroke skribl signature (inline SVG in the shared
+   partial). SIGNATURE-sized, deliberately — 20px, not a 44px block: it should
+   read as a word someone left on the chrome, not a logo asking to be looked
+   at. The zeroed radius and shadow keep the old `.brand svg` tile rule from
+   ever dressing it up again. overflow visible: the skew and tail sit a hair
+   outside the viewBox and must not be clipped. */
+.header .brand .brand-mark {
+  height: 20px;
   width: auto;
   display: block;
+  overflow: visible;
   border-radius: 0;
   box-shadow: none;
 }
@@ -534,14 +557,23 @@ body:not(.player-mode) .canvas-wrap {
      a different aspect will shrink from this to its own rectangle, which is a
      smaller change than appearing from nothing.
 
-     aspect-ratio matches the DEFAULT PRESET in lib/canvassizes.js (4:3, 816x612)
-     rather than filling the area outright: filling it left the frame 728px tall
-     against a settled 521px, so the placeholder appeared and then visibly
-     collapsed. Sized this way it lands on the settled rectangle for a default
-     pad and there is nothing to see. */
+     aspect-ratio matches the preset resizeCanvas() will pick for the device
+     (bestFor in lib/canvassizes.js) rather than filling the area outright:
+     filling it left the frame 728px tall against a settled 521px, so the
+     placeholder appeared and then visibly collapsed. Sized this way it lands on
+     (or near) the settled rectangle and there is nothing to see. Landscape
+     bands settle on 4:3; the portrait override below matches the 9:16 a phone
+     will get, so the placeholder doesn't flash wide and then snap tall. */
   aspect-ratio: 4 / 3;
   width: 100%;
   height: auto;
+}
+@media (orientation: portrait) {
+  body:not(.player-mode) .canvas-wrap {
+    aspect-ratio: 9 / 16;
+    width: auto;
+    height: 100%;
+  }
 }
 
 /* The #canvas min-height floor (400px, or 50vh under the <=640px query) predates
@@ -594,6 +626,15 @@ body:not(.player-mode) .canvas-wrap #canvas {
   --canvas-ring: inset 0 0 0 1px rgba(0,0,0,0.22);
   box-shadow: var(--canvas-ring),
               inset 0 1px 0 rgba(var(--wash-rgb), 0.6), inset 0 0 70px rgba(0,0,0,0.06);
+}
+
+/* Light theme: the (usually dark) canvas slab gets a seat — a 1px mat line so
+   it reads as an object placed on the light page rather than a hole cut in it.
+   An OUTLINE, not another box-shadow layer: every state rule above swaps
+   box-shadow wholesale, and an outline survives all of them. Editor only; the
+   player already frames its canvas. */
+:root[data-theme="light"] body:not(.player-mode) .canvas-wrap {
+  outline: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 .canvas-wrap.recording {
@@ -3306,6 +3347,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
      the export sheet's last control out of a 900px viewport, but it applied to
      any short window before that too. top is 64px; leave 24px below. */
   .menu-sheet { max-height: calc(100dvh - 88px); overflow-y: auto; }
+  /* Pointer density: 12px row padding is a touch target; a desktop dropdown
+     driven by a mouse reads better a third tighter (the export sheet keeps its
+     own larger rows — its options carry two-line descriptions). */
+  .menu-sheet:not(.export-sheet) .menu-item { padding: 9px 12px; }
 }
 
 /* Mobile: bottom sheet */
@@ -4226,6 +4271,20 @@ body.player-mode #canvas {
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.03em;
+  /* "made with <signature>": the words are quiet type, the mark is real ink.
+     The signature is the brand's one appearance on a shared page — the header
+     is display:none in player-mode — and the player draws it on load. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.player-brand .brand-mark {
+  height: 15px;
+  width: auto;
+  display: block;
+  overflow: visible;
+  color: var(--text-secondary);
 }
 
 /* Short viewports (landscape phones, ~360–414px tall): the metadata shell is a
@@ -4899,6 +4958,19 @@ body.player-mode #canvas {
   flex: 0 0 auto; white-space: nowrap;
 }
 .skribl-hint.in { opacity: 1; transform: translate(-50%, 0); }
+/* Anchored variant: the intro hint advertises the ⋯ / info cluster, so it hangs
+   under the header's right edge with a caret pointing up at it, instead of
+   floating centred over the canvas it is not about. Other hints keep the
+   centred default. */
+.skribl-hint--anchored { left: auto; right: 14px; transform: translate(0, -8px); }
+.skribl-hint--anchored.in { transform: translate(0, 0); }
+.skribl-hint--anchored::after {
+  content: ''; position: absolute; top: -5px; right: 22px;
+  width: 9px; height: 9px; transform: rotate(45deg);
+  background: var(--surface-control-hover);
+  border-left: 1px solid rgba(124, 92, 255, 0.35);
+  border-top: 1px solid rgba(124, 92, 255, 0.35);
+}
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 
@@ -4929,7 +5001,13 @@ body.player-mode #canvas {
   background: transparent; color: var(--text-secondary); cursor: pointer;
 }
 .onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
-.onion-tint.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
+/* ON is the accent, like every other selected control. This class began life on
+   the onion controls and its amber leaked to every switch that borrowed it —
+   Grid and Stroke layers lit orange in an otherwise purple chrome. */
+.onion-tint.active { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.4); background: rgba(124, 92, 255, 0.12); }
+/* Amber survives ONLY where it means the thing itself: the onion controls
+   light in the exact colour the onion pages tint (#ff9f43). */
+#onion.active, #onionTintBtn.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 .tune-shell {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
@@ -4949,35 +5027,12 @@ body.player-mode #canvas {
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
 
 /* ============================================================
-   NAME TAB + DRAWER — give the skribl a title (fixes the date/date(1)
-   filename and the untitled draft). The tab is a SEAMLESS tongue of the
-   header: same surface fill + blur, no top hairline (the header has none),
-   centred on its lower edge. Clicking it drops a title strip down with the
-   Tune drawer's exact grid-rows motion. Shared by Pad and Flip.
+   NAME DRAWER — give the skribl a title (fixes the date/date(1) filename and
+   the untitled draft). Opened from the ⋯ overflow menu's "Name this skribl"
+   row (an earlier build hung a persistent tab off the header; on the canvas it
+   read as obtrusive, so naming moved into the menu). The strip drops down from
+   the header with the Tune drawer's exact grid-rows motion. Shared by Pad+Flip.
    ============================================================ */
-.name-tab {
-  /* Hangs into the ~12px gap between the header and the canvas — NOT over the
-     canvas (bottom keeps ~2px clearance). SOLID surface-panel, which is exactly
-     what the translucent header composites to over the near-black page, so the
-     tab matches the header instead of tinting toward the canvas behind it. */
-  position: absolute; left: 50%; bottom: -10px;
-  transform: translateX(-50%); z-index: 1;
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 23px; padding: 0 10px 0 11px; max-width: min(58%, 300px);
-  background: var(--surface-panel);
-  border: 0; border-radius: 0 0 11px 11px; cursor: pointer;
-  color: var(--text-secondary);
-  box-shadow: 0 4px 9px rgba(0, 0, 0, 0.30);
-  transition: color 0.14s, background 0.14s;
-}
-.name-tab:hover { background: var(--surface-control); color: var(--text-primary); }
-.name-pen { width: 12px; height: 12px; color: var(--ui-hi); flex: none; }
-.name-lbl { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.name-lbl.empty { color: var(--text-dim); font-weight: 500; }
-.name-chev { width: 12px; height: 12px; color: var(--text-dim); flex: none; transition: transform 0.26s; }
-.name-tab.open .name-chev { transform: rotate(180deg); }
-body.recording .name-tab, body.playing .name-tab { display: none; }
-
 .name-shell {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
@@ -4992,21 +5047,33 @@ body.recording .name-tab, body.playing .name-tab { display: none; }
 .name-shell.open .name-panel { opacity: 1; transform: none; }
 .name-input {
   flex: 1; min-width: 0; height: 38px; padding: 0 12px; border-radius: 10px;
-  background: var(--surface-base); border: 1px solid var(--hairline-strong);
+  /* A hairline purple border, nothing more — no fill glow. The box is quiet at
+     rest and just firms the line on focus. */
+  background: var(--surface-base); border: 1px solid rgba(124, 92, 255, 0.5);
   color: var(--text-primary); font-size: 15px; font-weight: 600; font-family: inherit; outline: none;
 }
 .name-input::placeholder { color: var(--text-dim); font-weight: 500; }
-.name-input:focus { border-color: var(--ui-hi); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18); }
+/* Just firm the hairline on focus — no second ring. The global
+   `input:focus-visible` rule near the end of this file paints a 2px focus-ring
+   outline 2px OUTSIDE this border (a double ring), and its :focus-visible
+   specificity beats a plain `.name-input` outline:none — so it has to be killed
+   on the focus pseudo here, exactly as .help-search-input does. */
+.name-input:focus,
+.name-input:focus-visible { border-color: rgba(124, 92, 255, 0.85); outline: none; }
 .name-done {
   height: 38px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
   font-weight: 700; font-size: 13px; color: var(--text-primary);
   background: linear-gradient(150deg, var(--accent-2), var(--accent));
 }
 .name-done:hover { filter: brightness(1.06); }
-@media (prefers-reduced-motion: reduce) { .name-shell, .name-panel, .name-tab, .name-chev { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
 .tune-row + .tune-row { border-top: 1px solid var(--hairline); }
-.tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; }
+/* margin-right:auto clusters each row's controls on the RIGHT edge (label left,
+   control right — the settings-table pattern). Without it the desktop drawer's
+   controls huddled mid-left with 300px of dead row to their right; mobile
+   already read this way via its flex-grow override below. */
+.tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; margin-right: auto; }
 .tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .tune-hint { font-size: 11px; color: var(--text-dim); }
 .tune-tool.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
@@ -5187,6 +5254,9 @@ body.playing .flip-grid { display: none; }
      gaps buy 15px back and cost nothing legible. Tried BEFORE dropping Post's
      label, which is worth more than 3px of air between icons. */
   .header.gap-collapsed .actions { gap: 6px; }
+  /* Shed the MODE tag before any control's word: the sticker still says
+     SKRIBL, and PAD/FLIP is the cheapest ~55px on the bar. */
+  .header.tag-collapsed .brand-tag { display: none; }
   .header.gap-collapsed #menuBtn { margin-left: 4px; }
   /* Shed step 4 (last resort): Post drops to its icon, like Record does. */
   .header.post-collapsed .btn.post { width: 40px; padding: 0; }

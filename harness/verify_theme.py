@@ -277,8 +277,8 @@ with sync_playwright() as p:
         # PARITY rather than a literal: whatever the marks wear, they wear the
         # same thing, which is the property that was actually broken.
         mark = page.evaluate("""() => {
-          const m = document.querySelector('.brand svg.brand-mark')
-                 || document.querySelector('.flip-word svg.brand-mark');
+          const m = document.querySelector('.brand .brand-mark')
+                 || document.querySelector('.flip-word .brand-mark');
           if (!m) return null;
           const cs = getComputedStyle(m);
           return { shadow: cs.boxShadow, radius: cs.borderRadius };
