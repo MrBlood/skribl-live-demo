@@ -350,7 +350,14 @@ body {
    words are not square. overflow visible, tile opt-outs: same reasons as the
    mark's own rule above — the player-only `.brand svg { 34px tile }` rule
    below catches any svg inside .brand, and it is later in the file. */
-.brand-tag--script { align-self: flex-end; display: flex;
+/* padding-top 0: the base .brand-tag still carries the 3px optical seat from
+   the TEXT-tag era, which grew this wrapper to 39px and centered the word
+   svg 1.5px below the signature — measured, and the owner saw it ("flip and
+   pad look like they sit lower than skribl"). Both svgs are 36px of the same
+   30-unit box, so with the seat gone, centering aligns tops and therefore
+   baselines exactly. No align-self either (a flex-end leftover compounded
+   the same error). */
+.brand-tag--script { display: flex; padding-top: 0;
   /* The signature's exit tail sweeps through ~9px of air inside its own
      viewBox, so the flex gap alone cannot seat the word next to the ink —
      pull the word back under that air. Net ink-to-ink ≈ one word space. */
