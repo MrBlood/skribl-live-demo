@@ -329,7 +329,10 @@ body {
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* 4px, not 10: the signature's exit tail already carries ~5px of air in
+     its own viewBox, so a wide flex gap pushed the mode word visibly away
+     from the name it belongs to. */
+  gap: 4px;
 }
 /* JS (fitBrand) adds this when even the mark won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
@@ -375,13 +378,23 @@ body {
    ever dressing it up again. overflow visible: the skew and tail sit a hair
    outside the viewBox and must not be clipped. */
 .header .brand .brand-mark {
-  height: 20px;
+  height: 36px;
   width: auto;
   display: block;
   overflow: visible;
   border-radius: 0;
   box-shadow: none;
+  /* The almost-imperceptible lift (owner's spec): one soft 5px halo at 30%
+     accent. Felt more than seen on the dark header; a faint lavender breath
+     on light. A second, wider shadow tips it into neon — deliberately not. */
+  filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30));
 }
+/* Phone step: at 36px the signature is ~78px wide, which at 320-430px forces
+   the shed system to spend Post's label (390) or the mark itself (320) to
+   clear the cluster — the two things v223/v269 pin as never sacrificed. One
+   step down keeps the signature present with its neighbours intact. */
+@media (max-width: 480px) {
+  .header .brand .brand-mark { height: 26px; }}
 
 /* PLAYER-ONLY since the editor dropped its icon: the player keeps its mark
    (a shared link travels off the branded host site, so the card stays
@@ -895,7 +908,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
   .brand {
     font-size: 13px;
-    gap: 6px;
+    gap: 3px;
     flex-shrink: 0;
   }
 

@@ -316,7 +316,10 @@ body {
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* 4px, not 10: the signature's exit tail already carries ~5px of air in
+     its own viewBox, so a wide flex gap pushed the mode word visibly away
+     from the name it belongs to. */
+  gap: 4px;
 }
 /* JS (fitBrand) adds this when even the mark won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
@@ -337,6 +340,24 @@ body {
   /* Optical: the signature sits slightly high; a nudge seats the word on the
      same visual baseline. */
   padding-top: 3px;
+}
+/* Script form of the mode tag: "pad" / "flip" hand-lettered by the same pen
+   as the signature (one stroke, same skew), 24px to the mark's 36 — the mode
+   is a word the pen added after signing, not a second logo. Both share the
+   signature's 30-unit box and internal baseline (~23.5), so with bottoms
+   aligned the word's baseline sits 5.2px above its bottom edge vs the mark's
+   7.8 — the 2.6px bottom padding reseats them on ONE ruled line. width auto:
+   words are not square. overflow visible, tile opt-outs: same reasons as the
+   mark's own rule above — the player-only `.brand svg { 34px tile }` rule
+   below catches any svg inside .brand, and it is later in the file. */
+.brand-tag--script { padding-bottom: 2.6px; align-self: flex-end; display: flex;
+  /* The signature's exit tail sweeps through ~9px of air inside its own
+     viewBox, so the flex gap alone cannot seat the word next to the ink —
+     pull the word back under that air. Net ink-to-ink ≈ one word space. */
+  margin-left: -8px; }
+.brand .brand-tag--script svg, .brand-tag--script svg {
+  height: 24px; width: auto; display: block; overflow: visible;
+  border-radius: 0; box-shadow: none;
 }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
    buttons / Flip's back arrow) — one size at every width, per the wordmark
@@ -362,12 +383,27 @@ body {
    ever dressing it up again. overflow visible: the skew and tail sit a hair
    outside the viewBox and must not be clipped. */
 .header .brand .brand-mark {
-  height: 20px;
+  height: 36px;
   width: auto;
   display: block;
   overflow: visible;
   border-radius: 0;
   box-shadow: none;
+  /* The almost-imperceptible lift (owner's spec): one soft 5px halo at 30%
+     accent. Felt more than seen on the dark header; a faint lavender breath
+     on light. A second, wider shadow tips it into neon — deliberately not. */
+  filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30));
+}
+/* Phone step: at 36px the signature is ~78px wide, which at 320-430px forces
+   the shed system to spend Post's label (390) or the mark itself (320) to
+   clear the cluster — the two things v223/v269 pin as never sacrificed. One
+   step down keeps the signature present with its neighbours intact. */
+@media (max-width: 480px) {
+  .header .brand .brand-mark { height: 26px; }
+  /* The script word steps with the mark (24 -> 17, the mark's own 26/36
+     ratio): a smaller word that stays beats a bigger one fitBrand sheds. */
+  .brand .brand-tag--script svg, .brand-tag--script svg { height: 17px; }
+  .brand-tag--script { padding-bottom: 2px; margin-left: -6px; }
 }
 .brand.brand-collapsed > span { display: none; }
 
@@ -3803,7 +3839,7 @@ input:focus-visible {
 
   .brand {
     font-size: 13px;
-    gap: 6px;
+    gap: 3px;
     flex-shrink: 0;
   }
 

@@ -525,10 +525,17 @@ with sync_playwright() as _p:
     _b.close()
 
 print("\nWORDMARK WEIGHT — the phone is not a thinner brand")
-# Was a font-size parity check on the text tiers ("15px below 440 for no
-# remaining reason"). v220.x replaced the text with the fanned-stack mark;
-# the intent is unchanged and now reads as RENDERED height: the mark is the
-# same physical size on a phone as on a desktop, and never overflows.
+# Was a font-size parity check on the text tiers, then (v220.x) exact height
+# parity at every width. The 36px signature (owner's spec) DELIBERATELY
+# SUPERSEDES exact parity: at 36px the mark is ~78px wide, and holding that
+# on a 320-430px header forced the shed system to spend the two things this
+# suite pins harder — the mark itself (hidden at 320) and Post's label
+# (dropped at 390). The contract is now a SINGLE declared step, not a slide:
+# full size above 480, one smaller-but-still-signature size below, the same
+# on every phone tier, and never overflowing. "Not a thinner brand" now
+# means: the step is designed (one size per band, mark always present), not
+# an accident of shrinking.
+_PHONE_MARK = 26   # must match the 480px step in styles.css / flip.css
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
     _sizes = {}
@@ -544,13 +551,18 @@ with sync_playwright() as _p:
         _pg.close()
 
     _ref = _sizes[1000]
+    check("desktop wears the full 36px signature",
+          _ref["size"] == 36, f"{_ref['size']}px")
+    _phone_sizes = {w: m["size"] for w, m in _sizes.items() if w <= 480}
+    check("every phone tier wears the SAME stepped size — one step, not a slide",
+          len(set(_phone_sizes.values())) == 1, str(_phone_sizes))
     for _w, _m in _sizes.items():
-        check(f"at {_w}px the mark is full size",
-              _m["size"] == _ref["size"],
-              f"{_m['size']}px tall vs {_ref['size']}px on desktop — it reads lighter")
-        check(f"at {_w}px the mark keeps its width",
-              _m["weight"] == _ref["weight"], f"{_m['weight']} vs {_ref['weight']}")
-        check(f"at {_w}px the full size still does not overflow",
+        _want = _ref["size"] if _w > 480 else _PHONE_MARK
+        check(f"at {_w}px the mark is its band's declared size",
+              _m["size"] == _want, f"{_m['size']}px tall vs the declared {_want}px")
+        check(f"at {_w}px the mark is present with real width",
+              _m["weight"] >= 40, f"{_m['weight']}px wide — collapsed or hidden")
+        check(f"at {_w}px it does not overflow",
               _m["overflow"] <= 0, f"{_m['overflow']}px past the edge")
 
     print("\nGRID DENSITY — the fine subdivision runs at every size")

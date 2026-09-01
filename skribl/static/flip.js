@@ -91,9 +91,19 @@ function currentSizeId(){
   const m = FLIP_SIZES.find(s => s.w === CW && s.h === CH);
   return m ? m.id : 'custom';
 }
+// The stage's content box — the room the canvas can actually use. The reserve
+// IS the stage's CSS padding, read from computed style rather than repeated as
+// literals (24/6): those went stale the moment the padding changed, in fitPad,
+// in the boot best-fit pick AND in the harness mirrors of both.
+function stageAvail(stage){
+  const cs = getComputedStyle(stage);
+  return { w: stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+           h: stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) };
+}
 function fitPad(){
   const stage = document.querySelector('.flip-stage');
-  const availW = stage.clientWidth - 24, availH = stage.clientHeight - 6;
+  const avail = stageAvail(stage);
+  const availW = avail.w, availH = avail.h;
   // Capped at 1, not 1.4. The backing store is CW x CH x DPR (see pad.width
   // above), so any scale above 1 stretches a fixed bitmap and softens every
   // line — at 1.10 on a 1000px window, Flip's strokes were ~10% blurrier than
@@ -7495,7 +7505,8 @@ pad.addEventListener('pointerdown', () => {
 if(!restored && window.SkriblCanvasSizes && window.SkriblCanvasSizes.bestFor){
   const _st = document.querySelector('.flip-stage');
   if(_st && _st.clientWidth > 50 && _st.clientHeight > 50){
-    const _best = window.SkriblCanvasSizes.bestFor(_st.clientWidth - 24, _st.clientHeight - 6);
+    const _avail = stageAvail(_st);
+    const _best = window.SkriblCanvasSizes.bestFor(_avail.w, _avail.h);
     if(applyCanvasSize(_best.w, _best.h, {silent:true})){
       sizeStage(); buildStrip(); render(); syncCanvasSeg();
     }
