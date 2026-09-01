@@ -4590,3 +4590,64 @@ collision. Generic toggles light in the accent (amber survives only on the
 onion controls, whose pages genuinely tint #ff9f43); autosave stopped
 narrating every stroke; Flip's blank page whispers "Draw page 1"; the dark
 canvas gets a 1px seat in light theme.
+
+## v270 -- The stamp that lied, one pen for the whole lockup, and Safari's clips
+
+Sealed the same day v269 shipped, driven almost entirely by the owner testing
+the live site on a real iPhone. Two of these decisions close operational holes
+that had been open for months while looking closed; the rest are the brand
+lockup reaching its final form under a phone's scrutiny.
+
+**Migrations had NEVER run on production, and the fix is layered.** The v269
+deploy switched the rate limiter to its db backend in production and every
+POST 500'd: `skribl_rate_events` did not exist, though the v131 baseline
+creates it and v267 had "wired migrations into the deploy". Three findings,
+three layers. (1) **Render does not read Procfiles** -- v267's wiring was
+decorative; the authoritative setting is the dashboard Start Command, which
+now carries `python -m alembic upgrade head && gunicorn app:app`. (2) The
+database was STAMPED at the baseline without the baseline's DDL ever running,
+so the first real `upgrade head` crashed inside v180 (which alters the missing
+table) -- released revisions are frozen, so `skribl/migrations/env.py` gained a
+pre-flight that recreates a baseline table a stamp promised, in baseline shape,
+letting the chain apply its own alters; it hands Alembic a transaction-free
+connection, because Alembic will not manage one it finds already begun (the
+first draft silently rolled back stamps). (3) Head revision `e9f4a7c31b28`
+backstops any table still missing at the end. Verified against an exact replica
+of the production database on PostgreSQL 16, then in production itself: the
+deploy log showed the pre-flight fire, eleven revisions apply, and posting came
+alive for the first time since the stamp.
+
+**The mode words are written by the signature's pen, full size.** "pad" and
+"flip" are hand-lettered continuations of the skribl signature -- same
+continuous-stroke construction, same 30-unit box, and after three rounds of
+owner review, the SAME 36px and stroke-width 2.3 (26px stepping with the mark
+on phones). Legibility came from stretching the x-height zone of the letterforms
+that already read correctly (piecewise y-remap, baseline and ascenders fixed),
+not from redrawing -- three redraw attempts produced "prl", "ped" and "pod".
+The words seat on the signature's exact baseline: a 3px optical seat from the
+text-tag era and an align-self:flex-end leftover had them measurably 1.5px low.
+The icon experiments (pencil, book, reference art) are all retired; DECISIONS
+records them so nobody re-walks that road.
+
+**A restored drawing is a postable drawing.** v269 changed Post's posture to
+disabled-in-the-header and updated every take-producing path except
+restoreAutosave, which still only un-hid the button -- the entire reveal back
+when Post was hidden-until-take. Reported from the live demo the day it
+shipped; one line, plus a verify_drafts pin proven against the unfixed code.
+
+**Phone realities, each one measured.** The two drawer shells' -10px header
+tucks pull both editors' canvas bands up 20px; Flip got a 22px stage shield
+earlier in the day and Pad's canvas-area now carries the same number, after the
+owner's tall-phone 9:16 canvas slid visibly under the header. Record's bare
+phone glyph kept its pill's invisible 16px paddings and stranded the tune icon
+25px away -- glyph padding now, and the reclaimed width lets the full lockup
+fit at 390. The ⋯ menus became one design: Pad's bottom sheet, row metrics and
+all, with the grabber a REAL .menu-handle element on both editors after a
+::before drew inconsistently on the iPhone -- and the grabber's original
+invisibility was var(--hairline-strong) on a dark sheet, not absence. Photos
+punched square corners through the canvas frame only on the phone: Safari does
+not reliably clip transformed children (.zoom-layer) to a rounded
+overflow:hidden, so the photo layer wears the frame's own radius and the wrap
+carries the -webkit-mask-image nudge. CI's harness jobs get 90 minutes; the
+suite outgrew 30 and every push since the Aug 31 runner outage lifted was
+cancelled mid-run while looking like a code failure.
