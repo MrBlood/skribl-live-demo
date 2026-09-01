@@ -4581,6 +4581,14 @@ body.player-mode #canvas {
     border-color: transparent;
     box-shadow: none;
   }
+  /* The chrome left but the pill's 16px side paddings stayed, so a bare
+     "● Record" carried invisible air on both flanks — the tune icon looked
+     stranded ~25px away while every other control sat 9px apart (owner,
+     from the phone view: "why is tune drawer icon so far from record?").
+     A bare glyph gets glyph padding. Selector matches the late
+     `.header .actions .btn { padding: 0 16px }` density rule's specificity,
+     which otherwise outranks a bare .btn.record. */
+  .header .actions .btn.record { padding: 0 6px; }
   .btn.record svg { filter: none; }               /* clean accent dot, no glow */
 
   /* Post is the single filled element — with its label, now there's room. */
