@@ -1,7 +1,12 @@
-"""v268 — the skribl NAME TAB, shared by Pad and Flip.
+"""v269 — the skribl NAME, shared by Pad and Flip.
 
-A skribl gets a title from a tab on the header that drops a drawer (the same
-motion as Tune). The title becomes serializeSkribl/serializeFlip's `title`,
+A skribl gets a title from the ⋯ overflow menu ("Name this skribl"), which drops
+a drawer (the same motion as Tune). v268 hung this off a persistent header tab;
+on the canvas it read as obtrusive, so v269 moved it into the menu — this suite
+tracks that: no #nameTab, the menu row (#nameItem) opens the drawer, and the
+row's sub-label (#nameItemSub) echoes the name.
+
+The title becomes serializeSkribl/serializeFlip's `title`,
 which drives the `.skribl` download filename and the posted/library title. Two
 things this pins, both of which had a real bug:
 
@@ -44,11 +49,14 @@ def run(page, label, path):
     page.goto(BASE + path, wait_until="networkidle")
     page.wait_for_timeout(400)
 
-    tab = page.query_selector("#nameTab")
-    check(f"[{label}] the name tab is present and visible",
-          bool(tab) and tab.is_visible())
+    # v269: naming moved off the canvas into the overflow menu. The persistent
+    # header tab is gone; the menu carries a "Name this skribl" row instead.
+    check(f"[{label}] the old persistent name tab is gone (naming is in the menu now)",
+          page.query_selector("#nameTab") is None)
+    item = page.query_selector("#nameItem")
+    check(f"[{label}] the 'Name this skribl' menu row is present", bool(item))
 
-    has_api = page.evaluate("() => !!(window.SkriblName && window.SkriblName.get && window.SkriblName.filename)")
+    has_api = page.evaluate("() => !!(window.SkriblName && window.SkriblName.get && window.SkriblName.filename && window.SkriblName.open)")
     check(f"[{label}] window.SkriblName is wired (shared lib, not a per-editor copy)", has_api)
     if not has_api:
         return
@@ -68,18 +76,22 @@ def run(page, label, path):
           bool(re.fullmatch(r"[a-z0-9-]+\.skribl", dfn or "")), repr(dfn))
     filenames[label] = fn
 
-    # Open the drawer, type a name, and confirm it flows into get() + the tab label.
-    tab.click()
-    page.wait_for_timeout(250)
+    # Open the overflow menu, click the name row, and confirm it drops the drawer
+    # — the real path a user takes now that there is no persistent tab.
+    menu_btn = "#menuBtn" if path == "/" else "#moreBtn"
+    page.click(menu_btn)
+    page.wait_for_timeout(200)
+    page.click("#nameItem")
+    page.wait_for_timeout(300)
     shell_open = page.evaluate("() => document.getElementById('nameShell').classList.contains('open')")
-    check(f"[{label}] clicking the tab drops the title drawer open", shell_open)
+    check(f"[{label}] the menu row drops the title drawer open", shell_open)
 
     page.fill("#skriblName", "Midnight Transmission")
     page.wait_for_timeout(120)
     got = page.evaluate("() => window.SkriblName.get()")
     check(f"[{label}] a typed name is what get() returns", got == "Midnight Transmission", repr(got))
-    lbl = page.evaluate("() => document.getElementById('nameLbl').textContent")
-    check(f"[{label}] the tab label reflects the typed name", lbl == "Midnight Transmission", repr(lbl))
+    sub = page.evaluate("() => document.getElementById('nameItemSub').textContent")
+    check(f"[{label}] the menu row's sub-label reflects the typed name", sub == "Midnight Transmission", repr(sub))
 
     # It reaches the serialized payload (the property the filename/title read).
     fn_key = "serializeSkribl" if path == "/" else "serializeFlip"
@@ -104,7 +116,7 @@ with sync_playwright() as p:
         try:
             run(pg, label, path)
         finally:
-            check(f"[{label}] no page errors while driving the name tab", not errs, "; ".join(errs)[:200])
+            check(f"[{label}] no page errors while driving the name drawer", not errs, "; ".join(errs)[:200])
             pg.close()
     b.close()
 

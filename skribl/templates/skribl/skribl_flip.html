@@ -34,12 +34,6 @@
         <button type="button" class="btn post" id="postBtn" title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
         <button type="button" id="moreBtn" class="tool-open" title="More — save, export, help" aria-label="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       </div>
-      {# Name tab — same seamless tongue as the Pad's, shared CSS + lib/nametab.js. #}
-      <button type="button" id="nameTab" class="name-tab" aria-expanded="false" aria-controls="namePanel" title="Name this skribl">
-        <svg class="name-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-        <span class="name-lbl empty" id="nameLbl">Untitled</span>
-        <svg class="name-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
     </div>
 
     <!-- Name drawer — a title for the skribl; drops from the header like Tune. -->
@@ -304,6 +298,11 @@
        menu opened with no scrim at all. #}
     <div class="flip-menu-scrim" id="moreScrim" hidden></div>
     <div class="flip-menu" id="moreMenu" role="menu" hidden>
+      {# Name this skribl — opens the title drawer that drops from the header.
+         Naming lives here, not on a persistent tab over the canvas. Shared
+         treatment with Pad via lib/nametab.js; #nameItemSub echoes the name. #}
+      <button type="button" class="flip-menu-item" id="nameItem" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span class="mi-tx">Name this skribl<span class="mi-sub" id="nameItemSub">Untitled</span></span></button>
+      <div class="flip-menu-sep"></div>
       <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
       <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
       <div class="flip-menu-sep"></div>

@@ -1259,7 +1259,7 @@ body.player-mode #canvas {
 }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 @media (prefers-reduced-motion: reduce) { .tune-shell, .tune-panel { transition: none; } }
-@media (prefers-reduced-motion: reduce) { .name-shell, .name-panel, .name-tab, .name-chev { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
 
 /* ---------- STATES: pressed / disabled / loading, defined once ---------- */
 /* Pressed: every interactive control gives the same tactile response — a
