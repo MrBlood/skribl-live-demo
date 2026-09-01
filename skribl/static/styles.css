@@ -4969,11 +4969,13 @@ body.player-mode #canvas {
 .name-shell.open .name-panel { opacity: 1; transform: none; }
 .name-input {
   flex: 1; min-width: 0; height: 38px; padding: 0 12px; border-radius: 10px;
-  background: var(--surface-base); border: 1px solid var(--hairline-strong);
+  /* A hairline purple border, nothing more — no fill glow. The box is quiet at
+     rest and just firms the line on focus. */
+  background: var(--surface-base); border: 1px solid rgba(124, 92, 255, 0.5);
   color: var(--text-primary); font-size: 15px; font-weight: 600; font-family: inherit; outline: none;
 }
 .name-input::placeholder { color: var(--text-dim); font-weight: 500; }
-.name-input:focus { border-color: var(--ui-hi); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18); }
+.name-input:focus { border-color: rgba(124, 92, 255, 0.85); }
 .name-done {
   height: 38px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
   font-weight: 700; font-size: 13px; color: var(--text-primary);

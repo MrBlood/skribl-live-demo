@@ -4563,7 +4563,10 @@ if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
 })();
 
 bindEl('postBtn', 'click', openShareCompose);
-bindEl('miSave', 'click',()=>{ closeMenu(); saveDraft(); });
+bindEl('miSave', 'click',()=>{ closeMenu();
+  // Name it as part of saving — the drawer's button reads "Save draft".
+  if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save draft', onConfirm:saveDraft}); }
+  else { saveDraft(); } });
 bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
 /* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to
    Flip's existing encoders. The menu's "Export…" opens it; each format runs the

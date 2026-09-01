@@ -23,8 +23,12 @@
  *   window.SkriblName.filename(t)    -> a filesystem-safe "<slug>.skribl" for
  *                                        the download (no spaces/·/: to trip up
  *                                        Windows or a shell).
- *   window.SkriblName.open()         -> drop the title drawer (the menu calls
- *                                        this after closing itself).
+ *   window.SkriblName.open(opts?)    -> drop the title drawer. opts.onConfirm is
+ *                                        run when the drawer's button/Enter is
+ *                                        pressed (Save draft routes its save
+ *                                        through here, so a draft is named as it
+ *                                        is saved); opts.label sets that button's
+ *                                        text ("Done" for a plain rename).
  *
  * The default is computed ONCE, so the name is stable while you edit. The menu
  * row is editor-only; the player template has no #nameItem, so init() no-ops.
@@ -75,7 +79,10 @@
         .slice(0, 60);
       return (base || 'skribl') + '.skribl';
     },
-    open: function () { API._setOpen(true); }
+    // opts = { onConfirm?, label? }. onConfirm runs when the drawer is confirmed
+    // (Save draft passes its save here so the file is named as it is saved);
+    // label sets the confirm button's text, defaulting to "Done" for a rename.
+    open: function (opts) { API._open(opts || {}); }
   };
 
   // Close whichever overflow menu is open, so the drawer isn't hidden behind it.
@@ -100,8 +107,9 @@
     if (!item || !shell || !el) return;   // no naming on this surface (player)
 
     el.placeholder = computeDefault();
+    var pending = null;   // a callback to run when the drawer is confirmed
 
-    API._setOpen = function (open) {
+    function setOpen(open) {
       shell.classList.toggle('open', open);
       shell.setAttribute('aria-hidden', String(!open));
       if (open) {
@@ -114,28 +122,49 @@
         }
         setTimeout(function () { el.focus(); el.select(); }, 160);
       }
+    }
+    API._setOpen = setOpen;
+
+    // Open with an optional confirm callback + button label. Closes whatever
+    // menu is open first, then drops the drawer.
+    API._open = function (opts) {
+      pending = typeof opts.onConfirm === 'function' ? opts.onConfirm : null;
+      if (done) done.textContent = opts.label || 'Done';
+      closeAnyMenu();
+      setTimeout(function () { setOpen(true); }, 40);
     };
+
+    // Confirm: run the pending action (e.g. the actual save), then close and
+    // reset. get() already reflects the typed name, so the action sees it.
+    function confirm() {
+      var cb = pending;
+      pending = null;
+      if (done) done.textContent = 'Done';
+      setOpen(false);
+      if (cb) { try { cb(); } catch (e) {} }
+    }
+    // Cancel: close without running the pending action (Escape / click-away).
+    function cancel() { pending = null; if (done) done.textContent = 'Done'; setOpen(false); }
 
     item.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();      // don't let the same click reach the outside-close
-      closeAnyMenu();
-      // Let the menu's own close settle before the drawer drops in.
-      setTimeout(function () { API._setOpen(true); }, 40);
+      API._open({});            // a plain rename: no callback, "Done" button
     });
     el.addEventListener('input', syncLabel);
     el.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); API._setOpen(false); }
-      else if (e.key === 'Escape') { API._setOpen(false); }
+      if (e.key === 'Enter') { e.preventDefault(); confirm(); }
+      else if (e.key === 'Escape') { cancel(); }
     });
-    if (done) done.addEventListener('click', function () { API._setOpen(false); });
+    if (done) done.addEventListener('click', confirm);
     document.addEventListener('click', function (e) {
-      if (shell.classList.contains('open') && !shell.contains(e.target)) API._setOpen(false);
+      if (shell.classList.contains('open') && !shell.contains(e.target)) cancel();
     });
     syncLabel();
   }
 
   API._setOpen = function () {};   // no-op until init wires the real one
+  API._open = function () {};
   window.SkriblName = API;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

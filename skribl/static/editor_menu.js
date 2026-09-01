@@ -139,8 +139,14 @@ function clearAllWithUndo() {
 })();
 
 bindEl('saveDraftItem', 'click', () => {
-  saveDraft();
   closeMenu();
+  // Name it as part of saving: the drawer opens with the current/auto name and
+  // its button reads "Save draft" — confirming runs the actual download.
+  if (window.SkriblName && window.SkriblName.open) {
+    window.SkriblName.open({ label: 'Save draft', onConfirm: saveDraft });
+  } else {
+    saveDraft();
+  }
 });
 
 bindEl('loadDraftItem', 'click', () => {

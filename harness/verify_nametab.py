@@ -106,6 +106,21 @@ def run(page, label, path):
         check(f"[{label}] serialize{'' if path=='/' else 'Flip'}() carries the typed title",
               title == "Midnight Transmission", repr(title))
 
+    # Save draft names it: clicking Save draft opens the SAME drawer with its
+    # button relabelled to "Save draft" (confirming runs the real download). We
+    # assert the routing, not the download, so no file dialog is triggered.
+    page.click("#nameDone")          # close the rename drawer first
+    page.wait_for_timeout(150)
+    save_item = "#saveDraftItem" if path == "/" else "#miSave"
+    page.click(menu_btn)
+    page.wait_for_timeout(200)
+    page.click(save_item)
+    page.wait_for_timeout(300)
+    save_open = page.evaluate("() => document.getElementById('nameShell').classList.contains('open')")
+    check(f"[{label}] Save draft opens the name drawer (you name it as you save)", save_open)
+    btn = page.evaluate("() => document.getElementById('nameDone').textContent")
+    check(f"[{label}] the drawer's button reads 'Save draft' on that path", btn == "Save draft", repr(btn))
+
 
 with sync_playwright() as p:
     b = p.chromium.launch()
