@@ -236,6 +236,26 @@ def main():
         print(f"no {BEGIN} marker (skipped): {', '.join(unmarked)}")
     if args.check:
         if stale:
+            # MIRROR OF THE NARROWING GUARD ABOVE, on the read side. During a
+            # release re-run on an UNCHANGED tree, every batch's stamp is
+            # (rightly) refused — RELEASE.md already records release-wide
+            # evidence for this exact tree, and a batch must not narrow it. The
+            # docs therefore still carry the release-wide stanza while
+            # LAST-RUN.txt describes one batch, and comparing them called the
+            # docs stale: verify_docs failed the v269 re-release at batch 8/44
+            # for holding exactly the numbers the guard protects. If the docs'
+            # stanzas carry the release-wide assertion total for this same
+            # tree, they are current BY PRECEDENCE, not stale.
+            rel_total = _release_assertions(run.get("tree", ""))
+            if rel_total and run["assertions"] < rel_total:
+                narrowed = [s for s in stale
+                            if f"{rel_total} assertions" not in (ROOT / s).read_text(encoding="utf-8")]
+                if not narrowed:
+                    print(f"current by precedence: the docs carry the "
+                          f"release-wide {rel_total}-assertion stanza for this "
+                          f"tree; a {run['assertions']}-assertion batch record "
+                          f"must not narrow it (same rule as the stamping guard).")
+                    return 0
             print(f"STALE: {', '.join(stale)}")
             print("Run: python3 harness/stamp_docs.py")
             return 1
