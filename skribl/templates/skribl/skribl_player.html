@@ -129,24 +129,60 @@
      whole product before the visitor's drawing does the same thing. The
      editors show the mark at rest; a tool shouldn't perform for its author.
      Ends fully drawn (deterministic), skipped entirely for reduced-motion. #}
+  {# HOW THE DRAW WORKS (kept here, not in the shipped script — the page has a
+     byte ratchet and every visitor downloads this HTML):
+     - Ink is hidden at PARSE (dashoffset = length), so there is never a flash
+       of the finished word.
+     - The pen fires when the mark is actually ON SCREEN, not at load: the
+       player keeps its shell hidden until the payload arrives, and a
+       transition triggered inside a display:none subtree applies instantly —
+       keyed to load, the pen "drew" into the dark and the visitor met a
+       finished word. An rAF loop waits for a real box; two more rAFs let the
+       reveal paint commit with the ink still hidden, so the stroke starts
+       from zero in front of the viewer. If the shell never appears (error
+       states, ~15s cap) it gives up and shows the finished word.
+     - go() is a self-contained restart, measured to be the ONLY sequence
+       Chromium reliably animates here: reset offsets under transition:none,
+       FLUSH, install the transitions, FLUSH, then change the values. Setting
+       transition and value in one recalc snapped straight to drawn.
+     - SPEED 0.38 viewBox-units/ms ≈ 900ms of pen + a 90ms lift before the
+       i-dot; reduced-motion skips it all and gets the finished word. #}
   <script nonce="{{ csp_nonce }}">
   (function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var paths = document.querySelectorAll('.player-brand .brand-mark path');
-    if (!paths.length) return;
-    var t = 350, SPEED = 0.38;   // viewBox units per ms; ~900ms of pen
-    paths.forEach(function (p) {
+    var mark = document.querySelector('.player-brand .brand-mark');
+    if (!mark) return;
+    var plan = [];
+    mark.querySelectorAll('path').forEach(function (p) {
       var len = p.getTotalLength();
-      if (p.classList.contains('dot')) t += 90;   // the lift before the i-dot
-      var dur = Math.max(30, len / SPEED);
       p.style.strokeDasharray = len + ' ' + len;
       p.style.strokeDashoffset = len;
-      p.style.transition = 'stroke-dashoffset ' + Math.round(dur) + 'ms linear ' + Math.round(t) + 'ms';
-      t += dur;
+      plan.push({ p: p, len: len, dot: p.classList.contains('dot') });
     });
-    requestAnimationFrame(function () {
-      paths.forEach(function (p) { p.style.strokeDashoffset = '0'; });
-    });
+    function each(f) { plan.forEach(f); }
+    function flush() { void document.body.getBoundingClientRect(); }
+    function raf(f) { requestAnimationFrame(f); }
+    function snap() { each(function (s) { s.p.style.strokeDashoffset = '0'; }); }
+    function go() {
+      each(function (s) { s.p.style.transition = 'none'; s.p.style.strokeDashoffset = s.len; });
+      flush();
+      var t = 250;
+      each(function (s) {
+        if (s.dot) t += 90;
+        var dur = Math.max(30, s.len / 0.38);
+        s.p.style.transition = 'stroke-dashoffset ' + Math.round(dur) + 'ms linear ' + Math.round(t) + 'ms';
+        t += dur;
+      });
+      flush();
+      snap();
+    }
+    var tries = 0;
+    (function wv() {
+      var r = mark.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) raf(function () { raf(go); });
+      else if (++tries > 900) snap();
+      else raf(wv);
+    })();
   })();
   </script>
 
