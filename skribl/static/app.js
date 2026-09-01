@@ -1746,6 +1746,7 @@ if (playScrub) {
     header.classList.remove('rec-collapsed');
     header.classList.remove('gap-collapsed');
     header.classList.remove('post-collapsed');
+    header.classList.remove('tag-collapsed');
     // Pixel-snap the cluster. The wordmark's text width is fractional (the
     // brand's right edge measured 435.65625 at 1280) and justify-content:
     // flex-end hands that fraction straight to the cluster's x (715.609375),
@@ -1786,10 +1787,13 @@ if (playScrub) {
     // first-time user needs. Once a take exists the order flips back:
     // Record is already icon-only by then (the `:has(#playWrap)` rule) and
     // Post's word is the primary action's name.
+    // The MODE tag ('tag-collapsed') sheds right after the current action's
+    // cheapest word: the sticker still says SKRIBL without it, and its ~55px
+    // is worth more than any remaining label.
     const pb = document.getElementById('postBtn');
     const steps = (pb && pb.disabled)
-      ? ['post-collapsed', 'rec-collapsed', 'gap-collapsed']
-      : ['rec-collapsed', 'gap-collapsed', 'post-collapsed'];
+      ? ['post-collapsed', 'tag-collapsed', 'rec-collapsed', 'gap-collapsed']
+      : ['rec-collapsed', 'tag-collapsed', 'gap-collapsed', 'post-collapsed'];
     for (const s of steps) if (collides()) header.classList.add(s);
     if (collides()) {
       header.classList.remove('rec-collapsed');

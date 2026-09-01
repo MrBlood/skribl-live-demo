@@ -254,8 +254,11 @@ with sync_playwright() as _p:
           const r = m ? m.getBoundingClientRect() : {width: 0, height: 0};
           return { visible: !!m && r.width > 10 && r.height > 10,
                    label: (w && w.getAttribute('aria-label')) || '' }; }""")
-        check(f"at {_w}px the mark is visible and labelled", 
-              _shown["visible"] and _shown["label"].lower() == "flipmode",
+        # v269: the unified lockup — the shared SKRIBL sticker plus a mode tag —
+        # labels this surface "Skribl Flip" (was "Flipmode" back when each mode
+        # wore its own sticker).
+        check(f"at {_w}px the mark is visible and labelled",
+              _shown["visible"] and _shown["label"].lower() == "skribl flip",
               f"{_shown!r} — exactly one visible mark, aria-label carries the word")
 
         # Real overflow, not arithmetic. A wordmark that "fits" by squeezing
@@ -1701,7 +1704,9 @@ with _sp204() as _p:
         # missing mark makes the gap LARGER and the assertion greener. Measure
         # the mark itself. The brand is logo-only — there is no wordmark behind
         # it — so a hidden mark leaves nothing naming the surface.
-        _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span svg');"
+        # v269: the mark is an <img class="brand-mark"> (cached static SVG), so
+        # probe the class, not the svg element.
+        _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span .brand-mark');"
                           " if (!s) return 0; const r = s.getBoundingClientRect();"
                           " return r.width > 0 && r.height > 0 ? Math.round(r.width) : 0; }")
         if pw >= 375:

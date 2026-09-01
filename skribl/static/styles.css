@@ -318,10 +318,24 @@ body {
   align-items: center;
   gap: 10px;
 }
-/* JS (fitBrand) adds this when even "PAD" won't fit → header text-free. The
+/* JS (fitBrand) adds this when even the mark won't fit → header text-free. The
    icon this used to fall back to was removed with the wordmark reduction: the
    host site is already branded, so the header only names the MODE. */
 .brand > span { white-space: nowrap; display: flex; align-items: center; }
+/* The MODE half of the lockup — the library treatment, worn by every surface:
+   the shared SKRIBL sticker is the brand, and this quiet spaced-caps word says
+   which room you are in (PAD / FLIP / PLAYER). One system instead of a
+   different sticker per mode. */
+.brand-tag {
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  /* Optical: the sticker's word sits slightly high in its glow bubble; a nudge
+     seats the tag on the same visual baseline. */
+  padding-top: 3px;
+}
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
    buttons / Flip's back arrow) — one size at every width, per the wordmark
    parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340
@@ -339,7 +353,11 @@ body {
    matches emitted blocks by comparing selector STRINGS against a recorded live
    set — rewriting that selector drops the whole block out of player.css and
    takes the player's own logo tile with it. */
-.header .brand svg.brand-mark {
+/* v269: the mark is an <img> now (a cached static SVG — see the partial), so
+   the selector targets the class, not the svg element. The zeroed radius and
+   shadow stay: the old `.brand svg` tile rule cannot match an img, but being
+   explicit keeps the mark honest if the element ever changes again. */
+.header .brand .brand-mark {
   height: 44px;
   width: auto;
   display: block;
@@ -5217,6 +5235,9 @@ body.playing .flip-grid { display: none; }
      gaps buy 15px back and cost nothing legible. Tried BEFORE dropping Post's
      label, which is worth more than 3px of air between icons. */
   .header.gap-collapsed .actions { gap: 6px; }
+  /* Shed the MODE tag before any control's word: the sticker still says
+     SKRIBL, and PAD/FLIP is the cheapest ~55px on the bar. */
+  .header.tag-collapsed .brand-tag { display: none; }
   .header.gap-collapsed #menuBtn { margin-left: 4px; }
   /* Shed step 4 (last resort): Post drops to its icon, like Record does. */
   .header.post-collapsed .btn.post { width: 40px; padding: 0; }

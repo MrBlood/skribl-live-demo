@@ -44,7 +44,7 @@
      (FLIPMODE 86px / FLIP 34 / FM 23) retired along with their breakpoints.
      The aria-label on .flip-word still carries the WORD — the bare-icon
      lesson from Flip Mode's own history applies to the mark too. */
-  .flip-word { color: var(--text-primary); padding-left: 2px; display: flex; align-items: center; }
+  .flip-word { color: var(--text-primary); padding-left: 2px; display: flex; align-items: center; gap: 9px; }
   .flip-word .brand-mark { height: 44px; width: auto; display: block; } /* matches the tallest header element; see styles.css note */
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
   .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }

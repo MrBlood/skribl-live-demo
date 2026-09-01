@@ -1,0 +1,8 @@
+{# The SKRIBL sticker mark — the ONE brand mark every surface wears.
+   A cached static file, not inline SVG: the sticker is ~8KB of paths, and
+   inlining it into every page blew the player's HTML byte ratchet
+   (verify_player_isolation caps the shared player at 9,000 bytes). The
+   sticker carries its own inks (it is artwork, not chrome), so an <img>
+   loses nothing to CSS custom properties and the browser caches one copy
+   for all four surfaces. The mode beside it is a .brand-tag span. #}
+<img class="brand-mark" src="{{ skribl_asset('brand-skribl.svg') }}" alt="" draggable="false">
