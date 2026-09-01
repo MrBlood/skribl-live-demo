@@ -106,7 +106,8 @@
   "body.player-mode .header",
   "html",
   ".brand-tag",
-  ".header .brand .brand-mark"
+  ".header .brand .brand-mark",
+  ".player-brand .brand-mark"
  ],
  "editor": [
   "#canvas",

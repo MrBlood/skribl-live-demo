@@ -1709,15 +1709,15 @@ with _sp204() as _p:
         _mk = _h.evaluate("() => { const s = document.querySelector('.brand > span .brand-mark');"
                           " if (!s) return 0; const r = s.getBoundingClientRect();"
                           " return r.width > 0 && r.height > 0 ? Math.round(r.width) : 0; }")
-        if pw >= 375:
-            check(f"v223 header@{pw}: after record→stop the MARK IS BACK",
-                  _mk > 0,
-                  f"mark {_mk}px — the v210 take-saved hide is retired; "
-                  f"initBrandFit sheds Record/gap/Post's label to seat it")
-        else:
-            check(f"v223 header@{pw}: the mark stays shed where it genuinely cannot fit",
-                  _mk == 0,
-                  f"mark {_mk}px — at {pw} it does not fit even with every label shed")
+        # v269 CHANGED THE ARITHMETIC AGAIN, in the mark's favour: the brand is
+        # now the ~43px one-stroke signature, a third the old sticker's width,
+        # and it fits EVERY width this loop drives — including the 320px safety
+        # net where the old mark genuinely could not. The "stays shed" branch
+        # is retired with the width problem it described.
+        check(f"v223 header@{pw}: after record→stop the MARK IS BACK",
+              _mk > 0,
+              f"mark {_mk}px — the signature fits at every width; nothing "
+              f"should be hiding it")
         # And Post keeps its word wherever the arithmetic allows.
         #
         # v219 CHANGED THE ARITHMETIC, and the old pin's own reason is what says
@@ -1747,13 +1747,17 @@ with _sp204() as _p:
         # this loop measures; idle is untouched and keeps the word everywhere.
         # To reverse: restore `pw >= 375` here and drop pass A of the shed in
         # initBrandFit().
+        # v269 revisits v223's trade: the signature mark costs ~43px, so Post's
+        # word no longer has to pay for the brand — with a take saved, Post
+        # keeps its label from 390 up (measured 83px there). At 375 the
+        # arithmetic is still ~10px short, so Post may drop to its icon; below
+        # that is the safety net where Post is merely required to exist.
         _pw = _h.evaluate("() => { const p = document.getElementById('postBtn'); return p && !p.hidden ? Math.round(p.getBoundingClientRect().width) : null; }")
-        if pw >= 430:
-            check(f"V219 header@{pw}: Post KEEPS its label — at 430 the mark and the word both fit", _pw and _pw > 60, f"Post {_pw}px wide")
-        elif pw >= 375:
-            check(f"v223 header@{pw}: Post goes icon-only so the mark can be seated", _pw == 40, f"Post {_pw}px wide (icon)")
+        if pw >= 390:
+            check(f"v269 header@{pw}: Post KEEPS its label — the signature mark and the word both fit",
+                  _pw and _pw > 60, f"Post {_pw}px wide")
         else:
-            check(f"V219 header@{pw}: Post may shed its label at the 320px safety net", _pw and _pw > 0, f"Post {_pw}px wide")
+            check(f"v269 header@{pw}: Post is present, label optional at this width", _pw and _pw > 0, f"Post {_pw}px wide")
         _h.close()
 
     check("V204: the old crammed .flip-hint footer is gone",

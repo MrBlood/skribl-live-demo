@@ -31,10 +31,10 @@
 
   <div class="app">
   <div class="header">
-    <div class="brand">
-      <span>{% include 'skribl/_skribl_brand_mark.html' %}</span>
-      <span class="brand-tag">Player</span>
-    </div>
+    {# The player-mode header is display:none — the player's brand lives in
+       the "made with" footer line (_skribl_player_controls.html), where a
+       shared page actually shows it. #}
+    <div class="brand"></div>
 
     <div id="recIndicator" class="rec-indicator" hidden>
       <span class="dot"></span> <span id="recTimer" class="rec-timer">0:00</span>
@@ -124,6 +124,31 @@
   <!-- Read-only player shell (shown only in player-mode) -->
   <!-- Player shell (shared partial — editor preview + public player) -->
   {% include 'skribl/_skribl_player_controls.html' %}
+  {# The brand moment, PLAYER-ONLY: the "made with" signature draws itself
+     once as the page loads — a shared skribl's first second demonstrates the
+     whole product before the visitor's drawing does the same thing. The
+     editors show the mark at rest; a tool shouldn't perform for its author.
+     Ends fully drawn (deterministic), skipped entirely for reduced-motion. #}
+  <script nonce="{{ csp_nonce }}">
+  (function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var paths = document.querySelectorAll('.player-brand .brand-mark path');
+    if (!paths.length) return;
+    var t = 350, SPEED = 0.38;   // viewBox units per ms; ~900ms of pen
+    paths.forEach(function (p) {
+      var len = p.getTotalLength();
+      if (p.classList.contains('dot')) t += 90;   // the lift before the i-dot
+      var dur = Math.max(30, len / SPEED);
+      p.style.strokeDasharray = len + ' ' + len;
+      p.style.strokeDashoffset = len;
+      p.style.transition = 'stroke-dashoffset ' + Math.round(dur) + 'ms linear ' + Math.round(t) + 'ms';
+      t += dur;
+    });
+    requestAnimationFrame(function () {
+      paths.forEach(function (p) { p.style.strokeDashoffset = '0'; });
+    });
+  })();
+  </script>
 
 
   {# tab bar removed — authoring surface, never shown on the player #}

@@ -31,5 +31,8 @@
       <span class="cta-star" aria-hidden="true">&#x2736;</span>
       Make your own Skribl
     </a>
-    <div class="player-brand">Made with Skribl Pad</div>
+    {# The growth-loop line, and the brand's real home: on a SHARED page the
+       mark earns its place — "made with" plus the signature, which the player
+       page draws on load (see the nonce'd script in skribl_player.html). #}
+    <div class="player-brand">made with {% include 'skribl/_skribl_brand_mark.html' %}</div>
   </div>

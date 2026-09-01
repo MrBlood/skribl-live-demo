@@ -366,14 +366,17 @@ body {
    matches emitted blocks by comparing selector STRINGS against a recorded live
    set — rewriting that selector drops the whole block out of player.css and
    takes the player's own logo tile with it. */
-/* v269: the mark is an <img> now (a cached static SVG — see the partial), so
-   the selector targets the class, not the svg element. The zeroed radius and
-   shadow stay: the old `.brand svg` tile rule cannot match an img, but being
-   explicit keeps the mark honest if the element ever changes again. */
+/* v269: the mark is the one-stroke skribl signature (inline SVG in the shared
+   partial). SIGNATURE-sized, deliberately — 20px, not a 44px block: it should
+   read as a word someone left on the chrome, not a logo asking to be looked
+   at. The zeroed radius and shadow keep the old `.brand svg` tile rule from
+   ever dressing it up again. overflow visible: the skew and tail sit a hair
+   outside the viewBox and must not be clipped. */
 .header .brand .brand-mark {
-  height: 44px;
+  height: 20px;
   width: auto;
   display: block;
+  overflow: visible;
   border-radius: 0;
   box-shadow: none;
 }
@@ -1205,6 +1208,20 @@ body.player-mode #canvas {
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.03em;
+  /* "made with <signature>": the words are quiet type, the mark is real ink.
+     The signature is the brand's one appearance on a shared page — the header
+     is display:none in player-mode — and the player draws it on load. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.player-brand .brand-mark {
+  height: 15px;
+  width: auto;
+  display: block;
+  overflow: visible;
+  color: var(--text-secondary);
 }
 
 /* Short viewports (landscape phones, ~360–414px tall): the metadata shell is a
