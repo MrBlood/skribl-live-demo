@@ -471,6 +471,13 @@ body {
 /* In the player the wrap sizes/centers itself (see body.player-mode rules), so
    make the area transparent to layout — the player layout is unchanged. */
 body.player-mode .canvas-area { display: contents; }
+@media (orientation: portrait) {
+  body:not(.player-mode) .canvas-wrap {
+    aspect-ratio: 9 / 16;
+    width: auto;
+    height: 100%;
+  }
+}
 
 .canvas-wrap {
   flex: 1;

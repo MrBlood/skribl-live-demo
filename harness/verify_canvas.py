@@ -44,11 +44,17 @@ with sync_playwright() as p:
     # drift the presets themselves suffered from. The table is the contract;
     # that its labels are honest is asserted separately below.
     _table = {s["id"]: s for s in pg.evaluate("() => FLIP_SIZES")}
-    _first = pg.evaluate("() => FLIP_SIZES[0]")
-    check(f"starts at the first preset ({_first['label']})",
-          pg.evaluate("() => [CW,CH,currentSizeId()]")
-          == [_first["w"], _first["h"], _first["id"]],
-          str(pg.evaluate("() => [CW,CH,currentSizeId()]")))
+    # v269: a fresh document starts on the preset that DISPLAYS LARGEST in this
+    # device's stage (bestFor), not unconditionally on the first row — a
+    # portrait phone opens 9:16 instead of a letterboxed 4:3. Still always a
+    # real preset from the table, never a viewport-derived pair.
+    _boot = pg.evaluate("""() => {
+        const st = document.querySelector('.flip-stage');
+        const best = SkriblCanvasSizes.bestFor(st.clientWidth - 24, st.clientHeight - 6);
+        return { cur: [CW, CH, currentSizeId()], best: [best.w, best.h, best.id] };
+    }""")
+    check(f"starts at the preset that shows largest in this stage ({_boot['best'][2]})",
+          _boot["cur"] == _boot["best"], str(_boot))
     strokes = pg.evaluate("() => frames.map(f => f.strokes.length)")
     for sid in ("square", "wide", "tall"):
         sz = _table[sid]
@@ -167,22 +173,29 @@ with sync_playwright() as _p:
 
     check("preset ids are unique",
           len({x["id"] for x in _sizes}) == len(_sizes))
-    check("the default canvas IS the first preset, not a hardcoded pair",
-          _pg.evaluate("() => [CW, CH]") == [_sizes[0]["w"], _sizes[0]["h"]],
-          str(_pg.evaluate("() => [CW, CH]")))
+    # v269: the default is the table row bestFor() picks for this stage — a
+    # real preset (exact table dimensions), chosen by fit rather than position.
+    _dflt = _pg.evaluate("""() => {
+        const st = document.querySelector('.flip-stage');
+        const best = SkriblCanvasSizes.bestFor(st.clientWidth - 24, st.clientHeight - 6);
+        return { cur: [CW, CH], best: [best.w, best.h], id: currentSizeId() };
+    }""")
+    check("the default canvas IS a table preset, chosen by fit (not a hardcoded pair)",
+          _dflt["cur"] == _dflt["best"] and _dflt["id"] != "custom", str(_dflt))
     _b.close()
 
-print("\nDISPLAY SIZE — the two editors show the same canvas at the same size")
-# THE BUG. Both authored 632x474, but Flip DISPLAYED it at 694x521 and Pad at
-# 632x474 — the same drawing, 10% bigger in one editor. Worse, the larger one
-# was the worse one: canvas.width is authored x dpr on both surfaces, so Flip's
-# 1.4 cap stretched a fixed bitmap and softened every line. Pad had always
-# clamped at 1. Flip now does too.
+print("\nDISPLAY SIZE — each editor opens on the largest preset for ITS stage")
+# THE ORIGINAL BUG. Both authored 632x474, but Flip DISPLAYED it at 694x521 and
+# Pad at 632x474 — the same drawing, 10% bigger in one editor, and the larger
+# one softer (Flip's 1.4 cap stretched a fixed bitmap; Pad always clamped at 1).
+# The never-upscaled checks below still pin that property.
 #
-# Pad also reserved no breathing room while Flip reserved 24px, so on a narrow
-# screen Pad's canvas — and its new 2px ring — pressed against the column edge.
-# The padding was added but getBoundingClientRect() reports the BORDER box, so
-# it was handed straight back until layoutEditorCanvas subtracted it.
+# v269 CHANGED THE DEFAULT CONTRACT: a fresh document starts on the preset that
+# displays largest in that editor's own band (bestFor). Pad's band is taller
+# than Flip's (no filmstrip or page bar), so the two editors may legitimately
+# open on DIFFERENT presets at the same window size — each maximally filling
+# its own chrome. What is asserted instead: each editor's pick is a real table
+# preset, it IS the largest for its measured band, and neither upscales.
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
     for _w, _h in ((1400, 900), (1000, 900), (500, 900), (390, 844)):
@@ -197,6 +210,23 @@ with sync_playwright() as _p:
                 f" const r = c.getBoundingClientRect();"
                 f" return {{ css: [Math.round(r.width), Math.round(r.height)],"
                 f"          backing: [c.width, c.height] }}; }}")
+            # Which preset did this surface open on, and which is the largest
+            # for its measured band? The two must agree.
+            if _name == "Flip":
+                _sizes[_name]["fit"] = _pg.evaluate("""() => {
+                    const st = document.querySelector('.flip-stage');
+                    const best = SkriblCanvasSizes.bestFor(st.clientWidth - 24, st.clientHeight - 6);
+                    return { id: currentSizeId(), bestId: best.id };
+                }""")
+            else:
+                _sizes[_name]["fit"] = _pg.evaluate("""() => {
+                    const t = window.SkriblCanvasSizes;
+                    const el = document.querySelector('.canvas-area');
+                    const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
+                    const aw = r.width - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+                    const ah = r.height - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+                    return { id: t.idFor(authoredW, authoredH), bestId: t.bestFor(aw, ah).id };
+                }""")
             _pg.close()
 
         _f, _pd = _sizes["Flip"], _sizes["Pad"]
@@ -211,9 +241,10 @@ with sync_playwright() as _p:
                   f"canvas {_pd['css'][0]}px in a 720px column — it is floating, "
                   "not filling")
 
-        check(f"at {_w}x{_h} both editors display the canvas at the same size",
-              _f["css"] == _pd["css"],
-              f"Flip {_f['css']} vs Pad {_pd['css']}")
+        for _name, _m in (("Flip", _f), ("Pad", _pd)):
+            check(f"at {_w}x{_h} {_name} opens on a real preset, the largest for its band",
+                  _m["fit"]["id"] != "custom" and _m["fit"]["id"] == _m["fit"]["bestId"],
+                  str(_m["fit"]))
 
         # Never above 1:1. Above it, a fixed bitmap is stretched and every line
         # softens — which is what made the bigger canvas the worse one.

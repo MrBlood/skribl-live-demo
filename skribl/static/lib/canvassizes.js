@@ -83,11 +83,31 @@
     return best;
   }
 
+  // The preset that displays LARGEST in a given band (the space between the
+  // header and the toolbar). Every preset authors ~the same pixel AREA and both
+  // editors cap the display scale at 1 (upscaling a fixed bitmap softens every
+  // line), so on-screen area is scale² × that constant — the best preset is
+  // simply the one with the biggest capped fit scale. A portrait phone gets
+  // 9:16, the desktop column gets 4:3 or 1:1 depending on window height. Ties
+  // (a band big enough to show several at native size) fall to table order,
+  // i.e. the classic default. Used only when nothing chose a size yet — a
+  // stored draft or an explicit pick always wins.
+  function bestFor(availW, availH) {
+    if (!(availW > 0 && availH > 0)) return SIZES[0];
+    var best = SIZES[0], bestScale = -1;
+    for (var i = 0; i < SIZES.length; i++) {
+      var s = Math.min(1, availW / SIZES[i].w, availH / SIZES[i].h);
+      if (s > bestScale + 1e-9) { best = SIZES[i]; bestScale = s; }
+    }
+    return best;
+  }
+
   global.SkriblCanvasSizes = {
     SIZES: SIZES,
     DEFAULT: SIZES[0],
     idFor: idFor,
     byId: byId,
-    nearest: nearest
+    nearest: nearest,
+    bestFor: bestFor
   };
 })(window);

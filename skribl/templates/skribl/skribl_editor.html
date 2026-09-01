@@ -42,7 +42,9 @@
         </button>
         <span id="durationBadge" class="duration-badge" hidden>0:00</span>
       </div>
-      <button type="button" id="postBtn" class="btn post" hidden title="Post it and get a link anyone can open">
+      {# In its slot from first paint, disabled until a take exists — a primary
+         action that pops in and out makes the header feel unstable. #}
+      <button type="button" id="postBtn" class="btn post" disabled title="Post it and get a link anyone can open">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span class="btn-label">Post<span class="post-long"> to Skribl</span></span>
       </button>
@@ -90,13 +92,15 @@
         <span class="menu-item-text">Name this skribl<span class="menu-item-sub" id="nameItemSub">Untitled</span></span>
       </button>
       <div class="menu-divider"></div>
+      {# The extension is a sub-label, not part of the action's name — nobody
+         says "Save (.pages)". The sub still teaches what file to look for. #}
       <button type="button" class="menu-item" id="saveDraftItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Save draft (.skribl)
+        <span class="menu-item-text">Save draft<span class="menu-item-sub">Downloads a .skribl file</span></span>
       </button>
       <button type="button" class="menu-item" id="loadDraftItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        Load draft (.skribl)
+        <span class="menu-item-text">Open draft&hellip;<span class="menu-item-sub">A .skribl file you saved</span></span>
       </button>
       <button type="button" class="menu-item" id="exportItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>

@@ -67,7 +67,15 @@
     <div class="flip-stage">
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
-        <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas></div>
+        <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas>
+          {# Same whisper Pad's blank canvas carries — Flip's was a silent dark
+             rectangle. Hidden the moment the document has any content. #}
+          <div id="flipEmptyHint" class="canvas-empty-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            <span>Draw page 1</span>
+            <span class="canvas-empty-sub">Add pages below — they flip into an animation</span>
+          </div>
+        </div>
         <!-- Zoom HUD / magnify pill (shared partial — Pad + Flip) -->
         {% include 'skribl/_skribl_zoom_hud.html' %}
 
@@ -122,7 +130,10 @@
         <span class="pb-who" id="sbWho">Selection</span>
         <button type="button" class="pb" id="sbFlipH" title="Flip left to right" aria-label="Flip left to right"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M9.5 8 5 12l4.5 4"/><path d="M14.5 8 19 12l-4.5 4"/></svg></span><span class="pb-tx">Flip</span></button>
         <button type="button" class="pb" id="sbFlipV" title="Flip top to bottom" aria-label="Flip top to bottom"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16" stroke-dasharray="2.5 2.5" opacity=".75"/><path d="M8 9.5 12 5l4 4.5"/><path d="M8 14.5 12 19l4-4.5"/></svg></span><span class="pb-tx">Flip</span></button>
-        <button type="button" class="pb" id="sbDup" title="Duplicate the selection in place" aria-label="Duplicate selection"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span><span class="pb-tx">Copy</span></button>
+        {# "Duplicate", not "Copy": this button PLACES a copy in the page immediately
+   (selDuplicate), while the page bar's Copy puts pages on a clipboard for
+   Paste. One word per behaviour — the two were both labelled Copy. #}
+        <button type="button" class="pb" id="sbDup" title="Duplicate the selection in place" aria-label="Duplicate selection"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span><span class="pb-tx">Duplicate</span></button>
         <button type="button" class="pb" id="sbCut" title="Cut the selection — paste it on any page" aria-label="Cut selection"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8 7.5 20 18"/><path d="M8 16.5 20 6"/></svg></span><span class="pb-tx">Cut</span></button>
         {# SAVE, not place. The tray places; this is the only route INTO the
            shelf, and it lives here because a stamp is made out of a selection
@@ -303,8 +314,8 @@
          treatment with Pad via lib/nametab.js; #nameItemSub echoes the name. #}
       <button type="button" class="flip-menu-item" id="nameItem" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span class="mi-tx">Name this skribl<span class="mi-sub" id="nameItemSub">Untitled</span></span></button>
       <div class="flip-menu-sep"></div>
-      <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft (.skribl)</span></button>
-      <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Load draft (.skribl)</span></button>
+      <button type="button" class="flip-menu-item" id="miSave" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span><span class="mi-tx">Save draft<span class="mi-sub">Downloads a .skribl file</span></span></button>
+      <button type="button" class="flip-menu-item" id="miLoad" role="menuitem"><span class="mi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="mi-tx">Open draft&hellip;<span class="mi-sub">A .skribl file you saved</span></span></button>
       <div class="flip-menu-sep"></div>
       {# Rebuilds every generated in-between at the CURRENT frame rate. v260 made
          the sample count depend on fps, and that only reaches pages made after it;

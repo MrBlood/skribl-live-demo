@@ -75,8 +75,10 @@ with sync_playwright() as p:
         desc: document.getElementById('exportVideoDesc').textContent })""")
     check("Flip labels the button with a container", multi["title"].strip() in ("Video (MP4)", "Video (WebM)"),
           multi["title"])
-    check("Flip's description names it too", ("MP4" in multi["desc"] or "WebM" in multi["desc"]),
-          multi["desc"])
+    # v269: the container lives in the TITLE only — the description carries the
+    # tradeoff, and repeating "WebM" in both lines said it twice.
+    check("Flip's description does NOT repeat the container",
+          "MP4" not in multi["desc"] and "WebM" not in multi["desc"], multi["desc"])
 
     # The label must agree with what this browser can really do.
     truth = flip.evaluate("""async () => {
@@ -105,8 +107,10 @@ with sync_playwright() as p:
         desc: document.getElementById('exportVideoDesc').textContent })""")
     check("Pad labels the container", padlbl["title"].strip() in ("Video (MP4)", "Video (WebM)"),
           padlbl["title"])
-    check("Pad's desc names WebM too, not only MP4 (new in v106)",
-          ("MP4" in padlbl["desc"] or "WebM" in padlbl["desc"]), padlbl["desc"])
+    # v269: same rule as Flip — the title names the container once, the
+    # description keeps to the tradeoff.
+    check("Pad's desc does NOT repeat the container",
+          "MP4" not in padlbl["desc"] and "WebM" not in padlbl["desc"], padlbl["desc"])
     check("both surfaces agree on the format",
           padlbl["title"].strip() == multi["title"].strip(),
           f"pad {padlbl['title']!r} vs flip {multi['title']!r}")
@@ -576,9 +580,20 @@ with sync_playwright() as _p:
           }
           return n;
         }""")
+        # v269: the fresh canvas preset follows the viewport (a 393px phone opens
+        # 9:16), and the grid derives its column count from the canvas ASPECT —
+        # so the expected line count is computed the same way the overlay does,
+        # rather than assuming the old fixed 4:3's 8 columns.
+        _exp = _pg.evaluate("""() => {
+          const g = document.getElementById('flipGrid');
+          const m = SkriblGrid.majors();
+          const cols = g.width >= g.height ? m : Math.max(1, Math.round(m * g.width / g.height));
+          return { fine: cols * 2 + 1, coarse: cols + 1 };
+        }""")
         check(f"at {_w}px the grid includes the fine subdivision",
-              (_lines > 12) == _fine,
-              f"{_lines} vertical lines — 9 majors alone, 17 with the fine layer")
+              (_lines == _exp["fine"]) == _fine,
+              f"{_lines} vertical lines — {_exp['coarse']} majors alone, "
+              f"{_exp['fine']} with the fine layer")
 
         # Evenness is the property that made the fine layer usable at all:
         # equal gaps and one opacity per tier. A denser grid that is uneven is
@@ -1191,8 +1206,17 @@ with _sp204() as _p:
     pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     flip_items = fp.evaluate("() => [...document.querySelectorAll('.flip-menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     def has(items, s): return any(s in x for x in items)
-    check("V206: Pad menu says 'Save draft (.skribl)' like Flip", has(pad_items, "Save draft (.skribl)"), str(pad_items))
-    check("V206: Pad menu says 'Load draft (.skribl)' like Flip", has(pad_items, "Load draft (.skribl)"), str(pad_items))
+    # v269: the extension moved out of the action's name into a sub-label —
+    # "Save draft" is the action, ".skribl" is a detail. Parity still holds:
+    # both editors carry the same words, and neither puts "(.skribl)" back in
+    # the label itself.
+    check("V269: Pad menu says 'Save draft' like Flip", has(pad_items, "Save draft"), str(pad_items))
+    check("V269: Pad menu says 'Open draft…' like Flip", has(pad_items, "Open draft"), str(pad_items))
+    check("V269: Flip menu says 'Save draft' / 'Open draft…' too",
+          has(flip_items, "Save draft") and has(flip_items, "Open draft"), str(flip_items))
+    check("V269: neither menu titles an action with '(.skribl)' any more",
+          not has(pad_items, "(.skribl)") and not has(flip_items, "(.skribl)"),
+          str([x for x in pad_items + flip_items if "(.skribl)" in x]))
     check("V206: Pad menu says 'Export…' like Flip", has(pad_items, "Export\u2026"), str(pad_items))
     check("V206: Flip menu has 'Clear all pages' (was drawer-only)", has(flip_items, "Clear all pages"), str(flip_items))
     check("V206: Pad menu has 'Clear all'", has(pad_items, "Clear all"), str(pad_items))
@@ -1249,8 +1273,11 @@ with _sp204() as _p:
             const d = x.getImageData(0,0,c.width,c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++; return n; }}""")
     dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); dp.wait_for_timeout(600)
     dp.set_input_files("#draftInput", {"name": "demo-galaxy.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
+    # No backslash inside the f-string expression: legal only from Python 3.12,
+    # a SyntaxError that kills the whole suite on 3.11.
+    _nstrokes = dp.evaluate("() => (typeof strokes !== 'undefined' ? strokes.length : -1)")
     check("DEMO: galaxy .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
-          f"strokes={dp.evaluate('() => (typeof strokes!==\'undefined\'?strokes.length:-1)')}")
+          f"strokes={_nstrokes}")
     check("DEMO: galaxy renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
     dp.click("#playBtn"); dp.wait_for_timeout(1200); _a = _ink(dp, "#canvas"); dp.wait_for_timeout(1200); _b2 = _ink(dp, "#canvas")
     check("DEMO: galaxy REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")

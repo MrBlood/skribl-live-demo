@@ -105,6 +105,10 @@
     onHide = (opts && typeof opts.onHide === 'function') ? opts.onHide : null;
     var node = ensure();
     node.classList.remove('skribl-hint-panel');   // v205 variant, retired
+    // Anchored hints hang under the header's right edge (the ⋯ / info cluster
+    // they point at) instead of floating over the canvas. Toggled per show()
+    // because the node is reused by every hint.
+    node.classList.toggle('skribl-hint--anchored', !!(opts && opts.anchor === 'top-right'));
     clearTimeout(timer);
     node.textContent = '';
     /* An optional glyph, shown BEFORE the text. It exists because a hint that

@@ -534,14 +534,23 @@ body:not(.player-mode) .canvas-wrap {
      a different aspect will shrink from this to its own rectangle, which is a
      smaller change than appearing from nothing.
 
-     aspect-ratio matches the DEFAULT PRESET in lib/canvassizes.js (4:3, 816x612)
-     rather than filling the area outright: filling it left the frame 728px tall
-     against a settled 521px, so the placeholder appeared and then visibly
-     collapsed. Sized this way it lands on the settled rectangle for a default
-     pad and there is nothing to see. */
+     aspect-ratio matches the preset resizeCanvas() will pick for the device
+     (bestFor in lib/canvassizes.js) rather than filling the area outright:
+     filling it left the frame 728px tall against a settled 521px, so the
+     placeholder appeared and then visibly collapsed. Sized this way it lands on
+     (or near) the settled rectangle and there is nothing to see. Landscape
+     bands settle on 4:3; the portrait override below matches the 9:16 a phone
+     will get, so the placeholder doesn't flash wide and then snap tall. */
   aspect-ratio: 4 / 3;
   width: 100%;
   height: auto;
+}
+@media (orientation: portrait) {
+  body:not(.player-mode) .canvas-wrap {
+    aspect-ratio: 9 / 16;
+    width: auto;
+    height: 100%;
+  }
 }
 
 /* The #canvas min-height floor (400px, or 50vh under the <=640px query) predates
@@ -594,6 +603,15 @@ body:not(.player-mode) .canvas-wrap #canvas {
   --canvas-ring: inset 0 0 0 1px rgba(0,0,0,0.22);
   box-shadow: var(--canvas-ring),
               inset 0 1px 0 rgba(var(--wash-rgb), 0.6), inset 0 0 70px rgba(0,0,0,0.06);
+}
+
+/* Light theme: the (usually dark) canvas slab gets a seat — a 1px mat line so
+   it reads as an object placed on the light page rather than a hole cut in it.
+   An OUTLINE, not another box-shadow layer: every state rule above swaps
+   box-shadow wholesale, and an outline survives all of them. Editor only; the
+   player already frames its canvas. */
+:root[data-theme="light"] body:not(.player-mode) .canvas-wrap {
+  outline: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 .canvas-wrap.recording {
@@ -3306,6 +3324,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
      the export sheet's last control out of a 900px viewport, but it applied to
      any short window before that too. top is 64px; leave 24px below. */
   .menu-sheet { max-height: calc(100dvh - 88px); overflow-y: auto; }
+  /* Pointer density: 12px row padding is a touch target; a desktop dropdown
+     driven by a mouse reads better a third tighter (the export sheet keeps its
+     own larger rows — its options carry two-line descriptions). */
+  .menu-sheet:not(.export-sheet) .menu-item { padding: 9px 12px; }
 }
 
 /* Mobile: bottom sheet */
@@ -4899,6 +4921,19 @@ body.player-mode #canvas {
   flex: 0 0 auto; white-space: nowrap;
 }
 .skribl-hint.in { opacity: 1; transform: translate(-50%, 0); }
+/* Anchored variant: the intro hint advertises the ⋯ / info cluster, so it hangs
+   under the header's right edge with a caret pointing up at it, instead of
+   floating centred over the canvas it is not about. Other hints keep the
+   centred default. */
+.skribl-hint--anchored { left: auto; right: 14px; transform: translate(0, -8px); }
+.skribl-hint--anchored.in { transform: translate(0, 0); }
+.skribl-hint--anchored::after {
+  content: ''; position: absolute; top: -5px; right: 22px;
+  width: 9px; height: 9px; transform: rotate(45deg);
+  background: var(--surface-control-hover);
+  border-left: 1px solid rgba(124, 92, 255, 0.35);
+  border-top: 1px solid rgba(124, 92, 255, 0.35);
+}
 .skribl-hint[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .skribl-hint { transition: none; } }
 
@@ -4929,7 +4964,13 @@ body.player-mode #canvas {
   background: transparent; color: var(--text-secondary); cursor: pointer;
 }
 .onion-tint svg { width: 18px; height: 18px; }  /* v205-fix: tier-2 (32px box), was 16 (13 originally) */
-.onion-tint.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
+/* ON is the accent, like every other selected control. This class began life on
+   the onion controls and its amber leaked to every switch that borrowed it —
+   Grid and Stroke layers lit orange in an otherwise purple chrome. */
+.onion-tint.active { color: var(--ui-hi); border-color: rgba(124, 92, 255, 0.4); background: rgba(124, 92, 255, 0.12); }
+/* Amber survives ONLY where it means the thing itself: the onion controls
+   light in the exact colour the onion pages tint (#ff9f43). */
+#onion.active, #onionTintBtn.active { color: var(--warn-2); border-color: rgba(255, 159, 67, 0.34); background: rgba(255, 159, 67, 0.10); }
 .tune-shell {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows 0.26s cubic-bezier(0.32, 0.72, 0, 1);
@@ -4991,7 +5032,11 @@ body.player-mode #canvas {
 @media (prefers-reduced-motion: reduce) { .name-shell, .name-panel { transition: none; } }
 .tune-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; }
 .tune-row + .tune-row { border-top: 1px solid var(--hairline); }
-.tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; }
+/* margin-right:auto clusters each row's controls on the RIGHT edge (label left,
+   control right — the settings-table pattern). Without it the desktop drawer's
+   controls huddled mid-left with 300px of dead row to their right; mobile
+   already read this way via its flex-grow override below. */
+.tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; margin-right: auto; }
 .tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .tune-hint { font-size: 11px; color: var(--text-dim); }
 .tune-tool.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
