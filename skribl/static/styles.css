@@ -4975,7 +4975,13 @@ body.player-mode #canvas {
   color: var(--text-primary); font-size: 15px; font-weight: 600; font-family: inherit; outline: none;
 }
 .name-input::placeholder { color: var(--text-dim); font-weight: 500; }
-.name-input:focus { border-color: rgba(124, 92, 255, 0.85); }
+/* Just firm the hairline on focus — no second ring. The global
+   `input:focus-visible` rule near the end of this file paints a 2px focus-ring
+   outline 2px OUTSIDE this border (a double ring), and its :focus-visible
+   specificity beats a plain `.name-input` outline:none — so it has to be killed
+   on the focus pseudo here, exactly as .help-search-input does. */
+.name-input:focus,
+.name-input:focus-visible { border-color: rgba(124, 92, 255, 0.85); outline: none; }
 .name-done {
   height: 38px; padding: 0 16px; border: 0; border-radius: 10px; cursor: pointer;
   font-weight: 700; font-size: 13px; color: var(--text-primary);
