@@ -641,32 +641,34 @@
     background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
     box-shadow: 0 24px 60px rgba(0,0,0,.55); padding: 6px; }
   .flip-menu[hidden] { display: none; }
-  /* On phones the ⋯ menu is a BOTTOM SHEET, exactly like Pad's — the two
+  /* On COMPACT the ⋯ menu is a BOTTOM SHEET, exactly like Pad's — the two
      menus carried the same items in two different bodies (popover here,
-     sheet there), and the owner rightly asked why. Grabber drawn as ::before
-     so no markup changes; the scrim already closes it, like Pad's. */
-  @media (max-width: 640px) {
-    .flip-menu { position: fixed; top: auto; left: 10px; right: 10px; bottom: 0;
-      min-width: 0; width: auto; box-sizing: border-box;
-      border: 0; border-radius: 20px 20px 0 0;
-      padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
-      max-height: 88dvh; overflow-y: auto; }
-    .flip-menu:not([hidden]) { animation: flip-sheet-up 0.35s var(--spring); }
-    /* The grabber is a REAL .menu-handle element in the markup, same as
-       Pad's sheets — a ::before drew inconsistently on the owner's iPhone.
-       styles.css shows .menu-handle only at sheet widths, so the desktop
-       popover stays clean for free. */
-    /* The sheet BODY matches Pad's too — same row height (15px 14px padding),
-       same 18px icon column, same divider rhythm. Two menus with the same
-       items in the same body should not read as two designs (owner, phone
-       review: "the menus do not look the same?"). Desktop keeps the compact
-       popover metrics. Prefixed with .flip-menu: the base metric rules sit
-       LATER in this file and win a same-specificity tie. */
-    .flip-menu .flip-menu-item { padding: 15px 14px; gap: 12px; border-radius: 10px; }
-    .flip-menu .flip-menu-item .mi-ic { width: 18px; }
-    .flip-menu .flip-menu-item .mi-ic svg { width: 18px; height: 18px; }
-    .flip-menu .flip-menu-sep { margin: 6px 8px; }
-  }
+     sheet there), and the owner rightly asked why. Expressed through the
+     size class, not a width query: verify_sizeclass rightly failed the v270
+     seal's first run for a `max-width: 640px` here — flip.css answers the
+     640 question ONCE, via [data-size] (v226/v228). :where() keeps the
+     prefix at zero specificity so source order still decides ties, exactly
+     as the ladder below the boundary requires. */
+  :where(body[data-size="compact"]) .flip-menu { position: fixed; top: auto; left: 10px; right: 10px; bottom: 0;
+    min-width: 0; width: auto; box-sizing: border-box;
+    border: 0; border-radius: 20px 20px 0 0;
+    padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
+    max-height: 88dvh; overflow-y: auto; }
+  :where(body[data-size="compact"]) .flip-menu:not([hidden]) { animation: flip-sheet-up 0.35s var(--spring); }
+  /* The grabber is a REAL .menu-handle element in the markup, same as
+     Pad's sheets — a ::before drew inconsistently on the owner's iPhone.
+     styles.css shows .menu-handle only at sheet widths, so the desktop
+     popover stays clean for free. */
+  /* The sheet BODY matches Pad's too — same row height (15px 14px padding),
+     same 18px icon column, same divider rhythm. Two menus with the same
+     items in the same body should not read as two designs (owner, phone
+     review: "the menus do not look the same?"). Desktop keeps the compact
+     popover metrics. The .flip-menu prefix outranks the base metric rules,
+     which sit later in this file and would win a same-specificity tie. */
+  :where(body[data-size="compact"]) .flip-menu .flip-menu-item { padding: 15px 14px; gap: 12px; border-radius: 10px; }
+  :where(body[data-size="compact"]) .flip-menu .flip-menu-item .mi-ic { width: 18px; }
+  :where(body[data-size="compact"]) .flip-menu .flip-menu-item .mi-ic svg { width: 18px; height: 18px; }
+  :where(body[data-size="compact"]) .flip-menu .flip-menu-sep { margin: 6px 8px; }
   @keyframes flip-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
   /* Matches Pad's .menu-overlay::before — same alpha, same blur — so the two
      surfaces dim identically. z-index sits just under .flip-menu's 60. */
