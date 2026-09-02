@@ -1408,6 +1408,7 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     } }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; strokePointerId=e.pointerId; curCount=1; redoStack.length=0; noteAction('stroke');
+  document.body.classList.add('stroking');   // the chrome recedes while the pen is down (flip.css)
   // A stroke belongs to the page it STARTED on. Every later step used frame(),
   // which re-reads the current index — so changing page mid-stroke (tapping a
   // thumbnail, the pagebar, or holding an arrow to riffle) pushed the remaining
@@ -1556,6 +1557,7 @@ function endStroke(){
     _shapePrev=null; _shapeAnchor=null;
   }
   drawing=false; smoothPt=null; lastRaw=null;
+  document.body.classList.remove('stroking');   // pen up: the chrome returns
   const _tgt = (strokeFrame || frame());
   _tgt.strokeGroups.push(curCount);
   // Mirrored copies, one GROUP each — never appended to the original, or the
@@ -1771,6 +1773,7 @@ function abortStrokeForPinch(){
   const s=(strokeFrame || frame()).strokes;
   if(curCount>0 && s.length>=curCount) s.splice(s.length-curCount, curCount);
   drawing=false; curCount=0; smoothPt=null; lastRaw=null; strokeFrame=null; strokePointerId=null; render();
+  document.body.classList.remove('stroking');   // aborted stroke: the chrome returns too
 }
 /* eventPoint / pinch helpers: lib/eventpoint.js, one implementation shared with
    Pad and the player. Written out here once and rejected by verify_surfaces.py,

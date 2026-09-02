@@ -634,6 +634,18 @@ body.player-mode .canvas-area { display: contents; }
   z-index: 1;
 }
 
+/* THE CHROME RECEDES WHILE THE PEN IS DOWN. The moment a stroke begins
+   (body.stroking, set by the capture path on both editors) the header, the
+   toolbar and the autosave pill fade to a whisper, and the drawing owns the
+   whole screen; the instant the finger lifts they return. Opacity only —
+   nothing moves, nothing reflows, and every control keeps its hit target
+   for a second hand. The fade-out carries a small DELAY so a quick tap (a
+   dot) never blinks the chrome — entering a state uses that state's
+   transition, so the delay applies only on the way out of view; the return
+   uses the base transition and is immediate. prefers-reduced-motion zeroes
+   the transitions globally, leaving an instant, honest swap. */
+.header, .toolbar { transition: opacity 0.25s ease; }
+
 .canvas-empty-hint {
   position: absolute;
   inset: 0;
