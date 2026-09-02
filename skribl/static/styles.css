@@ -1704,20 +1704,33 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   z-index: 1;
 }
 
+/* The custom swatch WEARS the "any color" language the toolbar's color
+   button already established: a rainbow ring, not a fake preset. Before this
+   it shipped with an inline fill identical to the last preset beside it, so
+   the one control that opens the full picker read as a redundant seventh
+   swatch with a 7px mystery dot (owner, from the phone: "that plus is too
+   small to tell what it is... is it important?" — it is; it is the picker).
+   Picking a color sets an inline background from JS, which overrides this
+   and turns the swatch into "your color", exactly as before. */
+.color-custom, .bg-custom {
+  background: conic-gradient(from 0deg, #f43f5e, #f59e0b, #facc15, #22c55e,
+    #06b6d4, #6366f1, #a855f7, #f43f5e);
+}
 .color-custom-badge {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 11px;
-  height: 11px;
+  bottom: -3px;
+  right: -3px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--surface-well);
   border: 1px solid var(--line-loud);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 7px;
-  color: var(--text-tool);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
   pointer-events: none;
 }
 
