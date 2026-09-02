@@ -64,8 +64,17 @@
      They are tall, so lifting usually cannot clear them and the pill fades
      instead — which is right: a transient status has no business competing
      with a menu the user just opened, and a WARNING still refuses to fade. */
-  var TARGETS = ['.flip-tools', '.toolbar', '#pagebar', '#selbar', '#strip',
-                 '.addcol', '#toolTray', '#shapePop', '#stampPop'];
+  var BARS = ['.flip-tools', '.toolbar', '#pagebar', '#selbar', '#strip',
+              '.addcol'];
+  /* Popovers are FADE-ONLY, never climbed. They joined the target list so the
+     pill would yield to them, and on a desktop that is what happened — but on
+     a phone the shape pop's top sits mid-screen and the lift "fit", so
+     "Saving" rode the popover tower to halfway up the display (owner: "the
+     saving auto save... shows up half way up the screen"). The pill lifts
+     over BARS; if the lifted spot still sits on a popover, it fades instead —
+     which is what this file's own comment always claimed happened. */
+  var POPS = ['#toolTray', '#shapePop', '#stampPop'];
+  var TARGETS = BARS.concat(POPS);
   var WARNING = ['failed', 'partial'];
 
   function isWarning(el) {
@@ -101,16 +110,22 @@
     else el.style.removeProperty('--pill-lift');
   }
 
-  function hits(el) {
+  /* Overlap test. `list` defaults to every target; `dy` tests the pill as if
+     it were lifted a further dy px (used to ask "once over the bars, would it
+     sit on a popover?" before committing to the lift). */
+  function hits(el, list, dy) {
+    list = list || TARGETS;
+    dy = dy || 0;
     var r = el.getBoundingClientRect();
     if (!r.width || !r.height) return false;
-    for (var i = 0; i < TARGETS.length; i++) {
-      var c = global.document.querySelector(TARGETS[i]);
+    var rt = r.top - dy, rb = r.bottom - dy;
+    for (var i = 0; i < list.length; i++) {
+      var c = global.document.querySelector(list[i]);
       if (!c) continue;
       var b = c.getBoundingClientRect();
       if (!b.width || !b.height) continue;      // hidden bars have no box
       if (!(r.right <= b.left || r.left >= b.right ||
-            r.bottom <= b.top || r.top >= b.bottom)) return true;
+            rb <= b.top || rt >= b.bottom)) return true;
     }
     return false;
   }
@@ -129,15 +144,15 @@
    * pill's bottom edge SHOULD be and lifts by the difference from where the
    * un-lifted pill sits, so applying the answer twice gives the same answer.
    */
-  function wantLift(el) {
+  function wantLift(el, list) {
     var r = el.getBoundingClientRect();
     if (!r.width || !r.height) return 0;
     var lift = currentLift(el);
     var unliftedBottom = r.bottom + lift;
     var half = (global.innerHeight || 0) / 2;
     var top = Infinity;
-    for (var i = 0; i < TARGETS.length; i++) {
-      var c = global.document.querySelector(TARGETS[i]);
+    for (var i = 0; i < list.length; i++) {
+      var c = global.document.querySelector(list[i]);
       if (!c) continue;
       var b = c.getBoundingClientRect();
       if (!b.width || !b.height) continue;
@@ -162,12 +177,24 @@
       setLift(el, 0);
       return;
     }
-    var lift = wantLift(el);
+    // A warning never fades, so it is allowed to climb whatever is in the way
+    // — including a popover — rather than vanish. The reassuring states lift
+    // over BARS only, and yield to popovers below.
+    var warning = isWarning(el);
+    var lift = wantLift(el, warning ? TARGETS : BARS);
     var r = el.getBoundingClientRect();
     // Room above to move into? The pill's top once lifted, from its un-lifted
     // position, must stay on screen.
     var liftedTop = (r.top + currentLift(el)) - lift;
     if (lift > 0 && liftedTop >= GAP) {
+      // Bars cleared — but if the lifted spot still sits on a popover, a
+      // transient status has no business competing with a menu: fade.
+      if (!warning && hits(el, POPS, lift - currentLift(el))) {
+        setFlag(el, 'lifted', false);
+        setLift(el, 0);
+        setFlag(el, 'blocked', true);
+        return;
+      }
       setLift(el, lift);
       setFlag(el, 'lifted', true);
       setFlag(el, 'blocked', false);
@@ -177,7 +204,7 @@
     setLift(el, 0);
     // No room to lift into: fall back to the original remedy, which still
     // never applies to a warning.
-    setFlag(el, 'blocked', !isWarning(el) && hits(el));
+    setFlag(el, 'blocked', !warning && hits(el));
   }
 
   function watch(el) {
