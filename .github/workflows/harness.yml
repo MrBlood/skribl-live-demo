@@ -6,6 +6,22 @@ name: harness
 #   postgres  real parallelism, where the rate-limiter reservation race lives
 #   mp4       a browser with an H.264 encoder, which Playwright's Chromium lacks
 
+# WHO RUNS WHAT — the September 2026 minutes lesson, round two.
+#
+# The full battery below (three jobs, 89 suites each, 40-90 minutes a job) used
+# to run on EVERY pull request AND every merge: one shipped fix cost ~6 hours
+# of runner time, and an ordinary productive day (7 merges) burned the entire
+# monthly Actions allowance — 30 full runs in one day. cancel-in-progress
+# (below) had already closed the superseded-push hole; it cannot help when
+# every run is for a distinct event.
+#
+# So: pull requests get ONE fast smoke job (the boot suite — does the app
+# start and serve at all), and the full three-job battery runs only on pushes
+# to main and on manual dispatch. The working rhythm this repo actually has —
+# the full affected suites run locally before every push, and their counts are
+# quoted in each PR — is what makes the PR-side trim safe: CI's job on a PR is
+# to catch a broken push, not to re-verify a verified one. Merges to main keep
+# the complete record.
 on:
   push:
     branches: [main]
@@ -32,8 +48,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  smoke:
+    name: smoke (boot suite)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r constraints.txt --require-hashes
+          pip install playwright Pillow
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Run the boot suite
+        run: ./harness/run_harness.sh verify_boot.py
+
   sqlite:
     name: harness (sqlite)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # 90, not 30: the harness grew to 89 suites / ~4k assertions and a full run
     # takes 45-60 minutes on these runners. At 30 both jobs were cancelled
@@ -74,6 +112,7 @@ jobs:
 
   postgres:
     name: harness (postgresql)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # 90, not 30: the harness grew to 89 suites / ~4k assertions and a full run
     # takes 45-60 minutes on these runners. At 30 both jobs were cancelled
@@ -194,6 +233,7 @@ jobs:
 
   mp4:
     name: mp4 export (real Chrome)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
