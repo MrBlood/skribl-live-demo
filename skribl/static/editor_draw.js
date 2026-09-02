@@ -255,10 +255,12 @@ function startDraw(e) {
   // release (the click dismisser fires after the drag is over, so the card
   // stood over the canvas the whole time; owner: "how can we get that menu
   // to go away while I'm trying to draw the shape?"), and not tap-to-close,
-  // tap-again-to-draw. Hide, don't return.
+  // tap-again-to-draw. Hide, don't return. UNLESS the user dragged it
+  // somewhere (data-moved, set by lib/popdrag.js): a pop they positioned is
+  // a palette they want to keep while they draw.
   {
     const _shapePop = document.getElementById('shapePop');
-    if (_shapePop && !_shapePop.hidden) _shapePop.hidden = true;
+    if (_shapePop && !_shapePop.hidden && !_shapePop.dataset.moved) _shapePop.hidden = true;
   }
   // Eyedropper: this press opens the magnifying loupe — drag to aim, release
   // picks (lib/eyedropper.js). Allowed even on a locked canvas — it only

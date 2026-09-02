@@ -160,6 +160,9 @@
 
     <div class="flip-tools">
       <div class="shape-pop" id="shapePop" role="dialog" aria-label="Shape kind" hidden>
+      {# Drag grip (lib/popdrag.js): pull the pill to move the pop off the
+         patch of canvas you want to draw on; a moved pop pins open. #}
+      <div class="pop-grip" aria-hidden="true"><div class="pop-grip-pill"></div></div>
       <div class="smooth-seg" id="shapeSeg" role="group" aria-label="Shape kind">
         <span class="seg-slider"></span>
         <button type="button" class="smooth-btn active" data-shape="line" aria-pressed="true" title="Straight line">Line</button>
@@ -463,6 +466,7 @@
      which reads window.SkriblRecentColors at first use. #}
   <script src="{{ skribl_asset('lib/recentcolors.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/eyedropper.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/popdrag.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/smoothing.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/erasersize.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>

@@ -1336,8 +1336,9 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   // The shape picker is tool OPTIONS, not a dialog: the press that starts
   // your shape shoves it aside and the SAME gesture draws. Twin of the Pad
   // rule in editor_draw.js — separate copies of the picker, separate copies
-  // of its manners (verify_tray says so twice on purpose).
-  { const _sp=document.getElementById('shapePop'); if(_sp && !_sp.hidden) _sp.hidden=true; }
+  // of its manners (verify_tray says so twice on purpose). A DRAGGED pop
+  // (data-moved) is pinned and stays while you draw.
+  { const _sp=document.getElementById('shapePop'); if(_sp && !_sp.hidden && !_sp.dataset.moved) _sp.hidden=true; }
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
@@ -7033,10 +7034,15 @@ function spotlightStamp(){
   if(!pop) return;
   document.addEventListener('click',e=>{
     if(pop.hidden) return;
+    // Dragged means pinned (lib/popdrag.js sets data-moved): a pop the user
+    // positioned stops auto-dismissing. Escape and tool switches still close.
+    if(pop.dataset.moved) return;
     if(e.target.closest('#shapePop')||e.target.closest('#shapeToolBtn')) return;
     pop.hidden=true;
   });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!pop.hidden) pop.hidden=true; });
+  // The grip that makes the pop movable at all. Shared with Pad.
+  if(window.SkriblPopDrag) window.SkriblPopDrag.attach(pop, pop.querySelector('.pop-grip'));
 })();
 /* ---- move-artwork mode ----------------------------------------------------
  * Enter from the page bar, drag on the canvas, Done commits.

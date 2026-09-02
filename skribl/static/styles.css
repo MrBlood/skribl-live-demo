@@ -5682,7 +5682,11 @@ body.playing .flip-grid { display: none; }
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
-  transform: translateX(-50%);
+  /* The second translate is the DRAG: lib/popdrag.js writes --pop-dx/-dy when
+     the grip is pulled, composed after the anchor centering so moving the pop
+     never fights how it is anchored. Both default to 0, so an untouched pop
+     sits exactly where it always did. */
+  transform: translateX(-50%) translate(var(--pop-dx, 0px), var(--pop-dy, 0px));
   z-index: 44;
   background: var(--surface-pop);
   border: 1px solid var(--hairline, #252a35);
@@ -5697,6 +5701,35 @@ body.playing .flip-grid { display: none; }
    bitten by three times. */
 .shape-pop[hidden] { display: none; }
 .shape-pop .smooth-seg { margin: 0; }
+
+/* The pop's drag grip — same pill language as the sheets' grabber, meaning
+   "take hold of me here". A real inner element paints the pill (the flip
+   grabber taught us not to trust pseudo-elements for this on iPhones) and
+   the outer strip is the touch target. touch-action: none or the drag
+   becomes a page scroll on the first phone that tries it. */
+.pop-grip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  z-index: 1;
+}
+.pop-grip:active { cursor: grabbing; }
+.pop-grip-pill {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--text-secondary);
+  opacity: 0.55;
+  flex: none;   /* the grabber collapse taught us: empty divs shrink to 0 */
+}
 /* ROW SPACING FOR THE KNOBS, and it lives HERE rather than in flip.css because
    BOTH surfaces render this markup and only Flip loads that sheet -- the first
    version of this fix went in there and left Pad's Sides slider taking 4 of its
@@ -5724,8 +5757,10 @@ body.playing .flip-grid { display: none; }
 }
 @media (max-width: 640px) {
   /* Stay inside the viewport on a phone: the Shape button is near the left, so
-     a centred popover would hang off the edge. */
-  .shape-pop { left: 8px; transform: none; }
+     a centred popover would hang off the edge. No centering translate here,
+     but the DRAG vars stay composed — a bare `transform: none` silently
+     disconnected the grip on exactly the screens that need it most. */
+  .shape-pop { left: 8px; transform: translate(var(--pop-dx, 0px), var(--pop-dy, 0px)); }
   .shape-pop::after { left: 64px; }
 }
 
