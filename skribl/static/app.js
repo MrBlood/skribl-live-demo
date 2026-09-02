@@ -328,26 +328,91 @@ undoBtn.disabled = true;
 redoBtn.disabled = true;
 
 
+// Pixels on the canvas that the stroke list cannot rebuild: a stroke drawn
+// while NOT recording never enters `strokes` (commitStrokeWithMirrors bails),
+// so it exists only as paint. While any such ink is on the canvas, history
+// states must carry real pixels; otherwise they don't need any (below).
+// Cleared wherever the canvas becomes fully described again: a fresh-take
+// base capture bakes the ink into preRecordSnapshot, a clear blanks it, and
+// a load replaces it.
+let unrecordedInk = false;
+
 function makeHistoryState() {
-  // Snapshot into an offscreen canvas via drawImage instead of toDataURL():
-  // toDataURL PNG-encodes the whole canvas synchronously on EVERY stroke start
-  // (main-thread jank, worst on mobile/large canvases) and kept up to 30
-  // multi-MB base64 strings alive in the undo stack. A canvas-to-canvas
-  // drawImage is cheap, and restore becomes synchronous drawImage too (no
-  // async <img> decode). Nothing serializes these states, so the shape change
-  // (string -> canvas) is safe: undo/redo below are the only consumers.
-  const snap = document.createElement('canvas');
-  snap.width = Math.max(1, canvas.width);
-  snap.height = Math.max(1, canvas.height);
-  if (canvas.width > 0 && canvas.height > 0) {
-    snap.getContext('2d').drawImage(canvas, 0, 0);
-  }
-  return {
-    image: snap,
+  // NO pixel snapshot in the normal case — this ran on EVERY stroke start,
+  // and a full-resolution canvas copy is ~17MB on a desktop hi-DPI canvas:
+  // 30 of them alive was half a gigabyte pinned for undo, and a thousand
+  // dots was a thousand 17MB allocations (owner: "a drawing of space is
+  // breaking the machine"). The canvas at any stroke boundary IS
+  // preRecordSnapshot + paintStrokesStatic(strokes) — the exact identity
+  // stopPlayback already relies on to restore the drawing after every
+  // preview — so the state stores the stroke list and a REFERENCE to its
+  // base, and restoreHistoryState repaints. The one exception is unrecorded
+  // ink (see the flag above): those pixels live nowhere else, so while the
+  // flag is up the state carries a real snapshot, exactly as before.
+  const state = {
+    image: null,
+    base: preRecordSnapshot,
     strokes: strokes.slice(),
     strokeGroups: strokeGroups.slice(),
     hasContent: hasContent
   };
+  if (unrecordedInk) {
+    const snap = document.createElement('canvas');
+    snap.width = Math.max(1, canvas.width);
+    snap.height = Math.max(1, canvas.height);
+    if (canvas.width > 0 && canvas.height > 0) {
+      snap.getContext('2d').drawImage(canvas, 0, 0);
+    }
+    state.image = snap;
+  }
+  return state;
+}
+
+// Put a history state's PIXELS back on the canvas. Pixel states (unrecorded
+// ink) draw their snapshot; everything else repaints base + strokes — the
+// same restore stopPlayback performs after every preview, so it is exact by
+// the same invariant. The caller still assigns strokes/strokeGroups/
+// hasContent; this only paints. The base decode is async the first time a
+// given base is seen (same dataURL -> Image dance as clearAndRestore, same
+// shared cache, so the common case is synchronous) and a seq guard keeps a
+// slow decode from painting over a newer restore.
+let _histRestoreSeq = 0;
+function restoreHistoryState(state) {
+  const { width: cw, height: ch } = getCanvasLogicalSize();
+  const seq = ++_histRestoreSeq;
+  const paintOver = (baseImg) => {
+    ctx.save();
+    // Explicit source-over/alpha: a just-finished eraser stroke leaves
+    // destination-out on the ctx, which would make these draws erase.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, cw, ch);
+    if (baseImg) ctx.drawImage(baseImg, 0, 0, cw, ch);
+    ctx.restore();
+  };
+  // The restore determines the canvas contents exactly, so it also settles
+  // the unrecorded-ink flag: a pixel state may put unlisted ink back; a
+  // repaint state leaves a canvas the stroke list fully describes.
+  unrecordedInk = !!state.image;
+  if (state.image) { paintOver(state.image); return; }
+  if (!state.base) {
+    paintOver(null);
+    paintStrokesStatic(state.strokes);
+    return;
+  }
+  if (_baseImgCache && _baseImgCache.src === state.base && _baseImgCache.img.complete) {
+    paintOver(_baseImgCache.img);
+    paintStrokesStatic(state.strokes);
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    _baseImgCache = { src: state.base, img };
+    if (seq !== _histRestoreSeq) return;
+    paintOver(img);
+    paintStrokesStatic(state.strokes);
+  };
+  img.src = state.base;
 }
 
 /* eventPoint / pinch helpers live in lib/eventpoint.js — ONE implementation
@@ -1345,8 +1410,10 @@ function beginRecording(continueTake) {
   window._skriblClosePadTune?.();
   if (!continueTake) {
     // Fresh Skribl: snapshot whatever is already on the canvas as the static
-    // base image, and start the stroke list empty.
+    // base image, and start the stroke list empty. Any unrecorded ink is now
+    // baked into the base, so history states can go pixel-less again.
     preRecordSnapshot = canvas.toDataURL();
+    unrecordedInk = false;
     strokes = []; strokeGroups = [];
   }
   // continueTake: keep existing strokes/strokeGroups AND the original base so the
@@ -1449,6 +1516,7 @@ function clearCanvas() {
   updateCanvasLockCue();
   updateEmptyHint();
   preRecordSnapshot = null;
+  unrecordedInk = false;   // the canvas is blank: nothing left the list can't rebuild
   undoStack = [];
   redoStack = [];
   undoBtn.disabled = true;
@@ -1471,9 +1539,11 @@ function clearCanvas() {
 function updateClearUndoBtn() { const b = document.getElementById('clearUndoBtn'); if (b) b.disabled = !clearBackup; }
 function restoreClear() {
   if (!clearBackup) return;
-  const { width: cw, height: ch } = getCanvasLogicalSize();
-  ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-  ctx.clearRect(0, 0, cw, ch); ctx.drawImage(clearBackup.image, 0, 0, cw, ch); ctx.restore();
+  restoreHistoryState(clearBackup);
+  // Clearing nulled preRecordSnapshot; bring the state's own base back with
+  // it, so a replay of the restored drawing paints the base it was drawn on
+  // (the old pixel-only restore left the base out of any later replay).
+  preRecordSnapshot = clearBackup.base || null;
   strokes = clearBackup.strokes.slice();
   strokeGroups = clearBackup.strokeGroups.slice();
   syncStateAfterHistoryChange(clearBackup.hasContent);
@@ -3676,6 +3746,11 @@ function loadSkribl(data) {
 
   const { width: cw, height: ch } = getCanvasLogicalSize();
 
+  // A base painted with NO strokes leaves pixels the stroke list can't
+  // rebuild (preRecordSnapshot stays null below) — history states must carry
+  // snapshots. Every other load leaves a canvas that is exactly base+strokes.
+  unrecordedInk = !!data.baseSnapshot && !strokes.length;
+
   if (data.baseSnapshot) {
     // Draw the base layer (pre-record or un-recorded drawing) first,
     // then render recorded strokes on top — mirroring playback.
@@ -4751,13 +4826,7 @@ function abortStrokeForPinch() {
   if (drawing) {
     const snap = undoStack.pop();
     if (snap) {
-      const { width: cw, height: ch } = getCanvasLogicalSize();
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = 1;
-      ctx.clearRect(0, 0, cw, ch);
-      if (snap.image) ctx.drawImage(snap.image, 0, 0, cw, ch);
-      ctx.restore();
+      restoreHistoryState(snap);
       strokes = snap.strokes.slice();
       strokeGroups = snap.strokeGroups.slice();
       hasContent = snap.hasContent;

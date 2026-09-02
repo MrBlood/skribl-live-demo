@@ -462,7 +462,14 @@ let _mirrorPainting = false;   // re-entry guard for the mirrored paint below
 // The axis is the CANVAS centre, so it is stable across strokes; a mirror
 // anchored to wherever the stroke began drifts and cannot be aimed.
 function commitStrokeWithMirrors() {
-  if (!recording || currentStroke.length === 0) { currentStroke = []; return; }
+  if (!recording || currentStroke.length === 0) {
+    // A stroke laid while NOT recording never enters `strokes` — its pixels
+    // live only on the canvas, so history states must carry real snapshots
+    // until the next base capture bakes it in (see unrecordedInk, app.js).
+    if (!recording && currentStroke.length > 0) unrecordedInk = true;
+    currentStroke = [];
+    return;
+  }
   strokes = strokes.concat(currentStroke);
   strokeGroups.push(currentStroke.length);
   if (window.SkriblMirror && SkriblMirror.active()) {
@@ -516,6 +523,8 @@ function commitActiveStroke() {
   if (recording && currentStroke.length > 0) {
     strokes = strokes.concat(currentStroke);
     strokeGroups.push(currentStroke.length);
+  } else if (currentStroke.length > 0) {
+    unrecordedInk = true;   // pixels the stroke list can't rebuild — see app.js
   }
   currentStroke = [];
 }

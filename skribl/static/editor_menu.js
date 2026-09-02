@@ -242,20 +242,12 @@ document.addEventListener('keydown', (e) => {
 
 undoBtn.addEventListener('click', () => {
   if (undoStack.length === 0) return;
-  const { width: cw, height: ch } = getCanvasLogicalSize();
   redoStack.push(makeHistoryState());
   redoBtn.disabled = false;
   const prev = undoStack.pop();
-  // Synchronous restore from the snapshot canvas (see makeHistoryState).
-  // save/restore + explicit source-over/alpha guards against a stale
-  // 'destination-out' left on the ctx by a just-finished eraser stroke,
-  // which would make this drawImage erase instead of paint.
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 1;
-  ctx.clearRect(0, 0, cw, ch);
-  ctx.drawImage(prev.image, 0, 0, cw, ch);
-  ctx.restore();
+  // Pixel states restore their snapshot; ordinary states repaint base +
+  // strokes — see restoreHistoryState (app.js) for why both are exact.
+  restoreHistoryState(prev);
   strokes = prev.strokes.slice();
   strokeGroups = prev.strokeGroups.slice();
   syncStateAfterHistoryChange(prev.hasContent === undefined ? strokes.length > 0 : prev.hasContent);
@@ -264,17 +256,11 @@ undoBtn.addEventListener('click', () => {
 
 redoBtn.addEventListener('click', () => {
   if (redoStack.length === 0) return;
-  const { width: cw, height: ch } = getCanvasLogicalSize();
   undoStack.push(makeHistoryState());
   undoBtn.disabled = false;
   const next = redoStack.pop();
-  // Synchronous restore from the snapshot canvas — same pattern as undo.
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 1;
-  ctx.clearRect(0, 0, cw, ch);
-  ctx.drawImage(next.image, 0, 0, cw, ch);
-  ctx.restore();
+  // Same restore as undo — pixel state or base + strokes repaint.
+  restoreHistoryState(next);
   strokes = next.strokes.slice();
   strokeGroups = next.strokeGroups.slice();
   syncStateAfterHistoryChange(next.hasContent === undefined ? strokes.length > 0 : next.hasContent);
