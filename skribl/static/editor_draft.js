@@ -315,15 +315,14 @@ function readAutosave() {
 
 // Reconstruct the per-stroke undo AND redo history for a restored drawing. The
 // autosave persists the drawing plus the deepest undone state (the maximal stroke
-// set) and how many strokes are currently applied — not the stacks themselves,
-// which are piles of full-canvas snapshots far too big to store. So we rebuild
-// them here: snapshot the canvas at each stroke boundary of the maximal drawing,
-// exactly as startDraw does live. States before the applied cut become the undo
-// stack; states after it become the redo stack. Result — a restored Skribl undoes
-// AND redoes stroke by stroke, identical to one edited this session. Undo is
-// bounded to the last 30 (the in-session cap). Renders the applied state on the
-// canvas as it goes. Fully guarded: any failure falls back to the applied drawing
-// with no history, never a broken stack.
+// set) and how many strokes are currently applied — not the stacks themselves.
+// Each rebuilt state is a stroke-boundary slice over the maximal set (pixel-less
+// — see stateAt below), exactly the shape startDraw pushes live. States before
+// the applied cut become the undo stack; states after it become the redo stack.
+// Result — a restored Skribl undoes AND redoes stroke by stroke, identical to
+// one edited this session. Undo is bounded to the last 30 (the in-session cap).
+// Fully guarded: any failure falls back to the applied drawing with no history,
+// never a broken stack.
 //   maxStrokes/maxGroups — the maximal drawing (applied + undone strokes)
 //   appliedCount         — how many strokes are currently on the canvas (prefix)
 function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasContent) {
@@ -336,25 +335,22 @@ function rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, baseHasCo
   let acc = 0;
   for (let k = 0; k <= total; k++) { starts.push(acc); if (k < total) acc += maxGroups[k]; }
 
-  const snapshotMain = () => {
-    const s = document.createElement('canvas');
-    s.width = Math.max(1, canvas.width);
-    s.height = Math.max(1, canvas.height);
-    if (canvas.width > 0 && canvas.height > 0) s.getContext('2d').drawImage(canvas, 0, 0);
-    return s;
-  };
-  // Render base + the first k strokes. clearAndRestore is synchronous once the
-  // base image is cached, so the canvas is fully painted before we snapshot.
+  // States are PIXEL-LESS: {base + strokes} is the whole truth of a restored
+  // drawing (renderPrefix below paints exactly that), so each state is two
+  // array slices and a reference — no per-state render, no per-state
+  // full-canvas snapshot. The old build rendered AND snapshotted every stroke
+  // boundary: on a 1,000-stroke drawing that was 30 multi-MB canvases plus
+  // 30 near-full repaints in one synchronous burst at restore time — the
+  // owner's "it seemed fine until all of a sudden it just slowed down".
+  // restoreHistoryState (app.js) repaints these states on undo/redo.
   const renderPrefix = (k) => clearAndRestore(() => paintStrokesStatic(maxStrokes.slice(0, starts[k])));
-  const stateAt = (k) => {
-    renderPrefix(k);
-    return {
-      image: snapshotMain(),
-      strokes: maxStrokes.slice(0, starts[k]),
-      strokeGroups: maxGroups.slice(0, k),
-      hasContent: (k === 0) ? baseHasContent : true
-    };
-  };
+  const stateAt = (k) => ({
+    image: null,
+    base: preRecordSnapshot,
+    strokes: maxStrokes.slice(0, starts[k]),
+    strokeGroups: maxGroups.slice(0, k),
+    hasContent: (k === 0) ? baseHasContent : true
+  });
 
   const build = () => {
     try {
@@ -402,12 +398,17 @@ function restoreAutosave(data) {
   const appliedCount = strokeGroups.length;   // strokes currently on canvas (a prefix of maximal)
   if (strokes.length || hasRedo) {
     preRecordSnapshot = data.baseSnapshot || null;
+    unrecordedInk = false;   // the restored canvas is exactly base + strokes
     hasContent = strokes.length > 0 || !!preRecordSnapshot;
     // The pre-stroke base only counts as content if a photo was baked into it.
     rebuildHistoryForRestore(maxStrokes, maxGroups, appliedCount, !!(data.photoMeta && data.photoMeta.name));
   } else if (data.baseSnapshot) {
     // Base image with no strokes (e.g. a saved photo background): just draw it.
+    // With preRecordSnapshot deliberately null, these pixels are exactly the
+    // ink the stroke list can't rebuild — history states must carry snapshots
+    // until the next fresh-take capture bakes them into a base.
     preRecordSnapshot = null;
+    unrecordedInk = true;
     const baseImg = new Image();
     baseImg.onload = () => { ctx.drawImage(baseImg, 0, 0, cw, ch); };
     baseImg.src = data.baseSnapshot;
