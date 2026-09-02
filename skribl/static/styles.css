@@ -1972,14 +1972,24 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    ... is it important?" — it is; it is the picker; the rainbow now says so
    by itself and the badge is gone). border: 0 matters: the base swatch's
    2.5px transparent border let the gradient bleed past the 12px radius as
-   loose colour slivers at the edges. Picking a color sets an inline
-   background from JS, which overrides this and turns the swatch into "your
-   color", exactly as before. */
+   loose colour slivers at the edges. */
 .color-custom, .bg-custom {
   border: 0;
   box-shadow: none;
   background: conic-gradient(from 0deg, #f43f5e, #f59e0b, #facc15, #22c55e,
     #06b6d4, #6366f1, #a855f7, #f43f5e);
+}
+/* Once a colour is picked the middle shows it, but the spectrum stays as a
+   ring around it: the swatch keeps saying "the full picker lives here"
+   instead of impersonating an eighth preset (owner: "there is no way to know
+   that that is the color selector after you pick a color — it just looks
+   like a blue now"). JS sets --custom-color and this class rather than an
+   inline background, which used to paint the rainbow out entirely. */
+.color-custom.has-color, .bg-custom.has-color {
+  background:
+    radial-gradient(closest-side, var(--custom-color) 58%, transparent calc(58% + 1.5px)),
+    conic-gradient(from 0deg, #f43f5e, #f59e0b, #facc15, #22c55e,
+      #06b6d4, #6366f1, #a855f7, #f43f5e);
 }
 
 /* ---------- Music tab ---------- */
