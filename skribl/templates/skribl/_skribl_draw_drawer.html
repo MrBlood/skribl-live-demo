@@ -18,6 +18,12 @@
 {%- else -%}
 <div class="tab-panel" id="drawPanel" hidden>
 {%- endif %}
+  {# Detent handle (lib/drawerdetent.js): on a phone the drawer opens at the
+     HALF detent — colour only, the canvas visible above — and this pill
+     drags or taps between half and full. Hidden on desktop, where the
+     drawer was never in the canvas's way. Shared markup, both surfaces. #}
+  <div class="drawer-detent-handle" role="button" tabindex="0"
+       aria-label="Expand or collapse the drawer"><div class="drawer-detent-pill"></div></div>
   <div class="color-section">
     <span class="draw-section-label">Color</span>
     {# One switcher, two targets. The grids are SWAPPED rather than stacked: they
@@ -64,6 +70,13 @@
       </label>
     </div>
   </div>
+
+  {# Visible only at the HALF detent on a phone: the honest label for what
+     the pull-up reveals. A button, so it works by tap as well as drag. #}
+  <button type="button" class="drawer-detent-more" id="drawerDetentMore">
+    Brush, smoothing &amp; more
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
+  </button>
 
   <div class="draw-inline">
     <div class="tool-row">
