@@ -82,6 +82,8 @@
         pop.style.removeProperty('--pop-dx');
         pop.style.removeProperty('--pop-dy');
         delete pop.dataset.moved;
+        // A pop hidden mid-gesture must not reopen invisible.
+        pop.classList.remove('pop-veiled');
       }
     }).observe(pop, { attributes: true, attributeFilter: ['hidden'] });
   }

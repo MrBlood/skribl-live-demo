@@ -255,12 +255,18 @@ function startDraw(e) {
   // release (the click dismisser fires after the drag is over, so the card
   // stood over the canvas the whole time; owner: "how can we get that menu
   // to go away while I'm trying to draw the shape?"), and not tap-to-close,
-  // tap-again-to-draw. Hide, don't return. UNLESS the user dragged it
-  // somewhere (data-moved, set by lib/popdrag.js): a pop they positioned is
-  // a palette they want to keep while they draw.
+  // tap-again-to-draw. Hide, don't return. A pop the user DRAGGED
+  // (data-moved, lib/popdrag.js) is a palette they want to keep — it is
+  // VEILED for just this gesture instead (owner: "would it be smart if the
+  // poly shape menu disappears when you start making a shape?" — yes, and a
+  // pinned one comes back the moment you let go; the window pointerup
+  // listener below lifts the veil).
   {
     const _shapePop = document.getElementById('shapePop');
-    if (_shapePop && !_shapePop.hidden && !_shapePop.dataset.moved) _shapePop.hidden = true;
+    if (_shapePop && !_shapePop.hidden) {
+      if (_shapePop.dataset.moved) _shapePop.classList.add('pop-veiled');
+      else _shapePop.hidden = true;
+    }
   }
   // Eyedropper: this press opens the magnifying loupe — drag to aim, release
   // picks (lib/eyedropper.js). Allowed even on a locked canvas — it only
@@ -504,6 +510,17 @@ function commitActiveStroke() {
 }
 
 canvas.addEventListener('mousedown', startDraw);
+// The other half of the pinned-pop veil in startDraw: ANY release lifts it.
+// Window-level and unconditional, so no draw path — commit, cancel, a press
+// the lock check swallowed — can leave the panel invisible.
+window.addEventListener('pointerup', () => {
+  const p = document.getElementById('shapePop');
+  if (p) p.classList.remove('pop-veiled');
+}, true);
+window.addEventListener('pointercancel', () => {
+  const p = document.getElementById('shapePop');
+  if (p) p.classList.remove('pop-veiled');
+}, true);
 canvas.addEventListener('mousemove', continueDraw);
 canvas.addEventListener('mouseup', endDraw);
 /* NO mouseleave -> endDraw.

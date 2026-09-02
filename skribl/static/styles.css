@@ -5722,6 +5722,12 @@ body.playing .flip-grid { display: none; }
   z-index: 1;
 }
 .pop-grip:active { cursor: grabbing; }
+/* A PINNED pop (dragged, so it no longer auto-dismisses) still gets out of
+   the way while a shape is being drawn: the press handlers veil it for the
+   duration of the gesture and the release brings it back (owner: "would it
+   be smart if the poly shape menu disappears when you start making a
+   shape?"). Visibility, not [hidden] — its state, position and pin survive. */
+.shape-pop.pop-veiled { visibility: hidden; pointer-events: none; }
 .pop-grip-pill {
   width: 36px;
   height: 4px;
