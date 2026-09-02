@@ -159,6 +159,23 @@
      brand lived only in the halo. */
   --brand-ink: var(--accent-bright);
 
+  /* The header's rim — a border that is FELT, not seen (owner: "not one
+     that's visible... almost black to make it pop out a little more").
+     Darker than both the card and the page in dark mode, so the card reads
+     cut out and floating; the light block flips it to a near-white edge
+     that reads as light catching the card. Deliberately NOT a hairline
+     token: hairlines are lighter than their surface and read as lines,
+     this is darker/lighter than everything and reads as an edge. */
+  --header-rim: rgba(0, 0, 0, 0.55);
+
+  /* The letterpress relief on the signature (owner picked SINK over pop,
+     and asked for the old purple halo to go). A bright lower edge and a
+     dark upper shade press the strokes INTO the card — light from above,
+     ink sitting in its own groove. A whole filter list in one token so
+     the light theme can restate the physics for a light surface. */
+  --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.20))
+                  drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.65));
+
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
@@ -308,23 +325,31 @@ body {
   padding: 14px 18px;
   margin: 12px;
   border-radius: 16px;
-  /* No hairline. The header is made a surface by its fill and its shadow, and
-     a border on top of both was a third cue for one job.
-     What it cost: the canvas carries a 1px ring (--canvas-ring), and the header
-     and toolbar each carried one too, at almost the same radius — three
-     concentric outlined rectangles, with the tool group's own pill inside the
-     toolbar making a fourth. The eye could not tell which was the subject. The
-     canvas is the subject; it should own the only hairline on the screen.
-     rgba(23,26,34,0.78) over the near-black page, plus the 26px-blur shadow
-     below, still reads as raised — verified against an EMPTY dark canvas, which
-     is the state with the fewest edges and therefore the honest test.
+  /* No HAIRLINE — but a RIM. The hairline ban stands for the reason below:
+     the canvas owns the only visible outline on the screen. What the header
+     wears instead is --header-rim (owner: "not one that's visible... almost
+     black [dark] / almost white [light] to make it pop"), which is darker
+     than everything around it in dark mode and lighter than everything in
+     light — so it never reads as a LINE competing with the canvas ring, it
+     reads as the card's own edge: cut out of the dark, or catching the
+     light. The original reasoning, kept because it still governs: the
+     canvas carries a 1px ring (--canvas-ring), and when the header and
+     toolbar each carried one too, at almost the same radius, three
+     concentric outlined rectangles fought and the eye could not tell which
+     was the subject. rgba over the near-black page plus the 26px-blur
+     shadow below still does the raising; the rim only sharpens the cut.
+     A box-shadow RING, not a border, and that is load-bearing: a border
+     eats 2px of interior width, and the 390px header fit is measured to
+     the pixel (the v269 pin caught exactly that — Post shed its label the
+     moment a real border went in). The ring paints just outside the edge
+     and costs the layout nothing.
      Shared by Pad and Flip (flip.css only adjusts padding and gap) and
-     inherited by the player through the derived sheet, so the three surfaces
-     stay one design. */
+     inherited by the player through the derived sheet, so the three
+     surfaces stay one design. */
   background: rgba(var(--surface-well-2-rgb), 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 0 0 1px var(--header-rim), 0 8px 26px rgba(0, 0, 0, 0.42);
   flex-wrap: nowrap;
   gap: 10px;
   position: relative;
@@ -395,14 +420,15 @@ body {
   overflow: visible;
   border-radius: 0;
   box-shadow: none;
-  /* The signature's ink: primary in dark, deep brand violet in light — the
-     token says why. Set here as well as on the tag so both halves of the
-     lockup read the same pen wherever they inherit from. */
+  /* The signature's ink: brand violet in both themes — the token says why.
+     Set here as well as on the tag so both halves of the lockup read the
+     same pen wherever they inherit from. */
   color: var(--brand-ink, var(--text-primary));
-  /* The almost-imperceptible lift (owner's spec): one soft 5px halo at 30%
-     accent. Felt more than seen on the dark header; a faint lavender breath
-     on light. A second, wider shadow tips it into neon — deliberately not. */
-  filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30));
+  /* Letterpress, not glow. The halo era (0 0 5px accent at 30%) ended when
+     the ink itself went purple and the owner chose the pressed-in look and
+     asked for the glow to go: the relief token presses the strokes into
+     the card — bright ledge below, shade above — per theme. */
+  filter: var(--brand-relief);
 }
 /* Phone step: at 36px the signature is ~78px wide, which at 320-430px forces
    the shed system to spend Post's label (390) or the mark itself (320) to
