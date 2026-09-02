@@ -828,6 +828,18 @@ body.player-mode .canvas-area { display: contents; }
 
 .restore-banner[hidden] { display: none; }
 
+/* On a phone the toolbar owns the bottom edge of the screen — the 20px
+   anchor above was written for desktop, where that edge is empty air — so
+   the banner landed ON the tools and covered them until dismissed (worst in
+   light theme, where the two surfaces sit close in tone; owner-reported).
+   Seat it a toolbar higher: 56px of toolbar + its 12px bottom margin + the
+   same 20px of air the desktop anchor keeps = 88px, floating over the
+   canvas's bottom edge with the tools fully visible beneath. */
+@media (max-width: 640px) {
+  .restore-banner {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }}
+
 .restore-text {
   display: flex;
   flex-direction: column;
