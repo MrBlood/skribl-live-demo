@@ -3484,6 +3484,17 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .menu-overlay.open .menu-sheet { transform: translateY(0); }
   .menu-handle {
     display: block;
+    /* flex: none is the entire reason this pill exists on a real phone. The
+       sheet is a column flexbox capped at 88dvh; when the menu's content
+       overflows that cap (every actual iPhone — Safari's chrome shortens the
+       viewport our full-height dev runs never did), flex layout shrinks the
+       children before scrolling the rest, and an EMPTY 5px div has a
+       min-content height of zero — the one child that can be crushed to
+       nothing, while every item around it keeps its text and padding. So the
+       grabber vanished only on devices, with display:block and its margins
+       still holding the empty space open (owner, three times: "the grab is
+       still not there"). Measured 0px tall at a 620px viewport before this. */
+    flex: none;
     width: 40px;
     height: 5px;
     border-radius: 999px;
