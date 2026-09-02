@@ -859,7 +859,10 @@ const customBgInput = _authoringCtl('customBgInput', 'input');
 
 customBgInput.addEventListener('input', (e) => {
   const newColor = e.target.value;
-  customBgBtn.style.background = newColor;
+  // --custom-color + has-color, never an inline background: the CSS keeps the
+  // rainbow as a ring so the swatch still reads as the picker (same below).
+  customBgBtn.style.setProperty('--custom-color', newColor);
+  customBgBtn.classList.add('has-color');
   bgColor = newColor;
   document.querySelectorAll('.bg-swatch').forEach(b => b.classList.toggle('active', b === customBgBtn));
   canvasWrap.style.backgroundColor = bgColor;
@@ -883,13 +886,19 @@ const customColorInput = _authoringCtl('customColorInput', 'input');
 
 customColorInput.addEventListener('input', (e) => {
   const newColor = e.target.value;
-  customColorBtn.style.background = newColor;
+  customColorBtn.style.setProperty('--custom-color', newColor);
+  customColorBtn.classList.add('has-color');
   color = newColor;
   document.querySelectorAll('.color-dot').forEach(b => b.classList.toggle('active', b === customColorBtn));
   setTool('pen');
-  addRecent(newColor);
   updateCurrentColorChip();
 });
+// Recents remember what you CHOSE, not the path your finger took to it:
+// `input` fires for every intermediate shade of a drag through the native
+// picker, and feeding recents from it filled the whole row with gradations
+// of one pick (owner-reported). `change` fires once, on the committed
+// colour — which is how Flip has always fed its recents.
+customColorInput.addEventListener('change', (e) => { addRecent(e.target.value); });
 
 // ============ More-tools drawer: opacity, smoothing, eyedropper, recents, clear
 // Opacity rides inside the per-point color (rgba) so it flows through the shared
@@ -942,7 +951,8 @@ function setPenColor(hex) {
   color = hex;
   setTool('pen');
   if (!matched) {
-    customColorBtn.style.background = hex;
+    customColorBtn.style.setProperty('--custom-color', hex);
+    customColorBtn.classList.add('has-color');
     if (customColorInput) customColorInput.value = hex;
     customColorBtn.classList.add('active');
     addRecent(hex);

@@ -3267,7 +3267,13 @@ function renderRecent(){ _initRecent(); if(_recent) _recent.render(); }
 if(window.SkriblPalette) window.SkriblPalette.mount(colorGroup, { before: customWrap,
   onPick:(hex)=>{ setColor(hex); closePop(); } });
 // custom color picker (static markup)
-customInput.addEventListener('input',e=>{ customBtn.style.background=e.target.value; setColor(e.target.value); });
+// --custom-color + has-color, never an inline background: the CSS keeps the
+// rainbow as a ring so the swatch still reads as the picker (Pad matches).
+customInput.addEventListener('input',e=>{
+  customBtn.style.setProperty('--custom-color', e.target.value);
+  customBtn.classList.add('has-color');
+  setColor(e.target.value);
+});
 customInput.addEventListener('change',e=>{ addRecent(e.target.value); });
 
 // eyedropper — click to arm, then click the canvas to sample a pixel's colour
@@ -3432,7 +3438,10 @@ function setBg(hex, fromCustom){
     s.classList.toggle('active', on); if(on) matched=true;
   });
   customBgBtn.classList.toggle('active', !matched);
-  if(fromCustom || !matched){ customBgBtn.style.background=hex; }
+  if(fromCustom || !matched){
+    customBgBtn.style.setProperty('--custom-color', hex);
+    customBgBtn.classList.add('has-color');
+  }
   scheduleSave();
 }
 bgGroup.addEventListener('click',e=>{ const b=e.target.closest('.bg-swatch'); if(!b||b.classList.contains('bg-custom')) return; setBg(b.dataset.bg,false); });
