@@ -125,6 +125,15 @@
   --text-muted: #7d8496;
   --text-dim: #575f6e;
 
+  /* The ink the signature is written in. On the dark header it is the primary
+     ink — white chalk with the purple halo breathing behind it. It gets its
+     own token because LIGHT mode overrides it (owner: "black on white looks
+     wrong"): the halo all but vanishes on a light ground, and near-black
+     cursive stops reading as a lit-up signature and starts reading as plain
+     heavy handwriting. In daylight the signature is written with the brand's
+     own pen instead — see the light block. */
+  --brand-ink: var(--text-primary);
+
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
@@ -365,8 +374,10 @@ body {
   /* SAME INK as the signature — owner: "the exact same lettering as skribl".
      Same color, same halo — and at the SAME 36px of the same 30-unit box
      with the same stroke-width 2.3, it is literally the same pen: mark and
-     word share one baseline, one x-height band, one line of handwriting. */
-  color: var(--text-primary);
+     word share one baseline, one x-height band, one line of handwriting.
+     --brand-ink IS text-primary in dark and a deep brand violet in light —
+     the one-pen rule holds because mark and word read the same token. */
+  color: var(--brand-ink, var(--text-primary));
   filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30)); }
 .brand .brand-tag--script svg, .brand-tag--script svg {
   height: 36px; width: auto; display: block; overflow: visible;
@@ -402,6 +413,10 @@ body {
   overflow: visible;
   border-radius: 0;
   box-shadow: none;
+  /* The signature's ink: primary in dark, deep brand violet in light — the
+     token says why. Set here as well as on the tag so both halves of the
+     lockup read the same pen wherever they inherit from. */
+  color: var(--brand-ink, var(--text-primary));
   /* The almost-imperceptible lift (owner's spec): one soft 5px halo at 30%
      accent. Felt more than seen on the dark header; a faint lavender breath
      on light. A second, wider shadow tips it into neon — deliberately not. */
@@ -6188,6 +6203,13 @@ body.playing .flip-grid { display: none; }
   --text-heading:            #171c25;
   --text-primary:            #11161e;
   --text-on-accent-soft:     #3a2a80;   /* text on a translucent accent fill */
+  /* The signature switches pens in daylight (owner: "black on white looks
+     wrong"). Near-black cursive on a light header lost everything the dark
+     lockup has — the halo disappears against white, and heavy dark script
+     reads as handwriting, not identity. A deep violet in the accent's own
+     hue keeps it unmistakably the brand's pen, at ~9:1 contrast on the
+     header so legibility gives up nothing. */
+  --brand-ink:               #4a33c2;
 
   /* Washes and hairlines invert outright */
   --wash-rgb:                0,0,0;   /* every hover fill and translucent rule flips with this line */

@@ -51,6 +51,7 @@
   .flip-word .brand-tag--script { margin-left: -6px; }
   @media (max-width: 480px) { .flip-word .brand-tag--script { margin-left: -4px; } }
   .flip-word .brand-mark { height: 36px; width: auto; display: block; overflow: visible;
+    color: var(--brand-ink, var(--text-primary)); /* the signature's pen — primary in dark, brand violet in light; see the token in styles.css */
     filter: drop-shadow(0 0 5px rgba(124, 92, 255, 0.30)); } /* signature-sized + subtle halo, like Pad's — see styles.css note */
   @media (max-width: 480px) { .flip-word .brand-mark { height: 26px; } } /* phone step, same as Pad's */
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
