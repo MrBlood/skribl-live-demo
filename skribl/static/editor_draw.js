@@ -270,10 +270,18 @@ function startDraw(e) {
     openDrawer(null);
     return;
   }
-  // Post-record lock: the completed replay can't be drawn over.
+  // Post-record lock: the completed replay can't be drawn over. The visible
+  // answer is the on-canvas "+ Add take" pill — nudge it so the eye lands on
+  // the way forward, right where the press just failed; the toast explains.
   if (finishedRecording && !recording) {
+    const pill = document.getElementById('addTakePill');
+    if (pill && !pill.hidden) {
+      pill.classList.remove('nudge');
+      void pill.offsetWidth;   // restart the animation on every press
+      pill.classList.add('nudge');
+    }
     if (!lockToastShown) {
-      showToast('Recording done — Record again to add another take, or Clear to restart', recordBtn);
+      showToast('Take saved — tap Add take to draw more, or Clear to restart', recordBtn);
       lockToastShown = true;
       setTimeout(() => { lockToastShown = false; }, 3000);
     }

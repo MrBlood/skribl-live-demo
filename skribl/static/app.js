@@ -221,6 +221,9 @@ let size = 5;
 let tool = 'pen';
 
 const canvasEmptyHint = document.getElementById('canvasEmptyHint');
+// Editor-only overlay (the player template never ships it): the stub from
+// _authoringCtl keeps every hidden/class write below harmless in player mode.
+const addTakePill = _authoringCtl('addTakePill');
 function updateEmptyHint() {
   if (canvasEmptyHint) canvasEmptyHint.classList.toggle('hidden', hasContent);
 }
@@ -280,8 +283,12 @@ function updateClearVisibility() {
 // Reflect the post-record lock in the cursor so it's obvious the canvas
 // is no longer drawable until the user records again or clears.
 function updateCanvasLockCue() {
-  canvasWrap.classList.toggle('locked', finishedRecording && !recording);
-  if (finishedRecording && !recording) {
+  const locked = finishedRecording && !recording;
+  canvasWrap.classList.toggle('locked', locked);
+  // The lock's visible way forward: "+ Add take" floats on the locked canvas
+  // (hidden separately during replay preview via body.replaying, in CSS).
+  addTakePill.hidden = !locked;
+  if (locked) {
     canvas.style.cursor = 'not-allowed';
     eraserCursor.style.display = 'none';
   } else {
@@ -1393,8 +1400,8 @@ function endRecordingTake() {
     updateDrawingTimeLabels();
     durationBadge.hidden = false;
     // Confirm the capture and surface multi-take: the canvas is now locked on
-    // this take; pressing Record again appends another take to the same Skribl.
-    showToast('Take saved — Record again to add more to this Skribl, or Play to preview', recordBtn);
+    // this take; the on-canvas Add take pill (or Record) appends another take.
+    showToast('Take saved — Play to preview, or Add take to draw more', recordBtn);
   }
   updateClearVisibility();
 }
@@ -1407,6 +1414,15 @@ recordBtn.addEventListener('click', () => {
   if (playing) stopPlayback();
   // If a completed take is already on the canvas, continue it as another take
   // (append) instead of wiping and starting over.
+  beginRecording(strokes.length > 0);
+});
+
+// The on-canvas "+ Add take" pill is the same append the Record button does.
+// It only exists while the lock is on (updateCanvasLockCue), so `recording`
+// can't be true here; the playing guard covers a tap racing the replay's end.
+addTakePill.addEventListener('click', () => {
+  if (recording) return;
+  if (playing) stopPlayback();
   beginRecording(strokes.length > 0);
 });
 

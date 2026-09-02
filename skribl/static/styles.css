@@ -1036,6 +1036,57 @@ body.stroking .skribl-hint {
   opacity: 0;
 }
 
+/* "+ Add take" — the post-record lock, made visible. A finished take locks
+   the canvas, and until now the only explanation was a toast fired by the
+   press that failed (a silent locked canvas otherwise). The pill floats at
+   the canvas's bottom edge whenever the lock is on, looks like the button it
+   is, and tapping it appends another take — the same append the header's
+   Record button does. Surface recipe matches the zoom HUD (panel wash, blur,
+   strong hairline) so the two canvas overlays read as one family. Hidden
+   during replay preview via body.replaying: the pill sits exactly where the
+   replay is performing. */
+.addtake-pill {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px 9px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline-strong);
+  background: rgba(var(--surface-panel-rgb), 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.25s var(--ease);
+}
+.addtake-pill svg { width: 15px; height: 15px; color: var(--accent-bright); }
+.addtake-pill:active { transform: translateX(-50%) scale(0.96); }
+.addtake-pill[hidden] { display: none; }
+body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
+/* A press on the locked canvas nudges the pill: the answer to "why didn't
+   that draw?" bounces where the eye already is. Keyframes carry the centering
+   translate so the animation doesn't knock the pill off-center. */
+.addtake-pill.nudge { animation: addtake-nudge 0.45s var(--ease); }
+@keyframes addtake-nudge {
+  0%   { transform: translateX(-50%) scale(1); }
+  35%  { transform: translateX(-50%) scale(1.08) translateY(-3px); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .addtake-pill { transition: none; }
+  .addtake-pill.nudge { animation: none; }
+}
+
 /* ---------- Tabs ---------- */
 .tabs {
   display: flex;

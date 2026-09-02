@@ -221,6 +221,15 @@
       <span class="canvas-empty-sub">Recording starts automatically — it plays back as a replay</span>
     </div>
     </div>
+    <!-- The post-record lock, made visible: a finished take can't be drawn
+         over, and this pill is the way forward — tap to append another take.
+         Outside the zoom-layer so magnifying the drawing never scales it.
+         Hidden while recording/unlocked (app.js updateCanvasLockCue) and
+         during replay preview (body.replaying, CSS). -->
+    <button id="addTakePill" class="addtake-pill" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Add take</span>
+    </button>
     <!-- Zoom pill (editor only). Grip = drag-only (move to any corner); the
          four buttons below are pure taps. Guarded in app.js so the player,
          which has no #zoomLayer, is unaffected. -->
