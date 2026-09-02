@@ -622,13 +622,21 @@
      above. */
   .addcol { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px;
     padding: 10px 12px; align-items: center; }
-  .addbtn { width: 88px; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--text-secondary);
+  /* Real buttons, not placeholders (owner: "the dashed buttons need to look
+     more premium"). Dashed-and-hollow is this app's vocabulary for "nothing
+     here yet" — the paste ghost, the liquify reach — but Duplicate/Blank/
+     In-between are ACTIONS, so they wear the page bar's own recipe (solid
+     hairline, sheet wash, hover lift, 1px press) and the two rows around the
+     strip finally speak one language. The accent-tinted plus is the same
+     cue as the canvas's Add take pill: violet marks "this adds something". */
+  .addbtn { width: 88px; border: 1px solid var(--hairline-strong);
+    background: rgba(var(--surface-sheet-rgb), 0.9); color: var(--text-secondary);
     border-radius: 10px; padding: 8px 0; font: inherit; font-weight: 600; font-size: 12px; cursor: pointer;
     transition: color .15s, border-color .15s, background .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-  /* Same tone pass as .pb: a neutral lift rather than an accent tint, so the
-     two rows around the strip agree about how loud chrome is allowed to be. */
+  .addbtn .addbtn-ic { color: var(--accent-bright); }
   .addbtn:hover { color: var(--text-primary); border-color: var(--hairline-strong);
-    background: rgba(var(--wash-rgb), .05); }
+    background: rgba(var(--wash-rgb), .07); }
+  .addbtn:active { transform: translateY(1px); }
   .addbtn:focus-visible { outline: 2px solid var(--ui-line); outline-offset: 1px; }
   .addbtn.mini { padding: 5px 0; font-size: 11px; }
   /* In the row the buttons share the width instead of each claiming 88px, so
