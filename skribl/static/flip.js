@@ -1333,17 +1333,6 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   // the guard load-bearing here and unnecessary there.
   if(drawing && e.pointerId !== strokePointerId) return;
   e.preventDefault(); disarmAll();
-  // The shape picker is tool OPTIONS, not a dialog: the press that starts
-  // your shape shoves it aside and the SAME gesture draws. Twin of the Pad
-  // rule in editor_draw.js — separate copies of the picker, separate copies
-  // of its manners (verify_tray says so twice on purpose). A DRAGGED pop
-  // (data-moved) is pinned: veiled for just this gesture, back on release
-  // (the window pointerup listener by shapePopDismiss lifts the veil).
-  { const _sp=document.getElementById('shapePop');
-    if(_sp && !_sp.hidden){
-      if(_sp.dataset.moved) _sp.classList.add('pop-veiled');
-      else _sp.hidden=true;
-    } }
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
@@ -1404,6 +1393,19 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
     selDown(pos(e));
     return;
   }
+  // The shape picker is tool OPTIONS, not a dialog: the press that starts
+  // your shape shoves it aside and the SAME gesture draws. Twin of the Pad
+  // rule in editor_draw.js — separate copies of the picker, separate copies
+  // of its manners (verify_tray says so twice on purpose). A DRAGGED pop
+  // (data-moved) is pinned: veiled for just this gesture, back on release
+  // (the window pointerup listener by shapePopDismiss lifts the veil).
+  // BELOW every press-swallowing guard, same as Pad and for the same reason:
+  // the picker steps aside only for a press that actually draws.
+  { const _sp=document.getElementById('shapePop');
+    if(_sp && !_sp.hidden){
+      if(_sp.dataset.moved) _sp.classList.add('pop-veiled');
+      else _sp.hidden=true;
+    } }
   try{ pad.setPointerCapture(e.pointerId); }catch(_){ }
   drawing=true; strokePointerId=e.pointerId; curCount=1; redoStack.length=0; noteAction('stroke');
   // A stroke belongs to the page it STARTED on. Every later step used frame(),

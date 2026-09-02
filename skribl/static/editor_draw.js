@@ -250,24 +250,6 @@ function startDraw(e) {
   // can't start a stroke, sample, or reposition mid-replay. (Record/Play/Stop
   // still work via their own buttons.)
   if (playing) return;
-  // The shape picker is tool OPTIONS, not a dialog: the press that starts
-  // your shape shoves it aside, and the SAME gesture draws — not close-on-
-  // release (the click dismisser fires after the drag is over, so the card
-  // stood over the canvas the whole time; owner: "how can we get that menu
-  // to go away while I'm trying to draw the shape?"), and not tap-to-close,
-  // tap-again-to-draw. Hide, don't return. A pop the user DRAGGED
-  // (data-moved, lib/popdrag.js) is a palette they want to keep — it is
-  // VEILED for just this gesture instead (owner: "would it be smart if the
-  // poly shape menu disappears when you start making a shape?" — yes, and a
-  // pinned one comes back the moment you let go; the window pointerup
-  // listener below lifts the veil).
-  {
-    const _shapePop = document.getElementById('shapePop');
-    if (_shapePop && !_shapePop.hidden) {
-      if (_shapePop.dataset.moved) _shapePop.classList.add('pop-veiled');
-      else _shapePop.hidden = true;
-    }
-  }
   // Eyedropper: this press opens the magnifying loupe — drag to aim, release
   // picks (lib/eyedropper.js). Allowed even on a locked canvas — it only
   // reads. The one-shot tap sample stays as the fallback if the loupe
@@ -296,6 +278,27 @@ function startDraw(e) {
       setTimeout(() => { lockToastShown = false; }, 3000);
     }
     return;
+  }
+  // The shape picker is tool OPTIONS, not a dialog: the press that starts
+  // your shape shoves it aside, and the SAME gesture draws — not close-on-
+  // release, not tap-to-close-tap-again-to-draw. Hide, don't return. A pop
+  // the user DRAGGED (data-moved, lib/popdrag.js) is a palette they want to
+  // keep — it is VEILED for just this gesture and the window pointerup
+  // listener below lifts the veil on release.
+  //
+  // BELOW every guard that swallows the press, and that placement is the
+  // bug it fixes: this used to run before the post-record lock, so on a
+  // locked canvas the press closed the picker AND drew nothing — a menu
+  // that reacts to a press the canvas then ignores reads as a broken tool
+  // (owner: "it goes away when I start, but it doesn't draw it"). The
+  // picker now steps aside only for a press that actually draws; a
+  // swallowed press leaves it standing while the toast explains.
+  {
+    const _shapePop = document.getElementById('shapePop');
+    if (_shapePop && !_shapePop.hidden) {
+      if (_shapePop.dataset.moved) _shapePop.classList.add('pop-veiled');
+      else _shapePop.hidden = true;
+    }
   }
   // Auto-arm: on a blank, unlocked canvas the first stroke starts recording on
   // its own, so a first-time user who "just draws" still gets a replay to post
