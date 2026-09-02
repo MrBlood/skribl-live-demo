@@ -125,14 +125,16 @@
   --text-muted: #7d8496;
   --text-dim: #575f6e;
 
-  /* The ink the signature is written in. On the dark header it is the primary
-     ink — white chalk with the purple halo breathing behind it. It gets its
-     own token because LIGHT mode overrides it (owner: "black on white looks
-     wrong"): the halo all but vanishes on a light ground, and near-black
-     cursive stops reading as a lit-up signature and starts reading as plain
-     heavy handwriting. In daylight the signature is written with the brand's
-     own pen instead — see the light block. */
-  --brand-ink: var(--text-primary);
+  /* The ink the signature is written in — the brand's pen in BOTH themes
+     (owner, having seen the violet daylight ink: "I think the dark should
+     be purple too"). accent-bright rather than the accent itself: the same
+     hue family as Post and the Record dot but a step lighter, so the
+     signature glows like neon against the dark header without duplicating
+     the one saturated fill the accent budget spends on Post. The halo
+     behind it is the same hue, so ink and glow read as one lit stroke.
+     White (--text-primary) was the first draft; it read as chalk, and the
+     brand lived only in the halo. */
+  --brand-ink: var(--accent-bright);
 
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
