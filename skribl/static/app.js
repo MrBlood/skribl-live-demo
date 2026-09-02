@@ -1182,7 +1182,23 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     // for them, but a JS-requested 'smooth' scroll would override that intent,
     // so mirror it here.
     const b = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
-    if (panel) requestAnimationFrame(() => panel.scrollIntoView({ behavior: b, block: 'end' }));
+    if (panel) {
+      requestAnimationFrame(() => panel.scrollIntoView({ behavior: b, block: 'end' }));
+      // RE-ASSERT, instantly, once the smooth scroll should have landed. On
+      // the owner's iPhone the drawer opened with its lower half — the half
+      // detent's "Brush, smoothing & more" button included — below the fold:
+      // iOS Safari quietly abandons a smooth scrollIntoView issued in the
+      // same breath as un-hiding the target, while Chromium (every dev run)
+      // completes it. If the panel's end is still off screen after the
+      // animation window, snap it there; when the first scroll worked this
+      // is a no-op.
+      setTimeout(() => {
+        if (panel.hidden) return;
+        if (panel.getBoundingClientRect().bottom > window.innerHeight + 1) {
+          panel.scrollIntoView({ behavior: 'auto', block: 'end' });
+        }
+      }, 450);
+    }
     else window.scrollTo({ top: 0, behavior: b });
   }
 }) : null;
