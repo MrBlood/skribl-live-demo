@@ -2900,7 +2900,17 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    see. Fades out while any drawer is open; it is advisory, and the drawer is
    what the user is actually looking at. */
 body:has(.tab-panel:not([hidden])) .autosave-status,
-body:has(#drawPanel:not([hidden])) .autosave-status {
+body:has(#drawPanel:not([hidden])) .autosave-status,
+/* The ⋯ menus and sheets were missing from this list, so the amber
+   "Media missing" warning sat ON TOP of Flip's open menu, colliding with
+   its rows (owner: "that media thing should disappear when I click menu,
+   then reappear when I close menu"). Same rule, same reasoning as the
+   drawers: the surface the user just opened is what they are looking at,
+   and the pill — warning included — returns the moment it closes.
+   .menu-overlay covers Pad's ⋯ menu, export and post sheets in one
+   selector; #moreMenu is Flip's. */
+body:has(.menu-overlay:not([hidden])) .autosave-status,
+body:has(#moreMenu:not([hidden])) .autosave-status {
   opacity: 0;
   pointer-events: none;
 }
