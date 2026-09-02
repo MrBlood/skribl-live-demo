@@ -684,6 +684,15 @@ body.player-mode .canvas-area { display: contents; }
 .canvas-empty-hint.hidden {
   opacity: 0;
 }
+@keyframes addtake-nudge {
+  0%   { transform: translateX(-50%) scale(1); }
+  35%  { transform: translateX(-50%) scale(1.08) translateY(-3px); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .addtake-pill { transition: none; }
+  .addtake-pill.nudge { animation: none; }
+}
 
 /* Shared sliding-pill highlight for segmented controls (smoothing off/low/high,
    the Loop/Start/End focus row, and the 1x-8x magnifier) — the same affordance
