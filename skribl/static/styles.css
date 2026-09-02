@@ -1677,26 +1677,40 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .fine-tune-body[hidden] { display: none; }
 
 @media (max-width: 640px) {
-  /* Extra room so the eyedropper (9th item) fits the color row cleanly. */
-  .color-dot, .bg-swatch { width: 28px; height: 28px; }
+  /* Breathing room for the pen row's nine items (8 dots + eyedropper) on a
+     phone. At 28px the gaps closed to ~7px and the selected dot's white ring
+     nearly touched its neighbour (owner: "the pen colors are crowded — the
+     pink is too close to white"). 26px buys ~10px gaps; taps stay ≥44 via
+     the bumped --tap-grow / input overhang below. */
+  .color-dot, .bg-swatch { width: 26px; height: 26px; }
+  .eyedropper-btn { width: 26px; height: 26px; }
   .smooth-btn { padding: 5px 10px; }
   .prop-row .draw-section-label { width: 58px; }
 }
 
-.color-custom-wrap {
+/* The wraps carry NO size of their own: inline-flex shrink-wraps the swatch
+   span inside, so the label is exactly the swatch at every breakpoint. They
+   used to be fixed boxes (34px pen, 42px background) around a 28–30px swatch,
+   which pushed the custom swatch out of line with its row and left the old
+   "+" badge floating on empty background a corner away from the thing it
+   labelled (owner, zoomed in: "the swatch looks weird... there's white
+   there — fit it perfectly"). */
+.color-custom-wrap,
+.bg-custom-wrap {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
   cursor: pointer;
 }
 
-.color-custom-wrap input[type="color"] {
+/* The invisible <input type="color"> IS the tap target, so it overhangs the
+   swatch the same 8px the dots' --tap-grow pseudo does. */
+.color-custom-wrap input[type="color"],
+.bg-custom-wrap input[type="color"] {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -8px;
+  width: auto;
+  height: auto;
   opacity: 0;
   cursor: pointer;
   border: none;
@@ -1708,51 +1722,18 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
    button already established: a rainbow ring, not a fake preset. Before this
    it shipped with an inline fill identical to the last preset beside it, so
    the one control that opens the full picker read as a redundant seventh
-   swatch with a 7px mystery dot (owner, from the phone: "that plus is too
-   small to tell what it is... is it important?" — it is; it is the picker).
-   Picking a color sets an inline background from JS, which overrides this
-   and turns the swatch into "your color", exactly as before. */
+   swatch (owner, from the phone: "that plus is too small to tell what it is
+   ... is it important?" — it is; it is the picker; the rainbow now says so
+   by itself and the badge is gone). border: 0 matters: the base swatch's
+   2.5px transparent border let the gradient bleed past the 12px radius as
+   loose colour slivers at the edges. Picking a color sets an inline
+   background from JS, which overrides this and turns the swatch into "your
+   color", exactly as before. */
 .color-custom, .bg-custom {
+  border: 0;
+  box-shadow: none;
   background: conic-gradient(from 0deg, #f43f5e, #f59e0b, #facc15, #22c55e,
     #06b6d4, #6366f1, #a855f7, #f43f5e);
-}
-.color-custom-badge {
-  position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--surface-well);
-  border: 1px solid var(--line-loud);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-primary);
-  pointer-events: none;
-}
-
-.bg-custom-wrap {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  cursor: pointer;
-}
-
-.bg-custom-wrap input[type="color"] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  border: none;
-  padding: 0;
-  z-index: 1;
 }
 
 /* ---------- Music tab ---------- */
@@ -5236,6 +5217,16 @@ body.playing .flip-grid { display: none; }
 .nudge-btn  { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (readout between - and + keeps them apart) */
 .pending-dismiss { --tap-grow: 7px; }  /* 32 -> 44+ */
 .eyedropper-btn  { --tap-grow: 8px; }  /* 30 visual (dot-sized, on purpose) -> 44+ tap; it sat beside dots that had it and lacked its own */
+/* Compact shrinks dots and eyedropper to 26 visual (the pen row breathes),
+   so their tap overhang grows to keep 44. Sits AFTER the base declarations
+   above on purpose: a media query adds no specificity, and the same lines
+   placed earlier in the file would silently lose the tie. The custom picker's
+   overhang is its invisible <input>, so it gets the same bump. */
+@media (max-width: 640px) {
+  .color-dot, .eyedropper-btn { --tap-grow: 9px; }   /* 26 visual -> 44 tap */
+  .color-custom-wrap input[type="color"],
+  .bg-custom-wrap input[type="color"] { inset: -9px; }
+}
 /* .toolbar .undo-btn sets its own --tap-grow per tier: 2px at 40 visual,
    4px at 36, 5px at 34. Declared next to each width so the pair cannot drift. */
 
