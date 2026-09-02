@@ -35,7 +35,11 @@ jobs:
   sqlite:
     name: harness (sqlite)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 90, not 30: the harness grew to 89 suites / ~4k assertions and a full run
+    # takes 45-60 minutes on these runners. At 30 both jobs were cancelled
+    # mid-run on every push once the runner outage of Aug 31 lifted — red that
+    # looked like code and was budget.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -71,7 +75,11 @@ jobs:
   postgres:
     name: harness (postgresql)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 90, not 30: the harness grew to 89 suites / ~4k assertions and a full run
+    # takes 45-60 minutes on these runners. At 30 both jobs were cancelled
+    # mid-run on every push once the runner outage of Aug 31 lifted — red that
+    # looked like code and was budget.
+    timeout-minutes: 90
 
     services:
       db:
