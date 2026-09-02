@@ -1336,7 +1336,12 @@ pad.addEventListener('pointerdown', e=>{ if(playing) return; if(pinching) return
   if(reposMode && bgImage && photoEnabled && photoFit==='cover'){       // pan the image, don't draw
     reposActive=true; reposStart={x:e.clientX,y:e.clientY,ox:photoOffX,oy:photoOffY};
     try{ pad.setPointerCapture(e.pointerId); }catch(_){ } return; }
-  if(picking){ sampleColorAt(e); return; }   // eyedropper: pick, don't draw
+  // eyedropper: this press opens the magnifying loupe — drag to aim, release
+  // picks (lib/eyedropper.js). One-shot tap sample stays as the fallback.
+  if(picking){
+    if(_eyedropper && _eyedropper.beginPick && _eyedropper.beginPick(e)) return;
+    sampleColorAt(e); return;
+  }
   // Move mode intercepts BEFORE drawing, or dragging the artwork would lay a
   // stroke down the middle of it.
   if(moveMode){
@@ -3261,7 +3266,20 @@ function _initEyedropper(){
     surface: pad,
     idleCursor: 'none',
     onArm: () => hideCursors(),
-    onChange: v => { picking = v; },
+    // Beyond tracking the armed flag: the draw popout covers nearly the whole
+    // canvas on a phone, so while armed it is VEILED — visibility only, never
+    // the drawer state machine, whose onClose hook would disarm the pick it
+    // is making room for. It reappears the moment picking ends unpicked;
+    // an actual pick still closes it for real (onPick → closePop).
+    onChange: v => { picking = v;
+                     drawPanel.classList.toggle('eyedropper-veiled', v); },
+    // Loupe wiring: magnifies and reads the same composited artwork
+    // sampleColorAt reads — onion skin and guides stay invisible to it.
+    getPoint: ev => pos(ev),
+    artwork: () => paintArtwork(),
+    dpr: () => DPR,
+    bg: () => bgColor,
+    onPick: hex => { setColor(hex); addRecent(hex); closePop(); },
   });
 }
 function setPicking(v){ _initEyedropper(); if(_eyedropper){ v ? (!picking && _eyedropper.toggle()) : _eyedropper.disarm(); } }

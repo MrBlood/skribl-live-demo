@@ -250,9 +250,14 @@ function startDraw(e) {
   // can't start a stroke, sample, or reposition mid-replay. (Record/Play/Stop
   // still work via their own buttons.)
   if (playing) return;
-  // Eyedropper (fallback path): consume this tap to sample a pixel instead of
-  // starting a stroke. Allowed even on a locked canvas — it only reads.
-  if (pickingColor) { const p = getPos(e); sampleColorAt(p.x, p.y); return; }
+  // Eyedropper: this press opens the magnifying loupe — drag to aim, release
+  // picks (lib/eyedropper.js). Allowed even on a locked canvas — it only
+  // reads. The one-shot tap sample stays as the fallback if the loupe
+  // declines (created without its wiring).
+  if (pickingColor) {
+    if (_eyedropper && _eyedropper.beginPick && _eyedropper.beginPick(e)) return;
+    const p = getPos(e); sampleColorAt(p.x, p.y); return;
+  }
   // Photo reposition mode: this drag moves the background, never the drawing.
   // Returns before the lock check and the undo push, so it can't start a stroke,
   // fire the lock toast, or create an undo entry. Ignored during recording so a

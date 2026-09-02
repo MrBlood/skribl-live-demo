@@ -1074,9 +1074,18 @@ function stopPicking() {
       button: eyedropperBtn,
       surface: canvas,
       idleCursor: '',
-      onArm: () => showToast('Tap the canvas to pick a color', eyedropperBtn),
+      onArm: () => showToast('Touch the canvas — drag to aim, release to pick', eyedropperBtn),
       // pickingColor is read by the pointer handler and by two teardown paths.
       onChange: v => { pickingColor = v; },
+      // Loupe wiring: the lib magnifies and reads the SAME composited stage
+      // sampleColorAt reads, so the ring shows what release will pick.
+      getPoint: ev => getPos(ev),
+      artwork: () => padArtwork(),
+      dpr: () => window.devicePixelRatio || 1,
+      bg: () => bgColor,
+      // stopPicking, not just the lib's disarm: it also restores the
+      // lock/eraser/normal cursor cue, same as the tap path.
+      onPick: hex => { setPenColor(hex); stopPicking(); },
     });
   }
 
