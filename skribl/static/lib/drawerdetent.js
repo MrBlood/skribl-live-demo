@@ -38,6 +38,16 @@
       requestAnimationFrame(function () {
         panel.scrollIntoView({ behavior: b, block: 'end' });
       });
+      // Same re-assert the drawer machine's reveal carries: iOS Safari
+      // abandons smooth scrolls issued against just-changed layout; snap
+      // instantly if the end is still off screen once the animation window
+      // has passed. A completed first scroll makes this a no-op.
+      setTimeout(function () {
+        if (panel.hidden) return;
+        if (panel.getBoundingClientRect().bottom > window.innerHeight + 1) {
+          panel.scrollIntoView({ behavior: 'auto', block: 'end' });
+        }
+      }, 450);
     }
 
     function isFull() { return panel.classList.contains('detent-full'); }
