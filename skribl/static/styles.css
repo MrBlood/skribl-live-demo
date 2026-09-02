@@ -410,6 +410,18 @@ body {
   height: 36px; width: auto; display: block; overflow: visible;
   border-radius: 0; box-shadow: none;
 }
+/* The gradient the signature is inked with (owner-picked from a rendered
+   mock): accent to accent-2 on the 135° axis — violet at the top-left
+   melting to blue at the bottom-right, the same pair in both themes. The
+   stops live HERE as CSS so they stay tokens; the three lockup svgs (the
+   mark partial and both word svgs) carry the <linearGradient> that
+   references them, one per svg so each word runs a balanced sweep.
+   --brand-ink stays defined beneath this: it is the solid-pen fallback for
+   anything that renders the lockup without the gradient defs, and the
+   letterpress relief (--brand-relief) presses the gradient ink exactly as
+   it pressed the solid. */
+.brand-grad-a { stop-color: var(--accent); }
+.brand-grad-b { stop-color: var(--accent-2); }
 /* The mark matches the TALLEST header element anywhere (44px: Pad's desktop
    buttons / Flip's back arrow) — one size at every width, per the wordmark
    parity pin. Selector is deliberately (0,3,1): it must OUTRANK the ≤340

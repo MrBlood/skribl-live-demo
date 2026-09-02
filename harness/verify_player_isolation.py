@@ -750,7 +750,12 @@ with sync_playwright() as sp:
     # impossible through an <img>. Still a ratchet: pinned just above the new
     # floor so the next kilobyte has to argue for itself like this one did.
     # (Template was 56,716 B before the editor shell came out.)
-    HTML_RATCHET = 10_500
+    # Re-pinned 10,500 -> 10,800 at v272: the signature is now inked with the
+    # accent gradient, and the <linearGradient> defs ride in the same inline
+    # svg for the same reason the paths do (~140 B measured; a url(#) stroke
+    # cannot reference styles an <img> would strip). Same discipline: just
+    # above the new floor of 10,640.
+    HTML_RATCHET = 10_800
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
