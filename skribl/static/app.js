@@ -1183,21 +1183,11 @@ const _padDrawerCtl = (typeof skriblDrawers === 'function') ? skriblDrawers({
     // so mirror it here.
     const b = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
     if (panel) {
-      requestAnimationFrame(() => panel.scrollIntoView({ behavior: b, block: 'end' }));
-      // RE-ASSERT, instantly, once the smooth scroll should have landed. On
-      // the owner's iPhone the drawer opened with its lower half — the half
-      // detent's "Brush, smoothing & more" button included — below the fold:
-      // iOS Safari quietly abandons a smooth scrollIntoView issued in the
-      // same breath as un-hiding the target, while Chromium (every dev run)
-      // completes it. If the panel's end is still off screen after the
-      // animation window, snap it there; when the first scroll worked this
-      // is a no-op.
-      setTimeout(() => {
-        if (panel.hidden) return;
-        if (panel.getBoundingClientRect().bottom > window.innerHeight + 1) {
-          panel.scrollIntoView({ behavior: 'auto', block: 'end' });
-        }
-      }, 450);
+      // Shared with the detent lib: computed scroll + visualViewport math +
+      // settle-retries, because scrollIntoView proved unreliable on the one
+      // device that matters. See lib/drawerdetent.js revealPanelEnd.
+      if (window.SkriblDrawerDetent) window.SkriblDrawerDetent.revealPanelEnd(panel, b);
+      else requestAnimationFrame(() => panel.scrollIntoView({ behavior: b, block: 'end' }));
     }
     else window.scrollTo({ top: 0, behavior: b });
   }
