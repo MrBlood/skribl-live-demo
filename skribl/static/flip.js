@@ -3358,6 +3358,11 @@ const _flipDrawerCtl = skriblDrawers({
 // dismisser below. openPop/openPhoto/openMusic/closeMediaDrawers/refitDrawer
 // had no remaining callers once the buttons went through toggle().
 function closePop(){ if(_flipDrawerCtl.isOpen('draw')) _flipDrawerCtl.open(null); }
+// The draw popout's half detent (phones) — twin of Pad's attach; the lib is
+// shared, the close hand-off is this surface's own machine.
+if (window.SkriblDrawerDetent) {
+  window.SkriblDrawerDetent.attach(drawPanel, { close: () => closePop() });
+}
 function hidePhoto(){ if(_flipDrawerCtl.isOpen('photo')) _flipDrawerCtl.open(null); }
 function hideMusic(){ if(_flipDrawerCtl.isOpen('music')) _flipDrawerCtl.open(null); }
 colorCurrent.addEventListener('click',e=>{ e.stopPropagation(); _flipDrawerCtl.toggle('draw'); });
