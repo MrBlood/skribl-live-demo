@@ -22,6 +22,48 @@
 (function () {
   'use strict';
 
+  /* Scroll so `panel`'s end sits at the bottom of the VISIBLE screen.
+   *
+   * Not scrollIntoView, on hard-won evidence: the owner's iPhone shipped the
+   * half detent with its "Brush, smoothing & more" button below the fold
+   * through TWO rounds of scrollIntoView-based reveals — a smooth call
+   * issued as the panel un-hides, and an instant re-assert 450ms later —
+   * while every Chromium run scrolled perfectly. So this computes the
+   * absolute position itself and writes document.scrollingElement.scrollTop,
+   * the bluntest scrolling primitive there is; measures the fold against
+   * visualViewport.height where it exists, because iOS Safari's bottom bar
+   * overlays the layout viewport and innerHeight can lie about what a
+   * person can actually see; and re-asserts at three delays, because the
+   * device settles its URL bar, its layout and its own competing scrolls on
+   * a schedule no single timeout catches. Each assert is a no-op when the
+   * end is already visible, so browsers that got it right the first time
+   * feel nothing.
+   */
+  function revealPanelEnd(panel, behavior) {
+    function viewH() {
+      return (window.visualViewport && window.visualViewport.height)
+        ? window.visualViewport.height : window.innerHeight;
+    }
+    function target() {
+      var r = panel.getBoundingClientRect();
+      var scroller = document.scrollingElement || document.documentElement;
+      var want = scroller.scrollTop + r.bottom - viewH() + 8;
+      var max = scroller.scrollHeight - window.innerHeight;
+      return Math.max(0, Math.min(want, max));
+    }
+    requestAnimationFrame(function () {
+      window.scrollTo({ top: target(), behavior: behavior || 'smooth' });
+    });
+    [300, 700, 1200].forEach(function (ms) {
+      setTimeout(function () {
+        if (panel.hidden) return;
+        if (panel.getBoundingClientRect().bottom > viewH() + 1) {
+          (document.scrollingElement || document.documentElement).scrollTop = target();
+        }
+      }, ms);
+    });
+  }
+
   function attach(panel, opts) {
     if (!panel) return;
     opts = opts || {};
@@ -35,19 +77,7 @@
       // on screen, honouring reduced motion the way the drawer machine does.
       var b = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'auto' : 'smooth';
-      requestAnimationFrame(function () {
-        panel.scrollIntoView({ behavior: b, block: 'end' });
-      });
-      // Same re-assert the drawer machine's reveal carries: iOS Safari
-      // abandons smooth scrolls issued against just-changed layout; snap
-      // instantly if the end is still off screen once the animation window
-      // has passed. A completed first scroll makes this a no-op.
-      setTimeout(function () {
-        if (panel.hidden) return;
-        if (panel.getBoundingClientRect().bottom > window.innerHeight + 1) {
-          panel.scrollIntoView({ behavior: 'auto', block: 'end' });
-        }
-      }, 450);
+      revealPanelEnd(panel, b);
     }
 
     function isFull() { return panel.classList.contains('detent-full'); }
@@ -97,5 +127,5 @@
     }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
   }
 
-  window.SkriblDrawerDetent = { attach: attach };
+  window.SkriblDrawerDetent = { attach: attach, revealPanelEnd: revealPanelEnd };
 }());
