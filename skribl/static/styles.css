@@ -482,6 +482,12 @@ body {
   border-color: rgba(244, 50, 111, 0.5);
   color: var(--danger);
 }
+/* The stop square follows the button's ink. The idle whisper-of-purple rule
+   above kept painting the glyph accent while text, border and wash had all
+   turned recording-crimson — one purple square inside an otherwise crimson
+   pill (owner: "does that stop button look weird?"). The icon is drawn with
+   fill="currentColor", so this hands it back to the cascade. */
+.btn.record.active svg { color: currentColor; }
 
 .btn.play {
   background: rgba(var(--wash-rgb), 0.045);
@@ -4720,9 +4726,22 @@ body.player-mode #canvas {
    =================================================================== */
 @media (max-width: 640px) {
   /* Stop (recording) is a proper pill again — the bare-Record padding was
-     bleeding into it and clipping the word. */
-  .btn.record.active { width: auto; padding: 0 15px; gap: 7px; }
+     bleeding into it and clipping the word. The heavier selector is not
+     optional: the tune-to-Record fix declared `.header .actions .btn.record
+     { padding: 0 6px }` (0,4,0), written after this block, and it silently
+     won this tie for months — the Stop pill shipped with 6px flanks, glyph
+     and word crammed against the border. */
+  .btn.record.active { width: auto; gap: 7px; }
+  .header .actions .btn.record.active { padding: 0 15px; }
   .btn.record.active .btn-label { display: inline; }
+
+  /* Symmetry for the recording bar. On the left, the collapsed brand is a
+     zero-width flex item that still earns the header's 10px gap, so the rec
+     pill sits 24px in (14 padding + 10 phantom). The Stop pill's right flank
+     had only the bare 14 (owner, of the recording header: "padding on
+     right"). Mirror the phantom, and two rounded pills float evenly inside
+     the rounded card. */
+  body.recording .actions { margin-right: 10px; }
 
   /* While recording, collapse the mark so the timer + Stop have room and the
      header keeps clear space to its right. That case is static and stays here:
