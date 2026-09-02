@@ -1403,3 +1403,17 @@
 }
 
 
+
+/* THE CHROME RECEDES WHILE THE PEN IS DOWN — Flip's half of the shared rule
+   (styles.css fades .header and the autosave pill; the class is set by the
+   stroke path in flip.js exactly as Pad's capture path sets it). Same
+   opacity-only fade, same delayed exit so a quick dot never blinks the
+   chrome, same immediate return on release. */
+.flip-tools, .strip, .pagebar, .addcol { transition: opacity 0.25s ease; }
+body.stroking .flip-tools,
+body.stroking .strip,
+body.stroking .pagebar,
+body.stroking .addcol {
+  opacity: 0.1;
+  transition: opacity 0.3s ease 0.12s;
+}
