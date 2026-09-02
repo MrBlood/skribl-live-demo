@@ -148,6 +148,15 @@
   --text-muted: #7d8496;
   --text-dim: #575f6e;
 
+  /* The ink the signature is written in. On the dark header it is the primary
+     ink — white chalk with the purple halo breathing behind it. It gets its
+     own token because LIGHT mode overrides it (owner: "black on white looks
+     wrong"): the halo all but vanishes on a light ground, and near-black
+     cursive stops reading as a lit-up signature and starts reading as plain
+     heavy handwriting. In daylight the signature is written with the brand's
+     own pen instead — see the light block. */
+  --brand-ink: var(--text-primary);
+
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
@@ -384,6 +393,10 @@ body {
   overflow: visible;
   border-radius: 0;
   box-shadow: none;
+  /* The signature's ink: primary in dark, deep brand violet in light — the
+     token says why. Set here as well as on the tag so both halves of the
+     lockup read the same pen wherever they inherit from. */
+  color: var(--brand-ink, var(--text-primary));
   /* The almost-imperceptible lift (owner's spec): one soft 5px halo at 30%
      accent. Felt more than seen on the dark header; a faint lavender breath
      on light. A second, wider shadow tips it into neon — deliberately not. */
