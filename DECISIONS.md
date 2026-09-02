@@ -1186,6 +1186,26 @@ restore would present a partial drawing as the whole one.
 
 ---
 
+# The version log
+
+Everything below is the record, newest at the BOTTOM. Two things about the
+headings will otherwise mislead you.
+
+**Version numbers repeat.** The numbering restarted twice in this project's
+life, so the log runs v232->v297, then v240->v264, then v255->v272. There are
+two `## v272` headings and they are unrelated releases; the same is true of
+most numbers in the v240-v297 band. **When a number is ambiguous, the LAST
+occurrence in the file is the current one** -- reading order, not search order,
+is what disambiguates. Prose elsewhere that cites "DECISIONS v240" was written
+when that number meant one thing; date it by the file it sits in, not by a
+search hit.
+
+**These entries were true when written and are not maintained afterwards.** An
+entry describes the change it shipped with, including code that later moved or
+was replaced -- v272's undo rewrite retired a mechanism v213 documents in the
+present tense, and v213's entry is not wrong, it is old. START-HERE.md carries
+the CURRENT state of the tree; this file carries how it got there and why.
+
 ## v232-v233 -- Light mode: opt-in, chrome only, and the half that greys miss
 
 **Light is OPT-IN. There is no `@media (prefers-color-scheme: light)` rule.**
@@ -4727,3 +4747,93 @@ fit is measured to the pixel (the v269 pin caught it: Post shed its label).
 
 One tokened pen (--brand-ink), one press (--brand-relief), one rim
 (--header-rim): mark, words, surfaces and player all change together.
+
+## v272 -- Undo remembers the drawing; the chrome finishes learning manners
+
+Thirteen shipped changes across one day of live phone-and-desktop review. Most
+continue v271's manners line. One is a real performance defect, and it is the
+reason this release exists.
+
+**Undo stored a SCREENSHOT of every stroke, and it broke a machine.** The owner
+drew a thousand dots and four hexagons -- a 287 KB drawing -- and the whole
+computer crawled. `makeHistoryState()` copied the entire canvas into an
+offscreen canvas on every stroke START and kept the last thirty: ~17 MB a copy
+at desktop hi-DPI, so roughly half a gigabyte pinned for undo, plus a thousand
+multi-MB allocations churned through while dotting. Restoring that draft was
+worse -- the history rebuild RENDERED and SNAPSHOTTED every stroke boundary in
+one synchronous burst, which is the "fine until all of a sudden it slowed down"
+the owner described.
+
+The fix is not a smaller cache, it is the observation that the pixels were
+never the truth. The canvas at any stroke boundary IS `preRecordSnapshot +
+paintStrokesStatic(strokes)` -- the exact identity `stopPlayback()` already
+relied on to restore the drawing after every preview. So a state is now the
+stroke slices plus a REFERENCE to its base, and `restoreHistoryState()`
+repaints. Live stacks and the restored-draft rebuild both.
+
+That identity has one exception, and naming it is the whole safety argument: a
+stroke drawn while NOT recording never enters `strokes`, so its pixels live
+nowhere else. `unrecordedInk` tracks precisely that window; while it is up a
+state carries a real snapshot, exactly as before. A fresh-take base capture
+bakes the ink into the base, a clear blanks it, a load replaces it -- each
+drops the flag -- and `restoreHistoryState()` settles it either way, because a
+restore determines the canvas contents exactly. Clear-undo also restores the
+state's base into `preRecordSnapshot` now, closing a latent divergence where a
+replay after clear-undo lost its base layer. Measured at 1414x1414 with a
+thousand strokes: zero pixel entries, 9 MB heap, undo 0.8 ms, draft restore
+0.48 s where it used to freeze -- and undo/redo pixel-compared EXACT against
+live reference states across pen, eraser and shape.
+
+**The chrome recedes while the pen is down.** Header, toolbar, status and the
+Flip furniture fade to 10% on `body.stroking` with a 0.12 s exit delay and an
+immediate return -- the art gets the screen during the only moment it is being
+made.
+
+**The draw drawer opens half-height on phones** (`lib/drawerdetent.js`), and
+the reveal took three attempts to land on a real iPhone. Two scrollIntoView
+rounds left the "Brush, smoothing & more" button below the fold while every
+Chromium run scrolled perfectly. `revealPanelEnd()` computes the absolute
+target and writes `document.scrollingElement.scrollTop`, the bluntest primitive
+there is; measures the fold against `visualViewport.height`, because iOS
+Safari's bottom bar overlays the layout viewport and `innerHeight` lies about
+what a person can see; and re-asserts at 300 / 700 / 1200 ms, because the
+device settles URL bar, layout and its own competing scrolls on a schedule no
+single timeout catches. Each assert is a no-op when the end is already visible.
+
+**The post-record lock stopped being silent.** A finished take locks the canvas
+and the only explanation was a toast fired by the press that had already
+failed. "+ Add take" now floats at the locked canvas's bottom edge, appends a
+take on tap, and nudges when a press lands on the lock -- the answer bounces
+where the eye already is. Outside `#zoomLayer` so magnifying never scales it;
+hidden under `body.replaying`, since it sits where the replay performs.
+
+**One gradient sweep across the whole lockup.** The signature and its mode word
+each restarted the accent gradient, so "skribl pad" read as two balanced
+sweeps. Both now run `userSpaceOnUse` in the shared 30-unit hand: the mark runs
+0 -> the lockup's full width (`brand_sweep`, passed by the including page), and
+each word starts at the matching NEGATIVE x, continuing the mark's sweep rather
+than restarting it. Standalone includes default to the mark's own width.
+
+**Three smaller manners, one costume change.** The status pill now yields to
+open menus and sheets as it already did to drawers (the amber media warning was
+sitting on the Flip menu). The restore banner clears the toolbar on phones --
+its 20px anchor was written for a desktop where the bottom edge is empty air,
+and on a phone it covered the tools until dismissed. Flip's Duplicate / Blank /
+In-between stopped wearing dashed-and-hollow, which is this app's vocabulary
+for "nothing here yet" (the paste ghost, the liquify reach) and wrong on three
+of its most-used ACTIONS; they wear the page bar's recipe now, with the accent
+plus that marks "this adds something". And the custom swatch keeps its rainbow
+as a RING around the picked colour -- painting it solid made the one control
+that opens the picker impersonate an eighth preset -- while recents record the
+COMMITTED pick (`change`) instead of every shade a drag passes through
+(`input`), which had been filling the row with gradations of one colour.
+
+**CI stopped costing more than it proved.** A single productive day ran the
+full three-job harness thirty times and consumed the account's entire monthly
+Actions allowance. Pull requests now run one smoke job; the full battery runs
+on pushes to main and manual dispatch. The trim is safe because the affected
+suites run locally before every push and their counts are quoted in the PR:
+CI's job on a PR is to catch a broken push, not to re-verify a verified one.
+`CLAUDE.md` now carries the owner's standing rule -- ask before taking any
+action that could create or increase a bill on their accounts -- because the
+lesson generalises past Actions minutes to every metered thing a host sells.
