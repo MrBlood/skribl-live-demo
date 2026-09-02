@@ -173,8 +173,12 @@
     // layout, and this must not do that on every scroll of an idle page.
     if (el.hidden || !el.classList.contains('show')) {
       setFlag(el, 'blocked', false);
-      setFlag(el, 'lifted', false);
-      setLift(el, 0);
+      // KEEP the lift. The pill fades out over 0.3s when `show` drops, and
+      // stripping the lift here snapped it to its home corner mid-fade —
+      // "Saved" appeared above the toolbar and then FLASHED at the bottom
+      // left as it finished (owner report, verbatim symptom). The lift is
+      // recomputed absolutely on the next show, so a stale value costs
+      // nothing; leaving it lets the pill fade out exactly where it stood.
       return;
     }
     // A warning never fades, so it is allowed to climb whatever is in the way
