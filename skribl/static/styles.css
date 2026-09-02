@@ -411,11 +411,17 @@ body {
   border-radius: 0; box-shadow: none;
 }
 /* The gradient the signature is inked with (owner-picked from a rendered
-   mock): accent to accent-2 on the 135° axis — violet at the top-left
-   melting to blue at the bottom-right, the same pair in both themes. The
-   stops live HERE as CSS so they stay tokens; the three lockup svgs (the
-   mark partial and both word svgs) carry the <linearGradient> that
-   references them, one per svg so each word runs a balanced sweep.
+   mock): accent melting to accent-2, the same pair in both themes — and ONE
+   sweep across the whole line of handwriting (owner: "start with skribl and
+   end at the end rather than doing each word"). The stops live HERE as CSS
+   so they stay tokens; the three lockup svgs (the mark partial and both
+   word svgs) carry the <linearGradient> that references them, in
+   userSpaceOnUse units of the shared 30-unit hand: the mark runs 0 -> the
+   lockup's full width (brand_sweep, passed by the including page) and the
+   word's gradient starts at the matching NEGATIVE x, so violet at the s of
+   skribl reaches blue only at the d of pad / the p of flip. A standalone
+   mark (player, library) defaults to its own width — a full sweep across
+   just the signature.
    --brand-ink stays defined beneath this: it is the solid-pen fallback for
    anything that renders the lockup without the gradient defs, and the
    letterpress relief (--brand-relief) presses the gradient ink exactly as
