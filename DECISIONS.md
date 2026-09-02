@@ -4651,3 +4651,79 @@ overflow:hidden, so the photo layer wears the frame's own radius and the wrap
 carries the -webkit-mask-image nudge. CI's harness jobs get 90 minutes; the
 suite outgrew 30 and every push since the Aug 31 runner outage lifted was
 cancelled mid-run while looking like a code failure.
+
+
+## v271 -- The chrome learns manners: yield, step aside, sign in violet
+
+A polish release, every line of it owner-driven from live phone review, and
+the through-line is MANNERS: chrome that reacts to what the hand is doing
+instead of standing where it stood.
+
+**The custom color swatch stopped impersonating a preset.** It wore an inline
+fill identical to the dot beside it plus a 7px mystery badge; now it wears a
+rainbow conic (border 0 -- the base swatch's transparent border let the
+gradient bleed past the radius as slivers), its wrapper shrink-wraps so the
+badge-a-corner-away era is over, and the badge itself is deleted. The compact
+pen row breathes at 26px dots with tap targets held at 44 by --tap-grow.
+
+**The eyedropper grew a loupe.** A fingertip is forty pixels wide and the
+pixel being sampled is under it. An armed press now opens the standard
+magnifier -- reticle on the exact cell, ring and chip wearing the colour it
+reads, drag to aim, RELEASE picks. Shared in lib/eyedropper.js; the loupe
+draws from each surface's composited stage, the same canvas the sampler
+reads, so magnifier and pick cannot disagree. The drag session listens on
+window in the capture phase because Pad starts strokes from
+mousedown/touchstart and the press may carry no pointerId to capture with.
+On Flip the draw popout is VEILED while armed (visibility, never the drawer
+state machine, whose onClose hook would disarm the pick it is making room
+for): on a phone it covered nearly the whole canvas.
+
+**The shape picker became a well-mannered palette.** The press that starts a
+shape shoves it aside and the same gesture draws -- the click dismisser fired
+after the pointer came UP, so the card stood over the canvas through every
+drag. It grew a grip (lib/popdrag.js): drag the pill and the pop goes where
+you put it, MOVED MEANS PINNED -- a positioned pop stops auto-dismissing and
+behaves like a floating palette, veiled for each stroke and back on release.
+The drag composes translate(var(--pop-dx), var(--pop-dy)) after the anchor
+transform; the phone tier's `transform: none` override silently disconnected
+the grip on exactly the screens that asked for it. And the hide/veil sits
+BELOW every press-swallowing guard: on a post-record-locked canvas the press
+closed the picker and drew nothing, which read as a broken tool.
+
+**The grabber was never a contrast problem.** Third report, and the pixels
+told the truth: 27pt of EMPTY space where the pill belongs. The menu sheet is
+a column flexbox capped at 88dvh; when content overflows, flex shrinks
+children before scrolling, and an empty 5px div has min-content height ZERO
+-- the one child that could be crushed completely, only on real phones, whose
+Safari chrome shortens the viewport our full-height dev runs never did.
+flex: none. Two earlier contrast calibrations had "fixed" a pill that was
+not a contrast problem.
+
+**The autosave pill fades under a popover instead of climbing it.** The
+popovers joined pillfit's target list so the pill would YIELD to them; on a
+phone the lift "fit" and Saving rode the shape pop's tower to mid-screen.
+BARS are climbed, POPS are fade-only; a warning still never fades. And the
+lift now survives hiding, because stripping it at fade-out snapped "Saved"
+to its home corner mid-fade.
+
+**The recording header sits straight.** The stop square was accent-purple
+inside an otherwise crimson pill (the idle whisper-of-purple glyph rule was
+never taken back by the active state; currentColor now flows). The bar was
+lopsided 24/14 -- the collapsed brand is a zero-width flex item that still
+earns the header's gap, so recording mirrors the phantom on the right. And
+the Stop pill's 15px flanks had been silently losing a specificity tie to
+the newer tune-to-Record 6px rule for months.
+
+**The signature signs in violet, pressed into a rimmed card.** Owner-walked,
+step by step: black-on-white light theme read as heavy handwriting (the halo
+vanishes against white), so light got a deep violet pen (#4a33c2); then dark
+went purple too (--accent-bright, a step lighter than Post so the accent
+budget holds); then the halo retired for a LETTERPRESS relief (bright ledge
+below, shade above, physics restated per theme) chosen from a rendered
+eight-way; and the header wears --header-rim, a border that is felt rather
+than seen -- near-black in dark, near-white in light, drawn as a box-shadow
+RING because a real border eats 2px of interior width and the 390px header
+fit is measured to the pixel (the v269 pin caught it: Post shed its label).
+
+One tokened pen (--brand-ink), one press (--brand-relief), one rim
+(--header-rim): mark, words, surfaces and player all change together.
