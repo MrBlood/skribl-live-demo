@@ -250,6 +250,16 @@ function startDraw(e) {
   // can't start a stroke, sample, or reposition mid-replay. (Record/Play/Stop
   // still work via their own buttons.)
   if (playing) return;
+  // The shape picker is tool OPTIONS, not a dialog: the press that starts
+  // your shape shoves it aside, and the SAME gesture draws — not close-on-
+  // release (the click dismisser fires after the drag is over, so the card
+  // stood over the canvas the whole time; owner: "how can we get that menu
+  // to go away while I'm trying to draw the shape?"), and not tap-to-close,
+  // tap-again-to-draw. Hide, don't return.
+  {
+    const _shapePop = document.getElementById('shapePop');
+    if (_shapePop && !_shapePop.hidden) _shapePop.hidden = true;
+  }
   // Eyedropper: this press opens the magnifying loupe — drag to aim, release
   // picks (lib/eyedropper.js). Allowed even on a locked canvas — it only
   // reads. The one-shot tap sample stays as the fallback if the loupe
