@@ -338,6 +338,21 @@ staler twice, which is worth knowing when deciding.
 
 ---
 
+# ============ HISTORICAL NARRATIVE FROM HERE ============
+
+**Everything from this line down to "Known-open, in the order worth doing" is a
+RECORD OF HOW THE TREE GOT HERE, not a description of how it is now.** Section
+headings in this band are written in the tense of the release that produced
+them: "most of it still to do", "will not extract", "the newest feature" were
+all true once and several are not now. Numbers in this band are that era's.
+
+The parenthetical warning at the top of this file said as much and was not
+enough — three entries in the KNOWN-OPEN list, which is not even in this band,
+still described fixed bugs as open and cost a session a day. So this divider is
+loud on purpose. **If you want the current state, read above this line and the
+known-open list below it; if a claim down here matters, verify it against a
+suite before acting.**
+
 ## What was built in v142-v179
 
 Client work, all covered by suites that drive a real browser:
@@ -360,7 +375,7 @@ Client work, all covered by suites that drive a real browser:
 
 ---
 
-## Move artwork — the newest feature, and what it sets up
+## Move artwork as it landed (historical) — what it set up
 
 `Artwork` is a TOOL in Flip's tool shelf as of v226 — it was in the page bar
 until then, which is where the paragraphs below were written. Picking it enters
@@ -580,7 +595,7 @@ whole-page move first, and it is the natural next feature.
   checkpoint is deleted on completion, or the next release would silently resume
   a finished one.
 
-## Player extraction — first cut landed, most of it still to do
+## Player extraction, first cut (historical) — the target has since been MET
 
 **Do not read `verify_player_isolation.py` going green as "the player is
 extracted."** Its Half B assertions are RATCHETS: they hold the ground already
@@ -589,10 +604,13 @@ regression net and must never go red.
 
 Where it stands, all measured:
 
-* **Down 56,727 bytes.** A player page downloaded 329,159 bytes of JavaScript
-  before this session and downloads 272,432 now. The target is 153,600.
+* **Down 56,727 bytes.** (SUPERSEDED — the target has since been met; see "The
+  next step, and the honest distance" above, and run `verify_jsstrip.py`. The
+  three figures in this bullet are v199's and are kept for the shape of the
+  climb, not as current values.) A player page downloaded 329,159 bytes of
+  JavaScript before that session and 272,432 after. The target is 153,600.
   **v199: 155,843 B**, after the serve-time comment strip — 2,243 over the
-  target, and the figure the ratchet is now set at. `verify_player_isolation.py`
+  target at the time, and the figure the ratchet was then set at. `verify_player_isolation.py`
   measures `r.body()`, the decoded response, so this is what a browser parses;
   the wire figure is 48,309 B and must never be quoted as the first number.
 * **What moved:** `editor_export.js` (the PNG/GIF/WebM encoders and share-card
@@ -678,7 +696,7 @@ leaking out of the menu region, whose one external call site already reads
 guard is the difference between a movable region and one that is not**, and it is
 worth checking for before planning any further cut.
 
-## Why the music drawer will not extract — and the fix that unblocks it
+## Why the music drawer would not extract (historical) — superseded below
 
 The region has **64 top-level names, 36 of them referenced by code the player
 executes.** Not all state: `audioEl`, `trimStart`, `trimEnd`, `audioCtx`,
@@ -1885,7 +1903,8 @@ Mutation-tested; the reversed order reproduces the silent no-op exactly.
 ### Scratch probes must not be published as the project's result
 
 `stamp_docs.py` now refuses a run whose suite names begin with `_`. A one-off
-`_probe_mir.py`, written to look at a screenshot, put *"RUN NOT GREEN — 1
+`_probe_mir.py` (deleted afterwards, and deliberately not in the tree),
+written to look at a screenshot, put *"RUN NOT GREEN — 1
 suite(s) failed"* into four docs. The v212 narrowing guard did not catch it:
 that only engages when `RELEASE.md` describes the CURRENT tree, and a scratch
 probe is usually run mid-change when it does not.
