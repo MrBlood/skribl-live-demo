@@ -2258,8 +2258,8 @@ right and it was acted on. `verify_mp4.py` is now the only skip.
 LEAD is CLOSED, and this entry said the opposite for several releases.** A
 stroke that shot off-screen mid-draw, reported once and never reproduced. The
 lead was `getPos`'s `e.touches[0]` assuming the first touch on the SCREEN is the
-drawing finger, which a resting thumb or a palm breaks. This entry called that
-lead UNTESTED long after it had been tested, measured and fixed: v264 moved
+drawing finger, which a resting thumb or a palm breaks. This entry used to say that
+lead was UNTESTED long after it had been tested, measured and fixed: v264 moved
 contact identity into `skribl/static/lib/eventpoint.js`, which reads
 `targetTouches` — the contacts that began on the element — and both editors and
 the player now share it. The defect was measured rather than argued: with a

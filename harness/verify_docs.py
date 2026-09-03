@@ -643,11 +643,24 @@ CLAIMS = [
     ("pointer identity / contact ownership",
      ("skribl/static/lib/eventpoint.js", r"targetTouches"),
      [r"Migrate to Pointer Events",
-      r"pointer identity[^.\n]{0,60}(prerequisite|not deferrable|still open)"]),
+      r"pointer identity[^.\n]{0,60}(prerequisite|not deferrable|still open)",
+      # v273: and these missed START-HERE's known-open 5, which called the
+      # touches[0] lead "UNTESTED" for the several releases after v264 tested,
+      # measured and fixed it. A session read that entry and went looking for a
+      # bug that was already closed. Name the MECHANISM, not the conclusion.
+      r"touches\[0\].{0,240}\b(untested|unverified|never tested)\b",
+      r"\bgetPos\b.{0,240}\b(untested|unverified)\b"]),
     ("PostgreSQL cross-process rate limiting",
      ("harness/verify_postgres.py", r"no OVER-admission"),
      [r"NOT yet verified on PostgreSQL across processes",
-      r"not[^.\n]{0,30}verified[^.\n]{0,40}across processes"],
+      r"not[^.\n]{0,30}verified[^.\n]{0,40}across processes",
+      # v273: the two above missed START-HERE's known-open 4, which read
+      # "PostgreSQL is UNVERIFIED, not passing" for the several releases AFTER
+      # the suite started passing. Neither pattern contains the word the writer
+      # actually reached for. Match the CAPABILITY plus a denial word near it,
+      # rather than one remembered phrasing.
+      r"postgres\w*[^.]{0,60}\b(unverified|not passing|never (?:run|passed))\b",
+      r"\b(unverified|not passing)\b[^.]{0,60}postgres"],
      ["skribl/models.py", "skribl/ratelimit.py"]),
     ("media resource limits (dimensions, WAV duration)",
      ("harness/verify_medialimits.py", r"MAX_IMAGE_PIXELS"),
@@ -661,6 +674,25 @@ CLAIMS = [
     ("selection and move in Flip",
      ("harness/verify_select.py", r"check\("),
      [r"every mistake is currently undo-and-redraw"]),
+    # v273. START-HERE's "the next step, and the honest distance" argued at
+    # length that the player could not reach its JS byte target without a
+    # function-relocation refactor. verify_jsstrip.py had been asserting that it
+    # DOES reach it, comfortably, since the serve-time comment strip landed. The
+    # document and the suite contradicted each other and only the suite ran.
+    ("the player reaching its JS size target",
+     ("harness/verify_jsstrip.py", r"REACHES the"),
+     [r"STILL DOES NOT REACH",
+      r"does not reach [\d,_]{5,}",
+      r"\b[\d,]+ B OVER\b",
+      r"reaching the [\d,_]{5,} target needs"]),
+    # v273. The same section, and FUTURE.md's constraint list, both said a
+    # viewer downloads the whole authoring surface. Four editor_*.js files are
+    # carved out of the player and this suite asserts each stays carved.
+    ("the editor-only files being carved off the player",
+     ("harness/verify_player_isolation.py", r"the carves stay carved"),
+     [r"every viewer downloads the (entire )?authoring surface",
+      r"downloads the entire authoring surface",
+      r"serves both the editor and the player[^.]{0,80}\bentire\b"]),
 ]
 
 
