@@ -92,16 +92,49 @@ with sync_playwright() as p:
           posted_bytes < RAW_WAV_BYTES * 0.30,
           f"{posted_bytes/1e6:.2f} MB posted vs {RAW_WAV_BYTES/1e6:.2f} MB raw")
 
-    # 8s stereo 16-bit @44.1k = 8 * 44100 * 4 + 44 header.
-    expect = 8 * 44100 * 4
-    check("posted clip is exactly the loop length",
-          abs(posted_bytes - expect) < 44100 * 4 * 0.05,
-          f"{posted_bytes} bytes vs {expect} expected (~8.0s)")
+    # A POSTED loop is MONO at the SOURCE rate — buildPostedLoopWav, not
+    # buildTrimmedLoopWav. 8s mono 16-bit @44.1k = 8 * 44100 * 2 + 44 header.
+    # The old expectation here was 8 * 44100 * 4 (stereo) and it is kept below
+    # as the thing that must NOT come back: dropping the downmix reproduces it
+    # exactly, which is the only way this stays pinned.
+    #
+    # NOT 22.05 kHz. Resampling halves this again and puts an audible click on
+    # every loop repeat — decodeAudioData resamples to the AudioContext rate and
+    # zero-pads the edges, so the clip's end stops joining its start.
+    # verify_audio.py's seam assertion is what catches it (1.32x -> 12.36x); the
+    # reasoning is in the header of lib/postedaudio.js.
+    expect = 8 * 44100 * 2
+    was_stereo = 8 * 44100 * 4
+    check("posted clip is exactly the loop length, mono at the source rate",
+          abs(posted_bytes - expect) < 44100 * 2 * 0.05,
+          f"{posted_bytes} bytes vs {expect} expected (~8.0s mono @44.1k)")
+    check("...and is NOT the stereo bake the export path still uses",
+          posted_bytes < was_stereo * 0.6,
+          f"{posted_bytes} bytes vs {was_stereo} in stereo — dropping the downmix lands back on the larger number")
+
+    # Read the format out of the WAV header itself rather than trusting the byte
+    # count: a stereo clip at half the rate has the SAME size as a mono clip at
+    # full rate, so size alone cannot tell the intended bake from a wrong one.
+    hdr = base64.b64decode(b64)[:44]
+    ch, rate = struct.unpack("<H", hdr[22:24])[0], struct.unpack("<I", hdr[24:28])[0]
+    check("the posted WAV header says mono", ch == 1, f"numChannels = {ch}")
+    check("the posted WAV header keeps the source rate", rate == 44100, f"sampleRate = {rate}")
 
     check("trim rebased to 0..loopLen (the clip IS the loop)",
           abs(music["trimStart"]) < 1e-6 and abs(music["trimEnd"] - 8) < 0.05,
           f"trimStart {music['trimStart']} trimEnd {music['trimEnd']:.2f}")
     check("data URL is a WAV", music["data"].startswith("data:audio/wav;base64,"))
+
+    # The EXPORT bake is deliberately NOT downmixed. If these ever converge, the
+    # comment in editor_export.js is wrong and a user's downloaded video quietly
+    # lost half its channels.
+    exp_url = pg.evaluate("() => { const b = buildTrimmedLoopWav(); return b && b.dataUrl; }")
+    exp_hdr = base64.b64decode(exp_url.split(",", 1)[1])[:44]
+    exp_ch = struct.unpack("<H", exp_hdr[22:24])[0]
+    exp_rate = struct.unpack("<I", exp_hdr[24:28])[0]
+    check("the EXPORT bake keeps the channel count the post gives up",
+          exp_ch == 2 and exp_rate == 44100,
+          f"export {exp_ch}ch @{exp_rate} vs posted {ch}ch @{rate}")
 
     # ------------------------------------------------ (b) crossfade is baked
     print("\n(b) crossfade is folded in once, not sent for re-application")

@@ -447,7 +447,7 @@
     }
     if (media.music && media.music.data && currentAudioBuffer) {
       try {
-        const cropped = buildTrimmedLoopWav();
+        const cropped = window.SkriblPostedAudio.buildPostedLoopWav({ currentAudioBuffer, trimStart, trimEnd, loopCrossfadeMs });
         if (cropped) {
           // The clip IS the loop now, so trims collapse to 0..len and the
           // crossfade is already folded into the samples.

@@ -1253,6 +1253,7 @@ file's own opening line. `verify_docs.py` fails if a lib here is named nowhere.
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
+| `postedaudio.js` | Pad+Flip | What a POST stores: the loop baked down to mono. Editors only — the player never posts. Its header records why 22.05 kHz was tried and reverted. |
 | `posted.js` | Pad+Flip | Your Skribls — a local record of what you have posted. |
 | `postedui.js` | Pad+Flip | Your Skribls — rendering. The store is lib/posted.js; this draws it. |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
