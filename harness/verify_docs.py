@@ -40,6 +40,13 @@ BEGIN, END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
 DOCS = [ROOT / "README.md", ROOT / "harness" / "README.md",
         ROOT / "docs" / "HANDOFF.md", ROOT / "START-HERE.md"]
 
+def _py_sources():
+    """Every Python file that can register a route or read a knob."""
+    out = [Path("app.py")]
+    out += [p.relative_to(ROOT) for p in (ROOT / "skribl").rglob("*.py")]
+    return [p for p in out if (ROOT / p).is_file()]
+
+
 print("\nDOCS — the generated stanza is present and current")
 for doc in DOCS:
     check(f"{doc.relative_to(ROOT)} carries the generated stanza",
@@ -118,6 +125,47 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
 gone = sorted(p for p in paths if not (ROOT / p).is_file())
 check("no document names a repo file that is not there",
       not gone, ", ".join(gone))
+
+# v273: the reverse of the check above, in two dimensions the docs had drifted
+# on unnoticed. Both were found by cross-checking the tree against every .md and
+# both had real gaps; neither could have been found by reading, because what is
+# missing from a document is invisible while you read it.
+
+# EVERY REGISTERED ROUTE MUST BE NAMED SOMEWHERE. `/library` was registered by
+# the blueprint and appeared in no document at all — so a host mounting Skribl
+# got that route in their own URL space, serving an unsealed concept preview,
+# with nothing in INTEGRATION.md's route list to warn them. A route is the most
+# public surface this project has; an undocumented one is a surprise delivered
+# to somebody else's users. <public_id> and <id> are the same placeholder as far
+# as this check is concerned — the docs use the shorter spelling.
+_src = "".join((ROOT / p).read_text(encoding="utf-8")
+               for p in _py_sources())
+_routes = set(re.findall(r'@\w+\.(?:route|get|post|put|delete|patch)\('
+                         r'\s*["\']([^"\']+)', _src))
+_undoc_routes = sorted(r for r in _routes
+                       if r not in _all_md_text
+                       and r.replace("public_id", "id") not in _all_md_text)
+check("every route the blueprint registers is named in at least one .md",
+      not _undoc_routes,
+      ", ".join(_undoc_routes) + " — README.md's route table and "
+      "docs/INTEGRATION.md's list are where a host looks")
+
+# EVERY SKRIBL_* THE CODE READS MUST BE NAMED SOMEWHERE. Six were not:
+# SKRIBL_RATE_HMAC_KEY, SKRIBL_ALLOW_EPHEMERAL_SECRET, SKRIBL_FORCE_SECURE_COOKIES,
+# SKRIBL_MAX_REQUEST_BYTES, SKRIBL_MAX_GROUPS_PER_FRAME, SKRIBL_RATE_CLEANUP_BATCH.
+# The first three change SECURITY behaviour — whether cookies are Secure,
+# whether a placeholder SECRET_KEY boots, and what salts the rate limiter's
+# identity hash — and a deployer who never learns a knob exists cannot set it.
+# .env.example counts as documentation here: it is the file they actually open.
+_env_named = _all_md_text + (ROOT / ".env.example").read_text(encoding="utf-8")
+_env_read = set(re.findall(r'environ(?:\.get)?\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+_env_read |= set(re.findall(r'_env_(?:int|bool|str)\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+_env_read |= set(re.findall(r'config\.get\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+_undoc_env = sorted(v for v in _env_read
+                    if v.startswith("SKRIBL_") and v not in _env_named)
+check("every SKRIBL_* the code reads is named in a doc or .env.example",
+      not _undoc_env,
+      ", ".join(_undoc_env) + " — a knob nobody can find is a knob nobody sets")
 
 print("\nDOCS — no volatile release fact is typed by hand")
 # A tree hash written into prose cannot be kept true: it describes the tree it

@@ -95,6 +95,7 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `/s/<id>/card.png` | Share-card image for link unfurls |
 | `POST /api/skribls` | Create a post |
 | `GET /api/skribls/<id>` | Fetch a post as JSON |
+| `/library` | **Concept preview, not sealed.** Self-contained demo tiles, not backed by `GET /api/skribls` |
 
 ## Local setup
 
