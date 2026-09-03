@@ -20,23 +20,28 @@ Verify before believing anything in prose, including this file:
     grep -m1 'tree hash' harness/RELEASE.md
     python3 -c "import sys;sys.path.insert(0,'harness');import release_run as r;print(r.tree_hash())"
 
-**What a visitor downloads on a shared link, across the last session:**
+**What a visitor downloads on a shared link — RUN IT, do not read it:**
 
-    JavaScript   329,159 -> 231,106 B
-    HTML          56,716 ->   7,989 B
-    total        385,875 -> 239,095 B   (-146,780, 38%)
+    ./harness/run_harness.sh verify_player_isolation.py
 
-**What v199 changed, all of it measured by `verify_player_isolation.py`:**
+Its last assertion prints the whole payload broken down — JS, HTML and CSS
+separately, their sum, and the gzipped figure — and the suite fails if any part
+grows past its ratchet. **The numbers are deliberately not repeated here.** This
+block used to carry nine of them across two tables, every one measured at v199,
+and they were still sitting here unchanged dozens of releases later describing a
+player that had shrunk under all of them. That is the same failure the paragraph
+above this one warns about, committed fifteen lines after warning about it.
 
-    JavaScript   234,611 -> 155,843 B   serve-time comment strip
-    CSS           36,612 ->  32,515 B   splitting INSIDE @media blocks
-    HTML                     8,289 B    unchanged
-    parsed       279,512 -> 196,647 B   on the wire (gzip) 48,309 B
+One of those numbers is worth knowing as a SHAPE rather than a value: the
+gzipped "on the wire" figure is roughly a quarter of the source total, and must
+never be quoted as "the player's JavaScript" — the suite says so at the
+assertion itself.
 
-Neither change moved a byte of source. `skribl/jsstrip.py` removes comments from
-the RESPONSE — the files on disk keep every word, which is the only reason this
-was allowed at all — and `harness/tools/cssgraph.py` now classifies rules inside
-a media block instead of keeping the whole block whenever one rule matched.
+`skribl/jsstrip.py` removes comments from the RESPONSE — the files on disk keep
+every word, which is the only reason this was allowed at all — and
+`harness/tools/cssgraph.py` classifies rules inside a media block instead of
+keeping the whole block whenever one rule matched. Neither moved a byte of
+source.
 `verify_jsstrip.py` is the gate on the first (Chromium compiles and evaluates
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
@@ -84,47 +89,43 @@ runner actually reads.** Printing it is not reporting it.
 
 ### The next step, and the honest distance
 
-`app.js` is 214,132 B. The player executes about 88 KB of it; the rest never runs
-there. Reaching the 153,600 target needs nearly ALL of that removed — the gap and
-the dead weight are the same size, so there is no slack.
+**THE JS TARGET IS MET. This section argued for years that it could not be, and
+that argument is over.** `verify_jsstrip.py` asserts the player reaches the
+153,600 B target after the serve-time strip, with room to spare, and
+`verify_player_isolation.py` holds the ratchet below it. Run either for the
+number; it is not typed here, because every previous number in this section
+outlived the tree it described by dozens of releases.
 
-The cheap techniques are exhausted:
+How it was won, and why the old plan was the wrong plan:
 
-* **Self-contained IIFEs** — done: `editor_export`, `editor_post`, `editor_menu`.
-* **Wiring extraction** (move STATEMENTS, leave functions and state) — done for
-  both drawers: `editor_music`, `editor_photo`.
-* **What remains is functions**, and they cannot be relocated the same way
-  because shared paths still NAME them. `drawZoomWaveform` (4,457 B) is the
-  clearest case: dead on the player, but `loadSkribl` names it, so it stays.
-  Moving them means restructuring call sites — dependency inversion, not
-  relocation.
+* **Self-contained IIFEs** — `editor_export`, `editor_post`, `editor_menu`.
+* **Wiring extraction** (move STATEMENTS, leave functions and state) — both
+  drawers: `editor_music`, `editor_photo`.
+* **The carves** — `editor_draw`, `editor_shapes`, `editor_music`,
+  `editor_photo` are absent from the player entirely, and
+  `verify_player_isolation.py` asserts each stays carved.
+* **The serve-time comment strip** — `skribl/jsstrip.py` removes comments from
+  the RESPONSE; the files on disk keep every word. This is what closed the gap,
+  and it moved no source at all.
 
-**AND THAT RESTRUCTURING STILL DOES NOT REACH 153,600.** Measured since:
-move every editor-only function out of `app.js` — all 71,633 B, including the
-~34 KB the restructuring exists to unpin — and the player lands at 159,473 B,
-still 5,873 over. What is left is not functions; ~88 KB of `app.js` is top-level
-wiring and comments.
+**The plan this section used to prescribe was function relocation, and it was
+never executed.** It held that shared paths NAME the editor-only functions, so
+moving them means dependency inversion rather than relocation — and that even
+moving all of them still would not reach the target. Both statements were true
+of the tree they were measured on. Neither is now the binding question, because
+the strip got there without moving a function. The AST tool built to de-risk
+that relocation (`harness/tools/refgraph.js`) was DISPROVED — it fails its own
+superset gate and would move the four functions the v132 attempt got wrong. The
+v132 failure was load order, not classification. Read `docs/REFACTOR-v132.md`
+before planning anything here.
 
-**v199 CORRECTION — the comments were never the player's to carry.** That whole
-argument treated comment text as weight that had to be MOVED, and it does not:
-`skribl/jsstrip.py` strips comments at serve time, out of the response and never
-out of the source. The player now parses **155,843 B**, down from 234,611,
-without a single function relocated and without a separate entry point. So the
-paragraph above is answering a question that is no longer the binding one.
-
-It is also not a clean win for the opposite claim. Stripping alone lands
-**2,243 B OVER** the 153,600 target — not the 141 B a predicted 153,741 implied;
-that figure is not reproducible and the difference is mostly indentation
-accounting. `verify_jsstrip.py` asserts the gap so that neither this document's
-old conclusion nor that prediction can be read as settled. What remains is a
-2,243 B question, which is a much smaller thing than `app.js` ceasing to be the
-player's file.
-
-The AST step that `docs/REFACTOR-v132.md`
-prescribed as the way to de-risk this was built (`harness/tools/refgraph.js`)
-and DISPROVED: it fails its own superset gate and would move all four functions
-the v132 attempt got wrong. The v132 failure was load order, not
-classification. Read that section before planning anything here.
+**WHAT IS ACTUALLY OUTSTANDING IS CSS, NOT JS.** `verify_player_isolation.py`
+carries a `CSS_TARGET` and the player's stylesheet is well above it, under a
+ratchet (`CSS_RATCHET`) set far looser than the current value. That is the open
+size question, and it is a different problem from the one this section spent its
+life on: `player.css` is generated by `harness/tools/cssgraph.py`, so the lever
+is the classifier, not a carve. See the CSS-ratchet decision under "Decisions
+that are the user's" — the ratchet's slack is an owner call.
 
 **The rule that governs all of it:** a binding declared in an editor-only file
 does not exist on the player, so any player code touching it throws. Wiring moves
@@ -315,17 +316,25 @@ explicitly or posts appear in no feed, silently. Leave the backfill alone.
 **v140's recall framing is confirmed correct** — no database ran the v140 copy
 of `f0a3d81b47e2` at `BATCH = 500`.
 
-**The CSS ratchet decision has a FALSE PREMISE and needs restating before it can
-be decided.** It has been carried as "set at exactly the current size, so it has
+**The CSS ratchet decision is STILL OPEN, and the restatement it was given last
+time has itself gone stale — read the numbers off the suite, not off this
+paragraph.** It was long carried as "set at exactly the current size, so it has
 no headroom by construction". That was true when `player.css` did not exist and
-the player linked the whole of `styles.css`. It does exist: `CSS_RATCHET` is
-123,283 and the player links 32,515, so the mechanism has **90,768 B of
-headroom** — the same inert state the JS ratchet was in when it was reading
-gzipped lengths, arrived at a different way. Two candidate numbers, and this is
-a decision, not an edit: 32,515 (today's value, the convention the JS ratchet
-and the comment beside `CSS_RATCHET` both follow) or something with deliberate
-slack. It was left alone this session because the number is listed here as the
-user's; leaving it alone made it staler, which is worth knowing when deciding.
+the player linked the whole of `styles.css`. It does exist, so `CSS_RATCHET` sits
+well above what the player actually links and the mechanism has real headroom —
+the same inert state the JS ratchet was in when it was reading gzipped lengths,
+arrived at a different way.
+
+**The size of that headroom has changed twice since anyone wrote it down here,
+so this paragraph no longer quotes it.** `verify_player_isolation.py` prints the
+ratchet, the linked total and the target on one line; run it. Note also that the
+linked total has GROWN since the restatement, which is precisely what an inert
+ratchet permits and why the decision matters.
+
+The decision itself is unchanged and is the owner's: set the ratchet at today's
+value (the convention the JS ratchet and the comment beside `CSS_RATCHET` both
+follow) or at something with deliberate slack. Leaving it alone has now made it
+staler twice, which is worth knowing when deciding.
 
 ---
 
@@ -699,7 +708,7 @@ selector that once invented a "mixed register" grammar problem: a loose pattern
 inventing structure that is not there. **Anchor at column zero when asking what
 is top-level.**
 
-## Step 7 in progress — the shared paths are guarded, the drawer is not yet cut
+## Step 7 as it stood then (historical) — shared paths guarded, drawer not yet cut
 
 `updateTrimUI` was never a UI function. It is **the choke point that clamps
 `trimStart`/`trimEnd` and enforces the 20s loop cap on load**, and the player
@@ -2188,8 +2197,17 @@ The bottom bar was redesigned. What actually shipped, measured on the v219 tree:
     rather than a mechanism.
   * **The Pointer tool was never added.** It appeared in one review mockup and
     not the other, and it costs exactly the breakpoint the redesign bought.
-  * **The 641px cliff is real and STILL unaddressed.** One pixel takes Pad's bar
-    from 359px to 565px. Size classes, not a pixel breakpoint.
+  * **The 641px step is REAL but this line's numbers were never re-measured, and
+    the remedy it asked for was built.** It read "one pixel takes Pad's bar from
+    359px to 565px". Measured on the current tree at 900px tall, Pad's bar goes
+    the OTHER WAY — 608.0px at 640 to 569.3px at 641 — and `scrollWidth` equals
+    `clientWidth` at every width tested on BOTH surfaces, so nothing is clipped
+    or wrapped at the boundary. The remedy this line prescribed ("size classes,
+    not a pixel breakpoint") shipped as `lib/sizeclass.js`, whose own suite pins
+    the boundary at 640/640.4 — so the remaining step IS the size class
+    changing, by design, rather than a cliff. Re-measure before calling it a
+    defect again; the numbers above are the ones this tree produced, not the
+    ones this bullet carried for eight releases.
 
 `harness/verify_layout.py` covers this. It is a NEW suite, as the deferral
 required.
@@ -2313,8 +2331,14 @@ bytes.
    surface having a fix the other lacked. Extracting the shared drawer
    controllers is the highest-value refactor available. Use an AST, not a
    regex; `node` is available. See docs/REFACTOR-v132.md.
-6. **`app.js` serves both editor and player**, so every viewer downloads the
-   authoring surface. A split was ATTEMPTED and REVERTED.
+6. **`app.js` is still loaded by both editor and player** — but "every viewer
+   downloads the authoring surface" is NO LONGER TRUE and this entry said it
+   for several releases. The four `editor_*.js` carves are absent from the
+   player and `verify_player_isolation.py` asserts it; the player links its own
+   `player.css`; the JS target is met. What remains is `app.js` itself plus a
+   handful of reachable editor globals, counted against a zero target by that
+   same suite. The v132 split was attempted and reverted, and the AST tool that
+   was supposed to de-risk a second attempt was built and DISPROVED.
 7. **Payloads are ~476 KB inline in Postgres — the S3 backend now EXISTS**
    (`S3Store`, foot of `skribl/storage.py`, `SKRIBL_MEDIA_BACKEND=s3`).
    SigV4 signed with the stdlib, no boto3, so `requirements.txt` is unchanged.
