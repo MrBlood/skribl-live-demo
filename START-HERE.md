@@ -53,6 +53,28 @@ every case; the lexer checking its own output proves nothing) and
   postgresql, start it, create the `skribl` role and database.
 * `pip install -r constraints.txt --require-hashes --break-system-packages`, and
   `python3 -m playwright install chromium`.
+* **PILLOW IS NOT IN requirements.txt AND THREE SUITES NEED IT.** `verify_cssplit`
+  and `verify_smudgeblur` CRASH without it; `verify_sizeclass` is worse — it
+  reports 81/82 with a single tidy failure while **eight of its assertions
+  silently do not run**, which is the shape of problem this whole harness exists
+  to refuse. With Pillow it is 89/89. A v273 release run reached batch 42 of 44
+  before these three sank it. `pip install Pillow`.
+* **PLAYWRIGHT MUST MATCH THE CHROMIUM BUILD ON DISK.** Check with
+  `ls /opt/pw-browsers` (or wherever `PLAYWRIGHT_BROWSERS_PATH` points): build
+  1194 wants playwright 1.56.0, and 1.62 fails to launch with an executable-not-
+  found error that reads like a missing browser rather than a version mismatch.
+* **THE INTERPRETER MUST BE THE PINNED 3.12, and a container's default may not
+  be.** `verify_docs.py` fails the run outright when `.python-version` and the
+  running interpreter disagree — deliberately, because evidence produced on a
+  different interpreter from the deployed one describes nothing. If the default
+  `python3` is not 3.12, build a venv from the 3.12 that is installed and put it
+  on PATH ahead of everything for the whole run.
+* **PostgreSQL: if `verify_postgres` SKIPS, the seal is weaker than the last
+  one.** It wants `postgresql://skribl:skribl@127.0.0.1:5432/skribl` (override
+  with `SKRIBL_PG_DSN`), and it skips rather than fails when it cannot connect —
+  so a run can go green having never tested the multi-process behaviour SQLite
+  cannot establish. `pg_ctlcluster 16 main start`, then create the role and
+  database, then confirm the suite reports 20/20 rather than SKIPPED.
 * **PostgreSQL dies between tool invocations.** Start it in the SAME invocation
   as whatever needs it, and check `pg_isready`.
 * **Background processes do not survive between invocations**, and one
