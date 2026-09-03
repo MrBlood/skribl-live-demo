@@ -4837,3 +4837,80 @@ CI's job on a PR is to catch a broken push, not to re-verify a verified one.
 `CLAUDE.md` now carries the owner's standing rule -- ask before taking any
 action that could create or increase a bill on their accounts -- because the
 lesson generalises past Actions minutes to every metered thing a host sells.
+
+## v273 -- A posted loop is mono, and the docs stop describing a tree that shrank
+
+Two pieces of work, and the second is the reason the first took a whole session
+to reach.
+
+**The documents were wrong in a way that cost real time.** A session read
+START-HERE's known-open list, picked what it said were the two most valuable
+open items, and found both already shipped -- the touches[0] contact-identity
+lead closed in v264, and the post-time loop crop closed in v102 and re-fixed as
+BUG B in v210. A third pick, "PostgreSQL is UNVERIFIED, not passing", had been
+passing for releases. Nothing in the tree was broken; the map was.
+
+The sweep that followed was mechanical, not editorial, because reading is what
+had failed:
+
+  * Numbers. START-HERE's opening block carried nine byte figures measured at
+    v199 and never revisited. Its "next step, and the honest distance" section
+    argued at length that the player could not reach its 153,600 B JS target
+    without a function-relocation refactor -- while verify_jsstrip.py asserted,
+    every run, that the target IS reached, comfortably, and that the
+    serve-time comment strip is what got there without moving a function. The
+    document and the suite had contradicted each other for a long time and only
+    the suite ran. Both are now pointers to the suites that generate the
+    figures, which is what the file's own preamble had been preaching fifteen
+    lines above the offending block.
+
+  * Claims. "The 641px cliff is real and STILL unaddressed. One pixel takes
+    Pad's bar from 359px to 565px." Measured on this tree: 608.0px at 640 to
+    569.3px at 641 -- the other direction, different magnitude -- with
+    scrollWidth equal to clientWidth at every width on both surfaces, and the
+    size-class remedy the line asked for shipped as lib/sizeclass.js.
+
+  * Absences, which reading cannot find. /library is registered by the
+    blueprint and appeared in NO document, so a host mounting Skribl got that
+    route in their own URL space with no warning. Six SKRIBL_* environment
+    variables were read at runtime and named nowhere a deployer looks; three of
+    them change security behaviour.
+
+**The gates now carry what the prose could not.** verify_docs.py already had
+the right mechanism -- a capability, the suite that proves it, and the phrasings
+that would deny it -- and its pattern list was simply too literal: it matched
+"NOT yet verified on PostgreSQL across processes" and missed "PostgreSQL is
+UNVERIFIED, not passing". The patterns now match the capability plus a denial
+word near it, two new claims cover the JS target and the player carves, and two
+new checks assert that every registered route and every SKRIBL_* the code reads
+is named somewhere. All six were mutation-tested against the ACTUAL historical
+sentences rather than invented ones.
+
+START-HERE also gained a loud divider at the start of its historical band, and
+three headings inside it that asserted currency in their own words -- "the
+newest feature", "most of it still to do", "will not extract" -- now say when
+they were true.
+
+**A posted loop is mono; an exported one is not.** The crop has been post-only
+since v102, but the clip was stored at the source's channel count: half the
+bytes of the largest term in a music-bearing payload_json row, and those rows
+sit inline in Postgres. Measured on verify_loopcap's fixture, an 8s loop went
+1.41 MB to 0.71 MB. lib/postedaudio.js is loaded by the two editor templates
+only, for two reasons each caught by a suite rather than by review: the player
+loads audioloop.js and never posts, so putting the bake there blew
+verify_player_isolation.py's byte ratchet; and a one-line shim in both editors
+would have been a 61st shared name against verify_surfaces.py's ratchet of 60,
+so both post paths call the module directly.
+
+**22.05 kHz WAS TRIED AND REVERTED, and this is the part to remember.** It
+halves the bytes again and puts an audible click on every loop repeat:
+verify_audio.py's seam check goes from 1.32x the mid-loop delta to 12.36x. The
+fault is not in the resampler -- adding a wrapping box filter left the seam
+figure byte-identical at 0.13114, and dropping the resample restored the exact
+pre-change 1.32x. decodeAudioData resamples anything whose rate differs from
+the AudioContext's and zero-pads the edges, so the clip's end stops joining its
+start, which is the whole game for something played with loop = true. A
+compressed codec hits the same wall, and Opus-in-WebM additionally does not
+decode on iOS Safari before 17.4, where it fails silently as a Skribl with no
+music. The owner chose the certain 2x over the conditional 4x.
+
