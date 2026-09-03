@@ -2227,17 +2227,32 @@ demonstrated; both are labelled at their own line in the source.
 since v211. The headless Chromium here reports WebCodecs present but supports no
 H.264 profile.
 
-**4. PostgreSQL is UNVERIFIED, not passing.** External review flagged this as
-the more valuable of the two skips, because SQLite cannot establish the
-multi-process and concurrency behaviour the suite covers. It is recorded by name
-in `RELEASE.md` for that reason.
+**4. PostgreSQL — CLOSED, and this entry outlived the fact by several
+releases.** `verify_postgres.py` reports PASS in the sealed run; read the count
+from `harness/RELEASE.md` rather than from here. The text above described the
+v214 era, when mp4 AND postgres were both skipping and external review flagged
+postgres as the more valuable of the two, because SQLite cannot establish the
+multi-process and concurrency behaviour the suite covers. That argument was
+right and it was acted on. `verify_mp4.py` is now the only skip.
 
-**5. The stray line from the v213 bug report remains unexplained.** A stroke
-that shot off-screen mid-draw, reported once and never reproduced. The lead —
-`getPos`'s `e.touches[0]` assumes the first touch is the drawing finger, which
-a palm landing mid-stroke would break — is UNTESTED. Given that v214 found
-three touch-lifecycle defects the harness could not see, this is more plausible
-now than when it was filed.
+**5. The stray line from the v213 bug report remains unexplained — but its
+LEAD is CLOSED, and this entry said the opposite for several releases.** A
+stroke that shot off-screen mid-draw, reported once and never reproduced. The
+lead was `getPos`'s `e.touches[0]` assuming the first touch on the SCREEN is the
+drawing finger, which a resting thumb or a palm breaks. This entry called that
+lead UNTESTED long after it had been tested, measured and fixed: v264 moved
+contact identity into `skribl/static/lib/eventpoint.js`, which reads
+`targetTouches` — the contacts that began on the element — and both editors and
+the player now share it. The defect was measured rather than argued: with a
+thumb resting off-canvas, a Pad stroke drew at the thumb's x instead of the
+finger's.
+
+**What is still open is the REPORT, not the lead.** The stray line has never
+been shown to be that defect. `DESIGN-DIRECTION.md` has drawn this distinction
+correctly since v264 and this list did not, so the two documents disagreed —
+the same CURRENT-vs-PAST failure an external review already caught in the
+Python-runtime section above. A session trusting this entry goes hunting for a
+bug that is already fixed.
 
 
 **Comments no longer ship to users, and the guidance that followed from that is
@@ -2272,9 +2287,9 @@ bytes.
 5. **The two editors duplicate their controllers.** `app.js` and `flip.js`
    drive the SAME shared partials. Sizes are deliberately not quoted here —
    three documents carried three different line counts for `app.js` and none
-   matched the tree. Run `wc -l skribl/static/app.js skribl/static/flip.js`. Five controllers have been
+   matched the tree. Run `wc -l skribl/static/app.js skribl/static/flip.js`. The controllers
    extracted to `lib/` — `eyedropper`, `recentcolors`, `segslider`,
-   `smoothing`, `colorselect`, `photofit` and `looptrim` — and each is pinned
+   `smoothing`, `colorselect`, `photofit` and `looptrim` — are each pinned
    by parity assertions that prove both editors CALL the shared module, not
    merely that they behave alike. What remains in both photo and music is the
    DRAWER WIRING rather than the logic: the fit slider, drag-to-reposition,
