@@ -28,6 +28,8 @@ the fixture here rather than loosening the tolerance.
 import json
 import math
 import os
+import struct
+import wave
 import pathlib
 import re
 import sys
@@ -42,6 +44,52 @@ except Exception as exc:                                   # pragma: no cover
     print(f"SUITE-SKIPPED: playwright unavailable ({exc})")
     print("No assertions were executed. This is NOT evidence the feed player works.")
     raise SystemExit(77)
+
+# A REAL LOOP, because "the music stops when the drawing stops" is a claim about
+# SOUND and cannot be checked by looking at the DOM. Same 220 Hz tone and the
+# same analyser tap verify_player_isolation.py uses — a second way of measuring
+# audio would be a second thing to drift.
+WAV = "/tmp/inline_loop.wav"
+with wave.open(WAV, "wb") as _w:
+    _w.setnchannels(2)
+    _w.setsampwidth(2)
+    _w.setframerate(44100)
+    _buf = bytearray()
+    for _i in range(6 * 44100):
+        _v = int(18000 * math.sin(2 * math.pi * 220 * _i / 44100))
+        _buf += struct.pack("<hh", _v, _v)
+    _w.writeframes(bytes(_buf))
+
+TAP = """
+window.__an = null;
+(function () {
+  const Orig = window.AudioContext || window.webkitAudioContext;
+  function Tapped() {
+    const ctx = new Orig();
+    const an = ctx.createAnalyser(); an.fftSize = 2048; an.connect(ctx.destination);
+    window.__an = an;
+    const orig = ctx.createBufferSource.bind(ctx);
+    ctx.createBufferSource = function () {
+      const n = orig();
+      const oc = n.connect.bind(n);
+      n.connect = function (d) { try { oc(an); } catch (e) {} return oc(d); };
+      return n;
+    };
+    return ctx;
+  }
+  Tapped.prototype = Orig.prototype;
+  window.AudioContext = Tapped; window.webkitAudioContext = Tapped;
+})();
+"""
+
+PEAK = """() => {
+  if (!window.__an) return -1;
+  const buf = new Uint8Array(window.__an.frequencyBinCount);
+  window.__an.getByteTimeDomainData(buf);
+  let peak = 0;
+  for (const v of buf) peak = Math.max(peak, Math.abs(v - 128));
+  return peak;
+}"""
 
 results = []
 
@@ -100,7 +148,7 @@ POST_PUBLIC = """async (title) => {
 }"""
 
 
-def post_one(b, title):
+def post_one(b, title, music=False):
     """Record a drawing in Pad and post it PUBLICLY. Returns its public id."""
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     errs = []
@@ -112,6 +160,15 @@ def post_one(b, title):
     pg.wait_for_timeout(600)
     pg.click("#recordBtn")
     pg.wait_for_timeout(400)
+    if music:
+        # TRIMMED, not merely attached: an untrimmed upload can be posted
+        # without ever building a loop, which would leave the thing under test
+        # unexercised. Same reasoning as verify_player_isolation.py's fixture.
+        pg.set_input_files("#musicInput", WAV)
+        pg.wait_for_timeout(4000)
+        pg.evaluate("() => { trimStart = 1.0; trimEnd = 3.0; loopCrossfadeMs = 120; "
+                    "if (typeof updateTrimUI === 'function') updateTrimUI(); }")
+        pg.wait_for_timeout(1200)
     res = pg.evaluate(POST_PUBLIC, title)
     pg.close()
     if not isinstance(res, dict) or not res.get("id"):
@@ -164,12 +221,15 @@ with sync_playwright() as sp:
     # ---- fixture: two real posts -------------------------------------------
     id_a, errs_a = post_one(b, "Harness fixture A")
     id_b, errs_b = post_one(b, "Harness fixture B")
-    if not id_a or not id_b:
-        check("two drawings posted through the API (fixture)", False,
-              f"got {id_a!r}, {id_b!r}; errors: {(errs_a + errs_b)[:2]}")
+    id_m, errs_m = post_one(b, "Harness fixture with sound", music=True)
+    if not (id_a and id_b and id_m):
+        check("three drawings posted through the API, one with a loop (fixture)", False,
+              f"got {id_a!r}, {id_b!r}, {id_m!r}; "
+              f"errors: {(errs_a + errs_b + errs_m)[:2]}")
         print("\n" + "=" * 62 + "\n0/1 passed")
         sys.exit(1)
-    check("two drawings posted through the API (fixture)", True, f"{id_a}, {id_b}")
+    check("three drawings posted through the API, one with a loop (fixture)",
+          True, f"{id_a}, {id_b}, {id_m}")
 
     # ---- the macro's server-rendered markup --------------------------------
     # Before any script runs, a post must already be something. This is the
@@ -202,12 +262,13 @@ with sync_playwright() as sp:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("request", lambda r: payload_reqs.append(r.url)
           if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
+    pg.add_init_script(TAP)     # before any page script constructs a context
     pg.goto(BASE + "/feed", wait_until="load")
     pg.wait_for_timeout(1500)
 
     mounted = pg.evaluate("() => window.SkriblInline ? window.SkriblInline.players().length : -1")
     check("the feed mounts one in-post player per listed Skribl",
-          mounted >= 2, f"{mounted} mounted")
+          mounted >= 3, f"{mounted} mounted")
     check("no page errors on the feed", not errs, "; ".join(errs[:2]))
 
     # NOTHING FETCHES UNTIL SOMEBODY ASKS. GET /api/skribls/<id> returns the
@@ -291,6 +352,78 @@ with sync_playwright() as sp:
     check("the sound choice is remembered for the SESSION, not forever",
           persisted == "1" and pg.evaluate("() => localStorage.getItem('skribl.inline.sound')") is None,
           f"session={persisted!r}")
+
+    # ---- LOOP, AND THE MUSIC THAT MUST STOP WITH THE DRAWING ---------------
+    #
+    # A post has exactly two viewer controls, and this is the second. It is PER
+    # POST rather than page-wide (mute is page-wide) because repeating is a
+    # property of the drawing in front of you; the asymmetry is deliberate and
+    # asserted here so it cannot be quietly unified.
+    loop_state = pg.evaluate("""(id) => {
+        const el = document.querySelector('[data-skribl-id="' + id + '"]');
+        const btn = el.querySelector('.skribl-inline-loop');
+        return { present: !!btn, pressed: btn && btn.getAttribute('aria-pressed'),
+                 noloop: el.classList.contains('is-noloop') }; }""", id_m)
+    check("a post carries a loop control", loop_state["present"], json.dumps(loop_state))
+    check("and it starts on, which is what a post did before it existed",
+          loop_state["pressed"] == "true" and loop_state["noloop"] is False,
+          json.dumps(loop_state))
+
+    # The audio fixture, played and unmuted, so there is something to stop.
+    pg.evaluate("() => window.SkriblInline.setSoundOn(true)")
+    pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_m)
+    pg.wait_for_timeout(1500)
+    m_state = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
+    check("the Skribl with a loop reports its audio", m_state["hasAudio"] is True,
+          json.dumps(m_state))
+    playing_peak = max(pg.evaluate(PEAK) for _ in range(6))
+    check("its music is actually audible while it plays",
+          playing_peak > 4,
+          f"analyser peak {playing_peak} — measured on the audio graph, not "
+          f"inferred from a node existing")
+
+    # TURN THE LOOP OFF and let the replay run past its end.
+    pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"] "
+                ".skribl-inline-loop').click()", id_m)
+    after_click = pg.evaluate("""(id) => {
+        const el = document.querySelector('[data-skribl-id="' + id + '"]');
+        return { noloop: el.classList.contains('is-noloop'),
+                 pressed: el.querySelector('.skribl-inline-loop')
+                            .getAttribute('aria-pressed') }; }""", id_m)
+    check("the control reports the state it just changed to",
+          after_click["noloop"] is True and after_click["pressed"] == "false",
+          json.dumps(after_click))
+
+    pg.wait_for_function(
+        "(id) => window.SkriblInline.find(id).state().state !== 'playing'",
+        arg=id_m, timeout=20000)
+    ended = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
+    check("with the loop off the replay stops instead of going round",
+          ended["state"] != "playing"
+          and ended["elapsedMs"] >= ended["totalMs"] - 80,
+          json.dumps(ended))
+
+    # THE ASSERTION THIS BLOCK EXISTS FOR. A finished drawing with a loop still
+    # playing under it is a post that will not shut up. Measured on the audio
+    # graph after the replay has ended, not asserted from the DOM.
+    pg.wait_for_timeout(400)
+    stopped_peak = max(pg.evaluate(PEAK) for _ in range(6))
+    check("AND THE MUSIC STOPS WITH IT",
+          stopped_peak <= 1,
+          f"analyser peak {stopped_peak} after the drawing finished (it was "
+          f"{playing_peak} while playing)")
+
+    # Turning it back on restarts a replay sitting at its end, rather than
+    # appearing to do nothing until the next tap.
+    pg.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"] "
+                ".skribl-inline-loop').click()", id_m)
+    pg.wait_for_timeout(700)
+    resumed = pg.evaluate("(id) => window.SkriblInline.find(id).state()", id_m)
+    check("turning it back on starts it again rather than doing nothing",
+          resumed["state"] == "playing", json.dumps(resumed))
+    pg.evaluate("() => window.SkriblInline.stopAll()")
+    pg.evaluate("() => window.SkriblInline.setSoundOn(false)")
+    pg.wait_for_timeout(200)
 
     # ---- scrolling away ----------------------------------------------------
     pg.evaluate("""() => {
@@ -632,7 +765,12 @@ with sync_playwright() as sp:
     # second request on the profile to save a third of a kilobyte on the feed.
     # If this number moves again, the question is whether the FEED is the caller
     # that needs it.
-    EMBED_RATCHET = 26_000
+    #
+    # 26,000 -> 27,500 for the LOOP CONTROL: a post's second viewer control,
+    # about 1.5 KB across the stylesheet and the handler. Unlike the transport
+    # above, this one is paid for by the caller that uses it — the feed is
+    # exactly where somebody wants a two-second drawing to stop repeating.
+    EMBED_RATCHET = 27_500
     # feed.js is excluded: it is the PREVIEW PAGE's own script (fetch the
     # listing, clone the macro), not part of what a host embeds — a host writes
     # that loop themselves against their own posts.

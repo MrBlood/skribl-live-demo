@@ -2497,6 +2497,55 @@ that would have caught the original.
 
 **NOT SEALED**, same as the three before it.
 
+## A post gets a loop control, and the music stops with the drawing (NOT SEALED)
+
+Owner's call, and it reverses a decision recorded three sections up. The in-post
+player shipped with ONE viewer control — mute — on the argument that a feed is
+not a media player and a Pad replay stopping dead on its finished drawing reads
+as a broken GIF. Both halves of that are still true; what was missing is that
+some drawings are two seconds long and a viewer may simply want them to stop.
+
+**Two controls now, in one cluster at bottom-left, and the asymmetry between
+them is deliberate:**
+
+    mute   PAGE-WIDE, session-remembered, off by default
+    loop   PER POST, not remembered, on by default
+
+Sound is environmental — someone in a quiet room wants it off for the whole
+feed. Repeating is a property of the drawing in front of you, and a two-second
+loop you want to watch twice says nothing about the next post. A silent Skribl
+hides its mute button and keeps its loop button, because a silent drawing still
+repeats.
+
+**WHEN THE DRAWING STOPS, THE MUSIC STOPS**, and that is one call rather than
+two: the end of a non-looping replay routes through `pause()`, which takes the
+audio down in the same breath. It could have been a `cancelAnimationFrame` and
+a class change, and then a finished drawing would sit there with a loop still
+playing under it — a post that will not shut up, which is worse than one that
+never started. `verify_inline.py` measures it on the AUDIO GRAPH with the
+analyser tap verify_player_isolation.py uses, and it is mutation-tested: stop
+the drawing without routing through `pause()` and the peak stays at 71 where it
+should read 0.
+
+That suite grew a third fixture WITH A REAL TRIMMED LOOP to make the assertion
+possible. "The music stops" is a claim about sound and cannot be checked from
+the DOM.
+
+**Turning loop back on while a replay sits finished restarts it**, rather than
+appearing to do nothing until the next tap.
+
+**The embed ratchet moved 26,000 -> 27,500** for about 1.5 KB of stylesheet and
+handler. Unlike the transport the profile tab needed, this one is paid for by
+the caller that uses it.
+
+**Three documents said "mute is the only viewer control"** and are corrected:
+README.md, docs/INTEGRATION.md and the /feed page's own note. A claim that
+becomes false the moment a control is added is exactly what `verify_docs.py`
+cannot catch, because it is prose about behaviour rather than a name or a
+number.
+
+**NOT SEALED**, same as the four before it.
+
 ## Known-open, in the order worth doing
 
 ### Open at the v214 seal

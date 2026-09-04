@@ -71,7 +71,17 @@
  * defensible default for media that starts on a tap in a public place, and
  * unmuting one post unmutes all of them for the session (sessionStorage, not
  * localStorage: a preference set in a feed should not follow someone into next
- * week). Mute is the only viewer control there is — see inlineplayer.css.
+ * week).
+ *
+ * REPEATING IS ALSO THE VIEWER'S, but PER POST rather than page-wide. Sound is
+ * environmental; repeating is a property of the drawing in front of you, and a
+ * two-second loop you want to watch twice says nothing about the next post. On
+ * by default — that is what a post did before the control existed.
+ *
+ * WHEN A NON-LOOPING REPLAY ENDS, THE MUSIC ENDS WITH IT. The end of the replay
+ * goes through pause(), which stops the audio in the same call, so a finished
+ * drawing can never be left with a loop still playing under it. Those two are
+ * the only viewer controls — see inlineplayer.css.
  *
  * NOTHING FETCHES UNTIL SOMEBODY ASKS. The idle state is /s/<id>/card.png, one
  * cached image; GET /api/skribls/<id> is issued on the first play and never
@@ -298,6 +308,7 @@
     var durText = el.querySelector('.skribl-inline-dur-text');
     var playEl = el.querySelector('.skribl-inline-play');
     var muteBtn = el.querySelector('.skribl-inline-mute');
+    var loopBtn = el.querySelector('.skribl-inline-loop');
     var errEl = el.querySelector('.skribl-inline-err');
     /* An id is NOT required — a draft's skribl is attached by payload and has
      * none (api.attach below). The canvas and the two chrome elements are, and
@@ -319,6 +330,12 @@
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
     var music = null;
+    /* PER POST, unlike mute, and that asymmetry is deliberate. Sound is
+     * environmental — someone in a quiet room wants it off for the whole feed,
+     * so unmuting one post unmutes them all. Repeating is a property of THIS
+     * drawing: a two-second loop you want to watch again is not a statement
+     * about the next post. So this is per instance and not remembered; the
+     * default is on, which is what a post did before there was a control. */
     var looping = true;
 
     var me = {
@@ -340,7 +357,8 @@
        * broken, and a Flip document IS a loop. A library stage can offer the
        * choice, because somebody looking at one drawing on purpose may want it
        * to stop. */
-      setLoop: function (on) { looping = !!on; },
+      setLoop: function (on) { setLooping(on); },
+      looping: function () { return looping; },
       state: function () {
         return { id: id, state: state, totalMs: totalMs,
                  elapsedMs: state === 'playing' ? elapsed + (now() - t0) : elapsed,
@@ -587,6 +605,26 @@
       srcNode = gainNode = null;
     }
 
+    function applyLoop() {
+      el.classList.toggle('is-noloop', !looping);
+      if (!loopBtn) return;
+      loopBtn.setAttribute('aria-pressed', looping ? 'true' : 'false');
+      loopBtn.setAttribute('aria-label', looping ? 'Stop repeating' : 'Repeat');
+      loopBtn.title = looping ? 'Repeating' : 'Plays once';
+    }
+
+    function setLooping(on) {
+      looping = !!on;
+      applyLoop();
+      /* Turning it back ON while the replay is sitting finished starts it
+       * again — otherwise the button appears to do nothing until the next tap,
+       * which reads as broken. */
+      if (looping && state !== 'playing' && elapsed >= totalMs && totalMs) {
+        elapsed = 0;
+        play();
+      }
+    }
+
     function applySound() {
       var on = soundOn();
       el.classList.toggle('is-muted', !on);
@@ -603,16 +641,22 @@
     function frame() {
       var at = elapsed + (now() - t0);
       if (at >= totalMs) {
-        /* Both kinds loop by default, for different reasons: a Flip document IS
-         * a loop, and a Pad replay in a feed reads as a broken GIF if it stops
-         * on the finished drawing while its music keeps going. A post never
-         * gets a toggle for this; a library stage does (setLoop). */
+        /* Both kinds loop by DEFAULT, for different reasons: a Flip document IS
+         * a loop, and a Pad replay that stopped dead on the finished drawing
+         * reads as a broken GIF. The viewer can turn it off per post. */
         if (!looping) {
-          elapsed = totalMs;
           render(totalMs, false);
+          /* WHEN THE DRAWING STOPS, THE MUSIC STOPS. pause() takes the audio
+           * down with the replay — one call, so the two cannot come apart —
+           * and that coupling is the whole point of routing the end of a
+           * non-looping replay through it rather than just cancelling the rAF.
+           * A loop still playing under a drawing that has finished is a post
+           * that will not shut up, which is worse than one that never started.
+           */
           pause();
           /* Settled at the END, not back at the start: someone who asked it not
-           * to loop wants to look at the finished drawing. */
+           * to loop wants to look at the finished drawing. pause() computes
+           * elapsed from the clock, so pin it after. */
           elapsed = totalMs;
           return;
         }
@@ -690,6 +734,13 @@
       });
     }
 
+    if (loopBtn) {
+      loopBtn.addEventListener('click', function (e) {
+        e.stopPropagation();              /* not a play/pause tap */
+        setLooping(!looping);
+      });
+    }
+
     if (poster) {
       /* A post whose card 404s (a store that lost the thumbnail, a host without
        * the card route) must not show a broken-image glyph in the feed. */
@@ -697,6 +748,7 @@
     }
 
     applySound();
+    applyLoop();
     return me;
   }
 

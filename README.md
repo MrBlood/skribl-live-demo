@@ -119,8 +119,11 @@ to the full player a shared `/s/<id>` link opens. A host embeds it in two lines:
 Idle, a post is one cached image — the share card at `/s/<id>/card.png`, cropped
 back to the drawing, about 20 KB — and a play button; nothing is fetched until
 somebody taps. Playing, it redraws the drawing with a progress
-hairline and a nib at the pen. Mute is the only viewer control, sound is off by
-default, one Skribl plays at a time, and scrolling one out of view settles it.
+hairline and a nib at the pen. There are two viewer controls and only two —
+**mute** (page-wide, session-remembered, off by default) and **loop** (per post,
+on by default; turning it off stops the drawing at its last frame and stops the
+music with it). One Skribl plays at a time, and scrolling one out of view
+settles it.
 `/feed` is that page, live, over whatever this deployment has posted publicly.
 
 **Drawing one from a host's composer.** `?compose=1` opens the Pad as an

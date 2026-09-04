@@ -163,14 +163,22 @@
             </div>
           </div>
           <div class="skribl-inline-dur" hidden><span class="skribl-inline-dur-text"></span></div>
-          <button type="button" class="skribl-inline-mute" aria-pressed="true" aria-label="Unmute">
-            <svg class="skribl-inline-on" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
-            </svg>
-            <svg class="skribl-inline-off" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>
-            </svg>
-          </button>
+          <div class="skribl-inline-controls">
+            <button type="button" class="skribl-inline-mute" aria-pressed="true" aria-label="Unmute">
+              <svg class="skribl-inline-on" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
+              </svg>
+              <svg class="skribl-inline-off" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>
+              </svg>
+            </button>
+            <button type="button" class="skribl-inline-loop" aria-pressed="true" aria-label="Stop repeating">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </button>
+          </div>
           <div class="skribl-inline-prog"></div>
           <div class="skribl-inline-nib"></div>
           <div class="skribl-inline-err" hidden></div>
@@ -219,9 +227,11 @@
     <div class="note">
       <p><b>This is the in-post player.</b> Tap a Skribl to play it: the drawing
       redraws itself, a hairline runs along the bottom edge, and the nib shows
-      where the pen is. Sound is off until you turn it on, and turning it on is
-      the only control a post has — the full transport lives on the shared link
-      at <code>/s/&lt;id&gt;</code>, not in every post.</p>
+      where the pen is. Two controls, bottom-left: <b>sound</b>, off until you
+      turn it on and then on for the whole page, and <b>loop</b>, on until you
+      turn it off — which leaves the drawing finished and stops the music with
+      it. Nothing else: the full transport lives on the shared link at
+      <code>/s/&lt;id&gt;</code>, not in every post.</p>
       <p>Only one plays at a time, and scrolling one out of view settles it.
       Nothing is fetched until you tap: an idle post is one cached image.</p>
       <p>A host embeds it in two lines:

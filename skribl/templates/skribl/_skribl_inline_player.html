@@ -83,17 +83,26 @@
   <div class="skribl-inline-dur" hidden>
     <span class="skribl-inline-dur-text"></span>
   </div>
-  {# Hidden by .is-silent until the payload says there is audio — a mute button
-     on a silent drawing is a control that does nothing. #}
-  <button type="button" class="skribl-inline-mute"
-          aria-pressed="true" aria-label="Unmute" title="Sound is off">
-    <svg class="skribl-inline-on" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
-    </svg>
-    <svg class="skribl-inline-off" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>
-    </svg>
-  </button>
+  {# Two controls, in one cluster. Mute hides itself on a silent Skribl
+     (.is-silent); loop stays, because a silent drawing still repeats. #}
+  <div class="skribl-inline-controls">
+    <button type="button" class="skribl-inline-mute"
+            aria-pressed="true" aria-label="Unmute" title="Sound is off">
+      <svg class="skribl-inline-on" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
+      </svg>
+      <svg class="skribl-inline-off" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>
+      </svg>
+    </button>
+    <button type="button" class="skribl-inline-loop"
+            aria-pressed="true" aria-label="Stop repeating" title="Repeating">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+        <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+    </button>
+  </div>
   <div class="skribl-inline-prog"></div>
   <div class="skribl-inline-nib"></div>
   <div class="skribl-inline-err" hidden></div>

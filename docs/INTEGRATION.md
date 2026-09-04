@@ -102,11 +102,20 @@ issued on the first tap and never again for that post. Do not prefetch it: that
 endpoint returns the whole payload, base64 audio included.
 
 **What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
-with a progress hairline along the bottom edge and a nib at the pen. Sound is
-off until they turn it on, and that is the only control — no scrub, no speed, no
-frame-step; those live on `/s/<id>`. One Skribl plays at a time, page-wide.
-Scrolling a playing post out of view settles it. A post whose payload will not
-load says so rather than sitting dead.
+with a progress hairline along the bottom edge and a nib at the pen. Two
+controls, and only two — no scrub, no speed, no frame-step; those live on
+`/s/<id>`:
+
+- **Mute**, off by default and **page-wide**: sound is environmental, so
+  unmuting one post unmutes the feed for that session (`sessionStorage`).
+- **Loop**, on by default and **per post**: repeating is a property of the
+  drawing in front of you, not a statement about the next one. Turning it off
+  leaves the drawing on its last frame — and stops the music with it, in the
+  same call, so a finished drawing can never be left with a loop playing under
+  it.
+
+One Skribl plays at a time, page-wide. Scrolling a playing post out of view
+settles it. A post whose payload will not load says so rather than sitting dead.
 
 **Three things to know before you wire it up.**
 

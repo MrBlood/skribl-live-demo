@@ -160,12 +160,31 @@
 
 .skribl-inline.is-playing .skribl-inline-dur { opacity: 0; }
 
-/* Mute is the ONLY viewer control. Scrub, speed and frame-step belong on the
-   full player at /s/<id>; a post that grows a transport stops being a post. */
-.skribl-inline-mute {
+/* TWO viewer controls, and only two: mute and loop. Scrub, speed and
+   frame-step still belong on the full player at /s/<id> — a post that grows a
+   transport stops being a post — but these two are about whether the thing in
+   front of you keeps making noise and keeps moving, which is the viewer's
+   business in a way that seeking is not.
+
+   They share one cluster at bottom-left so a post has one control area rather
+   than two, and so a silent Skribl (which hides mute) does not leave a lone
+   button floating in the corner. */
+.skribl-inline-controls {
   position: absolute;
   left: 9px;
   bottom: 9px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.skribl-inline.is-playing .skribl-inline-controls,
+.skribl-inline:hover .skribl-inline-controls,
+.skribl-inline:focus-within .skribl-inline-controls { opacity: 1; }
+
+.skribl-inline-mute,
+.skribl-inline-loop {
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -176,26 +195,38 @@
   color: #eeeeff;
   cursor: pointer;
   padding: 0;
-  opacity: 0;
-  transition: opacity 0.18s, background 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.skribl-inline.is-playing .skribl-inline-mute,
-.skribl-inline:hover .skribl-inline-mute { opacity: 1; }
-
 /* A silent Skribl has nothing to mute, so it shows no mute button at all
-   rather than a control that does nothing. */
+   rather than a control that does nothing. Loop stays: a silent drawing still
+   repeats. */
 .skribl-inline.is-silent .skribl-inline-mute { display: none; }
 
-.skribl-inline-mute:hover { background: rgba(20, 16, 40, 0.78); }
+.skribl-inline-mute:hover,
+.skribl-inline-loop:hover { background: rgba(20, 16, 40, 0.78); }
 
-.skribl-inline-mute:focus-visible {
-  opacity: 1;
+.skribl-inline-mute:focus-visible,
+.skribl-inline-loop:focus-visible {
   outline: 2px solid #7c5cff;
   outline-offset: 1px;
 }
 
-.skribl-inline-mute svg {
+/* LOOP IS ON BY DEFAULT, so the lit state is the resting state and the button
+   dims when it is switched OFF — the opposite of mute, whose resting state is
+   muted. Each reads as "what is currently true", not "what this button does". */
+.skribl-inline-loop {
+  color: #cfc4ff;
+  border-color: rgba(124, 92, 255, 0.45);
+}
+
+.skribl-inline.is-noloop .skribl-inline-loop {
+  color: #9aa3b4;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.skribl-inline-mute svg,
+.skribl-inline-loop svg {
   width: 16px;
   height: 16px;
   fill: none;
