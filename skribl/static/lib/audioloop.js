@@ -141,7 +141,12 @@
   // in when one is set (the clip is then shorter by the crossfade length), so
   // the posted clip IS the loop. Same state-object contract as
   // buildLoopAudioBuffer, minus audioCtx: no Web Audio context needed.
-  function buildTrimmedLoopWav(state) {
+  // The slice-and-fold half of a loop bake, with no encoding opinion. Split out
+  // of buildTrimmedLoopWav when buildPostedLoopWav (below) needed the SAME
+  // window and the SAME crossfade fold but a different encode. Two copies of
+  // this arithmetic is exactly how the two surfaces drifted apart before lib/
+  // existed; there is one copy and both builders call it.
+  function loopChannels(state) {
     const currentAudioBuffer = state.currentAudioBuffer;
     const trimStart = state.trimStart;
     const trimEnd = state.trimEnd;
@@ -159,9 +164,20 @@
     const xfadeFrames = Math.min(Math.floor((loopCrossfadeMs / 1000) * sr), Math.floor(frames / 2));
     if (loopCrossfadeMs > 0 && xfadeFrames > 0) {
       const built = buildLoopChannels(currentAudioBuffer, startFrame, frames, xfadeFrames);
-      return { dataUrl: encodeWavFromChannels(built.channels, sr), duration: built.frames / sr };
+      return { channels: built.channels, frames: built.frames, sampleRate: sr };
     }
-    return { dataUrl: audioBufferToWavDataURL(currentAudioBuffer, startFrame, frames), duration: frames / sr };
+    const channels = [];
+    for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) {
+      channels.push(currentAudioBuffer.getChannelData(c).subarray(startFrame, startFrame + frames));
+    }
+    return { channels: channels, frames: frames, sampleRate: sr };
+  }
+
+  function buildTrimmedLoopWav(state) {
+    const lc = loopChannels(state);
+    if (!lc) return null;
+    return { dataUrl: encodeWavFromChannels(lc.channels, lc.sampleRate),
+             duration: lc.frames / lc.sampleRate };
   }
 
   global.SkriblAudioLoop = {
@@ -169,6 +185,7 @@
     buildLoopAudioBuffer: buildLoopAudioBuffer,
     audioBufferToWavDataURL: audioBufferToWavDataURL,
     encodeWavFromChannels: encodeWavFromChannels,
+    loopChannels: loopChannels,
     buildTrimmedLoopWav: buildTrimmedLoopWav
   };
 })(typeof window !== 'undefined' ? window : this);

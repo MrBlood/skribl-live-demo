@@ -1,0 +1,50 @@
+# What the HARNESS needs, which is not what the APP needs.
+#
+# The root requirements.txt is the application's runtime: Flask, SQLAlchemy,
+# psycopg, alembic, gunicorn, dotenv. Nothing here is imported by app.py or by
+# anything under skribl/ — these are test-only, and a production install must
+# not carry them. Pillow alone is a C-extension image library that every deploy
+# would build and never call.
+#
+# WHY THIS FILE EXISTS AT ALL. Until v273 the harness's dependencies were
+# declared NOWHERE. harness/README.md said `pip install flask_sqlalchemy`, which
+# is one package out of the eight a run needs, and neither Playwright nor Pillow
+# was named in any file. A v273 release run reached batch 42 of 44 before
+# failing on the absence of Pillow, and the failure it produced was worse than a
+# crash: see the note beside Pillow below.
+#
+#     pip install -r requirements.txt -r harness/requirements.txt
+#     python3 -m playwright install chromium
+#
+# ---------------------------------------------------------------------------
+
+# Pillow — THREE SUITES NEED IT AND ONE OF THEM LIES WITHOUT IT.
+#
+# verify_cssplit.py and verify_smudgeblur.py import PIL at module scope and
+# crash outright when it is missing, which is loud and therefore harmless.
+#
+# verify_sizeclass.py is the dangerous one. It guards its pixel-measuring
+# assertions on Pillow being importable, so without it the suite reports
+# 81/82 — a single tidy failure — while EIGHT of its assertions silently do not
+# run. With Pillow it is 89/89. A suite that quietly drops coverage and still
+# prints a near-perfect score is the exact failure this harness exists to
+# refuse, and it was doing it to itself. Do not "fix" that guard by deleting
+# the assertions; install the dependency.
+Pillow>=10.0,<14.0
+
+# Playwright — AND ITS VERSION IS COUPLED TO A BROWSER BUILD ON DISK.
+#
+# Every browser-driving suite uses it. The coupling is the trap: a playwright
+# release expects one specific Chromium build number, and launching against a
+# different one fails with an executable-not-found error that reads like a
+# missing browser rather than a version mismatch. `python3 -m playwright install
+# chromium` fetches the right build for whatever version resolves here, so that
+# is the safe path.
+#
+# In a container that ships a PRE-INSTALLED Chromium (PLAYWRIGHT_BROWSERS_PATH
+# pointing at one, and browser downloads disabled), you cannot fetch — you must
+# instead pin playwright to match what is already there. Check the build number
+# with `ls $PLAYWRIGHT_BROWSERS_PATH`; build 1194 wants playwright 1.56.x, and
+# 1.62 does not launch against it. The range below is deliberately narrow for
+# that reason: widen it only after checking the browser you actually have.
+playwright>=1.55,<1.57

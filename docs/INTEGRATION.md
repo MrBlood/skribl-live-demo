@@ -48,6 +48,17 @@ That is the whole integration. You now have:
     GET  /skribl/api/skribls              feed listing (metadata only)
     GET  /skribl/api/skribls/<id>         one Skribl, with payload
     GET  /skribl/media/<key>              stored media, authorised per post
+    GET  /skribl/library                  CONCEPT PREVIEW — see the warning below
+
+**`/library` is registered by the blueprint and is NOT part of the sealed
+feature set.** Mounting Skribl gives your host that route whether you want it or
+not. It renders a per-user library with an inline player, and its tiles are
+self-contained demo drawings rather than anything from `GET /api/skribls` — it
+exists so the player can be iterated on against something that looks real. This
+route was in no document at all until v273, which is how a host would first have
+met it in their own URL space. If you do not want it, do not route to it: it
+takes no arguments, reads no request state and reaches no database, so leaving
+it unlinked is enough.
 
 `url_for("skribl.skribl_player", public_id=...)` builds links. Skribl builds its
 own share URLs the same way, so they are correct under any prefix.
@@ -378,7 +389,7 @@ abuse reporting; users reporting content is a host feature.
 ## Checking your integration
 
 ```bash
-python3 harness/verify_integration.py        # 14 assertions, no browser, seconds
+python3 harness/verify_integration.py        # no browser, seconds
 ```
 
 It builds a host app, mounts Skribl, and checks the homepage is not stolen,

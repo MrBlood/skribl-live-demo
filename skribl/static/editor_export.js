@@ -540,10 +540,14 @@
         }
         mixDest = audioContextForExport.createMediaStreamDestination();
 
-        // Prefer the SAME baked loop the post uses: buildTrimmedLoopWav() folds
-        // the crossfade and slices [trimStart,trimEnd] into one clip, so the
-        // exported audio loops seamlessly (no hard-cut seam click) and matches
-        // the posted Skribl exactly. Decode it into the export context and play
+        // The same WINDOW and the same FOLD the post uses — buildTrimmedLoopWav()
+        // slices [trimStart,trimEnd] and folds the crossfade into one clip, so
+        // the exported audio loops seamlessly (no hard-cut seam click). It is
+        // NOT the same FILE as the post any more: a post bakes mono at 22.05 kHz
+        // to keep payload_json small (buildPostedLoopWav), and an export is a
+        // download where that trade would just be audible damage. Timing and
+        // seam are identical; rate and channel count are not. Decode it into the
+        // export context and play
         // it as a gapless looping AudioBufferSourceNode (started in runTimeline).
         let loopBuf = null;
         try {

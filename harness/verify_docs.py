@@ -40,6 +40,13 @@ BEGIN, END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
 DOCS = [ROOT / "README.md", ROOT / "harness" / "README.md",
         ROOT / "docs" / "HANDOFF.md", ROOT / "START-HERE.md"]
 
+def _py_sources():
+    """Every Python file that can register a route or read a knob."""
+    out = [Path("app.py")]
+    out += [p.relative_to(ROOT) for p in (ROOT / "skribl").rglob("*.py")]
+    return [p for p in out if (ROOT / p).is_file()]
+
+
 print("\nDOCS — the generated stanza is present and current")
 for doc in DOCS:
     check(f"{doc.relative_to(ROOT)} carries the generated stanza",
@@ -118,6 +125,90 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
 gone = sorted(p for p in paths if not (ROOT / p).is_file())
 check("no document names a repo file that is not there",
       not gone, ", ".join(gone))
+
+# v273: the reverse of the check above, in two dimensions the docs had drifted
+# on unnoticed. Both were found by cross-checking the tree against every .md and
+# both had real gaps; neither could have been found by reading, because what is
+# missing from a document is invisible while you read it.
+
+# EVERY REGISTERED ROUTE MUST BE NAMED SOMEWHERE. `/library` was registered by
+# the blueprint and appeared in no document at all — so a host mounting Skribl
+# got that route in their own URL space, serving an unsealed concept preview,
+# with nothing in INTEGRATION.md's route list to warn them. A route is the most
+# public surface this project has; an undocumented one is a surprise delivered
+# to somebody else's users. <public_id> and <id> are the same placeholder as far
+# as this check is concerned — the docs use the shorter spelling.
+_src = "".join((ROOT / p).read_text(encoding="utf-8")
+               for p in _py_sources())
+_routes = set(re.findall(r'@\w+\.(?:route|get|post|put|delete|patch)\('
+                         r'\s*["\']([^"\']+)', _src))
+_undoc_routes = sorted(r for r in _routes
+                       if r not in _all_md_text
+                       and r.replace("public_id", "id") not in _all_md_text)
+check("every route the blueprint registers is named in at least one .md",
+      not _undoc_routes,
+      ", ".join(_undoc_routes) + " — README.md's route table and "
+      "docs/INTEGRATION.md's list are where a host looks")
+
+# EVERY SKRIBL_* THE CODE READS MUST BE NAMED SOMEWHERE. Six were not:
+# SKRIBL_RATE_HMAC_KEY, SKRIBL_ALLOW_EPHEMERAL_SECRET, SKRIBL_FORCE_SECURE_COOKIES,
+# SKRIBL_MAX_REQUEST_BYTES, SKRIBL_MAX_GROUPS_PER_FRAME, SKRIBL_RATE_CLEANUP_BATCH.
+# The first three change SECURITY behaviour — whether cookies are Secure,
+# whether a placeholder SECRET_KEY boots, and what salts the rate limiter's
+# identity hash — and a deployer who never learns a knob exists cannot set it.
+# .env.example counts as documentation here: it is the file they actually open.
+_env_named = _all_md_text + (ROOT / ".env.example").read_text(encoding="utf-8")
+_env_read = set(re.findall(r'environ(?:\.get)?\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+_env_read |= set(re.findall(r'_env_(?:int|bool|str)\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+_env_read |= set(re.findall(r'config\.get\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+_undoc_env = sorted(v for v in _env_read
+                    if v.startswith("SKRIBL_") and v not in _env_named)
+check("every SKRIBL_* the code reads is named in a doc or .env.example",
+      not _undoc_env,
+      ", ".join(_undoc_env) + " — a knob nobody can find is a knob nobody sets")
+
+# v273: the harness's own dependencies were declared NOWHERE until this release.
+# harness/README.md said `pip install flask_sqlalchemy` — one package of the
+# eight a run needs — and neither Playwright nor Pillow appeared in any file. A
+# release run reached batch 42 of 44 before dying on the absence of Pillow, and
+# verify_sizeclass.py had been reporting 81/82 with eight assertions silently
+# not running. Test-only deps are deliberately NOT in the root requirements.txt,
+# which is the production runtime and the hashed lock; they live in
+# harness/requirements.txt, and this asserts that file actually covers what the
+# suites import.
+_HARNESS_REQ = ROOT / "harness" / "requirements.txt"
+check("harness/requirements.txt exists", _HARNESS_REQ.is_file(),
+      "the harness's dependencies must be declared somewhere a fresh container can read")
+if _HARNESS_REQ.is_file():
+    # PARSE REQUIREMENT LINES, do not substring-search the file. The first
+    # version of this checked `name in text.lower()` and its own mutation test
+    # caught it out: deleting the Pillow requirement left the word "Pillow" in
+    # the explanatory comment above it, so the gate passed on a MENTION of a
+    # dependency that was no longer declared. A comment is not an install.
+    def _declared_names(*paths):
+        out = set()
+        for path in paths:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.split("#", 1)[0].strip()
+                if not line or line.startswith("-"):
+                    continue
+                out.add(re.split(r"[<>=!~\[;\s]", line, 1)[0].strip().lower())
+        return out
+    _declared = _declared_names(_HARNESS_REQ, ROOT / "requirements.txt")
+    _IMPORT_TO_DIST = {"PIL": "pillow", "playwright": "playwright",
+                       "flask": "flask", "sqlalchemy": "sqlalchemy",
+                       "psycopg": "psycopg", "alembic": "alembic",
+                       "dotenv": "python-dotenv", "gunicorn": "gunicorn"}
+    _imported = set()
+    for _s in (ROOT / "harness").glob("verify_*.py"):
+        _t = _s.read_text(encoding="utf-8")
+        for _mod, _dist in _IMPORT_TO_DIST.items():
+            if re.search(r"^\s*(?:from|import)\s+" + re.escape(_mod) + r"\b", _t, re.M):
+                _imported.add(_dist)
+    _missing_dep = sorted(d for d in _imported if d.lower() not in _declared)
+    check("every third-party module the suites import is declared",
+          not _missing_dep,
+          ", ".join(_missing_dep) + " — an undeclared test dep is a run that dies at batch 42")
 
 print("\nDOCS — no volatile release fact is typed by hand")
 # A tree hash written into prose cannot be kept true: it describes the tree it
@@ -624,6 +715,51 @@ EXEMPT = re.compile(r"SUPERSEDED|\(history\)|\(historical|historical from here|"
                     r"requirement, as written|"
                     r"until v\d|before v\d|as of v\d", re.I)
 
+# v273: CLAUDE.md has always said "no doc may hand-type a tree hash or an
+# assertion count outside the generated stanza". The tree-hash half was
+# enforced below; the assertion-count half never was, and the audit found
+# THIRTY-SIX typed per-suite counts across six files with TWENTY-EIGHT of them
+# stale. harness/README.md carried seventeen in a code block — invisible to a
+# prose-scoped check — including verify_ux.py written as 24 against an actual
+# 330. A wrong number under the harness's own name is worse than no number.
+#
+# Scoped to documents that describe the present. A changelog SHOULD say what a
+# suite counted at the release it documents, so DECISIONS.md, docs/HANDOFF.md
+# and docs/REFACTOR-v132.md are not scanned, and a dated line here is exempt by
+# the same six-line window _denials uses — that is how START-HERE keeps its
+# "Measured at v214" suite-splitting table verbatim.
+_COUNTED = re.compile(r"(verify_\w+\.py)[^\n]{0,40}?\b(\d{1,4})\s*assertion"
+                      r"|\b(\d{1,4})\s*assertion[^\n]{0,40}?(verify_\w+\.py)"
+                      r"|python3?\s+(verify_\w+\.py)\s+#\s*(\d{1,4})\b")
+_DATED = re.compile(r"measured at v\d|as of v\d|at v\d{2,}|until v\d|before v\d|"
+                    r"SUPERSEDED|\(historical|used to", re.I)
+_typed_counts = []
+for rel in list(CURRENT_DOCS) + ["harness/README.md"]:
+    doc = ROOT / rel
+    if not doc.is_file():
+        continue
+    body = doc.read_text(encoding="utf-8")
+    # Blank the stanza rather than deleting it: re.sub removes its LINES too, and
+    # every line number reported after that point is then wrong. The first run of
+    # this check pointed at a section heading forty lines from the real offender.
+    body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END),
+                  lambda m: "\n" * m.group(0).count("\n"), body, flags=re.S)
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        m = _COUNTED.search(line)
+        if not m:
+            continue
+        if _DATED.search("\n".join(lines[max(0, i - 6):i + 1])):
+            continue
+        suite = m.group(1) or m.group(4) or m.group(5)
+        _typed_counts.append(f"{rel}:{i + 1} {suite}")
+check("no current doc hand-types a per-suite assertion count",
+      not _typed_counts,
+      ", ".join(_typed_counts[:4])
+      + (f" (+{len(_typed_counts) - 4} more)" if len(_typed_counts) > 4 else "")
+      + " — harness/RELEASE.md carries every count, generated by the run")
+
+
 # (label, proof, denial patterns, extra files to scan beyond CURRENT_DOCS)
 #
 # The `extra` column exists because the v224 reviewer's false finding did not
@@ -643,11 +779,24 @@ CLAIMS = [
     ("pointer identity / contact ownership",
      ("skribl/static/lib/eventpoint.js", r"targetTouches"),
      [r"Migrate to Pointer Events",
-      r"pointer identity[^.\n]{0,60}(prerequisite|not deferrable|still open)"]),
+      r"pointer identity[^.\n]{0,60}(prerequisite|not deferrable|still open)",
+      # v273: and these missed START-HERE's known-open 5, which called the
+      # touches[0] lead "UNTESTED" for the several releases after v264 tested,
+      # measured and fixed it. A session read that entry and went looking for a
+      # bug that was already closed. Name the MECHANISM, not the conclusion.
+      r"touches\[0\].{0,240}\b(untested|unverified|never tested)\b",
+      r"\bgetPos\b.{0,240}\b(untested|unverified)\b"]),
     ("PostgreSQL cross-process rate limiting",
      ("harness/verify_postgres.py", r"no OVER-admission"),
      [r"NOT yet verified on PostgreSQL across processes",
-      r"not[^.\n]{0,30}verified[^.\n]{0,40}across processes"],
+      r"not[^.\n]{0,30}verified[^.\n]{0,40}across processes",
+      # v273: the two above missed START-HERE's known-open 4, which read
+      # "PostgreSQL is UNVERIFIED, not passing" for the several releases AFTER
+      # the suite started passing. Neither pattern contains the word the writer
+      # actually reached for. Match the CAPABILITY plus a denial word near it,
+      # rather than one remembered phrasing.
+      r"postgres\w*[^.]{0,60}\b(unverified|not passing|never (?:run|passed))\b",
+      r"\b(unverified|not passing)\b[^.]{0,60}postgres"],
      ["skribl/models.py", "skribl/ratelimit.py"]),
     ("media resource limits (dimensions, WAV duration)",
      ("harness/verify_medialimits.py", r"MAX_IMAGE_PIXELS"),
@@ -661,6 +810,25 @@ CLAIMS = [
     ("selection and move in Flip",
      ("harness/verify_select.py", r"check\("),
      [r"every mistake is currently undo-and-redraw"]),
+    # v273. START-HERE's "the next step, and the honest distance" argued at
+    # length that the player could not reach its JS byte target without a
+    # function-relocation refactor. verify_jsstrip.py had been asserting that it
+    # DOES reach it, comfortably, since the serve-time comment strip landed. The
+    # document and the suite contradicted each other and only the suite ran.
+    ("the player reaching its JS size target",
+     ("harness/verify_jsstrip.py", r"REACHES the"),
+     [r"STILL DOES NOT REACH",
+      r"does not reach [\d,_]{5,}",
+      r"\b[\d,]+ B OVER\b",
+      r"reaching the [\d,_]{5,} target needs"]),
+    # v273. The same section, and FUTURE.md's constraint list, both said a
+    # viewer downloads the whole authoring surface. Four editor_*.js files are
+    # carved out of the player and this suite asserts each stays carved.
+    ("the editor-only files being carved off the player",
+     ("harness/verify_player_isolation.py", r"the carves stay carved"),
+     [r"every viewer downloads the (entire )?authoring surface",
+      r"downloads the entire authoring surface",
+      r"serves both the editor and the player[^.]{0,80}\bentire\b"]),
 ]
 
 
