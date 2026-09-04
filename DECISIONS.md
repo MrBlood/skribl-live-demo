@@ -5021,3 +5021,202 @@ no other status.
 
 **A test that only fails under load is a test that does not run.**
 
+## v275 -- A Skribl learns to live inside somebody else's post
+
+Four surfaces now play a Skribl and only one of them is ours. The sealed player
+is a PAGE -- `/s/<id>`, app.js plus eight modules, an app shell, a full
+transport -- and twenty of those in a feed is not a feed. So this release adds
+a second, small playback implementation and the three surfaces that need it:
+a post, a draft composer, a profile tab. It also fixes the picture all three
+of them show when they are not playing.
+
+**The decision that shapes everything else: A SECOND PLAYBACK IMPLEMENTATION,
+accepted deliberately.** `verify_sharedrules.py` has warned for many releases
+that two implementations of one rule drift, and it is right; the failure mode
+here is worse than usual, because the AUTHOR opens `/s/<id>`, sees it look
+correct, and every viewer scrolling past a feed sees something else. It was
+still the right call -- embedding the page was never available, and a feed that
+loads a 150 KB player per post is not a feed. Three things hold the two
+together, and they are the price of the decision:
+
+  * the RULES come out of `lib/` rather than being restated -- `holdtiming.js`
+    for what a hold means, `canvassizes.js` for a legacy payload's shape;
+  * what is genuinely retyped (the capped-gap timeline, `drawDot`/`drawLine`)
+    is retyped VERBATIM and names its origin in app.js at the line;
+  * `verify_inline.py` plays the SAME posted drawing in both players off the
+    same clock and compares where each has reached and what each has drawn.
+
+**The comparison's first numbers were worthless, and mutation is what said so.**
+A 32x32 grid at tolerance 48 passed while the in-post player was reading a BLANK
+canvas -- the selector matched the first post in the feed rather than the one
+playing -- and passed AGAIN with the gap cap deliberately set to 500 ms, with
+the two players 0.58 and 0.34 through the same drawing. A tolerance loose enough
+to admit a blank canvas is not a tolerance. It is 96x96 at tolerance 18 now,
+floor-subtracted (the two surfaces paint the drawing's ground in different
+places -- one on the canvas, one on `.canvas-wrap` behind it, so compared
+absolutely all 9,216 cells differ and the assertion becomes a claim about paint
+order), plus a scale-free ink-mass ratio.
+
+**COMPOSE MODE PUBLISHES NOTHING, and that is forced rather than chosen.**
+"Add to post" hands the host the PAYLOAD, not an id. `POST /api/skribls` is
+create-only -- routes.py registers one POST and two GETs -- so "publish on add,
+republish on edit" orphans a skribl per edit, each having spent a slot of the
+author's posting quota, and an abandoned draft leaves a published, shareable
+skribl the host has no way to withdraw. `verify_compose.py`'s main instrument is
+therefore A COUNT OF POSTS rather than a "does it work": zero while attaching,
+zero after an edit, exactly one when the host posts.
+
+**One builder, two endings.** `editor_post.js`'s `submit()` was split so that
+everything preparing a payload for posting -- serialise, share-card thumbnail,
+mono audio bake -- is now `buildPostPayload()`, called by both endings. A
+composed skribl is byte-for-byte a Pad-posted one. Two paths each preparing
+"the payload, but for posting" is precisely the shape of that file's own BUG B:
+a post-time step that silently stopped running on one path while the metadata
+looked identical.
+
+**The encoding rule was wrong by 16x, and the in-post player is what made it
+matter.** The share-card builder chose PNG for line art and JPEG for photos, on
+the recorded grounds that PNG is both smaller and crisper for lines. Measured on
+an actual card: **451,824 B as PNG against 28,062 B as JPEG q0.92.** The cause
+is the accent wash -- Chromium DITHERS a canvas gradient, scattering per-pixel
+noise across all 1,200x630 that PNG cannot compress -- so the rule was true
+before the wash existed and was never re-checked. It survived because a 450 KB
+card is not WRONG, only expensive, and nobody looks at the byte count of their
+own unfurl. Turning that image into the idle frame of every post in a feed is
+what turned expensive into unusable: a screenful was over five megabytes to show
+twelve thumbnails. The fix is to stop having a rule -- encode both, keep the
+smaller. Real cards are ~20 KB, and `verify_sharecard.py` pins a 200,000 B
+ceiling, which is the check that would have caught the original.
+
+**Flip had never built a share card at all.** `buildShareCardDataURL()` lived in
+`editor_post.js`, which is PAD-ONLY, and `flip.js` set no `thumbnail`. So every
+Flip Skribl ever posted fell back to the static branded og-card in three places
+at once -- its `/s/<id>` unfurl, its idle poster in a feed, its tile on a
+profile. An advert where the drawing should be. Same shape as the title bug
+`verify_flipmeta.py` records: a whole control surface built on one of the two
+editors and never carried to the other.
+
+**TWO MODULES, NOT ONE, and the byte ratchet is what said so.** The first cut
+put the card COMPOSITOR beside its GEOMETRY in `lib/sharecard.js` -- which the
+in-post player loads, because it crops the poster by `band()`. `verify_inline`'s
+embed ratchet failed on the next run, correctly: 2 KB of canvas work shipped to
+every feed page in the world, to composite a card a feed never makes. Split on
+the rule `lib/postedaudio.js` already states -- THE READER IS NOT THE WRITER. A
+host embeds the geometry and never the compositor, because a host never posts.
+
+**The ratchet also caught PROSE.** Explaining the poster crop added 2,800 B of
+comment to `inlineplayer.css` and pushed the embed past its limit -- correctly,
+because `jsstrip.py` strips JavaScript RESPONSES and nothing strips CSS, so a
+paragraph in that file ships to every host on every page. It moved into
+`inlineplayer.js`'s header and the CSS kept the numbers and a pointer: same
+words, a third of the weight. A ratchet that prices comments is a ratchet that
+tells you where comments are free.
+
+**The owner reversed a decision made three hours earlier, and the reversal is
+recorded because the original reasoning was not wrong.** The in-post player
+shipped with ONE viewer control -- mute -- on the argument that a feed is not a
+media player and a Pad replay stopping dead on its finished drawing reads as a
+broken GIF. Both halves are still true. What was missing is that some drawings
+are two seconds long and a viewer may simply want them to stop. There are two
+controls now, and the asymmetry between them is the decision:
+
+    mute   PAGE-WIDE, session-remembered, off by default
+    loop   PER POST, not remembered, on by default
+
+Sound is environmental -- someone in a quiet room wants it off for the whole
+feed. Repeating is a property of the drawing in front of you, and a two-second
+loop you want to watch twice says nothing about the next post.
+
+**WHEN THE DRAWING STOPS, THE MUSIC STOPS, as ONE call rather than two.** The
+end of a non-looping replay routes through `pause()`, which takes the audio down
+in the same breath. It could have been a `cancelAnimationFrame` and a class
+change, and then a finished drawing would sit there with a loop still playing
+underneath -- a post that will not shut up, which is worse than one that never
+started. `verify_inline.py` measures this on the AUDIO GRAPH through the
+analyser tap `verify_player_isolation.py` uses, because "the music stops" is a
+claim about sound and cannot be checked from the DOM. Mutation-tested: stop the
+drawing without routing through `pause()` and the peak reads 71 where it should
+read 0.
+
+**Three defects found by building compose mode, all real:**
+
+  * `setState('idle')` hardcoded `'Post to Skribl'`, overwriting the label the
+    TEMPLATE had rendered. Harmless duplicate string before compose mode
+    existed; with it, the attach button relabelled itself to publishing the
+    first time anything reset the sheet.
+  * The post sheet stayed open after delivering. The host closes its overlay
+    immediately so nobody sees it -- until the pad icon is pressed again, which
+    reopens the SAME iframe with the sheet sitting over the canvas.
+  * **The underlay repaint moved time.** `img.onload` called `render(elapsed,
+    true)`, and `elapsed` is 0 while idle, so on a drawing with a photo or a
+    base snapshot the underlay finishing its decode wiped the canvas and
+    repainted the FIRST frame. Invisible on a posted skribl, where the poster
+    hides it, and fatal on a draft, where idle IS the finished drawing: the
+    composer showed an empty box. Every Pad recording carries a baseSnapshot,
+    so this fired every time.
+
+**`asset_url()` built a RELATIVE endpoint** (`url_for(".static")`), which
+resolves against `request.blueprint` -- always Skribl's, while every caller so
+far was a template Skribl itself rendered. The embed macros render on the HOST's
+view, where a leading dot raises BuildError. It names the blueprint outright now,
+which is identical inside Skribl's own pages and works everywhere else, and
+`init_skribl()` registers `skribl_asset` as the ONE app-wide template global --
+added, never overwritten.
+
+**`POST /api/skribls` defaults to `unlisted` and Pad's composer has no
+visibility control**, so nothing posted from Pad appears in `GET /api/skribls`.
+The demo feed was empty on its first run and its suite was asserting against an
+empty list. The default is correct -- it is what a link-sharing product should
+do -- but it means a HOST's composer is what sends `"visibility": "public"`, and
+the empty state says so now instead of telling you to go and post from the Pad.
+
+**`library.js` had been drawing its own content.** It carried its own replay
+engine and a table of hand-drawn motifs -- a bolt, a cassette, a smiley -- and
+rendered those, while the route was registered the whole time, so a host
+mounting Skribl served invented drawings out of their own URL space and
+README.md carried a warning saying so. The problem was never the pretending: a
+page that draws its own content cannot tell you whether the thing it previews
+WORKS. It contains no player now; the stage is `inlineplayer.js` driven through
+its handle, and `verify_library.py` gates that at the source by forbidding
+`requestAnimationFrame` in the file.
+
+**TWO OF THAT SUITE'S GATES WERE SUBSTRING SEARCHES THAT PASSED ON THEIR OWN
+PROSE.** One looked for `offset` and matched a comment explaining why offset
+paging is wrong; one looked for `cassette` and matched a description of the
+motifs it had just deleted. This is the same failure a v273 gate made by
+searching for "Pillow" and matching a comment that mentioned it -- twice in
+three releases, so it is a pattern rather than a slip. They match SYNTAX now
+(`offset=`), and the second became a check on the DOCUMENTS instead: a page that
+stops lying while its docs keep saying the old thing has moved the lie, not
+removed it.
+
+**A route literal in client JS, in the one file whose comment says it never
+uses one.** `inlineplayer.js` read its endpoint from `data-skribl-api` and fell
+back to `'/api/skribls'`. On a host mounting the blueprint under a prefix that
+fallback fetches a path that does not exist, and fails QUIETLY into the box's
+error panel -- the exact defect the surrounding comment describes as the reason
+the attribute exists. `verify_seam.py` SECTION 1 caught it. There is no fallback
+now: a box with no endpoint says it is not wired up, which is the honest
+failure. Worth recording because the comment was written by the same hand, in
+the same file, in the same hour as the line that contradicted it. A comment is
+not a gate.
+
+**Two suites broke on this release and both were right to.**
+`verify_flipmeta.py` read a POST body as JSON, and `lib/posted.js` gzips any
+body over 4,096 B -- its one-stroke fixture sat under that until a 25 KB card
+was attached, so it inflates now. `verify_library.py`'s search matched
+`verify_inline.py`'s "Harness fixture A" as well as its own, because
+`run_harness.sh` gives ONE database to every suite in an invocation; its
+fixtures carry a per-run token now. Exactly the cross-suite state coupling that
+passes a seal and fails CI.
+
+**Known gap, named rather than hidden:** the in-post player has no wet/dry
+stroke compositor, so a sub-100%-opacity stroke beads at its overlaps where it
+does not on `/s/<id>`. The fixture draws opaque deliberately, so the pixel
+assertion stays meaningful instead of being quietly tolerant of a gap it cannot
+see. And the poster crop is exact vertically and cannot be horizontally: the
+drawing's width depends on its own aspect, and `canvasSize` lives inside
+`payload_json` which `GET /api/skribls` defers on purpose. The box is 16:9
+because that is the widest canvas, so a symmetric crop can only ever remove
+ground. The real fix is canvas size as a real COLUMN, which is a migration.
+

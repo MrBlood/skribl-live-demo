@@ -2228,17 +2228,25 @@ carries the owner's standing rule: **ask before taking any action that could
 create or increase a bill on their accounts**, CI triggers explicitly included.
 Do not widen those triggers to "fix" a red PR.
 
-## The in-post player — a fourth surface (landed, NOT sealed)
+## Closed in v275 — the in-post player, and the three surfaces around it
+
+Five changes that are one change: a Skribl can now be shown inside somebody
+else's post, put there from their composer, listed on a profile, and it carries
+its own picture and its own loop control. They were built in that order over one
+session and they are sealed together because none of them is finished alone —
+the player is what makes compose worth having, compose is what puts anything in
+a feed, and the share card is the player's idle frame.
+
+**Read this before the next change to any of it:** the in-post player is a
+SECOND playback implementation, and the subsections below say what holds it to
+the sealed one. The counts for every suite named here are in
+`harness/RELEASE.md`; none are typed in this file.
+
+### The in-post player — a fourth surface
 
 A Skribl inside somebody else's feed post. It had existed only as a mockup in a
 conversation; it is in the tree now, it plays real posted Skribls, and
 `verify_inline.py` is what says so.
-
-**This landed WITHOUT a seal and without a version bump.** `SKRIBL_VERSION` is
-unchanged, there is no `DECISIONS.md` entry, and `harness/RELEASE.md` describes
-the tree before it. What was run is named below, suite by suite — that is the
-evidence for this change and it is not a release aggregate. Seal it, or fold it
-into the next seal, before treating it as part of the sealed feature set.
 
     skribl/static/inlineplayer.js       the player   (read its header first)
     skribl/static/inlineplayer.css      its styles, scoped, host-safe
@@ -2326,7 +2334,7 @@ that file ships to every host on every page. It moved into `inlineplayer.js`'s
 header and the CSS kept the numbers and a pointer. Same words, a third of the
 weight.
 
-## Compose mode — a Skribl attached to somebody else's draft post (NOT SEALED)
+### Compose mode — a Skribl attached to somebody else's draft post
 
 The other half of the in-post player. That one answers "how does a Skribl LOOK
 in a feed"; this answers "how does one GET there".
@@ -2388,12 +2396,7 @@ contentWindow call would work; postMessage anyway, because it is the same code
 if the host ever splits deployments and because a wildcard would hand the
 author's drawing to whatever page is framing the editor. Asserted in the suite.
 
-**NOT SEALED**, same as the in-post player: `SKRIBL_VERSION` unchanged, no
-`DECISIONS.md` entry. Suites run for it, all green: verify_compose,
-verify_inline, verify_player_isolation, verify_posted, verify_pages,
-verify_docs. Counts are in `harness/RELEASE.md`, not typed here.
-
-## The profile's Skribls tab — /library stops being a mock (NOT SEALED)
+### The profile's Skribls tab — /library stops being a mock
 
 The third surface for the same player. The feed shows a Skribl in a post; the
 composer shows one on a draft; this is a page ABOUT the drawings — one stage
@@ -2435,19 +2438,18 @@ matching a comment that mentioned it. They match syntax now (`offset=`), and the
 second was replaced by a check on the DOCUMENTS: a page that stops lying while
 its docs keep saying the old thing has moved the lie, not removed it.
 
-**FOUND WHILE BUILDING IT, NOT FIXED: Flip posts have no share card.**
+**FOUND WHILE BUILDING IT — fixed in the subsection below: Flip posts had no
+share card.**
 `editor_post.js` builds `payload.thumbnail` at post time and `flip.js` never
 does — grep it, there is no `payload.thumbnail` anywhere in that file. So every
 Flip post falls back to the static branded og-card: on its `/s/<id>` unfurl, as
 the in-post player's idle poster in a feed, and as its tile here. It looks like
 an advert in all three places. The fix is to share the card BUILDER the way
 `lib/sharecard.js` now shares its geometry, and wire Flip's post path to it;
-that is a change to a 437 KB file with its own post flow and it wants its own
-run.
+that is a change to a 437 KB file with its own post flow, so it got its own
+pass — the next subsection.
 
-**NOT SEALED**, same as the two before it.
-
-## Flip's missing share card, and a 16x encoding mistake (NOT SEALED)
+### Flip's missing share card, and a 16x encoding mistake
 
 The gap the profile tab turned up: `buildShareCardDataURL()` lived in
 `editor_post.js`, which is PAD-ONLY, and `flip.js` set no `thumbnail` at all. So
@@ -2495,9 +2497,7 @@ that would have caught the original.
     suite in an invocation. Its fixtures carry a per-run token now. Exactly the
     cross-suite state this file warns passes the seal and fails CI.
 
-**NOT SEALED**, same as the three before it.
-
-## A post gets a loop control, and the music stops with the drawing (NOT SEALED)
+### A post gets a loop control, and the music stops with the drawing
 
 Owner's call, and it reverses a decision recorded three sections up. The in-post
 player shipped with ONE viewer control — mute — on the argument that a feed is
@@ -2543,8 +2543,6 @@ README.md, docs/INTEGRATION.md and the /feed page's own note. A claim that
 becomes false the moment a control is added is exactly what `verify_docs.py`
 cannot catch, because it is prose about behaviour rather than a name or a
 number.
-
-**NOT SEALED**, same as the four before it.
 
 ## Known-open, in the order worth doing
 
