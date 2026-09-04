@@ -167,6 +167,18 @@ appear here, and `RELEASE.md` names every one of them.
   one converge, so the tool's strength is not a property of the device's sample
   rate.
 
+- `verify_compose.py` — COMPOSE MODE: the Pad opened from a host's composer
+  (`/skribl-pad?compose=1`), driven end to end on the real `/feed` page through
+  the real iframe. Its main instrument is a count of POSTs to `/api/skribls`,
+  because the rule it exists to pin is that attaching a drawing PUBLISHES
+  NOTHING — the API is create-only, so a design that published on "Add to post"
+  would orphan a skribl and spend a posting slot on every edit, and would leave
+  a published, unwithdrawable skribl behind whenever a draft was abandoned.
+  Also pins that a re-opened editor gets the drawing back, that the draft
+  preview is the real in-post player rather than a thumbnail, that the composed
+  payload carries the post-time work (its own share card, so the feed poster is
+  its drawing), and that the handshake never posts to a wildcard origin.
+
 - `verify_inline.py` — the IN-POST player: a Skribl inside a host's feed
   (`skribl/static/inlineplayer.js`, the `/feed` preview). It is a second
   playback implementation, so this suite is built the way `verify_sharedrules.py`

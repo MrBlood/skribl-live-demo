@@ -62,9 +62,10 @@
     if (item.title || item.caption) {
       var body = document.createElement('div');
       body.className = 'pbody';
-      body.textContent = item.title
-        ? (item.caption ? item.title + ' — ' + item.caption : item.title)
-        : item.caption;
+      /* The CAPTION is the post's text; the title exists for what /s/<id>
+         unfurls with, and a host composer derives both from the same words —
+         so printing them together says everything twice. */
+      body.textContent = item.caption || item.title;
       post.appendChild(body);
     }
 
@@ -82,6 +83,175 @@
     post.appendChild(frag);
     return post;
   }
+
+  /* ======================================================================
+     THE COMPOSER — the whole point of this page.
+     ======================================================================
+
+     Everything below is HOST code. Skribl's side of this contract is two
+     things: the editor at ?compose=1, and the four postMessage types in
+     skribl/static/editor_compose.js. A real host writes roughly this, against
+     their own composer and their own post table.
+
+     THE LIFECYCLE, which is the part worth copying:
+
+       pad icon      -> open the editor in an overlay iframe
+       ready         -> if we are RE-EDITING, send the payload we are holding
+       done          -> keep the payload on the draft, render it inline,
+                        PUBLISH NOTHING
+       Post          -> POST /api/skribls exactly once, take the id
+
+     A real host's Post also writes their own row and stores that id on it; this
+     page has no post table, so the skribl IS the post and the composer's text
+     becomes its caption. That is the one place this demo differs from a host,
+     and it is why the text lands in the caption rather than beside it. */
+  var compose = {
+    payload: null,
+    overlay: document.getElementById('padOverlay'),
+    frame: document.getElementById('padFrame'),
+    attachWrap: document.getElementById('composerAttach'),
+    box: document.getElementById('composerSkribl'),
+    text: document.getElementById('composerText'),
+    postBtn: document.getElementById('postBtn'),
+    status: document.getElementById('composerStatus'),
+    player: null,
+    src: document.body.getAttribute('data-skribl-compose'),
+    createUrl: document.body.getAttribute('data-skribl-create'),
+    csrf: document.body.getAttribute('data-skribl-csrf')
+  };
+
+  function say(msg, bad) {
+    compose.status.textContent = msg || '';
+    compose.status.hidden = !msg;
+    compose.status.classList.toggle('error', !!bad);
+  }
+
+  function syncPostBtn() {
+    /* A post needs something in it. Text alone is a post; a Skribl alone is a
+       post; neither is not. */
+    compose.postBtn.disabled = !(compose.payload || compose.text.value.trim());
+  }
+
+  function openPad() {
+    say('');
+    compose.overlay.hidden = false;
+    /* Set src on OPEN, not in the markup: the editor is a heavy page and a
+       composer that loads it on every feed view has made every visitor pay for
+       a drawing tool they did not ask for. */
+    if (compose.frame.getAttribute('src') !== compose.src) {
+      compose.frame.setAttribute('src', compose.src);
+    } else if (compose.payload) {
+      /* Already loaded from a previous edit: it will not fire ready again, so
+         hand it the payload directly. */
+      sendToPad('skribl:compose:load', { payload: compose.payload });
+    }
+  }
+
+  function closePad() { compose.overlay.hidden = true; }
+
+  function sendToPad(type, data) {
+    var msg = { type: type };
+    if (data) for (var k in data) msg[k] = data[k];
+    try {
+      compose.frame.contentWindow.postMessage(msg, window.location.origin);
+    } catch (e) { /* frame not ready */ }
+  }
+
+  function showAttached() {
+    compose.attachWrap.hidden = false;
+    /* The REAL in-post player, rendering the real payload — not a thumbnail.
+       What the composer previews is what the post will publish. */
+    if (!compose.player) {
+      compose.player = window.SkriblInline.attach(compose.box, compose.payload);
+    } else {
+      compose.player.adopt(compose.payload);
+    }
+    syncPostBtn();
+  }
+
+  window.addEventListener('message', function (e) {
+    if (e.origin !== window.location.origin) return;
+    var d = e.data;
+    if (!d || typeof d.type !== 'string' || d.type.indexOf('skribl:compose:') !== 0) return;
+    if (d.type === 'skribl:compose:ready') {
+      if (compose.payload) sendToPad('skribl:compose:load', { payload: compose.payload });
+    } else if (d.type === 'skribl:compose:done') {
+      compose.payload = d.payload;
+      closePad();
+      showAttached();
+    } else if (d.type === 'skribl:compose:cancel') {
+      closePad();
+    }
+  });
+
+  document.getElementById('padBtn').addEventListener('click', openPad);
+  document.getElementById('editSkriblBtn').addEventListener('click', openPad);
+  document.getElementById('padCloseBtn').addEventListener('click', closePad);
+  document.getElementById('removeSkriblBtn').addEventListener('click', function () {
+    compose.payload = null;
+    compose.attachWrap.hidden = true;
+    if (compose.player) compose.player.settle();
+    /* Drop the loaded editor too, so the next pad click starts blank rather
+       than reopening the drawing that was just removed. */
+    compose.frame.setAttribute('src', 'about:blank');
+    syncPostBtn();
+  });
+  compose.text.addEventListener('input', syncPostBtn);
+
+  document.getElementById('composer').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (compose.postBtn.disabled) return;
+    var words = compose.text.value.trim();
+    if (!compose.payload) {
+      say('This demo host has no post table of its own — a post here IS a '
+          + 'Skribl, so add a drawing.', true);
+      return;
+    }
+    compose.postBtn.disabled = true;
+    say('Posting…');
+    /* THE ONE POST. Everything before this was a draft. `visibility: public` is
+       the host's decision, not Skribl's: POST /api/skribls defaults to
+       "unlisted" because that is what a link-sharing product should do, and a
+       feed's composer is exactly the caller that means otherwise. */
+    var body = Object.assign({}, compose.payload, {
+      title: words.slice(0, 80) || 'Untitled Skribl',
+      caption: words,
+      visibility: 'public'
+    });
+    var headers = { 'Content-Type': 'application/json' };
+    if (compose.csrf) headers['X-Skribl-CSRF'] = compose.csrf;
+    fetch(compose.createUrl, {
+      method: 'POST', headers: headers, credentials: 'same-origin',
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      if (!r.ok) return r.json().catch(function () { return {}; })
+        .then(function (j) { throw new Error(j.error || ('HTTP ' + r.status)); });
+      return r.json();
+    }).then(function (res) {
+      /* A real host stores res.id on THEIR post row here and renders it with
+         {{ skribl_inline(post.skribl_id) }}. This page just prepends it. */
+      list.insertBefore(row({ id: res.id, title: body.title, caption: body.caption,
+                              created_at: new Date().toISOString(), user_id: null }),
+                        list.firstChild);
+      window.SkriblInline.mount(list);
+      empty.hidden = true;
+      compose.payload = null;
+      compose.text.value = '';
+      compose.attachWrap.hidden = true;
+      /* The player object is kept and reused — attaching a second one to the
+         same element would leave the first in the one-at-a-time registry,
+         still holding a drawing nobody can see or stop. */
+      if (compose.player) compose.player.settle();
+      compose.frame.setAttribute('src', 'about:blank');
+      say('Posted.');
+      syncPostBtn();
+    }).catch(function (err) {
+      say(err.message || 'Could not post.', true);
+      compose.postBtn.disabled = false;
+    });
+  });
+
+  syncPostBtn();
 
   fetch(api + '?limit=12', { credentials: 'same-origin' })
     .then(function (r) {

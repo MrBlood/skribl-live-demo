@@ -128,6 +128,61 @@ reach it — a real column on the post, not a field inside `payload_json`, which
 `GET /api/skribls` defers on purpose. That is a schema change and it has not been
 made.
 
+## Drawing one from your own composer
+
+Your composer has a row of attachment buttons — photo, video, GIF, poll. One of
+them is a Skribl. Pressing it opens the Pad over your feed; the author draws;
+"Add to post" puts the drawing on the draft; pressing the button again reopens
+the editor with it; your Post button publishes the lot.
+
+**The rule: compose mode publishes nothing.** It hands your composer the
+PAYLOAD, not an id. This is not a preference — the alternative is broken twice:
+`POST /api/skribls` is create-only, so "publish on Add, republish on edit" makes
+every edit orphan the previous skribl and spend another slot of the author's
+posting quota; and an abandoned draft would leave a published, shareable skribl
+behind that you have no way to withdraw. Hold the payload, exactly as you hold
+an image attachment, and post once.
+
+**The editor.** `GET /skribl-pad?compose=1`, in an iframe. An iframe even
+though it is your own origin: the Pad is a whole application with its own
+stylesheet and thirty-odd scripts, and putting that inline in your feed has the
+two fight over every generic class name. Set the `src` when the button is
+pressed, not in your markup — otherwise every visitor downloads a drawing tool
+they never opened.
+
+**The handshake**, four messages, all `postMessage`:
+
+    editor -> host   skribl:compose:ready    up; send a payload if re-editing
+    host   -> editor skribl:compose:load     {payload} put this back on canvas
+    editor -> host   skribl:compose:done     {payload, preview, hasAudio}
+    editor -> host   skribl:compose:cancel   closed without attaching
+
+Target your own origin, never `'*'`, and check `e.origin` on the way in — a
+wildcard hands the author's drawing to whatever page is framing the editor. If
+you run Skribl on a different origin from your feed, set
+`window.SKRIBL_COMPOSE_ORIGIN` on the editor page to your feed's origin.
+
+**Showing the draft.** `SkriblInline.attach(el, payload)` renders a payload with
+no id — the real in-post player, on a drawing that is not posted yet. Use it
+rather than the `preview` PNG for the attachment itself: a composer that
+previews a thumbnail is previewing something other than what it will publish.
+The `preview` is there for a chip or a list row where a full player is too much.
+
+**Posting.** One `POST /api/skribls` with the payload, plus whatever your post
+needs: `title` (what `/s/<id>` unfurls with), `caption`, and
+`"visibility": "public"` — the API defaults to `unlisted`, and a feed's composer
+is exactly the caller that means otherwise. Store the returned `id` on your post
+row and render it with `{{ skribl_inline(post.skribl_id) }}`.
+
+`GET /feed` is all of the above, working, in about 150 lines of
+`skribl/static/feed.js` — that file is written to be read as the host-side
+recipe. `harness/verify_compose.py` drives it end to end and counts the POSTs.
+
+**What compose mode does NOT change:** the payload. `editor_post.js` has one
+`buildPostPayload()` and both endings call it, so a skribl your composer
+attaches is byte-for-byte what the Pad would have posted — same serialisation,
+same share-card thumbnail, same mono audio bake.
+
 **What it does not render.** The wet/dry stroke compositor. A stroke authored
 below 100% opacity beads at its overlaps here where it does not on `/s/<id>`.
 Everything else — Pad replays, Flip documents with their per-page holds, the

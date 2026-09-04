@@ -78,6 +78,7 @@ skribl/                    The blueprint package — everything Skribl owns
     app.js                 Pad + player (largest file)
     flip.js                Flip
     inlineplayer.js/.css   The in-post player — a Skribl inside a host's feed
+    editor_compose.js      Compose mode: attach a Skribl to a host's draft post
     styles.css, flip.css   Pad/shared styles, Flip styles
     lib/                   Modules shared across surfaces (audioloop, holdtiming, …)
     gifenc.min.js          Vendored GIF encoder (build command in its banner)
@@ -97,7 +98,8 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `POST /api/skribls` | Create a post |
 | `GET /api/skribls/<id>` | Fetch a post as JSON |
 | `GET /api/skribls` | Feed listing, metadata only, keyset-paginated |
-| `/feed` | **Preview of the in-post player.** A minimal host page over the real listing |
+| `/feed` | **Preview of the in-post player and the composer.** A minimal host page over the real listing |
+| `/skribl-pad?compose=1` | Pad opened from a host's composer — attaches, publishes nothing |
 | `/library` | **Concept preview, not sealed.** Self-contained demo tiles, not backed by `GET /api/skribls` |
 
 ## The in-post player
@@ -117,6 +119,13 @@ back to the drawing — and a play button; nothing is fetched until somebody tap
 hairline and a nib at the pen. Mute is the only viewer control, sound is off by
 default, one Skribl plays at a time, and scrolling one out of view settles it.
 `/feed` is that page, live, over whatever this deployment has posted publicly.
+
+**Drawing one from a host's composer.** `?compose=1` opens the Pad as an
+attachment editor: "Add to post" hands the payload back over `postMessage` and
+publishes nothing, so re-editing is free and an abandoned draft leaves nothing
+behind. The host posts once, when the author posts. `/feed` demonstrates the
+whole flow — pad icon, overlay, attach, re-edit, post — and
+`skribl/static/feed.js` is written to be read as the host-side recipe.
 
 `harness/verify_inline.py` is the proof — including that the in-post player and
 the sealed player, playing the same posted drawing from the same clock, are at

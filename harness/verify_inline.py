@@ -529,7 +529,10 @@ with sync_playwright() as sp:
     cp.goto(BASE + "/feed", wait_until="load")
     cp.wait_for_timeout(1500)
     geom = cp.evaluate("""() => {
-        const el = document.querySelector('.skribl-inline');
+        // SCOPED TO THE FEED. The page's first .skribl-inline is the
+        // COMPOSER's draft box now, and a draft has no poster to crop — it is
+        // not published, so there is no card. Selecting it read null.
+        const el = document.querySelector('#feedList .skribl-inline');
         const img = el.querySelector('.skribl-inline-poster');
         const box = el.getBoundingClientRect(), pr = img.getBoundingClientRect();
         // The poster's percentage height and top resolve against the PADDING

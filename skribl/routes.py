@@ -193,7 +193,19 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/skribl-pad")
     def skribl_editor():
-        return render_template("skribl/skribl_editor.html")
+        # COMPOSE MODE. ?compose=1 is the Pad opened from a host's post
+        # composer — an overlay over their feed, not a page somebody navigated
+        # to. It ends in "Add to post", which hands the finished drawing back to
+        # the composer and PUBLISHES NOTHING: the host holds the payload on
+        # their draft, so re-opening to change it is free and abandoning the
+        # draft leaves nothing behind. The single POST happens when the host
+        # posts, once. See skribl/static/editor_compose.js.
+        #
+        # A query flag rather than a separate route: it is the same editor, with
+        # the same drawing surface and the same post-time payload work, ending
+        # differently. A second route would be a second page to keep in step.
+        return render_template("skribl/skribl_editor.html",
+                               compose=request.args.get("compose") == "1")
 
     @bp.get("/flip")
     def skribl_flip():

@@ -71,7 +71,7 @@ every case; the lexer checking its own output proves nothing) and
   on PATH ahead of everything for the whole run.
 * **THE SEAL AND CI DO NOT TEST THE SAME THING, and CI's mode is the stricter
   one.** `release_run.py` runs 44 SEPARATE batches, each getting a fresh server
-  and database on a quiet machine. CI runs all 90 suites in ONE invocation on a
+  and database on a quiet machine. CI runs all 91 suites in ONE invocation on a
   contended two-core runner. Anything sensitive to write contention or to
   cross-suite state therefore passes the seal and fails CI — which is exactly
   what happened: a 500 under SQLite lock contention (v274) failed main's sqlite
@@ -2324,6 +2324,73 @@ The real fix is the canvas size as a real COLUMN, which is a migration.
 that file ships to every host on every page. It moved into `inlineplayer.js`'s
 header and the CSS kept the numbers and a pointer. Same words, a third of the
 weight.
+
+## Compose mode — a Skribl attached to somebody else's draft post (NOT SEALED)
+
+The other half of the in-post player. That one answers "how does a Skribl LOOK
+in a feed"; this answers "how does one GET there".
+
+    skribl/static/editor_compose.js     the handshake (read its header first)
+    /skribl-pad?compose=1               the same editor, ending differently
+    skribl/static/feed.js               ~150 lines of HOST code, written to be
+                                        read as the recipe
+    harness/verify_compose.py           the proof (count: harness/RELEASE.md)
+
+**THE RULE: COMPOSE MODE PUBLISHES NOTHING.** "Add to post" hands the host the
+PAYLOAD, not an id. This is forced, not chosen:
+
+  * `POST /api/skribls` is CREATE-ONLY — routes.py registers one POST and two
+    GETs. "Publish on Add, republish on edit" therefore ORPHANS a skribl per
+    edit, each having spent a slot of the author's posting quota.
+  * An abandoned draft would leave a published, shareable skribl behind that
+    the host cannot withdraw.
+
+So verify_compose.py's main instrument is a COUNT OF POSTS, not a "does it
+work": zero while attaching, zero after an edit, exactly one when the host
+posts. Mutation-tested by disabling the compose branch — five assertions fail,
+starting with that one.
+
+**One builder, two endings.** editor_post.js's `submit()` was split: everything
+that prepares a payload for posting (serialise, share-card thumbnail, mono audio
+bake) is now `buildPostPayload()`, and both endings call it. A composed skribl is
+byte-for-byte a Pad-posted one. Two paths preparing "the payload, but for
+posting" is exactly the shape of that file's own BUG B — a post-time step that
+silently stopped running on one path while the metadata looked identical.
+
+**Three defects found by building it, all real and all fixed:**
+
+  * `setState('idle')` hardcoded `'Post to Skribl'`, overwriting the label the
+    TEMPLATE had already rendered. It was a duplicate string before compose
+    mode existed; with it, the attach button relabelled itself to publishing
+    the first time anything reset the sheet. The label now comes from the DOM.
+  * The post sheet stayed open after delivering. The host closes its overlay
+    immediately so nobody sees it — until the pad icon is pressed again, which
+    reopens the SAME iframe, and the sheet is then sitting over the canvas.
+    Found by a probe that could not draw on the second edit.
+  * **The underlay repaint moved time.** `img.onload` in inlineplayer.js called
+    `render(elapsed, true)`, and `elapsed` is 0 while idle — so on a drawing
+    with a photo or a base snapshot, the underlay finishing its decode wiped the
+    canvas and repainted the FIRST frame. Invisible on a posted skribl (the
+    poster hides it) and fatal on a draft, where idle is the finished drawing:
+    the composer showed an empty box. Every Pad recording has a baseSnapshot, so
+    this fired every time.
+
+**Posterless idle is a real state now.** A posted skribl idles at time zero
+behind its cropped share card; a DRAFT has no card, so it idles showing the
+finished drawing. `SkriblInline.attach(el, payload)` is that path — the real
+player on a payload with no id, so the composer previews what it will publish
+rather than a thumbnail standing in for it.
+
+**The handshake targets an origin, never `'*'`.** Skribl mounts into a Flask
+host as a blueprint, so the overlay is normally same-origin and a direct
+contentWindow call would work; postMessage anyway, because it is the same code
+if the host ever splits deployments and because a wildcard would hand the
+author's drawing to whatever page is framing the editor. Asserted in the suite.
+
+**NOT SEALED**, same as the in-post player: `SKRIBL_VERSION` unchanged, no
+`DECISIONS.md` entry. Suites run for it, all green: verify_compose,
+verify_inline, verify_player_isolation, verify_posted, verify_pages,
+verify_docs. Counts are in `harness/RELEASE.md`, not typed here.
 
 ## Known-open, in the order worth doing
 

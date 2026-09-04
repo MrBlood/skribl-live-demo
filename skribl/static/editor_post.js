@@ -314,6 +314,16 @@
   }
 
   // states: 'idle' | 'sending' | 'success' | 'error'
+  /* The button's resting label comes from the DOM, not from a literal here.
+   * The template renders it ("Post to Skribl", or "Add to post" in compose
+   * mode) and setState('idle') used to overwrite it with a hardcoded copy —
+   * which was already a duplicate of the template's string and would have
+   * silently relabelled the compose button back to publishing the first time
+   * anything reset the sheet. Same reason the busy verb is chosen by mode:
+   * compose is not posting, and must not say it is. */
+  const IDLE_LABEL = (submitLabel.textContent || '').trim() || 'Post to Skribl';
+  const BUSY_LABEL = (window.SKRIBL_MODE === 'compose') ? 'Adding…' : 'Posting…';
+
   function setState(state) {
     if (state === 'idle') {
       posting = false;
@@ -326,12 +336,12 @@
       captionInput.disabled = false;
       submitBtn.disabled = false;
       submitBtn.hidden = false;
-      submitLabel.textContent = 'Post to Skribl';
+      submitLabel.textContent = IDLE_LABEL;
     } else if (state === 'sending') {
       posting = true;
       status.hidden = false;
       status.classList.remove('error');
-      statusLabel.textContent = 'Posting…';
+      statusLabel.textContent = BUSY_LABEL;
       progressFill.style.width = '35%';
       body.style.opacity = '0.5';
       titleInput.disabled = true;
@@ -411,14 +421,24 @@
     if (sheet) sheet.style.maxHeight = Math.max(200, vv.height - 12) + 'px';
   }
 
-  async function submit() {
+  /* EVERYTHING A PAYLOAD NEEDS BEFORE IT LEAVES THE BROWSER, in one place.
+   *
+   * Split out of submit() so COMPOSE MODE can reuse it exactly. A skribl the
+   * host's composer attaches and a skribl Pad posts itself must be the same
+   * bytes: same serialisation, same share-card thumbnail, same mono audio bake.
+   * Two code paths preparing "the payload, but for posting" is precisely the
+   * shape that produced BUG B below — a post-time step that silently stopped
+   * running on one of the paths and looked identical in the metadata.
+   *
+   * Returns the payload, or null if the media is not ready (it says why).
+   */
+  async function buildPostPayload() {
     // Mirror saveDraft(): don't serialize while photo/music bytes are still
     // being read into base64, or the posted Skribl could omit them.
     if (mediaBusy > 0) {
       showToast('Preparing media — try again in a moment', submitBtn);
-      return;
+      return null;
     }
-    setState('sending');
     // v211 (v210 review F2): decode is part of readiness. mediaBusy tracks the
     // FileReader; decodeAudioData is a separate promise, and in the gap the
     // crop below saw currentAudioBuffer null and silently shipped the full
@@ -467,6 +487,31 @@
         // a silent fallback here is how the size regression would hide again.
         console.warn('skribl: loop crop failed, posting the full sample', e);
       }
+    }
+    return payload;
+  }
+
+  async function submit() {
+    setState('sending');
+    const payload = await buildPostPayload();
+    if (!payload) { setState('idle'); return; }
+    // COMPOSE MODE HANDS THE PAYLOAD BACK AND PUBLISHES NOTHING. The host holds
+    // it on their draft; the single POST happens when they post. Everything
+    // above this line has already run, so what they attach is byte-for-byte
+    // what Pad would have posted. See editor_compose.js.
+    // The preview is built HERE because buildPreviewDataURL is local to this
+    // file — a flat PNG of the finished drawing, so the host's composer can
+    // show something the instant the overlay closes.
+    if (window.SkriblCompose) {
+      window.SkriblCompose.deliver(payload, buildPreviewDataURL());
+      // Put the sheet away and the button back to rest. The HOST closes its
+      // overlay the moment it gets the payload, so nobody sees this — until
+      // they press the pad icon again, which reopens the SAME iframe, and a
+      // sheet left open is then sitting over the canvas they came back to
+      // draw on. (Found exactly that way: the second edit could not draw.)
+      setState('idle');
+      closePost();
+      return;
     }
     try {
       const res = await sendSkribl(payload);

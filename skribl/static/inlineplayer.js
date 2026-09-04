@@ -299,9 +299,19 @@
     var playEl = el.querySelector('.skribl-inline-play');
     var muteBtn = el.querySelector('.skribl-inline-mute');
     var errEl = el.querySelector('.skribl-inline-err');
-    if (!id || !canvas || !prog || !nib) return null;
+    /* An id is NOT required — a draft's skribl is attached by payload and has
+     * none (api.attach below). The canvas and the two chrome elements are, and
+     * their absence means this is not the macro's markup. */
+    if (!canvas || !prog || !nib) return null;
 
     var ctx = canvas.getContext('2d');
+    /* WHAT "IDLE" LOOKS LIKE depends on whether there is a poster behind the
+     * canvas. A posted skribl has one — the cropped share card — so the canvas
+     * can sit at time zero underneath it. A DRAFT in a host's composer has no
+     * poster (nothing is published, so there is no card), and time zero is a
+     * blank rectangle: the composer showed an empty box where the drawing was
+     * meant to be. Posterless, idle is the FINISHED drawing. */
+    var hasPoster = !!poster;
     var payload = null, loading = false, failed = false;
     var timeline = null, flipFrames = null, flipHolds = null, flipFps = 12;
     var totalMs = 0, size = null, under = null;
@@ -316,6 +326,7 @@
       applySound: applySound,
       /* Read by verify_inline.py. A player that can only be checked by looking
        * at it is a player nothing can hold to a number. */
+      adopt: function (p) { adopt(p); },
       state: function () {
         return { id: id, state: state, totalMs: totalMs,
                  elapsedMs: state === 'playing' ? elapsed + (now() - t0) : elapsed,
@@ -409,7 +420,17 @@
       var src = (f0.photo && f0.photo.data) || f0.baseSnapshot || payload.baseSnapshot || null;
       if (src) {
         var img = new global.Image();
-        img.onload = function () { under.image = img; render(elapsed, true); };
+        /* THE REPAINT MUST NOT MOVE TIME. This used to be render(elapsed, true)
+         * unconditionally, and `elapsed` is 0 while idle — so on a drawing with
+         * a photo or a base snapshot, the underlay finishing its decode wiped
+         * whatever was on screen and repainted the FIRST frame. On a posted
+         * skribl the poster hides that; on a draft in a host's composer, where
+         * idle is the finished drawing, it left an empty box where the drawing
+         * had just been. Route through the same idle rule instead. */
+        img.onload = function () {
+          under.image = img;
+          if (state === 'idle') renderIdle(); else render(elapsed, true);
+        };
         img.src = src;
       }
 
@@ -427,7 +448,15 @@
 
       if (durText) durText.textContent = fmt(totalMs);
       if (durEl) durEl.hidden = false;
-      render(0, true);
+      renderIdle();
+    }
+
+    function renderIdle() {
+      render(hasPoster ? 0 : totalMs, true);
+      /* render() sets the hairline from the time it drew, and posterless idle
+       * draws the END of the replay — which left a full-width progress bar on a
+       * post that has not been played. Idle is not "finished". */
+      prog.style.width = '0';
     }
 
     /* ---- rendering ------------------------------------------------------ */
@@ -583,6 +612,9 @@
       if (state === 'playing') return;
       for (var i = 0; i < players.length; i++) if (players[i] !== me) players[i].settle();
       if (elapsed >= totalMs) elapsed = 0;
+      /* Always a full repaint from zero when starting at zero — posterless, the
+       * canvas is currently holding the FINISHED drawing (renderIdle), and the
+       * incremental path only ever appends. */
       if (elapsed === 0) render(0, true);
       state = 'playing';
       el.classList.add('is-playing');
@@ -614,7 +646,7 @@
       elapsed = 0;
       el.classList.remove('is-paused');
       prog.style.width = '0';
-      if (payload) render(0, true);
+      if (payload) renderIdle();
     }
 
     el.addEventListener('click', function (e) {
@@ -665,7 +697,12 @@
 
   function mount(root) {
     var scope = root || doc;
-    var found = scope.querySelectorAll('[data-skribl-inline]');
+    /* Only boxes that name a post. A draft's box carries data-skribl-inline
+     * too — api.attach put it there — but no id, and re-mounting it would give
+     * it a second player object for the same element. attach() guards against
+     * that with _skriblInline, but the selector is the honest place to say
+     * mount() is for POSTED skribls. */
+    var found = scope.querySelectorAll('[data-skribl-inline][data-skribl-id]');
     var out = [];
     for (var i = 0; i < found.length; i++) {
       var p = attach(found[i]);
@@ -676,6 +713,30 @@
 
   var api = {
     mount: mount,
+    /* A DRAFT'S SKRIBL, which has no id because it is not posted yet.
+     *
+     * The host's composer holds a payload (editor_compose.js hands it back) and
+     * has to show it inline while the author is still writing the post. Showing
+     * a thumbnail there and the real player after posting means the composer is
+     * previewing something other than what it will publish — the "preview is
+     * not the product" failure this project keeps finding. So the same player
+     * takes the payload directly: no id, no poster, no fetch, everything else
+     * identical because it is the same code path from adopt() down.
+     */
+    attach: function (el, payload) {
+      el.setAttribute('data-skribl-inline', '');
+      /* No id means load() can never run, which is the point: there is nothing
+       * on the server to fetch. */
+      el.removeAttribute('data-skribl-id');
+      /* A draft has no card to show, so the poster element is removed rather
+       * than hidden — attach() then knows this box is posterless and paints the
+       * finished drawing as its idle state. */
+      var poster = el.querySelector('.skribl-inline-poster');
+      if (poster) poster.parentNode.removeChild(poster);
+      var p = attach(el);
+      if (p) { if (io) io.observe(el); p.adopt(payload); }
+      return p;
+    },
     stopAll: function () { for (var i = 0; i < players.length; i++) players[i].settle(); },
     soundOn: soundOn,
     setSoundOn: setSoundOn,
@@ -683,6 +744,7 @@
      * DOM, so an assertion names a state and not a class name. */
     players: function () { return players; },
     find: function (id) {
+      if (!id) return null;      /* a draft has no id; do not match nulls */
       for (var i = 0; i < players.length; i++) {
         if (players[i].state().id === id) return players[i];
       }
