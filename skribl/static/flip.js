@@ -3822,7 +3822,7 @@ function buildSharePayload(){
   if (music0 && music0.data && !currentAudioBuffer) console.warn('skribl: music not decoded at post time — posting the full sample');
   if (music0 && music0.data && currentAudioBuffer) {
     try {
-      const cropped = buildTrimmedLoopWav();
+      const cropped = window.SkriblPostedAudio.buildPostedLoopWav({ currentAudioBuffer: currentAudioBuffer, trimStart: trimStart, trimEnd: trimEnd, loopCrossfadeMs: loopCrossfadeMs });
       if (cropped) music0 = { data: cropped.dataUrl, name: music0.name, trimStart: 0, trimEnd: cropped.duration, crossfadeMs: 0 };
     } catch (e) { console.warn('skribl: loop crop failed, posting the full sample', e); }
   }

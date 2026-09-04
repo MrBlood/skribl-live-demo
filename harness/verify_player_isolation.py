@@ -796,20 +796,32 @@ with sync_playwright() as sp:
     # byte ratchet notices the SIZE coming back; this notices the CODE coming
     # back, which is the thing that matters and which a later raise would hide.
     _player_js = (ROOT / "skribl" / "templates" / "skribl" / "skribl_player.html").read_text(encoding="utf-8")
-    check("the player does not load any of the four editor-only files "
+    # v273: this named FOUR carves in a hardcoded tuple while NINE editor_*.js
+    # files existed, so editor_draft, editor_export, editor_menu, editor_post and
+    # editor_tune could each have drifted back onto the player with nothing to
+    # catch it — and a tenth carve would have been unguarded on the day it landed.
+    # The list is read off disk instead, so the assertion covers whatever exists.
+    _carves = sorted(p.name for p in (ROOT / "skribl" / "static").glob("editor_*.js"))
+    _leaked = [c for c in _carves if c in _player_js]
+    check(f"the player loads none of the {len(_carves)} editor-only files "
           "(the carves stay carved)",
-          all(f"{_n}.js" not in _player_js for _n in
-              ("editor_draw", "editor_shapes", "editor_music", "editor_photo")),
-          "editor_draw / editor_shapes / editor_music / editor_photo all absent")
+          not _leaked,
+          ("LEAKED: " + ", ".join(_leaked)) if _leaked
+          else ", ".join(c[:-3] for c in _carves) + " all absent")
     _app_js = (ROOT / "skribl" / "static" / "app.js").read_text(encoding="utf-8")
     check("...and the stroke CAPTURE path has not drifted back into app.js, "
           "which the player does load",
           "function startDraw(" not in _app_js and "function endDraw(" not in _app_js,
           "startDraw/endDraw live in editor_draw.js")
 
-    # CSS. The player links the WHOLE of styles.css — the editor's drawers,
-    # export sheet, help panel and page bar included — and none of it was ever
-    # measured here, which is why it grew unnoticed while the JS came down.
+    # CSS. SUPERSEDED WORDING, kept because the ratchet below still carries its
+    # numbers: this used to read "the player links the WHOLE of styles.css — the
+    # editor's drawers, export sheet, help panel and page bar included", and that
+    # stopped being true when player.css was generated. The player links
+    # player.css alone (skribl_player.html says so at the link tag), a derived
+    # strict subset produced by harness/tools/cssgraph.py. What remains true is
+    # the reason the measurement is here at all: none of it was measured once,
+    # and it grew unnoticed while the JS came down.
     #
     # The ratchet is set at today's value, which is the POST-regression one.
     # That is deliberate and it is not an accommodation: 123,283 is where the

@@ -34,11 +34,22 @@ artist actually used — is not. If Skribl ever needs a one-sentence pitch, it i
 
 ## 2. The three constraints that shape everything
 
-### Payloads are ~476 KB, base64, inline in Postgres
+### Payloads are base64 and inline in Postgres, and their size is a RANGE
 
-This is the ceiling on every feature. Layers multiply it. Longer animations
-multiply it. A thousand posts is half a gigabyte in the database *and* in every
-backup.
+**This heading used to read "~476 KB" as though a payload had one size.** It
+does not, and the single number hid the term that actually matters. A
+drawing-only post is small. A post carrying media is bounded by the caps in
+`skribl/validation.py` and `app.py` — per-item audio and image limits, under an
+overall `MAX_CONTENT_LENGTH` on the request — and the audio term dominates
+everything else by an order of magnitude, because the posted loop is stored as
+uncompressed PCM WAV. Read the constants; do not trust a number in this
+sentence.
+
+The rate limiter bounds the flow rather than the size: `validation.py` does that
+multiplication itself in a comment beside the caps, and the answer is hundreds of
+megabytes per hour per IP into the database. That is the ceiling on every
+feature. Layers multiply it. Longer animations multiply it, and every byte lands
+in the backups too.
 
 `skribl/storage.py` has three real backends: `InlineStore` (default, v131
 behaviour), `LocalDiskStore`, and `S3Store` — the S3 path is a full
@@ -52,18 +63,35 @@ bytes no longer have to live in `payload_json`.
 Externalise before any feature that increases payload size. The mechanism is
 ready; the schema decision is the owner's.
 
-### `app.js` serves both the editor and the player
+### `app.js` serves both the editor and the player — MOSTLY CLOSED
 
-`app.js` is ~5,400 lines. Every *viewer* of a shared Skribl downloads the entire
-authoring surface — roughly 245 KB of JS plus 220 KB of CSS in `styles.css`
-alone — to watch a drawing play. On a social feed, viewers outnumber authors by
-orders of magnitude. (Sizes drift with every change; re-measure rather than
-trusting this line.)
+**This section used to say a viewer downloads "the entire authoring surface",
+and that stopped being true several releases ago.** NINE editor-only files —
+`editor_draft`, `editor_draw`, `editor_export`, `editor_menu`, `editor_music`,
+`editor_photo`, `editor_post`, `editor_shapes`, `editor_tune` — were carved out
+and `verify_player_isolation.py` asserts the player loads none of them. The
+player links its own generated `player.css`, not the whole of `styles.css`. And
+the JS size target the split existed to reach is now MET, by the serve-time
+comment strip in `skribl/jsstrip.py` rather than by any split at all.
 
-A split was attempted and reverted (see `docs/REFACTOR-v132.md`): the regex call
-graph misclassified functions the player needs. **Use an AST. `node` is
-available.** And rehearse on something smaller first — the shared drawer
-controllers, below — where a mistake is cheap.
+**No size figure is quoted here on purpose.** The ones that used to be went
+stale by tens of percent while the sentence around them stayed confident. Run
+`./harness/run_harness.sh verify_player_isolation.py`; its last assertion prints
+JS, HTML, CSS, the sum and the gzipped total, and fails if any grows.
+
+**What genuinely remains:** `app.js` itself is still loaded by both surfaces and
+is still the largest single file the player pulls, and a handful of editor
+globals remain reachable there — the suite counts them against a ratchet whose
+target is zero. The outstanding size question is now CSS, not JS: the player's
+stylesheet sits well above `CSS_TARGET`, and its lever is
+`harness/tools/cssgraph.py`'s classifier rather than a carve.
+
+The v132 split was attempted and reverted (see `docs/REFACTOR-v132.md`) because
+a regex call graph misclassified functions the player needs. **This section used
+to say "use an AST; `node` is available" — that was tried and DISPROVED.**
+`harness/tools/refgraph.js` fails its own superset gate and would move all four
+of the functions the v132 attempt got wrong; the v132 failure was load order,
+not classification. Do not spend the day rediscovering that.
 
 ### The two editors duplicate their controllers
 
@@ -136,7 +164,7 @@ and puts the tool in front of people who already exist.
 
 1. ~~**Selection and transform.**~~ **SHIPPED.** Marquee select, move, uniform
    scale from the corners, rotate from a grip, cut/duplicate/paste and flip
-   H/V — `verify_select.py`, 56 assertions. Lasso specifically was not built:
+   H/V — `verify_select.py`. Lasso specifically was not built:
    selection is by stroke GROUP rather than by point, because moving half a
    stroke splits a line down the middle and bakes a connecting segment into the
    replay. A lasso over whole groups would be a nicer marquee, not a new

@@ -22,8 +22,9 @@
   {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
 
   <!-- player.css, NOT styles.css: a derived strict subset of the rules a
-       player page can actually match. styles.css is 123 KB and a shared link
-       matched about 10% of it. Regenerate with harness/tools/cssgraph.py;
+       player page can actually match. styles.css dwarfs what a shared link can
+       match — measure both rather than trusting a figure here; this comment
+       said 123 KB long after styles.css had grown past twice that. Regenerate with harness/tools/cssgraph.py;
        verify_cssplit.py fails if this file and styles.css disagree. -->
   <link rel="stylesheet" href="{{ skribl_asset('player.css') }}">
 </head>
