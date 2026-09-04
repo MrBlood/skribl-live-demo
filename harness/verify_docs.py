@@ -167,6 +167,49 @@ check("every SKRIBL_* the code reads is named in a doc or .env.example",
       not _undoc_env,
       ", ".join(_undoc_env) + " — a knob nobody can find is a knob nobody sets")
 
+# v273: the harness's own dependencies were declared NOWHERE until this release.
+# harness/README.md said `pip install flask_sqlalchemy` — one package of the
+# eight a run needs — and neither Playwright nor Pillow appeared in any file. A
+# release run reached batch 42 of 44 before dying on the absence of Pillow, and
+# verify_sizeclass.py had been reporting 81/82 with eight assertions silently
+# not running. Test-only deps are deliberately NOT in the root requirements.txt,
+# which is the production runtime and the hashed lock; they live in
+# harness/requirements.txt, and this asserts that file actually covers what the
+# suites import.
+_HARNESS_REQ = ROOT / "harness" / "requirements.txt"
+check("harness/requirements.txt exists", _HARNESS_REQ.is_file(),
+      "the harness's dependencies must be declared somewhere a fresh container can read")
+if _HARNESS_REQ.is_file():
+    # PARSE REQUIREMENT LINES, do not substring-search the file. The first
+    # version of this checked `name in text.lower()` and its own mutation test
+    # caught it out: deleting the Pillow requirement left the word "Pillow" in
+    # the explanatory comment above it, so the gate passed on a MENTION of a
+    # dependency that was no longer declared. A comment is not an install.
+    def _declared_names(*paths):
+        out = set()
+        for path in paths:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.split("#", 1)[0].strip()
+                if not line or line.startswith("-"):
+                    continue
+                out.add(re.split(r"[<>=!~\[;\s]", line, 1)[0].strip().lower())
+        return out
+    _declared = _declared_names(_HARNESS_REQ, ROOT / "requirements.txt")
+    _IMPORT_TO_DIST = {"PIL": "pillow", "playwright": "playwright",
+                       "flask": "flask", "sqlalchemy": "sqlalchemy",
+                       "psycopg": "psycopg", "alembic": "alembic",
+                       "dotenv": "python-dotenv", "gunicorn": "gunicorn"}
+    _imported = set()
+    for _s in (ROOT / "harness").glob("verify_*.py"):
+        _t = _s.read_text(encoding="utf-8")
+        for _mod, _dist in _IMPORT_TO_DIST.items():
+            if re.search(r"^\s*(?:from|import)\s+" + re.escape(_mod) + r"\b", _t, re.M):
+                _imported.add(_dist)
+    _missing_dep = sorted(d for d in _imported if d.lower() not in _declared)
+    check("every third-party module the suites import is declared",
+          not _missing_dep,
+          ", ".join(_missing_dep) + " — an undeclared test dep is a run that dies at batch 42")
+
 print("\nDOCS — no volatile release fact is typed by hand")
 # A tree hash written into prose cannot be kept true: it describes the tree it
 # is written into, so writing it changes it. START-HERE.md carried one, it went
@@ -671,6 +714,51 @@ EXEMPT = re.compile(r"SUPERSEDED|\(history\)|\(historical|historical from here|"
                     r"was DECLARED|used to (say|read|be|end|state|claim)|no longer|"
                     r"requirement, as written|"
                     r"until v\d|before v\d|as of v\d", re.I)
+
+# v273: CLAUDE.md has always said "no doc may hand-type a tree hash or an
+# assertion count outside the generated stanza". The tree-hash half was
+# enforced below; the assertion-count half never was, and the audit found
+# THIRTY-SIX typed per-suite counts across six files with TWENTY-EIGHT of them
+# stale. harness/README.md carried seventeen in a code block — invisible to a
+# prose-scoped check — including verify_ux.py written as 24 against an actual
+# 330. A wrong number under the harness's own name is worse than no number.
+#
+# Scoped to documents that describe the present. A changelog SHOULD say what a
+# suite counted at the release it documents, so DECISIONS.md, docs/HANDOFF.md
+# and docs/REFACTOR-v132.md are not scanned, and a dated line here is exempt by
+# the same six-line window _denials uses — that is how START-HERE keeps its
+# "Measured at v214" suite-splitting table verbatim.
+_COUNTED = re.compile(r"(verify_\w+\.py)[^\n]{0,40}?\b(\d{1,4})\s*assertion"
+                      r"|\b(\d{1,4})\s*assertion[^\n]{0,40}?(verify_\w+\.py)"
+                      r"|python3?\s+(verify_\w+\.py)\s+#\s*(\d{1,4})\b")
+_DATED = re.compile(r"measured at v\d|as of v\d|at v\d{2,}|until v\d|before v\d|"
+                    r"SUPERSEDED|\(historical|used to", re.I)
+_typed_counts = []
+for rel in list(CURRENT_DOCS) + ["harness/README.md"]:
+    doc = ROOT / rel
+    if not doc.is_file():
+        continue
+    body = doc.read_text(encoding="utf-8")
+    # Blank the stanza rather than deleting it: re.sub removes its LINES too, and
+    # every line number reported after that point is then wrong. The first run of
+    # this check pointed at a section heading forty lines from the real offender.
+    body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END),
+                  lambda m: "\n" * m.group(0).count("\n"), body, flags=re.S)
+    lines = body.splitlines()
+    for i, line in enumerate(lines):
+        m = _COUNTED.search(line)
+        if not m:
+            continue
+        if _DATED.search("\n".join(lines[max(0, i - 6):i + 1])):
+            continue
+        suite = m.group(1) or m.group(4) or m.group(5)
+        _typed_counts.append(f"{rel}:{i + 1} {suite}")
+check("no current doc hand-types a per-suite assertion count",
+      not _typed_counts,
+      ", ".join(_typed_counts[:4])
+      + (f" (+{len(_typed_counts) - 4} more)" if len(_typed_counts) > 4 else "")
+      + " — harness/RELEASE.md carries every count, generated by the run")
+
 
 # (label, proof, denial patterns, extra files to scan beyond CURRENT_DOCS)
 #

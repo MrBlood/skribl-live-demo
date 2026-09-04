@@ -455,7 +455,7 @@ whole-page move first, and it is the natural next feature.
   its own signature was obsolete, while `README.md` pointed integrators at it.
   The plan is preserved in git history; the guide is rewritten
   around a copy-pasteable example that was executed, not imagined.
-  `harness/verify_integration.py` (14 assertions, no browser, seconds) pins all
+  `harness/verify_integration.py` (no browser, seconds; count in RELEASE.md) pins all
   of it, including the negative controls — install a visibility policy, prove it
   changes the outcome, clear it, prove the default returns.
   One limitation was DECLARED rather than silent: the feed filters
@@ -1823,7 +1823,7 @@ combined suite over the limit.
 **The shape of the release.** Five behaviours the code already had and no
 control could reach were exposed; four genuinely new tools were added; and the
 draw path was carved out of `app.js`. Everything is on BOTH editors unless
-noted, and lives in `harness/verify_tools.py` (84 assertions), split out of
+noted, and lives in `harness/verify_tools.py`, split out of
 `verify_ux.py` when that suite stopped finishing in one invocation.
 
 **Exposed, not invented** — stroke layers, eraser width, grid density, pause

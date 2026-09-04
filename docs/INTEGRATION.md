@@ -389,7 +389,7 @@ abuse reporting; users reporting content is a host feature.
 ## Checking your integration
 
 ```bash
-python3 harness/verify_integration.py        # 14 assertions, no browser, seconds
+python3 harness/verify_integration.py        # no browser, seconds
 ```
 
 It builds a host app, mounts Skribl, and checks the homepage is not stolen,

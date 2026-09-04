@@ -3,6 +3,12 @@
 > **v111–v131 are summarised below.** The round-by-round review records that
 > documented them in full were retired from the tree in the v263 cleanup; they
 > live in git history. This file remains the reverse-chronological narrative.
+>
+> **EVERY FIGURE BELOW IS THE FIGURE OF THE VERSION IT SITS UNDER, and is not
+> maintained afterwards.** Per-suite assertion counts in this file were written
+> when their entry was; at the v273 audit four of the five were stale, one by
+> nine assertions. That is correct behaviour for a changelog and wrong for a
+> reference — `harness/RELEASE.md` is the only current source for any count.
 
 ## v111–v131 at a glance
 

@@ -163,7 +163,7 @@ and puts the tool in front of people who already exist.
 
 1. ~~**Selection and transform.**~~ **SHIPPED.** Marquee select, move, uniform
    scale from the corners, rotate from a grip, cut/duplicate/paste and flip
-   H/V — `verify_select.py`, 56 assertions. Lasso specifically was not built:
+   H/V — `verify_select.py`. Lasso specifically was not built:
    selection is by stroke GROUP rather than by point, because moving half a
    stroke splits a line down the middle and bakes a connecting segment into the
    replay. A lasso over whole groups would be a nicer marquee, not a new
