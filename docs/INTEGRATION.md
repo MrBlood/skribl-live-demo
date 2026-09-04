@@ -209,6 +209,77 @@ background colour, a photo or base-snapshot underlay, the posted audio loop —
 plays. The header of `skribl/static/inlineplayer.js` says why the gap is there
 and what it would take to close it.
 
+## When your composer is a form, not a browser
+
+Everything above assumes the browser posts the Skribl. If your composer is a
+server-side **form** — the author types a caption, attaches things, and their
+browser sends one `POST /compose` to your own view — then having your server
+turn round and POST to its own JSON endpoint is the wrong shape. It costs a
+second request, a second authentication and a second CSRF exchange, and, the
+part that actually breaks, a **separate transaction**: a failure between the two
+leaves you a Skribl nothing points at, or a post pointing at a Skribl that was
+never stored.
+
+Call the function instead. It is the same code the endpoint runs — the endpoint
+calls it too:
+
+```python
+from skribl import create_post, SkriblRejected
+
+@app.post("/compose")
+@login_required
+def compose():
+    body = request.form.get("body", "")
+    drawing = json.loads(request.form["skribl_payload"])   # the hidden field
+    drawing["visibility"] = "public"                       # default is unlisted
+    drawing["title"] = body[:80] or "Untitled Skribl"
+
+    try:
+        made = create_post(drawing, author_id=current_user.id)
+    except SkriblRejected as exc:
+        flash(exc.message)                 # the wording Skribl's own composer shows
+        return redirect(url_for("compose_form"))
+
+    db.session.add(Post(body=body, author_id=current_user.id,
+                        skribl_id=made.public_id))
+    db.session.commit()          # ONE commit. The Skribl and your row, together.
+    return redirect(url_for("feed"))
+```
+
+**One transaction is the whole point.** `create_post` flushes and uses
+savepoints; it never commits and never rolls back. Your `db.session.commit()`
+makes the Skribl and your post row durable together, and your rollback takes
+both. `harness/verify_createpost.py` asserts exactly that, in both directions.
+
+**What you get back.** `made.public_id` is the string for
+`{{ skribl_inline(post.skribl_id) }}`. `made.post` is the flushed `SkriblPost`,
+so `made.post.id` is available if you would rather hold a foreign key. There is
+no `url` on it: building one needs `url_for`, which outside a request needs a
+configured `SERVER_NAME`, and this function should not require either — call
+`url_for("skribl.skribl_player", public_id=made.public_id)` yourself when you
+want one, which is also the only spelling that stays right under a `url_prefix`.
+
+**What it raises.** `SkriblRejected` for anything the author can fix — bad
+shape, an over-long title, an unknown visibility, media past a cap. `.message`
+is the same string the JSON endpoint puts in its `error` field and is safe to
+show; `.status` is the code the endpoint would answer with. `SkriblUnavailable`
+means five id attempts collided and the caller should retry.
+`SkriblIdempotencyRace` only appears if you passed an `idempotency` pair.
+
+**THE RATE LIMITER IS NOT YOURS FOR FREE, and this is the one that will catch
+you out.** Skribl's IP limiter counts *requests to Skribl's endpoint*. A call to
+`create_post` is not one, so **nothing throttles this path but you**. It is not
+an oversight and it cannot be switched on: `_client_ip()` reads the Flask
+`request` and the reservation is settled in a Flask teardown, so the limiter
+cannot run in a management command or a worker at all. If your compose view is
+reachable by an authenticated user — it is — put your own limit on it, the same
+way you already limit posting text.
+
+**Anonymous authors.** `author_id` has no default. Pass `None` deliberately for
+an anonymous post; do not leave it out and hope. There is no resolver here
+because a function that guesses the author is how every visitor once became
+user 1 and could read user 1's private posts.
+
 ## Three things that will bite you if you skip them
 
 **`attach_to_metadata` is not optional in practice.** Skribl's models sit on a

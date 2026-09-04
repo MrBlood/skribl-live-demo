@@ -86,6 +86,11 @@ BATCHES = [
     # card route) so it rides with the photo suite.
     ["verify_inline.py"],
     ["verify_compose.py"],
+    # Server-side creation. No browser, so it is fast and could ride with
+    # anything — but it drives the SAME endpoint the route suites drive, and
+    # the harness gives one database to every suite in an invocation, so it
+    # keeps its own batch rather than counting somebody else's posts.
+    ["verify_createpost.py"],
     ["verify_library.py"],
     ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],

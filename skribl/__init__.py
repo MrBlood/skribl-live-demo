@@ -35,13 +35,21 @@ import os
 from flask import Blueprint, url_for
 
 from .core import SKRIBL_VERSION
+from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
+                       SkriblUnavailable, create_post)
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_visibility_policy)
 from .routes import register_routes
 from .security import register_security
 
 __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
-           "SkriblBase", "create_all", "session"]
+           "SkriblBase", "create_all", "session",
+           # Server-side creation, for a host whose composer is a FORM rather
+           # than a browser calling POST /api/skribls. Same validation, same
+           # media handling, same transaction as the host's own rows. See
+           # skribl/creation.py's header, and docs/INTEGRATION.md.
+           "create_post", "CreatedPost", "SkriblRejected",
+           "SkriblIdempotencyRace", "SkriblUnavailable"]
 
 
 _ASSET_CACHE = {}

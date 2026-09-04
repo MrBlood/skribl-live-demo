@@ -70,9 +70,11 @@ every case; the lexer checking its own output proves nothing) and
   `python3` is not 3.12, build a venv from the 3.12 that is installed and put it
   on PATH ahead of everything for the whole run.
 * **THE SEAL AND CI DO NOT TEST THE SAME THING, and CI's mode is the stricter
-  one.** `release_run.py` runs 44 SEPARATE batches, each getting a fresh server
-  and database on a quiet machine. CI runs all 93 suites in ONE invocation on a
-  contended two-core runner. Anything sensitive to write contention or to
+  one.** `release_run.py` runs its batches SEPARATELY, each getting a fresh
+  server and database on a quiet machine. CI runs every suite in ONE invocation
+  on a contended two-core runner. (Both counts were typed here once and both
+  went stale — the suite count was caught by `verify_docs`, the batch count was
+  not, because nothing checks it. `release_run.py --dry-run` prints them.) Anything sensitive to write contention or to
   cross-suite state therefore passes the seal and fails CI — which is exactly
   what happened: a 500 under SQLite lock contention (v274) failed main's sqlite
   job on one push and passed it on the next, with the bug unchanged in both,
