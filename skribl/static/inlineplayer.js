@@ -89,6 +89,27 @@
  * returns the WHOLE payload, base64 audio included, and a feed that prefetched
  * twenty of those would move tens of megabytes to render thumbnails.
  *
+ * IT FOLLOWS THE HOST'S THEME, WITH ITS OWN VALUES AS FALLBACKS.
+ * inlineplayer.css reads a custom property for every colour and supplies a
+ * literal after the comma: `var(--bg-elev, #12151c)`. A host that defines those
+ * tokens gets a player that changes with it — including live, because custom
+ * properties cascade from :root and a theme switch is one attribute change up
+ * there. A host that defines nothing gets the literals, which is exactly what
+ * the file shipped with.
+ *
+ * The token NAMES are the ones a feed already has — --bg-elev, --border,
+ * --radius, --accent, --accent-2 — rather than skribl-prefixed ones, because a
+ * prefix would mean the host had to map their palette onto ours to get any
+ * benefit, and then nobody would.
+ *
+ * The failure this avoids is a DARK-ONLY PLAYER IN A LIGHT FEED: a black
+ * rectangle among white cards, which reads as broken rather than as styled. A
+ * microblog with a light/dark toggle is the normal case, not the exotic one.
+ *
+ * THE DRAWING ITSELF DOES NOT FOLLOW THE THEME. Its ground is the one the
+ * author drew on and it is painted from the payload — the artwork is content,
+ * not chrome, and recolouring it would be editing somebody's picture.
+ *
  * THE POSTER IS THE SHARE CARD, CROPPED — and this is where that is explained,
  * because inlineplayer.css ships its comments to every host (jsstrip.py strips
  * a JavaScript response; nothing strips CSS) while these are stripped from

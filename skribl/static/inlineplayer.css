@@ -1,10 +1,14 @@
 /* The in-post player's stylesheet.
  *
  * NOT styles.css and NOT player.css. This is the only Skribl CSS meant to load
- * inside SOMEBODY ELSE'S page, so every rule is scoped under .skribl-inline,
- * every colour is written out rather than inherited from a token the host does
- * not define, and nothing outside the component is selected. It is outside
- * cssgraph.py's graph entirely — that tool derives player.css from styles.css.
+ * inside SOMEBODY ELSE'S page, so every rule is scoped under .skribl-inline and
+ * nothing outside the component is selected. It is outside cssgraph.py's graph
+ * entirely — that tool derives player.css from styles.css.
+ *
+ * IT FOLLOWS THE HOST'S THEME: every colour reads a custom property with its
+ * own value as the fallback — `var(--bg-elev, #12151c)`. Tokens consumed, all
+ * optional: --bg-elev, --border, --radius, --accent, --accent-2. The reasoning
+ * is in inlineplayer.js's header, where jsstrip removes it from the response.
  *
  * THE REASONING LIVES IN inlineplayer.js's HEADER, not here, and that is
  * deliberate: jsstrip.py removes comments from a JavaScript response and
@@ -29,10 +33,12 @@
   aspect-ratio: 16 / 9;          /* the widest canvas a drawing can have */
   margin: 0;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 16px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.13));
+  border-radius: var(--radius, 16px);
   overflow: hidden;
-  background: #0b0d12;
+  /* The box's ground shows only as letterbox around a drawing, so it takes
+     the host's raised surface rather than a colour of its own. */
+  background: var(--bg-elev, #0b0d12);
   cursor: pointer;
   /* A host's line-height/font would leak into the duration chip otherwise. */
   line-height: 1.4;
@@ -42,7 +48,7 @@
 
 /* Keyboard: the box is the control, so it takes focus and shows it. */
 .skribl-inline:focus-visible {
-  outline: 2px solid #7c5cff;
+  outline: 2px solid var(--accent, #7c5cff);
   outline-offset: 2px;
 }
 
@@ -208,7 +214,7 @@
 
 .skribl-inline-mute:focus-visible,
 .skribl-inline-loop:focus-visible {
-  outline: 2px solid #7c5cff;
+  outline: 2px solid var(--accent, #7c5cff);
   outline-offset: 1px;
 }
 
@@ -216,8 +222,8 @@
    dims when it is switched OFF — the opposite of mute, whose resting state is
    muted. Each reads as "what is currently true", not "what this button does". */
 .skribl-inline-loop {
-  color: #cfc4ff;
-  border-color: rgba(124, 92, 255, 0.45);
+  color: var(--accent, #cfc4ff);
+  border-color: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent);
 }
 
 .skribl-inline.is-noloop .skribl-inline-loop {
@@ -248,7 +254,7 @@
   bottom: 0;
   height: 2.5px;
   width: 0;
-  background: linear-gradient(90deg, #7c5cff, #5b8cff);
+  background: linear-gradient(90deg, var(--accent, #7c5cff), var(--accent-2, #5b8cff));
   box-shadow: 0 0 10px rgba(124, 92, 255, 0.35);
   pointer-events: none;
 }
