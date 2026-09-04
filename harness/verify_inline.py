@@ -570,12 +570,14 @@ with sync_playwright() as sp:
           abs(geom["offset"] - geom["wantOffset"]) < 0.01,
           f"{geom['offset']:.4f} vs {geom['wantOffset']:.4f}")
 
-    # AND THE SAME NUMBERS ON THE OTHER SIDE. editor_post.js composites the card
-    # from this module too; if it stopped, the crop would be measuring a
-    # rectangle nothing puts the drawing in.
-    ep = (ROOT / "skribl" / "static" / "editor_post.js").read_text(encoding="utf-8")
-    check("editor_post.js composites the card from lib/sharecard.js",
-          "SkriblShareCard" in ep,
+    # AND THE SAME NUMBERS ON THE OTHER SIDE. The card is composited from this
+    # module's geometry too — by lib/postedcard.js, which the EDITORS load and a
+    # feed does not (it has no drawing to composite; see that file's header). If
+    # the compositor stopped reading sharecard.js, the crop above would be
+    # measuring a rectangle nothing puts the drawing in.
+    pc = (ROOT / "skribl" / "static" / "lib" / "postedcard.js").read_text(encoding="utf-8")
+    check("the card compositor places the drawing using lib/sharecard.js",
+          "SkriblShareCard" in pc and "drawingRect" in pc,
           "otherwise the two sides derive the same rectangle independently")
     for tpl, label in ((["skribl_editor.html"], "Pad"), (["skribl_flip.html"], "Flip")):
         body = (ROOT / "skribl" / "templates" / "skribl" / tpl[0]).read_text(encoding="utf-8")

@@ -3834,8 +3834,47 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  return { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
+  // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
+  // /s/<id>/card.png fell through to the static branded og-card for every Flip
+  // post ever made — on its unfurl, as the in-post player's idle poster in a
+  // feed, and as its tile on the profile's Skribls tab. Three surfaces showing
+  // an advert where the drawing should be, and invisible to the author, who
+  // does not look at their own unfurl. Same shape as the title bug
+  // verify_flipmeta.py records: a control surface built on one editor only.
+  //
+  // lib/postedcard.js composites it, exactly as it does for the Pad. What Flip
+  // supplies is the flat canvas, through drawFrameTo() — the same path the PNG
+  // and WebM exports use, so the card cannot show something no export would.
+  const _card = _shareCardDataURL();
+  if (_card) _payload.thumbnail = _card;
+  return _payload;
+}
+
+/* WHICH PAGE THE CARD SHOWS, and why it is not simply page 0. The in-post
+   player idles a flip on page 0 (lib/holdtiming.js indexAt(0)), so page 0 is
+   the consistent answer — right up until page 0 is empty, which is an ordinary
+   way to start an animation and would make the poster a blank rectangle. A
+   poster's job is to say what the thing IS. So: the first page with ink,
+   falling back to page 0 when nothing has any. A video's poster frame is
+   picked the same way and for the same reason. */
+function _shareCardDataURL(){
+  const PC = window.SkriblPostedCard;
+  if (!PC || !PC.build) return null;
+  try {
+    let pick = frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+    if (!pick) return null;
+    const flat = document.createElement('canvas');
+    flat.width = CW; flat.height = CH;
+    drawFrameTo(flat.getContext('2d'), pick);
+    return PC.build(flat);
+  } catch (e) {
+    // A post must never fail over its own poster; the server falls back to the
+    // branded card, which is exactly where this was before the change.
+    console.warn('skribl: share card failed, posting without one', e);
+    return null;
+  }
 }
 async function shareSkribl(){
   if(sharing) return;

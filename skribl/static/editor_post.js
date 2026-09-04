@@ -199,114 +199,23 @@
     return out ? out.toDataURL('image/png') : null;
   }
 
-  // Render the finished drawing onto a 1200×630 branded share card (the Open
-  // Graph aspect) so a shared /s/<id> link unfurls with the actual drawing
-  // instead of the generic card. Composited client-side at post time and sent as
-  // payload.thumbnail; encoded per-content — JPEG q0.92 when a photo is present
-  // (~6x smaller, artifacts hidden), PNG for line-art cards (smaller AND crisp as
-  // PNG). The /s/<id>/card.png route serves either format (also legacy PNG posts).
+  // The card itself is composited by lib/postedcard.js — editors only, beside
+  // lib/postedaudio.js, because a host's feed never posts. It moved out of here
+  // when Flip needed one too: this
+  // function was Pad-only, so every Flip post fell back to the static branded
+  // og-card on its unfurl, in a feed's in-post poster and on the profile's
+  // tiles. See that module's header.
+  //
+  // What stays HERE is the flattening — ground, photo with its fit/opacity/blur,
+  // then the strokes — because that is the part that genuinely differs between
+  // a Pad recording and a Flip animation, and the photo state it reads is this
+  // editor's. The encoding is not passed in any more: the module encodes both
+  // ways and keeps the smaller, because the content-based rule this used to
+  // supply a hint for turned out to be wrong by 16x.
   function buildShareCardDataURL() {
-    try {
-      const flat = buildPreviewCanvas();
-      // The card's geometry lives in lib/sharecard.js because the IN-POST
-      // player has to know it too: a feed post's idle state is this card, and
-      // it crops the brand strip back off to show just the drawing. Two files
-      // deriving the same rectangle from four numbers is the drift
-      // lib/holdtiming.js's header describes. Inline fallback, as every
-      // consumer of lib/ keeps, so a surface that somehow loads without the
-      // module composites exactly as it always did.
-      const SC = window.SkriblShareCard;
-      const CARD_W = SC ? SC.CARD_W : 1200, CARD_H = SC ? SC.CARD_H : 630;
-      const card = document.createElement('canvas');
-      card.width = CARD_W; card.height = CARD_H;
-      const c = card.getContext('2d');
-
-      // Ground + soft accent wash (echoes the static og-card).
-      c.fillStyle = '#0b0d12';
-      c.fillRect(0, 0, CARD_W, CARD_H);
-      const wash = c.createRadialGradient(CARD_W*0.5, CARD_H*0.28, 40, CARD_W*0.5, CARD_H*0.28, CARD_W*0.7);
-      wash.addColorStop(0, 'rgba(124,92,255,0.16)');
-      wash.addColorStop(1, 'rgba(124,92,255,0)');
-      c.fillStyle = wash;
-      c.fillRect(0, 0, CARD_W, CARD_H);
-
-      const roundRect = (x, y, w, h, r) => {
-        c.beginPath();
-        c.moveTo(x+r, y);
-        c.arcTo(x+w, y, x+w, y+h, r);
-        c.arcTo(x+w, y+h, x, y+h, r);
-        c.arcTo(x, y+h, x, y, r);
-        c.arcTo(x, y, x+w, y, r);
-        c.closePath();
-      };
-
-      // Contain the drawing centered, leaving a strip at the bottom for the mark.
-      const footer = SC ? SC.FOOTER : 84;
-      const pad = SC ? SC.PAD : 54;
-      if (flat && flat.width && flat.height) {
-        const areaW = CARD_W - pad*2;
-        const areaH = CARD_H - pad - footer;
-        const scale = Math.min(areaW / flat.width, areaH / flat.height);
-        const dw = Math.round(flat.width * scale);
-        const dh = Math.round(flat.height * scale);
-        const dx = Math.round((CARD_W - dw) / 2);
-        const dy = Math.round((CARD_H - footer - dh) / 2);
-        c.save();
-        roundRect(dx, dy, dw, dh, 18);
-        c.clip();
-        c.drawImage(flat, dx, dy, dw, dh);   // flat is already opaque (bg baked in)
-        c.restore();
-        c.lineWidth = 2;
-        c.strokeStyle = 'rgba(124,92,255,0.45)';
-        roundRect(dx, dy, dw, dh, 18);
-        c.stroke();
-      }
-
-      // Brand mark: 6-point star + wordmark, centered in the footer strip.
-      const cy = CARD_H - footer/2 + 6;
-      const label = 'Skribl Pad';
-      c.font = '700 30px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-      c.textBaseline = 'middle';
-      const tw = c.measureText(label).width;
-      const starR = 13;
-      const gap = 14;
-      const totalW = starR*2 + gap + tw;
-      let x = (CARD_W - totalW) / 2;
-      // star
-      const scx = x + starR, scy = cy;
-      c.save();
-      c.translate(scx, scy);
-      c.beginPath();
-      for (let i = 0; i < 12; i++) {
-        const ang = (Math.PI / 6) * i - Math.PI/2;
-        const rr = (i % 2 === 0) ? starR : starR * 0.42;
-        const px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
-        i === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
-      }
-      c.closePath();
-      const sg = c.createLinearGradient(-starR, -starR, starR, starR);
-      sg.addColorStop(0, '#7c5cff');
-      sg.addColorStop(1, '#5b8cff');
-      c.fillStyle = sg;
-      c.fill();
-      c.restore();
-      // wordmark
-      c.fillStyle = 'rgba(246,247,249,0.94)';
-      c.textAlign = 'left';
-      c.fillText(label, x + starR*2 + gap, cy);
-
-      // Encode by content. A photo card compresses several x smaller as JPEG (the
-      // point of this change), but the drawn lines sit ON TOP of the photo as sharp
-      // white-on-dark edges, so use q0.92 (not a lower q) to keep JPEG's edge
-      // ringing off those lines while still landing ~4-5x under PNG. A line-art
-      // card (no photo) is the opposite: PNG is both SMALLER and crisp, and JPEG
-      // would bloat AND ring it — so PNG there. The /s/<id>/card.png route serves
-      // either format. The photo-present test mirrors buildPreviewCanvas exactly.
-      const hasPhoto = !!(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src);
-      return hasPhoto ? card.toDataURL('image/jpeg', 0.92) : card.toDataURL('image/png');
-    } catch (e) {
-      return null;
-    }
+    var PC = window.SkriblPostedCard;
+    if (!PC || !PC.build) return null;
+    return PC.build(buildPreviewCanvas());
   }
 
   function updateCharCount() {

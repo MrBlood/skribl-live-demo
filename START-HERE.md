@@ -71,7 +71,7 @@ every case; the lexer checking its own output proves nothing) and
   on PATH ahead of everything for the whole run.
 * **THE SEAL AND CI DO NOT TEST THE SAME THING, and CI's mode is the stricter
   one.** `release_run.py` runs 44 SEPARATE batches, each getting a fresh server
-  and database on a quiet machine. CI runs all 92 suites in ONE invocation on a
+  and database on a quiet machine. CI runs all 93 suites in ONE invocation on a
   contended two-core runner. Anything sensitive to write contention or to
   cross-suite state therefore passes the seal and fails CI — which is exactly
   what happened: a 500 under SQLite lock contention (v274) failed main's sqlite
@@ -1330,7 +1330,8 @@ rather than a shared rule.
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
-| `sharecard.js` | Pad+Flip+in-post | Where the drawing sits inside /s/<id>/card.png — ONE definition, two readers. |
+| `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
+| `sharecard.js` | Pad+Flip+in-post | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
@@ -2445,6 +2446,56 @@ that is a change to a 437 KB file with its own post flow and it wants its own
 run.
 
 **NOT SEALED**, same as the two before it.
+
+## Flip's missing share card, and a 16x encoding mistake (NOT SEALED)
+
+The gap the profile tab turned up: `buildShareCardDataURL()` lived in
+`editor_post.js`, which is PAD-ONLY, and `flip.js` set no `thumbnail` at all. So
+every Flip Skribl ever posted fell back to the static branded og-card in three
+places at once — its `/s/<id>` unfurl, the in-post player's idle poster in a
+feed, and its tile on the profile. An advert where the drawing should be, and
+invisible because the person who posts one does not look at their own unfurl.
+Same shape as the title bug `verify_flipmeta.py` records: a whole control
+surface built on one of the two editors.
+
+    skribl/static/lib/postedcard.js   the compositor, editors only
+    skribl/static/lib/sharecard.js    the geometry, editors AND the in-post player
+    harness/verify_sharecard.py       both editors, one builder, round-tripped
+
+**TWO MODULES, NOT ONE, and the ratchet is what said so.** The first version put
+the compositor beside the geometry in `sharecard.js` — which the in-post player
+loads, because it crops the poster by `band()`. `verify_inline.py`'s embed
+ratchet failed on the next run: 2 KB of canvas work on every feed page in the
+world, to composite a card a feed never makes. Split on the same rule
+`lib/postedaudio.js` states: THE READER IS NOT THE WRITER. A host embeds the
+geometry and never the compositor, because it never posts.
+
+**AND THE ENCODING RULE WAS WRONG BY 16x.** The builder chose PNG for line art
+and JPEG for photos, on the recorded grounds that "PNG is both SMALLER and
+crisp" for lines. Measured on the actual card: **451,824 B as PNG against
+28,062 B as JPEG q0.92.** The cause is the accent wash — Chromium DITHERS a
+canvas gradient, putting per-pixel noise across all 1,200x630 that PNG cannot
+compress — so the rule was true before the wash existed and was never
+re-checked. It survived because a 450 KB card is not wrong, only expensive:
+nobody looks at their own unfurl's byte count. The in-post player is what made
+it matter, by turning this image into the IDLE COST OF EVERY POST IN A FEED —
+a screenful was over five megabytes to show twelve thumbnails.
+
+The fix is to stop having a rule: encode both, keep the smaller. Real cards are
+now ~20 KB. `verify_sharecard.py` pins a 200,000 B ceiling, which is the check
+that would have caught the original.
+
+**Two suites broke on this change and both were right to.**
+
+  * `verify_flipmeta.py` read the POST body as JSON. `lib/posted.js` gzips any
+    body over 4,096 B, and its fixture — one stroke, no media — sat under that
+    until a 25 KB card was attached. It inflates now.
+  * `verify_library.py`'s search matched `verify_inline.py`'s "Harness fixture
+    A" as well as its own, because `run_harness.sh` gives one database to every
+    suite in an invocation. Its fixtures carry a per-run token now. Exactly the
+    cross-suite state this file warns passes the seal and fails CI.
+
+**NOT SEALED**, same as the three before it.
 
 ## Known-open, in the order worth doing
 

@@ -167,6 +167,16 @@ appear here, and `RELEASE.md` names every one of them.
   one converge, so the tool's strength is not a property of the device's sample
   rate.
 
+- `verify_sharecard.py` — both editors build a share card, through ONE builder.
+  Flip never did: the builder lived in `editor_post.js`, which is Pad-only, so
+  every Flip post fell back to the static branded og-card on its unfurl, as the
+  in-post player's idle poster, and as its profile tile. Pins the round trip
+  (post from each editor, fetch the card, assert it is not the fallback and not
+  the same image twice), that only one file in the tree composites a card, that
+  the compositor is NOT in the module a host's feed loads, and a weight ceiling
+  — the card is the idle cost of every post in a feed, and it was 451,824 B
+  until the encoder stopped choosing PNG on a rule that had gone wrong.
+
 - `verify_library.py` — the PROFILE'S SKRIBLS TAB (`/library`), and what it
   replaced. That page was a mock: its own replay engine and a table of
   hand-drawn motifs, rendered as if posted, on a route a host got in their own

@@ -85,7 +85,14 @@ def post_one(b, title, turns=4):
 with sync_playwright() as sp:
     b = sp.chromium.launch()
 
-    ids = [post_one(b, "Library fixture A", 4), post_one(b, "Library fixture B", 2)]
+    # UNIQUE PER RUN. run_harness.sh gives one server and one database to every
+    # suite in an invocation, so the search assertion below was matching
+    # verify_inline.py's "Harness fixture A" as well as this suite's own — two
+    # tiles where it wanted one, intermittently, depending on which suites ran.
+    # Exactly the cross-suite state START-HERE.md warns passes the seal and
+    # fails CI. A token nothing else can produce makes the query this suite's.
+    tag = "lib" + os.urandom(4).hex()
+    ids = [post_one(b, tag + " alpha", 4), post_one(b, tag + " beta", 2)]
     if not all(ids):
         check("two public skribls posted (fixture)", False, str(ids))
         print("\n" + "=" * 62 + "\n0/1 passed")
@@ -209,7 +216,7 @@ with sync_playwright() as sp:
           f"{len(payload_reqs) - before} fetch(es)")
 
     # ---- search says what it is doing --------------------------------------
-    pg.fill("#search", "fixture A")
+    pg.fill("#search", tag + " alpha")
     # WAIT FOR THE FILTER, do not sleep at it. The grid re-renders on `input`,
     # and a fixed pause raced it: this read 2 tiles on one run and 1 on the next
     # with the same code, which is a flaky assertion rather than a finding.

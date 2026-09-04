@@ -92,11 +92,12 @@ in-post player is the other shape:
 demonstration, not a dependency: the two macros above are the product and they
 work without it.
 
-**What it costs and when.** `skribl_inline_assets()` pulls four files —
-`inlineplayer.css`, `inlineplayer.js`, and the two shared rule modules
-`lib/canvassizes.js` and `lib/holdtiming.js` — under 24 KB served, ratcheted by
-`harness/verify_inline.py`. Per post, idle, it costs ONE image: the share card
-at `/s/<id>/card.png`, which your CDN can cache. `GET /api/skribls/<id>` is
+**What it costs and when.** `skribl_inline_assets()` pulls five files —
+`inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
+`lib/canvassizes.js`, `lib/holdtiming.js` and `lib/sharecard.js` — under 26 KB
+served, ratcheted by `harness/verify_inline.py`. Per post, idle, it costs ONE
+image: the share card at `/s/<id>/card.png`, about 20 KB, which your CDN can
+cache. `GET /api/skribls/<id>` is
 issued on the first tap and never again for that post. Do not prefetch it: that
 endpoint returns the whole payload, base64 audio included.
 

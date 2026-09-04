@@ -79,6 +79,8 @@ skribl/                    The blueprint package — everything Skribl owns
     flip.js                Flip
     inlineplayer.js/.css   The in-post player — a Skribl inside a host's feed
     editor_compose.js      Compose mode: attach a Skribl to a host's draft post
+    lib/sharecard.js       Where the drawing sits inside /s/<id>/card.png
+    lib/postedcard.js      Compositing that card — editors only
     styles.css, flip.css   Pad/shared styles, Flip styles
     lib/                   Modules shared across surfaces (audioloop, holdtiming, …)
     gifenc.min.js          Vendored GIF encoder (build command in its banner)
@@ -115,7 +117,8 @@ to the full player a shared `/s/<id>` link opens. A host embeds it in two lines:
 ```
 
 Idle, a post is one cached image — the share card at `/s/<id>/card.png`, cropped
-back to the drawing — and a play button; nothing is fetched until somebody taps. Playing, it redraws the drawing with a progress
+back to the drawing, about 20 KB — and a play button; nothing is fetched until
+somebody taps. Playing, it redraws the drawing with a progress
 hairline and a nib at the pen. Mute is the only viewer control, sound is off by
 default, one Skribl plays at a time, and scrolling one out of view settles it.
 `/feed` is that page, live, over whatever this deployment has posted publicly.

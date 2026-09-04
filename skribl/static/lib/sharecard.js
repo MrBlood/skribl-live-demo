@@ -1,9 +1,32 @@
-/* Where the drawing sits inside /s/<id>/card.png — ONE definition, two readers.
+/* /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT.
  *
- * editor_post.js composites the share card at post time: a 1200x630 Open Graph
- * canvas, the drawing CONTAINED inside it with a 54 px margin and an 84 px strip
- * left at the bottom for the brand mark. That was the only consumer, so the four
- * numbers lived as locals in that function.
+ * The share card is a 1200x630 Open Graph canvas with the drawing CONTAINED
+ * inside it — a 54 px margin, an 84 px strip at the bottom for the brand mark —
+ * composited client-side at post time and sent as payload.thumbnail. It is what
+ * a shared link unfurls with, and (cropped back to the drawing) what an idle
+ * post shows in a feed and what a tile shows on the profile.
+ *
+ * IT LIVED IN editor_post.js, WHICH IS PAD-ONLY, AND THAT WAS A REAL DEFECT.
+ * flip.js has its own post path and never built one — grep it before this
+ * change and there is no payload.thumbnail anywhere in that file — so EVERY
+ * Flip post fell back to the static branded og-card: on its /s/<id> unfurl, as
+ * the in-post player's idle poster, and as its tile in the profile's Skribls
+ * tab. Three surfaces showing an advert instead of the drawing. Same shape as
+ * the bug verify_flipmeta.py records ("a whole control surface that was never
+ * built on one of the two editors"), and invisible for the same reason: the
+ * author who posted it never looks at their own unfurl.
+ *
+ * So the builder is shared — but it is NOT IN THIS FILE. It is in
+ * lib/postedcard.js, which only the two editors load, for the same reason
+ * lib/postedaudio.js is separate: THE READER OF THIS MODULE IS NOT THE WRITER.
+ * A host embedding the in-post player needs band() to crop a poster and nothing
+ * else; it never composites a card, because it never posts. Putting the
+ * composite here put 2 KB of canvas work on every feed page in the world and
+ * blew verify_inline.py's embed ratchet on the first run — which is exactly the
+ * job that ratchet has.
+ *
+ * What stays here is the geometry, because BOTH sides need it: postedcard.js to
+ * place the drawing, inlineplayer.css to crop it back out.
  *
  * The in-post player made a second consumer. A feed post's idle state is that
  * card, and a card is the wrong thing to put in a feed — it is a drawing inside
