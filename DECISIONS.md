@@ -4914,3 +4914,51 @@ compressed codec hits the same wall, and Opus-in-WebM additionally does not
 decode on iOS Safari before 17.4, where it fails silently as a Skribl with no
 music. The owner chose the certain 2x over the conditional 4x.
 
+**A second audit pass, asked for after the first seal, found the deeper half.**
+The first pass checked what the documents SAID. This one checked what they
+never mentioned, which reading cannot find.
+
+**Twenty-eight stale hand-typed assertion counts.** CLAUDE.md has always said no
+document may hand-type an assertion count outside the generated stanza. The
+tree-hash half of that rule was enforced; the count half never was. Thirty-six
+typed per-suite counts existed across six files and twenty-eight were wrong --
+harness/README.md alone carried seventeen inside a code block, invisible to a
+prose-scoped check, including verify_ux.py written as 24 against an actual 330.
+A wrong number under the harness's own name is worse than no number. They are
+gone from every document that describes the present, and enforced.
+
+**FIVE OF THE NINE CARVES WERE NEVER GUARDED.** The player-isolation carve is
+the architectural guarantee this project spends most of its words on, and the
+assertion named four editor_*.js files in a hardcoded tuple. There are nine.
+editor_draft, editor_export, editor_menu, editor_post and editor_tune could
+each have drifted back onto every shared link with nothing to catch it, and a
+tenth carve would have been unguarded on the day it landed. Two of the five
+appeared in no document at all despite each calling itself a carve in its own
+header. The list is read off disk now. Three documents that said "four" say
+nine and name them.
+
+**The harness's dependencies were declared nowhere.** harness/README.md said
+`pip install flask_sqlalchemy` -- one package of the eight a run needs -- and
+neither Playwright nor Pillow appeared in any file. harness/requirements.txt now
+carries both, deliberately NOT the root requirements.txt: nothing under skribl/
+imports PIL, only three suites do, and requirements.txt is the application
+runtime whose hashed lock every deploy installs. Pillow's absence is not a loud
+failure either: verify_sizeclass guards its pixel assertions on PIL importing,
+so without it the suite reports 81/82 -- one tidy failure -- while EIGHT
+assertions silently do not run.
+
+**Two comments described a layout that had been dead for releases**, both in the
+files a reader would most trust on the subject: verify_player_isolation.py still
+said "the player links the WHOLE of styles.css", and skribl_player.html's own
+justification for linking player.css instead cited a styles.css size less than
+half what it had grown to.
+
+**Every gate added across both passes was mutation-tested**, and two of them
+failed that test first time and were fixed because of it: the dependency check
+substring-searched the file, so deleting the Pillow requirement left the word
+"Pillow" in the comment above it and the gate passed on a mention rather than a
+declaration; and the count check reported a line forty lines from the real
+offender, because re.sub had removed the stanza's LINES and shifted every number
+after it. A gate that has not been shown to fail on the real defect is a gate
+nobody has tested.
+
