@@ -66,8 +66,9 @@ ready; the schema decision is the owner's.
 ### `app.js` serves both the editor and the player — MOSTLY CLOSED
 
 **This section used to say a viewer downloads "the entire authoring surface",
-and that stopped being true several releases ago.** Four editor-only files —
-`editor_draw`, `editor_shapes`, `editor_music`, `editor_photo` — were carved out
+and that stopped being true several releases ago.** NINE editor-only files —
+`editor_draft`, `editor_draw`, `editor_export`, `editor_menu`, `editor_music`,
+`editor_photo`, `editor_post`, `editor_shapes`, `editor_tune` — were carved out
 and `verify_player_isolation.py` asserts the player loads none of them. The
 player links its own generated `player.css`, not the whole of `styles.css`. And
 the JS size target the split existed to reach is now MET, by the serve-time

@@ -123,9 +123,14 @@ How it was won, and why the old plan was the wrong plan:
 * **Self-contained IIFEs** — `editor_export`, `editor_post`, `editor_menu`.
 * **Wiring extraction** (move STATEMENTS, leave functions and state) — both
   drawers: `editor_music`, `editor_photo`.
-* **The carves** — `editor_draw`, `editor_shapes`, `editor_music`,
-  `editor_photo` are absent from the player entirely, and
-  `verify_player_isolation.py` asserts each stays carved.
+* **The carves — there are NINE, not the four this file used to name.**
+  `editor_draft`, `editor_draw`, `editor_export`, `editor_menu`,
+  `editor_music`, `editor_photo`, `editor_post`, `editor_shapes` and
+  `editor_tune` are all absent from the player. Pad loads every one; Flip loads
+  only `editor_shapes`; the player loads none. `verify_player_isolation.py`
+  reads that list OFF DISK now rather than from a hardcoded tuple of four, so
+  five of them were unguarded until v273 and a tenth would be covered the day
+  it lands.
 * **The serve-time comment strip** — `skribl/jsstrip.py` removes comments from
   the RESPONSE; the files on disk keep every word. This is what closed the gap,
   and it moved no source at all.
@@ -2375,8 +2380,9 @@ bytes.
    regex; `node` is available. See docs/REFACTOR-v132.md.
 6. **`app.js` is still loaded by both editor and player** — but "every viewer
    downloads the authoring surface" is NO LONGER TRUE and this entry said it
-   for several releases. The four `editor_*.js` carves are absent from the
-   player and `verify_player_isolation.py` asserts it; the player links its own
+   for several releases. All nine `editor_*.js` carves are absent from the
+   player and `verify_player_isolation.py` asserts it, over a list read off
+   disk; the player links its own
    `player.css`; the JS target is met. What remains is `app.js` itself plus a
    handful of reachable editor globals, counted against a zero target by that
    same suite. The v132 split was attempted and reverted, and the AST tool that
