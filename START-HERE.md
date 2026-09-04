@@ -69,6 +69,24 @@ every case; the lexer checking its own output proves nothing) and
   different interpreter from the deployed one describes nothing. If the default
   `python3` is not 3.12, build a venv from the 3.12 that is installed and put it
   on PATH ahead of everything for the whole run.
+* **THE SEAL AND CI DO NOT TEST THE SAME THING, and CI's mode is the stricter
+  one.** `release_run.py` runs 44 SEPARATE batches, each getting a fresh server
+  and database on a quiet machine. CI runs all 89 suites in ONE invocation on a
+  contended two-core runner. Anything sensitive to write contention or to
+  cross-suite state therefore passes the seal and fails CI — which is exactly
+  what happened: a 500 under SQLite lock contention (v274) failed main's sqlite
+  job on one push and passed it on the next, with the bug unchanged in both,
+  while v273 sealed green TWICE on this box. **A green seal is not a prediction
+  that CI will be green — and a CI failure that clears itself on the next push
+  is not thereby a flake.** If a suite fails only in CI, do not
+  reach for "flake": reproduce it by loading the machine —
+  `for i in $(seq 1 12); do (while :; do :; done) & done` — and it will very
+  likely fall over locally too.
+* **A suite's subprocess servers send stderr to DEVNULL, so the traceback you
+  need is thrown away.** `verify_review.py`'s `server()` helper does this. When
+  a request 500s inside a suite-launched server, patch that redirect to a file
+  before theorising — the v274 bug named its own cause in the first traceback
+  captured, after the wrong writer had been suspected on reasoning alone.
 * **PostgreSQL: if `verify_postgres` SKIPS, the seal is weaker than the last
   one.** It wants `postgresql://skribl:skribl@127.0.0.1:5432/skribl` (override
   with `SKRIBL_PG_DSN`), and it skips rather than fails when it cannot connect —

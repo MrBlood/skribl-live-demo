@@ -4962,3 +4962,62 @@ offender, because re.sub had removed the stanza's LINES and shifted every number
 after it. A gate that has not been shown to fail on the real defect is a gate
 nobody has tested.
 
+## v274 -- The 500 v264 fixed had a twin one function away
+
+**The bug.** Under write contention on SQLite the db-backed rate limiter
+answered some concurrent posts with 500 instead of 429. v264 had already
+diagnosed and fixed exactly this, in `_db_rate_reserve_post`: a locked store
+must refuse a slot rather than raise, because "a limiter that cannot account
+for a slot must not hand one out". What it did not do was look one function up.
+
+`_db_rate_limited` charges the ATTEMPTS bucket, and attempts are charged on
+EVERY request, before a post slot is ever reserved. So the v264 fix moved the
+500 rather than removing it: under contention the request now died one step
+earlier, with the identical symptom. Nine releases later it was still there.
+
+**Why nine releases: it is INTERMITTENT, so it reads as a flake.** Nothing
+pinned it. The only cover was verify_review's #13b -- twelve threads racing for
+two slots -- which needs real write contention to fire and passes on any idle
+machine. It depends on how loaded the runner happens to be: main's sqlite job
+FAILED at e2bbfdd (run 288) and PASSED at ff19fc9 (run 292) with the bug
+present and unchanged in both. A steady red gets fixed; a red that goes green
+on the next push gets called flaky and waved past, which is what happened here
+nine times over.
+
+Two structural reasons it never showed up locally. **release_run.py runs 44
+SEPARATE batches on a quiet machine; CI runs all 89 suites in ONE contended
+invocation** -- the seal and CI do not test the same thing, and CI's mode is
+the one that catches this class. And the suite's subprocess servers send stderr
+to DEVNULL, so the one artefact that names the cause was being discarded on
+every run.
+
+**Found by the server log, not by reasoning.** The suite sends its subprocess
+servers' stderr to DEVNULL, so the traceback had never been seen. Captured it,
+and the failing statement named the bucket itself:
+
+    [parameters: ('attempts', 'ceb36866...', ..., 'committed')]
+    sqlite3.OperationalError: database is locked
+
+That is the project's own rule -- check the server log before theorising about
+the client -- and it turned a guess about which of two writers was at fault
+into a fact in one run.
+
+**The fix refuses, and refusing is the safe direction.** Same shape and same
+reasoning as v264's: catch the OperationalError, log, return "limited". Failing
+OPEN here would have been worse than the 500 it replaces, because it would let
+anyone able to induce write contention walk straight through the flood
+protection this bucket exists to provide. The cost is a poster occasionally
+told to retry while the store is briefly contended, which is what 429 means,
+instead of being shown a server error for a Skribl still safely in their
+browser.
+
+**Both writers are now pinned deterministically** (#13c), by raising the error
+directly instead of racing for it -- including v264's own fix, which had been
+unpinned since the day it shipped. Verified by reverting the fix: the suite
+dies on the attempts INSERT; restored, 283/283. And under the twelve-spinner
+CPU load that reproduced CI exactly, #13b went from 278/281 to 281/281 with no
+assertion weakened -- it still demands exactly two winners, ten refusals, and
+no other status.
+
+**A test that only fails under load is a test that does not run.**
+

@@ -653,6 +653,46 @@ def _db_rate_count(s, bucket, key_hash):
 
 
 def _db_rate_limited(ip, kind):
+    try:
+        return _db_rate_limited_locked(ip, kind)
+    except sa.exc.OperationalError:
+        # THE SAME BUG AS _db_rate_reserve_post BELOW, IN THE OTHER BUCKET, and
+        # it outlived that fix by nine releases because the fix was applied one
+        # function down rather than to both writers.
+        #
+        # v264 caught the locked store while reserving a POST slot and turned it
+        # into a refusal. It did not touch this function, which charges the
+        # ATTEMPTS bucket — and attempts are charged on EVERY request, before a
+        # post slot is ever reserved. So the earlier fix moved the 500 rather
+        # than removing it: under contention the request now dies here instead,
+        # one step sooner, with the same symptom.
+        #
+        # Proven by the server log rather than reasoned about. The failing
+        # statement's own parameters name the bucket:
+        #     [parameters: ('attempts', 'ceb36866...', ..., 'committed')]
+        #     sqlite3.OperationalError: database is locked
+        # The harness's twelve-threads-for-two-slots test (#13b) reported
+        #     [201, 201, 429, 429, 429, 500, 500, 500, 500, 500, 500, 500]
+        # against an assertion demanding only 201 and 429. It passes on an idle
+        # machine, which is why every local run was green while CI's loaded
+        # two-core sqlite job failed on it every time.
+        #
+        # REFUSING IS THE SAFE DIRECTION, and it is the same one v264 chose: a
+        # limiter that cannot record an attempt must not wave the attempt
+        # through. Failing OPEN here would be worse than the 500 it replaces —
+        # it would let anyone who can induce write contention bypass the flood
+        # protection this bucket exists to provide. The cost is a poster
+        # occasionally told to retry while the store is briefly contended,
+        # which is exactly what 429 means, instead of being shown a server
+        # error for a Skribl still safely in their browser.
+        current_app.logger.warning(
+            "skribl: limiter store unavailable while charging an attempt; "
+            "refusing this request (429) rather than admitting an unrecorded "
+            "attempt.")
+        return True
+
+
+def _db_rate_limited_locked(ip, kind):
     cap = _rate_cap(kind)
     key_hash = _rate_key(ip)
     with _rate_sessionmaker()() as s:
