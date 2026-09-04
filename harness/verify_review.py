@@ -859,6 +859,46 @@ with A.create_app().app_context():
     rows = A.RateEvent.query.filter(A.RateEvent.bucket == "posts").count()
 check("post slot rows exist and are bounded", rows >= 2, f"{rows} posts rows")
 
+# #13c — A LOCKED STORE REFUSES; IT DOES NOT 500. Deterministic, because the
+# race above only exposes this under contention.
+#
+# v264 taught _db_rate_reserve_post to turn a locked store into a refusal, and
+# left the ATTEMPTS writer beside it untouched — so the 500 moved one step
+# earlier instead of going away. That survived NINE RELEASES because nothing
+# pinned it: #13b is the only cover, it needs real write contention to fire,
+# and it passes on any idle machine. Every local run was green while CI's
+# loaded two-core sqlite job failed on it every time, and the tree was sealed
+# twice in that state.
+#
+# So both writers are pinned here by RAISING THE ERROR DIRECTLY rather than by
+# racing for it. A test that only fails under load is a test that does not run.
+import sqlalchemy as _sa_rl
+from skribl import ratelimit as _rl                                  # noqa: E402
+
+def _with_locked_store(fn):
+    """Run fn() with the limiter's inner writer raising 'database is locked'."""
+    def _boom(*a, **k):
+        raise _sa_rl.exc.OperationalError("INSERT INTO skribl_rate_events",
+                                          {}, Exception("database is locked"))
+    saved = _rl._db_rate_limited_locked, _rl._db_rate_reserve_post_locked
+    _rl._db_rate_limited_locked = _boom
+    _rl._db_rate_reserve_post_locked = _boom
+    try:
+        return fn()
+    finally:
+        _rl._db_rate_limited_locked, _rl._db_rate_reserve_post_locked = saved
+
+with A.create_app().app_context():
+    _attempts = _with_locked_store(lambda: _rl._db_rate_limited("1.2.3.4", "attempts"))
+    check("a locked store REFUSES the attempt (True) instead of raising",
+          _attempts is True,
+          f"got {_attempts!r} — False would wave a flood through, an exception is the 500")
+
+    _slot = _with_locked_store(lambda: _rl._db_rate_reserve_post("1.2.3.4"))
+    check("a locked store grants NO post slot (None) instead of raising",
+          _slot is None,
+          f"got {_slot!r} — this is v264's fix, unpinned until now")
+
 print("\n#14 — dependency hashes")
 _c = (ROOT / "constraints.txt").read_text(encoding="utf-8")
 # Round 7, #13: a text count proved nothing. Running the documented command
