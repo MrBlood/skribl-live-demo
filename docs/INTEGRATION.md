@@ -49,17 +49,26 @@ That is the whole integration. You now have:
     GET  /skribl/api/skribls/<id>         one Skribl, with payload
     GET  /skribl/media/<key>              stored media, authorised per post
     GET  /skribl/feed                     PREVIEW of the in-post player — below
-    GET  /skribl/library                  CONCEPT PREVIEW — see the warning below
+    GET  /skribl/library                  the profile's Skribls tab — below
 
-**`/library` is registered by the blueprint and is NOT part of the sealed
-feature set.** Mounting Skribl gives your host that route whether you want it or
-not. It renders a per-user library with an inline player, and its tiles are
-self-contained demo drawings rather than anything from `GET /api/skribls` — it
-exists so the player can be iterated on against something that looks real. This
-route was in no document at all until v273, which is how a host would first have
-met it in their own URL space. If you do not want it, do not route to it: it
-takes no arguments, reads no request state and reaches no database, so leaving
-it unlinked is enough.
+**`/library` is registered by the blueprint whether you want it or not**, like
+`/feed`. It is the profile's Skribls tab: your listing, with a full transport —
+play, restart, scrub, loop, mute, copy link — around one stage, and a grid of
+share cards beside it. The stage is the same in-post player driven through its
+exposed handle, so the profile cannot disagree with the feed or with `/s/<id>`
+about how a drawing replays, and it fetches ONE payload at a time.
+
+It reads `GET /api/skribls` and nothing else, so it shows whatever this
+deployment has, under the same visibility rules every other reader gets. It
+takes no arguments and reaches no database of its own, so leaving it unlinked is
+enough if you do not want it. Until recently it drew its own invented tiles;
+`harness/verify_library.py` is what replaced the warning that used to be here.
+
+**It shows the listing, not "your" listing.** `GET /api/skribls?user_id=<id>`
+is the per-author filter, and Skribl has no identity of its own to fill it in
+with — `create_blueprint(current_user_id=...)` is where yours arrives. A real
+profile tab passes the author being viewed; this page passes nothing, and so
+shows the public listing.
 
 `url_for("skribl.skribl_player", public_id=...)` builds links. Skribl builds its
 own share URLs the same way, so they are correct under any prefix.

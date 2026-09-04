@@ -167,6 +167,17 @@ appear here, and `RELEASE.md` names every one of them.
   one converge, so the tool's strength is not a property of the device's sample
   rate.
 
+- `verify_library.py` — the PROFILE'S SKRIBLS TAB (`/library`), and what it
+  replaced. That page was a mock: its own replay engine and a table of
+  hand-drawn motifs, rendered as if posted, on a route a host got in their own
+  URL space. A page that draws its own content cannot say whether the thing it
+  previews works. This pins that it plays real posts from `GET /api/skribls`,
+  that the stage is `inlineplayer.js` driven through its handle rather than a
+  third replay implementation, that ONE payload is fetched at a time (mutation-
+  tested by prefetching every tile), and that the transport reads the player's
+  clock rather than keeping one of its own. Two of its source gates were
+  substring searches that passed on their own prose — see the note beside them.
+
 - `verify_compose.py` — COMPOSE MODE: the Pad opened from a host's composer
   (`/skribl-pad?compose=1`), driven end to end on the real `/feed` page through
   the real iframe. Its main instrument is a count of POSTs to `/api/skribls`,

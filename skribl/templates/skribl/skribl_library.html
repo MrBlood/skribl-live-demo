@@ -154,6 +154,16 @@
     .card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 12px 30px var(--accent-glow); }
     .card .art { position: relative; aspect-ratio: 4/3; }
     .card .art canvas { display: block; width: 100%; height: 100%; }
+    /* The tile picture is /s/<id>/card.png, cropped to the drawing's band by
+       the same numbers inlineplayer.css uses — lib/sharecard.js band(): scale
+       630/492, offset 27/492. Shown whole, every tile would be the branded
+       share card and the grid would read as a page of adverts. */
+    .card .art { overflow: hidden; }
+    .card .art img { position: absolute; left: 50%; transform: translateX(-50%);
+                     top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
+    /* The stage IS the in-post player; the wrap already draws the frame. */
+    .stageCanvasWrap .skribl-inline { border: 0; border-radius: 0; }
+    .more-status { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-3); }
     .card .badge { position: absolute; top: 8px; left: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 999px; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; background: rgba(6,7,10,.66); backdrop-filter: blur(3px); color: #dfe6f2; }
     .card .badge svg { width: 11px; height: 11px; }
     .card .playing { position: absolute; inset: 0; display: none; place-items: center; background: rgba(6,7,10,.28); color: #fff; }
@@ -186,7 +196,8 @@
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
-<body>
+<body data-skribl-api="{{ url_for('.list_skribls') }}"
+      data-skribl-player="{{ skribl_player_base }}">
 <div class="wrap">
   <div class="top">
     <div class="brand" role="img" aria-label="Skribl player">
@@ -194,22 +205,24 @@
       <span class="tag">player</span>
     </div>
     <div class="spacer"></div>
-    <div class="ghost">concept · library view</div>
+    <div class="ghost">profile · skribls tab</div>
   </div>
 
-  <!-- PLACEHOLDER IDENTITY — mirrors a skribls.net profile (display name, verified
-       badge, @handle). Wire to the signed-in user when this leaves concept. -->
+  {# IDENTITY IS THE HOST'S. Skribl has no user table — GET /api/skribls returns
+     a user_id and nothing else, and models.set_author_resolver() is the seam a
+     host uses to turn that into a name. This page shows what the API actually
+     returns rather than a display name, a handle, a bio and a follower count
+     that were all invented; a mock that fills those in is a mock that has to be
+     un-believed before it can be built on. #}
   <div class="profile">
-    <div class="avatar"><canvas id="avatarCanvas" width="124" height="124"></canvas></div>
     <div class="who">
-      <div class="name">Mr. B <span class="verified" title="Verified account" aria-label="Verified">✓</span></div>
-      <div class="handle">@bigballbaron</div>
-      <div class="bio">Timed drawings & frame loops. Mostly at 3am.</div>
+      <div class="name" id="whoName">Skribls</div>
+      <div class="handle" id="whoHandle"></div>
+      <div class="bio">Every Skribl this listing returns, newest first, played
+        with the transport a post does not get.</div>
     </div>
     <div class="stats">
-      <div class="stat"><b id="statCount">0</b><span>skribls</span></div>
-      <div class="stat"><b id="statLikes">0</b><span>likes</span></div>
-      <div class="stat"><b>418</b><span>followers</span></div>
+      <div class="stat"><b id="statCount">—</b><span>loaded</span></div>
     </div>
   </div>
 
@@ -217,9 +230,25 @@
     <!-- PLAYER -->
     <section class="player" aria-label="Player">
       <div class="now"><span class="dot"></span><span class="lbl">Now playing</span></div>
+      {# THE SAME PLAYER THE FEED USES, with a transport bolted on from outside.
+         A third replay implementation for the profile is how the three would
+         drift; this is inlineplayer.js, driven through the handle it exposes
+         (play/pause/seek/setLoop). The buttons below are this page's, the clock
+         is the player's. #}
       <div class="stageCanvasWrap">
-        <canvas id="stageCanvas" width="800" height="600"></canvas>
-        <div class="replay-nib" id="nib"></div>
+        <div class="skribl-inline is-muted is-silent" id="stageBox">
+          <canvas class="skribl-inline-canvas" hidden></canvas>
+          <div class="skribl-inline-veil">
+            <div class="skribl-inline-play">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+          <div class="skribl-inline-dur" hidden><span class="skribl-inline-dur-text"></span></div>
+          <button type="button" class="skribl-inline-mute" hidden aria-hidden="true"></button>
+          <div class="skribl-inline-prog"></div>
+          <div class="skribl-inline-nib"></div>
+          <div class="skribl-inline-err" hidden></div>
+        </div>
       </div>
       <div class="pmeta">
         <div class="ptitle" id="pTitle">—</div>
@@ -245,11 +274,10 @@
       <div class="libhead">
         <h2>Your skribls</h2>
         <span class="cnt" id="libCnt"></span>
-        <div class="chips" role="tablist">
-          <button class="chip active" data-filter="all">All</button>
-          <button class="chip" data-filter="pad">Pad</button>
-          <button class="chip" data-filter="flip">Flip</button>
-        </div>
+        {# No Pad/Flip filter. GET /api/skribls is metadata only and does not
+           say which a post is — that lives in the payload, which the listing
+           defers on purpose. Chips that filtered on a guess would be a control
+           that quietly did nothing. #}
         <label class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
           <input id="search" type="search" placeholder="title…" aria-label="Search your skribls">
@@ -257,10 +285,17 @@
       </div>
       <div class="grid" id="grid"></div>
       <div class="more-wrap" id="moreWrap"></div>
-      <div class="foot">A concept mock of a per-user library over <b>GET /api/skribls</b> — every tile is a real replayed drawing. Press <b>play</b> to watch one draw itself.</div>
+      <div class="foot" id="libFoot"></div>
     </section>
   </div>
 </div>
+  {# The player, and the two shared rule modules it reads. Same four files a
+     host embeds — see templates/skribl/_skribl_inline_player.html. #}
+  <link rel="stylesheet" href="{{ skribl_asset('inlineplayer.css') }}">
+  <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+  <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 </body>
 </html>

@@ -616,7 +616,21 @@ with sync_playwright() as sp:
     # pins its own: the next kilobyte has to argue for itself, and a version of
     # this player growing toward app.js fails here rather than being discovered
     # on somebody's feed.
-    EMBED_RATCHET = 25_000
+    #
+    # 25,000 -> 26,000, and the ratchet earned it a second time. What pushed it
+    # over was 782 B of TRANSPORT on the player handle — play, pause, toggle,
+    # setLoop, and the branch that stops at the end instead of looping — added
+    # so the profile's Skribls tab (/library) could DRIVE this player rather
+    # than be a third replay implementation. verify_library.py gates that at
+    # the source: no requestAnimationFrame in library.js.
+    #
+    # A feed therefore pays for a transport it never uses, and that is the
+    # honest cost of the trade: a few hundred bytes against three surfaces that
+    # cannot disagree about how a drawing replays. Carving it out would put a
+    # second request on the profile to save a third of a kilobyte on the feed.
+    # If this number moves again, the question is whether the FEED is the caller
+    # that needs it.
+    EMBED_RATCHET = 26_000
     # feed.js is excluded: it is the PREVIEW PAGE's own script (fetch the
     # listing, clone the macro), not part of what a host embeds — a host writes
     # that loop themselves against their own posts.

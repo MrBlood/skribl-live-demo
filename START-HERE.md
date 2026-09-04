@@ -71,7 +71,7 @@ every case; the lexer checking its own output proves nothing) and
   on PATH ahead of everything for the whole run.
 * **THE SEAL AND CI DO NOT TEST THE SAME THING, and CI's mode is the stricter
   one.** `release_run.py` runs 44 SEPARATE batches, each getting a fresh server
-  and database on a quiet machine. CI runs all 91 suites in ONE invocation on a
+  and database on a quiet machine. CI runs all 92 suites in ONE invocation on a
   contended two-core runner. Anything sensitive to write contention or to
   cross-suite state therefore passes the seal and fails CI — which is exactly
   what happened: a 500 under SQLite lock contention (v274) failed main's sqlite
@@ -2391,6 +2391,60 @@ author's drawing to whatever page is framing the editor. Asserted in the suite.
 `DECISIONS.md` entry. Suites run for it, all green: verify_compose,
 verify_inline, verify_player_isolation, verify_posted, verify_pages,
 verify_docs. Counts are in `harness/RELEASE.md`, not typed here.
+
+## The profile's Skribls tab — /library stops being a mock (NOT SEALED)
+
+The third surface for the same player. The feed shows a Skribl in a post; the
+composer shows one on a draft; this is a page ABOUT the drawings — one stage
+with a full transport (play, restart, scrub, loop, mute, copy link) and a grid
+of share cards beside it.
+
+    skribl/static/library.js       rewritten: real listing, no replay engine
+    skribl/templates/skribl/skribl_library.html    the same chrome, real data
+    harness/verify_library.py      the suite that replaced a README warning
+
+**WHAT IT REPLACED IS THE POINT.** `library.js` carried its OWN replay engine
+and a table of hand-drawn motifs — a bolt, a cassette, a smiley — and rendered
+those. Nothing on the page had been posted by anyone, while the route was
+registered the whole time, so a host mounting Skribl served invented drawings
+from their own URL space and README.md had to carry a warning saying so. The
+problem was never the pretending: a page that draws its own content cannot tell
+you whether the thing it previews WORKS.
+
+**It contains no player.** The stage is `inlineplayer.js`, driven through the
+handle (`play`, `pause`, `seek`, `setLoop`, `state`) — three replay
+implementations would drift, and verify_sharedrules.py's note says what that
+costs. `verify_library.py` gates it at the source: no `requestAnimationFrame`
+in `library.js`.
+
+**The transport is the difference between the two surfaces, deliberately.** A
+post gets a play tap and a mute button because a feed is not a media player
+(inlineplayer.css says so at the mute rule). A profile tab is a page somebody
+came to on purpose, so scrub and restart and a loop toggle belong. `setLoop` is
+new on the player for exactly this and defaults ON, so a post is unchanged.
+
+**One payload at a time.** Tiles are share-card images; only the stage's drawing
+is fetched. Mutation-tested by prefetching every tile — the assertion fails.
+
+**TWO OF ITS GATES WERE SUBSTRING SEARCHES THAT PASSED ON THEIR OWN PROSE.** One
+looked for `offset` and matched a comment explaining why offset paging is wrong;
+one looked for `cassette` and matched this file's own description of the motifs
+it deleted. Same failure a v273 gate already made by searching for "Pillow" and
+matching a comment that mentioned it. They match syntax now (`offset=`), and the
+second was replaced by a check on the DOCUMENTS: a page that stops lying while
+its docs keep saying the old thing has moved the lie, not removed it.
+
+**FOUND WHILE BUILDING IT, NOT FIXED: Flip posts have no share card.**
+`editor_post.js` builds `payload.thumbnail` at post time and `flip.js` never
+does — grep it, there is no `payload.thumbnail` anywhere in that file. So every
+Flip post falls back to the static branded og-card: on its `/s/<id>` unfurl, as
+the in-post player's idle poster in a feed, and as its tile here. It looks like
+an advert in all three places. The fix is to share the card BUILDER the way
+`lib/sharecard.js` now shares its geometry, and wire Flip's post path to it;
+that is a change to a 437 KB file with its own post flow and it wants its own
+run.
+
+**NOT SEALED**, same as the two before it.
 
 ## Known-open, in the order worth doing
 

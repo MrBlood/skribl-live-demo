@@ -319,6 +319,7 @@
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
     var music = null;
+    var looping = true;
 
     var me = {
       el: el,
@@ -327,6 +328,19 @@
       /* Read by verify_inline.py. A player that can only be checked by looking
        * at it is a player nothing can hold to a number. */
       adopt: function (p) { adopt(p); },
+      /* TRANSPORT, for a surface that is allowed one. A post is not — see
+       * inlineplayer.css — but the profile's Skribls tab is a page ABOUT the
+       * drawings, where scrubbing and restarting are the point. It drives this
+       * player rather than being a third replay implementation; the buttons are
+       * the host's, the clock is still this one. */
+      play: play,
+      pause: pause,
+      toggle: function () { if (state === 'playing') pause(); else play(); },
+      /* Posts loop: a still frame at the end of a two-second replay reads as
+       * broken, and a Flip document IS a loop. A library stage can offer the
+       * choice, because somebody looking at one drawing on purpose may want it
+       * to stop. */
+      setLoop: function (on) { looping = !!on; },
       state: function () {
         return { id: id, state: state, totalMs: totalMs,
                  elapsedMs: state === 'playing' ? elapsed + (now() - t0) : elapsed,
@@ -589,10 +603,19 @@
     function frame() {
       var at = elapsed + (now() - t0);
       if (at >= totalMs) {
-        /* Both kinds loop, for different reasons: a Flip document IS a loop,
-         * and a Pad replay in a feed reads as a broken GIF if it stops on the
-         * finished drawing while its music keeps going. The full player at
-         * /s/<id> has a loop toggle; a post does not get one. */
+        /* Both kinds loop by default, for different reasons: a Flip document IS
+         * a loop, and a Pad replay in a feed reads as a broken GIF if it stops
+         * on the finished drawing while its music keeps going. A post never
+         * gets a toggle for this; a library stage does (setLoop). */
+        if (!looping) {
+          elapsed = totalMs;
+          render(totalMs, false);
+          pause();
+          /* Settled at the END, not back at the start: someone who asked it not
+           * to loop wants to look at the finished drawing. */
+          elapsed = totalMs;
+          return;
+        }
         elapsed = 0;
         t0 = now();
         render(0, true);

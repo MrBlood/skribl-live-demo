@@ -100,7 +100,7 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `GET /api/skribls` | Feed listing, metadata only, keyset-paginated |
 | `/feed` | **Preview of the in-post player and the composer.** A minimal host page over the real listing |
 | `/skribl-pad?compose=1` | Pad opened from a host's composer — attaches, publishes nothing |
-| `/library` | **Concept preview, not sealed.** Self-contained demo tiles, not backed by `GET /api/skribls` |
+| `/library` | Profile Skribls tab: the listing, with a full transport |
 
 ## The in-post player
 
@@ -132,6 +132,22 @@ the sealed player, playing the same posted drawing from the same clock, are at
 the same point and have drawn the same thing. See the header of
 `skribl/static/inlineplayer.js` for what it deliberately does not render, and
 `docs/INTEGRATION.md` for the host-side details.
+
+## The profile's Skribls tab
+
+`/library` is the other surface: a page ABOUT the drawings rather than a feed of
+them. One stage with a full transport — play, restart, scrub, loop, mute, copy
+link — and a grid of share cards beside it. The stage is the same in-post
+player, driven through the handle it exposes, so the profile cannot disagree
+with the feed or the shared link about how a drawing replays.
+
+It fetches ONE payload at a time, for the drawing on the stage. The tiles are
+cached card images; `GET /api/skribls` returns metadata precisely so a listing
+never has to carry payloads. Paging is the server's keyset cursor.
+
+Until now this page was a mock with its own replay engine and a table of
+hand-drawn motifs — nothing on it had been posted by anyone.
+`harness/verify_library.py` is what replaced the warning that used to sit here.
 
 ## Local setup
 

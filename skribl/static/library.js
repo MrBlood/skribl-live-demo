@@ -1,328 +1,315 @@
-/* ============================================================================
-   A tiny Skribl replay engine. Each "skribl" is a list of timed strokes in a
-   0..1 box; the player reveals them over time (the app's draw-on replay), and
-   the cards render the finished drawing. Riso inks on a dark ground, per the
-   app's drawing palette — the artwork never follows the chrome theme.
-   ========================================================================== */
-const INK = { pink:'#ff48b0', orange:'#ff6c2f', yellow:'#ffe800', green:'#00a95c', blue:'#0078bf', white:'#f4f4ff' };
+/* The profile's Skribls tab: every Skribl this listing returns, with a
+ * transport a post is not allowed to have.
+ *
+ * ===========================================================================
+ * WHAT THIS REPLACED, AND WHY THAT MATTERED
+ * ===========================================================================
+ *
+ * Until now this file was a MOCK. It carried its own tiny replay engine and a
+ * table of hand-drawn motifs — a bolt, a cassette, a smiley — and rendered
+ * those. Nothing on the page had ever been posted by anyone. It was registered
+ * as a real route the whole time, so a host mounting Skribl got it in their own
+ * URL space serving invented drawings, and README.md had to carry a warning
+ * saying so.
+ *
+ * The problem with that was not the pretending. It was that a page which draws
+ * its own content cannot tell you whether the thing it is previewing WORKS.
+ * This one reads GET /api/skribls and plays real payloads, so when it is wrong
+ * it is wrong about something.
+ *
+ * ===========================================================================
+ * IT DOES NOT CONTAIN A PLAYER
+ * ===========================================================================
+ *
+ * The stage is inlineplayer.js — the same player the feed uses — driven through
+ * the handle it exposes: play, pause, seek, setLoop, state. A third replay
+ * implementation for the profile is how three of them would drift, and
+ * verify_sharedrules.py's note explains what that costs: nothing an author can
+ * see reveals it.
+ *
+ * What this file owns is the LIBRARY: which drawing is on the stage, the
+ * transport around it, and the grid.
+ *
+ * THE TRANSPORT IS THE DIFFERENCE BETWEEN THE TWO SURFACES, and it is
+ * deliberate. A post gets a play tap and a mute button, because a feed is not a
+ * media player (inlineplayer.css says so at the mute rule). A profile tab is a
+ * page ABOUT the drawings — somebody came here to look at one — so scrub,
+ * restart and a loop toggle belong.
+ *
+ * ===========================================================================
+ * ONE PAYLOAD AT A TIME
+ * ===========================================================================
+ *
+ * The grid tiles are share-card images, not players. Fifty mounted players each
+ * holding a payload is tens of megabytes for a page of thumbnails, and
+ * GET /api/skribls returns metadata precisely so a listing does not have to pay
+ * that. Selecting a tile fetches ONE payload and hands it to the stage.
+ */
+(function () {
+  'use strict';
 
-/* deterministic per-seed rng so a drawing looks the same every render */
-function rng(seed){ let s = seed>>>0 || 1; return () => { s ^= s<<13; s^=s>>>17; s^=s<<5; s>>>=0; return s/4294967296; }; }
+  var api = document.body.getAttribute('data-skribl-api');
+  var playerBase = document.body.getAttribute('data-skribl-player') || '';
 
-/* stroke helpers operate in 0..1 space; return {color,width,pts:[[x,y]..]} */
-const P = (...pts) => pts;
-function circle(cx,cy,r,n=40){ const a=[]; for(let i=0;i<=n;i++){const t=i/n*Math.PI*2; a.push([cx+Math.cos(t)*r, cy+Math.sin(t)*r*1]);} return a; }
-function arc(cx,cy,r,a0,a1,n=24){ const a=[]; for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n; a.push([cx+Math.cos(t)*r, cy+Math.sin(t)*r]);} return a; }
-const S = (color,width,pts) => ({color,width,pts});
+  var grid = document.getElementById('grid');
+  var moreWrap = document.getElementById('moreWrap');
+  var foot = document.getElementById('libFoot');
+  var libCnt = document.getElementById('libCnt');
+  var statCount = document.getElementById('statCount');
+  var search = document.getElementById('search');
 
-/* ---- the motifs. Each returns an array of strokes. Bold, few, recognisable. -- */
-const MOTIFS = {
-  bolt(){ // pirate frequency — bolt in a ring
-    return [
-      S(INK.blue,3.4, circle(.5,.5,.40)),
-      S(INK.pink,1.8, circle(.512,.512,.40)),
-      S(INK.white,4.6, P([.56,.14],[.40,.5],[.52,.5],[.44,.86],[.66,.44],[.54,.44],[.56,.14])),
-      S(INK.yellow,1.6, P([.40,.30],[.60,.30])), S(INK.yellow,1.6, P([.38,.42],[.58,.42])),
-      S(INK.orange,1.4, arc(.5,.5,.30,-2.4,-0.7)),
-    ];
-  },
-  cassette(){
-    return [
-      S(INK.orange,3.6, P([.16,.26],[.84,.26],[.86,.74],[.14,.74],[.16,.26])),
-      S(INK.white,2.4, P([.24,.36],[.76,.36],[.76,.56],[.24,.56],[.24,.36])),
-      S(INK.blue,3.2, circle(.37,.46,.055,20)), S(INK.blue,3.2, circle(.63,.46,.055,20)),
-      S(INK.pink,2.0, P([.30,.66],[.70,.66])),
-      S(INK.yellow,2.0, P([.30,.30],[.34,.30])),
-    ];
-  },
-  smiley(){
-    return [
-      S(INK.yellow,4.4, circle(.5,.5,.36)),
-      S(INK.white,4.0, P([.34,.40],[.40,.46])), S(INK.white,4.0, P([.40,.40],[.34,.46])),
-      S(INK.white,4.0, P([.60,.40],[.66,.46])), S(INK.white,4.0, P([.66,.40],[.60,.46])),
-      S(INK.pink,4.4, arc(.5,.50,.20,0.5,2.64)),
-    ];
-  },
-  eye(){
-    return [
-      S(INK.white,3.4, P([.18,.5],[.5,.32],[.82,.5],[.5,.68],[.18,.5])),
-      S(INK.blue,3.4, circle(.5,.5,.11,26)),
-      S(INK.pink,5.0, circle(.5,.5,.045,16)),
-      ...[...Array(9)].map((_,i)=>{const a=i/9*Math.PI*2; return S(INK.yellow,1.4, P([.5+Math.cos(a)*.30,.5+Math.sin(a)*.30],[.5+Math.cos(a)*.40,.5+Math.sin(a)*.40]));}),
-    ];
-  },
-  boombox(){
-    return [
-      S(INK.white,3.4, P([.12,.28],[.88,.28],[.88,.76],[.12,.76],[.12,.28])),
-      S(INK.blue,3.0, circle(.32,.54,.11,24)), S(INK.pink,3.0, circle(.68,.54,.11,24)),
-      S(INK.orange,2.0, circle(.32,.54,.04,14)), S(INK.orange,2.0, circle(.68,.54,.04,14)),
-      S(INK.yellow,2.4, P([.44,.40],[.56,.40])),
-      S(INK.green,3.0, P([.30,.20],[.5,.13],[.70,.20])),
-    ];
-  },
-  moth(){
-    return [
-      S(INK.white,2.6, P([.5,.24],[.5,.78])),
-      S(INK.pink,3.2, P([.5,.34],[.20,.24],[.14,.5],[.30,.62],[.5,.5])),
-      S(INK.pink,3.2, P([.5,.34],[.80,.24],[.86,.5],[.70,.62],[.5,.5])),
-      S(INK.blue,2.4, P([.5,.5],[.26,.72],[.40,.80],[.5,.66])),
-      S(INK.blue,2.4, P([.5,.5],[.74,.72],[.60,.80],[.5,.66])),
-      S(INK.yellow,2.2, P([.5,.24],[.44,.15])), S(INK.yellow,2.2, P([.5,.24],[.56,.15])),
-    ];
-  },
-  hand(){
-    return [
-      S(INK.white,3.6, P([.34,.86],[.34,.44],[.30,.30],[.36,.30],[.40,.46])),
-      S(INK.white,3.6, P([.40,.46],[.42,.16],[.49,.16],[.50,.48])),
-      S(INK.white,3.6, P([.50,.48],[.54,.14],[.61,.14],[.60,.48])),
-      S(INK.white,3.6, P([.60,.48],[.66,.24],[.72,.26],[.66,.52])),
-      S(INK.white,3.6, P([.34,.56],[.24,.50],[.22,.58],[.34,.66])),
-      S(INK.pink,3.4, P([.34,.86],[.66,.86],[.68,.60])),
-      S(INK.yellow,1.8, arc(.5,.48,.42,-2.5,-0.6)),
-    ];
-  },
-  stack(){ // sound system speaker stack
-    return [
-      S(INK.white,3.2, P([.28,.10],[.72,.10],[.72,.90],[.28,.90],[.28,.10])),
-      S(INK.blue,3.0, circle(.5,.28,.11,24)),
-      S(INK.pink,3.0, circle(.5,.54,.13,26)),
-      S(INK.orange,2.2, circle(.5,.76,.075,20)),
-      S(INK.yellow,1.8, P([.28,.40],[.72,.40])), S(INK.yellow,1.8, P([.28,.66],[.72,.66])),
-    ];
-  },
-  flower(){
-    return [
-      ...[...Array(6)].map((_,i)=>{const a=i/6*Math.PI*2; return S(INK.pink,3.4, P([.5,.5],[.5+Math.cos(a)*.34,.5+Math.sin(a)*.34],[.5+Math.cos(a+.5)*.18,.5+Math.sin(a+.5)*.18],[.5,.5]));}),
-      S(INK.yellow,4.0, circle(.5,.5,.09,22)),
-      S(INK.green,3.2, P([.5,.59],[.52,.9])),
-      S(INK.green,2.4, P([.52,.74],[.66,.68])),
-    ];
-  },
-  tag(){ // wildstyle scribble tag
-    return [
-      S(INK.orange,5.0, P([.14,.62],[.22,.36],[.30,.62],[.34,.40],[.30,.66],[.44,.34],[.42,.66])),
-      S(INK.orange,5.0, P([.42,.66],[.54,.36],[.56,.64],[.66,.36],[.64,.66],[.80,.34])),
-      S(INK.pink,2.4, P([.16,.68],[.82,.40])),
-      S(INK.white,1.8, P([.20,.30],[.26,.26])), S(INK.white,1.8, P([.70,.30],[.76,.26])),
-      S(INK.blue,2.0, P([.12,.74],[.86,.74])),
-    ];
-  },
-  static(){ // glitch TV
-    return [
-      S(INK.white,3.2, P([.16,.24],[.84,.24],[.84,.72],[.16,.72],[.16,.24])),
-      S(INK.blue,2.2, P([.22,.34],[.78,.34])), S(INK.pink,2.2, P([.22,.44],[.62,.44])),
-      S(INK.yellow,2.2, P([.30,.54],[.78,.54])), S(INK.green,2.2, P([.22,.62],[.52,.62])),
-      S(INK.white,2.6, P([.44,.72],[.40,.82],[.60,.82],[.56,.72])),
-      S(INK.orange,2.4, P([.66,.16],[.78,.08])),
-    ];
-  },
-  wave(){ // waveform
-    return [
-      ...[...Array(11)].map((_,i)=>{ const x=.12+i*.076; const h=.10+((i*37)%9)/9*.30; return S([INK.pink,INK.blue,INK.yellow,INK.green][i%4],4.2,P([x,.5-h],[x,.5+h])); }),
-      S(INK.white,1.6, P([.08,.5],[.92,.5])),
-    ];
-  },
-};
+  var stageBox = document.getElementById('stageBox');
+  var pTitle = document.getElementById('pTitle');
+  var pKind = document.getElementById('pKind');
+  var pMeta = document.getElementById('pMeta');
+  var pStats = document.getElementById('pStats');
+  var scrub = document.getElementById('scrub');
+  var scrubFill = document.getElementById('scrubFill');
+  var tElapsed = document.getElementById('tElapsed');
+  var btnPlay = document.getElementById('btnPlay');
+  var btnRestart = document.getElementById('btnRestart');
+  var btnLoop = document.getElementById('btnLoop');
+  var btnMute = document.getElementById('btnMute');
+  var btnShare = document.getElementById('btnShare');
 
-const GROUNDS = ['#14122b','#0f1a1e','#1a1020','#101626','#191322','#0d1712'];
+  var items = [];          /* every row loaded so far, newest first */
+  var cursor = null;       /* the keyset cursor for the next page */
+  var current = null;      /* the item on the stage */
+  var player = null;       /* the inlineplayer handle */
+  var looping = true;
+  var tick = null;
 
-/* ---- render a motif to a canvas, optionally revealing up to progress p(0..1) --*/
-function draw(canvas, sk, p){
-  const dpr = Math.min(window.devicePixelRatio||1, 2);
-  const cw = canvas.clientWidth || canvas.width, ch = canvas.clientHeight || canvas.height;
-  if(canvas.width !== Math.round(cw*dpr)){ canvas.width = Math.round(cw*dpr); canvas.height = Math.round(ch*dpr); }
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.fillStyle = sk.ground; ctx.fillRect(0,0,cw,ch);
-  ctx.lineCap='round'; ctx.lineJoin='round';
-  const R = rng(sk.seed);
-  const jit = () => (R()-.5)* (cw*0.006);
-  const strokes = sk.strokes;
-  // total point budget for progress
-  const total = strokes.reduce((a,s)=>a+s.pts.length,0);
-  let seen = 0, lastPt = null;
-  const target = p==null ? total : Math.max(1, Math.floor(total*p));
-  for(const s of strokes){
-    ctx.strokeStyle = s.color; ctx.lineWidth = s.width * (cw/220);
-    ctx.beginPath();
-    for(let i=0;i<s.pts.length;i++){
-      if(seen>=target){ break; }
-      const x = s.pts[i][0]*cw + jit(), y = s.pts[i][1]*ch + jit();
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      lastPt = [x,y]; seen++;
+  function fmt(ms) {
+    var s = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  function when(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var mins = Math.round((Date.now() - d.getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    if (mins < 1440) return Math.round(mins / 60) + 'h ago';
+    return d.toLocaleDateString();
+  }
+
+  /* The share card, which is also the in-post player's idle poster. Built from
+   * the player base the server gave us — never assembled from a literal path,
+   * so a host's url_prefix is honoured. */
+  function cardUrl(id) { return playerBase + '/' + encodeURIComponent(id) + '/card.png'; }
+
+  /* ---- the stage ---------------------------------------------------------- */
+
+  function select(item) {
+    current = item;
+    pTitle.textContent = item.title || 'Untitled Skribl';
+    pMeta.textContent = when(item.created_at);
+    pKind.textContent = item.has_audio ? 'with sound' : 'silent';
+    pStats.textContent = item.visibility === 'public' ? 'listed' : item.visibility;
+    scrubFill.style.width = '0%';
+    tElapsed.textContent = '0:00 / 0:00';
+    setPlayIcon(false);
+    Array.prototype.forEach.call(grid.children, function (c) {
+      c.classList.toggle('active', c.getAttribute('data-id') === item.id);
+    });
+
+    /* ONE FETCH, for the one drawing about to play. The listing already gave us
+     * everything else on this page. */
+    fetch(api + '/' + encodeURIComponent(item.id), { credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (body) {
+        if (current !== item) return;      /* a later selection won */
+        var payload = (body && (body.skribl || body.payload)) || body;
+        if (!player) {
+          player = window.SkriblInline.attach(stageBox, payload);
+          player.setLoop(looping);
+        } else {
+          player.adopt(payload);
+        }
+        refresh();
+      })
+      .catch(function () {
+        pTitle.textContent = "Couldn't load this Skribl.";
+      });
+  }
+
+  function setPlayIcon(on) {
+    document.getElementById('playIcon').innerHTML = on
+      ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
+      : '<path d="M8 5v14l11-7z"/>';
+    btnPlay.title = on ? 'Pause' : 'Play';
+  }
+
+  /* The transport reads the PLAYER's clock rather than keeping one of its own.
+   * Two clocks is two answers to "how far through is it", and the one on screen
+   * would be the wrong one. */
+  function refresh() {
+    if (!player) return;
+    var st = player.state();
+    var frac = st.totalMs ? Math.min(1, st.elapsedMs / st.totalMs) : 0;
+    scrubFill.style.width = (frac * 100) + '%';
+    tElapsed.textContent = fmt(st.elapsedMs) + ' / ' + fmt(st.totalMs);
+    setPlayIcon(st.state === 'playing');
+    btnMute.classList.toggle('on', !st.muted);
+    btnMute.disabled = !st.hasAudio;
+    btnMute.title = !st.hasAudio ? 'This Skribl has no sound'
+                                 : (st.muted ? 'Unmute' : 'Mute');
+  }
+
+  tick = setInterval(refresh, 100);
+
+  btnPlay.addEventListener('click', function () { if (player) { player.toggle(); refresh(); } });
+  btnRestart.addEventListener('click', function () {
+    if (!player) return;
+    player.seek(0);
+    player.play();
+    refresh();
+  });
+  btnLoop.addEventListener('click', function () {
+    looping = !looping;
+    this.classList.toggle('on', looping);
+    this.setAttribute('aria-pressed', String(looping));
+    if (player) player.setLoop(looping);
+  });
+  btnMute.addEventListener('click', function () {
+    window.SkriblInline.setSoundOn(!window.SkriblInline.soundOn());
+    refresh();
+  });
+  btnShare.addEventListener('click', function () {
+    if (!current) return;
+    var url = location.origin + playerBase + '/' + current.id;
+    var done = function () {
+      var t = btnShare.title;
+      btnShare.title = 'Link copied';
+      setTimeout(function () { btnShare.title = t; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, done);
+    } else { done(); }
+  });
+
+  scrub.addEventListener('click', function (e) {
+    if (!player) return;
+    var r = e.currentTarget.getBoundingClientRect();
+    var f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    player.seek(player.state().totalMs * f);
+    refresh();
+  });
+
+  /* ---- the grid ----------------------------------------------------------- */
+
+  function tile(item) {
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'card';
+    el.setAttribute('data-id', item.id);
+
+    /* The tile's picture is the share card, cropped by the same rule the feed
+     * poster uses (lib/sharecard.js, applied in the page's own CSS). One cached
+     * image per tile, and no payload until the tile is picked. */
+    var art = document.createElement('div');
+    art.className = 'art';
+    var img = document.createElement('img');
+    img.src = cardUrl(item.id);
+    img.alt = item.title || 'A Skribl';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    art.appendChild(img);
+    el.appendChild(art);
+
+    var body = document.createElement('div');
+    body.className = 'body';
+    var t = document.createElement('div');
+    t.className = 'ct';
+    t.textContent = item.title || 'Untitled Skribl';
+    var cm = document.createElement('div');
+    cm.className = 'cm';
+    var w = document.createElement('span');
+    w.textContent = when(item.created_at);
+    cm.appendChild(w);
+    if (item.has_audio) {
+      var snd = document.createElement('span');
+      snd.className = 'dur';
+      snd.textContent = 'sound';
+      cm.appendChild(snd);
     }
-    ctx.stroke();
-    if(seen>=target) break;
+    body.appendChild(t);
+    body.appendChild(cm);
+    el.appendChild(body);
+
+    el.addEventListener('click', function () { select(item); });
+    return el;
   }
-  return lastPt;  // for the nib
-}
 
-/* ---- the library data: real-looking skribls -------------------------------*/
-/* Each row: title, motif, kind, dur, pages, date, likes, reposts, replies.
-   The last three are the skribls.net post model — every skribl is a post, so it
-   carries the same engagement counts a post does. Placeholders until the library
-   is wired to GET /api/skribls (which returns the real counts per post). */
-const RAW = [
-  ['Pirate Frequency','bolt','pad',41,null,'2d',  128, 22, 14],
-  ['3AM Transmission','wave','flip',12,24,'4d',    76,  9,  6],
-  ['Acid Regular','smiley','pad',18,null,'6d',     54,  6,  8],
-  ['Dubplate','cassette','pad',33,null,'1w',       91, 12,  5],
-  ['Third Eye Open','eye','flip',9,18,'1w',       210, 41, 19],
-  ['Blockparty','boombox','pad',52,null,'2w',     167, 28, 11],
-  ['Nightmoth','moth','flip',7,14,'2w',            38,  4,  3],
-  ['Respect','hand','pad',28,null,'3w',            72,  8,  9],
-  ['Soundsystem','stack','flip',15,30,'3w',       119, 17,  7],
-  ['Bloom','flower','pad',22,null,'1mo',           63,  5,  4],
-  ['Untitled Tag','tag','pad',19,null,'1mo',       47,  6,  2],
-  ['No Signal','static','flip',6,12,'2mo',         29,  3,  1],
-];
-let ID = 0;
-const SKRIBLS = RAW.map((r,i) => ({
-  id:'sk'+(ID++), title:r[0], motif:r[1], kind:r[2], dur:r[3], pages:r[4], date:r[5],
-  likes:r[6], reposts:r[7], replies:r[8],
-  seed: (i*2654435761)>>>0, ground: GROUNDS[i%GROUNDS.length],
-  strokes: MOTIFS[r[1]](),
-}));
-
-/* ---- icons ---------------------------------------------------------------*/
-const IC_PAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
-const IC_FLIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>';
-
-/* Social action glyphs, matched to skribls.net: filled heart (like), the
-   two-arrow repost, and the speech-bubble reply. */
-const IC_LIKE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.2-4.7-9.7-9.2C.7 8.3 2.6 5 6 5c2.1 0 3.3 1.2 4 2.3C10.7 6.2 11.9 5 14 5c3.4 0 5.3 3.3 3.7 6.8C19.2 16.3 12 21 12 21z"/></svg>';
-const IC_REPOST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
-const IC_REPLY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L4 20l1.1-4.3A8.4 8.4 0 1 1 21 11.5z"/></svg>';
-const statInner = sk => '<span class="like">'+IC_LIKE+sk.likes+'</span>'
-  + '<span>'+IC_REPOST+sk.reposts+'</span>'
-  + '<span>'+IC_REPLY+sk.replies+'</span>';
-const fmt = s => Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-const metaLine = sk => sk.kind==='flip' ? (sk.pages+' pages · '+sk.dur+' fps') : ('plays '+fmt(sk.dur));
-
-/* ---- build the grid ------------------------------------------------------*/
-const grid = document.getElementById('grid');
-const cards = new Map();
-const PAGE = 4;               // one row; the rest is behind a More button
-let visible = PAGE;
-const moreWrap = document.getElementById('moreWrap');
-function buildGrid(){
-  grid.innerHTML='';
-  moreWrap.innerHTML='';
-  cards.clear();
-  const q = (document.getElementById('search').value||'').toLowerCase().trim();
-  const shown = SKRIBLS.filter(s => (FILTER==='all'||s.kind===FILTER) && (!q || s.title.toLowerCase().includes(q)));
-  document.getElementById('libCnt').textContent = shown.length + (shown.length===1?' skribl':' skribls');
-  if(!shown.length){ grid.innerHTML = '<div class="empty">No skribls match that.</div>'; return; }
-  const page = shown.slice(0, visible);
-  for(const sk of page){
-    const el = document.createElement('button');
-    el.className = 'card' + (sk.id===current.id?' active':'');
-    el.innerHTML =
-      '<div class="art"><canvas></canvas>'+
-        '<span class="badge">'+(sk.kind==='flip'?IC_FLIP:IC_PAD)+(sk.kind==='flip'?'Flip':'Pad')+'</span>'+
-        '<span class="playing"><span>Now playing</span></span>'+
-      '</div>'+
-      '<div class="body"><div class="ct">'+sk.title+'</div>'+
-        '<div class="cm"><span class="dur">'+(sk.kind==='flip'?sk.pages+'p':fmt(sk.dur))+'</span><span>·</span><span>'+sk.date+'</span></div>'+
-        '<div class="st">'+statInner(sk)+'</div>'+
-      '</div>';
-    el.addEventListener('click', () => load(sk, true));
-    grid.appendChild(el);
-    cards.set(sk.id, el);
-    draw(el.querySelector('canvas'), sk, null);   // static full render
+  function renderGrid() {
+    var q = (search.value || '').trim().toLowerCase();
+    var shown = items.filter(function (i) {
+      return !q || (i.title || '').toLowerCase().indexOf(q) !== -1
+                || (i.caption || '').toLowerCase().indexOf(q) !== -1;
+    });
+    grid.innerHTML = '';
+    shown.forEach(function (i) { grid.appendChild(tile(i)); });
+    libCnt.textContent = shown.length + (q ? ' matching' : '');
+    statCount.textContent = items.length;
+    if (current) {
+      Array.prototype.forEach.call(grid.children, function (c) {
+        c.classList.toggle('active', c.getAttribute('data-id') === current.id);
+      });
+    }
+    /* SAYS WHAT IT IS SHOWING. The search filters what has been LOADED, not the
+     * table — the listing is keyset-paginated and a server-side search is a
+     * query this API does not have. A box that silently searched one page while
+     * looking like it searched everything is the kind of half-truth that gets
+     * believed. */
+    foot.textContent = !items.length ? ''
+      : (q ? 'Filtering the ' + items.length + ' loaded so far. Load more to search further.'
+           : 'Newest first, from GET /api/skribls. Pick one to play it.');
   }
-  const remaining = shown.length - page.length;
-  if(remaining > 0){
-    const btn = document.createElement('button');
-    btn.className = 'more';
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
-      + 'Show ' + Math.min(PAGE, remaining) + ' more <span class="rem">(' + remaining + ' left)</span>';
-    btn.addEventListener('click', () => { visible += PAGE; buildGrid(); });
-    moreWrap.appendChild(btn);
+
+  function loadPage() {
+    var url = api + '?limit=24' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
+    moreWrap.innerHTML = '<span class="more-status">Loading…</span>';
+    return fetch(url, { credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (body) {
+        items = items.concat(body.items || []);
+        cursor = body.next_cursor || null;
+        renderGrid();
+        moreWrap.innerHTML = '';
+        if (cursor) {
+          /* KEYSET, not offset — the cursor the server handed back. See
+             list_skribls() for why offset paging is wrong for a feed: page 50
+             costs fifty times page 1, and a post created mid-scroll shifts every
+             page after it. */
+          var more = document.createElement('button');
+          more.type = 'button';
+          more.className = 'more';
+          more.textContent = 'Load more';
+          more.addEventListener('click', function () { loadPage(); });
+          moreWrap.appendChild(more);
+        }
+        if (!current && items.length) select(items[0]);
+        if (!items.length) {
+          foot.innerHTML = '<b>Nothing listed.</b> POST /api/skribls defaults to '
+            + '<code>visibility: "unlisted"</code>, so nothing posted from the Pad '
+            + 'appears here — a host feed’s composer is what sends '
+            + '<code>"visibility": "public"</code>.';
+        }
+      })
+      .catch(function () {
+        moreWrap.innerHTML = '';
+        foot.textContent = "Couldn't load the listing.";
+      });
   }
-}
 
-/* ---- the player ----------------------------------------------------------*/
-let current = SKRIBLS[0];
-let FILTER = 'all';
-let playing = false, raf = null, startT = 0, playDurMs = 0, loop = true;
-const stage = document.getElementById('stageCanvas');
-const nib = document.getElementById('nib');
-
-function setActiveCard(){
-  cards.forEach((el,id)=> el.classList.toggle('active', id===current.id));
-}
-function load(sk, autoplay){
-  current = sk;
-  document.getElementById('pTitle').textContent = sk.title;
-  const k = document.getElementById('pKind');
-  k.className = 'kind '+sk.kind; k.innerHTML = (sk.kind==='flip'?IC_FLIP:IC_PAD)+(sk.kind==='flip'?'Flip':'Pad');
-  document.getElementById('pMeta').textContent = metaLine(sk);
-  document.getElementById('pStats').innerHTML = statInner(sk);
-  playDurMs = (sk.kind==='flip' ? Math.max(3.2, sk.pages/sk.dur*4) : Math.min(7, Math.max(3.5, sk.dur/8))) * 1000;
-  setActiveCard();
-  stop(); draw(stage, sk, 1); setScrub(1); setElapsed(1);
-  if(autoplay) play();
-}
-function setScrub(p){ document.getElementById('scrubFill').style.width = (p*100)+'%'; }
-function realTotal(sk){ return sk.kind==='flip' ? Math.max(1, Math.round(sk.pages/sk.dur)) : sk.dur; }
-function setElapsed(p){
-  const T = realTotal(current);
-  document.getElementById('tElapsed').textContent = fmt(Math.round(T*p))+' / '+fmt(T);
-}
-function frame(now){
-  const p = Math.min(1, (now-startT)/playDurMs);
-  const last = draw(stage, current, p);
-  setScrub(p); setElapsed(p);
-  if(last){ const wrap = stage.getBoundingClientRect();
-    nib.style.opacity = p<1?1:0;
-    nib.style.left = (last[0]/ (stage.width/(Math.min(window.devicePixelRatio||1,2))) *100)+'%';
-    nib.style.top = (last[1]/ (stage.height/(Math.min(window.devicePixelRatio||1,2))) *100)+'%';
-  }
-  if(p<1){ raf = requestAnimationFrame(frame); }
-  else { nib.style.opacity=0; if(loop){ startT = performance.now(); raf = requestAnimationFrame(frame); } else stop(); }
-}
-function play(){
-  if(playing) return; playing = true; setPlayIcon(true);
-  startT = performance.now(); raf = requestAnimationFrame(frame);
-}
-function stop(){
-  playing = false; setPlayIcon(false); nib.style.opacity=0;
-  if(raf) cancelAnimationFrame(raf); raf=null;
-}
-function setPlayIcon(on){
-  document.getElementById('playIcon').innerHTML = on
-    ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'
-    : '<path d="M8 5v14l11-7z"/>';
-  document.getElementById('btnPlay').title = on?'Pause':'Play';
-}
-
-/* controls */
-document.getElementById('btnPlay').addEventListener('click', ()=> playing?stop():play());
-document.getElementById('btnRestart').addEventListener('click', ()=>{ stop(); startT=performance.now(); play(); });
-document.getElementById('btnLoop').addEventListener('click', function(){ loop=!loop; this.classList.toggle('on',loop); this.setAttribute('aria-pressed',String(loop)); });
-document.getElementById('btnShare').addEventListener('click', function(){ const t=this.title; this.title='Copied link'; setTimeout(()=>this.title=t,1200); });
-document.getElementById('scrub').addEventListener('click', (e)=>{ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); stop(); draw(stage,current,p); setScrub(p); setElapsed(p); });
-document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', function(){
-  document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); this.classList.add('active');
-  FILTER = this.dataset.filter; visible = PAGE; buildGrid();
-}));
-document.getElementById('search').addEventListener('input', ()=>{ visible = PAGE; buildGrid(); });
-window.addEventListener('resize', ()=>{ drawAvatar(); if(!playing) draw(stage,current,1); cards.forEach((el,id)=>{ const sk=SKRIBLS.find(s=>s.id===id); if(sk) draw(el.querySelector('canvas'),sk,null); }); });
-
-/* avatar — a little skribl of its own */
-const AVATAR = {seed:99, ground:'#14122b', strokes: MOTIFS.bolt()};
-function drawAvatar(){ draw(document.getElementById('avatarCanvas'), AVATAR, null); }
-document.getElementById('statCount').textContent = SKRIBLS.length;
-{ const tot = SKRIBLS.reduce((a,s)=>a+s.likes,0);
-  document.getElementById('statLikes').textContent = tot>=1000 ? (tot/1000).toFixed(1)+'k' : tot; }
-
-/* boot — draw after a frame so the canvases have their laid-out size */
-buildGrid();
-load(SKRIBLS[0], false);
-requestAnimationFrame(() => {
-  drawAvatar();
-  draw(stage, current, 1);
-  cards.forEach((el,id)=>{ const sk=SKRIBLS.find(s=>s.id===id); if(sk) draw(el.querySelector('canvas'),sk,null); });
-});
-setElapsed(0); setScrub(0);
+  search.addEventListener('input', renderGrid);
+  loadPage();
+})();
