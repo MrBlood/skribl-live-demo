@@ -481,6 +481,10 @@
   <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>
+  <!-- Editors only, same reason: the share card is composited at POST time.
+       lib/sharecard.js owns where the drawing lands inside it, because the
+       in-post player crops the brand strip back off and the two must agree. -->
+  <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/framebitmap.js') }}" defer></script>

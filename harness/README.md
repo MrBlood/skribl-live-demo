@@ -167,6 +167,19 @@ appear here, and `RELEASE.md` names every one of them.
   one converge, so the tool's strength is not a property of the device's sample
   rate.
 
+- `verify_inline.py` — the IN-POST player: a Skribl inside a host's feed
+  (`skribl/static/inlineplayer.js`, the `/feed` preview). It is a second
+  playback implementation, so this suite is built the way `verify_sharedrules.py`
+  is: it posts one real drawing, plays it in the sealed player at `/s/<id>` AND
+  in a feed post from the same clock, and asserts they are at the same point in
+  the replay and have drawn the same thing. Also pins the product rules that are
+  not visible in a screenshot — nothing is fetched until a tap, one Skribl plays
+  at a time, sound is off by default and the choice is page-wide and session-only,
+  scrolling out of view settles a post — plus a flip document whose pages carry
+  different holds, which is what says the hold is being read from
+  `lib/holdtiming.js` rather than re-derived. Its pixel tolerances were set by
+  MUTATION, and the first set was worthless: see the note beside them.
+
 - `verify_input.py` — the coalesced pointer samples a per-frame listener
   throws away, which is why a fast circle drew as a polygon and a slow one did
   not. Pins the thinning rule (self-balancing: a slow stroke's dense samples

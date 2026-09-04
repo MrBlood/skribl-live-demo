@@ -208,7 +208,15 @@
   function buildShareCardDataURL() {
     try {
       const flat = buildPreviewCanvas();
-      const CARD_W = 1200, CARD_H = 630;
+      // The card's geometry lives in lib/sharecard.js because the IN-POST
+      // player has to know it too: a feed post's idle state is this card, and
+      // it crops the brand strip back off to show just the drawing. Two files
+      // deriving the same rectangle from four numbers is the drift
+      // lib/holdtiming.js's header describes. Inline fallback, as every
+      // consumer of lib/ keeps, so a surface that somehow loads without the
+      // module composites exactly as it always did.
+      const SC = window.SkriblShareCard;
+      const CARD_W = SC ? SC.CARD_W : 1200, CARD_H = SC ? SC.CARD_H : 630;
       const card = document.createElement('canvas');
       card.width = CARD_W; card.height = CARD_H;
       const c = card.getContext('2d');
@@ -233,8 +241,8 @@
       };
 
       // Contain the drawing centered, leaving a strip at the bottom for the mark.
-      const footer = 84;
-      const pad = 54;
+      const footer = SC ? SC.FOOTER : 84;
+      const pad = SC ? SC.PAD : 54;
       if (flat && flat.width && flat.height) {
         const areaW = CARD_W - pad*2;
         const areaH = CARD_H - pad - footer;

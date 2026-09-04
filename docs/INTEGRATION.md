@@ -48,6 +48,7 @@ That is the whole integration. You now have:
     GET  /skribl/api/skribls              feed listing (metadata only)
     GET  /skribl/api/skribls/<id>         one Skribl, with payload
     GET  /skribl/media/<key>              stored media, authorised per post
+    GET  /skribl/feed                     PREVIEW of the in-post player — below
     GET  /skribl/library                  CONCEPT PREVIEW — see the warning below
 
 **`/library` is registered by the blueprint and is NOT part of the sealed
@@ -62,6 +63,77 @@ it unlinked is enough.
 
 `url_for("skribl.skribl_player", public_id=...)` builds links. Skribl builds its
 own share URLs the same way, so they are correct under any prefix.
+
+## Putting a Skribl inside your own posts
+
+`/s/<id>` is a PAGE — the app shell, the full transport, ~150 KB of JavaScript.
+That is right for a shared link and wrong for a feed of twenty posts. The
+in-post player is the other shape:
+
+```jinja
+{% from 'skribl/_skribl_inline_player.html'
+     import skribl_inline_assets, skribl_inline %}
+
+{{ skribl_inline_assets() }}          {# once per page, in <head> #}
+...
+{{ skribl_inline(post.skribl_id) }}   {# once per post #}
+```
+
+`GET /skribl/feed` is that, live, over your own `GET /api/skribls`. It is a
+demonstration, not a dependency: the two macros above are the product and they
+work without it.
+
+**What it costs and when.** `skribl_inline_assets()` pulls four files —
+`inlineplayer.css`, `inlineplayer.js`, and the two shared rule modules
+`lib/canvassizes.js` and `lib/holdtiming.js` — under 24 KB served, ratcheted by
+`harness/verify_inline.py`. Per post, idle, it costs ONE image: the share card
+at `/s/<id>/card.png`, which your CDN can cache. `GET /api/skribls/<id>` is
+issued on the first tap and never again for that post. Do not prefetch it: that
+endpoint returns the whole payload, base64 audio included.
+
+**What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
+with a progress hairline along the bottom edge and a nib at the pen. Sound is
+off until they turn it on, and that is the only control — no scrub, no speed, no
+frame-step; those live on `/s/<id>`. One Skribl plays at a time, page-wide.
+Scrolling a playing post out of view settles it. A post whose payload will not
+load says so rather than sitting dead.
+
+**Three things to know before you wire it up.**
+
+*Your composer decides visibility, and the default is not public.* `POST
+/api/skribls` defaults to `"visibility": "unlisted"` — reachable by link, listed
+nowhere — because that is what a link-sharing product should default to. Skribl's
+own Pad composer has no visibility control, so nothing posted from it ever
+appears in `GET /api/skribls`. If your feed is meant to list posts, your composer
+sends `"visibility": "public"`.
+
+*The macros need one name in your Jinja environment.* `init_skribl()` adds
+`skribl_asset` as an app-wide template global — the only name Skribl puts in your
+environment — because the macros render on YOUR view, where Skribl's blueprint
+context processor does not run. It is added, never overwritten: if you already
+define `skribl_asset`, yours survives and the macros will not build. If you
+registered the blueprint under a name other than `skribl`, pass it:
+`{{ skribl_inline(id, bp='drawings') }}`.
+
+*The poster is the share card, cropped, and the crop is imperfect.*
+`/s/<id>/card.png` is a 1200x630 Open Graph card — the drawing inside a bordered
+box under a "Skribl Pad" wordmark — because that is what it was built for, and it
+is the only per-post image the server has. Shown whole it reads as an advert
+twenty times down a feed, so the idle post crops it back to the drawing. The
+vertical crop is exact; the horizontal one is a 16:9 window, which is the widest
+canvas a drawing can have, so it can only ever remove the card's ground and never
+the picture. A narrower drawing therefore still shows some of the card's frame
+either side. A tight per-post crop needs the canvas size where the listing can
+reach it — a real column on the post, not a field inside `payload_json`, which
+`GET /api/skribls` defers on purpose. That is a schema change and it has not been
+made.
+
+**What it does not render.** The wet/dry stroke compositor. A stroke authored
+below 100% opacity beads at its overlaps here where it does not on `/s/<id>`.
+Everything else — Pad replays, Flip documents with their per-page holds, the
+background colour, a photo or base-snapshot underlay, the posted audio loop —
+plays. The header of `skribl/static/inlineplayer.js` says why the gap is there
+and what it would take to close it.
 
 ## Three things that will bite you if you skip them
 

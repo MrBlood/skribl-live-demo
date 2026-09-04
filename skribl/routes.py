@@ -209,6 +209,23 @@ def register_routes(bp, *, index_route=False):
         # backed by GET /api/skribls. Not part of the sealed feature set.
         return render_template("skribl/skribl_library.html")
 
+    @bp.get("/feed")
+    def skribl_feed():
+        # PREVIEW ROUTE for the in-post player — the smallest honest host. It
+        # renders no posts of its own: the page fetches GET /api/skribls and
+        # clones the skribl_inline() macro for each item, so what it shows is
+        # whatever this deployment actually has, under the same visibility rules
+        # every other reader gets. That is the difference between this and
+        # /library above, which draws demo tiles nobody posted.
+        #
+        # Registered so the component can be seen and driven live
+        # (harness/verify_inline.py drives this page). A host does not need this
+        # route to embed the player — the two macros in
+        # templates/skribl/_skribl_inline_player.html are the product; this is
+        # the demonstration of them. Reads no request state and touches no
+        # database, so leaving it unlinked is enough if you do not want it.
+        return render_template("skribl/skribl_feed.html")
+
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
         # Server-render Open Graph / Twitter card metadata so shared links unfurl

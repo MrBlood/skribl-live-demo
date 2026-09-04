@@ -1,0 +1,101 @@
+{#  The in-post player, as two macros a host imports.
+
+    Skribl's other templates are PAGES it serves. This one is different: it is
+    markup a host puts inside their own post, on their own page, in their own
+    layout — so it is a pair of macros rather than an {% include %}, because an
+    include cannot take the post's id.
+
+        {% from 'skribl/_skribl_inline_player.html'
+             import skribl_inline_assets, skribl_inline %}
+
+        {{ skribl_inline_assets() }}          once per page, in <head>
+        ...
+        {{ skribl_inline(post.skribl_id) }}   once per post
+
+    EVERY URL IS BUILT FROM AN ABSOLUTE ENDPOINT NAME, never a literal path and
+    never a leading-dot relative one. A host renders these macros from THEIR
+    view, so `request.blueprint` is theirs and `url_for(".skribl_card")` would
+    raise BuildError; `url_for("skribl.skribl_card")` resolves from anywhere and
+    is correct under any url_prefix. `bp` is a parameter because Flask lets a
+    host register the blueprint under another name (register_blueprint(name=...));
+    it defaults to the name create_blueprint() gives it.
+
+    skribl_asset() is added to the host's Jinja environment by init_skribl()
+    (skribl/__init__.py) for exactly this reason. Its digest bust means a
+    released change reaches viewers instead of a stale cache serving them last
+    month's player.
+
+    WHY THE MARKUP IS HERE AND NOT BUILT BY THE SCRIPT. inlineplayer.js could
+    create all of this from one <div data-skribl-id>. It does not, for one
+    reason: a page with JavaScript off, or one whose script has not arrived yet,
+    then shows nothing where the post is. Server-rendered, an unenhanced post is
+    still the drawing's share card with a play affordance on it — a still image
+    of the Skribl, which is a truthful degradation. The script only ever adds
+    behaviour to markup that already says something.
+
+    THE CANVAS CARRIES NO SIZE, deliberately. Its logical size comes from the
+    payload's own canvasSize once that arrives (inlineplayer.js adopt()), and a
+    guessed width/height here would be a second answer to a question the payload
+    already answers — visible as one frame of wrongly-shaped canvas on first
+    play.
+#}
+
+{% macro skribl_inline_assets() -%}
+<link rel="stylesheet" href="{{ skribl_asset('inlineplayer.css') }}">
+{# lib/canvassizes.js: the default canvas size for a Skribl authored before Pad
+   had a size picker. lib/holdtiming.js: what a per-page `hold` MEANS. Both are
+   read rather than retyped, so a feed post and the player at /s/<id> cannot
+   disagree about a drawing's shape or about which page of a Flip is on screen —
+   see the header of inlineplayer.js. #}
+<script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+{# lib/sharecard.js: where the drawing sits inside /s/<id>/card.png. The idle
+   poster IS that card with its brand strip cropped off, and editor_post.js
+   composites it from the same numbers — so neither can move without the
+   other. #}
+<script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+<script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
+<script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
+{%- endmacro %}
+
+{% macro skribl_inline(public_id, alt='', bp='skribl') -%}
+{# is-muted and is-silent are the pre-script truth: sound is off by default, and
+   nothing yet knows whether this Skribl has any. inlineplayer.js clears
+   is-silent when the payload turns out to carry a loop. #}
+<div class="skribl-inline is-muted is-silent"
+     data-skribl-inline
+     data-skribl-id="{{ public_id }}"
+     data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
+     role="button"
+     tabindex="0"
+     aria-label="Play this Skribl">
+  {# The idle state. /s/<id>/card.png is visibility-checked server-side and
+     falls back to the generic branded card, so it never 404s for a post the
+     viewer may see — and never serves the drawing for one they may not. #}
+  <img class="skribl-inline-poster"
+       src="{{ url_for(bp ~ '.skribl_card', public_id=public_id) }}"
+       alt="{{ alt }}" loading="lazy" decoding="async">
+  <canvas class="skribl-inline-canvas" hidden></canvas>
+  <div class="skribl-inline-veil">
+    <div class="skribl-inline-play">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+  </div>
+  <div class="skribl-inline-dur" hidden>
+    <span class="skribl-inline-dur-text"></span>
+  </div>
+  {# Hidden by .is-silent until the payload says there is audio — a mute button
+     on a silent drawing is a control that does nothing. #}
+  <button type="button" class="skribl-inline-mute"
+          aria-pressed="true" aria-label="Unmute" title="Sound is off">
+    <svg class="skribl-inline-on" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
+    </svg>
+    <svg class="skribl-inline-off" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>
+    </svg>
+  </button>
+  <div class="skribl-inline-prog"></div>
+  <div class="skribl-inline-nib"></div>
+  <div class="skribl-inline-err" hidden></div>
+</div>
+{%- endmacro %}

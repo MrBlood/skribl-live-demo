@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skribl in a feed</title>
+  {# WHAT THIS PAGE IS FOR. It is the smallest honest host: a page that is not
+     Skribl, showing posts that are, using the same two macros a real host would
+     import. Everything on it comes from GET /api/skribls — there are no demo
+     tiles here, which is the difference between this and /library, and the
+     reason this one can answer "does the in-post player work" at all.
+
+     It is also what harness/verify_inline.py drives, so the preview and the
+     proof are the same page. A preview nothing tests is a screenshot. #}
+  {% from 'skribl/_skribl_inline_player.html'
+       import skribl_inline_assets, skribl_inline %}
+  {{ skribl_inline_assets() }}
+  <style>
+    /* The HOST's styling, deliberately. Not one rule here touches
+       .skribl-inline: if this page has to restyle the component to look right
+       in a feed, the component is wrong. Colours are written out rather than
+       taken from styles.css for the same reason — a host does not have it. */
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 600px at 50% -8%, rgba(124,92,255,0.10), transparent 60%),
+        #0d0f14;
+      color: #e8eaef;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #b7a8ff; }
+    .shell { max-width: 600px; margin: 0 auto; border-inline: 1px solid rgba(255,255,255,0.075); min-height: 100vh; }
+    @media (max-width: 620px) { .shell { border-inline: none; } }
+    .fhead {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; align-items: baseline; gap: 12px;
+      padding: 13px 18px; background: rgba(13,15,20,0.82);
+      border-bottom: 1px solid rgba(255,255,255,0.075);
+    }
+    .fhead h1 { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
+    .fhead .sub { font-size: 12.5px; color: #6f7686;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    .post { padding: 15px 18px; border-bottom: 1px solid rgba(255,255,255,0.075); }
+    .phead { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+    .phead .dn { font-weight: 700; letter-spacing: -0.01em; }
+    .phead .tm { color: #6f7686; font-size: 13px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    .pbody { margin: 3px 0 11px; font-size: 15px; overflow-wrap: anywhere; }
+    .post .skribl-inline { margin-top: 11px; }
+    .note, .state {
+      padding: 22px 18px; color: #a2abba; font-size: 13px; line-height: 1.7;
+    }
+    .state { text-align: center; color: #6f7686; }
+    .note { border-top: 8px solid #05060a; }
+    .note b { color: #e8eaef; font-weight: 600; }
+    .note code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      background: #1b1f28; padding: 1px 5px; border-radius: 5px; font-size: 12.5px; }
+  </style>
+</head>
+<body data-skribl-api="{{ url_for('.list_skribls') }}">
+
+  <div class="shell">
+    <header class="fhead">
+      <h1>Feed</h1>
+      <span class="sub">GET /api/skribls</span>
+    </header>
+
+    <div id="feedList"></div>
+
+    <p class="state" id="feedEmpty" hidden>
+      <b>Nothing public to list.</b> This is almost certainly not a bug:
+      <code>POST /api/skribls</code> defaults to <code>visibility: "unlisted"</code>
+      — reachable by link, deliberately not listed — and the
+      <a href="{{ url_for('.skribl_editor') }}">Pad</a>'s composer has no
+      visibility control, so everything posted from it stays out of
+      <code>GET /api/skribls</code>. A host feed's composer is what sends
+      <code>"visibility": "public"</code>. The in-post player itself does not
+      care: it plays any Skribl the viewer is allowed to read.
+    </p>
+    <p class="state" id="feedError" hidden>Couldn't load the listing.</p>
+
+    <div class="note">
+      <p><b>This is the in-post player.</b> Tap a Skribl to play it: the drawing
+      redraws itself, a hairline runs along the bottom edge, and the nib shows
+      where the pen is. Sound is off until you turn it on, and turning it on is
+      the only control a post has — the full transport lives on the shared link
+      at <code>/s/&lt;id&gt;</code>, not in every post.</p>
+      <p>Only one plays at a time, and scrolling one out of view settles it.
+      Nothing is fetched until you tap: an idle post is one cached image.</p>
+      <p>A host embeds it in two lines:
+      <code>{% raw %}{{ skribl_inline_assets() }}{% endraw %}</code> once per page and
+      <code>{% raw %}{{ skribl_inline(id) }}{% endraw %}</code> once per post — see
+      docs/INTEGRATION.md.</p>
+    </div>
+  </div>
+
+  {# The macro's own output, with the id left as a placeholder. feed.js clones
+     this per listing item, so the preview can never render markup the macro
+     does not produce. <template> content is inert: the placeholder poster URL
+     is not fetched. #}
+  <template id="skriblPostTpl">{{ skribl_inline('__ID__') }}</template>
+
+  <script src="{{ skribl_asset('feed.js') }}" defer></script>
+</body>
+</html>

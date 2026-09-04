@@ -122,7 +122,23 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
         paths |= set(re.findall(r"(?<![A-Za-z0-9_/-])((?:docs|skribl|harness)/"
                                 r"[A-Za-z0-9_./-]+"
                                 r"\.(?:py|md|patch|css|js|html|txt|sh))", body))
-gone = sorted(p for p in paths if not (ROOT / p).is_file())
+# A JINJA TEMPLATE NAME IS A NAMESPACE, NOT A PATH — and the docs have to be
+# able to quote one. `{% from 'skribl/_skribl_inline_player.html' import ... %}`
+# is what a host types verbatim to embed the in-post player; the file it names
+# lives at skribl/templates/skribl/_skribl_inline_player.html, because Jinja
+# resolves against the blueprint's template folder. Read as a repo path it is
+# missing, and this check called it a lie. Same class of false failure as the
+# served /static/skribl/ URLs the lookbehind above already handles: a correct
+# reference in a different namespace. Only .html is resolved this way, and only
+# after the literal path has failed, so a genuinely missing file still fails.
+def _resolves(rel):
+    if (ROOT / rel).is_file():
+        return True
+    return (rel.startswith("skribl/") and rel.endswith(".html")
+            and (ROOT / "skribl" / "templates" / rel).is_file())
+
+
+gone = sorted(p for p in paths if not _resolves(p))
 check("no document names a repo file that is not there",
       not gone, ", ".join(gone))
 

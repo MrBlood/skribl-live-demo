@@ -71,7 +71,7 @@ every case; the lexer checking its own output proves nothing) and
   on PATH ahead of everything for the whole run.
 * **THE SEAL AND CI DO NOT TEST THE SAME THING, and CI's mode is the stricter
   one.** `release_run.py` runs 44 SEPARATE batches, each getting a fresh server
-  and database on a quiet machine. CI runs all 89 suites in ONE invocation on a
+  and database on a quiet machine. CI runs all 90 suites in ONE invocation on a
   contended two-core runner. Anything sensitive to write contention or to
   cross-suite state therefore passes the seal and fails CI — which is exactly
   what happened: a 500 under SQLite lock contention (v274) failed main's sqlite
@@ -1283,12 +1283,20 @@ module gets forgotten and reimplemented.
 Surfaces are read from the template `<script>` tags; the descriptions are each
 file's own opening line. `verify_docs.py` fails if a lib here is named nowhere.
 
+"in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
+It loads exactly two of these — `canvassizes.js` for a legacy payload's default
+shape and `holdtiming.js` for what a per-page hold means — and reads nothing
+else from `lib/`, which is the point: those two are the rules it would otherwise
+have re-derived. `verify_inline.py` asserts both that it reads them and that the
+macro loads them, because reading a global nothing loads is a silent fallback
+rather than a shared rule.
+
 | module | loaded on | what it owns |
 | --- | --- | --- |
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
-| `canvassizes.js` | Pad+Flip | Canvas presets — the one table both editors read. |
+| `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
 | `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
@@ -1300,7 +1308,7 @@ file's own opening line. `verify_docs.py` fails if a lib here is named nowhere.
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
-| `holdtiming.js` | Pad+Flip+player | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip |
+| `holdtiming.js` | Pad+Flip+player+in-post | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip |
 | `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `media_validation.js` | Pad+Flip+player | media_validation.js — one owner for media format policy and byte verification. |
@@ -1322,6 +1330,7 @@ file's own opening line. `verify_docs.py` fails if a lib here is named nowhere.
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
+| `sharecard.js` | Pad+Flip+in-post | Where the drawing sits inside /s/<id>/card.png — ONE definition, two readers. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
@@ -2217,6 +2226,104 @@ PR is to catch a broken push, not to re-verify a verified one. `CLAUDE.md` now
 carries the owner's standing rule: **ask before taking any action that could
 create or increase a bill on their accounts**, CI triggers explicitly included.
 Do not widen those triggers to "fix" a red PR.
+
+## The in-post player — a fourth surface (landed, NOT sealed)
+
+A Skribl inside somebody else's feed post. It had existed only as a mockup in a
+conversation; it is in the tree now, it plays real posted Skribls, and
+`verify_inline.py` is what says so.
+
+**This landed WITHOUT a seal and without a version bump.** `SKRIBL_VERSION` is
+unchanged, there is no `DECISIONS.md` entry, and `harness/RELEASE.md` describes
+the tree before it. What was run is named below, suite by suite — that is the
+evidence for this change and it is not a release aggregate. Seal it, or fold it
+into the next seal, before treating it as part of the sealed feature set.
+
+    skribl/static/inlineplayer.js       the player   (read its header first)
+    skribl/static/inlineplayer.css      its styles, scoped, host-safe
+    templates/skribl/_skribl_inline_player.html   two macros a host imports
+    templates/skribl/skribl_feed.html + static/feed.js + GET /feed
+                                        the smallest honest host, over the
+                                        real GET /api/skribls listing
+    harness/verify_inline.py            the proof (count: harness/RELEASE.md)
+
+**IT IS A SECOND PLAYBACK IMPLEMENTATION, and that is the risk to understand
+before touching it.** The sealed player is a page — app.js plus eight modules,
+an app shell, a full transport. Twenty of those in a feed is not a feed. So
+inlineplayer.js replays payloads itself, and `verify_sharedrules.py`'s warning
+applies one surface further out: the author opens `/s/<id>`, it looks right, and
+every viewer scrolling past sees something else. Three things hold it:
+
+  * the RULES come out of `lib/` — `holdtiming.js` for what a hold means,
+    `canvassizes.js` for a legacy payload's default shape;
+  * what is retyped (the capped-gap timeline, `drawDot`/`drawLine`) is retyped
+    verbatim and names its origin in app.js;
+  * `verify_inline.py` plays the SAME posted drawing in both, from the same
+    clock, and compares where each has got to and what each has drawn.
+
+**The comparison's numbers were set by mutation, and the first set was
+worthless.** A 32x32 grid at tolerance 48 passed while the in-post player read a
+BLANK canvas (the selector matched the first post in the feed, not the one
+playing) and passed again with the gap cap deliberately set to 500 ms, the two
+players 0.58 and 0.34 through the same drawing. It is 96x96 at tolerance 18 now,
+plus a scale-free ink-mass ratio, and it is floor-subtracted because the two
+surfaces paint the drawing's ground in different places — the in-post player on
+the canvas, the sealed player on `.canvas-wrap` behind it. Compared absolutely,
+all 9,216 cells differ and the assertion is about paint order.
+
+**Known gap, deliberate and named:** the wet/dry stroke compositor is not
+implemented, so a sub-100%-opacity stroke beads at its overlaps where it does
+not on `/s/<id>`. The fixture draws opaque so the pixel assertion stays
+meaningful rather than quietly tolerant of a gap it cannot see.
+
+**Two things found while building it, both real:**
+
+  * **`POST /api/skribls` defaults to `unlisted` and Pad's composer has no
+    visibility control**, so nothing posted from Pad ever appears in
+    `GET /api/skribls`. `/feed` was empty on its first run and the suite was
+    asserting against an empty list. The default is correct — it is what a
+    link-sharing product should do — but it means a host feed's composer is what
+    sends `"visibility": "public"`, and `/feed`'s empty state now says so
+    instead of telling you to go and post from the Pad.
+  * **`asset_url()` built a RELATIVE endpoint** (`url_for(".static")`), which
+    resolves against `request.blueprint` — always Skribl's, while every caller
+    was a template Skribl rendered. The embed macros render on the HOST's view,
+    where a leading dot raises BuildError. It names the blueprint outright now,
+    which is identical inside Skribl's pages and works everywhere else, and
+    `init_skribl()` adds `skribl_asset` as the ONE app-wide template global —
+    added, never overwritten.
+
+**What a host downloads: 23,502 B served**, ratcheted at 24,000 in
+`verify_inline.py`. A third of that is `inlineplayer.css`, which is not
+comment-stripped — `jsstrip.py` is JavaScript-only — and is left that way
+deliberately. Measure it at the BUSTED URLs the page requests: bare, the
+JavaScript reads 28,739 B, and a ratchet on that number prices every explanatory
+comment as if it shipped.
+
+**The idle poster is `/s/<id>/card.png` CROPPED**, and the crop is the one piece
+of geometry two files now share. The card is a branded 1200x630 Open Graph image
+and the only per-post picture the server has; whole, it reads as an advert
+twenty times down a feed. `lib/sharecard.js` owns where the drawing sits inside
+it — `editor_post.js` composites from it, `inlineplayer.css` crops from it, and
+`verify_inline.py` measures the RENDERED poster against the module, so a change
+to one side fails rather than drifts.
+
+Vertically the crop is exact (the drawing is contained, so its height and y are
+identical in every card: 492 of 630, from 27). Horizontally it cannot be: the
+drawing's width depends on its own aspect and nothing in the feed knows that —
+`canvasSize` is inside `payload_json` and `GET /api/skribls` defers that column
+deliberately. The drawing IS centred, though, so a symmetric side crop can only
+remove ground as long as the window is at least as wide as the widest canvas.
+That is 16:9, so the box is 16:9; a 1:1 drawing then leaves 22% of the box as
+ground instead of 59%. A narrower drawing still shows some of the card's frame.
+The real fix is the canvas size as a real COLUMN, which is a migration.
+
+**And the ratchet caught the CSS.** Cropping added 2,800 B of explanation to
+`inlineplayer.css` and pushed the embed past its byte ratchet — correctly:
+`jsstrip.py` strips a JavaScript response and NOTHING strips CSS, so prose in
+that file ships to every host on every page. It moved into `inlineplayer.js`'s
+header and the CSS kept the numbers and a pointer. Same words, a third of the
+weight.
 
 ## Known-open, in the order worth doing
 

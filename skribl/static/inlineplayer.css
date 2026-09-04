@@ -1,0 +1,258 @@
+/* The in-post player's stylesheet.
+ *
+ * NOT styles.css and NOT player.css. This is the only Skribl CSS meant to load
+ * inside SOMEBODY ELSE'S page, so every rule is scoped under .skribl-inline,
+ * every colour is written out rather than inherited from a token the host does
+ * not define, and nothing outside the component is selected. It is outside
+ * cssgraph.py's graph entirely — that tool derives player.css from styles.css.
+ *
+ * THE REASONING LIVES IN inlineplayer.js's HEADER, not here, and that is
+ * deliberate: jsstrip.py removes comments from a JavaScript response and
+ * nothing does that for CSS, so prose in this file is prose every host
+ * downloads. What is kept below is the numbers and where they come from.
+ *
+ * The three geometry facts, all from lib/sharecard.js and all asserted against
+ * it by verify_inline.py:
+ *   - the poster is /s/<id>/card.png, a 1200x630 branded card, cropped back to
+ *     the drawing: scaled to 128.0488% of the box height (630/492) and pulled
+ *     up 5.4878% (27/492), which puts the wordmark and padding outside;
+ *   - the box is 16:9 because that is the widest canvas a drawing can have
+ *     (lib/canvassizes.js), and the drawing is centred in the card, so a
+ *     symmetric side crop removes ground and never picture;
+ *   - a 1:1 drawing then leaves 22% of the box as ground rather than 59%.
+ */
+
+.skribl-inline {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;          /* the widest canvas a drawing can have */
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0b0d12;
+  cursor: pointer;
+  /* A host's line-height/font would leak into the duration chip otherwise. */
+  line-height: 1.4;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard: the box is the control, so it takes focus and shows it. */
+.skribl-inline:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 2px;
+}
+
+.skribl-inline-poster {
+  position: absolute;
+  top: -5.4878%;                 /* band().offset — 27/492 of the box height */
+  height: 128.0488%;             /* band().scale  — 630/492 of the box height */
+  /* auto width keeps the card's 1200:630, making the image 2.439x the box
+     height against a 1.778x box; the centred excess is clipped. max-width is
+     defeated explicitly — a host's `img { max-width: 100% }` would squash it
+     back and pull the wordmark into frame. */
+  width: auto;
+  max-width: none;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
+  border: 0;
+  transition: opacity 0.22s;
+}
+
+/* The generic fallback card is cropped the same way — see inlineplayer.js. */
+
+/* Letterboxed at the DRAWING's aspect, centred, never stretched: a drawing
+   posted at 4:5 stretched into a 16:9 box is a different picture. */
+.skribl-inline-canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.skribl-inline.is-playing .skribl-inline-poster,
+.skribl-inline.is-paused .skribl-inline-poster {
+  opacity: 0;
+}
+
+/* Veil + play: the only control an idle post shows. A feed is not a player. */
+.skribl-inline-veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(120px 120px at 50% 50%, rgba(0, 0, 0, 0.28), transparent 70%);
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+
+.skribl-inline.is-playing .skribl-inline-veil { opacity: 0; }
+
+.skribl-inline-play {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 10, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+
+.skribl-inline-play svg {
+  width: 22px;
+  height: 22px;
+  fill: #ffffff;
+  margin-left: 2px;
+}
+
+.skribl-inline:hover .skribl-inline-play { background: rgba(20, 16, 40, 0.7); }
+
+/* Busy: without it, the first tap on a large post looks like a dead box. */
+.skribl-inline-play.is-busy svg { display: none; }
+
+.skribl-inline-play.is-busy::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #ffffff;
+  animation: skribl-inline-spin 0.7s linear infinite;
+}
+
+@keyframes skribl-inline-spin { to { transform: rotate(360deg); } }
+
+/* Duration chip, idle only: how long is this, before you commit to the tap. */
+.skribl-inline-dur {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #eeeeff;
+  background: rgba(6, 7, 10, 0.6);
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  transition: opacity 0.2s;
+}
+
+.skribl-inline-dur svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.8;
+}
+
+.skribl-inline.is-playing .skribl-inline-dur { opacity: 0; }
+
+/* Mute is the ONLY viewer control. Scrub, speed and frame-step belong on the
+   full player at /s/<id>; a post that grows a transport stops being a post. */
+.skribl-inline-mute {
+  position: absolute;
+  left: 9px;
+  bottom: 9px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: rgba(6, 7, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #eeeeff;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.18s, background 0.15s;
+}
+
+.skribl-inline.is-playing .skribl-inline-mute,
+.skribl-inline:hover .skribl-inline-mute { opacity: 1; }
+
+/* A silent Skribl has nothing to mute, so it shows no mute button at all
+   rather than a control that does nothing. */
+.skribl-inline.is-silent .skribl-inline-mute { display: none; }
+
+.skribl-inline-mute:hover { background: rgba(20, 16, 40, 0.78); }
+
+.skribl-inline-mute:focus-visible {
+  opacity: 1;
+  outline: 2px solid #7c5cff;
+  outline-offset: 1px;
+}
+
+.skribl-inline-mute svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.skribl-inline-mute .skribl-inline-off { display: none; }
+.skribl-inline.is-muted .skribl-inline-mute .skribl-inline-off { display: block; }
+.skribl-inline.is-muted .skribl-inline-mute .skribl-inline-on { display: none; }
+
+/* The progress hairline — the whole transport. Not a scrub track: it takes no
+   pointer events, because a 2.5px target on a phone steals the play tap. */
+.skribl-inline-prog {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2.5px;
+  width: 0;
+  background: linear-gradient(90deg, #7c5cff, #5b8cff);
+  box-shadow: 0 0 10px rgba(124, 92, 255, 0.35);
+  pointer-events: none;
+}
+
+/* The nib: what makes a replay read as drawing rather than as video of one. */
+.skribl-inline-nib {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.skribl-inline-err {
+  position: absolute;
+  inset: auto 9px 9px 9px;
+  font-size: 11.5px;
+  color: #ffd7e2;
+  background: rgba(6, 7, 10, 0.78);
+  border: 1px solid rgba(255, 90, 134, 0.35);
+  padding: 6px 9px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.skribl-inline [hidden] { display: none !important; }
+
+/* Reduced motion keeps the replay — it IS the content — and drops the chrome
+   animation. */
+@media (prefers-reduced-motion: reduce) {
+  .skribl-inline,
+  .skribl-inline * { transition: none !important; }
+  .skribl-inline-play.is-busy::after { animation: none; }
+}
