@@ -319,8 +319,17 @@
     /* The listing endpoint, written in by the macro from url_for(). A host may
      * mount Skribl under any prefix, so the component never assembles a URL
      * from window.location or from a literal path — it appends an id to what
-     * the server said the endpoint is. */
-    var api = (el.getAttribute('data-skribl-api') || '/api/skribls').replace(/\/+$/, '');
+     * the server said the endpoint is.
+     *
+     * NO DEFAULT. This read used to fall back to '/api/skribls', which is the
+     * exact mistake the rest of this comment describes: on a host mounted at
+     * /skribl the fallback would have sent every payload fetch to a path that
+     * does not exist, and quietly — the box would just show its error panel.
+     * verify_seam.py scans client JS for route literals and caught it. A box
+     * with no endpoint attribute cannot fetch, so it says so (see load()),
+     * which is the honest failure. A DRAFT has no endpoint and needs none: it
+     * is attached by payload and never loads. */
+    var api = (el.getAttribute('data-skribl-api') || '').replace(/\/+$/, '');
     var canvas = el.querySelector('.skribl-inline-canvas');
     var poster = el.querySelector('.skribl-inline-poster');
     var prog = el.querySelector('.skribl-inline-prog');
@@ -414,6 +423,13 @@
 
     function load() {
       if (payload || loading || failed) return Promise.resolve(payload);
+      if (!api) {
+        /* Nothing to fetch from. The macro always writes the endpoint in, so
+         * this is hand-built markup missing data-skribl-api — say so rather
+         * than guess a path. */
+        fail("This Skribl is not wired up.");
+        return Promise.resolve(null);
+      }
       loading = true;
       busy(true);
       return global.fetch(api + '/' + encodeURIComponent(id),

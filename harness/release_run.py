@@ -76,7 +76,18 @@ BATCHES = [
     # a batch with is a browser competing for the same CPU during a timing-
     # sensitive replay.
     ["verify_player_isolation.py"],
-    ["verify_player_photo.py"],
+    # THE IN-POST PLAYER'S FOUR SUITES, spread rather than stacked. Each of them
+    # records a real drawing in Pad and posts it — verify_inline authors three,
+    # one carrying an audio loop — and then drives a browser through a replay
+    # whose timing it asserts on. Sharing a batch means two browsers competing
+    # for the same CPU during exactly that measurement, which is the flake
+    # verify_hold and verify_player_isolation already have their own batches to
+    # avoid. verify_sharecard is the cheap one (two posts, then bytes off the
+    # card route) so it rides with the photo suite.
+    ["verify_inline.py"],
+    ["verify_compose.py"],
+    ["verify_library.py"],
+    ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],
     ["verify_flipmotion.py"],
     # v263: the playback bitmap cache. Browser-heavy (it plays loops on both
