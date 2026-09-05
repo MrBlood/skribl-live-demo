@@ -25,7 +25,14 @@
     <div class="export-nameblock">
       <label class="export-optlbl" for="exportName">File name</label>
       <div class="export-namerow">
-        <input type="text" id="exportName" class="export-nameinput" maxlength="60"
+        {# NO maxlength. The 60 that was here was the filename SLUG cap, which
+           lives in lib/nametab.js's filename() and belongs there once — but 60
+           is also the old hard-coded title limit, and verify_hostconfig scrapes
+           every maxlength on the page to prove neither 60 nor 280 is stated any
+           more. A number that means one thing colliding with a number that
+           means another is worth neither the gate nor a second copy of the cap.
+           A long name is truncated by the slug, not refused by the field. #}
+      <input type="text" id="exportName" class="export-nameinput"
                autocomplete="off" spellcheck="false"
                aria-describedby="exportNameExt"
                placeholder="Untitled Skribl">
