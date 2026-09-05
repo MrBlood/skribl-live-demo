@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
+{# The player's markup is the macro file's, not this page's — see the stage
+   below and the gate in verify_inline.py. #}
+{%- from 'skribl/_skribl_inline_player.html' import skribl_inline_draft %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Library</title>
@@ -236,19 +239,12 @@
          (play/pause/seek/setLoop). The buttons below are this page's, the clock
          is the player's. #}
       <div class="stageCanvasWrap">
-        <div class="skribl-inline is-muted is-silent" id="stageBox">
-          <canvas class="skribl-inline-canvas" hidden></canvas>
-          <div class="skribl-inline-veil">
-            <div class="skribl-inline-play">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-            </div>
-          </div>
-          <div class="skribl-inline-dur" hidden><span class="skribl-inline-dur-text"></span></div>
-          <button type="button" class="skribl-inline-mute" hidden aria-hidden="true"></button>
-          <div class="skribl-inline-prog"></div>
-          <div class="skribl-inline-nib"></div>
-          <div class="skribl-inline-err" hidden></div>
-        </div>
+        {#  The player, WITHOUT its mute/loop cluster: this page has a full
+            transport of its own below the stage. These lines used to be
+            hand-copied from the macro — the third such copy in the tree, found
+            by the gate in verify_inline.py. The hidden mute button they carried
+            was dead weight: inlineplayer.js null-guards both controls. #}
+        {{ skribl_inline_draft('stageBox', controls=false) }}
       </div>
       <div class="pmeta">
         <div class="ptitle" id="pTitle">—</div>

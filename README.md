@@ -7,6 +7,12 @@ Current version: **v275** (`SKRIBL_VERSION` in `skribl/core.py`; the archive fil
 
 ## Dropping Skribl into your own Flask app — start here
 
+**There is a worked one you can run:** `python examples/host_app/app.py`, then
+<http://127.0.0.1:5055/>. It is a separate Flask site with its own users and
+posts that mounts Skribl under `/skribl`, composes with a server-side form, and
+plays the result inline. `harness/verify_example.py` drives it in a browser, so
+it cannot quietly stop working. See `examples/README.md`.
+
 **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)** is the guide. It opens with a
 complete working example — about ten lines — and every claim in it is exercised
 by `harness/verify_integration.py`, which mounts Skribl into a throwaway host

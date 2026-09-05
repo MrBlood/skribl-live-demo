@@ -13,7 +13,7 @@
      It is also what harness/verify_inline.py drives, so the preview and the
      proof are the same page. A preview nothing tests is a screenshot. #}
   {% from 'skribl/_skribl_inline_player.html'
-       import skribl_inline_assets, skribl_inline %}
+       import skribl_inline_assets, skribl_inline, skribl_inline_draft %}
   {{ skribl_inline_assets() }}
   <style>
     /* The HOST's styling, deliberately. Not one rule here touches
@@ -155,34 +155,7 @@
          .attach), not a thumbnail standing in for it — a composer that previews
          something other than what it publishes is how a preview starts lying. #}
       <div class="composer-attach" id="composerAttach" hidden>
-        <div class="skribl-inline is-muted is-silent" id="composerSkribl">
-          <canvas class="skribl-inline-canvas" hidden></canvas>
-          <div class="skribl-inline-veil">
-            <div class="skribl-inline-play">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-            </div>
-          </div>
-          <div class="skribl-inline-dur" hidden><span class="skribl-inline-dur-text"></span></div>
-          <div class="skribl-inline-controls">
-            <button type="button" class="skribl-inline-mute" aria-pressed="true" aria-label="Unmute">
-              <svg class="skribl-inline-on" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/>
-              </svg>
-              <svg class="skribl-inline-off" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M11 5 6 9H2v6h4l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/>
-              </svg>
-            </button>
-            <button type="button" class="skribl-inline-loop" aria-pressed="true" aria-label="Stop repeating">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-              </svg>
-            </button>
-          </div>
-          <div class="skribl-inline-prog"></div>
-          <div class="skribl-inline-nib"></div>
-          <div class="skribl-inline-err" hidden></div>
-        </div>
+        {{ skribl_inline_draft('composerSkribl') }}
         <div class="attach-actions">
           <button type="button" class="attach-btn" id="editSkriblBtn">Edit drawing</button>
           <button type="button" class="attach-btn danger" id="removeSkriblBtn">Remove</button>

@@ -216,11 +216,16 @@ wildcard hands the author's drawing to whatever page is framing the editor. If
 you run Skribl on a different origin from your feed, set
 `window.SKRIBL_COMPOSE_ORIGIN` on the editor page to your feed's origin.
 
-**Showing the draft.** `SkriblInline.attach(el, payload)` renders a payload with
-no id — the real in-post player, on a drawing that is not posted yet. Use it
-rather than the `preview` PNG for the attachment itself: a composer that
-previews a thumbnail is previewing something other than what it will publish.
-The `preview` is there for a chip or a list row where a full player is too much.
+**Showing the draft.** `{{ skribl_inline_draft('draft') }}` renders the box and
+`SkriblInline.attach(el, payload)` fills it — the real in-post player, on a
+drawing that is not posted yet. Use it rather than the `preview` PNG for the
+attachment itself: a composer that previews a thumbnail is previewing something
+other than what it will publish. The `preview` is there for a chip or a list row
+where a full player is too much.
+
+Pass the id to the macro rather than wrapping it in a div of your own — `attach`
+takes the player element itself. `skribl_inline_draft(id, controls=false)` drops
+the mute/loop cluster for a page that has its own transport.
 
 **Posting.** One `POST /api/skribls` with the payload, plus whatever your post
 needs: `title` (what `/s/<id>` unfurls with), `caption`, and

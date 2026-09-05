@@ -817,6 +817,44 @@ with sync_playwright() as sp:
 
     b.close()
 
+# ---------------------------------------------------------------------------
+# THE PLAYER'S INSIDES ARE WRITTEN ONCE.
+#
+# skribl_feed.html used to hand-copy twenty-odd lines of the macro's internals
+# for its draft box — the canvas, the veil, the mute and loop buttons — because
+# a DRAFT has no id and the macro required one. That is the arrangement where
+# the macro grows an element and the copy does not, and it was found only by
+# building examples/host_app, whose author had no macro to call and would have
+# copied the same block a third time.
+#
+# There is a skribl_inline_draft() macro now and both callers use it. This gate
+# is on the SHAPE that made the copy possible: no template outside the macro
+# file may write the player's internal class names itself.
+_INTERNALS = ("skribl-inline-canvas", "skribl-inline-veil",
+              "skribl-inline-mute", "skribl-inline-loop",
+              "skribl-inline-prog", "skribl-inline-poster")
+_macro_file = "_skribl_inline_player.html"
+_offenders = []
+for _tpl in sorted((ROOT / "skribl" / "templates").rglob("*.html")):
+    if _tpl.name == _macro_file:
+        continue
+    _txt = _tpl.read_text(encoding="utf-8")
+    _hits = [c for c in _INTERNALS if c in _txt]
+    if _hits:
+        _offenders.append(f"{_tpl.name}: {', '.join(_hits)}")
+for _tpl in sorted((ROOT / "examples").rglob("*.html")) if (ROOT / "examples").exists() else []:
+    _txt = _tpl.read_text(encoding="utf-8")
+    _hits = [c for c in _INTERNALS if c in _txt]
+    if _hits:
+        _offenders.append(f"examples/{_tpl.name}: {', '.join(_hits)}")
+check("no template hand-writes the in-post player's internals — they are the "
+      "macro's, once",
+      not _offenders, "; ".join(_offenders))
+check("and there IS a draft macro, so a host previewing one need not copy them",
+      "macro skribl_inline_draft" in
+      (ROOT / "skribl" / "templates" / "skribl" / _macro_file).read_text(encoding="utf-8"))
+
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

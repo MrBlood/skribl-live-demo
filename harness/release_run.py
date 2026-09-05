@@ -91,6 +91,11 @@ BATCHES = [
     # the harness gives one database to every suite in an invocation, so it
     # keeps its own batch rather than counting somebody else's posts.
     ["verify_createpost.py"],
+    # The worked example, driven in a browser against its OWN server on its own
+    # port and its own database. It shares nothing with the harness instance,
+    # so it could batch with anything — but it is a browser suite recording a
+    # real drawing, which is the kind that wants a quiet CPU.
+    ["verify_example.py"],
     ["verify_library.py"],
     ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],

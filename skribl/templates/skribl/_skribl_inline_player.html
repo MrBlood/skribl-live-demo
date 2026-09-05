@@ -57,23 +57,16 @@
 <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
 {%- endmacro %}
 
-{% macro skribl_inline(public_id, alt='', bp='skribl') -%}
-{# is-muted and is-silent are the pre-script truth: sound is off by default, and
-   nothing yet knows whether this Skribl has any. inlineplayer.js clears
-   is-silent when the payload turns out to carry a loop. #}
-<div class="skribl-inline is-muted is-silent"
-     data-skribl-inline
-     data-skribl-id="{{ public_id }}"
-     data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
-     role="button"
-     tabindex="0"
-     aria-label="Play this Skribl">
-  {# The idle state. /s/<id>/card.png is visibility-checked server-side and
-     falls back to the generic branded card, so it never 404s for a post the
-     viewer may see — and never serves the drawing for one they may not. #}
-  <img class="skribl-inline-poster"
-       src="{{ url_for(bp ~ '.skribl_card', public_id=public_id) }}"
-       alt="{{ alt }}" loading="lazy" decoding="async">
+{#  THE INSIDES, ONCE. A posted Skribl and an un-posted DRAFT differ only in
+    their wrapper attributes and in whether there is a share card to show
+    behind them; everything from the canvas down is the same player.
+
+    This used to be written twice — the macro below, and a hand-copy of these
+    twenty-odd lines in skribl_feed.html's composer, which is the arrangement
+    where the macro grows an element and the copy does not. Building the worked
+    example in examples/host_app found it, because a host trying to preview a
+    draft has no macro to call and would copy the same block a third time. #}
+{% macro _skribl_inline_insides(controls=true) -%}
   <canvas class="skribl-inline-canvas" hidden></canvas>
   <div class="skribl-inline-veil">
     <div class="skribl-inline-play">
@@ -83,7 +76,7 @@
   <div class="skribl-inline-dur" hidden>
     <span class="skribl-inline-dur-text"></span>
   </div>
-  {# Two controls, in one cluster. Mute hides itself on a silent Skribl
+{% if controls %}  {# Two controls, in one cluster. Mute hides itself on a silent Skribl
      (.is-silent); loop stays, because a silent drawing still repeats. #}
   <div class="skribl-inline-controls">
     <button type="button" class="skribl-inline-mute"
@@ -103,8 +96,58 @@
       </svg>
     </button>
   </div>
+{% endif %}
   <div class="skribl-inline-prog"></div>
   <div class="skribl-inline-nib"></div>
   <div class="skribl-inline-err" hidden></div>
-</div>
+{%- endmacro %}
+
+{% macro skribl_inline(public_id, alt='', bp='skribl') -%}
+{# is-muted and is-silent are the pre-script truth: sound is off by default, and
+   nothing yet knows whether this Skribl has any. inlineplayer.js clears
+   is-silent when the payload turns out to carry a loop. #}
+<div class="skribl-inline is-muted is-silent"
+     data-skribl-inline
+     data-skribl-id="{{ public_id }}"
+     data-skribl-api="{{ url_for(bp ~ '.create_skribl') }}"
+     role="button"
+     tabindex="0"
+     aria-label="Play this Skribl">
+  {# The idle state. /s/<id>/card.png is visibility-checked server-side and
+     falls back to the generic branded card, so it never 404s for a post the
+     viewer may see — and never serves the drawing for one they may not. #}
+  <img class="skribl-inline-poster"
+       src="{{ url_for(bp ~ '.skribl_card', public_id=public_id) }}"
+       alt="{{ alt }}" loading="lazy" decoding="async">
+{{ _skribl_inline_insides() }}</div>
+{%- endmacro %}
+
+{% macro skribl_inline_draft(id='', controls=true) -%}
+{#  A DRAFT: the same player, on a payload that has not been posted.
+
+    Three deliberate absences, each load-bearing:
+      * no `data-skribl-inline`, so SkriblInline.mount() SKIPS it — a draft is
+        driven only by attach(el, payload), and a box mounted with no id would
+        try to fetch one and show its error panel;
+      * no `data-skribl-api`, because a draft never loads (see the endpoint
+        note in inlineplayer.js);
+      * no poster, because there is no share card until it is posted — so a
+        draft idles showing the finished drawing rather than a thumbnail.
+
+    Give it an id and hand it to attach():
+
+        {{ '{{ skribl_inline_draft("draft") }}' }}
+        SkriblInline.attach(document.getElementById('draft'), payload)
+
+    Pass the id to the MACRO rather than wrapping the call in a div of your
+    own: attach() takes the player element itself, so a wrapper carrying the id
+    hands it the wrong node and nothing renders.
+
+    controls=false drops the mute/loop cluster, for a page that has a transport
+    of its own — the profile tab's stage is the one in this tree. Both buttons
+    are null-guarded in inlineplayer.js, so their absence is a supported state
+    rather than a thing to work around with a hidden element.
+#}
+<div class="skribl-inline is-muted is-silent"{% if id %} id="{{ id }}"{% endif %}>
+{{ _skribl_inline_insides(controls=controls) }}</div>
 {%- endmacro %}

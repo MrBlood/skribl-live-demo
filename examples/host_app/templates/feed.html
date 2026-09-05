@@ -1,0 +1,200 @@
+{#  The host's own page. Two Skribl things happen here and nothing else:
+    the assets macro in <head>, and skribl_inline() inside each post.
+
+    NOTE WHAT IS ABSENT. No Skribl stylesheet is imported by hand, no script
+    path is typed, no /s/<id> or /skribl/api/... appears anywhere. Every URL
+    comes from a macro or from url_for, which is the only reason this page works
+    with the blueprint mounted at /skribl rather than at the root.
+#}
+{% from 'skribl/_skribl_inline_player.html'
+     import skribl_inline_assets, skribl_inline, skribl_inline_draft %}
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example host — Skribl drop-in</title>
+
+{# ONE LINE, once per page, for every Skribl on it. #}
+{{ skribl_inline_assets() }}
+
+{# The pad button's lifecycle. Only a page that COMPOSES needs this; a page
+   that merely displays Skribls does not, which is why it is not in the macro
+   above. #}
+<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
+
+<style>
+  :root { --bg:#0d0f14; --elev:#12151c; --line:#232936; --ink:#e8ecf4;
+          --dim:#8b93a7; --accent:#7c5cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5
+         ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 20px 16px 80px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  h1 { font-size:19px; margin:0; flex:1; }
+  .muted { color:var(--dim); font-size:13px; }
+  form.inline { display:inline; }
+  select, button, textarea, input { font: inherit; color: inherit; }
+  select { background:var(--elev); border:1px solid var(--line); border-radius:8px;
+           padding:6px 10px; }
+  .btn { background:var(--accent); border:0; color:#fff; border-radius:999px;
+         padding:8px 18px; font-weight:600; cursor:pointer; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn.ghost { background:transparent; border:1px solid var(--line);
+               color:var(--ink); font-weight:500; }
+  .composer, .post { background:var(--elev); border:1px solid var(--line);
+                     border-radius:14px; padding:14px; margin-bottom:16px; }
+  textarea { width:100%; background:transparent; border:0; resize:vertical;
+             min-height:62px; outline:none; }
+  .tools { display:flex; align-items:center; gap:8px; margin-top:8px;
+           border-top:1px solid var(--line); padding-top:10px; }
+  .tools .spacer { flex:1; }
+  .pad { background:transparent; border:1px solid var(--line); border-radius:8px;
+         width:34px; height:34px; cursor:pointer; font-size:16px; line-height:1; }
+  .attach { margin-top:12px; position:relative; }
+  .attach .row { display:flex; gap:8px; margin-top:8px; }
+  .phead { display:flex; gap:8px; align-items:baseline; margin-bottom:6px; }
+  .dn { font-weight:650; }
+  .flash { background:#3a1d24; border:1px solid #6d2c38; border-radius:10px;
+           padding:10px 12px; margin-bottom:14px; }
+  .overlay { position:fixed; inset:0; background:rgba(4,6,10,.86); z-index:50;
+             display:flex; flex-direction:column; }
+  .overlay[hidden] { display:none; }
+  .overlay .bar { display:flex; justify-content:flex-end; padding:8px; }
+  .overlay iframe { flex:1; width:100%; border:0; background:var(--bg); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Example host</h1>
+    {% if me %}
+      <span class="muted">signed in as <b>{{ me.handle }}</b></span>
+      <form class="inline" method="post" action="{{ url_for('logout') }}">
+        <button class="btn ghost" type="submit">Sign out</button></form>
+    {% else %}
+      <form class="inline" method="post" action="{{ url_for('login') }}">
+        <select name="uid">
+          {% for u in users %}<option value="{{ u.id }}">{{ u.handle }}</option>{% endfor %}
+        </select>
+        <button class="btn" type="submit">Sign in</button></form>
+    {% endif %}
+  </header>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% if me %}
+  {#  AN ORDINARY FORM. It posts to the host's own view, not to Skribl. The
+      drawing rides along in a hidden field as JSON and the server calls
+      skribl.create_post() — see app.py's compose(). #}
+  <form class="composer" id="composer" method="post" action="{{ url_for('compose') }}">
+    <textarea name="body" id="body" placeholder="Say something…"></textarea>
+    <input type="hidden" name="skribl_payload" id="skriblPayload">
+
+    <div class="attach" id="attach" hidden>
+      {#  The REAL in-post player on the un-posted payload, not a thumbnail:
+          what the composer previews is what the post will publish. The DRAFT
+          macro is the same player with no id, no poster and no api endpoint —
+          a draft has nothing to fetch and no share card yet, so it idles
+          showing the finished drawing. #}
+      {{ skribl_inline_draft('draftSkribl') }}
+      <div class="row">
+        <button class="btn ghost" type="button" id="editSkribl">Edit drawing</button>
+        <button class="btn ghost" type="button" id="removeSkribl">Remove</button>
+      </div>
+    </div>
+
+    <div class="tools">
+      <button class="pad" type="button" id="padBtn" title="Add a Skribl"
+              aria-label="Add a Skribl">✎</button>
+      <span class="spacer"></span>
+      <button class="btn" type="submit" id="postBtn" disabled>Post</button>
+    </div>
+  </form>
+  {% else %}
+    <div class="composer muted">Sign in to post.</div>
+  {% endif %}
+
+  {% for post in posts %}
+    <article class="post">
+      <div class="phead">
+        <span class="dn">{{ post.author.handle }}</span>
+        <span class="muted">#{{ post.id }}</span>
+      </div>
+      {% if post.body %}<div>{{ post.body }}</div>{% endif %}
+      {#  4. THE PLAYER, INSIDE THE HOST'S OWN POST. One call, the public id,
+          and the server-rendered markup degrades to the drawing's share card
+          if the script never arrives. #}
+      {% if post.skribl_id %}{{ skribl_inline(post.skribl_id) }}{% endif %}
+    </article>
+  {% else %}
+    <div class="muted">Nothing posted yet.</div>
+  {% endfor %}
+</div>
+
+{% if me %}
+<div class="overlay" id="padOverlay" hidden>
+  <div class="bar"><button class="btn ghost" type="button" id="padClose">Close</button></div>
+  {# src is set by composehost.js on first open, never here: the Pad is a whole
+     application and a composer that loads it on every page view has charged
+     every visitor for a drawing tool they never opened. #}
+  <iframe id="padFrame" title="Skribl editor"></iframe>
+</div>
+
+<script>
+/*  5. THE PAD BUTTON. The lifecycle is lib/composehost.js; what is left here is
+    this page's own business — show an overlay, preview the draft, put the
+    payload in the form field. */
+/*  DOMContentLoaded, and this is not decoration. Skribl's assets load with
+    `defer`, which means they run AFTER the document parses — so an inline
+    <script> like this one, which runs the moment the parser reaches it, would
+    execute BEFORE composehost.js exists and die on "SkriblComposeHost is not
+    defined". Deferred scripts are guaranteed to have run by DOMContentLoaded,
+    so waiting for it is the fix. (This example had that bug; the suite caught
+    it on its first run.) */
+window.addEventListener('DOMContentLoaded', function () {
+  var payloadField = document.getElementById('skriblPayload');
+  var attach = document.getElementById('attach');
+  var box = document.getElementById('draftSkribl');
+  var body = document.getElementById('body');
+  var postBtn = document.getElementById('postBtn');
+  var overlay = document.getElementById('padOverlay');
+  var player = null;
+
+  function sync() {
+    postBtn.disabled = !(payloadField.value || body.value.trim());
+  }
+
+  var pad = SkriblComposeHost.create({
+    frame: document.getElementById('padFrame'),
+    /* From url_for, because only the server knows the mount prefix. */
+    src: {{ url_for('skribl.skribl_editor', compose=1) | tojson }},
+    onOpen:  function () { overlay.hidden = false; },
+    onClose: function () { overlay.hidden = true; },
+    onDone:  function (drawing) {
+      payloadField.value = JSON.stringify(drawing);
+      attach.hidden = false;
+      /* The real player on the real payload. */
+      if (player) { player.adopt(drawing); }
+      else { player = window.SkriblInline.attach(box, drawing); }
+      sync();
+    }
+  });
+
+  document.getElementById('padBtn').addEventListener('click', pad.open);
+  document.getElementById('editSkribl').addEventListener('click', pad.open);
+  document.getElementById('padClose').addEventListener('click', pad.close);
+  document.getElementById('removeSkribl').addEventListener('click', function () {
+    payloadField.value = '';
+    attach.hidden = true;
+    if (player) player.settle();
+    pad.clear();
+    sync();
+  });
+  body.addEventListener('input', sync);
+  sync();
+});
+</script>
+{% endif %}
+
+{# Every posted Skribl on the page becomes a player. #}
+<script>window.addEventListener('load', function () { window.SkriblInline.mount(document); });</script>
