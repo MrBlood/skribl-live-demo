@@ -3493,14 +3493,35 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 /* GIF background toggle (segmented) — uses the shared sliding-pill highlight
    (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
-   controls. Full width so both labels fit. */
-.export-gif-toggle { width: 100%; padding: 2px 14px 10px; }
+   controls.
+
+   AN INLINE ROW, SIZED TO ITS CONTENT. It was `width: 100%`, commented "Full
+   width so both labels fit" — and that reason did not survive being measured:
+   "Solid" and "Transparent" at 12px/600 need about 200px, and there is ~330px
+   inside the card on a 390px phone. What full width actually bought was a
+   160px violet pill, 41% of a phone screen and the brightest thing on the
+   sheet — louder than the three buttons that do the exporting, for a setting
+   belonging to one of them.
+
+   Inline it reads as GIF → background → solid rather than as a question the
+   sheet is asking. It wraps to two lines below ~340px of card, which is the
+   stacked layout it used to have, so nothing is lost where it is tight. */
+.export-gif-toggle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 2px 14px 10px;
+}
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
   position: relative;
   overflow: hidden;
   display: flex;
-  width: 100%;
+  /* auto, not 100%: the buttons size to their labels and the row's margin-left
+     pushes the control to the trailing edge. */
+  width: auto;
+  margin-left: auto;
   gap: 2px;
   padding: 3px;
   background: var(--surface-control);
@@ -3510,8 +3531,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .gif-seg-btn {
   position: relative;
   z-index: 1;
-  flex: 1 1 0;
-  min-width: 0;
+  /* Was `flex: 1 1 0`, which split the full-width track evenly between two
+     labels of very different lengths. Content width now; the sliding pill
+     measures offsetWidth/offsetLeft so it follows without any change. */
+  flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
   border: none;
@@ -3519,7 +3542,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 8px;
+  padding: 6px 14px;
   border-radius: 999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;

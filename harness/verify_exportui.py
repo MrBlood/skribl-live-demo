@@ -385,6 +385,55 @@ with sync_playwright() as p3:
     seeded = pg.input_value("#exportName")
     check("the field is seeded, so an untitled drawing still gets a real name",
           bool(seeded.strip()), repr(seeded))
+
+    # ---- the GIF background control is a row, not a banner ------------------
+    # It was width:100%, commented "Full width so both labels fit". Measured,
+    # the labels need ~200px of a ~330px card, so what full width actually
+    # bought was a 160px violet pill — 41% of a phone screen, and the brightest
+    # thing on a sheet whose actual actions are the three format buttons.
+    _seg = pg.evaluate(
+        "() => { const t = document.getElementById('exportGifToggle');"
+        "        const seg = t.querySelector('.gif-seg');"
+        "        const act = t.querySelector('.gif-seg-btn.active');"
+        "        const pill = t.querySelector('.seg-slider');"
+        "        const card = t.closest('.export-opt-group');"
+        "        const sr = seg.getBoundingClientRect(), ar = act.getBoundingClientRect();"
+        "        const cr = card.getBoundingClientRect();"
+        "        const pr = pill ? pill.getBoundingClientRect() : null;"
+        "        return { card: cr.width, seg: sr.width, active: ar.width,"
+        "                 overflows: sr.right > cr.right + 1,"
+        "                 pillOnBtn: pr ? (Math.abs(pr.left - ar.left) < 2"
+        "                                  && Math.abs(pr.width - ar.width) < 2) : null }; }")
+    check("the GIF background control no longer spans the card",
+          _seg["seg"] < _seg["card"] * 0.75,
+          f"control {round(_seg['seg'])}px in a {round(_seg['card'])}px card")
+    check("...and the active pill is a pill, not a banner",
+          _seg["active"] < _seg["card"] * 0.4,
+          f"pill {round(_seg['active'])}px of {round(_seg['card'])}px")
+    check("it still fits inside the card", not _seg["overflows"])
+    # THE SLIDER IS THE RISK IN THIS CHANGE. It positions itself from the active
+    # button's offsetWidth/offsetLeft, so buttons that size to their labels are
+    # fine in principle — this is the assertion that says so in fact, before and
+    # after a switch, because the two labels are very different widths.
+    check("the sliding pill sits on the selected button", _seg["pillOnBtn"] is True)
+    pg.locator(".gif-seg-btn[data-gif-bg='transparent']").click()
+    pg.wait_for_timeout(700)
+    _seg2 = pg.evaluate(
+        "() => { const t = document.getElementById('exportGifToggle');"
+        "        const act = t.querySelector('.gif-seg-btn.active');"
+        "        const pill = t.querySelector('.seg-slider');"
+        "        const ar = act.getBoundingClientRect();"
+        "        const pr = pill ? pill.getBoundingClientRect() : null;"
+        "        return { label: act.textContent.trim(), active: ar.width,"
+        "                 pillOnBtn: pr ? (Math.abs(pr.left - ar.left) < 2"
+        "                                  && Math.abs(pr.width - ar.width) < 2) : null }; }")
+    check("switching moves the pill onto the other, wider label",
+          _seg2["label"] == "Transparent" and _seg2["pillOnBtn"] is True
+          and _seg2["active"] > _seg["active"],
+          f"{_seg2['label']} {round(_seg2['active'])}px vs {round(_seg['active'])}px, "
+          f"pill on button: {_seg2['pillOnBtn']}")
+    pg.locator(".gif-seg-btn[data-gif-bg='color']").click()
+    pg.wait_for_timeout(500)
     with pg.expect_download(timeout=90000) as d1:
         pg.locator("#exportPng").click()
     auto_png = d1.value.suggested_filename
