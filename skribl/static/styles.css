@@ -1298,7 +1298,8 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    v205. The tray went in 31ed04f; a #171a22 ring against a #06070a row was a
    faint light halo around every dot. Its job is to separate the dot from the
    glyph stroke it now overlaps, so it has to be the colour BEHIND both. */
-.tool-open .tab-dot {
+.tool-open .tab-dot,
+.post-sound .tab-dot {
   position: absolute;
   /* HALF IN, HALF OUT. The dot's centre sits on the icon box's top-right corner
      (+12.5, -12.5 from the icon's centre), so it straddles the edge the way it
@@ -3318,6 +3319,59 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   font-weight: 700;
   color: var(--text-primary);
   padding: 6px 14px 2px;
+  /* A row, so the sound marker sits on the title's baseline instead of being an
+     inline-block that drags the line height around. */
+  display: flex;
+  align-items: center;
+}
+
+/* THE POST SHEET'S SOUND MARKER. The toolbar's music mark, repeated on the
+   sheet so the author sees the state of their loop at the moment they post —
+   green when a track is loaded, amber when one is remembered and its file is
+   gone. Hidden entirely when there is no music, so a silent Skribl leaves the
+   sheet exactly as it was.
+
+   NOT A BUTTON. On the toolbar this glyph opens the music drawer; here there is
+   nothing to open. No hover, no active, no pointer — an affordance with nothing
+   behind it is worse than no affordance.
+
+   --icon-size is what positions the dot: the rule that places it is SHARED with
+   .tool-open (see the note there, which is where the 0.4 comes from) rather
+   than restated at a size that happens to look right here. 17px, not 24, because
+   this sits on a 15px header line and not in a 44px button. */
+.post-sound {
+  --icon-size: 17px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.post-sound[hidden] { display: none; }
+
+.post-sound svg {
+  width: 17px;
+  height: 17px;
+  color: var(--text-tool-lit);
+}
+
+/* The dot's ring is the colour BEHIND it, so it reads as a gap rather than an
+   outline. On the toolbar that is --surface-deep; here the ground is the sheet. */
+.post-sound .tab-dot { border-color: var(--surface-sheet); }
+
+/* Visually hidden, still read aloud: the marker is the only thing on this sheet
+   saying the post carries sound, and it is otherwise pure glyph. */
+.post-sound-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .export-sub {

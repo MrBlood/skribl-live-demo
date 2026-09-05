@@ -308,6 +308,103 @@ with sync_playwright() as sp:
     check("and it ignores messages from any other origin",
           "e.origin !== HOST_ORIGIN" in src)
 
+    # ---- the post sheet's sound marker -------------------------------------
+    # The toolbar's music mark, repeated on the sheet at the moment of posting.
+    # It exists for the AMBER case: a loop is remembered, its file is gone, and
+    # without this the author posts silence believing otherwise.
+    #
+    # "The same glyph as the toolbar" is asserted as RENDERED, not as source. A
+    # copy of the path data would satisfy any grep written against the template
+    # and drift the first time one of the two is redrawn — which is exactly how
+    # the in-post player's markup ended up written three times.
+    tmpl = (ROOT / "skribl" / "templates" / "skribl" / "skribl_editor.html").read_text(
+        encoding="utf-8")
+    _copies = tmpl.count('d="M9 18V5l12-2v13"')
+    check("the music glyph's path data is written ONCE in the template",
+          _copies == 1,
+          f"{_copies} copies — a second one is a redraw waiting to disagree "
+          f"with the first")
+    check("...and both callers reach it through the macro",
+          tmpl.count("{{ music_glyph() }}") == 2,
+          f"{tmpl.count(chr(123)*2 + ' music_glyph() ' + chr(125)*2)} call(s)")
+
+    pad = b.new_page(viewport={"width": 1180, "height": 900})
+    perrs = []
+    pad.on("pageerror", lambda e: perrs.append(str(e)))
+    pad.goto(BASE + "/", wait_until="load")
+    pad.wait_for_timeout(2500)
+    draw(pad, pad.locator("#canvas").bounding_box(), turns=2)
+    pad.wait_for_timeout(300)
+    pad.locator("#recordBtn").click()
+    pad.wait_for_timeout(600)
+
+    # SILENT: nothing renders at all, so the sheet is exactly as it was.
+    pad.locator("#postBtn").click()
+    pad.wait_for_timeout(900)
+    check("a Skribl with no music shows no sound marker",
+          pad.evaluate("() => document.getElementById('postSound').hidden") is True)
+
+    # THE GLYPHS ARE THE SAME, as rendered. Compares the DOM the browser
+    # actually built from both macro calls.
+    same = pad.evaluate(
+        "() => { var a = document.querySelector('#musicOpenBtn svg');"
+        "        var b = document.querySelector('#postSound svg');"
+        "        return (a && b) ? (a.outerHTML === b.outerHTML) : null; }")
+    check("the sheet's glyph is byte-identical to the toolbar's, as rendered",
+          same is True, f"outerHTML comparison returned {same!r}")
+
+    # GREEN: a loop is loaded. Driven by the toolbar's own dot, which is the
+    # app's existing statement about the track — a second opinion computed here
+    # could disagree with it, and then one mark would say two things.
+    pad.evaluate("() => { var d = document.getElementById('musicTabDot');"
+                 "        d.hidden = false; d.classList.remove('pending'); }")
+    pad.keyboard.press("Escape")
+    pad.wait_for_timeout(500)
+    pad.locator("#postBtn").click()
+    pad.wait_for_timeout(900)
+    st = pad.evaluate(
+        "() => { var m = document.getElementById('postSound');"
+        "        var d = document.getElementById('postSoundDot');"
+        "        return { hidden: m.hidden, pending: d.classList.contains('pending'),"
+        "                 bg: getComputedStyle(d).backgroundColor,"
+        "                 title: m.getAttribute('title'),"
+        "                 sr: document.getElementById('postSoundText').textContent,"
+        "                 tag: m.tagName }; }")
+    check("a loaded loop shows the marker", st["hidden"] is False, json.dumps(st))
+    check("...in --good green, the same colour the toolbar dot uses",
+          st["bg"] == "rgb(27, 207, 143)", st["bg"])
+    check("...and it says so in text, not only in colour",
+          "has sound" in (st["sr"] or "") and st["sr"] == st["title"],
+          json.dumps({"sr": st["sr"], "title": st["title"]}))
+    # On the toolbar this mark is a button that opens the music drawer. Here
+    # there is nothing to open, so it must not invite a tap.
+    check("the marker is not a button — nothing to tap and be disappointed by",
+          st["tag"] == "SPAN", st["tag"])
+    check("and it has no pointer cursor",
+          pad.evaluate("() => getComputedStyle("
+                       "document.getElementById('postSound')).cursor") != "pointer")
+
+    # AMBER: remembered, file gone. THE STATE THAT EARNS THE FEATURE.
+    pad.evaluate("() => document.getElementById('musicTabDot')"
+                 ".classList.add('pending')")
+    pad.keyboard.press("Escape")
+    pad.wait_for_timeout(500)
+    pad.locator("#postBtn").click()
+    pad.wait_for_timeout(900)
+    st2 = pad.evaluate(
+        "() => { var d = document.getElementById('postSoundDot');"
+        "        return { pending: d.classList.contains('pending'),"
+        "                 bg: getComputedStyle(d).backgroundColor,"
+        "                 sr: document.getElementById('postSoundText').textContent }; }")
+    check("a remembered loop whose file is gone goes amber, not green",
+          st2["pending"] is True and st2["bg"] == "rgb(255, 210, 63)",
+          json.dumps(st2))
+    check("...and says the post will have no sound, which is the whole point",
+          "missing" in (st2["sr"] or "") and "without sound" in (st2["sr"] or ""),
+          st2["sr"])
+    check("no page errors from the marker", not perrs, "; ".join(perrs[:2]))
+    pad.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

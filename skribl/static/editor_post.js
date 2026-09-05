@@ -24,6 +24,9 @@
   const previewFrame = document.getElementById('postPreview');
   const submitBtn = document.getElementById('postSubmitBtn');
   const submitLabel = document.getElementById('postSubmitLabel');
+  const soundMark = document.getElementById('postSound');
+  const soundDot = document.getElementById('postSoundDot');
+  const soundText = document.getElementById('postSoundText');
   const watchBtn = document.getElementById('postWatchBtn');
   let lastPostUrl = null;
   const status = document.getElementById('postStatus');
@@ -275,8 +278,41 @@
     }
   }
 
+  /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
+   *
+   * #musicTabDot is already the app's statement about the music track: hidden
+   * when there is none, green when a loop is loaded, amber (.pending) when one
+   * is REMEMBERED and its file is gone — the case where the author is about to
+   * post silence believing otherwise, and the reason this marker exists at all.
+   *
+   * Reading that dot rather than inspecting the payload is deliberate. A second
+   * opinion computed here could disagree with the toolbar, and then the same
+   * mark would say two things on one screen. It is also the cheap answer:
+   * serializing the drawing on every sheet open, to learn one boolean, would
+   * copy the audio bytes for nothing.
+   *
+   * What it therefore does NOT claim: that the post-time mono bake succeeded.
+   * The bake runs later, inside buildPostPayload(). This says what the editor
+   * is holding, which is the question the author can still do something about.
+   */
+  function syncSoundMark() {
+    if (!soundMark) return;
+    const dot = document.getElementById('musicTabDot');
+    const has = !!(dot && !dot.hidden);
+    soundMark.hidden = !has;
+    if (!has) return;
+    const pending = dot.classList.contains('pending');
+    if (soundDot) soundDot.classList.toggle('pending', pending);
+    const msg = pending
+      ? 'Your music file is missing — this will post without sound.'
+      : 'This Skribl has sound.';
+    soundMark.setAttribute('title', msg);
+    if (soundText) soundText.textContent = msg;
+  }
+
   function openPost() {
     setState('idle');
+    syncSoundMark();
     // Field values persist across an accidental close within the session; they
     // reset only after a successful post. So don't clear them here.
     updateCharCount();
