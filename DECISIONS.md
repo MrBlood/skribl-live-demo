@@ -5609,3 +5609,76 @@ after rather than asserting it is a positive number, which its default already
 satisfied. Eight of the nine assertions now fail when the bundle is removed.
 Same lesson v275 recorded under its own heading: a fixture too easy is a test
 that passes on the bug, and I wrote one again in the act of guarding a carve.
+
+## Unsealed, cont. -- a Skribl can be taken back
+
+The v277 review's second high finding: the API "supports creation and reading
+but no obvious delete, archive, revoke, or visibility-update operation for an
+already published Skribl". For a product whose whole surface is sharing, that
+is the gap that matters -- people share the wrong drawing, publish something
+private, pick the wrong audience, delete the host post a Skribl hung off, or
+are asked to take something down.
+
+**THE FOUNDATION WAS ALREADY BUILT AND ALREADY TESTED.** `SkriblPostMedia`
+carries ON DELETE CASCADE, `sweep_orphans()` collects the bytes, and
+`verify_deletion_foundation.py` runs the whole sequence on PostgreSQL. Its own
+docstring says the host-controls proposal "puts delete_skribl() first on the
+build order" and that the claim "has never been executed". `skribl/deletion.py`
+is that function; nothing underneath it changed.
+
+**TWO OPERATIONS, BECAUSE THEY ARE TWO DIFFERENT WISHES.** `delete_post`
+removes the row. `set_post_visibility` revokes: the post survives, and the link
+the author already sent stops working for everyone but them. Collapsing them
+would force "I regret sharing this" to mean "destroy it".
+
+**ONE EXCEPTION FOR "MISSING" AND "NOT YOURS", DELIBERATELY.** A distinct
+`SkriblForbidden` would be the disclosure however carefully a route translated
+it: it confirms which public ids are real and who owns them. `SkriblNotFound`
+covers both, with the same message, and the suite asserts the message strings
+are equal rather than trusting the type. `author_id=None` is refused rather
+than privileged; a post with no author can only be removed with
+`require_author=False`, or any authenticated user of a host could claim every
+anonymous post in the table.
+
+**THE HTTP ROUTES DO NOT EXIST WITHOUT AN IDENTITY, and that is the design
+rather than a precaution.** Skribl's API is unauthenticated by default and
+every other route is safe under that, because the worst a stranger can do is
+create or read. A DELETE on an unauthenticated API is a button marked "erase
+any Skribl in this deployment", reachable by anyone who has been sent a public
+id. Shipping it behind a warning in the docs would repeat exactly the mistake
+v224's CSRF gate was written to stop: the safe state must be the one you get by
+NOT noticing. So the standalone app gets no destructive routes at all, a host
+that authenticated its users gets them scoped to the author, and the Python API
+is always there because a host calling it from its own view already knows who
+is asking. Asserted against Flask's url_map, not the source.
+
+**AND THE GATES CAUGHT TWO THINGS I GOT WRONG, both worth recording.**
+
+`verify_txcontract.py` failed `delete_skribl` by name for calling
+`session().commit()`. That is the P0 an earlier outside review found and this
+package was rewritten to stop doing: a commit on the SHARED session commits
+everything pending on it, so a host with an uncommitted row of its own would
+have had it made durable by a Skribl deletion. Being the newest route is not an
+exemption. The host owns the per-request commit; the routes flush.
+
+`verify_seam.py` failed a function-local `from .models import
+visibility_values` as an unresolved name. Hoisted.
+
+**MY OWN FIRST TEST OF THE ASSOCIATION CLEANUP MEASURED THE WRONG THING, and
+only the mutation said so.** It deleted a post, checked the association rows
+were gone, and PASSED with the explicit cleanup removed -- because
+`init_skribl` installs `enable_sqlite_foreign_keys()` and the declared cascade
+did the work. The assertion was crediting the pragma hook to the function under
+test. The second attempt set `PRAGMA foreign_keys=OFF` on the session's
+connection; that does not work either, because the pragma is per connection and
+the pool re-applies the hook on the next checkout -- caught by a guard
+assertion, which is the only reason it is not in the tree. What ships runs the
+REAL uncovered configuration: an app that registers the blueprint directly
+rather than through `init_skribl`, which is documented as equivalent and is
+equivalent in everything except that the hook lives in `init_skribl`. There the
+cascade genuinely does not fire, and the explicit delete is what keeps the
+orphan sweeper from counting deleted posts' media as still referenced.
+
+That is twice in one release that a first-draft assertion passed on the bug it
+was written for. Both were found the same way, and neither would have been
+found by reading it.

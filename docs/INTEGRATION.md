@@ -320,6 +320,75 @@ an anonymous post; do not leave it out and hope. There is no resolver here
 because a function that guesses the author is how every visitor once became
 user 1 and could read user 1's private posts.
 
+## Taking one back: delete and revoke
+
+An external review of v277 named this the largest product gap: Skribl could
+create and read, and offered nothing for a Skribl already published. People
+share the wrong drawing, publish something private, pick the wrong audience,
+delete the host post a Skribl was attached to, or are asked to take something
+down. Two operations, because those are two different wishes.
+
+```python
+from skribl import delete_post, set_post_visibility, SkriblNotFound
+
+# Gone. The share URL 404s, the media associations go with it.
+try:
+    delete_post(public_id, author_id=current_user.id)
+except SkriblNotFound:
+    abort(404)
+else:
+    db.session.delete(my_feed_row)
+    db.session.commit()          # both, or neither
+
+# Still theirs, no longer reachable by the link they sent.
+set_post_visibility(public_id, "private", author_id=current_user.id)
+db.session.commit()
+```
+
+**`SkriblNotFound` means "no post you may act on", and it will not tell you
+which.** A post that does not exist and a post belonging to somebody else raise
+the same exception with the same message, on purpose: anything else is an
+oracle for which public ids are real and who owns them. Answer 404 for both.
+Do not translate one of them into a 403 — that puts the disclosure back.
+
+**`author_id=None` is refused, not privileged.** It means "nobody is signed
+in", and an anonymous caller may delete nothing. A management command that
+genuinely must remove any post passes `require_author=False` — in code, once,
+the same shape as `csrf=False`. Posts whose `user_id` is NULL (the standalone
+app's own) can *only* be removed that way, because otherwise any authenticated
+user of your host could claim them.
+
+**The transaction is yours, exactly as with `create_post`.** Both functions
+flush and neither commits, so your feed row and the Skribl go together.
+
+**The bytes are not deleted here, and that is deliberate.** Media objects are
+content addressed, so the photo in the post you are deleting may be the same
+object as the photo in one you are keeping; only a reference count across the
+whole table can say. `sweep_orphans()` owns that, conservatively — see
+*Maintenance jobs*. What deletion *does* guarantee immediately is that the
+bytes stop being **reachable**: `/media/<key>` authorises through the
+association rows, and those are gone with the post.
+
+**HTTP: `DELETE` and `PATCH /api/skribls/<id>` exist only if you passed
+`current_user_id`.** Skribl's API is unauthenticated by default, and a DELETE
+on an unauthenticated API is a button that erases any Skribl anyone can name.
+The standalone app therefore has no destructive routes at all. If you have
+authenticated your users, you get both, scoped to the author; `PATCH` accepts
+`{"visibility": "..."}` and nothing else. If your own views own the lifecycle,
+ignore the routes and call the Python functions — you have already decided who
+is asking.
+
+**If you would rather Skribls were never revocable, say so to your users.**
+Permanent publication is a defensible product choice. Silently having no way
+back is not.
+
+`harness/verify_deletion.py` holds all of the above: that the two refusals are
+indistinguishable, that the routes do not exist without an identity, that the
+associations go even where SQLite's cascade does not fire, and that the
+functions flush without committing. `harness/verify_deletion_foundation.py`
+covers the layer beneath — cascade, media unreachability, orphan sweep — on
+PostgreSQL.
+
 ## Three things that will bite you if you skip them
 
 **`attach_to_metadata` is not optional in practice.** Skribl's models sit on a

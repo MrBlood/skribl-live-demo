@@ -32,6 +32,8 @@ from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
 from .validation import _decode_data_url_image
 from .creation import (SkriblIdempotencyRace, SkriblRejected, SkriblUnavailable,
                        create_post)
+from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
+                       set_post_visibility)
 
 
 # --- feed cursors -----------------------------------------------------------
@@ -784,3 +786,83 @@ def register_routes(bp, *, index_route=False):
             "author": author_dict(post.user_id),
             "skribl": payload
         })
+
+    # ---- taking one back ---------------------------------------------------
+    # REGISTERED ONLY WHEN THE HOST HAS WIRED AN IDENTITY, and that condition is
+    # the whole design rather than a precaution bolted on.
+    #
+    # Skribl's API is unauthenticated by default and correctly so — DECISIONS #2
+    # explains why, and every other route here is safe under it because the
+    # worst a stranger can do is create or read. Deletion is not like that. A
+    # DELETE endpoint on an unauthenticated API is a button marked "erase any
+    # Skribl in this deployment, no questions asked", reachable by anybody who
+    # can guess or has been sent a public id. There is no version of that which
+    # is acceptable as a default, and shipping it behind a warning in the docs
+    # would be the same mistake v224's CSRF gate was written to stop making:
+    # the safe state must be the one you get by NOT noticing.
+    #
+    # So the standalone app — no current_user_id — gets no destructive routes at
+    # ALL, and a host that has authenticated its users gets them scoped to the
+    # author. The Python API (skribl.delete_post) is always available, because a
+    # host calling it from its own view has already decided who is asking; that
+    # is the same split creation.py makes for the same reason.
+    #
+    # CSRF is not re-checked here: create_blueprint REFUSES to build a blueprint
+    # with current_user_id and no explicit csrf decision, so reaching this line
+    # already means the integrator settled it.
+    if getattr(bp, "skribl_has_identity", False):
+
+        @bp.delete("/api/skribls/<public_id>")
+        def delete_skribl(public_id):
+            # The id shape is checked first so a malformed one cannot reach the
+            # query, exactly as GET does.
+            if not _valid_public_id(public_id):
+                return jsonify({"error": "Skribl not found."}), 404
+            try:
+                delete_post(public_id,
+                            author_id=bp.skribl_current_user_id())
+            except SkriblNotFound as exc:
+                # 404 for "no such post" AND for "not yours" — the module
+                # raises one exception for both so this route cannot leak the
+                # difference even by accident.
+                return jsonify({"error": exc.message}), 404
+            # NO COMMIT HERE. The first version of this route called
+            # session().commit(), and verify_txcontract.py failed it by name —
+            # correctly. A commit on the SHARED session commits everything
+            # pending on it, so a host with an uncommitted row of its own,
+            # mid-request, would have that row made durable by a Skribl
+            # deletion. That is the P0 an earlier outside review found and this
+            # package was rewritten to stop doing; the fact that deletion is
+            # the newest route does not exempt it.
+            #
+            # The HOST owns the per-request commit — app.py does it in
+            # after_request for the standalone deployment, skipping 5xx, with a
+            # teardown rollback behind it. delete_post has flushed, so the row
+            # is gone as far as this transaction is concerned, and it becomes
+            # durable when the host says so.
+            #
+            # 204: there is nothing left to describe.
+            return "", 204
+
+        @bp.patch("/api/skribls/<public_id>")
+        def update_skribl_visibility(public_id):
+            """Revoke, or re-publish. The only field a post may change."""
+            if not _valid_public_id(public_id):
+                return jsonify({"error": "Skribl not found."}), 404
+            body = request.get_json(silent=True) or {}
+            if "visibility" not in body:
+                # Deliberately NOT a general-purpose PATCH. Title and caption
+                # are part of the posted artefact; visibility is a decision
+                # about it, and it is the one the review asked for. Widening
+                # this later is a decision, not a default.
+                return jsonify({
+                    "error": "Only 'visibility' can be changed."}), 400
+            try:
+                new = set_post_visibility(public_id, body["visibility"],
+                                          author_id=bp.skribl_current_user_id())
+            except SkriblRefused as exc:
+                return jsonify({"error": exc.message}), 400
+            except SkriblNotFound as exc:
+                return jsonify({"error": exc.message}), 404
+            # Flushed, not committed — see the note in delete_skribl above.
+            return jsonify({"id": public_id, "visibility": new})

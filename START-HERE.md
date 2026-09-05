@@ -46,7 +46,7 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
-### Uncommitted at the last handover: three things beyond the v277 seal
+### Uncommitted at the last handover: four things beyond the v277 seal
 
 The generated stanza and `harness/RELEASE.md` still describe **v277**. Nothing
 below is sealed, and `release_run.py` has not been near it — treat the seal as
@@ -70,6 +70,15 @@ sections stayed green over it. Every edge now routes through one
 review predicted 600 B of headroom would; repaid by carving `initMoreTools()`
 into `editor_tools.js` (153,251 → 149,946, ratchet down to 150,000). Full
 account in the second unsealed entry at the foot of `DECISIONS.md`.
+
+**A Skribl can be taken back.** `skribl/deletion.py` adds `delete_post()` and
+`set_post_visibility()` — the review's second high finding. The FK cascade and
+orphan sweep were already built and tested; what was missing was the authorised
+product operation on top. A missing post and someone else's raise the same
+exception with the same message, on purpose. **`DELETE` and `PATCH` are
+registered only when the host passed `current_user_id`** — an unauthenticated
+DELETE would erase any Skribl anyone can name, and the standalone app therefore
+has no destructive routes at all.
 
 **`_ZOOM_EXEMPT` in `verify_ux.py` is now empty** — all seven sub-16px fields
 were raised, so the iOS-zoom rule is absolute rather than a ratchet. The raise
