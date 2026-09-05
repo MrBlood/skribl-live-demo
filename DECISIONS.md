@@ -5220,3 +5220,113 @@ drawing's width depends on its own aspect, and `canvasSize` lives inside
 because that is the widest canvas, so a symmetric crop can only ever remove
 ground. The real fix is canvas size as a real COLUMN, which is a migration.
 
+## v276 -- The drop-in stops being a description and becomes a thing you can run
+
+v275 made a Skribl displayable inside somebody else's post. It did not make the
+integration OBTAINABLE: a host still had to read four documents and write the
+same hundred and fifty lines everyone else writes. This release closes that,
+and every piece of it was shaped by the same question -- what does the host
+actually have to type, and what have we made them type twice?
+
+**`skribl.create_post()`, and the shape of host it exists for.** `POST
+/api/skribls` serves a host whose composer is a BROWSER. skribls.net's is a
+server-side FORM: the author types words, attaches things, and their browser
+sends one ordinary POST to the host's own view. That host already has the
+payload, has authenticated the author and has checked its own CSRF token, so
+turning round and POSTing to its own JSON endpoint buys it a second request, a
+second authentication, a second CSRF exchange and -- the part that actually
+breaks -- a SEPARATE TRANSACTION. A failure between the two leaves a Skribl
+nothing points at, or a post pointing at a Skribl that was never stored. The
+function runs in the caller's request, on the caller's session, so one commit
+makes the Skribl and the host's own row durable together.
+
+**IT IS A CARVE, NOT A SECOND PATH, and the direction is the whole point.**
+Everything in `skribl/creation.py` was MOVED out of `create_skribl`'s body; the
+route calls it and does nothing to the payload itself. Two functions that both
+"validate a payload and insert a post" is precisely the shape of the bug
+`editor_post.js` records as its own BUG B, where a post-time step silently
+stopped running on one of two paths while the metadata looked identical. What
+stayed in the route is exactly what is HTTP: the two rate budgets, CSRF, the
+`Idempotency-Key` header, and jsonify.
+
+**THE RATE LIMITER CANNOT FOLLOW, and finding out why was worth more than the
+assertion.** The plan was to state in the docs that a host calling create_post
+is not throttled by Skribl. Then the mutation written to prove the assertion --
+make create_post charge the limiter -- never reached the assertion at all: it
+died on "Working outside of request context", because `_client_ip()` reads the
+Flask `request` and the reservation is settled in a Flask teardown. So it is not
+a policy that a host owns abuse control on its own path; it is a fact about what
+the limiter is made of, and a host that assumes otherwise has an unlimited
+posting endpoint with no sign of it. `docs/INTEGRATION.md` says so in those
+words.
+
+**The instrument for a carve is AGREEMENT.** `verify_createpost.py` drives ten
+bad payloads through BOTH callers from one table and compares status and
+message. "The route calls it" is a fact about today's tree; the danger is a rule
+added to one side only, and the mutation for that (a rejection message given to
+the route alone) fails the comparison and prints both strings. Same instrument
+`verify_inline.py` points at the two playback implementations.
+
+**`lib/composehost.js`: the pad button's lifecycle, once.** Four rules that are
+the same in every host and easy to get subtly wrong -- the editor's `src` set on
+first open and never in markup, the payload pushed into an already-loaded
+editor, `clear()` resetting the frame, the origin checked inbound and targeted
+outbound. A host wires its own buttons to a handle.
+
+**AND ITS OWN COMMENT WAS WRONG ABOUT THE MOST IMPORTANT RULE.** It claimed
+that without the re-edit push the editor "reopens EMPTY over a drawing the draft
+is still holding". It does not: the iframe kept the drawing on its canvas, so a
+host answering only `ready` looks correct. What such a host is really doing is
+trusting the editor's retained state, which is a coincidence rather than a
+contract -- the rule earns its place when the draft's payload and the editor's
+differ, which is a host calling `setPayload()` to re-edit a saved post. Written
+from reasoning, corrected by a mutation that failed to fail.
+
+**AND THE SUITE DID NOT COVER IT.** Disabling that rule left `verify_compose`
+at a clean 29/29, because "re-opening the editor brings the drawing back"
+measures the editor's leftover ink. It counts the `skribl:compose:load` message
+now: 0 under the mutation, while the ink assertion stays green beside it. In the
+same file, one assertion was `check(..., True, "src is set on open")` -- an
+assertion of the literal True, in the file that names lazy loading as a rule.
+
+**TWO BYTE RATCHETS, BECAUSE THEY ARE TWO COSTS.** `verify_inline` scraped every
+`/static/skribl/` URL on the feed page, so a compose module would have been
+charged to every host page that merely DISPLAYS Skribls. Display and compose are
+paid by different pages and now have different budgets; blurring them into one
+number would have hidden whichever grew. Same reader-is-not-the-writer split
+that put the card compositor in `lib/postedcard.js`.
+
+**`examples/host_app`, and why an example needs a suite.** Every other document
+here DESCRIBES the drop-in. This one is the drop-in -- a separate Flask site with
+its own users and posts, mounting the blueprint under a PREFIX, composing with a
+server-side form. `verify_example.py` boots it as a real server on its own port
+and drives a real browser through drawing and posting, then checks on a FRESH
+connection that the host's post row and the Skribl were committed together. An
+example nothing runs is a document that goes stale silently, which is the
+failure mode this tree has been bitten by repeatedly.
+
+**BUILDING IT FOUND THE PLAYER'S MARKUP WRITTEN THREE TIMES.** A draft has no
+public id and the macro required one, so `skribl_feed.html` hand-copied twenty
+lines of the macro's internals for its composer box, `skribl_library.html`
+copied a variant for its stage, and the example was about to be the third. This
+is the general lesson of the release: **the third caller is what exposes the
+duplication, because the first two each had a reason.** The insides are one
+macro now with a `skribl_inline_draft(id, controls)` entry point, and the gate
+added for it -- no template outside the macro file may write the player's
+internal class names -- FAILED ON ITS FIRST RUN and named the library. The third
+copy was found rather than guessed at.
+
+**A route literal in the one file whose comment says it never uses one.**
+`inlineplayer.js` read its endpoint from `data-skribl-api` and fell back to
+`'/api/skribls'`. Under a prefix that fetches a path that does not exist and
+fails quietly into the box's error panel -- the exact defect the surrounding
+comment describes as the reason the attribute exists. `verify_seam.py` caught
+it. There is no fallback now. Recorded because the comment and the line that
+contradicted it were written by the same hand, in the same file, in the same
+hour: a comment is not a gate.
+
+**And a stale number nothing was checking.** `START-HERE.md` typed two counts in
+one sentence -- "44 SEPARATE batches" and "all 93 suites". `verify_docs` caught
+the suite count. Nothing checks the batch count and it was stale too. Both
+removed rather than updated, per that file's own rule about numbers in prose.
+
