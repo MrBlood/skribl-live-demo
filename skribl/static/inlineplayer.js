@@ -306,33 +306,190 @@
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  /* ---- the wet/dry compositor -------------------------------------------
+   * A stroke below 100% opacity is ONE translucent mark, not a row of
+   * translucent stamps. Drawn the naive way, every stamp composites against
+   * the last and the overlaps accumulate: the edges scallop and the interior
+   * bands. This keeps the in-progress stroke on its own opaque WET layer and
+   * bakes it down at the stroke's alpha when the stroke ends, so overlaps
+   * inside one stroke do not stack.
+   *
+   * THIS USED TO BE THE ONE KNOWN FIDELITY GAP, named in this header rather
+   * than left to be discovered, on the argument that ~60 lines of offscreen
+   * canvas work per stroke was not obviously worth it "at feed scale — twenty
+   * boxes, one playing". Two things were wrong with that.
+   *
+   * The scale figure was wrong: play() settles every other player, so exactly
+   * ONE post is ever playing and the cost is two offscreen canvases, not
+   * forty.
+   *
+   * And the gap was much larger than "beads at its overlaps" suggested. An
+   * external review of v277 said a feed representation should not change the
+   * drawing's appearance, so it was measured rather than argued.
+   *
+   * THE FIRST MEASUREMENT WAS CONFOUNDED AND IS RECORDED HERE BECAUSE IT WAS
+   * NEARLY BELIEVED. Comparing this player against /s/<id> on the 96x96 grid
+   * verify_inline.py uses gave "19.2% of cells differ, 22% less ink" — until
+   * an OPAQUE control, which the compositor cannot touch, scored WORSE
+   * (ink ratio 0.446). Most of that difference was the two surfaces fitting
+   * the drawing to different boxes, exactly as verify_inline's own note says
+   * they do. A cross-surface comparison cannot isolate this feature.
+   *
+   * The clean instrument is ONE surface with the feature absent. Same fixture,
+   * a self-crossing stroke at 50% alpha, this player only:
+   *
+   *     compositor off   145,014 ink        21.7% under the canonical page
+   *     compositor on    177,246 ink         4.3% under it
+   *     /s/<id>          185,205 ink        (the reference)
+   *
+   * The residual 4.3% is that same canvas-fit difference, and the shapes now
+   * agree: scalloped edges and a banded interior before, one smooth translucent
+   * mark after. Side by side they WERE not the same drawing.
+   *
+   * IT COSTS 2,913 B SERVED, and the embed ratchet went 29,000 -> 32,000 to
+   * pay for it — the largest raise that number has taken. Recorded at the
+   * ratchet with this reasoning. An all-opaque payload, which is most of them,
+   * allocates nothing: makeCompositor returns null and the direct path is
+   * exactly what it was.
+   *
+   * Ported from app.js makeStrokeCompositor rather than rewritten, and it
+   * draws through this file's own drawDot/drawLine so the two implementations
+   * cannot drift in how a mark is shaped — only in where it is composited.
+   */
+  function parseStrokeAlpha(c) {
+    if (typeof c !== 'string') return 1;
+    var m = c.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i);
+    return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : 1;
+  }
+
+  function solidStrokeColor(c) {
+    if (typeof c !== 'string') return c;
+    var m = c.match(/^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*[\d.]+\s*\)$/i);
+    return m ? 'rgb(' + m[1] + ', ' + m[2] + ', ' + m[3] + ')' : c;
+  }
+
+  /* Wraps a visible context. Returns null when the payload has no translucent
+   * stroke at all, so an opaque drawing — which is most of them — allocates
+   * nothing and takes the same path it always did. */
+  function makeCompositor(visCtx, visCanvas, strokes) {
+    var any = false;
+    for (var i = 0; i < strokes.length; i++) {
+      if (!strokes[i].erase && parseStrokeAlpha(strokes[i].color) < 1) {
+        any = true;
+        break;
+      }
+    }
+    if (!any) return null;
+
+    var dpr = visCanvas.width / (visCanvas.clientWidth || visCanvas.width) || 1;
+    var dry = document.createElement('canvas');
+    var wet = document.createElement('canvas');
+    dry.width = wet.width = visCanvas.width;
+    dry.height = wet.height = visCanvas.height;
+    var dctx = dry.getContext('2d');
+    var wctx = wet.getContext('2d');
+    /* Seed dry with whatever is already painted — background, photo underlay. */
+    dctx.setTransform(1, 0, 0, 1, 0, 0);
+    dctx.drawImage(visCanvas, 0, 0);
+    dctx.scale(dpr, dpr);
+    wctx.setTransform(1, 0, 0, 1, 0, 0);
+    wctx.scale(dpr, dpr);
+    var lgW = visCanvas.width / dpr, lgH = visCanvas.height / dpr;
+    var wetActive = false, wetAlpha = 1;
+
+    function bakeWet() {
+      dctx.save();
+      dctx.setTransform(1, 0, 0, 1, 0, 0);
+      dctx.globalAlpha = wetAlpha;
+      dctx.drawImage(wet, 0, 0);
+      dctx.restore();
+      wctx.clearRect(0, 0, lgW, lgH);
+      wetActive = false;
+      wetAlpha = 1;
+    }
+
+    return {
+      dot: function (x, y, color, size, erase) {
+        if (wetActive) bakeWet();
+        var a = erase ? 1 : parseStrokeAlpha(color);
+        if (!erase && a < 1) {
+          wetActive = true;
+          wetAlpha = a;
+          wctx.clearRect(0, 0, lgW, lgH);
+          drawDot(wctx, x, y, solidStrokeColor(color), size, false);
+        } else {
+          drawDot(dctx, x, y, color, size, erase);
+        }
+      },
+      line: function (x1, y1, x2, y2, color, size, erase) {
+        if (wetActive) {
+          drawLine(wctx, x1, y1, x2, y2, solidStrokeColor(color), size, false);
+        } else {
+          drawLine(dctx, x1, y1, x2, y2, color, size, erase);
+        }
+      },
+      /* Called once per frame. The wet layer is drawn ON TOP at its alpha
+       * rather than baked, so a stroke still in progress reads correctly
+       * without being committed early. */
+      present: function () {
+        visCtx.save();
+        visCtx.setTransform(1, 0, 0, 1, 0, 0);
+        visCtx.globalAlpha = 1;
+        visCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
+        visCtx.drawImage(dry, 0, 0);
+        if (wetActive) {
+          visCtx.globalAlpha = wetAlpha;
+          visCtx.drawImage(wet, 0, 0);
+        }
+        visCtx.restore();
+      },
+      finish: function () { if (wetActive) bakeWet(); },
+    };
+  }
+
   /* app.js replayTimelineToCanvas, verbatim: draw every point whose playT has
    * elapsed and return the index to resume from. The `i === 0` in the start
    * test matters — the first point of a payload may carry no `start` flag at
    * all, and without it the replay opens with a line from (0,0). */
-  function replayTo(ctx, timeline, from, elapsed) {
+  function replayTo(ctx, timeline, from, elapsed, comp) {
     var i = from;
+    /* `comp` is null for an all-opaque payload — then this is the direct path
+     * it always was, with no allocation and no wrapper. */
     while (i < timeline.length && timeline[i].playT <= elapsed) {
       var p = timeline[i];
-      if (p.start || i === 0) drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
-      else {
-        var prev = timeline[i - 1];
+      var prev = i > 0 ? timeline[i - 1] : null;
+      var st = p.start || i === 0;
+      if (comp) {
+        if (st) comp.dot(p.x, p.y, p.color, p.size, p.erase);
+        else comp.line(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+      } else if (st) {
+        drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
+      } else {
         drawLine(ctx, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
       }
       i++;
     }
+    if (comp) comp.present();
     return i;
   }
 
-  function paintStatic(ctx, strokes) {
+  function paintStatic(ctx, strokes, canvas) {
+    /* The idle poster and every non-replay repaint come through here, so the
+     * compositor has to be on this path too — otherwise a post looks right
+     * while playing and wrong the moment it settles. */
+    var comp = canvas ? makeCompositor(ctx, canvas, strokes) : null;
     for (var i = 0; i < strokes.length; i++) {
       var p = strokes[i];
-      if (p.start || i === 0) drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
-      else {
+      if (p.start || i === 0) {
+        if (comp) comp.dot(p.x, p.y, p.color, p.size, p.erase);
+        else drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
+      } else {
         var prev = strokes[i - 1];
-        drawLine(ctx, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+        if (comp) comp.line(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+        else drawLine(ctx, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
       }
     }
+    if (comp) { comp.finish(); comp.present(); }
   }
 
   function fmt(ms) {
@@ -388,6 +545,8 @@
     var totalMs = 0, size = null, under = null;
     var state = 'idle';                       // idle | playing | paused
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
+    /* Rebuilt on every full repaint; null for an all-opaque payload. */
+    var comp = null;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
     var music = null;
     /* PER POST, unlike mute, and that asymmetry is deliberate. Sound is
@@ -590,11 +749,21 @@
                                Math.floor(at / Math.max(1, totalMs) * flipFrames.length));
         clear();
         var fr = flipFrames[idx];
-        if (fr && fr.strokes && fr.strokes.length) paintStatic(ctx, fr.strokes);
+        if (fr && fr.strokes && fr.strokes.length)
+        paintStatic(ctx, fr.strokes, canvas);
         setNib(null);
       } else {
-        if (full) { clear(); drawn = 0; }
-        drawn = replayTo(ctx, timeline, drawn, at);
+        /* THE COMPOSITOR HAS TO OUTLIVE THE FRAME. The replay path is
+         * incremental — it appends the points that have come due and leaves
+         * the rest of the canvas alone, which is what makes it cheap — so a
+         * compositor built per frame would re-seed its dry layer from the
+         * visible canvas every time and bake the in-progress stroke on every
+         * tick, which is the beading it exists to prevent. Built once per full
+         * repaint, and `full` is exactly the set of things that move time
+         * backwards: start, seek, loop, resize. */
+        if (full) { clear(); drawn = 0; comp = makeCompositor(ctx, canvas, timeline); }
+        drawn = replayTo(ctx, timeline, drawn, at, comp);
+        if (comp && drawn >= timeline.length) comp.finish();
         setNib(state === 'playing' && drawn > 0 && drawn < timeline.length
                ? timeline[drawn - 1] : null);
       }

@@ -46,7 +46,7 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
-### Uncommitted at the last handover: four things beyond the v277 seal
+### Uncommitted at the last handover: five things beyond the v277 seal
 
 The generated stanza and `harness/RELEASE.md` still describe **v277**. Nothing
 below is sealed, and `release_run.py` has not been near it — treat the seal as
@@ -70,6 +70,12 @@ sections stayed green over it. Every edge now routes through one
 review predicted 600 B of headroom would; repaid by carving `initMoreTools()`
 into `editor_tools.js` (153,251 → 149,946, ratchet down to 150,000). Full
 account in the second unsealed entry at the foot of `DECISIONS.md`.
+
+**The feed draws the same picture as the shared page.** The wet/dry compositor
+is implemented in `inlineplayer.js` — the review's last finding. It cost 2,913 B
+and the embed ratchet went 29,000 → 32,000. The old reason for not doing it
+("twenty boxes, one playing") was wrong: `play()` settles every other player, so
+one is ever playing.
 
 **A Skribl can be taken back.** `skribl/deletion.py` adds `delete_post()` and
 `set_post_visibility()` — the review's second high finding. The FK cascade and
@@ -2336,10 +2342,18 @@ surfaces paint the drawing's ground in different places — the in-post player o
 the canvas, the sealed player on `.canvas-wrap` behind it. Compared absolutely,
 all 9,216 cells differ and the assertion is about paint order.
 
-**Known gap, deliberate and named:** the wet/dry stroke compositor is not
-implemented, so a sub-100%-opacity stroke beads at its overlaps where it does
-not on `/s/<id>`. The fixture draws opaque so the pixel assertion stays
-meaningful rather than quietly tolerant of a gap it cannot see.
+**That gap is CLOSED as of the v277 review.** It used to read: the wet/dry
+stroke compositor is not implemented, so a sub-100%-opacity stroke beads at its
+overlaps where it does not on `/s/<id>`. It is implemented now — 2,913 B, embed
+ratchet 29,000 → 32,000 — because the difference was not beading but a
+scalloped, banded rendering of a drawing that is smooth on the canonical page,
+and in a drawing product the drawing is the content.
+
+The opaque fixture above stays, because the two surfaces fit the drawing to
+different boxes and an absolute cross-surface ink comparison is confounded
+whatever the compositor does — an opaque control proved that by scoring worse
+than the translucent case. A second fixture, translucent, asserts the shape
+property on this player alone: 145,014 ink stamped against 177,246 composited.
 
 **Two things found while building it, both real:**
 

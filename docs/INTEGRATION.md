@@ -242,12 +242,14 @@ recipe. `harness/verify_compose.py` drives it end to end and counts the POSTs.
 attaches is byte-for-byte what the Pad would have posted — same serialisation,
 same share-card thumbnail, same mono audio bake.
 
-**What it does not render.** The wet/dry stroke compositor. A stroke authored
-below 100% opacity beads at its overlaps here where it does not on `/s/<id>`.
-Everything else — Pad replays, Flip documents with their per-page holds, the
-background colour, a photo or base-snapshot underlay, the posted audio loop —
-plays. The header of `skribl/static/inlineplayer.js` says why the gap is there
-and what it would take to close it.
+**What it renders: all of it.** Pad replays, Flip documents with their per-page
+holds, the background colour, a photo or base-snapshot underlay, the posted
+audio loop — and, since the v277 review, the wet/dry stroke compositor. A
+stroke below 100% opacity used to be drawn here as a row of translucent stamps,
+so its overlaps stacked and the feed showed a scalloped, banded version of a
+drawing that is smooth on `/s/<id>`. There is no known fidelity gap now. The
+header of `skribl/static/inlineplayer.js` carries the measurement, and
+`verify_inline.py` pins it with a translucent fixture.
 
 ## When your composer is a form, not a browser
 

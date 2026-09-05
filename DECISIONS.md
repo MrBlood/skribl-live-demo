@@ -5682,3 +5682,64 @@ orphan sweeper from counting deleted posts' media as still referenced.
 That is twice in one release that a first-draft assertion passed on the bug it
 was written for. Both were found the same way, and neither would have been
 found by reading it.
+
+## Unsealed, cont. -- the feed draws the same picture now
+
+The last of the v277 review's five. It said the tree documents a wet/dry
+compositor difference in which strokes authored below 100% opacity render
+differently in the in-post player than on the canonical shared page, that
+documenting a limitation is good but "in a premium drawing product the drawing
+itself is the content", and that a feed representation should ideally not
+change its appearance.
+
+**THE TREE'S OWN DESCRIPTION UNDERSTATED IT.** `inlineplayer.js` said a
+translucent stroke "beads at its overlaps". Rendered side by side, the feed
+version of a self-crossing 50%-alpha stroke has scalloped edges and a banded
+interior where the canonical page has one smooth translucent mark. They are not
+the same drawing.
+
+**AND THE REASON FOR NOT DOING IT WAS ARITHMETIC THAT WAS WRONG.** The header
+said ~60 lines of offscreen canvas work per stroke was not obviously worth it
+"at feed scale -- twenty boxes, one playing". `play()` settles every other
+player, so exactly ONE post is ever playing: the cost is two offscreen canvases,
+not forty. It also allocates nothing for an all-opaque payload, which is most of
+them.
+
+**MY FIRST MEASUREMENT WAS CONFOUNDED AND I NEARLY BELIEVED IT.** Comparing this
+player against `/s/<id>` on the 96x96 grid `verify_inline.py` already uses gave
+a satisfying "19.2% of cells differ, 22% less ink" -- and I had already written
+it into the source as the justification. An OPAQUE control, which the compositor
+cannot affect, then scored WORSE (ink ratio 0.446). Most of what I was measuring
+was the two surfaces fitting the drawing to different boxes, which
+verify_inline's own notes say they do. A cross-surface comparison cannot isolate
+this feature, and the number was corrected in place rather than quietly dropped.
+
+The clean instrument is one surface with the feature absent. Same fixture, the
+in-post player only: 145,014 ink stamped, 177,246 composited, against 185,205 on
+`/s/<id>`. The gap to canonical closes from 21.7% to 4.3%, and the residual is
+that same fit difference.
+
+**IT COST 2,913 B and the embed ratchet went 29,000 -> 32,000**, the largest
+raise that number has taken -- in the same release that tightened it 29,500 ->
+29,000 on a measurement, which is how a ratchet is supposed to move: down when
+the truth is smaller, up when something real is bought, never to make a failure
+go away.
+
+**AND THE SUITE'S OWN NOTE SAID WHERE TO WIDEN THE PROOF.** verify_inline draws
+OPAQUE on purpose, because a pixel assertion over a translucent stroke would
+have been "quietly tolerant of a gap it cannot see", and it said that if the
+in-post player ever got the compositor, "that fixture is where to widen the
+proof". A second fixture does that now. The opaque one stays: absolute
+cross-surface ink is confounded whatever the compositor does, so the new
+assertion is a shape property on one surface, with a floor set between the
+stamped and composited figures. Removing the compositor drops it to exactly
+145,014.
+
+That is all five findings closed. Two of them (the audio-session lifecycle and
+this) were things no gate in the tree could see, because both are failures of
+APPEARANCE and RESOURCE STATE rather than of behaviour anything asserted. Two
+more (the missing delete contract, the exhausted byte budget) were things the
+tree already knew and had written down without acting on. The fifth was a
+comment that had been false for several releases. None of them needed access to
+anything the harness does not have -- they needed somebody outside the work to
+read it.

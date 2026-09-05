@@ -353,6 +353,69 @@ with sync_playwright() as sp:
           persisted == "1" and pg.evaluate("() => localStorage.getItem('skribl.inline.sound')") is None,
           f"session={persisted!r}")
 
+    # ---- THE TRANSLUCENT FIXTURE, which used to be impossible --------------
+    # THE COMPARISON ABOVE DRAWS OPAQUE ON PURPOSE, and this file's own note
+    # said why: the wet/dry compositor was not implemented here, so a
+    # sub-100%-opacity stroke beaded at its overlaps and any pixel assertion
+    # over one would have been "quietly tolerant of a gap it cannot see". It
+    # also said that if the in-post player ever got the compositor, "that
+    # fixture is where to widen the proof". It has, so this is that.
+    #
+    # WHAT THIS CAN AND CANNOT ASSERT. The two surfaces fit the drawing to
+    # DIFFERENT boxes — the sealed player to its column, this one to the
+    # payload's logical size — so their ink masses are not comparable in
+    # absolute terms even when both are right. An opaque control proved that
+    # the hard way while this was being built: it scored WORSE than the
+    # translucent case on a cross-surface grid diff, which is how a confounded
+    # instrument announces itself. So the assertion here is the SHAPE property
+    # the compositor exists for, measured on this player alone: a stroke drawn
+    # as accumulating translucent stamps has far less ink than the same stroke
+    # composited once, because the overlaps eat it.
+    #
+    # 145,014 without the compositor against 177,246 with it, on this fixture,
+    # floor-subtracted — so the floor is set well below the composited figure
+    # and well above the stamped one. It is a wide gate deliberately: it is
+    # pinning "the compositor ran", not a pixel count.
+    STAMPED_INK_MAX = 160_000
+
+    tl_pts = []
+    for _i in range(240):
+        _a = (_i / 240) * math.pi * 8
+        _r = 40 + (_i / 240) * 120
+        tl_pts.append({"x": 260 + math.cos(_a) * _r, "y": 260 + math.sin(_a) * _r,
+                       "color": "rgba(233,236,245,0.5)", "size": 26,
+                       "t": _i * 12, "start": _i == 0, "erase": False})
+    _tl_body = {"frames": [{"strokes": tl_pts, "strokeGroups": [len(tl_pts)],
+                            "background": {"color": "#101418"}}],
+                "title": "translucent", "visibility": "public"}
+    _tl_req = urllib.request.Request(
+        BASE + "/api/skribls", method="POST",
+        data=json.dumps(_tl_body).encode(),
+        headers={"Content-Type": "application/json"})
+    id_tl = json.loads(urllib.request.urlopen(_tl_req, timeout=20).read())["id"]
+
+    p3 = b.new_page(viewport={"width": 620, "height": 900})
+    p3.goto(BASE + "/feed", wait_until="load")
+    p3.wait_for_timeout(1500)
+    p3.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_tl)
+    p3.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                         arg=id_tl, timeout=15000)
+    # Long enough for the whole 2.9s replay plus the final bake.
+    p3.wait_for_timeout(5000)
+    tl_grid = p3.evaluate(GRID, f'[data-skribl-id="{id_tl}"] .skribl-inline-canvas')
+    p3.close()
+
+    check("a translucent drawing renders at all in the feed", bool(tl_grid))
+    if tl_grid:
+        _floor = min(tl_grid)
+        tl_ink = sum(v - _floor for v in tl_grid)
+        check("a 50%-opacity stroke is composited, not stamped",
+              tl_ink > STAMPED_INK_MAX,
+              f"ink {tl_ink} — under {STAMPED_INK_MAX} means the overlaps are "
+              "stacking, which is the scalloped, banded rendering the wet/dry "
+              "compositor exists to prevent. Measured: 145,014 stamped, "
+              "177,246 composited, 185,205 on /s/<id>")
+
     # ---- LOOP, AND THE MUSIC THAT MUST STOP WITH THE DRAWING ---------------
     #
     # A post has exactly two viewer controls, and this is the second. It is PER
@@ -789,6 +852,28 @@ with sync_playwright() as sp:
     # floor like every other number here, which also means the 500 B of slack
     # that the wrong figure was quietly holding open is now closed.
     #
+    # 29,000 -> 32,000 FOR THE WET/DRY COMPOSITOR, 2,913 B measured (31,820
+    # served). The largest single raise this number has taken, and the one with
+    # the clearest thing to point at: without it a stroke below 100% opacity was
+    # drawn here as a row of translucent stamps, so its overlaps stacked and the
+    # feed showed a scalloped, banded version of a drawing that is smooth on
+    # /s/<id>. The v277 review put it plainly — in a drawing product the drawing
+    # IS the content, and a feed representation should not change how it looks.
+    #
+    # Measured on ONE surface with the feature absent, because the obvious
+    # cross-surface comparison is confounded (an opaque control scored worse:
+    # the two players fit the drawing to different boxes). Same fixture, this
+    # player only: 145,014 ink without, 177,246 with, against 185,205 on
+    # /s/<id>. The gap to canonical closes from 21.7% to 4.3%, and the residual
+    # is that same fit difference.
+    #
+    # The old header's reason for NOT doing this said "at feed scale — twenty
+    # boxes, one playing". That figure was wrong: play() settles every other
+    # player, so exactly one is ever playing and the cost is two offscreen
+    # canvases. It also allocates nothing at all for an all-opaque payload,
+    # which is most of them — makeCompositor returns null and the direct path
+    # is unchanged.
+    #
     # THE COST IS PAID BY THE SURFACE
     # THAT NEEDS IT, which is the rule: without it a posted Skribl's music is
     # silent in a feed on any iPhone with the ringer switch off. This player is
@@ -796,7 +881,7 @@ with sync_playwright() as sp:
     # leaving <audio> elements alone — which is why Test Seam has always played
     # on the owner's phone and Preview Loop has not. A silent held <audio>
     # session is the fix, and it has to ship wherever the player does.
-    EMBED_RATCHET = 29_000
+    EMBED_RATCHET = 32_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
