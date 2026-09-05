@@ -383,8 +383,19 @@ with sync_playwright() as p3:
     # still distinguishable — which "skribl.png" never was.
     open_sheet()
     seeded = pg.input_value("#exportName")
-    check("the field is seeded, so an untitled drawing still gets a real name",
-          bool(seeded.strip()), repr(seeded))
+    # EMPTY, NOT THE AUTO-NAME, and that is the fix for a flake rather than a
+    # compromise. Seeding get() put a live timestamp into a visible field, and
+    # verify_cssplit compares this very scene twice in one run: editor-export
+    # went intermittently red with the diff box moving a pixel between runs.
+    # lib/nametab.js's own header already warned about exactly this. The
+    # filename is unaffected — exportName() falls through to get() at export
+    # time, which the download assertions below prove.
+    check("an untitled drawing leaves the field empty, not holding a clock",
+          seeded.strip() == "",
+          f"{seeded!r} — a live timestamp rendered here makes verify_cssplit flaky")
+    check("...behind a static placeholder, so the field still reads as nameable",
+          pg.get_attribute("#exportName", "placeholder") == "Untitled Skribl",
+          repr(pg.get_attribute("#exportName", "placeholder")))
 
     # ---- the GIF background control is a row, not a banner ------------------
     # It was width:100%, commented "Full width so both labels fit". Measured,

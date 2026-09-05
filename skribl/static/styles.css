@@ -218,7 +218,18 @@
   --danger-fill: #b3283f;
   --warn: #ffd23f;
   --warn-2: #ff9f43;
-  --good: #1bcf8f;
+  /* Lifted from #1bcf8f (H159 S77% L46%) to H159 S80% L55%. The old one was
+     not short of CONTRAST — 9.6:1 on the base ground — it was short of VIVIDNESS,
+     and it is spent almost entirely on 6-7px dots: the toolbar's music and image
+     tab-dots, the autosave dot, the post sheet's sound marker. At that size hue
+     reads weakly and lightness carries the signal, so a mid-lightness green
+     reads as grey-green at a glance. Owner's call: "a little too dull".
+     Not raised further: past ~L60 it goes mint and stops reading as "ready". */
+  --good: #30e8a7;
+  /* The same colour as components, for the glows and tints that used to hardcode
+     rgba(27, 207, 143, …) — three of them, which would have silently kept the
+     old hue the moment the token above moved. */
+  --good-rgb: 48, 232, 167;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
 
@@ -1169,7 +1180,7 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   height: 7px;
   border-radius: 50%;
   background: var(--good);
-  box-shadow: 0 0 3px rgba(27, 207, 143, 0.35);
+  box-shadow: 0 0 3px rgba(var(--good-rgb), 0.35);
   flex-shrink: 0;
 }
 
@@ -2030,9 +2041,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .music-dropzone.loaded {
   height: auto;
   border-style: solid;
-  border-color: rgba(27, 207, 143, 0.4);
+  border-color: rgba(var(--good-rgb), 0.4);
   border-radius: 12px;
-  background: rgba(27, 207, 143, 0.08);
+  background: rgba(var(--good-rgb), 0.08);
   color: var(--good);
   padding: 12px 16px;
   flex-direction: row;
@@ -6592,7 +6603,11 @@ body.playing .flip-grid { display: none; }
   --danger-soft-3: #b81447;
   --warn:          #8a5b00;
   --warn-2:        #96560a;
+  /* NOT lifted with the dark theme's. This one sits on white, where brighter
+     means less readable — the dark theme's problem was a dim dot on near-black
+     and does not exist here. */
   --good:          #0a7350;
+  --good-rgb:      10, 115, 80;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
 

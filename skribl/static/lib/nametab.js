@@ -106,11 +106,26 @@
       return API.filename(API.exportBase() + (suffix || ''), ext);
     },
 
-    /* Called by whichever editor is opening the sheet. */
+    /* Called by whichever editor is opening the sheet.
+     *
+     * SEEDS THE TYPED TITLE ONLY — NEVER THE AUTO-NAME. get() falls back to a
+     * live timestamp, and writing that into a visible field puts a clock into
+     * the export sheet. The note at the top of this file already says what that
+     * costs: "a live timestamp there renders differently between two frames and
+     * makes any pixel comparison of the editor flaky (verify_cssplit)". The
+     * first version of this function did it anyway and made editor-export
+     * intermittently red — the bbox moved by a pixel between runs, which is the
+     * tell.
+     *
+     * So an unnamed drawing leaves the field EMPTY behind its static
+     * placeholder, and exportName() still falls through to get() at export
+     * time: the file is named skribl-sep-5-2-36-pm.gif exactly as before, and
+     * nothing time-varying is ever rendered. */
     seedExport: function () {
       var el = document.getElementById('exportName');
       if (!el || el._skriblDirty) return;
-      el.value = API.get();
+      var typed = inputEl();
+      el.value = (typed && typed.value) ? typed.value.trim() : '';
     },
     // opts = { onConfirm?, label? }. onConfirm runs when the drawer is confirmed
     // (Save draft passes its save here so the file is named as it is saved);

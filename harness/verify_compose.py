@@ -371,8 +371,21 @@ with sync_playwright() as sp:
         "                 sr: document.getElementById('postSoundText').textContent,"
         "                 tag: m.tagName }; }")
     check("a loaded loop shows the marker", st["hidden"] is False, json.dumps(st))
+    # Read from the token rather than typed, so lifting --good does not have to
+    # be chased through the suites. The point of the assertion is that the sheet
+    # marker and the toolbar dot are THE SAME green, not which green it is.
+    # `pad`, not `pg`: this section drives its own page and pg was closed long
+    # before. Using the wrong one crashed the suite outright, which is at least
+    # the loud kind of wrong.
+    _good = pad.evaluate(
+        "() => getComputedStyle(document.documentElement)"
+        ".getPropertyValue('--good').trim()")
+    _toolbar = pad.evaluate(
+        "() => getComputedStyle(document.getElementById('musicTabDot'))"
+        ".backgroundColor")
     check("...in --good green, the same colour the toolbar dot uses",
-          st["bg"] == "rgb(27, 207, 143)", st["bg"])
+          st["bg"] == _toolbar and bool(_good),
+          f"sheet {st['bg']} vs toolbar {_toolbar} (--good: {_good})")
     check("...and it says so in text, not only in colour",
           "has sound" in (st["sr"] or "") and st["sr"] == st["title"],
           json.dumps({"sr": st["sr"], "title": st["title"]}))

@@ -241,7 +241,18 @@
   --danger-fill: #b3283f;
   --warn: #ffd23f;
   --warn-2: #ff9f43;
-  --good: #1bcf8f;
+  /* Lifted from #1bcf8f (H159 S77% L46%) to H159 S80% L55%. The old one was
+     not short of CONTRAST — 9.6:1 on the base ground — it was short of VIVIDNESS,
+     and it is spent almost entirely on 6-7px dots: the toolbar's music and image
+     tab-dots, the autosave dot, the post sheet's sound marker. At that size hue
+     reads weakly and lightness carries the signal, so a mid-lightness green
+     reads as grey-green at a glance. Owner's call: "a little too dull".
+     Not raised further: past ~L60 it goes mint and stops reading as "ready". */
+  --good: #30e8a7;
+  /* The same colour as components, for the glows and tints that used to hardcode
+     rgba(27, 207, 143, …) — three of them, which would have silently kept the
+     old hue the moment the token above moved. */
+  --good-rgb: 48, 232, 167;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
 
