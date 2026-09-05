@@ -1,3 +1,19 @@
+{#  THE MUSIC GLYPH, DEFINED ONCE.
+
+    It is drawn in two places now — the toolbar's music button and the post
+    sheet's sound marker — and "the same icon" has to mean one definition, not
+    two copies that agree today. This tree has already paid for that lesson
+    three times over in one release: the in-post player's markup was hand-copied
+    into the feed's composer and the profile's stage before a macro was made for
+    it, and verify_inline.py now gates against it happening again.
+
+    verify_compose.py asserts the path data appears exactly once in this file.
+#}
+{% macro music_glyph() -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      </svg>
+{%- endmacro %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -179,8 +195,23 @@
   <div id="postOverlay" class="menu-overlay" hidden>
     <div class="menu-sheet post-sheet" id="postSheet" role="dialog" aria-modal="true" aria-label="Post your Skribl">
       <div class="menu-handle"></div>
-      <div class="export-head">Post your Skribl</div>
-      <div class="export-sub">Add a title and share it to Skribl</div>
+      {# Compose mode is not publishing, and the sheet must not say it is: the
+         drawing goes back to the host's draft and nothing is posted until they
+         post. Rendered server-side rather than swapped by script, so the sheet
+         never shows the wrong verb for a frame. #}
+      {# THE SOUND MARKER. The toolbar's own mark, repeated at the moment of
+         posting — same glyph (one macro), same .tab-dot, same green/amber
+         meanings. It MIRRORS the toolbar rather than recomputing anything: the
+         dot up there is already the app's statement about the music track, and
+         a second opinion could disagree with it. A <span>, not a button: on the
+         toolbar this opens the music drawer, here there is nothing to open, so
+         it carries no hover or active state and nothing invites a tap. #}
+      <div class="export-head">{{ "Add to your post" if compose else "Post your Skribl" }}<span
+           class="post-sound" id="postSound" hidden>{{ music_glyph() }}<span
+           class="tab-dot" id="postSoundDot"></span><span class="post-sound-sr"
+           id="postSoundText"></span></span></div>
+      <div class="export-sub">{{ "It goes inline in the post, and plays there"
+                                 if compose else "Add a title and share it to Skribl" }}</div>
       <div class="post-body" id="postBody">
         <div class="post-preview" id="postPreview">
           <img id="postPreviewImg" class="post-preview-img" alt="Preview of your Skribl">
@@ -199,7 +230,7 @@
       </div>
       <button type="button" class="post-submit" id="postSubmitBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        <span id="postSubmitLabel">Post to Skribl</span>
+        <span id="postSubmitLabel">{{ "Add to post" if compose else "Post to Skribl" }}</span>
       </button>
       <button type="button" class="post-submit post-watch" id="postWatchBtn" hidden>
         <span class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
@@ -361,9 +392,7 @@
       <span id="photoTabDot" class="tab-dot" hidden></span>
     </button>
     <button type="button" class="tool-open" id="musicOpenBtn" data-drawer="music" aria-label="Music" title="Add a music loop that plays underneath">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-      </svg>
+      {{ music_glyph() }}
       <span id="musicTabDot" class="tab-dot" hidden></span>
     </button>
     {# Magnify ends the row with image and music. It changes how you SEE the
@@ -390,7 +419,10 @@
 </div>
 
   <script nonce="{{ csp_nonce }}">
-    window.SKRIBL_MODE = "editor";
+    {# "compose" is the same editor opened from a host's post composer. app.js
+       already branches on SKRIBL_MODE for the player, so this is the existing
+       mechanism rather than a second one. #}
+    window.SKRIBL_MODE = {{ ("compose" if compose else "editor") | tojson }};
     window.SKRIBL_API_BASE = {{ skribl_api_base | tojson }};
   window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
     window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
@@ -429,6 +461,11 @@
   <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>
+  <!-- Editors only, same reason: the share card is composited at POST time.
+       lib/sharecard.js owns where the drawing lands inside it, because the
+       in-post player crops the brand strip back off and the two must agree. -->
+  <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/postedcard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/shapes.js') }}" defer></script>
@@ -446,6 +483,11 @@
   <script src="{{ skribl_asset('lib/palette.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pillfit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+  {# lib/audiosession.js: iOS silences Web Audio when the ringer switch is off
+     but not an <audio> element, so a Skribl's music is inaudible on a phone set
+     to silent. Holds a playback session, claimed only on a gesture that asks
+     for sound. #}
+  <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
@@ -464,6 +506,11 @@
   <script src="{{ skribl_asset('editor_photo.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_export.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_post.js') }}" defer></script>
+  {% if compose %}
+  {# Compose only. It is an editor_*.js carve, so verify_player_isolation.py's
+     glob enrols it automatically and fails if the player ever loads it. #}
+  <script src="{{ skribl_asset('editor_compose.js') }}" defer></script>
+  {% endif %}
   <script src="{{ skribl_asset('editor_draft.js') }}" defer></script>
 </body>
 </html>

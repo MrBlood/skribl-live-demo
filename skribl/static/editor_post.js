@@ -24,6 +24,9 @@
   const previewFrame = document.getElementById('postPreview');
   const submitBtn = document.getElementById('postSubmitBtn');
   const submitLabel = document.getElementById('postSubmitLabel');
+  const soundMark = document.getElementById('postSound');
+  const soundDot = document.getElementById('postSoundDot');
+  const soundText = document.getElementById('postSoundText');
   const watchBtn = document.getElementById('postWatchBtn');
   let lastPostUrl = null;
   const status = document.getElementById('postStatus');
@@ -199,106 +202,23 @@
     return out ? out.toDataURL('image/png') : null;
   }
 
-  // Render the finished drawing onto a 1200×630 branded share card (the Open
-  // Graph aspect) so a shared /s/<id> link unfurls with the actual drawing
-  // instead of the generic card. Composited client-side at post time and sent as
-  // payload.thumbnail; encoded per-content — JPEG q0.92 when a photo is present
-  // (~6x smaller, artifacts hidden), PNG for line-art cards (smaller AND crisp as
-  // PNG). The /s/<id>/card.png route serves either format (also legacy PNG posts).
+  // The card itself is composited by lib/postedcard.js — editors only, beside
+  // lib/postedaudio.js, because a host's feed never posts. It moved out of here
+  // when Flip needed one too: this
+  // function was Pad-only, so every Flip post fell back to the static branded
+  // og-card on its unfurl, in a feed's in-post poster and on the profile's
+  // tiles. See that module's header.
+  //
+  // What stays HERE is the flattening — ground, photo with its fit/opacity/blur,
+  // then the strokes — because that is the part that genuinely differs between
+  // a Pad recording and a Flip animation, and the photo state it reads is this
+  // editor's. The encoding is not passed in any more: the module encodes both
+  // ways and keeps the smaller, because the content-based rule this used to
+  // supply a hint for turned out to be wrong by 16x.
   function buildShareCardDataURL() {
-    try {
-      const flat = buildPreviewCanvas();
-      const CARD_W = 1200, CARD_H = 630;
-      const card = document.createElement('canvas');
-      card.width = CARD_W; card.height = CARD_H;
-      const c = card.getContext('2d');
-
-      // Ground + soft accent wash (echoes the static og-card).
-      c.fillStyle = '#0b0d12';
-      c.fillRect(0, 0, CARD_W, CARD_H);
-      const wash = c.createRadialGradient(CARD_W*0.5, CARD_H*0.28, 40, CARD_W*0.5, CARD_H*0.28, CARD_W*0.7);
-      wash.addColorStop(0, 'rgba(124,92,255,0.16)');
-      wash.addColorStop(1, 'rgba(124,92,255,0)');
-      c.fillStyle = wash;
-      c.fillRect(0, 0, CARD_W, CARD_H);
-
-      const roundRect = (x, y, w, h, r) => {
-        c.beginPath();
-        c.moveTo(x+r, y);
-        c.arcTo(x+w, y, x+w, y+h, r);
-        c.arcTo(x+w, y+h, x, y+h, r);
-        c.arcTo(x, y+h, x, y, r);
-        c.arcTo(x, y, x+w, y, r);
-        c.closePath();
-      };
-
-      // Contain the drawing centered, leaving a strip at the bottom for the mark.
-      const footer = 84;
-      const pad = 54;
-      if (flat && flat.width && flat.height) {
-        const areaW = CARD_W - pad*2;
-        const areaH = CARD_H - pad - footer;
-        const scale = Math.min(areaW / flat.width, areaH / flat.height);
-        const dw = Math.round(flat.width * scale);
-        const dh = Math.round(flat.height * scale);
-        const dx = Math.round((CARD_W - dw) / 2);
-        const dy = Math.round((CARD_H - footer - dh) / 2);
-        c.save();
-        roundRect(dx, dy, dw, dh, 18);
-        c.clip();
-        c.drawImage(flat, dx, dy, dw, dh);   // flat is already opaque (bg baked in)
-        c.restore();
-        c.lineWidth = 2;
-        c.strokeStyle = 'rgba(124,92,255,0.45)';
-        roundRect(dx, dy, dw, dh, 18);
-        c.stroke();
-      }
-
-      // Brand mark: 6-point star + wordmark, centered in the footer strip.
-      const cy = CARD_H - footer/2 + 6;
-      const label = 'Skribl Pad';
-      c.font = '700 30px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-      c.textBaseline = 'middle';
-      const tw = c.measureText(label).width;
-      const starR = 13;
-      const gap = 14;
-      const totalW = starR*2 + gap + tw;
-      let x = (CARD_W - totalW) / 2;
-      // star
-      const scx = x + starR, scy = cy;
-      c.save();
-      c.translate(scx, scy);
-      c.beginPath();
-      for (let i = 0; i < 12; i++) {
-        const ang = (Math.PI / 6) * i - Math.PI/2;
-        const rr = (i % 2 === 0) ? starR : starR * 0.42;
-        const px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
-        i === 0 ? c.moveTo(px, py) : c.lineTo(px, py);
-      }
-      c.closePath();
-      const sg = c.createLinearGradient(-starR, -starR, starR, starR);
-      sg.addColorStop(0, '#7c5cff');
-      sg.addColorStop(1, '#5b8cff');
-      c.fillStyle = sg;
-      c.fill();
-      c.restore();
-      // wordmark
-      c.fillStyle = 'rgba(246,247,249,0.94)';
-      c.textAlign = 'left';
-      c.fillText(label, x + starR*2 + gap, cy);
-
-      // Encode by content. A photo card compresses several x smaller as JPEG (the
-      // point of this change), but the drawn lines sit ON TOP of the photo as sharp
-      // white-on-dark edges, so use q0.92 (not a lower q) to keep JPEG's edge
-      // ringing off those lines while still landing ~4-5x under PNG. A line-art
-      // card (no photo) is the opposite: PNG is both SMALLER and crisp, and JPEG
-      // would bloat AND ring it — so PNG there. The /s/<id>/card.png route serves
-      // either format. The photo-present test mirrors buildPreviewCanvas exactly.
-      const hasPhoto = !!(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg.src);
-      return hasPhoto ? card.toDataURL('image/jpeg', 0.92) : card.toDataURL('image/png');
-    } catch (e) {
-      return null;
-    }
+    var PC = window.SkriblPostedCard;
+    if (!PC || !PC.build) return null;
+    return PC.build(buildPreviewCanvas());
   }
 
   function updateCharCount() {
@@ -306,6 +226,16 @@
   }
 
   // states: 'idle' | 'sending' | 'success' | 'error'
+  /* The button's resting label comes from the DOM, not from a literal here.
+   * The template renders it ("Post to Skribl", or "Add to post" in compose
+   * mode) and setState('idle') used to overwrite it with a hardcoded copy —
+   * which was already a duplicate of the template's string and would have
+   * silently relabelled the compose button back to publishing the first time
+   * anything reset the sheet. Same reason the busy verb is chosen by mode:
+   * compose is not posting, and must not say it is. */
+  const IDLE_LABEL = (submitLabel.textContent || '').trim() || 'Post to Skribl';
+  const BUSY_LABEL = (window.SKRIBL_MODE === 'compose') ? 'Adding…' : 'Posting…';
+
   function setState(state) {
     if (state === 'idle') {
       posting = false;
@@ -318,12 +248,12 @@
       captionInput.disabled = false;
       submitBtn.disabled = false;
       submitBtn.hidden = false;
-      submitLabel.textContent = 'Post to Skribl';
+      submitLabel.textContent = IDLE_LABEL;
     } else if (state === 'sending') {
       posting = true;
       status.hidden = false;
       status.classList.remove('error');
-      statusLabel.textContent = 'Posting…';
+      statusLabel.textContent = BUSY_LABEL;
       progressFill.style.width = '35%';
       body.style.opacity = '0.5';
       titleInput.disabled = true;
@@ -348,8 +278,41 @@
     }
   }
 
+  /* THE SOUND MARKER MIRRORS THE TOOLBAR, IT DOES NOT RE-DECIDE.
+   *
+   * #musicTabDot is already the app's statement about the music track: hidden
+   * when there is none, green when a loop is loaded, amber (.pending) when one
+   * is REMEMBERED and its file is gone — the case where the author is about to
+   * post silence believing otherwise, and the reason this marker exists at all.
+   *
+   * Reading that dot rather than inspecting the payload is deliberate. A second
+   * opinion computed here could disagree with the toolbar, and then the same
+   * mark would say two things on one screen. It is also the cheap answer:
+   * serializing the drawing on every sheet open, to learn one boolean, would
+   * copy the audio bytes for nothing.
+   *
+   * What it therefore does NOT claim: that the post-time mono bake succeeded.
+   * The bake runs later, inside buildPostPayload(). This says what the editor
+   * is holding, which is the question the author can still do something about.
+   */
+  function syncSoundMark() {
+    if (!soundMark) return;
+    const dot = document.getElementById('musicTabDot');
+    const has = !!(dot && !dot.hidden);
+    soundMark.hidden = !has;
+    if (!has) return;
+    const pending = dot.classList.contains('pending');
+    if (soundDot) soundDot.classList.toggle('pending', pending);
+    const msg = pending
+      ? 'Your music file is missing — this will post without sound.'
+      : 'This Skribl has sound.';
+    soundMark.setAttribute('title', msg);
+    if (soundText) soundText.textContent = msg;
+  }
+
   function openPost() {
     setState('idle');
+    syncSoundMark();
     // Field values persist across an accidental close within the session; they
     // reset only after a successful post. So don't clear them here.
     updateCharCount();
@@ -403,14 +366,24 @@
     if (sheet) sheet.style.maxHeight = Math.max(200, vv.height - 12) + 'px';
   }
 
-  async function submit() {
+  /* EVERYTHING A PAYLOAD NEEDS BEFORE IT LEAVES THE BROWSER, in one place.
+   *
+   * Split out of submit() so COMPOSE MODE can reuse it exactly. A skribl the
+   * host's composer attaches and a skribl Pad posts itself must be the same
+   * bytes: same serialisation, same share-card thumbnail, same mono audio bake.
+   * Two code paths preparing "the payload, but for posting" is precisely the
+   * shape that produced BUG B below — a post-time step that silently stopped
+   * running on one of the paths and looked identical in the metadata.
+   *
+   * Returns the payload, or null if the media is not ready (it says why).
+   */
+  async function buildPostPayload() {
     // Mirror saveDraft(): don't serialize while photo/music bytes are still
     // being read into base64, or the posted Skribl could omit them.
     if (mediaBusy > 0) {
       showToast('Preparing media — try again in a moment', submitBtn);
-      return;
+      return null;
     }
-    setState('sending');
     // v211 (v210 review F2): decode is part of readiness. mediaBusy tracks the
     // FileReader; decodeAudioData is a separate promise, and in the gap the
     // crop below saw currentAudioBuffer null and silently shipped the full
@@ -459,6 +432,31 @@
         // a silent fallback here is how the size regression would hide again.
         console.warn('skribl: loop crop failed, posting the full sample', e);
       }
+    }
+    return payload;
+  }
+
+  async function submit() {
+    setState('sending');
+    const payload = await buildPostPayload();
+    if (!payload) { setState('idle'); return; }
+    // COMPOSE MODE HANDS THE PAYLOAD BACK AND PUBLISHES NOTHING. The host holds
+    // it on their draft; the single POST happens when they post. Everything
+    // above this line has already run, so what they attach is byte-for-byte
+    // what Pad would have posted. See editor_compose.js.
+    // The preview is built HERE because buildPreviewDataURL is local to this
+    // file — a flat PNG of the finished drawing, so the host's composer can
+    // show something the instant the overlay closes.
+    if (window.SkriblCompose) {
+      window.SkriblCompose.deliver(payload, buildPreviewDataURL());
+      // Put the sheet away and the button back to rest. The HOST closes its
+      // overlay the moment it gets the payload, so nobody sees this — until
+      // they press the pad icon again, which reopens the SAME iframe, and a
+      // sheet left open is then sitting over the canvas they came back to
+      // draw on. (Found exactly that way: the second edit could not draw.)
+      setState('idle');
+      closePost();
+      return;
     }
     try {
       const res = await sendSkribl(payload);

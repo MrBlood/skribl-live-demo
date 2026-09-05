@@ -3834,8 +3834,47 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  return { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
+  // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
+  // /s/<id>/card.png fell through to the static branded og-card for every Flip
+  // post ever made — on its unfurl, as the in-post player's idle poster in a
+  // feed, and as its tile on the profile's Skribls tab. Three surfaces showing
+  // an advert where the drawing should be, and invisible to the author, who
+  // does not look at their own unfurl. Same shape as the title bug
+  // verify_flipmeta.py records: a control surface built on one editor only.
+  //
+  // lib/postedcard.js composites it, exactly as it does for the Pad. What Flip
+  // supplies is the flat canvas, through drawFrameTo() — the same path the PNG
+  // and WebM exports use, so the card cannot show something no export would.
+  const _card = _shareCardDataURL();
+  if (_card) _payload.thumbnail = _card;
+  return _payload;
+}
+
+/* WHICH PAGE THE CARD SHOWS, and why it is not simply page 0. The in-post
+   player idles a flip on page 0 (lib/holdtiming.js indexAt(0)), so page 0 is
+   the consistent answer — right up until page 0 is empty, which is an ordinary
+   way to start an animation and would make the poster a blank rectangle. A
+   poster's job is to say what the thing IS. So: the first page with ink,
+   falling back to page 0 when nothing has any. A video's poster frame is
+   picked the same way and for the same reason. */
+function _shareCardDataURL(){
+  const PC = window.SkriblPostedCard;
+  if (!PC || !PC.build) return null;
+  try {
+    let pick = frames.find(f => f && f.strokes && f.strokes.length) || frames[0];
+    if (!pick) return null;
+    const flat = document.createElement('canvas');
+    flat.width = CW; flat.height = CH;
+    drawFrameTo(flat.getContext('2d'), pick);
+    return PC.build(flat);
+  } catch (e) {
+    // A post must never fail over its own poster; the server falls back to the
+    // branded card, which is exactly where this was before the change.
+    console.warn('skribl: share card failed, posting without one', e);
+    return null;
+  }
 }
 async function shareSkribl(){
   if(sharing) return;
@@ -3949,7 +3988,7 @@ bindEl('flipShareCopy', 'click',async()=>{
 function exportPNG(){
   const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
   drawFrameTo(c, frame());
-  cv.toBlob(b=>{ if(b) download(b, 'skribl-frame-'+(idx+1)+'.png'); }, 'image/png');
+  cv.toBlob(b=>{ if(b) download(b, window.SkriblName ? window.SkriblName.exportName('png', ' frame '+(idx+1)) : 'skribl-frame-'+(idx+1)+'.png'); }, 'image/png');
 }
 let exporting=false;
 function exportWebM(){
@@ -3967,7 +4006,7 @@ function exportWebM(){
   const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
   let rec; try{ rec=new MediaRecorder(stream,{mimeType:mime}); }catch(_){ exporting=false; exportHide(); chip('Video export failed'); return; }
   const chunks=[]; rec.ondataavailable=ev=>{ if(ev.data && ev.data.size) chunks.push(ev.data); };
-  rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob,'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
+  rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob, window.SkriblName ? window.SkriblName.exportName('webm') : 'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
   drawFrameTo(c, frames[_r.from-1]); rec.start();
   // Tick in base-fps units, not pages, so a held page simply occupies more ticks.
   const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
@@ -4014,7 +4053,7 @@ async function exportGIF(){
       if((i&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
     }
     enc.finish();
-    download(new Blob([enc.bytes()],{type:'image/gif'}),'skribl-flip.gif');
+    download(new Blob([enc.bytes()],{type:'image/gif'}), window.SkriblName ? window.SkriblName.exportName('gif') : 'skribl-flip.gif');
     exportSet(1,'Done!'); setTimeout(exportHide,500); chip('GIF exported');
   }catch(err){ console.error('GIF export failed:', err); exportHide(); chip('GIF export failed'); }
   exporting=false;
@@ -4097,7 +4136,7 @@ async function exportViaWebCodecsMp4(){
     }
     if(encErr) throw encErr;
     muxer.finalize();
-    download(new Blob([muxer.target.buffer],{type:'video/mp4'}),'skribl-flip.mp4');
+    download(new Blob([muxer.target.buffer],{type:'video/mp4'}), window.SkriblName ? window.SkriblName.exportName('mp4') : 'skribl-flip.mp4');
     try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){}
     exportSet(1,'Done!'); setTimeout(exportHide,500); chip('MP4 exported'); exporting=false; return true;
   }catch(err){ console.error('WebCodecs MP4 export failed:', err); exportHide(); chip('MP4 failed — using WebM'); exporting=false; return false; }
@@ -4506,7 +4545,11 @@ matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 // preview loop + test seam (seek-based on the <audio> element)
 let previewingLoop=false, previewLoopTimer=null, seamStopTimer=null, _previewWA=false;
 function stopLoopPreview(){ previewingLoop=false; _previewWA=false;
-  if(!playing){ stopWebAudioLoop(); if(audioEl){ try{audioEl.pause();}catch(_){}} }
+  if(!playing){ stopWebAudioLoop(); if(audioEl){ try{audioEl.pause();}catch(_){}}
+    // Nothing wants sound any more, so stop holding the iOS playback session
+    // (it shows Skribl as playing media in Control Center). Guarded on
+    // `playing`: the animation's own audio still needs it.
+    if(window.SkriblAudioSession) window.SkriblAudioSession.release(); }
   if(previewLoopTimer) clearInterval(previewLoopTimer); if(seamStopTimer) clearTimeout(seamStopTimer); previewLoopTimer=null; seamStopTimer=null;
   if(playhead) playhead.hidden=true; if(zoomPlayhead) zoomPlayhead.hidden=true; if(previewLoopBtn) previewLoopBtn.textContent='Preview Loop'; }
 function previewTick(){ if(!previewingLoop) return;
@@ -4516,6 +4559,9 @@ function previewTick(){ if(!previewingLoop) return;
   if(zoomPlayhead && currentAudioBuffer){ const zw=getZoomWindow(); const zp=((st-zw.start)/zw.duration)*100; zoomPlayhead.hidden=false; zoomPlayhead.style.left=Math.max(0,Math.min(100,zp))+'%'; } }
 function startLoopPreviewNative(){ if(!previewingLoop) return; _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; } try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} }
 function startLoopPreview(){
+  // iOS silences Web Audio with the ringer switch off — hold a playback session
+  // for the length of the preview. See lib/audiosession.js.
+  if(window.SkriblAudioSession) window.SkriblAudioSession.claim();
   previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
   if(startWebAudioLoop(startLoopPreviewNative)){ _previewWA=true; }           // gapless; native reachable on async unlock failure
   else startLoopPreviewNative();
@@ -4657,6 +4703,8 @@ const exportSheet=document.getElementById('exportSheet');
 let _exCloseT=null;
 function openExportSheet(){
   closeMenu();
+  // Seed the file-name field from the title (lib/nametab.js).
+  if(window.SkriblName && window.SkriblName.seedExport) window.SkriblName.seedExport();
   const single=frames.length<2;
   const vBtn=document.getElementById('exportVideo'), vDesc=document.getElementById('exportVideoDesc');
   const vTitle=vBtn?vBtn.querySelector('.export-opt-title'):null;

@@ -20,6 +20,7 @@ Section 3 covers the empty case, because the compose step introduces a way to
 share with nothing typed, and the server's substitution ('Untitled Skribl') is
 what stops that becoming a blank row.
 """
+import gzip
 import json
 import os
 import re
@@ -123,8 +124,18 @@ with sync_playwright() as p:
     def _capture(route):
         req = route.request
         if req.method == "POST":
+            # THE BODY MAY BE GZIPPED, and it did not use to be. lib/posted.js
+            # compresses any post body over 4,096 B, and this fixture's — one
+            # stroke, no media — sat under that until Flip started attaching a
+            # share card (lib/postedcard.js, ~25 KB). Reading post_data as JSON
+            # then returned nothing and three assertions here failed on a change
+            # that had not touched titles at all. Read the bytes and inflate
+            # when the client says it compressed them.
             try:
-                posted_bodies.append(json.loads(req.post_data or "{}"))
+                raw = req.post_data_buffer
+                if (req.headers.get("content-encoding") or "").lower() == "gzip":
+                    raw = gzip.decompress(raw)
+                posted_bodies.append(json.loads((raw or b"{}").decode("utf-8")))
             except Exception:
                 posted_bodies.append({})
         route.continue_()

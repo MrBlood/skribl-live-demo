@@ -42,6 +42,37 @@ def summarise_and_exit():
     sys.exit(1 if bad else 0)
 
 
+
+def _hardcoded():
+    """Export filenames still written as literals rather than named."""
+    import glob
+    pat = re.compile(r"""(?<!: )['"]skribl(?:-flip|-animation|-frame-)?[.'"]""")
+    out = []
+    for f in ("editor_export.js", "flip.js"):
+        src = open(os.path.join(STATIC_DIR, f), encoding="utf-8").read()
+        for m in re.finditer(r"""\.download\s*=\s*['"]skribl[^'"]*['"]""", src):
+            out.append(f + ": " + m.group(0))
+        for m in re.finditer(r"""download\w*\(\s*[^,]+,\s*['"]skribl[^'"]*['"]\s*\)""", src):
+            out.append(f + ": " + m.group(0)[:60])
+    return out
+
+
+def _scribble(pg):
+    import math
+    box = pg.locator("#canvas").bounding_box()
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    pg.mouse.move(cx, cy)
+    pg.mouse.down()
+    for i in range(40):
+        t = i / 39.0
+        a = t * 2 * 2 * math.pi
+        r = 12 + t * 100
+        pg.mouse.move(cx + math.cos(a) * r, cy + math.sin(a) * r)
+        pg.wait_for_timeout(10)
+    pg.mouse.up()
+    pg.wait_for_timeout(250)
+
+
 print("EXPORT SHEET — section 1: every class in the markup has a rule")
 
 with open(template("_skribl_export.html"), encoding="utf-8") as fh:
@@ -60,6 +91,30 @@ undefined = sorted(c for c in classes if f".{c}" not in css)
 check("no class in the export sheet is undefined in CSS",
       not undefined,
       "unstyled, so the browser falls back to defaults: " + ", ".join(undefined))
+
+# SPLIT BY SURFACE. The sweep above concatenates styles.css AND flip.css, so a
+# class styled for ONE surface passes as if it were styled for both — and that
+# is not hypothetical: .export-optlbl lived only in flip.css while the shared
+# GIF toggle used it, so Pad rendered "Background" at browser-default size for
+# several releases and this assertion said the sheet was fine. Pad does not load
+# flip.css, so anything OUTSIDE the flip-only block must be in styles.css.
+_shared, _in_flip_block = set(), False
+for _line in markup.splitlines():
+    if "{% if kind ==" in _line:
+        _in_flip_block = True
+    if "{% endif %}" in _line and _in_flip_block:
+        _in_flip_block = False
+        continue
+    if _in_flip_block:
+        continue
+    for _attr in re.findall(r'class="([^"{}]+)"', _line):
+        _shared.update(c for c in _attr.split() if c)
+with open(os.path.join(STATIC_DIR, "styles.css"), encoding="utf-8") as fh:
+    _pad_css = fh.read()
+_pad_missing = sorted(c for c in _shared if f".{c}" not in _pad_css)
+check("every class Pad renders is defined in styles.css, which Pad actually loads",
+      not _pad_missing,
+      "in flip.css only, so unstyled on Pad: " + ", ".join(_pad_missing))
 
 # The five that actually shipped unstyled, pinned by name. The sweep above would
 # catch them, but naming them keeps the regression legible in the log.
@@ -294,5 +349,136 @@ with sync_playwright() as p:
               f"sheet starts at {round(sheet['x'])}, column starts at {round(col['left'])}")
         w.close()
     b2.close()
+
+print("\nEXPORT SHEET — section 5: the file name")
+
+# Every media export used to be a hardcoded literal — skribl.gif, skribl.png,
+# skribl.mp4, skribl-flip.gif — so two exports of one drawing arrived as
+# "skribl.gif" and "skribl (1).gif" with nothing to tell them apart, and titling
+# the drawing changed none of it. These assertions are on the DOWNLOAD's
+# suggested filename, not on the field: the field is the input, the filename is
+# the thing that was broken.
+check("no export filename is a hardcoded literal any more",
+      not _hardcoded(),
+      "still literal: " + ", ".join(_hardcoded()))
+
+with sync_playwright() as p3:
+    b3 = p3.chromium.launch()
+    pg = b3.new_page(viewport={"width": 1180, "height": 900}, accept_downloads=True)
+    nerrs = []
+    pg.on("pageerror", lambda e: nerrs.append(str(e)))
+    pg.goto(BASE + "/", wait_until="load")
+    pg.wait_for_timeout(2500)
+    _scribble(pg)
+    pg.locator("#recordBtn").click()
+    pg.wait_for_timeout(700)
+
+    def open_sheet():
+        pg.locator("#menuBtn").click()
+        pg.wait_for_timeout(350)
+        pg.locator("#exportItem").click()
+        pg.wait_for_timeout(800)
+
+    # UNTITLED: seeded from the auto-name, so two exports minutes apart are
+    # still distinguishable — which "skribl.png" never was.
+    open_sheet()
+    seeded = pg.input_value("#exportName")
+    # EMPTY, NOT THE AUTO-NAME, and that is the fix for a flake rather than a
+    # compromise. Seeding get() put a live timestamp into a visible field, and
+    # verify_cssplit compares this very scene twice in one run: editor-export
+    # went intermittently red with the diff box moving a pixel between runs.
+    # lib/nametab.js's own header already warned about exactly this. The
+    # filename is unaffected — exportName() falls through to get() at export
+    # time, which the download assertions below prove.
+    check("an untitled drawing leaves the field empty, not holding a clock",
+          seeded.strip() == "",
+          f"{seeded!r} — a live timestamp rendered here makes verify_cssplit flaky")
+    check("...behind a static placeholder, so the field still reads as nameable",
+          pg.get_attribute("#exportName", "placeholder") == "Untitled Skribl",
+          repr(pg.get_attribute("#exportName", "placeholder")))
+
+    # ---- the GIF background control is a row, not a banner ------------------
+    # It was width:100%, commented "Full width so both labels fit". Measured,
+    # the labels need ~200px of a ~330px card, so what full width actually
+    # bought was a 160px violet pill — 41% of a phone screen, and the brightest
+    # thing on a sheet whose actual actions are the three format buttons.
+    _seg = pg.evaluate(
+        "() => { const t = document.getElementById('exportGifToggle');"
+        "        const seg = t.querySelector('.gif-seg');"
+        "        const act = t.querySelector('.gif-seg-btn.active');"
+        "        const pill = t.querySelector('.seg-slider');"
+        "        const card = t.closest('.export-opt-group');"
+        "        const sr = seg.getBoundingClientRect(), ar = act.getBoundingClientRect();"
+        "        const cr = card.getBoundingClientRect();"
+        "        const pr = pill ? pill.getBoundingClientRect() : null;"
+        "        return { card: cr.width, seg: sr.width, active: ar.width,"
+        "                 overflows: sr.right > cr.right + 1,"
+        "                 pillOnBtn: pr ? (Math.abs(pr.left - ar.left) < 2"
+        "                                  && Math.abs(pr.width - ar.width) < 2) : null }; }")
+    check("the GIF background control no longer spans the card",
+          _seg["seg"] < _seg["card"] * 0.75,
+          f"control {round(_seg['seg'])}px in a {round(_seg['card'])}px card")
+    check("...and the active pill is a pill, not a banner",
+          _seg["active"] < _seg["card"] * 0.4,
+          f"pill {round(_seg['active'])}px of {round(_seg['card'])}px")
+    check("it still fits inside the card", not _seg["overflows"])
+    # THE SLIDER IS THE RISK IN THIS CHANGE. It positions itself from the active
+    # button's offsetWidth/offsetLeft, so buttons that size to their labels are
+    # fine in principle — this is the assertion that says so in fact, before and
+    # after a switch, because the two labels are very different widths.
+    check("the sliding pill sits on the selected button", _seg["pillOnBtn"] is True)
+    pg.locator(".gif-seg-btn[data-gif-bg='transparent']").click()
+    pg.wait_for_timeout(700)
+    _seg2 = pg.evaluate(
+        "() => { const t = document.getElementById('exportGifToggle');"
+        "        const act = t.querySelector('.gif-seg-btn.active');"
+        "        const pill = t.querySelector('.seg-slider');"
+        "        const ar = act.getBoundingClientRect();"
+        "        const pr = pill ? pill.getBoundingClientRect() : null;"
+        "        return { label: act.textContent.trim(), active: ar.width,"
+        "                 pillOnBtn: pr ? (Math.abs(pr.left - ar.left) < 2"
+        "                                  && Math.abs(pr.width - ar.width) < 2) : null }; }")
+    check("switching moves the pill onto the other, wider label",
+          _seg2["label"] == "Transparent" and _seg2["pillOnBtn"] is True
+          and _seg2["active"] > _seg["active"],
+          f"{_seg2['label']} {round(_seg2['active'])}px vs {round(_seg['active'])}px, "
+          f"pill on button: {_seg2['pillOnBtn']}")
+    pg.locator(".gif-seg-btn[data-gif-bg='color']").click()
+    pg.wait_for_timeout(500)
+    with pg.expect_download(timeout=90000) as d1:
+        pg.locator("#exportPng").click()
+    auto_png = d1.value.suggested_filename
+    check("an untitled export is not the old literal", auto_png != "skribl.png", auto_png)
+    check("...and it is a slug with a .png extension",
+          auto_png.endswith(".png") and " " not in auto_png
+          and auto_png.lower() == auto_png,
+          auto_png)
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(500)
+
+    # TYPED: the name the author gives is the name of the file.
+    open_sheet()
+    pg.fill("#exportName", "Lighthouse at dusk")
+    with pg.expect_download(timeout=90000) as d2:
+        pg.locator("#exportPng").click()
+    named = d2.value.suggested_filename
+    check("the typed name becomes the filename, slugged",
+          named == "lighthouse-at-dusk.png", named)
+    pg.keyboard.press("Escape")
+    pg.wait_for_timeout(500)
+
+    # AND IT SURVIVES A REOPEN. seedExport() must not overwrite a name the
+    # author chose for this export; that is what the dirty flag is for.
+    open_sheet()
+    check("reopening the sheet does not overwrite the typed name",
+          pg.input_value("#exportName") == "Lighthouse at dusk",
+          pg.input_value("#exportName"))
+    with pg.expect_download(timeout=180000) as d3:
+        pg.locator("#exportGif").click()
+    gif = d3.value.suggested_filename
+    check("every format takes the same name, differing only in extension",
+          gif == "lighthouse-at-dusk.gif", gif)
+    check("no page errors from the naming path", not nerrs, "; ".join(nerrs[:2]))
+    b3.close()
 
 summarise_and_exit()

@@ -481,6 +481,11 @@
   <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>
+  <!-- Editors only, same reason: the share card is composited at POST time.
+       lib/sharecard.js owns where the drawing lands inside it, because the
+       in-post player crops the brand strip back off and the two must agree. -->
+  <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/postedcard.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/constrain.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/strokelayers.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/framebitmap.js') }}" defer></script>
@@ -505,6 +510,11 @@
   <script src="{{ skribl_asset('lib/palette.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pillfit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+  {# lib/audiosession.js: iOS silences Web Audio when the ringer switch is off
+     but not an <audio> element, so a Skribl's music is inaudible on a phone set
+     to silent. Holds a playback session, claimed only on a gesture that asks
+     for sound. #}
+  <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>

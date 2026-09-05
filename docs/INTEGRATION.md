@@ -48,20 +48,277 @@ That is the whole integration. You now have:
     GET  /skribl/api/skribls              feed listing (metadata only)
     GET  /skribl/api/skribls/<id>         one Skribl, with payload
     GET  /skribl/media/<key>              stored media, authorised per post
-    GET  /skribl/library                  CONCEPT PREVIEW — see the warning below
+    GET  /skribl/feed                     PREVIEW of the in-post player — below
+    GET  /skribl/library                  the profile's Skribls tab — below
 
-**`/library` is registered by the blueprint and is NOT part of the sealed
-feature set.** Mounting Skribl gives your host that route whether you want it or
-not. It renders a per-user library with an inline player, and its tiles are
-self-contained demo drawings rather than anything from `GET /api/skribls` — it
-exists so the player can be iterated on against something that looks real. This
-route was in no document at all until v273, which is how a host would first have
-met it in their own URL space. If you do not want it, do not route to it: it
-takes no arguments, reads no request state and reaches no database, so leaving
-it unlinked is enough.
+**`/library` is registered by the blueprint whether you want it or not**, like
+`/feed`. It is the profile's Skribls tab: your listing, with a full transport —
+play, restart, scrub, loop, mute, copy link — around one stage, and a grid of
+share cards beside it. The stage is the same in-post player driven through its
+exposed handle, so the profile cannot disagree with the feed or with `/s/<id>`
+about how a drawing replays, and it fetches ONE payload at a time.
+
+It reads `GET /api/skribls` and nothing else, so it shows whatever this
+deployment has, under the same visibility rules every other reader gets. It
+takes no arguments and reaches no database of its own, so leaving it unlinked is
+enough if you do not want it. Until recently it drew its own invented tiles;
+`harness/verify_library.py` is what replaced the warning that used to be here.
+
+**It shows the listing, not "your" listing.** `GET /api/skribls?user_id=<id>`
+is the per-author filter, and Skribl has no identity of its own to fill it in
+with — `create_blueprint(current_user_id=...)` is where yours arrives. A real
+profile tab passes the author being viewed; this page passes nothing, and so
+shows the public listing.
 
 `url_for("skribl.skribl_player", public_id=...)` builds links. Skribl builds its
 own share URLs the same way, so they are correct under any prefix.
+
+## Putting a Skribl inside your own posts
+
+`/s/<id>` is a PAGE — the app shell, the full transport, ~150 KB of JavaScript.
+That is right for a shared link and wrong for a feed of twenty posts. The
+in-post player is the other shape:
+
+```jinja
+{% from 'skribl/_skribl_inline_player.html'
+     import skribl_inline_assets, skribl_inline %}
+
+{{ skribl_inline_assets() }}          {# once per page, in <head> #}
+...
+{{ skribl_inline(post.skribl_id) }}   {# once per post #}
+```
+
+`GET /skribl/feed` is that, live, over your own `GET /api/skribls`. It is a
+demonstration, not a dependency: the two macros above are the product and they
+work without it.
+
+**What it costs and when.** `skribl_inline_assets()` pulls five files —
+`inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
+`lib/canvassizes.js`, `lib/holdtiming.js` and `lib/sharecard.js` — under 26 KB
+served, ratcheted by `harness/verify_inline.py`. Per post, idle, it costs ONE
+image: the share card at `/s/<id>/card.png`, about 20 KB, which your CDN can
+cache. `GET /api/skribls/<id>` is
+issued on the first tap and never again for that post. Do not prefetch it: that
+endpoint returns the whole payload, base64 audio included.
+
+**What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
+with a progress hairline along the bottom edge and a nib at the pen. Two
+controls, and only two — no scrub, no speed, no frame-step; those live on
+`/s/<id>`:
+
+- **Mute**, off by default and **page-wide**: sound is environmental, so
+  unmuting one post unmutes the feed for that session (`sessionStorage`).
+- **Loop**, on by default and **per post**: repeating is a property of the
+  drawing in front of you, not a statement about the next one. Turning it off
+  leaves the drawing on its last frame — and stops the music with it, in the
+  same call, so a finished drawing can never be left with a loop playing under
+  it.
+
+One Skribl plays at a time, page-wide. Scrolling a playing post out of view
+settles it. A post whose payload will not load says so rather than sitting dead.
+
+**Three things to know before you wire it up.**
+
+*Your composer decides visibility, and the default is not public.* `POST
+/api/skribls` defaults to `"visibility": "unlisted"` — reachable by link, listed
+nowhere — because that is what a link-sharing product should default to. Skribl's
+own Pad composer has no visibility control, so nothing posted from it ever
+appears in `GET /api/skribls`. If your feed is meant to list posts, your composer
+sends `"visibility": "public"`.
+
+*The macros need one name in your Jinja environment.* `init_skribl()` adds
+`skribl_asset` as an app-wide template global — the only name Skribl puts in your
+environment — because the macros render on YOUR view, where Skribl's blueprint
+context processor does not run. It is added, never overwritten: if you already
+define `skribl_asset`, yours survives and the macros will not build. If you
+registered the blueprint under a name other than `skribl`, pass it:
+`{{ skribl_inline(id, bp='drawings') }}`.
+
+*The poster is the share card, cropped, and the crop is imperfect.*
+`/s/<id>/card.png` is a 1200x630 Open Graph card — the drawing inside a bordered
+box under a "Skribl Pad" wordmark — because that is what it was built for, and it
+is the only per-post image the server has. Shown whole it reads as an advert
+twenty times down a feed, so the idle post crops it back to the drawing. The
+vertical crop is exact; the horizontal one is a 16:9 window, which is the widest
+canvas a drawing can have, so it can only ever remove the card's ground and never
+the picture. A narrower drawing therefore still shows some of the card's frame
+either side. A tight per-post crop needs the canvas size where the listing can
+reach it — a real column on the post, not a field inside `payload_json`, which
+`GET /api/skribls` defers on purpose. That is a schema change and it has not been
+made.
+
+## Drawing one from your own composer
+
+Your composer has a row of attachment buttons — photo, video, GIF, poll. One of
+them is a Skribl. Pressing it opens the Pad over your feed; the author draws;
+"Add to post" puts the drawing on the draft; pressing the button again reopens
+the editor with it; your Post button publishes the lot.
+
+**The rule: compose mode publishes nothing.** It hands your composer the
+PAYLOAD, not an id. This is not a preference — the alternative is broken twice:
+`POST /api/skribls` is create-only, so "publish on Add, republish on edit" makes
+every edit orphan the previous skribl and spend another slot of the author's
+posting quota; and an abandoned draft would leave a published, shareable skribl
+behind that you have no way to withdraw. Hold the payload, exactly as you hold
+an image attachment, and post once.
+
+**The editor.** `GET /skribl-pad?compose=1`, in an iframe. An iframe even
+though it is your own origin: the Pad is a whole application with its own
+stylesheet and thirty-odd scripts, and putting that inline in your feed has the
+two fight over every generic class name. Set the `src` when the button is
+pressed, not in your markup — otherwise every visitor downloads a drawing tool
+they never opened.
+
+**You do not have to write the lifecycle.** `lib/composehost.js` is it —
+load it on your composer page and wire your own buttons to the handle:
+
+```html
+<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
+```
+
+```js
+var pad = SkriblComposeHost.create({
+  frame: document.getElementById('padFrame'),
+  src:   document.body.getAttribute('data-skribl-compose'),   // from url_for
+  onOpen:  function () { overlay.hidden = false; },
+  onClose: function () { overlay.hidden = true; },
+  onDone:  function (payload) { draft = payload; showAttachment(payload); }
+});
+padButton.addEventListener('click', pad.open);
+removeButton.addEventListener('click', function () { draft = null; pad.clear(); });
+```
+
+It owns four things that are the same in every host and easy to get subtly
+wrong: the editor's `src` is set on first open and never in your markup (or
+every feed view downloads a drawing tool nobody opened); re-opening an
+already-loaded editor pushes the draft's payload in, so the editor shows what
+the DRAFT holds rather than whatever it kept from last time; `clear()` resets
+the frame, so removing a Skribl does not leave the next pad press reopening it;
+and the origin is checked inbound and targeted outbound, never `'*'`.
+
+It does NOT post. Posting is yours — you write your own row and store the id on
+it, or you skip the browser entirely and call `create_post()` server-side (see
+below). A module that posted for you would have to guess which.
+
+Use `pad.setPayload(existing)` before the first open to re-edit the Skribl on a
+post that is already saved.
+
+**The handshake** underneath it, four messages, all `postMessage` — you need
+this only if you are not using the module:
+
+    editor -> host   skribl:compose:ready    up; send a payload if re-editing
+    host   -> editor skribl:compose:load     {payload} put this back on canvas
+    editor -> host   skribl:compose:done     {payload, preview, hasAudio}
+    editor -> host   skribl:compose:cancel   closed without attaching
+
+Target your own origin, never `'*'`, and check `e.origin` on the way in — a
+wildcard hands the author's drawing to whatever page is framing the editor. If
+you run Skribl on a different origin from your feed, set
+`window.SKRIBL_COMPOSE_ORIGIN` on the editor page to your feed's origin.
+
+**Showing the draft.** `{{ skribl_inline_draft('draft') }}` renders the box and
+`SkriblInline.attach(el, payload)` fills it — the real in-post player, on a
+drawing that is not posted yet. Use it rather than the `preview` PNG for the
+attachment itself: a composer that previews a thumbnail is previewing something
+other than what it will publish. The `preview` is there for a chip or a list row
+where a full player is too much.
+
+Pass the id to the macro rather than wrapping it in a div of your own — `attach`
+takes the player element itself. `skribl_inline_draft(id, controls=false)` drops
+the mute/loop cluster for a page that has its own transport.
+
+**Posting.** One `POST /api/skribls` with the payload, plus whatever your post
+needs: `title` (what `/s/<id>` unfurls with), `caption`, and
+`"visibility": "public"` — the API defaults to `unlisted`, and a feed's composer
+is exactly the caller that means otherwise. Store the returned `id` on your post
+row and render it with `{{ skribl_inline(post.skribl_id) }}`.
+
+`GET /feed` is all of the above, working, in about 150 lines of
+`skribl/static/feed.js` — that file is written to be read as the host-side
+recipe. `harness/verify_compose.py` drives it end to end and counts the POSTs.
+
+**What compose mode does NOT change:** the payload. `editor_post.js` has one
+`buildPostPayload()` and both endings call it, so a skribl your composer
+attaches is byte-for-byte what the Pad would have posted — same serialisation,
+same share-card thumbnail, same mono audio bake.
+
+**What it does not render.** The wet/dry stroke compositor. A stroke authored
+below 100% opacity beads at its overlaps here where it does not on `/s/<id>`.
+Everything else — Pad replays, Flip documents with their per-page holds, the
+background colour, a photo or base-snapshot underlay, the posted audio loop —
+plays. The header of `skribl/static/inlineplayer.js` says why the gap is there
+and what it would take to close it.
+
+## When your composer is a form, not a browser
+
+Everything above assumes the browser posts the Skribl. If your composer is a
+server-side **form** — the author types a caption, attaches things, and their
+browser sends one `POST /compose` to your own view — then having your server
+turn round and POST to its own JSON endpoint is the wrong shape. It costs a
+second request, a second authentication and a second CSRF exchange, and, the
+part that actually breaks, a **separate transaction**: a failure between the two
+leaves you a Skribl nothing points at, or a post pointing at a Skribl that was
+never stored.
+
+Call the function instead. It is the same code the endpoint runs — the endpoint
+calls it too:
+
+```python
+from skribl import create_post, SkriblRejected
+
+@app.post("/compose")
+@login_required
+def compose():
+    body = request.form.get("body", "")
+    drawing = json.loads(request.form["skribl_payload"])   # the hidden field
+    drawing["visibility"] = "public"                       # default is unlisted
+    drawing["title"] = body[:80] or "Untitled Skribl"
+
+    try:
+        made = create_post(drawing, author_id=current_user.id)
+    except SkriblRejected as exc:
+        flash(exc.message)                 # the wording Skribl's own composer shows
+        return redirect(url_for("compose_form"))
+
+    db.session.add(Post(body=body, author_id=current_user.id,
+                        skribl_id=made.public_id))
+    db.session.commit()          # ONE commit. The Skribl and your row, together.
+    return redirect(url_for("feed"))
+```
+
+**One transaction is the whole point.** `create_post` flushes and uses
+savepoints; it never commits and never rolls back. Your `db.session.commit()`
+makes the Skribl and your post row durable together, and your rollback takes
+both. `harness/verify_createpost.py` asserts exactly that, in both directions.
+
+**What you get back.** `made.public_id` is the string for
+`{{ skribl_inline(post.skribl_id) }}`. `made.post` is the flushed `SkriblPost`,
+so `made.post.id` is available if you would rather hold a foreign key. There is
+no `url` on it: building one needs `url_for`, which outside a request needs a
+configured `SERVER_NAME`, and this function should not require either — call
+`url_for("skribl.skribl_player", public_id=made.public_id)` yourself when you
+want one, which is also the only spelling that stays right under a `url_prefix`.
+
+**What it raises.** `SkriblRejected` for anything the author can fix — bad
+shape, an over-long title, an unknown visibility, media past a cap. `.message`
+is the same string the JSON endpoint puts in its `error` field and is safe to
+show; `.status` is the code the endpoint would answer with. `SkriblUnavailable`
+means five id attempts collided and the caller should retry.
+`SkriblIdempotencyRace` only appears if you passed an `idempotency` pair.
+
+**THE RATE LIMITER IS NOT YOURS FOR FREE, and this is the one that will catch
+you out.** Skribl's IP limiter counts *requests to Skribl's endpoint*. A call to
+`create_post` is not one, so **nothing throttles this path but you**. It is not
+an oversight and it cannot be switched on: `_client_ip()` reads the Flask
+`request` and the reservation is settled in a Flask teardown, so the limiter
+cannot run in a management command or a worker at all. If your compose view is
+reachable by an authenticated user — it is — put your own limit on it, the same
+way you already limit posting text.
+
+**Anonymous authors.** `author_id` has no default. Pass `None` deliberately for
+an anonymous post; do not leave it out and hope. There is no resolver here
+because a function that guesses the author is how every visitor once became
+user 1 and could read user 1's private posts.
 
 ## Three things that will bite you if you skip them
 

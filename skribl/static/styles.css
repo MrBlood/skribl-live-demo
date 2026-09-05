@@ -218,7 +218,18 @@
   --danger-fill: #b3283f;
   --warn: #ffd23f;
   --warn-2: #ff9f43;
-  --good: #1bcf8f;
+  /* Lifted from #1bcf8f (H159 S77% L46%) to H159 S80% L55%. The old one was
+     not short of CONTRAST — 9.6:1 on the base ground — it was short of VIVIDNESS,
+     and it is spent almost entirely on 6-7px dots: the toolbar's music and image
+     tab-dots, the autosave dot, the post sheet's sound marker. At that size hue
+     reads weakly and lightness carries the signal, so a mid-lightness green
+     reads as grey-green at a glance. Owner's call: "a little too dull".
+     Not raised further: past ~L60 it goes mint and stops reading as "ready". */
+  --good: #30e8a7;
+  /* The same colour as components, for the glows and tints that used to hardcode
+     rgba(27, 207, 143, …) — three of them, which would have silently kept the
+     old hue the moment the token above moved. */
+  --good-rgb: 48, 232, 167;
   --accent-tint: #d6ccff;
   --accent-tint-2: #d5cfff;
 
@@ -1169,7 +1180,7 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   height: 7px;
   border-radius: 50%;
   background: var(--good);
-  box-shadow: 0 0 3px rgba(27, 207, 143, 0.35);
+  box-shadow: 0 0 3px rgba(var(--good-rgb), 0.35);
   flex-shrink: 0;
 }
 
@@ -1298,7 +1309,8 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
    v205. The tray went in 31ed04f; a #171a22 ring against a #06070a row was a
    faint light halo around every dot. Its job is to separate the dot from the
    glyph stroke it now overlaps, so it has to be the colour BEHIND both. */
-.tool-open .tab-dot {
+.tool-open .tab-dot,
+.post-sound .tab-dot {
   position: absolute;
   /* HALF IN, HALF OUT. The dot's centre sits on the icon box's top-right corner
      (+12.5, -12.5 from the icon's centre), so it straddles the edge the way it
@@ -2029,9 +2041,9 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .music-dropzone.loaded {
   height: auto;
   border-style: solid;
-  border-color: rgba(27, 207, 143, 0.4);
+  border-color: rgba(var(--good-rgb), 0.4);
   border-radius: 12px;
-  background: rgba(27, 207, 143, 0.08);
+  background: rgba(var(--good-rgb), 0.08);
   color: var(--good);
   padding: 12px 16px;
   flex-direction: row;
@@ -3318,12 +3330,118 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   font-weight: 700;
   color: var(--text-primary);
   padding: 6px 14px 2px;
+  /* A row, so the sound marker sits on the title's baseline instead of being an
+     inline-block that drags the line height around. */
+  display: flex;
+  align-items: center;
+}
+
+/* THE POST SHEET'S SOUND MARKER. The toolbar's music mark, repeated on the
+   sheet so the author sees the state of their loop at the moment they post —
+   green when a track is loaded, amber when one is remembered and its file is
+   gone. Hidden entirely when there is no music, so a silent Skribl leaves the
+   sheet exactly as it was.
+
+   NOT A BUTTON. On the toolbar this glyph opens the music drawer; here there is
+   nothing to open. No hover, no active, no pointer — an affordance with nothing
+   behind it is worse than no affordance.
+
+   --icon-size is what positions the dot: the rule that places it is SHARED with
+   .tool-open (see the note there, which is where the 0.4 comes from) rather
+   than restated at a size that happens to look right here. 17px, not 24, because
+   this sits on a 15px header line and not in a 44px button. */
+.post-sound {
+  --icon-size: 17px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.post-sound[hidden] { display: none; }
+
+.post-sound svg {
+  width: 17px;
+  height: 17px;
+  color: var(--text-tool-lit);
+}
+
+/* The dot's ring is the colour BEHIND it, so it reads as a gap rather than an
+   outline. On the toolbar that is --surface-deep; here the ground is the sheet. */
+.post-sound .tab-dot { border-color: var(--surface-sheet); }
+
+/* Visually hidden, still read aloud: the marker is the only thing on this sheet
+   saying the post carries sound, and it is otherwise pure glyph. */
+.post-sound-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .export-sub {
   font-size: 12px;
   color: var(--text-muted);
   padding: 0 14px 10px;
+}
+
+/* IN styles.css, NOT flip.css, because BOTH editors render it. It was defined
+   only in flip.css, which Pad does not load — so Pad's "Background" label in the
+   shared GIF toggle has been falling back to browser defaults, rendering at body
+   size against 12px everywhere else. verify_exportui's sweep could not see it:
+   that gate concatenates styles.css AND flip.css, so a class styled for one
+   surface passes as if it were styled for both. The sweep is split by surface
+   now. Found by adding the file-name field, whose label used the same class. */
+.export-optlbl { font-size: 12px; color: var(--text-secondary); }
+
+/* THE EXPORT SHEET'S FILE-NAME FIELD. Sits between "Choose a format" and the
+   formats themselves, because it applies to all of them. */
+.export-nameblock {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 2px 14px 10px;
+}
+
+.export-namerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-nameinput {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-control);
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.export-nameinput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.export-nameinput::placeholder { color: var(--text-muted); }
+
+/* The extension is decided by the format button, not typed — so it is shown as
+   a hint beside the field rather than left for the author to guess at or, worse,
+   type themselves and get "drawing.gif.gif". */
+.export-nameext {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 .export-opt {
@@ -3386,14 +3504,35 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 
 /* GIF background toggle (segmented) — uses the shared sliding-pill highlight
    (.seg-slider via attachSegSlider), same as the smoothing/focus/magnifier
-   controls. Full width so both labels fit. */
-.export-gif-toggle { width: 100%; padding: 2px 14px 10px; }
+   controls.
+
+   AN INLINE ROW, SIZED TO ITS CONTENT. It was `width: 100%`, commented "Full
+   width so both labels fit" — and that reason did not survive being measured:
+   "Solid" and "Transparent" at 12px/600 need about 200px, and there is ~330px
+   inside the card on a 390px phone. What full width actually bought was a
+   160px violet pill, 41% of a phone screen and the brightest thing on the
+   sheet — louder than the three buttons that do the exporting, for a setting
+   belonging to one of them.
+
+   Inline it reads as GIF → background → solid rather than as a question the
+   sheet is asking. It wraps to two lines below ~340px of card, which is the
+   stacked layout it used to have, so nothing is lost where it is tight. */
+.export-gif-toggle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 2px 14px 10px;
+}
 .export-gif-toggle[hidden] { display: none; }
 .gif-seg {
   position: relative;
   overflow: hidden;
   display: flex;
-  width: 100%;
+  /* auto, not 100%: the buttons size to their labels and the row's margin-left
+     pushes the control to the trailing edge. */
+  width: auto;
+  margin-left: auto;
   gap: 2px;
   padding: 3px;
   background: var(--surface-control);
@@ -3403,8 +3542,10 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .gif-seg-btn {
   position: relative;
   z-index: 1;
-  flex: 1 1 0;
-  min-width: 0;
+  /* Was `flex: 1 1 0`, which split the full-width track evenly between two
+     labels of very different lengths. Content width now; the sliding pill
+     measures offsetWidth/offsetLeft so it follows without any change. */
+  flex: 0 0 auto;
   text-align: center;
   white-space: nowrap;
   border: none;
@@ -3412,7 +3553,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  padding: 6px 8px;
+  padding: 6px 14px;
   border-radius: 999px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -6462,7 +6603,11 @@ body.playing .flip-grid { display: none; }
   --danger-soft-3: #b81447;
   --warn:          #8a5b00;
   --warn-2:        #96560a;
+  /* NOT lifted with the dark theme's. This one sits on white, where brighter
+     means less readable — the dark theme's problem was a dim dot on near-black
+     and does not exist here. */
   --good:          #0a7350;
+  --good-rgb:      10, 115, 80;
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
 

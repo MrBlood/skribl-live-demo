@@ -18,6 +18,11 @@ results = []
 def check(name, ok, detail=""):
     results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
 
+def _rgb(h):
+    """'#30e8a7' -> 'rgb(48, 232, 167)', the form getComputedStyle returns."""
+    h = h.lstrip("#")
+    return "rgb(%d, %d, %d)" % tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
 COLOURS = """(which) => {
     const dot = document.getElementById(which + 'TabDot');
     const card = document.getElementById(which === 'photo' ? 'photoPending' : 'musicPending');
@@ -51,7 +56,14 @@ with sync_playwright() as p:
     scribble(pg, box, 0.0); pg.wait_for_timeout(1200)
     pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(5000)
     c = pg.evaluate(COLOURS, "music")
-    check("music dot GREEN while the file is loaded", c["dotBg"] == "rgb(27, 207, 143)" and not c["dotPending"], c["dotBg"])
+    # Compared against the --good token rather than a typed literal: the colour
+    # was lifted once (too dull at 6px) and a hand-typed hex here would have
+    # failed for the right reason and the wrong cause.
+    _good = pg.evaluate("() => getComputedStyle(document.documentElement)"
+                        ".getPropertyValue('--good').trim()")
+    check("music dot GREEN while the file is loaded",
+          c["dotBg"] == _rgb(_good) and not c["dotPending"],
+          f"{c['dotBg']} vs --good {_good}")
 
     # CONTRACT CHANGE (v222): with a working IndexedDB the quota spill brings
     # the media BACK on reload, so the dot is honestly green and there is no

@@ -12,7 +12,6 @@ route by literal path any more — see the context processor in __init__.py.
 import base64
 import binascii
 import os
-import secrets
 from datetime import datetime
 
 from flask import (abort, current_app, g, jsonify, redirect, render_template,
@@ -20,23 +19,19 @@ from flask import (abort, current_app, g, jsonify, redirect, render_template,
 import hashlib
 
 import sqlalchemy as sa
-from sqlalchemy.exc import IntegrityError
 
-from .core import (MAX_CAPTION_CHARS, MAX_CARD_BYTES, MAX_TITLE_CHARS,
+from .core import (MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
-                     SkriblPendingMedia,
-                     _visibility_policy, as_utc, session, visibility_values,
+                     _visibility_policy, as_utc, session,
                      feed_filter, author_dict)
-from .storage import (KEY_RE, LocalDiskStore, claim_media, externalise_payload,
-                      pending_media_ready)
-from .core import MEDIA_CLAIM_TTL
+from .storage import KEY_RE, LocalDiskStore
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
-from .validation import (_decode_data_url_image, _iter_media_items,
-                         _payload_has_audio,
-                         _validate_payload_complexity, _validate_payload_media)
+from .validation import _decode_data_url_image
+from .creation import (SkriblIdempotencyRace, SkriblRejected, SkriblUnavailable,
+                       create_post)
 
 
 # --- feed cursors -----------------------------------------------------------
@@ -193,7 +188,19 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/skribl-pad")
     def skribl_editor():
-        return render_template("skribl/skribl_editor.html")
+        # COMPOSE MODE. ?compose=1 is the Pad opened from a host's post
+        # composer — an overlay over their feed, not a page somebody navigated
+        # to. It ends in "Add to post", which hands the finished drawing back to
+        # the composer and PUBLISHES NOTHING: the host holds the payload on
+        # their draft, so re-opening to change it is free and abandoning the
+        # draft leaves nothing behind. The single POST happens when the host
+        # posts, once. See skribl/static/editor_compose.js.
+        #
+        # A query flag rather than a separate route: it is the same editor, with
+        # the same drawing surface and the same post-time payload work, ending
+        # differently. A second route would be a second page to keep in step.
+        return render_template("skribl/skribl_editor.html",
+                               compose=request.args.get("compose") == "1")
 
     @bp.get("/flip")
     def skribl_flip():
@@ -208,6 +215,23 @@ def register_routes(bp, *, index_route=False):
         # player iterated on; the tiles are self-contained demo drawings, not yet
         # backed by GET /api/skribls. Not part of the sealed feature set.
         return render_template("skribl/skribl_library.html")
+
+    @bp.get("/feed")
+    def skribl_feed():
+        # PREVIEW ROUTE for the in-post player — the smallest honest host. It
+        # renders no posts of its own: the page fetches GET /api/skribls and
+        # clones the skribl_inline() macro for each item, so what it shows is
+        # whatever this deployment actually has, under the same visibility rules
+        # every other reader gets. That is the difference between this and
+        # /library above, which draws demo tiles nobody posted.
+        #
+        # Registered so the component can be seen and driven live
+        # (harness/verify_inline.py drives this page). A host does not need this
+        # route to embed the player — the two macros in
+        # templates/skribl/_skribl_inline_player.html are the product; this is
+        # the demonstration of them. Reads no request state and touches no
+        # database, so leaving it unlinked is enough if you do not want it.
+        return render_template("skribl/skribl_feed.html")
 
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
@@ -386,8 +410,9 @@ def register_routes(bp, *, index_route=False):
         # costs no second quota slot. Scoped per author (see
         # SkriblIdempotency); opt-in, so clients without the header behave
         # exactly as before.
+        author_id = bp.skribl_current_user_id()
         idem_hash = _idempotency_hash(request.headers.get("Idempotency-Key"),
-                                      bp.skribl_current_user_id())
+                                      author_id)
         idem_fp = None
         if idem_hash is not None:
             # The fingerprint binds the key to THIS body (v201 review, F4):
@@ -402,86 +427,6 @@ def register_routes(bp, *, index_route=False):
 
         payload = request.get_json(silent=True)
 
-        # Permissive shape validation: the frontend contract is a JSON object
-        # (see serializeSkribl). Reject only gross type violations so version
-        # bumps and unknown keys keep working; the request body size is already
-        # capped by MAX_CONTENT_LENGTH.
-        if not isinstance(payload, dict):
-            return jsonify({"error": "Body must be a JSON object."}), 400
-        for key in ("strokes", "strokeGroups"):
-            if key in payload and not isinstance(payload[key], list):
-                return jsonify({"error": f"'{key}' must be a list."}), 400
-        for key in ("photo", "music", "background", "canvasSize"):
-            if key in payload and payload[key] is not None and not isinstance(payload[key], dict):
-                return jsonify({"error": f"'{key}' must be an object or null."}), 400
-        if payload.get("baseSnapshot") is not None and not isinstance(payload.get("baseSnapshot"), str):
-            return jsonify({"error": "'baseSnapshot' must be a string or null."}), 400
-        # Review #1: these went straight to .strip() below, so {"title": 123}
-        # raised AttributeError and returned 500 instead of a 400.
-        for key in ("title", "caption"):
-            value = payload.get(key)
-            if value is not None and not isinstance(value, str):
-                return jsonify({"error": f"'{key}' must be a string or null."}), 400
-        # Review #2/#8: structure is capped BEFORE the media walk, so the walk can
-        # safely visit every frame without an arbitrary cutoff.
-        complexity_error = _validate_payload_complexity(payload)
-        if complexity_error:
-            return jsonify({"error": complexity_error}), 400
-        # Media: type + per-item size caps. See _validate_payload_media. This is
-        # the only place a data URL is vetted before it lands in the JSON column.
-        media_error = _validate_payload_media(payload)
-        if media_error:
-            return jsonify({"error": media_error}), 400
-        # Frame-format Skribls carry the drawing under frames[] (a classic Skribl
-        # is a 1-frame Skribl). Only a gross type check — keep unknown keys working.
-        if "frames" in payload and not isinstance(payload["frames"], list):
-            return jsonify({"error": "'frames' must be a list."}), 400
-
-        # Visibility. Defaults to "unlisted", NOT "public": that is exactly what a
-        # v131 post already was — reachable by its share link, listed nowhere —
-        # so existing clients that never send this field keep their current
-        # behaviour instead of silently becoming feed content.
-        visibility = payload.get("visibility", "unlisted")
-        # models.visibility_values() = Skribl's three plus anything the host
-        # registered with set_visibility_values(). The model has no DB CHECK
-        # constraint precisely so a host can add "draft" or "moderated" without
-        # a migration, and the docs said so, while THIS line rejected every one
-        # of them — so the documented extensibility only worked for rows the
-        # host inserted behind Skribl's back (outside review #7).
-        if visibility not in visibility_values():
-            return jsonify({"error": "Unknown visibility."}), 400
-        author_id = bp.skribl_current_user_id()
-        # "private" means "the author only", so it is meaningless without an
-        # author. Allowing it anonymously creates a post nobody can ever read —
-        # including the person who just made it, since visible_to(None) denies a
-        # post whose user_id is None. Refuse instead of silently making a
-        # write-only Skribl.
-        if visibility == "private" and author_id is None:
-            return jsonify({
-                "error": "A private Skribl needs a signed-in author."
-            }), 400
-
-        # REJECT, don't truncate (outside review, low severity). [:80] returned
-        # 201 for an over-length title and stored half a sentence, so the caller
-        # was told it succeeded and the user lost text with nothing to see. Every
-        # other over-limit field on this endpoint answers 400 with the limit in
-        # the message; these two now do the same. Both editors cap input at
-        # exactly these numbers, so nothing the client can produce hits this.
-        title = (payload.get("title") or "Untitled Skribl").strip()
-        caption = (payload.get("caption") or "").strip()
-        for _field, _value, _cap in (("title", title, MAX_TITLE_CHARS),
-                                     ("caption", caption, MAX_CAPTION_CHARS)):
-            if len(_value) > _cap:
-                return jsonify({
-                    "error": f"'{_field}' is too long ({len(_value)} characters; "
-                             f"limit {_cap})."
-                }), 400
-        # True only when there are actual audio bytes, whether stored top-level
-        # (legacy) or inside a frame (frame-format). See _payload_has_audio.
-        has_audio = _payload_has_audio(payload)
-
-        # Retry on the rare public_id collision instead of 500-ing.
-        public_id = None
         # Reserve a post slot atomically, right before the only database write.
         # Released below if no row is produced, so a failed insert doesn't burn
         # quota. This makes the single-process limiter internally correct; it is
@@ -497,140 +442,57 @@ def register_routes(bp, *, index_route=False):
                           "still here — try again in a little while.")
             }), 429
 
+        # EVERYTHING THE PAYLOAD ITSELF DECIDES IS create_post's, not this
+        # route's — validation, visibility, title, media externalisation, the
+        # insert and its savepoints. This route contributes only what is HTTP:
+        # the two rate budgets, CSRF, the Idempotency-Key header, and JSON. See
+        # skribl/creation.py's header for why the split runs exactly there.
+        #
         # try/finally, not a single release on the id-exhaustion path: ANY other
-        # exception from commit() (operational error, lost connection, disk full)
-        # used to return 500 with the slot still held for the full window.
+        # exception (operational error, lost connection, disk full) used to
+        # return 500 with the slot still held for the full window.
         # (Review round 3, #1)
         created = False
-
         try:
-            # Externalise media AFTER validation and INSIDE the try. Validation
-            # decodes, signature-checks and size-caps every data URL first, so
-            # nothing unproven is ever written to the store. And it sits inside
-            # the try/finally because it was previously outside it: an exception
-            # from externalise_payload (disk full, permissions) escaped with the
-            # rate-limit slot still held for the whole window.
-            stored_payload, media_keys = externalise_payload(
-                payload, bp.skribl_media_store, _iter_media_items)
-
-            # Reserve the objects we just wrote BEFORE the association commits
-            # (H3). The claim is committed on its own connection, so the orphan
-            # sweeper sees it immediately and spares these objects during the
-            # window between the bytes landing and this request's transaction
-            # committing. Best-effort — a claim that cannot be written degrades
-            # to the pre-v266 age re-check and never fails the post.
-            if media_keys:
-                try:
-                    claim_media(session().get_bind(), media_keys, MEDIA_CLAIM_TTL)
-                except Exception:
-                    pass
-
-            for _attempt in range(5):
-                candidate = secrets.token_urlsafe(8)
-                try:
-                    # A SAVEPOINT per attempt, not a commit: the request's
-                    # transaction belongs to the HOST (docs/INTEGRATION.md). A
-                    # public_id collision surfaces at flush — the UNIQUE
-                    # violation does not wait for commit — and rolling back to
-                    # the savepoint discards only this attempt's rows, never
-                    # whatever the host has pending on the same session.
-                    with session().begin_nested():
-                        post = SkriblPost(
-                            public_id=candidate,
-                            # The host injects its own resolver via
-                            # create_blueprint(current_user_id=...). The default
-                            # is ANONYMOUS (None) — not 1, which would have made
-                            # every visitor the owner of user 1's private posts.
-                            user_id=author_id,
-                            title=title,
-                            caption=caption,
-                            payload_json=stored_payload,
-                            has_audio=has_audio,
-                            visibility=visibility,
-                        )
-                        session().add(post)
-                        # Flush to get the post id, then record one association
-                        # row per stored object — under the SAME savepoint, so a
-                        # failed attempt leaves neither behind. An orphan
-                        # association would authorise an object on behalf of a
-                        # post that does not exist.
-                        session().flush()
-                        for _key in media_keys:
-                            session().add(SkriblPostMedia(post_id=post.id,
-                                                          media_key=_key))
-                        # The pending-media claim has done its job the moment the
-                        # association is in this transaction: from here the
-                        # association is what protects the object, so drop the
-                        # claim IN THE SAME SAVEPOINT. On commit the claim is
-                        # gone and does not linger to protect the object after
-                        # the post is later deleted; on rollback the delete
-                        # reverts with everything else and the claim survives as
-                        # the crashed-poster backstop until its TTL. (v266.)
-                        # Gate on the table existing. Where the v203 migration
-                        # has NOT been applied (e.g. a production database still
-                        # to be migrated) skribl_pending_media is absent, no
-                        # claim was ever written, and there is nothing to clear —
-                        # but the DELETE runs on the HOST session, so on
-                        # PostgreSQL a missing-table error here aborts the whole
-                        # transaction and the post's later statements (and the
-                        # rate-limiter insert) 500 with PendingRollbackError.
-                        # The gate makes it a clean no-op until the table exists.
-                        if media_keys and pending_media_ready(session().get_bind()):
-                            session().query(SkriblPendingMedia).filter(
-                                SkriblPendingMedia.media_key.in_(media_keys)
-                            ).delete(synchronize_session=False)
-                        if idem_hash is not None:
-                            # Same savepoint, same (host-owned) transaction as
-                            # the post: durable together or not at all, which
-                            # is the property a retry needs.
-                            session().add(SkriblIdempotency(
-                                key_hash=idem_hash, post_id=post.id,
-                                request_fingerprint=idem_fp))
-                        session().flush()
-                except IntegrityError as ie:
-                    # RETRY BOUNDARY (outside review follow-up). Retrying is
-                    # only correct for the ONE violation a fresh public_id can
-                    # cure. This handler used to retry on ANY IntegrityError —
-                    # which is how the media-key dedup bug (see
-                    # externalise_payload) burned five attempts on a
-                    # constraint no new id could satisfy and surfaced as
-                    # "Could not allocate a unique id": five wasted inserts
-                    # and a diagnosis pointing at the wrong table.
-                    diag = str(getattr(ie, "orig", ie))
-                    if idem_hash is not None and "key_hash" in diag:
-                        # The idempotency index refused the KEY: a concurrent
-                        # duplicate won. Resolve to the winner — same
-                        # fingerprint rule as the fast path, so a concurrent
-                        # DIFFERENT body under the same key gets the 409, not
-                        # the other request's post.
-                        prior = _idempotent_replay(idem_hash, idem_fp)
-                        if prior is not None:
-                            return prior
-                    if "public_id" not in diag:
-                        # Some other constraint. A new candidate cannot fix
-                        # it; let the generic handler report THIS error.
-                        raise
-                    continue
-                public_id = candidate
-                created = True
-                # ALL post-slot bookkeeping happens in TEARDOWN, after the
-                # host's transaction has closed (see _finish_parked_reservation
-                # for the full why): the rows here are FLUSHED, not committed,
-                # and on SQLite the host's open write transaction and the
-                # limiter's own session cannot both hold the write lock — a
-                # promote or release issued now deadlocks the very request it
-                # accounts for. So the reservation is parked with its outcome,
-                # and teardown promotes on success or releases on failure.
-                g._skribl_post_reservation = (client_ip, post_token, True)
-                break
+            made = create_post(payload,
+                               author_id=author_id,
+                               media_store=bp.skribl_media_store,
+                               idempotency=((idem_hash, idem_fp)
+                                            if idem_hash is not None else None))
+        except SkriblIdempotencyRace:
+            # A concurrent request committed first under this key. Resolve to
+            # the winner — same fingerprint rule as the fast path, so a
+            # concurrent DIFFERENT body under the same key gets the 409, not
+            # the other request's post.
+            prior = _idempotent_replay(idem_hash, idem_fp)
+            if prior is not None:
+                return prior
+            return jsonify({"error": "A concurrent request is already using "
+                                     "this idempotency key."}), 409
+        except SkriblRejected as rejected:
+            return jsonify({"error": rejected.message}), rejected.status
+        except SkriblUnavailable as unavailable:
+            return jsonify({"error": unavailable.message}), unavailable.status
         except Exception:
             # No rollback here: the session and its transaction are the host's
-            # (see docs/INTEGRATION.md). The savepoints above have already
+            # (see docs/INTEGRATION.md). create_post's savepoints have already
             # unwound this route's own rows; deciding the fate of the outer
             # transaction — including whatever the host had pending before this
             # request — is the host's teardown's job, and app.py does exactly
             # that for the standalone deployment.
             raise
+        else:
+            created = True
+            public_id = made.public_id
+            # ALL post-slot bookkeeping happens in TEARDOWN, after the host's
+            # transaction has closed (see _finish_parked_reservation for the
+            # full why): the rows are FLUSHED, not committed, and on SQLite the
+            # host's open write transaction and the limiter's own session cannot
+            # both hold the write lock — a promote or release issued now
+            # deadlocks the very request it accounts for. So the reservation is
+            # parked with its outcome, and teardown promotes on success or
+            # releases on failure.
+            g._skribl_post_reservation = (client_ip, post_token, True)
         finally:
             if not created and post_token is not None:
                 # Parked for teardown, NOT released here: on the failure path
@@ -640,9 +502,6 @@ def register_routes(bp, *, index_route=False):
                 # runs after the host transaction ends, where the release is
                 # cheap and safe.
                 g._skribl_post_reservation = (client_ip, post_token, False)
-
-        if not created:
-            return jsonify({"error": "Could not allocate a unique id; please retry."}), 503
 
         return jsonify({
             "id": public_id,

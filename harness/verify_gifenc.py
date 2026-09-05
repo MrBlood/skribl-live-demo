@@ -192,8 +192,17 @@ with sync_playwright() as p:
     with flip.expect_download(timeout=60000) as dl:
         flip.click("#exportGif")
     got = dl.value
-    check("Flip download is named skribl-flip.gif", got.suggested_filename == "skribl-flip.gif",
-          got.suggested_filename)
+    # WAS: == "skribl-flip.gif". That literal is gone — every export is now named
+    # from the export sheet's file-name field, seeded from the drawing's title
+    # (lib/nametab.js). This assertion pinned the defect: two GIFs of two
+    # different animations both arrived as "skribl-flip.gif", and the suite
+    # called that correct. It now asserts the property that replaced it — a
+    # slug, and specifically NOT the old constant.
+    _fn = got.suggested_filename
+    check("the GIF is named from the sheet, not the old skribl-flip.gif constant",
+          _fn != "skribl-flip.gif" and _fn.endswith(".gif"), _fn)
+    check("...and the name is a filesystem-safe slug",
+          _fn == _fn.lower() and " " not in _fn and "/" not in _fn, _fn)
     raw = open(got.path(), "rb").read()
     g = parse_gif(raw)
     check("bytes are a valid GIF89a", raw[:6] == b"GIF89a", f"{len(raw)} bytes")

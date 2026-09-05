@@ -742,7 +742,17 @@ with sync_playwright() as sp:
     #
     # Headroom after this: 1,755 B. Tighter still, and the carve candidate below
     # is unchanged and now the obvious next move for whoever needs room.
-    BYTES_RATCHET, BYTES_TARGET = 151_845, 153_600
+    # 151,845 -> 153,000 for lib/audiosession.js (~1,293 B served). THE COST IS
+    # REAL AND THE HEADROOM IS NOW SMALL: 600 B to the target, down from 1,755.
+    # Spent because without it a shared link's music is SILENT on any iPhone
+    # with the ringer switch off — iOS routes Web Audio into a session that
+    # switch mutes and leaves <audio> alone. A player nobody can hear is worse
+    # than a player 1.2 KB larger, and the target is still met.
+    #
+    # The module was 1,650 B first, building its silent clip byte by byte; that
+    # read better and this ratchet is not the place to pay 360 B for legibility,
+    # so it carries a base64 constant instead.
+    BYTES_RATCHET, BYTES_TARGET = 153_000, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -755,7 +765,9 @@ with sync_playwright() as sp:
     # svg for the same reason the paths do (~140 B measured; a url(#) stroke
     # cannot reference styles an <img> would strip). Same discipline: just
     # above the new floor of 10,640.
-    HTML_RATCHET = 10_800
+    # 10,800 -> 10,900 for one <script> tag: lib/audiosession.js, without which
+    # this page is silent on a silent-mode iPhone. See the JS ratchet above.
+    HTML_RATCHET = 10_900
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",

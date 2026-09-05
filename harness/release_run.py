@@ -76,7 +76,31 @@ BATCHES = [
     # a batch with is a browser competing for the same CPU during a timing-
     # sensitive replay.
     ["verify_player_isolation.py"],
-    ["verify_player_photo.py"],
+    # THE IN-POST PLAYER'S FOUR SUITES, spread rather than stacked. Each of them
+    # records a real drawing in Pad and posts it — verify_inline authors three,
+    # one carrying an audio loop — and then drives a browser through a replay
+    # whose timing it asserts on. Sharing a batch means two browsers competing
+    # for the same CPU during exactly that measurement, which is the flake
+    # verify_hold and verify_player_isolation already have their own batches to
+    # avoid. verify_sharecard is the cheap one (two posts, then bytes off the
+    # card route) so it rides with the photo suite.
+    ["verify_inline.py"],
+    ["verify_compose.py"],
+    # Server-side creation. No browser, so it is fast and could ride with
+    # anything — but it drives the SAME endpoint the route suites drive, and
+    # the harness gives one database to every suite in an invocation, so it
+    # keeps its own batch rather than counting somebody else's posts.
+    ["verify_createpost.py"],
+    # The worked example, driven in a browser against its OWN server on its own
+    # port and its own database. It shares nothing with the harness instance,
+    # so it could batch with anything — but it is a browser suite recording a
+    # real drawing, which is the kind that wants a quiet CPU.
+    ["verify_example.py"],
+    # Audio measured on the graph through an analyser tap, so it wants the same
+    # quiet CPU verify_player_isolation and verify_hold get their own batch for.
+    ["verify_audiosession.py"],
+    ["verify_library.py"],
+    ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],
     ["verify_flipmotion.py"],
     # v263: the playback bitmap cache. Browser-heavy (it plays loops on both

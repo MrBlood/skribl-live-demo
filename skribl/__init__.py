@@ -35,13 +35,21 @@ import os
 from flask import Blueprint, url_for
 
 from .core import SKRIBL_VERSION
+from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
+                       SkriblUnavailable, create_post)
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_visibility_policy)
 from .routes import register_routes
 from .security import register_security
 
 __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
-           "SkriblBase", "create_all", "session"]
+           "SkriblBase", "create_all", "session",
+           # Server-side creation, for a host whose composer is a FORM rather
+           # than a browser calling POST /api/skribls. Same validation, same
+           # media handling, same transaction as the host's own rows. See
+           # skribl/creation.py's header, and docs/INTEGRATION.md.
+           "create_post", "CreatedPost", "SkriblRejected",
+           "SkriblIdempotencyRace", "SkriblUnavailable"]
 
 
 _ASSET_CACHE = {}
@@ -61,6 +69,16 @@ def asset_url(bp, filename):
     releases for the same reason: single-source it, derive it, stop trusting
     anyone to remember. Keyed on (mtime, size) so a rebuilt file re-hashes but a
     served request does not re-read the file every time.
+
+    THE ENDPOINT IS ABSOLUTE (`bp.name + ".static"`), NOT RELATIVE (".static").
+    It was relative until the in-post player landed, which was fine while every
+    caller was a template Skribl itself rendered — a leading dot resolves
+    against `request.blueprint`,
+    and that was always this one. The in-post player broke that assumption: its
+    macros render inside the HOST's templates, on the host's own views, where
+    `request.blueprint` is theirs or None and a dot raises BuildError. Naming the
+    blueprint outright resolves identically inside Skribl's own pages and also
+    works everywhere else, so this is strictly more general.
     """
     path = os.path.join(bp.static_folder, filename)
     try:
@@ -69,14 +87,14 @@ def asset_url(bp, filename):
     except OSError:
         # Missing file: let url_for produce the URL and let the 404 be visible,
         # rather than masking it with a fabricated bust.
-        return url_for(".static", filename=filename)
+        return url_for(bp.name + ".static", filename=filename)
     cached = _ASSET_CACHE.get(path)
     if cached is None or cached[0] != key:
         with open(path, "rb") as fh:
             digest = hashlib.sha256(fh.read()).hexdigest()[:8]
         _ASSET_CACHE[path] = (key, digest)
         cached = _ASSET_CACHE[path]
-    return url_for(".static", filename=filename, v=cached[1])
+    return url_for(bp.name + ".static", filename=filename, v=cached[1])
 
 
 def create_blueprint(session=None, url_prefix=None,
@@ -226,10 +244,13 @@ def create_blueprint(session=None, url_prefix=None,
     # that it accepts serving formerly-public bytes from caches until they
     # expire. The standalone app wires this to SKRIBL_PUBLIC_MEDIA_CACHE.
     bp.skribl_public_media_cache = bool(public_media_cache)
-    # Registered on the blueprint's Jinja environment, not the application's.
-    # add_app_template_global() would expose skribl_asset to every template in
-    # the host app, and calling it there builds a relative endpoint from outside
-    # the blueprint — the same BuildError as the context processor above.
+    # Registered on the blueprint's Jinja environment, which is what Skribl's
+    # OWN pages read. The BuildError this used to warn about — an app-wide
+    # helper calling url_for(".static") from outside the blueprint — is gone:
+    # asset_url() names the blueprint outright now. init_skribl() therefore also
+    # adds skribl_asset as an app-wide global so the in-post player's macros
+    # work in a host's template; this context processor still wins here, so
+    # these pages are unchanged.
     @bp.context_processor
     def _expose_asset_helper():
         # skribl_limits so the editors' maxlength attributes render from the
@@ -257,6 +278,24 @@ def init_skribl(app, **kwargs):
     _vis_values = kwargs.pop("visibility_values", None)
     _author = kwargs.pop("author_resolver", None)
     bp = create_blueprint(**kwargs)
+    # THE ONE NAME SKRIBL PUTS IN THE HOST'S JINJA ENVIRONMENT, and it is here
+    # because the in-post player needs it. _skribl_inline_player.html's macros
+    # render inside the HOST's post template, on the host's own view, where the
+    # blueprint context processor below (which is what supplies skribl_asset to
+    # Skribl's own pages) does not run at all. Without this the macros cannot
+    # build a cache-busted URL for inlineplayer.js and the embed does not work.
+    #
+    # The objection recorded on that context processor — that an app-wide
+    # helper builds a RELATIVE endpoint from outside the blueprint and raises
+    # BuildError — was answered by making asset_url() name the blueprint
+    # outright (see its docstring). What is left is namespace: exactly one
+    # `skribl_`-prefixed global, added rather than overwritten, so a host that
+    # already defines the name keeps theirs and simply cannot use the macros
+    # until they rename. Inside Skribl's own templates the context processor
+    # still wins, so nothing about those pages changes.
+    if "skribl_asset" not in app.jinja_env.globals:
+        app.add_template_global(lambda filename: asset_url(bp, filename),
+                                "skribl_asset")
     if _policy is not None:
         from .models import set_visibility_policy
         set_visibility_policy(_policy, app=app)

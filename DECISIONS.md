@@ -5021,3 +5021,427 @@ no other status.
 
 **A test that only fails under load is a test that does not run.**
 
+## v275 -- A Skribl learns to live inside somebody else's post
+
+Four surfaces now play a Skribl and only one of them is ours. The sealed player
+is a PAGE -- `/s/<id>`, app.js plus eight modules, an app shell, a full
+transport -- and twenty of those in a feed is not a feed. So this release adds
+a second, small playback implementation and the three surfaces that need it:
+a post, a draft composer, a profile tab. It also fixes the picture all three
+of them show when they are not playing.
+
+**The decision that shapes everything else: A SECOND PLAYBACK IMPLEMENTATION,
+accepted deliberately.** `verify_sharedrules.py` has warned for many releases
+that two implementations of one rule drift, and it is right; the failure mode
+here is worse than usual, because the AUTHOR opens `/s/<id>`, sees it look
+correct, and every viewer scrolling past a feed sees something else. It was
+still the right call -- embedding the page was never available, and a feed that
+loads a 150 KB player per post is not a feed. Three things hold the two
+together, and they are the price of the decision:
+
+  * the RULES come out of `lib/` rather than being restated -- `holdtiming.js`
+    for what a hold means, `canvassizes.js` for a legacy payload's shape;
+  * what is genuinely retyped (the capped-gap timeline, `drawDot`/`drawLine`)
+    is retyped VERBATIM and names its origin in app.js at the line;
+  * `verify_inline.py` plays the SAME posted drawing in both players off the
+    same clock and compares where each has reached and what each has drawn.
+
+**The comparison's first numbers were worthless, and mutation is what said so.**
+A 32x32 grid at tolerance 48 passed while the in-post player was reading a BLANK
+canvas -- the selector matched the first post in the feed rather than the one
+playing -- and passed AGAIN with the gap cap deliberately set to 500 ms, with
+the two players 0.58 and 0.34 through the same drawing. A tolerance loose enough
+to admit a blank canvas is not a tolerance. It is 96x96 at tolerance 18 now,
+floor-subtracted (the two surfaces paint the drawing's ground in different
+places -- one on the canvas, one on `.canvas-wrap` behind it, so compared
+absolutely all 9,216 cells differ and the assertion becomes a claim about paint
+order), plus a scale-free ink-mass ratio.
+
+**COMPOSE MODE PUBLISHES NOTHING, and that is forced rather than chosen.**
+"Add to post" hands the host the PAYLOAD, not an id. `POST /api/skribls` is
+create-only -- routes.py registers one POST and two GETs -- so "publish on add,
+republish on edit" orphans a skribl per edit, each having spent a slot of the
+author's posting quota, and an abandoned draft leaves a published, shareable
+skribl the host has no way to withdraw. `verify_compose.py`'s main instrument is
+therefore A COUNT OF POSTS rather than a "does it work": zero while attaching,
+zero after an edit, exactly one when the host posts.
+
+**One builder, two endings.** `editor_post.js`'s `submit()` was split so that
+everything preparing a payload for posting -- serialise, share-card thumbnail,
+mono audio bake -- is now `buildPostPayload()`, called by both endings. A
+composed skribl is byte-for-byte a Pad-posted one. Two paths each preparing
+"the payload, but for posting" is precisely the shape of that file's own BUG B:
+a post-time step that silently stopped running on one path while the metadata
+looked identical.
+
+**The encoding rule was wrong by 16x, and the in-post player is what made it
+matter.** The share-card builder chose PNG for line art and JPEG for photos, on
+the recorded grounds that PNG is both smaller and crisper for lines. Measured on
+an actual card: **451,824 B as PNG against 28,062 B as JPEG q0.92.** The cause
+is the accent wash -- Chromium DITHERS a canvas gradient, scattering per-pixel
+noise across all 1,200x630 that PNG cannot compress -- so the rule was true
+before the wash existed and was never re-checked. It survived because a 450 KB
+card is not WRONG, only expensive, and nobody looks at the byte count of their
+own unfurl. Turning that image into the idle frame of every post in a feed is
+what turned expensive into unusable: a screenful was over five megabytes to show
+twelve thumbnails. The fix is to stop having a rule -- encode both, keep the
+smaller. Real cards are ~20 KB, and `verify_sharecard.py` pins a 200,000 B
+ceiling, which is the check that would have caught the original.
+
+**Flip had never built a share card at all.** `buildShareCardDataURL()` lived in
+`editor_post.js`, which is PAD-ONLY, and `flip.js` set no `thumbnail`. So every
+Flip Skribl ever posted fell back to the static branded og-card in three places
+at once -- its `/s/<id>` unfurl, its idle poster in a feed, its tile on a
+profile. An advert where the drawing should be. Same shape as the title bug
+`verify_flipmeta.py` records: a whole control surface built on one of the two
+editors and never carried to the other.
+
+**TWO MODULES, NOT ONE, and the byte ratchet is what said so.** The first cut
+put the card COMPOSITOR beside its GEOMETRY in `lib/sharecard.js` -- which the
+in-post player loads, because it crops the poster by `band()`. `verify_inline`'s
+embed ratchet failed on the next run, correctly: 2 KB of canvas work shipped to
+every feed page in the world, to composite a card a feed never makes. Split on
+the rule `lib/postedaudio.js` already states -- THE READER IS NOT THE WRITER. A
+host embeds the geometry and never the compositor, because a host never posts.
+
+**The ratchet also caught PROSE.** Explaining the poster crop added 2,800 B of
+comment to `inlineplayer.css` and pushed the embed past its limit -- correctly,
+because `jsstrip.py` strips JavaScript RESPONSES and nothing strips CSS, so a
+paragraph in that file ships to every host on every page. It moved into
+`inlineplayer.js`'s header and the CSS kept the numbers and a pointer: same
+words, a third of the weight. A ratchet that prices comments is a ratchet that
+tells you where comments are free.
+
+**The owner reversed a decision made three hours earlier, and the reversal is
+recorded because the original reasoning was not wrong.** The in-post player
+shipped with ONE viewer control -- mute -- on the argument that a feed is not a
+media player and a Pad replay stopping dead on its finished drawing reads as a
+broken GIF. Both halves are still true. What was missing is that some drawings
+are two seconds long and a viewer may simply want them to stop. There are two
+controls now, and the asymmetry between them is the decision:
+
+    mute   PAGE-WIDE, session-remembered, off by default
+    loop   PER POST, not remembered, on by default
+
+Sound is environmental -- someone in a quiet room wants it off for the whole
+feed. Repeating is a property of the drawing in front of you, and a two-second
+loop you want to watch twice says nothing about the next post.
+
+**WHEN THE DRAWING STOPS, THE MUSIC STOPS, as ONE call rather than two.** The
+end of a non-looping replay routes through `pause()`, which takes the audio down
+in the same breath. It could have been a `cancelAnimationFrame` and a class
+change, and then a finished drawing would sit there with a loop still playing
+underneath -- a post that will not shut up, which is worse than one that never
+started. `verify_inline.py` measures this on the AUDIO GRAPH through the
+analyser tap `verify_player_isolation.py` uses, because "the music stops" is a
+claim about sound and cannot be checked from the DOM. Mutation-tested: stop the
+drawing without routing through `pause()` and the peak reads 71 where it should
+read 0.
+
+**Three defects found by building compose mode, all real:**
+
+  * `setState('idle')` hardcoded `'Post to Skribl'`, overwriting the label the
+    TEMPLATE had rendered. Harmless duplicate string before compose mode
+    existed; with it, the attach button relabelled itself to publishing the
+    first time anything reset the sheet.
+  * The post sheet stayed open after delivering. The host closes its overlay
+    immediately so nobody sees it -- until the pad icon is pressed again, which
+    reopens the SAME iframe with the sheet sitting over the canvas.
+  * **The underlay repaint moved time.** `img.onload` called `render(elapsed,
+    true)`, and `elapsed` is 0 while idle, so on a drawing with a photo or a
+    base snapshot the underlay finishing its decode wiped the canvas and
+    repainted the FIRST frame. Invisible on a posted skribl, where the poster
+    hides it, and fatal on a draft, where idle IS the finished drawing: the
+    composer showed an empty box. Every Pad recording carries a baseSnapshot,
+    so this fired every time.
+
+**`asset_url()` built a RELATIVE endpoint** (`url_for(".static")`), which
+resolves against `request.blueprint` -- always Skribl's, while every caller so
+far was a template Skribl itself rendered. The embed macros render on the HOST's
+view, where a leading dot raises BuildError. It names the blueprint outright now,
+which is identical inside Skribl's own pages and works everywhere else, and
+`init_skribl()` registers `skribl_asset` as the ONE app-wide template global --
+added, never overwritten.
+
+**`POST /api/skribls` defaults to `unlisted` and Pad's composer has no
+visibility control**, so nothing posted from Pad appears in `GET /api/skribls`.
+The demo feed was empty on its first run and its suite was asserting against an
+empty list. The default is correct -- it is what a link-sharing product should
+do -- but it means a HOST's composer is what sends `"visibility": "public"`, and
+the empty state says so now instead of telling you to go and post from the Pad.
+
+**`library.js` had been drawing its own content.** It carried its own replay
+engine and a table of hand-drawn motifs -- a bolt, a cassette, a smiley -- and
+rendered those, while the route was registered the whole time, so a host
+mounting Skribl served invented drawings out of their own URL space and
+README.md carried a warning saying so. The problem was never the pretending: a
+page that draws its own content cannot tell you whether the thing it previews
+WORKS. It contains no player now; the stage is `inlineplayer.js` driven through
+its handle, and `verify_library.py` gates that at the source by forbidding
+`requestAnimationFrame` in the file.
+
+**TWO OF THAT SUITE'S GATES WERE SUBSTRING SEARCHES THAT PASSED ON THEIR OWN
+PROSE.** One looked for `offset` and matched a comment explaining why offset
+paging is wrong; one looked for `cassette` and matched a description of the
+motifs it had just deleted. This is the same failure a v273 gate made by
+searching for "Pillow" and matching a comment that mentioned it -- twice in
+three releases, so it is a pattern rather than a slip. They match SYNTAX now
+(`offset=`), and the second became a check on the DOCUMENTS instead: a page that
+stops lying while its docs keep saying the old thing has moved the lie, not
+removed it.
+
+**A route literal in client JS, in the one file whose comment says it never
+uses one.** `inlineplayer.js` read its endpoint from `data-skribl-api` and fell
+back to `'/api/skribls'`. On a host mounting the blueprint under a prefix that
+fallback fetches a path that does not exist, and fails QUIETLY into the box's
+error panel -- the exact defect the surrounding comment describes as the reason
+the attribute exists. `verify_seam.py` SECTION 1 caught it. There is no fallback
+now: a box with no endpoint says it is not wired up, which is the honest
+failure. Worth recording because the comment was written by the same hand, in
+the same file, in the same hour as the line that contradicted it. A comment is
+not a gate.
+
+**Two suites broke on this release and both were right to.**
+`verify_flipmeta.py` read a POST body as JSON, and `lib/posted.js` gzips any
+body over 4,096 B -- its one-stroke fixture sat under that until a 25 KB card
+was attached, so it inflates now. `verify_library.py`'s search matched
+`verify_inline.py`'s "Harness fixture A" as well as its own, because
+`run_harness.sh` gives ONE database to every suite in an invocation; its
+fixtures carry a per-run token now. Exactly the cross-suite state coupling that
+passes a seal and fails CI.
+
+**Known gap, named rather than hidden:** the in-post player has no wet/dry
+stroke compositor, so a sub-100%-opacity stroke beads at its overlaps where it
+does not on `/s/<id>`. The fixture draws opaque deliberately, so the pixel
+assertion stays meaningful instead of being quietly tolerant of a gap it cannot
+see. And the poster crop is exact vertically and cannot be horizontally: the
+drawing's width depends on its own aspect, and `canvasSize` lives inside
+`payload_json` which `GET /api/skribls` defers on purpose. The box is 16:9
+because that is the widest canvas, so a symmetric crop can only ever remove
+ground. The real fix is canvas size as a real COLUMN, which is a migration.
+
+## v276 -- The drop-in stops being a description and becomes a thing you can run
+
+v275 made a Skribl displayable inside somebody else's post. It did not make the
+integration OBTAINABLE: a host still had to read four documents and write the
+same hundred and fifty lines everyone else writes. This release closes that,
+and every piece of it was shaped by the same question -- what does the host
+actually have to type, and what have we made them type twice?
+
+**`skribl.create_post()`, and the shape of host it exists for.** `POST
+/api/skribls` serves a host whose composer is a BROWSER. skribls.net's is a
+server-side FORM: the author types words, attaches things, and their browser
+sends one ordinary POST to the host's own view. That host already has the
+payload, has authenticated the author and has checked its own CSRF token, so
+turning round and POSTing to its own JSON endpoint buys it a second request, a
+second authentication, a second CSRF exchange and -- the part that actually
+breaks -- a SEPARATE TRANSACTION. A failure between the two leaves a Skribl
+nothing points at, or a post pointing at a Skribl that was never stored. The
+function runs in the caller's request, on the caller's session, so one commit
+makes the Skribl and the host's own row durable together.
+
+**IT IS A CARVE, NOT A SECOND PATH, and the direction is the whole point.**
+Everything in `skribl/creation.py` was MOVED out of `create_skribl`'s body; the
+route calls it and does nothing to the payload itself. Two functions that both
+"validate a payload and insert a post" is precisely the shape of the bug
+`editor_post.js` records as its own BUG B, where a post-time step silently
+stopped running on one of two paths while the metadata looked identical. What
+stayed in the route is exactly what is HTTP: the two rate budgets, CSRF, the
+`Idempotency-Key` header, and jsonify.
+
+**THE RATE LIMITER CANNOT FOLLOW, and finding out why was worth more than the
+assertion.** The plan was to state in the docs that a host calling create_post
+is not throttled by Skribl. Then the mutation written to prove the assertion --
+make create_post charge the limiter -- never reached the assertion at all: it
+died on "Working outside of request context", because `_client_ip()` reads the
+Flask `request` and the reservation is settled in a Flask teardown. So it is not
+a policy that a host owns abuse control on its own path; it is a fact about what
+the limiter is made of, and a host that assumes otherwise has an unlimited
+posting endpoint with no sign of it. `docs/INTEGRATION.md` says so in those
+words.
+
+**The instrument for a carve is AGREEMENT.** `verify_createpost.py` drives ten
+bad payloads through BOTH callers from one table and compares status and
+message. "The route calls it" is a fact about today's tree; the danger is a rule
+added to one side only, and the mutation for that (a rejection message given to
+the route alone) fails the comparison and prints both strings. Same instrument
+`verify_inline.py` points at the two playback implementations.
+
+**`lib/composehost.js`: the pad button's lifecycle, once.** Four rules that are
+the same in every host and easy to get subtly wrong -- the editor's `src` set on
+first open and never in markup, the payload pushed into an already-loaded
+editor, `clear()` resetting the frame, the origin checked inbound and targeted
+outbound. A host wires its own buttons to a handle.
+
+**AND ITS OWN COMMENT WAS WRONG ABOUT THE MOST IMPORTANT RULE.** It claimed
+that without the re-edit push the editor "reopens EMPTY over a drawing the draft
+is still holding". It does not: the iframe kept the drawing on its canvas, so a
+host answering only `ready` looks correct. What such a host is really doing is
+trusting the editor's retained state, which is a coincidence rather than a
+contract -- the rule earns its place when the draft's payload and the editor's
+differ, which is a host calling `setPayload()` to re-edit a saved post. Written
+from reasoning, corrected by a mutation that failed to fail.
+
+**AND THE SUITE DID NOT COVER IT.** Disabling that rule left `verify_compose`
+at a clean 29/29, because "re-opening the editor brings the drawing back"
+measures the editor's leftover ink. It counts the `skribl:compose:load` message
+now: 0 under the mutation, while the ink assertion stays green beside it. In the
+same file, one assertion was `check(..., True, "src is set on open")` -- an
+assertion of the literal True, in the file that names lazy loading as a rule.
+
+**TWO BYTE RATCHETS, BECAUSE THEY ARE TWO COSTS.** `verify_inline` scraped every
+`/static/skribl/` URL on the feed page, so a compose module would have been
+charged to every host page that merely DISPLAYS Skribls. Display and compose are
+paid by different pages and now have different budgets; blurring them into one
+number would have hidden whichever grew. Same reader-is-not-the-writer split
+that put the card compositor in `lib/postedcard.js`.
+
+**`examples/host_app`, and why an example needs a suite.** Every other document
+here DESCRIBES the drop-in. This one is the drop-in -- a separate Flask site with
+its own users and posts, mounting the blueprint under a PREFIX, composing with a
+server-side form. `verify_example.py` boots it as a real server on its own port
+and drives a real browser through drawing and posting, then checks on a FRESH
+connection that the host's post row and the Skribl were committed together. An
+example nothing runs is a document that goes stale silently, which is the
+failure mode this tree has been bitten by repeatedly.
+
+**BUILDING IT FOUND THE PLAYER'S MARKUP WRITTEN THREE TIMES.** A draft has no
+public id and the macro required one, so `skribl_feed.html` hand-copied twenty
+lines of the macro's internals for its composer box, `skribl_library.html`
+copied a variant for its stage, and the example was about to be the third. This
+is the general lesson of the release: **the third caller is what exposes the
+duplication, because the first two each had a reason.** The insides are one
+macro now with a `skribl_inline_draft(id, controls)` entry point, and the gate
+added for it -- no template outside the macro file may write the player's
+internal class names -- FAILED ON ITS FIRST RUN and named the library. The third
+copy was found rather than guessed at.
+
+**A route literal in the one file whose comment says it never uses one.**
+`inlineplayer.js` read its endpoint from `data-skribl-api` and fell back to
+`'/api/skribls'`. Under a prefix that fetches a path that does not exist and
+fails quietly into the box's error panel -- the exact defect the surrounding
+comment describes as the reason the attribute exists. `verify_seam.py` caught
+it. There is no fallback now. Recorded because the comment and the line that
+contradicted it were written by the same hand, in the same file, in the same
+hour: a comment is not a gate.
+
+**And a stale number nothing was checking.** `START-HERE.md` typed two counts in
+one sentence -- "44 SEPARATE batches" and "all 93 suites". `verify_docs` caught
+the suite count. Nothing checks the batch count and it was stale too. Both
+removed rather than updated, per that file's own rule about numbers in prose.
+
+## v277 -- Five things the owner found on a phone, and one of them is not verified
+
+Every change in this release came from the owner using the app on an iPhone
+rather than from a suite going red, which is worth saying at the top because it
+is the pattern: the harness runs Chromium on Linux, and four of the five defects
+below are invisible there by construction.
+
+**The post sheet gets the toolbar's music mark.** A Skribl with a loop and one
+without looked identical at the moment of posting. The owner's sketch beat the
+design I proposed -- I offered a labelled pill that BORROWED the tool row's
+green; they asked why not use the tool row's actual mark. It is cleaner, needs
+no learning, and dropping the text label dissolved my own objection to putting
+it on the header, which was an argument against a variable-width chip reflowing
+against a variable-width string and not against a 17px marker.
+
+ONE GLYPH, NOT TWO THAT AGREE TODAY. The path data was about to be written a
+second time, so it is a Jinja macro called by both callers, and the suite
+compares the two as RENDERED rather than grepping the template -- a copy would
+satisfy any grep and drift the first time either was redrawn. The dot's POSITION
+is shared too: `.post-sound` joins `.tool-open`'s selector rather than restating
+a calc whose 0.4 offset carries an essay deriving it from measured clearances at
+six button tiers.
+
+**Exports could not be named.** Every media export was a hardcoded literal --
+skribl.gif, skribl.png, skribl-flip.mp4 -- so two exports of one drawing arrived
+as "skribl.gif" and "skribl (1).gif" with nothing to tell them apart, and
+titling the drawing changed none of it. Drafts had been named properly through
+`lib/nametab.js` for releases; the media exports were simply never wired to it.
+A field in the export sheet, seeded from the title, edited independently:
+naming an export is not renaming the drawing.
+
+**PLACING THAT FIELD'S LABEL FOUND A BUG NO SUITE COULD SEE.**
+`.export-optlbl` was defined only in `flip.css`, which Pad does not load, and
+the shared export partial uses that class for the GIF toggle's "Background"
+label outside the flip-only block. Pad had been rendering it at browser-default
+size for several releases. `verify_exportui`'s sweep could not catch it because
+it concatenates styles.css AND flip.css, so a class styled for ONE surface
+passes as if styled for both -- an assertion that reads as coverage and is not.
+The sweep is split by surface now, and the hole was demonstrated by reverting
+the class: the new gate fails, the old one still passes.
+
+**The GIF background control was a banner.** `width: 100%`, commented "Full
+width so both labels fit", which did not survive being measured: the labels need
+about 200px of a 330px card. What full width actually bought was a 160px violet
+pill, 41% of a phone screen and the brightest thing on a sheet whose actual
+actions are three format buttons. It is an inline row now. The mutation
+restoring full width fails in the most telling way -- both labels forced to
+143px, so the sliding pill cannot tell them apart -- which is a better argument
+against the old rule than the one I had.
+
+**And the green was too dull.** #1bcf8f -> #30e8a7. It was never short of
+CONTRAST (9.6:1, measured) but short of VIVIDNESS, and it is spent almost
+entirely on 6-7px dots where hue reads weakly and lightness carries the signal.
+Three rules hardcoded `rgba(27, 207, 143, ...)`, the token's own RGB, and would
+have kept the old hue silently; they read a `--good-rgb` companion now. The
+light theme's darker green is deliberately unchanged -- it sits on white, where
+brighter is worse.
+
+**iOS SILENCES WEB AUDIO WHEN THE RINGER SWITCH IS OFF, AND THIS IS THE ONE
+THAT MATTERS.** The owner reported Preview Loop playing no sound. Test Seam, on
+the same phone with the same file, played fine. Test Seam is a plain `<audio>`
+element; Preview Loop is Web Audio, and iOS routes Web Audio into an "ambient"
+session the hardware switch mutes while leaving `<audio>` alone.
+
+The preview button is the least of it. `/s/<id>` and the in-post player are both
+Web Audio, so on any iPhone in silent mode a shared link's music and every feed
+post's music are silent too -- for a component whose entire purpose is playing
+inside somebody else's feed, that is the feature not working.
+
+**Why every existing guard missed it, and this is the lesson worth keeping.**
+app.js carries an elaborate hand-off for a context that never unlocks, built
+over several releases, and every one of its tests is `state !== 'running'`. In
+silent mode the context reaches `running` perfectly well and is merely
+inaudible. So all the guards pass, the native `<audio>` fallback is deliberately
+suppressed, and the result is confident silence. The file's own warning --
+"A source object existing is NOT the same as audible playback" -- turns out to
+apply one level further out than where it was written. A guard is only as good
+as the failure it imagines.
+
+**THIS RELEASE SEALS AN UNVERIFIED FIX, DELIBERATELY AND WITH IT SAID OUT LOUD.**
+`lib/audiosession.js` holds a silent looping `<audio>` element, which moves the
+session to "playback". Claimed only on a gesture that asks for sound -- the
+unmute tap, the Preview button -- never at load, because a held session shows
+Skribl as playing media in Control Center; overriding the switch is defensible
+only because sound here is never automatic. But Chromium on Linux has no ringer
+switch. `verify_audiosession.py` pins the MECHANISM -- one element, silent,
+looping, playing, idempotent, released, loaded on all four surfaces -- and
+prints a closing line saying none of it proves an iPhone is audible. It is the
+same limit app.js already recorded: "Desktop never showed it ... including in
+the harness." **A green seal is not evidence this works.** The phone is.
+
+It cost the player's byte ratchets, which is the budget this project guards
+hardest: JS 151,845 -> 153,000 and HTML 10,800 -> 10,900, leaving ~600 B to the
+153,600 target. The embed ratchet moved too, 27,500 -> 29,500. Both raises are
+recorded at the ratchet with the reason, and the module was shrunk first -- a
+byte-by-byte WAV builder read better and cost 1,650 B against ~450 for a base64
+constant, and the player's ratchet is not the place to spend 1,200 B on
+legibility.
+
+**One gap this closed that let a person find a bug before a suite did:**
+`verify_audiostate` drove Preview Loop under a HUNG unlock and asserted the
+fallback plumbing in detail, but nothing anywhere asserted that preview produces
+a sound at all.
+
+**AND I PUT A LIVE CLOCK INTO A COMPARED SCENE.** The export field seeded itself
+from `nametab.get()`, which falls back to a timestamped auto-name.
+`verify_cssplit` renders the export scene twice in one run and compares the
+pixels, so the two captures straddled a clock tick and editor-export went
+intermittently red -- the diff box moving one pixel between runs, which is the
+tell. `lib/nametab.js`'s own header warns about exactly this, one function above
+the one I wrote: "a live timestamp there renders differently between two frames
+and makes any pixel comparison of the editor flaky (verify_cssplit)". It seeds
+only a typed title now and leaves an unnamed drawing's field empty behind a
+static placeholder; the filename still resolves the timestamp at export time.
+
