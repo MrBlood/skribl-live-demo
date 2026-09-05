@@ -2092,6 +2092,75 @@ with sync_playwright() as _b13:
     _p13.close(); _c13.close()
     _br13.close()
 
+print("\nIOS ZOOM — no text field under 16px, except the ones already there")
+# THE RULE THIS PINS is written in styles.css twice — "16px is the threshold
+# below which iOS Safari zooms the whole PAGE on focus" — and was broken a
+# third time anyway: the export sheet's file-name field shipped at 13.5px, so
+# tapping it on an iPhone zoomed the page. A rule stated in prose twice and
+# broken again is a rule that wants a gate.
+#
+# A RATCHET, NOT A BLANKET ASSERTION. Seven fields were already under the
+# threshold when this was written. They are NAMED rather than fixed here:
+# raising Flip's 12.5px number inputs changes the layout of a tight two-field
+# row and wants its own pass with eyes on it. The list may SHRINK and must
+# never grow.
+_ZOOM_EXEMPT = {
+    "skriblName":       "the title drawer, 15px — one notch under, both editors",
+    "mbOffsetInput":    "Flip motion-blur offset, 12px",
+    "exportFrom":       "Flip export range, 12.5px, in a tight two-field row",
+    "exportTo":         "Flip export range, 12.5px, in a tight two-field row",
+    "flipShareTitle":   "Flip share sheet, 12.5px",
+    "flipShareCaption": "Flip share sheet, 12.5px",
+    "flipShareUrl":     "Flip share sheet, 12.5px, read-only",
+}
+_MEASURE = """() => {
+  const out = [];
+  document.querySelectorAll('input, textarea').forEach(el => {
+    const t = (el.getAttribute('type') || 'text').toLowerCase();
+    if (['checkbox','radio','range','file','color','hidden','button','submit'].includes(t)) return;
+    out.push({ id: el.id || '.' + (el.className || '').split(' ')[0],
+               size: parseFloat(getComputedStyle(el).fontSize) });
+  });
+  return out;
+}"""
+with sync_playwright() as _pz:
+    _zb = _pz.chromium.launch()
+    _under_new = []
+    _seen = set()
+    _export_size = None
+    for _url, _label in (("/", "Pad"), ("/flip", "Flip")):
+        _zp = _zb.new_page(viewport={"width": 1280, "height": 900})
+        _zp.goto(BASE + _url, wait_until="load")
+        _zp.wait_for_timeout(2000)
+        for _sel in ("#menuBtn", "#exportItem"):
+            try:
+                _zp.click(_sel, timeout=3000)
+                _zp.wait_for_timeout(400)
+            except Exception:
+                pass
+        for _row in _zp.evaluate(_MEASURE):
+            _seen.add(_row["id"])
+            if _row["id"] == "exportName" and _url == "/":
+                _export_size = _row["size"]
+            if _row["size"] < 16 and _row["id"] not in _ZOOM_EXEMPT:
+                _under_new.append(f"{_label} {_row['id']} at {_row['size']}px")
+        _zp.close()
+    _zb.close()
+
+check("no text field is under 16px except the seven already known",
+      not _under_new,
+      "; ".join(_under_new) + " — under 16px iOS Safari zooms the whole page "
+      "on focus, which styles.css states twice")
+# Name the field this gate was written for, so the regression that prompted it
+# fails loudly rather than generically.
+check("the export file-name field is at least 16px",
+      _export_size is not None and _export_size >= 16,
+      f"{_export_size}px — it shipped at 13.5 and zoomed the page on iOS")
+# An exemption for a field that no longer exists is a licence nobody is using.
+_stale = sorted(k for k in _ZOOM_EXEMPT if k not in _seen)
+check("no exemption names a field that no longer exists",
+      not _stale, "stale: " + ", ".join(_stale))
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:

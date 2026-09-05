@@ -3415,16 +3415,26 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   gap: 8px;
 }
 
+/* THE SAME FIELD AS .post-input, deliberately. It was invented instead of
+   matched, and picked up 13.5px text — below the 16px threshold this file
+   documents TWICE (see .zoom-hud .zoom-val-input) as the point where iOS
+   Safari zooms the whole page on focus. Tapping it on an iPhone zoomed the
+   page. It also read as inert, and that was the same mistake seen from the
+   other side: its solid #171b23 fill sits five units off the sheet's ground,
+   where .post-input's translucent lift reads as a well the way the title and
+   caption fields do. Matching the app's existing text field fixes both, and
+   the author is already typing into two of them one sheet over. */
 .export-nameinput {
   flex: 1;
   min-width: 0;
-  background: var(--surface-control);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--hairline);
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 9px 11px;
-  font: inherit;
-  font-size: 13.5px;
+  font-family: inherit;
+  font-size: 16px;
   color: var(--text-primary);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .export-nameinput:focus {
