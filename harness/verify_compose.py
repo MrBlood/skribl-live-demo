@@ -110,6 +110,10 @@ with sync_playwright() as sp:
           pg.evaluate("() => document.getElementById('postBtn').disabled") is True)
 
     # ---- open the editor ---------------------------------------------------
+    # Captured BEFORE the click, because the assertion below is about what the
+    # page had NOT done yet.
+    src_before = pg.evaluate(
+        "() => document.getElementById('padFrame').getAttribute('src')")
     pg.click("#padBtn")
     pg.wait_for_timeout(4000)
     mode = pg.evaluate("() => document.getElementById('padFrame').contentWindow.SKRIBL_MODE")
@@ -123,11 +127,21 @@ with sync_playwright() as sp:
     check("the editor's button says it is attaching, not publishing",
           label.strip() == "Add to post", f"reads {label.strip()!r}")
 
-    # THE EDITOR IS NOT LOADED UNTIL IT IS ASKED FOR. A composer that put the
-    # pad's ~500 KB in an iframe on every feed view would charge every visitor
-    # for a drawing tool they never opened.
+    # THE EDITOR IS NOT LOADED UNTIL IT IS ASKED FOR (lib/composehost.js rule 1).
+    # A composer that put the pad's ~500 KB in an iframe on every feed view
+    # would charge every visitor for a drawing tool they never opened.
+    #
+    # This assertion used to be check(..., True, "src is set on open"), which
+    # asserts the literal True and cannot fail — it would have stayed green
+    # through any regression it names. It reads the attribute now.
     check("the editor was not loaded until the pad icon was pressed",
-          True, "src is set on open — see feed.js openPad()")
+          not src_before or src_before in ("", "about:blank"),
+          f"src before the click was {src_before!r}")
+    src_after = pg.evaluate(
+        "() => document.getElementById('padFrame').getAttribute('src')")
+    check("...and pressing it is what set the src",
+          bool(src_after) and src_after not in ("", "about:blank"),
+          f"src after the click was {src_after!r}")
 
     # ---- draw and attach ---------------------------------------------------
     draw(pg, fr.locator("#canvas").bounding_box())
@@ -165,8 +179,30 @@ with sync_playwright() as sp:
              '#composerSkribl .skribl-inline-prog').style.width) || 0""") == 0)
 
     # ---- re-edit -----------------------------------------------------------
+    # COUNT THE LOAD MESSAGE, not just the ink. The ink assertion below passes
+    # even with lib/composehost.js's re-edit push disabled, because the editor
+    # iframe is still loaded and still holding the drawing from the previous
+    # open — so it measures the editor's retained state, not the handshake.
+    # Rule 2 is the guarantee that the editor shows the DRAFT's payload rather
+    # than whatever it happens to have kept, which is what makes it correct
+    # when the host sets a payload the editor has never seen (setPayload).
+    # Mutation-tested: disabling the push takes this to 0 and leaves the ink
+    # assertion green.
+    pg.evaluate("""() => {
+        var w = document.getElementById('padFrame').contentWindow;
+        w.__skriblLoads = 0;
+        w.addEventListener('message', function (e) {
+          if (e.data && e.data.type === 'skribl:compose:load') w.__skriblLoads++;
+        });
+    }""")
     pg.click("#editSkriblBtn")
     pg.wait_for_timeout(3500)
+    loads = pg.evaluate(
+        "() => document.getElementById('padFrame').contentWindow.__skriblLoads")
+    check("re-opening pushes the draft's payload into the loaded editor",
+          loads == 1,
+          f"{loads} skribl:compose:load message(s) — without this the editor "
+          f"shows whatever it kept, not what the draft holds")
     restored = pg.evaluate(EDITOR_INK)
     check("re-opening the editor brings the drawing back",
           restored > 500,
@@ -197,6 +233,13 @@ with sync_playwright() as sp:
     check("the composer is empty again and cannot post a second time by accident",
           pg.evaluate("""() => document.getElementById('composerAttach').hidden
                             && document.getElementById('postBtn').disabled""") is True)
+    # lib/composehost.js rule 3: clearing drops the EDITOR too, not just the
+    # payload. Without it the next pad press reopens the drawing that was just
+    # posted, and the author's next Skribl starts as a copy of their last one.
+    check("clearing reset the editor frame, so the next pad press starts blank",
+          pg.evaluate("() => document.getElementById('padFrame').getAttribute('src')")
+          == "about:blank",
+          pg.evaluate("() => document.getElementById('padFrame').getAttribute('src')"))
     check("no page errors through the whole flow", not errs, "; ".join(errs[:2]))
 
     posted_id = pg.evaluate("""() => {

@@ -132,31 +132,6 @@
     compose.postBtn.disabled = !(compose.payload || compose.text.value.trim());
   }
 
-  function openPad() {
-    say('');
-    compose.overlay.hidden = false;
-    /* Set src on OPEN, not in the markup: the editor is a heavy page and a
-       composer that loads it on every feed view has made every visitor pay for
-       a drawing tool they did not ask for. */
-    if (compose.frame.getAttribute('src') !== compose.src) {
-      compose.frame.setAttribute('src', compose.src);
-    } else if (compose.payload) {
-      /* Already loaded from a previous edit: it will not fire ready again, so
-         hand it the payload directly. */
-      sendToPad('skribl:compose:load', { payload: compose.payload });
-    }
-  }
-
-  function closePad() { compose.overlay.hidden = true; }
-
-  function sendToPad(type, data) {
-    var msg = { type: type };
-    if (data) for (var k in data) msg[k] = data[k];
-    try {
-      compose.frame.contentWindow.postMessage(msg, window.location.origin);
-    } catch (e) { /* frame not ready */ }
-  }
-
   function showAttached() {
     compose.attachWrap.hidden = false;
     /* The REAL in-post player, rendering the real payload — not a thumbnail.
@@ -169,31 +144,32 @@
     syncPostBtn();
   }
 
-  window.addEventListener('message', function (e) {
-    if (e.origin !== window.location.origin) return;
-    var d = e.data;
-    if (!d || typeof d.type !== 'string' || d.type.indexOf('skribl:compose:') !== 0) return;
-    if (d.type === 'skribl:compose:ready') {
-      if (compose.payload) sendToPad('skribl:compose:load', { payload: compose.payload });
-    } else if (d.type === 'skribl:compose:done') {
-      compose.payload = d.payload;
-      closePad();
+  /* THE LIFECYCLE IS lib/composehost.js, not this file. Everything that used to
+     be written out here — the lazy src, re-pushing the payload into an
+     already-loaded editor, the origin checks, resetting the frame on remove —
+     is the same in every host, so it lives in the module and this page is left
+     with only what is genuinely its own: an overlay to show and a preview to
+     render. That subtraction IS the deliverable; what remains is the honest
+     measure of what a host writes. */
+  var pad = window.SkriblComposeHost.create({
+    frame: compose.frame,
+    src: compose.src,
+    onOpen: function () { say(''); compose.overlay.hidden = false; },
+    onClose: function () { compose.overlay.hidden = true; },
+    onDone: function (payload) {
+      compose.payload = payload;
       showAttached();
-    } else if (d.type === 'skribl:compose:cancel') {
-      closePad();
     }
   });
 
-  document.getElementById('padBtn').addEventListener('click', openPad);
-  document.getElementById('editSkriblBtn').addEventListener('click', openPad);
-  document.getElementById('padCloseBtn').addEventListener('click', closePad);
+  document.getElementById('padBtn').addEventListener('click', pad.open);
+  document.getElementById('editSkriblBtn').addEventListener('click', pad.open);
+  document.getElementById('padCloseBtn').addEventListener('click', pad.close);
   document.getElementById('removeSkriblBtn').addEventListener('click', function () {
     compose.payload = null;
     compose.attachWrap.hidden = true;
     if (compose.player) compose.player.settle();
-    /* Drop the loaded editor too, so the next pad click starts blank rather
-       than reopening the drawing that was just removed. */
-    compose.frame.setAttribute('src', 'about:blank');
+    pad.clear();
     syncPostBtn();
   });
   compose.text.addEventListener('input', syncPostBtn);
@@ -242,7 +218,7 @@
          same element would leave the first in the one-at-a-time registry,
          still holding a drawing nobody can see or stop. */
       if (compose.player) compose.player.settle();
-      compose.frame.setAttribute('src', 'about:blank');
+      pad.clear();
       say('Posted.');
       syncPostBtn();
     }).catch(function (err) {

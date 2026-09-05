@@ -247,6 +247,11 @@
      is not fetched. #}
   <template id="skriblPostTpl">{{ skribl_inline('__ID__') }}</template>
 
+  {# lib/composehost.js: the pad button's lifecycle — lazy editor load, the
+     re-edit push into an already-loaded frame, the origin checks, resetting on
+     remove. A host's COMPOSER loads this; a page that only displays Skribls
+     never does, which is why it is here and not in skribl_inline_assets(). #}
+  <script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
   <script src="{{ skribl_asset('feed.js') }}" defer></script>
 </body>
 </html>

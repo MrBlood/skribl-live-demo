@@ -1285,6 +1285,15 @@ module gets forgotten and reimplemented.
 Surfaces are read from the template `<script>` tags; the descriptions are each
 file's own opening line. `verify_docs.py` fails if a lib here is named nowhere.
 
+ONE ENTRY READS "HOST" RATHER THAN A SURFACE. `composehost.js` is the pad
+button's lifecycle for a host's own composer, so nothing Skribl serves loads it
+except the `/feed` preview standing in for a host. It is in `lib/` for the same
+reason everything else is — the alternative is every host writing the same four
+rules, three of them right — but it is the one module whose reader is somebody
+else's page. It is not in `skribl_inline_assets()` and carries its own byte
+ratchet in `verify_inline.py`, separate from the embed's: a page that only
+DISPLAYS Skribls never composes one and must not be charged for it.
+
 "in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
 It loads exactly two of these — `canvassizes.js` for a legacy payload's default
 shape and `holdtiming.js` for what a per-page hold means — and reads nothing
@@ -1301,6 +1310,7 @@ rather than a shared rule.
 | `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
+| `composehost.js` | HOST | The pad button's lifecycle for a HOST's composer — the only lib no Skribl surface loads. |
 | `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
 | `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both |

@@ -771,13 +771,20 @@ with sync_playwright() as sp:
     # above, this one is paid for by the caller that uses it — the feed is
     # exactly where somebody wants a two-second drawing to stop repeating.
     EMBED_RATCHET = 27_500
-    # feed.js is excluded: it is the PREVIEW PAGE's own script (fetch the
-    # listing, clone the macro), not part of what a host embeds — a host writes
-    # that loop themselves against their own posts.
-    embed_urls = sorted(u for u in
-                        set(re.findall(r'(?:src|href)="([^"]*/static/skribl/[^"]+)"',
-                                       feed_html))
-                        if "feed.js" not in u)
+    # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
+    # paid by separate pages. Excluded here and measured on its own below:
+    #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
+    #                    the macro) — a host writes that loop themselves.
+    #   lib/composehost  the pad button's lifecycle. A host page that only shows
+    #                    Skribls in a feed never composes one, so charging every
+    #                    such page for it would price a cost nobody on that page
+    #                    pays — the same reader-is-not-the-writer split that put
+    #                    the card compositor in lib/postedcard.js.
+    _compose_only = ("feed.js", "composehost.js")
+    _all_urls = sorted(set(re.findall(
+        r'(?:src|href)="([^"]*/static/skribl/[^"]+)"', feed_html)))
+    embed_urls = [u for u in _all_urls
+                  if not any(n in u for n in _compose_only)]
     total = 0
     served = {}
     for u in embed_urls:
@@ -791,6 +798,22 @@ with sync_playwright() as sp:
           f"of CSS and JavaScript",
           total <= EMBED_RATCHET,
           f"{total:,} B served: " + ", ".join(f"{k} {v:,}" for k, v in served.items()))
+
+    # THE COMPOSE COST, on its own ratchet. A host's composer page pays this and
+    # a host's feed does not, so blurring the two into one number would hide
+    # whichever grew. lib/composehost.js is the whole of Skribl's contribution
+    # to the host side of compose mode — feed.js is this preview page's, not a
+    # host's, and is excluded from both.
+    COMPOSE_RATCHET = 4_000
+    _ch = [u for u in _all_urls if "composehost.js" in u]
+    check("the feed page loads lib/composehost.js exactly once",
+          len(_ch) == 1, str(_ch))
+    if _ch:
+        _ch_bytes = len(urllib.request.urlopen(
+            BASE + _ch[0] if _ch[0].startswith("/") else _ch[0], timeout=20).read())
+        check(f"the compose lifecycle costs a host no more than "
+              f"{COMPOSE_RATCHET:,} bytes",
+              _ch_bytes <= COMPOSE_RATCHET, f"{_ch_bytes:,} B served")
 
     b.close()
 

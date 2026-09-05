@@ -169,7 +169,42 @@ two fight over every generic class name. Set the `src` when the button is
 pressed, not in your markup — otherwise every visitor downloads a drawing tool
 they never opened.
 
-**The handshake**, four messages, all `postMessage`:
+**You do not have to write the lifecycle.** `lib/composehost.js` is it —
+load it on your composer page and wire your own buttons to the handle:
+
+```html
+<script src="{{ skribl_asset('lib/composehost.js') }}" defer></script>
+```
+
+```js
+var pad = SkriblComposeHost.create({
+  frame: document.getElementById('padFrame'),
+  src:   document.body.getAttribute('data-skribl-compose'),   // from url_for
+  onOpen:  function () { overlay.hidden = false; },
+  onClose: function () { overlay.hidden = true; },
+  onDone:  function (payload) { draft = payload; showAttachment(payload); }
+});
+padButton.addEventListener('click', pad.open);
+removeButton.addEventListener('click', function () { draft = null; pad.clear(); });
+```
+
+It owns four things that are the same in every host and easy to get subtly
+wrong: the editor's `src` is set on first open and never in your markup (or
+every feed view downloads a drawing tool nobody opened); re-opening an
+already-loaded editor pushes the draft's payload in, so the editor shows what
+the DRAFT holds rather than whatever it kept from last time; `clear()` resets
+the frame, so removing a Skribl does not leave the next pad press reopening it;
+and the origin is checked inbound and targeted outbound, never `'*'`.
+
+It does NOT post. Posting is yours — you write your own row and store the id on
+it, or you skip the browser entirely and call `create_post()` server-side (see
+below). A module that posted for you would have to guess which.
+
+Use `pad.setPayload(existing)` before the first open to re-edit the Skribl on a
+post that is already saved.
+
+**The handshake** underneath it, four messages, all `postMessage` — you need
+this only if you are not using the module:
 
     editor -> host   skribl:compose:ready    up; send a payload if re-editing
     host   -> editor skribl:compose:load     {payload} put this back on canvas
