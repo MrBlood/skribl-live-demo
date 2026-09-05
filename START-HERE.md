@@ -46,11 +46,12 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
-### Uncommitted at the last handover: five things beyond the v277 seal
+### Closed in v278: an outside review, and a phone that answered
 
-The generated stanza and `harness/RELEASE.md` still describe **v277**. Nothing
-below is sealed, and `release_run.py` has not been near it — treat the seal as
-the record and this as what sits on top of it.
+v278 is one thing from the owner's own phone and five from an external
+developer review of the sealed v277 archive. **Every one of the five was
+checked against the tree before it was acted on, and every one was real** —
+two of them larger than the tree's own description of them.
 
 **The iOS silent-mode fix is confirmed on a phone** (5 Sep 2026, "Music
 works"). v277 sealed it saying in as many words that a green seal was not
@@ -69,7 +70,7 @@ sections stayed green over it. Every edge now routes through one
 `syncAudioSession()`. Fixing it blew the player's JS ratchet, exactly as the
 review predicted 600 B of headroom would; repaid by carving `initMoreTools()`
 into `editor_tools.js` (153,251 → 149,946, ratchet down to 150,000). Full
-account in the second unsealed entry at the foot of `DECISIONS.md`.
+account in the second v278 entry at the foot of `DECISIONS.md`.
 
 **The feed draws the same picture as the shared page.** The wet/dry compositor
 is implemented in `inlineplayer.js` — the review's last finding. It cost 2,913 B
@@ -92,7 +93,7 @@ was not free: Flip's `.mb-offset` readout WRAPPED at 16px and painted its second
 line over the control beside it, at 320, 360, 375 and 390 — with every geometry
 probe in the tree reporting "ok", because a wrap does not move the box.
 `verify_layout.py` section 5 now measures `scrollHeight` against the box's own
-height, which is the measurement that sees it. See the unsealed entry at the
+height, which is the measurement that sees it. See the v278 entry at the
 foot of `DECISIONS.md`.
 
 ### Environment traps, in the order they will bite

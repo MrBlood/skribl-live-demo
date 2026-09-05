@@ -5446,13 +5446,15 @@ only a typed title now and leaves an unnamed drawing's field empty behind a
 static placeholder; the filename still resolves the timestamp at export time.
 
 
-## Unsealed, on top of v277 -- the phone answered, and the 16px rule cost a pill
+## v278 -- the phone answered, and the 16px rule cost a pill
 
-**NO VERSION NUMBER, DELIBERATELY.** Nothing here is sealed. A heading with a
-number in it is a claim that `harness/release_run.py` froze a tree and passed,
-and none of that has happened. When this does get sealed the number goes on at
-that point; until then the entry sits here under a name that cannot be mistaken
-for a release. Read it as "what is in the working tree beyond the v277 seal".
+**THESE FOUR ENTRIES WERE WRITTEN UNSEALED AND NUMBERED AFTERWARDS.** While the
+work was in the tree they sat under "Unsealed, on top of v277", because a
+heading with a number in it is a claim that `harness/release_run.py` froze a
+tree and passed, and none of that had happened yet. The number went on at the
+seal, which is the point at which the claim became true. The practice is worth
+keeping: an unsealed heading cannot be mistaken for a release by someone
+reading the log a year from now.
 
 **THE UNVERIFIED FIX IS VERIFIED.** v277 sealed `lib/audiosession.js` with the
 loudest disclaimer in this file -- "A green seal is not evidence this works.
@@ -5521,7 +5523,7 @@ not a clipped box. The title drawer and the share URL clip long values
 horizontally, which is what a single-line input does.
 
 
-## Unsealed, cont. -- what an outside reviewer found that the harness could not
+## v278, cont. -- what an outside reviewer found that the harness could not
 
 An external developer review of the sealed v277 archive. It verified the
 archive against its SHA-256, checked all 254 `SHA256SUMS` entries, ran
@@ -5610,7 +5612,7 @@ satisfied. Eight of the nine assertions now fail when the bundle is removed.
 Same lesson v275 recorded under its own heading: a fixture too easy is a test
 that passes on the bug, and I wrote one again in the act of guarding a carve.
 
-## Unsealed, cont. -- a Skribl can be taken back
+## v278, cont. -- a Skribl can be taken back
 
 The v277 review's second high finding: the API "supports creation and reading
 but no obvious delete, archive, revoke, or visibility-update operation for an
@@ -5683,7 +5685,7 @@ That is twice in one release that a first-draft assertion passed on the bug it
 was written for. Both were found the same way, and neither would have been
 found by reading it.
 
-## Unsealed, cont. -- the feed draws the same picture now
+## v278, cont. -- the feed draws the same picture now
 
 The last of the v277 review's five. It said the tree documents a wet/dry
 compositor difference in which strokes authored below 100% opacity render

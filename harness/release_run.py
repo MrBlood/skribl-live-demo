@@ -86,11 +86,17 @@ BATCHES = [
     # card route) so it rides with the photo suite.
     ["verify_inline.py"],
     ["verify_compose.py"],
-    # Server-side creation. No browser, so it is fast and could ride with
-    # anything — but it drives the SAME endpoint the route suites drive, and
-    # the harness gives one database to every suite in an invocation, so it
-    # keeps its own batch rather than counting somebody else's posts.
-    ["verify_createpost.py"],
+    # Server-side creation and server-side DELETION, the two host-facing Python
+    # entry points. No browser and no harness server between them: each builds
+    # its own Flask apps over its own temporary SQLite files, so neither counts
+    # somebody else's posts and neither can be counted. They keep this batch to
+    # themselves for that reason rather than for isolation from each other.
+    #
+    # verify_deletion is placed here rather than beside verify_deletion_foundation
+    # despite the name: that suite sweeps orphans FOR REAL against a live media
+    # root, and sharing a batch with it is what the note beside it warns off.
+    # This one never touches a store.
+    ["verify_createpost.py", "verify_deletion.py"],
     # The worked example, driven in a browser against its OWN server on its own
     # port and its own database. It shares nothing with the harness instance,
     # so it could batch with anything — but it is a browser suite recording a
