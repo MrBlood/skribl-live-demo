@@ -752,7 +752,30 @@ with sync_playwright() as sp:
     # The module was 1,650 B first, building its silent clip byte by byte; that
     # read better and this ratchet is not the place to pay 360 B for legibility,
     # so it carries a base64 constant instead.
-    BYTES_RATCHET, BYTES_TARGET = 153_000, 153_600
+    #
+    # 153,000 -> 150,000 = A THIRD RATCHET THAT WENT DOWN, by 3,305 measured B,
+    # and the sequence that produced it is the argument for the discipline.
+    #
+    # An external review of v277 said 600 B was not meaningful headroom
+    # "particularly while the audio-session behavior still needs lifecycle
+    # work". Its other finding WAS that lifecycle work: the /s player claimed
+    # the iOS session on the play/pause tap before the branch deciding which it
+    # was, and released it nowhere. Fixing that took the player to 153,251 B —
+    # 251 over this ratchet — so the prediction and its proof landed inside one
+    # change. The review also said not to solve it by raising the target.
+    #
+    # Repaid from initMoreTools(), now editor_tools.js: the "More" drawer and
+    # its six tool controls, every branch guarded on an element or a lib the
+    # player template does not load, so the player parsed ~4.9 KB of source to
+    # run nothing at all. Behaviour-preserving for the player by construction
+    # rather than by an argument about reachability — none of the six libs is in
+    # skribl_player.html, so every branch was already false.
+    #
+    # Pinned just above the new floor, as every raise here has been: 149,946
+    # measured, 150,000 set, 3,654 B to target. The lesson is the one the shape
+    # tool's carve already recorded and this release had to learn twice — carve
+    # first when the target is furniture the player has no use for.
+    BYTES_RATCHET, BYTES_TARGET = 150_000, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

@@ -498,6 +498,7 @@
      every shared link shipped the GIF/WebM encoders and the post composer to
      run them for nothing. They read globals app.js declares, so they must stay
      after it; `defer` preserves document order. #}
+  <script src="{{ skribl_asset('editor_tools.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_menu.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_tune.js') }}" defer></script>
   <script src="{{ skribl_asset('editor_draw.js') }}" defer></script>

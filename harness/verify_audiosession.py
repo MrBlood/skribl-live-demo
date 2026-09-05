@@ -39,6 +39,7 @@ import os
 import pathlib
 import struct
 import sys
+import wave
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -78,6 +79,79 @@ AUD = wav_bytes(4.0)
 AS_IPHONE = """
 Object.defineProperty(navigator, 'platform', { get: () => 'iPhone' });
 """
+
+
+# ---- a posted Skribl carrying music, to drive the SHARED player -------------
+# Section 5 needs a real /s/<id> page: the release edges live in app.js's player
+# scope and there is no way to reach them from a page that has no post behind
+# it. Copied from verify_inline.py rather than shared, for the reason v278
+# recorded when a shared helper went wrong — a fixture is not surface-agnostic
+# just because two suites happen to want one, and this one wants a LONGER
+# drawing than that file's so section 5 can watch a loop run for six seconds
+# without the drawing ending underneath it.
+LOOP_WAV = "/tmp/audiosession_loop.wav"
+with wave.open(LOOP_WAV, "wb") as _w:
+    _w.setnchannels(2)
+    _w.setsampwidth(2)
+    _w.setframerate(RATE)
+    _b = bytearray()
+    for _i in range(6 * RATE):
+        _v = int(18000 * math.sin(2 * math.pi * 220 * _i / RATE))
+        _b += struct.pack("<hh", _v, _v)
+    _w.writeframes(bytes(_b))
+
+POST_PUBLIC = """async (title) => {
+  const p = serializeSkribl();
+  p.title = title;
+  p.visibility = 'public';
+  const r = await fetch(window.SKRIBL_API_BASE, {
+    method: 'POST', headers: skriblPostHeaders(), body: JSON.stringify(p) });
+  if (!r.ok) return { error: r.status + ' ' + (await r.text()).slice(0, 200) };
+  return await r.json();
+}"""
+
+
+def scribble(pg, box, n=110):
+    """Draw over about three seconds of WALL CLOCK.
+
+    Strokes carry timestamps, so a drawing made as fast as the mouse moves
+    replays in under a second — over before Play/Pause can be observed at all.
+    """
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    pg.mouse.move(cx, cy)
+    pg.mouse.down()
+    for i in range(n):
+        a = (i / n) * math.pi * 4
+        r = 20 + (i / n) * 110
+        pg.mouse.move(cx + math.cos(a) * r, cy + math.sin(a) * r)
+        pg.wait_for_timeout(25)
+    pg.mouse.up()
+
+
+def post_one(b, title, music=True):
+    """Record a drawing in Pad and post it PUBLICLY. Returns (id, errors)."""
+    pg = b.new_page(viewport={"width": 1280, "height": 900})
+    errs = []
+    pg.on("pageerror", lambda e: errs.append(str(e)))
+    pg.goto(BASE + "/skribl-pad", wait_until="load")
+    pg.wait_for_timeout(900)
+    pg.evaluate("() => localStorage.clear()")
+    scribble(pg, pg.locator("#canvas").bounding_box())
+    pg.wait_for_timeout(600)
+    pg.click("#recordBtn")
+    pg.wait_for_timeout(400)
+    if music:
+        pg.set_input_files("#musicInput", LOOP_WAV)
+        pg.wait_for_timeout(4000)
+        pg.evaluate("() => { trimStart = 1.0; trimEnd = 3.0; loopCrossfadeMs = 120; "
+                    "if (typeof updateTrimUI === 'function') updateTrimUI(); }")
+        pg.wait_for_timeout(1200)
+    res = pg.evaluate(POST_PUBLIC, title)
+    pg.close()
+    if not isinstance(res, dict) or not res.get("id"):
+        errs.append(str(res))
+        return None, errs
+    return res["id"], errs
 
 # The analyser tap from verify_player_isolation, so section 4 measures SOUND
 # rather than the absence of an error.
@@ -211,6 +285,148 @@ with sync_playwright() as p:
         check(f"{label}: and claiming the session did not break it",
               pg.inner_text("#previewLoopBtn").strip() == "Stop Preview")
         pg.close()
+
+    print("\n5 — AND IT IS RELEASED WHEN NOTHING WANTS SOUND ANY MORE")
+    # THE FINDING THIS SECTION EXISTS FOR, from an external review of v277.
+    # Claiming was correct and releasing was not: the /s player claimed on the
+    # play/pause tap BEFORE the branch that decides which of the two it is, so
+    # a Pause tap claimed the session on its way to stopping the audio — and no
+    # path released it at all. The first Play held an iOS media session until
+    # the tab closed.
+    #
+    # WHY NOTHING CAUGHT IT, and it is the same shape as the bug this whole
+    # module exists for. The failure is not silence. Sound works perfectly;
+    # what is wrong is a Control Center and lock-screen entry claiming Skribl
+    # is playing when it is not, which no assertion about audibility can see.
+    # Section 3 pinned claim/release as an API and section 4 pinned that sound
+    # comes out. Neither asked WHEN the session is let go, so both stayed green.
+    #
+    # active() is the observable here, and it is only worth reading because
+    # claim() no longer sets it optimistically and leaves it — see the last
+    # assertions in this section.
+    pid, perrs = post_one(b, "session lifecycle", music=True)
+    if not pid:
+        check("posted a Skribl carrying music to drive the shared player",
+              False, "; ".join(perrs[:2]))
+    else:
+        pg = b.new_page(viewport={"width": 390, "height": 840})
+        pg.add_init_script(AS_IPHONE)
+        pg.goto(f"{BASE}/s/{pid}", wait_until="load")
+        pg.wait_for_timeout(2500)
+        held = "() => window.SkriblAudioSession.active()"
+
+        check("the shared player holds nothing before you press Play",
+              pg.evaluate(held) is False,
+              "opening a link is not asking for sound")
+
+        pg.click("#playerPlayBtn")
+        pg.wait_for_timeout(700)
+        check("Play claims the session", pg.evaluate(held) is True)
+
+        # The regression itself: the tap that STOPS sound used to claim.
+        pg.click("#playerPlayBtn")
+        pg.wait_for_timeout(500)
+        check("Pause releases it", pg.evaluate(held) is False,
+              "a paused player holding a media session is a lock-screen entry "
+              "for audio that is not playing, and the viewer cannot clear it")
+
+        # Mute is the other edge that stops wanting sound.
+        pg.click("#playerPlayBtn")
+        pg.wait_for_timeout(600)
+        pg.click("#playerMuteBtn")
+        pg.wait_for_timeout(400)
+        check("Mute releases it while still playing", pg.evaluate(held) is False)
+        pg.click("#playerMuteBtn")
+        pg.wait_for_timeout(400)
+        check("...and unmuting takes it back", pg.evaluate(held) is True)
+
+        # Natural completion with the loop OFF. The fixture is a few seconds of
+        # drawing, so this waits for the player's own end rather than guessing.
+        pg.evaluate("() => { const l = document.getElementById('playerLoopBtn');"
+                    " if (l && l.classList.contains('active')) l.click(); }")
+        pg.evaluate("() => { const r = document.getElementById('playerRestartBtn');"
+                    " if (r) r.click(); }")
+        ended = False
+        for _ in range(40):
+            pg.wait_for_timeout(500)
+            if pg.evaluate("() => { const b = document.getElementById('playerPlayBtn');"
+                           " return b ? b.getAttribute('aria-label') : null; }") == "Play":
+                ended = True
+                break
+        check("the drawing reached its end with the loop off", ended,
+              "the rest of this assertion cannot mean anything without it")
+        if ended:
+            check("natural completion releases it", pg.evaluate(held) is False,
+                  "playback is over and the session is still held")
+
+        # A LOOP RESTART MUST NOT DROP AND RETAKE IT. Releasing on the last
+        # frame and reclaiming on the next lap would flicker the Control Center
+        # entry once per pass, which is why onEnded() only syncs when it is NOT
+        # about to restart.
+        pg.evaluate("() => { const l = document.getElementById('playerLoopBtn');"
+                    " if (l && !l.classList.contains('active')) l.click(); }")
+        pg.click("#playerPlayBtn")
+        pg.wait_for_timeout(600)
+        drops = pg.evaluate("""() => new Promise(res => {
+            let seen = 0;
+            const t = setInterval(() => {
+              if (!window.SkriblAudioSession.active()) seen++;
+            }, 100);
+            setTimeout(() => { clearInterval(t); res(seen); }, 6000); })""")
+        check("a looping player holds the session continuously across laps",
+              drops == 0,
+              f"released {drops} time(s) mid-loop — a tear-down and reacquire "
+              "every pass")
+        pg.close()
+
+    print("\n6 — active() MEANS HELD, NOT ATTEMPTED")
+    # claim() used to set its flag synchronously after a fire-and-forget play().
+    # play() settles asynchronously, so on a rejection the module reported a
+    # session it had never been granted, and — because claim() returned early
+    # on that flag — no later gesture would ever retry. Also found in the v277
+    # review. The fix is two lines: clear the flag when play() rejects, and
+    # re-play an element that exists but is paused.
+    pg = b.new_page(viewport={"width": 390, "height": 840})
+    pg.add_init_script(AS_IPHONE)
+    # Reject every play() BEFORE the module loads, so the first claim is the
+    # rejected one.
+    pg.add_init_script("""
+      HTMLMediaElement.prototype.play = function () {
+        return Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+      };
+    """)
+    pg.goto(BASE + "/", wait_until="load")
+    pg.wait_for_timeout(1200)
+    rejected = pg.evaluate("""() => new Promise(res => {
+        window.SkriblAudioSession.claim();
+        setTimeout(() => res(window.SkriblAudioSession.active()), 300); })""")
+    check("a rejected play() leaves the session NOT held",
+          rejected is False,
+          "active() would be reporting an attempt rather than a session, and "
+          "claim()'s early return would make it permanent")
+    # READ THE ELEMENT, NOT THE RETURN VALUE. claim()'s own answer passes on the
+    # bug: the optimistic version left `claimed` true after the rejection, so a
+    # retry early-returned true without ever calling play() again — a stale flag
+    # reporting success for a session it did not have. What separates the fix
+    # from the bug is whether the element is actually PLAYING afterwards.
+    retried = pg.evaluate("""() => new Promise(res => {
+        HTMLMediaElement.prototype.play = function () {
+          this.__played = true;
+          return Promise.resolve();
+        };
+        const ok = window.SkriblAudioSession.claim();
+        setTimeout(() => {
+          const el = window.SkriblAudioSession._element();
+          res({ ok: ok, replayed: !!(el && el.__played),
+                active: window.SkriblAudioSession.active() });
+        }, 200); })""")
+    check("...and the next gesture actually re-plays the element",
+          retried["replayed"] is True and retried["active"] is True
+          and retried["ok"] is True,
+          f"{retried} — a one-off rejection must not lock the module out for "
+          "the page's life, and a stale flag must not fake the recovery")
+    pg.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)

@@ -1894,6 +1894,115 @@ with sync_playwright() as _b19:
     _br19.close()
 
 
+print("\nMORE DRAWER — the carved wiring still runs in the editor")
+# WHY THIS EXISTS. initMoreTools() moved out of app.js into editor_tools.js at
+# the v277 review, to give the player back ~3.3 KB it downloaded and never ran.
+# The carve was argued safe FOR THE PLAYER by construction — none of the six
+# libs the block needs is in skribl_player.html, so every branch was already
+# false there — but nothing anywhere proved the other half: that the EDITOR
+# still gets the behaviour. Of everything the block wires, exactly one control
+# (#eraserSeg's markup, above) was covered by any suite.
+#
+# A carve verified only by "the other suites stayed green" is verified by
+# suites that do not touch the moved code. These assertions read the RUNTIME
+# EFFECT of each piece of wiring — a populated segment, a drawer that opens, a
+# button that arms — not the presence of the markup it wires, which is in the
+# template either way and would pass with editor_tools.js deleted.
+with sync_playwright() as _bmd:
+    _brmd = _bmd.chromium.launch()
+    _pmd = _brmd.new_page(viewport={"width": 1280, "height": 1000})
+    _errs_md = []
+    _pmd.on("pageerror", lambda e: _errs_md.append(str(e)))
+    _pmd.goto(BASE + "/", wait_until="load")
+    _pmd.wait_for_timeout(1500)
+
+    check("no page error from the carved bundle", not _errs_md,
+          "; ".join(_errs_md[:2]))
+    check("the editor loads editor_tools.js",
+          _pmd.evaluate("() => [...document.scripts].some("
+                        "s => /editor_tools\\.js/.test(s.src))"),
+          "the carve is only safe if the editor actually gets it back")
+
+    # AND THE ID THAT IS NOT THERE STAYS NOT THERE. The block used to open with
+    # a click handler for #moreToggle — an id no template has, so the handler
+    # had never once run. It was deleted rather than carried across, and this
+    # pins that: if the element is ever added back, the handler has to come
+    # with it deliberately rather than a dead binding being resurrected by
+    # accident. The isolation suite cannot see this class of dead code — it
+    # counts ids the editor has and the player lacks, and this is in neither.
+    check("#moreToggle is still absent, so removing its dead handler was right",
+          _pmd.evaluate("() => document.getElementById('moreToggle') === null"),
+          "the element exists again — restore a toggle handler in "
+          "editor_tools.js, do not leave the drawer with no way to close")
+
+    # CLICK THEM. The first version of this counted the buttons inside each
+    # segment and passed with editor_tools.js deleted from the template — the
+    # BUTTONS ARE IN THE TEMPLATE (see _skribl_draw_drawer.html), and only the
+    # click handling comes from the lib's create(). Counting markup measured
+    # the markup. The same mistake v275 recorded: a fixture too easy is a test
+    # that passes on the bug.
+    #
+    # What the carve actually provides is the create() call, so the assertion
+    # is that pressing an inactive segment MOVES the selection. Nothing else on
+    # the page listens to these buttons.
+    _alpha_before = _pmd.evaluate("() => typeof smoothingAlpha === 'number' "
+                                  "? smoothingAlpha : null")
+    _seg_move = _pmd.evaluate("""() => {
+        const out = {};
+        for (const id of ['smoothSeg', 'eraserSeg', 'brushSeg', 'pressureSeg']) {
+          const el = document.getElementById(id);
+          if (!el) { out[id] = 'missing'; continue; }
+          const btns = [...el.querySelectorAll('button')];
+          const before = btns.findIndex(b => b.classList.contains('active'));
+          const target = btns.find(b => !b.classList.contains('active'));
+          if (!target) { out[id] = 'no inactive button'; continue; }
+          target.click();
+          const after = btns.findIndex(b => b.classList.contains('active'));
+          out[id] = (before !== after && after >= 0) ? 'moved' : 'inert';
+        }
+        return out; }""")
+    for _id, _r in _seg_move.items():
+        check(f"#{_id} responds to a press — its create() ran", _r == "moved",
+              f"{_r} — the buttons ship in the template; only the create() "
+              "call that moved into editor_tools.js makes them do anything")
+
+    # And one that reaches past the lib into the callback the CARVED BLOCK
+    # supplies: smoothing's onChange writes app.js's smoothingAlpha. The lib
+    # could move a class on its own; only this wiring changes the drawing.
+    #
+    # BEFORE AND AFTER, not a bare read: smoothingAlpha has a non-zero default
+    # in app.js, so "is a positive number" passed with the bundle deleted. The
+    # press above moved the segment off its default, so the value must have
+    # moved with it.
+    _alpha_after = _pmd.evaluate("() => typeof smoothingAlpha === 'number' "
+                                 "? smoothingAlpha : null")
+    check("smoothing's press reaches app.js's own state",
+          _alpha_before is not None and _alpha_after is not None
+          and _alpha_after != _alpha_before,
+          f"smoothingAlpha {_alpha_before} -> {_alpha_after} — the onChange "
+          "that writes it is in editor_tools.js, not in lib/smoothing.js, so "
+          "an unchanged value means the carved wiring did not run")
+
+    # The eyedropper's create() returns the handle app.js keeps in _eyedropper.
+    check("the eyedropper is armed by the carved wiring",
+          _pmd.evaluate("() => typeof _eyedropper === 'object' && _eyedropper !== null"),
+          "_eyedropper is declared in app.js and ASSIGNED in editor_tools.js — "
+          "the cross-file global-lexical read the carve depends on")
+
+    # Clear is two-tap. The first tap must arm rather than clear, which is the
+    # whole safety property of that button.
+    _pmd.evaluate("() => { const b = document.getElementById('clearDrawerBtn');"
+                  " if (b) b.click(); }")
+    _pmd.wait_for_timeout(200)
+    check("Clear drawing still arms on the first tap instead of clearing",
+          _pmd.evaluate("() => { const b = document.getElementById('clearDrawerBtn');"
+                        " return b.classList.contains('armed'); }"),
+          "an unarmed Clear that clears immediately is the failure mode this "
+          "button exists to avoid, and its handler moved with the block")
+    _pmd.close()
+    _brmd.close()
+
+
 ok = sum(1 for o, _ in results if o)
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{ok}/{len(results)} passed" +

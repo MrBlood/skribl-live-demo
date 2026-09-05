@@ -5519,3 +5519,93 @@ sheet's caption textarea holds exactly three whole lines at 16px, the same as
 at 12.5px; the partial fourth line in a screenshot is ordinary textarea scroll,
 not a clipped box. The title drawer and the share URL clip long values
 horizontally, which is what a single-line input does.
+
+
+## Unsealed, cont. -- what an outside reviewer found that the harness could not
+
+An external developer review of the sealed v277 archive. It verified the
+archive against its SHA-256, checked all 254 `SHA256SUMS` entries, ran
+`node --check` over all 69 JavaScript files, and declined to re-run the suites
+because its environment did not match the pinned Python -- treating the sealed
+evidence as evidence rather than replacing it with a non-equivalent run. That
+last decision is the right one and worth copying.
+
+Its findings were checked against the tree one at a time before any were acted
+on. **All five were real.** What follows is what each turned out to be.
+
+**THE ONE THAT MATTERED, AND WHY NO GATE COULD SEE IT.** The /s player claimed
+the iOS playback session on the play/pause tap BEFORE the branch that decides
+which of the two it is -- so a Pause tap claimed the session on its way to
+stopping the audio -- and released it on no path at all. The first Play held it
+until the tab closed.
+
+The failure is not silence. Sound works; what is wrong is a Control Center and
+lock-screen entry saying Skribl is playing when it is not, which the viewer
+cannot clear. That is the same shape as the bug `audiosession.js` exists for --
+the thing that is broken is not the thing anyone thought to measure -- and it is
+why v277's own audio sections stayed green over it. Section 3 pinned claim and
+release as an API. Section 4 pinned that sound comes out. Neither asked WHEN the
+session is let go.
+
+Fixed by routing every edge through one `syncAudioSession()`: Pause, the last
+frame, and Mute release; Play and Unmute claim. A loop restart deliberately does
+NOT release and reclaim -- `onEnded()` syncs only when it is not about to
+restart -- because a session dropped and retaken every lap is a Control Center
+entry flickering once per pass.
+
+**AND THE FEED'S CONTRACT IS DIFFERENT ON PURPOSE**, which the review asked to
+be made explicit rather than left to be inferred. The /s player holds the
+session while it is AUDIBLY PLAYING. The feed holds it while SOUND IS ENABLED,
+playing or not, because sound there is one session-scoped preference shared by
+every post and posts start and stop as you scroll: tying it to playback would
+flicker the entry down a feed and would need a cross-player refcount to know
+when the last one stopped. The cost -- sound on, nothing playing, iOS still
+shows Skribl as playing -- is bounded, clears on mute, and is now written in
+`inlineplayer.js` where the decision lives.
+
+**`active()` MEANT "ATTEMPTED", NOT "HELD".** `claim()` set its flag
+synchronously after a fire-and-forget `play()`. `play()` settles
+asynchronously, so a rejection left the module reporting a session it had never
+been granted -- and because `claim()` early-returned on that flag, no later
+gesture would ever retry. Two lines: clear the flag when `play()` rejects,
+re-play an element that exists but is paused.
+
+**THE REVIEW PREDICTED THE NEXT FAILURE AND THE FIX PRODUCED IT.** It said 600 B
+of player headroom was not meaningful "particularly while the audio-session
+behavior still needs lifecycle work". That lifecycle work took the player's JS
+to 153,251 B against a 153,000 ratchet. The prediction and its proof landed
+inside one change.
+
+It also said not to solve that by raising the target, which is right, and the
+repayment is `editor_tools.js`: `initMoreTools()` carved out of app.js, the
+tenth such bundle. Every branch in it is guarded on an element or a lib the
+player template does not load, so the player was parsing ~4.9 KB of source to
+run nothing -- behaviour-preserving there BY CONSTRUCTION rather than by an
+argument about reachability. 153,251 -> 149,946, and the ratchet went DOWN to
+150,000, the third time it has. The embed ratchet tightened too, 29,500 ->
+29,000 against 28,907 measured.
+
+**A DEAD HANDLER FELL OUT OF READING THE CODE WELL ENOUGH TO MOVE IT.** The
+block opened by binding a click on `#moreToggle` -- an id NO TEMPLATE HAS. It
+had never run. The isolation gate that would catch this counts ids the editor
+has and the player lacks; an id neither has is invisible to it. Deleted, and
+`verify_tools.py` now pins its absence so it cannot be resurrected by accident.
+
+**TWO RATCHETS DISAGREED ABOUT THE SAME FILE**, which is worse than one being
+wrong, because each looks corroborated by the other. `verify_inline.py` said
+`audiosession.js` "serves at 1,650 B ... because it builds its own silent WAV
+rather than carrying one as base64" -- describing an implementation replaced
+several releases earlier, in the present tense, while
+`verify_player_isolation.py` correctly described the shipped one. Measured:
+1,362 B. Prose is not checked, which is the whole reason the generated stanza
+exists, and these numbers are prose.
+
+**AND MY FIRST GATE FOR THE CARVE MEASURED THE MARKUP.** It counted the buttons
+inside each segmented control and passed with `editor_tools.js` deleted from
+the template -- the buttons ship in `_skribl_draw_drawer.html`; only the click
+handling comes from the `create()` call that moved. Rewritten to PRESS each
+segment and assert the selection moves, and to read `smoothingAlpha` before and
+after rather than asserting it is a positive number, which its default already
+satisfied. Eight of the nine assertions now fail when the bundle is removed.
+Same lesson v275 recorded under its own heading: a fixture too easy is a test
+that passes on the bug, and I wrote one again in the act of guarding a carve.

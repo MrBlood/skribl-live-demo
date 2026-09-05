@@ -184,7 +184,26 @@
      * AudioContext below). Holding a silent <audio> session makes it audible.
      * Claimed only here, on an explicit unmute, never on load: see
      * lib/audiosession.js for why that distinction is the whole justification
-     * for overriding the switch at all. */
+     * for overriding the switch at all.
+     *
+     * THE FEED'S CONTRACT IS DELIBERATELY DIFFERENT FROM THE /s PLAYER'S, and
+     * this is the paragraph that says so rather than leaving it to be inferred.
+     * The /s player holds the session only while it is AUDIBLY PLAYING, and
+     * releases on Pause, the last frame and Mute. The feed holds it for as long
+     * as SOUND IS ENABLED, whether or not anything is playing right now.
+     *
+     * Why the difference: sound here is one session-scoped preference shared by
+     * every post in the list (SOUND_KEY, above), and posts start and stop as
+     * you scroll. Tying the session to "is a post playing" would drop and
+     * retake it on every card that scrolls in and out — a Control Center entry
+     * flickering on and off down a feed — and would need a cross-player
+     * refcount to know when the LAST one stopped. Tying it to the preference
+     * gives one claim on unmute and one release on mute, which is also the only
+     * pair of taps the viewer thinks of as turning sound on and off.
+     *
+     * The cost is honest and bounded: with sound on and nothing playing, iOS
+     * shows Skribl as playing media. Muting clears it. If that ever needs to be
+     * tightened, the refcount is the work, not a change of gesture. */
     if (global.SkriblAudioSession) {
       if (on) global.SkriblAudioSession.claim();
       else global.SkriblAudioSession.release();

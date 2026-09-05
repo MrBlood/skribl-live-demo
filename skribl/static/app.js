@@ -1086,125 +1086,9 @@ function stopPicking() {
   updateCanvasLockCue();   // restore lock/eraser/normal cursor rather than wiping it
 }
 
-(function initMoreTools() {
-  const moreToggle = document.getElementById('moreToggle');
-  const moreDrawer = document.getElementById('moreDrawer');
-  if (moreToggle && moreDrawer) {
-    moreToggle.addEventListener('click', () => {
-      const open = moreDrawer.hidden;      // currently hidden -> we are opening
-      moreDrawer.hidden = !open;
-      moreToggle.classList.toggle('open', open);
-      moreToggle.setAttribute('aria-expanded', String(open));
-    });
-  }
-
-  const opacitySlider = document.getElementById('opacitySlider');
-  const opacityVal = document.getElementById('opacityVal');
-  if (opacitySlider) {
-    opacitySlider.addEventListener('input', () => {
-      const v = parseInt(opacitySlider.value, 10);
-      strokeOpacity = v / 100;
-      if (opacityVal) opacityVal.textContent = v + '%';
-      if (typeof updateSliderFill === 'function') updateSliderFill(opacitySlider);
-    });
-    if (typeof updateSliderFill === 'function') updateSliderFill(opacitySlider);
-  }
-
-  // Shared with Flip via lib/smoothing.js — the level-to-alpha mapping was
-  // three magic numbers written out twice. Pill positioning stays here because
-  // Pad and Flip do it differently; see the note in that file.
-  const smoothSeg = document.getElementById('smoothSeg');
-  if (smoothSeg && window.SkriblSmoothing) {
-    window.SkriblSmoothing.create({
-      seg: smoothSeg,
-      onChange: a => { smoothingAlpha = a; },
-    });
-    attachSegSlider(smoothSeg);
-  }
-
-  // Eraser width — the shared multiplier (lib/erasersize.js). Repainting the
-  // cursor on change matters: the ring is what the user aims with, so a size
-  // that only took effect on the next stroke would be a cursor that lies.
-  const eraserSeg = document.getElementById('eraserSeg');
-  if (eraserSeg && window.SkriblEraser) {
-    window.SkriblEraser.create({
-      seg: eraserSeg,
-      onChange: () => { if (typeof updateEraserCursor === 'function') updateEraserCursor(); },
-    });
-    attachSegSlider(eraserSeg);
-  }
-
-  const brushSeg = document.getElementById('brushSeg');
-  if (brushSeg && window.SkriblBrush) {
-    window.SkriblBrush.create({ seg: brushSeg });
-    attachSegSlider(brushSeg);
-  }
-
-  const pressureSeg = document.getElementById('pressureSeg');
-  if (pressureSeg && window.SkriblPressure) {
-    window.SkriblPressure.create({ seg: pressureSeg });
-    attachSegSlider(pressureSeg);
-  }
-
-  // Shared with Flip via lib/eyedropper.js. The native window.EyeDropper
-  // branch that used to live here is GONE: it existed only on Chromium, so the
-  // tap-to-sample path had to exist anyway, and keeping both shipped two
-  // different experiences behind one button. See the note in that file.
-  const eyedropperBtn = document.getElementById('eyedropperBtn');
-  if (eyedropperBtn && window.SkriblEyedropper) {
-    _eyedropper = window.SkriblEyedropper.create({
-      button: eyedropperBtn,
-      surface: canvas,
-      idleCursor: '',
-      onArm: () => showToast('Touch the canvas — drag to aim, release to pick', eyedropperBtn),
-      // pickingColor is read by the pointer handler and by two teardown paths.
-      onChange: v => { pickingColor = v; },
-      // Loupe wiring: the lib magnifies and reads the SAME composited stage
-      // sampleColorAt reads, so the ring shows what release will pick.
-      getPoint: ev => getPos(ev),
-      artwork: () => padArtwork(),
-      dpr: () => window.devicePixelRatio || 1,
-      bg: () => bgColor,
-      // stopPicking, not just the lib's disarm: it also restores the
-      // lock/eraser/normal cursor cue, same as the tap path.
-      onPick: hex => { setPenColor(hex); stopPicking(); },
-    });
-  }
-
-  const clearDrawerBtn = document.getElementById('clearDrawerBtn');
-  if (clearDrawerBtn) {
-    let armed = false, armTimer = null;
-    const label = clearDrawerBtn.querySelector('span');
-    const disarm = () => { armed = false; clearDrawerBtn.classList.remove('armed'); if (label) label.textContent = 'Clear drawing'; };
-    clearDrawerBtn.addEventListener('click', () => {
-      if (recording) { showToast('Stop recording before clearing', clearDrawerBtn); return; }
-      if (!armed) {
-        armed = true;
-        clearDrawerBtn.classList.add('armed');
-        if (label) label.textContent = 'Tap again to clear drawing';
-        clearTimeout(armTimer);
-        armTimer = setTimeout(disarm, 3000);
-        return;
-      }
-      clearTimeout(armTimer);
-      disarm();
-      const _clearSnap = hasContent ? makeHistoryState() : null;
-      clearCanvas();
-      if (typeof clearAutosave === 'function') clearAutosave();
-      clearBackup = _clearSnap; updateClearUndoBtn();
-    });
-  }
-
-  // Restore recent colors from a previous session.
-  try {
-    const saved = JSON.parse(localStorage.getItem('skribl_recent_colors') || '[]');
-    if (Array.isArray(saved)) {
-      recentColors = saved.filter(c => /^#[0-9a-f]{6}$/.test(c)).slice(0, 6);
-      renderRecent();
-    }
-  } catch (e) {}
-})();
-
+// The "More" drawer's wiring lived here and is now editor_tools.js — every
+// branch in it was guarded on an element or a lib the player does not load, so
+// the player was parsing ~4.9 KB to run nothing. See that file's header.
 const tabSlider = document.getElementById('tabSlider');
 const tabBgSlider = document.getElementById('tabBgSlider');
 
@@ -4650,6 +4534,10 @@ function showPlayerError(msg) {
       rafId = requestAnimationFrame(frame);
       setPlayIcon();
     };
+    // Before the async clearAndRestore() below, because claim() must run inside
+    // the click gesture. running is still false here and begin() owns setting
+    // it, so the intent is passed explicitly.
+    syncAudioSession(true);
     if (fresh) {
       elapsedBase = 0;
       setProgress(0);
@@ -4660,6 +4548,32 @@ function showPlayerError(msg) {
     }
   }
 
+  // THE SESSION IS HELD ONLY WHILE THIS PLAYER IS ACTUALLY MAKING SOUND.
+  // It used to be claimed on the play/pause tap BEFORE the branch that decides
+  // which of the two it is, and released nowhere — so a Pause tap claimed the
+  // session on its way to stopping the audio, and the first Play held it until
+  // the tab closed. The failure is not silence, which is why nothing caught it:
+  // it is a Control Center and lock-screen entry saying Skribl is playing when
+  // it is not, and the viewer cannot clear it.
+  //
+  // Routed through one function so the edges cannot drift apart again. claim()
+  // is a no-op when the session is already held, which is what keeps a LOOP
+  // restart from tearing the session down and reacquiring it every pass.
+  // See lib/audiosession.js.
+  // `willRun` overrides the CURRENT running flag for the one caller that has to
+  // claim before it is set: play() must claim inside the click gesture, but
+  // running only becomes true in begin(), which clearAndRestore() may defer to
+  // a later tick. Setting running early instead would be a real behaviour
+  // change — the frame loop and the scrub handler both read it — so the intent
+  // is passed rather than the state being faked.
+  const audibleNow = (willRun) =>
+    post.hasAudio && (willRun === undefined ? running : willRun) && !muted;
+  function syncAudioSession(willRun) {
+    const s = window.SkriblAudioSession;
+    if (!s) return;
+    if (audibleNow(willRun)) s.claim(); else s.release();
+  }
+
   function pause() {
     if (!running) return;
     running = false;
@@ -4667,6 +4581,7 @@ function showPlayerError(msg) {
     elapsedBase += performance.now() - segStart;
     audioPause();
     setPlayIcon();
+    syncAudioSession();
   }
 
   function restart() {
@@ -4687,15 +4602,18 @@ function showPlayerError(msg) {
     elapsedBase = 0;
     idx = 0;
     setPlayIcon();
-    if (loop) restart();
+    // Loop first, and only sync if it does NOT restart: releasing here and
+    // reclaiming inside restart() would drop and retake the session on every
+    // lap, which is exactly the churn a held session should not produce.
+    if (loop) restart(); else syncAudioSession();
   }
 
   if (pPlay) pPlay.addEventListener('click', () => {
-    // The play tap is the gesture that asks for sound, and this player starts
-    // UNMUTED — so on iOS the ringer switch would otherwise silence a shared
-    // link's music entirely. Claimed here rather than in the mute toggle for
-    // that reason. See lib/audiosession.js.
-    if (post.hasAudio && window.SkriblAudioSession) window.SkriblAudioSession.claim();
+    // The claim has to happen on the PLAY branch, inside the gesture. This
+    // player starts UNMUTED, so on iOS the ringer switch would otherwise
+    // silence a shared link's music entirely; claimed here rather than in the
+    // mute toggle for that reason. play() and pause() both end by syncing, so
+    // the tap only has to pick the right one. See lib/audiosession.js.
     running ? pause() : play();
   });
   if (pRestart) pRestart.addEventListener('click', restart);
@@ -4713,6 +4631,9 @@ function showPlayerError(msg) {
       pMute.addEventListener('click', () => {
         muted = !muted;
         if (paGain) paGain.gain.value = muted ? 0 : 1;
+        // Muting is an edge that stops wanting sound, and unmuting mid-play is
+        // a gesture that asks for it — both belong to the session.
+        syncAudioSession();
         pMute.classList.toggle('active', muted);
         pMute.innerHTML = muted ? ICON_MUTED_P : ICON_SOUND_P;
         pMute.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');

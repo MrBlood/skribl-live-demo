@@ -46,7 +46,7 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
-### Uncommitted at the last handover: two things beyond the v277 seal
+### Uncommitted at the last handover: three things beyond the v277 seal
 
 The generated stanza and `harness/RELEASE.md` still describe **v277**. Nothing
 below is sealed, and `release_run.py` has not been near it — treat the seal as
@@ -58,6 +58,18 @@ evidence and the phone was the test; the phone answered. `verify_audiosession.py
 keeps its closing disclaimer, because the confirmation is evidence about the
 FIX, not about a harness that still has no ringer switch. Details below, under
 "Closed in v277".
+
+**An external developer review of the sealed v277 archive found five things,
+all of them real** — checked against the tree one at a time before any were
+acted on. The one that mattered: the /s player claimed the iOS playback session
+on the play/pause tap BEFORE the branch deciding which it was, and released it
+nowhere, so the first Play held it until the tab closed. Not silence — a
+Control Center entry the viewer cannot clear, which is why v277's own audio
+sections stayed green over it. Every edge now routes through one
+`syncAudioSession()`. Fixing it blew the player's JS ratchet, exactly as the
+review predicted 600 B of headroom would; repaid by carving `initMoreTools()`
+into `editor_tools.js` (153,251 → 149,946, ratchet down to 150,000). Full
+account in the second unsealed entry at the foot of `DECISIONS.md`.
 
 **`_ZOOM_EXEMPT` in `verify_ux.py` is now empty** — all seven sub-16px fields
 were raised, so the iOS-zoom rule is absolute rather than a ratchet. The raise

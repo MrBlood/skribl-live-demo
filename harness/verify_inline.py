@@ -770,19 +770,33 @@ with sync_playwright() as sp:
     # about 1.5 KB across the stylesheet and the handler. Unlike the transport
     # above, this one is paid for by the caller that uses it — the feed is
     # exactly where somebody wants a two-second drawing to stop repeating.
-    # 27,500 -> 29,500 for lib/audiosession.js, which serves at 1,650 B — TWICE
-    # the ~800 B estimated when the change was specced, because it builds its
-    # own silent WAV rather than carrying one as base64 (a pasted clip would
-    # have been larger still). The number here is the measured cost, not the
-    # predicted one; the estimate was wrong and the ratchet records what the
-    # feature actually costs. THE COST IS PAID BY THE SURFACE
+    # 27,500 -> 29,500 for lib/audiosession.js. The estimate when the change was
+    # specced was ~800 B and the first implementation served at 1,650 — twice
+    # it — because it built its own silent WAV byte by byte; the ratchet was
+    # raised against THAT number and the raise has not been revisited since.
+    #
+    # THE COMMENT THAT USED TO SIT HERE DESCRIBED THAT FIRST IMPLEMENTATION IN
+    # THE PRESENT TENSE, and it had not shipped for several releases: the module
+    # carries a base64 constant and serves at ~1,293 B, which is what
+    # verify_player_isolation.py's ratchet says twenty lines into its own note.
+    # Two ratchets in one tree stating contradictory facts about the same file
+    # is worse than either being wrong alone, because each looks corroborated.
+    # Caught in an external review of v277, not by a gate — the numbers here are
+    # prose, and prose is not checked.
+    #
+    # 29,500 -> 29,000, measured: 28,907 B served, of which lib/audiosession.js
+    # is 1,362 — not the 1,650 the old comment claimed. Pinned just above the
+    # floor like every other number here, which also means the 500 B of slack
+    # that the wrong figure was quietly holding open is now closed.
+    #
+    # THE COST IS PAID BY THE SURFACE
     # THAT NEEDS IT, which is the rule: without it a posted Skribl's music is
     # silent in a feed on any iPhone with the ringer switch off. This player is
     # Web Audio, and iOS routes Web Audio into a session that switch mutes while
     # leaving <audio> elements alone — which is why Test Seam has always played
     # on the owner's phone and Preview Loop has not. A silent held <audio>
     # session is the fix, and it has to ship wherever the player does.
-    EMBED_RATCHET = 29_500
+    EMBED_RATCHET = 29_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
