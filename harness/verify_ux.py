@@ -2092,27 +2092,29 @@ with sync_playwright() as _b13:
     _p13.close(); _c13.close()
     _br13.close()
 
-print("\nIOS ZOOM — no text field under 16px, except the ones already there")
+print("\nIOS ZOOM — no text field is under 16px, anywhere")
 # THE RULE THIS PINS is written in styles.css twice — "16px is the threshold
 # below which iOS Safari zooms the whole PAGE on focus" — and was broken a
 # third time anyway: the export sheet's file-name field shipped at 13.5px, so
 # tapping it on an iPhone zoomed the page. A rule stated in prose twice and
 # broken again is a rule that wants a gate.
 #
-# A RATCHET, NOT A BLANKET ASSERTION. Seven fields were already under the
-# threshold when this was written. They are NAMED rather than fixed here:
-# raising Flip's 12.5px number inputs changes the layout of a tight two-field
-# row and wants its own pass with eyes on it. The list may SHRINK and must
-# never grow.
-_ZOOM_EXEMPT = {
-    "skriblName":       "the title drawer, 15px — one notch under, both editors",
-    "mbOffsetInput":    "Flip motion-blur offset, 12px",
-    "exportFrom":       "Flip export range, 12.5px, in a tight two-field row",
-    "exportTo":         "Flip export range, 12.5px, in a tight two-field row",
-    "flipShareTitle":   "Flip share sheet, 12.5px",
-    "flipShareCaption": "Flip share sheet, 12.5px",
-    "flipShareUrl":     "Flip share sheet, 12.5px, read-only",
-}
+# A RATCHET THAT IS NOW EMPTY. Seven fields were under the threshold when this
+# was written and were NAMED rather than fixed, because raising them changes
+# real layout and wanted its own pass with eyes on it. That pass happened: all
+# seven are at 16px, so the ratchet is empty and the rule is absolute.
+#
+# The pass was not free, which is why the exemptions existed. Raising
+# .mb-offset from 12px made "-1000, -1000" WRAP inside a pill that states its
+# height, so the second line painted over the scope pill beside it — while
+# scrollWidth against clientWidth reported nothing, because the BOX never
+# changed. flip.css now carries `white-space: nowrap` and a clipping
+# `safe center`, and verify_layout.py section 5 pins it.
+#
+# The mechanism stays so that a future exemption is a deliberate edit here
+# rather than a number quietly dropped into a stylesheet. The list may SHRINK
+# and must never grow.
+_ZOOM_EXEMPT = {}
 _MEASURE = """() => {
   const out = [];
   document.querySelectorAll('input, textarea').forEach(el => {
@@ -2147,7 +2149,7 @@ with sync_playwright() as _pz:
         _zp.close()
     _zb.close()
 
-check("no text field is under 16px except the seven already known",
+check("no text field is under 16px — the ratchet is empty",
       not _under_new,
       "; ".join(_under_new) + " — under 16px iOS Safari zooms the whole page "
       "on focus, which styles.css states twice")

@@ -46,6 +46,28 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
+### Uncommitted at the last handover: two things beyond the v277 seal
+
+The generated stanza and `harness/RELEASE.md` still describe **v277**. Nothing
+below is sealed, and `release_run.py` has not been near it — treat the seal as
+the record and this as what sits on top of it.
+
+**The iOS silent-mode fix is confirmed on a phone** (5 Sep 2026, "Music
+works"). v277 sealed it saying in as many words that a green seal was not
+evidence and the phone was the test; the phone answered. `verify_audiosession.py`
+keeps its closing disclaimer, because the confirmation is evidence about the
+FIX, not about a harness that still has no ringer switch. Details below, under
+"Closed in v277".
+
+**`_ZOOM_EXEMPT` in `verify_ux.py` is now empty** — all seven sub-16px fields
+were raised, so the iOS-zoom rule is absolute rather than a ratchet. The raise
+was not free: Flip's `.mb-offset` readout WRAPPED at 16px and painted its second
+line over the control beside it, at 320, 360, 375 and 390 — with every geometry
+probe in the tree reporting "ok", because a wrap does not move the box.
+`verify_layout.py` section 5 now measures `scrollHeight` against the box's own
+height, which is the measurement that sees it. See the unsealed entry at the
+foot of `DECISIONS.md`.
+
 ### Environment traps, in the order they will bite
 
 * `apt-get update` fails outright until the blocked nodesource repo is moved
@@ -2653,7 +2675,7 @@ Every one came from using the app on an iPhone, not from a suite going red. The
 harness is Chromium on Linux; four of the five are invisible there by
 construction. That is the pattern worth taking from this release.
 
-    skribl/static/lib/audiosession.js    the iOS playback session (UNVERIFIED)
+    skribl/static/lib/audiosession.js    the iOS playback session (confirmed on a phone, 5 Sep 2026)
     harness/verify_audiosession.py       its mechanism, and preview's first
                                          assertion that sound comes out at all
     _skribl_export.html                  a file-name field; the GIF row
@@ -2719,12 +2741,20 @@ Preview button — never at load, because a held session shows Skribl as playing
 media in Control Center. Overriding the switch is defensible here only because
 sound is never automatic: the in-post player ships muted.
 
-**IT IS NOT VERIFIED, AND THE SUITE SAYS SO.** Chromium on Linux has no ringer
-switch. `verify_audiosession.py` pins the mechanism — one element, silent,
-looping, playing, idempotent, released, loaded on all four surfaces — and prints
-a closing line saying none of it proves an iPhone is audible. The phone is the
-test. This is the same limit app.js already records: *"Desktop never showed it
-… including in the harness."*
+**CONFIRMED ON THE DEVICE, 5 Sep 2026 — after v277 sealed it unverified.** The
+owner reported *"Music works"* from the same iPhone that found the bug, in
+silent mode. v277's DECISIONS entry sealed this fix with "A green seal is not
+evidence this works. The phone is." The phone has now answered.
+
+**THE SUITE STILL CANNOT VERIFY IT, AND STILL SAYS SO.** Chromium on Linux has
+no ringer switch. `verify_audiosession.py` pins the mechanism — one element,
+silent, looping, playing, idempotent, released, loaded on all four surfaces —
+and prints a closing line saying none of it proves an iPhone is audible. That
+line stays: the device confirmation is evidence about the fix, not about the
+harness, and a green run here only proves the mechanism is still wired up. That
+is the job it now has — protecting a confirmed fix from being refactored away.
+This is the same limit app.js already records: *"Desktop never showed it …
+including in the harness."*
 
 It also closed a gap that let a person find this before a suite did:
 `verify_audiostate` drove Preview Loop under a HUNG unlock and asserted the

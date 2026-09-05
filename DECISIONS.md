@@ -5445,3 +5445,77 @@ and makes any pixel comparison of the editor flaky (verify_cssplit)". It seeds
 only a typed title now and leaves an unnamed drawing's field empty behind a
 static placeholder; the filename still resolves the timestamp at export time.
 
+
+## Unsealed, on top of v277 -- the phone answered, and the 16px rule cost a pill
+
+**NO VERSION NUMBER, DELIBERATELY.** Nothing here is sealed. A heading with a
+number in it is a claim that `harness/release_run.py` froze a tree and passed,
+and none of that has happened. When this does get sealed the number goes on at
+that point; until then the entry sits here under a name that cannot be mistaken
+for a release. Read it as "what is in the working tree beyond the v277 seal".
+
+**THE UNVERIFIED FIX IS VERIFIED.** v277 sealed `lib/audiosession.js` with the
+loudest disclaimer in this file -- "A green seal is not evidence this works.
+The phone is." On 5 Sep 2026 the owner reported *"Music works"* from the same
+iPhone that found the bug, in silent mode. That is the outcome the harness
+cannot reach, and it is now recorded in the two places a reader would look:
+START-HERE.md's shared-module index and `verify_audiosession.py`'s header.
+
+**The suite's closing disclaimer STAYS, and the reason is worth stating.** The
+temptation on a confirmation is to delete the caveat, because the thing it
+warned about turned out fine. That gets the logic backwards. Chromium on Linux
+still has no ringer switch, so the suite still cannot see the outcome -- the
+confirmation is evidence about the FIX, not about the HARNESS. What changes is
+the suite's job: it no longer stands in for a verification that never happened,
+it protects a verification that did. A future refactor that quietly unwires the
+silent `<audio>` element would leave the phone's answer stale and true-sounding,
+and this suite is the only thing that would notice. Its closing line now says
+both halves.
+
+**THE 16px RATCHET IS EMPTY.** v277 added the IOS ZOOM section to
+`verify_ux.py` naming seven fields that were under the threshold, on the
+argument that raising them changes real layout and wants a pass with eyes on
+it. That pass happened; all seven are at 16px and `_ZOOM_EXEMPT` is `{}`. The
+mechanism stays so a future exemption is a deliberate edit in that file rather
+than a number dropped quietly into a stylesheet.
+
+**AND THE PASS WAS NOT FREE, WHICH IS WHY THE EXEMPTIONS EXISTED.** Raising
+Flip's `.mb-offset` from 12px made a wide offset -- `-1000, -1000`, and also
+`-320, -240`, which is a full-canvas drag on a phone -- WRAP to a second line
+inside a pill that states `height: 30px`. The second line painted straight over
+the scope pill beside it, at 320, 360, 375 and 390.
+
+**Every geometry probe in the project passed it.** This is the part to keep.
+`verify_layout.py` opens by declaring the right rule -- "measure what the
+browser laid out, never what the CSS was told to do" -- and it was not enough,
+because a wrap does not move the BOX. `scrollWidth - clientWidth` was 0 at
+every width, the bar's height was unchanged, and section 1's reachability query
+reported "ok" while the bar looked broken in a screenshot. The measurement that
+sees it is `scrollHeight` against the box's own height: the CONTENT, not the
+container. New section 5 in `verify_layout.py` does that at five widths.
+
+**Two things about reproducing it.** Setting `textContent` directly did NOT
+reproduce the wrap; the offset has to be written through `applyMoveOffset()`,
+the function that ships. And a `Range` over the text node reports its LAYOUT
+box, which is unaffected by `overflow: hidden` -- so a probe built on that
+reports a paint bug that is no longer there. Both cost a wrong answer here
+before the right one.
+
+**The fix is `white-space: nowrap` plus a clipping `safe center`.** nowrap for
+the same reason `.mb-scope button` already carries it: a control with a stated
+height has nowhere to put a second line. `overflow: hidden` because without it
+the too-wide text painted 4.9px outside the pill at 320 and 4.7px at 360, over
+its neighbour. `safe center` rather than plain `center` because a centred
+overflow is clipped at BOTH ends -- it would eat the leading digits and show
+the middle of the number, which is worse than a truncation. `safe` falls back
+to start exactly when it overflows and is inert otherwise, so 375px and up are
+byte-for-byte unchanged. Both properties are pinned by name in section 5, so an
+edit that drops either fails there rather than in somebody's screenshot.
+
+**What was checked and found fine, so nobody re-checks it.** The export sheet's
+`.export-num` range row -- the tight two-field row the exemption list called
+out by name -- has 123px per field at 320px and needed nothing. The share
+sheet's caption textarea holds exactly three whole lines at 16px, the same as
+at 12.5px; the partial fourth line in a screenshot is ordinary textarea scroll,
+not a clipped box. The title drawer and the share URL clip long values
+horizontally, which is what a single-line input does.

@@ -14,14 +14,20 @@ perfectly well and is merely inaudible, so all the guards pass, the native
 silence. app.js's own warning — "A source object existing is NOT the same as
 audible playback" — applies one level further out than where it was written.
 
+CONFIRMED ON THE DEVICE, 5 Sep 2026. The owner reported "Music works" from the
+same iPhone that found the bug, in silent mode. That is the evidence; what
+follows is why this file is still not.
+
 WHAT THIS SUITE CAN AND CANNOT DO, stated plainly because the distinction is the
-whole point. Chromium on Linux has no ringer switch and no iOS audio session.
-These assertions pin the MECHANISM — one element, silent, looping, playsinline,
-playing, idempotent, released, loaded on every surface that makes sound. They
-CANNOT pin the OUTCOME, which is whether an iPhone in silent mode is audible.
-app.js already says the same of its own iOS branches: "Desktop never showed it
-… including in the harness." The phone is the test, and this file is not
-evidence that the bug is fixed.
+whole point, and the confirmation above does not change it. Chromium on Linux
+has no ringer switch and no iOS audio session. These assertions pin the
+MECHANISM — one element, silent, looping, playsinline, playing, idempotent,
+released, loaded on every surface that makes sound. They CANNOT pin the OUTCOME,
+which is whether an iPhone in silent mode is audible. app.js already says the
+same of its own iOS branches: "Desktop never showed it … including in the
+harness." The phone is the test. A green run here is evidence the mechanism is
+still wired up — it is what protects the confirmed fix from being refactored
+away — and it is not, and never becomes, evidence that the fix works.
 
 Section 4 closes a different gap: verify_audiostate drives Preview Loop under a
 HUNG unlock and asserts the fallback plumbing, but nothing anywhere asserted
@@ -212,5 +218,7 @@ bad = [n for ok, n in results if not ok]
 print("\n" + "=" * 62)
 print(f"{passed}/{len(results)} passed"
       + ("" if not bad else "\nFAILURES:\n  - " + "\n  - ".join(bad)))
-print("\nNOTE: none of the above proves an iPhone in silent mode is audible.")
+print("\nNOTE: none of the above proves an iPhone in silent mode is audible."
+      "\n      The device did: confirmed by the owner on 5 Sep 2026. This suite"
+      "\n      guards the mechanism behind that confirmation, not the outcome.")
 sys.exit(1 if bad else 0)

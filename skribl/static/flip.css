@@ -13,7 +13,9 @@
   .flip-share-close { position: absolute; top: 10px; right: 12px; background: none; border: 0; color: var(--text-secondary); cursor: pointer; font-size: 15px; }
   .flip-share-sub { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
   .flip-share-url { width: 100%; box-sizing: border-box; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--hairline-strong);
-    background: var(--surface-panel); color: var(--text-primary); font-size: 12.5px; text-align: center; }
+    background: var(--surface-panel); color: var(--text-primary);
+    /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
+    font-size: 16px; text-align: center; }
   /* Compose step. Inherits .flip-share-url's box so the title, caption and the
      result URL all read as one family; the caption relaxes text-align and
      resize, which a single-line readonly URL does not want. */
@@ -1192,7 +1194,9 @@
     height: 32px; padding: 0 10px; text-align: center;
     background: var(--surface-panel); color: var(--text-primary);
     border: 1px solid var(--hairline-strong); border-radius: 9px;
-    font: inherit; font-size: 12.5px;
+    font: inherit;
+    /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
+    font-size: 16px;
   }
   .export-num:focus { outline: none; border-color: var(--ui-line); }
   /* The spinners are redundant next to a keyboard and steal horizontal room. */
@@ -1247,12 +1251,31 @@
      .color-dot, .bg-swatch, .zoom-hud .zoom-val, #musicPendingBtn), one tier
      below the 38px .pb controls they sit beside. */
   .mb-offset {
-    font-variant-numeric: tabular-nums; font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
+    /* The BUTTON moves with the input: the note below says the two must
+       match exactly or the bar jumps on every edit. */
+    font-size: 16px;
+    /* `nowrap` because the pill states a height: a wrapped second line has
+       nowhere to go and spills over the controls beside it, and — because the
+       BOX is unchanged — scrollWidth against clientWidth reports nothing.
+       At 12px "-1000, -1000" fitted on one line at every width and the wrap
+       never happened; at 16px it wrapped at 320, 360, 375 and 390. Same
+       reason .mb-scope button carries it. */
+    white-space: nowrap;
     color: var(--text-primary);
     background: var(--surface-control); border: 1px solid var(--hairline-strong);
     border-radius: 8px; min-width: 62px; text-align: center;
     height: 30px; box-sizing: border-box;
-    display: inline-flex; align-items: center; justify-content: center;
+    display: inline-flex; align-items: center;
+    /* `safe center` + `overflow: hidden` so a value too wide for the pill is
+       CLIPPED INSIDE IT instead of painting over the scope pill beside it.
+       Plain `center` overflows both ends, so the clip would eat the leading
+       digits and show the middle of the number — worse than a truncation.
+       `safe` falls back to start exactly when it overflows and is otherwise
+       inert, so 375px and up are unchanged. Measured at "-1000, -1000": the
+       text escaped the pill by 4.9px at 320 and 4.7px at 360. */
+    justify-content: safe center; overflow: hidden;
     padding: 0 10px;
   }
   /* The readout is operable, so it says so. */
@@ -1262,7 +1285,9 @@
      exactly or the bar jumps on every edit. Both take their height from the
      same 30px as the scope pill. */
   .mb-offset-input {
-    font: inherit; font-size: 12px; font-variant-numeric: tabular-nums;
+    font: inherit;
+    /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
+    font-size: 16px; font-variant-numeric: tabular-nums;
     text-align: center; cursor: text;
     color: var(--text-primary); caret-color: var(--ui-hi);
     outline: none;

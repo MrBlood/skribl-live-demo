@@ -5582,7 +5582,9 @@ body.player-mode #canvas {
   /* A hairline purple border, nothing more — no fill glow. The box is quiet at
      rest and just firms the line on focus. */
   background: var(--surface-base); border: 1px solid rgba(124, 92, 255, 0.5);
-  color: var(--text-primary); font-size: 15px; font-weight: 600; font-family: inherit; outline: none;
+  color: var(--text-primary);
+  /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
+  font-size: 16px; font-weight: 600; font-family: inherit; outline: none;
 }
 .name-input::placeholder { color: var(--text-dim); font-weight: 500; }
 /* Just firm the hairline on focus — no second ring. The global

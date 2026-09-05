@@ -38,6 +38,14 @@ SECTION 4 — the Flip navigation guard.
     Asserts the URL after the click, not the sheet. A sheet appearing proves a
     sheet appeared; only the URL proves the work survived.
 
+SECTION 5 — the move-bar readout does not spill its pill.
+    The one defect in this file that every other measurement in it misses. A
+    wrapped line inside a fixed-height pill leaves the BOX unchanged, so
+    scrollWidth, the bar height and reachability all report "ok" while the
+    second line paints over the control beside it. Measured as scrollHeight
+    against the box's own height, with the offset written through the function
+    that ships — setting textContent directly does not reproduce it.
+
 Requires a running server. Run it like the other browser suites:
     ./harness/run_harness.sh verify_layout.py
 """
@@ -419,6 +427,77 @@ with sync_playwright() as p:
               "/flip" not in pg.url,
               f"stayed on {pg.url} — a guard appeared on the surface that does not need one")
     pg.close()
+
+    # ------------------------------------------------------------ section 5
+    print("\nLAYOUT 5 — the move-bar readout does not spill its pill")
+    # THIS SECTION EXISTS BECAUSE THE FILE'S OWN RULE WAS NOT ENOUGH. Raising
+    # .mb-offset from 12px to 16px (the iOS zoom threshold — see the IOS ZOOM
+    # section in verify_ux.py) made "-1000, -1000" WRAP to a second line inside
+    # a pill that states `height: 30px`. The second line painted straight over
+    # the scope pill beside it.
+    #
+    # Every geometry probe in this file would have passed it. The pill's BOX is
+    # unchanged by the wrap, so scrollWidth against clientWidth reports zero,
+    # the bar's height is unchanged, and Done stays reachable. Section 1's
+    # REACH_Q returned "ok" at all five widths while the bar looked broken.
+    #
+    # So the measurement here is scrollHeight against the box's own height —
+    # the content, not the container — and the offset is written through
+    # applyMoveOffset(), the function that ships. Setting textContent directly
+    # did NOT reproduce the wrap, which is worth knowing: the reproduction has
+    # to go through the app's path.
+    #
+    # "-1000, -1000" is the pessimistic end of what applyMoveOffset can write
+    # (it rounds dx/dy to integers and does not clamp). "-320, -240" is a
+    # full-canvas drag on a phone, and it wrapped too, at 320 and 360.
+    SPILL_Q = """([dx, dy]) => {
+      moveDx = dx; moveDy = dy; applyMoveOffset();
+      const off = document.getElementById('mbOffset');
+      const nxt = document.querySelector('.mb-scope');
+      if (!off || !nxt) return null;
+      const cs = getComputedStyle(off);
+      const b = off.getBoundingClientRect();
+      // A single nowrap line fits the stated height; a wrapped one does not.
+      // scrollHeight sees the content even when the box is unmoved.
+      return { txt: off.textContent,
+               boxH: +b.height.toFixed(1),
+               contentH: off.scrollHeight,
+               clips: cs.overflow === 'hidden',
+               wraps: cs.whiteSpace === 'nowrap' ? false : true };
+    }"""
+    for w in (320, 360, 375, 390, 430):
+        pg = ctx.new_page()
+        pg.set_viewport_size({"width": w, "height": 800})
+        pg.goto(BASE + "/flip", wait_until="load")
+        pg.wait_for_timeout(250)
+        # A stroke to move, then the mode that shows the bar. setTool is the
+        # same entry verify_move.py uses, for the same reason: the control has
+        # moved between the page bar and the tool shelf once already.
+        box = pg.locator("#pad").bounding_box()
+        pg.mouse.move(box["x"] + 60, box["y"] + 60)
+        pg.mouse.down()
+        pg.mouse.move(box["x"] + 160, box["y"] + 110, steps=8)
+        pg.mouse.up()
+        pg.evaluate("() => setTool('artmove')")
+        pg.wait_for_timeout(200)
+        for dx, dy in ((-320, -240), (-1000, -1000)):
+            r = pg.evaluate(SPILL_Q, [dx, dy])
+            if r is None:
+                check(f"@{w}px — found the move bar readout", False)
+                continue
+            check(f"@{w}px the readout \"{r['txt']}\" stays on one line",
+                  r["contentH"] <= r["boxH"] + 1,
+                  f"content is {r['contentH']}px in a {r['boxH']}px pill — it "
+                  "wrapped, and a wrapped line paints over the control beside it")
+        # The two properties that make the above true, pinned by name so a
+        # future edit that drops either fails HERE rather than in a screenshot.
+        r = pg.evaluate(SPILL_Q, [-1000, -1000])
+        check(f"@{w}px the readout declares nowrap", not r["wraps"],
+              "without it a value too wide for the pill wraps instead of clipping")
+        check(f"@{w}px the readout clips rather than overflowing", r["clips"],
+              "overflow:visible let the text paint outside the pill by 4.9px "
+              "at 320 and 4.7px at 360")
+        pg.close()
 
     browser.close()
 
