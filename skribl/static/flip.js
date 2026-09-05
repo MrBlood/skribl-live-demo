@@ -3988,7 +3988,7 @@ bindEl('flipShareCopy', 'click',async()=>{
 function exportPNG(){
   const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
   drawFrameTo(c, frame());
-  cv.toBlob(b=>{ if(b) download(b, 'skribl-frame-'+(idx+1)+'.png'); }, 'image/png');
+  cv.toBlob(b=>{ if(b) download(b, window.SkriblName ? window.SkriblName.exportName('png', ' frame '+(idx+1)) : 'skribl-frame-'+(idx+1)+'.png'); }, 'image/png');
 }
 let exporting=false;
 function exportWebM(){
@@ -4006,7 +4006,7 @@ function exportWebM(){
   const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'video/webm';
   let rec; try{ rec=new MediaRecorder(stream,{mimeType:mime}); }catch(_){ exporting=false; exportHide(); chip('Video export failed'); return; }
   const chunks=[]; rec.ondataavailable=ev=>{ if(ev.data && ev.data.size) chunks.push(ev.data); };
-  rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob,'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
+  rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob, window.SkriblName ? window.SkriblName.exportName('webm') : 'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
   drawFrameTo(c, frames[_r.from-1]); rec.start();
   // Tick in base-fps units, not pages, so a held page simply occupies more ticks.
   const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
@@ -4053,7 +4053,7 @@ async function exportGIF(){
       if((i&1)===0) await new Promise(r=>setTimeout(r,0));               // yield so the UI stays responsive
     }
     enc.finish();
-    download(new Blob([enc.bytes()],{type:'image/gif'}),'skribl-flip.gif');
+    download(new Blob([enc.bytes()],{type:'image/gif'}), window.SkriblName ? window.SkriblName.exportName('gif') : 'skribl-flip.gif');
     exportSet(1,'Done!'); setTimeout(exportHide,500); chip('GIF exported');
   }catch(err){ console.error('GIF export failed:', err); exportHide(); chip('GIF export failed'); }
   exporting=false;
@@ -4136,7 +4136,7 @@ async function exportViaWebCodecsMp4(){
     }
     if(encErr) throw encErr;
     muxer.finalize();
-    download(new Blob([muxer.target.buffer],{type:'video/mp4'}),'skribl-flip.mp4');
+    download(new Blob([muxer.target.buffer],{type:'video/mp4'}), window.SkriblName ? window.SkriblName.exportName('mp4') : 'skribl-flip.mp4');
     try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){}
     exportSet(1,'Done!'); setTimeout(exportHide,500); chip('MP4 exported'); exporting=false; return true;
   }catch(err){ console.error('WebCodecs MP4 export failed:', err); exportHide(); chip('MP4 failed — using WebM'); exporting=false; return false; }
@@ -4696,6 +4696,8 @@ const exportSheet=document.getElementById('exportSheet');
 let _exCloseT=null;
 function openExportSheet(){
   closeMenu();
+  // Seed the file-name field from the title (lib/nametab.js).
+  if(window.SkriblName && window.SkriblName.seedExport) window.SkriblName.seedExport();
   const single=frames.length<2;
   const vBtn=document.getElementById('exportVideo'), vDesc=document.getElementById('exportVideoDesc');
   const vTitle=vBtn?vBtn.querySelector('.export-opt-title'):null;

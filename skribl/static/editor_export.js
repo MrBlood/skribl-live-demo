@@ -33,6 +33,9 @@
   let closeTimer = null;
 
   function openExport() {
+    // Seed the file-name field from the title, unless the author has
+    // already typed one for this export (lib/nametab.js keeps that flag).
+    if (window.SkriblName && window.SkriblName.seedExport) window.SkriblName.seedExport();
     // Update the video option description based on what's available
     const videoTitle = videoBtn.querySelector('.export-opt-title');
     if (!strokes.length) {
@@ -213,7 +216,7 @@
       }
       enc.finish();
       const bytes = enc.bytes();
-      downloadBlob(new Blob([bytes], { type: 'image/gif' }), 'skribl.gif');
+      downloadBlob(new Blob([bytes], { type: 'image/gif' }), (window.SkriblName ? window.SkriblName.exportName('gif') : 'skribl.gif'));
       progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
       showToast('GIF exported', null);
       videoBtn.disabled = false; pngBtn.disabled = false; gifBtn.disabled = false;
@@ -265,7 +268,7 @@
     drawComposite(octx, w, h);
     out.toBlob((blob) => {
       if (!blob) { showToast('Export failed', null); return; }
-      downloadBlob(blob, 'skribl.png');
+      downloadBlob(blob, (window.SkriblName ? window.SkriblName.exportName('png') : 'skribl.png'));
       showToast('Image exported', null);
       closeExport();
     }, 'image/png');
@@ -459,7 +462,7 @@
       muxer.finalize();
       const buffer = muxer.target.buffer;
       progressFill.style.width = '100%'; progressLabel.textContent = 'Done!';
-      downloadBlob(new Blob([buffer], { type: 'video/mp4' }), 'skribl.mp4');
+      downloadBlob(new Blob([buffer], { type: 'video/mp4' }), (window.SkriblName ? window.SkriblName.exportName('mp4') : 'skribl.mp4'));
       showToast('MP4 exported', null);
       try { vEnc.close(); } catch (e) {} try { if (aEnc) aEnc.close(); } catch (e) {}
       cleanup();
@@ -600,7 +603,8 @@
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
       const ext = mimeType.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
-      downloadBlob(blob, 'skribl.' + ext);
+      downloadBlob(blob, window.SkriblName
+        ? window.SkriblName.exportName(ext) : 'skribl.' + ext);
       progressLabel.textContent = 'Done!';
       progressFill.style.width = '100%';
       showToast('Video exported', null);

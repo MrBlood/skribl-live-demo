@@ -72,12 +72,45 @@
       var el = inputEl();
       if (el && typeof t === 'string') { el.value = t; syncLabel(); }
     },
-    filename: function (t) {
+    filename: function (t, ext) {
       var base = String(t || API.get()).toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')   // spaces, ·, :, everything non-alnum -> -
         .replace(/^-+|-+$/g, '')       // trim leading/trailing -
         .slice(0, 60);
-      return (base || 'skribl') + '.skribl';
+      // 'skribl' both as the extension default and as the base fallback: an
+      // untitled draft is skribl.skribl, which is odd-looking and correct.
+      return (base || 'skribl') + '.' + (ext || 'skribl');
+    },
+
+    /* ---- THE EXPORT SHEET'S NAME FIELD -----------------------------------
+     * Every media export used to be a hardcoded literal — skribl.gif,
+     * skribl.png, skribl.mp4, skribl-flip.gif — so exporting the same drawing
+     * twice produced "skribl.gif" and "skribl (1).gif" with nothing to tell
+     * them apart, and titling the drawing changed none of it.
+     *
+     * The field is seeded from the title and edited independently: naming an
+     * export is not renaming the drawing, so typing here never writes back.
+     * `dirty` is what protects that edit — once the author has typed, reopening
+     * the sheet stops overwriting them.
+     */
+    exportBase: function () {
+      var el = document.getElementById('exportName');
+      var typed = el && el.value ? el.value.trim() : '';
+      return typed || API.get();
+    },
+
+    /* The one place an export filename is built, for both editors. `suffix` is
+     * for Flip's single-frame PNG, which is the one export that names a part of
+     * the piece rather than the piece: "lighthouse-frame-3.png". */
+    exportName: function (ext, suffix) {
+      return API.filename(API.exportBase() + (suffix || ''), ext);
+    },
+
+    /* Called by whichever editor is opening the sheet. */
+    seedExport: function () {
+      var el = document.getElementById('exportName');
+      if (!el || el._skriblDirty) return;
+      el.value = API.get();
     },
     // opts = { onConfirm?, label? }. onConfirm runs when the drawer is confirmed
     // (Save draft passes its save here so the file is named as it is saved);
@@ -152,6 +185,15 @@
       API._open({});            // a plain rename: no callback, "Done" button
     });
     el.addEventListener('input', syncLabel);
+
+    // The export field is a sibling of this drawer, not part of it: it lives in
+    // the shared export sheet and is seeded from the title. Marking it dirty on
+    // the first keystroke is what stops seedExport() overwriting a name the
+    // author chose for this export.
+    var exp = document.getElementById('exportName');
+    if (exp) {
+      exp.addEventListener('input', function () { exp._skriblDirty = true; });
+    }
     el.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); confirm(); }
       else if (e.key === 'Escape') { cancel(); }

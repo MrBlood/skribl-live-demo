@@ -13,6 +13,25 @@
     <div class="menu-handle"></div>
     <div class="export-head">Export your Skribl</div>
     <div class="export-sub" id="exportSub">Choose a format</div>
+    {# THE FILE NAME. Every export used to be a hardcoded literal — skribl.gif,
+       skribl.png, skribl-flip.mp4 — so two exports of the same drawing came out
+       as "skribl.gif" and "skribl (1).gif", and titling the drawing changed
+       nothing. Seeded from the title (lib/nametab.js seedExport) and edited
+       independently: naming an export is not renaming the drawing, so what is
+       typed here never writes back to the title.
+
+       Above the formats, not below: it applies to every one of them, and a
+       field under the buttons would read as belonging to the last one. #}
+    <div class="export-nameblock">
+      <label class="export-optlbl" for="exportName">File name</label>
+      <div class="export-namerow">
+        <input type="text" id="exportName" class="export-nameinput" maxlength="60"
+               autocomplete="off" spellcheck="false"
+               aria-describedby="exportNameExt"
+               placeholder="Untitled Skribl">
+        <span class="export-nameext" id="exportNameExt">.gif / .png / .mp4</span>
+      </div>
+    </div>
     <button type="button" class="export-opt" id="exportPng" title="Save the current frame as a still image">
       <div class="export-opt-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
