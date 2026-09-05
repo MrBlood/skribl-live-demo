@@ -4545,7 +4545,11 @@ matchDrawingBtn.addEventListener('click', setLoopToDrawingLength);
 // preview loop + test seam (seek-based on the <audio> element)
 let previewingLoop=false, previewLoopTimer=null, seamStopTimer=null, _previewWA=false;
 function stopLoopPreview(){ previewingLoop=false; _previewWA=false;
-  if(!playing){ stopWebAudioLoop(); if(audioEl){ try{audioEl.pause();}catch(_){}} }
+  if(!playing){ stopWebAudioLoop(); if(audioEl){ try{audioEl.pause();}catch(_){}}
+    // Nothing wants sound any more, so stop holding the iOS playback session
+    // (it shows Skribl as playing media in Control Center). Guarded on
+    // `playing`: the animation's own audio still needs it.
+    if(window.SkriblAudioSession) window.SkriblAudioSession.release(); }
   if(previewLoopTimer) clearInterval(previewLoopTimer); if(seamStopTimer) clearTimeout(seamStopTimer); previewLoopTimer=null; seamStopTimer=null;
   if(playhead) playhead.hidden=true; if(zoomPlayhead) zoomPlayhead.hidden=true; if(previewLoopBtn) previewLoopBtn.textContent='Preview Loop'; }
 function previewTick(){ if(!previewingLoop) return;
@@ -4555,6 +4559,9 @@ function previewTick(){ if(!previewingLoop) return;
   if(zoomPlayhead && currentAudioBuffer){ const zw=getZoomWindow(); const zp=((st-zw.start)/zw.duration)*100; zoomPlayhead.hidden=false; zoomPlayhead.style.left=Math.max(0,Math.min(100,zp))+'%'; } }
 function startLoopPreviewNative(){ if(!previewingLoop) return; _previewWA=false; ensureAudio(); if(!audioEl){ stopLoopPreview(); return; } try{ audioEl.muted=false; audioEl.currentTime=trimStart; audioEl.play().catch(()=>{}); }catch(_){} }
 function startLoopPreview(){
+  // iOS silences Web Audio with the ringer switch off — hold a playback session
+  // for the length of the preview. See lib/audiosession.js.
+  if(window.SkriblAudioSession) window.SkriblAudioSession.claim();
   previewingLoop=true; previewLoopBtn.textContent='Stop Preview';
   if(startWebAudioLoop(startLoopPreviewNative)){ _previewWA=true; }           // gapless; native reachable on async unlock failure
   else startLoopPreviewNative();

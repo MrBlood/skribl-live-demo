@@ -54,6 +54,11 @@
    other. #}
 <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
 <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
+{# lib/audiosession.js: the reason this costs a host bytes is that WITHOUT it a
+   posted Skribl's music is silent in a feed on any iPhone with the ringer switch
+   off — this player is Web Audio, and iOS routes that into a session the switch
+   mutes. Claimed on the unmute tap only, never on load. #}
+<script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
 <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
 {%- endmacro %}
 

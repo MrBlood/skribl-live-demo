@@ -770,7 +770,19 @@ with sync_playwright() as sp:
     # about 1.5 KB across the stylesheet and the handler. Unlike the transport
     # above, this one is paid for by the caller that uses it — the feed is
     # exactly where somebody wants a two-second drawing to stop repeating.
-    EMBED_RATCHET = 27_500
+    # 27,500 -> 29,500 for lib/audiosession.js, which serves at 1,650 B — TWICE
+    # the ~800 B estimated when the change was specced, because it builds its
+    # own silent WAV rather than carrying one as base64 (a pasted clip would
+    # have been larger still). The number here is the measured cost, not the
+    # predicted one; the estimate was wrong and the ratchet records what the
+    # feature actually costs. THE COST IS PAID BY THE SURFACE
+    # THAT NEEDS IT, which is the rule: without it a posted Skribl's music is
+    # silent in a feed on any iPhone with the ringer switch off. This player is
+    # Web Audio, and iOS routes Web Audio into a session that switch mutes while
+    # leaving <audio> elements alone — which is why Test Seam has always played
+    # on the owner's phone and Preview Loop has not. A silent held <audio>
+    # session is the fix, and it has to ship wherever the player does.
+    EMBED_RATCHET = 29_500
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -793,7 +805,7 @@ with sync_playwright() as sp:
         served[u.split("/static/skribl/")[-1].split("?")[0]] = len(raw)
         total += len(raw)
     check("every asset the embed macro names is one the server serves",
-          len(embed_urls) == 5, str(embed_urls))
+          len(embed_urls) == 6, str(embed_urls))
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
           total <= EMBED_RATCHET,

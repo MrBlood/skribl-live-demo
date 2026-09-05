@@ -1305,6 +1305,7 @@ rather than a shared rule.
 | module | loaded on | what it owns |
 | --- | --- | --- |
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
+| `audiosession.js` | Pad+Flip+player+in-post | Holds an iOS playback session so the ringer switch stops silencing Web Audio. |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |
@@ -2645,6 +2646,45 @@ the same hour. **A comment is not a gate.**
 **Two hand-typed counts in one sentence of this file** — batches and suites.
 `verify_docs` caught the suite count; nothing checks the batch count and it was
 stale too. Both removed rather than updated.
+
+## iOS silences Web Audio when the ringer switch is off — v277 work
+
+`harness/verify_audiosession.py`, `skribl/static/lib/audiosession.js`.
+
+Found by the owner on their own phone: **Test Seam plays and Preview Loop does
+not**, on a phone set to silent. Test Seam is a plain `<audio>` element; Preview
+Loop is Web Audio. iOS routes Web Audio into an "ambient" session the hardware
+switch mutes and leaves `<audio>` alone.
+
+**THE SCOPE IS NOT THE PREVIEW BUTTON.** `/s/<id>` and the in-post player are
+both Web Audio, so on an iPhone in silent mode a shared link's music and every
+feed post's music are silent too. For a component whose whole purpose is playing
+in somebody else's feed, that is the feature not working.
+
+**Why every existing guard missed it.** app.js has an elaborate hand-off for a
+context that never unlocks, and every one of its tests is `state !== 'running'`.
+In silent mode the context reaches `running` perfectly well and is merely
+inaudible — so all the guards pass, the native `<audio>` fallback is
+deliberately suppressed, and the result is confident silence. app.js's own
+warning, *"A source object existing is NOT the same as audible playback"*,
+applies one level further out than where it was written.
+
+**The fix holds a silent looping `<audio>` element**, which moves the session to
+"playback". Claimed only on a gesture that asks for sound — the unmute tap, the
+Preview button — never at load, because a held session shows Skribl as playing
+media in Control Center. Overriding the switch is defensible here only because
+sound is never automatic: the in-post player ships muted.
+
+**IT IS NOT VERIFIED, AND THE SUITE SAYS SO.** Chromium on Linux has no ringer
+switch. `verify_audiosession.py` pins the mechanism — one element, silent,
+looping, playing, idempotent, released, loaded on all four surfaces — and prints
+a closing line saying none of it proves an iPhone is audible. The phone is the
+test. This is the same limit app.js already records: *"Desktop never showed it
+… including in the harness."*
+
+It also closed a gap that let a person find this before a suite did:
+`verify_audiostate` drove Preview Loop under a HUNG unlock and asserted the
+fallback plumbing, but nothing anywhere asserted that preview makes a sound.
 
 ## Known-open, in the order worth doing
 

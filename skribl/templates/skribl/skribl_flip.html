@@ -510,6 +510,11 @@
   <script src="{{ skribl_asset('lib/palette.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pillfit.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+  {# lib/audiosession.js: iOS silences Web Audio when the ringer switch is off
+     but not an <audio> element, so a Skribl's music is inaudible on a phone set
+     to silent. Holds a playback session, claimed only on a gesture that asks
+     for sound. #}
+  <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>

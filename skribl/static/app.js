@@ -2560,6 +2560,7 @@ function stopPreviewLoopAudio() {
 
 function stopLoopPreview() {
   previewingLoop = false;
+  if (window.SkriblAudioSession) window.SkriblAudioSession.release();
   if (audioEl) audioEl.pause();
   if (previewLoopTimer) clearInterval(previewLoopTimer);
   stopSeamTest();
@@ -2574,6 +2575,9 @@ function stopLoopPreview() {
 
 function startLoopPreview() {
   if (!audioEl) return;
+  /* iOS silences Web Audio when the ringer switch is off; hold a playback
+     session so this is audible. Gesture-scoped — see lib/audiosession.js. */
+  if (window.SkriblAudioSession) window.SkriblAudioSession.claim();
   previewingLoop = true;
   previewLoopBtn.textContent = 'Stop Preview';
   try { audioEl.pause(); } catch (e) {}   // keep the raw source from playing underneath
@@ -4686,7 +4690,14 @@ function showPlayerError(msg) {
     if (loop) restart();
   }
 
-  if (pPlay) pPlay.addEventListener('click', () => { running ? pause() : play(); });
+  if (pPlay) pPlay.addEventListener('click', () => {
+    // The play tap is the gesture that asks for sound, and this player starts
+    // UNMUTED — so on iOS the ringer switch would otherwise silence a shared
+    // link's music entirely. Claimed here rather than in the mute toggle for
+    // that reason. See lib/audiosession.js.
+    if (post.hasAudio && window.SkriblAudioSession) window.SkriblAudioSession.claim();
+    running ? pause() : play();
+  });
   if (pRestart) pRestart.addEventListener('click', restart);
   if (pLoop) pLoop.addEventListener('click', () => {
     loop = !loop;

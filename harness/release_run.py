@@ -96,6 +96,9 @@ BATCHES = [
     # so it could batch with anything — but it is a browser suite recording a
     # real drawing, which is the kind that wants a quiet CPU.
     ["verify_example.py"],
+    # Audio measured on the graph through an analyser tap, so it wants the same
+    # quiet CPU verify_player_isolation and verify_hold get their own batch for.
+    ["verify_audiosession.py"],
     ["verify_library.py"],
     ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],

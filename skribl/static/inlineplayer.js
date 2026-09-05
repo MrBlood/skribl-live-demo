@@ -178,6 +178,17 @@
 
   function setSoundOn(on) {
     try { global.sessionStorage.setItem(SOUND_KEY, on ? '1' : '0'); } catch (e) {}
+    /* THE UNMUTE TAP IS THE GESTURE. On iOS the ringer switch silences Web
+     * Audio but not an <audio> element, so a posted Skribl's music is inaudible
+     * in a feed on a phone set to silent — this player is Web Audio (see the
+     * AudioContext below). Holding a silent <audio> session makes it audible.
+     * Claimed only here, on an explicit unmute, never on load: see
+     * lib/audiosession.js for why that distinction is the whole justification
+     * for overriding the switch at all. */
+    if (global.SkriblAudioSession) {
+      if (on) global.SkriblAudioSession.claim();
+      else global.SkriblAudioSession.release();
+    }
     for (var i = 0; i < players.length; i++) players[i].applySound();
   }
 
