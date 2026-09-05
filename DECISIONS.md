@@ -5330,3 +5330,118 @@ one sentence -- "44 SEPARATE batches" and "all 93 suites". `verify_docs` caught
 the suite count. Nothing checks the batch count and it was stale too. Both
 removed rather than updated, per that file's own rule about numbers in prose.
 
+## v277 -- Five things the owner found on a phone, and one of them is not verified
+
+Every change in this release came from the owner using the app on an iPhone
+rather than from a suite going red, which is worth saying at the top because it
+is the pattern: the harness runs Chromium on Linux, and four of the five defects
+below are invisible there by construction.
+
+**The post sheet gets the toolbar's music mark.** A Skribl with a loop and one
+without looked identical at the moment of posting. The owner's sketch beat the
+design I proposed -- I offered a labelled pill that BORROWED the tool row's
+green; they asked why not use the tool row's actual mark. It is cleaner, needs
+no learning, and dropping the text label dissolved my own objection to putting
+it on the header, which was an argument against a variable-width chip reflowing
+against a variable-width string and not against a 17px marker.
+
+ONE GLYPH, NOT TWO THAT AGREE TODAY. The path data was about to be written a
+second time, so it is a Jinja macro called by both callers, and the suite
+compares the two as RENDERED rather than grepping the template -- a copy would
+satisfy any grep and drift the first time either was redrawn. The dot's POSITION
+is shared too: `.post-sound` joins `.tool-open`'s selector rather than restating
+a calc whose 0.4 offset carries an essay deriving it from measured clearances at
+six button tiers.
+
+**Exports could not be named.** Every media export was a hardcoded literal --
+skribl.gif, skribl.png, skribl-flip.mp4 -- so two exports of one drawing arrived
+as "skribl.gif" and "skribl (1).gif" with nothing to tell them apart, and
+titling the drawing changed none of it. Drafts had been named properly through
+`lib/nametab.js` for releases; the media exports were simply never wired to it.
+A field in the export sheet, seeded from the title, edited independently:
+naming an export is not renaming the drawing.
+
+**PLACING THAT FIELD'S LABEL FOUND A BUG NO SUITE COULD SEE.**
+`.export-optlbl` was defined only in `flip.css`, which Pad does not load, and
+the shared export partial uses that class for the GIF toggle's "Background"
+label outside the flip-only block. Pad had been rendering it at browser-default
+size for several releases. `verify_exportui`'s sweep could not catch it because
+it concatenates styles.css AND flip.css, so a class styled for ONE surface
+passes as if styled for both -- an assertion that reads as coverage and is not.
+The sweep is split by surface now, and the hole was demonstrated by reverting
+the class: the new gate fails, the old one still passes.
+
+**The GIF background control was a banner.** `width: 100%`, commented "Full
+width so both labels fit", which did not survive being measured: the labels need
+about 200px of a 330px card. What full width actually bought was a 160px violet
+pill, 41% of a phone screen and the brightest thing on a sheet whose actual
+actions are three format buttons. It is an inline row now. The mutation
+restoring full width fails in the most telling way -- both labels forced to
+143px, so the sliding pill cannot tell them apart -- which is a better argument
+against the old rule than the one I had.
+
+**And the green was too dull.** #1bcf8f -> #30e8a7. It was never short of
+CONTRAST (9.6:1, measured) but short of VIVIDNESS, and it is spent almost
+entirely on 6-7px dots where hue reads weakly and lightness carries the signal.
+Three rules hardcoded `rgba(27, 207, 143, ...)`, the token's own RGB, and would
+have kept the old hue silently; they read a `--good-rgb` companion now. The
+light theme's darker green is deliberately unchanged -- it sits on white, where
+brighter is worse.
+
+**iOS SILENCES WEB AUDIO WHEN THE RINGER SWITCH IS OFF, AND THIS IS THE ONE
+THAT MATTERS.** The owner reported Preview Loop playing no sound. Test Seam, on
+the same phone with the same file, played fine. Test Seam is a plain `<audio>`
+element; Preview Loop is Web Audio, and iOS routes Web Audio into an "ambient"
+session the hardware switch mutes while leaving `<audio>` alone.
+
+The preview button is the least of it. `/s/<id>` and the in-post player are both
+Web Audio, so on any iPhone in silent mode a shared link's music and every feed
+post's music are silent too -- for a component whose entire purpose is playing
+inside somebody else's feed, that is the feature not working.
+
+**Why every existing guard missed it, and this is the lesson worth keeping.**
+app.js carries an elaborate hand-off for a context that never unlocks, built
+over several releases, and every one of its tests is `state !== 'running'`. In
+silent mode the context reaches `running` perfectly well and is merely
+inaudible. So all the guards pass, the native `<audio>` fallback is deliberately
+suppressed, and the result is confident silence. The file's own warning --
+"A source object existing is NOT the same as audible playback" -- turns out to
+apply one level further out than where it was written. A guard is only as good
+as the failure it imagines.
+
+**THIS RELEASE SEALS AN UNVERIFIED FIX, DELIBERATELY AND WITH IT SAID OUT LOUD.**
+`lib/audiosession.js` holds a silent looping `<audio>` element, which moves the
+session to "playback". Claimed only on a gesture that asks for sound -- the
+unmute tap, the Preview button -- never at load, because a held session shows
+Skribl as playing media in Control Center; overriding the switch is defensible
+only because sound here is never automatic. But Chromium on Linux has no ringer
+switch. `verify_audiosession.py` pins the MECHANISM -- one element, silent,
+looping, playing, idempotent, released, loaded on all four surfaces -- and
+prints a closing line saying none of it proves an iPhone is audible. It is the
+same limit app.js already recorded: "Desktop never showed it ... including in
+the harness." **A green seal is not evidence this works.** The phone is.
+
+It cost the player's byte ratchets, which is the budget this project guards
+hardest: JS 151,845 -> 153,000 and HTML 10,800 -> 10,900, leaving ~600 B to the
+153,600 target. The embed ratchet moved too, 27,500 -> 29,500. Both raises are
+recorded at the ratchet with the reason, and the module was shrunk first -- a
+byte-by-byte WAV builder read better and cost 1,650 B against ~450 for a base64
+constant, and the player's ratchet is not the place to spend 1,200 B on
+legibility.
+
+**One gap this closed that let a person find a bug before a suite did:**
+`verify_audiostate` drove Preview Loop under a HUNG unlock and asserted the
+fallback plumbing in detail, but nothing anywhere asserted that preview produces
+a sound at all.
+
+**AND I PUT A LIVE CLOCK INTO A COMPARED SCENE.** The export field seeded itself
+from `nametab.get()`, which falls back to a timestamped auto-name.
+`verify_cssplit` renders the export scene twice in one run and compares the
+pixels, so the two captures straddled a clock tick and editor-export went
+intermittently red -- the diff box moving one pixel between runs, which is the
+tell. `lib/nametab.js`'s own header warns about exactly this, one function above
+the one I wrote: "a live timestamp there renders differently between two frames
+and makes any pixel comparison of the editor flaky (verify_cssplit)". It seeds
+only a typed title now and leaves an unnamed drawing's field empty behind a
+static placeholder; the filename still resolves the timestamp at export time.
+

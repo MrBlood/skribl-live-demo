@@ -2647,7 +2647,51 @@ the same hour. **A comment is not a gate.**
 `verify_docs` caught the suite count; nothing checks the batch count and it was
 stale too. Both removed rather than updated.
 
-## iOS silences Web Audio when the ringer switch is off — v277 work
+## Closed in v277 — five things the owner found on a phone
+
+Every one came from using the app on an iPhone, not from a suite going red. The
+harness is Chromium on Linux; four of the five are invisible there by
+construction. That is the pattern worth taking from this release.
+
+    skribl/static/lib/audiosession.js    the iOS playback session (UNVERIFIED)
+    harness/verify_audiosession.py       its mechanism, and preview's first
+                                         assertion that sound comes out at all
+    _skribl_export.html                  a file-name field; the GIF row
+    skribl_editor.html                   the sound marker, one macro'd glyph
+    styles.css                           --good lifted, --good-rgb added
+
+### The four small ones
+
+**The post sheet shows the toolbar's music mark**, so a Skribl with a loop and
+one without stop looking identical at the moment of posting. The owner's sketch
+beat mine — I proposed a chip that borrowed the tool row's green, they asked why
+not use the tool row's mark. ONE GLYPH: a macro, called by both, compared as
+RENDERED rather than grepped, because a copy satisfies any grep and drifts the
+first time either is redrawn.
+
+**Exports can be named.** Every one was a hardcoded literal — `skribl.gif`,
+`skribl-flip.mp4` — so two exports of one drawing were indistinguishable and
+titling the drawing changed nothing. `lib/nametab.js` had named drafts properly
+for releases; the media exports were never wired to it.
+
+**Placing that field's label found a bug no suite could see.**
+`.export-optlbl` lived only in `flip.css`, which Pad does not load, while the
+shared partial uses it outside the flip-only block — so Pad rendered
+"Background" at browser-default size for releases. `verify_exportui`'s sweep
+concatenates both stylesheets, so a class styled for ONE surface passed as if
+styled for both. Split by surface now; the hole was demonstrated by reverting
+the class.
+
+**The GIF background control is a row, not a banner.** `width: 100%` was
+commented "Full width so both labels fit" and did not survive measurement.
+Restoring it fails the suite in the most telling way: both labels forced to
+143px, so the sliding pill cannot tell them apart.
+
+**And `--good` was too dull** — #1bcf8f to #30e8a7. Never short of contrast
+(9.6:1) but of vividness, and it is spent on 6-7px dots. Three rules hardcoded
+the token's own RGB and would have kept the old hue; they read `--good-rgb` now.
+
+### iOS silences Web Audio when the ringer switch is off
 
 `harness/verify_audiosession.py`, `skribl/static/lib/audiosession.js`.
 
