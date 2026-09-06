@@ -96,6 +96,46 @@ probe in the tree reporting "ok", because a wrap does not move the box.
 height, which is the measurement that sees it. See the v278 entry at the
 foot of `DECISIONS.md`.
 
+### `verify_a11y.py` — keyboard and assistive technology, as its own suite
+
+Added after an accessibility audit of v278, and a suite rather than more of
+`verify_ux.py` because of the audit's structural point: the tree carried 4,392
+assertions while basic keyboard failures were visible in the source. Three
+playback scrubbers were pointer-only, two of them declaring `role="slider"`
+with no tabindex, no `aria-valuenow` and no key handler — announcing a control
+that could not be operated. Five `aria-modal` dialogs did nothing about focus.
+Visible slider captions were not labels. Segmented controls kept selection in a
+CSS class. Nothing announced that a post had succeeded or failed.
+
+Its own rule: **assert the behaviour, not the attribute** — `role="slider"`
+being present is exactly what was true while it was broken. It presses keys and
+reads what moved, focuses things and reads where focus went.
+
+Two things it caught that the audit had not: five unnamed controls in Flip's
+share sheet and image drawer, and `--text-faint-2` on `.accordion-count` at
+3.47:1.
+
+And one about ITSELF. The contrast gate's first version exempted any line
+matching `--text-`, meaning to skip the token definitions — but
+`var(--text-dim)` contains `--text-`, so it skipped every use as well and the
+check was vacuous. Putting a failing token back on readable text left it at
+37/37. Definitions are excluded by shape now.
+
+### Identities are opaque text
+
+`skribl_posts.user_id` is `String(255)` behind a `TypeDecorator`, not `Integer`.
+The column was Integer while `docs/INTEGRATION.md` advertised "your user id",
+so a host using UUIDs, ULIDs or an OAuth subject could not integrate at all.
+Integer hosts are unaffected — 42 stores as "42" and both sides of every
+comparison normalise. `author.id` in the API is a JSON string now.
+
+**Both sides, not just the argument.** Normalising only the incoming id passed
+every suite that goes through `create_post` and failed `verify_privacy`, which
+builds `SkriblPost(user_id=7)` in memory and never flushes it — so the
+TypeDecorator never ran and an author could not read their own private post.
+The type covers what is stored and loaded; the comparison covers what was never
+persisted. Both are needed and for different reasons.
+
 ### Environment traps, in the order they will bite
 
 * `apt-get update` fails outright until the blocked nodesource repo is moved
@@ -1356,6 +1396,8 @@ rather than a shared rule.
 | --- | --- | --- |
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
 | `audiosession.js` | Pad+Flip+player+in-post | Holds an iOS playback session so the ringer switch stops silencing Web Audio. |
+| `scrubkeys.js` | Pad+Flip+player | Makes a `role="slider"` scrubber keyboard-operable and keeps `aria-valuenow` current. All three declared or implied the role and none could be focused or moved. |
+| `modalfocus.js` | Pad+Flip | Focus in, Tab trapped, focus back out, for surfaces that declare `aria-modal="true"`. Replaces two `blur()` calls that dropped focus on `<body>`. |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |

@@ -25,6 +25,7 @@ from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         ForeignKey, ForeignKeyConstraint, Index, Integer, JSON,
                         String)
 from sqlalchemy import event
+from sqlalchemy.types import TypeDecorator
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -294,6 +295,54 @@ def set_author_resolver(fn, app=None):
     _AUTHOR_RESOLVER = fn
 
 
+class UserId(TypeDecorator):
+    """Text, coerced at the database boundary in BOTH directions.
+
+    WHY A TYPE AND NOT A HELPER AT EACH CALL SITE. The first attempt at this
+    normalised in create_post, visible_to, the deletion check and the listing
+    filter — every path Skribl controls. verify_privacy failed anyway, and the
+    reason is the one that matters: a host can construct `SkriblPost(user_id=1)`
+    directly, and the suites do. On SQLite, whose column types are advisory, the
+    integer 1 then goes in and comes back OUT as the integer 1, so `visible_to(1)`
+    compared 1 against the string "1" and the author could not read their own
+    private post.
+
+    A TypeDecorator has no such gap. `process_bind_param` normalises everything
+    on the way in, whoever wrote it and however; `process_result_value`
+    normalises on the way out, which also repairs rows that predate this change
+    on a backend that stored them as integers. There is one conversion and it
+    cannot be forgotten.
+
+    None passes through untouched at both ends: it means "nobody is signed in",
+    which is not an identity and must never become the string "None".
+    """
+
+    impl = String(255)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        return None if value is None else str(value)
+
+    def process_result_value(self, value, dialect):
+        return None if value is None else str(value)
+
+
+def normalise_user_id(value):
+    """The one place a host's user id becomes Skribl's.
+
+    Every comparison in this package is equality against `SkriblPost.user_id`,
+    and that column is text — so an integer host passing 42 and a query string
+    carrying "42" have to arrive at the same value or ownership silently stops
+    matching. Normalising in ONE function rather than at each call site is the
+    same reasoning `_authorised_post` uses for the lookup: two places that
+    convert are two places that can drift.
+
+    None stays None. It means "nobody is signed in", which is not an identity
+    and must never become the string "None".
+    """
+    return None if value is None else str(value)
+
+
 def author_dict(user_id):
     """{"id": ...} plus whatever the host's resolver adds."""
     fn = _AUTHOR_RESOLVER
@@ -330,7 +379,27 @@ class SkriblPost(SkriblBase):
 
     id = Column(Integer, primary_key=True)
     public_id = Column(String(32), unique=True, nullable=False, index=True)
-    user_id = Column(Integer, nullable=True)
+    # OPAQUE TEXT, NOT AN INTEGER, and the change was forced by the docs being
+    # right while the schema was not. `current_user_id` is documented as
+    # "a callable returning your user id" and the worked example passes the
+    # host's native `current_user.id` straight through — but this column was
+    # Integer, so a host using UUIDs, ULIDs, an OAuth subject, an LDAP DN or
+    # any other textual identifier failed at flush, and the listing endpoint
+    # coerced `?user_id=` with int() and 400'd before it ever queried. An audit
+    # of v278 put it plainly: do not leave the API generic while the schema is
+    # not.
+    #
+    # Text is the right side to settle on for an INTEGRATION LIBRARY. Skribl
+    # never does arithmetic on this value, never sorts by it and never joins to
+    # a users table it does not own — it only ever compares it for equality.
+    # An integer host loses nothing: 42 stores as "42" and compares equal to
+    # "42", because every boundary normalises with str() (see creation.py and
+    # models.author_dict). A textual host gains the ability to integrate at all.
+    #
+    # 255 because that is long enough for a UUID (36), a ULID (26), a JWT
+    # subject, or an email, and short enough to index on every backend without
+    # a prefix length.
+    user_id = Column(UserId, nullable=True)
     # Widths come from core so the API check, the editors' maxlength and the
     # column cannot drift apart again — see the note there.
     title = Column(String(MAX_TITLE_CHARS), nullable=False)
@@ -441,7 +510,15 @@ class SkriblPost(SkriblBase):
         if self.visibility in ("public", "unlisted"):
             return True
         # private, and every state this package does not define
-        return viewer_id is not None and self.user_id == viewer_id
+        # BOTH SIDES NORMALISED, and the second one is not redundant. The
+        # UserId type converts at the DATABASE boundary, which covers every
+        # row that was stored or loaded — but an in-memory `SkriblPost(user_id=7)`
+        # that was never flushed still holds the integer, and hosts and suites
+        # build those. Comparing only the argument made an author unable to
+        # read their own private post in exactly that case.
+        return (viewer_id is not None
+                and normalise_user_id(self.user_id)
+                == normalise_user_id(viewer_id))
 
     def feed_dict(self):
         """Metadata only — NO payload.

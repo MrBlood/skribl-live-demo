@@ -63,7 +63,8 @@ from sqlalchemy.exc import IntegrityError
 
 from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS, MEDIA_CLAIM_TTL
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
-                     SkriblPendingMedia, session, visibility_values)
+                     SkriblPendingMedia, normalise_user_id, session,
+                     visibility_values)
 from .deletion import hash_delete_token
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
@@ -339,7 +340,7 @@ def create_post(payload, *, author_id=None, media_store=None,
                     # ANONYMOUS (None) when the caller has no author — not 1,
                     # which would have made every visitor the owner of user 1's
                     # private posts.
-                    user_id=author_id,
+                    user_id=normalise_user_id(author_id),
                     title=title,
                     caption=caption,
                     payload_json=stored_payload,

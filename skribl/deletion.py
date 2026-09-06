@@ -94,8 +94,8 @@ shape as the two byte ratchets that disagreed about `audiosession.js`.
 import hashlib
 import hmac
 
-from .models import (SkriblPost, SkriblPostMedia, session,
-                     visibility_values)
+from .models import (SkriblPost, SkriblPostMedia, normalise_user_id,
+                     session, visibility_values)
 
 
 def hash_delete_token(token):
@@ -191,7 +191,12 @@ def _authorised_post(public_id, author_id, require_author, delete_token=None):
     # NULL user_id is an anonymous post. Nobody owns it, so nobody may claim it
     # by merely authenticating — only the capability above or an explicit
     # require_author=False gets through.
-    if post.user_id is None or author_id is None or post.user_id != author_id:
+    # Normalised, because an integer host passes 42 and the column holds "42".
+    # Both sides — see the note in models.visible_to: an unflushed instance
+    # still holds whatever the caller put in it.
+    if (post.user_id is None or author_id is None
+            or normalise_user_id(post.user_id)
+            != normalise_user_id(author_id)):
         raise SkriblNotFound()
     return post
 

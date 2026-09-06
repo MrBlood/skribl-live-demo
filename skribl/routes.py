@@ -24,8 +24,8 @@ from .core import (MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
-                     _visibility_policy, as_utc, session,
-                     feed_filter, author_dict)
+                     _visibility_policy, as_utc, normalise_user_id,
+                     session, feed_filter, author_dict)
 from .storage import KEY_RE, LocalDiskStore
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
@@ -624,7 +624,9 @@ def register_routes(bp, *, index_route=False):
                 # media of a host-defined 'draft' post while the post itself
                 # was refused.
                 sa.or_(SkriblPost.visibility.in_(("public", "unlisted")),
-                       sa.and_(SkriblPost.user_id == viewer,
+                       # Normalised for the same reason every other comparison
+                       # is: the column is text and an integer host passes 42.
+                       sa.and_(SkriblPost.user_id == normalise_user_id(viewer),
                                sa.literal(viewer is not None))))
             granted = session().query(readable.exists()).scalar()
         else:
@@ -737,15 +739,21 @@ def register_routes(bp, *, index_route=False):
 
         author = request.args.get("user_id")
         if author is not None:
-            try:
-                author = int(author)
-            except (TypeError, ValueError):
-                return jsonify({"error": "user_id must be a number."}), 400
+            # NO int() COERCION. It used to parse this and 400 on anything
+            # non-numeric, which made the endpoint unusable for a host whose
+            # user ids are UUIDs, ULIDs or an OAuth subject — the identities
+            # docs/INTEGRATION.md invites, since `current_user_id` is
+            # documented as returning "your user id". The column is text now,
+            # so the filter compares text; a bounded length is all the
+            # validation an opaque identifier can honestly get.
+            if len(author) > 255:
+                return jsonify({"error": "user_id is too long."}), 400
+            author = normalise_user_id(author)
             q = q.filter(SkriblPost.user_id == author)
             # Private posts are visible on their author's own listing, and only
             # there. Unlisted stay out of listings entirely — they are reachable
             # by link, which is what "unlisted" means.
-            if viewer is not None and author == viewer:
+            if viewer is not None and author == normalise_user_id(viewer):
                 q = q.filter(SkriblPost.visibility.in_(("public", "private")))
             else:
                 q = q.filter(SkriblPost.visibility == "public")

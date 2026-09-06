@@ -240,9 +240,14 @@ try:
               joined == 1,
               f"{joined} joined row(s) — if this is 0 the two landed in "
               f"different transactions")
+        # str() BOTH SIDES: skribl_posts.user_id is text since v279 while the
+        # host's own author_id column is whatever the host chose — here an
+        # integer. That the two agree AS IDENTITIES is the assertion; that they
+        # share a SQL type never was, and requiring it would force every host
+        # to store ids the way Skribl does.
         check("the author stamp on the Skribl is the host's user",
-              durable("SELECT user_id FROM skribl_posts LIMIT 1") ==
-              durable("SELECT author_id FROM host_posts LIMIT 1"))
+              str(durable("SELECT user_id FROM skribl_posts LIMIT 1")) ==
+              str(durable("SELECT author_id FROM host_posts LIMIT 1")))
         check("the host set it public, so it is feed content not a hidden link",
               durable("SELECT visibility FROM skribl_posts LIMIT 1") == "public")
         check("the words became the caption",

@@ -177,9 +177,16 @@ with host.app_context():
           and _durable("SELECT COUNT(*) FROM host_posts") == 1,
           f"posts {_durable('SELECT COUNT(*) FROM skribl_posts')}, "
           f"host {_durable('SELECT COUNT(*) FROM host_posts')}")
+    # STORED AS TEXT SINCE v279, so this compares "7" and not 7. The column was
+    # Integer while docs/INTEGRATION.md advertised "your user id", which meant a
+    # host with UUID or OAuth-subject identities could not integrate at all; an
+    # audit of v278 called that out. An integer host is unaffected — 42 stores
+    # as "42" and compares equal to "42" everywhere — and this raw SQL read is
+    # the one place that difference is visible, because it bypasses the type
+    # that normalises it.
+    _stamp = _durable("SELECT user_id FROM skribl_posts LIMIT 1")
     check("the author stamp is the id the host passed, not a guess",
-          _durable("SELECT user_id FROM skribl_posts LIMIT 1") == 7,
-          str(_durable("SELECT user_id FROM skribl_posts LIMIT 1")))
+          str(_stamp) == "7", repr(_stamp))
 
 print("\n4 — AND A HOST ROLLBACK TAKES THE SKRIBL WITH IT")
 with host.app_context():
@@ -381,6 +388,65 @@ with host.app_context():
     db.session.commit()
 check("a working reservation still posts normally", bool(_ok.public_id),
       "the claim path must only refuse when the claim actually fails")
+
+print("\n10 — AN IDENTITY IS OPAQUE TEXT, WHATEVER SHAPE THE HOST USES")
+# THE FINDING, from an audit of v278: docs/INTEGRATION.md documents
+# `current_user_id` as "a callable returning your user id" and its worked
+# example passes the host's native `current_user.id` straight through — while
+# the column was Integer. A host identifying users by UUID, ULID, OAuth subject
+# or email could not integrate at all: creation failed at flush and the listing
+# endpoint coerced ?user_id= with int() and 400'd before querying.
+#
+# "Do not leave the API generic while the schema is not." It is text now, and
+# these are the shapes that have to work.
+_IDS = [
+    ("integer", 12345),
+    ("numeric string", "12345"),
+    ("UUID", "6f1c9a80-3b2e-4d5f-9a11-7c0de2f4b8a3"),
+    ("ULID", "01ARZ3NDEKTSV4RRFFQ69G5FAV"),
+    ("OAuth subject", "auth0|5f3c2b1a9d8e7f6a5b4c3d2e"),
+    ("email", "person@example.com"),
+]
+with host.app_context():
+    for _label, _uid in _IDS:
+        try:
+            _made = skribl.create_post(payload(title=f"id-{_label}"),
+                                       author_id=_uid)
+            db.session.commit()
+            _row = db.session.query(skribl.models.SkriblPost).filter_by(
+                public_id=_made.public_id).one()
+            _stored = _row.user_id
+            _reads = _row.visible_to(_uid)
+            _ok = _stored == str(_uid) and _reads is True
+            _detail = f"stored {_stored!r}, author can read: {_reads}"
+        except Exception as exc:                       # noqa: BLE001
+            _ok, _detail = False, f"{type(exc).__name__}: {exc}"
+        check(f"a {_label} author id round-trips", _ok, _detail)
+
+# AN INTEGER HOST MUST NOT NOTICE. 42 in, "42" stored, and ownership still
+# matches when the host passes the integer back — which is the whole reason
+# both sides of every comparison normalise.
+with host.app_context():
+    # PRIVATE, or this measures nothing: payload() defaults to "unlisted",
+    # which ANY reader may see, so visible_to() returned True for a stranger
+    # and the "a different id does not" assertion failed on a post that was
+    # never about ownership. Only private makes visible_to an ownership test.
+    _m = skribl.create_post(payload(title="int-host", visibility="private"),
+                            author_id=42)
+    db.session.commit()
+    _r = db.session.query(skribl.models.SkriblPost).filter_by(
+        public_id=_m.public_id).one()
+    check("an integer host still owns its post when it passes an int back",
+          _r.visible_to(42) is True and _r.visible_to("42") is True,
+          f"int:{_r.visible_to(42)} str:{_r.visible_to('42')}")
+    check("...and a DIFFERENT id still does not",
+          _r.visible_to(43) is False and _r.visible_to("4") is False,
+          "normalising must not make unrelated ids collide")
+
+# None is not an identity and must never become the string "None".
+check("None stays None rather than becoming a string",
+      skribl.models.normalise_user_id(None) is None,
+      'the string "None" would be an owner somebody could authenticate as')
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

@@ -391,6 +391,35 @@ functions flush without committing. `harness/verify_deletion_foundation.py`
 covers the layer beneath — cascade, media unreachability, orphan sweep — on
 PostgreSQL.
 
+### Your user id can be any shape
+
+`user_id` is **opaque text**, up to 255 characters. Skribl never does
+arithmetic on it, never sorts by it and never joins to a users table it does
+not own — it compares it for equality and nothing else.
+
+Until v279 the column was `Integer` while this document said "your user id",
+so a host using UUIDs, ULIDs, an OAuth `sub`, an LDAP DN or an email could not
+integrate: creation failed at flush and `GET /api/skribls?user_id=` answered
+400 before it queried. An audit put it as *do not leave the API generic while
+the schema is not*, and it was right.
+
+**Integer hosts need do nothing.** `42` is stored as `"42"` and matches when
+you pass `42` back; every comparison normalises both sides. The only place the
+difference is visible is raw SQL against the column.
+
+**One API-visible consequence, called out rather than left to be discovered.**
+`author.id` in `GET /api/skribls` and `GET /api/skribls/<id>` is now a JSON
+**string**: `{"id": "7"}` where it used to be `{"id": 7}`. That is the honest
+shape for an opaque identifier, but if your client compares `author.id` against
+its own numeric user id, it has to compare as text.
+
+**Upgrading a populated database** runs `b7d240ac91e3`. On PostgreSQL that is
+`ALTER COLUMN ... TYPE varchar(255) USING user_id::varchar(255)` — a total cast,
+no row at risk, `NULL` preserved. On SQLite the table is rebuilt through
+`batch_alter_table`. The downgrade refuses if any id is non-numeric rather than
+truncating it, because a post whose owner silently became `0` is a post anybody
+can delete.
+
 ## Three things that will bite you if you skip them
 
 **`attach_to_metadata` is not optional in practice.** Skribl's models sit on a
@@ -547,7 +576,7 @@ All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 | `session` | **required** | `lambda: db.session`. Pass `session=False` only for a test blueprint that never queries. |
 | `url_prefix` | `None` | Mount point. |
 | `static_url_path` | `/static/skribl` | Where Skribl's own JS/CSS is served. |
-| `current_user_id` | anonymous (`None`) | Callable returning your user id, or None. Decides post authorship and who a visibility policy is asked about. |
+| `current_user_id` | anonymous (`None`) | Callable returning your user id, or None. **Any type** — integers, UUIDs, ULIDs, OAuth subjects and emails all work; Skribl stores the `str()` of it, up to 255 characters, and only ever compares it for equality. Decides post authorship and who a visibility policy is asked about. |
 | `csrf` | `None` | Your CSRF triple, if you use one. |
 | `media_store` | inline | An object storing media out of the payload. See `skribl/storage.py`. |
 | `index_route` | `False` | Register `GET /`. Standalone sites only. |

@@ -110,7 +110,13 @@ with app_a.app_context():
     _owner = db_a.session.execute(
         sa.text("select user_id from skribl_posts where public_id = :p"),
         {"p": _pid}).first()[0]
-check("…and its current_user_id still decides authorship", _owner == 7,
+# IDS ARE TEXT SINCE v279, so these compare "7" and not 7. The column was
+# Integer while docs/INTEGRATION.md advertised "your user id", which locked out
+# every host whose identities are UUIDs, ULIDs or an OAuth subject. The change
+# is visible in the API too: `author.id` is now a JSON STRING. That is the
+# honest shape for an opaque identifier, and it is called out here because a
+# host comparing author.id to its own numeric id has to compare as text now.
+check("…and its current_user_id still decides authorship", str(_owner) == "7",
       f"user_id={_owner}")
 check("no CSRF token is issued when the host declined one",
       app_a.blueprints["skribl"].skribl_csrf is None,
@@ -120,7 +126,7 @@ check("no CSRF token is issued when the host declined one",
 print("\n#8 — the author block says what Skribl knows, and nothing it doesn't")
 r = c_a.get(f"/api/skribls/{_pid}")
 author = r.get_json()["author"]
-check("the default author block carries the real id", author.get("id") == 7,
+check("the default author block carries the real id", author.get("id") == "7",
       json.dumps(author))
 check("AND NO INVENTED USERNAME", "username" not in author,
       "'demo-user' was returned for every author in every deployment")
@@ -130,18 +136,18 @@ app_b, _ = host_app(7, author_resolver=lambda uid: {
 author = app_b.test_client().get(f"/api/skribls/{_pid}").get_json()["author"]
 check("a host resolver's fields appear", author.get("username") == "user7"
       and author.get("displayName") == "Real Person", json.dumps(author))
-check("…alongside the id, not instead of it", author.get("id") == 7)
+check("…alongside the id, not instead of it", author.get("id") == "7")
 
 app_c, _ = host_app(7, author_resolver=lambda uid: {"id": 999, "username": "x"})
 author = app_c.test_client().get(f"/api/skribls/{_pid}").get_json()["author"]
 check("a resolver CANNOT overwrite the id",
-      author.get("id") == 7 and author.get("username") == "x",
+      author.get("id") == "7" and author.get("username") == "x",
       f"{json.dumps(author)} — the id is what the host's own policy was handed")
 
 app_d, _ = host_app(7, author_resolver=lambda uid: None)
 author = app_d.test_client().get(f"/api/skribls/{_pid}").get_json()["author"]
 check("a resolver returning nothing degrades to the default, not a 500",
-      author == {"id": 7}, json.dumps(author))
+      author == {"id": "7"}, json.dumps(author))
 # The seam is app-local like the visibility policy. Two Skribl apps in one
 # process must not share author naming — that is the bug set_visibility_policy
 # was reshaped to avoid, and a new global would reintroduce it.
