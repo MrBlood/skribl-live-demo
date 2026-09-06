@@ -213,7 +213,11 @@ check("every route the blueprint registers is named in at least one .md",
 # identity hash — and a deployer who never learns a knob exists cannot set it.
 # .env.example counts as documentation here: it is the file they actually open.
 _env_named = _all_md_text + (ROOT / ".env.example").read_text(encoding="utf-8")
-_env_read = set(re.findall(r'environ(?:\.get)?\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+# `os.getenv` is in the alternation because nothing in the tree uses it TODAY
+# and a check that only holds while one spelling is in fashion is not a check:
+# the next `os.getenv("SKRIBL_...")` would have been read by nobody and gated
+# by nothing.
+_env_read = set(re.findall(r'(?:environ(?:\.get)?|getenv)\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
 _env_read |= set(re.findall(r'_env_(?:int|bool|str)\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
 _env_read |= set(re.findall(r'config\.get\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
 _undoc_env = sorted(v for v in _env_read
@@ -502,6 +506,17 @@ if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(enc
     check("and on the tree they were produced from",
           bool(_rel_t and _lr_t) and _rel_t.group(1) == _lr_t.group(1),
           "one of them describes a different tree")
+else:
+    # SAY SO. Skipping this pair is legitimate — a targeted run_harness.sh
+    # invocation owns LAST-RUN.txt and has no whole-run record to compare —
+    # but skipping it QUIETLY means the suite reports 77/77 in one place and
+    # 79/79 in another with nothing to explain the gap, and the reader's first
+    # guess is that two assertions regressed. This project already holds that a
+    # skipped SUITE must announce itself; an assertion that vanishes from the
+    # denominator is the same defect one level down.
+    print("    SKIPPED (2 assertions): harness/LAST-RUN.txt is not a whole-run "
+          "record, so there is nothing to compare RELEASE.md against.")
+    print("    Restore it with `git checkout harness/LAST-RUN.txt` to run them.")
 
 print("\nDOCS — a run with skips is not published as 'all green'")# The runner reports PASS WITH SKIPS when nothing failed but something was
 # skipped; the stanza generator decided on failures alone and wrote "all green",

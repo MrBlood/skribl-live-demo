@@ -66,11 +66,12 @@
      the ratio alone suggests.
      There is no dimmer tier that also passes: --text-muted (#7d8496) is
      4.61:1 against the lightest surface here, so anything meaningfully fainter
-     fails somewhere. These two survive for DISABLED controls and placeholders,
-     where the text-contrast requirement does not apply. Everything a user
-     reads uses --text-muted; verify_a11y.py holds that line. */
-  --text-faint: #5f6675;
-  --text-faint-2: #697080;
+     fails somewhere. --text-dim survives for DISABLED controls and
+     placeholders, where the text-contrast requirement does not apply.
+     Everything a user reads uses --text-muted; verify_a11y.py holds that line.
+
+     --text-faint/-2 were dropped in v281: defined, used by no rule, unable to
+     pass. verify_a11y.py fails such a token now. */
   --text-soft: #8a93a6;
   --text-soft-2: #8b93a5;
   --text-soft-3: #8b97a8;
@@ -6598,8 +6599,6 @@ body.playing .flip-grid { display: none; }
 
   /* Text — the brightest becomes the darkest ink */
   --text-dim:                #8c94a3;
-  --text-faint:              #858d9c;
-  --text-faint-2:            #7a8291;
   --text-muted:              #6c7483;
   --text-soft:               #5f6775;
   --text-soft-2:             #5f6775;

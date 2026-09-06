@@ -534,9 +534,14 @@ SURFACES = ["surface-base", "surface-raised", "surface-panel", "surface-control"
 _surf = {s: _token(s) for s in SURFACES}
 check("the surface ramp resolves", all(_surf.values()), str(_surf))
 
-# --text-faint and --text-dim CANNOT pass — see the note at their definition.
-# They survive for disabled controls and placeholders, where the requirement
-# does not apply. What this asserts is that nothing a user READS uses them.
+# The tokens that CANNOT pass AA — see the note at --text-dim's definition.
+# --text-dim survives for disabled controls and placeholders, where the
+# requirement does not apply. What this asserts is that nothing a user READS
+# uses one, and (below) that one which nothing uses at all does not exist.
+#
+# The list keeps the names v281 DELETED, deliberately: it is what stops them
+# being reintroduced as definitions, and the census below is what tells the
+# difference between "gone" and "back, unused, waiting to be picked up".
 FAILING = ("text-faint", "text-dim", "text-faint-2")
 _body = re.sub(r"/\*.*?\*/", "", _css, flags=re.S)
 
@@ -564,6 +569,28 @@ for _line in _body.split("\n"):
 check("no readable text uses a token that fails AA",
       not _bad,
       "; ".join(_bad[:4]) + (f" (+{len(_bad) - 4} more)" if len(_bad) > 4 else ""))
+
+# A DEFINED TOKEN IS AN INVITATION. v281 found --text-faint and --text-faint-2
+# still in :root — the v278 audit had taken them off the last things they
+# coloured (--text-faint-2 was on .accordion-count at 3.47:1) and left the
+# definitions behind. Nothing referenced them, so the assertion above was green
+# and stayed green; the trap is that the next person wanting faint text reaches
+# for the faintest name in the ramp and reintroduces the finding. Both were
+# deleted. What must hold from here is narrower than "unused tokens are bad":
+# a token on THIS list either earns its place in a context the requirement does
+# not reach, or it does not exist.
+_defined = {t for t in FAILING
+            if re.search(r"^\s*--%s\s*:" % re.escape(t), _css, re.M)}
+_used = {t for t in FAILING if f"var(--{t})" in _body}
+_idle = sorted(_defined - _used)
+check("no failing token is defined with nothing using it",
+      not _idle,
+      ", ".join("--" + t for t in _idle) +
+      " — defined, referenced by no rule, and unable to pass: use it somewhere "
+      "the contrast requirement does not reach, or delete the definition"
+      if _idle else
+      f"{len(_defined)} of {len(FAILING)} defined, each used: " +
+      ", ".join("--" + t for t in sorted(_defined)))
 
 _muted = _token("text-muted")
 _worst = min(ratio(_muted, s) for s in _surf.values())
