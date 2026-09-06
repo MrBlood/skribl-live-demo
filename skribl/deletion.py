@@ -27,8 +27,10 @@ proposal "puts delete_skribl() first on the build order" and that the claim
 changed.
 
 WHAT THIS IS NOT. It is not a second deletion path. There was no first one, and
-there is exactly one here — the HTTP route, when it exists at all, calls these
-functions and adds nothing but status codes. That direction is the same one
+there is exactly one here — the HTTP route calls these functions and adds
+nothing but status codes. ("when it exists at all" stood here until v281 and
+was a leftover of v278, when the routes were registered only for a host that
+had wired an identity; they ship for every deployment now.) That direction is the same one
 `creation.py` records, and for the same reason: two functions that both "delete
 a post and clean up its associations" is how one of them quietly stops running.
 
@@ -53,9 +55,15 @@ translated it.
   `require_author=False`, in code, once — the same shape as `csrf=False`.
 
   A post whose `user_id` IS NULL — the standalone app's own posts, which have
-  no author because nothing signed in — can only be deleted with
-  `require_author=False`. Anything else would let any authenticated user of a
-  host delete every anonymous post in the table.
+  no author because nothing signed in — cannot be claimed by merely
+  authenticating: no user_id matches NULL, so no host user can delete another
+  visitor's anonymous post. It IS deletable by whoever holds its capability
+  (v279), and by an operator passing `require_author=False`.
+
+  This paragraph said "can only be deleted with require_author=False" until
+  v281, which was true when written and was falsified by the capability three
+  releases earlier — in the header of the module whose own
+  `_authorised_post()` lists the token as one of its three ways to say yes.
 
 TRANSACTIONS ARE THE HOST'S, exactly as in `creation.py`. These functions
 flush; they never commit and never roll back the outer transaction. The host's

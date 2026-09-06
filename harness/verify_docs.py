@@ -84,10 +84,24 @@ check("no document references a harness suite that does not exist",
 # suite nobody can find is a suite nobody maintains. Scans every tracked .md
 # in the repo, not just DOCS: a suite documented only in e.g. DECISIONS.md is
 # documented.
+#
+# v281: GENERATED DOCUMENTS DO NOT COUNT AS DOCUMENTATION, and until now they
+# did. harness/RELEASE.md carries a per-suite results table listing every suite
+# by construction, so "named in at least one .md" was satisfied for ANY suite
+# the moment a release run finished — including 17 that no hand-written
+# document mentioned at all. The check could not fail for the case it exists
+# to catch, which is the same defect as the contrast gate that exempted every
+# use of a token by matching its definition.
+#
+# The whole point is "a suite nobody can find is a suite nobody maintains". A
+# reader looking for what verify_posted.py covers is not helped by a row in a
+# generated results table saying it passed.
+_GENERATED_MD = {"harness/RELEASE.md"}
 _all_md_text = "\n".join(
     p.read_text(encoding="utf-8")
     for p in ROOT.rglob("*.md")
-    if "__pycache__" not in p.parts and p.is_file())
+    if "__pycache__" not in p.parts and p.is_file()
+    and str(p.relative_to(ROOT)).replace("\\", "/") not in _GENERATED_MD)
 _undocumented = sorted(
     p.name for p in (ROOT / "harness").glob("verify_*.py")
     if p.name not in _all_md_text)

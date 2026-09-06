@@ -438,7 +438,11 @@ class SkriblPost(SkriblBase):
     # ONCE, and let whoever holds it revoke. That is the same shape as the
     # unlisted share URL the product already runs on — possession of a hard-to-
     # guess string is the authorisation — except that this one is never
-    # published and never leaves the creator's own browser.
+    # published. It was also described here as never leaving the creator's
+    # browser, which stopped being true in v280 and is now the opposite of the
+    # design: the browser is a convenient copy, and the author is invited to
+    # keep their own (Copy key) and hand it back (Use a recovery key), because
+    # a credential only one machine can hold dies with that machine.
     #
     # ONLY THE HASH IS STORED. A database leak must not hand out the ability to
     # delete every anonymous post in it; sha256 of the raw token is enough to

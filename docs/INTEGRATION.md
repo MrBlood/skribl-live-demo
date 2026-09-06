@@ -354,11 +354,19 @@ oracle for which public ids are real and who owns them. Answer 404 for both.
 Do not translate one of them into a 403 — that puts the disclosure back.
 
 **`author_id=None` is refused, not privileged.** It means "nobody is signed
-in", and an anonymous caller may delete nothing. A management command that
-genuinely must remove any post passes `require_author=False` — in code, once,
-the same shape as `csrf=False`. Posts whose `user_id` is NULL (the standalone
-app's own) can *only* be removed that way, because otherwise any authenticated
-user of your host could claim them.
+in", so identity alone authorises nothing. A management command that genuinely
+must remove any post passes `require_author=False` — in code, once, the same
+shape as `csrf=False`, and `python -m skribl.takedown` is that command.
+
+**Posts whose `user_id` is NULL cannot be claimed by merely authenticating.**
+No user_id matches NULL, so one host user cannot delete another visitor's
+anonymous post. They ARE deletable by whoever holds the capability minted at
+creation, which is the whole point of it.
+
+> Until v281 this paragraph said an anonymous caller "may delete nothing" and
+> that NULL-owner posts could *only* be removed with `require_author=False`.
+> Both were true in v278 and were falsified by the v279 capability. The same
+> wrong sentence was also sitting in `skribl/deletion.py`'s header.
 
 **The transaction is yours, exactly as with `create_post`.** Both functions
 flush and neither commits, so your feed row and the Skribl go together.
@@ -389,6 +397,14 @@ PATCH  /api/skribls/<id>     {"visibility": "private", "deleteToken": "..."}
 Neither is optional. A stranger with only a public id gets 404, so does a wrong
 token, and so does a token minted for a different post. `PATCH` takes
 `visibility` and optionally `deleteToken`, nothing else.
+
+**IF YOU BUILD YOUR OWN DELETE UI, DO NOT TREAT 404 AS CONFIRMED DELETION.**
+The ambiguity above is deliberate and it cuts both ways: the same 404 answers
+"no such post" and "your token is wrong". A client that reads it as success
+will report a deletion that did not happen and, if it also tidies up, throw
+away the credential for a post that is still live. Skribl's own tray made
+exactly that mistake until v281 and an audit caught it. Treat 404 as UNKNOWN,
+keep the credential, and tell the person to check the link.
 
 If your own views own the lifecycle, ignore the routes and call the Python
 functions — you have already decided who is asking.

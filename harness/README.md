@@ -94,6 +94,54 @@ appear here, and `RELEASE.md` names every one of them.
   invocation, or use `run_harness.sh`.
 ### v200 review-response suites
 
+- `verify_posted.py` — "Your Skribls", the local record of what this browser
+  posted, which since v279 also holds the revocation key. Pins the cap that
+  never evicts a key, a failed write being reported rather than assumed,
+  hostile storage (throws, quota, unavailable), the tray's Delete and Copy key
+  appearing only where a key is held, handing a key back, and a DELETE 404
+  being treated as unknown.
+- `verify_audiostate.py` — the player's loop bounds installed outside the
+  `loadedmetadata` handler, because iOS defers media loading until playback is
+  asked for and a shared link routinely tapped Play before the event fired.
+- `verify_backfill.py` — `storage.backfill_media` over a table written before
+  `SKRIBL_MEDIA_BACKEND` was flipped: a mixed table is correct, and the rows
+  that predate the switch keep their base64 until this runs.
+- `verify_delivery.py` — caching and compression of every asset the blueprint
+  serves. They came back `no-cache` and uncompressed on Flask's defaults,
+  which nobody had chosen.
+- `verify_exportui.py` — the export sheet's rules exist. Five class names
+  shipped in the template with no rule anywhere in the tree, so the markup
+  fell back to browser defaults.
+- `verify_externalised.py` — the externalised media path driven through a
+  BROWSER rather than urllib, which was the half nothing had ever asked about.
+- `verify_flipmotion.py` — scrub and playback must not go through `go()`,
+  which rebuilds every strip tile; fine for a click, ruinous sixteen times a
+  second.
+- `verify_help.py` — the help drawer describes what actually shipped. It
+  still told Flip users that Post gives them "a link" after that stopped being
+  the whole story.
+- `verify_keys.py` — the global keydown map. flip.js attaches eight listeners,
+  five of them Escape, and ArrowLeft/Right were once bound twice and both
+  fired on one press.
+- `verify_padcanvas.py` — Pad's canvas size is chosen, not inherited from
+  whatever the window happened to be on first load, which made a drawing's
+  shape depend on the browser.
+- `verify_player_photo.py` — the player's photo and music branches after the
+  editor shell was cut out from under them.
+- `verify_pressure.py` — `PointerEvent.pressure` scaling the per-point size
+  both surfaces already stored, so a stylus stops drawing like a mouse.
+- `verify_report.py` — the in-app problem report, so a tester's "it didn't
+  work" carries the version, browser, canvas and page count with it.
+- `verify_sheetfit.py` — the post composer fits its sheet. Reported from the
+  live demo as "why does this have sliders?", from a value copied into an
+  override without the value it was paired with.
+- `verify_strokegroups.py` — `strokes` and `strokeGroups` must agree exactly
+  or the server refuses the payload, which the user sees as a red box on the
+  share sheet.
+- `verify_tips.py` — tooltips are drawn rather than native `title` chrome,
+  and coverage is asserted rather than assumed.
+- `verify_visual.py` — pixels, because three of the last four faults to reach
+  users were visual and every one passed a full green harness.
 - `verify_takedown.py` — `python -m skribl.takedown`, the operator's door for a
   post its author cannot revoke: the orphan census, the refusals (unknown id,
   two wet flags at once, a wet flag with no id), dry-run by default, and both
