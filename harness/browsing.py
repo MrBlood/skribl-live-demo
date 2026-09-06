@@ -39,24 +39,38 @@ def boot_key(path):
     return BOOT_MARKER.get(path.split("?")[0])
 
 
-def open_page(target, base, path, *, viewport=None, settle=150, timeout=30000):
+def open_page(target, base, path, *, viewport=None, settle=150, boot_timeout=5000):
     """goto `base+path` and return a page that has actually finished booting.
 
     `target` is anything with .new_page() — a Browser or a BrowserContext.
     """
     page = target.new_page(viewport=viewport) if viewport else target.new_page()
-    goto(page, base, path, settle=settle, timeout=timeout)
+    goto(page, base, path, settle=settle, boot_timeout=boot_timeout)
     return page
 
 
-def goto(page, base, path, *, settle=150, timeout=30000):
+def goto(page, base, path, *, settle=150, boot_timeout=5000):
     """Navigate an existing page and wait for the surface to be ready."""
     page.goto(base + path, wait_until="load")
     key = boot_key(path)
     if key:
-        page.wait_for_function(
-            "k => !!(window.__skriblBoot && window.__skriblBoot[k])",
-            arg=key, timeout=timeout)
+        # A PATH DOES NOT IDENTIFY A SURFACE, which is what the first version
+        # of this got wrong. "/" is Skribl's Pad when BASE points at Skribl —
+        # but verify_example.py points BASE at the EXAMPLE HOST APP, whose root
+        # is the host's own page and sets no marker. Insisting on it there took
+        # the full timeout and then crashed the suite.
+        #
+        # So the marker is an OPTIMISATION, not a preconditon: wait a bounded
+        # time for it, and fall through to the settle if the page turns out not
+        # to be a Skribl editor. A page that IS Pad but failed to boot still
+        # fails — on the assertions that then find no editor, which is the
+        # honest place for that failure rather than a timeout in a helper.
+        try:
+            page.wait_for_function(
+                "k => !!(window.__skriblBoot && window.__skriblBoot[k])",
+                arg=key, timeout=boot_timeout)
+        except Exception:
+            pass
     if settle:
         page.wait_for_timeout(settle)
     return page
