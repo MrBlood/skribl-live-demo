@@ -96,6 +96,97 @@ probe in the tree reporting "ok", because a wrap does not move the box.
 height, which is the measurement that sees it. See the v278 entry at the
 foot of `DECISIONS.md`.
 
+### Closed in v280: a capability whose custody was nobody's job
+
+A second adversarial audit read the sealed v279 and returned **No-ship**, with
+one High of its own and one it re-raised, plus four Mediums and a Low. Every
+finding was checked against the tree before it was acted on and every one held.
+Its diagnosis is the sentence to keep:
+
+> The server-side primitive is the strongest part of the new design… The
+> failure is lifecycle ownership around that secret.
+
+**Minting and verifying a capability is not the whole security boundary.**
+Creation, durable custody, recovery, migration and retirement are all inside
+it, and v279 had built the first two beautifully and left the rest to a
+localStorage write whose return value nothing read.
+
+**Two ways to publish something irrevocable and be told it went fine.**
+`posted.js`'s `write()` has always returned whether it succeeded and `add()`
+has always discarded it, so quota exhaustion or private mode produced a live
+public post, no key, and a success message. Separately, `write()` truncated to
+`LIMIT` on every call, so the 201st Skribl silently stranded the 1st — still
+live, no longer withdrawable — and the 202nd stranded the next. Deterministic,
+not an edge case.
+
+`add()` now returns `{list, durable, key}` and both surfaces check it.
+`capped()` keeps the newest `LIMIT` entries **plus every entry carrying a key**,
+however old, so the cap governs what is rendered and never what authorises.
+
+**IndexedDB was the obvious answer and the wrong one.** It is cleared by the
+same user action and the same Safari eviction sweep as localStorage: it buys
+capacity, not durability, and the durability is what was missing. What actually
+survives cleared site data, a new phone, or an account system that does not
+exist yet is the person holding the key. So `lib/recoverykey.js` shows it when
+the browser cannot keep it, `warnIfVolatile()` says so *before* posting rather
+than after, and Your Skribls offers **Copy key** beside Delete. It is called a
+recovery key in everything a user reads, because the same secret is what a
+future account system would take to CLAIM a post, and a name meaning only
+"delete" would have to be retired exactly when the back-catalogue depended on
+people still recognising it.
+
+**Pre-v279 anonymous posts still cannot be self-served, and no migration can
+change that** — see the note in `docs/INTEGRATION.md`. `python -m
+skribl.takedown` is the operational answer, with `--list-orphans` as the census
+that says whether any deployment actually has the problem.
+
+### `verify_a11y.py` generates its population now
+
+Three of seven `aria-modal` surfaces were routed through `SkriblModal`; the
+suite tested one of the three by hand and passed. The audit named the shape:
+*a global semantic claim should generate its test population from the DOM, not
+from a manually chosen specimen.* The suite had already learned to assert
+behaviour instead of attributes, and then asserted the right thing about the
+wrong population — the same error one level up.
+
+All eight surfaces route through the utility (the eighth is the new recovery
+panel). Section 2 reads `[aria-modal="true"]` out of the live DOM; a surface
+with no recipe **fails** rather than being skipped, a recipe naming a deleted
+surface fails too, and a template census backstops the dialog that lives behind
+an unrendered branch. A dialog built at runtime escapes a census taken at load,
+so `recoverykey.js`'s overlay is primed before the sweep — anything added the
+same way must be primed too, and the template census is what will say so.
+
+**It immediately found a defect in `modalfocus.js` itself.** `close()` checked
+`isConnected`, but an opener can be present and `display:none` — the leave
+confirm closes the menu holding its opener on the way up. `focus()` was then a
+silent no-op and the user landed on `<body>`: the exact outcome the utility
+exists to prevent, reached through the one door it did not cover. It checks
+`offsetParent` now and falls back to whatever had focus when the dialog opened.
+
+### Two gates that were representatives of a global contract
+
+`verify_txcontract.py` scanned two files — the two where the v224 violation
+happened to be found — so `takedown.py` could have committed the shared session
+from request-shaped code and stayed green. It scans every module now, by AST
+rather than by grep, with exemptions named **per function**. Per function
+because widening it produced a finding at once: `storage.py` is a library a
+host imports and only its batch function may commit, so a file-level allowlist
+would have waved the whole module through. Its stale-exemption check then
+caught an exemption I had granted on an assumption, for a function that does
+not commit at all.
+
+`verify_docs.py` gates the CI-cost claim. Two of this release's findings were
+stale statements in **source comments**, where the v279 sweep never looked: 22
+lines above the delete routes still calling the v278 identity gate "the whole
+design", and the header of `harness.yml`, which used to say a heavy CI day had
+burned a monthly Actions allowance. This repository is public and every job
+runs on `ubuntu-latest`, so there is no allowance — see `CLAUDE.md`. The gate
+asserts the half that is checkable offline: while every runner is standard,
+nothing current may call this project's minutes finite or billed. Move to a
+larger runner and the claim becomes sayable again and the gate stands down by
+itself.
+
 ### Closed in v279: twelve findings from a second audit, all real
 
 An external audit read the sealed v278 archive and returned one High and

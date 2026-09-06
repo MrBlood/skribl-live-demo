@@ -5954,3 +5954,163 @@ response `immutable`; README.md still pointing at a compositor gap that v278
 closed. All of them were true when written, and all of them are the reason the
 generated stanza exists at all -- the numbers are guarded and the sentences are
 not.
+
+## v280 -- a capability is not finished when the cryptography is
+
+A second adversarial audit read the sealed v279 and returned No-ship. One High
+of its own, one it re-raised, four Mediums and a Low; all seven checked against
+the tree before anything was acted on, all seven real. Two were LARGER than
+reported, which is worth recording because the temptation on a long list is to
+triage by plausibility.
+
+Its diagnosis is better than its list: *"The server-side primitive is the
+strongest part of the new design. The failure is lifecycle ownership around
+that secret."*
+
+**THAT IS THE LESSON AND IT GENERALISES.** v279 got the hard-looking parts
+right -- 256 bits of CSPRNG, hash-only storage, constant-time comparison, a
+hard False on an empty token -- and then handed the only copy to a
+`localStorage.setItem()` whose return value nothing read. Minting and
+verification felt like the security boundary because they are the parts that
+look like security. Creation, durable custody, recovery, migration and
+retirement are all inside it too, and four of them had no owner.
+
+**TWO WAYS TO PUBLISH SOMETHING IRREVOCABLE AND BE TOLD IT WENT FINE.**
+`write()` has always returned a boolean and `add()` has always dropped it, so
+quota exhaustion or private mode produced a live public post, no key, and a
+success message two lines later. And `write()` truncated to LIMIT on every
+call, so the 201st Skribl stranded the 1st and the 202nd stranded the next --
+deterministic, not an edge.
+
+The second one is the more instructive. The cap was correct when it was
+written: the list held titles and timestamps, and a tray that grows without
+limit is a real bug. What changed was the MEANING OF THE DATA, in a different
+release, in a different file. Nothing re-examined the policy, because policies
+are attached to mechanisms and this one was attached to a mechanism that had
+not changed. `capped()` now keeps the newest LIMIT entries plus every entry
+carrying a key: the cap governs what is RENDERED, which is what it was always
+for.
+
+**INDEXEDDB WAS THE OBVIOUS ANSWER AND I DID NOT TAKE IT.** The audit offered
+it as the stronger option and the owner asked which choice serves the future.
+Every store a page can reach -- localStorage, IndexedDB, Cache -- is cleared by
+the same user action and evicted by the same Safari sweep. Moving the key
+between them buys CAPACITY, and capacity was not what was missing. It would
+also have cost a second storage layer plus a browser-side migration for keys
+already written, which is real surface for a benefit that is not the one
+needed.
+
+What survives cleared site data, a new phone, and an account system that does
+not exist yet is the PERSON holding the key. So the fix is to show it: when the
+browser cannot keep it (`recoverykey.js`), before posting when it cannot keep
+anything (`warnIfVolatile`), and on demand in Your Skribls (Copy key). The
+routes already accept a pasted token, so surfacing cost almost nothing.
+
+**IT IS A RECOVERY KEY, NOT A DELETE TOKEN, IN EVERYTHING A USER READS.**
+Deletion is what it does today; the same secret is what a future account system
+would accept to CLAIM the post it belongs to. A name meaning only "delete"
+would have to be retired at exactly the moment the back-catalogue depended on
+people still recognising it.
+
+**AND THE LEGACY ROWS CANNOT BE FIXED, ONLY ANSWERED.** Every pre-v279
+anonymous post holds a NULL hash and no migration can invent authorship the
+server never held. The audit named the trap and it is a good one: do not turn
+possession of the share URL into deletion authority, because the URL is the
+thing the author gave away. `python -m skribl.takedown` is the operational
+answer instead, with `--list-orphans` as the census that says whether a given
+deployment has the problem at all. `require_author=False` had existed since
+v278 with nothing to invoke it, which is a capability the person answering the
+support mail does not have.
+
+## v280, cont. -- a suite can assert the right thing about the wrong population
+
+`verify_a11y.py` was written in v279 with an explicit rule at the top: assert
+the BEHAVIOUR, not the attribute, because `role="slider"` being present was
+precisely what was true while it was broken. It then tested one modal by hand
+while four others declared `aria-modal="true"` and implemented none of it.
+
+**THE RULE WAS RIGHT AND WAS APPLIED ONE LEVEL TOO LOW.** The audit's phrasing
+is the one to keep: a global semantic claim should generate its test population
+from the DOM, not from a manually chosen specimen. Asserting behaviour on a
+specimen still tells you about the specimen.
+
+Section 2 now reads `[aria-modal="true"]` out of the live page. A surface with
+no interaction recipe FAILS rather than being skipped -- that is the whole
+mechanism, because the alternative is a new dialog joining the tree silently. A
+recipe naming a surface that no longer exists fails too, since a recipe for a
+deleted dialog passes forever by testing nothing.
+
+**A DOM CENSUS TAKEN AT LOAD CANNOT SEE A DIALOG BUILT AT RUNTIME**, and
+`recoverykey.js` builds its overlay the first time it is shown. It is primed
+before the sweep. A template census backs that up for the opposite case, a
+dialog behind a branch that did not render this run. Neither alone is enough
+and the pair is stated rather than assumed.
+
+**MY FIRST TWO RECIPES WERE WRONG AND THE STRUCTURE MADE THAT LOUD.** Pad gates
+Post behind a finished take rather than behind ink, so `draw|click:#postBtn`
+timed out on a hidden disabled button; and `atRisk()` is `!flushPadDraft()`, so
+a draft that saves cleanly is not at risk and the leave confirm never opens.
+Under the old design both would have been silent -- no dialog, no assertion, no
+failure. Under this one they were timeouts and red lines.
+
+**THEN IT FOUND A REAL DEFECT IN modalfocus.js.** `close()` checked
+`isConnected`, and an opener can be connected but `display:none`: the leave
+confirm closes the menu holding its opener on the way up. `focus()` on a hidden
+node does nothing and throws nothing, so focus landed on `<body>` -- the exact
+outcome the utility was written to prevent, reached through the one door it did
+not cover. It checks `offsetParent` now and falls back to whatever had focus
+when the dialog opened. Widening a population is how you find the case the
+narrow one was chosen to avoid, usually without meaning to.
+
+## v280, cont. -- two gates that were representatives of a global contract
+
+The audit's second cross-cutting pattern turned out to describe two gates it
+had not looked at, which is the best kind of finding: it kept paying out after
+the specific instance was fixed.
+
+**verify_txcontract SCANNED TWO FILES** -- `ratelimit.py` and `routes.py`, the
+two where the v224 violation happened to be found -- while the contract covers
+the whole package. `takedown.py` could have committed the shared session from
+request-shaped code and the gate would have stayed green. An instrument aimed
+at the site of the last defect is a regression test, not a contract.
+
+It scans every module now, by AST rather than by grep, and the exemptions are
+named PER FUNCTION. Per function because widening it produced a finding on the
+first run: `storage.py` is a library a host imports, and only its batch
+function may legitimately commit, so a file-level allowlist would have waved
+the whole module through -- including any commit a later edit put in it.
+
+**AND ITS STALE-EXEMPTION CHECK CAUGHT MY OWN MISTAKE IMMEDIATELY.** I had
+exempted `sweep_orphans_report` on the assumption that a batch job commits. It
+does not. An exemption granted on an assumption is an exemption that will one
+day become true by accident, which is why that check exists at all.
+
+**verify_docs NOW GATES THE CI-COST CLAIM**, and the reason is that two of this
+release's findings were stale statements in SOURCE COMMENTS. The v279 staleness
+sweep read every `.md` in the tree and found neither: 22 lines above the delete
+routes still calling v278's identity gate "the whole design", and the header of
+`harness.yml` recording a heavy CI day as having burned a monthly Actions
+allowance. A sweep looks where it is pointed; a gate looks every run.
+
+The repository is public and every job runs on `ubuntu-latest`, so there is no
+allowance to burn -- standard hosted runners are free there, with no minute
+cap. Runner SIZE is the billable knob and nothing here turns it. The claim was
+in three places independently, and the gate found the third.
+
+**IT ASSERTS THE HALF THAT IS CHECKABLE OFFLINE.** Whether Actions bills this
+repository depends on visibility, which needs the network, and on runner
+labels, which do not. So: while every `runs-on` is a standard label, nothing
+current may describe this project's minutes as finite or billed. Move one job
+to a larger runner and the claim becomes true again, and the gate stands down
+and says why -- which is the behaviour a rule about cost should have, rather
+than a constant that somebody has to remember to flip.
+
+**A STANDING RULE THAT FIRES ON A FREE ACTION IS NOT HARMLESSLY CAUTIOUS.**
+`CLAUDE.md` had been asking for permission before spending nothing, and that
+trains the next session to ask theatrically -- which is how a real spending
+question gets waved through with the rest of the noise. Render, third-party
+paid tiers and usage-scaled billing are untouched. The PR-side CI trim also
+keeps its conclusion and loses its reason: three jobs at 40-90 minutes is a
+long time to sit on a pull request whether or not anyone is invoiced, and
+keeping a wrong reason attached to a right decision is how the decision gets
+reversed by the first person who checks it.

@@ -398,11 +398,57 @@ Permanent publication is a defensible product choice. Silently having no way
 back is not.
 
 `harness/verify_deletion.py` holds all of the above: that the two refusals are
-indistinguishable, that the routes do not exist without an identity, that the
-associations go even where SQLite's cascade does not fire, and that the
-functions flush without committing. `harness/verify_deletion_foundation.py`
-covers the layer beneath — cascade, media unreachability, orphan sweep — on
-PostgreSQL.
+indistinguishable, that a wrong token and a token minted for another post both
+404, that the associations go even where SQLite's cascade does not fire, and
+that the functions flush without committing. (Until v280 this sentence said the
+suite proves "the routes do not exist without an identity" — v279's change made
+that false and the v279 sweep read the paragraph above it and not this one.)
+`harness/verify_deletion_foundation.py` covers the layer beneath — cascade,
+media unreachability, orphan sweep — on PostgreSQL.
+
+### Posts nobody can revoke, and the door that exists for them
+
+**A post created before v279 has no capability, and no migration can give it
+one.** The column is nullable, so every pre-existing row holds NULL, and
+`_token_matches()` refuses NULL deliberately: an empty token matching an empty
+hash would make the whole anonymous back-catalogue deletable by anybody.
+
+There is no cryptographic repair. The server never held a secret proving which
+browser created those rows. The tempting shortcut — treat possession of the
+share URL as authority — is exactly backwards, because the URL is the thing the
+author gave away; the recipients have it too.
+
+So the answer is operational, and v280 ships it:
+
+    python -m skribl.takedown --list-orphans          # how many, and which
+    python -m skribl.takedown <public-id>             # dry run: what is it?
+    python -m skribl.takedown <public-id> --delete
+    python -m skribl.takedown <public-id> --visibility private
+
+Dry by default, like `python -m skribl.sweep`. It refuses to guess: one public
+id, no search, no wildcard, no `--all`. Exit 1 means no such post, exit 2 means
+it could not run — distinct so a runbook can alert on them separately. The
+media bytes are left to the sweeper, which is the only thing that can tell
+whether another post shares them.
+
+**Run the census before you upgrade**, so you know whether this affects anyone:
+
+```sql
+SELECT COUNT(*) FROM skribl_posts
+WHERE user_id IS NULL AND delete_token_hash IS NULL;
+```
+
+Zero means the gap is theoretical for your deployment. Non-zero means those
+authors cannot withdraw their own posts and you are their only route, so decide
+who answers that mail before you need to.
+
+**The same door is not only for legacy rows.** It covers a post-v279 author who
+cleared their site data, a moderation decision, and a legal takedown. Those
+needs are permanent; the legacy back-catalogue is the part that shrinks to
+nothing over time.
+
+`harness/verify_takedown.py` drives the CLI as a subprocess, so the exit codes
+it asserts are the ones your runbook will see.
 
 ### Your user id can be any shape
 
