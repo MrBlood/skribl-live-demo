@@ -2401,15 +2401,22 @@ COMMITTED pick (`change`) rather than every shade a drag passes through
 (`input`) — which had filled the row with gradations of one colour.
 
 **CI economics changed with this release, and the rule outlives it.** A single
-productive day ran the full three-job harness thirty times and consumed the
-account's entire monthly Actions allowance. Pull requests now run one smoke job
-(`verify_boot.py`); the full sqlite/postgres/mp4 battery runs on pushes to main
-and manual dispatch only. That trim is safe because the affected suites are run
-LOCALLY before every push and their counts are quoted in the PR — CI's job on a
-PR is to catch a broken push, not to re-verify a verified one. `CLAUDE.md` now
-carries the owner's standing rule: **ask before taking any action that could
-create or increase a bill on their accounts**, CI triggers explicitly included.
-Do not widen those triggers to "fix" a red PR.
+productive day ran the full three-job harness thirty times. Pull requests now
+run one smoke job (`verify_boot.py`); the full sqlite/postgres/mp4 battery runs
+on pushes to main and manual dispatch only. That trim is safe because the
+affected suites are run LOCALLY before every push and their counts are quoted
+in the PR — CI's job on a PR is to catch a broken push, not to re-verify a
+verified one. `CLAUDE.md` carries the owner's standing rule: **ask before
+taking any action that could create or increase a bill on their accounts**.
+
+**THE BILLING HALF OF THAT PARAGRAPH WAS WRONG AND IS SUPERSEDED (v280).** It
+used to say the thirty runs "consumed the account's entire monthly Actions
+allowance". This repository is public and every job runs on `ubuntu-latest`,
+so there is no allowance to consume — standard runners are free there, with no
+minute cap. The trim is still right, for turnaround rather than for money:
+three jobs at 40-90 minutes each is a long time to sit on a PR. Still do not
+widen the triggers to "fix" a red PR, but do not decline to run CI on cost
+grounds either. `verify_docs.py` now gates this claim wherever it appears.
 
 ## Closed in v275 — the in-post player, and the three surfaces around it
 

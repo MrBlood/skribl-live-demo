@@ -6,22 +6,36 @@ name: harness
 #   postgres  real parallelism, where the rate-limiter reservation race lives
 #   mp4       a browser with an H.264 encoder, which Playwright's Chromium lacks
 
-# WHO RUNS WHAT — the September 2026 minutes lesson, round two.
+# WHO RUNS WHAT — and WHY, which was written down wrong.
 #
 # The full battery below (three jobs, 89 suites each, 40-90 minutes a job) used
 # to run on EVERY pull request AND every merge: one shipped fix cost ~6 hours
-# of runner time, and an ordinary productive day (7 merges) burned the entire
-# monthly Actions allowance — 30 full runs in one day. cancel-in-progress
-# (below) had already closed the superseded-push hole; it cannot help when
-# every run is for a distinct event.
+# of runner time, and an ordinary productive day (7 merges) meant 30 full runs
+# in a day. cancel-in-progress (below) had already closed the superseded-push
+# hole; it cannot help when every run is for a distinct event.
 #
-# So: pull requests get ONE fast smoke job (the boot suite — does the app
-# start and serve at all), and the full three-job battery runs only on pushes
-# to main and on manual dispatch. The working rhythm this repo actually has —
-# the full affected suites run locally before every push, and their counts are
-# quoted in each PR — is what makes the PR-side trim safe: CI's job on a PR is
+# THAT WAS RECORDED HERE AS A BILL, AND IT IS NOT ONE. This repository is
+# public and every job below runs on `ubuntu-latest`, a standard GitHub-hosted
+# runner. Standard runners on public repositories have no minute allowance and
+# no per-minute charge, so "burned the entire monthly Actions allowance" —
+# what this note used to say — describes an allowance this repository does not
+# have. Whatever the visibility was on the day it happened, it is public now.
+# Runner SIZE is the billable knob (4-core and up, GPU, macOS, self-hosted),
+# and nothing here turns it.
+#
+# THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. Three jobs at 40-90 minutes
+# is a long time to sit on a pull request whether or not anyone is invoiced
+# for it. So: pull requests get ONE fast smoke job (the boot suite — does the
+# app start and serve at all), and the full three-job battery runs only on
+# pushes to main and on manual dispatch. The working rhythm this repo actually
+# has — the full affected suites run locally before every push, and their
+# counts are quoted in each PR — is what makes that safe: CI's job on a PR is
 # to catch a broken push, not to re-verify a verified one. Merges to main keep
 # the complete record.
+#
+# Keeping the wrong reason attached to a right decision is how the decision
+# gets reversed by the first person who checks the reason. Corrected in v280,
+# during a release whose whole subject was claims that had stopped being true.
 on:
   push:
     branches: [main]

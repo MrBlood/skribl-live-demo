@@ -694,13 +694,16 @@ if _wf.is_file():
     check("the mp4 lane FAILS on a skip rather than reporting green",
           "SKIPPED on the job that exists to run it" in _wf_text,
           "a lane that tolerates the skip it exists to prevent is not a lane")
-    # THE MINUTES ARE A FINITE RESOURCE AND THIS PROJECT EXHAUSTED THEM.
-    # Three jobs of 20-30 minutes started on every push; without a concurrency
-    # group the superseded runs finished anyway, against commits nobody would
-    # merge. Pinned here because the symptom -- runs dying in a second with 404
-    # logs -- looks nothing like its cause, and the block is one deletable
-    # stanza that nothing else in the workflow depends on.
-    check("superseded pull-request runs are cancelled rather than paid for",
+    # SUPERSEDED PUSHES SHOULD NOT KEEP RUNNING. Three jobs of 20-30 minutes
+    # started on every push; without a concurrency group the runs finished
+    # anyway, against commits nobody would merge. This comment used to open
+    # "THE MINUTES ARE A FINITE RESOURCE AND THIS PROJECT EXHAUSTED THEM",
+    # which is not true of a public repository on standard runners — see the
+    # gate at the foot of this file. The stanza is still worth pinning: a
+    # superseded run occupies a runner and delays the one that matters, and
+    # the symptom (runs dying in a second with 404 logs) looks nothing like
+    # its cause.
+    check("superseded pull-request runs are cancelled rather than left running",
           re.search(r"^concurrency:$", _wf_text, re.M) is not None
           and "cancel-in-progress:" in _wf_text,
           "no concurrency group — every push leaves the previous three jobs running")
@@ -775,6 +778,73 @@ EXEMPT = re.compile(r"SUPERSEDED|\(history\)|\(historical|historical from here|"
                     r"was DECLARED|used to (say|read|be|end|state|claim)|no longer|"
                     r"requirement, as written|"
                     r"until v\d|before v\d|as of v\d", re.I)
+
+
+# ...AND THE SAME DISCIPLINE FOR A CLAIM THAT IS NOT A NUMBER: what CI costs.
+#
+# v280. Two of this release's findings were stale statements sitting in SOURCE
+# COMMENTS rather than in documents, where nothing looks: 22 lines above the
+# delete routes still calling the v278 identity gate "the whole design", and
+# the header of .github/workflows/harness.yml recording a day of heavy CI as
+# having "burned the entire monthly Actions allowance". The v279 staleness
+# sweep read every .md and found neither, which is the argument for gating a
+# claim rather than trusting a sweep.
+#
+# THE INVARIANT IS CHECKABLE OFFLINE AND THAT IS THE WHOLE POINT. Whether
+# Actions bills this repository depends on two facts: the repository's
+# visibility, which needs the network, and the runner labels, which do not.
+# So this asserts the half that can be proved from the tree — if every job
+# runs on a STANDARD GitHub-hosted runner, then nothing current may describe
+# this project's Actions minutes as a finite or billed resource. Should the
+# project ever move to a larger runner, the claim becomes sayable again and
+# this gate steps out of the way on its own, which is the behaviour a rule
+# about cost should have.
+_STANDARD_RUNNER = re.compile(
+    r"^\s*runs-on:\s*(ubuntu|windows|macos)-(latest|\d+\.\d+|\d+)\s*$", re.M)
+_ANY_RUNNER = re.compile(r"^\s*runs-on:", re.M)
+_wf_dir = ROOT / ".github" / "workflows"
+_wf_all = "\n".join(f.read_text(encoding="utf-8")
+                    for f in sorted(_wf_dir.glob("*.yml"))) if _wf_dir.is_dir() else ""
+_all_runners = len(_ANY_RUNNER.findall(_wf_all))
+_std_runners = len(_STANDARD_RUNNER.findall(_wf_all))
+_all_standard = _all_runners > 0 and _all_runners == _std_runners
+
+# A small closed list of phrasings that ASSERT metered minutes, in the same
+# spirit as EXEMPT below: each entry is a way a writer says "this costs us",
+# not a general notion of talking about money. A sentence may mention an
+# allowance while denying there is one — the corrections in CLAUDE.md do
+# exactly that — so the exemption window applies here too.
+_COST_CLAIM = re.compile(
+    r"monthly Actions allowance|metered Actions minutes|"
+    r"Actions minutes (are|were) (finite|metered|limited)|"
+    r"minutes are a finite resource", re.I)
+
+if _all_standard:
+    _cost_hits = []
+    for rel in ["CLAUDE.md", ".github/workflows/harness.yml"] + \
+               [str(d.relative_to(ROOT)) for d in _current]:
+        f = ROOT / rel
+        if not f.is_file():
+            continue
+        lines = f.read_text(encoding="utf-8").splitlines()
+        for n, line in enumerate(lines):
+            if not _COST_CLAIM.search(line):
+                continue
+            # The same six-line window the denial checks use: a quotation of a
+            # retired claim, marked as one, stays sayable.
+            window = "\n".join(lines[max(0, n - 6):n + 1])
+            if EXEMPT.search(window):
+                continue
+            _cost_hits.append(f"{rel}:{n + 1}")
+    check("nothing current claims CI minutes are metered while every runner "
+          "is standard", not _cost_hits,
+          ", ".join(_cost_hits) + f" — all {_all_runners} job(s) run on "
+          "standard GitHub-hosted runners, which are free on a public "
+          "repository; mark the line superseded if it is quoting history")
+else:
+    check("the runner audit ran", True,
+          f"{_all_runners - _std_runners} non-standard runner(s) — a cost "
+          "claim is sayable again, so the check above stands down")
 
 # v273: CLAUDE.md has always said "no doc may hand-type a tree hash or an
 # assertion count outside the generated stanza". The tree-hash half was

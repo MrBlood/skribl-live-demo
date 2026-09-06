@@ -51,9 +51,10 @@ Never take an action that could create or increase a bill on any of the
 owner's accounts — GitHub, Render, or any other service — without asking
 first and getting an explicit yes. This includes, concretely:
 
-- Enabling, re-enabling, or widening CI triggers, paid runners, larger
-  runner sizes, or anything that consumes metered Actions minutes beyond
-  the current workflow configuration.
+- Moving CI onto larger runners (4-core and up, GPU, macOS), self-hosted
+  paid runners, or any runner class that is not GitHub's standard hosted
+  one. **Standard runners are the free case; runner SIZE is the billable
+  knob.** See the note below before assuming a CI change costs anything.
 - Creating or upgrading services, plans, databases, storage, bandwidth
   tiers, or autoscaling on Render (or any host).
 - Signing the project up for any third-party service that has a paid tier,
@@ -62,14 +63,46 @@ first and getting an explicit yes. This includes, concretely:
   coming (per-request billing, storage growth, egress).
 
 When in doubt about whether something bills, treat it as if it does: stop
-and ask, with a plain-language estimate of the cost. Context: the full CI
-battery once burned the entire monthly Actions allowance in a single day
-(30 full runs — see the note atop `.github/workflows/harness.yml`).
+and ask, with a plain-language estimate of the cost.
 
-## CI economics
+**GITHUB ACTIONS DOES NOT BILL THIS REPOSITORY, and this paragraph exists
+because the rule above used to say it did.** `MrBlood/skribl-live-demo` is
+public, and every job in `.github/workflows/harness.yml` runs on
+`ubuntu-latest` — a standard GitHub-hosted runner. Standard runners on
+public repositories have no minute allowance and no per-minute charge, and
+Actions artifact and cache storage is free there too. So running the full
+battery, dispatching a job by hand, or adding a trigger costs nothing.
+
+Two things that WOULD bill even on a public repository, and are the reason
+the bullet above still exists: a larger runner size, and a self-hosted
+runner on paid infrastructure.
+
+**The history is real and its billing premise is not.** The note atop
+`harness.yml` records a day when the full battery ran 30 times; whatever
+the repository's visibility was then, it is public now, so that day would
+cost nothing today. Verify before repeating the claim — the visibility and
+the `runs-on:` labels are the two facts that decide it, and both are
+checkable in about ten seconds:
+
+    gh repo view --json visibility        # or the API; must say "public"
+    grep -n 'runs-on' .github/workflows/*.yml
+
+A standing rule that asks for permission on something that cannot cost
+money teaches the assistant to ask for permission theatrically, which is
+how a real spending question gets waved through with the rest.
+
+## CI economics — turnaround, not money
 
 Pull requests run only the smoke job; the full three-job harness runs on
-pushes to main and manual dispatch. Do not widen these triggers without
-the owner's explicit approval (see the spending rule above). The full
-suites run locally before every push — that is what makes the PR-side
-trim safe.
+pushes to main and manual dispatch. The full suites run locally before
+every push — that is what makes the PR-side trim safe.
+
+**The trim's justification is WALL-CLOCK, not cost.** Three jobs at 40-90
+minutes each is a long time to sit on a pull request, and free minutes are
+not free minutes-of-your-life. The trim was originally written up as a
+money-saving measure; on a public repository with standard runners it never
+was one, and keeping the wrong reason attached to a right decision is how
+the decision gets reversed by someone who checks the reason.
+
+Still ask before widening triggers — not because it bills, but because it
+is the owner's call how much CI noise a pull request generates.
