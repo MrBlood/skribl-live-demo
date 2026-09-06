@@ -456,11 +456,26 @@ grep, standalone durability) and `verify_review.py` (limiter semantics).
 Everything served through an authorisation check — `/media/<key>`, the share
 card — defaults to `Cache-Control: private, no-store`. Passing
 `public_media_cache=True` (standalone: `SKRIBL_PUBLIC_MEDIA_CACHE=1`) lets
-all-public objects be served `public, immutable` for CDN caching. Two things
+all-public objects be served `public, max-age=300` for CDN caching. Two things
 the opt-in means, and you must accept BOTH:
 
-1. **Revocation window.** Visibility is revocable; shared caches don't
-   re-check. Formerly-public bytes keep serving from caches until they expire.
+1. **Revocation window, bounded at five minutes.** Visibility is revocable and
+   shared caches don't re-check, so formerly-public bytes keep serving until
+   they expire — and *deleted* bytes do too. The window used to be a year
+   (`max-age=31536000, immutable`), on the reasoning that content-addressed
+   bytes never change; that is true of the bytes and beside the point, because
+   what a cache is being asked is who may read them. An audit of v278 called it
+   incompatible with deletion, moderation and takedowns, and it was.
+
+   `immutable` is gone entirely — it told caches not to revalidate even on a
+   user reload, closing the last recovery path. The number now lives in one
+   place, `skribl.routes.PUBLIC_MEDIA_MAX_AGE`.
+
+   **If "deleted" must mean "gone this instant" for you, leave this off** —
+   which is the default. Closing the window completely needs a CDN purge hook
+   on your side, invoked when a post goes private or is deleted; Skribl does
+   not have one, and raising the number instead of building one just makes the
+   window longer.
 2. **Incompatible with viewer-dependent DENIAL.** Public-cacheability is
    decided by `visible_to(None)` — "may an anonymous viewer see this?". A
    policy that allows anonymous viewing while denying a *specific* viewer

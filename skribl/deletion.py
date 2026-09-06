@@ -68,9 +68,28 @@ table can say, and that is `sweep_orphans()`'s job. It is also conservative by
 design — `older_than_seconds`, plus the pending-claim protocol
 `SkriblPendingMedia` documents — because deleting a live object is unrecoverable
 and keeping a dead one costs storage. Deleting bytes inline here would throw all
-of that away for the one caller least able to reason about it. What this DOES
-guarantee is that the bytes stop being reachable: `/media/<key>` authorises
-through the association rows, which are gone with the post.
+of that away for the one caller least able to reason about it.
+
+WHAT THIS GUARANTEES, AND THE ONE PLACE IT DOES NOT. Deleting a post removes
+its association rows, and `/media/<key>` authorises through exactly those, so
+the object stops being reachable THROUGH SKRIBL immediately.
+
+That used to be written here as an unconditional promise, and an audit of v278
+caught it contradicting `routes.py` twenty lines from where the exception is
+documented: a deployment that sets `SKRIBL_PUBLIC_MEDIA_CACHE=1` lets a shared
+cache hold public media, and a shared cache does not re-run `visible_to()`. So
+for that deployment, and only that one, a deleted object can still be served
+by a CDN or proxy that already has it.
+
+The window is now bounded to `routes.PUBLIC_MEDIA_MAX_AGE` (five minutes) and
+the `immutable` directive is gone, so the promise is late rather than false.
+Closing it entirely needs a purge hook the deployment supplies; until one
+exists, a deployment for which "deleted" must mean "gone this instant" should
+leave the opt-in off, which is the default.
+
+Two contradictory statements about the same behaviour is worse than either
+being wrong alone, because each looks corroborated by the other — the same
+shape as the two byte ratchets that disagreed about `audiosession.js`.
 """
 import hashlib
 import hmac

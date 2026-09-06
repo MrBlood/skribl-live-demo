@@ -36,6 +36,29 @@ from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
 
 
+# How long a shared cache may hold an authorisation-dependent response, when a
+# deployment has opted into public caching at all.
+#
+# THIS NUMBER IS THE REVOCATION WINDOW, and it used to be a year. /media/<key>
+# answered `public, max-age=31536000, immutable` and the share card
+# `public, max-age=86400`, on the reasoning that content-addressed bytes never
+# change — which is true of the BYTES and irrelevant to the question a cache is
+# actually being asked. What can change is who may read them. An audit of v278
+# put it plainly: a one-year immutable response is incompatible with deletion,
+# moderation, privacy requests and takedowns, because a CDN keeps serving the
+# object without ever reaching Flask again.
+#
+# `immutable` was the worst of it. It tells a cache not to revalidate even when
+# the user reloads, so the one recovery path a person has left is closed too.
+# Dropped.
+#
+# Five minutes is chosen to be short enough that "I deleted it" is true in any
+# human timeframe, and long enough to absorb the burst a shared link produces —
+# which is the whole reason the opt-in exists. A deployment that needs longer
+# needs a CDN purge hook, not a bigger number here, and should keep the default
+# (no shared caching at all) until it has one.
+PUBLIC_MEDIA_MAX_AGE = 300
+
 # --- feed cursors -----------------------------------------------------------
 # Opaque to clients on purpose: an obviously-decodable "offset=40" invites
 # clients to construct their own, which then breaks the moment the pagination
@@ -369,7 +392,8 @@ def register_routes(bp, *, index_route=False):
                         if (post.visibility == "public"
                                 and post.visible_to(None)
                                 and bp.skribl_public_media_cache):
-                            resp.headers["Cache-Control"] = "public, max-age=86400"
+                            resp.headers["Cache-Control"] = (
+                                f"public, max-age={PUBLIC_MEDIA_MAX_AGE}")
                         else:
                             resp.headers["Cache-Control"] = "private, no-store"
                         return resp
@@ -667,7 +691,11 @@ def register_routes(bp, *, index_route=False):
                         public_only = False
                         break
         if public_only:
-            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            # Bounded, and NOT immutable — see PUBLIC_MEDIA_MAX_AGE. The bytes
+            # are immutable; the permission to read them is not, and only the
+            # second one matters to a cache.
+            resp.headers["Cache-Control"] = (
+                f"public, max-age={PUBLIC_MEDIA_MAX_AGE}")
         else:
             resp.headers["Cache-Control"] = "private, no-store"
         # Never let a stored blob be re-interpreted as something executable.

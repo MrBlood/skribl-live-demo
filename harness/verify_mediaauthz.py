@@ -245,8 +245,17 @@ check("the share card WITHOUT the opt-in: never `public`",
 opted = build_app(None, public_media_cache=True)
 r = opted.test_client().get(pub_media)
 cc = r.headers.get("Cache-Control", "")
-check("WITH the opt-in, all-public media is public+immutable",
-      "public" in cc and "immutable" in cc, cc)
+# WAS "public+immutable", AND THAT ASSERTION PINNED THE DEFECT. It was written
+# when the opt-in answered `max-age=31536000, immutable`, on the reasoning that
+# content-addressed bytes never change — true of the bytes, and not the
+# question a cache is being asked, which is who may read them. An audit of v278
+# pointed out that a year of immutable is incompatible with deletion. The
+# property worth pinning is that the opt-in still WORKS, not that it works
+# forever; the bound itself is asserted in the REVOCATION WINDOW section below.
+check("WITH the opt-in, all-public media is shared-cacheable",
+      "public" in cc and "immutable" not in cc,
+      f"{cc} — `immutable` here would mean a revoked object cannot even be "
+      "shaken loose by a reload")
 r = opted.test_client().get(private_media)
 check("...but the opt-in never publicises a blob a private post references",
       r.status_code == 404, str(r.status_code))
@@ -447,6 +456,48 @@ appF.register_blueprint(bpF)
 rF = appF.test_client().get("/api/skribls/zzzzzzzz")
 check("F6: a session=False blueprint's query FAILS (5xx), never borrows "
       "another app's database", rF.status_code >= 500, str(rF.status_code))
+
+print("\nREVOCATION WINDOW — the opt-in is bounded, and says so consistently")
+# THE FINDING, from an audit of v278. The default (no shared caching) is pinned
+# above and was always right. The OPT-IN was not: /media/<key> answered
+# `public, max-age=31536000, immutable` and the share card `max-age=86400`, so
+# a deployment that enabled it turned deletion into a promise a CDN keeps
+# breaking for up to a year — and `immutable` closed the one recovery path a
+# person has, because it tells a cache not to revalidate even on reload.
+#
+# The window is bounded now and the directive is gone. This asserts both, and
+# asserts the number is the SAME one routes.py defines rather than a literal
+# retyped here, because a second copy is how the two drift.
+from skribl.routes import PUBLIC_MEDIA_MAX_AGE as _MAXAGE
+
+check("the revocation window is minutes, not months",
+      0 < _MAXAGE <= 900,
+      f"{_MAXAGE}s — this number IS how long a deleted object can still be "
+      "served by a shared cache; a year was the previous answer")
+
+_cache_app = build_app(viewer=None, public_media_cache=True)
+_cc = None
+with _cache_app.app_context():
+    _cc_client = _cache_app.test_client()
+    # pub_media is already a "/media/<key>" path for a PUBLIC post.
+    _r = _cc_client.get(pub_media)
+    _cc = _r.headers.get("Cache-Control", "")
+check("an opted-in public object IS shared-cacheable", "public" in _cc, _cc)
+check("...but never `immutable`", "immutable" not in _cc,
+      f"{_cc} — immutable tells a cache not to revalidate even when the user "
+      "reloads, so a revoked object cannot be shaken loose at all")
+check("...and its max-age is the bounded window",
+      f"max-age={_MAXAGE}" in _cc, _cc)
+
+# THE TWO FILES MUST NOT CONTRADICT EACH OTHER. deletion.py used to promise,
+# without qualification, that deleting a post stops the bytes being reachable —
+# while routes.py documented the configuration where that is false. Each
+# statement looked corroborated by the other. Same failure as the two byte
+# ratchets that disagreed about audiosession.js.
+_dele = (ROOT / "skribl" / "deletion.py").read_text(encoding="utf-8")
+check("deletion.py names the cache exception rather than promising past it",
+      "PUBLIC_MEDIA_CACHE" in _dele and "PUBLIC_MEDIA_MAX_AGE" in _dele,
+      "a module that guarantees unreachability must say where it cannot")
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
