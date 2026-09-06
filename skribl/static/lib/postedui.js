@@ -65,11 +65,24 @@
       });
     } catch (e) { done(false, 'Could not reach the server.'); return; }
     req.then(function (r) {
-      /* 404 is the same answer for "already gone" and "not yours". Treated as
-         success: the post is not there, which is what the user asked for, and
-         the local entry should go either way. */
-      done(r.ok || r.status === 404,
-           r.status === 404 ? null : 'Could not delete — try again.');
+      if (r.ok) { done(true, null); return; }
+      /* 404 IS AMBIGUOUS BY DESIGN AND MUST STAY AMBIGUOUS HERE. The server
+         answers the same 404 for "no such post" and "not yours" so the API
+         cannot be walked to learn which public ids exist — deletion.py's whole
+         anti-oracle rule. Until v281 this client collapsed that into success,
+         with a comment reasoning "the local entry should go either way".
+         It does not: a wrong or corrupted key gets exactly this 404, and
+         treating it as done threw away the only credential for a post that is
+         still live. Security ambiguity on the server cannot become certainty
+         in the UI — that is the client undoing the server's care.
+         So: unknown. The entry and its key stay. */
+      if (r.status === 404) {
+        done(false, 'Could not confirm it was deleted — the key may not match '
+                    + 'this Skribl. Your key has been kept; open the link to '
+                    + 'check whether it is still there.');
+        return;
+      }
+      done(false, 'Could not delete — try again.');
     }).catch(function () { done(false, 'Could not reach the server.'); });
   }
 
@@ -98,6 +111,7 @@
     var clearEl = document.getElementById('postedClear');
     var backdrop = document.getElementById('postedBackdrop');
     var closeEl = document.getElementById('postedClose');
+    var recoverEl = document.getElementById('postedRecover');
 
     function open() {
       drawer.hidden = false;
@@ -288,9 +302,30 @@
         e.stopPropagation(); searchEl.value = ''; render();
       }
     });
+    if (recoverEl) recoverEl.addEventListener('click', function () {
+      if (global.SkriblRecoveryKey) global.SkriblRecoveryKey.openRecover();
+    });
     if (closeEl) closeEl.addEventListener('click', close);
     if (backdrop) backdrop.addEventListener('click', close);
     if (clearEl) clearEl.addEventListener('click', function () {
+      /* KEYS ARE NOT HISTORY, AND THIS CONTROL USED TO TREAT THEM AS HISTORY.
+         Two taps emptied the whole store — including every revocation key —
+         while the posts stayed online, so the user kept nothing but a dead
+         list and lost the only thing that could withdraw anything on it. The
+         single-row X has warned about exactly this since v279; the button that
+         does it to ALL of them at once did not, which is the weaker contract
+         winning on the more destructive path.
+         The tray's own footer says clearing site data forfeits the keys. That
+         is a statement about the BROWSER's control. This is Skribl's own. */
+      var keyed = store.list().filter(function (e) { return !!e.tok; });
+      if (keyed.length && global.SkriblRecoveryKey
+          && global.SkriblRecoveryKey.confirmClear) {
+        clearEl.dataset.armed = ''; clearEl.textContent = 'Clear list';
+        global.SkriblRecoveryKey.confirmClear(keyed, function () {
+          store.clear(); render();
+        });
+        return;
+      }
       if (clearEl.dataset.armed === '1') {
         store.clear(); clearEl.dataset.armed = ''; clearEl.textContent = 'Clear list'; render();
       } else {

@@ -375,6 +375,159 @@ with sync_playwright() as p:
           f"{copied!r} — a button that copies the URL under a key's label is "
           "how somebody thinks they have saved a credential and has not")
 
+    print("\nRECOVERY — the journey the key exists for, end to end")
+    # THE INVARIANT, in the words of the audit that found it missing:
+    #
+    #   possess the id and the key -> revoke through the product, whatever
+    #   this browser happens to remember.
+    #
+    # v280 built the export half only. It showed the key, the tray copied it,
+    # the panel said "keep it somewhere you will find it" — and nothing would
+    # accept one back. A user who did exactly as told and then lost their
+    # browser state held the credential and could not spend it. This section
+    # is that round trip, run as ONE journey rather than as two features that
+    # each pass alone: post, keep the key, DESTROY the local record, and come
+    # back with nothing but the id and the key.
+    made = pd.evaluate("""async (base) => {
+        const r = await fetch(base, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({title: 'recover me', payload:
+            {v:1, canvas:{w:100,h:100}, strokes:[]}})});
+        const d = await r.json();
+        return {id: d.id, tok: d.deleteToken || null};
+      }""", API)
+    check("an anonymous post still returns a key to keep",
+          bool(made.get("id")) and bool(made.get("tok")),
+          f"{made!r} — with no key there is nothing to recover with")
+
+    # THE LOSS, made real rather than simulated: the store is emptied exactly
+    # as clearing site data would leave it.
+    pd.evaluate("() => localStorage.removeItem('skribl_posted_v1')")
+    gone = pd.evaluate("() => window.SkriblPosted.list().length")
+    check("this browser now remembers nothing about it", gone == 0, str(gone))
+
+    # THE RETURN. Only the two things a person could still have.
+    pd.evaluate("() => window.SkriblRecoveryKey.openRecover()")
+    pd.wait_for_timeout(300)
+    check("the product offers a way back in",
+          pd.evaluate("() => !document.getElementById('recoverOverlay').hidden"),
+          "no recovery surface — this is the v280 blocker")
+
+    # A share LINK, not a bare id, because that is what somebody actually has.
+    pd.fill("#recoverId", f"http://127.0.0.1:5001/s/{made['id']}")
+    pd.fill("#recoverKey", made["tok"])
+    pd.click("#recoverDelete")
+    pd.wait_for_timeout(1200)
+    said = pd.evaluate("() => document.getElementById('recoverSaid').textContent")
+    check("it says the Skribl was taken down", "Taken down" in said, repr(said))
+
+    # AND THE SERVER AGREES, which is the only opinion that counts here.
+    code = pd.evaluate("""async (u) => {
+        const r = await fetch(u); return r.status; }""",
+        f"{API}/{made['id']}")
+    check("the post is really gone from the server", code == 404, str(code))
+
+    print("\nRECOVERY — a key that does not fit is not a deletion")
+    # THE OTHER HALF OF THE SAME RULE. The server answers 404 both for "no such
+    # post" and "not yours" so the API cannot be walked. v280's client read
+    # that as success and dropped the local record — destroying the credential
+    # for a post that was still live. Ambiguity on the server must stay
+    # ambiguity in the UI.
+    kept = pd.evaluate("""async (base) => {
+        const r = await fetch(base, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({title: 'wrong key', payload:
+            {v:1, canvas:{w:100,h:100}, strokes:[]}})});
+        const d = await r.json();
+        localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({id: d.id, url: d.url, kind: 'pad',
+                                 title: 'wrong key', tok: 'not-the-right-key'});
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+        return d.id;
+      }""", API)
+    # Put the surfaces back where a user would have them: the recovery
+    # dialog closed, the drawer open. The first draft clicked the row's
+    # Delete with the recovery overlay still covering it and timed out on
+    # an element that was present and NOT VISIBLE — a test-setup failure
+    # that reads exactly like a product one.
+    # ACCEPT THE CONFIRM, or this section measures nothing. The row's
+    # Delete asks `confirm()` first, and Playwright auto-DISMISSES dialogs,
+    # so the first version of this test clicked Delete, had the confirm
+    # silently refused, never reached destroy(), and then asserted that the
+    # entry was still present — which it was, for the wrong reason. It
+    # passed with the 404-as-success bug fully restored. Caught by mutating
+    # the code it was written for; nothing else would have shown it.
+    pd.on("dialog", lambda d: d.accept())
+    pd.evaluate("() => window.SkriblRecoveryKey.closeRecover()")
+    pd.evaluate("() => window._skriblPostedUI && window._skriblPostedUI.open()")
+    pd.wait_for_timeout(500)
+    pd.click(f'.posted-row[data-id="{kept}"] .posted-delete')
+    pd.wait_for_timeout(1500)
+    still = pd.evaluate("() => window.SkriblPosted.list()")
+    check("a wrong key does NOT remove the local entry",
+          len(still) == 1 and still[0]["id"] == kept,
+          f"{len(still)} entries — v280 treated the 404 as success and threw "
+          "away the only key for a post that is still up")
+    check("...and the key it holds is still there",
+          still and still[0].get("tok") == "not-the-right-key",
+          "the credential went with the entry")
+    live = pd.evaluate("""async (u) => (await fetch(u)).status""", f"{API}/{kept}")
+    check("...because the post really is still live", live == 200, str(live))
+
+    print("\nRECOVERY — Clear list cannot quietly take the keys with it")
+    # The single-row X has warned about credential loss since v279. The button
+    # that does it to every row at once did not, which is the weaker contract
+    # winning on the more destructive path.
+    pd.evaluate("""() => {
+        localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({id:'k1', title:'one', kind:'pad', tok:'key-1'});
+        window.SkriblPosted.add({id:'k2', title:'two', kind:'pad', tok:'key-2'});
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+      }""")
+    pd.wait_for_timeout(250)
+    pd.click("#postedClear")
+    pd.wait_for_timeout(400)
+    check("clearing a list holding keys asks first",
+          pd.evaluate("() => { const d = document.getElementById('clearKeysOverlay');"
+                      " return !!d && !d.hidden; }"),
+          "two taps and every key was gone")
+    check("...and it says how many are at stake",
+          "2 Skribls" in pd.evaluate(
+              "() => document.getElementById('clearKeysWhy').textContent"),
+          pd.evaluate("() => document.getElementById('clearKeysWhy').textContent"))
+    check("...and will not clear until the keys have been exported",
+          pd.evaluate("() => document.getElementById('clearKeysGo').disabled") is True,
+          "'Clear anyway' was live before anything had been saved")
+    check("THE KEYS ARE STILL THERE while it asks",
+          pd.evaluate("() => window.SkriblPosted.list().length") == 2)
+
+    # And the export unlocks it — with the keys in what it copied.
+    copied = pd.evaluate("""async () => {
+        let seen = null;
+        const real = navigator.clipboard && navigator.clipboard.writeText;
+        if (real) navigator.clipboard.writeText = t => { seen = t; return Promise.resolve(); };
+        document.getElementById('clearKeysExport').click();
+        await new Promise(r => setTimeout(r, 300));
+        if (real) navigator.clipboard.writeText = real;
+        return seen;
+      }""")
+    check("exporting hands over every key", copied and "key-1" in copied
+          and "key-2" in copied, repr(copied))
+    check("...and only then is clearing allowed",
+          pd.evaluate("() => document.getElementById('clearKeysGo').disabled") is False,
+          "export succeeded and the button stayed locked")
+
+    print("\nRECOVERY — a pasted link is read the way people paste it")
+    for raw, want in (("abc123", "abc123"),
+                      ("http://x/s/abc123", "abc123"),
+                      ("http://x/s/abc123?utm=1", "abc123"),
+                      ("http://x/s/abc123#t=2", "abc123"),
+                      ("  http://x/s/abc123/  ", "abc123"),
+                      ("not a link at all", ""),
+                      ("", "")):
+        got = pd.evaluate("(v) => window.SkriblRecoveryKey.parseId(v)", raw)
+        check(f"parseId({raw!r}) -> {want!r}", got == want, repr(got))
+
     pd.close()
     b.close()
 

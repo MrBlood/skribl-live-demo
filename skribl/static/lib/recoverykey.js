@@ -2,6 +2,31 @@
  *
  *   SkriblRecoveryKey.present({ key: '...', url: '...' });   // storage failed
  *   SkriblRecoveryKey.copy(key)  -> Promise<boolean>
+ *   SkriblRecoveryKey.openRecover()                          // USE a saved key
+ *   SkriblRecoveryKey.parseId('https://host/s/abc123')       // -> 'abc123'
+ *
+ * EXPORT WITHOUT IMPORT IS NOT A RECOVERY STORY, which is what v280 shipped
+ * and what a third audit called the release blocker. This file showed the key,
+ * the tray copied it, the panel said "keep it somewhere you will find it" —
+ * and nothing anywhere would accept one back. The only DELETE the product
+ * could send read its token out of the local record, and the button that sent
+ * it only rendered when that record already had one. So the four situations
+ * the key exists for (cleared site data, origin eviction, a new device, a
+ * failed write) all ended the same way: the user holds the credential and the
+ * product cannot use it.
+ *
+ * openRecover() is the other half. Skribl id or share link, plus the key, and
+ * then either withdraw the post or take custody of it again in this browser.
+ * The invariant it exists to satisfy, stated as the audit stated it:
+ *
+ *     possess the id and the key -> revoke through the product, whatever
+ *     this browser happens to remember.
+ *
+ * IT LIVES IN "YOUR SKRIBLS" AND NOT ON THE PLAYER PAGE. Partly a hard
+ * constraint — the player's byte ratchet had six bytes of headroom — but it is
+ * the right place anyway: /s/<id> is what RECIPIENTS open, and a takedown
+ * affordance there teaches that holding the link is what entitles you to
+ * remove it. The link is the thing the author gave away.
  *
  * WHY THIS EXISTS. v279 gave an anonymous post a 256-bit capability, returned
  * once in the create response and stored only as a SHA-256 on the server. There
@@ -171,10 +196,234 @@
     return true;
   }
 
+  /* ---------------------------------------------------------------- import */
+
+  var rnode = null;
+
+  /* A share link or a bare id. People paste what they have, and what they have
+     is usually the link they sent somebody — so accepting only an id would
+     fail the commonest case. Anchors and query strings are stripped; the id is
+     the last non-empty path segment. Returns '' when there is nothing usable,
+     so the caller can say so rather than sending a request for ''. */
+  function parseId(raw) {
+    var v = String(raw || '').trim();
+    if (!v) return '';
+    v = v.split('#')[0].split('?')[0];
+    if (v.indexOf('/') !== -1) {
+      var parts = v.split('/').filter(function (p) { return p !== ''; });
+      v = parts.length ? parts[parts.length - 1] : '';
+    }
+    /* Public ids are url-safe and short; anything else is a paste accident. */
+    return /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : '';
+  }
+
+  function buildRecover() {
+    if (rnode) return rnode;
+    var d = doc.createElement('div');
+    d.className = 'reckey-overlay';
+    d.id = 'recoverOverlay';
+    d.setAttribute('role', 'dialog');
+    d.setAttribute('aria-modal', 'true');
+    d.setAttribute('aria-labelledby', 'recoverTitle');
+    d.hidden = true;
+    d.innerHTML =
+      '<div class="reckey-sheet">' +
+        '<h2 id="recoverTitle" class="reckey-title">Use a recovery key</h2>' +
+        '<p class="reckey-why">For a Skribl this browser has forgotten. Paste ' +
+        'its link and the key you saved.</p>' +
+        '<label class="reckey-label" for="recoverId">Skribl link or ID</label>' +
+        '<input class="reckey-input" id="recoverId" type="text" autocomplete="off" ' +
+          'autocapitalize="off" spellcheck="false" placeholder="https://…/s/abc123">' +
+        '<label class="reckey-label" for="recoverKey">Recovery key</label>' +
+        '<input class="reckey-input" id="recoverKey" type="text" autocomplete="off" ' +
+          'autocapitalize="off" spellcheck="false">' +
+        '<div class="reckey-actions">' +
+          '<button type="button" class="reckey-copy" id="recoverAdd">Add to my list</button>' +
+          '<button type="button" class="reckey-done" id="recoverDelete">Take it down</button>' +
+        '</div>' +
+        '<p class="reckey-said" id="recoverSaid" role="status" aria-live="polite"></p>' +
+        '<div class="reckey-actions">' +
+          '<button type="button" class="reckey-copy" id="recoverCancel">Close</button>' +
+        '</div>' +
+      '</div>';
+    doc.body.appendChild(d);
+    rnode = d;
+    return d;
+  }
+
+  function openRecover() {
+    var d = buildRecover();
+    var idEl = d.querySelector('#recoverId');
+    var keyEl = d.querySelector('#recoverKey');
+    var said = d.querySelector('#recoverSaid');
+    idEl.value = ''; keyEl.value = ''; said.textContent = '';
+
+    function inputs() {
+      var id = parseId(idEl.value);
+      var key = String(keyEl.value || '').trim();
+      if (!id) { said.textContent = 'That does not look like a Skribl link or ID.'; return null; }
+      if (!key) { said.textContent = 'Paste the recovery key you saved.'; return null; }
+      return { id: id, key: key };
+    }
+
+    /* TAKE IT DOWN. The 404 rule is the same one postedui.destroy() follows and
+       for the same reason: the server answers 404 both for "no such post" and
+       "not yours", so it cannot be read as success. Here it is even more
+       important — the user has just told us this key is the only copy. */
+    d.querySelector('#recoverDelete').onclick = function () {
+      var v = inputs(); if (!v) return;
+      var base = global.SKRIBL_API_BASE;
+      if (!base) { said.textContent = 'This Skribl is not wired up.'; return; }
+      said.textContent = 'Taking it down…';
+      global.fetch(base + '/' + encodeURIComponent(v.id), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deleteToken: v.key })
+      }).then(function (r) {
+        if (r.ok) {
+          said.textContent = 'Taken down. It is gone for everyone.';
+          if (global.SkriblPosted) global.SkriblPosted.remove(v.id);
+          if (global._skriblPostedUI) global._skriblPostedUI.render();
+          return;
+        }
+        said.textContent = r.status === 404
+          ? 'That key does not open that Skribl — or it is already gone. '
+            + 'Nothing was changed, and your key is still yours.'
+          : 'Could not take it down — try again.';
+      }).catch(function () {
+        said.textContent = 'Could not reach the server.';
+      });
+    };
+
+    /* ADD TO MY LIST. Recovery is not only deletion: somebody who has just
+       moved browsers wants their Skribl back under management, not destroyed.
+       This re-establishes custody, which is the step that makes
+       export -> lose the browser -> import a round trip rather than a
+       one-way door. */
+    d.querySelector('#recoverAdd').onclick = function () {
+      var v = inputs(); if (!v) return;
+      if (!global.SkriblPosted) { said.textContent = 'This browser cannot store it.'; return; }
+      var base = global.SKRIBL_PLAYER_BASE || '';
+      var kept = global.SkriblPosted.add({
+        id: v.id, url: base ? base + '/' + v.id : null,
+        title: 'Recovered Skribl', kind: 'pad', pages: 1, tok: v.key
+      });
+      if (global._skriblPostedUI) global._skriblPostedUI.render();
+      /* The key is NOT verified against the server here, and saying so matters:
+         adding it proves nothing about whether it works. Deletion is the only
+         operation that can tell, and it is destructive, so this cannot check
+         on the user's behalf without doing the thing they may not want done. */
+      said.textContent = kept && kept.durable
+        ? 'Added to your list on this browser. The key is not checked until '
+          + 'you use it.'
+        : 'This browser could not store it — keep your key safe.';
+    };
+
+    d.querySelector('#recoverCancel').onclick = function () { closeRecover(); };
+
+    d.hidden = false;
+    if (global.SkriblModal) global.SkriblModal.open(d);
+    else idEl.focus();
+    return true;
+  }
+
+  function closeRecover() {
+    if (!rnode) return;
+    rnode.hidden = true;
+    if (global.SkriblModal) global.SkriblModal.close(rnode);
+  }
+
+  /* ------------------------------------------------- clearing, with the keys */
+
+  var cnode = null;
+
+  /* EXPORT BEFORE DESTROY, and the destroy stays behind the export. The audit
+     asked for "Clear anyway" to be withheld until the keys have actually been
+     exported, and that is right: an unexported clear is unrecoverable and a
+     two-tap affordance is not consent to that. So the button is disabled until
+     a copy or a download has succeeded, and the count is stated because "17
+     keys" reads differently from "your list". */
+  function confirmClear(keyed, proceed) {
+    if (!cnode) {
+      var d = doc.createElement('div');
+      d.className = 'reckey-overlay';
+      d.id = 'clearKeysOverlay';
+      d.setAttribute('role', 'dialog');
+      d.setAttribute('aria-modal', 'true');
+      d.setAttribute('aria-labelledby', 'clearKeysTitle');
+      d.hidden = true;
+      d.innerHTML =
+        '<div class="reckey-sheet">' +
+          '<h2 id="clearKeysTitle" class="reckey-title">These keys are the only copies</h2>' +
+          '<p class="reckey-why" id="clearKeysWhy"></p>' +
+          '<p class="reckey-note">Clearing the list does <strong>not</strong> ' +
+          'delete those Skribls. It removes this browser&rsquo;s ability to ' +
+          'take them down.</p>' +
+          '<div class="reckey-actions">' +
+            '<button type="button" class="reckey-copy" id="clearKeysExport">Copy the keys</button>' +
+            '<button type="button" class="reckey-copy" id="clearKeysCancel">Cancel</button>' +
+          '</div>' +
+          '<p class="reckey-said" id="clearKeysSaid" role="status" aria-live="polite"></p>' +
+          '<div class="reckey-actions">' +
+            '<button type="button" class="reckey-done" id="clearKeysGo" disabled>Clear anyway</button>' +
+          '</div>' +
+        '</div>';
+      doc.body.appendChild(d);
+      cnode = d;
+    }
+    var d2 = cnode;
+    var go = d2.querySelector('#clearKeysGo');
+    var said = d2.querySelector('#clearKeysSaid');
+    d2.querySelector('#clearKeysWhy').textContent =
+      keyed.length + (keyed.length === 1
+        ? ' Skribl in this list has a recovery key stored here.'
+        : ' Skribls in this list have recovery keys stored here.');
+    said.textContent = '';
+    go.disabled = true;
+
+    /* One line per Skribl, id and key, so it can be pasted anywhere and read
+       back by a person. Not JSON: the thing being saved has to survive being
+       kept in a note, and a person has to be able to see which key is which. */
+    var dump = keyed.map(function (e) {
+      return (e.url || e.id) + '  ' + e.tok;
+    }).join('\n');
+
+    d2.querySelector('#clearKeysExport').onclick = function () {
+      copy(dump).then(function (ok) {
+        said.textContent = ok
+          ? 'Copied ' + keyed.length + ' key(s). Paste them somewhere safe, '
+            + 'then you can clear.'
+          : 'Could not copy automatically — clearing stays disabled. Copy the '
+            + 'keys from Your Skribls one at a time instead.';
+        /* Only a CONFIRMED copy unlocks it. A failed clipboard write that
+           still enabled the button would be the same false certainty this
+           release removed from the DELETE path. */
+        go.disabled = !ok;
+      });
+    };
+    d2.querySelector('#clearKeysCancel').onclick = function () { closeClear(); };
+    go.onclick = function () { closeClear(); proceed(); };
+
+    d2.hidden = false;
+    if (global.SkriblModal) global.SkriblModal.open(d2);
+    return true;
+  }
+
+  function closeClear() {
+    if (!cnode) return;
+    cnode.hidden = true;
+    if (global.SkriblModal) global.SkriblModal.close(cnode);
+  }
+
   global.SkriblRecoveryKey = {
     present: present,
     close: close,
     copy: copy,
-    warnIfVolatile: warnIfVolatile
+    confirmClear: confirmClear,
+    closeClear: closeClear,
+    warnIfVolatile: warnIfVolatile,
+    openRecover: openRecover,
+    closeRecover: closeRecover,
+    parseId: parseId
   };
 })(window);

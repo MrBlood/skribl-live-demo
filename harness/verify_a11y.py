@@ -256,6 +256,12 @@ with sync_playwright() as p:
                                   "|click:#menuBtn|click:#flipBtn", None),
         "reckeyOverlay": ("/",    "js:window.SkriblRecoveryKey.present("
                                   "{key:'test-recovery-key-abc123'})", None),
+        # The import half of the recovery key, and the guard that stands
+        # between "Clear list" and every key it would take with it. Both are
+        # built by lib/recoverykey.js the first time they are shown.
+        "recoverOverlay": ("/",   "js:window.SkriblRecoveryKey.openRecover()", None),
+        "clearKeysOverlay": ("/", "js:window.SkriblRecoveryKey.confirmClear("
+                                  "[{id:'x',tok:'k'}], function () {})", None),
     }
 
     def _draw_on_pad(pg):
@@ -289,10 +295,14 @@ with sync_playwright() as p:
     pg.goto(BASE + "/", wait_until="load")
     pg.wait_for_timeout(1200)
     # Prime the runtime-built dialog so the census can see it (see above).
-    pg.evaluate("window.SkriblRecoveryKey && "
-                "window.SkriblRecoveryKey.present({key:'census'})")
-    pg.wait_for_timeout(200)
-    pg.evaluate("window.SkriblRecoveryKey && window.SkriblRecoveryKey.close()")
+    for _prime, _shut in (
+            ("present({key:'census'})", "close()"),
+            ("openRecover()", "closeRecover()"),
+            ("confirmClear([{id:'c',tok:'k'}], function () {})", "closeClear()")):
+        pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_prime}")
+        pg.wait_for_timeout(150)
+        pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_shut}")
+    pg.wait_for_timeout(150)
     found = pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
         .map(el => el.id || '(no id)')""")
     pg.close()
@@ -354,6 +364,32 @@ with sync_playwright() as p:
     # branch that did not render this run is invisible to the DOM sweep above
     # and would leave a genuine gap silently. Every aria-modal in the templates
     # must carry an id and that id must be recipe-backed.
+    # ...AND THE SAME FOR DIALOGS BUILT IN JAVASCRIPT, which is the hole the
+    # template census cannot see and which I fell into one release after
+    # writing the note warning about it. v281 added two runtime dialogs
+    # (recover, clear-keys) and this section stayed green at 62/62 because
+    # nothing had primed them into the DOM before the sweep — the population
+    # was generated, correctly, from a page that did not contain them yet.
+    #
+    # So: any module that writes `aria-modal` also has its element ids
+    # extracted from source, and each must be recipe-backed. A dialog cannot
+    # now be added in JS without either a recipe or a deliberate argument
+    # about why it does not need one.
+    _js_dir = ROOT / "skribl" / "static"
+    _js_modals = set()
+    for f in sorted(_js_dir.rglob("*.js")):
+        if "min.js" in f.name:
+            continue
+        body = f.read_text(encoding="utf-8")
+        if "aria-modal" not in body:
+            continue
+        _js_modals |= set(re.findall(r"\.id\s*=\s*['\"]([A-Za-z0-9_-]+)['\"]", body))
+    _js_untested = sorted(_js_modals - set(MODALS))
+    check("every dialog built in JavaScript is recipe-backed",
+          not _js_untested, ", ".join(_js_untested) +
+          " — built at runtime, so the DOM census above cannot see it unless "
+          "this section primes it first; add a recipe and prime it")
+
     _tpl = ROOT / "skribl" / "templates" / "skribl"
     _tpl_modals, _idless = set(), []
     for f in sorted(_tpl.glob("*.html")):

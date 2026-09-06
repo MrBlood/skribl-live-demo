@@ -6770,3 +6770,26 @@ body.playing .flip-grid { display: none; }
   line-height: 1.45;
   color: var(--text-muted);
 }
+/* Recovery-key inputs (lib/recoverykey.js). 16px minimum: _ZOOM_EXEMPT is
+   empty, and a field the user must paste into is the last place to make iOS
+   zoom the page out from under them. */
+.reckey-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.reckey-input {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-well);
+  color: var(--text-strong);
+  font-size: 16px;
+  font-family: inherit;
+}
+.reckey-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.reckey-done[disabled] { opacity: 0.45; cursor: not-allowed; }

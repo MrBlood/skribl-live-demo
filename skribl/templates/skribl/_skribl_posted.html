@@ -38,6 +38,12 @@
     <div class="posted-foot">
       <span>Saved in this browser only &middot; clearing site data removes them,
         and the key that can delete them</span>
+      {# The other half of the recovery key. Until v281 the product could show
+         a key and never accept one back, so a user who did as they were told
+         — save it, then lose the browser — held the credential and had no way
+         to spend it. Sits beside Clear list because this is where somebody
+         goes when the list is not what they expected. #}
+      <button type="button" id="postedRecover" class="posted-clearbtn">Use a recovery key</button>
       <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
     </div>
   </div>
