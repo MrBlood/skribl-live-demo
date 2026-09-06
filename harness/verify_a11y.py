@@ -25,8 +25,10 @@ region) say so.
 
 SECTION 1 — a declared slider can actually be operated by keyboard.
 SECTION 2 — EVERY modal surface takes focus, traps Tab, and gives focus back.
-            The population is read out of the DOM, not listed here; see the
-            note at that section for why the first version was unsound.
+            The population is read out of the DOM and cross-checked against
+            two source censuses — templates and lib/*.js — so a dialog built
+            at runtime cannot slip past a sweep taken at load. See the note at
+            that section for why the first two versions were unsound.
 SECTION 3 — every form control has an accessible name.
 SECTION 4 — one-of-N controls expose which one.
 SECTION 5 — asynchronous status reaches a live region.
@@ -371,10 +373,17 @@ with sync_playwright() as p:
     # nothing had primed them into the DOM before the sweep — the population
     # was generated, correctly, from a page that did not contain them yet.
     #
-    # So: any module that writes `aria-modal` also has its element ids
-    # extracted from source, and each must be recipe-backed. A dialog cannot
-    # now be added in JS without either a recipe or a deliberate argument
-    # about why it does not need one.
+    # So: any non-minified module under static/ that writes `aria-modal` has
+    # its assigned element ids extracted from source, and each must be
+    # recipe-backed. A dialog cannot now be added in JS without either a recipe
+    # or a deliberate argument about why it does not need one.
+    #
+    # WHAT THIS CANNOT SEE, stated rather than left to be discovered the way
+    # the last two gaps were: it matches `el.id = 'name'`, which is how both
+    # dialogs here are built. A module assigning an id through setAttribute, a
+    # template literal or a computed name would pass this check while adding an
+    # untested dialog. That is a narrower hole than the one it closes, and
+    # naming it is the honest position until something needs the wider match.
     _js_dir = ROOT / "skribl" / "static"
     _js_modals = set()
     for f in sorted(_js_dir.rglob("*.js")):

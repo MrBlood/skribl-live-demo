@@ -122,11 +122,16 @@
       title: (entry.title || '').slice(0, 80),
       kind: entry.kind === 'flip' ? 'flip' : 'pad',
       pages: Math.max(1, parseInt(entry.pages, 10) || 1),
-      /* THE REVOCATION CAPABILITY, and the only copy of it that will ever
-         exist. The server returns it once in the create response and stores
-         only its SHA-256; there is no endpoint that can reissue it. Losing
-         this entry means the Skribl can no longer be withdrawn, which is why
-         the UI says so before you publish rather than after.
+      /* THE REVOCATION CAPABILITY. The server returns it once in the create
+         response and stores only its SHA-256; there is no endpoint that can
+         reissue it.
+         This used to say "the only copy of it that will ever exist" and that
+         losing this entry meant the Skribl could no longer be withdrawn. Both
+         were true until v281, which added the other half of the loop: the key
+         can be copied out and handed back through Your Skribls, so this entry
+         is now the CONVENIENT copy rather than the only one. Losing it still
+         costs the Skribl if no copy was kept, which is why the UI says so
+         before you publish rather than after.
          Absent for a post made under a host that authenticated its author —
          that one is revoked by ownership. */
       tok: typeof entry.tok === 'string' && entry.tok ? entry.tok : null,

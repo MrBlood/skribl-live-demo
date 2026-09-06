@@ -168,7 +168,9 @@ class CreatedPost:
     it is stored, and it is never recoverable afterwards — losing it means the
     post can no longer be withdrawn. A caller that wants anonymous users to be
     able to take a post back must hand this to them and let them keep it; the
-    standalone app stores it beside the local "Your Skribls" entry. See
+    standalone app stores it beside the local "Your Skribls" entry AND accepts
+    one back there, which is the half that makes keeping it worth anything —
+    a credential a product can only issue is not a recovery story. See
     `skribl/deletion.py`.
     """
 

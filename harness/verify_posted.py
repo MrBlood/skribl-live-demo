@@ -18,6 +18,17 @@ What this suite pins, in order of how badly each would fail a user:
   4. Removing an entry removes the ENTRY, not the Skribl.
   5. The empty state invites rather than apologises — it is the first thing a
      new tester sees.
+
+  Added as the record became a credential store rather than a tray, each from
+  an audit finding rather than from foresight:
+
+  6. A write that did not happen is REPORTED, not assumed (v280).
+  7. The 200-entry cap governs what is rendered and never evicts a key (v280).
+  8. Delete and Copy key appear only where a key is actually held (v280).
+  9. A key can be handed BACK: link-or-id plus key, then take it down or
+     re-adopt it into this browser (v281).
+ 10. Clear list cannot discard keys until an export has succeeded (v281).
+ 11. A 404 from DELETE is UNKNOWN, so the entry and its key survive it (v281).
 """
 import json
 import os

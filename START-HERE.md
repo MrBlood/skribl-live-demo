@@ -96,6 +96,83 @@ probe in the tree reporting "ok", because a wrap does not move the box.
 height, which is the measurement that sees it. See the v278 entry at the
 foot of `DECISIONS.md`.
 
+### Closed in v281: the half of the recovery key that was missing
+
+A third adversarial audit read the sealed v280 and returned **No-ship** again.
+It confirmed the v279 fixes were all present and correct, and then named a gap
+that is a design failure rather than a bug:
+
+> A user can now **save** a recovery key but cannot **use** it after the browser
+> copy is gone.
+
+**v280 built export and never built import.** The panel said "keep it somewhere
+you will find it". The tray offered **Copy key**. And nothing anywhere would
+accept one back — the only `DELETE` the product could send read its token out
+of the local record, and the button that sent it rendered only when that record
+already held one. So the four situations the key exists for (cleared site data,
+origin eviction, a new device, a failed write) all ended the same way: the
+author holds the credential the product told them to keep and the product will
+not take it.
+
+The invariant the audit asked for, which is the one to hold on to:
+
+> **Possess the id and the key → revoke through the product, whatever this
+> browser happens to remember.**
+
+**"Use a recovery key" in Your Skribls** is that loop closed. It takes a share
+link or a bare id plus the key, and offers two outcomes: take it down, or add
+it to this browser's list. The second matters as much as the first — it
+re-establishes custody, which is what makes export → lose the browser → import
+a round trip rather than a one-way door. Adding does NOT verify the key and
+says so, because deletion is the only operation that can tell and it is
+destructive.
+
+**It is deliberately not on the player page.** Two reasons, and the second is
+the real one: the player's JS ratchet has single digits of headroom — run
+`verify_player_isolation.py`, which prints the current breakdown, rather than
+trusting a figure typed here — and `/s/<id>` is what RECIPIENTS open. A takedown affordance
+there would teach that holding the link is what entitles you to remove it,
+which is the trap the second audit named when it warned against turning
+possession of a shared URL into deletion authority.
+
+**Clear list stopped being ordinary history.** It wiped every stored key on a
+second tap while the posts stayed online. The single-row `×` had warned about
+exactly that since v279 — the weaker contract was winning on the more
+destructive path, which is the audit's "same structure, two incompatible
+purposes" pattern. It now names how many keys are at stake and withholds
+"Clear anyway" until an export has actually succeeded; a failed clipboard write
+leaves it locked, because a failed copy that unlocked it would be the same
+false certainty this release removes from `DELETE`.
+
+**A 404 means unknown.** `deletion.py` answers the same 404 for "no such post"
+and "not yours" so the API cannot be walked for which ids exist. The client was
+collapsing that into success and dropping the credential for a post that might
+still be live — with a comment of mine arguing for it: *"the local entry should
+go either way."* It does not. Security ambiguity on the server cannot become
+certainty in the UI.
+
+### What the gates caught, including one I built last release
+
+**`verify_a11y`'s modal census passed over both new dialogs.** The v280 gate
+enumerated `[aria-modal="true"]` from the live DOM and primed the one
+runtime-built dialog it knew about by name. Two more arrived in `recoverykey.js`
+and the census could not see them, because a sweep taken at load cannot see a
+node that does not exist yet. That is the hole the v280 note warned about, in
+writing, one release before walking into it. There is now a **JS-source
+census** beside the template one: every non-minified `.js` under
+`skribl/static/` that mentions `aria-modal` has its assigned element ids
+extracted and required to be recipe-backed, so the next runtime-built dialog
+fails the suite instead of slipping through.
+
+**The wrong-key test passed with the bug fully restored.** Deleting a row calls
+`confirm()`, Playwright dismisses dialogs by default, so `destroy()` never ran
+and the assertion was checking that nothing had changed after nothing had
+happened. It drives `destroy()` directly now. Measuring something ADJACENT to
+the claim is the recurring failure of this whole sequence of releases — it has
+happened in most of them, to me, in assertions I had just written — and it is
+the argument for mutating every new assertion rather than trusting a green
+one.
+
 ### Closed in v280: a capability whose custody was nobody's job
 
 A second adversarial audit read the sealed v279 and returned **No-ship**, with
@@ -129,7 +206,9 @@ capacity, not durability, and the durability is what was missing. What actually
 survives cleared site data, a new phone, or an account system that does not
 exist yet is the person holding the key. So `lib/recoverykey.js` shows it when
 the browser cannot keep it, `warnIfVolatile()` says so *before* posting rather
-than after, and Your Skribls offers **Copy key** beside Delete. It is called a
+than after, and Your Skribls offers **Copy key** beside Delete. (That is the
+EXPORT half only, which a third audit called v280's blocker — see "Closed in
+v281" above for the half that accepts one back.) It is called a
 recovery key in everything a user reads, because the same secret is what a
 future account system would take to CLAIM a post, and a name meaning only
 "delete" would have to be retired exactly when the back-catalogue depended on

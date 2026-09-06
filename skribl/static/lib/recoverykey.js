@@ -1,4 +1,5 @@
-/* The one surface that shows an anonymous author their revocation key.
+/* Both ends of an anonymous author's revocation key: showing one, taking one
+ * back, and standing between a bulk clear and the keys it would discard.
  *
  *   SkriblRecoveryKey.present({ key: '...', url: '...' });   // storage failed
  *   SkriblRecoveryKey.copy(key)  -> Promise<boolean>

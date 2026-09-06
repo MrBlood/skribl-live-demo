@@ -269,7 +269,8 @@
         if (ent && ent.tok && !global.confirm(
               'Remove this from your list?\n\n' +
               'The Skribl stays online and the link keeps working — but this ' +
-              'browser holds the only key that can delete it, and removing ' +
+              "browser's copy of the key is the only one Skribl knows about, " +
+              'and removing ' +
               'the entry throws that key away.')) return;
         store.remove(d.dataset.del);
         render();

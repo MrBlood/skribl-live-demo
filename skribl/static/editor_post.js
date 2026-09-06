@@ -477,7 +477,8 @@
           id: res.id, url: res.url, kind: 'pad', pages: 1,
           title: (titleInput.value || '').trim(),
           // The create response carries the revocation capability exactly
-          // once for an anonymous post. Stored here or lost forever.
+          // once for an anonymous post. Stored here, and since v281 also
+          // re-enterable through Your Skribls if the author kept a copy.
           tok: res.deleteToken || null
         });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
