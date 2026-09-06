@@ -103,6 +103,13 @@
       drawer.hidden = false;
       drawer.classList.add('open');
       render();
+      /* The manual focus stays — search is the right first stop here and
+         modalfocus would pick whatever comes first in the DOM. What was
+         missing is everything around it: Tab escaped into the page behind,
+         and closing dropped focus entirely. SkriblModal.open() installs the
+         trap and remembers the opener; the timeout then moves focus on to
+         search inside the same dialog, which the trap is happy with. */
+      if (global.SkriblModal) global.SkriblModal.open(drawer);
       if (searchEl) setTimeout(function () { try { searchEl.focus(); } catch (e) {} }, 40);
     }
 
@@ -110,6 +117,7 @@
       drawer.classList.remove('open');
       drawer.hidden = true;
       if (searchEl) searchEl.value = '';
+      if (global.SkriblModal) global.SkriblModal.close(drawer);
     }
 
     function copy(text, btn) {

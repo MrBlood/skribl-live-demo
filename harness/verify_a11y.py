@@ -5,9 +5,9 @@ audit of v278 made a structural observation, not just a list of defects: the
 tree carries thousands of assertions (see harness/RELEASE.md for the figure —
 typing one here is how a number goes stale) and yet basic keyboard and ARIA
 failures were visible in the SOURCE. Scrubbers declared `role="slider"` with
-no tabindex, no `aria-valuenow` and no key handler. Five `aria-modal="true"` dialogs did
-nothing about focus, two of them calling `blur()` and hoping. Visible slider
-captions were not labels. Segmented controls tracked selection in a CSS class
+no tabindex, no `aria-valuenow` and no key handler. Every `aria-modal="true"`
+dialog did nothing about focus, two of them calling `blur()` and hoping.
+Visible slider captions were not labels. Segmented controls tracked selection in a CSS class
 only. Post status and toasts announced nothing.
 
 Its diagnosis is the part worth keeping: "the existing test architecture is not
@@ -24,7 +24,9 @@ went. The two places an attribute IS the assertion (an accessible name, a live
 region) say so.
 
 SECTION 1 — a declared slider can actually be operated by keyboard.
-SECTION 2 — modal surfaces take focus, trap Tab, and give focus back.
+SECTION 2 — EVERY modal surface takes focus, traps Tab, and gives focus back.
+            The population is read out of the DOM, not listed here; see the
+            note at that section for why the first version was unsound.
 SECTION 3 — every form control has an accessible name.
 SECTION 4 — one-of-N controls expose which one.
 SECTION 5 — asynchronous status reaches a live region.
@@ -208,41 +210,169 @@ with sync_playwright() as p:
         pg.close()
 
     # ------------------------------------------------------------ section 2
-    print("\nA11Y 2 — modal surfaces take focus, trap Tab, and hand it back")
+    print("\nA11Y 2 — every modal surface takes focus, traps Tab, and hands it back")
     # aria-modal="true" while focus stays behind the sheet is worse than not
     # claiming it: the user is told they are in a modal and the page disagrees.
+    #
+    # THE FIRST VERSION OF THIS SECTION TESTED ONE MODAL BY HAND — the More
+    # menu — and passed while Export, Report, Your Skribls and the leave
+    # confirm all still declared the role and implemented none of it. An audit
+    # of v279 named the shape: "a global semantic claim should generate its
+    # test population from the DOM, not from a manually chosen specimen." The
+    # suite had already learned to assert behaviour instead of attributes and
+    # then asserted the right thing about the wrong population, which is the
+    # same error one level up.
+    #
+    # So the population is read from the page. MODALS below supplies only HOW
+    # to open each one — a recipe, not a list of what to test — and the first
+    # assertion is that the two agree: a surface in the DOM with no recipe
+    # FAILS rather than being skipped, so adding an eighth dialog without
+    # testing it is not possible quietly.
+    #
+    # DYNAMICALLY CREATED DIALOGS ESCAPE A CENSUS TAKEN AT LOAD, which is a
+    # real hole in "enumerate from the DOM": lib/recoverykey.js builds its
+    # overlay the first time it is shown, so at load there is nothing to find.
+    # It is primed below before the census is taken. Any future dialog built
+    # the same way must be primed here too, and the template census that
+    # follows is the backstop that says so.
+    MODALS = {
+        # id            (surface, how to open, expected focus-return target)
+        "menuSheet":    ("/",     "click:#menuBtn",                "menuBtn"),
+        "helpDrawer":   ("/",     "click:#menuBtn|click:#helpItem", None),
+        "postedDrawer": ("/",     "click:#menuBtn|click:#postedItem", None),
+        "exportSheet":  ("/",     "click:#menuBtn|click:#exportItem", None),
+        "reportSheet":  ("/",     "click:#menuBtn|click:#reportItem", None),
+        # Post is gated on a FINISHED take, not on ink: drawing auto-starts
+        # recording and #recordBtn stops it. The first recipe here was
+        # "draw|click:#postBtn" and timed out on a button that is hidden and
+        # disabled mid-take — the enumeration turning a silent no-op into a
+        # loud failure, which is the whole reason it replaced the specimen.
+        "postSheet":    ("/",     "draw|click:#recordBtn|click:#postBtn", None),
+        # atRisk() is `!flushPadDraft()`, so a draft that saves cleanly is not
+        # at risk and the anchor simply navigates. Stubbing the flush puts the
+        # app in the state the sheet exists for; the click, the handler and the
+        # sheet are all still the product's.
+        "leaveSheet":   ("/",     "js:window.flushPadDraft = () => false"
+                                  "|click:#menuBtn|click:#flipBtn", None),
+        "reckeyOverlay": ("/",    "js:window.SkriblRecoveryKey.present("
+                                  "{key:'test-recovery-key-abc123'})", None),
+    }
+
+    def _draw_on_pad(pg):
+        """One real stroke on PAD's canvas, which is #canvas.
+
+        Named for its surface rather than called DRAW_STROKE, because the
+        generic name is what caused the v278 mess: a helper lifted to the top
+        of a file reads as applying to the whole file, and Flip draws on #pad.
+        Every recipe here is a Pad path; a Flip one would need its own."""
+        box = pg.locator("#canvas").bounding_box()
+        cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+        pg.mouse.move(cx - 60, cy)
+        pg.mouse.down()
+        pg.mouse.move(cx + 60, cy)
+        pg.mouse.up()
+        pg.wait_for_timeout(300)
+
+    def _drive(pg, recipe):
+        """Run one recipe's steps. Kept tiny on purpose: a recipe that needed
+        real logic would be a second implementation of the product."""
+        for step in recipe.split("|"):
+            if step == "draw":
+                _draw_on_pad(pg)
+            elif step.startswith("click:"):
+                pg.click(step[6:])
+            elif step.startswith("js:"):
+                pg.evaluate(step[3:])
+            pg.wait_for_timeout(450)
+
     pg = browser.new_page(viewport={"width": 1280, "height": 900})
     pg.goto(BASE + "/", wait_until="load")
     pg.wait_for_timeout(1200)
-
-    pg.focus("#menuBtn")
-    pg.click("#menuBtn")
-    pg.wait_for_timeout(500)
-    inside = pg.evaluate("""() => {
-        const sheet = document.getElementById('menuSheet');
-        const a = document.activeElement;
-        return !!(sheet && a && sheet.contains(a)); }""")
-    check("opening the menu moves focus into it", inside,
-          "focus used to stay on whatever had it, behind the sheet")
-
-    # Tab all the way round: focus must still be inside.
-    for _ in range(25):
-        pg.keyboard.press("Tab")
-    still = pg.evaluate("""() => {
-        const sheet = document.getElementById('menuSheet');
-        const a = document.activeElement;
-        return !!(sheet && a && sheet.contains(a)); }""")
-    check("Tab stays inside it", still,
-          "25 tabs escaped the dialog — a keyboard user reaches the page "
-          "underneath while a modal covers it")
-
-    pg.keyboard.press("Escape")
-    pg.wait_for_timeout(600)
-    back = pg.evaluate("() => document.activeElement && document.activeElement.id")
-    check("closing returns focus to the opener", back == "menuBtn",
-          f"focus on {back!r} — blur() left it on <body>, which loses the "
-          "user's place entirely")
+    # Prime the runtime-built dialog so the census can see it (see above).
+    pg.evaluate("window.SkriblRecoveryKey && "
+                "window.SkriblRecoveryKey.present({key:'census'})")
+    pg.wait_for_timeout(200)
+    pg.evaluate("window.SkriblRecoveryKey && window.SkriblRecoveryKey.close()")
+    found = pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
+        .map(el => el.id || '(no id)')""")
     pg.close()
+
+    unrecipe = sorted(set(found) - set(MODALS))
+    check("every aria-modal surface in the DOM has a recipe here",
+          not unrecipe,
+          ", ".join(unrecipe) + " — a dialog claiming modal semantics that "
+          "nothing drives is exactly what this section was rewritten to stop")
+    stale = sorted(set(MODALS) - set(found))
+    check("every recipe here names a surface that still exists",
+          not stale,
+          ", ".join(stale) + " — a recipe for a deleted dialog passes forever "
+          "by testing nothing")
+
+    for mid in sorted(set(found) & set(MODALS)):
+        path, recipe, back_to = MODALS[mid]
+        pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        pg.goto(BASE + path, wait_until="load")
+        pg.wait_for_timeout(1200)
+        _drive(pg, recipe)
+
+        inside = pg.evaluate("""(id) => {
+            const d = document.getElementById(id), a = document.activeElement;
+            return !!(d && a && d.contains(a)); }""", mid)
+        check(f"{mid}: opening moves focus into it", inside,
+              "focus stayed on whatever had it, behind the sheet")
+
+        # Tab all the way round: focus must still be inside.
+        for _ in range(25):
+            pg.keyboard.press("Tab")
+        still = pg.evaluate("""(id) => {
+            const d = document.getElementById(id), a = document.activeElement;
+            return !!(d && a && d.contains(a)); }""", mid)
+        check(f"{mid}: Tab stays inside it", still,
+              "25 tabs escaped the dialog — a keyboard user reaches the page "
+              "underneath while a modal covers it")
+
+        pg.keyboard.press("Escape")
+        pg.wait_for_timeout(650)
+        landed = pg.evaluate("""() => {
+            const a = document.activeElement;
+            return a === document.body ? '(body)' : (a && a.id) || '(unnamed)'; }""")
+        # WHAT IS ASSERTED ON CLOSE, and why it is not always an exact id.
+        # Only the More menu has a single unambiguous opener; the others are
+        # reached from inside a menu that has itself closed by then. The
+        # invariant that holds for all of them is the one the finding was
+        # about: focus must not be dumped on <body>, which is where blur()
+        # used to leave it and which loses the user's place entirely.
+        if back_to:
+            check(f"{mid}: closing returns focus to {back_to}", landed == back_to,
+                  f"focus on {landed!r}")
+        else:
+            check(f"{mid}: closing does not drop focus on <body>",
+                  landed != "(body)", f"focus on {landed!r}")
+        pg.close()
+
+    # THE TEMPLATE CENSUS, which the live one cannot replace. A dialog inside a
+    # branch that did not render this run is invisible to the DOM sweep above
+    # and would leave a genuine gap silently. Every aria-modal in the templates
+    # must carry an id and that id must be recipe-backed.
+    _tpl = ROOT / "skribl" / "templates" / "skribl"
+    _tpl_modals, _idless = set(), []
+    for f in sorted(_tpl.glob("*.html")):
+        for tag in re.findall(r"<[^>]*aria-modal=\"true\"[^>]*>",
+                              f.read_text(encoding="utf-8")):
+            m = re.search(r'\bid="([^"]+)"', tag)
+            if m:
+                _tpl_modals.add(m.group(1))
+            else:
+                _idless.append(f.name)
+    check("every aria-modal in a template carries an id",
+          not _idless, ", ".join(sorted(set(_idless))) +
+          " — an id is how this suite addresses it; without one it cannot be "
+          "enumerated and cannot be tested")
+    _untested = sorted(_tpl_modals - set(MODALS))
+    check("every aria-modal in a template is recipe-backed",
+          not _untested, ", ".join(_untested) +
+          " — declared in markup, never opened by this suite; a dialog behind "
+          "an unrendered branch is the case the live census cannot see")
 
     # ------------------------------------------------------------ section 3
     print("\nA11Y 3 — every form control has an accessible name")

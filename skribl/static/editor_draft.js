@@ -647,11 +647,17 @@ document.addEventListener('visibilitychange', () => {
     leaveSheet.hidden = false;
     const scrim = document.getElementById('leaveScrim');
     if (scrim) scrim.hidden = false;
+    // The trap and the opener memory come from the shared utility; the
+    // explicit focus that follows overrides its choice of first control,
+    // because here the SAFE choice must be the one under the user's thumb
+    // rather than whichever button the markup happens to list first.
+    if (window.SkriblModal) window.SkriblModal.open(leaveSheet, flipBtn);
     leaveCancel.focus();   // focus the SAFE choice
   });
   const close = () => { leaveSheet.hidden = true;
     const scrim = document.getElementById('leaveScrim');
-    if (scrim) scrim.hidden = true; };
+    if (scrim) scrim.hidden = true;
+    if (window.SkriblModal) window.SkriblModal.close(leaveSheet); };
   leaveCancel.addEventListener('click', close);
   leaveGo.addEventListener('click', () => {
     released = true;

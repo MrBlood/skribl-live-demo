@@ -13,10 +13,36 @@
  * until it is opened and 404s — better a dead link the person can see than a
  * silent disappearance.
  *
- * NO PAYLOAD IS STORED. Only id, url, title, kind, page count and a timestamp,
- * so the whole list stays a few kilobytes however many Skribls someone makes.
- * Payloads run to hundreds of kilobytes each and localStorage is a ~5MB budget
- * shared with the crash-recovery autosave, which matters far more.
+ * NO PAYLOAD IS STORED. Only id, url, title, kind, page count, a timestamp and
+ * -- since v279 -- the revocation key. Payloads run to hundreds of kilobytes
+ * each and localStorage is a ~5MB budget shared with the crash-recovery
+ * autosave, which matters far more.
+ *
+ * WHAT CHANGED IN v280, AND WHY THE OLD POLICY STOPPED BEING VALID. Everything
+ * above was written when the worst case was losing a convenience list. v279 put
+ * the anonymous revocation key in these same records, and an audit named the
+ * consequence: the failure policy did not change when the data changed meaning.
+ * Two specific ways the key was being thrown away, both silent:
+ *
+ *   * `write()` has always returned whether it succeeded and `add()` has always
+ *     ignored it. A quota failure or private mode meant the server had created
+ *     a public post and the only credential that could withdraw it was gone,
+ *     with the UI reporting success.
+ *   * `write()` truncated to LIMIT on every call. Publishing the 201st Skribl
+ *     silently stranded the 1st -- still live, no longer revocable -- and the
+ *     202nd stranded the next. Deterministic, not an edge case.
+ *
+ * SO THE CAP NOW APPLIES TO HISTORY AND NEVER TO AUTHORISATION. `capped()`
+ * keeps the newest LIMIT entries PLUS every entry that carries a key, however
+ * old. The list can therefore exceed LIMIT, deliberately: a few hundred bytes
+ * per stranded credential is not a reason to strand it. Rendering is what LIMIT
+ * was for and rendering is what it still governs.
+ *
+ * AND A FAILED WRITE IS NOW A RESULT, NOT A SHRUG. `add()` returns
+ * `{list, durable, key}`; Pad and Flip show the key for the user to copy when
+ * `durable` is false. That is the only custody that survives cleared site data,
+ * a new phone, or Safari evicting the origin -- none of which IndexedDB would
+ * have survived either, which is why this stayed in localStorage.
  */
 (function (global) {
   'use strict';
@@ -36,18 +62,56 @@
     }
   }
 
+  /* The cap, applied so that it can never cost anyone a credential.
+     Keeps the newest LIMIT entries and, beyond them, every entry still holding
+     a revocation key. `list.slice(0, LIMIT)` -- what this replaced -- treated
+     an authorisation secret and a row in a tray as the same kind of thing. */
+  function capped(list) {
+    var keep = [];
+    for (var i = 0; i < list.length; i++) {
+      if (i < LIMIT || (list[i] && list[i].tok)) keep.push(list[i]);
+    }
+    return keep;
+  }
+
   function write(list) {
+    var body = JSON.stringify(capped(list));
     try {
-      global.localStorage.setItem(KEY, JSON.stringify(list.slice(0, LIMIT)));
+      global.localStorage.setItem(KEY, body);
       return true;
     } catch (e) {
-      // Quota, or private mode. The tray degrades to empty; posting still works.
+      /* Quota, or private mode. Before v280 this returned false into a caller
+         that ignored it. Now: try to buy room the free way -- orphaned payload
+         blobs are the usual hog and nothing can reach them -- and retry once.
+         Only if THAT fails is the write genuinely not durable, and the caller
+         is told so rather than left believing the key was kept. */
+      try {
+        sweepOrphans();
+        global.localStorage.setItem(KEY, body);
+        return true;
+      } catch (e2) {
+        return false;
+      }
+    }
+  }
+
+  /* Ask, before creating server state, whether this browser can keep anything.
+     Private mode and a full origin both answer no, and both are worth knowing
+     BEFORE a post exists that needs a key kept for it. Cheap: one tiny write
+     and a remove. */
+  function canPersist() {
+    var probe = KEY + '__probe';
+    try {
+      global.localStorage.setItem(probe, '1');
+      global.localStorage.removeItem(probe);
+      return true;
+    } catch (e) {
       return false;
     }
   }
 
   function add(entry) {
-    if (!entry || !entry.id) return read();
+    if (!entry || !entry.id) return { list: read(), durable: false, key: null };
     var list = read();
     // De-duplicate on id: re-posting the same Skribl should move it to the top,
     // not appear twice with two timestamps.
@@ -68,8 +132,14 @@
       tok: typeof entry.tok === 'string' && entry.tok ? entry.tok : null,
       at: Date.now()
     });
-    write(list);
-    return list;
+    /* THE RETURN SHAPE IS THE FINDING. `add()` used to return the list and
+       drop `write()`'s answer on the floor, so a caller could not distinguish
+       "kept" from "lost" and neither Pad nor Flip tried. Three fields, because
+       the operation genuinely has three things to say: what to render, whether
+       it survived, and -- when it did not -- the secret the user must be given
+       a chance to copy, because nothing else in the system still holds it. */
+    var durable = write(list);
+    return { list: list, durable: durable, key: durable ? null : (entry.tok || null) };
   }
 
   // A local save's BYTES live under 'skribl_post_<id>', written by
@@ -172,11 +242,14 @@
     KEY: KEY,
     list: read,
     add: add,
+    capped: capped,
+    canPersist: canPersist,
     remove: remove,
     clear: clear,
     sweepOrphans: sweepOrphans,
     evictOldest: evictOldest,
     reclaim: reclaim,
+    LIMIT: LIMIT,
     ago: ago,
     absolute: absolute
   };

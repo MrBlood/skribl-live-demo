@@ -3919,11 +3919,17 @@ async function shareSkribl(){
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){
       const _t=document.getElementById('flipShareTitle');
-      window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
+      const kept=window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
         pages:frames.length, title:(_t?_t.value:'').trim(),
         // Revocation capability, returned once — see lib/posted.js.
         tok: data.deleteToken || null });
       if(window._skriblPostedUI) window._skriblPostedUI.render();
+      // Checked since v280, for the reason editor_post.js states at the same
+      // point: a discarded write result meant an irrevocable post reported as
+      // a successful one. Both surfaces, because both mint a key.
+      if(kept && !kept.durable && kept.key && window.SkriblRecoveryKey){
+        window.SkriblRecoveryKey.present({ key: kept.key, url: data.url });
+      }
     }
     showShareResult(url);
   }catch(err){
@@ -3973,6 +3979,8 @@ function openShareCompose(){
   if(compose) compose.hidden=false;
   if(result) result.hidden=true;
   clearShareError();
+  // Ask before creating server state, not after — see lib/recoverykey.js.
+  if(window.SkriblRecoveryKey && compose) window.SkriblRecoveryKey.warnIfVolatile(compose);
   m.hidden=false;
   const t=document.getElementById('flipShareTitle');
   if(t) setTimeout(()=>{ try{ t.focus(); }catch(_){ } }, 30);

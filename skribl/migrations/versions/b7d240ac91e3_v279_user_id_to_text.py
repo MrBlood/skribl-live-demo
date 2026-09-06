@@ -35,9 +35,23 @@ the upgrade cannot go back without discarding its authorship. The downgrade
 refuses rather than truncating, because a takedown or a delete authorised
 against the wrong owner is worse than a failed migration.
 
+THAT REFUSAL WAS BACKEND-DEPENDENT AND THE DOCSTRING CLAIMED IT WAS NOT --
+an audit of v279 caught it. The check was written as PostgreSQL's `!~` regex
+and placed AFTER the SQLite branch had already returned, so a SQLite host
+running UUID identities could downgrade straight through the guard that exists
+to stop exactly that. The paragraph above described the PostgreSQL path and
+presented it as the contract.
+
+It is now validated BEFORE any dialect branch, in Python rather than in SQL,
+because neither SQLite nor a regex-free backend can be relied on for the test
+and a guard that only some deployments get is not a guard. DISTINCT keeps the
+scan bounded by the number of identities rather than the number of posts.
+
 Revision ID: b7d240ac91e3
 Revises: a1c93e5f7b04
 """
+import re
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -80,9 +94,42 @@ def upgrade():
     )
 
 
+_NUMERIC = re.compile(r"^[0-9]+$")
+
+
+def _refuse_non_numeric(bind):
+    """Every backend's guard, run before every backend's branch.
+
+    Refuse rather than mangle. A non-numeric id cast to integer is either an
+    error or, worse, a silent 0 — and a post whose owner became 0 is a post
+    anybody with user 0 can delete.
+
+    Python, not SQL: `!~` is PostgreSQL's, SQLite has no regex at all without a
+    loaded extension, and the previous version simply skipped the check where
+    it could not express it. `re` is available everywhere this runs.
+
+    `^[0-9]+$` and not `str.isdigit()`: isdigit() is true for '٣' and other
+    unicode digit forms, which int() then accepts and which are emphatically
+    not the ids this column is going back to.
+    """
+    rows = bind.execute(sa.text(
+        "SELECT DISTINCT user_id FROM skribl_posts WHERE user_id IS NOT NULL"
+    )).scalars().all()
+    bad = [v for v in rows if not _NUMERIC.match(str(v))]
+    if bad:
+        sample = ", ".join(repr(v) for v in sorted(map(str, bad))[:3])
+        raise RuntimeError(
+            f"{len(bad)} distinct non-numeric user_id value(s) present "
+            f"(e.g. {sample}); downgrading to Integer would discard or corrupt "
+            "their authorship. Reassign or delete those posts first if this "
+            "downgrade is really intended.")
+
+
 def downgrade():
     bind = op.get_bind()
     name = _dialect(bind)
+    # BEFORE the branch. Placing it after cost SQLite the guard entirely.
+    _refuse_non_numeric(bind)
     if name == "sqlite":
         with op.batch_alter_table("skribl_posts") as batch:
             batch.alter_column("user_id",
@@ -90,18 +137,6 @@ def downgrade():
                                type_=sa.Integer(),
                                existing_nullable=True)
         return
-    # Refuse rather than mangle. A non-numeric id cast to integer is either an
-    # error or, worse, a silent 0 — and a post whose owner became 0 is a post
-    # anybody with user 0 can delete.
-    bad = bind.execute(sa.text(
-        "SELECT COUNT(*) FROM skribl_posts "
-        "WHERE user_id IS NOT NULL AND user_id !~ '^[0-9]+$'"
-    )).scalar()
-    if bad:
-        raise RuntimeError(
-            f"{bad} post(s) have a non-numeric user_id; downgrading to Integer "
-            "would discard or corrupt their authorship. Reassign or delete them "
-            "first if this downgrade is really intended.")
     op.alter_column(
         "skribl_posts", "user_id",
         existing_type=sa.String(_LEN),

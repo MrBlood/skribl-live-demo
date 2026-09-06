@@ -70,9 +70,26 @@
     }
   }
 
+  /* Connected is not the same as focusable. `focus()` on a node that is
+     display:none does nothing and throws nothing, so focus stays where it was
+     — on <body> — and the caller has no way to tell. */
+  function focusable(el) {
+    return !!(el && el.isConnected && typeof el.focus === 'function' &&
+              el.offsetParent !== null);
+  }
+
   function open(dialog, opener) {
     if (!dialog) return;
     dialog._skriblOpener = opener || global.document.activeElement || null;
+    /* AND WHATEVER HAD FOCUS, always, as a second chance. An explicit opener
+       can be gone from view by the time the dialog closes: the leave confirm
+       is opened from a menu item and closes that menu on the way, so the item
+       it names is display:none when focus should come back to it. v279 checked
+       isConnected only, so that case put focus on <body> — the exact outcome
+       the utility was written to prevent, reached through the one door it did
+       not cover. Found by making verify_a11y enumerate every modal instead of
+       testing the one whose opener happens to stay visible. */
+    dialog._skriblFallback = global.document.activeElement || null;
     if (!dialog._skriblTrap) {
       dialog._skriblTrap = onKeydown;
       dialog.addEventListener('keydown', onKeydown);
@@ -87,13 +104,16 @@
   function close(dialog) {
     if (!dialog) return;
     var opener = dialog._skriblOpener;
+    var fallback = dialog._skriblFallback;
     dialog._skriblOpener = null;
-    /* isConnected: the opener may have been re-rendered away while the dialog
-       was up (the posted list rebuilds its rows), and focusing a detached node
-       silently does nothing — which is how focus ends up on <body>. */
-    if (opener && opener.isConnected && typeof opener.focus === 'function') {
-      opener.focus();
-    }
+    dialog._skriblFallback = null;
+    /* The opener first, then whatever had focus when it opened. Both are
+       checked with focusable() rather than isConnected: the posted list
+       rebuilds its rows so an opener can be detached, and a menu item can be
+       present but hidden. Either way focusing it is a silent no-op and the
+       user lands on <body>. */
+    if (focusable(opener)) { opener.focus(); return; }
+    if (focusable(fallback)) { fallback.focus(); }
   }
 
   global.SkriblModal = { open: open, close: close };

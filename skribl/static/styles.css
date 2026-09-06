@@ -6657,3 +6657,102 @@ body.playing .flip-grid { display: none; }
   --accent-tint-2: #4c31c4;
 
 }
+
+/* --- the recovery-key panel (lib/recoverykey.js) --------------------------
+   Shown only when the browser could not keep an anonymous post's revocation
+   key, so it is the last place that secret exists. It is styled to be read
+   rather than dismissed: full-bleed scrim, the key in a monospace well large
+   enough to transcribe by hand off a phone, and no close affordance except the
+   button that says the user has saved it.
+
+   Deliberately not sharing .post-sheet: that sheet's job is to be got through
+   quickly and this one's is to stop somebody. Borrowing its chrome would have
+   made them look interchangeable at the one moment they must not. */
+.reckey-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;                 /* above the eyedropper loupe, the previous
+                                     ceiling: nothing may cover this */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(6, 7, 10, 0.82);
+}
+.reckey-sheet {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-sheet);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+.reckey-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+.reckey-why, .reckey-note {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.reckey-note { margin-bottom: 16px; }
+/* 16px minimum: _ZOOM_EXEMPT is empty and this is a field a user may focus to
+   select from, so anything smaller zooms the page on iOS. */
+.reckey-value {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-well);
+  color: var(--text-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  line-height: 1.4;
+  word-break: break-all;
+  user-select: all;
+}
+.reckey-actions { display: flex; gap: 8px; }
+.reckey-copy, .reckey-done {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.reckey-copy {
+  border: 1px solid var(--line-strong);
+  background: var(--surface-control);
+  color: var(--text-strong);
+}
+.reckey-copy:hover { background: var(--surface-control-hover); }
+.reckey-done {
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--text-strong);
+}
+.reckey-said {
+  margin: 10px 0 0;
+  min-height: 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+/* The pre-post volatility notice, inserted by recoverykey.warnIfVolatile()
+   into whichever sheet is about to create server state. Warning colours, not
+   error colours: nothing has gone wrong yet and posting is still allowed. */
+.reckey-warn {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-well);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}

@@ -168,10 +168,12 @@
       body.textContent = collect();
       overlay.hidden = false;
       overlay.classList.add('open');
+      if (window.SkriblModal) window.SkriblModal.open(sheet);
     }
     function close() {
       overlay.hidden = true;
       overlay.classList.remove('open');
+      if (window.SkriblModal) window.SkriblModal.close(sheet);
     }
 
     openers.forEach(function (b) {

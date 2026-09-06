@@ -836,28 +836,6 @@ def register_routes(bp, *, index_route=False):
         })
 
     # ---- taking one back ---------------------------------------------------
-    # REGISTERED ONLY WHEN THE HOST HAS WIRED AN IDENTITY, and that condition is
-    # the whole design rather than a precaution bolted on.
-    #
-    # Skribl's API is unauthenticated by default and correctly so — DECISIONS #2
-    # explains why, and every other route here is safe under it because the
-    # worst a stranger can do is create or read. Deletion is not like that. A
-    # DELETE endpoint on an unauthenticated API is a button marked "erase any
-    # Skribl in this deployment, no questions asked", reachable by anybody who
-    # can guess or has been sent a public id. There is no version of that which
-    # is acceptable as a default, and shipping it behind a warning in the docs
-    # would be the same mistake v224's CSRF gate was written to stop making:
-    # the safe state must be the one you get by NOT noticing.
-    #
-    # So the standalone app — no current_user_id — gets no destructive routes at
-    # ALL, and a host that has authenticated its users gets them scoped to the
-    # author. The Python API (skribl.delete_post) is always available, because a
-    # host calling it from its own view has already decided who is asking; that
-    # is the same split creation.py makes for the same reason.
-    #
-    # CSRF is not re-checked here: create_blueprint REFUSES to build a blueprint
-    # with current_user_id and no explicit csrf decision, so reaching this line
-    # already means the integrator settled it.
     # REGISTERED UNCONDITIONALLY SINCE v279, and the reasoning changed rather
     # than being abandoned. v278 gated these on `skribl_has_identity` because a
     # DELETE on an unauthenticated API is a button marked "erase any Skribl in

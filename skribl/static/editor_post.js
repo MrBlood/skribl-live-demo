@@ -313,6 +313,8 @@
   function openPost() {
     setState('idle');
     syncSoundMark();
+    // Ask before creating server state, not after — see lib/recoverykey.js.
+    if (window.SkriblRecoveryKey) window.SkriblRecoveryKey.warnIfVolatile(sheet);
     // Field values persist across an accidental close within the session; they
     // reset only after a successful post. So don't clear them here.
     updateCharCount();
@@ -471,7 +473,7 @@
       // Record it locally, but ONLY a real post. A local fallback is not
       // shareable, so listing it under links you can send would be a lie.
       if (!localOnly && res && res.id && window.SkriblPosted) {
-        window.SkriblPosted.add({
+        const kept = window.SkriblPosted.add({
           id: res.id, url: res.url, kind: 'pad', pages: 1,
           title: (titleInput.value || '').trim(),
           // The create response carries the revocation capability exactly
@@ -479,6 +481,14 @@
           tok: res.deleteToken || null
         });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
+        // THE RETURN VALUE IS CHECKED NOW. It was discarded until v280, so a
+        // browser that could not write left the post live and its only
+        // revocation key gone, with this same code path reporting success two
+        // lines later. When the store cannot hold the key, the user is the
+        // only remaining custodian and gets the chance to be one.
+        if (kept && !kept.durable && kept.key && window.SkriblRecoveryKey) {
+          window.SkriblRecoveryKey.present({ key: kept.key, url: res.url });
+        }
       }
       titleInput.value = '';
       captionInput.value = '';
