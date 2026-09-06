@@ -34,6 +34,7 @@ WHAT IS PINNED HERE, and the shape each guards against:
     one implementation.
 """
 from playwright.sync_api import sync_playwright
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 import math as _math
@@ -1912,8 +1913,7 @@ with sync_playwright() as _bmd:
     _pmd = _brmd.new_page(viewport={"width": 1280, "height": 1000})
     _errs_md = []
     _pmd.on("pageerror", lambda e: _errs_md.append(str(e)))
-    _pmd.goto(BASE + "/", wait_until="load")
-    _pmd.wait_for_timeout(1500)
+    browsing.goto(_pmd, BASE, "/")
 
     check("no page error from the carved bundle", not _errs_md,
           "; ".join(_errs_md[:2]))

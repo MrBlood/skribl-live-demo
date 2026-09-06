@@ -41,6 +41,7 @@ import zlib
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/player_photo.wav"
@@ -117,8 +118,7 @@ with sync_playwright() as sp:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     ed_errs = []
     pg.on("pageerror", lambda e: ed_errs.append(str(e)))
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/")
     pg.evaluate("() => localStorage.clear()")
     pg.set_input_files("#photoInput", PNG)
     pg.wait_for_timeout(2500)

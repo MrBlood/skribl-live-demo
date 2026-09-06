@@ -1,5 +1,6 @@
 import re
 import _layout
+import browsing
 """v111 — regression suite for the external review findings.
 
 One assertion per reported issue, written to fail against v110. Numbering matches
@@ -216,8 +217,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/flip")
 
     def draw(x0, n=10):
         b = pg.locator("#pad").bounding_box()
@@ -695,8 +695,7 @@ with sync_playwright() as p5:
     br5 = p5.chromium.launch()
     ctx5 = br5.new_context(accept_downloads=True)
     pg5 = ctx5.new_page()
-    pg5.goto(BASE + "/flip", wait_until="load")
-    pg5.wait_for_timeout(900)
+    browsing.goto(pg5, BASE, "/flip")
     for i2 in range(4):
         pg5.evaluate("() => addFrame()")
         bb = pg5.locator("#pad").bounding_box()
@@ -924,8 +923,7 @@ with sync_playwright() as p7:
     pad7 = ctx7.new_page()
     perr7 = []
     pad7.on("pageerror", lambda e: perr7.append(str(e)))
-    pad7.goto(BASE + "/", wait_until="load")
-    pad7.wait_for_timeout(1000)
+    browsing.goto(pad7, BASE, "/")
     res = pad7.evaluate("""async (b64) => {
         const out = {};
         const text = () => new Uint8Array([104,101,108,108,111,33]);
@@ -962,8 +960,7 @@ with sync_playwright() as p7:
     flip7 = ctx7.new_page()
     ferr7 = []
     flip7.on("pageerror", lambda e: ferr7.append(str(e)))
-    flip7.goto(BASE + "/flip", wait_until="load")
-    flip7.wait_for_timeout(900)
+    browsing.goto(flip7, BASE, "/flip")
     check("Flip has the same checks (both surfaces, not just the Pad)",
           flip7.evaluate("() => typeof skriblDecodeCheckImage === 'function' && typeof skriblDecodeCheckAudio === 'function'"))
     fres = flip7.evaluate("""async () => await skriblDecodeCheckAudio(

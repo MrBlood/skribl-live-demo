@@ -56,6 +56,7 @@ import tempfile
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -467,8 +468,7 @@ with sync_playwright() as p:
     for w in (320, 360, 375, 390, 430):
         pg = ctx.new_page()
         pg.set_viewport_size({"width": w, "height": 800})
-        pg.goto(BASE + "/flip", wait_until="load")
-        pg.wait_for_timeout(250)
+        browsing.goto(pg, BASE, "/flip")
         # A stroke to move, then the mode that shows the bar. setTool is the
         # same entry verify_move.py uses, for the same reason: the control has
         # moved between the page bar and the tool shelf once already.

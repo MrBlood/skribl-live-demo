@@ -13,6 +13,7 @@ change the format, and this suite is the baseline they will have to preserve.
 import os
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 # Overridable so this suite can be pointed at a dev server while the harness
 # holds 5001 — otherwise it silently tests the sweep's checkout, not the tree.
@@ -53,8 +54,7 @@ with sync_playwright() as p:
     flip = ctx.new_page()
     errs = []
     flip.on("pageerror", lambda e: errs.append(str(e)))
-    flip.goto(BASE + "/flip", wait_until="load")
-    flip.wait_for_timeout(1000)
+    browsing.goto(flip, BASE, "/flip")
     # v205: the intro toast is a center panel that does NOT auto-dismiss, so it
     # sits over the canvas until closed. Dismiss it before drawing, or every
     # draw() lands on the panel instead of the canvas.
@@ -248,8 +248,7 @@ with sync_playwright() as p:
     pad = ctx.new_page()
     pad_errs = []
     pad.on("pageerror", lambda e: pad_errs.append(str(e)))
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(1000)
+    browsing.goto(pad, BASE, "/")
     draw(pad, "#canvas", 80, 80, n=24)
     pad.evaluate("() => document.getElementById('recordBtn').click()")
     pad.wait_for_timeout(700)
@@ -346,8 +345,7 @@ with sync_playwright() as p:
     ac = br.new_page(viewport={"width": 393, "height": 820})
     ac_errs = []
     ac.on("pageerror", lambda e: ac_errs.append(str(e)))
-    ac.goto(BASE + "/flip", wait_until="load")
-    ac.wait_for_timeout(900)
+    browsing.goto(ac, BASE, "/flip")
     ac.evaluate("() => { for (let i = 0; i < 14; i++) addFrame(false); go(1); }")
     ac.wait_for_timeout(400)
     ac.evaluate("() => { strip.scrollLeft = 0; }")

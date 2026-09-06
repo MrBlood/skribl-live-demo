@@ -27,6 +27,7 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _layout import STATIC_DIR, template  # noqa: E402
 from assertions import make_check
+import browsing
 
 results = []
 
@@ -366,8 +367,7 @@ with sync_playwright() as p3:
     pg = b3.new_page(viewport={"width": 1180, "height": 900}, accept_downloads=True)
     nerrs = []
     pg.on("pageerror", lambda e: nerrs.append(str(e)))
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(2500)
+    browsing.goto(pg, BASE, "/")
     _scribble(pg)
     pg.locator("#recordBtn").click()
     pg.wait_for_timeout(700)

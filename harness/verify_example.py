@@ -45,6 +45,7 @@ except Exception as exc:                                   # pragma: no cover
 
 import sqlalchemy as sa
 from assertions import make_check
+import browsing
 
 results = []
 
@@ -162,8 +163,7 @@ try:
         pg.on("request", lambda r: api_posts.append(r.url)
               if r.method == "POST" and "/api/skribls" in r.url else None)
 
-        pg.goto(BASE + "/", wait_until="load")
-        pg.wait_for_timeout(800)
+        browsing.goto(pg, BASE, "/")
 
         print("\n2 — SIGN IN, AND THE COMPOSER APPEARS")
         check("signed out, there is no composer",

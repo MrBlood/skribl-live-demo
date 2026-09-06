@@ -41,6 +41,7 @@ import zlib
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 VIEWPORTS = [(1600, 950), (1280, 900), (1023, 931), (830, 914), (420, 850)]
@@ -142,15 +143,13 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         pg.set_viewport_size({"width": vw, "height": vh})
         pg.route("**/app.js*", lambda route: route.abort())
-        pg.goto(BASE + "/", wait_until="load")
-        pg.wait_for_timeout(500)
+        browsing.goto(pg, BASE, "/")
         frame_checks(pg, "editor pre-JS", vw)
         pg.close()
 
     print("\nVISUAL — the editor, settled")
     pg = ctx.new_page()
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/")
     for vw, vh in VIEWPORTS:
         pg.set_viewport_size({"width": vw, "height": vh})
         pg.wait_for_timeout(350)

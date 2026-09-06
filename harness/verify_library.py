@@ -30,6 +30,7 @@ import re
 import sys
 import urllib.request
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -59,8 +60,7 @@ POST_PUBLIC = """async (title) => {
 
 def post_one(b, title, turns=4):
     pg = b.new_page(viewport={"width": 1280, "height": 900})
-    pg.goto(BASE + "/skribl-pad", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => localStorage.clear()")
     box = pg.locator("#canvas").bounding_box()
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2

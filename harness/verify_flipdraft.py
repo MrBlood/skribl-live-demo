@@ -25,6 +25,7 @@ restore, so the last section plants one by hand and reloads.
 import json
 import sys
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -90,8 +91,7 @@ def clean(page):
     two strokes and old.png, and reported a backward-compatibility failure that
     did not exist. (Third time this trap has been hit in this codebase; see
     fresh() in verify_select.py.)"""
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(400)
+    browsing.goto(page, BASE, "/flip")
     page.evaluate("""() => {
       frames = [newFrame()]; idx = 0;
       musicData = null; musicName = ''; bgImage = null; bgImageObj = null; imageName = '';
@@ -214,8 +214,7 @@ with sync_playwright() as p:
     # fence the flag exists to provide.
     legacy_page = browser.new_page(viewport={"width": 1000, "height": 800})
     legacy_page.on("pageerror", lambda e: errors.append(str(e)))
-    legacy_page.goto(BASE + "/flip", wait_until="load")
-    legacy_page.wait_for_timeout(400)
+    browsing.goto(legacy_page, BASE, "/flip")
     legacy_page.evaluate("""(raw) => {
       for (const k of Object.keys(localStorage))
         if (k.indexOf('skribl') === 0) localStorage.removeItem(k);

@@ -23,6 +23,7 @@ returns focus to the trigger, and the items are not smaller targets than the
 import os
 import sys
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -60,8 +61,7 @@ with sync_playwright() as p:
         page = br.new_page(viewport={"width": 1100, "height": 900})
         errs = []
         page.on("pageerror", lambda e: errs.append(str(e)))
-        page.goto(BASE + "/flip", wait_until="networkidle")
-        page.wait_for_timeout(400)
+        browsing.goto(page, BASE, "/flip")
 
         print("\nREGULAR — the row stays, and nothing was added beside it")
         seed(page)

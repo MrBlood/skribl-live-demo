@@ -27,6 +27,7 @@ import urllib.request
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 SRC_SECONDS = 30.0
@@ -76,8 +77,7 @@ def wav_duration(raw):
 
 
 def post_with_music(pg, audio):
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(700)
+    browsing.goto(pg, BASE, "/")
     pg.click("#musicOpenBtn")
     pg.wait_for_timeout(300)
     pg.set_input_files("#musicInput",

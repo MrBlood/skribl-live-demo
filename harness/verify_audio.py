@@ -1,6 +1,7 @@
 import math, struct, wave, json
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/seam.wav"
@@ -171,8 +172,7 @@ with sync_playwright() as _zp:
     _zb = _zp.chromium.launch()
     try:
         zp = _zb.new_page(viewport={"width": 430, "height": 1200})
-        zp.goto(BASE + "/flip", wait_until="load")
-        zp.wait_for_timeout(1200)
+        browsing.goto(zp, BASE, "/flip")
         zp.set_input_files("#musicInput", WAV)
         zp.wait_for_timeout(4500)
         zp.evaluate("() => _flipDrawerCtl.open('music')")

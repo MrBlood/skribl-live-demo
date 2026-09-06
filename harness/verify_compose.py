@@ -35,6 +35,7 @@ import re
 import sys
 import urllib.request
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -330,8 +331,7 @@ with sync_playwright() as sp:
     pad = b.new_page(viewport={"width": 1180, "height": 900})
     perrs = []
     pad.on("pageerror", lambda e: perrs.append(str(e)))
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(2500)
+    browsing.goto(pad, BASE, "/")
     draw(pad, pad.locator("#canvas").bounding_box(), turns=2)
     pad.wait_for_timeout(300)
     pad.locator("#recordBtn").click()

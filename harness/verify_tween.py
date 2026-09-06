@@ -33,6 +33,7 @@ import os
 import re
 import sys
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -77,8 +78,7 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1100, "height": 900})
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1500)
+    browsing.goto(page, BASE, "/flip")
 
     print("IN-BETWEEN — it generates a page between two poses")
     check("Flip booted", page.evaluate("() => !!(window.__skriblBoot && window.__skriblBoot.flip)"),

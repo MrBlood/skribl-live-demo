@@ -45,6 +45,7 @@ import urllib.request
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PORT = 5015
@@ -144,8 +145,7 @@ try:
             pg = b.new_page(viewport={"width": 1280, "height": 900})
             errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.goto(BASE + "/flip", wait_until="load")
-            pg.wait_for_timeout(1200)
+            browsing.goto(pg, BASE, "/flip")
             out = pg.evaluate(DRAW, mode)
             pg.close()
 
@@ -188,8 +188,7 @@ try:
         # =================================================================
         print("\nSTROKE GROUPS — a snapshot taken mid-stroke")
         pg = b.new_page(viewport={"width": 1280, "height": 900})
-        pg.goto(BASE + "/flip", wait_until="load")
-        pg.wait_for_timeout(1200)
+        browsing.goto(pg, BASE, "/flip")
         box = pg.locator("#pad").bounding_box()
         cx, cy = box["x"] + 150, box["y"] + 150
         pg.mouse.move(cx, cy)
@@ -286,8 +285,7 @@ try:
                 editIdx: 9, frames: frames}));
         })()""")
         planted = 10
-        pg.goto(BASE + "/flip", wait_until="load")
-        pg.wait_for_timeout(1500)
+        browsing.goto(pg, BASE, "/flip")
         healed = pg.evaluate("""() => ({
             n: frames.length,
             bad: frames.map((f, i) => ({i, pts: f.strokes.length,

@@ -29,6 +29,7 @@ lands short by its own length unless the target is adjusted for the splice-out.
 import os
 import sys
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -69,8 +70,7 @@ with sync_playwright() as p:
         page = br.new_page(viewport={"width": 1280, "height": 950})
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.goto(BASE + "/flip", wait_until="networkidle")
-        page.wait_for_timeout(400)
+        browsing.goto(page, BASE, "/flip")
 
         print("\nLIB — the arithmetic, including the case that is always wrong")
         check("lib/pagespan.js is loaded on Flip",

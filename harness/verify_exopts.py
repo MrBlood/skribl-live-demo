@@ -17,6 +17,7 @@ Still session-only state: nothing here reaches the payload.
 """
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -97,8 +98,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(1000)
+    browsing.goto(pg, BASE, "/flip")
     for i in range(5):
         pg.evaluate("() => addFrame()")
         draw(pg, 70 + i * 25)

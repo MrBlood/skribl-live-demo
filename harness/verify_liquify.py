@@ -45,6 +45,7 @@ pinned at pointerdown and there is an assertion for it here.
 import os
 import sys
 from assertions import make_check
+import browsing
 
 # Overridable like verify_parity's and verify_fuzz's, so this can be pointed at
 # a scratch instance while the main harness holds 5001. Without it, a run
@@ -126,8 +127,7 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1100, "height": 900})
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1500)
+    browsing.goto(page, BASE, "/flip")
 
     print("LIQUIFY — it exists, and the file survived registering it")
     check("Flip reached its last line with a fifth tool registered",
@@ -148,8 +148,7 @@ with sync_playwright() as p:
     # exposes SkriblFlipTools (verify_tray drives both), so the claim can just
     # be checked.
     _pad = browser.new_page(viewport={"width": 1100, "height": 900})
-    _pad.goto(BASE + "/", wait_until="load")
-    _pad.wait_for_timeout(1200)
+    browsing.goto(_pad, BASE, "/")
     _pad_tools = _pad.evaluate("() => window.SkriblPadTools"
                                " ? window.SkriblPadTools.list().map(t => t.id || t) : null")
     check("Pad's tool registry was readable at all",

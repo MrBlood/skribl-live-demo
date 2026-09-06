@@ -37,6 +37,7 @@ All of which is invisible in a screenshot, and is the thing most likely to be
 import os
 import sys
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -75,8 +76,7 @@ with sync_playwright() as p:
         page = br.new_page(viewport={"width": 1280, "height": 900})
         errs = []
         page.on("pageerror", lambda e: errs.append(str(e)))
-        page.goto(BASE + "/flip", wait_until="networkidle")
-        page.wait_for_timeout(700)
+        browsing.goto(page, BASE, "/flip")
 
         print("\nTHE LIB — arithmetic three tools share")
         check("lib/brushfield.js is loaded on Flip",

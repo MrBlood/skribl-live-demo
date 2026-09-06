@@ -18,6 +18,7 @@ import json
 import os
 import sys
 from assertions import make_check
+import browsing
 
 SKIP_EXIT = 77
 
@@ -44,8 +45,7 @@ with sync_playwright() as p:
     page = browser.new_page()
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1500)
+    browsing.goto(page, BASE, "/flip")
 
     caps = page.evaluate("""async () => {
         if (typeof VideoEncoder === 'undefined') return {webcodecs: false};

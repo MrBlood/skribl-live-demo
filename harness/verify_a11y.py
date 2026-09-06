@@ -45,6 +45,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -325,8 +326,7 @@ with sync_playwright() as p:
             pg.wait_for_timeout(450)
 
     pg = browser.new_page(viewport={"width": 1280, "height": 900})
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/")
     # Prime the runtime-built dialog so the census can see it (see above).
     for _prime, _shut in (
             ("present({key:'census'})", "close()"),
@@ -491,8 +491,7 @@ with sync_playwright() as p:
     # ------------------------------------------------------------ section 4
     print("\nA11Y 4 — a one-of-N control says WHICH")
     pg = browser.new_page(viewport={"width": 1280, "height": 900})
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/")
     seg = pg.evaluate("""() => {
         const out = {};
         for (const id of ['smoothSeg']) {
@@ -526,8 +525,7 @@ with sync_playwright() as p:
     # assertions: a live region is an attribute contract, and there is nothing
     # behavioural to press.
     pg = browser.new_page(viewport={"width": 1280, "height": 900})
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(1000)
+    browsing.goto(pg, BASE, "/")
     for _id, why in (("toast", "autosave, copy, and the Undo affordance"),
                      ("postStatus", "posting started / succeeded / failed"),
                      ("postedStatus", "server-side deletion from Your Skribls")):

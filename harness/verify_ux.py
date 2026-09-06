@@ -20,6 +20,7 @@ here is WebM on both surfaces — which is exactly the case the old Flip label g
 wrong, and therefore the useful one to pin.
 """
 from playwright.sync_api import sync_playwright
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 import pathlib
@@ -48,8 +49,7 @@ with sync_playwright() as p:
     flip = ctx.new_page()
     flip_errors = []
     flip.on("pageerror", lambda e: flip_errors.append(str(e)))
-    flip.goto(BASE + "/flip", wait_until="load")
-    flip.wait_for_timeout(1200)
+    browsing.goto(flip, BASE, "/flip")
 
     # Single page: video is gated, and the label must not promise a format.
     flip.evaluate("() => openExportSheet()")
@@ -96,8 +96,7 @@ with sync_playwright() as p:
     pad = ctx.new_page()
     pad_errors = []
     pad.on("pageerror", lambda e: pad_errors.append(str(e)))
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(1200)
+    browsing.goto(pad, BASE, "/")
     draw(pad, "#canvas", 80, 80, n=26)
     pad.evaluate("() => { document.getElementById('exportItem').click(); }")
     pad.wait_for_timeout(1400)
@@ -843,8 +842,7 @@ with _sp204() as _p:
     _b = _p.chromium.launch()
     # Pad: tune button opens the drawer; Grid toggles the overlay canvas.
     pg = _b.new_page(viewport={"width": 900, "height": 800})
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/")
     check("V204: Pad has a tune button (new drawer)",
           pg.locator("#tuneBtn").count() == 1)
     check("V204-fix: the Pad tune button is in the header actions, not the toolbar",
@@ -1134,8 +1132,7 @@ with _sp204() as _p:
     # record indicator onto the wordmark, and the wordmark must recover after
     # stop. Reproduces the reported 600px overlap + stuck-brand bug.
     narrow = _b.new_page(viewport={"width": 600, "height": 800})
-    narrow.goto(BASE + "/", wait_until="load")
-    narrow.wait_for_timeout(700)
+    browsing.goto(narrow, BASE, "/")
     narrow.evaluate("() => document.getElementById('recordBtn').click()")
     narrow.wait_for_timeout(400)
     check("V204-fix: the tune button is hidden while recording (reclaims width)",
@@ -1186,8 +1183,7 @@ with _sp204() as _p:
     pg.close()
     # Flip: the intro toast fires on load (Tips default on, first visit).
     fp = _b.new_page(viewport={"width": 900, "height": 800})
-    fp.goto(BASE + "/flip", wait_until="load")
-    fp.wait_for_timeout(900)
+    browsing.goto(fp, BASE, "/flip")
     toast = fp.evaluate("""() => {
         const el = document.querySelector('.skribl-hint');
         return el && !el.hidden ? el.textContent : null;
@@ -1881,8 +1877,7 @@ with _sp() as _p3:
     """
     _f3 = _b.new_page(viewport={"width": 1280, "height": 900})
     _f3.add_init_script(_F3_INIT)
-    _f3.goto(BASE + "/", wait_until="load")
-    _f3.wait_for_timeout(700)
+    browsing.goto(_f3, BASE, "/")
     _f3.click("#musicOpenBtn")
     _f3.wait_for_timeout(300)
     _f3.set_input_files("#musicInput",

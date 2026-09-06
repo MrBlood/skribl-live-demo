@@ -37,6 +37,7 @@ import os
 import re
 import sys
 from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -58,8 +59,7 @@ with sync_playwright() as p:
         page = br.new_page(viewport={"width": 1280, "height": 900})
         errs = []
         page.on("pageerror", lambda e: errs.append(str(e)))
-        page.goto(BASE + "/flip", wait_until="networkidle")
-        page.wait_for_timeout(400)
+        browsing.goto(page, BASE, "/flip")
 
         print("\nTHE DECISION — one threshold, named once")
         check("lib/sizeclass.js is loaded on Flip",
@@ -324,8 +324,7 @@ with sync_playwright() as _gp:
     try:
         for _w in (320, 390, 430, 900):
             gp = _gb.new_page(viewport={"width": _w, "height": 900})
-            gp.goto(BASE + "/flip", wait_until="load")
-            gp.wait_for_timeout(1200)
+            browsing.goto(gp, BASE, "/flip")
             gp.evaluate("() => setTool('pen')")
             gbox = gp.eval_on_selector(
                 "#pad", "e => { const r = e.getBoundingClientRect();"

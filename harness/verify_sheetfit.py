@@ -44,6 +44,7 @@ import time
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import browsing
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PORT = 5016
@@ -131,8 +132,7 @@ try:
             pg = b.new_page(viewport={"width": vw, "height": vh})
             errs = []
             pg.on("pageerror", lambda e: errs.append(str(e)))
-            pg.goto(BASE + "/", wait_until="load")
-            pg.wait_for_timeout(900)
+            browsing.goto(pg, BASE, "/")
             author(pg)
 
             for trigger, sheet_id, label in (("#postBtn", "postSheet", "post composer"),
@@ -178,8 +178,7 @@ try:
 
         print("\nSHEET FIT — the composer fits a window it should fit")
         pg = b.new_page(viewport={"width": 1280, "height": 800})
-        pg.goto(BASE + "/", wait_until="load")
-        pg.wait_for_timeout(900)
+        browsing.goto(pg, BASE, "/")
         author(pg)
         pg.click("#postBtn")
         pg.wait_for_timeout(700)
