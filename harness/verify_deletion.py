@@ -15,11 +15,21 @@ THE THREE THINGS WORTH ASSERTING, in the order they can hurt:
      Asserted on the EXCEPTION TYPE, the MESSAGE and the HTTP STATUS, because
      any one of the three leaking is the whole leak.
 
-  2. THE DESTRUCTIVE ROUTES DO NOT EXIST WITHOUT AN IDENTITY. Skribl's API is
-     unauthenticated by default (DECISIONS #2) and every other route is safe
-     under that because the worst a stranger can do is create or read. A DELETE
-     on an unauthenticated API erases anything anyone can name. Section 4 asks
-     Flask's url_map, not the source, because what ships is the routing table.
+  2. THE DESTRUCTIVE ROUTES EXIST FOR EVERYONE, AND THE CAPABILITY IS WHAT
+     MAKES THAT SAFE. Skribl's API is unauthenticated by default (DECISIONS #2)
+     and every other route is safe under that because the worst a stranger can
+     do is create or read. A DELETE reachable by anyone who has a public id
+     would erase posts on demand — so section 6 asks Flask's url_map, not the
+     source, that both verbs ship, and section 8 asks that a stranger holding
+     only the public id is refused anyway.
+
+     THIS BULLET USED TO SAY the routes "do not exist without an identity",
+     which was v278's design and which v279 reversed: removing them also
+     removed the only way the deployed product could revoke anything. The
+     assertions below were rewritten then and this summary was not, so the
+     suite spent a release announcing the opposite of what it proved. Caught
+     by a sweep before the v280 seal, not by a gate — a printed section
+     heading is prose, and prose is what goes stale.
 
   3. IT LEAVES NOTHING BEHIND, WITH THE CASCADE TURNED OFF. The first version
      of this section deleted a post and checked the association rows were gone,
@@ -306,7 +316,7 @@ with direct.app_context():
 
 
 # ---------------------------------------------------------------------- 6
-print("\n6 — THE DESTRUCTIVE ROUTES DO NOT EXIST WITHOUT AN IDENTITY")
+print("\n6 — THE DESTRUCTIVE ROUTES SHIP FOR EVERY DEPLOYMENT")
 # ASKED OF THE ROUTING TABLE, NOT THE SOURCE. What ships is the url_map; a
 # source grep would pass on a route registered under a condition that is always
 # true. MUTATION: register them unconditionally. Kills the first two.

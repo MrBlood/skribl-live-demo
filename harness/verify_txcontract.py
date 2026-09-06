@@ -17,10 +17,16 @@ THE CONTRACT (docs/INTEGRATION.md):
   * The HOST owns the per-request commit. app.py does it for the standalone
     deployment; an embedding host does it however it already does.
 
-Assertions 2-4 fail on the old code because the old create path committed the
-shared session: the host's pending row became durable, and the post survived a
-host rollback it should have died in. Assertion 1 fails on the old tree by
-count: ratelimit.py alone had seven shared-session commits.
+WHAT FAILS ON THE OLD CODE. The dynamic assertions below fail because the old
+create path committed the shared session: the host's pending row became
+durable, and the post survived a host rollback it should have died in. The
+static scan fails on the old tree by count — ratelimit.py alone had seven
+shared-session commits.
+
+Written as "Assertions 2-4" and "Assertion 1" until v280, when the static scan
+widened from two files to every module and the numbering those labels pointed
+at stopped existing. An index into a list that grows is a fact with a short
+life; naming the thing survives.
 """
 import ast
 import importlib

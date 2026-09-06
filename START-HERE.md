@@ -242,7 +242,9 @@ thousands of assertions — the count is in `harness/RELEASE.md`, never typed
 here — while basic keyboard failures were visible in the source. Three
 playback scrubbers were pointer-only, two of them declaring `role="slider"`
 with no tabindex, no `aria-valuenow` and no key handler — announcing a control
-that could not be operated. Five `aria-modal` dialogs did nothing about focus.
+that could not be operated. Every `aria-modal` dialog did nothing about
+focus — this said "Five" until v280, when counting them for the enumeration
+gate found seven.
 Visible slider captions were not labels. Segmented controls kept selection in a
 CSS class. Nothing announced that a post had succeeded or failed.
 

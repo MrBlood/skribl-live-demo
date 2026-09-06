@@ -3,20 +3,27 @@
  *   SkriblModal.open(dialog);    // remembers the opener, moves focus in
  *   SkriblModal.close(dialog);   // returns focus to the opener
  *
- * WHY THIS EXISTS. An accessibility audit of v278 found that Pad's modal
- * surfaces — the More sheet, Help, Post, Export, the leave confirm — declare
- * `role="dialog" aria-modal="true"` and then do nothing about focus. They are
- * shown by unhiding a node. Focus stays wherever it was, behind the sheet, so
- * a keyboard user can Tab into controls the modal is covering; closing leaves
- * focus nowhere useful; and two of them called `blur()` on the active element,
- * which is not focus management, it is throwing focus at the document body.
+ * WHY THIS EXISTS. An accessibility audit of v278 found that Skribl's modal
+ * surfaces declare `role="dialog" aria-modal="true"` and then do nothing about
+ * focus. They are shown by unhiding a node. Focus stays wherever it was, behind
+ * the sheet, so a keyboard user can Tab into controls the modal is covering;
+ * closing leaves focus nowhere useful; and two of them called `blur()` on the
+ * active element, which is not focus management, it is throwing focus at the
+ * document body.
+ *
+ * This used to name five surfaces. There are eight, and v279 wired three of
+ * them — a second audit caught that, and `verify_a11y.py` now reads the
+ * population out of the DOM rather than trusting a list anybody has to keep
+ * up to date, this one included.
  *
  * ARIA-MODAL IS A CLAIM ABOUT BEHAVIOUR. Saying it while the page underneath
  * stays reachable is worse than not saying it, because a screen reader tells
  * the user they are in a modal and the interaction contradicts that.
  *
  * WHAT IT DOES, and deliberately no more:
- *   - remembers what was focused when the dialog opened, and puts it back;
+ *   - remembers what was focused when the dialog opened, and puts it back —
+ *     falling back to that if an explicitly named opener is no longer VISIBLE,
+ *     which `isConnected` alone did not catch and which put focus on <body>;
  *   - moves focus to the first usable control inside, or the dialog itself;
  *   - keeps Tab inside while it is open.
  *
