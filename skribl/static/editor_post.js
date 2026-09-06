@@ -467,7 +467,10 @@
       if (!localOnly && res && res.id && window.SkriblPosted) {
         window.SkriblPosted.add({
           id: res.id, url: res.url, kind: 'pad', pages: 1,
-          title: (titleInput.value || '').trim()
+          title: (titleInput.value || '').trim(),
+          // The create response carries the revocation capability exactly
+          // once for an anonymous post. Stored here or lost forever.
+          tok: res.deleteToken || null
         });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
       }

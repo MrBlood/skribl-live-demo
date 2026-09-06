@@ -3909,7 +3909,9 @@ async function shareSkribl(){
     if(window.SkriblPosted){
       const _t=document.getElementById('flipShareTitle');
       window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
-        pages:frames.length, title:(_t?_t.value:'').trim() });
+        pages:frames.length, title:(_t?_t.value:'').trim(),
+        // Revocation capability, returned once — see lib/posted.js.
+        tok: data.deleteToken || null });
       if(window._skriblPostedUI) window._skriblPostedUI.render();
     }
     showShareResult(url);

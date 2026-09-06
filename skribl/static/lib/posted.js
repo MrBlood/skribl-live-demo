@@ -58,6 +58,14 @@
       title: (entry.title || '').slice(0, 80),
       kind: entry.kind === 'flip' ? 'flip' : 'pad',
       pages: Math.max(1, parseInt(entry.pages, 10) || 1),
+      /* THE REVOCATION CAPABILITY, and the only copy of it that will ever
+         exist. The server returns it once in the create response and stores
+         only its SHA-256; there is no endpoint that can reissue it. Losing
+         this entry means the Skribl can no longer be withdrawn, which is why
+         the UI says so before you publish rather than after.
+         Absent for a post made under a host that authenticated its author —
+         that one is revoked by ownership. */
+      tok: typeof entry.tok === 'string' && entry.tok ? entry.tok : null,
       at: Date.now()
     });
     write(list);

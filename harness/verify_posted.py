@@ -122,8 +122,29 @@ with sync_playwright() as p:
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — removing an entry does not delete the Skribl")
     pid = entry.get("id")
+
+    # THE ✕ NOW ASKS FIRST WHEN THERE IS SOMETHING TO LOSE, and that is a v279
+    # behaviour change this assertion had to be taught. An audit of v278 pointed
+    # out that ✕ removed the local record while the Skribl stayed live — and
+    # since v279 that record also holds the only key that can delete it, so
+    # discarding it silently forfeits revocation. It confirms; a token-less
+    # entry still goes without friction.
+    #
+    # Playwright dismisses dialogs by default, so an unhandled confirm reads as
+    # "cancelled" and this section failed on the real, intended behaviour. The
+    # handler is what makes the assertion measure the removal rather than the
+    # dialog.
+    _asked = []
+    pg.on("dialog", lambda d: (_asked.append(d.message), d.accept()))
+
+    _has_tok = pg.evaluate("() => !!(window.SkriblPosted.list()[0]||{}).tok")
     pg.click("#postedList .posted-del")
-    pg.wait_for_timeout(300)
+    pg.wait_for_timeout(400)
+    if _has_tok:
+        check("removing an entry that holds the delete key warns first",
+              any("key" in m.lower() for m in _asked),
+              f"{_asked} — throwing the key away without saying so is what the "
+              "audit called out as making recovery worse")
     check("the entry is gone from the list", pg.evaluate(READ) == [])
     with urllib.request.urlopen(f"{API}/{pid}", timeout=15) as r:
         still = json.loads(r.read())

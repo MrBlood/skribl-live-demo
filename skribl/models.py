@@ -354,6 +354,40 @@ class SkriblPost(SkriblBase):
     # places state this default and all three must agree.
     visibility = Column(String(16), default="unlisted", nullable=False)
 
+    # A REVOCATION CAPABILITY FOR A POST NOBODY OWNS.
+    #
+    # v278 gave Skribl delete_post()/set_post_visibility(), authorised by
+    # matching `user_id` against the host's signed-in user. An audit pointed out
+    # that the DEPLOYED product cannot reach any of it: the standalone app
+    # passes no `current_user_id`, so it has no author to match and no
+    # destructive routes registered. Somebody who shares the wrong drawing on
+    # skribl.live has no way to take it back. The API was built to the letter of
+    # the request while the user's actual problem stayed open.
+    #
+    # Accounts would fix it and would also change what the product is. A
+    # capability does not: on an anonymous create, mint a secret, hand it back
+    # ONCE, and let whoever holds it revoke. That is the same shape as the
+    # unlisted share URL the product already runs on — possession of a hard-to-
+    # guess string is the authorisation — except that this one is never
+    # published and never leaves the creator's own browser.
+    #
+    # ONLY THE HASH IS STORED. A database leak must not hand out the ability to
+    # delete every anonymous post in it; sha256 of the raw token is enough to
+    # verify a presented one and useless for producing it. Compared with
+    # hmac.compare_digest, not `==`.
+    #
+    # IT COMPOSES WITH ACCOUNTS RATHER THAN COMPETING. _authorised_post answers
+    # "may this caller act on this post"; ownership is one way to say yes and a
+    # capability is a second. When a deployment later gains real users, new
+    # posts carry a user_id and take the ownership path, while every anonymous
+    # post already published keeps working because its token is still valid.
+    # Choosing accounts INSTEAD would have left that back-catalogue permanently
+    # unrevocable, which is the problem being fixed.
+    #
+    # NULL for posts that have an author: they are authorised by ownership and
+    # a second, weaker credential would only widen the attack surface.
+    delete_token_hash = Column(String(64), nullable=True)
+
     __table_args__ = (
         # Feed reads are "this author's posts, newest first" and "the public
         # timeline, newest first". Both are covering-ish index scans with these;

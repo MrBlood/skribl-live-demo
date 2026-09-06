@@ -324,12 +324,23 @@ _anon_methods = _api_methods(skribl.create_blueprint(session=False))
 _auth_methods = _api_methods(skribl.create_blueprint(
     session=False, current_user_id=lambda: 7, csrf=False))
 
-check("an UNAUTHENTICATED deployment exposes no DELETE",
-      "DELETE" not in _anon_methods,
-      f"{sorted(_anon_methods)} — Skribl's API is unauthenticated by default "
-      "(DECISIONS #2); a DELETE under that erases any Skribl anyone can name")
-check("...and no PATCH either", "PATCH" not in _anon_methods,
-      f"{sorted(_anon_methods)}")
+# THESE TWO ASSERTIONS ARE RETIRED, AND SAYING SO IS THE POINT. Until v279 they
+# read "an UNAUTHENTICATED deployment exposes no DELETE" and "...and no PATCH
+# either", and they were correct about the danger: a DELETE reachable by anyone
+# who has a public id erases posts on demand. They were wrong about the remedy.
+# Removing the route also removed the only way the DEPLOYED product could
+# revoke anything, which an audit of v278 identified as the release's worst
+# problem — the mechanism existed and the user could not reach it.
+#
+# What replaces them is not weaker, it is aimed at the actual property: section
+# 8 asserts that a stranger holding only the public id is refused, that a wrong
+# token is refused, and that a token minted for another post is refused. The
+# route's existence was a proxy for that; the capability check is the thing
+# itself. A proxy that also breaks the product is the wrong instrument.
+check("an unauthenticated deployment DOES expose them now",
+      {"DELETE", "PATCH"} <= _anon_methods,
+      f"{sorted(_anon_methods)} — gone means the standalone product cannot "
+      "revoke; safety comes from the capability, asserted in section 8")
 # Gating deletion must not gate anything else. /api/skribls/<id> keeps its GET
 # on both; the collection route keeps GET and POST. Measured on the collection
 # separately because _api_methods above only looks at the item route.
@@ -453,11 +464,161 @@ check("PATCH refuses to be a general-purpose editor",
       r.status_code == 400,
       f"{r.status_code} — visibility is the only field this route takes; "
       "widening it later should be a decision, not a default")
+
+# EVERY JSON ROOT, NOT JUST THE ONE I THOUGHT OF. The check above sends a
+# well-formed object with the wrong KEY, which is the shape that occurred to me
+# when the route was written. An audit of v278 found the shapes that did not:
+# `["visibility"]` and `"visibility"` both satisfy `"visibility" in body`
+# — membership works on a list and on a string — and the `body["visibility"]`
+# that followed raised TypeError, so both came back 500. A client error was
+# being served as a server error.
+#
+# The extra-keys case is the same omission from the other side: the route's
+# own docstring says visibility is the only field a post may change, and
+# {"visibility": "private", "extra": 1} was accepted with a 200.
+for _label, _body in (
+        ("a JSON array root", ["visibility"]),
+        ("a JSON string root", "visibility"),
+        ("a JSON number root", 42),
+        # NOT `json=None`: the test client then sends no body at all, and the
+        # request is correctly refused 411 Length Required by the security
+        # layer before routing. A literal JSON `null` needs a real body.
+        ("a JSON null root", "\0LITERAL-NULL"),
+        ("an empty object", {}),
+        ("visibility plus an extra key", {"visibility": "private", "extra": 1}),
+        ("a valid value under the wrong key", {"vis": "private"}),
+):
+    if _body == "\0LITERAL-NULL":
+        r = client.patch(f"/api/skribls/{theirs7}", data="null",
+                         content_type="application/json")
+    else:
+        r = client.patch(f"/api/skribls/{theirs7}", json=_body)
+    check(f"PATCH rejects {_label} with 400, not 500",
+          r.status_code == 400,
+          f"{r.status_code} — a malformed but VALID JSON body is a client "
+          "error; 500 means the route indexed something it had not checked")
+
+with web.app_context():
+    check("...and none of those rejections changed the post",
+          (db7.session.query(SkriblPost).filter_by(public_id=theirs7)
+           .one().visibility) == "private",
+          "a refused PATCH that still wrote would be the worse bug")
 with web.app_context():
     check("...and the title it refused is unchanged",
           (db7.session.query(SkriblPost).filter_by(public_id=theirs7)
            .one().title) == "theirs")
 
+
+# ---------------------------------------------------------------------- 8
+print("\n8 — THE ANONYMOUS PRODUCT CAN TAKE A POST BACK")
+# THE FINDING THIS SECTION EXISTS FOR, from an audit of v278. v278 built
+# delete_post() and gated the HTTP routes on the host having wired an identity.
+# The DEPLOYED product wires none — app.py passes no current_user_id — so the
+# routes were not registered there at all and a person who published the wrong
+# drawing on the live site had no way to withdraw it. The mechanism shipped and
+# the product contract did not, which is a harder failure to see than a bug
+# because every test of the mechanism passed.
+#
+# The fix is a capability, not accounts: an anonymous post carries a 256-bit
+# secret minted at creation, returned exactly once, stored only as SHA-256.
+# Section 6 above still holds — a merely authenticated stranger cannot touch an
+# author-less post — and now the person who made it can.
+_tmp8 = tempfile.mkdtemp()
+anon = Flask(__name__)
+anon.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{_tmp8}/anon.db"
+anon.config["SECRET_KEY"] = "harness-deletion-anon"
+db8 = SQLAlchemy()
+db8.init_app(anon)
+# NO current_user_id. This is app.py's configuration, which is the whole point.
+skribl.init_skribl(anon, session=lambda: db8.session)
+skribl.models.attach_to_metadata(db8.metadata)
+
+
+@anon.after_request
+def _commit8(resp):
+    if resp.status_code < 500:
+        db8.session.commit()
+    return resp
+
+
+@anon.teardown_request
+def _rollback8(exc):
+    db8.session.rollback()
+
+
+with anon.app_context():
+    db8.create_all()
+
+c8 = anon.test_client()
+_PL = {"frames": [{"strokes": [], "strokeGroups": [],
+                   "background": {"color": "#101418"}}],
+       "title": "anon", "visibility": "unlisted"}
+
+r = c8.post("/api/skribls", json=_PL)
+check("an anonymous deployment still posts", r.status_code == 201,
+      f"{r.status_code} {r.data[:120]!r}")
+_j = r.get_json() or {}
+_pid, _tok = _j.get("id"), _j.get("deleteToken")
+check("...and the create response carries a revocation capability",
+      isinstance(_tok, str) and len(_tok) >= 40,
+      f"{_tok!r} — returned exactly once; only its hash is stored, so a client "
+      "that drops it has published something it can never withdraw")
+
+check("the destructive routes EXIST without an identity now",
+      "DELETE" in _api_methods(skribl.create_blueprint(session=False)),
+      "v278 gated these away and left the deployed product unable to revoke "
+      "anything; what makes them safe is the capability, not their absence")
+
+check("a stranger with only the public id is refused",
+      c8.delete(f"/api/skribls/{_pid}").status_code == 404,
+      "no token, no deletion")
+check("...and so is a wrong token",
+      c8.delete(f"/api/skribls/{_pid}",
+                json={"deleteToken": "z" * 43}).status_code == 404)
+check("...and a token minted for a DIFFERENT post",
+      c8.delete(f"/api/skribls/{_pid}", json={"deleteToken": (
+          c8.post("/api/skribls", json=_PL).get_json() or {}
+      ).get("deleteToken")}).status_code == 404,
+      "the token is compared against THIS post's hash, so it cannot be "
+      "replayed across posts")
+check("...and the post survived all three refusals",
+      c8.get(f"/api/skribls/{_pid}").status_code == 200)
+
+# Revoke first — the softer of the two, and the one an unlisted link needs.
+r = c8.patch(f"/api/skribls/{_pid}",
+             json={"visibility": "private", "deleteToken": _tok})
+check("the capability can REVOKE an unlisted post", r.status_code == 200,
+      f"{r.status_code} {r.data[:120]!r}")
+check("...and the link the author already sent stops working",
+      c8.get(f"/api/skribls/{_pid}").status_code == 404,
+      "this is what 'I shared the wrong thing' actually needs")
+
+r = c8.delete(f"/api/skribls/{_pid}", json={"deleteToken": _tok})
+check("the capability can DELETE the post", r.status_code == 204,
+      f"{r.status_code} {r.data[:120]!r}")
+check("...and it is gone", c8.get(f"/api/skribls/{_pid}").status_code == 404)
+
+# The hash is what is stored. A database leak must not be a mass delete.
+with anon.app_context():
+    _fresh = (c8.post("/api/skribls", json=_PL).get_json() or {})
+    _row = (db8.session.query(SkriblPost)
+            .filter_by(public_id=_fresh["id"]).one())
+    check("only the HASH is stored, never the token",
+          _row.delete_token_hash
+          and _row.delete_token_hash != _fresh["deleteToken"]
+          and len(_row.delete_token_hash) == 64,
+          f"{_row.delete_token_hash!r} — a readable token in the column would "
+          "make a database leak into the ability to delete everything in it")
+
+# An OWNED post gets no capability: it is authorised by its owner, and a second
+# credential would only be one more thing to leak.
+with host.app_context():
+    _owned = create_post(payload(title="owned", visibility="public"),
+                         author_id=7)
+    db.session.commit()
+    check("an OWNED post is issued no capability",
+          _owned.delete_token is None,
+          "ownership already authorises it")
 
 passed = sum(1 for ok, _, _ in results if ok)
 bad = [n for ok, n, _ in results if not ok]

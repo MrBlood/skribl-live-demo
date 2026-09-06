@@ -35,6 +35,51 @@
     ' stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 
+  /* The entry, so the click handler works from stored state rather than from
+     what the DOM happens to say. */
+  function byId(id) {
+    /* global.SkriblPosted.list(), not a captured `store`: this helper sits at
+       module scope while `store` is bound inside init(). And `list` is the
+       exported name — an earlier draft called store.read(), which does not
+       exist, so the lookup silently returned null and the Delete button did
+       nothing at all. */
+    var api = global.SkriblPosted;
+    var all = (api && api.list) ? api.list() : [];
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+
+  /* Server-side deletion, authorised by the capability this browser holds.
+     NO ROUTE LITERAL — the API base is injected, for the same reason
+     lib/posted.js refuses to hand-write '/s/': a literal is wrong the moment
+     Skribl is mounted under a url_prefix, and verify_seam.py fails it. */
+  function destroy(entry, done) {
+    var base = global.SKRIBL_API_BASE;
+    if (!base) { done(false, 'This Skribl is not wired up.'); return; }
+    var req;
+    try {
+      req = global.fetch(base + '/' + encodeURIComponent(entry.id), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deleteToken: entry.tok })
+      });
+    } catch (e) { done(false, 'Could not reach the server.'); return; }
+    req.then(function (r) {
+      /* 404 is the same answer for "already gone" and "not yours". Treated as
+         success: the post is not there, which is what the user asked for, and
+         the local entry should go either way. */
+      done(r.ok || r.status === 404,
+           r.status === 404 ? null : 'Could not delete — try again.');
+    }).catch(function () { done(false, 'Could not reach the server.'); });
+  }
+
+  /* Status for assistive technology as well as eyes. The list has no toast of
+     its own, so this writes into a polite live region the drawer owns. */
+  function announce(msg) {
+    var live = global.document.getElementById('postedStatus');
+    if (live) live.textContent = msg;
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -152,8 +197,22 @@
             '<span class="posted-sub">' + esc(sub) + '</span>' +
           '</a>' +
           '<button type="button" class="posted-copy" data-url="' + esc(url) + '">Copy link</button>' +
+          /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
+             removed the local entry and nothing else — the Skribl stayed live
+             and the link kept working — which an audit of v278 called out as
+             making recovery WORSE: it threw away the only handle the person
+             had on a post they might want to withdraw.
+             "Delete" appears only when this browser holds the revocation
+             capability for the post (see lib/posted.js). Without it there is
+             nothing honest to offer, so nothing is offered. */
+          (e.tok
+            ? '<button type="button" class="posted-delete" data-delete="' +
+                esc(e.id) + '" aria-label="Delete this Skribl for everyone">' +
+                'Delete</button>'
+            : '') +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
-            'aria-label="Remove from this list">\u2715</button>' +
+            'aria-label="Remove from this list, keeping the Skribl online">' +
+            '\u2715</button>' +
         '</div>';
       }).join('');
     }
@@ -165,8 +224,37 @@
       if (d) {
         // Removes the entry, NOT the Skribl. The link keeps working, which is
         // why this is not a confirm dialog — nothing is destroyed.
+        //
+        // It DOES throw away the revocation capability, though, so it is worth
+        // saying once. Only asked when there is something to lose.
+        var ent = byId(d.dataset.del);
+        if (ent && ent.tok && !global.confirm(
+              'Remove this from your list?\n\n' +
+              'The Skribl stays online and the link keeps working — but this ' +
+              'browser holds the only key that can delete it, and removing ' +
+              'the entry throws that key away.')) return;
         store.remove(d.dataset.del);
         render();
+        return;
+      }
+
+      var del = ev.target.closest('.posted-delete');
+      if (del) {
+        var entry = byId(del.dataset.delete);
+        if (!entry || !entry.tok) return;
+        if (!global.confirm(
+              'Delete this Skribl for everyone?\n\n' +
+              'The link stops working immediately and this cannot be undone.'))
+          return;
+        del.disabled = true;
+        var was = del.textContent;
+        del.textContent = 'Deleting…';
+        destroy(entry, function (ok, msg) {
+          if (ok) { store.remove(entry.id); render(); return; }
+          del.disabled = false;
+          del.textContent = was;
+          announce(msg || 'Could not delete — try again.');
+        });
       }
     });
 

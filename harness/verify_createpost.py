@@ -288,6 +288,100 @@ with _bare.app_context():
 check("an app with no Skribl blueprint gets a named error, not a silent store",
       "no Skribl blueprint" in _bare_msg, _bare_msg[:90])
 
+print("\n9 — A POST THAT CANNOT RESERVE ITS MEDIA DOES NOT SHIP")
+# THE FINDING, from an audit of v278. The pending-media claim exists to close a
+# race the tree documents in storage.py: the sweeper can delete an object
+# AFTER a successful age-touch, so touching alone is not enough. creation.py
+# wrapped the claim in `except Exception: pass` and called it best-effort,
+# "degrades to the pre-v266 age re-check" — degrading, that is, to the very
+# mechanism the other file says does not work. The result was that a post could
+# commit, durable and user-visible, pointing at media a concurrent sweep had
+# already removed.
+#
+# It now raises SkriblUnavailable (503). The trade is asymmetric: an
+# externalised object nobody references is collected by the next sweep, while a
+# published post with missing media is permanent damage.
+#
+# Driven by making the claim itself fail, which is the only way to reach the
+# branch — the ordinary path succeeds.
+import skribl.creation as _creation
+
+_before_ids = None
+with host.app_context():
+    _before_ids = {r[0] for r in db.session.execute(
+        sa.text("SELECT public_id FROM skribl_posts")).all()}
+
+_real_claim = _creation.claim_media
+
+
+def _broken_claim(*a, **k):
+    raise RuntimeError("simulated: the claim table is unreachable")
+
+
+# A payload carrying media, or media_keys is empty and the branch never runs.
+_PNG = ("data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE"
+        "hQGAhKmMIQAAAABJRU5ErkJggg==")
+
+
+def _media_payload():
+    # baseSnapshot, NOT background.image. The first attempt used the latter and
+    # externalise_payload returned NO keys, so `if media_keys:` was false and
+    # this whole section passed over a branch it never entered. _iter_media_items
+    # walks `music`/`photo` as dicts carrying `.data`, plus a bare-data-URL
+    # `baseSnapshot`; a data URL under background.image is not a media slot at
+    # all. Verified non-empty before this was trusted.
+    return {"frames": [{"strokes": [], "strokeGroups": [],
+                        "background": {"color": "#101418"},
+                        "baseSnapshot": _PNG}]}
+
+
+# A REAL STORE, OR THE BRANCH IS UNREACHABLE. The first version of this section
+# reported ACCEPTED with the fix in place, because this harness host runs the
+# default InlineStore: the data URL stays in the JSON column, externalise_payload
+# returns no keys, and `if media_keys:` is false — so the assertion was passing
+# over a branch it never entered. A LocalDiskStore is what makes media_keys
+# non-empty and the reservation real.
+import tempfile as _tf
+from skribl.storage import LocalDiskStore as _LDS
+_store = _LDS(_tf.mkdtemp(), lambda k: "/media/" + k)
+
+_creation.claim_media = _broken_claim
+try:
+    with host.app_context():
+        try:
+            skribl.create_post(_media_payload(), author_id=1,
+                               media_store=_store)
+            _claim_outcome = "ACCEPTED"
+        except Exception as exc:                       # noqa: BLE001
+            _claim_outcome = type(exc).__name__
+        db.session.rollback()
+finally:
+    _creation.claim_media = _real_claim
+
+check("a failed media reservation refuses the post",
+      _claim_outcome == "SkriblUnavailable",
+      f"{_claim_outcome} — swallowing it publishes a post whose media a "
+      "concurrent sweep may already have deleted, which no later job repairs")
+check("...and it is a 503, not a 400 — the payload was fine",
+      getattr(_creation.SkriblUnavailable, "status", None) == 503,
+      "a client that retries the same bytes should succeed")
+
+with host.app_context():
+    _after_ids = {r[0] for r in db.session.execute(
+        sa.text("SELECT public_id FROM skribl_posts")).all()}
+check("...and no post row survived the refusal",
+      _after_ids == _before_ids,
+      f"{sorted(_after_ids - _before_ids)} left behind")
+
+# The ordinary path still works — a guard that fails everything is not a fix.
+with host.app_context():
+    _ok = skribl.create_post(_media_payload(), author_id=1,
+                             media_store=_store)
+    db.session.commit()
+check("a working reservation still posts normally", bool(_ok.public_id),
+      "the claim path must only refuse when the claim actually fails")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"

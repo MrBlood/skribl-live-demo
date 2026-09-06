@@ -72,8 +72,37 @@ of that away for the one caller least able to reason about it. What this DOES
 guarantee is that the bytes stop being reachable: `/media/<key>` authorises
 through the association rows, which are gone with the post.
 """
+import hashlib
+import hmac
+
 from .models import (SkriblPost, SkriblPostMedia, session,
                      visibility_values)
+
+
+def hash_delete_token(token):
+    """The stored form of a revocation capability.
+
+    SHA-256 of the raw token, hex. Deliberately a plain digest and not a
+    password hash: the token is 256 bits of `secrets.token_urlsafe(32)`, not a
+    human-chosen secret, so there is no dictionary to slow an attacker down
+    against and bcrypt/argon2 would buy nothing but latency on every delete.
+    What matters is that the stored value cannot be turned back into a usable
+    token, and a digest gives that.
+    """
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _token_matches(token, stored_hash):
+    """Constant-time comparison, and a hard no for a post with no capability.
+
+    `stored_hash` is NULL for every post created before v279 and for every post
+    that HAS an owner. Returning False for those is the whole point: an owned
+    post is authorised by ownership, and letting an empty token match an empty
+    hash would make every pre-v279 anonymous post deletable by anybody.
+    """
+    if not token or not stored_hash:
+        return False
+    return hmac.compare_digest(hash_delete_token(token), stored_hash)
 
 
 class SkriblNotFound(LookupError):
@@ -106,12 +135,27 @@ class SkriblRefused(ValueError):
         self.message = message
 
 
-def _authorised_post(public_id, author_id, require_author):
+def _authorised_post(public_id, author_id, require_author, delete_token=None):
     """The post, or SkriblNotFound. The ONLY lookup either operation uses.
 
     Written once because "find it" and "check you may have it" must not be two
     steps that a later edit can reorder or half-apply. Every caller below gets
     a post it is already allowed to act on, or an exception.
+
+    THREE WAYS TO SAY YES, checked in this order:
+
+      1. `require_author=False` — the caller has declared, in code, that it is
+         acting outside any user (a management command, a takedown script).
+      2. A matching `delete_token` — the capability minted when an ANONYMOUS
+         post was created. This is the standalone product's whole revocation
+         story; see the note on SkriblPost.delete_token_hash.
+      3. `author_id` equal to the post's `user_id` — ownership, which is the
+         only path a host with real users needs.
+
+    They compose deliberately. A deployment that later grows accounts keeps
+    every anonymous post revocable through (2) while new owned posts take (3);
+    replacing the capability with accounts instead would strand the whole
+    anonymous back-catalogue.
     """
     post = (session().query(SkriblPost)
             .filter(SkriblPost.public_id == public_id)
@@ -120,15 +164,21 @@ def _authorised_post(public_id, author_id, require_author):
         raise SkriblNotFound()
     if not require_author:
         return post
-    # NULL user_id is the standalone app's own posts. Nobody owns them, so
-    # nobody may claim them by authenticating; require_author=False is the only
-    # way through, and it is a decision written in the host's code.
+    # The capability first, because it is the one an anonymous caller can
+    # possibly satisfy — and it is checked against the post's own hash, so it
+    # cannot be used to reach a post it was not minted for.
+    if _token_matches(delete_token, post.delete_token_hash):
+        return post
+    # NULL user_id is an anonymous post. Nobody owns it, so nobody may claim it
+    # by merely authenticating — only the capability above or an explicit
+    # require_author=False gets through.
     if post.user_id is None or author_id is None or post.user_id != author_id:
         raise SkriblNotFound()
     return post
 
 
-def delete_post(public_id, *, author_id=None, require_author=True):
+def delete_post(public_id, *, author_id=None, require_author=True,
+                delete_token=None):
     """Delete a Skribl. Returns the deleted post's public_id.
 
     Flushes; does not commit. See the module header for the transaction
@@ -138,7 +188,7 @@ def delete_post(public_id, *, author_id=None, require_author=True):
     Raises SkriblNotFound if there is no such post OR the caller does not own
     it — the two are deliberately indistinguishable.
     """
-    post = _authorised_post(public_id, author_id, require_author)
+    post = _authorised_post(public_id, author_id, require_author, delete_token)
 
     s = session()
     # THE ASSOCIATIONS ARE DELETED EXPLICITLY, NOT LEFT TO THE CASCADE, and the
@@ -176,7 +226,7 @@ def delete_post(public_id, *, author_id=None, require_author=True):
 
 
 def set_post_visibility(public_id, visibility, *, author_id=None,
-                        require_author=True):
+                        require_author=True, delete_token=None):
     """Change who may read a Skribl. Returns the post's new visibility.
 
     `set_post_visibility(pid, "private", author_id=...)` is the REVOKE: the
@@ -195,7 +245,7 @@ def set_post_visibility(public_id, visibility, *, author_id=None,
         raise SkriblRefused(
             f"visibility must be one of {', '.join(sorted(allowed))}")
 
-    post = _authorised_post(public_id, author_id, require_author)
+    post = _authorised_post(public_id, author_id, require_author, delete_token)
     post.visibility = visibility
     session().flush()
     return visibility
