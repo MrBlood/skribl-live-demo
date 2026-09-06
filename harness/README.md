@@ -363,3 +363,582 @@ appear here, and `RELEASE.md` names every one of them.
   fallback, not the encoder. A real MP4 needs a real Chrome.
 - Drawing before adding music triggers `setLoopToDrawingLength()`, so the loop
   will be the drawing's length, not 20s. That's intended; don't read it as a bug.
+
+## What individual suites are for
+
+These sections were in `START-HERE.md` until v282. They are suite
+documentation, and `START-HERE.md` is the file every new session reads
+first — so they belong here, next to the suites, not in the primer. Ten of
+the eleven were the ONLY prose describing their suite, which is why they
+moved rather than being deleted.
+
+## Suites: verify_boot.py
+
+**The most expensive bug in this codebase, measured in debugging rounds**, is not
+a wrong pixel. It is `flip.js` throwing at top level and silently abandoning
+every line after the throw. The page still renders, the markup is all there, and
+an arbitrary SUFFIX of the behaviour is missing — so it presents as several
+unrelated features breaking at once and sends you after whichever one you
+noticed first. Four rounds in one session, every one the same shape: a function
+that runs during init (`setTool()` is the usual culprit) reaches a `let` declared
+further down and hits its temporal dead zone. `let` and `const` do not hoist the
+way `function` does, and **no `typeof` guard can rescue them — only declaration
+order can.**
+
+So each editor script ends with one statement whose only job is to say it got
+there — `window.__skriblBoot.flip = true` — and this suite reads it. That beats a
+page-error listener twice over: it also catches a throw something swallowed, and
+it names WHICH file died instead of reporting a symptom three screens away.
+Verified by reintroducing the bug on purpose: the suite fails with *"Cannot
+access '__tdzCanary' before initialization"* rather than with a missing
+filmstrip.
+
+**Rule going in: state any early path can reach belongs with the early state, and
+anything touching state declared further down belongs in the load handler.**
+
+The suite loads each surface twice, empty and restoring a draft, because restore
+is a second load-time path with its own ordering and it is the one a returning
+user takes. It pins the two surfaces' genuinely different behaviour rather than
+flattening it: Flip restores silently, Pad offers a "Discard / Restore" banner.
+(The banner is older than the fix: until v222 Pad's autosave held strokes but not media bytes.
+Since v222 the bytes are durable — see the IndexedDB section below — and the
+banner is a UX choice rather than a warning about lossy restore.)
+
+One trap worth remembering, found while writing it: `typeof frames !== 'undefined'`
+is **always true** in a browser — `window.frames` is the iframe list. On Flip a
+real top-level `let frames` shadows it and the expression worked by luck; on Pad
+it resolved to `window.frames[0]` and threw.
+
+## Suites: verify_fuzz.py
+
+**Every other suite here tests a feature. This one tests the document**, against
+the single rule that has broken three separate times for three unrelated
+reasons:
+
+```
+'frames[9].strokeGroups' accounts for 317 points, but the strokes array contains 318.
+```
+
+That is the server refusing a share. It is not cosmetic — the user has finished
+a drawing and the app will not let them post it — and all three occurrences were
+found the same way: in production, by the owner, on a phone. The causes were a
+second pointer landing mid-stroke, a page change mid-stroke, and a shape
+committing its group before its points. **Nothing they had in common was visible
+in a diff, and no feature suite would have caught any of them, because each one
+only appears when two features interleave.**
+
+So this drives the editor the way a person actually uses it — a shuffled stream
+of draws, erases, page adds and deletes, duplicates, selections, moves, mirrors,
+cuts, pastes, liquifies, undos and redos — and re-checks the invariants after
+**every** operation: strokes length equals the sum of strokeGroups, every group
+count is a positive integer, the page index is in range, every coordinate is
+finite. Then it posts the result and requires the server to take it. That last
+step is the one that matters: **the invariants are this file's model of the
+rule; the POST is the rule.** If `validation.py` and this file ever disagree,
+that assertion is what says so.
+
+**The seed is fixed and printed**, and the last dozen operations are dumped on
+failure. A fuzz failure that cannot be replayed is a story, not a bug report.
+
+**Two anti-vacuity assertions, and they are not decoration.** The first version
+guessed the page-operation names (`addPage`, `dupPage`, `delPage`; the real ones
+are `addFrame(copy)` and `delFrame(i)`) and wrapped them in
+`typeof fn === 'function'` guards. Every page operation became a silent no-op:
+the fuzz spent its whole budget on one page and reported a confident pass having
+never changed page at all — while the invariants, which an untouched empty
+document satisfies trivially, stayed green throughout. So the suite now asserts
+that it drew something *and* that it used more than one page. **A guard that
+skips is a guard that lies about coverage.**
+
+**A failure here does not mean "the fuzzer is flaky."** Every operation is
+something a person can do with a mouse, in an order a person could do it in. If
+this goes red, some pair of features has stopped composing.
+
+## Suites: verify_sharedrules.py
+
+**verify_parity.py guards the CONTROLS Pad and Flip share. This guards the
+RULES.** Three of them had two implementations apiece, and all three had
+drifted:
+
+| rule | Flip editor | player |
+| --- | --- | --- |
+| what a `hold` means | `frameHold` + `runPlayTimer` | `flipHolds` + `flipIndexAt` |
+| what one frame may spend layering | `LAYER_BUDGET` | *no ceiling at all* |
+| what alpha a stroke carries | `alphaOf` | `parseStrokeAlpha` |
+
+The hold: the player's cumulative table was right; the editor's timer read its
+delay off the page AFTER the one on screen and never wrapped its index, so a
+hold stretched the wrong page and stopped working after the first loop. The
+ceiling: Flip's editor caps compositing cost, the player never did, so a
+document could play smoothly while authoring and stall for a viewer. The alpha:
+Flip's regex was unanchored and matched `rgb()` too, so the greedy body let the
+BLUE channel land in the alpha group — `alphaOf('rgb(255,176,32)')` returned 32,
+and `tweenFade` multiplied by it and clamped, making an in-between of any such
+drawing fully opaque.
+
+`lib/holdtiming.js` and the budget in `lib/strokelayers.js` own the rules now.
+The two mechanisms stay different where they should — the player maps a clock to
+an index, the editor reschedules a timer — so the suite asserts not shared code
+but that they cannot disagree about the ANSWER, over a grid of hold tables and
+frame rates.
+
+**The recurring shape, and why it costs more than an ordinary bug:** when the
+EDITOR and the PLAYER disagree, nothing an author can see reveals it. The
+preview is not the product. The suite's first block checks that every surface
+actually loads the modules, because `skribl_player.html` loads a handful of libs
+rather than the editors' thirty-odd — a new dependency is easy to add everywhere
+except the surface that needs it most. That happened twice while writing it.
+
+One block is a SOURCE check rather than a behavioural one, annotated as such:
+the behavioural version was tried first and cannot work on that canvas, because
+Pad's draw path strips a colour's alpha and leans on a `globalAlpha` that is 1
+outside a live stroke — so layered and un-layered frames come out pixel-identical
+there. Asserting the wiring is honest; asserting something weaker and calling it
+behavioural would not be.
+
+## Suites: verify_pillfit.py
+
+**The autosave pill sat on the pen button, on every phone, on both surfaces.**
+`.autosave-status` is `position: fixed` at bottom-left; on a phone the tool row
+is at the bottom too. Desktop never collides, which is why it lasted — *it is
+invisible on the machine it was built on.*
+
+A rule for a nearby case already existed: the pill fades while a drawer is open,
+because "a pill covering a destructive button is worse than one you cannot see".
+That rule was right and too narrow — it fixed the collision somebody noticed
+rather than the general one, and CSS cannot ask whether two boxes intersect. So
+`lib/pillfit.js` measures it, and the fade is a class the measurement sets.
+
+**A warning is never faded, and that is the point of the suite.** `failed` and
+`partial` (saved without media) stay on screen deliberately — `flip.js` records
+why: *"a warning that fades claims it was resolved."* Hiding one because it
+happened to overlap would trade a cosmetic problem for a durability one,
+silently, in the exact situation where the user most needs telling. Most of the
+assertions here are on that distinction rather than on the easy half.
+
+**The pill has always been `pointer-events: none`**, so none of this was ever
+about blocking taps — it obscures a control without disabling it. That lowers
+the stakes, and it is asserted, so a later change cannot quietly make the pill
+interactive and turn an overlap into a dead button.
+
+**The consequence, stated plainly: "Saved" no longer appears on a phone.** It
+appeared on top of a control before, so this is a change from *visible and in
+the way* to *not shown*, not from visible to hidden. The warnings — the states
+that actually need reading — still show everywhere. If the reassurance turns out
+to be wanted on mobile, the fix is to give the pill somewhere to go rather than
+to weaken this rule.
+
+Two anti-vacuity guards: the suite asserts the pill **does** overlap at phone
+size before asserting that it fades (otherwise the section proves nothing), and
+it resizes a live window to check the verdict is recomputed on layout rather
+than decided once at load — which would leave a rotated phone wrong.
+
+## Suites: verify_tween.py
+
+**A generated page that looks like a long exposure.** The reference was
+stop-motion shot with the shutter open while the puppet moved, so one frame
+integrates the whole path between two poses. What sells that look is not blur —
+it is that the blur is **uneven**. The feet, which barely travelled, come out
+nearly sharp; the arms, which swung furthest, smear away to nothing.
+
+That gradient is why this can be done honestly in a stroke document. Sample the
+motion between two pages at N steps and draw every step faintly: a point that
+hardly moves lays all N copies on top of each other and stays crisp; a point
+that travels far spreads them along its path and goes soft. **Nobody authors the
+falloff** — it is what integrating a motion means, and it falls out of the
+arithmetic. The suite pins exactly that (arm spans 150px, foot spans 2px, ratio
+> 20×), because it is the property a later "optimisation" of the sampling would
+quietly destroy while every other assertion still passed.
+
+**It is ordinary stroke data.** No new field, no raster layer, nothing the
+player must learn — opacity already rides inside each point's `rgba()` and the
+player already honours it. So the generated page is editable, erasable,
+exportable and postable like any other, and the suite proves that end to end
+rather than asserting it.
+
+**The fade is an 8-digit hex, and that is a performance decision, not a style
+one.** Reported from a phone: *"it takes 2 seconds to play 3 frames."*
+`paintStatic` gives every translucent stroke its own offscreen layer — clear a
+full canvas, redraw, composite back — to stop a see-through stroke beading at
+its own overlaps. An exposure is 27 samples of *every* stroke, so a six-limb
+figure is **162 translucent strokes and ~486 full-canvas operations per frame**:
+measured at **221 ms against a 12 fps budget of 83 ms**. The render blocks the
+play timer, so the *previous* frame sits on screen while it works — which is why
+the stall appeared on the page **before** the in-between as well as on it.
+
+The layering is also simply wrong for this content: it exists to stop a stroke
+compounding at its own overlaps, and an exposure *is* compounding overlaps —
+the density where samples pile up is the whole effect.
+
+Both renderers decide whether to layer by matching the `rgba()` **function**
+form — `alphaOf` in `flip.js`, `parseStrokeAlpha` in `app.js`, which is also the
+**player's** renderer — and neither matches a hex. Canvas honours `#rrggbbaa`
+and accumulates it either way. **221 ms → 5.8 ms, the same picture** (+3% ink
+from the extra accumulation), with no new field, no renderer edit, and nothing
+for the player to learn.
+
+**Fixing the generator was not enough, and that is the lesson.** Writing the
+fade as hex only helps in-betweens made *after* the change. Every one already
+sitting in somebody's draft still carried `rgba()` and still cost 218 ms —
+reported a second time from the phone after the first fix shipped: *"it still
+pauses on the blurred slides."* **A fix that only applies to new data leaves
+every user who already hit the bug still hitting it.**
+
+So `paintStatic` now carries a cost ceiling: layering costs a full-canvas round
+trip per translucent stroke (~1.4 ms measured), so a frame holding more than a
+frame-budget's worth paints direct instead. Old pages **218 ms → 5.1 ms**, and
+a hand-drawn frame with six see-through strokes still layers normally — the
+guard is a ceiling, not a ban, and both halves are asserted.
+
+It is a deliberate use of the form. Teaching `alphaOf` to understand hex would
+make exposures slow again — *not broken, just slow*, which is exactly the kind
+of regression that ships — so the suite pins the **render cost**, which is the
+assertion that catches it. A test on the colour string would not: the string
+could stay the same while the heuristic around it changed.
+
+**The point budget is the hazard.** Multiplying a page by 27 is precisely how a
+feature makes a drawing unpostable: the server refuses a frame over 20,000
+points, and it would refuse it at the moment the user tried to share, with no
+earlier warning. N adapts to the page — a light page gets all 26 samples, a
+heavy one gets fewer and a coarser exposure. Measured in the suite: a 900-point
+page that would have produced 24,300 points produces 14,400 instead.
+
+**The point budget is not the render budget, and the second one moves with the
+frame rate.** The server's 20,000-point ceiling is a fixed number; the time a
+frame has to paint is `1000/fps`, so the same exposure that is comfortable at
+12 fps has half the slot at 24 and a third of it at 36. Reported that way:
+*"it still stalls on the in-between slides"* on a 24 fps document, in a build
+whose exposure was already within budget. The plan now fits two ceilings — the
+postable one, which is fixed, and a render allowance that falls with the slot —
+and never drops below `TWEEN_MIN_SAMPLES`, so the exposure gets coarser rather
+than the document getting unshareable.
+
+**And then, for the third time in this feature, a fix that only new pages could
+reach.** The rate budget applies where the exposure is BUILT; 22 in-betweens
+already sitting in the reported file kept the count they were given. "Rebuild
+in-betweens" in the ... menu re-runs the generator over the generated pages at
+the current rate — 270,692 -> 155,060 points on that file. It has to RECOGNISE a
+generated page, because nothing in the format marks one and a false positive
+overwrites a drawing: 8-digit hex ink, neighbours that still interpolate, and a
+run count that is an exact multiple of the source's, all three. It skips pages
+already at the right count, so running it twice is free and says so.
+
+**And then the fourth report, which ended the sample-budget era.** The same
+file, in-betweens re-added by hand at 12fps (where the budget thins nothing),
+played at "about 5.5 seconds for 46 slides." At 4x CPU throttle — a mid-range
+phone — one in-between costs ~215ms against a 41.7ms slot; rebuilt, ~123ms.
+No budget closes a 5x device gap. The frame is STATIC: `lib/framebitmap.js`
+now captures a heavy page's first paint as a bitmap and every later visit is
+one drawImage, on BOTH playback surfaces. First loop fills the cache; cached
+loops measured 1911ms/1916ms against 1917 nominal on the same file and
+throttle. Only pages past 1,500 points earn a bitmap, captures happen at the
+displayed resolution, and past 64MB — or one failed allocation — frames paint
+direct: slower, never broken. The play timer estimates a BLIT for cached
+frames, because subtracting a rasterisation cost that can no longer happen
+made cached loops rush (measured 1.5s for a 1.92s loop).
+
+**It refuses rather than guessing.** Interpolating needs the two pages to
+correspond — same strokes, moved — which is what Duplicate-then-drag produces.
+Two freehand redraws have nothing to pair up, and inventing a pairing would
+produce a mess that reads as a bug in the tool rather than a limit of the idea.
+Both refusals say what is needed, and both are asserted.
+
+**No blur, deliberately.** 26 samples unblurred is most of the way to the
+photograph and costs nothing; the faint ribbing left over reads as a *drawn*
+in-between rather than a photographic one, which suits an app that looks like a
+printed zine. A real gaussian is one render attribute away (`ctx.filter` carries
+it, and it works in this engine — measured) but that attribute is a contract the
+**player** would have to honour too, which is the same trap the `pressure` note
+in `flip.js` records. A decision to make on purpose, not a default to slide in.
+
+## Suites: verify_liquify.py
+
+**The name is part of the design.** This was built as "Smudge" — that is what
+was asked for, and what the mental slot is called — and renamed before it
+reached main, because the word promises something it cannot do. A control that
+lies about itself is worse than one that is merely limited.
+
+A real smudge is **colour transport**: Photoshop, Procreate and Krita's Color
+Smudge engine all sample the pixels under the brush, carry that colour along the
+drag, and blend it down. *Blending two colours and softening a hard edge are what
+people reach for smudge to do, and this does neither.* The family it actually
+belongs to is Photoshop's **Liquify → Forward Warp**, Procreate's
+**Liquify → Push**, and Inkscape's Tweak tool in "push parts of paths" mode,
+which displaces path nodes by a distance-weighted delta exactly as this does.
+
+**And colour transport was never on the table here.** Blending needs pixels to
+sample, and Skribl has none. A page is a list of points, and that same list is
+what the player replays, what export walks and what the draft stores.
+Rasterising a page to blend it would invent a second kind of content that undo,
+export, the draft schema and the player would all have to learn — and it would
+kill replay outright, because a flattened image has no stroke order left to
+animate.
+
+So this moves the **geometry**. Points inside the brush are dragged along with
+the pointer, weighted by distance from its centre, and the strokes bend. For a
+line document that is the better instrument anyway: it moves the ink you drew
+rather than averaging it into mud, and it is lossless where a raster smudge is
+not — ten undo/redo round trips come back bit-identical.
+
+**What it costs, stated plainly:** no colour bleed. Two crossing strokes bend
+towards each other but never mix, and nothing in this format can make them mix.
+**What it keeps** is the reason to do it this way — replay, export, the player,
+the draft, and an exact undo. The suite proves that end to end: it liquifies a
+page, posts it, and loads the result in the player, which was never taught
+about liquify and does not need to be.
+
+**`LIQUIFY_STRENGTH` is what makes it a pull instead of a spike.** At full
+strength a point in the centre of the brush moves the entire delta — which lands
+it back in the centre for the next move event, at weight 1 again. It rides the
+cursor forever, and every line the brush crosses gets dragged to the same single
+point. Measured on three parallel lines: all three converged to one vertex.
+Below 1 the ink lags behind the brush, slides toward the rim, and sheds on its
+own — which is what dragging a finger through wet ink actually does. The suite
+pins the *property* rather than the constant: three parallel lines must still be
+three lines afterwards.
+
+**Undo stores coordinates, not a displacement**, for the reason `selRestore`'s
+comment already gives: a liquify stroke accumulates over dozens of move events at a
+different weight each time, so there is no single delta to negate and
+re-deriving one would walk the artwork further from home on every cycle. Ten
+undo/redo round trips are asserted to leave it bit-identical.
+
+**A liquify stroke belongs to the page it started on.** The frame index is pinned at
+pointerdown, exactly as `strokeFrame` is for a stroke. Changing page mid-drag
+and re-reading `frame()` would apply the back half of the gesture to different
+artwork, at indices that mean something else there, and hand undo a
+before/after pair for strokes nobody touched.
+
+**A tap logs nothing.** Neither does a drag across empty canvas. A no-op on the
+history puts the stroke the user actually wants back one press further away than
+they expect.
+
+**One test-isolation trap, found the hard way and worth repeating.** `fresh()`
+originally reset the document but not the *tool* — so a section that left liquify
+selected made the next section's setup silently draw nothing, and the assertions
+downstream then passed or failed for reasons unrelated to what they named. One
+of them passed *vacuously*: "undo restores the exact coordinates" compared an
+untouched page against itself. `fresh()` now restores the pen and asserts it,
+and `line()` asserts that it actually drew something. **A setup step that
+quietly does nothing is worse than one that fails.**
+
+## Suites: verify_theme.py
+
+Light mode, and the four things that make a second palette a feature rather
+than a liability.
+
+**It is opt-in, and that is a decision.** There is no
+`@media (prefers-color-scheme: light)` rule in the sheet. The first pass had
+one, and it flipped the default for every visitor whose OS is set to light —
+which is most of them, on an app whose entire identity is dark. Skribl would
+have changed for everyone overnight without anyone asking. Following the system
+is one block away (wrap the light ramp in the media query and guard it with
+`:root:not([data-theme="dark"])`) but it is the owner's call about the product,
+not a detail of the implementation. The suite emulates **both** OS preferences
+and asserts the default load is dark under each, because a rule that only
+misfires under one of them is exactly what nearly shipped.
+
+**It does not flash.** The setting lives in localStorage, which no stylesheet
+can read, and every script in both templates is deferred (`verify_surfaces`
+pins that). Stamped by a deferred script, the browser would paint a dark frame
+first — a black flash on every navigation for the people who chose light
+specifically to avoid one. `_skribl_theme_boot.html` is a tiny inline script in
+`<head>`; the test for it serves the page with **every external script
+aborted** and asserts the theme is still right. If it needs anything deferred,
+it flashes.
+
+**The canvas does not follow it.** This is the load-bearing rule and the reason
+the job was scoped to chrome only. A drawing's ground is part of the drawing —
+exported, posted, seen by other people — so a UI preference must never repaint
+it. The check reads an actual pixel from the middle of the canvas in both
+themes and demands they be identical; `#0d0f14` is excluded from the palette
+and from both colour ratchets for the same reason.
+
+**The ramp cannot rot.** Add a token to `:root` next month, forget the light
+value, and that one control keeps its dark colour while everything around it
+flips — silently. Rather than a hand-kept list, the assertion is structural:
+every *neutral* colour token must be overridden, which lets the accent family
+and the radii and easings through automatically because they are not neutral
+colours.
+
+**Chromatic ink was the half phase 1 could not see.** That pass moved neutrals,
+because greys are what a theme obviously flips, and left every coloured literal
+alone. But the danger red, the warn amber and the ok green were all picked
+against a near-black ground: `#f4326f` measures **3.32:1** on the light menu
+sheet — below AA for body text, and it is what "Clear all" is written in. So
+v233 tokenised them (`--danger`, `--warn`, `--good`, and friends) at their
+existing dark values, restated them darker at the same hues for light, and the
+ratchet for ink is stricter than the one for greys: **no literal at all**, with
+`#fff` and `#0d0f14` the only exemptions.
+
+**The legibility threshold is relative, not absolute, and getting that wrong
+cost a round.** Demanding 4.5:1 of every label failed on `.menu-version` at
+4.42 — the version footer, deliberately tertiary, dim in *both* themes.
+Satisfying it would have meant darkening the upper half of the light text ramp,
+i.e. breaking the mirrored relationship on purpose to fix something this work
+never touched. What light mode is answerable for is not regressing, so each
+element is measured in both themes: a floor of 3:1, and a drop is a failure
+only if it lands under AA *and* loses more than 15%. `#f4326f` went 5.5 → 3.32,
+caught twice over. White on the accent (4.35:1, identical in both themes and
+older than this work) is printed as a number rather than asserted — it is a
+palette question about the accent, not a theme one.
+
+**A sweep over a hidden element measures nothing and passes.** The first
+version swept a closed menu, found no neutral-ground text on Flip, and reported
+a triumphant 99:1 having measured zero elements. It opens the menu now, and
+asserts the count of laid-out elements before trusting the numbers.
+
+## Suites: verify_flipdraft.py
+
+Closes the bug the owner reported as "autosave is failing on pad". It was not
+Pad's fault: localStorage is capped at roughly **5 MB per origin** and both
+editors share it, and Flip was writing its media into that budget as base64 data
+URLs — inflated 4/3 by the encoding, so a 30-second WAV is ~6.7 MB on its own.
+One Flip draft measured 2.7 MB of the shared 5 MB, and Pad's autosave was what
+fell over.
+
+The spill to IndexedDB already existed, but only as an EMERGENCY path reached
+after localStorage had refused the write — which made a 5 MB quota the thing
+standing between a user and their drawing. It is the normal path now: strokes
+and media metadata to localStorage, media bytes to `lib/draftstore.js`. The
+merge on the restore side was written for the quota case and was correct all
+along; what changed is that it is reached on purpose.
+
+The number this suite exists to hold: **the same draft that wrote 1,683,508 B
+to localStorage now writes about 3,500 B.**
+
+Backward compatibility is the last section and is not optional — anyone with a
+draft saved before this has the old full payload sitting in localStorage with
+media inline, and it has to keep restoring.
+
+Two isolation traps are documented in the file itself, because both produced
+failures that lied about their cause. `clean()` must empty the DOCUMENT as well
+as the stores, or the live page saves its media back on the next unload. And the
+legacy section runs on a **fresh page**: `_sessionOwnedDraft` licenses `saveNow()`
+to delete the slot when the document is empty, so emptying a page that had
+already saved made the flush remove the planted record, and the section reported
+0 strokes against a backward-compatibility failure that did not exist.
+
+## Suites: verify_select.py
+
+Select exists on Flip and **must not** exist on Pad, and this suite pins both
+halves of that.
+
+v219 pulled Select from Pad because Pad records a timed performance: moving
+points that were already recorded made replay draw a stroke at its NEW position
+at its OLD timestamp. Flip has no timeline within a page — playback reveals
+strokes in index order — so moving a point changes only where it is, never when.
+Flip's own Move mode has translated whole pages this way since v213. The last
+section asserts Pad's registry still does not list the tool, so a future "make
+the surfaces match" cannot quietly reintroduce the bug v219 removed.
+
+**Transform (v228)** adds four corner handles and a rotate grip. Scale is
+UNIFORM and corners-only: a point carries one scalar `size`, so a non-uniform
+scale has no honest answer for stroke weight — stretch a drawing horizontally
+and the verticals would need to be thicker than the horizontals — and edge
+handles are absent by design rather than missing. A scale multiplies `size`
+along with position, which is what makes it worth having: shrink a drawing and
+its strokes get thinner, rather than the same-weight outline of a smaller shape.
+Rotation leaves `size` alone. Both are pinned.
+
+A transform's undo RESTORES COORDINATES rather than inverting itself, unlike
+`selmove`, which negates its dx/dy. Negating a translate is exact; dividing by a
+scale ratio is not, and repeated undo/redo would walk the artwork off its mark.
+Every gesture also recomputes from a snapshot taken on pointerdown rather than
+applying to the previous frame — compounding a ratio sixty times a second walks
+the geometry away from the finger, and a drag out and back would not return.
+
+**Mirror, duplicate, cut and paste (v229)** live on `#selbar`, which REPLACES
+the page bar while a selection exists — the pattern `setMoveMode()` established.
+Five more actions do not fit on a 320px phone as extra chrome; they fit as a
+different job for the same row, and `.pb-tx` already drops the labels below 640.
+
+All four share ONE undo shape, `selframe`, carrying a before/after pair of that
+page's `strokes` and `strokeGroups`. `selmove` negates its dx/dy and a transform
+restores coordinates, because both leave the arrays the same length. These do
+not — duplicate appends, cut splices, paste appends — and undoing an index-range
+edit whose indices have since moved is the class of bug this codebase keeps
+finding. The entry carries the arrays instead of the arithmetic.
+
+Cut writes to a clipboard rather than just deleting: a flipbook's real use for
+cut is taking artwork off one page and putting it on the next, and the suite
+pins that cross-page paste. Paste is hidden until the clipboard has something —
+on a bar this tight a disabled control is a cell of dead width. Duplicate leaves
+the COPY selected, not the original, because the two sit on top of each other
+and moving the wrong one would be silent.
+
+Two properties carry the design and are pinned hardest:
+
+* **Whole strokes, never fragments.** The marquee selects by GROUP, so a box
+  that clips a stroke takes all of it or none. Moving half a stroke would leave
+  `strokeGroups` accounting for points that had walked away from their run.
+* **Undo is an operation, not a snapshot.** Pad had to clone the selected point
+  objects *before* snapshotting, or `strokes.slice()` aliased them and undo
+  silently restored the moved position. Flip's `actionLog` stores what was done,
+  so undo is the same translation negated and there is nothing to alias. Pinned
+  by moving, undoing and redoing and comparing every point to its original.
+
+Note `fresh()`: Flip autosaves and restores on load, so a section that has just
+drawn leaves its strokes waiting for the next one. Clearing localStorage is **not
+enough on its own** — the live page still holds the drawing in memory and saves
+on the way out, so the draft is written back after the clear and restored by the
+very reload meant to be rid of it. `fresh()` empties the document first, then
+clears, then reloads, and asserts zero points afterwards; without that last check
+a polluted page turns every stroke-index assertion into a coin flip.
+
+## Suites: verify_tray.py
+
+Guards a **process**, not a bug. Flip's bottom row was holding two populations
+out of one width budget: the document controls (colour, undo, redo, image,
+music, magnify), which are a closed set, and the mark-making tools, which are
+not. They shared one shelf, so every new tool competed with undo for the same
+pixels and each addition became a fresh fitting exercise across six breakpoints
+and two surfaces. Measured before the tray: a fourth cell takes the pill
+121 -> 158px and wraps the row at 320, 344, 360, 375, 390 and 431.
+
+`verify_tray.py` runs on BOTH surfaces and is mostly ONE assertion repeated at
+six widths each:
+**adding a tool does not change the pill's width.** If that stops being true the
+tray has failed at the only job it was built for.
+
+The two rosters differ on purpose and this suite is where that is recorded: Pad
+ships `pen/eraser/shape`, Flip ships those plus `select` since v227, so Pad is
+asserted dormant (three cells, chevron hidden) and Flip asserted overflowing
+(three cells ending in the chevron). The trial tool it registers is called
+`trial` rather than `select` for the same reason — `register()` returns false
+for a duplicate id, so registering `select` on Flip silently stopped testing
+anything and the width assertions compared a shelf against itself.
+
+It also carries two regression pins for bugs the first version did not catch:
+the chevron is a `.tool-btn`, so it was swept up by the binding that calls
+`setTool(btn.dataset.tool)` on every tool cell — it has no `data-tool`, so
+opening the tray called `setTool(undefined)` and left Pad with no tool selected;
+and the tray cells were styled `font: 600 10px/1 inherit`, an invalid shorthand
+whose family slot rejects `inherit`, so the whole declaration was dropped.
+
+The fourth tool is registered through the surface's own `register()` — the
+real extension point, not a test seam. It is how a tool will actually be added,
+so testing registration is testing the feature, and this file never has to ship
+a fake tool of its own. Nothing here asserts that Select, Fill or Text exist:
+they do not, and the tray was never a promise that they would.
+
+Below 641 the cells are icon-only and the width must not move at all. At 900 the
+labels are visible, so swapping "Shape" for "More" legitimately changes it; that
+width is pinned on not wrapping instead.
+
+## Suites: verify_tools.py
+
+Split from `verify_ux.py` at v213, which had reached 366 assertions and a dozen
+browser launches and stopped finishing inside a single tool invocation. **A
+suite that cannot be run in one go stops being run** — the same failure this
+project writes pins against.
+
+`verify_tools.py` holds the v213 tool work: the five settings that had no
+control (stroke layers, eraser width, grid density, pause handling, pressure)
+and the four new behaviours (shift-constrain, shortcuts, shapes, mirror).
+`verify_ux.py` keeps V213/V213b, which are behaviour fixes to recording and
+drawing rather than tools.
+
+When writing pins here, reuse ONE page per surface and reset state between
+cases instead of reloading. Three reloads per surface is what pushed the old
+combined suite over the limit.
