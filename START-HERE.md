@@ -171,6 +171,53 @@ happened in most of them, to me, in assertions I had just written — and it is
 the argument for mutating every new assertion rather than trusting a green
 one.
 
+### Also closed in v281: a staleness sweep, and what it says about the tree
+
+The sweep ran until two consecutive passes from different angles found
+nothing. **Twelve findings, and every one was a description that had drifted
+from a thing — not one was a logic bug.** Three templates loaded modules
+nothing on those pages read; the shared-module index had three wrong rows and
+three missing; `docs/INTEGRATION.md` never mentioned `player_target`; README's
+route table did not mention DELETE, which is the whole revocation feature the
+previous two releases were spent building; `verify_jsstrip` measured four of
+the player's nine scripts; two byte figures were measured on disk and reported
+as what a link costs; 7.8 KB of CSS styled controls that do not exist; three
+assertions asserted the literal `True`; and the Pad emitted two elements with
+`id="skink-m"`, so the brand mark under the player declared `x2="65"` and
+rendered at 101.
+
+**The invariant to carry forward is about the shape of the tree, not any one
+of those.** There are 41,546 lines of harness and 13,608 of markdown against
+35,832 lines of shipped code — more description of the thing than thing. Every
+restatement is a place where two files must change together or one becomes a
+lie. Staleness here is not decay; it is the arithmetic of saying one fact
+twice.
+
+So the order of preference is **derive, then delete, then gate.** This sweep
+reached for the gate six times and that is why the harness grew. A gate
+detects drift and costs a permanent assertion; a derivation prevents it. The
+pattern already exists in this repo — the generated HARNESS-COUNTS stanza
+stopped being prose because prose kept going stale — and the module index,
+route table and seam table are the same shape. Turning them into generated stanzas is v282's
+first job, and it lets four of the gates added here be deleted.
+
+**And the process rule, which cost more than any single finding.** Across the
+sweep roughly as many probes were wrong as defects were found: a truncated
+`head`, a `--` that swallowed an `--include`, a regex that took the first of
+eight exports, a CSS trimmer that ate a comment terminator and corrupted the
+shared `.slider` rule. Worst of them, the first README route-table gate reused
+a set of PATHS, so GET, PATCH and DELETE collapsed into one entry — **it would
+have passed on the tree that motivated it.**
+
+> Calibrate the instrument on a known answer before believing its output. Run
+> every new probe against one case known bad and one known good; if it cannot
+> tell them apart, the probe is wrong, not the tree.
+
+That is the mutation test moved BEFORE the fix rather than after. Its narrower
+companion: **do not edit mechanically where prose and code interleave.** Three
+automated passes over the stylesheets each produced fresh damage before the
+fourth was done by hand.
+
 ### Closed in v280: a capability whose custody was nobody's job
 
 A second adversarial audit read the sealed v279 and returned **No-ship**, with

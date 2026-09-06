@@ -529,6 +529,40 @@ if src:
               all(c == n_tables for c in claimed),
               f"claims {claimed}, metadata has {n_tables}")
 
+print("\nDOCS — the stamp has exactly one place to write in each document")
+# NEARLY SHIPPED THIS. The v281 notes described the generated-stanza pattern and
+# quoted its marker literally, so START-HERE.md ended up with TWO opening
+# markers — one in prose, hundreds of lines above the real stanza. stamp_docs.py
+# finds the first BEGIN and the first END after it, so the next stamp would have
+# replaced everything between a sentence and the real stanza with a counts line,
+# silently deleting the section in between.
+#
+# It was caught by diffing what the stamp WOULD write instead of running it,
+# which is the same rule the rest of this release argues for: calibrate before
+# believing. This assertion is the cheap permanent version of that check.
+_STAMPED = {"START-HERE.md", "README.md", "docs/HANDOFF.md", "harness/README.md"}
+_BEGIN, _END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
+_marker_bad = []
+for _rel in sorted(_STAMPED):
+    _f = ROOT / _rel
+    if not _f.is_file():
+        _marker_bad.append(f"{_rel}: missing")
+        continue
+    _t = _f.read_text(encoding="utf-8")
+    _o, _c = _t.count(_BEGIN), _t.count(_END)
+    if _o != 1 or _c != 1:
+        _marker_bad.append(f"{_rel}: {_o} opening, {_c} closing")
+    elif _t.index(_BEGIN) > _t.index(_END):
+        _marker_bad.append(f"{_rel}: closing marker precedes the opening one")
+check("each stamped document has exactly one HARNESS-COUNTS region",
+      not _marker_bad,
+      "; ".join(_marker_bad) +
+      " — stamp_docs.py writes between the FIRST pair it finds, so a second "
+      "marker anywhere (a doc quoting the pattern, say) makes the next stamp "
+      "delete everything in between"
+      if _marker_bad else
+      f"{len(_STAMPED)} documents, one well-formed region each")
+
 print("\nDOCS — the two generated records describe the SAME run")
 # There are two generators: run_harness.sh writes LAST-RUN.txt (and stamp_docs.py
 # stamps the docs from it), and release_run.py writes RELEASE.md. release_run

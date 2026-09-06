@@ -6114,3 +6114,70 @@ keeps its conclusion and loses its reason: three jobs at 40-90 minutes is a
 long time to sit on a pull request whether or not anyone is invoiced, and
 keeping a wrong reason attached to a right decision is how the decision gets
 reversed by the first person who checks it.
+
+## v281, cont. -- a description is a thing that can be wrong
+
+The recovery-key work above was v281's reason for existing. What followed was
+a staleness sweep that ran until two consecutive passes found nothing, and it
+is worth recording what it actually turned up, because the pattern was not the
+one anybody expected.
+
+**Twelve findings. Every one was a description that had drifted from a thing.
+Not one was a logic bug.**
+
+  a template loaded three modules nothing on those pages read
+  the shared-module index had three wrong rows and three missing ones
+  docs/INTEGRATION.md never mentioned `player_target`
+  :root defined two colour tokens no rule used and that cannot pass AA
+  README's route table did not mention DELETE -- the whole revocation feature
+  verify_jsstrip measured four of the player's nine scripts
+  two byte figures were measured on disk and reported as what a link costs
+  7.8 KB of CSS styled controls that do not exist
+  three assertions asserted the literal True
+  the Pad emitted two elements with id="skink-m"
+
+The tree carries 41,546 lines of harness and 13,608 of markdown against 35,832
+lines of shipped code. It contains more description of itself than self, and
+every restatement is a place where two things must be changed together or one
+of them becomes a lie. That is the whole mechanism. "Staleness" is not decay;
+it is the arithmetic of saying the same fact in more than one place.
+
+**THE ORDER OF PREFERENCE IS DERIVE, THEN DELETE, THEN GATE.** This sweep
+reached for the third six times, which is why the harness got heavier. Gating
+a restatement detects drift; it does not prevent it, and it costs a permanent
+assertion. Deriving it makes drift impossible. This repository already proved
+that with the generated HARNESS-COUNTS stanza: numbers in prose kept going
+stale, so they stopped being prose. The module index, the route table and the seam table are
+the same shape and should become generated stanzas in v282, at which point
+four of the gates added here can be deleted outright.
+
+## v281, cont. -- an instrument is wrong before the tree is
+
+Across the sweep, roughly as many probes were wrong as defects were found. A
+truncated `head` nearly reported a working control as permanently hidden. A
+`--` swallowed a `--include=*.md` and made a documentation census read Python.
+A regex took the first of eight exports and declared a live module dead. A CSS
+trimmer ate a comment terminator and corrupted the shared `.slider` rule --
+caught only because verify_sizeclass and verify_tray assert exactly that.
+
+And the sharpest one: the first version of the README route-table gate reused
+a set of PATHS, so GET, PATCH and DELETE on `/api/skribls/<public_id>`
+collapsed into one entry and any single row satisfied all three. **It would
+have passed on the tree that motivated it.** A mutation said so; nothing else
+would have.
+
+The rule this argues for is not "be careful". It is procedural:
+
+  CALIBRATE THE INSTRUMENT ON A KNOWN ANSWER BEFORE BELIEVING ITS OUTPUT.
+  Run every new probe against one case known to be bad and one known to be
+  good. If it cannot tell them apart, the probe is wrong, not the tree.
+
+That is the mutation test moved BEFORE the fix instead of after, and it would
+have caught nearly every instrument error in this release.
+
+A second rule, narrower and learned the expensive way: **do not edit
+mechanically where prose and code are interleaved.** Three automated passes
+over the stylesheets each produced new damage -- a stranded trailing comment,
+an emptied media query, a deleted note that documented a live token, and
+finally the corrupted rule above. Comments are prose and prose needs reading.
+
