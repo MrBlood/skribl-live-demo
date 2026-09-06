@@ -77,6 +77,38 @@ with sync_playwright() as p:
     browser = p.chromium.launch()
 
     # ------------------------------------------------------------ section 1
+    print("\nA11Y 0 — an id is a name, and a name has to be unique")
+    # AN SVG url(#...) AND getElementById BOTH TAKE THE FIRST MATCH, so a
+    # duplicate id does not error — it silently points half the page at the
+    # wrong element. The Pad carried two <linearGradient id="skink-m">: the
+    # header includes the brand mark at brand_sweep=101 and
+    # _skribl_player_controls.html includes it again at the default 65, so the
+    # "made with" mark under the player DECLARED x2="65" and RENDERED at 101.
+    # Nothing looked broken, which is why it lasted.
+    #
+    # Screen readers resolve aria-labelledby and aria-describedby the same way,
+    # so this is an accessibility assertion and not only an HTML-validity one:
+    # a label pointing at the first of two ids describes the wrong control.
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip"),
+                         ("/library", "Library"), ("/feed", "the host feed")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(900)
+        _seen = _pg.evaluate("""() => {
+          const seen = Object.create(null), dup = [];
+          for (const el of document.querySelectorAll('[id]')) {
+            if (seen[el.id]) dup.push(el.id); else seen[el.id] = 1;
+          }
+          return {total: document.querySelectorAll('[id]').length,
+                  dup: [...new Set(dup)]};
+        }""")
+        check(f"{_name}: every id on the page is unique",
+              _seen["total"] > 0 and not _seen["dup"],
+              f"{_seen['total']} ids, duplicated: {', '.join(_seen['dup'])}"
+              if _seen["dup"] else
+              f"{_seen['total']} ids, none repeated")
+        _pg.close()
+
     print("\nA11Y 1 — a declared slider can be driven from the keyboard")
     # role="slider" is a PROMISE: a screen reader announces a control the user
     # can move. All three players declared or implied it and none could be
