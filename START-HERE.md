@@ -128,9 +128,7 @@ says so, because deletion is the only operation that can tell and it is
 destructive.
 
 **It is deliberately not on the player page.** Two reasons, and the second is
-the real one: the player's JS ratchet has single digits of headroom — run
-`verify_player_isolation.py`, which prints the current breakdown, rather than
-trusting a figure typed here — and `/s/<id>` is what RECIPIENTS open. A takedown affordance
+the real one: `/s/<id>` is what RECIPIENTS open. A takedown affordance
 there would teach that holding the link is what entitles you to remove it,
 which is the trap the second audit named when it warned against turning
 possession of a shared URL into deletion authority.
@@ -1693,7 +1691,7 @@ rather than a shared rule.
 | `stamps.js` | Flip | The stamp shelf: normalising a selection onto its own centre, the compact encoding, and the byte budget that keeps a store which only grows from starving the draft it shares an origin with. |
 | `sizeclass.js` | Flip | One size decision for the whole app — compact vs regular, measured once, stamped on the root. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
-| `photofit.js` | Pad+Flip+player | Photo fit geometry — the part both editors and the player must agree on. |
+| `photofit.js` | Pad+Flip | Photo fit geometry — the part both editors must agree on. Listed as `Pad+Flip+player` until v281: the player LOADED it and never called it, because its only consumer is `artwork.js`, which composites the editors' canvas and is not on that page. The player fits its photo layer in CSS, and that the two agree is held by `verify_visual.py`'s pixels rather than by a shared module. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |

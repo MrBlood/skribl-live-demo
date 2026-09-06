@@ -789,7 +789,11 @@ with sync_playwright() as sp:
     # drawing arrives at. Shared as a lib rather than written three times, so
     # the step size and the value reporting cannot drift between surfaces.
     # 1,606 B still to target.
-    BYTES_RATCHET, BYTES_TARGET = 152_000, 153_600
+    # 152,000 -> 151,000 in v281: dropping lib/photofit.js, which the player
+    # loads and cannot reach, took JS from 151,994 to 150,839. The old ratchet
+    # had six bytes of headroom and was the reason given for keeping new work
+    # off this surface; the constraint was partly dead weight.
+    BYTES_RATCHET, BYTES_TARGET = 151_000, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -807,7 +811,8 @@ with sync_playwright() as sp:
     # 10,900 -> 11,000 for one <script> tag: lib/scrubkeys.js, without which
     # this page cannot be seeked from a keyboard. Same reasoning as the JS
     # ratchet above.
-    HTML_RATCHET = 11_000
+    # 11,000 -> 10,900: one fewer <script> tag, 10,946 -> 10,872.
+    HTML_RATCHET = 10_900
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",

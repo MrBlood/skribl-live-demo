@@ -217,7 +217,16 @@
      to silent. Holds a playback session, claimed only on a gesture that asks
      for sound. #}
   <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
+  {# lib/photofit.js IS NOT LOADED HERE. Its only consumer is lib/artwork.js,
+     which composites the editors' canvas and is not on this page — app.js
+     reaches it through window.SkriblArtwork.stage(), a Pad-authoring path the
+     player never enters. The player's photo is a DOM layer fitted in CSS.
+
+     It was loaded from the v190 player cut until v281, 1,155 B of a 152,000 B
+     JS ratchet that had SIX BYTES of headroom left. Removing it took the
+     measured payload to 150,839 B. verify_player_photo.py posts a real photo
+     and asserts the layer displays; it passes without this file, which is the
+     evidence, not the reasoning above. #}
   <script src="{{ skribl_asset('lib/looptrim.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/audioloop.js') }}" defer></script>
   {# Flip playback in the player reads its per-page holds through this; the
