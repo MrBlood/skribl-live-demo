@@ -168,8 +168,8 @@
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
-     .post-watch), Flip's post/share CTAs (.flip-upload, .flip-share-open),
-     and the whole PLAYER surface — a shared link travels off the branded
+     .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
@@ -1131,31 +1131,6 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   z-index: 30;
 }
 
-.tab-bg-slider {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 33.333%;
-  background: var(--surface-control);
-  transition: transform 0.42s var(--spring);
-  z-index: 0;
-  pointer-events: none;
-}
-
-.tab-slider {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2.5px;
-  background: var(--ui-active);
-  border-radius: var(--r-pill);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
-  z-index: 1;
-  pointer-events: none;
-}
-
 .tab-btn {
   flex: 1;
   display: flex;
@@ -1396,15 +1371,6 @@ body.replaying .tab-panel,
 body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 /* ---------- Draw panel ---------- */
-.brush-size-inline {
-  font-size: 10px;
-  color: var(--text-muted);
-  font-weight: 500;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  margin-left: auto;
-  white-space: nowrap;
-}
 
 .size-label {
   font-size: 11px;
@@ -1506,43 +1472,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .undo-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); }
 .undo-btn:disabled { opacity: 0.3; cursor: default; }
-
-.size-group {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 160px;
-}
-
-.size-btn {
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background: var(--surface-control-hover);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease, transform 0.3s var(--spring);
-  flex-shrink: 0;
-}
-
-.size-btn[data-size="2"]  { width: 18px; height: 18px; }
-.size-btn[data-size="5"]  { width: 22px; height: 22px; }
-.size-btn[data-size="10"] { width: 28px; height: 28px; }
-.size-btn[data-size="20"] { width: 36px; height: 36px; }
-
-.size-btn:active { transform: scale(0.9); }
-.size-btn.active { background: var(--ui-active); }
-
-.size-btn span {
-  border-radius: 50%;
-  background: var(--text-muted);
-  display: block;
-  transition: background 0.15s ease;
-}
-
-.size-btn.active span { background: var(--text-primary); }   /* not #fff: a white dot vanishes on a light drawer */
 
 .color-section, .bg-section {
   display: flex;
@@ -1649,28 +1578,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .canvas-wrap.repositioning canvas { cursor: inherit; pointer-events: auto; }
 
 /* --- More tools drawer (Draw tab) --- */
-.more-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  width: 100%; padding: 9px; border: 1px solid rgba(124, 92, 255, 0.32);
-  border-radius: 10px; background: rgba(124, 92, 255, 0.08); color: var(--text-bright);
-  font-size: 12px; font-weight: 500; cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.more-toggle-main { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
-.more-toggle-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.current-color-chip {
-  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
-  background: #ffffff;
-  box-shadow:
-    inset 0 0 0 1px rgba(var(--wash-rgb), 0.22),
-    0 0 0 1.5px var(--surface-panel),
-    0 0 0 3px rgba(var(--wash-rgb), 0.85);
-}
-.more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
-.more-toggle.open { color: var(--text-bright); }
-.more-chevron { width: 15px; height: 15px; color: var(--accent-bright); transition: transform .25s var(--spring); }
-.more-toggle.open .more-chevron { transform: rotate(180deg); }
 
 .more-drawer { display: flex; flex-direction: column; gap: 12px; }
 .more-drawer[hidden] { display: none; }
@@ -2068,15 +1975,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .music-detail[hidden] { display: none; }
 
-.music-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: 13px;
-  color: var(--text-strong);
-}
-
 .dropzone-remove {
   margin-left: auto;
   padding: 6px 14px;
@@ -2444,15 +2342,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-top: 1px solid var(--line);
 }
 
-.finetune-head {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
 .finetune-grid {
   display: flex;
   align-items: flex-start;
@@ -2506,25 +2395,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 0 2px;
 }
 
-.finetune-divider {
-  height: 1px;
-  background: var(--line);
-  margin: 12px 0;
-}
-
-.finetune-step {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.step-name {
-  font-size: 11px;
-  color: var(--text-tool);
-  font-weight: 600;
-}
-
 .nudge-btn {
   /* v206 (option A): 26 -> 32 visual, readable but still compact enough for
      the three side-by-side Start/End/Step columns; the invisible 44pt tap
@@ -2558,33 +2428,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .nudge-btn:hover { background: var(--line); color: var(--text-strong); }
 .nudge-btn:active { background: var(--ui-active); color: #fff; }
-
-.step-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 5px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--surface-well);
-}
-
-.step-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.step-value {
-  min-width: 34px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--ui-hi);
-  font-variant-numeric: tabular-nums;
-}
 
 .step-btn {
   width: 22px;
@@ -3181,15 +3024,7 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
 
 /* Magnifier toggle — lit when the zoom controls are showing. Uses the same
    purple ring as the record button (subtle border + glow + accent icon). */
-.magnify-btn.active {
-  background: var(--surface-control);
-  border-color: rgba(124, 92, 255, 0.3);
-  color: var(--ui-hi);
-}
-.magnify-btn.active svg { filter: none; }
-@media (hover: hover) {
-  .magnify-btn.active:hover { background: var(--surface-control-hover); }
-}
+
 
 /* Player never shows the editor's "Start drawing" hint (leaked on not-found). */
 body.player-mode #canvasEmptyHint { display: none !important; }
@@ -3253,7 +3088,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     flex-direction: column;
     line-height: 1.05;
   }
-  .header.compact .brand-word { display: block; }
 
   .header.compact .btn.play.btn-icon {
     width: auto;
@@ -3914,7 +3748,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 /* ---------- Help button + drawer ---------- */
-.help-btn { position: relative; }
 
 .help-drawer {
   position: absolute;
@@ -4055,18 +3888,6 @@ html.help-open, html.help-open body { overflow: hidden; }
   margin-bottom: 18px;
 }
 
-.help-note {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  background: rgba(124, 92, 255, 0.08);
-  border: 1px solid rgba(124, 92, 255, 0.25);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-}
-.help-note strong { color: var(--text-primary); font-weight: 600; }
-
 .accordion {
   display: flex;
   flex-direction: column;
@@ -4180,21 +4001,6 @@ html.help-open, html.help-open body { overflow: hidden; }
   flex-direction: column;
   gap: 15px;
   padding: 16px 16px 18px;
-}
-
-.help-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-}
-
-.help-divider {
-  height: 1px;
-  background: var(--surface-control-hover);
-  margin: 8px 0 20px;
 }
 
 .help-tip {
@@ -4340,7 +4146,6 @@ input:focus-visible {
   /* 15px on mobile, same tier .flip-word takes below 440 — the phone is not a
      thinner brand. */
   .brand > span { font-size: 15px; white-space: nowrap; }
-  .header.compact .brand-word { display: inline; }
 
   .actions {
     flex: 1;
@@ -4372,13 +4177,6 @@ input:focus-visible {
     font-size: 10px;
     padding: 0 8px;
     flex-shrink: 0;
-  }
-
-  .help-btn {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    padding: 0;
   }
 
   /* Unify every round control in the header to one size (34px).
@@ -4423,8 +4221,6 @@ input:focus-visible {
     min-height: 240px;
   }
 
-  .brush-size-inline { display: none; }
-
   .undo-btn {
     width: 34px;
     height: 34px;
@@ -4440,16 +4236,6 @@ input:focus-visible {
   }
 
   .tool-row { gap: 5px; }
-
-  .size-btn[data-size="20"] {
-    width: 30px;
-    height: 30px;
-  }
-
-  .size-group {
-    width: auto;
-    flex: 1;
-  }
 
   .music-trim-handle,
   .zoom-handle {
@@ -4861,12 +4647,6 @@ body.player-mode #canvas {
 
 /* ---------- Pass 2: brush sizes read as one labeled control ---------- */
 #drawPanel .tool-row { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
-#drawPanel .size-group {
-  width: fit-content; justify-content: flex-start; gap: 12px;
-  padding: 7px 12px; border-radius: 12px; background: rgba(var(--wash-rgb), .035);
-}
-.size-btn span { background: var(--text-brightest); }              /* brighter dots so the small one reads */
-.size-btn.active span { background: var(--text-primary); }   /* not #fff: a white dot vanishes on a light drawer */
 
 
 /* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
@@ -5366,7 +5146,6 @@ body.player-mode #canvas {
    what verify_exportui.py exists to catch, and the next person editing
    .posted-thumb above needs to know its background is load-bearing for Flip
    rather than a neutral default. */
-.posted-thumb-pad { background: rgba(91,140,255,0.18); }
 /* SVG now, not a font glyph: the two characters rendered at whatever weight and
    baseline the system font chose, so they sat unevenly beside each other. */
 .posted-thumb svg { width: 17px; height: 17px; display: block; }
@@ -5778,32 +5557,7 @@ body.playing .flip-grid { display: none; }
   filter: none;
 }
 
-/* Loading: an in-progress action hides its label and shows a spinner in place,
-   keeps its footprint (no layout jump), and cannot be re-tapped. Apply with
-   the .is-loading class; aria-busy is set alongside for assistive tech. */
-.btn.is-loading,
-.pb.is-loading,
-.loop-btn.is-loading {
-  position: relative;
-  color: transparent !important;
-  pointer-events: none;
-}
-.btn.is-loading::after,
-.pb.is-loading::after,
-.loop-btn.is-loading::after {
-  content: "";
-  position: absolute;
-  width: 16px; height: 16px;
-  top: calc(50% - 8px); left: calc(50% - 8px);
-  border: 2px solid rgba(var(--wash-rgb), 0.35);
-  border-top-color: var(--text-primary);   /* the leading arc, against a wash of the same ink */
-  border-radius: 50%;
-  animation: skribl-spin 0.8s linear infinite;
-}
-@keyframes skribl-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
-}
+
 
 /* v207: help pills show the actual button glyph beside the name — people match
    shapes, not words — using the same SVG the real control renders. */

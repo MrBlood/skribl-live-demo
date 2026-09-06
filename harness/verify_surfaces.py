@@ -357,6 +357,71 @@ check("every index row's 'loaded on' column matches the templates",
       "— the column is a census, and a census nobody recomputes is a memory")
 
 
+print("\nSURFACES — stylesheets keep no rule nothing can match")
+# 31 class names had rule-sets in styles.css, flip.css and player.css and were
+# applied by NOTHING — no template, no script, no test, no example host. About
+# 7.8 KB, and every byte of it served: a whole "More tools" drawer, a help
+# button cluster, a fine-tune stepper, a size picker, a magnifier toggle, a tab
+# slider, a loading spinner and its @keyframes. Dead CSS is quieter than dead
+# JavaScript because nothing ever fails to load — the rule simply never matches.
+#
+# ONLY FULLY-DEAD RULE-SETS COUNT. A selector list like
+# `.slider:focus, .opacity-slider:focus` keeps a dead fragment beside a live
+# one, and trimming those is not worth it: the attempt ate a comment
+# terminator, corrupted the shared .slider rule, and verify_sizeclass and
+# verify_tray caught it. A fragment that can never match costs a few bytes and
+# breaks nothing; a rule-set devoted entirely to a class nobody applies is the
+# thing that accumulates.
+_SHEETS = sorted(_ST.rglob("*.css"))
+_decomment = lambda t: re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+
+_applied = []
+for _p in ROOT.rglob("*"):
+    if not _p.is_file() or ".git" in _p.parts or "__pycache__" in _p.parts:
+        continue
+    if _p.suffix in (".html", ".js", ".py", ".md", ".txt", ".json", ".yml", ".yaml", ".sh"):
+        _applied.append(_p.read_text(encoding="utf-8", errors="ignore"))
+_applied = "".join(_applied)
+
+def _rulesets(css):
+    """(selector, depth) for every rule-set, at any nesting depth."""
+    i, n, depth, start, stack, out = 0, len(css), 0, 0, [], []
+    while i < n:
+        if css.startswith("/*", i):
+            j = css.find("*/", i + 2); i = (j + 2) if j != -1 else n; continue
+        if css[i] == "{":
+            stack.append(css[start:i]); depth += 1; i += 1; start = i; continue
+        if css[i] == "}":
+            if stack: out.append(stack.pop())
+            depth -= 1; i += 1; start = i; continue
+        i += 1
+    return out
+
+_dead_rules = []
+for _sheet in _SHEETS:
+    for _sel in _rulesets(_sheet.read_text(encoding="utf-8")):
+        _clean = _decomment(_sel).strip()
+        if not _clean or _clean.startswith("@"):
+            continue
+        _parts = [q.strip() for q in _clean.split(",") if q.strip()]
+        if not _parts:
+            continue
+        if all(any(c not in _applied
+                   for c in re.findall(r"\.([a-z][a-z0-9-]{2,})", q)) and
+               re.findall(r"\.([a-z][a-z0-9-]{2,})", q)
+               for q in _parts):
+            _dead_rules.append(f"{_sheet.name}: {_clean.splitlines()[0][:52]}")
+
+check("no stylesheet keeps a rule-set whose every selector is unmatched",
+      not _dead_rules,
+      "; ".join(_dead_rules[:5]) +
+      (f" (+{len(_dead_rules) - 5} more)" if len(_dead_rules) > 5 else "") +
+      " — a class nothing applies, styled anyway, and served to everyone"
+      if _dead_rules else
+      f"{len(_SHEETS)} stylesheets, every rule-set reachable by some class the "
+      "tree actually applies")
+
+
 print("\nSURFACES — what the player is made to download")
 # Not a pass/fail on size: this is the number the JS-only byte ratchet in
 # verify_player_isolation.py cannot see, reported so it stops being invisible.

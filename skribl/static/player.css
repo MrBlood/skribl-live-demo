@@ -191,8 +191,8 @@
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
-     .post-watch), Flip's post/share CTAs (.flip-upload, .flip-share-open),
-     and the whole PLAYER surface — a shared link travels off the branded
+     .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
@@ -957,6 +957,10 @@ body.player-mode .canvas-area { display: contents; }
   }
   .icon-btn:hover { color: var(--text-primary); }}
 
+/* Magnifier toggle — lit when the zoom controls are showing. Uses the same
+   purple ring as the record button (subtle border + glow + accent icon). */
+
+
 /* Player never shows the editor's "Start drawing" hint (leaked on not-found). */
 body.player-mode #canvasEmptyHint { display: none !important; }
 
@@ -1382,7 +1386,7 @@ body.player-mode #canvas {
   .player-title { font-size: 15px; }
   .player-caption { font-size: 12px; margin-top: 2px; }
   .player-controls { gap: 8px; }
-  .player-brand { display: none; }}   /* not #fff: a white dot vanishes on a light drawer */
+  .player-brand { display: none; }}
 
 
 /* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
@@ -1492,10 +1496,6 @@ body.player-mode #canvas {
   .tool-open:active, .icon-btn:active, .undo-btn:active, .t-btn:active,
   .onion-tint:active, .tool-btn:active, .pb:active, .loop-btn:active,
   .btn:active:not(:disabled) { transform: none; }
-}
-@keyframes skribl-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
 }
 
 
