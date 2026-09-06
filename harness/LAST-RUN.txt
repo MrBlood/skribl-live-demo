@@ -1,16 +1,16 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-06T14:44:54Z
+UTC timestamp           : 2026-09-06T19:35:46Z
 Host                    : Linux x86_64
-Tree SHA-256            : 535513674a09b906c3ced0b77f7008919061478cb70b2c8215138fe7fb253d93
-Git commit              : 72fb048-dirty
-SKRIBL_VERSION          : v280
+Tree SHA-256            : 8c3d6aeabe065838f065220b52b8ca56c8f4fd2200cbafc893890a8f01e32857
+Git commit              : 82a3643-dirty
+SKRIBL_VERSION          : v281
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.93u9BUXETP/harness.db)
+Database reset          : yes (fresh /tmp/tmp.aQGw8w05V1/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -22,7 +22,7 @@ Command                 : /home/user/skribl-live-demo/harness/run_harness.sh ver
 ================ AGGREGATE (machine-generated) ================
 # whole release run: 52 batches recorded as one run
 suites requested : 99
-  verify_a11y.py: ok — 62/62 passed
+  verify_a11y.py: ok — 74/74 passed
   verify_amber.py: ok — 31/31 passed
   verify_apiedges.py: ok — 31/31 passed
   verify_assetcache.py: ok — 12/12 passed
@@ -42,7 +42,7 @@ suites requested : 99
   verify_deletion.py: ok — 63/63 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 76/76 passed
+  verify_docs.py: ok — 79/79 passed
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 29/29 passed
   verify_example.py: ok — 32/32 passed
@@ -61,17 +61,17 @@ suites requested : 99
   verify_help.py: ok — 61/61 passed
   verify_hold.py: ok — 56/56 passed
   verify_hostconfig.py: ok — 55/55 passed
-  verify_hostseams.py: ok — 33/33 passed
+  verify_hostseams.py: ok — 32/32 passed
   verify_icons.py: ok — 35/35 passed
   verify_inline.py: ok — 63/63 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 14/14 passed
-  verify_jsstrip.py: ok — 27/27 passed
+  verify_jsstrip.py: ok — 28/28 passed
   verify_keys.py: ok — 9/9 passed
   verify_layout.py: ok — 103/103 passed
   verify_lib.py: ok — 8/8 passed
   verify_library.py: ok — 22/22 passed
-  verify_liquify.py: ok — 31/31 passed
+  verify_liquify.py: ok — 32/32 passed
   verify_loopcap.py: ok — 22/22 passed
   verify_media.py: ok — 24/24 passed
   verify_mediaauthz.py: ok — 48/48 passed
@@ -89,7 +89,7 @@ suites requested : 99
   verify_pillfit.py: ok — 20/20 passed
   verify_player_isolation.py: ok — 22/22 passed
   verify_player_photo.py: ok — 9/9 passed
-  verify_posted.py: ok — 51/51 passed
+  verify_posted.py: ok — 74/74 passed
   verify_postgres.py: ok — 20/20 passed
   verify_prefix.py: ok — 33/33 passed
   verify_pressure.py: ok — 27/27 passed
@@ -109,8 +109,8 @@ suites requested : 99
   verify_stamps.py: ok — 70/70 passed
   verify_storage.py: ok — 38/38 passed
   verify_strokegroups.py: ok — 24/24 passed
-  verify_surfaces.py: ok — 9/9 passed
-  verify_sweepjob.py: ok — 53/53 passed
+  verify_surfaces.py: ok — 14/14 passed
+  verify_sweepjob.py: ok — 52/52 passed
   verify_takedown.py: ok — 27/27 passed
   verify_theme.py: ok — 42/42 passed
   verify_tips.py: ok — 44/44 passed
@@ -121,6 +121,6 @@ suites requested : 99
   verify_ux.py: ok — 333/333 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 4567   (skipped suites contribute 0)
+assertions passed: 4610   (skipped suites contribute 0)
 suites skipped   : 1
 suites with problems: 0
