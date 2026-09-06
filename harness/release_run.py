@@ -219,6 +219,10 @@ BATCHES = [
     # codes asserted are the ones cron would see. Isolated by construction, so
     # it shares a batch with the other cheap v224 suite.
     ["verify_sweepjob.py"],
+    # Its own batch beside the sweeper for the same reason: both drive a CLI
+    # as a subprocess against their own temp database, so neither wants a
+    # neighbour's server or schema in the way.
+    ["verify_takedown.py"],
     # v224. The four host seams from the outside review (#3 feed filter, #4
     # csrf=False, #7 visibility values, #8 author resolver). In-process
     # throwaway apps over one temp SQLite file, like verify_privacy — no

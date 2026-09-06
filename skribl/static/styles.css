@@ -5385,6 +5385,15 @@ body.player-mode #canvas {
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 .posted-copy:hover { color: var(--text-primary); }
 .posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
+/* Copy key — the same chrome as Copy link because it is the same kind of act,
+   and deliberately NOT danger-toned like .posted-delete beside it: copying a
+   recovery key destroys nothing. It sits between the two so the destructive
+   button is not the only thing a worried person sees. */
+.posted-key { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+  border: 1px solid var(--hairline-strong); color: var(--text-secondary);
+  padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+.posted-key:hover { color: var(--text-primary); }
+.posted-key.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
   font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
 .posted-del:hover { color: var(--danger, var(--danger)); }

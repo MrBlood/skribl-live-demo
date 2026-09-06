@@ -233,6 +233,148 @@ with sync_playwright() as p:
     check("and moves it to the top", dedup and dedup[0]["id"] == "aaa",
           str([e["id"] for e in dedup]))
 
+    # ---------------------------------------------------------------- v280
+    print("\nCUSTODY — the cap governs history and never authorisation")
+    # THE FINDING, from an adversarial audit of v279. write() truncated with
+    # `list.slice(0, LIMIT)` on every call, and v279 had just put the only copy
+    # of an anonymous post's revocation key in these same records. Publishing
+    # the 201st Skribl silently stranded the 1st -- still live on the server,
+    # no longer withdrawable by anyone. The 202nd stranded the next. This is
+    # the audit's own regression test: 200 key-bearing entries, add one more,
+    # prove all 201 keys survive.
+    LIMIT = pd.evaluate("() => window.SkriblPosted.LIMIT")
+    check("the store still declares the cap this test is about", LIMIT == 200,
+          f"LIMIT is {LIMIT}; this section assumes the audited value")
+
+    pd.evaluate("""(n) => {
+        localStorage.setItem('skribl_posted_v1', '[]');
+        for (var i = 0; i < n; i++) {
+          window.SkriblPosted.add({ id: 'tok' + i, title: 'k' + i,
+                                    kind: 'pad', tok: 'secret-' + i });
+        }
+      }""", LIMIT)
+    kept = pd.evaluate(READ)
+    check(f"{LIMIT} key-bearing posts are all held", len(kept) == LIMIT,
+          f"{len(kept)} of {LIMIT}")
+
+    pd.evaluate("""() => window.SkriblPosted.add({ id: 'overflow', title: 'the 201st',
+                     kind: 'pad', tok: 'secret-overflow' })""")
+    after = pd.evaluate(READ)
+    check("publishing past the cap does not evict a key",
+          len(after) == LIMIT + 1, f"{len(after)} entries after the {LIMIT + 1}th "
+          "post — the oldest key was dropped, which is the finding")
+    keys = {e.get("tok") for e in after}
+    missing = [f"secret-{i}" for i in range(LIMIT) if f"secret-{i}" not in keys]
+    check("every one of the original keys is still recoverable",
+          not missing and "secret-overflow" in keys,
+          f"{len(missing)} lost, first {missing[:3]}")
+
+    # ...AND THE CAP STILL DOES ITS JOB for entries that authorise nothing. A
+    # fix that simply removed the truncation would pass everything above and
+    # let the tray grow without limit, which is the bug the cap was added for.
+    pd.evaluate("""(n) => {
+        localStorage.setItem('skribl_posted_v1', '[]');
+        for (var i = 0; i < n + 25; i++) {
+          window.SkriblPosted.add({ id: 'plain' + i, title: 'p' + i, kind: 'pad' });
+        }
+      }""", LIMIT)
+    plain = pd.evaluate(READ)
+    check("entries with no key are still capped", len(plain) == LIMIT,
+          f"{len(plain)} — removing the truncation outright is not the fix")
+
+    print("\nCUSTODY — a write that did not happen is reported, not assumed")
+    # THE OTHER HALF OF THE FINDING. write() has always returned a boolean and
+    # add() has always discarded it, so a browser that could not store the key
+    # produced a live post and a success message. These drive the three hostile
+    # states the audit named: throws-on-set, quota, and no localStorage at all.
+    HOSTILE = """(mode) => {
+        const proto = Object.getPrototypeOf(window.localStorage);
+        const real = proto.setItem;
+        proto.setItem = function () {
+          const e = new Error(mode === 'quota' ? 'quota' : 'nope');
+          if (mode === 'quota') e.name = 'QuotaExceededError';
+          throw e;
+        };
+        try {
+          return window.SkriblPosted.add({ id: 'hostile', title: 'h',
+                                           kind: 'pad', tok: 'secret-hostile' });
+        } finally { proto.setItem = real; }
+      }"""
+    for mode in ("throws", "quota"):
+        res = pd.evaluate(HOSTILE, mode)
+        check(f"{mode}: add() reports the write as not durable",
+              res.get("durable") is False, repr(res.get("durable")))
+        check(f"{mode}: add() hands back the key it could not keep",
+              res.get("key") == "secret-hostile",
+              f"{res.get('key')!r} — with no key here the caller has nothing "
+              "to show the user and the post is irrevocable in silence")
+
+    ok = pd.evaluate("""() => { localStorage.setItem('skribl_posted_v1','[]');
+        return window.SkriblPosted.add({ id: 'fine', title: 'f', kind: 'pad',
+                                         tok: 'secret-fine' }); }""")
+    check("a write that DID happen reports durable and withholds the key",
+          ok.get("durable") is True and ok.get("key") is None,
+          f"durable={ok.get('durable')!r} key={ok.get('key')!r} — handing the "
+          "key back on the happy path would put the recovery panel in front of "
+          "every successful post")
+
+    check("canPersist() answers true on a working store",
+          pd.evaluate("() => window.SkriblPosted.canPersist()") is True)
+    check("canPersist() answers false when setItem throws", pd.evaluate("""() => {
+            const proto = Object.getPrototypeOf(window.localStorage);
+            const real = proto.setItem;
+            proto.setItem = function () { throw new Error('nope'); };
+            try { return window.SkriblPosted.canPersist(); }
+            finally { proto.setItem = real; } }""") is False,
+          "the pre-post warning never fires, so the user is told nothing until "
+          "after the irreversible part")
+
+    print("\nCUSTODY — the tray offers the key, and offers it only where there is one")
+    # Nothing tested these two buttons before v280, which is its own finding:
+    # the tray's Delete is the affordance that actually invokes revocation, and
+    # Copy key is the one that lets the key outlive this browser. Both are
+    # conditional on holding a key, and a condition nothing checks is a
+    # condition that quietly inverts.
+    pd.evaluate("""() => {
+        localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'withkey', title: 'has one',
+                                  kind: 'pad', tok: 'secret-visible' });
+        window.SkriblPosted.add({ id: 'nokey', title: 'has none', kind: 'pad' });
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+      }""")
+    pd.wait_for_timeout(300)
+
+    def _row(rid, sel):
+        return pd.evaluate(
+            "([rid, sel]) => { const r = document.querySelector("
+            "'.posted-row[data-id=\"' + rid + '\"]'); "
+            "return !!(r && r.querySelector(sel)); }", [rid, sel])
+
+    check("a post whose key this browser holds offers Copy key",
+          _row("withkey", ".posted-key"),
+          "the only affordance that survives cleared site data is missing")
+    check("...and offers Delete", _row("withkey", ".posted-delete"))
+    check("a post with no key offers NEITHER",
+          not _row("nokey", ".posted-key") and not _row("nokey", ".posted-delete"),
+          "offering an action that cannot be authorised is worse than "
+          "offering nothing — it fails at the moment somebody needs it")
+
+    # And the button copies the KEY, not the link. Reading the clipboard needs
+    # a permission Chromium will not grant headless, so this asserts what the
+    # handler was handed rather than what the OS holds.
+    copied = pd.evaluate("""() => {
+        let seen = null;
+        const real = navigator.clipboard && navigator.clipboard.writeText;
+        if (real) navigator.clipboard.writeText = t => { seen = t; return Promise.resolve(); };
+        document.querySelector('.posted-row[data-id="withkey"] .posted-key').click();
+        if (real) navigator.clipboard.writeText = real;
+        return seen;
+      }""")
+    check("Copy key copies the key and not the share link",
+          copied == "secret-visible",
+          f"{copied!r} — a button that copies the URL under a key's label is "
+          "how somebody thinks they have saved a credential and has not")
+
     pd.close()
     b.close()
 

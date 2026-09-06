@@ -94,6 +94,11 @@ appear here, and `RELEASE.md` names every one of them.
   invocation, or use `run_harness.sh`.
 ### v200 review-response suites
 
+- `verify_takedown.py` — `python -m skribl.takedown`, the operator's door for a
+  post its author cannot revoke: the orphan census, the refusals (unknown id,
+  two wet flags at once, a wet flag with no id), dry-run by default, and both
+  actions. Driven as a subprocess so the exit codes are the ones a runbook
+  sees.
 - `verify_a11y.py` — keyboard and assistive-technology contracts, as their own
   suite rather than more of `verify_ux.py`. Presses keys and reads what moved,
   focuses things and reads where focus went; a present-but-inert

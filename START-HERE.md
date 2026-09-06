@@ -1474,7 +1474,8 @@ rather than a shared rule.
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
 | `audiosession.js` | Pad+Flip+player+in-post | Holds an iOS playback session so the ringer switch stops silencing Web Audio. |
 | `scrubkeys.js` | Pad+Flip+player | Makes a `role="slider"` scrubber keyboard-operable and keeps `aria-valuenow` current. All three declared or implied the role and none could be focused or moved. |
-| `modalfocus.js` | Pad+Flip | Focus in, Tab trapped, focus back out, for surfaces that declare `aria-modal="true"`. Replaces two `blur()` calls that dropped focus on `<body>`. |
+| `modalfocus.js` | Pad+Flip | Focus in, Tab trapped, focus back out, for surfaces that declare `aria-modal="true"`. Replaces two `blur()` calls that dropped focus on `<body>`. All eight such surfaces route through it as of v280, and `verify_a11y.py` enumerates them rather than testing one. |
+| `recoverykey.js` | Pad+Flip | Shows an anonymous post's revocation key when the browser could not keep it, and warns BEFORE posting when it cannot keep anything. The last custody that survives cleared site data — see "Closed in v280". |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |

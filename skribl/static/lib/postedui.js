@@ -216,7 +216,17 @@
           (e.tok
             ? '<button type="button" class="posted-delete" data-delete="' +
                 esc(e.id) + '" aria-label="Delete this Skribl for everyone">' +
-                'Delete</button>'
+                'Delete</button>' +
+              /* THE KEY ITSELF, offered for copying. Everything above assumes
+                 this browser will still be here when the person changes their
+                 mind, and an audit was right that the assumption is the weak
+                 part: clearing site data, a new phone, or Safari evicting the
+                 origin all end it, and no endpoint can reissue the key. This
+                 is the one affordance that outlives the browser. Shown only
+                 where a key exists, for the same reason Delete is. */
+              '<button type="button" class="posted-key" data-key="' +
+                esc(e.id) + '" aria-label="Copy the recovery key for this ' +
+                'Skribl">Copy key</button>'
             : '') +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
             'aria-label="Remove from this list, keeping the Skribl online">' +
@@ -228,6 +238,12 @@
     listEl.addEventListener('click', function (ev) {
       var c = ev.target.closest('.posted-copy');
       if (c) { copy(c.dataset.url, c); return; }
+      var k = ev.target.closest('.posted-key');
+      if (k) {
+        var kent = byId(k.dataset.key);
+        if (kent && kent.tok) copy(kent.tok, k);
+        return;
+      }
       var d = ev.target.closest('.posted-del');
       if (d) {
         // Removes the entry, NOT the Skribl. The link keeps working, which is
