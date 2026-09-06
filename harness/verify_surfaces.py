@@ -206,6 +206,157 @@ check("no editor script builds a stylesheet at runtime",
       ", ".join(injectors) or "CSS in a string is CSS no audit can read, and "
       "two copies of it drift with nothing to show the diff")
 
+print("\nSURFACES — every module a page loads is a module that page can reach")
+# THREE DEAD LOADS FOUND BY HAND IN ONE SWEEP, which is a pattern and not three
+# incidents:
+#
+#   * the in-post macro and the library page both loaded lib/sharecard.js;
+#     inlineplayer.js never reads window.SkriblShareCard, and the only real
+#     reader was verify_inline.py evaluating band() IN the page.
+#   * the player loaded lib/photofit.js, whose only consumer is lib/artwork.js
+#     — an editor module that is not on that page. It cost 1,155 B of a ratchet
+#     with SIX BYTES of headroom, and that headroom was the standing argument
+#     against putting anything new on the player.
+#
+# A surface inherits an asset list from the surface it was copied from, and
+# nothing notices when the requirement does not come with it. This is that
+# check: for every lib/*.js a template loads, SOMETHING that template also
+# loads must read one of the globals it exports.
+#
+# EXPORTS ARE PLURAL. lib/media_validation.js assigns eight globals and the
+# ones actually read are the lowercase helpers; a check that took the first
+# match would report it dead. Every `global.X =` is collected.
+#
+# SELF-INSTALLERS NEED NO READER, and listing them is the honest way to say so:
+# lib/pillfit.js wires itself on DOMContentLoaded and exposes its API only for
+# tests. An entry here is a claim that the module runs itself.
+_SELF_INSTALLING = {"pillfit.js"}
+
+_TPL = ROOT / "skribl" / "templates" / "skribl"
+_ST = ROOT / "skribl" / "static"
+_SURFACES = {"editor": "skribl_editor.html", "flip": "skribl_flip.html",
+             "player": "skribl_player.html", "feed": "skribl_feed.html",
+             "library": "skribl_library.html",
+             "in-post": "_skribl_inline_player.html"}
+
+def _scripts(path):
+    """Script SRCs only — Jinja comments are stripped first, because a note
+    saying a file is NOT loaded names it too. (That false positive turned up
+    the first time this was run by hand.)"""
+    body = re.sub(r"\{#.*?#\}", "", path.read_text(encoding="utf-8"), flags=re.S)
+    return re.findall(r"<script[^>]*skribl_asset\('([^']+)'\)", body)
+
+def _unread(asset, siblings):
+    """True when nothing else the page loads names any global this module
+    exports. EXPORTS ARE PLURAL — every `global.X =` counts."""
+    body = (_ST / asset).read_text(encoding="utf-8")
+    names = set(re.findall(r"(?:global|window)\.([A-Za-z_][A-Za-z0-9_]*)\s*=", body))
+    if not names:
+        return False          # exports nothing; it is a side-effect module
+    return not any(n in src for a, src in siblings.items()
+                   if a != asset for n in names)
+
+_orphans, _exempted = [], {}
+for _surf, _tpl in sorted(_SURFACES.items()):
+    _p = _TPL / _tpl
+    if not _p.is_file():
+        continue
+    _assets = _scripts(_p)
+    _src = {a: (_ST / a).read_text(encoding="utf-8")
+            for a in _assets if (_ST / a).is_file()}
+    for _a in _assets:
+        if not _a.startswith("lib/") or not (_ST / _a).is_file():
+            continue
+        if (_ST / _a).name in _SELF_INSTALLING:
+            _exempted.setdefault((_ST / _a).name, []).append(_surf)
+            continue
+        if _unread(_a, _src):
+            _orphans.append(f"{_surf}:{_a}")
+check("no page loads a lib module nothing on that page reads",
+      not _orphans, ", ".join(_orphans) +
+      " — an asset list copied from another surface without the requirement "
+      "that justified it; either something must read it or it must go")
+
+# AN EXEMPTION NOTHING CHECKS IS WHERE THE NEXT DEAD LOAD HIDES. Each entry in
+# _SELF_INSTALLING makes three claims, and all three go stale on their own:
+# that some surface still loads it, that it still wires itself (so it needs no
+# reader), and that it still NEEDS the exemption — once something on the page
+# reads it, the entry stops being a statement and becomes cover.
+_stale = []
+for _name in sorted(_SELF_INSTALLING):
+    _hits = _exempted.get(_name)
+    if not _hits:
+        _stale.append(f"{_name}: no surface loads it — drop the entry")
+        continue
+    _body = (_ST / "lib" / _name).read_text(encoding="utf-8")
+    if "DOMContentLoaded" not in _body:
+        _stale.append(f"{_name}: no longer wires itself, so it now needs a reader")
+    _needed = False
+    for _surf in _hits:
+        _sib = {a: (_ST / a).read_text(encoding="utf-8")
+                for a in _scripts(_TPL / _SURFACES[_surf]) if (_ST / a).is_file()}
+        if _unread(f"lib/{_name}", _sib):
+            _needed = True
+    if not _needed:
+        _stale.append(f"{_name}: something reads it on every surface — "
+                      "the exemption is doing nothing and hiding the next one")
+check("every self-installing exemption still earns its place",
+      not _stale, "; ".join(_stale) or
+      f"{len(_SELF_INSTALLING)} exemption(s), each loaded, self-wiring, and "
+      "load-bearing — an entry here is a claim that the module runs itself")
+
+print("\nSURFACES — the shared-module index against the templates it describes")
+# START-HERE.md's index is where CLAUDE.md sends a reader to learn what a
+# lib module is and which pages carry it, and its "loaded on" column had drifted
+# on three of 52 rows by v281 — media_validation.js still claimed the player
+# while THAT TEMPLATE'S OWN COMMENT explained why it is not loaded there, and
+# canvassizes/holdtiming had never been told the library page exists. Three
+# rows wrong by hand-count is the same shape as the three dead script tags
+# above: a census nothing recomputes describes the tree it was written against.
+#
+# The column's vocabulary is closed, and an unknown token FAILS rather than
+# reading as "no surfaces" — a typo must not turn a row green by emptying it.
+_COLUMN = {"Pad": "skribl_editor.html", "Flip": "skribl_flip.html",
+           "player": "skribl_player.html", "library": "skribl_library.html",
+           "in-post": "_skribl_inline_player.html",
+           # skribl_feed.html is not a Skribl surface: it is the demo HOST page,
+           # and lib/composehost.js is the one module only a host loads.
+           "HOST": "skribl_feed.html"}
+
+_loaded = {}
+for _tok, _tpl in _COLUMN.items():
+    for _a in _scripts(_TPL / _tpl):
+        if _a.startswith("lib/"):
+            _loaded.setdefault(_a[4:], set()).add(_tok)
+
+_index = re.findall(r"^\| `([a-z0-9_]+\.js)` \| ([^|]+?) \|",
+                    (ROOT / "START-HERE.md").read_text(encoding="utf-8"), re.M)
+_files = {f.name for f in (_ST / "lib").glob("*.js")}
+_rows = {n for n, _ in _index}
+
+check("the shared-module index names every lib/*.js and no file that is gone",
+      _rows == _files,
+      "missing: " + (", ".join(sorted(_files - _rows)) or "none") +
+      "; named but absent: " + (", ".join(sorted(_rows - _files)) or "none") +
+      " — CLAUDE.md sends a reader here to find out what a module is")
+
+_wrong = []
+for _name, _col in _index:
+    _claim = {t.strip() for t in _col.split("+")}
+    _unknown = _claim - set(_COLUMN)
+    if _unknown:
+        _wrong.append(f"{_name}: unknown surface {'/'.join(sorted(_unknown))}")
+        continue
+    _actual = _loaded.get(_name, set())
+    if _claim != _actual:
+        _wrong.append(f"{_name}: doc says {'+'.join(sorted(_claim))}, "
+                      f"templates load it on {'+'.join(sorted(_actual)) or 'nothing'}")
+check("every index row's 'loaded on' column matches the templates",
+      not _wrong, "; ".join(_wrong) or
+      f"{len(_index)} rows, each checked against the {len(_COLUMN)} templates "
+      "— the column is a census, and a census nobody recomputes is a memory")
+
+
 print("\nSURFACES — what the player is made to download")
 # Not a pass/fail on size: this is the number the JS-only byte ratchet in
 # verify_player_isolation.py cannot see, reported so it stops being invisible.

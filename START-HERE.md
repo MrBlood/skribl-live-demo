@@ -1634,11 +1634,11 @@ ratchet in `verify_inline.py`, separate from the embed's: a page that only
 DISPLAYS Skribls never composes one and must not be charged for it.
 
 "in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
-It loads FOUR of these — `canvassizes.js` for a legacy payload's default shape,
-`holdtiming.js` for what a per-page hold means, `audiosession.js` for the iOS
-ringer fix, and `sharecard.js` — and its own code reads the first three. This
-said "exactly two ... and reads nothing else from `lib/`" until v281; the third
-and fourth arrived in v277 and v278 and the sentence did not move.
+It loads THREE of these — `canvassizes.js` for a legacy payload's default
+shape, `holdtiming.js` for what a per-page hold means, and `audiosession.js`
+for the iOS ringer fix — and its own code reads all three. This said "exactly
+two ... and reads nothing else from `lib/`" until v281; `audiosession.js`
+arrived with the ringer fix and the sentence did not move.
 
 `sharecard.js` USED to be a fifth, and v281 dropped it. The idle poster's crop
 is literals in `inlineplayer.css`; nothing in the page ever read
@@ -1666,24 +1666,26 @@ rather than a shared rule.
 | `recoverykey.js` | Pad+Flip | Shows an anonymous post's revocation key when the browser could not keep it, and warns BEFORE posting when it cannot keep anything. The last custody that survives cleared site data — see "Closed in v280". |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
-| `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |
+| `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
 | `composehost.js` | HOST | The pad button's lifecycle for a HOST's composer — the only lib no Skribl surface loads. |
 | `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
-| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both |
+| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels, at most one open, the opener reflecting state. |
 | `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |
 | `eventpoint.js` | Pad+Flip+player | Which contact a gesture belongs to — shared by Pad, Flip and the player. |
 | `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
+| `framebitmap.js` | Flip+player | A painted page is rasterised ONCE per playback — the rule both playback surfaces apply, because both repainted every stroke point of a static picture on every loop. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
-| `holdtiming.js` | Pad+Flip+player+in-post | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip |
-| `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things |
+| `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip editor and the player. |
+| `keyregistry.js` | Flip | What is bound to which key, and whether two things answer at once. NOT a command router: it records bindings, it does not dispatch. |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
-| `media_validation.js` | Pad+Flip+player | media_validation.js — one owner for media format policy and byte verification. |
+| `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
+| `nametab.js` | Pad+Flip | The skribl NAME drawer — one title for the drawing, because the Pad defaulted to "Untitled Skribl" and Flip named the file by date and collided. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `floodfill.js` | Flip | Flood fill as scanline runs — a region expressed as strokes, because the format has no fill primitive. |
 | `inputsamples.js` | Flip | The coalesced pointer samples a per-frame listener drops, thinned by distance so a fast stroke keeps its curve without bloating the payload. |
@@ -1702,7 +1704,7 @@ rather than a shared rule.
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
 | `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
 | `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
-| `sharecard.js` | Pad+Flip+in-post | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `sharecard.js` | Pad+Flip | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
@@ -1711,6 +1713,7 @@ rather than a shared rule.
 | `theme.js` | Pad+Flip | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip | Styled tooltips, replacing the browser's. |
+| `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder and the chrome, kept OUT of `looptrim.js` because the player loads that and has no such panel. |
 
 Two are worth calling out because they were extracted after a bug, not before:
 `holdtiming.js` (the editor and the player disagreed about what a hold means)
@@ -2847,16 +2850,24 @@ Same shape as the title bug `verify_flipmeta.py` records: a whole control
 surface built on one of the two editors.
 
     skribl/static/lib/postedcard.js   the compositor, editors only
-    skribl/static/lib/sharecard.js    the geometry, editors AND the in-post player
+    skribl/static/lib/sharecard.js    the geometry, editors only since v281
     harness/verify_sharecard.py       both editors, one builder, round-tripped
 
 **TWO MODULES, NOT ONE, and the ratchet is what said so.** The first version put
-the compositor beside the geometry in `sharecard.js` — which the in-post player
-loads, because it crops the poster by `band()`. `verify_inline.py`'s embed
-ratchet failed on the next run: 2 KB of canvas work on every feed page in the
-world, to composite a card a feed never makes. Split on the same rule
-`lib/postedaudio.js` states: THE READER IS NOT THE WRITER. A host embeds the
-geometry and never the compositor, because it never posts.
+the compositor beside the geometry in `sharecard.js`, which the in-post player
+loaded. `verify_inline.py`'s embed ratchet failed on the next run: 2 KB of
+canvas work on every feed page in the world, to composite a card a feed never
+makes. Split on the same rule `lib/postedaudio.js` states: THE READER IS NOT
+THE WRITER. A host embeds the geometry and never the compositor, because it
+never posts.
+
+**The split was right and its stated reason was not.** This said the in-post
+player loaded the geometry "because it crops the poster by `band()`", and v281
+found nothing in that page ever read `window.SkriblShareCard` — the crop is
+literals in `inlineplayer.css`. The ratchet's 2 KB was real, because the module
+really was on the page; the requirement that put it there never existed. A
+right decision resting on a wrong reason is one reader-who-checks away from
+being reversed, so the reason is corrected here rather than quietly dropped.
 
 **AND THE ENCODING RULE WAS WRONG BY 16x.** The builder chose PNG for line art
 and JPEG for photos, on the recorded grounds that "PNG is both SMALLER and
