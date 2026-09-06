@@ -724,6 +724,20 @@ with sync_playwright() as sp:
     cp = b.new_page(viewport={"width": 620, "height": 900})
     cp.goto(BASE + "/feed", wait_until="load")
     cp.wait_for_timeout(1500)
+    # INJECTED, NOT SHIPPED. The comparison below needs sharecard.js's
+    # arithmetic in THIS page to check the CSS literals against it — and until
+    # v281 the macro loaded it for every host to get it here, 5,210 B of a
+    # 32,000 B budget for a module the page never calls. The check is the same
+    # check; only who pays for it changed.
+    #
+    # evaluate(), NOT add_script_tag(). The latter inlines the source, and this
+    # page's CSP is `script-src 'self' 'nonce-...'`, so Chromium refuses it —
+    # which is verify_csp.py's subject matter arriving as a side effect and is
+    # the right answer. evaluate() runs through the debugger protocol and is
+    # not a page script, so the module's IIFE installs window.SkriblShareCard
+    # without the page ever being allowed to load one.
+    cp.evaluate((ROOT / "skribl" / "static" / "lib" / "sharecard.js")
+                .read_text(encoding="utf-8"))
     geom = cp.evaluate("""() => {
         // SCOPED TO THE FEED. The page's first .skribl-inline is the
         // COMPOSER's draft box now, and a draft has no poster to crop — it is
@@ -881,7 +895,11 @@ with sync_playwright() as sp:
     # leaving <audio> elements alone — which is why Test Seam has always played
     # on the owner's phone and Preview Loop has not. A silent held <audio>
     # session is the fix, and it has to ship wherever the player does.
-    EMBED_RATCHET = 32_000
+    # 32,000 -> 31,000 in v281, when dropping lib/sharecard.js from the macro
+    # took the measured total from 31,820 B to 30,827 B. A ratchet moves down
+    # when the truth is smaller; leaving it at 32,000 would have banked the
+    # saving as slack for the next thing to spend without arguing for it.
+    EMBED_RATCHET = 31_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -903,8 +921,13 @@ with sync_playwright() as sp:
                                      timeout=20).read()
         served[u.split("/static/skribl/")[-1].split("?")[0]] = len(raw)
         total += len(raw)
-    check("every asset the embed macro names is one the server serves",
-          len(embed_urls) == 6, str(embed_urls))
+    # The count is pinned so a new asset cannot join the embed unnoticed; the
+    # loop above is what proves each one is actually served, because urlopen
+    # raises on a 404. Named for the count it checks — it used to be called
+    # "every asset the embed macro names is one the server serves", which is
+    # the loop's job and not this line's.
+    check("the embed macro names exactly the five assets a host pays for",
+          len(embed_urls) == 5, str(embed_urls))
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
           total <= EMBED_RATCHET,

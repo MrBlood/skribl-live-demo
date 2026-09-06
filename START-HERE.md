@@ -1642,15 +1642,20 @@ ringer fix, and `sharecard.js` — and its own code reads the first three. This
 said "exactly two ... and reads nothing else from `lib/`" until v281; the third
 and fourth arrived in v277 and v278 and the sentence did not move.
 
-`sharecard.js` is the odd one and worth knowing about: the idle poster's crop
-is implemented in `inlineplayer.css` as literals, and nothing in the page reads
-`window.SkriblShareCard` at runtime. What reads it is `verify_inline.py`, in
-the page, to check those literals still agree with the module's arithmetic.
-That is a real assertion and it costs every host 5,210 B of a 32,000 B embed
-budget — 16% — for a module the page itself never calls. Injecting it from the
-suite instead would keep the check and drop the payload; it is left as it is
-because the index below documents `in-post` as one of its surfaces, so removing
-it is a contract change rather than a cleanup. `verify_inline.py` asserts both that it reads them and that the
+`sharecard.js` USED to be a fifth, and v281 dropped it. The idle poster's crop
+is literals in `inlineplayer.css`; nothing in the page ever read
+`window.SkriblShareCard`. The only reader was `verify_inline.py`, evaluating
+`band()` in the page to check those literals still agree with the module's
+arithmetic — a real assertion that did not need the payload. The suite injects
+the module now (by `evaluate()`, since the page's CSP correctly refuses an
+injected `<script>`), and the embed ratchet came down 32,000 → 31,000 rather
+than banking the saving as slack.
+
+**The saving is 993 B, not the 5,210 B this paragraph first claimed.** That was
+the size on disk; `jsstrip.py` serves these files without comments and the
+budget counts served bytes. The correct figure was in `verify_inline.py`'s own
+note the whole time. A five-fold overstatement in the direction that made the
+finding look better is exactly the kind worth writing down. `verify_inline.py` asserts both that it reads them and that the
 macro loads them, because reading a global nothing loads is a silent fallback
 rather than a shared rule.
 

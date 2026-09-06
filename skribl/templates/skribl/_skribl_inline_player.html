@@ -48,11 +48,23 @@
    disagree about a drawing's shape or about which page of a Flip is on screen —
    see the header of inlineplayer.js. #}
 <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
-{# lib/sharecard.js: where the drawing sits inside /s/<id>/card.png. The idle
-   poster IS that card with its brand strip cropped off, and editor_post.js
-   composites it from the same numbers — so neither can move without the
-   other. #}
-<script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+{# lib/sharecard.js IS NOT LOADED HERE, and that is the point of this note.
+   The idle poster is /s/<id>/card.png with its brand strip cropped off, and
+   the crop is literals in inlineplayer.css. Nothing on this page ever reads
+   window.SkriblShareCard — inlineplayer.js cites the module in a comment and
+   hardcodes the numbers.
+
+   It WAS loaded, from v278 until v281, for a module the page never called.
+   MEASURED, because the first version of this note said 5,210 B and that is
+   the size ON DISK: jsstrip.py serves these without comments, so what a host
+   actually downloaded was 993 B, and the embed went 31,820 -> 30,827 B. The
+   budget counts served bytes, so the disk figure overstated it five-fold.
+
+   The only reader was verify_inline.py, evaluating band() in this page to
+   prove the CSS literals still agree with the module's arithmetic. That check
+   is worth keeping and did not need the payload: the suite injects the module
+   itself now, and the ratchet came down 32,000 -> 31,000 to keep the saving.
+   A page that only DISPLAYS Skribls is not charged for composing one. #}
 <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
 {# lib/audiosession.js: the reason this costs a host bytes is that WITHOUT it a
    posted Skribl's music is silent in a feed on any iPhone with the ringer switch
