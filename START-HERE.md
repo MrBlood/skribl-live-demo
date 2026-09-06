@@ -82,10 +82,10 @@ one is ever playing.
 `set_post_visibility()` — the review's second high finding. The FK cascade and
 orphan sweep were already built and tested; what was missing was the authorised
 product operation on top. A missing post and someone else's raise the same
-exception with the same message, on purpose. **`DELETE` and `PATCH` are
-registered only when the host passed `current_user_id`** — an unauthenticated
-DELETE would erase any Skribl anyone can name, and the standalone app therefore
-has no destructive routes at all.
+exception with the same message, on purpose. **v278 registered `DELETE` and
+`PATCH` only when the host passed `current_user_id`; v279 reversed that** — see
+"Closed in v279" below. The gate was right about the danger and wrong about the
+remedy: it also left the deployed product unable to revoke anything.
 
 **`_ZOOM_EXEMPT` in `verify_ux.py` is now empty** — all seven sub-16px fields
 were raised, so the iOS-zoom rule is absolute rather than a ratchet. The raise
@@ -96,11 +96,59 @@ probe in the tree reporting "ok", because a wrap does not move the box.
 height, which is the measurement that sees it. See the v278 entry at the
 foot of `DECISIONS.md`.
 
+### Closed in v279: twelve findings from a second audit, all real
+
+An external audit read the sealed v278 archive and returned one High and
+eleven Medium findings across three passes, plus a coverage ledger and the
+sentence that set the release's shape: **"No-ship for the standalone premium
+product until P1-H-01 is resolved."** Every one was checked against the tree
+before it was acted on and every one held. What follows is what changed; the
+reasoning is in the v279 entries at the foot of `DECISIONS.md`.
+
+**The High finding was v278's own remedy.** v278 shipped `delete_post()` and
+`set_post_visibility()` and then registered the HTTP routes only when the host
+had passed `current_user_id` — so the standalone product, which is the premium
+one, could not revoke anything at all. The gate was right that an
+unauthenticated DELETE erases any Skribl anyone can name; it was wrong that
+absence was the fix, because "you cannot delete it" and "anyone can delete it"
+are both failures.
+
+**The answer is a capability, not an account.** An anonymous post is created
+with a `secrets.token_urlsafe(32)` returned once, in the create response, and
+stored only as a SHA-256 digest (`skribl_posts.delete_token_hash`). DELETE and
+PATCH are now registered unconditionally and a caller must present *something*:
+a matching token, or ownership, or an explicit in-code `require_author=False`.
+A stranger holding only a public id gets the same 404 as a stranger holding
+nothing.
+
+This was chosen over per-post passwords and over "wait for accounts" for one
+reason: it composes with accounts instead of competing with them. A deployment
+that grows real users later keeps every anonymous post revocable through the
+capability while new owned posts authorise by identity. The alternative
+stranded the whole back-catalogue on the day the feature it was waiting for
+arrived.
+
+**Three smaller Mediums in the same area.** `PATCH` accepted any JSON root and
+any extra keys — `"null"` reached the handler and 500'd, and
+`{"visibility": "private", "delete": true}` was silently tolerated; it now
+takes an object with `visibility` and optionally `deleteToken`, nothing else.
+Creation treated a failed pending-media claim as best effort and posted anyway,
+which is the reservation protocol failing open; it now raises
+`SkriblUnavailable`. And `/media/<key>` answered public objects
+`max-age=31536000, immutable`, which `deletion.py` twenty lines away promised
+"stops being reachable" — two documents corroborating each other into a false
+guarantee. The window is `routes.PUBLIC_MEDIA_MAX_AGE`, five minutes, and
+`immutable` is gone, so the promise is late rather than untrue. Closing it
+completely needs a purge hook a deployment supplies.
+
+**Identities became opaque text and the MP4 gap became evidence** — both below.
+
 ### `verify_a11y.py` — keyboard and assistive technology, as its own suite
 
 Added after an accessibility audit of v278, and a suite rather than more of
-`verify_ux.py` because of the audit's structural point: the tree carried 4,392
-assertions while basic keyboard failures were visible in the source. Three
+`verify_ux.py` because of the audit's structural point: the tree carried
+thousands of assertions — the count is in `harness/RELEASE.md`, never typed
+here — while basic keyboard failures were visible in the source. Three
 playback scrubbers were pointer-only, two of them declaring `role="slider"`
 with no tabindex, no `aria-valuenow` and no key handler — announcing a control
 that could not be operated. Five `aria-modal` dialogs did nothing about focus.
@@ -3064,8 +3112,9 @@ bytes.
    S3 deployment "never routes through here" — which would route around the
    authorisation that route exists for, re-opening the bug where a private
    Skribl's audio was readable by anyone holding the URL. Put a CDN in front of
-   /media/<key> instead; the response is already immutable for public-only
-   objects and `private, no-store` otherwise, a distinction a bucket cannot make.
+   /media/<key> instead; the response is already cacheable for public-only
+   objects (`public, max-age=300` since v279 — bounded, no longer `immutable`)
+   and `private, no-store` otherwise, a distinction a bucket cannot make.
    **What is NOT proven: Amazon.** Nothing here can reach a real bucket, so the
    requests are proven well-formed and correctly signed, not accepted. Point it
    at MinIO or a test prefix once; that is a minute of work and closes it.

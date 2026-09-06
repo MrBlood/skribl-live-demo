@@ -330,8 +330,16 @@ claims = []
 # docs/HANDOFF.md is a CHANGELOG: "112 assertions across 8 suites (was 60 across
 # 5)" is a true statement about v-something, not a claim about this tree. Only
 # documents that describe the current state are checked.
+# The documents that describe the tree AS IT IS, as opposed to the changelogs
+# (DECISIONS.md, docs/HANDOFF.md, docs/REFACTOR-v132.md), whose entries are
+# true of the version they sit under and are deliberately not maintained. The
+# integration guide, the direction notes and the examples README were outside
+# this list until v279 for no reason anybody wrote down — they are read by the
+# same people as README.md and go stale the same way.
 _current = [ROOT / "README.md", ROOT / "harness" / "README.md",
-            ROOT / "ARCHIVE-README.md", ROOT / "START-HERE.md"]
+            ROOT / "ARCHIVE-README.md", ROOT / "START-HERE.md",
+            ROOT / "docs" / "INTEGRATION.md", ROOT / "FUTURE.md",
+            ROOT / "DESIGN-DIRECTION.md", ROOT / "examples" / "README.md"]
 for doc in _current:
     if not doc.is_file():
         continue
@@ -340,6 +348,28 @@ for doc in _current:
     body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", body, flags=re.S)
     for m in re.finditer(r"\b(\d+)\s+suites\b", body):
         claims.append((doc.relative_to(ROOT), int(m.group(1))))
+
+# ...AND THE SAME FOR ASSERTION COUNTS, which CLAUDE.md forbids outside the
+# generated stanza in exactly these words and which nothing enforced. Two were
+# typed into current documents while answering an audit — "the tree carried
+# 4,392 assertions" — and both would have been wrong the moment the next seal
+# ran. The suite-count check above has existed for releases; this is its twin,
+# missing because the rule was written down and the gate was not.
+#
+# Any four-or-more-digit number followed by "assertion(s)" is refused: totals
+# are that size and a sentence about "two assertions" is not.
+_typed_counts = []
+for doc in _current:
+    if not doc.is_file():
+        continue
+    body = doc.read_text(encoding="utf-8")
+    body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", body, flags=re.S)
+    for m in re.finditer(r"\b(\d[\d,]{3,})\s+assertions?\b", body):
+        _typed_counts.append(f"{doc.relative_to(ROOT)}: {m.group(1)}")
+check("no current document hand-types an assertion total",
+      not _typed_counts,
+      "; ".join(_typed_counts) + " — point at harness/RELEASE.md instead; a "
+      "typed total is wrong from the next seal onward and looks authoritative")
 wrong = [(d, n) for d, n in claims if n != len(on_disk)]
 check(f"no hand-typed suite count disagrees with the {len(on_disk)} on disk",
       not wrong, "; ".join(f"{d} says {n}" for d, n in wrong))

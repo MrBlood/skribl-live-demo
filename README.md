@@ -3,7 +3,7 @@
 Server-backed Flask app for **Skribl Pad** (record-and-replay drawing) and
 **Skribl Flip** (frame-by-frame animation), plus a public player for sharing.
 
-Current version: **v278** (`SKRIBL_VERSION` in `skribl/core.py`; the archive filename is derived from it)
+Current version: **v279** (`SKRIBL_VERSION` in `skribl/core.py`; the archive filename is derived from it)
 
 ## Dropping Skribl into your own Flask app — start here
 
@@ -141,8 +141,9 @@ whole flow — pad icon, overlay, attach, re-edit, post — and
 
 `harness/verify_inline.py` is the proof — including that the in-post player and
 the sealed player, playing the same posted drawing from the same clock, are at
-the same point and have drawn the same thing. See the header of
-`skribl/static/inlineplayer.js` for what it deliberately does not render, and
+the same point and have drawn the same thing. The wet/dry compositor gap that
+header used to describe is closed as of v279, so there is no known rendering
+difference; see `skribl/static/inlineplayer.js` for the measurement and
 `docs/INTEGRATION.md` for the host-side details.
 
 ## The profile's Skribls tab

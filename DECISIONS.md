@@ -5745,3 +5745,212 @@ tree already knew and had written down without acting on. The fifth was a
 comment that had been false for several releases. None of them needed access to
 anything the harness does not have -- they needed somebody outside the work to
 read it.
+
+## v279 -- absence is not a permission model
+
+An external audit read the sealed v278 archive and returned one High and eleven
+Mediums across three passes. Its verdict line was the one that set this
+release's shape: **"No-ship for the standalone premium product until P1-H-01 is
+resolved."** Every finding was checked against the tree before it was acted on,
+and every one held -- second review in a row where that was true, which is
+worth saying because the temptation on a long list is to triage by plausibility
+rather than by reading.
+
+**THE HIGH FINDING WAS THE PREVIOUS RELEASE'S OWN REMEDY.** v278 built
+`delete_post()` and `set_post_visibility()` -- the fix for v277's "no obvious
+delete" -- and then registered the HTTP routes only when the host had passed
+`current_user_id`. The reasoning is in that entry and it is not stupid: a DELETE
+on an unauthenticated API is a button that erases any Skribl anyone can name.
+
+The consequence is what the reasoning missed. The standalone app never passes
+`current_user_id`. The standalone app is the premium product. So the release
+that added revocation shipped it switched off for the only deployment that had
+no other way to revoke anything, and said so in three documents as though it
+were a security posture.
+
+**"NOBODY CAN DELETE IT" AND "ANYBODY CAN DELETE IT" ARE BOTH FAILURES.** The
+gate treated the second as the only one worth avoiding. What was missing was
+never authentication -- it was AUTHORISATION, and those are not the same
+requirement. A caller does not have to be a known user; it has to prove it is
+entitled to this specific post.
+
+**THE FORK, AND WHY THE CAPABILITY WON.** Three ways to authorise an anonymous
+author:
+
+  1. *Wait for accounts.* Honest, and it defers the product's worst gap behind a
+     feature with no date.
+  2. *A per-post password the author chooses.* Human-chosen, so it needs a real
+     password hash, a recovery story and a place in the UI for both.
+  3. *A capability token minted at creation* -- 256 bits of
+     `secrets.token_urlsafe(32)`, returned exactly once in the create response,
+     stored only as a SHA-256 digest.
+
+The question asked of all three was not which is simplest now but which one
+survives the arrival of accounts. (1) makes the back-catalogue the price of the
+upgrade. (2) becomes a second, weaker credential the moment there is a real
+one, and nobody ever deletes those. (3) composes: `_authorised_post()` has
+three ways to say yes -- an explicit in-code `require_author=False`, a matching
+token, an owning identity -- and a deployment that grows users keeps every
+anonymous post revocable through the capability while new owned posts authorise
+by identity. Nothing has to be migrated and nothing is stranded.
+
+**A PLAIN DIGEST, DELIBERATELY, AND THE COMMENT SAYS WHY.** bcrypt or argon2 on
+a 256-bit random token buys latency on every delete and defends against a
+dictionary that does not exist. What matters is that the stored value cannot be
+turned back into a usable token. `hmac.compare_digest` does the comparison, and
+`_token_matches()` returns a hard False when either side is empty -- which is
+the assertion that matters most, because every pre-v279 anonymous post has a
+NULL hash and an empty-matches-empty bug would have made all of them deletable
+by anybody.
+
+**THE ROUTES ARE UNCONDITIONAL NOW AND THAT IS THE SAFER SHAPE**, because the
+authorisation is in one function that all three entry points go through, rather
+than in a registration-time `if` that reads like a security control and is
+really a feature flag.
+
+## v279, cont. -- an identity is whatever the host calls a user
+
+`current_user_id` is documented as "a callable returning your user id", the
+worked example in `docs/INTEGRATION.md` passes `current_user.id` straight
+through, and the column was `Integer`. A host whose users are UUIDs, ULIDs,
+OAuth subjects, LDAP DNs or email addresses could not integrate at all:
+creation failed at flush, and the listing endpoint coerced `?user_id=` with
+`int()` and answered 400 before it ever queried.
+
+**DO NOT LEAVE THE API GENERIC WHILE THE SCHEMA IS NOT.** The docs were writing
+cheques the column could not cash, and every one of them read as a deliberate
+design choice.
+
+Text is the side to settle on, and the reason is narrow enough to state: Skribl
+never does arithmetic on this value, never sorts by it, and never joins it to a
+users table it does not own. It compares it for equality. An integer host loses
+nothing -- 42 stores as "42" -- and a textual host gains the ability to exist.
+
+**THE MIGRATION'S POSTGRESQL PATH IS THE INTERESTING PART.** PostgreSQL refuses
+to reinterpret an integer column as text without an explicit `USING`. The cast
+`user_id::varchar(255)` is total -- every integer has exactly one text form --
+and it produces exactly what `normalise_user_id()` produces for the same host
+on the next request, so ownership keeps matching across the upgrade. That
+sentence is the whole reason the migration is safe on a populated database, and
+it is in the migration rather than here.
+
+The downgrade REFUSES when any id is non-numeric instead of casting. A post
+whose owner silently became 0 is a post anybody with user 0 can delete; a
+failed migration is the better outcome.
+
+**THE SQLITE PATH WAS A NO-OP AND THE DRIFT CHECK WAS RIGHT TO FAIL IT.**
+SQLite's column types are advisory and the column already accepted text, so
+skipping the ALTER worked at runtime. But the chain's end state then declared
+INTEGER while the model declared String, and a database built by migration
+disagreed on paper with one built by `create_all()`. A schema that only happens
+to work is the kind that stops working. `batch_alter_table` rebuilds it.
+
+**NORMALISING THE ARGUMENT WAS NOT ENOUGH, and the suite that found that is the
+one that never touches a database.** The `TypeDecorator` covers what is stored
+and loaded. `verify_privacy.py` builds `SkriblPost(user_id=7)` in memory and
+never flushes it, so the decorator never runs -- and an author could not read
+their own private post. `visible_to()` and `_authorised_post()` now normalise
+BOTH sides. The type covers persistence; the comparison covers everything that
+was never persisted. Two mechanisms, two different reasons, and the one that
+looks redundant is the one that caught it.
+
+## v279, cont. -- role="slider" is a promise, not a label
+
+A separate accessibility audit, and `verify_a11y.py` exists as its own suite
+rather than as more of `verify_ux.py` because of the audit's structural point
+rather than its list: the tree carried thousands of assertions while basic
+keyboard failures were sitting in the source, legible to anyone who read it.
+
+All three playback scrubbers were pointer-exclusive. Two of them declared
+`role="slider"` with `aria-valuemin` and `aria-valuemax` and then supplied no
+`tabindex`, no `aria-valuenow` and not one key handler. The third -- the shared
+`/s/<id>` player, the surface strangers get sent a link to -- did not even
+claim it. Five `aria-modal="true"` dialogs did nothing about focus, two of them
+calling `blur()`, which is not focus management but throwing focus at the body.
+
+**DECLARING THE ROLE AND STOPPING IS WORSE THAN LEAVING THE DIV UNDECORATED**,
+because assistive technology then announces a control the user cannot operate.
+`lib/scrubkeys.js` sets the attributes itself, so a surface cannot claim the
+role without getting the behaviour -- the exact split that produced the
+finding. `lib/modalfocus.js` does focus-in, Tab-trap, focus-back and nothing
+else: the surfaces already own visibility and Escape, and they differ.
+
+**THE SUITE'S RULE IS: ASSERT THE BEHAVIOUR, NOT THE ATTRIBUTE.** `role="slider"`
+being present is precisely what was true while it was broken. So it presses
+keys and reads what moved, focuses things and reads where focus went.
+
+**AND THE FIRST VERSION OF ITS CONTRAST GATE WAS VACUOUS.** It exempted any line
+matching `--text-`, meaning to skip token definitions -- but `var(--text-dim)`
+contains `--text-`, so it skipped every USE as well. It reported 37/37 with a
+deliberately failing token on readable text. Only a mutation revealed it.
+Definitions are excluded by shape now (`^\s*--[a-z0-9-]+\s*:`), and the fixed
+gate immediately found `--text-faint-2` on `.accordion-count` at 3.47:1, plus
+five unnamed controls the audit had not seen.
+
+**SEVEN OF MY OWN ASSERTIONS WERE WRONG BEFORE THEY WERE RIGHT**, and they fail
+the same way: each one passed while measuring something adjacent to what it
+claimed. A carve gate that counted markup the templates always shipped. An
+ownership check run against an `unlisted` post, which anyone may read, so it
+measured visibility. A keyboard delta read a frame after dispatch, racing a
+render loop. An association-cleanup test that measured the pragma hook and
+passed with the cleanup deleted. `json=None` in a shape test, which sends no
+body and trips the Content-Length guard first, giving 411 for the 400 it
+wanted. The mutation is not optional: an assertion that does not move under the
+change it was written for is decoration.
+
+## v279, cont. -- what a seal can honestly say about a browser it does not have
+
+`verify_mp4.py` skips wherever Chromium is the browser, and until now the seal
+recorded `skipped 1 (verify_mp4.py)` and stopped. A reader could not tell "not
+covered" from "covered somewhere you cannot see". The audit called that an
+evidence gap rather than a defect, which is exactly the right classification --
+the `mp4 (real Chrome)` CI job does cover it, and its answer simply never
+reached the archive.
+
+`harness/MP4-ATTESTATION.txt` is that job's answer and `RELEASE.md` now carries
+an `mp4 (H.264)` line computed from it, with three outcomes stated rather than
+implied: verified, STALE, or NOT VERIFIED with the command that fixes it.
+
+**THE ATTESTATION IS BOUND TO A TREE HASH AND IS WORTHLESS WITHOUT IT.**
+Evidence about different code is worse than no evidence, because the seal would
+then assert coverage it does not have. STALE is a distinct outcome for that
+reason, not an error.
+
+**IT NEVER BLOCKS A RELEASE.** Whether an unverified MP4 path is shippable is a
+product decision. The seal's job is to state the fact.
+
+**AND I GOT THE EXPLANATION WRONG FIRST, in a note to the reviewer.** I probed
+`VideoEncoder` on `about:blank` and reported "no WebCodecs at all". The suite
+checks on a real page, where the API is present and the three `avc1.*` profiles
+are all unsupported. A probe run in a different context from the thing it is
+explaining is not a smaller version of that measurement; it is a different one.
+
+## v279, cont. -- a rule written down and not enforced is a rule that is already broken
+
+`CLAUDE.md` has said for many releases that no document may hand-type an
+assertion count outside the generated stanza. `verify_docs.py` enforced the
+suite-count half of that rule and not this half. While answering the audit I
+typed "4,392 assertions" into two current documents, correctly quoting the
+sealed figure, and both would have been wrong the moment this release ran.
+
+The gate is there now, and it is deliberately blunt: any four-or-more-digit
+number followed by "assertion" or "assertions" in a current document fails.
+Totals are that size; a sentence about two assertions is not. Re-inserting the
+number fails it by name.
+
+**THE LIST OF "CURRENT DOCUMENTS" WAS ALSO TOO SHORT.** It held README.md,
+harness/README.md, ARCHIVE-README.md and START-HERE.md. `docs/INTEGRATION.md`
+-- the document a host actually integrates against -- was outside it, along
+with FUTURE.md, DESIGN-DIRECTION.md and examples/README.md, for no reason
+anybody had written down. They are in it now. The changelogs
+(`DECISIONS.md`, `docs/HANDOFF.md`, `docs/REFACTOR-v132.md`) stay out on
+purpose: their entries are true of the version they sit under and are not
+maintained afterwards, which is stated at the head of each.
+
+**THE STALENESS SWEEP FOUND THE PREDICTABLE THING.** Prose describing behaviour
+this release changed: `docs/INTEGRATION.md` and START-HERE.md still documenting
+the identity-gated routes; START-HERE.md still calling the public media
+response `immutable`; README.md still pointing at a compositor gap that v278
+closed. All of them were true when written, and all of them are the reason the
+generated stanza exists at all -- the numbers are guarded and the sentences are
+not.

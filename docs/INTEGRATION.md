@@ -371,14 +371,27 @@ whole table can say. `sweep_orphans()` owns that, conservatively — see
 bytes stop being **reachable**: `/media/<key>` authorises through the
 association rows, and those are gone with the post.
 
-**HTTP: `DELETE` and `PATCH /api/skribls/<id>` exist only if you passed
-`current_user_id`.** Skribl's API is unauthenticated by default, and a DELETE
-on an unauthenticated API is a button that erases any Skribl anyone can name.
-The standalone app therefore has no destructive routes at all. If you have
-authenticated your users, you get both, scoped to the author; `PATCH` accepts
-`{"visibility": "..."}` and nothing else. If your own views own the lifecycle,
-ignore the routes and call the Python functions — you have already decided who
-is asking.
+**HTTP: `DELETE` and `PATCH /api/skribls/<id>` are always registered, and what
+makes that safe is the capability rather than their absence.** v278 gated them
+on `current_user_id` being set, reasoning that a DELETE on an unauthenticated
+API is a button erasing any Skribl anyone can name. True of an *unauthorised*
+delete — and the gate's cost was that the standalone product could not revoke
+anything at all, which an audit called the release's worst problem.
+
+A caller must present something. An owner presents their identity; an anonymous
+author presents the `deleteToken` from the create response, in the JSON body:
+
+```
+DELETE /api/skribls/<id>     {"deleteToken": "..."}
+PATCH  /api/skribls/<id>     {"visibility": "private", "deleteToken": "..."}
+```
+
+Neither is optional. A stranger with only a public id gets 404, so does a wrong
+token, and so does a token minted for a different post. `PATCH` takes
+`visibility` and optionally `deleteToken`, nothing else.
+
+If your own views own the lifecycle, ignore the routes and call the Python
+functions — you have already decided who is asking.
 
 **If you would rather Skribls were never revocable, say so to your users.**
 Permanent publication is a defensible product choice. Silently having no way

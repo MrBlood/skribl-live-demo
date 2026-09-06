@@ -2,9 +2,10 @@
 
 WHY THIS IS A NEW SUITE RATHER THAN MORE OF verify_ux.py. An accessibility
 audit of v278 made a structural observation, not just a list of defects: the
-tree carries 4,392 assertions and yet basic keyboard and ARIA failures were
-visible in the SOURCE. Scrubbers declared `role="slider"` with no tabindex, no
-`aria-valuenow` and no key handler. Five `aria-modal="true"` dialogs did
+tree carries thousands of assertions (see harness/RELEASE.md for the figure —
+typing one here is how a number goes stale) and yet basic keyboard and ARIA
+failures were visible in the SOURCE. Scrubbers declared `role="slider"` with
+no tabindex, no `aria-valuenow` and no key handler. Five `aria-modal="true"` dialogs did
 nothing about focus, two of them calling `blur()` and hoping. Visible slider
 captions were not labels. Segmented controls tracked selection in a CSS class
 only. Post status and toasts announced nothing.
