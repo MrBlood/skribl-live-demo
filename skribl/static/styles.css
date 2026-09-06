@@ -6686,7 +6686,12 @@ body.playing .flip-grid { display: none; }
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(6, 7, 10, 0.82);
+  /* Pure black, like .menu-overlay::before, and NOT a hand-mixed dark grey:
+     verify_surfaces refuses an untokenised neutral because it cannot follow
+     a light theme. rgba(6,7,10,.82) was exactly that and the ratchet caught
+     it. Heavier than the menu's 0.4 on purpose — this panel has to be read,
+     not glanced past. */
+  background: rgba(0, 0, 0, 0.62);
 }
 .reckey-sheet {
   width: 100%;

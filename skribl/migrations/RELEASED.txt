@@ -16,6 +16,31 @@
 # was recalled unreleased. Batch size cannot change which rows result;
 # verify_migrations.py proves it at several sizes.
 #
+# b7d240ac91e3's digest changed once, in v280, and ONLY its downgrade().
+# `upgrade()` is byte-identical -- proved, not asserted: the UPGRADE-PATH
+# stanza at the foot of this file pins every released upgrade() as a normalised
+# AST, and verify_migrations.py fails if one moves. That is the check the
+# paragraph above is really about.
+#
+# THE RULE'S OWN REASONING INVERTS FOR A DOWNGRADE. "A database that already
+# ran it is stamped at that revision, so upgrade head executes nothing" is why
+# editing an upgrade() is useless. A downgrade() is READ FROM THE FILE at the
+# moment somebody downgrades, so editing one reaches every stamped database --
+# it is the only thing that does.
+#
+# Adding a guard in a NEW revision on top was considered and does not work: a
+# database stamped at b7d240ac91e3 never runs a later revision's downgrade(),
+# and those are exactly the v279 deployments the guard exists for.
+#
+# WHAT IT WAS PROTECTING AGAINST, measured rather than assumed. The v279
+# downgrade refused non-numeric user_ids on PostgreSQL and returned before the
+# check on SQLite. On SQLite the rebuild does not preserve them:
+#     '3f2a-9c11-uuid' -> 3      'abc-def'    -> 0
+#     '01ARZ3NDEKTSV4' -> 1      'auth0|60f1' -> 0      'a@b.com' -> 0
+# Three of those collapse to the SAME owner, so each of those users could then
+# delete the others' posts. Silent authorship reassignment, which is worse than
+# the failed migration the guard produces instead.
+#
 42862a8ce5d973f18d1cda73ae986488f8cf4c965a1e1be1bfa4df89515a2543  6aa1de24dda3
 09cfa3d03d1596ddc39d132efd1af558b35b998605cc865214f2d204a68137dc  86171614cb85
 23d568040697f449a8051cdc773e9fff0a2652b2d5e47ad28ed9bd1823dd047e  88f18e7f844d
@@ -29,4 +54,26 @@ eca1461367bfa31ab5b4882548c143bc5183d74438024e6962644f14d1863b66  f0a3d81b47e2
 6ae3539c5d51dd55ffcee1e196d846074aeb7053a42e711eb1fbf87c9622bdb3  f7c2e0a934d1
 4af97bce509d2a89ff91265641c5093fdf6f42f943f71d3f448b2369cda9667c  e9f4a7c31b28
 13f4e5a906ba4ffc1bb77b879d50addc56c91fe0e528fa49fcfa54a593584e05  a1c93e5f7b04
-db60fdb7328f1c1467302418e9846e8aac20bd77c62d345add8a98d64db3d5d3  b7d240ac91e3
+510c82c5239eb0f41b2996c3cba23f9d7983784daab5a516ca93de4cc1beffff  b7d240ac91e3
+
+# ---- UPGRADE-PATH DIGESTS ------------------------------------------------
+# The normalised AST of every released upgrade(), which is the half of a
+# migration that can never change: it has already run on real databases and
+# editing it reaches none of them. Pinned separately from the file digest so
+# the two questions stay separate -- "did anything in this file change?" and
+# "did the part that already ran change?". A downgrade-only amendment moves the
+# first and must never move the second.
+upgrade c068c54d7521ac9839b427365faa517eb5f09fb16d93a61f1edaea90d4405baf  6aa1de24dda3
+upgrade 281f7c1eb8146548753f6c6f3e5e0b7406c6c5396cb7fd8add4bf804adc52136  86171614cb85
+upgrade aa8d31afd89da579aad0ee8f80017f9a78dc2350bceb11517ebdd09c18c8219d  88f18e7f844d
+upgrade 4ff612792bd97d62c004c938467096bfabcf66f3bd2dba03bc5a6d67be082fd5  a1c93e5f7b04
+upgrade 727ba6828c7038bdd1c12d46f7318dd300eac970eae7276a1d242e6a3c01e20a  a9d4c31e7b02
+upgrade 79b2e8aeeb6b192d604b5210943faf83e11024815915a32d8ade77f5e1f2f7da  b21f7ae0c93d
+upgrade efd8f8654f7c17207c03f628f23f46abf4d1fa30ca00a6fccdd1bacc4f7cb148  b7d240ac91e3
+upgrade 7148103bb5194a5f78fe96628e801970222157ed506e44c7615d6756b4110da2  b7e2f9a41c55
+upgrade 82390740b35f4f20da57fb71feb6e2d78dbd5e8ef67bf6c98a6cfa05668c6482  c7e1a5f04b93
+upgrade d7ffc48cb3822f52b6dbda4053b7d165de9fe9f10777987b97b48a37ea454154  d3f8b12c9a67
+upgrade 4d6980d36770b6dd85dfae18037b048a6f869bd5ec33d4ba3cde3846f32acebe  e4b7c9a15d2f
+upgrade 01be449f0433cf8ce79c13d02a254aa5aa81206a51c37950f1adca4b1a349fcb  e9f4a7c31b28
+upgrade 4f0bf8f93993d1bea0ce3874c556698cb9560dfe1aab45a1128238974a906f40  f0a3d81b47e2
+upgrade f25467dc47798eb963774df74ef98356678a029aed78252a4ec53fcff0f82cf2  f7c2e0a934d1
