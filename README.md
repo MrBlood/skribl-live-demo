@@ -106,6 +106,9 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `POST /api/skribls` | Create a post |
 | `GET /api/skribls/<id>` | Fetch a post as JSON |
 | `GET /api/skribls` | Feed listing, metadata only, keyset-paginated |
+| `PATCH /api/skribls/<id>` | Edit a post's own metadata — title, caption, visibility |
+| `DELETE /api/skribls/<id>` | Take a post down. An author, or an anonymous poster holding the revocation key issued when they posted |
+| `GET /media/<key>` | Media stored outside the payload, when a `media_store` is configured |
 | `/feed` | **Preview of the in-post player and the composer.** A minimal host page over the real listing |
 | `/skribl-pad?compose=1` | Pad opened from a host's composer — attaches, publishes nothing |
 | `/library` | Profile Skribls tab: the listing, with a full transport |

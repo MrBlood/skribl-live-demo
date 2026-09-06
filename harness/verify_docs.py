@@ -205,6 +205,58 @@ check("every route the blueprint registers is named in at least one .md",
       ", ".join(_undoc_routes) + " — README.md's route table and "
       "docs/INTEGRATION.md's list are where a host looks")
 
+# ...AND README.md'S TABLE IS ONE OF THOSE PLACES, so being named SOMEWHERE is
+# not enough for it. Its "## Routes" heading carries no qualifier — no "the main
+# ones", no "a sample" — so it reads as the list, and by v281 it was missing
+# three: GET /media/<key>, PATCH /api/skribls/<id>, and DELETE /api/skribls/<id>
+# — the last being the entire revocation capability v279-v281 was spent
+# building, invisible in the table a reader consults to find out what Skribl
+# serves. The check above passed the whole time, because all three are named in
+# docs/INTEGRATION.md.
+#
+# If a route genuinely should not be listed, qualify the heading and this stops
+# claiming completeness on the table's behalf.
+#
+# METHOD-AWARE, and the first version of this gate was not — which is why the
+# mutation that removed the DELETE row from the table left it green. `_routes`
+# above holds PATHS, so GET, PATCH and DELETE on /api/skribls/<public_id>
+# collapse into one entry and any single row satisfies all three. The check
+# would have passed on the exact tree that motivated it.
+_METHODS = ("GET", "POST", "PATCH", "DELETE", "PUT")
+_verbed = set()
+for _kind, _path, _rest in re.findall(
+        r'@\w+\.(route|get|post|put|delete|patch)\(\s*["\']([^"\']+)["\']([^)]*)\)', _src):
+    _m = re.search(r"methods=\[([^\]]*)\]", _rest)
+    _verbs = ([v.strip().strip("\"'").upper() for v in _m.group(1).split(",") if v.strip()]
+              if _m else [_kind.upper().replace("ROUTE", "GET")])
+    for _v in _verbs:
+        _verbed.add((_v, _path))
+# A path carrying one verb is named by its path alone; the table spells those
+# without a method ("/flip"), which is right. A path carrying SEVERAL needs the
+# verb, because that is the only thing telling the rows apart.
+_multi = {p for p in {p for _, p in _verbed}
+          if sum(1 for v, q in _verbed if q == p) > 1}
+_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+_tbl = _readme.split("## Routes", 1)[1].split("\n## ", 1)[0] if "## Routes" in _readme else ""
+_untabled = []
+for _v, _pth in sorted(_verbed):
+    _rows = [ln for ln in _tbl.splitlines()
+             if _pth in ln or _pth.replace("public_id", "id") in ln]
+    if _pth in _multi:
+        _rows = [ln for ln in _rows if _v in ln]
+    if not _rows:
+        _untabled.append(f"{_v} {_pth}")
+if not _tbl:
+    check("README.md has a '## Routes' section to check", False,
+          "the section this gate reads is gone or renamed")
+else:
+    check("README.md's route table names every route, since it claims to be the list",
+          not _untabled,
+          ", ".join(_untabled) +
+          " — an unqualified table is a promise of completeness"
+          if _untabled else
+          f"all {len(_verbed)} method+path routes appear in the table")
+
 # EVERY SKRIBL_* THE CODE READS MUST BE NAMED SOMEWHERE. Six were not:
 # SKRIBL_RATE_HMAC_KEY, SKRIBL_ALLOW_EPHEMERAL_SECRET, SKRIBL_FORCE_SECURE_COOKIES,
 # SKRIBL_MAX_REQUEST_BYTES, SKRIBL_MAX_GROUPS_PER_FRAME, SKRIBL_RATE_CLEANUP_BATCH.
