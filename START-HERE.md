@@ -1636,10 +1636,21 @@ ratchet in `verify_inline.py`, separate from the embed's: a page that only
 DISPLAYS Skribls never composes one and must not be charged for it.
 
 "in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
-It loads exactly two of these — `canvassizes.js` for a legacy payload's default
-shape and `holdtiming.js` for what a per-page hold means — and reads nothing
-else from `lib/`, which is the point: those two are the rules it would otherwise
-have re-derived. `verify_inline.py` asserts both that it reads them and that the
+It loads FOUR of these — `canvassizes.js` for a legacy payload's default shape,
+`holdtiming.js` for what a per-page hold means, `audiosession.js` for the iOS
+ringer fix, and `sharecard.js` — and its own code reads the first three. This
+said "exactly two ... and reads nothing else from `lib/`" until v281; the third
+and fourth arrived in v277 and v278 and the sentence did not move.
+
+`sharecard.js` is the odd one and worth knowing about: the idle poster's crop
+is implemented in `inlineplayer.css` as literals, and nothing in the page reads
+`window.SkriblShareCard` at runtime. What reads it is `verify_inline.py`, in
+the page, to check those literals still agree with the module's arithmetic.
+That is a real assertion and it costs every host 5,210 B of a 32,000 B embed
+budget — 16% — for a module the page itself never calls. Injecting it from the
+suite instead would keep the check and drop the payload; it is left as it is
+because the index below documents `in-post` as one of its surfaces, so removing
+it is a contract change rather than a cleanup. `verify_inline.py` asserts both that it reads them and that the
 macro loads them, because reading a global nothing loads is a silent fallback
 rather than a shared rule.
 
@@ -1648,7 +1659,7 @@ rather than a shared rule.
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
 | `audiosession.js` | Pad+Flip+player+in-post | Holds an iOS playback session so the ringer switch stops silencing Web Audio. |
 | `scrubkeys.js` | Pad+Flip+player | Makes a `role="slider"` scrubber keyboard-operable and keeps `aria-valuenow` current. All three declared or implied the role and none could be focused or moved. |
-| `modalfocus.js` | Pad+Flip | Focus in, Tab trapped, focus back out, for surfaces that declare `aria-modal="true"`. Replaces two `blur()` calls that dropped focus on `<body>`. All eight such surfaces route through it as of v280, and `verify_a11y.py` enumerates them rather than testing one. |
+| `modalfocus.js` | Pad+Flip | Focus in, Tab trapped, focus back out, for surfaces that declare `aria-modal="true"`. Replaces two `blur()` calls that dropped focus on `<body>`. EVERY such surface routes through it — `verify_a11y.py` enumerates them from the DOM and from source, so the count lives there and not in this row, which said "all eight" while v281 was adding the ninth and tenth. |
 | `recoverykey.js` | Pad+Flip | Shows an anonymous post's revocation key when the browser could not keep it, and warns BEFORE posting when it cannot keep anything. The last custody that survives cleared site data — see "Closed in v280". |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
