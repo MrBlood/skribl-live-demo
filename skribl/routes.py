@@ -209,10 +209,12 @@ def register_routes(bp, *, index_route=False):
     if index_route:
         @bp.get("/")
         def home():
+            """Standalone-site root, registered only when index_route=True."""
             return render_template("skribl/skribl_editor.html")
 
     @bp.get("/skribl-pad")
     def skribl_editor():
+        """Pad — the record-and-replay editor."""
         # COMPOSE MODE. ?compose=1 is the Pad opened from a host's post
         # composer — an overlay over their feed, not a page somebody navigated
         # to. It ends in "Add to post", which hands the finished drawing back to
@@ -229,12 +231,14 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/flip")
     def skribl_flip():
+        """Flip — the frame-by-frame animator."""
         # Flip Mode — the frame-by-frame animation editor (standalone page for now;
         # folds into the pad as an in-app mode in a later phase).
         return render_template("skribl/skribl_flip.html")
 
     @bp.get("/library")
     def skribl_library():
+        """The profile's Skribls tab: the listing, with a full transport."""
         # CONCEPT PREVIEW — a per-user library with an inline player that replays
         # each skribl. Served as a real route so it can be seen live and the
         # player iterated on; the tiles are self-contained demo drawings, not yet
@@ -243,6 +247,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/feed")
     def skribl_feed():
+        """The demo host page: the in-post player and composer over the real listing."""
         # PREVIEW ROUTE for the in-post player — the smallest honest host. It
         # renders no posts of its own: the page fetches GET /api/skribls and
         # clones the skribl_inline() macro for each item, so what it shows is
@@ -260,6 +265,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
+        """The public player a shared link opens."""
         # Server-render Open Graph / Twitter card metadata so shared links unfurl
         # with the Skribl's title + caption — social scrapers don't run the client
         # JS that fills those in. The lookup is best-effort: on a missing post or a
@@ -318,6 +324,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/s/<public_id>/card.png")
     def skribl_card(public_id):
+        """The share-card image link unfurls use."""
         # Serve the per-Skribl share-card thumbnail generated client-side at post
         # time and stored in the payload. Best-effort and render-always: on a
         # missing post, missing/'malformed thumbnail, or a transient DB error we
@@ -404,6 +411,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.post("/api/skribls")
     def create_skribl():
+        """Create a post."""
         # Two budgets (review #7). The ATTEMPT budget is charged on every request
         # and exists to stop request floods; the POST budget is charged only when
         # a post commits, so a burst of malformed bodies can no longer exhaust a
@@ -798,6 +806,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/api/skribls/<public_id>")
     def get_skribl(public_id):
+        """Fetch one post as JSON."""
         if not _valid_public_id(public_id):
             return jsonify({"error": "Skribl not found."}), 404
         post = session().query(SkriblPost).filter_by(public_id=public_id).first()
@@ -895,6 +904,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.delete("/api/skribls/<public_id>")
     def delete_skribl(public_id):
+        """Take a post down — by its author, or with the revocation key issued at post time."""
         # The id shape is checked first so a malformed one cannot reach the
         # query, exactly as GET does.
         if not _valid_public_id(public_id):

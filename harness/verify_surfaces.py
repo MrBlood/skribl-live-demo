@@ -305,57 +305,12 @@ check("every self-installing exemption still earns its place",
       f"{len(_SELF_INSTALLING)} exemption(s), each loaded, self-wiring, and "
       "load-bearing — an entry here is a claim that the module runs itself")
 
-print("\nSURFACES — the shared-module index against the templates it describes")
-# START-HERE.md's index is where CLAUDE.md sends a reader to learn what a
-# lib module is and which pages carry it, and its "loaded on" column had drifted
-# on three of 52 rows by v281 — media_validation.js still claimed the player
-# while THAT TEMPLATE'S OWN COMMENT explained why it is not loaded there, and
-# canvassizes/holdtiming had never been told the library page exists. Three
-# rows wrong by hand-count is the same shape as the three dead script tags
-# above: a census nothing recomputes describes the tree it was written against.
-#
-# The column's vocabulary is closed, and an unknown token FAILS rather than
-# reading as "no surfaces" — a typo must not turn a row green by emptying it.
-_COLUMN = {"Pad": "skribl_editor.html", "Flip": "skribl_flip.html",
-           "player": "skribl_player.html", "library": "skribl_library.html",
-           "in-post": "_skribl_inline_player.html",
-           # skribl_feed.html is not a Skribl surface: it is the demo HOST page,
-           # and lib/composehost.js is the one module only a host loads.
-           "HOST": "skribl_feed.html"}
-
-_loaded = {}
-for _tok, _tpl in _COLUMN.items():
-    for _a in _scripts(_TPL / _tpl):
-        if _a.startswith("lib/"):
-            _loaded.setdefault(_a[4:], set()).add(_tok)
-
-_index = re.findall(r"^\| `([a-z0-9_]+\.js)` \| ([^|]+?) \|",
-                    (ROOT / "START-HERE.md").read_text(encoding="utf-8"), re.M)
-_files = {f.name for f in (_ST / "lib").glob("*.js")}
-_rows = {n for n, _ in _index}
-
-check("the shared-module index names every lib/*.js and no file that is gone",
-      _rows == _files,
-      "missing: " + (", ".join(sorted(_files - _rows)) or "none") +
-      "; named but absent: " + (", ".join(sorted(_rows - _files)) or "none") +
-      " — CLAUDE.md sends a reader here to find out what a module is")
-
-_wrong = []
-for _name, _col in _index:
-    _claim = {t.strip() for t in _col.split("+")}
-    _unknown = _claim - set(_COLUMN)
-    if _unknown:
-        _wrong.append(f"{_name}: unknown surface {'/'.join(sorted(_unknown))}")
-        continue
-    _actual = _loaded.get(_name, set())
-    if _claim != _actual:
-        _wrong.append(f"{_name}: doc says {'+'.join(sorted(_claim))}, "
-                      f"templates load it on {'+'.join(sorted(_actual)) or 'nothing'}")
-check("every index row's 'loaded on' column matches the templates",
-      not _wrong, "; ".join(_wrong) or
-      f"{len(_index)} rows, each checked against the {len(_COLUMN)} templates "
-      "— the column is a census, and a census nobody recomputes is a memory")
-
+# THE SHARED-MODULE INDEX CENSUS LIVED HERE AND IS GONE, which is the point.
+# It checked that START-HERE.md's table agreed with the templates, and it found
+# three wrong rows and three missing ones in v281. harness/gen_docs.py now
+# GENERATES that table from the templates and each module's own opening
+# sentence, so there is no second copy to disagree — and a gate that guards a
+# fact nothing restates is pure cost. Derive, then delete, then gate.
 
 print("\nSURFACES — stylesheets keep no rule nothing can match")
 # 31 class names had rule-sets in styles.css, flip.css and player.css and were

@@ -1704,63 +1704,69 @@ finding look better is exactly the kind worth writing down. `verify_inline.py` a
 macro loads them, because reading a global nothing loads is a silent fallback
 rather than a shared rule.
 
+<!-- GEN:MODULE-INDEX -->
 | module | loaded on | what it owns |
-| --- | --- | --- |
+|---|---|---|
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
-| `audiosession.js` | Pad+Flip+player+in-post | Holds an iOS playback session so the ringer switch stops silencing Web Audio. |
-| `scrubkeys.js` | Pad+Flip+player | Makes a `role="slider"` scrubber keyboard-operable and keeps `aria-valuenow` current. All three declared or implied the role and none could be focused or moved. |
-| `modalfocus.js` | Pad+Flip | Focus in, Tab trapped, focus back out, for surfaces that declare `aria-modal="true"`. Replaces two `blur()` calls that dropped focus on `<body>`. EVERY such surface routes through it — `verify_a11y.py` enumerates them from the DOM and from source, so the count lives there and not in this row, which said "all eight" while v281 was adding the ninth and tenth. |
-| `recoverykey.js` | Pad+Flip | Shows an anonymous post's revocation key when the browser could not keep it, and warns BEFORE posting when it cannot keep anything. The last custody that survives cleared site data — see "Closed in v280". |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
+| `audiosession.js` | Pad+Flip+player+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
+| `brushfield.js` | Flip | The arithmetic behind tools that act on ink already on the page. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
+| `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
-| `composehost.js` | HOST | The pad button's lifecycle for a HOST's composer — the only lib no Skribl surface loads. |
 | `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
-| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels, at most one open, the opener reflecting state. |
+| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels above/below a toolbar, at most one open, the opener button reflecting state, and a scroll that reveals the opened panel without stranding it under browser chrome. |
 | `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |
 | `eventpoint.js` | Pad+Flip+player | Which contact a gesture belongs to — shared by Pad, Flip and the player. |
 | `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
-| `framebitmap.js` | Flip+player | A painted page is rasterised ONCE per playback — the rule both playback surfaces apply, because both repainted every stroke point of a static picture on every loop. |
+| `floodfill.js` | Flip | Flood fill, expressed in the only vocabulary this project has: strokes. |
+| `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
 | `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip editor and the player. |
-| `keyregistry.js` | Flip | What is bound to which key, and whether two things answer at once. NOT a command router: it records bindings, it does not dispatch. |
+| `inputsamples.js` | Flip | The points the browser already captured and the handler was throwing away. |
+| `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
-| `nametab.js` | Pad+Flip | The skribl NAME drawer — one title for the drawing, because the Pad defaulted to "Untitled Skribl" and Flip named the file by date and collided. |
+| `modalfocus.js` | Pad+Flip | Focus for surfaces that declare aria-modal="true". |
+| `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
-| `floodfill.js` | Flip | Flood fill as scanline runs — a region expressed as strokes, because the format has no fill primitive. |
-| `inputsamples.js` | Flip | The coalesced pointer samples a per-frame listener drops, thinned by distance so a fast stroke keeps its curve without bloating the payload. |
-| `brushfield.js` | Flip | The falloff, colour mixing and point traversal that Liquify, Smudge and Blur share — including why a stroke-format blur is possible at all, and what it cannot do. |
-| `stamps.js` | Flip | The stamp shelf: normalising a selection onto its own centre, the compact encoding, and the byte budget that keeps a store which only grows from starving the draft it shares an origin with. |
-| `sizeclass.js` | Flip | One size decision for the whole app — compact vs regular, measured once, stamped on the root. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
-| `photofit.js` | Pad+Flip | Photo fit geometry — the part both editors must agree on. Listed as `Pad+Flip+player` until v281: the player LOADED it and never called it, because its only consumer is `artwork.js`, which composites the editors' canvas and is not on that page. The player fits its photo layer in CSS, and that the two agree is held by `verify_visual.py`'s pixels rather than by a shared module. |
+| `photofit.js` | Pad+Flip | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
-| `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
-| `postedaudio.js` | Pad+Flip | What a POST stores: the loop baked down to mono. Editors only — the player never posts. Its header records why 22.05 kHz was tried and reverted. |
+| `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `posted.js` | Pad+Flip | Your Skribls — a local record of what you have posted. |
-| `postedui.js` | Pad+Flip | Your Skribls — rendering. The store is lib/posted.js; this draws it. |
+| `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
+| `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
+| `postedui.js` | Pad+Flip | Your Skribls — rendering. |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
+| `recoverykey.js` | Pad+Flip | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
 | `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
-| `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
-| `sharecard.js` | Pad+Flip | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
+| `sharecard.js` | Pad+Flip | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
+| `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
 | `theme.js` | Pad+Flip | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip | Styled tooltips, replacing the browser's. |
-| `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder and the chrome, kept OUT of `looptrim.js` because the player loads that and has no such panel. |
+| `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |
+<!-- /GEN:MODULE-INDEX -->
+
+Generated by `harness/gen_docs.py`: the surfaces come from the templates that
+load each module and the description is the module's own opening sentence, so
+neither can drift from the thing it describes.
 
 Two are worth calling out because they were extracted after a bug, not before:
 `holdtiming.js` (the editor and the player disagreed about what a hold means)
