@@ -131,8 +131,23 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
 # served /static/skribl/ URLs the lookbehind above already handles: a correct
 # reference in a different namespace. Only .html is resolved this way, and only
 # after the literal path has failed, so a genuinely missing file still fails.
+# Files a CI job PRODUCES rather than files the tree carries. Naming one in a
+# document is not a broken reference — it is how a reader learns the artefact
+# exists and where it lands. Kept as an explicit short list rather than a
+# pattern, so adding one is a decision: an entry here is a promise that
+# something actually writes it.
+_PRODUCED = {
+    # Written by the 'mp4 (real Chrome)' job in .github/workflows/harness.yml,
+    # read by release_run.mp4_attestation(). Absent from a normal checkout by
+    # design — it is evidence about a specific tree, not source.
+    "harness/MP4-ATTESTATION.txt",
+}
+
+
 def _resolves(rel):
     if (ROOT / rel).is_file():
+        return True
+    if rel in _PRODUCED:
         return True
     return (rel.startswith("skribl/") and rel.endswith(".html")
             and (ROOT / "skribl" / "templates" / rel).is_file())

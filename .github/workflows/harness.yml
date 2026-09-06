@@ -277,3 +277,34 @@ jobs:
             cat harness/LAST-RUN.txt >&2
             exit 1
           fi
+      - name: Write the MP4 attestation
+        # THE RESULT HAS TO REACH THE SEAL. Before this the job proved H.264
+        # and the sealed archive said only "skipped 1 (verify_mp4.py)", so a
+        # reader could not tell "not covered" from "covered somewhere you
+        # cannot see" — an audit of v278 called that an evidence gap, correctly.
+        #
+        # The TREE HASH is the load-bearing field: release_run.py accepts this
+        # file only when it matches the tree the release froze, because an
+        # attestation for different code is worse than none.
+        run: |
+          python - <<'PY' > harness/MP4-ATTESTATION.txt
+          import re, sys
+          sys.path.insert(0, "harness")
+          import release_run as r
+          rec = open("harness/LAST-RUN.txt").read()
+          n = re.search(r"^assertions passed:\s*(\d+)", rec, re.M)
+          print("tree:", r.tree_hash())
+          print("channel: chrome")
+          print("result: PASS")
+          print("assertions:", n.group(1) if n else "?")
+          import datetime
+          print("generated:",
+                datetime.datetime.now(datetime.timezone.utc)
+                .strftime("%Y-%m-%dT%H:%M:%SZ"))
+          PY
+          cat harness/MP4-ATTESTATION.txt
+      - name: Upload the MP4 attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: mp4-attestation
+          path: harness/MP4-ATTESTATION.txt

@@ -60,6 +60,7 @@ _tree_files() {
               -e 'README.md' -e 'harness/README.md' -e 'docs/HANDOFF.md' \
               -e 'START-HERE.md' -e 'harness/RELEASE.md' \
               -e 'harness/.pg_gunicorn.log' -e 'harness/.pg_f3_gunicorn.log' \
+              -e 'harness/MP4-ATTESTATION.txt' \
      | LC_ALL=C sort
 }
 

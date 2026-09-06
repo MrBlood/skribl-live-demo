@@ -136,6 +136,35 @@ TypeDecorator never ran and an author could not read their own private post.
 The type covers what is stored and loaded; the comparison covers what was never
 persisted. Both are needed and for different reasons.
 
+### The MP4 attestation — what a seal can honestly say about H.264
+
+`verify_mp4.py` skips wherever Chromium is the browser: Playwright ships the
+open-source build, which has WebCodecs but no H.264 encoder. (Probing
+`VideoEncoder` on `about:blank` reports "no WebCodecs at all" and is
+misleading — the suite checks on a real page, where the API is present and the
+three `avc1.*` profiles are all unsupported.)
+
+The `mp4 (real Chrome)` CI job covers it, and until v279 its result never
+reached the archive: the seal said `skipped 1 (verify_mp4.py)` and nothing
+about whether the gap had been closed elsewhere, so a reader could not tell
+"not covered" from "covered somewhere you cannot see". An audit of v278 called
+that an evidence gap rather than a defect, which is exactly what it was.
+
+`harness/MP4-ATTESTATION.txt` is that job's answer, and `RELEASE.md` now
+carries an `mp4 (H.264)` line computed from it. **The tree hash in the
+attestation must match the one the release froze** — evidence about different
+code is worse than no evidence, because the seal would then assert coverage it
+does not have. Three outcomes, all stated rather than implied: verified, STALE,
+or NOT VERIFIED with the command to fix it.
+
+It never blocks a release. Whether an unverified MP4 path is shippable is a
+product decision; the seal's job is to state the fact.
+
+The file is excluded from BOTH tree-hash lists (`release_run.GENERATED` and
+`run_harness.sh`'s `_tree_files`) for the same reason `RELEASE.md` is: it names
+a hash, so including it would make writing the evidence change the thing the
+evidence is about. The two lists must stay identical — that is the v221 defect.
+
 ### Environment traps, in the order they will bite
 
 * `apt-get update` fails outright until the blocked nodesource repo is moved

@@ -39,13 +39,27 @@ HARNESS = ROOT / "harness"
 # Excluded from the tree hash for the same reason run_harness.sh excludes them:
 # they are written AFTER a run, so including them means recording a result
 # changes the tree whose hash was just recorded. Kept in step by verify_docs.
+ATTESTATION = "harness/MP4-ATTESTATION.txt"
+
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
              "harness/RELEASE.md",
              # v211: verify_postgres writes gunicorn logs beside itself; they
              # are run artefacts, not tree, and must not move the frozen hash
              # between batches (the F3 host log did exactly that once).
-             "harness/.pg_gunicorn.log", "harness/.pg_f3_gunicorn.log"}
+             "harness/.pg_gunicorn.log", "harness/.pg_f3_gunicorn.log",
+             # The MP4 attestation NAMES a tree hash, so including it in that
+             # hash would be circular: writing the evidence would change the
+             # thing the evidence is about, and the file could never match.
+             # Same argument as RELEASE.md above, which states the hash it is
+             # excluded from. run_harness.sh's _tree_files must exclude it too
+             # or the banner and this file print different hashes for one tree
+             # — the v221 defect, which is why both lists carry the same names.
+             # SPELLED OUT rather than written as the ATTESTATION constant: the
+             # parity check in verify_docs.py compares the two lists as LITERAL
+             # strings, so a name that reaches this set through a variable is
+             # invisible to it. Caught by that check on the first run.
+             "harness/MP4-ATTESTATION.txt"}
 
 # Batches exist because a bare run hangs. Grouped so a browser batch stays
 # small enough to finish, and so the server/security suites — which do not
@@ -278,6 +292,49 @@ def tree_files():
     return sorted(keep)
 
 
+def mp4_attestation(frozen):
+    """What the seal can honestly say about H.264, for THIS tree.
+
+    verify_mp4.py SKIPS wherever Chromium is the browser: Playwright ships the
+    open-source build, which has WebCodecs but no H.264 encoder. The CI job
+    `mp4 (real Chrome)` exists to cover it and does — and an audit of v278
+    pointed out that its result never reached the sealed archive, so the seal
+    said "skipped 1" and nothing about whether the gap had been closed
+    elsewhere. A reader could not tell "not covered" from "covered somewhere
+    you cannot see".
+
+    The attestation is that job's answer, written as a file it produces. THE
+    TREE HASH IN IT MUST MATCH THE ONE THIS RUN FROZE — an attestation for a
+    different tree is evidence about different code, and accepting one would be
+    worse than having none, because the seal would then assert coverage it does
+    not have.
+
+    Returns a single line for RELEASE.md. It never raises and never blocks a
+    release: whether an unverified MP4 path is shippable is a product decision,
+    and the seal's job is to state the fact, not to make it.
+    """
+    f = ROOT / ATTESTATION
+    if not f.is_file():
+        return ("NOT VERIFIED for this tree — no attestation. Run the "
+                "'mp4 (real Chrome)' CI job, or "
+                "SKRIBL_BROWSER_CHANNEL=chrome ./harness/run_harness.sh "
+                "verify_mp4.py on a machine with Google Chrome.")
+    fields = {}
+    for line in f.read_text(encoding="utf-8").splitlines():
+        if ":" in line:
+            k, _, v = line.partition(":")
+            fields[k.strip().lower()] = v.strip()
+    got = fields.get("tree", "")
+    if got != frozen:
+        return (f"STALE — the attestation describes tree {got[:12] or '?'}, "
+                f"this release is {frozen[:12]}. Evidence about different code.")
+    if fields.get("result", "").upper() != "PASS":
+        return f"FAILED on {fields.get('channel', '?')} — {fields.get('result')}"
+    return (f"verified on {fields.get('channel', '?')}, "
+            f"{fields.get('assertions', '?')} assertions, "
+            f"{fields.get('generated', 'time unknown')}")
+
+
 def tree_hash():
     inner = "".join(
         f"{hashlib.sha256((ROOT / f).read_bytes()).hexdigest()}  {f}\n"
@@ -464,6 +521,7 @@ def main():
         f"    assertions       {total}",
         f"    skipped          {len(skipped)}" +
         (f"  ({', '.join(skipped)})" if skipped else ""),
+        f"    mp4 (H.264)      {mp4_attestation(frozen)}",
         f"    generated        {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
         "",
         "A skip is not coverage. Suites that skip are listed above by name so "
