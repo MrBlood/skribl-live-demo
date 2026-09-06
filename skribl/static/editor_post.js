@@ -332,13 +332,19 @@
     }
     clearTimeout(closeTimer);
     overlay.hidden = false;
-    requestAnimationFrame(() => { overlay.classList.add('open'); applyKeyboardInset(); });
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+      applyKeyboardInset();
+      if (window.SkriblModal) window.SkriblModal.open(sheet || overlay);
+    });
   }
 
   function closePost() {
-    if (document.activeElement === titleInput || document.activeElement === captionInput) {
-      document.activeElement.blur();
-    }
+    // WAS a conditional blur() on the two text fields, which exists to dismiss
+    // the soft keyboard on a phone. Returning focus to the opener does that
+    // too — focus leaves the input either way — and it also puts the user back
+    // where they were instead of on <body>.
+    if (window.SkriblModal) window.SkriblModal.close(sheet || overlay);
     overlay.classList.remove('open');
     if (sheet) sheet.style.maxHeight = '';
     overlay.style.top = ''; overlay.style.bottom = ''; overlay.style.height = '';

@@ -81,6 +81,17 @@
   --line-loud: #3a4150;
 
   /* Text, dimmest first */
+  /* NOT FOR TEXT A USER HAS TO READ. Measured against every surface in this
+     ramp, --text-faint reaches 2.99-3.37:1 and --text-dim 2.68-3.02:1, both
+     under WCAG AA's 4.5:1 for normal-size text — and an accessibility audit of
+     v278 found them carrying instructions, trim times, optional-field state
+     and character counters, at 10-13px, which makes it worse in practice than
+     the ratio alone suggests.
+     There is no dimmer tier that also passes: --text-muted (#7d8496) is
+     4.61:1 against the lightest surface here, so anything meaningfully fainter
+     fails somewhere. These two survive for DISABLED controls and placeholders,
+     where the text-contrast requirement does not apply. Everything a user
+     reads uses --text-muted; verify_a11y.py holds that line. */
   --text-faint: #5f6675;
   --text-faint-2: #697080;
   --text-soft: #8a93a6;
@@ -1340,7 +1351,7 @@ body.player-mode #canvas {
 
 .player-brand {
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   letter-spacing: 0.03em;
   /* "made with <signature>": the words are quiet type, the mark is real ink.
      The signature is the brand's one appearance on a shared page — the header

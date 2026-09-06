@@ -58,6 +58,17 @@
   --line-loud: #3a4150;
 
   /* Text, dimmest first */
+  /* NOT FOR TEXT A USER HAS TO READ. Measured against every surface in this
+     ramp, --text-faint reaches 2.99-3.37:1 and --text-dim 2.68-3.02:1, both
+     under WCAG AA's 4.5:1 for normal-size text — and an accessibility audit of
+     v278 found them carrying instructions, trim times, optional-field state
+     and character counters, at 10-13px, which makes it worse in practice than
+     the ratio alone suggests.
+     There is no dimmer tier that also passes: --text-muted (#7d8496) is
+     4.61:1 against the lightest surface here, so anything meaningfully fainter
+     fails somewhere. These two survive for DISABLED controls and placeholders,
+     where the text-contrast requirement does not apply. Everything a user
+     reads uses --text-muted; verify_a11y.py holds that line. */
   --text-faint: #5f6675;
   --text-faint-2: #697080;
   --text-soft: #8a93a6;
@@ -1386,7 +1397,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 /* ---------- Draw panel ---------- */
 .brush-size-inline {
   font-size: 10px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-weight: 500;
   letter-spacing: 0.4px;
   text-transform: uppercase;
@@ -1474,7 +1485,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: var(--r-control);
   border: 1px solid var(--hairline);
   background: transparent;
-  color: var(--text-faint);
+  color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1627,7 +1638,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
-  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: var(--text-faint);
+  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: var(--text-muted);
 }
 .reposition-hint[hidden] { display: none; }
 
@@ -2015,7 +2026,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 80px;
   border: 1px dashed var(--line-mid);
   border-radius: 12px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2295,7 +2306,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   justify-content: space-between;
   margin-top: 6px;
   font-size: 11px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2319,7 +2330,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   margin-bottom: 12px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-faint);
+  color: var(--text-muted);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2434,7 +2445,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .finetune-head {
   font-size: 11px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2560,7 +2571,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .step-label {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-faint);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -3685,7 +3696,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 .post-field-optional {
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -3716,7 +3727,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-char-count {
   align-self: flex-end;
   font-size: 10.5px;
-  color: var(--text-dim);
+  color: var(--text-muted);
 }
 
 .post-submit {
@@ -4119,7 +4130,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-count {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-faint);
+  color: var(--text-muted);
   background: var(--surface-control-hover);
   border: 1px solid var(--line-2);
   padding: 3px 8px;
@@ -4131,7 +4142,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-chevron {
   width: 18px;
   height: 18px;
-  color: var(--text-faint-2);
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4173,7 +4184,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .help-section-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-faint);
+  color: var(--text-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -4780,7 +4791,7 @@ body.player-mode #canvas {
 
 .player-brand {
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   letter-spacing: 0.03em;
   /* "made with <signature>": the words are quiet type, the mark is real ink.
      The signature is the brand's one appearance on a shared page — the header
@@ -5631,7 +5642,7 @@ body.player-mode #canvas {
    already read this way via its flex-grow override below. */
 .tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; margin-right: auto; }
 .tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.tune-hint { font-size: 11px; color: var(--text-dim); }
+.tune-hint { font-size: 11px; color: var(--text-muted); }
 .tune-tool.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
 .flip-grid.on { display: block; }

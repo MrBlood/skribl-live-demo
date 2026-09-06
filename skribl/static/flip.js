@@ -2749,7 +2749,8 @@ function updateToolState(){
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
 const drawOnBtn=document.getElementById('drawOnBtn');
 let scrubbingFrames=false, playI=0;
-function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%'; }
+function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgressFill.style.width=(((idx+1)/frames.length)*100)+'%';
+  if(window.SkriblScrub && frames.length>1) window.SkriblScrub.sync(flipProgress, idx/(frames.length-1)); }
 
 // --- draw-on replay: reveal each frame's strokes over their recorded timing ---
 function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); paintFrame(ctx, count>=f.strokes.length ? f.strokes : f.strokes.slice(0, Math.max(0,count))); }
@@ -2936,6 +2937,16 @@ flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; co
 function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false; if(playing && drawOnMode){ dFrameStartPerf=performance.now(); drawOnTick(); } }
 flipProgress.addEventListener('pointerup',endFrameScrub);
 flipProgress.addEventListener('pointercancel',endFrameScrub);
+/* The keyboard half. This div declared role="slider" with valuemin/valuemax
+   and supplied no tabindex, no valuenow and no key handler, so it announced a
+   control nobody could focus or move. Same scrubToFrac() the drag uses, so the
+   two paths cannot diverge. See lib/scrubkeys.js. */
+if(window.SkriblScrub){
+  window.SkriblScrub.attach(flipProgress, {
+    seek: f => scrubToFrac(f),
+    frac: () => (frames.length > 1 ? idx / (frames.length - 1) : 0)
+  });
+}
 
 /* ---- tools: the Pad editor's Draw menu (colors + brush), wired to Flip state ---- */
 const colorCurrent=document.getElementById('colorCurrent');

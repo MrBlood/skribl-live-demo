@@ -189,7 +189,14 @@ bindEl('photoRemove', 'click', (e) => {
   if (blEl) { blEl.value = 0; document.getElementById('photoBlurVal').textContent = '0px'; updateSliderFill(blEl); }
   updateSliderFill(document.getElementById('photoOpacity'));
   // Reset fit to Fill
-  document.querySelectorAll('.photo-fit-btn').forEach(b => b.classList.toggle('active', b.dataset.fit === 'cover'));
+  document.querySelectorAll('.photo-fit-btn').forEach(b => {
+    /* aria-pressed alongside the class: the visual selection was the only
+       selection, so a screen reader could operate these and never learn
+       which was chosen. */
+    const sel = b.dataset.fit === 'cover';
+    b.classList.toggle('active', sel);
+    b.setAttribute('aria-pressed', String(sel));
+  });
   if (photoFitSlider) { photoFitSlider.style.width = '0'; photoFitSlider.style.transform = 'translateX(0)'; }
   photoOffsetX = 0.5; photoOffsetY = 0.5;
   photoZoom = 1; setZoomSliderUI();
@@ -202,7 +209,11 @@ setTimeout(initPhotoFitSlider, 50);
 document.querySelectorAll('.photo-fit-btn').forEach((btn, idx) => {
   btn.addEventListener('click', () => {
     photoFit = btn.dataset.fit;
-    document.querySelectorAll('.photo-fit-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.photo-fit-btn').forEach(b => {
+      const sel = b === btn;
+      b.classList.toggle('active', sel);
+      b.setAttribute('aria-pressed', String(sel));
+    });
     const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
     photoBgImg.style.objectFit = fitMap[photoFit];
     applyPhotoPosition();

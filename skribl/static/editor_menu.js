@@ -21,6 +21,10 @@
 // ---------- Overflow menu ----------
 const menuBtn = document.getElementById('menuBtn');
 const menuOverlay = document.getElementById('menuOverlay');
+// The dialog node itself, at module scope. setupSheetGestures() below has
+// its own local `sheet`; referencing that from openMenu/closeMenu would be
+// a ReferenceError, so the focus calls need this binding.
+const menuSheet = document.getElementById('menuSheet');
 let menuCloseTimer = null;
 
 function openMenu() {
@@ -32,12 +36,21 @@ function openMenu() {
   if (window._skriblSyncHintToggle) window._skriblSyncHintToggle();
   if (window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
   menuOverlay.hidden = false;
-  requestAnimationFrame(() => menuOverlay.classList.add('open'));
+  requestAnimationFrame(() => {
+    menuOverlay.classList.add('open');
+    // AFTER the unhide, or focus() lands on a hidden node and does nothing.
+    // The sheet declares aria-modal="true" and until now did nothing about
+    // focus at all — see lib/modalfocus.js.
+    if (window.SkriblModal) window.SkriblModal.open(menuSheet, menuBtn);
+  });
 }
 
 function closeMenu(instant) {
   menuOverlay.classList.remove('open');
   clearTimeout(menuCloseTimer);
+  // Return focus to whatever opened it. Before this, closing left focus
+  // wherever it had been when the sheet appeared — usually nowhere.
+  if (window.SkriblModal) window.SkriblModal.close(menuSheet);
   if (instant) {
     menuOverlay.hidden = true;   // dismiss with no slide (e.g. when opening another panel)
   } else {
@@ -282,6 +295,9 @@ function openHelpDrawer() {
   helpDrawer.classList.remove('closing');
   requestAnimationFrame(() => {
     helpDrawer.classList.add('open');
+    // aria-modal="true" is declared on this node; this is the half that makes
+    // it true. See lib/modalfocus.js.
+    if (window.SkriblModal) window.SkriblModal.open(helpDrawer);
   });
 }
 
@@ -290,8 +306,11 @@ if (helpItem) helpItem.addEventListener('click', () => { closeMenu(true); openHe
 
 function closeHelpDrawer() {
   clearTimeout(helpCloseTimer);
-  // Drop focus off the trigger so its :focus-visible ring doesn't linger (Escape).
-  if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+  // WAS blur(). That does drop the lingering :focus-visible ring, and it also
+  // drops focus on <body> — the user's place in the page is gone and the next
+  // Tab starts from the top. Returning focus to the opener achieves the ring's
+  // purpose (it moves off whatever had it) without the cost.
+  if (window.SkriblModal) window.SkriblModal.close(helpDrawer);
   helpDrawer.classList.add('closing');
   helpDrawer.classList.remove('open');
   helpCloseTimer = setTimeout(() => {

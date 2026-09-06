@@ -47,7 +47,12 @@
         // Explicit boolean. classList.toggle(name, undefined) TOGGLES rather
         // than setting, which is how two controls once read as selected at the
         // same time.
-        buttons[i].classList.toggle('active', buttons[i] === btn);
+        var _sel = buttons[i] === btn;
+      buttons[i].classList.toggle('active', _sel);
+      /* The selection was visual only: a screen-reader user could press these
+         but not learn which was chosen. Other controls in this tree already
+         use aria-pressed, so the pattern existed and this one had missed it. */
+      buttons[i].setAttribute('aria-pressed', String(_sel));
       }
       onChange(alphaFor(btn && btn.dataset ? btn.dataset.smooth : 'off'));
       onRender();

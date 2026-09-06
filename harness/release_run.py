@@ -56,6 +56,12 @@ BATCHES = [
     # batch 1 was never written and every re-invoke restarted from the top.
     # It gets a batch of its own; the three it shared with move to batch 2.
     ["verify_ux.py"],
+    # Keyboard and assistive-technology contracts. Its own batch for the same
+    # reason verify_ux has one: it drives both editors and the shared player
+    # through full page loads, and it presses keys against a PLAYING scrubber,
+    # so sharing a server with a suite that posts would make its timings a
+    # function of somebody else's work.
+    ["verify_a11y.py"],
     # verify_tools.py holds the v213 tool work, split out of verify_ux when that
     # suite outgrew a single invocation. Its own batch for the same reason.
     ["verify_tools.py"],

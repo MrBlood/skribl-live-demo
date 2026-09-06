@@ -94,6 +94,14 @@ appear here, and `RELEASE.md` names every one of them.
   invocation, or use `run_harness.sh`.
 ### v200 review-response suites
 
+- `verify_a11y.py` — keyboard and assistive-technology contracts, as their own
+  suite rather than more of `verify_ux.py`. Presses keys and reads what moved,
+  focuses things and reads where focus went; a present-but-inert
+  `role="slider"` was the defect it exists for, so the attribute alone is
+  never the assertion. Also holds the AA contrast floor for readable text.
+- `verify_deletion.py` — `delete_post()` / `set_post_visibility()`: the two
+  refusals are indistinguishable, an anonymous post is revocable by its
+  capability and by nothing else, and neither function commits.
 - `verify_txcontract.py` — the transaction ownership contract: routes flush and
   never commit/roll back the host's session, the host owns the per-request
   commit (app.py's for the standalone), and the blueprint bounds request bodies

@@ -1549,6 +1549,7 @@ const playScrubFill = document.getElementById('playScrubFill');
 
 function setScrubProgress(frac) {
   if (playScrubFill) playScrubFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+  if (playScrub && window.SkriblScrub) window.SkriblScrub.sync(playScrub, frac);
 }
 function positionScrub() {
   // Hang the bar just below the canvas, matched to its width — flush to the
@@ -1696,6 +1697,21 @@ if (playScrub) {
   playScrub.addEventListener('pointerup', endScrub);
   playScrub.addEventListener('pointercancel', endScrub);
   window.addEventListener('resize', () => { if (playing) positionScrub(); });
+  // The keyboard half. This div DECLARED role="slider" with valuemin/valuemax
+  // and had no tabindex, no valuenow and no key handler — a control announced
+  // to a screen reader that could not be focused or moved. See
+  // lib/scrubkeys.js. Seeking uses the same editorSeek() the pointer path
+  // does, so the two cannot diverge.
+  if (window.SkriblScrub) {
+    window.SkriblScrub.attach(playScrub, {
+      seek: (f) => {
+        if (!playing) return;
+        editorSeek(f);
+        playStart = performance.now() - lastTargetMs / replayRate;
+      },
+      frac: () => (playTotal ? lastTargetMs / playTotal : 0),
+    });
+  }
 }
 
 // The Post button opens the composer sheet — wired in initPostComposer() below.
@@ -4285,6 +4301,9 @@ function showPlayerError(msg) {
   }
   function setProgress(frac) {
     if (pFill) pFill.style.width = Math.max(0, Math.min(1, frac)) * 100 + '%';
+    // A slider that only reports its value on keypress is wrong the moment
+    // playback moves on its own, which is most of the time.
+    if (pTrack && window.SkriblScrub) window.SkriblScrub.sync(pTrack, frac);
   }
   // A small nib that rides the current replay point so watching reads as a hand
   // drawing rather than lines appearing. Player-only; positioned in display px
@@ -4473,6 +4492,16 @@ function showPlayerError(msg) {
     };
     clearAndRestore(paint);   // clear + redraw baseSnapshot, then replay to target
   }
+  // Keyboard seeking for the SHARED player, which did not even claim the role:
+  // a bare div with mousedown/touchstart, so a link sent to a stranger was
+  // pointer-only. Same seekTo() the drag path uses.
+  if (pTrack && window.SkriblScrub) {
+    window.SkriblScrub.attach(pTrack, {
+      seek: (f) => seekTo(f),
+      frac: () => (totalMs ? Math.min(1, elapsedBase / totalMs) : 0),
+    });
+  }
+
   function fracFromEvent(e) {
     const rect = pTrack.getBoundingClientRect();
     const clientX = SkriblEventPoint.at(e).clientX;

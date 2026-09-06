@@ -236,7 +236,10 @@
         <span class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
         <span>Watch your Skribl</span>
       </button>
-      <div class="post-status" id="postStatus" hidden>
+      {# Posting is the one flow where "did that work?" has a real cost, and
+         it announced nothing: started, succeeded and failed were all silent. #}
+      <div class="post-status" id="postStatus" role="status"
+           aria-live="polite" aria-atomic="true" hidden>
         <div class="export-progress-bar"><div class="export-progress-fill" id="postProgressFill"></div></div>
         <span class="export-progress-label" id="postStatusLabel">Posting…</span>
       </div>
@@ -283,7 +286,12 @@
   <div id="autosaveStatus" class="autosave-status" hidden><span class="autosave-dot"></span><span id="autosaveStatusText">Saved</span></div>
 
   <!-- Toast -->
-  <div id="toast" class="toast" hidden></div>
+  {# role=status/polite, not alert: a toast interrupting every autosave would
+   be worse than silence. Failures that need interrupting say so at their
+   own call site. aria-atomic because the Undo button is appended INTO
+   this node — without it a screen reader announces the fragment. #}
+  <div id="toast" class="toast" role="status" aria-live="polite"
+       aria-atomic="true" hidden></div>
 
   <!-- Autosave restore prompt -->
   <div id="restoreBanner" class="restore-banner" hidden>
@@ -458,6 +466,8 @@
      the player needs it too, because the scrub track is a player control and it
      read the screen-wide touch list. See the file for the rule. #}
   <script src="{{ skribl_asset('lib/eventpoint.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/scrubkeys.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>

@@ -775,7 +775,21 @@ with sync_playwright() as sp:
     # measured, 150,000 set, 3,654 B to target. The lesson is the one the shape
     # tool's carve already recorded and this release had to learn twice — carve
     # first when the target is furniture the player has no use for.
-    BYTES_RATCHET, BYTES_TARGET = 150_000, 153_600
+    #
+    # 150,000 -> 152,000 for lib/scrubkeys.js (1,489 B) and app.js's two call
+    # sites (+559 B). An accessibility audit of v278 found the shared player's
+    # progress bar was a bare div with mousedown/touchstart: a link sent to a
+    # stranger could not be seeked by keyboard at all, and Pad and Flip both
+    # DECLARED role="slider" while supplying no tabindex, no aria-valuenow and
+    # no key handler — announcing to a screen reader a control that could not
+    # be focused or moved.
+    #
+    # This is capability, not furniture, and it is capability the /s/<id> page
+    # specifically needs: it is the surface a person who did not make the
+    # drawing arrives at. Shared as a lib rather than written three times, so
+    # the step size and the value reporting cannot drift between surfaces.
+    # 1,606 B still to target.
+    BYTES_RATCHET, BYTES_TARGET = 152_000, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -790,7 +804,10 @@ with sync_playwright() as sp:
     # above the new floor of 10,640.
     # 10,800 -> 10,900 for one <script> tag: lib/audiosession.js, without which
     # this page is silent on a silent-mode iPhone. See the JS ratchet above.
-    HTML_RATCHET = 10_900
+    # 10,900 -> 11,000 for one <script> tag: lib/scrubkeys.js, without which
+    # this page cannot be seeked from a keyboard. Same reasoning as the JS
+    # ratchet above.
+    HTML_RATCHET = 11_000
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
