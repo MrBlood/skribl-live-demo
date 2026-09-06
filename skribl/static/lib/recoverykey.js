@@ -1,10 +1,21 @@
 /* Both ends of an anonymous author's revocation key: showing one, taking one
  * back, and standing between a bulk clear and the keys it would discard.
  *
- *   SkriblRecoveryKey.present({ key: '...', url: '...' });   // storage failed
- *   SkriblRecoveryKey.copy(key)  -> Promise<boolean>
- *   SkriblRecoveryKey.openRecover()                          // USE a saved key
- *   SkriblRecoveryKey.parseId('https://host/s/abc123')       // -> 'abc123'
+ *   present({ key, url })        show a key the store could not keep
+ *   openRecover()                take one back: link-or-id plus key
+ *   confirmClear(keyed, onOk)    stand between a bulk clear and the keys
+ *   warnIfVolatile(container)    warn BEFORE posting when nothing persists
+ *   copy(text)  -> Promise<bool> clipboard, with a legacy fallback
+ *   parseId('https://h/s/abc')   -> 'abc123'
+ *   close() / closeRecover() / closeClear()
+ *                                dismiss each, used by their own buttons
+ *                                and by verify_a11y's modal recipes
+ *
+ * This block listed four of the nine until v281 — written when the module
+ * only showed a key, and not grown as it gained the other end of the loop and
+ * the clear guard. An incomplete usage summary is the kind that sends the
+ * next reader to read the export list instead, which is where they would have
+ * looked anyway if it had claimed nothing.
  *
  * EXPORT WITHOUT IMPORT IS NOT A RECOVERY STORY, which is what v280 shipped
  * and what a third audit called the release blocker. This file showed the key,
@@ -292,7 +303,16 @@
         body: JSON.stringify({ deleteToken: v.key })
       }).then(function (r) {
         if (r.ok) {
-          said.textContent = 'Taken down. It is gone for everyone.';
+          /* "gone for everyone" is the unconditional promise deletion.py
+             was corrected for after a v278 audit, written back into the UI
+             by me and caught by reading every user-facing string as a claim.
+             The LINK stops working immediately — the row is gone and
+             /media/<key> authorises through associations that went with it.
+             What can outlive it is cached media, for the five-minute window a
+             deployment opts into with SKRIBL_PUBLIC_MEDIA_CACHE. The page
+             cannot know whether that is on, so it promises the part that is
+             true everywhere and does not promise the part that is not. */
+          said.textContent = 'Taken down. The link stops working now.';
           if (global.SkriblPosted) global.SkriblPosted.remove(v.id);
           if (global._skriblPostedUI) global._skriblPostedUI.render();
           return;
