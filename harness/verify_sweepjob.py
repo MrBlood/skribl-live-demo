@@ -350,8 +350,12 @@ code, out, err = cli("--app", "sweepstub:create_app", "--delete")
 check("a run where every delete fails exits 1, not 0", code == 1, f"exit {code}")
 check("…and the failures are printed, not swallowed",
       "DELETES THAT FAILED" in out and "PermissionError" in out, out.strip()[-160:])
-check("exit 1 and exit 2 mean different things to the job that reads them",
-      True, "1 = it ran and some deletes failed; 2 = it could not run at all")
+# Not a check: the distinction is what lines 308 and 320 above already assert
+# (a refused grace period and an unimportable --app both exit 2) against this
+# block's exit 1. Asserting `True` a third time added a number to the count and
+# proved nothing, so it says its piece as a note instead.
+print("    exit 1 = it ran and some deletes failed; exit 2 = it could not run "
+      "at all — both asserted above, against real runs")
 
 
 print("\nTHE FLAG IS LOAD-BEARING — without --delete, nothing goes")

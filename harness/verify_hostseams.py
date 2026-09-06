@@ -212,8 +212,11 @@ for n in range(6):
 listed = [i["id"] for i in c_pub.get("/api/skribls").get_json()["items"]]
 check("with no filter installed, the feed lists every public post",
       set(ids) <= set(listed), f"{len(listed)} listed")
-check("…which is the honest starting point: this is a SEAM, not an automatic fix",
-      True, "a host whose policy can deny a PUBLIC post must install the filter")
+# A note, not a check. The assertion above it does the work; asserting `True`
+# after it added a number to the count and proved nothing.
+print("    …which is the honest starting point: this is a SEAM, not an "
+      "automatic fix — a host whose policy can deny a PUBLIC post must "
+      "install the filter")
 
 # A host that hides posts by a blocked author. This is exactly the case the
 # visibility COLUMN cannot express and the visibility policy could not reach.

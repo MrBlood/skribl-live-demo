@@ -142,8 +142,26 @@ with sync_playwright() as p:
           len(ids or []) > 3
           and page.evaluate("() => !document.getElementById('toolMoreBtn').hidden"),
           "the chevron is what a fifth tool costs, and it was already there")
-    check("Pad does NOT get liquify", True,
-          "Flip is the animation tool; Pad stays immediate — same call as select")
+    # THIS ASSERTED `True`. "Pad does NOT get liquify" is a claim about Pad's
+    # tool registry and nothing here had ever opened Pad — adding liquify to
+    # the Pad would have left it green, which is the whole failure mode this
+    # project keeps paying for. Pad exposes SkriblPadTools exactly as Flip
+    # exposes SkriblFlipTools (verify_tray drives both), so the claim can just
+    # be checked.
+    _pad = browser.new_page(viewport={"width": 1100, "height": 900})
+    _pad.goto(BASE + "/", wait_until="load")
+    _pad.wait_for_timeout(1200)
+    _pad_tools = _pad.evaluate("() => window.SkriblPadTools"
+                               " ? window.SkriblPadTools.list().map(t => t.id || t) : null")
+    check("Pad's tool registry was readable at all",
+          isinstance(_pad_tools, list) and len(_pad_tools) > 0,
+          f"{_pad_tools!r} — a null registry would make the next assertion "
+          "vacuous in exactly the way the one it replaced was")
+    check("Pad does NOT get liquify",
+          "liquify" not in (_pad_tools or []),
+          f"Pad offers {_pad_tools} — Flip is the animation tool; Pad stays "
+          "immediate, same call as select")
+    _pad.close()
 
     box = page.locator("#pad").bounding_box()
     cx = box["x"] + box["width"] / 2
