@@ -340,6 +340,81 @@ with sync_playwright() as p:
           "the pre-post warning never fires, so the user is told nothing until "
           "after the irreversible part")
 
+    print("\nCSRF — the destructive paths send the token the POST path sends")
+    # NOT because either route consults it: bp.skribl_csrf is checked on POST
+    # and nowhere else, and routes.py now says so precisely instead of implying
+    # an authenticated deployment had "settled it". What keeps DELETE safe is
+    # the CORS preflight plus a bearer token in the body.
+    #
+    # The header is sent anyway so that enforcing csrf on these routes stays a
+    # one-line change rather than a breaking one — the position routes.py's
+    # note takes, which is only true while the clients actually do it. This
+    # assertion is what makes it true rather than intended.
+    hdrs = pd.evaluate("""() => {
+        window.SKRIBL_CSRF_TOKEN = 'csrf-probe-value';
+        let seen = null;
+        const real = window.fetch;
+        window.fetch = (u, o) => { seen = (o && o.headers) || {}; return Promise.resolve(
+            { ok: true, status: 200 }); };
+        window.SkriblPosted.add({ id: 'csrfrow', title: 'c', kind: 'pad', tok: 'k' });
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+        window._skriblPostedUI.destroyForTest
+          ? window._skriblPostedUI.destroyForTest({ id: 'csrfrow', tok: 'k' }, () => {})
+          : null;
+        window.fetch = real;
+        return seen;
+      }""")
+    if hdrs is None:
+        # No test seam on the module; drive the real button instead, accepting
+        # the confirm() that guards it.
+        pd.once("dialog", lambda d: d.accept())
+        hdrs = pd.evaluate("""() => {
+            window.SKRIBL_CSRF_TOKEN = 'csrf-probe-value';
+            let seen = null;
+            const real = window.fetch;
+            window.fetch = (u, o) => { seen = (o && o.headers) || {};
+                return Promise.resolve({ ok: true, status: 200 }); };
+            const b = document.querySelector('.posted-row[data-id="csrfrow"] .posted-delete');
+            if (b) b.click();
+            window.fetch = real;
+            return seen; }""")
+    check("the tray's DELETE carries X-Skribl-CSRF when the host issued one",
+          isinstance(hdrs, dict) and hdrs.get("X-Skribl-CSRF") == "csrf-probe-value",
+          f"{hdrs!r} — the POST path has always sent it; a DELETE that does not "
+          "is what would make enforcing csrf on that route a breaking change")
+    pd.evaluate("() => { delete window.SKRIBL_CSRF_TOKEN; }")
+
+    print("\nTRAY LINKS — 'watch it' honours the host's player_target")
+    # __init__.py names three paths that open the player — Pad's watch button,
+    # Flip's anchor, and this tray link — and says _blank is their DEFAULT,
+    # with a host passing player_target="_self" taking over. Two of the three
+    # read the configured value. This one hardcoded target="_blank" until v281,
+    # so an SPA rendering /s/<id> in its own shell was obeyed twice and ignored
+    # here. verify_delivery covers the other two and never covered this one,
+    # which is the sort of coincidence that stops looking like one.
+    #
+    # ASSERTED BY OVERRIDING THE GLOBAL, not by reading the source: with the
+    # harness server's default the configured value IS _blank, so a hardcoded
+    # _blank and a correct read are indistinguishable. Setting it to _self
+    # first is what tells them apart.
+    pd.evaluate("""() => {
+        window.SKRIBL_PLAYER_TARGET = '_self';
+        localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'linktarget', title: 'link',
+                                  kind: 'pad', url: '/s/linktarget' });
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+      }""")
+    pd.wait_for_timeout(250)
+    tgt = pd.evaluate("""() => {
+        const a = document.querySelector('.posted-row[data-id="linktarget"] .posted-main');
+        return a ? a.getAttribute('target') : null; }""")
+    check("the tray link uses the configured player target, not a literal",
+          tgt == "_self",
+          f"target={tgt!r} with player_target set to _self — hardcoding _blank "
+          "here overrides a host that routes the player itself")
+    # ...and back to the default, so the rest of the section is unaffected.
+    pd.evaluate("() => { window.SKRIBL_PLAYER_TARGET = '_blank'; }")
+
     print("\nCUSTODY — the tray offers the key, and offers it only where there is one")
     # Nothing tested these two buttons before v280, which is its own finding:
     # the tray's Delete is the affordance that actually invokes revocation, and

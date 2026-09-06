@@ -60,7 +60,17 @@
     try {
       req = global.fetch(base + '/' + encodeURIComponent(entry.id), {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: (function () {
+          var h = { 'Content-Type': 'application/json' };
+          /* Sent even though neither route consults it today: the POST path
+             has always sent it, and a DELETE that omits it is why enforcing
+             bp.skribl_csrf on these routes would be a breaking change rather
+             than a one-line one. See the note above delete_skribl in
+             routes.py. Absent on an anonymous deployment, where the global is
+             never injected. */
+          if (global.SKRIBL_CSRF_TOKEN) { h['X-Skribl-CSRF'] = global.SKRIBL_CSRF_TOKEN; }
+          return h;
+        })(),
         body: JSON.stringify({ deleteToken: entry.tok })
       });
     } catch (e) { done(false, 'Could not reach the server.'); return; }
@@ -214,7 +224,17 @@
         return '<div class="posted-row" data-id="' + esc(e.id) + '">' +
           '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
             (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
-          '<a class="posted-main" href="' + esc(url) + '" target="_blank" rel="noopener">' +
+          /* HONOURS player_target, which it did not until v281. __init__.py
+             names this link as one of the three "watch it" paths and says
+             _blank is their DEFAULT and that a host passing _self "takes
+             over" — but this one was hardcoded, so an SPA rendering /s/<id>
+             in its own shell got its choice obeyed by Pad's button and Flip's
+             anchor and ignored here. Both of those read the value; this was
+             the odd one out precisely because it is built in JS rather than
+             server-rendered, which is the same seam the docstring says caused
+             the original drift. */
+          '<a class="posted-main" href="' + esc(url) + '" target="' +
+            esc(global.SKRIBL_PLAYER_TARGET || '_blank') + '" rel="noopener">' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
             '<span class="posted-sub">' + esc(sub) + '</span>' +
           '</a>' +

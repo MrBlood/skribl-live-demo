@@ -5359,6 +5359,12 @@ body.player-mode #canvas {
 .posted-thumb { width: 42px; height: 34px; border-radius: 8px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; color: var(--accent-tint-2); background: rgba(124,92,255,0.18); }
+/* THE BASE IS THE FLIP COLOUR and .posted-thumb-flip deliberately has no rule
+   of its own — the class is emitted so the markup names what it is, and Pad
+   is the one that overrides. Said out loud because a class with no rule is
+   what verify_exportui.py exists to catch, and the next person editing
+   .posted-thumb above needs to know its background is load-bearing for Flip
+   rather than a neutral default. */
 .posted-thumb-pad { background: rgba(91,140,255,0.18); }
 /* SVG now, not a font glyph: the two characters rendered at whatever weight and
    baseline the system font chose, so they sat unevenly beside each other. */

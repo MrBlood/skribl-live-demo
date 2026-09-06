@@ -278,7 +278,17 @@
       said.textContent = 'Taking it down…';
       global.fetch(base + '/' + encodeURIComponent(v.id), {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: (function () {
+          var h = { 'Content-Type': 'application/json' };
+          /* Sent even though neither route consults it today: the POST path
+             has always sent it, and a DELETE that omits it is why enforcing
+             bp.skribl_csrf on these routes would be a breaking change rather
+             than a one-line one. See the note above delete_skribl in
+             routes.py. Absent on an anonymous deployment, where the global is
+             never injected. */
+          if (global.SKRIBL_CSRF_TOKEN) { h['X-Skribl-CSRF'] = global.SKRIBL_CSRF_TOKEN; }
+          return h;
+        })(),
         body: JSON.stringify({ deleteToken: v.key })
       }).then(function (r) {
         if (r.ok) {

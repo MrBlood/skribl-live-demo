@@ -852,11 +852,32 @@ def register_routes(bp, *, index_route=False):
     # with a public id still cannot delete anything; the person who made it can.
     #
     # CSRF: create_blueprint refuses to build a blueprint with current_user_id
-    # and no explicit csrf decision, so an authenticated deployment has already
-    # settled it. An anonymous deployment has no ambient authority to abuse —
-    # the token is a bearer credential in the body, not a cookie, so a
-    # third-party page cannot cause a deletion it does not already hold the
-    # secret for.
+    # and no explicit csrf decision. An anonymous deployment has no ambient
+    # authority to abuse — the token is a bearer credential in the BODY, not a
+    # cookie, so a third-party page cannot cause a deletion it does not already
+    # hold the secret for.
+    #
+    # BE PRECISE ABOUT THE OWNED-POST CASE, because this comment used to wave
+    # at it with "an authenticated deployment has already settled it" and that
+    # is not what settles it. The host's csrf verifier is consulted on POST and
+    # NOWHERE ELSE — these two routes never call it. An owned post is
+    # authorised by the session cookie, which is exactly the ambient authority
+    # CSRF exists to protect.
+    #
+    # What actually protects them is the request shape: DELETE and PATCH with
+    # `Content-Type: application/json` are not simple requests, so a
+    # cross-origin caller gets a CORS preflight, and this blueprint sends no
+    # Access-Control-Allow-* header anywhere (SKRIBL_EMBED_ORIGINS is CSP
+    # frame-ancestors, not CORS). The browser refuses before the real request
+    # leaves. A <form> cannot issue either verb at all.
+    #
+    # SO THE PROTECTION IS REAL AND IT IS NOT THE ONE NAMED. Three changes
+    # would remove it without touching this file: adding CORS headers,
+    # accepting the token from a query string or form encoding, or a host
+    # mounting the blueprint behind something that reflects Origin. Any of
+    # those makes enforcing bp.skribl_csrf here a prerequisite, and the clients
+    # already send the header (lib/postedui.js, lib/recoverykey.js) so that
+    # change would be one `if` on each route.
 
     def _submitted_delete_token():
         """The capability from the body, or None.

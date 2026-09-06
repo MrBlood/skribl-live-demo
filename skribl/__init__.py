@@ -148,6 +148,16 @@ def create_blueprint(session=None, url_prefix=None,
     itself — an SPA that renders `/s/<id>` inside its own shell, say — passes
     `player_target="_self"` and takes over. No other value is accepted, because
     a named target would let one embed steal another's tab.
+
+    That last paragraph was written when it was true of two paths out of three.
+    The posted-list link HARDCODED `target="_blank"` until v281 — the right
+    default by accident, and deaf to a host that asked for `_self` — because it
+    is built in JavaScript while the other two are server-rendered, which is
+    the same seam the drift above came through. `verify_delivery.py` covered
+    the two that were correct; `verify_posted.py` covers this one now, by
+    setting the global to `_self` and reading the rendered anchor, because with
+    the default configured a hardcoded `_blank` and a correct read look
+    identical.
     """
     if player_target not in ("_blank", "_self"):
         raise ValueError(
