@@ -1077,6 +1077,36 @@ check("...and an unrelated sentence is not a false positive",
                    CLAIMS[0][2]))
 
 
+print("\nDOCS — every host seam is in the guide a host is sent to")
+# CLAUDE.md sends an integrator to docs/INTEGRATION.md to mount Skribl in
+# another Flask app, and by v281 `player_target` had never appeared in it:
+# eight of nine create_blueprint() arguments documented, and the ninth — the
+# one that decides whether posting navigates THE HOST'S top-level document
+# away — known only to the source. A seam a host cannot find is a seam that
+# does not exist for them, and the default being the safe one is exactly what
+# stops anybody noticing.
+#
+# Reflection over the real signature, not a list: a list is the thing that
+# went stale. The app-local seams init_skribl() pops from kwargs count too —
+# they are arguments a host passes and cannot see any other way.
+import ast as _ast
+_src = (ROOT / "skribl" / "__init__.py").read_text(encoding="utf-8")
+_seams = []
+for _n in _ast.walk(_ast.parse(_src)):
+    if isinstance(_n, _ast.FunctionDef) and _n.name == "create_blueprint":
+        _seams += [a.arg for a in _n.args.args] + [a.arg for a in _n.args.kwonlyargs]
+_seams += re.findall(r'kwargs\.pop\("([a-z_]+)"', _src)
+_guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+_undocumented = [s for s in _seams if s not in _guide]
+
+check("docs/INTEGRATION.md names every seam a host can pass",
+      _seams and not _undocumented,
+      ", ".join(_undocumented) + " — read out of create_blueprint()'s "
+      "signature, so adding an argument is what fails this"
+      if _undocumented else
+      f"all {len(_seams)} seams, read from the signature rather than a list")
+
+
 bad = [r for r in results if not r[0]]
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))

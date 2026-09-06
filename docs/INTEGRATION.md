@@ -655,6 +655,26 @@ All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 | `csrf` | `None` | Your CSRF triple, if you use one. |
 | `media_store` | inline | An object storing media out of the payload. See `skribl/storage.py`. |
 | `index_route` | `False` | Register `GET /`. Standalone sites only. |
+| `player_target` | `_blank` | Where the three "watch it" paths send the viewer. See below. |
+| `public_media_cache` | `False` | Let a CDN cache public media. See "Shared-cache opt-in" above, and read it before turning it on. |
+
+### Where the player opens (`player_target`)
+
+Three paths lead a poster to `/s/<id>`: Pad's watch button, Flip's, and the
+link in the list of things this browser has posted. `player_target` decides
+where all three open, and it defaults to `_blank`.
+
+**The default is `_blank` for the same reason `index_route` defaults to
+`False`.** Pad's watch button used to do `location.href = url`, which inside a
+host application navigates THE HOST'S top-level document away from whatever
+page Skribl was embedded in — a drawing widget unilaterally deciding the
+surrounding app should stop being on screen.
+
+Pass `player_target="_self"` if your app routes the player itself — an SPA that
+renders `/s/<id>` inside its own shell, say. **Those are the only two values.**
+A named target is rejected, because it would let one embed steal another's tab.
+
+Nothing is required of a host that does not care: the default is the safe one.
 
 Plus one module-level seam:
 
