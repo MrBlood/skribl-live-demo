@@ -245,6 +245,19 @@ with sync_playwright() as sp:
     # directions: comment stripping plus token-aware whitespace collapse
     # (_collapse_whitespace) REACHES the target with room to spare. Assert it,
     # so any regression that pushes the player back over the line is loud.
+    # What keep_banner would cost, printed rather than asserted: it is the
+    # number jsstrip.strip_comments's docstring cites for having the flag off
+    # by default, and a figure in a docstring that nothing re-measures is how
+    # the previous one (4,491 B, over a player that never had those files)
+    # stayed wrong across several releases.
+    _banner = 0
+    for _f in player_js:
+        _m = re.match(r"\s*/\*.*?\*/", (STATIC / _f).read_text(encoding="utf-8"), re.S)
+        if _m:
+            _banner += len(_m.group(0))
+    print(f"    keeping our own leading block comments would add {_banner:,} B "
+          f"across {len(player_js)} player scripts (jsstrip's keep_banner=False)")
+
     check("REACHES the 153,600 target (strip + whitespace collapse)",
           lean_total <= 153_600,
           f"lean_total {lean_total:,} B ({153_600 - lean_total:,} B under)")

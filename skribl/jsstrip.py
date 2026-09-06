@@ -311,9 +311,15 @@ def strip_comments(src, keep_banner=False):
     VENDORED artifacts only. mp4-muxer.min.js's banner names its upstream
     version and warns about SRI without using the word licence, so a rule that
     only looks for `/*!` throws away the provenance of code we did not write.
-    It is off by default because our own files open with block comments too —
-    audioloop, looptrim and photofit all do, and keeping theirs put 4,491 bytes
-    back onto the player for no benefit to anyone.
+    It is off by default because our own files open with block comments too:
+    eight of the nine scripts the player loads do, and keeping theirs would put
+    roughly 16 KB back onto every shared link for no benefit to anyone.
+
+    THAT FIGURE USED TO READ 4,491 BYTES over "audioloop, looptrim and
+    photofit". It was measured across a four-file player that never existed —
+    the same wrong population verify_jsstrip.py hand-maintained until v281 —
+    and photofit is not even on the player. The suite prints the real number
+    each run, so it does not have to be trusted from here.
     """
     out, last = [], 0
     for first, tok in enumerate(_Lexer(src)):

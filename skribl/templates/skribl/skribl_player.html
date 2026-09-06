@@ -206,7 +206,14 @@
   {# lib/media_validation.js is NOT loaded here. Its only callers are the photo
      and music drop/change handlers, and both upload buttons and both file
      inputs left with the tab panels — on the player those bindings resolve to
-     detached stubs whose handlers can never fire. 7,130 B off every link. #}
+     detached stubs whose handlers can never fire.
+
+     3,935 B off every link. This said 7,130 B, which is the size ON DISK —
+     the same served-vs-disk mistake _skribl_inline_player.html records for
+     sharecard.js, made here too and left standing. jsstrip.py serves .js
+     without comments, and the ratchets count served bytes, so the disk figure
+     overstated the saving by 81%. Measure what is downloaded, not what is
+     stored. #}
   {# eventpoint.js: which touch a gesture owns. Loaded on ALL THREE surfaces —
      the player needs it too, because the scrub track is a player control and it
      read the screen-wide touch list. See the file for the rule. #}
