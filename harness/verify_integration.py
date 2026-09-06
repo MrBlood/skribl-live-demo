@@ -17,6 +17,7 @@ fast and has no port to collide on.
 """
 import sys
 from pathlib import Path
+from assertions import make_check
 
 # Same idiom as verify_migrations.py: the suite imports the package under test.
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,9 +26,7 @@ sys.path.insert(0, str(ROOT))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 try:

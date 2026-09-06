@@ -24,6 +24,7 @@ restore, so the last section plants one by hand and reloads.
 """
 import json
 import sys
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 
@@ -36,9 +37,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # ~1.2 MB and ~0.5 MB once base64'd: together they are what used to fill the

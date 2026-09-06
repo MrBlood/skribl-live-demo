@@ -16,6 +16,7 @@ transparency + disposal flags). That closes the oldest gap in the handoff.
 """
 import os, sys
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 
@@ -26,9 +27,7 @@ if _GIFENC is None:
              "      comment in the file itself, for the reproduce command.")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def parse_gif(b):

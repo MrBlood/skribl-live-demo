@@ -40,6 +40,7 @@ import sys
 import zlib
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 VIEWPORTS = [(1600, 950), (1280, 900), (1023, 931), (830, 914), (420, 850)]
@@ -67,9 +68,7 @@ open(PNG, "wb").write(_png(400, 300))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # The default size of a <canvas> with no width/height attribute. Seeing this on

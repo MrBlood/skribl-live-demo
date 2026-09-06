@@ -64,11 +64,11 @@ else:
     sys.exit(f"SKIP: CSRF instance did not start on port {PORT}.")
 
 import atexit
+from assertions import make_check
 atexit.register(lambda: (_proc.terminate(), _proc.wait(timeout=10)))
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 BODY = json.dumps({"frames": [{"strokes": [], "strokeGroups": [],
                                "background": {"color": "#101418"}}]}).encode()

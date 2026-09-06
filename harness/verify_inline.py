@@ -34,6 +34,7 @@ import pathlib
 import re
 import sys
 import urllib.request
+from assertions import make_check
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -94,9 +95,7 @@ PEAK = """() => {
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def scribble(pg, box, n=110):

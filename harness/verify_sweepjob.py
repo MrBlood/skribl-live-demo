@@ -33,6 +33,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from assertions import make_check
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -46,9 +47,7 @@ DAY = 86400
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 ENV = dict(os.environ, DATABASE_URL=DB_URL, SKRIBL_MEDIA_BACKEND="local",

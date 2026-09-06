@@ -26,6 +26,7 @@ import sys
 import urllib.request
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 SRC_SECONDS = 30.0
@@ -35,9 +36,7 @@ RATE = 22050
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 
 def wav_bytes(seconds, rate=RATE):

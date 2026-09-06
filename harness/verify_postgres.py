@@ -35,6 +35,7 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parent.parent
 SKIP_EXIT = 77
@@ -69,9 +70,7 @@ except Exception as exc:
     skip(f"cannot connect to PostgreSQL at the configured DSN ({type(exc).__name__})")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def version(pkg):

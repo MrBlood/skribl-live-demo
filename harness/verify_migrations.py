@@ -31,13 +31,13 @@ import sqlite3
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  → {detail}" if detail else ""))
+check = make_check(results, sep="→")
 
 
 def alembic(db_path, *args):

@@ -12,12 +12,11 @@ view rather than silently distorting artwork; switching back restores the framin
 The strokes are never destroyed, which is what makes that safe.
 """
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 with sync_playwright() as p:
     br = p.chromium.launch()

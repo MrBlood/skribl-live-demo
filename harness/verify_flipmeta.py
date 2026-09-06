@@ -34,21 +34,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _layout import STATIC_DIR, template  # noqa: E402
+from assertions import make_check
 
 results = []
 
 
-def check(name, ok, detail=""):
-    """`detail` here explains a FAILURE, so it is printed only on one.
-
-    Suites in this harness pass a captured value as `detail` and print it
-    either way. These details are diagnoses rather than values, and a PASS
-    printing "the literal is back" reads as a failure to anyone scanning the
-    log — which is exactly the kind of contradictory output round 6 found in
-    the run stanza.
-    """
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail and not ok else ""))
+check = make_check(results, detail_on_pass=False)
 
 
 def summarise_and_exit():

@@ -1,5 +1,6 @@
 import math, struct, wave
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/boombap.wav"
@@ -15,8 +16,7 @@ with wave.open(WAV, "wb") as _w:
 AMBER = "rgb(255, 210, 63)"
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 def _rgb(h):
     """'#30e8a7' -> 'rgb(48, 232, 167)', the form getComputedStyle returns."""

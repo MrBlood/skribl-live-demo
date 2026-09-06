@@ -12,15 +12,14 @@ change the format, and this suite is the baseline they will have to preserve.
 """
 import os
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 # Overridable so this suite can be pointed at a dev server while the harness
 # holds 5001 — otherwise it silently tests the sweep's checkout, not the tree.
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def draw(pg, sel, x0, y0, n=18):

@@ -18,12 +18,11 @@ check would prove nothing about the encoders.
 from playwright.sync_api import sync_playwright
 
 import os
+from assertions import make_check
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def gif_delays(b):

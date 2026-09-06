@@ -28,15 +28,14 @@ import sys
 import urllib.error
 import urllib.request
 import zlib
+from assertions import make_check
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 SKIP_EXIT = 77
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def png_data_url(w=16, h=16):

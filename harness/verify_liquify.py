@@ -44,6 +44,7 @@ pinned at pointerdown and there is an assertion for it here.
 """
 import os
 import sys
+from assertions import make_check
 
 # Overridable like verify_parity's and verify_fuzz's, so this can be pointed at
 # a scratch instance while the main harness holds 5001. Without it, a run
@@ -61,9 +62,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def fresh(page):

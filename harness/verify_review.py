@@ -56,18 +56,11 @@ class _Helpers:
 
 A = _Helpers()
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 results = []
-def check(name, ok, detail=""):
-    # The detail is recorded, not just printed. The summary at the bottom used
-    # to re-print only the NAME of each failure, so a run read through `tail`
-    # — which is how a 278-assertion suite is actually read — showed
-    # "FAILED: attempt and post budgets are separate" and nothing else. The
-    # measured values were sitting in the inline line thousands of lines up.
-    # A failure has to carry what it measured to the place it gets read.
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 def post(payload, headers=None):
     h = {"Content-Type": "application/json"}

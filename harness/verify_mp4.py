@@ -17,12 +17,12 @@ nothing about MP4. It is not a pass.
 import json
 import os
 import sys
+from assertions import make_check
 
 SKIP_EXIT = 77
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def skip(reason):

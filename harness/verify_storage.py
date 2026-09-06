@@ -33,6 +33,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = 5010
@@ -40,8 +41,7 @@ BASE = f"http://127.0.0.1:{PORT}"
 API = BASE + "/api/skribls"
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # A minimal, real WAV: the server signature-checks media, so random bytes are

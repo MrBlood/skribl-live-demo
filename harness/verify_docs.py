@@ -23,12 +23,12 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 BEGIN, END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
@@ -535,6 +535,23 @@ check("the generated documentation tables are current",
       _gen.returncode == 0,
       (_gen.stdout + _gen.stderr).strip().replace("\n", "; ") or
       "harness/gen_docs.py --check failed")
+
+# THE ASSERTION FORMAT IS A HARNESS-WIDE CONTRACT. run_harness.sh parses
+# "  [PASS] ..." lines and the "N/M passed" summary out of every suite's
+# stdout, so a change to how check() renders is not a cosmetic edit — it
+# reads downstream as suites failing or vanishing. All 99 suites now share
+# one implementation (harness/assertions.py), which makes that contract a
+# single point of failure and therefore worth asserting on every run.
+#
+# The self-test compares the shared check() against the literal strings the
+# NINE hand-written variants used to produce, including the one suite that
+# rendered "→" instead of "—".
+_fmt = subprocess.run([sys.executable, str(ROOT / "harness" / "assertions.py")],
+                      capture_output=True, text=True, cwd=str(ROOT))
+check("the shared check() still renders every historical variant",
+      _fmt.returncode == 0,
+      (_fmt.stdout + _fmt.stderr).strip().splitlines()[-1]
+      if (_fmt.stdout or _fmt.stderr) else "harness/assertions.py self-test failed")
 
 # Marker integrity for the GEN regions too, for the same reason it exists for
 # HARNESS-COUNTS: a second opening marker anywhere in the file (a note quoting

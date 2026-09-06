@@ -64,6 +64,7 @@ import json
 import os
 import random
 import sys
+from assertions import make_check
 
 # Overridable like verify_parity's, so a fuzz run can be pointed at a scratch
 # instance while the main harness holds 5001.
@@ -85,9 +86,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # The invariant check runs in the page after every operation. It returns the

@@ -27,6 +27,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from assertions import make_check
 
 # On the path so the caption limit can be READ from core.py rather than typed
 # here — a suite that hard-codes the number it is checking cannot notice the
@@ -38,9 +39,7 @@ BASE = "http://127.0.0.1:5001"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 
 def post(payload, headers=None):

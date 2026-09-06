@@ -50,6 +50,7 @@ import urllib.request
 import zlib
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PORT = 5017
@@ -59,9 +60,7 @@ LIVE = ROOT / "harness" / "tools" / "css_live.json"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 
 # FREEZE neutralises everything that is NOT what this suite tests. The suite

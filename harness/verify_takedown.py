@@ -23,6 +23,7 @@ import os
 import subprocess
 import sys
 import tempfile
+from assertions import make_check
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -34,9 +35,7 @@ DB_URL = f"sqlite:///{DB_DIR}/takedown.db"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail and not ok else ""))
+check = make_check(results, detail_on_pass=False)
 
 
 ENV = dict(os.environ, DATABASE_URL=DB_URL, SKRIBL_MEDIA_BACKEND="local",

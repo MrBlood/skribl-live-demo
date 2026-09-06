@@ -51,6 +51,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from skribl.storage import S3Store, sweep_orphans  # noqa: E402
+from assertions import make_check
 
 APP_PORT = 5036
 S3_PORT = 5037
@@ -60,9 +61,7 @@ AK, SK, REGION, BUCKET = "AKIAHARNESS", "harness-secret-key", "eu-west-2", "skri
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # --------------------------------------------------------------------------

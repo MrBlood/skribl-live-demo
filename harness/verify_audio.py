@@ -1,5 +1,6 @@
 import math, struct, wave, json
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/seam.wav"
@@ -49,8 +50,7 @@ def scribble(pg, box, seed, n=160):
     pg.mouse.up()
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required",

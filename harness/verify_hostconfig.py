@@ -44,13 +44,12 @@ BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 from skribl.core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS   # noqa: E402
 from skribl.models import SkriblPost                          # noqa: E402
+from assertions import make_check
 
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def post(payload):

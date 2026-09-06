@@ -43,6 +43,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from skribl.jsstrip import strip_bytes, strip_comments   # noqa: E402
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 STATIC = ROOT / "skribl" / "static"
@@ -50,9 +51,7 @@ STATIC = ROOT / "skribl" / "static"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Each fixture is (label, source). The source must be an expression-producing

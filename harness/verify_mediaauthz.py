@@ -26,6 +26,7 @@ import base64
 import pathlib
 import sys
 import tempfile
+from assertions import make_check
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -33,9 +34,7 @@ sys.path.insert(0, str(ROOT))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 
 from flask import Flask

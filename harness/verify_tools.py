@@ -39,12 +39,11 @@ BASE = "http://127.0.0.1:5001"
 import math as _math
 import re as _re2
 import pathlib
+from assertions import make_check
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def _ink(pg, sel):

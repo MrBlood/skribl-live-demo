@@ -11,6 +11,7 @@ prove the mount without disturbing any other suite.
 """
 import json, os, socket, subprocess, sys, tempfile, time, urllib.request
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "/skribl"
@@ -18,8 +19,7 @@ PORT = 5007
 BASE = f"http://127.0.0.1:{PORT}"
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 def summarise_and_exit():
     bad = [r for r in results if not r[0]]

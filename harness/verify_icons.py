@@ -32,6 +32,7 @@ repeat the mistake.
 """
 import os
 import sys
+from assertions import make_check
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -44,9 +45,7 @@ except ImportError:                                    # pragma: no cover
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # THE BAND, in viewBox units of the 24x24 box.
