@@ -23,7 +23,8 @@ What this suite pins, in order of how badly each would fail a user:
   an audit finding rather than from foresight:
 
   6. A write that did not happen is REPORTED, not assumed (v280).
-  7. The 200-entry cap governs what is rendered and never evicts a key (v280).
+  7. The 200-entry cap bounds what is KEPT — an entry past it with no key is
+     dropped from storage, not hidden — and never evicts a key (v280).
   8. Delete and Copy key appear only where a key is actually held (v280).
   9. A key can be handed BACK: link-or-id plus key, then take it down or
      re-adopt it into this browser (v281).

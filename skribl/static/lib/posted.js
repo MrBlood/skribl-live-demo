@@ -35,8 +35,14 @@
  * SO THE CAP NOW APPLIES TO HISTORY AND NEVER TO AUTHORISATION. `capped()`
  * keeps the newest LIMIT entries PLUS every entry that carries a key, however
  * old. The list can therefore exceed LIMIT, deliberately: a few hundred bytes
- * per stranded credential is not a reason to strand it. Rendering is what LIMIT
- * was for and rendering is what it still governs.
+ * per stranded credential is not a reason to strand it.
+ *
+ * BE EXACT ABOUT WHAT THE CAP DOES, because "it governs what is rendered" is
+ * how this was phrased and it is not what the code does: capped() runs inside
+ * write(), so an entry past LIMIT with no key is dropped from STORAGE, not
+ * merely hidden. It is gone. LIMIT was always about bounding the tray, and
+ * bounding the tray is done by not keeping the row — which is fine for a row
+ * that authorises nothing and was never fine for one that does.
  *
  * AND A FAILED WRITE IS NOW A RESULT, NOT A SHRUG. `add()` returns
  * `{list, durable, key}`; Pad and Flip show the key for the user to copy when

@@ -198,7 +198,9 @@ not an edge case.
 
 `add()` now returns `{list, durable, key}` and both surfaces check it.
 `capped()` keeps the newest `LIMIT` entries **plus every entry carrying a key**,
-however old, so the cap governs what is rendered and never what authorises.
+however old, so the cap bounds what is KEPT and never drops what authorises.
+(It was written up as governing "what is rendered", which understates it: an
+entry past the limit with no key is dropped from storage, not hidden.)
 
 **IndexedDB was the obvious answer and the wrong one.** It is cleared by the
 same user action and the same Safari eviction sweep as localStorage: it buys

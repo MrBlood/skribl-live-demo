@@ -96,6 +96,16 @@ check("no document references a harness suite that does not exist",
 # The whole point is "a suite nobody can find is a suite nobody maintains". A
 # reader looking for what verify_posted.py covers is not helped by a row in a
 # generated results table saying it passed.
+# ONE ENTRY, AND NOT THE FIVE .md IN release_run.GENERATED, which is the
+# mistake waiting to be made here. Those five are excluded from the TREE HASH,
+# and four of them — README.md, harness/README.md, docs/HANDOFF.md,
+# START-HERE.md — are hand-written documents that merely carry a stamped
+# stanza. They are exactly where a suite SHOULD be documented, so excluding
+# them from this census would gut it.
+#
+# The question here is different: is the whole file machine-produced? Only
+# harness/RELEASE.md is. Do not "fix" this by syncing it with GENERATED — the
+# two lists answer different questions and are supposed to differ.
 _GENERATED_MD = {"harness/RELEASE.md"}
 _all_md_text = "\n".join(
     p.read_text(encoding="utf-8")
