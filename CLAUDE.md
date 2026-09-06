@@ -45,6 +45,15 @@ On PASS, `harness/stamp_docs.py` writes the counts into the docs. **Do not
 edit a tracked file once a run has frozen its tree hash**, or the sealed
 record describes a tree that no longer exists; restart the run instead.
 
+**And do not run `run_harness.sh` AFTER the release run.** Every invocation
+rewrites `harness/LAST-RUN.txt`, so one ad-hoc suite replaces the whole-run
+record with a one-suite record, and the checkpoint is deleted on success so
+there is nothing to resume from — it costs a full re-run. The stanza-restore
+habit covers the docs and not this. For a source-only suite, invoke it
+directly (`python3 harness/verify_docs.py`), which does not touch the record.
+Order the seal: release run, then `stamp_docs.py`, then commit, and check
+`stamp_docs.py --check` rather than re-running a suite.
+
 ## Spending: ask before incurring costs (owner's standing rule)
 
 Never take an action that could create or increase a bill on any of the
