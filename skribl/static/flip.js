@@ -1117,7 +1117,7 @@ function paintArtwork(){
 
 // Where the background image lands, honouring fit + zoom + reposition.
 function photoRect(iw, ih){
-  // Shared with Pad and the player via lib/photofit.js. This used to special-
+  // Shared with Pad via lib/photofit.js. This used to special-
   // case only 'fill', so a 'stretch' — the value THIS FILE writes into the post
   // payload — rendered as cover with no fit button active. The lib treats
   // 'fill' as an alias of 'stretch', so both spellings land in the same place.

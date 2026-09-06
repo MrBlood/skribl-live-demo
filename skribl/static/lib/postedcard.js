@@ -7,10 +7,12 @@
  *
  * EDITORS ONLY, and that is the whole reason this is not in lib/sharecard.js.
  * Same rule as lib/postedaudio.js: the player never posts, and neither does a
- * host's feed. A page embedding the in-post player needs sharecard.js's band()
- * to crop a poster and nothing else — it has no drawing to composite. Merging
- * the two put this canvas work on every feed page and blew verify_inline.py's
- * embed ratchet, which is what that ratchet is for.
+ * host's feed. A page embedding the in-post player has no drawing to
+ * composite, and since v281 does not load sharecard.js either — its poster
+ * crop is literals in inlineplayer.css, checked against band() by
+ * verify_inline.py rather than computed in the page. Merging the two put this
+ * canvas work on every feed page and blew verify_inline.py's embed ratchet,
+ * which is what that ratchet is for.
  *
  * IT LIVED IN editor_post.js, WHICH IS PAD-ONLY, AND THAT WAS A REAL DEFECT.
  * flip.js has its own post path and never built a card — grep it before this

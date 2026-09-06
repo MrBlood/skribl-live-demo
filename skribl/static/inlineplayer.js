@@ -119,8 +119,11 @@
  * bordered box under a "Skribl Pad" wordmark — because it was built to unfurl
  * on social scrapers, and it is the only per-post image the server has. Shown
  * whole it reads as an advert twenty times down a timeline. So the idle post
- * crops it back to the drawing, using the geometry in lib/sharecard.js, which
- * is the same module editor_post.js composites the card from.
+ * crops it back to the drawing. The crop is LITERALS in inlineplayer.css, not
+ * a call: this page loaded lib/sharecard.js until v281 and never read
+ * window.SkriblShareCard. verify_inline.py injects that module and compares
+ * band() against these literals, so the arithmetic is still held to the
+ * editors' — it just is not shipped to every feed page to do it.
  *
  * Vertically the crop is exact. The drawing is CONTAINED, so for any canvas not
  * wider than 2.22:1 — every preset — its height and its y are identical in

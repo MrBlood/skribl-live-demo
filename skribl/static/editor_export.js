@@ -255,7 +255,7 @@
     targetCtx.drawImage(canvas, 0, 0, w, h);
   }
 
-  // Geometry is shared with Flip and the player via lib/photofit.js — this
+  // Geometry is shared with Flip via lib/photofit.js — this
   // function is now just "compute the rect, then draw it". The two copies of
   // the arithmetic agreed on cover/contain but not on the third mode's NAME,
   // which is how a value one surface posts became unreadable to the other.

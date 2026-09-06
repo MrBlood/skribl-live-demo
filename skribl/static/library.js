@@ -210,8 +210,10 @@
     el.setAttribute('data-id', item.id);
 
     /* The tile's picture is the share card, cropped by the same rule the feed
-     * poster uses (lib/sharecard.js, applied in the page's own CSS). One cached
-     * image per tile, and no payload until the tile is picked. */
+     * poster uses — sharecard.js's geometry, expressed as literals in this
+     * page's own CSS. The module itself is NOT loaded here (v281 removed it);
+     * verify_inline.py is what holds the literals to band(). One cached image
+     * per tile, and no payload until the tile is picked. */
     var art = document.createElement('div');
     art.className = 'art';
     var img = document.createElement('img');
