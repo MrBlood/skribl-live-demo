@@ -548,7 +548,9 @@ branch on `strokeLayersOn()` — never neither.
 ends, `updateCanvasLockCue()` sets `cursor: not-allowed` and the canvas is not
 drawable until you Record again or Clear. This looks like a dead end and is not:
 it is the multi-take model, and `endRecordingTake()` says so in a toast —
-*"Take saved — Record again to add more to this Skribl, or Play to preview."*
+*"Take saved — Play to preview, or Add take to draw more"* — and the way
+forward is an "+ Add take" pill floating on the locked canvas, not only the
+Record button the older wording named.
 An external design pass in v215 read the lock as a bug and came close to
 recommending its removal, which would have turned every stray tap after a take
 into recorded timing. The round-trip through Record is the cost of knowing when
