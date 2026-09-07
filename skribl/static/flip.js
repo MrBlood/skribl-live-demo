@@ -3838,7 +3838,25 @@ function buildSharePayload(){
     } catch (e) { console.warn('skribl: loop crop failed, posting the full sample', e); }
   }
   const photo0=bgImage ? { data:bgImage, name:imageName||null, fit:(photoFit==='fill'?'stretch':photoFit), opacity:photoOpacity, blur:photoBlur, offset:{x:photoOffX,y:photoOffY}, zoom:photoZoom } : null;
-  const outFrames=frames.map((f,i)=>({ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null }));
+  // PER-PAGE HOLDS HAVE NEVER TRAVELLED WITH A POST. serializeFlip() writes
+  // `hold` into the draft; this function, which builds the POST body, did not
+  // write it at all — so a page held for four beats previewed correctly, posted,
+  // and then played at uniform timing for every viewer of the link. The author
+  // is the one person who never sees that, because they watch the preview.
+  //
+  // Why no suite caught it: verify_hold.py posts a HAND-BUILT payload to prove
+  // the API accepts `hold`, and reads timing off the exported GIF. Both pass
+  // with this bug fully present. Neither drives the editor's own Share path,
+  // which is the only thing that could have failed. Measuring something
+  // ADJACENT to the claim, one more time.
+  //
+  // Written only above the default, exactly as the draft does, so a document
+  // with no holds posts the bytes it always did.
+  const outFrames=frames.map((f,i)=>{
+    const o={ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null };
+    const h=frameHold(f); if(h>1) o.hold=h;
+    return o;
+  });
   // Title/caption come from the compose sheet. This was hardcoded to
   // 'Flip animation' with no caption, so every Flip post arrived at the platform
   // with an identical, meaningless title. The server truncates at 80/300 and
