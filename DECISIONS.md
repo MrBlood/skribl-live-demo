@@ -6283,3 +6283,101 @@ corollaries, both learned the expensive way: mutate per COMPONENT rather than
 once per change (v212, where Flip self-healed the scenario its assertion
 claimed to pin), and do not edit mechanically where prose and code interleave.
 
+
+## v283 -- a readiness check that could not go red, in the release that wrote the rule against them
+
+`browsing.goto()` promised in its docstring that a page had finished booting and
+swallowed the timeout with `except: pass`. The comment defending it argued that
+a Pad which failed to boot still fails later, on the assertions that then find no
+editor. That is true and it is not enough: the failure surfaces three screens
+from its cause, as "no editor" rather than "flip.js died at line N", which is the
+misattribution that cost four debugging rounds in one session and is the entire
+reason the boot marker exists.
+
+**It shipped in v282 — the release that added "a green check is not evidence
+until it has been shown to go red" to CLAUDE.md.** The rule was written and not
+applied to the code being written beside it. An outside audit found it, not the
+harness, because the harness had no way to notice: the helper 45 suites navigate
+through could not fail.
+
+It fails closed now, and the fix is asserted by RUNNING it rather than by reading
+it. Eight cases live permanently in `verify_boot.py` — the suite already about
+scripts reaching their last line, so no new suite and no new module. Against the
+pre-fix implementation, extracted with `git show`, the same matrix scores 3/8
+with all three prevented-boot cases reporting success.
+
+**Two opt-outs exist and they are not the same case**, which is why each says
+which at its call site: `verify_example` points at a HOST app whose root is not a
+Skribl surface, and `verify_visual` aborts `app.js` on purpose to assert the
+editor is not blank while it downloads. `verify_gifenc` looked like a third and
+is not — it blocks one script and Flip still boots, which it asserts on the next
+line. If that opt-out's call-site count ever grows, that is itself the signal.
+
+## v283, cont. -- "dirty" meant two opposite things and the seal reported them identically
+
+The v282 seal recorded `Git commit : 0d88605-dirty` and an audit could not tell
+what it meant. It meant the release had written its own evidence into the tree:
+`harness/MP4-ATTESTATION.txt` is dropped in mid-run so `RELEASE.md` can report
+H.264 on the tree it describes. A bare suffix says that in the same words as
+somebody leaving uncommitted source behind.
+
+The audit's remedy — "require a clean working tree for a final seal" — would have
+forbidden the mid-run write that v282's own process fix requires, so the two
+rules could not both have stood. **Narrowed, with the reviewer's agreement, to
+the case that is actually a reproducibility hole:** block on modifications
+outside `release_run.GENERATED`, permit and ENUMERATE them inside it. The banner
+now lists the files rather than printing a suffix a reader has to trust.
+
+The exclusion list had existed twice inside `run_harness.sh` alone; it is one
+function used by both callers now.
+
+## v283, cont. -- 1,370 lines under a marker that said they were history
+
+`START-HERE.md` carried a divider at line 573 reading HISTORICAL NARRATIVE FROM
+HERE. Two thirds of the document whose job is current state sat below it.
+
+Fourteen rules that a change can still break came out of it, each enforcer
+verified by grep. **The most valuable had never been written down as an invariant
+at all: a point carries no field outside `{x, y, color, size, t, start, erase}`**
+— the contract that makes every post ever made keep working. It was a paragraph
+in a band a reader is told to distrust. So were COMPOSE MODE PUBLISHES NOTHING
+and the rule that the compose handshake targets an origin and never `'*'`.
+
+**The marker was also mis-scoped, and that is the sharper defect.** Inside the
+band it declared historical sat the GENERATED module index — a region
+`gen_docs.py` writes and `verify_docs` requires — telling a reader to verify it
+against a suite before acting on it. Documentation structure had become actively
+misleading rather than merely stale.
+
+Three rules were about how to WORK rather than about the product, and went to
+CLAUDE.md instead of the invariants table: procedure and rationale are different
+concepts, and collapsing them into one canonical location puts a rule somewhere
+nobody reads at the moment they need it. One of the three is against this
+session — v213 lost 68 assertions to `git checkout`, and `git stash` repeated it
+here.
+
+Measured against `DECISIONS.md` v234, the pen-palette and colour-ratchet sections
+were a near-verbatim SECOND COPY of reasoning this file already held. Duplication
+found by comparison, not by impression.
+
+## v283, cont. -- three hashes were wearing one name
+
+`RELEASE.md` said "tree hash" for a value that is the hash of the pre-stamp
+source subset, while `SHA256SUMS` covers delivered bytes and the MP4 attestation
+names a third. The reviewer's fix was a rename rather than another document:
+`release_run.py` emits `tested tree hash` and the generated prose says why the
+three differ, so the distinction is inherited by every record instead of
+explained in a paragraph somebody has to find.
+
+Both parsers were tightened to REQUIRE the new name. A loose substring would have
+matched either spelling and let the two drift apart silently, which is the same
+failure mode as the two generated-file lists.
+
+**The success measure for this work is not "one statement per concept."** The
+reviewer corrected that drift and the correction is recorded here because it is
+easy to lose: implementation, enforcement and a test's own statement may all
+legitimately restate a rule — an assertion that does not state its rule is not an
+assertion. What is countable waste is explanatory narrative beyond the point of
+enforcement. Applied carelessly to `strokeGroups`, where 11 files explain the
+partition rule and 63 merely use it, the wrong reading would delete ten
+explanations that make local contracts legible.
