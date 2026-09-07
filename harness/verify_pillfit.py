@@ -23,6 +23,13 @@ The pill is pointer-events:none and always was, so none of this was ever about
 blocking taps — it obscures a control without disabling it. Worth knowing when
 weighing the fix, and asserted here so a later change cannot quietly make the
 pill interactive and turn an overlap into a dead button.
+
+THE CONSEQUENCE, STATED PLAINLY: "Saved" no longer appears on a phone. It
+appeared on top of a control before, so this is a change from VISIBLE AND IN THE
+WAY to NOT SHOWN, not from visible to hidden — and the warning states, the ones
+that actually need reading, still show everywhere. If the reassurance turns out
+to be wanted on mobile, the fix is to give the pill somewhere to go, not to
+weaken this rule.
 """
 import os
 import sys

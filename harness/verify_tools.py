@@ -32,6 +32,10 @@ WHAT IS PINNED HERE, and the shape each guards against:
     where the two share a module the assertion goes through the shared entry
     point — verify_parity's re-inline lesson: agreeing today is not the same as
     one implementation.
+
+WHEN ADDING PINS HERE, reuse ONE page per surface and reset state between cases
+rather than reloading. Three reloads per surface is what pushed the old combined
+suite past a single invocation in the first place.
 """
 from playwright.sync_api import sync_playwright
 import browsing

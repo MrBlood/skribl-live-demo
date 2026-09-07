@@ -27,6 +27,15 @@ than flattening it: Flip restores silently, because it persists pages, media and
 background and has nothing to warn about; Pad offers a banner, because its
 autosave holds strokes but NOT media bytes and a silent restore would present a
 partial drawing as the whole one.
+
+CALIBRATED BY REINTRODUCING THE BUG ON PURPOSE: the suite then fails with
+"Cannot access '__tdzCanary' before initialization" rather than with a missing
+filmstrip — it names the file that died instead of a symptom three screens away,
+which is the whole reason it exists.
+
+THE RULE THIS YIELDS, for anyone editing either editor script: state any early
+path can reach belongs WITH the early state, and anything touching state
+declared further down belongs in the load handler.
 """
 import json
 import sys
