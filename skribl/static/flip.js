@@ -319,7 +319,12 @@ let stampScalePct = 100;
    back does not return to where it started. */
 let selMode = null, selSnap = null, selPivot = null, selRef = null;
 let editIdx = 0, armedDel = -1, armedClear = false;
-let drawOnMode = false, drawOnRAF = null, dFrame = 0, dFrameStartPerf = 0;   // "draw-on" replay
+// The per-page reveal clock. There used to be a document-wide `drawOnMode`
+// here with a SECOND playback loop behind it, which is why Draw-on could never
+// be posted: it was a preview mode rather than a property of the drawing. A
+// page now carries `draw` itself and ONE loop plays both kinds, so what you
+// preview is what a viewer gets.
+let revealRAF = null, revealStart = 0;
 
 function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
 // Per-page hold: how many base-fps slots this page occupies. ALWAYS read through
@@ -2020,6 +2025,9 @@ function syncPagebar(){
   if(pbCopy){ pbCopy.disabled = playing; pbCopy.title = 'Copy ' + these; }
   if(pbDel){ pbDel.disabled = playing || n<=1 || cnt>=n;
     pbDel.title = 'Delete ' + these; }
+  // The drawer's bulk switch reads "on" only while EVERY page is on, so setting
+  // one page individually has to re-read it or it lies about the document.
+  if(typeof syncDrawOnBtn === 'function') syncDrawOnBtn();
   if(pbDraw){
     // The FIRST page in the span decides what the switch reads, matching what
     // spanSetDraw() will do to the whole range if it is tapped.
@@ -2799,8 +2807,10 @@ window.addEventListener('blur', ()=> endFlipHold(true));
 const playBtn=document.getElementById('play');
 const liveBadge=document.querySelector('.flip-live');
 function updateToolState(){
-  playBtn.disabled = drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length < 2;
-  playBtn.title = playBtn.disabled ? (drawOnMode ? 'Draw something to replay' : 'Add a second page to flip') : (drawOnMode ? 'Watch it draw itself' : 'Flip through the pages');
+  playBtn.disabled = frames.length < 2 && !frames.some(frameDraw);
+  playBtn.title = playBtn.disabled ? 'Add a second page to flip'
+    : (frames.some(frameDraw) ? 'Flip through the pages — drawing pages draw themselves'
+                             : 'Flip through the pages');
   // v126: hide the whole control until there is something to play, matching the
   // Pad (playWrap.hidden = !recorded). Showing "Flip it · 0:00" on a one-page
   // animation advertises an action that cannot run. Reuses playBtn.disabled
@@ -2826,21 +2836,13 @@ function updatePlayProgress(){ if(flipProgressFill && frames.length) flipProgres
 
 // --- draw-on replay: reveal each frame's strokes over their recorded timing ---
 function renderPartial(f, count){ ctx.clearRect(0,0,CW,CH); drawBackdrop(ctx); paintFrame(ctx, count>=f.strokes.length ? f.strokes : f.strokes.slice(0, Math.max(0,count))); }
-function drawOnParams(f){ const p=f.strokes; if(!p.length) return {span:0, dur:Math.max(160,1000/fps), t0:0}; const t0=p[0].t; const span=Math.max(1, p[p.length-1].t - t0); return {span, dur:Math.min(2200, Math.max(320, span)), t0}; }
-function startDrawOnFrame(){ dFrameStartPerf=performance.now(); drawOnTick(); }
-function drawOnTick(){
-  if(!playing || scrubbingFrames) return;
-  const f=frames[dFrame]; if(!f){ stop(); return; }
-  const {span,dur,t0}=drawOnParams(f);
-  const e=performance.now()-dFrameStartPerf;
-  if(!f.strokes.length){ renderPartial(f,0); }
-  else { const revealMs=(e/dur)*span; let count=0; while(count<f.strokes.length && (f.strokes[count].t - t0)<=revealMs) count++; renderPartial(f, count); }
-  liveBadge.textContent='\u270E '+(dFrame+1)+' / '+frames.length;
-  if(flipProgressFill && frames.length){ flipProgressFill.style.width=(((dFrame+Math.max(0,Math.min(1,e/dur)))/frames.length)*100)+'%'; }
-  if(e>=dur){ renderPartial(f, f.strokes.length); advanceDrawOn(); return; }
-  drawOnRAF=requestAnimationFrame(drawOnTick);
-}
-function advanceDrawOn(){ dFrame=(dFrame+1)%frames.length; idx=dFrame; startDrawOnFrame(); }   // preview loops
+/* drawOnParams / startDrawOnFrame / drawOnTick / advanceDrawOn lived here: a
+ * SECOND playback loop, driven by a document-wide toggle, that ignored `hold`
+ * entirely and could not be posted. Its reveal arithmetic survives in
+ * startReveal(), scoped to one page and driven by the same timer that schedules
+ * every other page — which is the point. Two loops disagreeing about timing is
+ * the bug lib/holdtiming.js was extracted to end, and keeping a second one
+ * alive beside the fix would have re-created it. */
 
 /* v262: a page is rasterised at most ONCE per playback. Repainting a generated
    in-between costs ~123ms at 4x CPU throttle (a mid-range phone) even after the
@@ -2880,9 +2882,52 @@ function playPaint(){
   }
   return false;
 }
+/* A drawing page's own span, for the inline fallback only — the lib owns the
+ * real answer. Kept beside frameDraw() in spirit: same defensive read. */
+function _spanOf(f){
+  const p = f && f.strokes;
+  if(!p || p.length < 2) return 320;
+  const s = Number(p[p.length-1].t) - Number(p[0].t);
+  return s > 0 ? s : 320;
+}
+/* Reveal a drawing page over its own duration. This is the old drawOnTick,
+ * scoped to ONE page instead of driving the whole document: the outer timer
+ * still owns when to advance, so a drawing page and a still page are scheduled
+ * by the same clock and cannot drift apart. */
+function startReveal(f, durMs){
+  const p = f.strokes;
+  if(!p.length){ renderPartial(f, 0); return; }
+  const t0 = p[0].t, span = Math.max(1, p[p.length-1].t - t0);
+  revealStart = performance.now();
+  const tick = () => {
+    if(!playing || scrubbingFrames) return;
+    const e = performance.now() - revealStart;
+    const revealMs = (e / Math.max(1, durMs)) * span;
+    let count = 0;
+    while(count < p.length && (p[count].t - t0) <= revealMs) count++;
+    renderPartial(f, count);
+    if(e < durMs) revealRAF = requestAnimationFrame(tick);
+    else renderPartial(f, p.length);
+  };
+  renderPartial(f, 0);
+  revealRAF = requestAnimationFrame(tick);
+}
 function playStep(){ if(scrubbingFrames) return;
   idx=playI%frames.length;
   const _t0 = performance.now();
+  // A drawing page must never blit a cached bitmap: the cache exists because a
+  // still page does not change, and this one does. It also must not FILL the
+  // cache from a half-drawn canvas, so it goes nowhere near playPaint().
+  if(frameDraw(frames[idx])){
+    if(revealRAF){ cancelAnimationFrame(revealRAF); revealRAF = null; }
+    const _d = (typeof window !== 'undefined' && window.SkriblHold)
+      ? window.SkriblHold.pageMs(frames[idx], fps)
+      : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
+    startReveal(frames[idx], _d);
+    updatePlayProgress();
+    liveBadge.textContent='\u270E '+(idx+1)+' / '+frames.length; playI++;
+    return;
+  }
   const _blit = playPaint();
   const _cost = performance.now() - _t0;
   if(_blit){
@@ -2948,9 +2993,13 @@ function runPlayTimer(){
     const cur = (playI - 1 + frames.length) % frames.length;
     // slotMs takes the FRAME, not a hold read off it, so this cannot go back
     // to reading the hold off the wrong page — which is what it used to do.
+    // pageMs, not slotMs: a drawing page is EXEMPT FROM fps and lasts as long
+    // as its own strokes took, so its duration is not a whole number of slots.
     const d = (typeof window !== 'undefined' && window.SkriblHold)
-      ? window.SkriblHold.slotMs(frames[cur], fps)
-      : (1000 / fps) * frameHold(frames[cur]);
+      ? window.SkriblHold.pageMs(frames[cur], fps)
+      : frameDraw(frames[cur])
+        ? Math.max(320, Math.min(8000, _spanOf(frames[cur])))
+        : (1000 / fps) * frameHold(frames[cur]);
     const ni = playI % frames.length;
     // An unpainted frame is estimated from its point count at the going rate,
     // so the FIRST play-through is even too — that is the one you watch after
@@ -2974,7 +3023,9 @@ function runPlayTimer(){
 }
 function play(){
   if(playing) return;
-  if(drawOnMode ? (frames.length<1 || !frame().strokes.length) : frames.length<2) return;
+  // A single page that draws itself IS worth playing — that is the whole of a
+  // one-page Flip, which the help already calls "just a drawing".
+  if(frames.length<2 && !frames.some(frameDraw)) return;
   disarmAll(); editIdx = idx;
   if(ZoomView && ZoomView.isZoomed()) ZoomView.fit();       // play at 100% so frames aren't cropped
   playing=true; document.body.classList.add('playing');
@@ -2983,14 +3034,13 @@ function play(){
   startMusic();
   startFlipElapsed();
   playBitmaps = window.SkriblFrameBitmap ? window.SkriblFrameBitmap.store() : null;
-  if(drawOnMode){ dFrame=0; idx=0; startDrawOnFrame(); }
-  else { playI=idx; runPlayTimer(); }
+  playI=idx; runPlayTimer();
 }
 function stop(){
   playBitmaps = null;                 // playback-scoped: freed the moment it ends
   playing=false; document.body.classList.remove('playing');
   playBtn.classList.remove('playing'); playBtn.querySelector('span').textContent='Flip it';
-  clearInterval(playTimer); playTimer=null; if(drawOnRAF) cancelAnimationFrame(drawOnRAF); drawOnRAF=null;
+  clearInterval(playTimer); playTimer=null; if(revealRAF) cancelAnimationFrame(revealRAF); revealRAF=null;
   stopMusic(); scrubbingFrames=false;
   stopFlipElapsed();
   if(flipPlayer){ flipPlayer.classList.remove('show'); flipPlayer.hidden=true; }
@@ -2998,15 +3048,44 @@ function stop(){
   buildStrip(); render();
 }
 playBtn.addEventListener('click',()=> playing?stop():play());
-drawOnBtn.addEventListener('click',()=>{ if(playing) stop(); drawOnMode=!drawOnMode; drawOnBtn.classList.toggle('on',drawOnMode); drawOnBtn.setAttribute('aria-checked',String(drawOnMode)); updateToolState(); chip(drawOnMode?'Draw-on replay: on':'Draw-on replay: off'); });
+// The Draw drawer's switch now sets EVERY page, because per-page draw is the
+// real control and a document-wide preview mode beside it would be the same
+// divergence again — one state that plays and another that posts. It reads as
+// on only when every page is on: a bulk setter with an honest readout rather
+// than a mode with state of its own.
+function _allDraw(){ return frames.length > 0 && frames.every(frameDraw); }
+function syncDrawOnBtn(){
+  if(!drawOnBtn) return;
+  const on = _allDraw();
+  drawOnBtn.classList.toggle('on', on);
+  drawOnBtn.setAttribute('aria-checked', String(on));
+}
+drawOnBtn.addEventListener('click',()=>{
+  if(playing) stop();
+  const on = !_allDraw();
+  for(const f of frames){ if(on) f.draw = true; else delete f.draw; }
+  syncDrawOnBtn(); buildStrip(); syncPagebar(); scheduleSave(); updateToolState();
+  chip(on ? 'Every page draws itself' : 'Every page snaps in');
+});
 // scrub through frames (drag to preview any frame)
 function scrubToFrac(frac){ const n=frames.length; if(!n) return; frac=Math.max(0,Math.min(1,frac)); idx=Math.min(n-1, Math.round(frac*(n-1)));
-  if(drawOnMode){ dFrame=idx; renderPartial(frames[dFrame], frames[dFrame].strokes.length); dFrameStartPerf=performance.now(); if(flipProgressFill) flipProgressFill.style.width=(((idx+1)/n)*100)+'%'; }
-  else { playI=idx; render(); updatePlayProgress(); }
-  liveBadge.textContent=(drawOnMode?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
+  // Scrubbing shows a page WHOLE, drawing or not: a drag is for finding a page,
+  // and revealing strokes under the finger would make the thumbnail you are
+  // aiming at depend on how fast you moved.
+  playI=idx; render(); updatePlayProgress();
+  liveBadge.textContent=(frameDraw(frames[idx])?'\u270E ':'\u25B6 ')+(idx+1)+' / '+n; }
 flipProgress.addEventListener('pointerdown',e=>{ scrubbingFrames=true; try{flipProgress.setPointerCapture(e.pointerId);}catch(_){} const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
 flipProgress.addEventListener('pointermove',e=>{ if(!scrubbingFrames) return; const r=flipProgress.getBoundingClientRect(); scrubToFrac((e.clientX-r.left)/r.width); });
-function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false; if(playing && drawOnMode){ dFrameStartPerf=performance.now(); drawOnTick(); } }
+function endFrameScrub(){ if(!scrubbingFrames) return; scrubbingFrames=false;
+  // Releasing mid-play resumes the page under the finger, revealing it from the
+  // start if it draws; the outer timer is still running, so this only restarts
+  // the reveal.
+  if(playing && frameDraw(frames[idx])){
+    const _d = (typeof window !== 'undefined' && window.SkriblHold)
+      ? window.SkriblHold.pageMs(frames[idx], fps)
+      : Math.max(320, Math.min(8000, _spanOf(frames[idx])));
+    startReveal(frames[idx], _d);
+  } }
 flipProgress.addEventListener('pointerup',endFrameScrub);
 flipProgress.addEventListener('pointercancel',endFrameScrub);
 /* The keyboard half. This div declared role="slider" with valuemin/valuemax
