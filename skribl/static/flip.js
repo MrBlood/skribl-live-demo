@@ -335,6 +335,17 @@ function frameHold(f){
   const h = Math.round(Number(f && f.hold));
   return (isFinite(h) && h >= 1) ? Math.min(h, MAX_HOLD) : 1;
 }
+// Per-page DRAW: this page replays its own strokes over their recorded timing
+// instead of snapping in, exactly as the Pad does, and is therefore EXEMPT FROM
+// fps. Read through this for the same reason frameHold() exists — a payload
+// written before per-page draw has no `draw` field and every page must read as
+// still, which is what makes the change additive. Owned by lib/holdtiming.js so
+// the editor and the player cannot disagree about which pages draw.
+// Inline fallback for a surface that somehow loads without the lib.
+function frameDraw(f){
+  if(typeof window !== 'undefined' && window.SkriblHold) return window.SkriblHold.drawOf(f);
+  return !!(f && f.draw === true);
+}
 function totalHoldUnits(from, to){
   let u = 0;
   for(let i=from; i<=to; i++) u += frameHold(frames[i]);
@@ -472,6 +483,7 @@ function serializeFlip(opts){
       const o = { strokes: b.strokes, strokeGroups: b.strokeGroups, background: bgColor };
       const h = frameHold(f);
       if(h > 1) o.hold = h;      // omitted at the default => payload unchanged
+      if(frameDraw(f)) o.draw = true;   // same rule: absent at the default
       return o;
     })
   };
@@ -3855,6 +3867,7 @@ function buildSharePayload(){
   const outFrames=frames.map((f,i)=>{
     const o={ strokes:f.strokes, strokeGroups:f.strokeGroups, baseSnapshot:null, background:{color:bgColor}, photo:i===0?photo0:null, music:i===0?music0:null };
     const h=frameHold(f); if(h>1) o.hold=h;
+    if(frameDraw(f)) o.draw=true;
     return o;
   });
   // Title/caption come from the compose sheet. This was hardcoded to
