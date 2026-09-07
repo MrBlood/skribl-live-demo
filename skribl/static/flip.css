@@ -998,6 +998,35 @@
    marked .idle, and hidden by the rule further down unless its tile is active,
    hovered or focused. This comment used to say "always visible" flatly, which
    stopped being true the moment the badge became a button. */
+/* DRAW-ON, per page. The mark sits bottom-left: the page number owns top-left,
+   the hold badge sits after it at left:30px, and the ✕ owns top-right, so this
+   is the one corner of a tile nothing else claims.
+
+   Tokens only, no literal. #moreBtn.on above states this same violet as
+   rgba(124,92,255,…), which is --accent's own value written out by hand — the
+   exact shape v277 added --good-rgb to stop. A new rule does not get to repeat
+   an old rule's mistake just because it is next to it. */
+.frame .drawmark {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  z-index: 2;
+  width: 13px;
+  height: 13px;
+  display: block;
+  color: var(--ui-hi);
+  pointer-events: none;   /* the switch lives in the page bar and the ⋯ menu */
+}
+.frame .drawmark svg { width: 100%; height: 100%; display: block; }
+
+/* The page bar's Draw switch, on. role="switch" is the accessible half; this
+   is the visible one, and both are needed — an aria-checked nobody can see is
+   the defect verify_a11y exists to find, in the other direction. */
+.pb[aria-checked="true"] {
+  color: var(--ui-hi);
+  border-color: var(--ui-hi);
+}
+
 .frame .holdbadge {
   position: absolute;
   top: 4px;

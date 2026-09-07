@@ -1939,7 +1939,8 @@ function disarmAll(){
 const pagebar=document.getElementById('pagebar');
 const pbWho=document.getElementById('pbWho'), pbLeft=document.getElementById('pbLeft'),
       pbRight=document.getElementById('pbRight'), pbCopy=document.getElementById('pbCopy'),
-      pbDel=document.getElementById('pbDel');
+      pbDel=document.getElementById('pbDel'),
+      pbDraw=document.getElementById('pbDraw');
 // The Pad shows the recorded length beside Play; Flip can state its animation
 // length exactly — total hold units over fps. Same badge, same m:ss format.
 const flipDurationEl=document.getElementById('flipDuration');
@@ -2019,6 +2020,16 @@ function syncPagebar(){
   if(pbCopy){ pbCopy.disabled = playing; pbCopy.title = 'Copy ' + these; }
   if(pbDel){ pbDel.disabled = playing || n<=1 || cnt>=n;
     pbDel.title = 'Delete ' + these; }
+  if(pbDraw){
+    // The FIRST page in the span decides what the switch reads, matching what
+    // spanSetDraw() will do to the whole range if it is tapped.
+    const on = frameDraw(frames[sp ? sp.from : idx]);
+    pbDraw.disabled = playing;
+    pbDraw.setAttribute('aria-checked', on ? 'true' : 'false');
+    pbDraw.classList.toggle('on', on);
+    const say = (on ? 'Stop drawing ' : 'Draw ') + these + (on ? '' : ' on');
+    pbDraw.title = say; pbDraw.setAttribute('aria-label', say);
+  }
   // pbHold's sync block lived here until v226. It was inert the moment the
   // button left the template — every line behind an `if(pbHold)` that could
   // never be true — and dead code that cannot run is worse than dead code that
@@ -2029,6 +2040,8 @@ if(pbLeft) pbLeft.addEventListener('click',()=>{ if(pbLeft.disabled) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; } spanMove(-1); });
 if(pbRight) pbRight.addEventListener('click',()=>{ if(!pbRight.disabled) spanMove(1); });
 if(pbCopy) pbCopy.addEventListener('click',()=>{ if(pbCopy.disabled) return; spanCopy(); });
+if(pbDraw) pbDraw.addEventListener('click',()=>{ if(pbDraw.disabled) return;
+  spanSetDraw(pbDraw.getAttribute('aria-checked') !== 'true'); });
 // pbHold retired in v226: the hold badge on the tile is the control now, and it
 // was already drawn there showing the value the button was cycling.
 if(pbDel) pbDel.addEventListener('click',()=>{ if(pbDel.disabled) return;
@@ -2063,6 +2076,23 @@ function buildStrip(){
         +'title="Hold this page longer — tap to cycle" '
         +'aria-label="Hold page '+(i+1)+', currently '+_h+' frame'+(_h===1?'':'s')+'">'
         +'\u00d7'+_h+'</button>'
+      // A page that draws itself has to SAY so on the strip. The hold badge is
+      // the precedent: a per-page property nobody can see is one people set by
+      // accident and then cannot find. Not a button — the switch lives in the
+      // page bar and the ⋯ menu, and a third route would be the clutter the
+      // compact split exists to avoid.
+      //
+      // IT CARRIES ITS OWN NAME rather than aria-hidden. The tile is a bare
+      // <div class="frame"> with no accessible name of its own — everything a
+      // screen reader gets here comes from a CHILD that names itself, which is
+      // what the hold badge does ("Hold page 3, currently 2 frames"). A
+      // decorative mark would have made this state visible to sighted users
+      // only, which is the defect verify_a11y was written after finding five of.
+      + (frameDraw(f) ? '<span class="drawmark" role="img" '
+          + 'aria-label="Page '+(i+1)+' draws itself">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+          + 'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'
+          + '<path d="M4 20l4-1 9.5-9.5a2 2 0 0 0-3-3L5 16l-1 4z"/></svg></span>' : '')
       + (_compactStrip() ? '<button class="pageops" aria-haspopup="menu" '
           + 'aria-expanded="false" title="Page actions" '
           + 'aria-label="Actions for page ' + (i+1) + '">'
@@ -2262,6 +2292,14 @@ function openPageOps(trigger, i){
     ['Move right', 'Move ' + what + ' right', () => spanMove(1),
      sp ? sp.to === n - 1 : i === n - 1],
     ['Copy',       'Copy ' + what,            () => spanCopy(),  false],
+    // The ⋯ menu's half of the Draw switch. The page bar carries the other
+    // half and only one of the two is ever rendered, so both must exist or the
+    // control disappears at one size class — the split this whole menu exists
+    // to serve. The label states the RESULT, as the other items do ("Copy",
+    // not "Copy?"), and flips with the state rather than reading as a mode.
+    [_drawOnHere(sp, i) ? 'Stop drawing' : 'Draw on',
+     (_drawOnHere(sp, i) ? 'Stop drawing ' : 'Draw ') + what + (_drawOnHere(sp, i) ? '' : ' on'),
+     () => spanSetDraw(!_drawOnHere(sp, i)), false],
     ['Delete',     'Delete ' + what,          () => spanDelete(),
      n <= 1 || (sp && SkriblPageSpan.count(sp) >= n)],
   ];
@@ -2532,6 +2570,28 @@ function extendSpanTo(i){
   const to = Math.max(0, Math.min(frames.length - 1, i));
   if(to !== idx){ if(typeof selClear === 'function') selClear(true); idx = to; }
   buildStrip(); render(); scrollStripToActive(true);
+}
+/* DRAW-ON across a span, mirroring spanCopy's scope rule: with a range lit
+ * every page in it takes the new state, otherwise just the current one. The
+ * new state is decided by the FIRST page in the span rather than per page, so
+ * one tap makes a mixed selection uniform instead of inverting it into a
+ * different mixture — the same choice the hold badge makes when it cycles. */
+/* Which state the Draw control should READ, in either home: the first page in
+ * scope decides, so the switch and the menu item cannot disagree about a mixed
+ * selection. Kept beside spanSetDraw() because the two must move together. */
+function _drawOnHere(sp, i){
+  return frameDraw(frames[sp ? sp.from : i]);
+}
+function spanSetDraw(on){
+  const s = spanOrCurrent();
+  const from = s.from, to = s.to;
+  for(let i=from; i<=to; i++){
+    if(on) frames[i].draw = true; else delete frames[i].draw;
+  }
+  buildStrip(); syncPagebar(); scheduleSave();
+  const cnt = to - from + 1;
+  chip(on ? (cnt>1 ? cnt + ' pages draw themselves' : 'Page draws itself')
+          : (cnt>1 ? cnt + ' pages snap in' : 'Page snaps in'));
 }
 function spanCopy(){
   const s = spanOrCurrent();
