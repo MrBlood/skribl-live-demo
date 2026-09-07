@@ -30,13 +30,27 @@ marker is the end of all work.
 
 BOOT_MARKER = {
     "/": "pad", "/skribl-pad": "pad", "/flip": "flip",
+    "/library": "library", "/feed": "feed",
 }
+
+# The PLAYER runs app.js, so it raises the same flag Pad does — verified in a
+# browser rather than assumed, because "which script backs this surface" is
+# exactly the kind of thing that reads obvious and is wrong. /s/<id> is a
+# prefix rather than a fixed path, so it cannot live in the table above.
+PLAYER_PREFIX = "/s/"
 
 
 def boot_key(path):
-    """Which __skriblBoot flag a path should wait for, or None if the surface
-    does not set one (the player, library and feed do not)."""
-    return BOOT_MARKER.get(path.split("?")[0])
+    """Which __skriblBoot flag a path should wait for, or None if unknown.
+
+    Every Skribl surface raises one as of v282; library.js and feed.js gained
+    theirs here. None still happens legitimately — verify_example points BASE
+    at a HOST application whose root is not a Skribl surface at all.
+    """
+    p = path.split("?")[0]
+    if p.startswith(PLAYER_PREFIX):
+        return "pad"
+    return BOOT_MARKER.get(p)
 
 
 def open_page(target, base, path, *, viewport=None, settle=150, boot_timeout=5000):

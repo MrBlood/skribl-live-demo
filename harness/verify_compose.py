@@ -100,8 +100,7 @@ with sync_playwright() as sp:
     pg.on("request", lambda r: posts.append(r.url)
           if r.method == "POST" and "/api/skribls" in r.url else None)
 
-    pg.goto(BASE + "/feed", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/feed")
 
     # ---- the button is there, and it is the only real one ------------------
     check("the host composer offers a Skribl alongside its own attachments",

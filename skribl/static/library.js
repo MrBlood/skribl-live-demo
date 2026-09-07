@@ -315,3 +315,11 @@
   search.addEventListener('input', renderGrid);
   loadPage();
 })();
+
+/* THE BOOT FLAG, and it must stay last. app.js and flip.js have set one since
+   v-early; this surface did not, so every suite that opened it waited a fixed
+   guess instead of a signal — the harness spent 15.7 minutes sleeping and 78
+   seconds launching browsers. A flag is the cheapest possible check for the
+   most expensive possible bug (the file did not reach its end), and unlike a
+   page-error listener it also catches a swallowed throw. */
+window.__skriblBoot = Object.assign(window.__skriblBoot || {}, { library: true });

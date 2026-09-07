@@ -104,8 +104,7 @@ with sync_playwright() as sp:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("request", lambda r: payload_reqs.append(r.url)
           if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
-    pg.goto(BASE + "/library", wait_until="load")
-    pg.wait_for_timeout(3000)
+    browsing.goto(pg, BASE, "/library")
 
     tiles = pg.evaluate("() => document.getElementById('grid').children.length")
     check("the grid is built from GET /api/skribls, not from demo motifs",

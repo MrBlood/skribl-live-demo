@@ -262,8 +262,7 @@ with sync_playwright() as sp:
     pg.on("request", lambda r: payload_reqs.append(r.url)
           if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
     pg.add_init_script(TAP)     # before any page script constructs a context
-    pg.goto(BASE + "/feed", wait_until="load")
-    pg.wait_for_timeout(1500)
+    browsing.goto(pg, BASE, "/feed")
 
     mounted = pg.evaluate("() => window.SkriblInline ? window.SkriblInline.players().length : -1")
     check("the feed mounts one in-post player per listed Skribl",
@@ -394,8 +393,7 @@ with sync_playwright() as sp:
     id_tl = json.loads(urllib.request.urlopen(_tl_req, timeout=20).read())["id"]
 
     p3 = b.new_page(viewport={"width": 620, "height": 900})
-    p3.goto(BASE + "/feed", wait_until="load")
-    p3.wait_for_timeout(1500)
+    browsing.goto(p3, BASE, "/feed")
     p3.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_tl)
     p3.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
                          arg=id_tl, timeout=15000)
@@ -540,8 +538,7 @@ with sync_playwright() as sp:
     p1.close()
 
     p2 = b.new_page(viewport={"width": 620, "height": 900})
-    p2.goto(BASE + "/feed", wait_until="load")
-    p2.wait_for_timeout(1500)
+    browsing.goto(p2, BASE, "/feed")
     p2.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_a)
     # The tap issues a fetch before the first frame; wait for the payload to
     # land, then time the sample from the moment playback actually begins.
@@ -658,8 +655,7 @@ with sync_playwright() as sp:
     if flip_id:
         check("a flip document was posted (fixture)", True, flip_id)
         fp = b.new_page(viewport={"width": 620, "height": 900})
-        fp.goto(BASE + "/feed", wait_until="load")
-        fp.wait_for_timeout(1500)
+        browsing.goto(fp, BASE, "/feed")
         fp.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", flip_id)
         fp.wait_for_function("(id) => window.SkriblInline.find(id).state().loaded",
                              arg=flip_id, timeout=15000)
@@ -721,8 +717,7 @@ with sync_playwright() as sp:
     # and compare it to lib/sharecard.js's own arithmetic: if the card's layout
     # moves and only one side is updated, this fails.
     cp = b.new_page(viewport={"width": 620, "height": 900})
-    cp.goto(BASE + "/feed", wait_until="load")
-    cp.wait_for_timeout(1500)
+    browsing.goto(cp, BASE, "/feed")
     # INJECTED, NOT SHIPPED. The comparison below needs sharecard.js's
     # arithmetic in THIS page to check the CSS literals against it — and until
     # v281 the macro loaded it for every host to get it here, 5,210 B of a
