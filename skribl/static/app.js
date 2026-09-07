@@ -4197,27 +4197,46 @@ function showPlayerError(msg) {
   // used to be written out here as a literal, a copy of flip.js's MAX_HOLD with
   // nothing forcing them to agree. Inline fallback kept, as the other libs do.
   const _hold = (typeof window !== 'undefined' && window.SkriblHold) ? window.SkriblHold : null;
-  const flipHolds = isFlip
-    ? (_hold ? _hold.table(flipFrames) : flipFrames.map(f => {
+  /* PER-PAGE MILLISECONDS, not fps slots. A page carrying `draw` replays its
+     own strokes over their recorded timing and is exempt from fps, so its
+     duration is not a whole number of slots and the cumulative table cannot be
+     denominated in them any more. lib/holdtiming.js owns the conversion; a
+     document with no `draw` anywhere produces exactly the numbers the slot
+     table used to, which is what keeps every existing post playing identically.
+
+     THE FALLBACK DELIBERATELY DOES NOT REPRODUCE `draw`. Without the lib a
+     drawing page plays as a still one, which is what this player did before
+     the field existed — the fallback's job, stated at the top of holdtiming.js,
+     is that a surface loading without the module "behaves exactly as it did",
+     not that it reimplements the feature. Duplicating the reveal arithmetic
+     here would put a second copy of the rule on the surface whose byte budget
+     this project guards hardest, to serve a page that is already broken. */
+  const _drawOf = f => !!(f && f.draw === true);
+  const flipMs = isFlip
+    ? (_hold ? _hold.msTable(flipFrames, flipFps) : flipFrames.map(f => {
         const h = Math.round(Number(f && f.hold));
-        return (isFinite(h) && h >= 1) ? Math.min(h, 4) : 1;
+        return (1000 / flipFps) * ((isFinite(h) && h >= 1) ? Math.min(h, 4) : 1);
       }))
     : null;
-  const flipUnits = isFlip ? (_hold ? _hold.units(flipHolds) : flipHolds.reduce((a, b) => a + b, 0)) : 0;
   const flipDurMs = isFlip
-    ? (_hold ? _hold.durationMs(flipHolds, flipFps) : Math.max(1, (flipUnits / flipFps) * 1000))
+    ? (_hold ? _hold.cycleMs(flipMs) : Math.max(1, flipMs.reduce((a, b) => a + b, 0)))
     : 0;
   // Map elapsed time -> page index through the cumulative hold table.
   function flipIndexAt(cycT) {
-    if (_hold) return _hold.indexAt(flipHolds, flipFps, cycT);
-    let u = Math.floor((cycT / 1000) * flipFps);
-    if (!(u >= 0)) u = 0;
+    if (_hold) return _hold.indexAtMs(flipMs, cycT);
+    let e = Number(cycT); if (!(e >= 0)) e = 0;
     let acc = 0;
-    for (let i = 0; i < flipHolds.length; i++) {
-      acc += flipHolds[i];
-      if (u < acc) return i;
+    for (let i = 0; i < flipMs.length; i++) {
+      acc += flipMs[i];
+      if (e < acc) return i;
     }
-    return flipHolds.length - 1;
+    return flipMs.length - 1;
+  }
+  /* How far INTO the current page the clock is, 0..1 — only a drawing page
+     uses it, and a still page returns 0 because it has no progress: it is
+     simply up. */
+  function flipProgressAt(cycT) {
+    return _hold ? _hold.progressAt(flipMs, flipFrames, cycT) : 0;
   }
   /* A FLIP FRAME IS STATIC, SO PAINTING IT TWICE IS PURE WASTE, and the RAF
      loop was asking for it about five times per frame: requestAnimationFrame
@@ -4247,8 +4266,31 @@ function showPlayerError(msg) {
      every later visit is one drawImage. Keys are frame indices because the
      player's frames never change; the store is dropped only with the backing
      store (sizePlayerCanvas), whose captures it describes. */
-  function drawFlipFrame(fi) {
+  function drawFlipFrame(fi, prog) {
     const at = Math.max(0, Math.min(flipFrames.length - 1, fi));
+    const fr0 = flipFrames[at];
+    /* A DRAWING PAGE IS EXEMPT FROM BOTH MEMOS, and for the same reason it is
+       exempt from fps: it changes. `at === lastFlipDrawn` skips a repaint of
+       the page already on screen, which is right for a still page and would
+       freeze this one on its first revealed stroke. The bitmap cache is worse
+       than wrong here — it would serve a half-drawn capture as the whole page
+       for the rest of the document's life, because the store is keyed by frame
+       index and never invalidated. So: no memo, no cache read, no capture. */
+    if (_drawOf(fr0)) {
+      const s0 = getCanvasLogicalSize();
+      ctx.clearRect(0, 0, s0.width, s0.height);
+      const pts = (fr0 && Array.isArray(fr0.strokes)) ? fr0.strokes : [];
+      if (pts.length) {
+        const t0 = pts[0].t;
+        const span = Math.max(1, pts[pts.length - 1].t - t0);
+        const revealMs = Math.max(0, Math.min(1, Number(prog) || 0)) * span;
+        let n = 0;
+        while (n < pts.length && (pts[n].t - t0) <= revealMs) n++;
+        if (n) paintStrokesStatic(pts.slice(0, n));
+      }
+      lastFlipDrawn = -1;   // the next still page must repaint over this
+      return;
+    }
     if (at === lastFlipDrawn) return;
     const s = getCanvasLogicalSize();
     const FB = window.SkriblFrameBitmap;
@@ -4470,7 +4512,7 @@ function showPlayerError(msg) {
     setPlayIcon();
     if (isFlip) {
       const cycT = flipDurMs ? (targetMs % flipDurMs) : 0;
-      drawFlipFrame(flipIndexAt(cycT));
+      drawFlipFrame(flipIndexAt(cycT), flipProgressAt(cycT));
       elapsedBase = targetMs; setProgress(frac); hideNib();
       return;
     }
@@ -4512,10 +4554,10 @@ function showPlayerError(msg) {
     const elapsed = elapsedBase + (performance.now() - segStart);
     if (isFlip) {
       const cycT = flipDurMs ? (elapsed % flipDurMs) : 0;
-      drawFlipFrame(flipIndexAt(cycT));
+      drawFlipFrame(flipIndexAt(cycT), flipProgressAt(cycT));
       setProgress(flipDurMs ? cycT / flipDurMs : 1);
       hideNib();
-      if (!loop && elapsed >= flipDurMs) { drawFlipFrame(flipFrames.length - 1); onEnded(); return; }
+      if (!loop && elapsed >= flipDurMs) { drawFlipFrame(flipFrames.length - 1, 1); onEnded(); return; }
       rafId = requestAnimationFrame(frame);
       return;
     }

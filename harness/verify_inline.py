@@ -663,7 +663,12 @@ with sync_playwright() as sp:
         check("a flip document is recognised as a flip, not replayed as strokes",
               fst["kind"] == "flip", json.dumps(fst))
 
-        expected = fp.evaluate("() => window.SkriblHold.durationMs([2, 4, 2], 6)")
+        # ms table, not the slot table: holdtiming.js now denominates a page in
+        # milliseconds because a drawing page is exempt from fps. Same answer
+        # for a document with no `draw`, which this one is.
+        expected = fp.evaluate("() => { const H = window.SkriblHold;"
+                               " return H.cycleMs(H.msTable("
+                               "[{hold:2},{hold:4},{hold:2}], 6)); }")
         check("the flip's duration is the one lib/holdtiming.js computes",
               abs(fst["totalMs"] - expected) < 1,
               f"player {fst['totalMs']} vs module {expected}")

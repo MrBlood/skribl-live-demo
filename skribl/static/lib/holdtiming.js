@@ -22,8 +22,8 @@
  * with nothing forcing the copies to agree. This module owns the clamp, the
  * cumulative table, and the two questions each surface actually asks:
  *
- *     indexAt()  which page is on screen at time t   (the player's clock)
- *     slotMs()   how long page i should stay up      (the editor's timer)
+ *     indexAtMs()  which page is on screen at time t  (the player's clock)
+ *     pageMs()     how long page i should stay up      (the editor's timer)
  *
  * A PAGE THAT DRAWS ITSELF IS EXEMPT FROM fps, which is why this module now
  * denominates a page in MILLISECONDS rather than in fps slots. `hold` says how
@@ -37,6 +37,13 @@
  * a drawing page cannot mean one thing in the editor and another in the player.
  * That is the same failure this module was created for; `draw` is simply the
  * second field capable of causing it.
+ *
+ * THE SLOT-DENOMINATED API IS GONE rather than kept beside this one. table(),
+ * units(), durationMs(), indexAt() and slotMs() answered the same question in
+ * a unit that can no longer express every page, and two ways to ask "how long
+ * is page i" is the duplication this file was extracted to remove. A document
+ * with no `draw` gets identical numbers either way, so no existing post
+ * changes.
  *
  * The two mechanisms stay different — the player maps a clock to an index, the
  * editor reschedules a timer — because they are solving different problems.
@@ -132,57 +139,15 @@
     return Math.max(0, Math.min(1, into / span));
   }
 
-  function table(frames) {
-    var out = [], i, n = frames && frames.length ? frames.length : 0;
-    for (i = 0; i < n; i++) out.push(holdOf(frames[i]));
-    return out;
-  }
-
-  function units(holds) {
-    var u = 0, i, n = holds && holds.length ? holds.length : 0;
-    for (i = 0; i < n; i++) u += holds[i];
-    return u;
-  }
 
   function fpsOf(fps) {
     var f = Number(fps);
     return (isFinite(f) && f > 0) ? f : 12;
   }
 
-  /* Total run time of one cycle. Floored at 1ms so a caller dividing by it
-   * cannot produce Infinity on an empty document. */
-  function durationMs(holds, fps) {
-    return Math.max(1, (units(holds) / fpsOf(fps)) * 1000);
-  }
-
-  /* Which page is on screen `elapsedMs` into a cycle. */
-  function indexAt(holds, fps, elapsedMs) {
-    if (!holds || !holds.length) return 0;
-    var u = Math.floor((Number(elapsedMs) / 1000) * fpsOf(fps));
-    if (!(u >= 0)) u = 0;
-    var acc = 0, i;
-    for (i = 0; i < holds.length; i++) {
-      acc += holds[i];
-      if (u < acc) return i;
-    }
-    return holds.length - 1;
-  }
-
-  /* How long page `i` should stay on screen. Takes the FRAME, not a hold, so a
-   * caller cannot read the hold off the wrong page — which is the mistake this
-   * module exists to stop. */
-  function slotMs(frame, fps) {
-    return (1000 / fpsOf(fps)) * holdOf(frame);
-  }
-
   var api = {
     MAX_HOLD: MAX_HOLD,
     holdOf: holdOf,
-    table: table,
-    units: units,
-    durationMs: durationMs,
-    indexAt: indexAt,
-    slotMs: slotMs,
     DRAW_MIN: DRAW_MIN,
     DRAW_MAX: DRAW_MAX,
     drawOf: drawOf,
