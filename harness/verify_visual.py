@@ -143,7 +143,11 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         pg.set_viewport_size({"width": vw, "height": vh})
         pg.route("**/app.js*", lambda route: route.abort())
-        browsing.goto(pg, BASE, "/")
+        # require_boot=False, case 2: app.js is aborted ON PURPOSE one line up,
+        # so this Pad can never set its marker. That is the whole assertion —
+        # the editor must not be blank in the window a visitor sits in while
+        # app.js downloads, which is the regression a user photographed.
+        browsing.goto(pg, BASE, "/", require_boot=False)
         frame_checks(pg, "editor pre-JS", vw)
         pg.close()
 

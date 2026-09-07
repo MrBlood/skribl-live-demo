@@ -163,7 +163,11 @@ try:
         pg.on("request", lambda r: api_posts.append(r.url)
               if r.method == "POST" and "/api/skribls" in r.url else None)
 
-        browsing.goto(pg, BASE, "/")
+        # require_boot=False, case 1: BASE is the EXAMPLE HOST APP, not Skribl.
+        # Its "/" is the host's own page and raises no __skriblBoot marker,
+        # so requiring one would spend the timeout and then fail a page that
+        # is behaving correctly.
+        browsing.goto(pg, BASE, "/", require_boot=False)
 
         print("\n2 — SIGN IN, AND THE COMPOSER APPEARS")
         check("signed out, there is no composer",
