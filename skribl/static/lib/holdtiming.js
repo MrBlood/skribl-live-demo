@@ -25,6 +25,19 @@
  *     indexAt()  which page is on screen at time t   (the player's clock)
  *     slotMs()   how long page i should stay up      (the editor's timer)
  *
+ * A PAGE THAT DRAWS ITSELF IS EXEMPT FROM fps, which is why this module now
+ * denominates a page in MILLISECONDS rather than in fps slots. `hold` says how
+ * many slots a still page occupies; `draw` says the page replays its own
+ * strokes over their recorded timing instead, exactly as the Pad does, and a
+ * stroke timeline is not a whole number of slots at any frame rate.
+ *
+ * pageMs() is the one answer both questions are now built on: a still page is
+ * holdOf()/fps, a drawing page is its own span. Everything else — the
+ * cumulative table, the cycle duration, elapsed -> index — falls out of it, so
+ * a drawing page cannot mean one thing in the editor and another in the player.
+ * That is the same failure this module was created for; `draw` is simply the
+ * second field capable of causing it.
+ *
  * The two mechanisms stay different — the player maps a clock to an index, the
  * editor reschedules a timer — because they are solving different problems.
  * What they can no longer do is disagree about the ANSWER.
@@ -43,6 +56,80 @@
   function holdOf(frame) {
     var h = Math.round(Number(frame && frame.hold));
     return (isFinite(h) && h >= 1) ? Math.min(h, MAX_HOLD) : 1;
+  }
+
+  /* Read defensively for the same reason holdOf() does: a payload written
+   * before per-page draw has no `draw` field, so every page must read as false
+   * and play bit-for-bit as it always did. Only a literal true counts — a
+   * truthy string from a hand-edited payload is not an opt-in. */
+  function drawOf(frame) {
+    return !!(frame && frame.draw === true);
+  }
+
+  /* How long this page's own strokes took to make, from the points' recorded
+   * `t`. Floored at DRAW_MIN so a page holding one dot is not zero-length and
+   * therefore skipped entirely; capped at DRAW_MAX so one very long page cannot
+   * make a loop unwatchable. A page with no strokes has no span and falls back
+   * to DRAW_MIN rather than 0, for the same skip reason. */
+  var DRAW_MIN = 320, DRAW_MAX = 8000;
+  function spanMs(frame) {
+    var p = frame && frame.strokes;
+    if (!p || p.length < 2) return DRAW_MIN;
+    var span = Number(p[p.length - 1].t) - Number(p[0].t);
+    if (!(span > 0)) return DRAW_MIN;
+    return Math.max(DRAW_MIN, Math.min(DRAW_MAX, span));
+  }
+
+  /* THE ONE ANSWER. How many milliseconds page `frame` occupies. Takes the
+   * FRAME, not a hold, for the reason slotMs() does: a caller cannot read the
+   * wrong page's field. A drawing page ignores fps entirely — that is the
+   * point of it. */
+  function pageMs(frame, fps) {
+    if (drawOf(frame)) return spanMs(frame);
+    return (1000 / fpsOf(fps)) * holdOf(frame);
+  }
+
+  /* Per-page milliseconds, in page order. The ms counterpart of table(). */
+  function msTable(frames, fps) {
+    var out = [], i, n = frames && frames.length ? frames.length : 0;
+    for (i = 0; i < n; i++) out.push(pageMs(frames[i], fps));
+    return out;
+  }
+
+  /* Total run time of one cycle, from the ms table. Floored at 1ms for the
+   * same reason durationMs() is. */
+  function cycleMs(ms) {
+    var s = 0, i, n = ms && ms.length ? ms.length : 0;
+    for (i = 0; i < n; i++) s += ms[i];
+    return Math.max(1, s);
+  }
+
+  /* Which page is on screen `elapsedMs` into a cycle, walking the ms table.
+   * The slot version floors elapsed into integer units first; this one cannot,
+   * because a drawing page's duration is not a whole number of units. */
+  function indexAtMs(ms, elapsedMs) {
+    if (!ms || !ms.length) return 0;
+    var e = Number(elapsedMs);
+    if (!(e >= 0)) e = 0;
+    var acc = 0, i;
+    for (i = 0; i < ms.length; i++) {
+      acc += ms[i];
+      if (e < acc) return i;
+    }
+    return ms.length - 1;
+  }
+
+  /* How far INTO page `i` the clock is, 0..1 — what a drawing page needs to
+   * know which strokes to have revealed. A still page returns 0: it has no
+   * progress, it is simply up. */
+  function progressAt(ms, frames, elapsedMs) {
+    var i = indexAtMs(ms, elapsedMs);
+    if (!drawOf(frames && frames[i])) return 0;
+    var acc = 0, k;
+    for (k = 0; k < i; k++) acc += ms[k];
+    var into = Number(elapsedMs) - acc, span = ms[i] || 1;
+    if (!(into > 0)) return 0;
+    return Math.max(0, Math.min(1, into / span));
   }
 
   function table(frames) {
@@ -95,7 +182,16 @@
     units: units,
     durationMs: durationMs,
     indexAt: indexAt,
-    slotMs: slotMs
+    slotMs: slotMs,
+    DRAW_MIN: DRAW_MIN,
+    DRAW_MAX: DRAW_MAX,
+    drawOf: drawOf,
+    spanMs: spanMs,
+    pageMs: pageMs,
+    msTable: msTable,
+    cycleMs: cycleMs,
+    indexAtMs: indexAtMs,
+    progressAt: progressAt
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;
