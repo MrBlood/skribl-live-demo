@@ -6679,3 +6679,103 @@ not evidence until it has been shown to go red.
 alters release enforcement and generated-evidence semantics -- two of the
 categories named above as ending the ride -- so the batching and docstring
 commits now have a seal to ride into.
+
+## v285, cont. -- a page can draw itself, and the field finally travels
+
+The owner asked for per-page Draw-on. What existed was a document-wide toggle
+in the Draw drawer -- real, shipped, and PREVIEW-ONLY: it appeared in neither
+`serializeFlip()` nor `buildSharePayload()`, so a Skribl posted with it on
+played as an ordinary flip for everyone who opened the link. The author was the
+only person who ever saw the thing they chose.
+
+**A DRAWING PAGE IS EXEMPT FROM fps, which is the whole design.** "When it gets
+to that page it just draws it like a pad page" -- so its duration is its own
+stroke span, and a stroke span is not a whole number of fps slots at any frame
+rate. `lib/holdtiming.js` is therefore denominated in MILLISECONDS now.
+`pageMs()` is the one answer both questions are built on: a still page is
+`holdOf()/fps`, a drawing page is its own span. The slot-denominated half
+(`table`/`units`/`durationMs`/`indexAt`/`slotMs`) was DELETED rather than kept
+beside it -- two ways to ask "how long is page i" is the duplication that module
+was extracted to remove.
+
+Measured before believing: on a document with no `draw`, the ms model and the
+slot model agree on total duration AND on the page index at every 7ms step
+across a whole cycle. Nothing about an existing post changes.
+
+**The control exists twice because per-page controls in Flip do** -- `#pagebar`
+on the regular strip, the per-tile menu on compact, and only one is ever
+rendered. A control added to one vanishes at the other size class. The strip
+carries a pencil mark that NAMES ITSELF, because a tile is a bare `<div>` with
+no accessible name of its own and a decorative mark would have made the state
+sighted-only.
+
+**One playback clock, not two.** `drawOnMode` had a parallel loop that ignored
+`hold` entirely; its reveal arithmetic survives in `startReveal()`, scoped to
+one page and driven by the same timer that schedules every other page. Two loops
+disagreeing about timing is precisely the bug this module was extracted to end,
+and keeping one alive beside the cure would have re-created it. The drawer
+switch is a bulk setter now, reading "on" only while every page is on.
+
+All four surfaces honour it -- editor, `/s/<id>`, the in-post player -- and so
+does the exported file: both export paths expand a drawing page into as many
+base-fps units as its own duration needs, each carrying its progress. A drawing
+page is exempt from the frame-bitmap cache on every surface, because the cache
+exists on the premise that a page does not change.
+
+## v285, cont. -- three bugs the work walked into, and what each cost
+
+**PER-PAGE HOLDS HAVE NEVER TRAVELLED WITH A POST.** `buildSharePayload()`
+wrote no `hold` at all. Set a page to x4, preview it, post it, and every viewer
+saw uniform timing; months of Flip posts carry no holds and cannot be repaired,
+because the field is simply absent from their payloads. Their authors would have
+to re-post.
+
+Why nothing caught it is the useful half. `verify_hold` already knew that
+proving a hold is WRITTEN says nothing about whether it comes BACK, and had
+grown a round trip for exactly that. The same gap sat one step further out and
+nothing was looking: the API check posts a payload built BY HAND, and the timing
+check reads the exported GIF. Neither touches the editor's own Share path, which
+is the only thing that could have failed. Adjacent to the claim, again. The new
+assertion reads the hold off `buildSharePayload()` and is calibrated -- 57/58
+against the pre-fix tree, 58/58 after.
+
+**A `var` SHADOWED THE PROGRESS ELEMENT AND BROKE EVERY REPLAY POST.** `var prog`
+declared inside `render()`'s flip branch in `inlineplayer.js` is function-scoped,
+so it shadowed the outer `prog` -- the DOM element -- for the whole function, and
+the REPLAY branch threw on `undefined.style` at its last line. The load path's
+`.catch` swallowed it as "Couldn't load this Skribl", so a flip-only edit
+silently broke every replay in a feed with no error visible anywhere. Found by
+instrumenting that catch: the same lesson START-HERE records about suites
+sending stderr to DEVNULL, which is that the traceback you need is the one being
+discarded.
+
+Two process notes, because both cost real time. I bisected the reveal block and
+MISREAD the result -- I read the tail line, which was a different failure, and
+threw away a correct answer. And I only trusted "I broke it" after running the
+v284 baseline three times.
+
+**AND THE SEAL ITSELF WAS RUNNING ON UNLOCKED DEPENDENCIES.** v284 recorded
+SQLAlchemy 2.0.52 while `constraints.txt` pins 2.0.51. `requirements.txt`
+carries ranges, the lock carries hashes, and `pip install -r requirements.txt`
+satisfies the first while ignoring the second -- so the sealed evidence
+described a configuration nobody deploys. That is the argument that pins the
+interpreter, one layer down, and nothing was checking it. `verify_docs` compares
+installed versions against the lock now, calibrated against two real
+environments: the container's system 3.12 fails it, the locked venv passes.
+
+## v285, cont. -- the ratchets, and what was spent before asking for them
+
+    player JS   151,000 -> 152,100   (measured 152,054; target 153,600)
+    embed       31,000  -> 31,900    (measured 31,800)
+
+v281's note beside the embed ratchet set the terms -- "leaving it at 32,000
+would have banked the saving as slack for the next thing to spend without
+arguing for it" -- so the argument is written at each ratchet, and the spending
+came first: the slot API deleted rather than carried, and `app.js`'s inline
+fallback deliberately NOT reimplementing the reveal, since without the lib a
+drawing page should play as a still one, which is what that player did before
+the field existed. Those two took the cost from +2,535 B to +1,215 B.
+
+The help was audited on both surfaces afterwards. Flip's Draw-on tip still
+called it "a playback style" set "in the Draw menu"; both halves had stopped
+being true. Pad's claims were checked against the code and none was stale.
