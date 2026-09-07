@@ -6181,3 +6181,105 @@ over the stylesheets each produced new damage -- a stranded trailing comment,
 an emptied media query, a deleted note that documented a live token, and
 finally the corrupted rule above. Comments are prose and prose needs reading.
 
+
+## v282 -- the mechanisms that prevent regression became the thing to reduce
+
+v281 shipped with a harness larger than the application: 41,546 lines against
+35,832, plus 13,608 lines of markdown. An adversarial review named the
+condition precisely -- the tree contained more description of itself than self
+-- and set a decluttering plan. This release implements it, and the useful
+record is where the plan did NOT survive contact with measurement.
+
+**Measured, then declined: merging 99 suites toward 15.** The argument was
+partly that it would enable fewer browser launches. All 133 launches together
+cost ~78 seconds; fixed sleeps cost ~17 minutes. The target is also
+unreachable as stated -- 73 browser-using suites launch exactly once each, in
+their own process, so they cannot drop without the merge itself. Merging
+trades away process isolation (today one crash takes down one suite) for a
+benefit worth 78 seconds. The reviewer withdrew the "<=20 suites" target on
+seeing this.
+
+**Measured, then corrected: "all 99 suites define their own check()".** They
+defined NINE, differing on three axes with no record of why. Eleven printed
+detail only on failure; eleven kept it in the results tuple; one rendered an
+arrow instead of a dash. Two of those three had a reason written down in
+exactly one file each. Consolidating them saved ~300 lines, not "thousands" --
+and that is fine, because the point was removing hidden contracts, not lines.
+
+**THE HARNESS GOT BIGGER, and the honest number belongs here.** 42,806 ->
+43,353 lines. The new substrate (package.py, gen_docs.py, makeskribl.py,
+assertions.py, browsing.py) is 704 lines against ~400 removed. On lines of
+code this decluttering is a regression. What shrank is the count of facts a
+maintainer must know twice:
+
+    harness/fixtures/            2,737,166 B -> 0
+    check() implementations      9 -> 1
+    hand-maintained doc tables   2 -> 0
+    START-HERE.md                3,455 -> 2,038 lines
+    fixed-sleep budget           1,019s -> 929s
+
+The reviewer's reframing is the right metric and is adopted: count CONCEPTS,
+not files. How many facts, invariants, compatibility behaviours and historical
+explanations must be known twice?
+
+## v282, cont. -- deriving beats gating, and deleting the gate is the proof
+
+Two documentation tables now generate from source: START-HERE's shared-module
+index (surfaces from the templates that load each module, description from the
+module's own opening sentence) and README's route table (from routes.py, each
+purpose the handler's own docstring -- ten handlers gained one).
+
+**Both bespoke gates that policed those tables were DELETED**, 104 lines,
+replaced by one assertion that the generator ran. Keeping generator, gate and
+hand-maintained table together would have been the exact accumulation this
+release exists to reverse.
+
+Two of the four candidates did not qualify, which is worth recording so nobody
+re-attempts them: the host-seam table's descriptions are authored prose, so
+generating it relocates a list rather than eliminating one; and the env-knob
+"table" is a coverage check with no second copy to remove.
+
+## v282, cont. -- 708 lines of release narrative became 23 enforced invariants
+
+Fifteen "Closed in vNNN" sections left START-HERE.md. Each was read for the
+invariant that outlived it, that invariant was checked BY GREP against the
+suite that enforces it, and only then was the narrative deleted. The result is
+a table of 23 rules with their enforcer named; a rule with no enforcer is
+marked as such, because "we all know that" is how a rule stops being true.
+
+Ten of the fifteen were duplicates -- DECISIONS.md carries 2-6 entries each
+for v272 through v281. Five (v179, v184, v212, v213, v214) had NO entry here
+at all, so START-HERE was their only record outside git. Their durable content
+is in the invariants table and in CLAUDE.md; the rest is archaeology and git
+is the archive.
+
+**One invariant did not survive, and is recorded rather than dropped.** v179
+stated "segmented controls state a height". flip.css now says `--seg-h
+intentionally NOT set`, because the control has only been measured on one
+machine and its height follows the installed font. START-HERE asserted the
+superseded rule until this release -- a stale invariant in the file every new
+session reads first, which is the whole disease in one line.
+
+## v282, cont. -- calibrate the instrument before believing it
+
+Now a standing rule in CLAUDE.md, because this release produced roughly as
+many broken instruments as real defects:
+
+  * the README route-table gate reused a set of PATHS, so GET, PATCH and
+    DELETE collapsed into one entry -- IT WOULD HAVE PASSED ON THE TREE THAT
+    MOTIVATED IT;
+  * the packaging verifier called db.create_all() and never opened
+    alembic.ini, so it would have called a runtime package missing migrations
+    VERIFIED;
+  * verify_ux's ink measure counted alpha > 0, and Flip's canvas is opaque, so
+    it returned width*height/4 every time -- `ink > 5000` would have passed on
+    a blank page, and had since v206;
+  * `import browsing` landed below first use in five suites, past a check that
+    was "all 99 parse" -- a misplaced import is valid syntax.
+
+The rule: run every new check against one case known BAD and one known GOOD.
+A green check is not evidence until it has been shown to go red. Its
+corollaries, both learned the expensive way: mutate per COMPONENT rather than
+once per change (v212, where Flip self-healed the scenario its assertion
+claimed to pin), and do not edit mechanically where prose and code interleave.
+
