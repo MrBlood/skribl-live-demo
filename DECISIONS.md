@@ -6630,3 +6630,52 @@ normally, and these commits ride into that frozen tree and are covered by it.
 Documentation-only changes do not queue up here in the meantime: a bucket of
 them is the campaign restarting under another name, which the stopping condition
 in CLAUDE.md exists to prevent.
+
+## v285, cont. -- the release headline stopped outrunning its evidence
+
+An outside retest of v284 found one Medium, and it is worth the entry because
+the defect was a WORD rather than a gate. `RELEASE.md`'s top line said `PASS`,
+computed from `ok = not failed and not never` -- the local suite ledger, and
+nothing else. A skip lands in `skipped` and never in `failed`, and
+`mp4_attestation()` is rendered BESIDE the result rather than gating it. So a
+sealed record could read `result PASS` above a STALE attestation and a
+PostgreSQL lane nobody had run, and anybody consuming that token would take it
+for whole-release coverage.
+
+**The gate is deliberate and did not change.** `mp4_attestation()`'s own
+docstring already said why: whether an unverified H.264 path is shippable is a
+product decision, and the seal's job is to state the fact rather than make it.
+The review offered a final-gate model as an alternative and it was declined for
+exactly that reason -- it would reverse a decision this tree made on purpose and
+wrote down. What shipped is the state model:
+
+    release status   FULL RELEASE PASS | LOCAL PASS -- EXTERNAL COVERAGE PENDING | FAIL
+    local result     PASS   (every suite that ran here, on this tree)
+    external lanes   N attested, M pending
+
+**TWO THINGS WERE BEING SUMMED THAT ARE NOT THE SAME KIND OF THING**, which is
+the part worth keeping. The `mp4` lane is ATTESTED: `MP4-ATTESTATION.txt` names
+the tree it describes, so a local run can actually check it and reports STALE on
+a mismatch. A `SKIP_COVERAGE` lane is CLAIMED: `verify_docs` proves the CI job
+EXISTS in the workflow, and existence is not a result. `external_coverage()`
+keeps them apart and names every pending lane in the record.
+
+**FULL RELEASE PASS IS CURRENTLY UNREACHABLE, AND THAT IS THE FINDING RESTATED
+RATHER THAN A BUG.** PostgreSQL has no attestation: nothing the `postgres` job
+produces reaches the local tree, so no local seal can prove that lane was green.
+Before this change the record said `PASS` anyway. Now it says `LOCAL PASS --
+EXTERNAL COVERAGE PENDING` and names PostgreSQL, which is the true statement.
+The status becomes reachable the day the `postgres` job writes a tree-bound
+attestation the way `mp4` does -- deliberately NOT done here, because the review
+was explicit that this is a small trust-semantics fix and not another release-
+framework project.
+
+Six assertions in `verify_docs`, four of them negative controls, and the whole
+thing was calibrated against the pre-fix predicate in a throwaway copy: green on
+the fix, red on `return "FULL RELEASE PASS" if ok else "FAIL"`. A green check is
+not evidence until it has been shown to go red.
+
+**This is the behaviour-changing work the v285 tranche was waiting for.** It
+alters release enforcement and generated-evidence semantics -- two of the
+categories named above as ending the ride -- so the batching and docstring
+commits now have a seal to ride into.
