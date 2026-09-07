@@ -138,6 +138,28 @@ directly (`python3 harness/verify_docs.py`), which does not touch the record.
 Order the seal: release run, then `stamp_docs.py`, then commit, and check
 `stamp_docs.py --check` rather than re-running a suite.
 
+**DO NOT RUN POSTGRESQL IN THIS CONTAINER DURING A SEAL.** `verify_postgres.py`
+skipping locally is the DESIGNED configuration, not a gap: `SKIP_COVERAGE` names
+the `postgres` CI job that runs it in an environment this one lacks, and the
+sealed record says so by name. Starting the cluster to "improve" the record from
+two skips to one costs more than it buys.
+
+Measured, same tree, same suite, the only variable being the cluster:
+
+    PostgreSQL up      verify_hold 2nd-worst frame deviation  32 ms  FAIL
+    PostgreSQL down    verify_hold 2nd-worst frame deviation   1 ms  PASS
+
+`verify_hold` times a real playback loop and asserts frame-pacing evenness. Its
+tolerance already allows one contention outlier; the checkpointer and autovacuum
+supply a second. That is almost certainly the v264 flake its own batch comment
+records, and it is not a flake — it reproduces on demand and disappears on
+demand. A seal run with the cluster up is a seal that can fail for a reason
+having nothing to do with the tree.
+
+The same logic applies to anything else periodically hungry on this box during a
+run: the browser timing suites are the instrument, and background load is noise
+in it.
+
 **THE MP4 ATTESTATION HAS TO BE PULLED INTO THE TREE, NOT MERELY DISPATCHED.**
 `release_run.py` reads `harness/MP4-ATTESTATION.txt` from the LOCAL working
 tree when it renders `RELEASE.md` at the end of the run. The CI job writes that
