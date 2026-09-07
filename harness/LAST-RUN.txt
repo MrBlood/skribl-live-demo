@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-07T12:57:02Z
+UTC timestamp           : 2026-09-07T15:08:50Z
 Host                    : Linux x86_64
-Tree SHA-256            : 8b479d11225892d818eef1b92a71fd96c4e39a29e285da8ffcd3c3abf118b5a7
-Git commit              : b27409e
+Tree SHA-256            : d99346c2a97f8d8eebfb4b30f4f3828317098963d8921a260583b04d6349056e
+Git commit              : 6a3930b
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
@@ -10,15 +10,14 @@ Source state            : generated-only dirty
                             harness/LAST-RUN.txt
                             harness/MP4-ATTESTATION.txt
                             harness/README.md
-                            harness/RELEASE.md
-SKRIBL_VERSION          : v283
+SKRIBL_VERSION          : v284
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.52
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.6IUPTNYbeq/harness.db)
+Database reset          : yes (fresh /tmp/tmp.bMHJXnzhgQ/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -50,7 +49,7 @@ suites requested : 99
   verify_deletion.py: ok — 63/63 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 81/81 passed
+  verify_docs.py: ok — 81/81 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 29/29 passed
   verify_example.py: ok — 32/32 passed
