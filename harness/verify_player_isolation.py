@@ -787,12 +787,28 @@ with sync_playwright() as sp:
     # specifically needs: it is the surface a person who did not make the
     # drawing arrives at. Shared as a lib rather than written three times, so
     # the step size and the value reporting cannot drift between surfaces.
-    # 1,606 B still to target.
     # 152,000 -> 151,000 in v281: dropping lib/photofit.js, which the player
     # loads and cannot reach, took JS from 151,994 to 150,839. The old ratchet
     # had six bytes of headroom and was the reason given for keeping new work
     # off this surface; the constraint was partly dead weight.
-    BYTES_RATCHET, BYTES_TARGET = 151_000, 153_600
+    #
+    # 151,000 -> 152,100 for PER-PAGE DRAW, measured at 152,054 B and pinned
+    # just above it so the next addition has to argue for itself. What the
+    # bytes bought: lib/holdtiming.js gained the millisecond model a page that
+    # draws itself requires — a stroke timeline is not a whole number of fps
+    # slots at any frame rate, so the cumulative table could no longer be
+    # denominated in them — and app.js gained the reveal path that honours it,
+    # which is what makes a shared link show the drawing draw.
+    #
+    # WHAT WAS SPENT BEFORE ASKING, because v281's note on the embed ratchet is
+    # right that a raise taken without argument is a saving banked as slack:
+    # the slot-denominated half of holdtiming.js (table/units/durationMs/
+    # indexAt/slotMs) was DELETED rather than kept beside the new one, and
+    # app.js's inline fallback deliberately does not reimplement the reveal —
+    # without the lib a drawing page plays as a still one, which is exactly
+    # what this player did before the field existed. Those two took the cost
+    # from +2,535 B to +1,215 B. What remains is the feature itself.
+    BYTES_RATCHET, BYTES_TARGET = 152_100, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

@@ -898,7 +898,21 @@ with sync_playwright() as sp:
     # took the measured total from 31,820 B to 30,827 B. A ratchet moves down
     # when the truth is smaller; leaving it at 32,000 would have banked the
     # saving as slack for the next thing to spend without arguing for it.
-    EMBED_RATCHET = 31_000
+    #
+    # 31,000 -> 31,900 for PER-PAGE DRAW, measured at 31,800 B. This is the
+    # argument v281 asked the next spender to make, so here it is: a page
+    # marked `draw` replays its own strokes instead of snapping in, and the
+    # in-post player is the surface where that matters most — it is the one a
+    # reader meets without choosing to. Without these bytes a Skribl posted
+    # with drawing pages plays in a feed as an ordinary flip, which is the
+    # preview/post divergence this whole release exists to end. The cost is
+    # holdtiming.js's millisecond model (1,293 -> 1,937 B) plus the reveal in
+    # inlineplayer.js; the module's slot-denominated half was deleted rather
+    # than carried alongside, which is why it is 644 B and not double.
+    #
+    # It does not spend all of what v281 banked: 31,900 against the 32,000 that
+    # stood before, so the saving is still worth something.
+    EMBED_RATCHET = 31_900
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
