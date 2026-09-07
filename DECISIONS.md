@@ -6602,3 +6602,31 @@ target either.
 
 **The sign that the campaign worked is not that nothing is left to delete. It is
 that deletion needs a reason again.**
+
+**THE REVIEW ASKED FOR A SEAL, THE OWNER DEFERRED, AND THE REVIEW THEN WITHDREW
+THE CONDITION.** The reviewer's sixth condition was "freeze the source and run
+the ordinary release seal" -- deciding whether this tranche was ready to become
+a release. The owner's question was the next one: what does a seal buy on a tree
+where nothing executes differently?
+
+Measured against v284, this tranche changes five files and no behaviour. The
+only diff lines that execute are batch entries that gained a trailing comment,
+with the layout proved identical by importing both modules and comparing; both
+suite edits are docstrings. An aggregate would spend its ~42 minutes reproducing
+v284's assertion total under a new tree hash, and the MP4 attestation would be
+hand-carried for an H.264 path nobody touched. Shown that, the review withdrew
+condition 6: **accepted, intentionally unsealed; v284 remains the latest sealed
+release.**
+
+So `SKRIBL_VERSION` reading v284 beside a v285 heading is the accurate statement
+rather than drift -- v285 names the development tranche, v284 the sealed
+product. Until a seal exists this is not released, shipped, in production or
+release-approved. It is accepted unsealed maintenance work.
+
+**WHAT ENDS THE RIDE.** The next change touching production behaviour, test
+behaviour, assertions or contracts, batch topology, release enforcement,
+packaging, generated-evidence semantics, or security/recovery/storage seals
+normally, and these commits ride into that frozen tree and are covered by it.
+Documentation-only changes do not queue up here in the meantime: a bucket of
+them is the campaign restarting under another name, which the stopping condition
+in CLAUDE.md exists to prevent.
