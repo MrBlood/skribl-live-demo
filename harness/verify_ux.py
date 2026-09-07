@@ -1270,36 +1270,60 @@ with _sp204() as _p:
           not fp.evaluate("() => document.getElementById('photoPanel').hidden"))
     fp.click("#imageBtn"); fp.wait_for_timeout(300)
 
-    # v206: the two demo .skribl fixtures (harness/fixtures/) must load, render,
-    # and PLAY in their own editor, and be refused by the other. These are real
-    # non-trivial documents (a timed-replay galaxy; a 24-page bouncing-ball
-    # flipbook), so they exercise the whole load->render->play path and pin the
-    # format: if the schema drifts, the demos break here first.
-    import pathlib as _pl
-    _fx = _pl.Path(__file__).resolve().parent / "fixtures"
-    _gal = (_fx / "demo-galaxy.skribl").read_bytes(); _bnc = (_fx / "demo-bounce.skribl").read_bytes()
+    # THE FORMAT'S load -> render -> play PATH, on documents built for the job.
+    # This used to load two .skribl files the owner had asked for as DEMOS —
+    # drawings to look at — which a later session promoted into fixtures. That
+    # made 2.7 MB of somebody's artwork load-bearing, and left the tested
+    # properties to be whatever those particular drawings happened to have.
+    # harness/makeskribl.py builds both documents in memory instead, so the
+    # repo stores no drawing and each fixture exhibits exactly the property its
+    # assertions name.
+    import makeskribl as _mk
+    _gal = _mk.replay(); _bnc = _mk.flipbook()
     def _ink(page, sel):
-        return page.evaluate(f"""() => {{ const c = document.querySelector('{sel}'); const x = c.getContext('2d');
-            const d = x.getImageData(0,0,c.width,c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++; return n; }}""")
+        """Pixels that differ from the canvas background.
+
+        THIS COUNTED ALPHA > 0 UNTIL v282, WHICH IS VACUOUS ON FLIP. Flip's
+        #pad canvas paints an opaque background, so every sampled pixel had
+        alpha 255 and the count was always exactly width*height/4 — 124,848,
+        reported identically for a 24-page bouncing-ball drawing and for a
+        generated bar pattern. `ink > 5000` would have passed on a blank page.
+        It survived since v206 because the fixture in use also saturated it.
+
+        The background is taken from pixel (0,0): transparent on Pad, the
+        paper colour on Flip. Either way a drawn pixel differs from it, and a
+        blank canvas now measures ~0.
+        """
+        return page.evaluate(f"""() => {{
+            const c = document.querySelector('{sel}');
+            const x = c.getContext('2d');
+            const d = x.getImageData(0, 0, c.width, c.height).data;
+            const br = d[0], bg = d[1], bb = d[2], ba = d[3];
+            let n = 0;
+            for (let i = 0; i < d.length; i += 16) {{
+                if (Math.abs(d[i] - br) + Math.abs(d[i+1] - bg)
+                    + Math.abs(d[i+2] - bb) + Math.abs(d[i+3] - ba) > 24) n++;
+            }}
+            return n; }}""")
     dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); dp.wait_for_timeout(600)
-    dp.set_input_files("#draftInput", {"name": "demo-galaxy.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
+    dp.set_input_files("#draftInput", {"name": "replay.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
     # No backslash inside the f-string expression: legal only from Python 3.12,
     # a SyntaxError that kills the whole suite on 3.11.
     _nstrokes = dp.evaluate("() => (typeof strokes !== 'undefined' ? strokes.length : -1)")
-    check("DEMO: galaxy .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
+    check("FORMAT: a replay .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
           f"strokes={_nstrokes}")
-    check("DEMO: galaxy renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
+    check("FORMAT: ...and renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
     dp.click("#playBtn"); dp.wait_for_timeout(1200); _a = _ink(dp, "#canvas"); dp.wait_for_timeout(1200); _b2 = _ink(dp, "#canvas")
-    check("DEMO: galaxy REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
+    check("FORMAT: ...and REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
     dp.close()
     df = _b.new_page(viewport={"width": 1280, "height": 900}); df.goto(BASE + "/flip", wait_until="load"); df.wait_for_timeout(800)
     df.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
-    df.set_input_files("#draftInput", {"name": "demo-bounce.skribl", "mimeType": "application/json", "buffer": _bnc}); df.wait_for_timeout(1400)
-    check("DEMO: bounce .skribl loads in Flip as 24 pages @ 12fps",
+    df.set_input_files("#draftInput", {"name": "flipbook.skribl", "mimeType": "application/json", "buffer": _bnc}); df.wait_for_timeout(1400)
+    check("FORMAT: a flipbook .skribl loads in Flip as 24 pages @ 12fps",
           df.evaluate("() => frames.length === 24 && fps === 12"), f"pages={df.evaluate('() => frames.length')} fps={df.evaluate('() => fps')}")
-    check("DEMO: bounce renders ink", _ink(df, "#pad") > 5000, f"ink={_ink(df,'#pad')}")
+    check("FORMAT: ...and renders ink", _ink(df, "#pad") > 5000, f"ink={_ink(df,'#pad')}")
     df.click("#play"); df.wait_for_timeout(500); _i1 = df.evaluate("() => idx"); df.wait_for_timeout(500); _i2 = df.evaluate("() => idx")
-    check("DEMO: bounce FLIPS — page index advances on Play", df.evaluate("() => playing") and _i1 != _i2, f"idx {_i1} -> {_i2}")
+    check("FORMAT: ...and FLIPS — page index advances on Play", df.evaluate("() => playing") and _i1 != _i2, f"idx {_i1} -> {_i2}")
     df.close()
 
     # v207: the player's Repeat (loop) button must VISIBLY light when pressed.
