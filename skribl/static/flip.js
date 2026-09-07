@@ -3716,7 +3716,46 @@ if(window.SkriblStrokeLayers){
 
 /* Composite a full frame (backdrop + strokes) onto a CW×CH context — used by both
    PNG and WebM export. Same path as the live canvas and thumbnails. */
-function drawFrameTo(c, f){ drawBackdrop(c); paintFrame(c, f.strokes); }
+/* `prog` is how much of a DRAWING page has come due, 0..1. A still page is
+ * always painted whole and passes undefined, which reads as 1 — so every
+ * existing caller keeps its behaviour without saying anything. */
+function drawFrameTo(c, f, prog){
+  drawBackdrop(c);
+  const pts = (f && f.strokes) || [];
+  if(prog == null || prog >= 1 || !frameDraw(f) || pts.length < 2){ paintFrame(c, pts); return; }
+  const t0 = pts[0].t, span = Math.max(1, pts[pts.length-1].t - t0);
+  const due = Math.max(0, Math.min(1, prog)) * span;
+  let k = 0; while(k < pts.length && (pts[k].t - t0) <= due) k++;
+  paintFrame(c, pts.slice(0, k));
+}
+
+/* THE EXPORTED FILE HAS TO SHOW WHAT THE PLAYER SHOWS. Both export paths used
+ * to tick in base-fps units and repeat a page index once per hold slot, which
+ * is right for a still page and freezes a drawing one on its finished state —
+ * the three live surfaces would draw it and the downloaded file would not.
+ *
+ * A unit is still one base-fps slot, so `total`, `totalSec` and the interval
+ * arithmetic are all unchanged. What changes is that a drawing page expands
+ * into as many units as its OWN duration needs — it is exempt from fps, so
+ * that count comes from pageMs, not from a hold — and each carries how far
+ * through the page it is. lib/holdtiming.js owns the duration, as everywhere
+ * else, so the file and the player cannot disagree about it. */
+function exportUnits(fromI, toI){
+  const out = [], slot = 1000 / fps;
+  for(let i = fromI; i <= toI; i++){
+    const f = frames[i];
+    if(frameDraw(f)){
+      const ms = (typeof window !== 'undefined' && window.SkriblHold)
+        ? window.SkriblHold.pageMs(f, fps)
+        : Math.max(320, Math.min(8000, _spanOf(f)));
+      const steps = Math.max(1, Math.round(ms / slot));
+      for(let k = 0; k < steps; k++) out.push({ i: i, prog: (k + 1) / steps });
+    } else {
+      for(let k = 0; k < frameHold(f); k++) out.push({ i: i, prog: 1 });
+    }
+  }
+  return out;
+}
 
 /* ---- background image ---- */
 const imageInput=document.getElementById('imageInput');
@@ -4200,10 +4239,10 @@ function exportWebM(){
   rec.onstop=()=>{ exporting=false; if(_exportAbort){ exportHide(); chip('Export cancelled'); return; } const blob=new Blob(chunks,{type:'video/webm'}); download(blob, window.SkriblName ? window.SkriblName.exportName('webm') : 'skribl-animation.webm'); exportSet(1,'Done!'); setTimeout(exportHide,500); chip('Animation exported'); };
   drawFrameTo(c, frames[_r.from-1]); rec.start();
   // Tick in base-fps units, not pages, so a held page simply occupies more ticks.
-  const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
+  const _units=exportUnits(_r.from-1, _r.to-1);
   const loops=exLoops, total=_units.length*loops; let n=0;   // from the export sheet; see exLoops
   const iv=setInterval(()=>{ if(_exportAbort){ clearInterval(iv); try{rec.stop();}catch(_){ exporting=false; exportHide(); } return; }
-    drawFrameTo(c, frames[_units[n%_units.length]]); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
+    const _u=_units[n%_units.length]; drawFrameTo(c, frames[_u.i], _u.prog); n++; exportSet(n/total); if(n>=total){ clearInterval(iv); setTimeout(()=>{ try{rec.stop();}catch(_){ exporting=false; exportHide(); } }, Math.ceil(1000/fps)+40); } }, 1000/fps);
 }
 async function exportGIF(){
   try{ await skriblLoadVendor('gifenc'); }
@@ -4298,13 +4337,13 @@ async function exportViaWebCodecsMp4(){
     rctx.setTransform(w/CW, 0, 0, h/CH, 0, 0);   // same reason as the WebM path
     const encFps=30, frameDurUs=1000000/encFps;
     const loops = frames.length>1 ? exLoops : 1;              // from the export sheet; a single page has nothing to loop
-    const _units=[]; for(let i=_r.from-1;i<=_r.to-1;i++){ for(let k=0;k<frameHold(frames[i]);k++) _units.push(i); }
+    const _units=exportUnits(_r.from-1, _r.to-1);
     const totalSec=(_units.length/fps)*loops;
     const totalFrames=Math.max(1, Math.ceil(totalSec*encFps));
     for(let f=0; f<totalFrames; f++){
       if(_exportAbort){ try{vEnc.close();}catch(e){} try{if(aEnc)aEnc.close();}catch(e){} exportHide(); chip('Export cancelled'); exporting=false; return true; }
-      const animIdx=_units[Math.floor((f/encFps)*fps)%_units.length];
-      drawFrameTo(rctx, frames[animIdx]);
+      const _u=_units[Math.floor((f/encFps)*fps)%_units.length];
+      drawFrameTo(rctx, frames[_u.i], _u.prog);
       const vf=new VideoFrame(rec, { timestamp:Math.round(f*frameDurUs), duration:Math.round(frameDurUs) });
       vEnc.encode(vf, { keyFrame:(f%(encFps*2))===0 }); vf.close();
       if(encErr) throw encErr;
