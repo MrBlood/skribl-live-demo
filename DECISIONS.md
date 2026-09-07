@@ -6538,3 +6538,67 @@ therefore spend its ~42 minutes restating v284's counts under a new tree hash,
 immediately after the run that produced them. The owner's call was to let it
 ride: the bump to v285 and the aggregate happen when the next
 behaviour-changing work lands, and that one seal covers both.
+
+## v285, cont. -- the split trigger was a citation, not a rule
+
+`verify_a11y` and `verify_layout` each justified their existence partly by
+saying another suite was "past the split trigger". Nothing defined it. Searched
+the whole history, not just the current tree: `git log -S"split trigger" --all`
+returns five commits, and in every version of every file the phrase appears in
+exactly two places -- `verify_layout.py`, where it entered, and
+`verify_a11y.py`, which took it from there. It was never a rule. It was one
+docstring citing another docstring's phrasing.
+
+**BOTH DOCSTRINGS ALREADY GAVE THE REAL REASON, one sentence later.**
+`verify_layout`: "More to the point, every assertion here is about LAYOUT, and
+layout is the one thing this project has repeatedly got wrong while every
+attribute passed." `verify_a11y`: "A suite that asks those questions by name is
+how they stop being optional." Both are cohesion arguments and both stand
+alone, so deleting the trigger clause loses nothing -- which is why the outside
+review's instruction was to establish that before inventing a threshold to
+replace it.
+
+It was also already rotting in the ordinary way: `verify_layout` said
+`verify_tools` was at 125 assertions, the seal says 130. Two hand-typed
+assertion counts left the tree with the clause, in source comments -- where the
+v279 staleness sweep never looked, and where v284 found two more.
+
+**NO SUITE WAS SPLIT AND NO THRESHOLD WAS WRITTEN.** The review was explicit
+that inventing a numeric trigger would turn two historical comments into a
+project-wide policy that never existed, and that splitting `verify_ux` or
+`verify_tools` was warranted only by a current concrete problem. None was
+found: both are green, both are cohesive, and neither has failed anybody.
+
+The one operational rule in this neighbourhood is real and is already stated
+once, by the entry above: a suite gets its own BATCH when it will not finish
+inside one invocation. That is about placement in a release run, not about how
+big a file may be, and the deleted phrase blurred the two. A suite is its own
+suite because it asks one kind of question.
+
+## v285, cont. -- the arc that started at v282 ends here, by decision
+
+`CLAUDE.md` gains a stopping condition, in the reviewer's own words: continue
+only while a targeted semantic review identifies a specific duplicated or
+obsolete concept with concrete maintenance cost; "load-bearing" and "reason
+unknown" are valid outcomes rather than invitations to keep searching.
+
+Three things were declined, and the declining is the point:
+
+  * **`docs/HANDOFF.md` against `DECISIONS.md`** -- not investigated. The
+    hypothesis came from file shape, not from a stale claim, a contradiction or
+    anybody's failure. Auditing thousands of lines to find out whether there
+    *might* be duplication is the exact work the rule above stops.
+  * **The nine `unrecorded` batches** -- not consolidated. The tag records that
+    no reason is on file; it is not evidence that merging is safe. If a future
+    change touches one of those suites, measure then.
+  * **A fourth deduplication instrument** -- not built. Three failed in v284 and
+    reading worked; this release read history and two docstrings.
+
+The metrics go too. Markdown line count is confounded by the architecture this
+project chose on purpose -- current-state docs stay concise BECAUSE the log
+grows -- so it stops being a direction-of-travel number. Harness comment density
+is 17% against the app's own 29%; nothing suggests 17% is bad, and it is not a
+target either.
+
+**The sign that the campaign worked is not that nothing is left to delete. It is
+that deletion needs a reason again.**

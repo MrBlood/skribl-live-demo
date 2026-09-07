@@ -116,6 +116,20 @@ delete. Read an old version with `git show <rev>:<path> > /tmp/copy`, which
 cannot touch the working tree. When an edit script goes wrong, FIX IT FORWARD —
 reverting looks faster and is the destructive choice. (Twice: v213, v283.)
 
+## Decluttering has a stopping condition
+
+Continue only while a targeted semantic review identifies a specific duplicated
+or obsolete concept with concrete maintenance cost. **"Load-bearing" and "reason
+unknown" are valid outcomes, not invitations to keep searching.** Resume cleanup
+when a concrete stale claim, duplication, defect, or maintenance problem
+provides a target.
+
+So the question is not "what can we declutter next?" but "what concrete thing is
+currently duplicated, stale, contradictory, or costly to maintain?" If there is
+no answer, do not run a pass. No percentage, no clutter score, no recurring
+duplication scan — the tree has enough machinery. (Outside review of v285, which
+ended the broad arc that ran from v282.)
+
 ## Sealing a release
 
 Bump `SKRIBL_VERSION` in `skribl/core.py`, add the `DECISIONS.md` entry, and
