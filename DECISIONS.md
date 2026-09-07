@@ -6381,3 +6381,94 @@ assertion. What is countable waste is explanatory narrative beyond the point of
 enforcement. Applied carelessly to `strokeGroups`, where 11 files explain the
 partition rule and 63 merely use it, the wrong reading would delete ten
 explanations that make local contracts legible.
+
+## v284 -- a suite explains itself, and v282's reason for moving prose was measured and wrong
+
+v282 moved eleven per-suite sections out of `START-HERE.md` into
+`harness/README.md` and justified it in the block's own opening: "ten of the
+eleven were the ONLY prose describing their suite, which is why they moved
+rather than being deleted." That was reported at the time as a PLACEMENT fix
+and explicitly not counted as decluttering, which was right. The premise was
+still wrong, and nobody checked it for two releases.
+
+**Nine of the eleven were already documented in their own file** -- docstring,
+inline comment beside the code, or the assertion's own failure message.
+`verify_boot`'s section and `verify_boot.py`'s docstring share an opening
+sentence, the same four debugging rounds, the same temporal-dead-zone
+mechanism, the same marker rationale and the same Flip/Pad split. A verbatim
+line diff scored them as sharing ONE line.
+
+**THREE INSTRUMENTS FAILED BEFORE ONE WORKED**, and that is the part worth
+keeping. A verbatim diff reported ~1 shared line on a ~90% semantic duplicate:
+reworded duplication is the normal kind and exact matching cannot see it. A
+three-word phrase match reported rewordings as differences. Backticked
+IDENTIFIERS survive rewording and looked like the answer -- and under-reported,
+clearing `verify_pillfit`, whose section held a consequence stated nowhere else:
+"Saved" no longer appears on a phone at all, and if the reassurance is wanted
+back the fix is to give the pill somewhere to go rather than to weaken the
+overlap rule. That section was deleted on the identifier check before being
+read, caught on review, and restored into the suite. Only reading both sides
+worked, which is exactly what the reviewer said this item would need.
+
+What survived went to the suite that enforces it: `verify_boot` gained its
+`__tdzCanary` calibration and the declaration-order rule; `verify_tools` gained
+the page-reuse guidance; `verify_tween` gained six rules that existed nowhere
+else, including why the suite pins RENDER COST rather than the colour string,
+and that a fix applying only to new data leaves every already-affected user
+affected -- which happened three times in that one feature.
+
+`harness/README.md` 957 -> 399 lines. The rule that came out of it: **a suite
+explains itself.** Prose about a suite, kept anywhere but the suite, drifts from
+it and is read by nobody editing it.
+
+## v284, cont. -- not applicable is not skipped
+
+`verify_docs` reports 81 assertions inside a release run and 83 in CI, because
+two whole-run comparisons cannot apply until `LAST-RUN.txt` holds a whole-run
+record -- and it runs in batch 9 of 52, when that record describes batch 8. Both
+numbers were always correct. The record could not tell them apart, which let a
+v283 release summary claim 83/83 beside its own evidence saying 81/81 with
+neither being false. An outside audit caught it and was right to.
+
+The summary line now carries the denominator, after the `N/M passed` token that
+`run_harness.sh` parses with a leading-anchored regex:
+
+    81/81 passed  (2 not applicable: <both names>)
+
+**NOT APPLICABLE, NOT SKIPPED.** The pair already announced itself, as "SKIPPED
+(2 assertions)" -- and skipped implies coverage debt, where these are
+structurally inapplicable and run the moment the artifact exists. The
+distinction was the reviewer's, and it is the right one: what needed exposing
+was the denominator, not another subsystem.
+
+That block was also advising `git checkout harness/LAST-RUN.txt`, on a generated
+file holding the current run's record, in a tree whose CLAUDE.md now says never
+to do that. Replaced with the invocation that regenerates it.
+
+## v284, cont. -- what a failure earns, and what it does not
+
+The reviewer's rule, adopted: **a failure may create a test, an invariant, or a
+working rule; it does not automatically earn a permanent historical explanation
+everywhere that touches it.**
+
+v283 broke it three times over. `browsing.goto()`'s docstring carried a
+paragraph on what its first version did wrong and which release shipped it
+violating which rule -- release archaeology inside the fix whose own release was
+about removing exactly that. The PostgreSQL note speculated about which
+historical flake it explained. The MP4 note recounted learning its lesson
+release by release. All three kept their rule and their evidence and lost the
+story: `goto()` 44 -> 33 lines, `CLAUDE.md` 251 -> 240.
+
+**`docs/REFACTOR-v132.md` was proposed for deletion and is DECLINED.** v263
+already examined it and kept it, recording why: two live suites cite it. Both
+citations still carry a live rule -- `verify_seam` warns that a regex call graph
+sizes the prize but is never a safe-to-move list, because a split driven by
+those numbers was attempted and reverted; `verify_player_isolation` warns that
+153,600 is the honest distance and a session treating it as reachable will
+repeat v132. `verify_docs` also classifies the file structurally as a CHANGELOG,
+with this file and `docs/HANDOFF.md`, exempt from staleness scans because its
+entries are true of the version they sit under.
+
+This work moves history OUT of current-state documents INTO the log. Deleting
+the log is the inverse operation, and the same argument keeps the v283 entries
+above as written.
