@@ -46,108 +46,49 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
-### Closed in v278: an outside review, and a phone that answered
+## Invariants, and what enforces each one
 
-v278 is one thing from the owner's own phone and five from an external
-developer review of the sealed v277 archive. **Every one of the five was
-checked against the tree before it was acted on, and every one was real** —
-two of them larger than the tree's own description of them.
+These outlived the releases that produced them. Each line is a rule a change
+can break, followed by the suite that would catch it — **checked by grep, not
+recalled.** An invariant with no enforcer is marked as such, because "we all
+know that" is how a rule stops being true.
 
-**The iOS silent-mode fix is confirmed on a phone** (5 Sep 2026, "Music
-works"). v277 sealed it saying in as many words that a green seal was not
-evidence and the phone was the test; the phone answered. `verify_audiosession.py`
-keeps its closing disclaimer, because the confirmation is evidence about the
-FIX, not about a harness that still has no ringer switch. Details below, under
-"Closed in v277".
+This section replaced 15 "Closed in vNNN" narratives (708 lines). The
+reasoning behind each release lives in `DECISIONS.md`; the *history* lives in
+git. What has to be here is the rule you can break tomorrow.
 
-**An external developer review of the sealed v277 archive found five things,
-all of them real** — checked against the tree one at a time before any were
-acted on. The one that mattered: the /s player claimed the iOS playback session
-on the play/pause tap BEFORE the branch deciding which it was, and released it
-nowhere, so the first Play held it until the tab closed. Not silence — a
-Control Center entry the viewer cannot clear, which is why v277's own audio
-sections stayed green over it. Every edge now routes through one
-`syncAudioSession()`. Fixing it blew the player's JS ratchet, exactly as the
-review predicted 600 B of headroom would; repaid by carving `initMoreTools()`
-into `editor_tools.js` (153,251 → 149,946, ratchet down to 150,000). Full
-account in the second v278 entry at the foot of `DECISIONS.md`.
+| invariant | enforced by |
+|---|---|
+| A route flushes; it never commits the shared session. | `verify_txcontract.py` (AST over every module, exemptions named per function) |
+| Undo stores a DRAWING, not a screenshot — replay reconstructs from strokes. | `verify_move.py`, `verify_stamps.py`, `verify_liquify.py` |
+| An anonymous post is revoked by a CAPABILITY, never by an account. | `verify_deletion.py`, `verify_posted.py` |
+| Possess the id and the key → revoke through the product, whatever this browser remembers. | `verify_posted.py` |
+| A 404 from DELETE means UNKNOWN. The client must not turn it into success. | `verify_posted.py` |
+| The player carries no editor-only module. | `verify_player_isolation.py` |
+| The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
+| `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
+| No readable text uses a token that fails WCAG AA. | `verify_a11y.py` |
+| A token that cannot pass AA must be USED somewhere the requirement does not reach, or not exist. | `verify_a11y.py` |
+| Every `aria-modal` surface is routed through `SkriblModal`, and the population is generated from the DOM and the JS source, not listed. | `verify_a11y.py` |
+| Every id on a rendered page is unique — `getElementById` and `url(#…)` both take the first match. | `verify_a11y.py` |
+| No page loads a `lib/` module nothing on that page reads. | `verify_surfaces.py` |
+| No stylesheet keeps a rule-set whose every selector is unmatched. | `verify_surfaces.py` |
+| Every route the blueprint registers is named in at least one document. | `verify_docs.py` |
+| Every host seam `create_blueprint()` accepts is documented in `docs/INTEGRATION.md`. | `verify_docs.py` (reflection over the signature) |
+| Every `SKRIBL_*` the code reads is named in a doc or `.env.example`. | `verify_docs.py` |
+| No document hand-types a tree hash or an assertion count outside the generated stanza. | `verify_docs.py` |
+| The generated doc tables match their source. | `verify_docs.py` → `gen_docs.py --check` |
+| A skipped suite contributes ZERO assertions and is not evidence of coverage. | `run_harness.sh` emits it; `stamp_docs.py` writes it into every stanza |
+| The release run must be the LAST harness invocation — anything after it rewrites `LAST-RUN.txt`. | `verify_docs.py` (RELEASE.md/LAST-RUN.txt agreement), and the guard in `stamp_docs.py` |
+| Every suite on disk appears in exactly one `release_run.py` batch. | `release_run.py` refuses to start otherwise |
+| The assertion output format is a contract `run_harness.sh` parses. | `harness/assertions.py` self-test, run by `verify_docs.py` |
 
-**The feed draws the same picture as the shared page.** The wet/dry compositor
-is implemented in `inlineplayer.js` — the review's last finding. It cost 2,913 B
-and the embed ratchet went 29,000 → 32,000. The old reason for not doing it
-("twenty boxes, one playing") was wrong: `play()` settles every other player, so
-one is ever playing.
-
-**A Skribl can be taken back.** `skribl/deletion.py` adds `delete_post()` and
-`set_post_visibility()` — the review's second high finding. The FK cascade and
-orphan sweep were already built and tested; what was missing was the authorised
-product operation on top. A missing post and someone else's raise the same
-exception with the same message, on purpose. **v278 registered `DELETE` and
-`PATCH` only when the host passed `current_user_id`; v279 reversed that** — see
-"Closed in v279" below. The gate was right about the danger and wrong about the
-remedy: it also left the deployed product unable to revoke anything.
-
-**`_ZOOM_EXEMPT` in `verify_ux.py` is now empty** — all seven sub-16px fields
-were raised, so the iOS-zoom rule is absolute rather than a ratchet. The raise
-was not free: Flip's `.mb-offset` readout WRAPPED at 16px and painted its second
-line over the control beside it, at 320, 360, 375 and 390 — with every geometry
-probe in the tree reporting "ok", because a wrap does not move the box.
-`verify_layout.py` section 5 now measures `scrollHeight` against the box's own
-height, which is the measurement that sees it. See the v278 entry at the
-foot of `DECISIONS.md`.
-
-### Closed in v281: the half of the recovery key that was missing
-
-A third adversarial audit read the sealed v280 and returned **No-ship** again.
-It confirmed the v279 fixes were all present and correct, and then named a gap
-that is a design failure rather than a bug:
-
-> A user can now **save** a recovery key but cannot **use** it after the browser
-> copy is gone.
-
-**v280 built export and never built import.** The panel said "keep it somewhere
-you will find it". The tray offered **Copy key**. And nothing anywhere would
-accept one back — the only `DELETE` the product could send read its token out
-of the local record, and the button that sent it rendered only when that record
-already held one. So the four situations the key exists for (cleared site data,
-origin eviction, a new device, a failed write) all ended the same way: the
-author holds the credential the product told them to keep and the product will
-not take it.
-
-The invariant the audit asked for, which is the one to hold on to:
-
-> **Possess the id and the key → revoke through the product, whatever this
-> browser happens to remember.**
-
-**"Use a recovery key" in Your Skribls** is that loop closed. It takes a share
-link or a bare id plus the key, and offers two outcomes: take it down, or add
-it to this browser's list. The second matters as much as the first — it
-re-establishes custody, which is what makes export → lose the browser → import
-a round trip rather than a one-way door. Adding does NOT verify the key and
-says so, because deletion is the only operation that can tell and it is
-destructive.
-
-**It is deliberately not on the player page.** Two reasons, and the second is
-the real one: `/s/<id>` is what RECIPIENTS open. A takedown affordance
-there would teach that holding the link is what entitles you to remove it,
-which is the trap the second audit named when it warned against turning
-possession of a shared URL into deletion authority.
-
-**Clear list stopped being ordinary history.** It wiped every stored key on a
-second tap while the posts stayed online. The single-row `×` had warned about
-exactly that since v279 — the weaker contract was winning on the more
-destructive path, which is the audit's "same structure, two incompatible
-purposes" pattern. It now names how many keys are at stake and withholds
-"Clear anyway" until an export has actually succeeded; a failed clipboard write
-leaves it locked, because a failed copy that unlocked it would be the same
-false certainty this release removes from `DELETE`.
-
-**A 404 means unknown.** `deletion.py` answers the same 404 for "no such post"
-and "not yours" so the API cannot be walked for which ids exist. The client was
-collapsing that into success and dropping the credential for a post that might
-still be live — with a comment of mine arguing for it: *"the local entry should
-go either way."* It does not. Security ambiguity on the server cannot become
-certainty in the UI.
+**One from v179 did NOT survive, and is recorded here rather than quietly
+dropped.** "Segmented controls state a height" was true when written; `flip.css`
+now says `--seg-h intentionally NOT set`, because the control has only been
+measured on one machine and its height follows the installed font. Opting it in
+would mean choosing a number for every viewer. The rule was superseded by a
+deliberate decision, and START-HERE asserted the old one until v282.
 
 ### What the gates caught, including one I built last release
 
@@ -170,101 +111,6 @@ the claim is the recurring failure of this whole sequence of releases — it has
 happened in most of them, to me, in assertions I had just written — and it is
 the argument for mutating every new assertion rather than trusting a green
 one.
-
-### Also closed in v281: a staleness sweep, and what it says about the tree
-
-The sweep ran until two consecutive passes from different angles found
-nothing. **Twelve findings, and every one was a description that had drifted
-from a thing — not one was a logic bug.** Three templates loaded modules
-nothing on those pages read; the shared-module index had three wrong rows and
-three missing; `docs/INTEGRATION.md` never mentioned `player_target`; README's
-route table did not mention DELETE, which is the whole revocation feature the
-previous two releases were spent building; `verify_jsstrip` measured four of
-the player's nine scripts; two byte figures were measured on disk and reported
-as what a link costs; 7.8 KB of CSS styled controls that do not exist; three
-assertions asserted the literal `True`; and the Pad emitted two elements with
-`id="skink-m"`, so the brand mark under the player declared `x2="65"` and
-rendered at 101.
-
-**The invariant to carry forward is about the shape of the tree, not any one
-of those.** There are 41,546 lines of harness and 13,608 of markdown against
-35,832 lines of shipped code — more description of the thing than thing. Every
-restatement is a place where two files must change together or one becomes a
-lie. Staleness here is not decay; it is the arithmetic of saying one fact
-twice.
-
-So the order of preference is **derive, then delete, then gate.** This sweep
-reached for the gate six times and that is why the harness grew. A gate
-detects drift and costs a permanent assertion; a derivation prevents it. The
-pattern already exists in this repo — the generated HARNESS-COUNTS stanza
-stopped being prose because prose kept going stale — and the module index,
-route table and seam table are the same shape. Turning them into generated stanzas is v282's
-first job, and it lets four of the gates added here be deleted.
-
-**And the process rule, which cost more than any single finding.** Across the
-sweep roughly as many probes were wrong as defects were found: a truncated
-`head`, a `--` that swallowed an `--include`, a regex that took the first of
-eight exports, a CSS trimmer that ate a comment terminator and corrupted the
-shared `.slider` rule. Worst of them, the first README route-table gate reused
-a set of PATHS, so GET, PATCH and DELETE collapsed into one entry — **it would
-have passed on the tree that motivated it.**
-
-> Calibrate the instrument on a known answer before believing its output. Run
-> every new probe against one case known bad and one known good; if it cannot
-> tell them apart, the probe is wrong, not the tree.
-
-That is the mutation test moved BEFORE the fix rather than after. Its narrower
-companion: **do not edit mechanically where prose and code interleave.** Three
-automated passes over the stylesheets each produced fresh damage before the
-fourth was done by hand.
-
-### Closed in v280: a capability whose custody was nobody's job
-
-A second adversarial audit read the sealed v279 and returned **No-ship**, with
-one High of its own and one it re-raised, plus four Mediums and a Low. Every
-finding was checked against the tree before it was acted on and every one held.
-Its diagnosis is the sentence to keep:
-
-> The server-side primitive is the strongest part of the new design… The
-> failure is lifecycle ownership around that secret.
-
-**Minting and verifying a capability is not the whole security boundary.**
-Creation, durable custody, recovery, migration and retirement are all inside
-it, and v279 had built the first two beautifully and left the rest to a
-localStorage write whose return value nothing read.
-
-**Two ways to publish something irrevocable and be told it went fine.**
-`posted.js`'s `write()` has always returned whether it succeeded and `add()`
-has always discarded it, so quota exhaustion or private mode produced a live
-public post, no key, and a success message. Separately, `write()` truncated to
-`LIMIT` on every call, so the 201st Skribl silently stranded the 1st — still
-live, no longer withdrawable — and the 202nd stranded the next. Deterministic,
-not an edge case.
-
-`add()` now returns `{list, durable, key}` and both surfaces check it.
-`capped()` keeps the newest `LIMIT` entries **plus every entry carrying a key**,
-however old, so the cap bounds what is KEPT and never drops what authorises.
-(It was written up as governing "what is rendered", which understates it: an
-entry past the limit with no key is dropped from storage, not hidden.)
-
-**IndexedDB was the obvious answer and the wrong one.** It is cleared by the
-same user action and the same Safari eviction sweep as localStorage: it buys
-capacity, not durability, and the durability is what was missing. What actually
-survives cleared site data, a new phone, or an account system that does not
-exist yet is the person holding the key. So `lib/recoverykey.js` shows it when
-the browser cannot keep it, `warnIfVolatile()` says so *before* posting rather
-than after, and Your Skribls offers **Copy key** beside Delete. (That is the
-EXPORT half only, which a third audit called v280's blocker — see "Closed in
-v281" above for the half that accepts one back.) It is called a
-recovery key in everything a user reads, because the same secret is what a
-future account system would take to CLAIM a post, and a name meaning only
-"delete" would have to be retired exactly when the back-catalogue depended on
-people still recognising it.
-
-**Pre-v279 anonymous posts still cannot be self-served, and no migration can
-change that** — see the note in `docs/INTEGRATION.md`. `python -m
-skribl.takedown` is the operational answer, with `--list-orphans` as the census
-that says whether any deployment actually has the problem.
 
 ### `verify_a11y.py` generates its population now
 
@@ -312,53 +158,6 @@ asserts the half that is checkable offline: while every runner is standard,
 nothing current may call this project's minutes finite or billed. Move to a
 larger runner and the claim becomes sayable again and the gate stands down by
 itself.
-
-### Closed in v279: twelve findings from a second audit, all real
-
-An external audit read the sealed v278 archive and returned one High and
-eleven Medium findings across three passes, plus a coverage ledger and the
-sentence that set the release's shape: **"No-ship for the standalone premium
-product until P1-H-01 is resolved."** Every one was checked against the tree
-before it was acted on and every one held. What follows is what changed; the
-reasoning is in the v279 entries at the foot of `DECISIONS.md`.
-
-**The High finding was v278's own remedy.** v278 shipped `delete_post()` and
-`set_post_visibility()` and then registered the HTTP routes only when the host
-had passed `current_user_id` — so the standalone product, which is the premium
-one, could not revoke anything at all. The gate was right that an
-unauthenticated DELETE erases any Skribl anyone can name; it was wrong that
-absence was the fix, because "you cannot delete it" and "anyone can delete it"
-are both failures.
-
-**The answer is a capability, not an account.** An anonymous post is created
-with a `secrets.token_urlsafe(32)` returned once, in the create response, and
-stored only as a SHA-256 digest (`skribl_posts.delete_token_hash`). DELETE and
-PATCH are now registered unconditionally and a caller must present *something*:
-a matching token, or ownership, or an explicit in-code `require_author=False`.
-A stranger holding only a public id gets the same 404 as a stranger holding
-nothing.
-
-This was chosen over per-post passwords and over "wait for accounts" for one
-reason: it composes with accounts instead of competing with them. A deployment
-that grows real users later keeps every anonymous post revocable through the
-capability while new owned posts authorise by identity. The alternative
-stranded the whole back-catalogue on the day the feature it was waiting for
-arrived.
-
-**Three smaller Mediums in the same area.** `PATCH` accepted any JSON root and
-any extra keys — `"null"` reached the handler and 500'd, and
-`{"visibility": "private", "delete": true}` was silently tolerated; it now
-takes an object with `visibility` and optionally `deleteToken`, nothing else.
-Creation treated a failed pending-media claim as best effort and posted anyway,
-which is the reservation protocol failing open; it now raises
-`SkriblUnavailable`. And `/media/<key>` answered public objects
-`max-age=31536000, immutable`, which `deletion.py` twenty lines away promised
-"stops being reachable" — two documents corroborating each other into a false
-guarantee. The window is `routes.PUBLIC_MEDIA_MAX_AGE`, five minutes, and
-`immutable` is gone, so the promise is late rather than untrue. Closing it
-completely needs a purge hook a deployment supplies.
-
-**Identities became opaque text and the MP4 gap became evidence** — both below.
 
 ### `verify_a11y.py` — keyboard and assistive technology, as its own suite
 
@@ -835,199 +634,6 @@ whole-page move first, and it is the natural next feature.
 
 ---
 
-## Closed since the v179 archive was cut
-
-* **`[hidden]` works everywhere now.** `styles.css` carries
-  `[hidden] { display: none !important; }`. The UA rule loses to any author
-  rule, so `el.hidden = true` drew nothing for 380 elements on Flip and 366 on
-  Pad — the page bar rendered 55px tall throughout Move artwork's life while
-  reporting `hidden === true`. Four one-off `.thing[hidden]` rules had been
-  written before anyone looked for the general case.
-* **Segmented controls state a height.** `--seg-h` was declared four times and
-  read nowhere, so a `.seg` inherited its height through `font: inherit` and
-  followed the VIEWER'S font: 20px headless, 23px on the owner's Mac, while
-  `.pb` matched exactly. `.seg` now reads `var(--seg-h)` with NO fallback, so
-  an unmeasured control keeps `auto` and opting one in is deliberate.
-  `.mb-scope` and `.mb-offset` are 30px; the export segs 32px.
-* **The offset readout takes typed coordinates.** Click it, type `40, -12`.
-  Same moveDx/moveDy as a drag, so the same Reset, Done and single undo entry.
-* **Skribl no longer steals a host application's homepage, and `docs/INTEGRATION.md`
-  is now a real guide.** Both came out of the first actual DROP-IN TEST: a
-  throwaway Flask host app, built from the docs, that is not `app.py`.
-  The blueprint registered `GET /` unconditionally — a second copy of the Pad
-  editor, there so the standalone demo had a landing page. Flask resolves
-  duplicate rules by registration order and the blueprint registers first, so
-  **mounting Skribl silently replaced the host's front page.** No error. It is
-  now `create_blueprint(index_route=False)` by default; `app.py` opts in.
-  Two more integration facts that were true but undiscoverable: a host's
-  `db.create_all()` creates **nothing** without
-  `skribl.models.attach_to_metadata(db.metadata)` — no tables, no error — and
-  `docs/INTEGRATION.md` was a v98–v136 planning record that opened by admitting
-  its own signature was obsolete, while `README.md` pointed integrators at it.
-  The plan is preserved in git history; the guide is rewritten
-  around a copy-pasteable example that was executed, not imagined.
-  `harness/verify_integration.py` (no browser, seconds; count in RELEASE.md) pins all
-  of it, including the negative controls — install a visibility policy, prove it
-  changes the outcome, clear it, prove the default returns.
-  One limitation was DECLARED rather than silent: the feed filters
-  `visibility == 'public'` in SQL and never consults the host policy, because a
-  Python predicate over a keyset-paginated query would break the pagination — a
-  policy-refused post could appear in the feed as metadata (no payload, no
-  image). **v224 built the `feed_filter` seam that paragraph asked for**: a host
-  contributes a SQL predicate the query composes, so authorization pages
-  correctly. It is a seam and not an automatic fix, and both directions are
-  pinned by `verify_hostseams.py` — without a filter the feed still lists every
-  public post, which is correct where a policy only restricts private and
-  unlisted. Install one if your policy can deny a PUBLIC post.
-* **Loop trim clamping is extracted to `lib/looptrim.js`, and it found a second
-  real bug.** The 20-second cap was a named constant on Flip
-  (`MAX_LOOP_SECONDS`, nine uses) and a **bare `20` on Pad, eight times, with no
-  constant in the file** — so changing the cap meant one edit on one surface and
-  eight on the other, with nothing failing if the second was missed.
-  **Flip re-clamped the cap inside `updateTrimUI`**, with a comment calling it
-  "the single choke point ... so the <=20s invariant can't be bypassed".
-  **Pad had no such line**: it enforced the cap on drag and nudge ONLY, so a
-  loop arriving any other way — a load, a draft restore, a re-add — kept
-  whatever length it came with, and travelled in the payload. Measured: a 60s
-  loop through `updateTrimUI` stayed 60s on Pad and became 20s on Flip. Pad now
-  has the same choke point and both read the shared constant.
-  The clamp rule itself existed in **six copies** across the two files, in two
-  behaviours: `'constrain'` (the dragged handle stops at the cap) on the main
-  track, `'slide'` (the OTHER end is pushed, so the window slides) on the zoom
-  track and nudge. **Pad and Flip are identical about this, path for path**, so
-  it is a design inconsistency faithfully duplicated, not drift — the mode is
-  now an explicit named argument at each call site rather than hidden inside
-  six copies of the arithmetic. Verified against all six transcribed sites
-  across 140 scenarios: zero disagreements.
-  **The player needed the module too** and the harness caught it: `updateTrimUI`
-  lives in `app.js`, which serves the player, so the player threw
-  `Cannot read properties of undefined` until `looptrim.js` was added to its
-  template. Any client constant `app.js` reads has to load on THREE templates,
-  not two.
-* **Photo fit geometry is extracted to `lib/photofit.js`, and extracting it
-  found a real bug.** Pad drew the background with `drawPhotoFitted`, Flip
-  computed it with `photoRect`, and the PLAYER used Pad's copy — three call
-  sites, two implementations. They agreed on cover and contain and disagreed on
-  the third mode's NAME, which is why the shared partial carried
-  `data-fit="{{ 'fill' if kind == 'flip' else 'stretch' }}"`: the markup had
-  been bent to fit two vocabularies. flip.js posts
-  `fit:(photoFit==='fill'?'stretch':fit)`, so **'stretch' is what the player and
-  the database see** — but Flip's restore whitelist was
-  `['cover','contain','fill']` and `photoRect` special-cased only `'fill'`.
-  **Flip could not read the value Flip writes.** Measured on a 100x50 image
-  before the fix, `fit='stretch'` returned `[-204,0,1224,612]` — byte-identical
-  to cover — while `'fill'` returned `[0,0,816,612]`, and the fit row showed no
-  active button at all. The lib treats `'fill'` as an alias of `'stretch'`, and
-  Flip normalises at both entry points, so the value round-trips. Neither
-  surface's PERSISTED vocabulary was changed: that is a decision about live
-  data, not a refactor. The template conditional and the split vocabulary are
-  still there, deliberately — see the open question below.
-  Verified behaviour-preserving by comparing the lib against BOTH pre-extraction
-  implementations across 405 combinations of size, canvas, offset, zoom and
-  fit: zero disagreements. `lib/photofit.js` loads on the editor, Flip AND the
-  player — the player draws photos through `app.js`, so omitting it there would
-  have left viewers a blank background.
-* **`lib/colorselect.js` is now covered by `verify_parity.py`.** It is the
-  fifth shared-controller extraction (after `eyedropper`, `recentcolors`,
-  `segslider`, `smoothing`) and it entered the archive with no parity
-  assertions naming it. The suite already asserted the BEHAVIOUR it
-  implements — hex validation, case normalisation, exactly one active swatch,
-  on both surfaces — and all of that still passed when Flip was given back its
-  own private copy of the logic. Behavioural parity says the copies agree
-  today, not that there is one copy. Nine assertions now pin the extraction
-  itself: one module, one URL including its content hash, one implementation,
-  and — the load-bearing one — each editor's setter is spied on to prove it
-  actually CALLS the module. Only that last assertion caught the re-inline;
-  `verify_ux.py`'s source grep for `classList.toggle('active'` passed 130/130
-  against a copy that merely wrote `classList["toggle"]("active"`.
-* **The loop magnifier is NOT unstyled** — a claim made and withdrawn this
-  session. `app.js` injects its CSS at runtime, including the
-  `position: relative` the seg pill needs. Grep both stylesheets AND the
-  injected `<style>` before believing a component has no rules.
-
-## Closed after the v184 dotfix
-
-* **The move-offset field summoned the wrong keyboard.** `#mbOffsetInput` takes
-  BOTH coordinates in one box (`"40, -12"`) and declared `inputmode="numeric"`,
-  which on a phone offers digits only — no comma, and on most keyboards no minus,
-  so a negative offset could not be typed at all. `decimal` is not the fix; that
-  adds a decimal POINT, not a separator. It is `text` now. The parser needed no
-  change: `parseOffsetEntry()` already accepts a comma or a space between the two
-  numbers plus a leading minus and decimals, and `verify_move.py` now asserts
-  both halves — the attribute, and that the parser takes every form the fuller
-  keyboard allows while still rejecting junk. Mutation-tested: restoring
-  `numeric` fails the assertion.
-
-* **The play scrubber's shape is no longer unverified — and it was correct.**
-  It had never been seen rendered. Driving Pad through draw → stop → play and
-  measuring the real shown state gives, at 1280x900 and at 390x844 alike: inset
-  **24px at both ends, exactly `--r-frame`**, flush to the canvas bottom (gap 0),
-  spanning wrap width less 48, radius reaching past half the height so the ends
-  read round. Nothing needed adjusting. `verify_scrub.py` (17) pins it, and its
-  FIRST assertion is the negative control: at rest the bar is genuinely not laid
-  out, because `positionScrub()` returns early on `hidden` — so an element forced
-  visible measures 0 wide and reads as catastrophic misalignment that is entirely
-  an artifact. A gate assertion also refuses to compare insets until a real
-  replay has actually shown the bar; a symmetric zero is a broken probe, not
-  agreement. Mutation-tested: zeroing `_inset` fails four assertions.
-
-* **`positionPlayScrub` does not exist.** The function is `positionScrub()`
-  (`app.js`). The name was wrong in the `styles.css` comment that points at it
-  and in the handoff, so anyone grepping for it found nothing. Corrected.
-
-* **`verify_deletion_foundation.py` is in `harness/` now, and it crashed on
-  arrival.** It resolved the repository root with `os.path.abspath(".")`, but
-  `run_harness.sh` does `cd $ROOT/harness` before invoking a suite — so `from app
-  import ...` raised `ModuleNotFoundError` and the suite reported zero assertions
-  rather than eight. It anchors on `__file__` now, matching `verify_storage.py`.
-  8/8 on PostgreSQL with the local media backend; it needs BOTH
-  `SKRIBL_MEDIA_BACKEND=local` and a Postgres `DATABASE_URL`, and skips cleanly
-  without them.
-
-* **Hand-typed counts that had drifted are gone rather than corrected.** Three
-  documents quoted three different line counts for `app.js` and none matched the
-  tree; four places hand-typed the suite count. Replacing a stale number with a
-  fresh one only resets the clock, so they now point at `wc -l` and at
-  `harness/RELEASE.md`. `verify_docs.py` caught the suite counts by itself the
-  moment the two new suites landed — that check works, and it is why this list
-  can be trusted where prose cannot.
-
-* **SQLite declared the foreign key and never enforced it.** `PRAGMA
-  foreign_keys` defaults to OFF per connection, so revision `c7e1a5f04b93`'s
-  `skribl_post_media.post_id -> skribl_posts.id` ON DELETE CASCADE was written
-  into the schema and ignored. Deleting a post left its association row behind,
-  `sweep_orphans` then read the media as still REFERENCED, and the bytes were
-  never reclaimed — the exact leak the constraint was added to close, still open
-  on the one engine the assertion had never been run against. It surfaced only
-  because `verify_deletion_foundation.py` joined the aggregate, which runs on
-  SQLite; standalone it had only ever run on PostgreSQL, where it passes 8/8
-  because PostgreSQL enforces the constraint natively.
-  **Access was never exposed** — `/media/<key>` authorises through an EXISTS join
-  to the post, so a deleted post's media is refused (404) whether or not the
-  orphan survives. It is a data-integrity and storage leak, not a security hole.
-  `models.enable_sqlite_foreign_keys()` now sets the pragma, installed from
-  `init_skribl()` so a process that merely imports Skribl without mounting it is
-  untouched. Measured both ways: cascade fires with it, orphan survives with
-  `SKRIBL_SQLITE_FOREIGN_KEYS=0`.
-  **Scope worth knowing before deploying on SQLite:** the pragma is a property of
-  the CONNECTION, so there is no way to enforce Skribl's foreign keys and not the
-  host's. A host whose own data violates a constraint it declared will now get an
-  error where it previously got silence. That is the correct outcome and it is a
-  behaviour change; the env var is the opt-out.
-
-* **A generated aggregate now survives being interrupted.** A full run needs
-  ~25 minutes, longer than some environments allow in one invocation, and
-  background processes do NOT reliably survive between invocations here —
-  ARCHIVE-README claims they do, and a run killed after batch 1 proved otherwise.
-  The tempting workaround is running batches by hand and adding up the totals,
-  which is the hand-typed number this project keeps abolishing. `release_run.py`
-  checkpoints after every batch instead (`--budget`, `--restart`; state lives
-  OUTSIDE the tree, or writing it would change the hash of the tree it describes)
-  and re-verifies the frozen tree hash on every resume — so an edit made between
-  invocations aborts the run exactly as an edit between batches does. The
-  checkpoint is deleted on completion, or the next release would silently resume
-  a finished one.
-
 ## Player extraction, first cut (historical) — the target has since been MET
 
 **Do not read `verify_player_isolation.py` going green as "the player is
@@ -1335,125 +941,6 @@ cannot see a wiring extraction**, and anyone using it to judge progress will
 conclude nothing happened. `verify_player_isolation.py`'s byte ratchet is the
 measurement that tracks this work.
 
-## Closed in v212 — the trim strip, and an assertion that pinned nothing
-
-**The bug.** `drawWaveform()` sized `#waveformCanvas` straight from
-`musicTrack.getBoundingClientRect()` with no guard, and the decode chain is its
-ONLY caller. Sizing a canvas from a 0-wide rect is not a no-op: it sets
-`canvas.width = 0`, which CLEARS the bitmap, and the loop then paints zero
-peaks. So a decode landing while the music drawer was shut left the strip blank
-for the rest of the session, while `drawZoomWaveform` — guarded, and re-called
-from `updateTrimUI()` — drew Loop Detail correctly from the SAME buffer. One
-decoded buffer, two canvases, one painted. Reported from a phone, where the
-slower decode makes it easier to hit; the realistic routes in are a draft reload
-or closing the drawer before decode lands.
-
-Reproduced before any edit, by holding `decodeAudioData` until the drawer was
-shut: strip 0x0 with 0 ink, zoom 638x72 with 45,936 ink. That is the screenshot.
-
-**The fix.** The guard on `drawWaveform` on both editors, plus a repaint from
-Pad's `openDrawer()` music branch, two frames after opening so `musicTrack`
-reports real width rather than 0.
-
-**THE PART WORTH READING. My first Flip assertion pinned nothing, and only the
-mutation test found it.** The handoff note said "same on Flip, which had the
-identical unguarded line". The LINE is identical; the conclusion was wrong.
-Flip's `reveal()` already calls `requestZoomWaveformDraw()`, and Flip's copy of
-that repaints BOTH canvases — so **Flip self-heals this scenario and was never
-broken by it.** An assertion that Flip "shows a painted strip after opening the
-drawer" is green against the sealed v211 archive and green against the fix.
-
-So the two surfaces are pinned by DIFFERENT assertions, deliberately:
-
-* **Pad** fails the user-visible scenario, so the scenario is its pin.
-* **Flip** cannot fail that scenario, so its guard is pinned by the property the
-  guard actually governs: paint the strip, take the track's layout away, call
-  `drawWaveform`, restore layout WITHOUT scheduling a repaint, read the canvas.
-  Guarded, 9,499 ink survives; unguarded, the canvas is 0x0 and empty. The whole
-  sequence runs inside ONE `evaluate` so no rAF can slip in and repaint between
-  the wipe and the measurement — that would make the probe green for a reason
-  having nothing to do with the guard.
-
-**Generalises, and this project keeps relearning it.** `verify_parity`'s
-re-inline caught the same class: behavioural parity says the copies agree today,
-not that the assertion depends on the fix. **Run the mutation per COMPONENT, not
-once for the whole change** — a single all-or-nothing revert would have shown
-three reds and hidden that one of them was unreachable.
-
-Mutation matrix, each component reverted independently (the full revert is
-byte-identical to the sealed v211 `app.js` and `flip.js`):
-
-    mutation      pad gate  pad scenario  pad no-wipe  flip no-wipe   total
-    none            PASS       PASS          PASS         PASS       298/298
-    pad-guard       PASS       PASS          FAIL         PASS       297/298
-    pad-reveal      PASS       FAIL          FAIL         PASS       296/298
-    flip-guard      PASS       PASS          PASS         FAIL       297/298
-    all (= v211)    PASS       FAIL          FAIL         FAIL       295/298
-
-The gate assertion stays green under every mutation BY DESIGN — it asserts the
-scenario entered the failing state, so a red gate means a broken probe, not a
-caught bug. Under `pad-reveal` the no-wipe pin fails on its own self-gate
-(`before.ink > 500`), not on a wipe: the strip was never painted to begin with.
-Same colour, different reason, and worth reading the detail line rather than the
-column.
-
-**Cost: 209 B served, 2,428 B of source.** Almost all of it is the comment
-naming the pattern, which `jsstrip.py` removes from the response — this is the
-third "sized from a rect with no layout yet" bug in this drawer, so naming it in
-place is worth 209 B. The ratchet went 146,911 -> 147,120, set to fit, with the
-accounting line beside it.
-
-**A number from the previous handoff that was wrong: "+360 B".** It was recorded
-against a fix whose Flip half was mischaracterised, and the measured figure is
-209 B. Nothing from that note should be carried forward without re-measuring.
-
-## Also closed in v212 — two generators, one stanza, and they disagreed
-
-**Found while sealing this build, by causing it.** `release_run.py` drives
-`run_harness.sh` one batch at a time, so the record it leaves behind describes
-only the final batch. It already fixes that from one side: it rewrites
-`LAST-RUN.txt` to cover every batch and re-stamps. **That holds only while the
-release run is the LAST harness invocation.** A bare
-`./harness/run_harness.sh verify_docs.py` afterwards rewrites `LAST-RUN.txt` and
-re-stamps from it — publishing **a stanza claiming 36 assertions from a single
-batch, beside a `RELEASE.md` recording 2400 across every suite on disk, on the
-same frozen tree.**
-
-**This is worse than a hand-typed number, not better.** It is machine-generated,
-so it carries exactly the authority this project grants generated figures, and
-it is wrong. The generated-not-typed rule assumes ONE generator. There are two,
-and nothing made them agree.
-
-`stamp_docs.py` now REFUSES a stamp that would narrow the record for the same
-tree; `--force` is the deliberate override.
-
-* **It compares ASSERTION TOTALS, not suite counts.** `read_run()` counts suites
-  that REPORTED (59 here), while `RELEASE.md` counts suites reported INCLUDING
-  skips (61). A suite-count comparison refuses a legitimate full release. The
-  assertion total is the one figure both generators compute the same way,
-  because a skipped suite contributes zero to each.
-* **A `RELEASE.md` for a DIFFERENT tree does not gate at all.** It says nothing
-  about the run being stamped, and gating on it would wedge every build — which
-  is precisely the state the tree is in mid-release, since `RELEASE.md` is
-  written at the END.
-
-**The pin runs in an isolated temp ROOT, and that is load-bearing.** The first
-version drove the real `stamp_docs` against the real files and could not work:
-`stamp_docs` resolves `ROOT` from `__file__`, so mid-release it reads a
-`RELEASE.md` describing the PREVIOUS tree, the guard correctly declines to gate,
-and there is nothing to refuse — the assertion would fail inside the very run
-that seals the archive. It also restored "the real record" from disk, which at
-that moment WAS the damaged narrow one. Four assertions in `verify_docs.py` now
-build a fabricated tree instead: refuse-on-narrow, stanza-untouched (exit code
-alone would pass against a script that refuses loudly and writes anyway),
-stamp-on-wide, and no-gate-on-other-tree. Mutation-tested: remove the guard and
-the two refusal assertions go red while both controls stay green.
-
-**The general lesson, and it is the one this file keeps restating.** A second
-generator is a second place for a number to come from. When two of them write
-the same field, something has to make them agree, or "generated" stops meaning
-"trustworthy" and starts meaning "unattributable".
-
 ## The v213 loss — commit before anything destructive
 
 **I destroyed several hours of harness work with `git checkout`.** The tree had
@@ -1707,25 +1194,6 @@ asserts both halves so a later tidy-up cannot drop the spoken one.
 *intent* — a digit on screen and "Page" in the accessible name — rather than the
 wording.
 
-## Closed in v213 — nine settings, four tools, four carves
-
-**The shape of the release.** Five behaviours the code already had and no
-control could reach were exposed; four genuinely new tools were added; and the
-draw path was carved out of `app.js`. Everything is on BOTH editors unless
-noted, and lives in `harness/verify_tools.py`, split out of
-`verify_ux.py` when that suite stopped finishing in one invocation.
-
-**Exposed, not invented** — stroke layers, eraser width, grid density, pause
-handling (Pad only), pressure. Each is asserted through the code path that USES
-it — painted pixels, `_eraserSize`, the grid overlay, `getPlaybackDuration` —
-never through the control's own aria state. A switch that updates itself and
-nothing else passes every attribute check ever written, and the eraser mutation
-proved it: re-inlining Pad's copy left *"the editor CALLS lib/erasersize.js"*
-GREEN while the draw-path assertion caught it.
-
-**New** — shift-to-constrain, keyboard shortcuts, shapes, mirror, brushes,
-preview speed (Pad only), selection (Pad only).
-
 ### The one rule that shaped every new tool
 
 **Shapes, mirror and brushes all generate ORDINARY STROKE POINTS.** A Skribl is
@@ -1849,14 +1317,6 @@ So the row was never at the tap-target minimum, and any argument that started
 had not been true for some time. Whether 34px is acceptable is a decision, and
 `verify_layout.py` pins it in ONE place (`MIN_TOUCH_PX`) so raising it is a
 deliberate edit rather than a discovery.
-
-## Closed in v214 — seven defects from two external review passes
-
-**Read this before touching media, document loading, or touch gestures.** All
-seven came from external review of the sealed v213 archive. None was found by
-the harness, which was green throughout: they are phone-specific gesture
-lifecycle bugs and asynchronous ordering bugs, and a steady-state desktop suite
-cannot see either.
 
 ### The two families
 
@@ -2006,104 +1466,6 @@ correct fix uses a DIFFERENT function for cancel — `onTouchEnd` dismisses the
 menu past 80px, so wiring cancel to it would let a gesture the OS took away
 commit a dismissal the user never finished. The weaker invariant is stated at
 the assertion site; the behavioural pins cover the semantics.
-
-## Closed in v272 — a day of live phone review, and one real performance bug
-
-Thirteen shipped changes, every one of them an owner report from a phone or a
-desktop in front of the live site. Most are chrome manners in the v271 line and
-are recorded in DECISIONS; four carry invariants a next session can break.
-
-**Undo stores a DRAWING, not a screenshot — and this is the one to read.**
-`makeHistoryState()` used to copy the whole canvas into an offscreen canvas on
-EVERY stroke start and keep thirty of them. On a desktop hi-DPI canvas that is
-~17 MB a copy: half a gigabyte pinned for undo, plus one multi-MB allocation
-per dot. A thousand dots made the owner's machine unusable, and restoring that
-draft was worse — the rebuild rendered AND snapshotted every stroke boundary in
-one synchronous burst. States are now `{base, strokes, strokeGroups,
-hasContent}` and `restoreHistoryState()` repaints, because the canvas at any
-stroke boundary IS `preRecordSnapshot + paintStrokesStatic(strokes)` — the same
-identity `stopPlayback()` has always used to restore the drawing after a
-preview. **THE INVARIANT THAT MAKES THIS SAFE:** every pixel must be
-describable by the stroke list. Ink drawn while NOT recording is not — it never
-enters `strokes` — so `unrecordedInk` (app.js) tracks exactly that window and
-states carry a real snapshot while it is up. A fresh-take base capture (which
-bakes the ink into `preRecordSnapshot`), a clear, or a load drops the flag, and
-`restoreHistoryState()` settles it, since a restore determines the canvas
-exactly. If you add a path that puts pixels on the canvas without adding
-strokes, it MUST raise that flag or undo will silently lose them. Measured at
-1414x1414 with 1,000 strokes: 0 pixel entries, 9 MB heap, undo 0.8 ms, restore
-0.48 s where it used to freeze; undo/redo pixel-compared exact against live
-reference states across pen, eraser and shape.
-
-**The draw drawer opens at a HALF detent on phones** (`lib/drawerdetent.js`),
-so choosing a colour no longer hides the art you are judging it against. The
-reveal is the part that fought back: the owner's iPhone shipped the "Brush,
-smoothing & more" button below the fold through TWO scrollIntoView-based
-rounds while every Chromium run scrolled perfectly. `revealPanelEnd()` now
-computes the target itself and writes `document.scrollingElement.scrollTop`,
-measures the fold against `visualViewport.height` (iOS Safari's bottom bar
-overlays the layout viewport, so `innerHeight` lies), and re-asserts at 300 /
-700 / 1200 ms because the device settles URL bar, layout and its own competing
-scrolls on a schedule no single timeout catches. Each assert is a no-op when
-the end is already visible.
-
-**The post-record lock got an affordance.** A finished take locks the canvas
-and the only explanation was a toast fired by the press that had already
-failed. `#addTakePill` floats at the locked canvas's bottom edge, appends a
-take on tap, nudges when a press lands on the locked canvas, and hides under
-`body.replaying` — it sits where the replay performs. It lives OUTSIDE
-`#zoomLayer` so magnifying never scales it, and the player template never
-ships it (the `_authoringCtl` stub keeps app.js's writes harmless there).
-
-**One gradient sweep across the whole lockup.** The mark and its mode word each
-restarted the accent gradient. Both now run `gradientUnits="userSpaceOnUse"` in
-the shared 30-unit hand: the mark runs 0 -> the lockup's full width, passed in
-as the `brand_sweep` Jinja variable by the including page (101 pad, 95 flip),
-and each word's gradient starts at the matching NEGATIVE x. A standalone
-include (player, library) passes nothing and defaults to its own width. If you
-change the word svg's viewBox or the flex gap, `brand_sweep` moves with it.
-
-Also in v272, each recorded in DECISIONS: chrome recedes to 10% while the pen
-is down (`body.stroking`, both editors); the status pill yields to open menus
-and sheets as it already did to drawers; Flip's Duplicate / Blank / In-between
-stopped wearing the dashed-and-hollow costume this app reserves for "nothing
-here yet"; the restore banner clears the toolbar on phones (its 20px anchor was
-written for a desktop where the bottom edge is empty); and the custom swatch
-keeps its rainbow as a ring around the picked colour while recents record the
-COMMITTED pick (`change`) rather than every shade a drag passes through
-(`input`) — which had filled the row with gradations of one colour.
-
-**CI economics changed with this release, and the rule outlives it.** A single
-productive day ran the full three-job harness thirty times. Pull requests now
-run one smoke job (`verify_boot.py`); the full sqlite/postgres/mp4 battery runs
-on pushes to main and manual dispatch only. That trim is safe because the
-affected suites are run LOCALLY before every push and their counts are quoted
-in the PR — CI's job on a PR is to catch a broken push, not to re-verify a
-verified one. `CLAUDE.md` carries the owner's standing rule: **ask before
-taking any action that could create or increase a bill on their accounts**.
-
-**THE BILLING HALF OF THAT PARAGRAPH WAS WRONG AND IS SUPERSEDED (v280).** It
-used to say the thirty runs "consumed the account's entire monthly Actions
-allowance". This repository is public and every job runs on `ubuntu-latest`,
-so there is no allowance to consume — standard runners are free there, with no
-minute cap. The trim is still right, for turnaround rather than for money:
-three jobs at 40-90 minutes each is a long time to sit on a PR. Still do not
-widen the triggers to "fix" a red PR, but do not decline to run CI on cost
-grounds either. `verify_docs.py` now gates this claim wherever it appears.
-
-## Closed in v275 — the in-post player, and the three surfaces around it
-
-Five changes that are one change: a Skribl can now be shown inside somebody
-else's post, put there from their composer, listed on a profile, and it carries
-its own picture and its own loop control. They were built in that order over one
-session and they are sealed together because none of them is finished alone —
-the player is what makes compose worth having, compose is what puts anything in
-a feed, and the share card is the player's idle frame.
-
-**Read this before the next change to any of it:** the in-post player is a
-SECOND playback implementation, and the subsections below say what holds it to
-the sealed one. The counts for every suite named here are in
-`harness/RELEASE.md`; none are typed in this file.
 
 ### The in-post player — a fourth surface
 
@@ -2423,19 +1785,6 @@ becomes false the moment a control is added is exactly what `verify_docs.py`
 cannot catch, because it is prose about behaviour rather than a name or a
 number.
 
-## Closed in v276 — the drop-in becomes something you can run
-
-v275 made a Skribl displayable in somebody else's post. It did not make the
-integration OBTAINABLE: a host still read four documents and wrote the same
-hundred and fifty lines everyone writes. Three pieces close that, and the
-general lesson of the release is in the third.
-
-    skribl/creation.py                   create_post(), carved out of the route
-    skribl/static/lib/composehost.js     the pad button's lifecycle, once
-    examples/host_app/                   a host you can actually run
-    harness/verify_createpost.py         agreement between the two callers
-    harness/verify_example.py            the example, driven in a browser
-
 ### create_post() — for a host whose composer is a FORM
 
 `POST /api/skribls` serves a host whose composer is a browser. skribls.net's is
@@ -2512,19 +1861,6 @@ the same hour. **A comment is not a gate.**
 **Two hand-typed counts in one sentence of this file** — batches and suites.
 `verify_docs` caught the suite count; nothing checks the batch count and it was
 stale too. Both removed rather than updated.
-
-## Closed in v277 — five things the owner found on a phone
-
-Every one came from using the app on an iPhone, not from a suite going red. The
-harness is Chromium on Linux; four of the five are invisible there by
-construction. That is the pattern worth taking from this release.
-
-    skribl/static/lib/audiosession.js    the iOS playback session (confirmed on a phone, 5 Sep 2026)
-    harness/verify_audiosession.py       its mechanism, and preview's first
-                                         assertion that sound comes out at all
-    _skribl_export.html                  a file-name field; the GIF row
-    skribl_editor.html                   the sound marker, one macro'd glyph
-    styles.css                           --good lifted, --good-rgb added
 
 ### The four small ones
 

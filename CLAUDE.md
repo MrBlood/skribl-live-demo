@@ -35,6 +35,57 @@ may name a repo file that is not there; no doc may hand-type a tree hash or
 an assertion count outside the generated `<!-- HARNESS-COUNTS -->` stanza.
 Numbers in prose go stale silently — point at the generated record instead.
 
+## Calibrate the instrument before believing it
+
+**Run every new check against one case you know is BAD and one you know is
+GOOD. If it cannot tell them apart, the instrument is wrong, not the tree.**
+
+This is the mutation test moved BEFORE the fix instead of after, and it is
+here because the v281/v282 work produced roughly as many broken instruments
+as real defects. Each of these reached a commit or a run:
+
+- The README route-table gate reused a set of PATHS, so GET, PATCH and DELETE
+  on one route collapsed into a single entry. **It would have passed on the
+  tree that motivated it.** A mutation said so; nothing else would have.
+- The packaging verifier called `db.create_all()` and never opened
+  `alembic.ini` or `skribl/migrations` — it would have reported a runtime
+  package missing either as VERIFIED. The `Procfile` runs
+  `alembic upgrade head`; so does the check now.
+- `verify_ux`'s ink measure counted `alpha > 0`. Flip's canvas is opaque, so
+  it always returned exactly width*height/4 and `ink > 5000` would have
+  passed on a blank page — since v206, because the fixture in use saturated
+  it too.
+- `import browsing` landed below first use in five suites. The check had been
+  "all 99 parse", and a misplaced import is valid syntax: parsing proves
+  nothing about importing.
+
+A green check is not evidence until it has been shown to go red.
+
+**Mutate per COMPONENT, not once per change** (learned in v212, where it was
+the only thing that caught the error). A single all-or-nothing revert can show
+red for one component's sake while another's assertion pins nothing. That
+release fixed the same unguarded line on Pad and Flip and asserted both the
+same way — but Flip's `reveal()` already repainted both canvases, so Flip
+**self-heals the scenario and was never broken by it**. The Flip assertion was
+green against the broken tree and green against the fix.
+
+Which yields a second rule: **when two surfaces share a fix, they may need
+DIFFERENT assertions.** Pin the surface that can fail the user-visible
+scenario with that scenario; pin the surface that cannot with the property the
+fix actually governs.
+
+**Its companion, learned the expensive way: do not edit mechanically where
+prose and code interleave.** Three automated passes over the stylesheets each
+produced fresh damage — a stranded trailing comment, an emptied media query, a
+deleted note documenting a live token, and finally a corrupted `.slider` rule
+that `verify_sizeclass` and `verify_tray` caught. Comments are prose and prose
+needs reading.
+
+**And for a change that touches many suites, the sample IS the full run.** The
+five broken imports and two crashed suites above were each caught by running
+all 99, never by a representative subset. Commit before running it, so the
+work survives being wrong.
+
 ## Sealing a release
 
 Bump `SKRIBL_VERSION` in `skribl/core.py`, add the `DECISIONS.md` entry, and

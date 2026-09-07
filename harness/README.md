@@ -78,6 +78,16 @@ That list is a sample and always was — there are far more suites on disk than
 appear here, and `RELEASE.md` names every one of them.
 
 
+## The rule for adding a check
+
+**Calibrate it on a known-bad and a known-good case before believing it.**
+See CLAUDE.md for the four instruments this project shipped that could not
+detect the defect they were written for — including one gate that would have
+passed on the tree that motivated it, and an ink measure that returned a
+constant and had been green since v206.
+
+A green check is not evidence until it has been shown to go red.
+
 ## Gotchas
 
 - **The rate limiter will bite you.** `POST /api/skribls` allows 20/hour/IP, and
@@ -229,6 +239,9 @@ appear here, and `RELEASE.md` names every one of them.
   rate.
 
 - `verify_sharecard.py` — both editors build a share card, through ONE builder.
+- `verify_scrub.py` — the play scrubber's rendered SHAPE, measured rather than
+  assumed: 24px radius at both ends, matching `--r-frame`. Its only prose lived
+  in START-HERE's v184 section until v282 retired it.
   Flip never did: the builder lived in `editor_post.js`, which is Pad-only, so
   every Flip post fell back to the static branded og-card on its unfurl, as the
   in-post player's idle poster, and as its profile tile. Pins the round trip
