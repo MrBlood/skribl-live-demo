@@ -649,6 +649,41 @@ check("and is reported as PASS WITH SKIPS", "PASS WITH SKIPS" in _skips,
 check("a run with failures is reported as NOT GREEN",
       "NOT GREEN" in _fails and "all green" not in _fails, _fails[:60])
 
+print("\nDOCS — the release headline cannot outrun its external evidence")
+# P1-M-01 (outside review of v285). The top-level word was `PASS`, computed from
+# `ok = not failed and not never` — the LOCAL suite ledger only. A skip lands in
+# `skipped`, never in `failed`, and mp4_attestation() is rendered beside the
+# result rather than gating it, so `result PASS` could sit above a STALE
+# attestation and a postgres lane nobody had run. The gate is deliberate and did
+# not change; the label did. These pin the split so it cannot quietly re-merge.
+import release_run as _rr
+
+check("a green local run with every external lane attested is a FULL RELEASE PASS",
+      _rr.release_status(True, []) == "FULL RELEASE PASS",
+      _rr.release_status(True, []))
+# MUTATION — the case that motivated the finding. If this ever reports FULL
+# RELEASE PASS again, the headline has gone back to outrunning the evidence.
+check("MUTATION: a green local run with a PENDING lane is NOT a full release pass",
+      _rr.release_status(True, ["verify_postgres.py — claimed"])
+      == "LOCAL PASS — EXTERNAL COVERAGE PENDING",
+      _rr.release_status(True, ["x"]))
+check("MUTATION: a local failure is FAIL whatever the lanes say",
+      _rr.release_status(False, []) == "FAIL"
+      and _rr.release_status(False, ["x"]) == "FAIL")
+
+# And the classifier under it: a lane is ATTESTED only on tree-bound evidence.
+_att, _pend = _rr.external_coverage("0" * 64, ["verify_postgres.py"])
+check("a SKIP_COVERAGE lane with no attestation is PENDING, not attested",
+      not _att and len(_pend) == 1 and "postgres" in _pend[0],
+      f"attested={_att} pending={_pend}")
+_att2, _pend2 = _rr.external_coverage("0" * 64, ["verify_mp4.py"])
+check("MUTATION: an MP4 attestation for a DIFFERENT tree is PENDING, not attested",
+      not _att2 and len(_pend2) == 1,
+      f"attested={_att2} pending={_pend2}")
+_att3, _pend3 = _rr.external_coverage("0" * 64, ["verify_nolane.py"])
+check("a skip with NO named lane is pending and says so",
+      not _att3 and "NOT covered anywhere" in _pend3[0], f"{_pend3}")
+
 print("\nDOCS — CI cannot report a green run that tested nothing")
 # Both CI jobs invoked ./harness/run_harness.sh with NO arguments. The suite loop
 # ran zero times and the script printed "PASS — every requested suite exited 0"
