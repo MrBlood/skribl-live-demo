@@ -105,6 +105,34 @@ directly (`python3 harness/verify_docs.py`), which does not touch the record.
 Order the seal: release run, then `stamp_docs.py`, then commit, and check
 `stamp_docs.py --check` rather than re-running a suite.
 
+**THE MP4 ATTESTATION HAS TO BE PULLED INTO THE TREE, NOT MERELY DISPATCHED.**
+`release_run.py` reads `harness/MP4-ATTESTATION.txt` from the LOCAL working
+tree when it renders `RELEASE.md` at the end of the run. The CI job writes that
+file on the runner. Those two never meet on their own, so dispatching the job
+concurrently with the sealing run — the fix v281 recorded after sealing stale —
+is necessary and NOT sufficient: v282 did exactly that and sealed stale anyway.
+
+The step that was missing both times, done while the run is still going:
+
+1. Dispatch `harness.yml` on the branch carrying the exact tree being sealed.
+2. When the `mp4` job finishes (~1 minute), write its attestation into
+   `harness/MP4-ATTESTATION.txt`. The file is in `GENERATED`, so writing it
+   does NOT move the frozen tree hash — confirm that with `release_run.tree_hash()`
+   before believing it.
+3. Confirm `release_run.mp4_attestation(frozen)` says `verified`, not `STALE`.
+4. Only then let the run reach its final render.
+
+Get it wrong and the choice is a re-run (~42 minutes) or a sealed record whose
+mp4 line contradicts evidence already in hand. An audit of v278 called that
+second shape an evidence gap, so it is a re-run.
+
+If the environment's egress proxy refuses GitHub's artifact blob storage (403
+on CONNECT, which is the normal case here), the job's own `cat` step puts the
+file verbatim in the log — transcribe from there. That is not hand-typed
+evidence: nothing is computed or invented, and the load-bearing field
+self-verifies, because `release_run` reports STALE on any tree-hash mismatch.
+A bad transcription fails closed.
+
 ## Spending: ask before incurring costs (owner's standing rule)
 
 Never take an action that could create or increase a bill on any of the
