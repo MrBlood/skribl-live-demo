@@ -86,6 +86,39 @@ five broken imports and two crashed suites above were each caught by running
 all 99, never by a representative subset. Commit before running it, so the
 work survives being wrong.
 
+**A CHECK FOR ABSENCE MUST MATCH THE MECHANISM, NOT THE WORD** — and this one
+has now happened three times, in three different files, which is why it is a
+rule rather than an anecdote:
+
+- `verify_review` asserted "the player does not load this module" with a
+  substring search. The template's COMMENT explaining the absence contains the
+  filename, so the check read the explanation as the thing it was looking for.
+- Two `/library` gates were substring searches that passed on their own prose.
+- v283: a comment in `run_harness.sh` explained that generated names must be
+  spelled out — by SHOWING the flag syntax it was describing. `verify_docs`
+  scrapes that file for exactly that syntax, so it read the illustration and
+  found a file called `...`.
+
+Match the tag, the token, the parsed structure — never the human sentence
+around it. And do not write an example of a machine-read literal in prose the
+machine reads: the v281 stamp nearly deleted a whole section because notes
+quoted the counts marker verbatim.
+
+**An assertion that can only pass while the work is OUTSTANDING is a TODO in a
+test's clothes.** `verify_seam`'s "a split is still worth doing" asserted
+`editor_lines > player_lines` and went red the moment `editor_draw.js` landed —
+the fix succeeding is what broke it. Invert such a check to guard the
+achievement instead, so it goes red when the ground is LOST.
+
+**NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.** In
+v213 `git checkout harness/verify_ux.py`, reached for as a cleanup after a
+botched edit, wiped 68 assertions — the tree had one commit, so checkout was
+not an undo, it was a delete. In v283 I did the same thing again with
+`git stash`, mid-task, and had to pop it. To read an old version, use
+`git show <rev>:<path> > /tmp/copy`, which cannot touch the working tree. When
+an edit script goes wrong, FIX IT FORWARD — reverting looks faster and is the
+destructive choice.
+
 ## Sealing a release
 
 Bump `SKRIBL_VERSION` in `skribl/core.py`, add the `DECISIONS.md` entry, and

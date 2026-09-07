@@ -593,7 +593,7 @@ if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(enc
           f"LAST-RUN.txt says {_lr_n.group(1) if _lr_n else '?'} — a release run "
           "must rewrite the record for the WHOLE run, not leave the final batch "
           "standing as it")
-    _rel_t = re.search(r"^\s*tree hash\s+([0-9a-f]{64})", _rel.read_text(encoding="utf-8"), re.M)
+    _rel_t = re.search(r"^\s*tested tree hash\s+([0-9a-f]{64})", _rel.read_text(encoding="utf-8"), re.M)
     _lr_t = re.search(r"^Tree SHA-256\s*:\s*([0-9a-f]{64})", _lr.read_text(encoding="utf-8"), re.M)
     check("and on the tree they were produced from",
           bool(_rel_t and _lr_t) and _rel_t.group(1) == _lr_t.group(1),
@@ -748,7 +748,7 @@ def _fake_root(tmp, assertions, rel_assertions, tree="a1b2c3d4e5f6" + "0" * 52):
     (tmp / "harness" / "RELEASE.md").write_text(
         "# Release evidence\n\n"
         "    result           PASS\n"
-        f"    tree hash        {tree}\n"
+        f"    tested tree hash {tree}\n"
         "    suites on disk   61\n"
         "    suites reported  61\n"
         f"    assertions       {rel_assertions}\n"
