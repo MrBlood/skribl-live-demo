@@ -339,6 +339,40 @@ def mp4_attestation(frozen):
             f"{fields.get('generated', 'time unknown')}")
 
 
+def source_state():
+    """('clean' | 'generated-only dirty' | 'dirty', [paths]) for the working tree.
+
+    "Dirty" means two opposite things here and a bare -dirty suffix reported
+    them identically — the v282 seal recorded `0d88605-dirty` and an outside
+    audit could not tell which it was.
+
+      GENERATED files are written into the tree BY the release itself.
+      harness/MP4-ATTESTATION.txt is dropped in DURING the run so RELEASE.md can
+      report the H.264 result on the tree it describes, and RELEASE.md and
+      LAST-RUN.txt are written at the end. Dirt there is the process working.
+
+      Everything else is source no commit records, which is the reproducibility
+      hole the audit was actually pointing at.
+
+    The audit's original wording — "require a clean working tree" — would have
+    forbidden the mid-run attestation write that v282's own process fix requires,
+    so the rule is narrowed to the second case and the first is enumerated rather
+    than trusted.
+    """
+    try:
+        out = subprocess.run(["git", "-C", str(ROOT), "diff", "--name-only", "HEAD"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return "unknown", []
+    if out.returncode != 0:
+        return "unknown", []
+    dirty = sorted(p for p in out.stdout.split("\n") if p.strip())
+    if not dirty:
+        return "clean", []
+    source = [p for p in dirty if p not in GENERATED]
+    return ("dirty", source) if source else ("generated-only dirty", dirty)
+
+
 def tree_hash():
     inner = "".join(
         f"{hashlib.sha256((ROOT / f).read_bytes()).hexdigest()}  {f}\n"
@@ -373,6 +407,13 @@ def main():
                          "with 75 (incomplete); 0 means run to completion")
     ap.add_argument("--restart", action="store_true",
                     help="discard any existing checkpoint and start over")
+    # A CHECKPOINT RUN DURING DEVELOPMENT IS LEGITIMATELY DIRTY; a final seal is
+    # not. Both use this script, so the refusal has an escape rather than a
+    # workflow that has to be abandoned — and RELEASE.md records which was used,
+    # so "development run" cannot be mistaken for a seal after the fact.
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="proceed with uncommitted source changes (development "
+                         "runs only; RELEASE.md records that it was used)")
     args = ap.parse_args()
 
     on_disk = sorted(p.name for p in HARNESS.glob("verify_*.py"))
@@ -392,6 +433,21 @@ def main():
     print(f"batch coverage: all {len(on_disk)} suites appear exactly once")
     if args.dry_run:
         return 0
+
+    state, paths = source_state()
+    if state == "dirty" and not args.allow_dirty:
+        print("REFUSED: the working tree has uncommitted changes outside the")
+        print("generated-evidence set, so the hash this run is about to freeze")
+        print("would describe source that no commit records:")
+        for f in paths:
+            print(f"    {f}")
+        print("\nCommit them, or pass --allow-dirty for a development run "
+              "(which says so in RELEASE.md).")
+        return 1
+    if state == "generated-only dirty":
+        print("source state   : generated-only dirty — " + ", ".join(paths))
+    elif state == "dirty":
+        print("source state   : DIRTY, --allow-dirty given — " + ", ".join(paths))
 
     frozen = tree_hash()
     state_path = pathlib.Path(args.state)
@@ -516,6 +572,15 @@ def main():
         "not typed — see the note at the top of that file for why.", "",
         f"    result           {'PASS' if ok else 'FAIL'}",
         f"    tree hash        {frozen}",
+        f"    source state     " + (
+            "clean"
+            if state == "clean" else
+            f"{state} ({', '.join(paths)})"
+            if state == "generated-only dirty" else
+            f"DIRTY, --allow-dirty used ({', '.join(paths)}) — "
+            f"NOT A SEALABLE RUN"
+            if state == "dirty" else
+            "unknown (not a git checkout)"),
         f"    SKRIBL_VERSION   " + re.search(
             r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
             (ROOT / "skribl" / "core.py").read_text()).group(1),

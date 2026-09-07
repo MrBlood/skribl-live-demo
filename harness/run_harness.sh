@@ -56,12 +56,35 @@ _tree_files() {
   # the same archive). verify_docs' parity check missed it because its name
   # regex only matched .md/.txt — also fixed at v221. The two lists must stay
   # identical, including extensions the regex writer did not think of.
-  fi | grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' \
-              -e 'README.md' -e 'harness/README.md' -e 'docs/HANDOFF.md' \
-              -e 'START-HERE.md' -e 'harness/RELEASE.md' \
-              -e 'harness/.pg_gunicorn.log' -e 'harness/.pg_f3_gunicorn.log' \
-              -e 'harness/MP4-ATTESTATION.txt' \
-     | LC_ALL=C sort
+  fi | _drop_generated | LC_ALL=C sort
+}
+
+# THE GENERATED SET, ONCE. Two callers need it: the tree hash above excludes
+# these because they are written AFTER the run, and _git_state below uses the
+# same list to tell "the seal wrote its own evidence" apart from "somebody has
+# uncommitted source changes". Those are opposite facts and a bare `-dirty`
+# suffix reported them identically — the v282 seal said `0d88605-dirty` and an
+# outside audit could not tell which it meant.
+#
+# The names stay SPELLED OUT below rather than built from a variable, because
+# verify_docs.py's parity check scrapes this file for them as literal strings
+# and compares the result with release_run.py's GENERATED. A name that reached
+# the list through a variable would be invisible to that check and the two
+# lists could drift apart in silence.
+#
+# WHICH ALSO MEANS: do not write an example of that flag pattern in a comment
+# anywhere in this file. The scraper cannot tell prose from code, so an
+# illustration of the syntax becomes a filename in the list — this comment
+# said so using the syntax it was describing, and the parity check promptly
+# failed on a file called "...". Second time this release: quoting a
+# machine-read token inside prose is how the v281 stamp nearly deleted a
+# section, when notes quoted the counts marker verbatim.
+_drop_generated() {
+  grep -vx -e 'harness/LAST-RUN.txt' -e 'SHA256SUMS' \
+           -e 'README.md' -e 'harness/README.md' -e 'docs/HANDOFF.md' \
+           -e 'START-HERE.md' -e 'harness/RELEASE.md' \
+           -e 'harness/.pg_gunicorn.log' -e 'harness/.pg_f3_gunicorn.log' \
+           -e 'harness/MP4-ATTESTATION.txt'
 }
 
 _tree_hash() {
@@ -73,11 +96,31 @@ _tree_hash() {
 # uncommitted edit reported under a clean-looking SHA is exactly the kind of
 # claim this banner exists to prevent.
 _git_commit() {
-  local c
-  c=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null) || {
-    echo "(not a git checkout)"; return; }
-  git -C "$ROOT" diff --quiet HEAD 2>/dev/null || c="$c-dirty"
-  echo "$c"
+  git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo "(not a git checkout)"
+}
+
+# A commit SHA describes the tree only if the working copy is clean, and
+# "clean" has two useful meanings here rather than one. Generated evidence is
+# written into the tree DURING a run by design — harness/MP4-ATTESTATION.txt is
+# dropped in mid-run so RELEASE.md can report the H.264 result on the tree it
+# describes — so dirt inside the generated set is expected. Dirt OUTSIDE it is
+# the reproducibility hole: source that no commit records.
+#
+# The banner enumerates which files, rather than printing a suffix, so a reader
+# can see what the exception actually covered instead of taking it on trust.
+_git_state() {
+  local dirty src
+  git -C "$ROOT" rev-parse --short HEAD >/dev/null 2>&1 || { echo "unknown"; return; }
+  dirty=$(git -C "$ROOT" diff --name-only HEAD 2>/dev/null)
+  [ -z "$dirty" ] && { echo "clean"; return; }
+  src=$(printf '%s\n' "$dirty" | _drop_generated)
+  if [ -z "$src" ]; then
+    echo "generated-only dirty"
+    printf '%s\n' "$dirty" | LC_ALL=C sort | sed 's/^/                            /'
+  else
+    echo "DIRTY OUTSIDE THE GENERATED SET — these are not recorded by any commit"
+    printf '%s\n' "$src" | LC_ALL=C sort | sed 's/^/                            /'
+  fi
 }
 
 # Isolated database per run (round 4, #7). This previously reused the repository
@@ -130,6 +173,7 @@ RUN_HEADER="$({
   echo "Host                    : $(uname -sm)"
   echo "Tree SHA-256            : $(_tree_hash)"
   echo "Git commit              : $(_git_commit)"
+  echo "Source state            : $(_git_state)"
   # SKRIBL_VERSION moved from app.py into the package when Skribl became a
   # blueprint. Look in both so the run header is never silently blank.
   echo "SKRIBL_VERSION          : $(grep -h -m1 "^SKRIBL_VERSION" "$ROOT/app.py" "$ROOT/skribl/core.py" 2>/dev/null | head -1 | cut -d'"' -f2)"
