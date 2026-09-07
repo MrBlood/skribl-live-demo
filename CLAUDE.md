@@ -110,14 +110,11 @@ test's clothes.** `verify_seam`'s "a split is still worth doing" asserted
 the fix succeeding is what broke it. Invert such a check to guard the
 achievement instead, so it goes red when the ground is LOST.
 
-**NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.** In
-v213 `git checkout harness/verify_ux.py`, reached for as a cleanup after a
-botched edit, wiped 68 assertions — the tree had one commit, so checkout was
-not an undo, it was a delete. In v283 I did the same thing again with
-`git stash`, mid-task, and had to pop it. To read an old version, use
-`git show <rev>:<path> > /tmp/copy`, which cannot touch the working tree. When
-an edit script goes wrong, FIX IT FORWARD — reverting looks faster and is the
-destructive choice.
+**NEVER `git checkout` OR `git stash` A FILE THAT HOLDS UNCOMMITTED WORK.**
+With nothing committed to fall back to, checkout is not an undo, it is a
+delete. Read an old version with `git show <rev>:<path> > /tmp/copy`, which
+cannot touch the working tree. When an edit script goes wrong, FIX IT FORWARD —
+reverting looks faster and is the destructive choice. (Twice: v213, v283.)
 
 ## Sealing a release
 
@@ -149,25 +146,17 @@ Measured, same tree, same suite, the only variable being the cluster:
     PostgreSQL up      verify_hold 2nd-worst frame deviation  32 ms  FAIL
     PostgreSQL down    verify_hold 2nd-worst frame deviation   1 ms  PASS
 
-`verify_hold` times a real playback loop and asserts frame-pacing evenness. Its
-tolerance already allows one contention outlier; the checkpointer and autovacuum
-supply a second. That is almost certainly the v264 flake its own batch comment
-records, and it is not a flake — it reproduces on demand and disappears on
-demand. A seal run with the cluster up is a seal that can fail for a reason
-having nothing to do with the tree.
-
-The same logic applies to anything else periodically hungry on this box during a
-run: the browser timing suites are the instrument, and background load is noise
-in it.
+`verify_hold` asserts frame-pacing evenness and its tolerance already allows one
+contention outlier; the checkpointer and autovacuum supply a second. The same
+holds for anything else periodically hungry on this box during a run — the
+browser timing suites are the instrument, and background load is noise in it.
 
 **THE MP4 ATTESTATION HAS TO BE PULLED INTO THE TREE, NOT MERELY DISPATCHED.**
 `release_run.py` reads `harness/MP4-ATTESTATION.txt` from the LOCAL working
-tree when it renders `RELEASE.md` at the end of the run. The CI job writes that
-file on the runner. Those two never meet on their own, so dispatching the job
-concurrently with the sealing run — the fix v281 recorded after sealing stale —
-is necessary and NOT sufficient: v282 did exactly that and sealed stale anyway.
-
-The step that was missing both times, done while the run is still going:
+tree when it renders `RELEASE.md` at the end of the run; the CI job writes that
+file on the runner. Those two never meet on their own, so **dispatching the job
+concurrently is necessary and NOT sufficient** — the attestation has to be
+carried across by hand, while the run is still going:
 
 1. Dispatch `harness.yml` on the branch carrying the exact tree being sealed.
 2. When the `mp4` job finishes (~1 minute), write its attestation into
@@ -178,8 +167,8 @@ The step that was missing both times, done while the run is still going:
 4. Only then let the run reach its final render.
 
 Get it wrong and the choice is a re-run (~42 minutes) or a sealed record whose
-mp4 line contradicts evidence already in hand. An audit of v278 called that
-second shape an evidence gap, so it is a re-run.
+mp4 line contradicts evidence already in hand. The second is an evidence gap,
+so it is a re-run.
 
 If the environment's egress proxy refuses GitHub's artifact blob storage (403
 on CONNECT, which is the normal case here), the job's own `cat` step puts the

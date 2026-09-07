@@ -72,45 +72,34 @@ class BootFailure(RuntimeError):
 def goto(page, base, path, *, settle=150, boot_timeout=5000, require_boot=None):
     """Navigate an existing page and wait for the surface to be ready.
 
-    Raises BootFailure if a surface that should raise a boot marker does not.
-
-    THIS FAILS CLOSED, AND THE FIRST VERSION DID NOT. It swallowed the timeout
-    with `except: pass` on the reasoning that a Pad which failed to boot would
-    still fail later, on the assertions that then find no editor. That reasoning
-    is true and insufficient, for the two reasons verify_boot.py exists:
-
-      * the failure surfaces three screens from its cause, as "no editor" rather
-        than "flip.js died at line N" — the misattribution that cost four
-        debugging rounds in one session and motivated the boot marker at all;
-      * a readiness check that cannot go red is not a readiness check. The v282
-        release that ADDED "a green check is not evidence until it has been
-        shown to go red" to CLAUDE.md shipped this function violating it, which
-        is how the outside audit found it.
+    A known Skribl surface must raise its boot marker; a missing marker is a
+    BootFailure naming the path, the marker and what `window.__skriblBoot`
+    actually held. It fails closed so a dead script reports itself rather than
+    surfacing three screens later as "no editor" — `verify_boot.py` asserts
+    both directions, including that this helper can go red.
 
     `require_boot` resolves three ways:
 
       None (default)  require the marker when boot_key() knows one for `path`,
                       and skip the wait when it does not.
-      False           never wait, never raise. For the two legitimate cases
-                      below ONLY, each of which must say WHY at the call site.
-      True            require, and raise immediately if no marker is known for
-                      the path — that combination is a programming error, not a
-                      slow page.
+      False           never wait, never raise. Documented cases below ONLY;
+                      each call site must say which, and why.
+      True            require, and raise if no marker is known for the path —
+                      that combination is a programming error, not a slow page.
 
-    TWO LEGITIMATE OPT-OUTS EXIST, AND THEY ARE NOT THE SAME CASE:
+    TWO OPT-OUT CASES EXIST AND THEY ARE NOT THE SAME:
 
-      1. THE PAGE IS NOT A SKRIBL SURFACE. verify_example.py points BASE at the
-         example HOST application, whose "/" is the host's own page and sets no
-         marker. Insisting there took the full timeout and then crashed.
-      2. THE PAGE IS A SKRIBL SURFACE, DELIBERATELY PREVENTED FROM BOOTING.
-         verify_visual.py aborts app.js on purpose to assert the editor is not
-         blank in the window a real visitor sits in while it downloads. That is
-         the regression a user photographed, so the assertion is load-bearing
-         and the page can never set the marker.
+      1. NOT A SKRIBL SURFACE. verify_example.py points BASE at the example
+         HOST app, whose "/" raises no marker.
+      2. A SKRIBL SURFACE DELIBERATELY PREVENTED FROM BOOTING. verify_visual.py
+         aborts app.js on purpose, to assert the editor is not blank while it
+         downloads. The page can never set the marker; that IS the assertion.
 
     Blocking ONE script is not case 2: verify_gifenc.py aborts gifenc.min.js and
-    Flip still boots — it asserts exactly that on the next line — so it requires
-    the marker like everything else, and is stronger for it.
+    Flip still boots, which it asserts on the next line, so it requires the
+    marker like everything else.
+
+    A growing count of require_boot=False call sites is itself the warning.
     """
     page.goto(base + path, wait_until="load")
     key = boot_key(path)

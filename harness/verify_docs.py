@@ -584,6 +584,16 @@ _lr = ROOT / "harness" / "LAST-RUN.txt"
 # invocation. Like the stamped stanzas, this therefore validates the PREVIOUS
 # release — verify_docs runs inside the suite loop, so it cannot see a record
 # that has not been written yet.
+# NOT APPLICABLE IS NOT SKIPPED, AND THE SUMMARY NOW SAYS WHICH. These two run
+# only when LAST-RUN.txt holds a whole-run record. Inside release_run.py it does
+# not — verify_docs runs in batch 9 of 52, when the record describes batch 8 —
+# so the suite honestly reports 81 where CI, running all 99 in one invocation,
+# reports 83. Both numbers were correct and the record could not tell them
+# apart, which let a release summary and its own evidence disagree without
+# either being false. "Skipped" would have been the wrong word: it implies
+# coverage debt, and these are structurally inapplicable until the whole-run
+# artifact exists.
+_not_applicable = []
 if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(encoding="utf-8"):
     _rel_n = re.search(r"^\s*assertions\s+(\d+)", _rel.read_text(encoding="utf-8"), re.M)
     _lr_n = re.search(r"^assertions passed:\s*(\d+)", _lr.read_text(encoding="utf-8"), re.M)
@@ -599,16 +609,24 @@ if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(enc
           bool(_rel_t and _lr_t) and _rel_t.group(1) == _lr_t.group(1),
           "one of them describes a different tree")
 else:
-    # SAY SO. Skipping this pair is legitimate — a targeted run_harness.sh
-    # invocation owns LAST-RUN.txt and has no whole-run record to compare —
-    # but skipping it QUIETLY means the suite reports 77/77 in one place and
-    # 79/79 in another with nothing to explain the gap, and the reader's first
-    # guess is that two assertions regressed. This project already holds that a
-    # skipped SUITE must announce itself; an assertion that vanishes from the
-    # denominator is the same defect one level down.
-    print("    SKIPPED (2 assertions): harness/LAST-RUN.txt is not a whole-run "
-          "record, so there is nothing to compare RELEASE.md against.")
-    print("    Restore it with `git checkout harness/LAST-RUN.txt` to run them.")
+    # SAY SO, AND SAY IT WITH THE RIGHT WORD. Not running this pair is
+    # legitimate — a targeted run_harness.sh invocation owns LAST-RUN.txt and
+    # has no whole-run record to compare — but doing it QUIETLY means the suite
+    # reports 81/81 in one place and 83/83 in another with nothing to explain
+    # the gap, and the reader's first guess is that two assertions regressed.
+    # That is not hypothetical: a v283 release summary and its own evidence
+    # disagreed exactly this way, and neither was false.
+    #
+    # NOT APPLICABLE, NOT SKIPPED. "Skipped" implies coverage debt; these are
+    # structurally inapplicable until the whole-run artifact exists, and they
+    # run and pass the moment it does. The distinction is the point — the
+    # denominator is what needed exposing, not another subsystem.
+    _not_applicable = ["RELEASE.md and LAST-RUN.txt agree on the assertion count",
+                       "and on the tree they were produced from"]
+    print("    NOT APPLICABLE (2 assertions): harness/LAST-RUN.txt is not a "
+          "whole-run record, so there is nothing to compare RELEASE.md against.")
+    print("    They run in any single invocation that covers the whole suite "
+          "set — CI, or a bare ./harness/run_harness.sh.")
 
 print("\nDOCS — a run with skips is not published as 'all green'")# The runner reports PASS WITH SKIPS when nothing failed but something was
 # skipped; the stanza generator decided on failures alone and wrote "all green",
@@ -1215,7 +1233,12 @@ check("docs/INTEGRATION.md names every seam a host can pass",
 
 
 bad = [r for r in results if not r[0]]
+# The leading "N/M passed" token is a contract run_harness.sh parses with a
+# LEADING-anchored regex, so trailing text is safe — that is how the FAILURES
+# tail already works. Anything added here goes after it, never before.
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
+      (f"  ({len(_not_applicable)} not applicable: "
+       + "; ".join(_not_applicable) + ")" if _not_applicable else "") +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
 # This suite printed its failures and then exited 0, so run_harness.sh — which
 # takes ok/FAIL from the exit code — reported it as "ok — 32/33 passed" and the
