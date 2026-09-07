@@ -6472,3 +6472,69 @@ entries are true of the version they sit under.
 This work moves history OUT of current-state documents INTO the log. Deleting
 the log is the inverse operation, and the same argument keeps the v283 entries
 above as written.
+
+## v285 -- the splitting rule was written nineteen times and stated nowhere
+
+`release_run.py`'s BATCHES block carried a reason beside almost every solo
+batch and nowhere stated the rule those reasons were instances of. Nineteen of
+them said one thing in different words: this suite measures something, a second
+Chromium in the batch competes for the same CPU, so it runs alone. A maintainer
+placing a new suite could read all nineteen and still have to infer the
+criterion, because the criterion was the one thing not written down.
+
+It is now, once, above the list:
+
+    measures    it reads rendered geometry, canvas pixels or frame pacing, and
+                a contention spike would read as a moved pixel or a pacing
+                failure rather than as load
+    size        it will not finish inside one sandbox invocation, and a batch
+                that never finishes never checkpoints
+    store       it mutates state a neighbour can SEE -- a media root, the
+                shared server's posts, a database
+
+Everything else shares. Each solo batch keeps a one-word tag naming which
+applies; `store` is the only reason that names specific neighbours, so those
+batches keep their note and the others lost theirs.
+
+**THE v284 RULE DOES NOT APPLY HERE, AND THAT WAS CHECKED RATHER THAN
+ASSUMED.** "A suite explains itself" would send each reason into the suite it
+describes. Reading all 99 for placement language found none: the four that
+mention contention -- `verify_hold`, `verify_cssplit`, `verify_padcanvas`,
+`verify_review` -- do so about an assertion's own TOLERANCE, not about where
+the suite runs. Placement is a fact about the relationship between suites in a
+run, and no single suite owns it, so the concept's home is this file and the
+fix was to state it once rather than relocate it.
+
+**Reading found three claims that had gone stale in place**, which is the
+argument for the change independent of its size:
+
+  * `verify_ux` "is 284 assertions" -- it is 333 on the sealed tree;
+  * `verify_sweepjob` "shares a batch with the other cheap v224 suite" -- it
+    has a batch of its own, and so does the suite named;
+  * `verify_tween`'s "nothing but this comment says so", about needing a line
+    per suite -- START-HERE.md's invariants table says so, and the coverage
+    refusal is what actually enforces it.
+
+**A fourth output is the honest one: `unrecorded`.** Nine solo batches meet
+none of the three criteria -- they neither measure nor mutate, and sit alone
+because that is how the list grew. Two of the old comments admitted it in
+passing (`verify_pagespan` "shares a batch with nothing only because the two
+suites either side of it are already alone"). The tag records that no reason is
+on file; it deliberately does NOT say merging them is safe, because nobody has
+measured that. Making the gap visible is worth more than nine invented reasons.
+
+**The batch layout did not change and that was proved, not asserted.** Old and
+new modules were imported side by side and their BATCHES compared -- a reorder,
+a moved suite or a dropped suite each make that comparison go red, checked
+against all three. The block went 205 -> 112 lines, 145 -> 51 of them comment,
+with the run it describes byte-identical.
+
+**THIS ENTRY IS UNSEALED BY DECISION, so main carries a v285 heading above a
+tree whose `SKRIBL_VERSION` still reads v284.** That is deliberate and not
+drift. Nothing here can move a suite result: `BATCHES`, `GENERATED` and
+`SKIP_COVERAGE` are identical to v284's, and no suite executes this file except
+`verify_docs`, which imports it for `SKIP_COVERAGE` alone. A seal would
+therefore spend its ~42 minutes restating v284's counts under a new tree hash,
+immediately after the run that produced them. The owner's call was to let it
+ride: the bump to v285 and the aggregate happen when the next
+behaviour-changing work lands, and that one seal covers both.
