@@ -58,8 +58,20 @@
   --line-loud: #3a4150;
 
   /* Text, dimmest first */
-  --text-faint: #5f6675;
-  --text-faint-2: #697080;
+  /* NOT FOR TEXT A USER HAS TO READ. Measured against every surface in this
+     ramp, --text-faint reaches 2.99-3.37:1 and --text-dim 2.68-3.02:1, both
+     under WCAG AA's 4.5:1 for normal-size text — and an accessibility audit of
+     v278 found them carrying instructions, trim times, optional-field state
+     and character counters, at 10-13px, which makes it worse in practice than
+     the ratio alone suggests.
+     There is no dimmer tier that also passes: --text-muted (#7d8496) is
+     4.61:1 against the lightest surface here, so anything meaningfully fainter
+     fails somewhere. --text-dim survives for DISABLED controls and
+     placeholders, where the text-contrast requirement does not apply.
+     Everything a user reads uses --text-muted; verify_a11y.py holds that line.
+
+     --text-faint/-2 were dropped in v281: defined, used by no rule, unable to
+     pass. verify_a11y.py fails such a token now. */
   --text-soft: #8a93a6;
   --text-soft-2: #8b93a5;
   --text-soft-3: #8b97a8;
@@ -156,8 +168,8 @@
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
-     .post-watch), Flip's post/share CTAs (.flip-upload, .flip-share-open),
-     and the whole PLAYER surface — a shared link travels off the branded
+     .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
@@ -1119,31 +1131,6 @@ body.replaying .addtake-pill { opacity: 0; pointer-events: none; }
   z-index: 30;
 }
 
-.tab-bg-slider {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 33.333%;
-  background: var(--surface-control);
-  transition: transform 0.42s var(--spring);
-  z-index: 0;
-  pointer-events: none;
-}
-
-.tab-slider {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2.5px;
-  background: var(--ui-active);
-  border-radius: var(--r-pill);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  transition: transform 0.42s var(--spring), width 0.42s var(--spring);
-  z-index: 1;
-  pointer-events: none;
-}
-
 .tab-btn {
   flex: 1;
   display: flex;
@@ -1384,15 +1371,6 @@ body.replaying .tab-panel,
 body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 /* ---------- Draw panel ---------- */
-.brush-size-inline {
-  font-size: 10px;
-  color: var(--text-faint);
-  font-weight: 500;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  margin-left: auto;
-  white-space: nowrap;
-}
 
 .size-label {
   font-size: 11px;
@@ -1474,7 +1452,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-radius: var(--r-control);
   border: 1px solid var(--hairline);
   background: transparent;
-  color: var(--text-faint);
+  color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1494,43 +1472,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .undo-btn:hover { background: var(--surface-control-hover); color: var(--text-strong); }
 .undo-btn:disabled { opacity: 0.3; cursor: default; }
-
-.size-group {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 160px;
-}
-
-.size-btn {
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background: var(--surface-control-hover);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease, transform 0.3s var(--spring);
-  flex-shrink: 0;
-}
-
-.size-btn[data-size="2"]  { width: 18px; height: 18px; }
-.size-btn[data-size="5"]  { width: 22px; height: 22px; }
-.size-btn[data-size="10"] { width: 28px; height: 28px; }
-.size-btn[data-size="20"] { width: 36px; height: 36px; }
-
-.size-btn:active { transform: scale(0.9); }
-.size-btn.active { background: var(--ui-active); }
-
-.size-btn span {
-  border-radius: 50%;
-  background: var(--text-muted);
-  display: block;
-  transition: background 0.15s ease;
-}
-
-.size-btn.active span { background: var(--text-primary); }   /* not #fff: a white dot vanishes on a light drawer */
 
 .color-section, .bg-section {
   display: flex;
@@ -1627,7 +1568,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .reposition-btn[hidden] { display: none; }
 #photoZoomRow[hidden] { display: none; }
 .reposition-hint {
-  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: var(--text-faint);
+  margin: 8px 2px 0; font-size: 11px; line-height: 1.45; color: var(--text-muted);
 }
 .reposition-hint[hidden] { display: none; }
 
@@ -1637,28 +1578,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 .canvas-wrap.repositioning canvas { cursor: inherit; pointer-events: auto; }
 
 /* --- More tools drawer (Draw tab) --- */
-.more-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  width: 100%; padding: 9px; border: 1px solid rgba(124, 92, 255, 0.32);
-  border-radius: 10px; background: rgba(124, 92, 255, 0.08); color: var(--text-bright);
-  font-size: 12px; font-weight: 500; cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.more-toggle-main { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
-.more-toggle-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.current-color-chip {
-  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
-  background: #ffffff;
-  box-shadow:
-    inset 0 0 0 1px rgba(var(--wash-rgb), 0.22),
-    0 0 0 1.5px var(--surface-panel),
-    0 0 0 3px rgba(var(--wash-rgb), 0.85);
-}
-.more-toggle:hover { background: rgba(124, 92, 255, 0.14); border-color: rgba(124, 92, 255, 0.5); color: var(--text-strong-2); }
-.more-toggle.open { color: var(--text-bright); }
-.more-chevron { width: 15px; height: 15px; color: var(--accent-bright); transition: transform .25s var(--spring); }
-.more-toggle.open .more-chevron { transform: rotate(180deg); }
 
 .more-drawer { display: flex; flex-direction: column; gap: 12px; }
 .more-drawer[hidden] { display: none; }
@@ -2015,7 +1934,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   height: 80px;
   border: 1px dashed var(--line-mid);
   border-radius: 12px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2055,15 +1974,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 }
 
 .music-detail[hidden] { display: none; }
-
-.music-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: 13px;
-  color: var(--text-strong);
-}
 
 .dropzone-remove {
   margin-left: auto;
@@ -2295,7 +2205,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   justify-content: space-between;
   margin-top: 6px;
   font-size: 11px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2319,7 +2229,7 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   margin-bottom: 12px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-faint);
+  color: var(--text-muted);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2432,15 +2342,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   border-top: 1px solid var(--line);
 }
 
-.finetune-head {
-  font-size: 11px;
-  color: var(--text-faint);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
 .finetune-grid {
   display: flex;
   align-items: flex-start;
@@ -2494,25 +2395,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
   padding: 0 2px;
 }
 
-.finetune-divider {
-  height: 1px;
-  background: var(--line);
-  margin: 12px 0;
-}
-
-.finetune-step {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.step-name {
-  font-size: 11px;
-  color: var(--text-tool);
-  font-weight: 600;
-}
-
 .nudge-btn {
   /* v206 (option A): 26 -> 32 visual, readable but still compact enough for
      the three side-by-side Start/End/Step columns; the invisible 44pt tap
@@ -2546,33 +2428,6 @@ body.replaying .zoom-hud { opacity: 0; pointer-events: none; }
 
 .nudge-btn:hover { background: var(--line); color: var(--text-strong); }
 .nudge-btn:active { background: var(--ui-active); color: #fff; }
-
-.step-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 5px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--surface-well);
-}
-
-.step-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.step-value {
-  min-width: 34px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--ui-hi);
-  font-variant-numeric: tabular-nums;
-}
 
 .step-btn {
   width: 22px;
@@ -3169,15 +3024,7 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
 
 /* Magnifier toggle — lit when the zoom controls are showing. Uses the same
    purple ring as the record button (subtle border + glow + accent icon). */
-.magnify-btn.active {
-  background: var(--surface-control);
-  border-color: rgba(124, 92, 255, 0.3);
-  color: var(--ui-hi);
-}
-.magnify-btn.active svg { filter: none; }
-@media (hover: hover) {
-  .magnify-btn.active:hover { background: var(--surface-control-hover); }
-}
+
 
 /* Player never shows the editor's "Start drawing" hint (leaked on not-found). */
 body.player-mode #canvasEmptyHint { display: none !important; }
@@ -3241,7 +3088,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
     flex-direction: column;
     line-height: 1.05;
   }
-  .header.compact .brand-word { display: block; }
 
   .header.compact .btn.play.btn-icon {
     width: auto;
@@ -3415,16 +3261,26 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   gap: 8px;
 }
 
+/* THE SAME FIELD AS .post-input, deliberately. It was invented instead of
+   matched, and picked up 13.5px text — below the 16px threshold this file
+   documents TWICE (see .zoom-hud .zoom-val-input) as the point where iOS
+   Safari zooms the whole page on focus. Tapping it on an iPhone zoomed the
+   page. It also read as inert, and that was the same mistake seen from the
+   other side: its solid #171b23 fill sits five units off the sheet's ground,
+   where .post-input's translucent lift reads as a well the way the title and
+   caption fields do. Matching the app's existing text field fixes both, and
+   the author is already typing into two of them one sheet over. */
 .export-nameinput {
   flex: 1;
   min-width: 0;
-  background: var(--surface-control);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--hairline);
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 9px 11px;
-  font: inherit;
-  font-size: 13.5px;
+  font-family: inherit;
+  font-size: 16px;
   color: var(--text-primary);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .export-nameinput:focus {
@@ -3675,7 +3531,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 .post-field-optional {
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -3706,7 +3562,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 .post-char-count {
   align-self: flex-end;
   font-size: 10.5px;
-  color: var(--text-dim);
+  color: var(--text-muted);
 }
 
 .post-submit {
@@ -3892,7 +3748,6 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 
 /* ---------- Help button + drawer ---------- */
-.help-btn { position: relative; }
 
 .help-drawer {
   position: absolute;
@@ -4033,18 +3888,6 @@ html.help-open, html.help-open body { overflow: hidden; }
   margin-bottom: 18px;
 }
 
-.help-note {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  background: rgba(124, 92, 255, 0.08);
-  border: 1px solid rgba(124, 92, 255, 0.25);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 6px;
-}
-.help-note strong { color: var(--text-primary); font-weight: 600; }
-
 .accordion {
   display: flex;
   flex-direction: column;
@@ -4109,7 +3952,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-count {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-faint);
+  color: var(--text-muted);
   background: var(--surface-control-hover);
   border: 1px solid var(--line-2);
   padding: 3px 8px;
@@ -4121,7 +3964,7 @@ html.help-open, html.help-open body { overflow: hidden; }
 .accordion-chevron {
   width: 18px;
   height: 18px;
-  color: var(--text-faint-2);
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4158,21 +4001,6 @@ html.help-open, html.help-open body { overflow: hidden; }
   flex-direction: column;
   gap: 15px;
   padding: 16px 16px 18px;
-}
-
-.help-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-faint);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-}
-
-.help-divider {
-  height: 1px;
-  background: var(--surface-control-hover);
-  margin: 8px 0 20px;
 }
 
 .help-tip {
@@ -4318,7 +4146,6 @@ input:focus-visible {
   /* 15px on mobile, same tier .flip-word takes below 440 — the phone is not a
      thinner brand. */
   .brand > span { font-size: 15px; white-space: nowrap; }
-  .header.compact .brand-word { display: inline; }
 
   .actions {
     flex: 1;
@@ -4350,13 +4177,6 @@ input:focus-visible {
     font-size: 10px;
     padding: 0 8px;
     flex-shrink: 0;
-  }
-
-  .help-btn {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    padding: 0;
   }
 
   /* Unify every round control in the header to one size (34px).
@@ -4401,8 +4221,6 @@ input:focus-visible {
     min-height: 240px;
   }
 
-  .brush-size-inline { display: none; }
-
   .undo-btn {
     width: 34px;
     height: 34px;
@@ -4418,16 +4236,6 @@ input:focus-visible {
   }
 
   .tool-row { gap: 5px; }
-
-  .size-btn[data-size="20"] {
-    width: 30px;
-    height: 30px;
-  }
-
-  .size-group {
-    width: auto;
-    flex: 1;
-  }
 
   .music-trim-handle,
   .zoom-handle {
@@ -4770,7 +4578,7 @@ body.player-mode #canvas {
 
 .player-brand {
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   letter-spacing: 0.03em;
   /* "made with <signature>": the words are quiet type, the mark is real ink.
      The signature is the brand's one appearance on a shared page — the header
@@ -4839,12 +4647,6 @@ body.player-mode #canvas {
 
 /* ---------- Pass 2: brush sizes read as one labeled control ---------- */
 #drawPanel .tool-row { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
-#drawPanel .size-group {
-  width: fit-content; justify-content: flex-start; gap: 12px;
-  padding: 7px 12px; border-radius: 12px; background: rgba(var(--wash-rgb), .035);
-}
-.size-btn span { background: var(--text-brightest); }              /* brighter dots so the small one reads */
-.size-btn.active span { background: var(--text-primary); }   /* not #fff: a white dot vanishes on a light drawer */
 
 
 /* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
@@ -5024,6 +4826,16 @@ body.player-mode #canvas {
 .brush-dot-cell { flex: none; width: 34px; display: flex; align-items: center; justify-content: center; }
 .brush-dot { background: var(--text-primary); border-radius: 50%; flex: none; }  /* the size preview has to show on both themes */
 .brush-slider-line .slider-nudge-btn { width: 24px; height: 24px; }
+
+/* Visually hidden, still announced. Lives HERE and not only in flip.css: the
+   posted drawer is shared, Pad loads styles.css alone, and a live region
+   without this class is a line of status text visible in the middle of the
+   panel. Exactly the way .export-optlbl was flip.css-only and rendered
+   unstyled on Pad for several releases. */
+.vis-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 
 /* ===================================================================
    Apple-style mobile header (v74): bare glyphs, one filled Post pill,
@@ -5328,7 +5140,12 @@ body.player-mode #canvas {
 .posted-thumb { width: 42px; height: 34px; border-radius: 8px; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   font-size: 15px; color: var(--accent-tint-2); background: rgba(124,92,255,0.18); }
-.posted-thumb-pad { background: rgba(91,140,255,0.18); }
+/* THE BASE IS THE FLIP COLOUR and .posted-thumb-flip deliberately has no rule
+   of its own — the class is emitted so the markup names what it is, and Pad
+   is the one that overrides. Said out loud because a class with no rule is
+   what verify_exportui.py exists to catch, and the next person editing
+   .posted-thumb above needs to know its background is load-bearing for Flip
+   rather than a neutral default. */
 /* SVG now, not a font glyph: the two characters rendered at whatever weight and
    baseline the system font chose, so they sat unevenly beside each other. */
 .posted-thumb svg { width: 17px; height: 17px; display: block; }
@@ -5337,11 +5154,32 @@ body.player-mode #canvas {
 .posted-title { font-size: 13px; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .posted-sub { font-size: 11px; color: var(--text-secondary); }
+/* The destructive sibling of .posted-copy. Danger-toned so it does not read
+   as another neutral utility beside "Copy link", and only rendered at all when
+   this browser holds the post's revocation key. */
+.posted-delete {
+  flex: 0 0 auto; padding: 5px 10px; border-radius: 8px;
+  background: rgba(244, 50, 111, 0.12); border: 1px solid rgba(244, 50, 111, 0.35);
+  color: var(--danger-soft); font-size: 12px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.posted-delete:hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); }
+.posted-delete:disabled { opacity: .6; cursor: default; }
+
 .posted-copy { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);
   padding: 5px 9px; border-radius: 8px; cursor: pointer; }
 .posted-copy:hover { color: var(--text-primary); }
 .posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
+/* Copy key — the same chrome as Copy link because it is the same kind of act,
+   and deliberately NOT danger-toned like .posted-delete beside it: copying a
+   recovery key destroys nothing. It sits between the two so the destructive
+   button is not the only thing a worried person sees. */
+.posted-key { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+  border: 1px solid var(--hairline-strong); color: var(--text-secondary);
+  padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+.posted-key:hover { color: var(--text-primary); }
+.posted-key.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
   font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
 .posted-del:hover { color: var(--danger, var(--danger)); }
@@ -5572,7 +5410,9 @@ body.player-mode #canvas {
   /* A hairline purple border, nothing more — no fill glow. The box is quiet at
      rest and just firms the line on focus. */
   background: var(--surface-base); border: 1px solid rgba(124, 92, 255, 0.5);
-  color: var(--text-primary); font-size: 15px; font-weight: 600; font-family: inherit; outline: none;
+  color: var(--text-primary);
+  /* 16px: below it iOS Safari zooms the whole page on focus. See .zoom-hud .zoom-val-input. */
+  font-size: 16px; font-weight: 600; font-family: inherit; outline: none;
 }
 .name-input::placeholder { color: var(--text-dim); font-weight: 500; }
 /* Just firm the hairline on focus — no second ring. The global
@@ -5597,7 +5437,7 @@ body.player-mode #canvas {
    already read this way via its flex-grow override below. */
 .tune-label { display: flex; flex-direction: column; gap: 1px; flex: 0 0 auto; width: 150px; margin-right: auto; }
 .tune-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.tune-hint { font-size: 11px; color: var(--text-dim); }
+.tune-hint { font-size: 11px; color: var(--text-muted); }
 .tune-tool.open { color: var(--ui-hi); background: rgba(124, 92, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.45); }
 .flip-grid { position: absolute; top: 0; left: 0; pointer-events: none; display: none; z-index: 5; }
 .flip-grid.on { display: block; }
@@ -5717,32 +5557,7 @@ body.playing .flip-grid { display: none; }
   filter: none;
 }
 
-/* Loading: an in-progress action hides its label and shows a spinner in place,
-   keeps its footprint (no layout jump), and cannot be re-tapped. Apply with
-   the .is-loading class; aria-busy is set alongside for assistive tech. */
-.btn.is-loading,
-.pb.is-loading,
-.loop-btn.is-loading {
-  position: relative;
-  color: transparent !important;
-  pointer-events: none;
-}
-.btn.is-loading::after,
-.pb.is-loading::after,
-.loop-btn.is-loading::after {
-  content: "";
-  position: absolute;
-  width: 16px; height: 16px;
-  top: calc(50% - 8px); left: calc(50% - 8px);
-  border: 2px solid rgba(var(--wash-rgb), 0.35);
-  border-top-color: var(--text-primary);   /* the leading arc, against a wash of the same ink */
-  border-radius: 50%;
-  animation: skribl-spin 0.8s linear infinite;
-}
-@keyframes skribl-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
-}
+
 
 /* v207: help pills show the actual button glyph beside the name — people match
    shapes, not words — using the same SVG the real control renders. */
@@ -6538,8 +6353,6 @@ body.playing .flip-grid { display: none; }
 
   /* Text — the brightest becomes the darkest ink */
   --text-dim:                #8c94a3;
-  --text-faint:              #858d9c;
-  --text-faint-2:            #7a8291;
   --text-muted:              #6c7483;
   --text-soft:               #5f6775;
   --text-soft-2:             #5f6775;
@@ -6612,3 +6425,130 @@ body.playing .flip-grid { display: none; }
   --accent-tint-2: #4c31c4;
 
 }
+
+/* --- the recovery-key panel (lib/recoverykey.js) --------------------------
+   Shown only when the browser could not keep an anonymous post's revocation
+   key, so it is the last place that secret exists. It is styled to be read
+   rather than dismissed: full-bleed scrim, the key in a monospace well large
+   enough to transcribe by hand off a phone, and no close affordance except the
+   button that says the user has saved it.
+
+   Deliberately not sharing .post-sheet: that sheet's job is to be got through
+   quickly and this one's is to stop somebody. Borrowing its chrome would have
+   made them look interchangeable at the one moment they must not. */
+.reckey-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;                 /* above the eyedropper loupe, the previous
+                                     ceiling: nothing may cover this */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  /* Pure black, like .menu-overlay::before, and NOT a hand-mixed dark grey:
+     verify_surfaces refuses an untokenised neutral because it cannot follow
+     a light theme. rgba(6,7,10,.82) was exactly that and the ratchet caught
+     it. Heavier than the menu's 0.4 on purpose — this panel has to be read,
+     not glanced past. */
+  background: rgba(0, 0, 0, 0.62);
+}
+.reckey-sheet {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-sheet);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+.reckey-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+.reckey-why, .reckey-note {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.reckey-note { margin-bottom: 16px; }
+/* 16px minimum: _ZOOM_EXEMPT is empty and this is a field a user may focus to
+   select from, so anything smaller zooms the page on iOS. */
+.reckey-value {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-well);
+  color: var(--text-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  line-height: 1.4;
+  word-break: break-all;
+  user-select: all;
+}
+.reckey-actions { display: flex; gap: 8px; }
+.reckey-copy, .reckey-done {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.reckey-copy {
+  border: 1px solid var(--line-strong);
+  background: var(--surface-control);
+  color: var(--text-strong);
+}
+.reckey-copy:hover { background: var(--surface-control-hover); }
+.reckey-done {
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--text-strong);
+}
+.reckey-said {
+  margin: 10px 0 0;
+  min-height: 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+/* The pre-post volatility notice, inserted by recoverykey.warnIfVolatile()
+   into whichever sheet is about to create server state. Warning colours, not
+   error colours: nothing has gone wrong yet and posting is still allowed. */
+.reckey-warn {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-well);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+/* Recovery-key inputs (lib/recoverykey.js). 16px minimum: _ZOOM_EXEMPT is
+   empty, and a field the user must paste into is the last place to make iOS
+   zoom the page out from under them. */
+.reckey-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.reckey-input {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-well);
+  color: var(--text-strong);
+  font-size: 16px;
+  font-family: inherit;
+}
+.reckey-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.reckey-done[disabled] { opacity: 0.45; cursor: not-allowed; }

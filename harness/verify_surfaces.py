@@ -29,6 +29,7 @@ templates DO agree on quietly stops being shared.
 import pathlib
 import re
 import sys
+from assertions import make_check
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATIC = ROOT / "skribl" / "static"
@@ -37,9 +38,7 @@ TPL = ROOT / "skribl" / "templates" / "skribl"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def scripts(template):
@@ -205,6 +204,177 @@ check("no editor script builds a stylesheet at runtime",
       not injectors,
       ", ".join(injectors) or "CSS in a string is CSS no audit can read, and "
       "two copies of it drift with nothing to show the diff")
+
+print("\nSURFACES — every module a page loads is a module that page can reach")
+# THREE DEAD LOADS FOUND BY HAND IN ONE SWEEP, which is a pattern and not three
+# incidents:
+#
+#   * the in-post macro and the library page both loaded lib/sharecard.js;
+#     inlineplayer.js never reads window.SkriblShareCard, and the only real
+#     reader was verify_inline.py evaluating band() IN the page.
+#   * the player loaded lib/photofit.js, whose only consumer is lib/artwork.js
+#     — an editor module that is not on that page. It cost 1,155 B of a ratchet
+#     with SIX BYTES of headroom, and that headroom was the standing argument
+#     against putting anything new on the player.
+#
+# A surface inherits an asset list from the surface it was copied from, and
+# nothing notices when the requirement does not come with it. This is that
+# check: for every lib/*.js a template loads, SOMETHING that template also
+# loads must read one of the globals it exports.
+#
+# EXPORTS ARE PLURAL. lib/media_validation.js assigns eight globals and the
+# ones actually read are the lowercase helpers; a check that took the first
+# match would report it dead. Every `global.X =` is collected.
+#
+# SELF-INSTALLERS NEED NO READER, and listing them is the honest way to say so:
+# lib/pillfit.js wires itself on DOMContentLoaded and exposes its API only for
+# tests. An entry here is a claim that the module runs itself.
+_SELF_INSTALLING = {"pillfit.js"}
+
+_TPL = ROOT / "skribl" / "templates" / "skribl"
+_ST = ROOT / "skribl" / "static"
+_SURFACES = {"editor": "skribl_editor.html", "flip": "skribl_flip.html",
+             "player": "skribl_player.html", "feed": "skribl_feed.html",
+             "library": "skribl_library.html",
+             "in-post": "_skribl_inline_player.html"}
+
+def _scripts(path):
+    """Script SRCs only — Jinja comments are stripped first, because a note
+    saying a file is NOT loaded names it too. (That false positive turned up
+    the first time this was run by hand.)"""
+    body = re.sub(r"\{#.*?#\}", "", path.read_text(encoding="utf-8"), flags=re.S)
+    return re.findall(r"<script[^>]*skribl_asset\('([^']+)'\)", body)
+
+def _unread(asset, siblings):
+    """True when nothing else the page loads names any global this module
+    exports. EXPORTS ARE PLURAL — every `global.X =` counts."""
+    body = (_ST / asset).read_text(encoding="utf-8")
+    names = set(re.findall(r"(?:global|window)\.([A-Za-z_][A-Za-z0-9_]*)\s*=", body))
+    if not names:
+        return False          # exports nothing; it is a side-effect module
+    return not any(n in src for a, src in siblings.items()
+                   if a != asset for n in names)
+
+_orphans, _exempted = [], {}
+for _surf, _tpl in sorted(_SURFACES.items()):
+    _p = _TPL / _tpl
+    if not _p.is_file():
+        continue
+    _assets = _scripts(_p)
+    _src = {a: (_ST / a).read_text(encoding="utf-8")
+            for a in _assets if (_ST / a).is_file()}
+    for _a in _assets:
+        if not _a.startswith("lib/") or not (_ST / _a).is_file():
+            continue
+        if (_ST / _a).name in _SELF_INSTALLING:
+            _exempted.setdefault((_ST / _a).name, []).append(_surf)
+            continue
+        if _unread(_a, _src):
+            _orphans.append(f"{_surf}:{_a}")
+check("no page loads a lib module nothing on that page reads",
+      not _orphans, ", ".join(_orphans) +
+      " — an asset list copied from another surface without the requirement "
+      "that justified it; either something must read it or it must go")
+
+# AN EXEMPTION NOTHING CHECKS IS WHERE THE NEXT DEAD LOAD HIDES. Each entry in
+# _SELF_INSTALLING makes three claims, and all three go stale on their own:
+# that some surface still loads it, that it still wires itself (so it needs no
+# reader), and that it still NEEDS the exemption — once something on the page
+# reads it, the entry stops being a statement and becomes cover.
+_stale = []
+for _name in sorted(_SELF_INSTALLING):
+    _hits = _exempted.get(_name)
+    if not _hits:
+        _stale.append(f"{_name}: no surface loads it — drop the entry")
+        continue
+    _body = (_ST / "lib" / _name).read_text(encoding="utf-8")
+    if "DOMContentLoaded" not in _body:
+        _stale.append(f"{_name}: no longer wires itself, so it now needs a reader")
+    _needed = False
+    for _surf in _hits:
+        _sib = {a: (_ST / a).read_text(encoding="utf-8")
+                for a in _scripts(_TPL / _SURFACES[_surf]) if (_ST / a).is_file()}
+        if _unread(f"lib/{_name}", _sib):
+            _needed = True
+    if not _needed:
+        _stale.append(f"{_name}: something reads it on every surface — "
+                      "the exemption is doing nothing and hiding the next one")
+check("every self-installing exemption still earns its place",
+      not _stale, "; ".join(_stale) or
+      f"{len(_SELF_INSTALLING)} exemption(s), each loaded, self-wiring, and "
+      "load-bearing — an entry here is a claim that the module runs itself")
+
+# THE SHARED-MODULE INDEX CENSUS LIVED HERE AND IS GONE, which is the point.
+# It checked that START-HERE.md's table agreed with the templates, and it found
+# three wrong rows and three missing ones in v281. harness/gen_docs.py now
+# GENERATES that table from the templates and each module's own opening
+# sentence, so there is no second copy to disagree — and a gate that guards a
+# fact nothing restates is pure cost. Derive, then delete, then gate.
+
+print("\nSURFACES — stylesheets keep no rule nothing can match")
+# 31 class names had rule-sets in styles.css, flip.css and player.css and were
+# applied by NOTHING — no template, no script, no test, no example host. About
+# 7.8 KB, and every byte of it served: a whole "More tools" drawer, a help
+# button cluster, a fine-tune stepper, a size picker, a magnifier toggle, a tab
+# slider, a loading spinner and its @keyframes. Dead CSS is quieter than dead
+# JavaScript because nothing ever fails to load — the rule simply never matches.
+#
+# ONLY FULLY-DEAD RULE-SETS COUNT. A selector list like
+# `.slider:focus, .opacity-slider:focus` keeps a dead fragment beside a live
+# one, and trimming those is not worth it: the attempt ate a comment
+# terminator, corrupted the shared .slider rule, and verify_sizeclass and
+# verify_tray caught it. A fragment that can never match costs a few bytes and
+# breaks nothing; a rule-set devoted entirely to a class nobody applies is the
+# thing that accumulates.
+_SHEETS = sorted(_ST.rglob("*.css"))
+_decomment = lambda t: re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+
+_applied = []
+for _p in ROOT.rglob("*"):
+    if not _p.is_file() or ".git" in _p.parts or "__pycache__" in _p.parts:
+        continue
+    if _p.suffix in (".html", ".js", ".py", ".md", ".txt", ".json", ".yml", ".yaml", ".sh"):
+        _applied.append(_p.read_text(encoding="utf-8", errors="ignore"))
+_applied = "".join(_applied)
+
+def _rulesets(css):
+    """(selector, depth) for every rule-set, at any nesting depth."""
+    i, n, depth, start, stack, out = 0, len(css), 0, 0, [], []
+    while i < n:
+        if css.startswith("/*", i):
+            j = css.find("*/", i + 2); i = (j + 2) if j != -1 else n; continue
+        if css[i] == "{":
+            stack.append(css[start:i]); depth += 1; i += 1; start = i; continue
+        if css[i] == "}":
+            if stack: out.append(stack.pop())
+            depth -= 1; i += 1; start = i; continue
+        i += 1
+    return out
+
+_dead_rules = []
+for _sheet in _SHEETS:
+    for _sel in _rulesets(_sheet.read_text(encoding="utf-8")):
+        _clean = _decomment(_sel).strip()
+        if not _clean or _clean.startswith("@"):
+            continue
+        _parts = [q.strip() for q in _clean.split(",") if q.strip()]
+        if not _parts:
+            continue
+        if all(any(c not in _applied
+                   for c in re.findall(r"\.([a-z][a-z0-9-]{2,})", q)) and
+               re.findall(r"\.([a-z][a-z0-9-]{2,})", q)
+               for q in _parts):
+            _dead_rules.append(f"{_sheet.name}: {_clean.splitlines()[0][:52]}")
+
+check("no stylesheet keeps a rule-set whose every selector is unmatched",
+      not _dead_rules,
+      "; ".join(_dead_rules[:5]) +
+      (f" (+{len(_dead_rules) - 5} more)" if len(_dead_rules) > 5 else "") +
+      " — a class nothing applies, styled anyway, and served to everyone"
+      if _dead_rules else
+      f"{len(_SHEETS)} stylesheets, every rule-set reachable by some class the "
+      "tree actually applies")
+
 
 print("\nSURFACES — what the player is made to download")
 # Not a pass/fail on size: this is the number the JS-only byte ratchet in

@@ -45,6 +45,8 @@ pass missed entirely because Phase 1 had only converted `rgba(255,255,255,a)`.
 import pathlib
 import re
 import sys
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -60,9 +62,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # ---------------------------------------------------------------- static ----
@@ -479,11 +479,9 @@ with sync_playwright() as p:
 
     print("\nTHEME — one setting, shared by the two surfaces")
     page = browser.new_page(viewport={"width": 1000, "height": 900})
-    page.goto(BASE + "/", wait_until="load")
-    page.wait_for_timeout(600)
+    browsing.goto(page, BASE, "/")
     page.evaluate("() => window.SkriblTheme.set('light')")
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(700)
+    browsing.goto(page, BASE, "/flip")
     check("light chosen on Pad is light on Flip",
           page.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light",
           "Tips is one setting for both editors and so is this — being asked "
@@ -504,8 +502,7 @@ with sync_playwright() as p:
     """)
     errs = []
     page2.on("pageerror", lambda e: errs.append(str(e)))
-    page2.goto(BASE + "/", wait_until="load")
-    page2.wait_for_timeout(900)
+    browsing.goto(page2, BASE, "/")
     check("a page whose localStorage throws on ACCESS still loads dark",
           page2.evaluate("() => document.documentElement.getAttribute('data-theme')") is None,
           "; ".join(errs[:2]) or "falls back to the app as it has always looked")

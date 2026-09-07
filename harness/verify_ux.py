@@ -20,15 +20,15 @@ here is WebM on both surfaces — which is exactly the case the old Flip label g
 wrong, and therefore the useful one to pin.
 """
 from playwright.sync_api import sync_playwright
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 import pathlib
+from assertions import make_check
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def draw(page, sel, x0, y0, n=22):
@@ -49,8 +49,7 @@ with sync_playwright() as p:
     flip = ctx.new_page()
     flip_errors = []
     flip.on("pageerror", lambda e: flip_errors.append(str(e)))
-    flip.goto(BASE + "/flip", wait_until="load")
-    flip.wait_for_timeout(1200)
+    browsing.goto(flip, BASE, "/flip")
 
     # Single page: video is gated, and the label must not promise a format.
     flip.evaluate("() => openExportSheet()")
@@ -97,8 +96,7 @@ with sync_playwright() as p:
     pad = ctx.new_page()
     pad_errors = []
     pad.on("pageerror", lambda e: pad_errors.append(str(e)))
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(1200)
+    browsing.goto(pad, BASE, "/")
     draw(pad, "#canvas", 80, 80, n=26)
     pad.evaluate("() => { document.getElementById('exportItem').click(); }")
     pad.wait_for_timeout(1400)
@@ -844,8 +842,7 @@ with _sp204() as _p:
     _b = _p.chromium.launch()
     # Pad: tune button opens the drawer; Grid toggles the overlay canvas.
     pg = _b.new_page(viewport={"width": 900, "height": 800})
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/")
     check("V204: Pad has a tune button (new drawer)",
           pg.locator("#tuneBtn").count() == 1)
     check("V204-fix: the Pad tune button is in the header actions, not the toolbar",
@@ -1135,8 +1132,7 @@ with _sp204() as _p:
     # record indicator onto the wordmark, and the wordmark must recover after
     # stop. Reproduces the reported 600px overlap + stuck-brand bug.
     narrow = _b.new_page(viewport={"width": 600, "height": 800})
-    narrow.goto(BASE + "/", wait_until="load")
-    narrow.wait_for_timeout(700)
+    browsing.goto(narrow, BASE, "/")
     narrow.evaluate("() => document.getElementById('recordBtn').click()")
     narrow.wait_for_timeout(400)
     check("V204-fix: the tune button is hidden while recording (reclaims width)",
@@ -1187,8 +1183,7 @@ with _sp204() as _p:
     pg.close()
     # Flip: the intro toast fires on load (Tips default on, first visit).
     fp = _b.new_page(viewport={"width": 900, "height": 800})
-    fp.goto(BASE + "/flip", wait_until="load")
-    fp.wait_for_timeout(900)
+    browsing.goto(fp, BASE, "/flip")
     toast = fp.evaluate("""() => {
         const el = document.querySelector('.skribl-hint');
         return el && !el.hidden ? el.textContent : null;
@@ -1275,36 +1270,60 @@ with _sp204() as _p:
           not fp.evaluate("() => document.getElementById('photoPanel').hidden"))
     fp.click("#imageBtn"); fp.wait_for_timeout(300)
 
-    # v206: the two demo .skribl fixtures (harness/fixtures/) must load, render,
-    # and PLAY in their own editor, and be refused by the other. These are real
-    # non-trivial documents (a timed-replay galaxy; a 24-page bouncing-ball
-    # flipbook), so they exercise the whole load->render->play path and pin the
-    # format: if the schema drifts, the demos break here first.
-    import pathlib as _pl
-    _fx = _pl.Path(__file__).resolve().parent / "fixtures"
-    _gal = (_fx / "demo-galaxy.skribl").read_bytes(); _bnc = (_fx / "demo-bounce.skribl").read_bytes()
+    # THE FORMAT'S load -> render -> play PATH, on documents built for the job.
+    # This used to load two .skribl files the owner had asked for as DEMOS —
+    # drawings to look at — which a later session promoted into fixtures. That
+    # made 2.7 MB of somebody's artwork load-bearing, and left the tested
+    # properties to be whatever those particular drawings happened to have.
+    # harness/makeskribl.py builds both documents in memory instead, so the
+    # repo stores no drawing and each fixture exhibits exactly the property its
+    # assertions name.
+    import makeskribl as _mk
+    _gal = _mk.replay(); _bnc = _mk.flipbook()
     def _ink(page, sel):
-        return page.evaluate(f"""() => {{ const c = document.querySelector('{sel}'); const x = c.getContext('2d');
-            const d = x.getImageData(0,0,c.width,c.height).data; let n = 0; for (let i = 3; i < d.length; i += 16) if (d[i] > 0) n++; return n; }}""")
+        """Pixels that differ from the canvas background.
+
+        THIS COUNTED ALPHA > 0 UNTIL v282, WHICH IS VACUOUS ON FLIP. Flip's
+        #pad canvas paints an opaque background, so every sampled pixel had
+        alpha 255 and the count was always exactly width*height/4 — 124,848,
+        reported identically for a 24-page bouncing-ball drawing and for a
+        generated bar pattern. `ink > 5000` would have passed on a blank page.
+        It survived since v206 because the fixture in use also saturated it.
+
+        The background is taken from pixel (0,0): transparent on Pad, the
+        paper colour on Flip. Either way a drawn pixel differs from it, and a
+        blank canvas now measures ~0.
+        """
+        return page.evaluate(f"""() => {{
+            const c = document.querySelector('{sel}');
+            const x = c.getContext('2d');
+            const d = x.getImageData(0, 0, c.width, c.height).data;
+            const br = d[0], bg = d[1], bb = d[2], ba = d[3];
+            let n = 0;
+            for (let i = 0; i < d.length; i += 16) {{
+                if (Math.abs(d[i] - br) + Math.abs(d[i+1] - bg)
+                    + Math.abs(d[i+2] - bb) + Math.abs(d[i+3] - ba) > 24) n++;
+            }}
+            return n; }}""")
     dp = _b.new_page(viewport={"width": 1280, "height": 900}); dp.goto(BASE + "/", wait_until="load"); dp.wait_for_timeout(600)
-    dp.set_input_files("#draftInput", {"name": "demo-galaxy.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
+    dp.set_input_files("#draftInput", {"name": "replay.skribl", "mimeType": "application/json", "buffer": _gal}); dp.wait_for_timeout(1400)
     # No backslash inside the f-string expression: legal only from Python 3.12,
     # a SyntaxError that kills the whole suite on 3.11.
     _nstrokes = dp.evaluate("() => (typeof strokes !== 'undefined' ? strokes.length : -1)")
-    check("DEMO: galaxy .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
+    check("FORMAT: a replay .skribl loads in Pad", dp.evaluate("() => typeof strokes !== 'undefined' && strokes.length > 800"),
           f"strokes={_nstrokes}")
-    check("DEMO: galaxy renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
+    check("FORMAT: ...and renders ink on the canvas", _ink(dp, "#canvas") > 2000, f"ink={_ink(dp,'#canvas')}")
     dp.click("#playBtn"); dp.wait_for_timeout(1200); _a = _ink(dp, "#canvas"); dp.wait_for_timeout(1200); _b2 = _ink(dp, "#canvas")
-    check("DEMO: galaxy REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
+    check("FORMAT: ...and REPLAYS — the drawing grows over time on Play", _b2 > _a, f"ink {_a} -> {_b2}")
     dp.close()
     df = _b.new_page(viewport={"width": 1280, "height": 900}); df.goto(BASE + "/flip", wait_until="load"); df.wait_for_timeout(800)
     df.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
-    df.set_input_files("#draftInput", {"name": "demo-bounce.skribl", "mimeType": "application/json", "buffer": _bnc}); df.wait_for_timeout(1400)
-    check("DEMO: bounce .skribl loads in Flip as 24 pages @ 12fps",
+    df.set_input_files("#draftInput", {"name": "flipbook.skribl", "mimeType": "application/json", "buffer": _bnc}); df.wait_for_timeout(1400)
+    check("FORMAT: a flipbook .skribl loads in Flip as 24 pages @ 12fps",
           df.evaluate("() => frames.length === 24 && fps === 12"), f"pages={df.evaluate('() => frames.length')} fps={df.evaluate('() => fps')}")
-    check("DEMO: bounce renders ink", _ink(df, "#pad") > 5000, f"ink={_ink(df,'#pad')}")
+    check("FORMAT: ...and renders ink", _ink(df, "#pad") > 5000, f"ink={_ink(df,'#pad')}")
     df.click("#play"); df.wait_for_timeout(500); _i1 = df.evaluate("() => idx"); df.wait_for_timeout(500); _i2 = df.evaluate("() => idx")
-    check("DEMO: bounce FLIPS — page index advances on Play", df.evaluate("() => playing") and _i1 != _i2, f"idx {_i1} -> {_i2}")
+    check("FORMAT: ...and FLIPS — page index advances on Play", df.evaluate("() => playing") and _i1 != _i2, f"idx {_i1} -> {_i2}")
     df.close()
 
     # v207: the player's Repeat (loop) button must VISIBLY light when pressed.
@@ -1882,8 +1901,7 @@ with _sp() as _p3:
     """
     _f3 = _b.new_page(viewport={"width": 1280, "height": 900})
     _f3.add_init_script(_F3_INIT)
-    _f3.goto(BASE + "/", wait_until="load")
-    _f3.wait_for_timeout(700)
+    browsing.goto(_f3, BASE, "/")
     _f3.click("#musicOpenBtn")
     _f3.wait_for_timeout(300)
     _f3.set_input_files("#musicInput",
@@ -2091,6 +2109,77 @@ with sync_playwright() as _b13:
           f"{_N13} moves -> {_pts13} points (double-capture would give ~{_N13 * 2})")
     _p13.close(); _c13.close()
     _br13.close()
+
+print("\nIOS ZOOM — no text field is under 16px, anywhere")
+# THE RULE THIS PINS is written in styles.css twice — "16px is the threshold
+# below which iOS Safari zooms the whole PAGE on focus" — and was broken a
+# third time anyway: the export sheet's file-name field shipped at 13.5px, so
+# tapping it on an iPhone zoomed the page. A rule stated in prose twice and
+# broken again is a rule that wants a gate.
+#
+# A RATCHET THAT IS NOW EMPTY. Seven fields were under the threshold when this
+# was written and were NAMED rather than fixed, because raising them changes
+# real layout and wanted its own pass with eyes on it. That pass happened: all
+# seven are at 16px, so the ratchet is empty and the rule is absolute.
+#
+# The pass was not free, which is why the exemptions existed. Raising
+# .mb-offset from 12px made "-1000, -1000" WRAP inside a pill that states its
+# height, so the second line painted over the scope pill beside it — while
+# scrollWidth against clientWidth reported nothing, because the BOX never
+# changed. flip.css now carries `white-space: nowrap` and a clipping
+# `safe center`, and verify_layout.py section 5 pins it.
+#
+# The mechanism stays so that a future exemption is a deliberate edit here
+# rather than a number quietly dropped into a stylesheet. The list may SHRINK
+# and must never grow.
+_ZOOM_EXEMPT = {}
+_MEASURE = """() => {
+  const out = [];
+  document.querySelectorAll('input, textarea').forEach(el => {
+    const t = (el.getAttribute('type') || 'text').toLowerCase();
+    if (['checkbox','radio','range','file','color','hidden','button','submit'].includes(t)) return;
+    out.push({ id: el.id || '.' + (el.className || '').split(' ')[0],
+               size: parseFloat(getComputedStyle(el).fontSize) });
+  });
+  return out;
+}"""
+with sync_playwright() as _pz:
+    _zb = _pz.chromium.launch()
+    _under_new = []
+    _seen = set()
+    _export_size = None
+    for _url, _label in (("/", "Pad"), ("/flip", "Flip")):
+        _zp = _zb.new_page(viewport={"width": 1280, "height": 900})
+        _zp.goto(BASE + _url, wait_until="load")
+        _zp.wait_for_timeout(2000)
+        for _sel in ("#menuBtn", "#exportItem"):
+            try:
+                _zp.click(_sel, timeout=3000)
+                _zp.wait_for_timeout(400)
+            except Exception:
+                pass
+        for _row in _zp.evaluate(_MEASURE):
+            _seen.add(_row["id"])
+            if _row["id"] == "exportName" and _url == "/":
+                _export_size = _row["size"]
+            if _row["size"] < 16 and _row["id"] not in _ZOOM_EXEMPT:
+                _under_new.append(f"{_label} {_row['id']} at {_row['size']}px")
+        _zp.close()
+    _zb.close()
+
+check("no text field is under 16px — the ratchet is empty",
+      not _under_new,
+      "; ".join(_under_new) + " — under 16px iOS Safari zooms the whole page "
+      "on focus, which styles.css states twice")
+# Name the field this gate was written for, so the regression that prompted it
+# fails loudly rather than generically.
+check("the export file-name field is at least 16px",
+      _export_size is not None and _export_size >= 16,
+      f"{_export_size}px — it shipped at 13.5 and zoomed the page on iOS")
+# An exemption for a field that no longer exists is a licence nobody is using.
+_stale = sorted(k for k in _ZOOM_EXEMPT if k not in _seen)
+check("no exemption names a field that no longer exists",
+      not _stale, "stale: " + ", ".join(_stale))
 
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")

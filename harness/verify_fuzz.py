@@ -64,6 +64,8 @@ import json
 import os
 import random
 import sys
+from assertions import make_check
+import browsing
 
 # Overridable like verify_parity's, so a fuzz run can be pointed at a scratch
 # instance while the main harness holds 5001.
@@ -85,9 +87,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # The invariant check runs in the page after every operation. It returns the
@@ -126,8 +126,7 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1100, "height": 900})
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1500)
+    browsing.goto(page, BASE, "/flip")
 
     print(f"FUZZ — driving the editor with seed {SEED}")
     check("Flip booted before the fuzz starts",

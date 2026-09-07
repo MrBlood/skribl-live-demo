@@ -35,6 +35,74 @@
     ' stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18 4 20l2-4.5z"/></svg>';
 
+  /* The entry, so the click handler works from stored state rather than from
+     what the DOM happens to say. */
+  function byId(id) {
+    /* global.SkriblPosted.list(), not a captured `store`: this helper sits at
+       module scope while `store` is bound inside init(). And `list` is the
+       exported name — an earlier draft called store.read(), which does not
+       exist, so the lookup silently returned null and the Delete button did
+       nothing at all. */
+    var api = global.SkriblPosted;
+    var all = (api && api.list) ? api.list() : [];
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+
+  /* Server-side deletion, authorised by the capability this browser holds.
+     NO ROUTE LITERAL — the API base is injected, for the same reason
+     lib/posted.js refuses to hand-write '/s/': a literal is wrong the moment
+     Skribl is mounted under a url_prefix, and verify_seam.py fails it. */
+  function destroy(entry, done) {
+    var base = global.SKRIBL_API_BASE;
+    if (!base) { done(false, 'This Skribl is not wired up.'); return; }
+    var req;
+    try {
+      req = global.fetch(base + '/' + encodeURIComponent(entry.id), {
+        method: 'DELETE',
+        headers: (function () {
+          var h = { 'Content-Type': 'application/json' };
+          /* Sent even though neither route consults it today: the POST path
+             has always sent it, and a DELETE that omits it is why enforcing
+             bp.skribl_csrf on these routes would be a breaking change rather
+             than a one-line one. See the note above delete_skribl in
+             routes.py. Absent on an anonymous deployment, where the global is
+             never injected. */
+          if (global.SKRIBL_CSRF_TOKEN) { h['X-Skribl-CSRF'] = global.SKRIBL_CSRF_TOKEN; }
+          return h;
+        })(),
+        body: JSON.stringify({ deleteToken: entry.tok })
+      });
+    } catch (e) { done(false, 'Could not reach the server.'); return; }
+    req.then(function (r) {
+      if (r.ok) { done(true, null); return; }
+      /* 404 IS AMBIGUOUS BY DESIGN AND MUST STAY AMBIGUOUS HERE. The server
+         answers the same 404 for "no such post" and "not yours" so the API
+         cannot be walked to learn which public ids exist — deletion.py's whole
+         anti-oracle rule. Until v281 this client collapsed that into success,
+         with a comment reasoning "the local entry should go either way".
+         It does not: a wrong or corrupted key gets exactly this 404, and
+         treating it as done threw away the only credential for a post that is
+         still live. Security ambiguity on the server cannot become certainty
+         in the UI — that is the client undoing the server's care.
+         So: unknown. The entry and its key stay. */
+      if (r.status === 404) {
+        done(false, 'Could not confirm it was deleted — the key may not match '
+                    + 'this Skribl. Your key has been kept; open the link to '
+                    + 'check whether it is still there.');
+        return;
+      }
+      done(false, 'Could not delete — try again.');
+    }).catch(function () { done(false, 'Could not reach the server.'); });
+  }
+
+  /* Status for assistive technology as well as eyes. The list has no toast of
+     its own, so this writes into a polite live region the drawer owns. */
+  function announce(msg) {
+    var live = global.document.getElementById('postedStatus');
+    if (live) live.textContent = msg;
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -53,11 +121,19 @@
     var clearEl = document.getElementById('postedClear');
     var backdrop = document.getElementById('postedBackdrop');
     var closeEl = document.getElementById('postedClose');
+    var recoverEl = document.getElementById('postedRecover');
 
     function open() {
       drawer.hidden = false;
       drawer.classList.add('open');
       render();
+      /* The manual focus stays — search is the right first stop here and
+         modalfocus would pick whatever comes first in the DOM. What was
+         missing is everything around it: Tab escaped into the page behind,
+         and closing dropped focus entirely. SkriblModal.open() installs the
+         trap and remembers the opener; the timeout then moves focus on to
+         search inside the same dialog, which the trap is happy with. */
+      if (global.SkriblModal) global.SkriblModal.open(drawer);
       if (searchEl) setTimeout(function () { try { searchEl.focus(); } catch (e) {} }, 40);
     }
 
@@ -65,6 +141,7 @@
       drawer.classList.remove('open');
       drawer.hidden = true;
       if (searchEl) searchEl.value = '';
+      if (global.SkriblModal) global.SkriblModal.close(drawer);
     }
 
     function copy(text, btn) {
@@ -147,13 +224,47 @@
         return '<div class="posted-row" data-id="' + esc(e.id) + '">' +
           '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
             (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
-          '<a class="posted-main" href="' + esc(url) + '" target="_blank" rel="noopener">' +
+          /* HONOURS player_target, which it did not until v281. __init__.py
+             names this link as one of the three "watch it" paths and says
+             _blank is their DEFAULT and that a host passing _self "takes
+             over" — but this one was hardcoded, so an SPA rendering /s/<id>
+             in its own shell got its choice obeyed by Pad's button and Flip's
+             anchor and ignored here. Both of those read the value; this was
+             the odd one out precisely because it is built in JS rather than
+             server-rendered, which is the same seam the docstring says caused
+             the original drift. */
+          '<a class="posted-main" href="' + esc(url) + '" target="' +
+            esc(global.SKRIBL_PLAYER_TARGET || '_blank') + '" rel="noopener">' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
             '<span class="posted-sub">' + esc(sub) + '</span>' +
           '</a>' +
           '<button type="button" class="posted-copy" data-url="' + esc(url) + '">Copy link</button>' +
+          /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
+             removed the local entry and nothing else — the Skribl stayed live
+             and the link kept working — which an audit of v278 called out as
+             making recovery WORSE: it threw away the only handle the person
+             had on a post they might want to withdraw.
+             "Delete" appears only when this browser holds the revocation
+             capability for the post (see lib/posted.js). Without it there is
+             nothing honest to offer, so nothing is offered. */
+          (e.tok
+            ? '<button type="button" class="posted-delete" data-delete="' +
+                esc(e.id) + '" aria-label="Delete this Skribl for everyone">' +
+                'Delete</button>' +
+              /* THE KEY ITSELF, offered for copying. Everything above assumes
+                 this browser will still be here when the person changes their
+                 mind, and an audit was right that the assumption is the weak
+                 part: clearing site data, a new phone, or Safari evicting the
+                 origin all end it, and no endpoint can reissue the key. This
+                 is the one affordance that outlives the browser. Shown only
+                 where a key exists, for the same reason Delete is. */
+              '<button type="button" class="posted-key" data-key="' +
+                esc(e.id) + '" aria-label="Copy the recovery key for this ' +
+                'Skribl">Copy key</button>'
+            : '') +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
-            'aria-label="Remove from this list">\u2715</button>' +
+            'aria-label="Remove from this list, keeping the Skribl online">' +
+            '\u2715</button>' +
         '</div>';
       }).join('');
     }
@@ -161,12 +272,48 @@
     listEl.addEventListener('click', function (ev) {
       var c = ev.target.closest('.posted-copy');
       if (c) { copy(c.dataset.url, c); return; }
+      var k = ev.target.closest('.posted-key');
+      if (k) {
+        var kent = byId(k.dataset.key);
+        if (kent && kent.tok) copy(kent.tok, k);
+        return;
+      }
       var d = ev.target.closest('.posted-del');
       if (d) {
         // Removes the entry, NOT the Skribl. The link keeps working, which is
         // why this is not a confirm dialog — nothing is destroyed.
+        //
+        // It DOES throw away the revocation capability, though, so it is worth
+        // saying once. Only asked when there is something to lose.
+        var ent = byId(d.dataset.del);
+        if (ent && ent.tok && !global.confirm(
+              'Remove this from your list?\n\n' +
+              'The Skribl stays online and the link keeps working — but this ' +
+              "browser's copy of the key is the only one Skribl knows about, " +
+              'and removing ' +
+              'the entry throws that key away.')) return;
         store.remove(d.dataset.del);
         render();
+        return;
+      }
+
+      var del = ev.target.closest('.posted-delete');
+      if (del) {
+        var entry = byId(del.dataset.delete);
+        if (!entry || !entry.tok) return;
+        if (!global.confirm(
+              'Delete this Skribl for everyone?\n\n' +
+              'The link stops working immediately and this cannot be undone.'))
+          return;
+        del.disabled = true;
+        var was = del.textContent;
+        del.textContent = 'Deleting…';
+        destroy(entry, function (ok, msg) {
+          if (ok) { store.remove(entry.id); render(); return; }
+          del.disabled = false;
+          del.textContent = was;
+          announce(msg || 'Could not delete — try again.');
+        });
       }
     });
 
@@ -176,9 +323,30 @@
         e.stopPropagation(); searchEl.value = ''; render();
       }
     });
+    if (recoverEl) recoverEl.addEventListener('click', function () {
+      if (global.SkriblRecoveryKey) global.SkriblRecoveryKey.openRecover();
+    });
     if (closeEl) closeEl.addEventListener('click', close);
     if (backdrop) backdrop.addEventListener('click', close);
     if (clearEl) clearEl.addEventListener('click', function () {
+      /* KEYS ARE NOT HISTORY, AND THIS CONTROL USED TO TREAT THEM AS HISTORY.
+         Two taps emptied the whole store — including every revocation key —
+         while the posts stayed online, so the user kept nothing but a dead
+         list and lost the only thing that could withdraw anything on it. The
+         single-row X has warned about exactly this since v279; the button that
+         does it to ALL of them at once did not, which is the weaker contract
+         winning on the more destructive path.
+         The tray's own footer says clearing site data forfeits the keys. That
+         is a statement about the BROWSER's control. This is Skribl's own. */
+      var keyed = store.list().filter(function (e) { return !!e.tok; });
+      if (keyed.length && global.SkriblRecoveryKey
+          && global.SkriblRecoveryKey.confirmClear) {
+        clearEl.dataset.armed = ''; clearEl.textContent = 'Clear list';
+        global.SkriblRecoveryKey.confirmClear(keyed, function () {
+          store.clear(); render();
+        });
+        return;
+      }
       if (clearEl.dataset.armed === '1') {
         store.clear(); clearEl.dataset.armed = ''; clearEl.textContent = 'Clear list'; render();
       } else {

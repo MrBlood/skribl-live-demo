@@ -366,9 +366,9 @@
            to v105 unnoticed). .menu-version is shared styling from styles.css. -->
       <div class="menu-version">Skribl Flip · {{ skribl_version }}</div>
     </div>
-    <input type="file" id="imageInput" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
-    <input type="file" id="musicInput" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
-    <input type="file" id="draftInput" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden">
+    <input type="file" id="imageInput" aria-label="Choose an image file" accept="image/jpeg,image/png,image/gif,image/webp" class="vis-hidden">
+    <input type="file" id="musicInput" aria-label="Choose an audio file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
+    <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden">
     {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}
 {% include 'skribl/_skribl_posted.html' %}{% endwith %}
 {% include 'skribl/_skribl_report.html' %}
@@ -397,9 +397,9 @@
       <div id="flipShareCompose">
         <span class="flip-export-label">Share your Skribl</span>
         <p class="flip-share-sub">Give it a name so you can find it again.</p>
-        <input type="text" id="flipShareTitle" class="flip-share-url" maxlength="{{ skribl_limits.title }}"
+        <input type="text" id="flipShareTitle" aria-label="Title" class="flip-share-url" maxlength="{{ skribl_limits.title }}"
                placeholder="Untitled Skribl" autocomplete="off">
-        <textarea id="flipShareCaption" class="flip-share-url flip-share-caption" maxlength="{{ skribl_limits.caption }}"
+        <textarea id="flipShareCaption" aria-label="Caption" class="flip-share-url flip-share-caption" maxlength="{{ skribl_limits.caption }}"
                   rows="3" placeholder="Say something about it…"></textarea>
         <span class="flip-share-count" id="flipShareCount">0 / 280</span>
         {# A failed post used to report itself only as a transient chip. On a
@@ -417,7 +417,7 @@
       <div id="flipShareResult" hidden>
         <span class="flip-export-label">Your Skribl is live &#127881;</span>
         <p class="flip-share-sub">Anyone with the link can watch it play — with your loop, image, and controls.</p>
-        <input type="text" id="flipShareUrl" class="flip-share-url" readonly>
+        <input type="text" id="flipShareUrl" aria-label="Share link" class="flip-share-url" readonly>
         <div class="flip-share-actions">
           <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
           <a id="flipShareOpen" class="panel-btn flip-share-open" target="{{ skribl_player_target }}" rel="noopener">Open player</a>
@@ -478,6 +478,9 @@
      the player needs it too, because the scrub track is a player control and it
      read the screen-wide touch list. See the file for the rule. #}
   <script src="{{ skribl_asset('lib/eventpoint.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/scrubkeys.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/pinchgesture.js') }}" defer></script>
   <!-- Editors only: the player never posts. See the header of postedaudio.js. -->
   <script src="{{ skribl_asset('lib/postedaudio.js') }}" defer></script>

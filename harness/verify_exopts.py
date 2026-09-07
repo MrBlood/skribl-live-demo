@@ -16,13 +16,13 @@ none of this could have been verified in-sandbox at all.
 Still session-only state: nothing here reaches the payload.
 """
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def parse_gif(b):
@@ -98,8 +98,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(1000)
+    browsing.goto(pg, BASE, "/flip")
     for i in range(5):
         pg.evaluate("() => addFrame()")
         draw(pg, 70 + i * 25)

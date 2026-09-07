@@ -27,6 +27,8 @@ import re
 import sys
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASE = "http://127.0.0.1:5001"
@@ -35,9 +37,7 @@ FLIP = BASE + "/flip"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Global listeners in the source. Anchored on window/document specifically:
@@ -67,8 +67,7 @@ with sync_playwright() as sp:
     # player's byte ratchet is currently red. Assert the absence, or "Flip-only"
     # is a claim rather than a fact.
     pg2 = b.new_page()
-    pg2.goto(BASE + "/", wait_until="load")
-    pg2.wait_for_timeout(600)
+    browsing.goto(pg2, BASE, "/")
     check("and is NOT loaded on Pad, which shares app.js with the player",
           pg2.evaluate("() => typeof KeyRegistry === 'undefined'"),
           "app.js is the player's file; a lib it needs would ship to every "

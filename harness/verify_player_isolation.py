@@ -29,6 +29,8 @@ import sys
 import wave
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/player_isolation.wav"
@@ -92,9 +94,7 @@ PEAK = """() => {
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Editor-only globals. Every one of these was CONFIRMED PRESENT on a real player
@@ -182,8 +182,7 @@ with sync_playwright() as sp:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     ed_errs = []
     pg.on("pageerror", lambda e: ed_errs.append(str(e)))
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/")
     pg.evaluate("() => localStorage.clear()")
     scribble(pg, pg.locator("#canvas").bounding_box())
     pg.wait_for_timeout(700)
@@ -752,7 +751,48 @@ with sync_playwright() as sp:
     # The module was 1,650 B first, building its silent clip byte by byte; that
     # read better and this ratchet is not the place to pay 360 B for legibility,
     # so it carries a base64 constant instead.
-    BYTES_RATCHET, BYTES_TARGET = 153_000, 153_600
+    #
+    # 153,000 -> 150,000 = A THIRD RATCHET THAT WENT DOWN, by 3,305 measured B,
+    # and the sequence that produced it is the argument for the discipline.
+    #
+    # An external review of v277 said 600 B was not meaningful headroom
+    # "particularly while the audio-session behavior still needs lifecycle
+    # work". Its other finding WAS that lifecycle work: the /s player claimed
+    # the iOS session on the play/pause tap before the branch deciding which it
+    # was, and released it nowhere. Fixing that took the player to 153,251 B —
+    # 251 over this ratchet — so the prediction and its proof landed inside one
+    # change. The review also said not to solve it by raising the target.
+    #
+    # Repaid from initMoreTools(), now editor_tools.js: the "More" drawer and
+    # its six tool controls, every branch guarded on an element or a lib the
+    # player template does not load, so the player parsed ~4.9 KB of source to
+    # run nothing at all. Behaviour-preserving for the player by construction
+    # rather than by an argument about reachability — none of the six libs is in
+    # skribl_player.html, so every branch was already false.
+    #
+    # Pinned just above the new floor, as every raise here has been: 149,946
+    # measured, 150,000 set, 3,654 B to target. The lesson is the one the shape
+    # tool's carve already recorded and this release had to learn twice — carve
+    # first when the target is furniture the player has no use for.
+    #
+    # 150,000 -> 152,000 for lib/scrubkeys.js (1,489 B) and app.js's two call
+    # sites (+559 B). An accessibility audit of v278 found the shared player's
+    # progress bar was a bare div with mousedown/touchstart: a link sent to a
+    # stranger could not be seeked by keyboard at all, and Pad and Flip both
+    # DECLARED role="slider" while supplying no tabindex, no aria-valuenow and
+    # no key handler — announcing to a screen reader a control that could not
+    # be focused or moved.
+    #
+    # This is capability, not furniture, and it is capability the /s/<id> page
+    # specifically needs: it is the surface a person who did not make the
+    # drawing arrives at. Shared as a lib rather than written three times, so
+    # the step size and the value reporting cannot drift between surfaces.
+    # 1,606 B still to target.
+    # 152,000 -> 151,000 in v281: dropping lib/photofit.js, which the player
+    # loads and cannot reach, took JS from 151,994 to 150,839. The old ratchet
+    # had six bytes of headroom and was the reason given for keeping new work
+    # off this surface; the constraint was partly dead weight.
+    BYTES_RATCHET, BYTES_TARGET = 151_000, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -767,6 +807,10 @@ with sync_playwright() as sp:
     # above the new floor of 10,640.
     # 10,800 -> 10,900 for one <script> tag: lib/audiosession.js, without which
     # this page is silent on a silent-mode iPhone. See the JS ratchet above.
+    # 10,900 -> 11,000 for one <script> tag: lib/scrubkeys.js, without which
+    # this page cannot be seeked from a keyboard. Same reasoning as the JS
+    # ratchet above.
+    # 11,000 -> 10,900: one fewer <script> tag, 10,946 -> 10,872.
     HTML_RATCHET = 10_900
 
     present = pg.evaluate(

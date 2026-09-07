@@ -44,6 +44,8 @@ it every assertion here could pass on a canvas that never repainted at all.
 """
 import os
 import sys
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -56,9 +58,7 @@ except ImportError:                                   # pragma: no cover
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Alpha channel, grey pixels only. See the module docstring for why both.
@@ -109,8 +109,7 @@ with sync_playwright() as p:
     br = p.chromium.launch()
     try:
         page = br.new_page(viewport={"width": 1280, "height": 950})
-        page.goto(BASE + "/", wait_until="networkidle")
-        page.wait_for_timeout(400)
+        browsing.goto(page, BASE, "/")
 
         print("\nSETUP — one 22%-alpha stroke, drawn with the mouse")
         check("stroke layers are ON, which is what this fix protects",

@@ -242,12 +242,14 @@ recipe. `harness/verify_compose.py` drives it end to end and counts the POSTs.
 attaches is byte-for-byte what the Pad would have posted — same serialisation,
 same share-card thumbnail, same mono audio bake.
 
-**What it does not render.** The wet/dry stroke compositor. A stroke authored
-below 100% opacity beads at its overlaps here where it does not on `/s/<id>`.
-Everything else — Pad replays, Flip documents with their per-page holds, the
-background colour, a photo or base-snapshot underlay, the posted audio loop —
-plays. The header of `skribl/static/inlineplayer.js` says why the gap is there
-and what it would take to close it.
+**What it renders: all of it.** Pad replays, Flip documents with their per-page
+holds, the background colour, a photo or base-snapshot underlay, the posted
+audio loop — and, since the v277 review, the wet/dry stroke compositor. A
+stroke below 100% opacity used to be drawn here as a row of translucent stamps,
+so its overlaps stacked and the feed showed a scalloped, banded version of a
+drawing that is smooth on `/s/<id>`. There is no known fidelity gap now. The
+header of `skribl/static/inlineplayer.js` carries the measurement, and
+`verify_inline.py` pins it with a translucent fixture.
 
 ## When your composer is a form, not a browser
 
@@ -320,6 +322,179 @@ an anonymous post; do not leave it out and hope. There is no resolver here
 because a function that guesses the author is how every visitor once became
 user 1 and could read user 1's private posts.
 
+## Taking one back: delete and revoke
+
+An external review of v277 named this the largest product gap: Skribl could
+create and read, and offered nothing for a Skribl already published. People
+share the wrong drawing, publish something private, pick the wrong audience,
+delete the host post a Skribl was attached to, or are asked to take something
+down. Two operations, because those are two different wishes.
+
+```python
+from skribl import delete_post, set_post_visibility, SkriblNotFound
+
+# Gone. The share URL 404s, the media associations go with it.
+try:
+    delete_post(public_id, author_id=current_user.id)
+except SkriblNotFound:
+    abort(404)
+else:
+    db.session.delete(my_feed_row)
+    db.session.commit()          # both, or neither
+
+# Still theirs, no longer reachable by the link they sent.
+set_post_visibility(public_id, "private", author_id=current_user.id)
+db.session.commit()
+```
+
+**`SkriblNotFound` means "no post you may act on", and it will not tell you
+which.** A post that does not exist and a post belonging to somebody else raise
+the same exception with the same message, on purpose: anything else is an
+oracle for which public ids are real and who owns them. Answer 404 for both.
+Do not translate one of them into a 403 — that puts the disclosure back.
+
+**`author_id=None` is refused, not privileged.** It means "nobody is signed
+in", so identity alone authorises nothing. A management command that genuinely
+must remove any post passes `require_author=False` — in code, once, the same
+shape as `csrf=False`, and `python -m skribl.takedown` is that command.
+
+**Posts whose `user_id` is NULL cannot be claimed by merely authenticating.**
+No user_id matches NULL, so one host user cannot delete another visitor's
+anonymous post. They ARE deletable by whoever holds the capability minted at
+creation, which is the whole point of it.
+
+> Until v281 this paragraph said an anonymous caller "may delete nothing" and
+> that NULL-owner posts could *only* be removed with `require_author=False`.
+> Both were true in v278 and were falsified by the v279 capability. The same
+> wrong sentence was also sitting in `skribl/deletion.py`'s header.
+
+**The transaction is yours, exactly as with `create_post`.** Both functions
+flush and neither commits, so your feed row and the Skribl go together.
+
+**The bytes are not deleted here, and that is deliberate.** Media objects are
+content addressed, so the photo in the post you are deleting may be the same
+object as the photo in one you are keeping; only a reference count across the
+whole table can say. `sweep_orphans()` owns that, conservatively — see
+*Maintenance jobs*. What deletion *does* guarantee immediately is that the
+bytes stop being **reachable**: `/media/<key>` authorises through the
+association rows, and those are gone with the post.
+
+**HTTP: `DELETE` and `PATCH /api/skribls/<id>` are always registered, and what
+makes that safe is the capability rather than their absence.** v278 gated them
+on `current_user_id` being set, reasoning that a DELETE on an unauthenticated
+API is a button erasing any Skribl anyone can name. True of an *unauthorised*
+delete — and the gate's cost was that the standalone product could not revoke
+anything at all, which an audit called the release's worst problem.
+
+A caller must present something. An owner presents their identity; an anonymous
+author presents the `deleteToken` from the create response, in the JSON body:
+
+```
+DELETE /api/skribls/<id>     {"deleteToken": "..."}
+PATCH  /api/skribls/<id>     {"visibility": "private", "deleteToken": "..."}
+```
+
+Neither is optional. A stranger with only a public id gets 404, so does a wrong
+token, and so does a token minted for a different post. `PATCH` takes
+`visibility` and optionally `deleteToken`, nothing else.
+
+**IF YOU BUILD YOUR OWN DELETE UI, DO NOT TREAT 404 AS CONFIRMED DELETION.**
+The ambiguity above is deliberate and it cuts both ways: the same 404 answers
+"no such post" and "your token is wrong". A client that reads it as success
+will report a deletion that did not happen and, if it also tidies up, throw
+away the credential for a post that is still live. Skribl's own tray made
+exactly that mistake until v281 and an audit caught it. Treat 404 as UNKNOWN,
+keep the credential, and tell the person to check the link.
+
+If your own views own the lifecycle, ignore the routes and call the Python
+functions — you have already decided who is asking.
+
+**If you would rather Skribls were never revocable, say so to your users.**
+Permanent publication is a defensible product choice. Silently having no way
+back is not.
+
+`harness/verify_deletion.py` holds all of the above: that the two refusals are
+indistinguishable, that a wrong token and a token minted for another post both
+404, that the associations go even where SQLite's cascade does not fire, and
+that the functions flush without committing. (Until v280 this sentence said the
+suite proves "the routes do not exist without an identity" — v279's change made
+that false and the v279 sweep read the paragraph above it and not this one.)
+`harness/verify_deletion_foundation.py` covers the layer beneath — cascade,
+media unreachability, orphan sweep — on PostgreSQL.
+
+### Posts nobody can revoke, and the door that exists for them
+
+**A post created before v279 has no capability, and no migration can give it
+one.** The column is nullable, so every pre-existing row holds NULL, and
+`_token_matches()` refuses NULL deliberately: an empty token matching an empty
+hash would make the whole anonymous back-catalogue deletable by anybody.
+
+There is no cryptographic repair. The server never held a secret proving which
+browser created those rows. The tempting shortcut — treat possession of the
+share URL as authority — is exactly backwards, because the URL is the thing the
+author gave away; the recipients have it too.
+
+So the answer is operational, and v280 ships it:
+
+    python -m skribl.takedown --list-orphans          # how many, and which
+    python -m skribl.takedown <public-id>             # dry run: what is it?
+    python -m skribl.takedown <public-id> --delete
+    python -m skribl.takedown <public-id> --visibility private
+
+Dry by default, like `python -m skribl.sweep`. It refuses to guess: one public
+id, no search, no wildcard, no `--all`. Exit 1 means no such post, exit 2 means
+it could not run — distinct so a runbook can alert on them separately. The
+media bytes are left to the sweeper, which is the only thing that can tell
+whether another post shares them.
+
+**Run the census before you upgrade**, so you know whether this affects anyone:
+
+```sql
+SELECT COUNT(*) FROM skribl_posts
+WHERE user_id IS NULL AND delete_token_hash IS NULL;
+```
+
+Zero means the gap is theoretical for your deployment. Non-zero means those
+authors cannot withdraw their own posts and you are their only route, so decide
+who answers that mail before you need to.
+
+**The same door is not only for legacy rows.** It covers a post-v279 author who
+cleared their site data, a moderation decision, and a legal takedown. Those
+needs are permanent; the legacy back-catalogue is the part that shrinks to
+nothing over time.
+
+`harness/verify_takedown.py` drives the CLI as a subprocess, so the exit codes
+it asserts are the ones your runbook will see.
+
+### Your user id can be any shape
+
+`user_id` is **opaque text**, up to 255 characters. Skribl never does
+arithmetic on it, never sorts by it and never joins to a users table it does
+not own — it compares it for equality and nothing else.
+
+Until v279 the column was `Integer` while this document said "your user id",
+so a host using UUIDs, ULIDs, an OAuth `sub`, an LDAP DN or an email could not
+integrate: creation failed at flush and `GET /api/skribls?user_id=` answered
+400 before it queried. An audit put it as *do not leave the API generic while
+the schema is not*, and it was right.
+
+**Integer hosts need do nothing.** `42` is stored as `"42"` and matches when
+you pass `42` back; every comparison normalises both sides. The only place the
+difference is visible is raw SQL against the column.
+
+**One API-visible consequence, called out rather than left to be discovered.**
+`author.id` in `GET /api/skribls` and `GET /api/skribls/<id>` is now a JSON
+**string**: `{"id": "7"}` where it used to be `{"id": 7}`. That is the honest
+shape for an opaque identifier, but if your client compares `author.id` against
+its own numeric user id, it has to compare as text.
+
+**Upgrading a populated database** runs `b7d240ac91e3`. On PostgreSQL that is
+`ALTER COLUMN ... TYPE varchar(255) USING user_id::varchar(255)` — a total cast,
+no row at risk, `NULL` preserved. On SQLite the table is rebuilt through
+`batch_alter_table`. The downgrade refuses if any id is non-numeric rather than
+truncating it, because a post whose owner silently became `0` is a post anybody
+can delete.
+
 ## Three things that will bite you if you skip them
 
 **`attach_to_metadata` is not optional in practice.** Skribl's models sit on a
@@ -385,11 +560,26 @@ grep, standalone durability) and `verify_review.py` (limiter semantics).
 Everything served through an authorisation check — `/media/<key>`, the share
 card — defaults to `Cache-Control: private, no-store`. Passing
 `public_media_cache=True` (standalone: `SKRIBL_PUBLIC_MEDIA_CACHE=1`) lets
-all-public objects be served `public, immutable` for CDN caching. Two things
+all-public objects be served `public, max-age=300` for CDN caching. Two things
 the opt-in means, and you must accept BOTH:
 
-1. **Revocation window.** Visibility is revocable; shared caches don't
-   re-check. Formerly-public bytes keep serving from caches until they expire.
+1. **Revocation window, bounded at five minutes.** Visibility is revocable and
+   shared caches don't re-check, so formerly-public bytes keep serving until
+   they expire — and *deleted* bytes do too. The window used to be a year
+   (`max-age=31536000, immutable`), on the reasoning that content-addressed
+   bytes never change; that is true of the bytes and beside the point, because
+   what a cache is being asked is who may read them. An audit of v278 called it
+   incompatible with deletion, moderation and takedowns, and it was.
+
+   `immutable` is gone entirely — it told caches not to revalidate even on a
+   user reload, closing the last recovery path. The number now lives in one
+   place, `skribl.routes.PUBLIC_MEDIA_MAX_AGE`.
+
+   **If "deleted" must mean "gone this instant" for you, leave this off** —
+   which is the default. Closing the window completely needs a CDN purge hook
+   on your side, invoked when a post goes private or is deleted; Skribl does
+   not have one, and raising the number instead of building one just makes the
+   window longer.
 2. **Incompatible with viewer-dependent DENIAL.** Public-cacheability is
    decided by `visible_to(None)` — "may an anonymous viewer see this?". A
    policy that allows anonymous viewing while denying a *specific* viewer
@@ -461,10 +651,30 @@ All are arguments to `create_blueprint()` / `init_skribl()` unless noted.
 | `session` | **required** | `lambda: db.session`. Pass `session=False` only for a test blueprint that never queries. |
 | `url_prefix` | `None` | Mount point. |
 | `static_url_path` | `/static/skribl` | Where Skribl's own JS/CSS is served. |
-| `current_user_id` | anonymous (`None`) | Callable returning your user id, or None. Decides post authorship and who a visibility policy is asked about. |
+| `current_user_id` | anonymous (`None`) | Callable returning your user id, or None. **Any type** — integers, UUIDs, ULIDs, OAuth subjects and emails all work; Skribl stores the `str()` of it, up to 255 characters, and only ever compares it for equality. Decides post authorship and who a visibility policy is asked about. |
 | `csrf` | `None` | Your CSRF triple, if you use one. |
 | `media_store` | inline | An object storing media out of the payload. See `skribl/storage.py`. |
 | `index_route` | `False` | Register `GET /`. Standalone sites only. |
+| `player_target` | `_blank` | Where the three "watch it" paths send the viewer. See below. |
+| `public_media_cache` | `False` | Let a CDN cache public media. See "Shared-cache opt-in" above, and read it before turning it on. |
+
+### Where the player opens (`player_target`)
+
+Three paths lead a poster to `/s/<id>`: Pad's watch button, Flip's, and the
+link in the list of things this browser has posted. `player_target` decides
+where all three open, and it defaults to `_blank`.
+
+**The default is `_blank` for the same reason `index_route` defaults to
+`False`.** Pad's watch button used to do `location.href = url`, which inside a
+host application navigates THE HOST'S top-level document away from whatever
+page Skribl was embedded in — a drawing widget unilaterally deciding the
+surrounding app should stop being on screen.
+
+Pass `player_target="_self"` if your app routes the player itself — an SPA that
+renders `/s/<id>` inside its own shell, say. **Those are the only two values.**
+A named target is rejected, because it would let one embed steal another's tab.
+
+Nothing is required of a host that does not care: the default is the safe one.
 
 Plus one module-level seam:
 

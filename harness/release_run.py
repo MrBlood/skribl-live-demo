@@ -39,13 +39,27 @@ HARNESS = ROOT / "harness"
 # Excluded from the tree hash for the same reason run_harness.sh excludes them:
 # they are written AFTER a run, so including them means recording a result
 # changes the tree whose hash was just recorded. Kept in step by verify_docs.
+ATTESTATION = "harness/MP4-ATTESTATION.txt"
+
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
              "harness/RELEASE.md",
              # v211: verify_postgres writes gunicorn logs beside itself; they
              # are run artefacts, not tree, and must not move the frozen hash
              # between batches (the F3 host log did exactly that once).
-             "harness/.pg_gunicorn.log", "harness/.pg_f3_gunicorn.log"}
+             "harness/.pg_gunicorn.log", "harness/.pg_f3_gunicorn.log",
+             # The MP4 attestation NAMES a tree hash, so including it in that
+             # hash would be circular: writing the evidence would change the
+             # thing the evidence is about, and the file could never match.
+             # Same argument as RELEASE.md above, which states the hash it is
+             # excluded from. run_harness.sh's _tree_files must exclude it too
+             # or the banner and this file print different hashes for one tree
+             # — the v221 defect, which is why both lists carry the same names.
+             # SPELLED OUT rather than written as the ATTESTATION constant: the
+             # parity check in verify_docs.py compares the two lists as LITERAL
+             # strings, so a name that reaches this set through a variable is
+             # invisible to it. Caught by that check on the first run.
+             "harness/MP4-ATTESTATION.txt"}
 
 # Batches exist because a bare run hangs. Grouped so a browser batch stays
 # small enough to finish, and so the server/security suites — which do not
@@ -56,6 +70,12 @@ BATCHES = [
     # batch 1 was never written and every re-invoke restarted from the top.
     # It gets a batch of its own; the three it shared with move to batch 2.
     ["verify_ux.py"],
+    # Keyboard and assistive-technology contracts. Its own batch for the same
+    # reason verify_ux has one: it drives both editors and the shared player
+    # through full page loads, and it presses keys against a PLAYING scrubber,
+    # so sharing a server with a suite that posts would make its timings a
+    # function of somebody else's work.
+    ["verify_a11y.py"],
     # verify_tools.py holds the v213 tool work, split out of verify_ux when that
     # suite outgrew a single invocation. Its own batch for the same reason.
     ["verify_tools.py"],
@@ -86,11 +106,17 @@ BATCHES = [
     # card route) so it rides with the photo suite.
     ["verify_inline.py"],
     ["verify_compose.py"],
-    # Server-side creation. No browser, so it is fast and could ride with
-    # anything — but it drives the SAME endpoint the route suites drive, and
-    # the harness gives one database to every suite in an invocation, so it
-    # keeps its own batch rather than counting somebody else's posts.
-    ["verify_createpost.py"],
+    # Server-side creation and server-side DELETION, the two host-facing Python
+    # entry points. No browser and no harness server between them: each builds
+    # its own Flask apps over its own temporary SQLite files, so neither counts
+    # somebody else's posts and neither can be counted. They keep this batch to
+    # themselves for that reason rather than for isolation from each other.
+    #
+    # verify_deletion is placed here rather than beside verify_deletion_foundation
+    # despite the name: that suite sweeps orphans FOR REAL against a live media
+    # root, and sharing a batch with it is what the note beside it warns off.
+    # This one never touches a store.
+    ["verify_createpost.py", "verify_deletion.py"],
     # The worked example, driven in a browser against its OWN server on its own
     # port and its own database. It shares nothing with the harness instance,
     # so it could batch with anything — but it is a browser suite recording a
@@ -193,6 +219,10 @@ BATCHES = [
     # codes asserted are the ones cron would see. Isolated by construction, so
     # it shares a batch with the other cheap v224 suite.
     ["verify_sweepjob.py"],
+    # Its own batch beside the sweeper for the same reason: both drive a CLI
+    # as a subprocess against their own temp database, so neither wants a
+    # neighbour's server or schema in the way.
+    ["verify_takedown.py"],
     # v224. The four host seams from the outside review (#3 feed filter, #4
     # csrf=False, #7 visibility values, #8 author resolver). In-process
     # throwaway apps over one temp SQLite file, like verify_privacy — no
@@ -266,6 +296,83 @@ def tree_files():
     return sorted(keep)
 
 
+def mp4_attestation(frozen):
+    """What the seal can honestly say about H.264, for THIS tree.
+
+    verify_mp4.py SKIPS wherever Chromium is the browser: Playwright ships the
+    open-source build, which has WebCodecs but no H.264 encoder. The CI job
+    `mp4 (real Chrome)` exists to cover it and does — and an audit of v278
+    pointed out that its result never reached the sealed archive, so the seal
+    said "skipped 1" and nothing about whether the gap had been closed
+    elsewhere. A reader could not tell "not covered" from "covered somewhere
+    you cannot see".
+
+    The attestation is that job's answer, written as a file it produces. THE
+    TREE HASH IN IT MUST MATCH THE ONE THIS RUN FROZE — an attestation for a
+    different tree is evidence about different code, and accepting one would be
+    worse than having none, because the seal would then assert coverage it does
+    not have.
+
+    Returns a single line for RELEASE.md. It never raises and never blocks a
+    release: whether an unverified MP4 path is shippable is a product decision,
+    and the seal's job is to state the fact, not to make it.
+    """
+    f = ROOT / ATTESTATION
+    if not f.is_file():
+        return ("NOT VERIFIED for this tree — no attestation. Run the "
+                "'mp4 (real Chrome)' CI job, or "
+                "SKRIBL_BROWSER_CHANNEL=chrome ./harness/run_harness.sh "
+                "verify_mp4.py on a machine with Google Chrome.")
+    fields = {}
+    for line in f.read_text(encoding="utf-8").splitlines():
+        if ":" in line:
+            k, _, v = line.partition(":")
+            fields[k.strip().lower()] = v.strip()
+    got = fields.get("tree", "")
+    if got != frozen:
+        return (f"STALE — the attestation describes tree {got[:12] or '?'}, "
+                f"this release is {frozen[:12]}. Evidence about different code.")
+    if fields.get("result", "").upper() != "PASS":
+        return f"FAILED on {fields.get('channel', '?')} — {fields.get('result')}"
+    return (f"verified on {fields.get('channel', '?')}, "
+            f"{fields.get('assertions', '?')} assertions, "
+            f"{fields.get('generated', 'time unknown')}")
+
+
+def source_state():
+    """('clean' | 'generated-only dirty' | 'dirty', [paths]) for the working tree.
+
+    "Dirty" means two opposite things here and a bare -dirty suffix reported
+    them identically — the v282 seal recorded `0d88605-dirty` and an outside
+    audit could not tell which it was.
+
+      GENERATED files are written into the tree BY the release itself.
+      harness/MP4-ATTESTATION.txt is dropped in DURING the run so RELEASE.md can
+      report the H.264 result on the tree it describes, and RELEASE.md and
+      LAST-RUN.txt are written at the end. Dirt there is the process working.
+
+      Everything else is source no commit records, which is the reproducibility
+      hole the audit was actually pointing at.
+
+    The audit's original wording — "require a clean working tree" — would have
+    forbidden the mid-run attestation write that v282's own process fix requires,
+    so the rule is narrowed to the second case and the first is enumerated rather
+    than trusted.
+    """
+    try:
+        out = subprocess.run(["git", "-C", str(ROOT), "diff", "--name-only", "HEAD"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        return "unknown", []
+    if out.returncode != 0:
+        return "unknown", []
+    dirty = sorted(p for p in out.stdout.split("\n") if p.strip())
+    if not dirty:
+        return "clean", []
+    source = [p for p in dirty if p not in GENERATED]
+    return ("dirty", source) if source else ("generated-only dirty", dirty)
+
+
 def tree_hash():
     inner = "".join(
         f"{hashlib.sha256((ROOT / f).read_bytes()).hexdigest()}  {f}\n"
@@ -300,6 +407,13 @@ def main():
                          "with 75 (incomplete); 0 means run to completion")
     ap.add_argument("--restart", action="store_true",
                     help="discard any existing checkpoint and start over")
+    # A CHECKPOINT RUN DURING DEVELOPMENT IS LEGITIMATELY DIRTY; a final seal is
+    # not. Both use this script, so the refusal has an escape rather than a
+    # workflow that has to be abandoned — and RELEASE.md records which was used,
+    # so "development run" cannot be mistaken for a seal after the fact.
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="proceed with uncommitted source changes (development "
+                         "runs only; RELEASE.md records that it was used)")
     args = ap.parse_args()
 
     on_disk = sorted(p.name for p in HARNESS.glob("verify_*.py"))
@@ -319,6 +433,21 @@ def main():
     print(f"batch coverage: all {len(on_disk)} suites appear exactly once")
     if args.dry_run:
         return 0
+
+    state, paths = source_state()
+    if state == "dirty" and not args.allow_dirty:
+        print("REFUSED: the working tree has uncommitted changes outside the")
+        print("generated-evidence set, so the hash this run is about to freeze")
+        print("would describe source that no commit records:")
+        for f in paths:
+            print(f"    {f}")
+        print("\nCommit them, or pass --allow-dirty for a development run "
+              "(which says so in RELEASE.md).")
+        return 1
+    if state == "generated-only dirty":
+        print("source state   : generated-only dirty — " + ", ".join(paths))
+    elif state == "dirty":
+        print("source state   : DIRTY, --allow-dirty given — " + ", ".join(paths))
 
     frozen = tree_hash()
     state_path = pathlib.Path(args.state)
@@ -442,7 +571,16 @@ def main():
         "Generated by `harness/release_run.py`. Every fact here is computed, "
         "not typed — see the note at the top of that file for why.", "",
         f"    result           {'PASS' if ok else 'FAIL'}",
-        f"    tree hash        {frozen}",
+        f"    tested tree hash {frozen}",
+        f"    source state     " + (
+            "clean"
+            if state == "clean" else
+            f"{state} ({', '.join(paths)})"
+            if state == "generated-only dirty" else
+            f"DIRTY, --allow-dirty used ({', '.join(paths)}) — "
+            f"NOT A SEALABLE RUN"
+            if state == "dirty" else
+            "unknown (not a git checkout)"),
         f"    SKRIBL_VERSION   " + re.search(
             r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
             (ROOT / "skribl" / "core.py").read_text()).group(1),
@@ -452,11 +590,15 @@ def main():
         f"    assertions       {total}",
         f"    skipped          {len(skipped)}" +
         (f"  ({', '.join(skipped)})" if skipped else ""),
+        f"    mp4 (H.264)      {mp4_attestation(frozen)}",
         f"    generated        {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
         "",
         "A skip is not coverage. Suites that skip are listed above by name so "
         "that an absence of failures is never read as an absence of gaps.", "",
-        "The frozen tree hash above deliberately EXCLUDES the docs that carry "
+        "THREE HASHES IN THIS PROJECT ARE NOT THE SAME HASH, and calling all of "
+        "them \"the tree hash\" is how they get confused. The TESTED TREE HASH "
+        "above is the one this run froze and the suites ran against; it "
+        "deliberately EXCLUDES the docs that carry "
         "generated counts (README.md, START-HERE.md, docs/HANDOFF.md, "
         "harness/README.md), this file, harness/LAST-RUN.txt and SHA256SUMS: "
         "each is written AFTER the run, so a hash covering them would describe "

@@ -34,6 +34,8 @@ import pathlib
 import re
 import sys
 import urllib.request
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -94,9 +96,7 @@ PEAK = """() => {
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def scribble(pg, box, n=110):
@@ -153,8 +153,7 @@ def post_one(b, title, music=False):
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/skribl-pad", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => localStorage.clear()")
     scribble(pg, pg.locator("#canvas").bounding_box())
     pg.wait_for_timeout(600)
@@ -263,8 +262,7 @@ with sync_playwright() as sp:
     pg.on("request", lambda r: payload_reqs.append(r.url)
           if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
     pg.add_init_script(TAP)     # before any page script constructs a context
-    pg.goto(BASE + "/feed", wait_until="load")
-    pg.wait_for_timeout(1500)
+    browsing.goto(pg, BASE, "/feed")
 
     mounted = pg.evaluate("() => window.SkriblInline ? window.SkriblInline.players().length : -1")
     check("the feed mounts one in-post player per listed Skribl",
@@ -352,6 +350,68 @@ with sync_playwright() as sp:
     check("the sound choice is remembered for the SESSION, not forever",
           persisted == "1" and pg.evaluate("() => localStorage.getItem('skribl.inline.sound')") is None,
           f"session={persisted!r}")
+
+    # ---- THE TRANSLUCENT FIXTURE, which used to be impossible --------------
+    # THE COMPARISON ABOVE DRAWS OPAQUE ON PURPOSE, and this file's own note
+    # said why: the wet/dry compositor was not implemented here, so a
+    # sub-100%-opacity stroke beaded at its overlaps and any pixel assertion
+    # over one would have been "quietly tolerant of a gap it cannot see". It
+    # also said that if the in-post player ever got the compositor, "that
+    # fixture is where to widen the proof". It has, so this is that.
+    #
+    # WHAT THIS CAN AND CANNOT ASSERT. The two surfaces fit the drawing to
+    # DIFFERENT boxes — the sealed player to its column, this one to the
+    # payload's logical size — so their ink masses are not comparable in
+    # absolute terms even when both are right. An opaque control proved that
+    # the hard way while this was being built: it scored WORSE than the
+    # translucent case on a cross-surface grid diff, which is how a confounded
+    # instrument announces itself. So the assertion here is the SHAPE property
+    # the compositor exists for, measured on this player alone: a stroke drawn
+    # as accumulating translucent stamps has far less ink than the same stroke
+    # composited once, because the overlaps eat it.
+    #
+    # 145,014 without the compositor against 177,246 with it, on this fixture,
+    # floor-subtracted — so the floor is set well below the composited figure
+    # and well above the stamped one. It is a wide gate deliberately: it is
+    # pinning "the compositor ran", not a pixel count.
+    STAMPED_INK_MAX = 160_000
+
+    tl_pts = []
+    for _i in range(240):
+        _a = (_i / 240) * math.pi * 8
+        _r = 40 + (_i / 240) * 120
+        tl_pts.append({"x": 260 + math.cos(_a) * _r, "y": 260 + math.sin(_a) * _r,
+                       "color": "rgba(233,236,245,0.5)", "size": 26,
+                       "t": _i * 12, "start": _i == 0, "erase": False})
+    _tl_body = {"frames": [{"strokes": tl_pts, "strokeGroups": [len(tl_pts)],
+                            "background": {"color": "#101418"}}],
+                "title": "translucent", "visibility": "public"}
+    _tl_req = urllib.request.Request(
+        BASE + "/api/skribls", method="POST",
+        data=json.dumps(_tl_body).encode(),
+        headers={"Content-Type": "application/json"})
+    id_tl = json.loads(urllib.request.urlopen(_tl_req, timeout=20).read())["id"]
+
+    p3 = b.new_page(viewport={"width": 620, "height": 900})
+    browsing.goto(p3, BASE, "/feed")
+    p3.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_tl)
+    p3.wait_for_function("(id) => window.SkriblInline.find(id).state().state === 'playing'",
+                         arg=id_tl, timeout=15000)
+    # Long enough for the whole 2.9s replay plus the final bake.
+    p3.wait_for_timeout(5000)
+    tl_grid = p3.evaluate(GRID, f'[data-skribl-id="{id_tl}"] .skribl-inline-canvas')
+    p3.close()
+
+    check("a translucent drawing renders at all in the feed", bool(tl_grid))
+    if tl_grid:
+        _floor = min(tl_grid)
+        tl_ink = sum(v - _floor for v in tl_grid)
+        check("a 50%-opacity stroke is composited, not stamped",
+              tl_ink > STAMPED_INK_MAX,
+              f"ink {tl_ink} — under {STAMPED_INK_MAX} means the overlaps are "
+              "stacking, which is the scalloped, banded rendering the wet/dry "
+              "compositor exists to prevent. Measured: 145,014 stamped, "
+              "177,246 composited, 185,205 on /s/<id>")
 
     # ---- LOOP, AND THE MUSIC THAT MUST STOP WITH THE DRAWING ---------------
     #
@@ -478,8 +538,7 @@ with sync_playwright() as sp:
     p1.close()
 
     p2 = b.new_page(viewport={"width": 620, "height": 900})
-    p2.goto(BASE + "/feed", wait_until="load")
-    p2.wait_for_timeout(1500)
+    browsing.goto(p2, BASE, "/feed")
     p2.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", id_a)
     # The tap issues a fetch before the first frame; wait for the payload to
     # land, then time the sample from the moment playback actually begins.
@@ -596,8 +655,7 @@ with sync_playwright() as sp:
     if flip_id:
         check("a flip document was posted (fixture)", True, flip_id)
         fp = b.new_page(viewport={"width": 620, "height": 900})
-        fp.goto(BASE + "/feed", wait_until="load")
-        fp.wait_for_timeout(1500)
+        browsing.goto(fp, BASE, "/feed")
         fp.evaluate("(id) => document.querySelector('[data-skribl-id=\"' + id + '\"]').click()", flip_id)
         fp.wait_for_function("(id) => window.SkriblInline.find(id).state().loaded",
                              arg=flip_id, timeout=15000)
@@ -659,8 +717,21 @@ with sync_playwright() as sp:
     # and compare it to lib/sharecard.js's own arithmetic: if the card's layout
     # moves and only one side is updated, this fails.
     cp = b.new_page(viewport={"width": 620, "height": 900})
-    cp.goto(BASE + "/feed", wait_until="load")
-    cp.wait_for_timeout(1500)
+    browsing.goto(cp, BASE, "/feed")
+    # INJECTED, NOT SHIPPED. The comparison below needs sharecard.js's
+    # arithmetic in THIS page to check the CSS literals against it — and until
+    # v281 the macro loaded it for every host to get it here, 5,210 B of a
+    # 32,000 B budget for a module the page never calls. The check is the same
+    # check; only who pays for it changed.
+    #
+    # evaluate(), NOT add_script_tag(). The latter inlines the source, and this
+    # page's CSP is `script-src 'self' 'nonce-...'`, so Chromium refuses it —
+    # which is verify_csp.py's subject matter arriving as a side effect and is
+    # the right answer. evaluate() runs through the debugger protocol and is
+    # not a page script, so the module's IIFE installs window.SkriblShareCard
+    # without the page ever being allowed to load one.
+    cp.evaluate((ROOT / "skribl" / "static" / "lib" / "sharecard.js")
+                .read_text(encoding="utf-8"))
     geom = cp.evaluate("""() => {
         // SCOPED TO THE FEED. The page's first .skribl-inline is the
         // COMPOSER's draft box now, and a draft has no poster to crop — it is
@@ -770,19 +841,59 @@ with sync_playwright() as sp:
     # about 1.5 KB across the stylesheet and the handler. Unlike the transport
     # above, this one is paid for by the caller that uses it — the feed is
     # exactly where somebody wants a two-second drawing to stop repeating.
-    # 27,500 -> 29,500 for lib/audiosession.js, which serves at 1,650 B — TWICE
-    # the ~800 B estimated when the change was specced, because it builds its
-    # own silent WAV rather than carrying one as base64 (a pasted clip would
-    # have been larger still). The number here is the measured cost, not the
-    # predicted one; the estimate was wrong and the ratchet records what the
-    # feature actually costs. THE COST IS PAID BY THE SURFACE
+    # 27,500 -> 29,500 for lib/audiosession.js. The estimate when the change was
+    # specced was ~800 B and the first implementation served at 1,650 — twice
+    # it — because it built its own silent WAV byte by byte; the ratchet was
+    # raised against THAT number and the raise has not been revisited since.
+    #
+    # THE COMMENT THAT USED TO SIT HERE DESCRIBED THAT FIRST IMPLEMENTATION IN
+    # THE PRESENT TENSE, and it had not shipped for several releases: the module
+    # carries a base64 constant and serves at ~1,293 B, which is what
+    # verify_player_isolation.py's ratchet says twenty lines into its own note.
+    # Two ratchets in one tree stating contradictory facts about the same file
+    # is worse than either being wrong alone, because each looks corroborated.
+    # Caught in an external review of v277, not by a gate — the numbers here are
+    # prose, and prose is not checked.
+    #
+    # 29,500 -> 29,000, measured: 28,907 B served, of which lib/audiosession.js
+    # is 1,362 — not the 1,650 the old comment claimed. Pinned just above the
+    # floor like every other number here, which also means the 500 B of slack
+    # that the wrong figure was quietly holding open is now closed.
+    #
+    # 29,000 -> 32,000 FOR THE WET/DRY COMPOSITOR, 2,913 B measured (31,820
+    # served). The largest single raise this number has taken, and the one with
+    # the clearest thing to point at: without it a stroke below 100% opacity was
+    # drawn here as a row of translucent stamps, so its overlaps stacked and the
+    # feed showed a scalloped, banded version of a drawing that is smooth on
+    # /s/<id>. The v277 review put it plainly — in a drawing product the drawing
+    # IS the content, and a feed representation should not change how it looks.
+    #
+    # Measured on ONE surface with the feature absent, because the obvious
+    # cross-surface comparison is confounded (an opaque control scored worse:
+    # the two players fit the drawing to different boxes). Same fixture, this
+    # player only: 145,014 ink without, 177,246 with, against 185,205 on
+    # /s/<id>. The gap to canonical closes from 21.7% to 4.3%, and the residual
+    # is that same fit difference.
+    #
+    # The old header's reason for NOT doing this said "at feed scale — twenty
+    # boxes, one playing". That figure was wrong: play() settles every other
+    # player, so exactly one is ever playing and the cost is two offscreen
+    # canvases. It also allocates nothing at all for an all-opaque payload,
+    # which is most of them — makeCompositor returns null and the direct path
+    # is unchanged.
+    #
+    # THE COST IS PAID BY THE SURFACE
     # THAT NEEDS IT, which is the rule: without it a posted Skribl's music is
     # silent in a feed on any iPhone with the ringer switch off. This player is
     # Web Audio, and iOS routes Web Audio into a session that switch mutes while
     # leaving <audio> elements alone — which is why Test Seam has always played
     # on the owner's phone and Preview Loop has not. A silent held <audio>
     # session is the fix, and it has to ship wherever the player does.
-    EMBED_RATCHET = 29_500
+    # 32,000 -> 31,000 in v281, when dropping lib/sharecard.js from the macro
+    # took the measured total from 31,820 B to 30,827 B. A ratchet moves down
+    # when the truth is smaller; leaving it at 32,000 would have banked the
+    # saving as slack for the next thing to spend without arguing for it.
+    EMBED_RATCHET = 31_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -804,8 +915,13 @@ with sync_playwright() as sp:
                                      timeout=20).read()
         served[u.split("/static/skribl/")[-1].split("?")[0]] = len(raw)
         total += len(raw)
-    check("every asset the embed macro names is one the server serves",
-          len(embed_urls) == 6, str(embed_urls))
+    # The count is pinned so a new asset cannot join the embed unnoticed; the
+    # loop above is what proves each one is actually served, because urlopen
+    # raises on a 404. Named for the count it checks — it used to be called
+    # "every asset the embed macro names is one the server serves", which is
+    # the loop's job and not this line's.
+    check("the embed macro names exactly the five assets a host pays for",
+          len(embed_urls) == 5, str(embed_urls))
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
           total <= EMBED_RATCHET,

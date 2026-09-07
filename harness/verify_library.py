@@ -29,6 +29,8 @@ import pathlib
 import re
 import sys
 import urllib.request
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -43,9 +45,7 @@ except Exception as exc:                                   # pragma: no cover
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 POST_PUBLIC = """async (title) => {
@@ -60,8 +60,7 @@ POST_PUBLIC = """async (title) => {
 
 def post_one(b, title, turns=4):
     pg = b.new_page(viewport={"width": 1280, "height": 900})
-    pg.goto(BASE + "/skribl-pad", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/skribl-pad")
     pg.evaluate("() => localStorage.clear()")
     box = pg.locator("#canvas").bounding_box()
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
@@ -105,8 +104,7 @@ with sync_playwright() as sp:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("request", lambda r: payload_reqs.append(r.url)
           if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
-    pg.goto(BASE + "/library", wait_until="load")
-    pg.wait_for_timeout(3000)
+    browsing.goto(pg, BASE, "/library")
 
     tiles = pg.evaluate("() => document.getElementById('grid').children.length")
     check("the grid is built from GET /api/skribls, not from demo motifs",

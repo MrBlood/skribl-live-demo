@@ -31,13 +31,13 @@ import sqlite3
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  → {detail}" if detail else ""))
+check = make_check(results, sep="→")
 
 
 def alembic(db_path, *args):
@@ -216,17 +216,126 @@ _after = len(list(sqlite3.connect(db6).execute("select 1 from skribl_post_media"
 check("and does not duplicate associations", _after == len(_rows),
       f"{_after} rows vs {len(_rows)}")
 
+print("\nMIGRATIONS — the downgrade to Integer refuses rather than reassigning")
+# THE FINDING, from an adversarial audit of v279: the non-numeric refusal was
+# written as PostgreSQL's `!~` and placed AFTER the SQLite branch returned, so
+# SQLite never got it while the docstring called the guarantee universal.
+#
+# WHAT THAT COSTS IS WORSE THAN THE AUDIT SAID, and it is measured here rather
+# than reasoned about. SQLite's rebuild does not leave a non-numeric id alone;
+# it converts, taking whatever numeric prefix it finds and 0 when there is
+# none. The fixture below is the real shapes a host uses.
+import importlib.util as _ilu
+import sqlalchemy as sa
+from alembic.migration import MigrationContext
+from alembic.operations import Operations
+_mig_path = (ROOT / "skribl" / "migrations" / "versions"
+             / "b7d240ac91e3_v279_user_id_to_text.py")
+_spec = _ilu.spec_from_file_location("_v279_text", _mig_path)
+_v279 = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_v279)
+
+_IDS = ["3f2a-9c11-uuid", "abc-def", "01ARZ3NDEKTSV4", "auth0|60f1",
+        "a@b.com", "42"]
+
+
+def _seeded_sqlite():
+    eng = sa.create_engine("sqlite://")
+    with eng.begin() as c:
+        c.exec_driver_sql("CREATE TABLE skribl_posts "
+                          "(id INTEGER PRIMARY KEY, user_id VARCHAR(255))")
+        for v in _IDS:
+            c.exec_driver_sql("INSERT INTO skribl_posts (user_id) VALUES (?)", (v,))
+    return eng
+
+
+def _run_downgrade(eng):
+    """Call the migration's real downgrade() under a live Alembic op context.
+
+    NOT `_refuse_non_numeric(conn)`. Calling the helper proves the helper
+    works and says nothing about whether downgrade() reaches it -- and the
+    v279 defect was PLACEMENT, not the check: the guard existed and sat after
+    the SQLite branch returned. A test that calls the helper stays green
+    through the exact bug it was written for. (Confirmed by mutation: moving
+    the call back below the branch left the first version of this section
+    passing.)
+    """
+    with eng.begin() as conn:
+        ctx = MigrationContext.configure(conn)
+        with Operations.context(ctx):
+            _v279.downgrade()
+
+
+# 1. The guard refuses, on SQLite, which is the finding.
+_eng = _seeded_sqlite()
+_refused, _msg = False, ""
+try:
+    _run_downgrade(_eng)
+except RuntimeError as _exc:
+    _refused, _msg = True, str(_exc)
+check("SQLite: the downgrade guard refuses a non-numeric user_id", _refused,
+      "the v279 guard returned before this check on SQLite, and the docstring "
+      "called the refusal universal")
+# The examples are the first three SORTED, so naming one literally here would
+# be asserting the sort order by accident — which is how the first version of
+# this line failed, on 'abc-def' sorting fourth.
+check("...and the refusal names how many and shows examples",
+      "5 distinct" in _msg and sum(v in _msg for v in _IDS) >= 3, _msg[:140])
+
+# 2. It does NOT refuse a table that is genuinely all-numeric. A guard that
+#    refuses everything protects nothing and would be indistinguishable here.
+_eng2 = sa.create_engine("sqlite://")
+with _eng2.begin() as c:
+    c.exec_driver_sql("CREATE TABLE skribl_posts "
+                      "(id INTEGER PRIMARY KEY, user_id VARCHAR(255))")
+    for v in ("1", "42", "999"):
+        c.exec_driver_sql("INSERT INTO skribl_posts (user_id) VALUES (?)", (v,))
+    c.exec_driver_sql("INSERT INTO skribl_posts (user_id) VALUES (NULL)")
+_ok = True
+try:
+    _run_downgrade(_eng2)
+except RuntimeError:
+    _ok = False
+check("...and allows an all-numeric table through, NULLs included", _ok,
+      "an integer host must still be able to roll back")
+
+# 3. WHAT THE GUARD PREVENTS, run for real so the severity is a measurement.
+#    Without it, these are the owners the posts end up with.
+_eng3 = _seeded_sqlite()
+with _eng3.begin() as _conn:
+    _op = Operations(MigrationContext.configure(_conn))
+    with _op.batch_alter_table("skribl_posts") as _b:
+        _b.alter_column("user_id", existing_type=sa.String(255),
+                        type_=sa.Integer(), existing_nullable=True)
+with _eng3.connect() as _c:
+    _after = [r[0] for r in _c.exec_driver_sql(
+        "SELECT user_id FROM skribl_posts ORDER BY id")]
+_mangled = [(b, a) for b, a in zip(_IDS, _after) if str(a) != b]
+check("UNGUARDED, the SQLite rebuild silently rewrites authorship",
+      len(_mangled) == 5,
+      f"{len(_mangled)} of {len(_IDS)} changed — if this drops to 0 the guard "
+      "is protecting against nothing and the refusal should go")
+# The collision is the part that makes it a security bug rather than data loss.
+_zeros = [b for b, a in zip(_IDS, _after) if a == 0]
+check("...and collapses distinct owners onto a single id", len(_zeros) >= 2,
+      f"{_zeros} all became user 0 — each could then delete the others' posts")
+
 print("\nMIGRATIONS — released revisions are immutable")
 # The guard for the mistake this project made twice. Editing a released revision
 # is invisible to Alembic: a database stamped at it sees current == head and runs
 # nothing, so the fix reaches only the databases that never needed it.
+import ast
 import hashlib
 _released = ROOT / "skribl" / "migrations" / "RELEASED.txt"
 check("the released-revision manifest exists", _released.is_file())
 if _released.is_file():
-    _frozen = {}
+    _frozen, _frozen_up = {}, {}
     for _line in _released.read_text(encoding="utf-8").splitlines():
         if _line.startswith("#") or not _line.strip():
+            continue
+        if _line.startswith("upgrade "):
+            _, _d, _rev = _line.split()
+            _frozen_up[_rev] = _d
             continue
         _d, _rev = _line.split()
         _frozen[_rev] = _d
@@ -238,6 +347,36 @@ if _released.is_file():
             _unlisted.append(_rev)
         elif _frozen[_rev] != _actual:
             _changed.append(_rev)
+    # THE HALF THAT CAN NEVER CHANGE, pinned separately since v280. The file
+    # digest answers "did anything move?"; this answers "did the part that has
+    # ALREADY RUN on real databases move?" -- and only the second is what the
+    # immutability rule is really protecting. An upgrade() edit reaches no
+    # stamped database, so it is always a mistake. A downgrade() edit reaches
+    # every one of them, so it is sometimes the only possible fix, and v280's
+    # b7d240ac91e3 amendment is one; see the note in RELEASED.txt.
+    #
+    # Normalised through ast.unparse so reflowing a docstring or a comment
+    # cannot trip it, and so a real change to the statements cannot hide behind
+    # reformatting.
+    _up_changed, _up_missing = [], []
+    for _f in sorted((ROOT / "skribl" / "migrations" / "versions").glob("*.py")):
+        _rev = _f.name.split("_")[0]
+        _tree = ast.parse(_f.read_text(encoding="utf-8"))
+        _up = next((n for n in _tree.body
+                    if isinstance(n, ast.FunctionDef) and n.name == "upgrade"), None)
+        if _up is None:
+            continue
+        _actual_up = hashlib.sha256(ast.unparse(_up).encode()).hexdigest()
+        if _rev not in _frozen_up:
+            _up_missing.append(_rev)
+        elif _frozen_up[_rev] != _actual_up:
+            _up_changed.append(_rev)
+    check("no released migration's UPGRADE path has been edited", not _up_changed,
+          ", ".join(_up_changed) + " — this is the edit that reaches no database "
+          "that needs it; add a revision instead")
+    check("every released migration has a pinned upgrade path", not _up_missing,
+          ", ".join(_up_missing) + " — append its `upgrade <sha>  <rev>` line to "
+          "RELEASED.txt; an unpinned upgrade path is an unguarded one")
     check("no released migration has been edited", not _changed,
           f"{_changed} — add a revision instead; editing one is a silent no-op "
           f"for every database already stamped at it")

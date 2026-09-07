@@ -17,16 +17,24 @@ THE CONTRACT (docs/INTEGRATION.md):
   * The HOST owns the per-request commit. app.py does it for the standalone
     deployment; an embedding host does it however it already does.
 
-Assertions 2-4 fail on the old code because the old create path committed the
-shared session: the host's pending row became durable, and the post survived a
-host rollback it should have died in. Assertion 1 fails on the old tree by
-count: ratelimit.py alone had seven shared-session commits.
+WHAT FAILS ON THE OLD CODE. The dynamic assertions below fail because the old
+create path committed the shared session: the host's pending row became
+durable, and the post survived a host rollback it should have died in. The
+static scan fails on the old tree by count — ratelimit.py alone had seven
+shared-session commits.
+
+Written as "Assertions 2-4" and "Assertion 1" until v280, when the static scan
+widened from two files to every module and the numbering those labels pointed
+at stopped existing. An index into a list that grows is a fact with a short
+life; naming the thing survives.
 """
+import ast
 import importlib
 import os
 import pathlib
 import sys
 import tempfile
+from assertions import make_check
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -34,22 +42,91 @@ sys.path.insert(0, str(ROOT))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 
 print("\nSTATIC — the shared session is never committed or rolled back")
 # The review found the violation by grep; keep the same instrument pointed at
 # the same files so the violation cannot quietly return. Comments are excluded
 # (the contract is DESCRIBED in them, in exactly these words).
-for fname in ("ratelimit.py", "routes.py"):
-    src = (ROOT / "skribl" / fname).read_text()
-    hits = [i + 1 for i, line in enumerate(src.splitlines())
-            if not line.lstrip().startswith("#")
-            and ("session().commit()" in line or "session().rollback()" in line)]
-    check(f"skribl/{fname} never commits/rolls back the shared session",
-          not hits, f"lines {hits}" if hits else "")
+#
+# v280: THE SCAN WAS TWO FILES AND THE CONTRACT IS THE WHOLE PACKAGE. An audit
+# named this shape as a cross-cutting pattern — "tests validate representatives
+# where the contract is global" — and it was true here: skribl/takedown.py
+# could have been written with a commit in its request-shaped code and this
+# gate would have stayed green, because it only ever looked at the two files
+# where the original violation happened to be found.
+#
+# Every module is scanned now, and the exceptions are named. An entry here is a
+# claim that the module is a COMMAND — something a person or a cron job runs,
+# with no host request around it and therefore no outer transaction to belong
+# to. That is the only circumstance in which committing is correct, and it is
+# checked below rather than trusted: an allowlisted file that is not actually a
+# command fails, so the list cannot be used to wave through a library.
+# The exceptions are named PER FUNCTION, not per file. A file-level list would
+# have waved through skribl/storage.py entirely — it is a library that a host
+# imports, and only its two batch functions may commit. Widening the scan
+# produced exactly that finding, which is the argument for the precision.
+_OWNS_ITS_TRANSACTION = {
+    # `python -m skribl.takedown` — the operator's door for a post whose author
+    # cannot revoke it. A CLI invocation is the whole unit of work.
+    ("takedown.py", "main"),
+    # Batch maintenance over the whole table, committing per chunk so a killed
+    # run resumes instead of starting again. NOT safe to call inside a host
+    # request, and both docstrings say so; the gate is what makes that binding.
+    # backfill_media only. sweep_orphans_report was listed here in the first
+    # draft on the assumption that a batch job commits; it does not — it
+    # deletes objects from the store and leaves the rows to the caller. The
+    # stale-exemption check below caught that, which is the argument for
+    # having it: an exemption granted on an assumption is an exemption that
+    # will one day be true by accident.
+    ("storage.py", "backfill_media"),
+}
+
+
+def _committing_functions(src):
+    """Every top-level function containing a commit on the shared session.
+
+    AST rather than indentation, because "which function is this line in" read
+    off leading whitespace is the kind of approximation that is right until a
+    nested def or a long dict argument makes it wrong, silently, in the
+    direction of passing.
+    """
+    tree = ast.parse(src)
+    out = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for sub in ast.walk(node):
+            if not isinstance(sub, ast.Call) or not isinstance(sub.func, ast.Attribute):
+                continue
+            if sub.func.attr not in ("commit", "rollback"):
+                continue
+            inner = sub.func.value
+            # `session().commit()` and `resolve_session().commit()` — a call on
+            # the result of calling something named *session.
+            if (isinstance(inner, ast.Call) and isinstance(inner.func, ast.Name)
+                    and inner.func.id.endswith("session")):
+                out.setdefault(node.name, []).append(sub.lineno)
+    return out
+
+
+for path in sorted((ROOT / "skribl").glob("*.py")):
+    fname = path.name
+    found = _committing_functions(path.read_text())
+    illicit = {fn: lines for fn, lines in found.items()
+               if (fname, fn) not in _OWNS_ITS_TRANSACTION}
+    check(f"skribl/{fname}: only declared commands commit the shared session",
+          not illicit,
+          "; ".join(f"{fn}() at {lines}" for fn, lines in sorted(illicit.items())))
+
+# An exemption for a function that no longer exists is one waiting to be
+# inherited by a new function with the same name.
+_stale = sorted(f"{f}:{fn}" for f, fn in _OWNS_ITS_TRANSACTION
+                if not (ROOT / "skribl" / f).is_file()
+                or fn not in _committing_functions((ROOT / "skribl" / f).read_text()))
+check("every exemption still names a function that commits",
+      not _stale, ", ".join(_stale))
 
 import sqlalchemy as sa
 from flask import Flask

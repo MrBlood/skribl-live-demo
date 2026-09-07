@@ -83,6 +83,9 @@
     overlay.hidden = false;
     requestAnimationFrame(() => {
       overlay.classList.add('open');
+      // Focus AFTER the reveal: modalfocus skips anything with no offsetParent,
+      // and while the overlay is still hidden that is every control in it.
+      if (window.SkriblModal) window.SkriblModal.open(sheet);
       // Re-measure the GIF toggle's sliding pill now that the sheet has real
       // layout — the observers can miss this on reopen, leaving the pill wrongly
       // sized. A rAF after reveal guarantees correct button widths.
@@ -96,6 +99,10 @@
   }
   function closeExport() {
     overlay.classList.remove('open');
+    // Restore focus now rather than on the 350ms timer: the sheet is already
+    // going and a keyboard user should not be focus-less for a third of a
+    // second while it animates out.
+    if (window.SkriblModal) window.SkriblModal.close(sheet);
     closeTimer = setTimeout(() => { overlay.hidden = true; }, 350);
   }
 
@@ -248,7 +255,7 @@
     targetCtx.drawImage(canvas, 0, 0, w, h);
   }
 
-  // Geometry is shared with Flip and the player via lib/photofit.js — this
+  // Geometry is shared with Flip via lib/photofit.js — this
   // function is now just "compute the rect, then draw it". The two copies of
   // the arithmetic agreed on cover/contain but not on the third mode's NAME,
   // which is how a value one surface posts became unreadable to the other.

@@ -14,14 +14,13 @@ template, which is the only way this can silently rot again.
 import re
 import urllib.request
 from pathlib import Path
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 ROOT = Path(__file__).resolve().parent.parent
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Read the constant from source rather than importing app.py, so the suite has no

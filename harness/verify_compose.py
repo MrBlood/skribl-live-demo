@@ -34,6 +34,8 @@ import pathlib
 import re
 import sys
 import urllib.request
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -48,9 +50,7 @@ except Exception as exc:                                   # pragma: no cover
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def draw(pg, box, turns=4, n=70):
@@ -100,8 +100,7 @@ with sync_playwright() as sp:
     pg.on("request", lambda r: posts.append(r.url)
           if r.method == "POST" and "/api/skribls" in r.url else None)
 
-    pg.goto(BASE + "/feed", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/feed")
 
     # ---- the button is there, and it is the only real one ------------------
     check("the host composer offers a Skribl alongside its own attachments",
@@ -331,8 +330,7 @@ with sync_playwright() as sp:
     pad = b.new_page(viewport={"width": 1180, "height": 900})
     perrs = []
     pad.on("pageerror", lambda e: perrs.append(str(e)))
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(2500)
+    browsing.goto(pad, BASE, "/")
     draw(pad, pad.locator("#canvas").bounding_box(), turns=2)
     pad.wait_for_timeout(300)
     pad.locator("#recordBtn").click()

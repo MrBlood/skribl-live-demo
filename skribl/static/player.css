@@ -81,8 +81,20 @@
   --line-loud: #3a4150;
 
   /* Text, dimmest first */
-  --text-faint: #5f6675;
-  --text-faint-2: #697080;
+  /* NOT FOR TEXT A USER HAS TO READ. Measured against every surface in this
+     ramp, --text-faint reaches 2.99-3.37:1 and --text-dim 2.68-3.02:1, both
+     under WCAG AA's 4.5:1 for normal-size text — and an accessibility audit of
+     v278 found them carrying instructions, trim times, optional-field state
+     and character counters, at 10-13px, which makes it worse in practice than
+     the ratio alone suggests.
+     There is no dimmer tier that also passes: --text-muted (#7d8496) is
+     4.61:1 against the lightest surface here, so anything meaningfully fainter
+     fails somewhere. --text-dim survives for DISABLED controls and
+     placeholders, where the text-contrast requirement does not apply.
+     Everything a user reads uses --text-muted; verify_a11y.py holds that line.
+
+     --text-faint/-2 were dropped in v281: defined, used by no rule, unable to
+     pass. verify_a11y.py fails such a token now. */
   --text-soft: #8a93a6;
   --text-soft-2: #8b93a5;
   --text-soft-3: #8b97a8;
@@ -179,8 +191,8 @@
   /* Accent — the brand colour, spent almost nowhere (DESIGN-DIRECTION.md:
      "POST is electricity"). After the v220.x demotion the ONLY things still
      on --accent are: Post and its sheet (.btn.post, .post-submit,
-     .post-watch), Flip's post/share CTAs (.flip-upload, .flip-share-open),
-     and the whole PLAYER surface — a shared link travels off the branded
+     .post-watch), Flip's share CTA (.flip-share-open), and the whole PLAYER
+     surface — a shared link travels off the branded
      host, so the player stays branded, and verify_ux pins its active fill
      to this exact colour. Everything else moved to the --ui-* roles below.
      Recording stays #f4326f (red) and was never accent. */
@@ -945,6 +957,10 @@ body.player-mode .canvas-area { display: contents; }
   }
   .icon-btn:hover { color: var(--text-primary); }}
 
+/* Magnifier toggle — lit when the zoom controls are showing. Uses the same
+   purple ring as the record button (subtle border + glow + accent icon). */
+
+
 /* Player never shows the editor's "Start drawing" hint (leaked on not-found). */
 body.player-mode #canvasEmptyHint { display: none !important; }
 
@@ -1340,7 +1356,7 @@ body.player-mode #canvas {
 
 .player-brand {
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   letter-spacing: 0.03em;
   /* "made with <signature>": the words are quiet type, the mark is real ink.
      The signature is the brand's one appearance on a shared page — the header
@@ -1370,7 +1386,7 @@ body.player-mode #canvas {
   .player-title { font-size: 15px; }
   .player-caption { font-size: 12px; margin-top: 2px; }
   .player-controls { gap: 8px; }
-  .player-brand { display: none; }}   /* not #fff: a white dot vanishes on a light drawer */
+  .player-brand { display: none; }}
 
 
 /* ---------- Pass 2 fix: fit the toolbar on mobile ---------- */
@@ -1480,10 +1496,6 @@ body.player-mode #canvas {
   .tool-open:active, .icon-btn:active, .undo-btn:active, .t-btn:active,
   .onion-tint:active, .tool-btn:active, .pb:active, .loop-btn:active,
   .btn:active:not(:disabled) { transform: none; }
-}
-@keyframes skribl-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .btn.is-loading::after, .pb.is-loading::after, .loop-btn.is-loading::after { animation-duration: 1.6s; }
 }
 
 

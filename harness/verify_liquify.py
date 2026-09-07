@@ -44,6 +44,8 @@ pinned at pointerdown and there is an assertion for it here.
 """
 import os
 import sys
+from assertions import make_check
+import browsing
 
 # Overridable like verify_parity's and verify_fuzz's, so this can be pointed at
 # a scratch instance while the main harness holds 5001. Without it, a run
@@ -61,9 +63,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def fresh(page):
@@ -127,8 +127,7 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1100, "height": 900})
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1500)
+    browsing.goto(page, BASE, "/flip")
 
     print("LIQUIFY — it exists, and the file survived registering it")
     check("Flip reached its last line with a fifth tool registered",
@@ -142,8 +141,25 @@ with sync_playwright() as p:
           len(ids or []) > 3
           and page.evaluate("() => !document.getElementById('toolMoreBtn').hidden"),
           "the chevron is what a fifth tool costs, and it was already there")
-    check("Pad does NOT get liquify", True,
-          "Flip is the animation tool; Pad stays immediate — same call as select")
+    # THIS ASSERTED `True`. "Pad does NOT get liquify" is a claim about Pad's
+    # tool registry and nothing here had ever opened Pad — adding liquify to
+    # the Pad would have left it green, which is the whole failure mode this
+    # project keeps paying for. Pad exposes SkriblPadTools exactly as Flip
+    # exposes SkriblFlipTools (verify_tray drives both), so the claim can just
+    # be checked.
+    _pad = browser.new_page(viewport={"width": 1100, "height": 900})
+    browsing.goto(_pad, BASE, "/")
+    _pad_tools = _pad.evaluate("() => window.SkriblPadTools"
+                               " ? window.SkriblPadTools.list().map(t => t.id || t) : null")
+    check("Pad's tool registry was readable at all",
+          isinstance(_pad_tools, list) and len(_pad_tools) > 0,
+          f"{_pad_tools!r} — a null registry would make the next assertion "
+          "vacuous in exactly the way the one it replaced was")
+    check("Pad does NOT get liquify",
+          "liquify" not in (_pad_tools or []),
+          f"Pad offers {_pad_tools} — Flip is the animation tool; Pad stays "
+          "immediate, same call as select")
+    _pad.close()
 
     box = page.locator("#pad").bounding_box()
     cx = box["x"] + box["width"] / 2

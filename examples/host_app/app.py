@@ -55,7 +55,14 @@ db = SQLAlchemy()
 
 class User(db.Model):
     """The host's users. Skribl never sees this table — it only ever gets an
-    id back from the `current_user_id` callable, and stores it as an integer."""
+    id back from the `current_user_id` callable, and stores the str() of it.
+
+    THIS EXAMPLE'S ids happen to be integers because the host's table declares
+    them that way. Skribl's own column is opaque text as of v279, so a host
+    keyed by UUID, ULID, an OAuth subject or an email works here unchanged —
+    which is the point of that change, and the reason this docstring no longer
+    says Skribl "stores it as an integer". It stored them that way until v279
+    and a host that was not integer-keyed could not mount it at all."""
     __tablename__ = "host_users"
     id = sa.Column(sa.Integer, primary_key=True)
     handle = sa.Column(sa.String(40), unique=True, nullable=False)

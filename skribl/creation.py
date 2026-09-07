@@ -63,7 +63,9 @@ from sqlalchemy.exc import IntegrityError
 
 from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS, MEDIA_CLAIM_TTL
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
-                     SkriblPendingMedia, session, visibility_values)
+                     SkriblPendingMedia, normalise_user_id, session,
+                     visibility_values)
+from .deletion import hash_delete_token
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
                          _validate_payload_complexity, _validate_payload_media)
@@ -128,12 +130,19 @@ class SkriblIdempotencyRace(SkriblRejected):
 
 
 class SkriblUnavailable(Exception):
-    """Five id attempts all collided. Retryable, and says so."""
+    """The post cannot be completed right now, and retrying may work.
+
+    Two causes, both infrastructure rather than the caller's payload, which is
+    why they share a 503 and not SkriblRejected's 400: five id attempts all
+    collided, or the media reservation could not be written.
+    """
 
     status = 503
     message = "Could not allocate a unique id; please retry."
 
-    def __init__(self):
+    def __init__(self, message=None):
+        if message:
+            self.message = message
         super().__init__(self.message)
 
 
@@ -152,14 +161,26 @@ class CreatedPost:
     builds the URL from `.skribl_player`, which is also the only way it stays
     correct under a url_prefix, and a host that wants one calls url_for the
     same way.
+
+    `delete_token` is the ONE moment the raw revocation secret exists. It is
+    set only for a post with no author (an owned post is authorised by its
+    owner and does not need a second, weaker credential), only the SHA-256 of
+    it is stored, and it is never recoverable afterwards — losing it means the
+    post can no longer be withdrawn. A caller that wants anonymous users to be
+    able to take a post back must hand this to them and let them keep it; the
+    standalone app stores it beside the local "Your Skribls" entry AND accepts
+    one back there, which is the half that makes keeping it worth anything —
+    a credential a product can only issue is not a recovery story. See
+    `skribl/deletion.py`.
     """
 
-    __slots__ = ("public_id", "post", "media_keys")
+    __slots__ = ("public_id", "post", "media_keys", "delete_token")
 
-    def __init__(self, public_id, post, media_keys):
+    def __init__(self, public_id, post, media_keys, delete_token=None):
         self.public_id = public_id
         self.post = post
         self.media_keys = media_keys
+        self.delete_token = delete_token
 
 
 def create_post(payload, *, author_id=None, media_store=None,
@@ -269,14 +290,43 @@ def create_post(payload, *, author_id=None, media_store=None,
     # Reserve the objects we just wrote BEFORE the association commits (H3).
     # The claim is committed on its own connection, so the orphan sweeper sees
     # it immediately and spares these objects during the window between the
-    # bytes landing and this transaction committing. Best-effort — a claim that
-    # cannot be written degrades to the pre-v266 age re-check and never fails
-    # the post.
+    # bytes landing and this transaction committing.
+    #
+    # THIS FAILS THE POST RATHER THAN DEGRADING, and it used to do the
+    # opposite. The claim was wrapped in `except Exception: pass` and described
+    # as best-effort, "degrades to the pre-v266 age re-check". An audit of v278
+    # pointed out what that sentence is actually promising: storage.py's own
+    # note says the age re-check does NOT close the window — "the sweeper can
+    # still delete AFTER a successful utime" — which is precisely why this
+    # claim was introduced. So the fallback was a mechanism the tree already
+    # documents as insufficient, and the swallow meant a post could be
+    # published, committed and durable while pointing at media a concurrent
+    # sweep had deleted.
+    #
+    # The trade is not close. An externalised object nobody ends up
+    # referencing is collected safely by the next sweep; a published post with
+    # missing media is permanent, user-visible damage that no later job
+    # repairs. 503 rather than 400 because nothing is wrong with the payload —
+    # the same request is expected to succeed on retry.
     if media_keys:
         try:
             claim_media(session().get_bind(), media_keys, MEDIA_CLAIM_TTL)
-        except Exception:
-            pass
+        except Exception as exc:
+            raise SkriblUnavailable(
+                "Media could not be reserved for this post; please retry."
+            ) from exc
+
+    # MINTED ONLY FOR A POST NOBODY OWNS. An owned post is authorised by its
+    # owner; issuing a capability alongside that would be a second credential
+    # to leak for no gain. 32 urlsafe bytes is ~256 bits — this is the whole
+    # authorisation for a destructive operation, so it is sized like a secret
+    # rather than like the 8-byte public id, which only has to be unguessable
+    # enough not to be enumerated.
+    delete_token = None
+    delete_token_hash = None
+    if author_id is None:
+        delete_token = secrets.token_urlsafe(32)
+        delete_token_hash = hash_delete_token(delete_token)
 
     for _attempt in range(5):
         candidate = secrets.token_urlsafe(8)
@@ -292,12 +342,13 @@ def create_post(payload, *, author_id=None, media_store=None,
                     # ANONYMOUS (None) when the caller has no author — not 1,
                     # which would have made every visitor the owner of user 1's
                     # private posts.
-                    user_id=author_id,
+                    user_id=normalise_user_id(author_id),
                     title=title,
                     caption=caption,
                     payload_json=stored_payload,
                     has_audio=has_audio,
                     visibility=visibility,
+                    delete_token_hash=delete_token_hash,
                 )
                 session().add(post)
                 # Flush to get the post id, then record one association row per
@@ -350,6 +401,6 @@ def create_post(payload, *, author_id=None, media_store=None,
                 # caller's generic handler report THIS error.
                 raise
             continue
-        return CreatedPost(candidate, post, media_keys)
+        return CreatedPost(candidate, post, media_keys, delete_token)
 
     raise SkriblUnavailable()

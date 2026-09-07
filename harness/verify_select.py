@@ -45,6 +45,8 @@ surfaces match" would quietly reintroduce the bug v219 removed.
 """
 import math
 import sys
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -57,9 +59,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 SNAP = "() => frames[idx].strokes.map(p => [Math.round(p.x), Math.round(p.y)])"
@@ -98,8 +98,7 @@ def fresh(page):
     it save on the way out — so the draft is written back after the clear and
     restored by the very reload meant to be rid of it. Empty the document first,
     then clear, then reload, so the save-on-unload has nothing to write."""
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(250)
+    browsing.goto(page, BASE, "/flip")
     page.evaluate("() => { frames = [newFrame()]; idx = 0;"
                   " try { buildStrip(); render(); } catch (e) {}"
                   " for (const k of Object.keys(localStorage))"
@@ -437,8 +436,7 @@ with sync_playwright() as p:
 
     print("\nSELECT — Pad still does not have it")
     pad = browser.new_page(viewport={"width": 900, "height": 800})
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(400)
+    browsing.goto(pad, BASE, "/")
     check("Pad's registry does not list select",
           pad.evaluate("() => window.SkriblPadTools.list()") == ["pen", "eraser", "shape"],
           str(pad.evaluate("() => window.SkriblPadTools.list()"))

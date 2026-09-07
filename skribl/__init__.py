@@ -37,6 +37,8 @@ from flask import Blueprint, url_for
 from .core import SKRIBL_VERSION
 from .creation import (CreatedPost, SkriblIdempotencyRace, SkriblRejected,
                        SkriblUnavailable, create_post)
+from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
+                       set_post_visibility)
 from .models import (NO_SESSION, SkriblBase, bind_session, create_all,
                      session, set_visibility_policy)
 from .routes import register_routes
@@ -49,7 +51,13 @@ __all__ = ["create_blueprint", "init_skribl", "SKRIBL_VERSION",
            # media handling, same transaction as the host's own rows. See
            # skribl/creation.py's header, and docs/INTEGRATION.md.
            "create_post", "CreatedPost", "SkriblRejected",
-           "SkriblIdempotencyRace", "SkriblUnavailable"]
+           "SkriblIdempotencyRace", "SkriblUnavailable",
+           # Taking one back. A host owns the authorisation, so these are the
+           # contract rather than an endpoint — see skribl/deletion.py's header
+           # for why an unauthenticated DELETE route would be a mistake, and
+           # docs/INTEGRATION.md for wiring them up.
+           "delete_post", "set_post_visibility",
+           "SkriblNotFound", "SkriblRefused"]
 
 
 _ASSET_CACHE = {}
@@ -140,6 +148,16 @@ def create_blueprint(session=None, url_prefix=None,
     itself — an SPA that renders `/s/<id>` inside its own shell, say — passes
     `player_target="_self"` and takes over. No other value is accepted, because
     a named target would let one embed steal another's tab.
+
+    That last paragraph was written when it was true of two paths out of three.
+    The posted-list link HARDCODED `target="_blank"` until v281 — the right
+    default by accident, and deaf to a host that asked for `_self` — because it
+    is built in JavaScript while the other two are server-rendered, which is
+    the same seam the drift above came through. `verify_delivery.py` covered
+    the two that were correct; `verify_posted.py` covers this one now, by
+    setting the global to `_self` and reading the rendered anchor, because with
+    the default configured a hardcoded `_blank` and a correct read look
+    identical.
     """
     if player_target not in ("_blank", "_self"):
         raise ValueError(
@@ -178,6 +196,13 @@ def create_blueprint(session=None, url_prefix=None,
     # None means "nobody is signed in", which is the truth for an unauthenticated
     # deployment, and it is what the authorization rule is written against.
     bp.skribl_current_user_id = current_user_id or (lambda: None)
+    # Recorded separately from the callable above, because the callable is
+    # ALWAYS present — it falls back to `lambda: None` — and "always present"
+    # is exactly the thing a destructive route must not gate on. This flag says
+    # the INTEGRATOR supplied an identity, which is a different fact from
+    # "there is a function to call", and it is what register_routes() uses to
+    # decide whether DELETE and PATCH exist at all. See the note beside them.
+    bp.skribl_has_identity = current_user_id is not None
     # csrf is a THREE-element tuple: (prepare, issue, validate).
     #
     #   prepare()            called in before_request. Resolves the token and

@@ -95,11 +95,15 @@
     </div>
     <div class="prop-row">
       <span class="draw-section-label">Smoothing</span>
-      <div class="smooth-seg" id="smoothSeg">
+      {# role=group + a name, so the three buttons announce as one control
+         rather than three unrelated ones. aria-pressed is written by
+         lib/smoothing.js on every change. #}
+      <div class="smooth-seg" id="smoothSeg" role="group"
+           aria-label="Stroke smoothing">
         <span class="seg-slider"></span>
-        <button type="button" class="smooth-btn active" data-smooth="off">Off</button>
-        <button type="button" class="smooth-btn" data-smooth="low">Low</button>
-        <button type="button" class="smooth-btn" data-smooth="high">High</button>
+        <button type="button" class="smooth-btn active" data-smooth="off" aria-pressed="true">Off</button>
+        <button type="button" class="smooth-btn" data-smooth="low" aria-pressed="false">Low</button>
+        <button type="button" class="smooth-btn" data-smooth="high" aria-pressed="false">High</button>
       </div>
     </div>
     {# Eraser width, as a multiple of the pen. This 3 lived in seven places

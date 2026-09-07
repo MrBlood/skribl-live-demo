@@ -34,6 +34,8 @@ the first version of this suite did not catch:
     Pinned on the computed font-size.
 """
 import sys
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -46,9 +48,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 PAD_ROWS = """() => ({
@@ -278,8 +278,7 @@ with sync_playwright() as p:
     # routes converge. This asserts the tray route specifically, because the
     # shelf route never broke and testing it proves nothing.
     page = browser.new_page(viewport={"width": 1100, "height": 900})
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1100)
+    browsing.goto(page, BASE, "/flip")
     hidden = lambda: page.evaluate("() => document.getElementById('shapePop').hidden")
     check("Flip: the shape picker starts closed", hidden() is True,
           "it opens on selection, not on load")
@@ -454,8 +453,7 @@ with sync_playwright() as p:
     # on Pad alone would have let the copy drift straight back.
     print("\nSHAPES [Pad] — the same picker, the same rule, a second copy")
     pad = browser.new_page(viewport={"width": 1200, "height": 950})
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(1000)
+    browsing.goto(pad, BASE, "/")
     phidden = lambda: pad.evaluate("() => document.getElementById('shapePop').hidden")
     prows = lambda: pad.evaluate(PAD_ROWS)
     pad.click("#shapeToolBtn")
@@ -587,8 +585,7 @@ with sync_playwright() as p:
     # without one.
     print("\nCURSOR — the badge names the tool under your hand")
     bp = browser.new_page(viewport={"width": 1280, "height": 900})
-    bp.goto(BASE + "/flip", wait_until="load")
-    bp.wait_for_timeout(1100)
+    browsing.goto(bp, BASE, "/flip")
     pb = bp.eval_on_selector("#pad", "e => { const r = e.getBoundingClientRect();"
                              " return { x: r.x, y: r.y, w: r.width, h: r.height }; }")
     roster = bp.evaluate("() => SkriblFlipTools.list()")

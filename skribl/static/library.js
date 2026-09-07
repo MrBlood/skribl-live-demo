@@ -210,8 +210,10 @@
     el.setAttribute('data-id', item.id);
 
     /* The tile's picture is the share card, cropped by the same rule the feed
-     * poster uses (lib/sharecard.js, applied in the page's own CSS). One cached
-     * image per tile, and no payload until the tile is picked. */
+     * poster uses — sharecard.js's geometry, expressed as literals in this
+     * page's own CSS. The module itself is NOT loaded here (v281 removed it);
+     * verify_inline.py is what holds the literals to band(). One cached image
+     * per tile, and no payload until the tile is picked. */
     var art = document.createElement('div');
     art.className = 'art';
     var img = document.createElement('img');
@@ -313,3 +315,11 @@
   search.addEventListener('input', renderGrid);
   loadPage();
 })();
+
+/* THE BOOT FLAG, and it must stay last. app.js and flip.js have set one since
+   v-early; this surface did not, so every suite that opened it waited a fixed
+   guess instead of a signal — the harness spent 15.7 minutes sleeping and 78
+   seconds launching browsers. A flag is the cheapest possible check for the
+   most expensive possible bug (the file did not reach its end), and unlike a
+   page-error listener it also catches a swallowed throw. */
+window.__skriblBoot = Object.assign(window.__skriblBoot || {}, { library: true });

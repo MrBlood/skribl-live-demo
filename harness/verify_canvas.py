@@ -12,12 +12,12 @@ view rather than silently distorting artwork; switching back restores the framin
 The strokes are never destroyed, which is what makes that safe.
 """
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 with sync_playwright() as p:
     br = p.chromium.launch()
@@ -25,8 +25,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/flip")
     for i in range(2):
         pg.evaluate("() => addFrame()")
         b = pg.locator("#pad").bounding_box()
@@ -111,8 +110,7 @@ with sync_playwright() as p:
     for phrase in ("9:16", "Onion skin", "hold", "Size", "Pages"):
         check(f"Flip help mentions {phrase!r}", phrase in flip_help)
     pad = ctx.new_page()
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(900)
+    browsing.goto(pad, BASE, "/")
     pad_help = pad.content()
     check("Pad help explains Clear all can be undone",
           "Undo" in pad_help and "Clear all" in pad_help)

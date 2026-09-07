@@ -18,12 +18,12 @@ check would prove nothing about the encoders.
 from playwright.sync_api import sync_playwright
 
 import os
+from assertions import make_check
+import browsing
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def gif_delays(b):
@@ -78,8 +78,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/flip")
     for i in range(3):
         pg.evaluate("() => addFrame()")
         draw(pg, 70 + i * 25, 8 + i * 5)
@@ -366,8 +365,7 @@ with sync_playwright() as _p2:
     _t = _b2.new_page(viewport={"width": 1000, "height": 860})
     _terrs = []
     _t.on("pageerror", lambda e: _terrs.append(str(e)))
-    _t.goto(BASE + "/flip", wait_until="load")
-    _t.wait_for_timeout(1200)
+    browsing.goto(_t, BASE, "/flip")
 
     # Light poses with one genuinely expensive frame between them, built with
     # the app's own in-between so the cost is the real thing.
@@ -473,8 +471,7 @@ with sync_playwright() as _p2:
     hb = _b2.new_page(viewport={"width": 900, "height": 820})
     hb_errs = []
     hb.on("pageerror", lambda e: hb_errs.append(str(e)))
-    hb.goto(BASE + "/flip", wait_until="load")
-    hb.wait_for_timeout(900)
+    browsing.goto(hb, BASE, "/flip")
     built = hb.evaluate("""() => {
       const mk = (dy) => { const p = [];
         for (let i = 0; i < 8; i++)

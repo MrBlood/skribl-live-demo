@@ -40,6 +40,8 @@ import wave
 import zlib
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/player_photo.wav"
@@ -73,9 +75,7 @@ open(PNG, "wb").write(_png(400, 300))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 STATE = """() => {
@@ -118,8 +118,7 @@ with sync_playwright() as sp:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     ed_errs = []
     pg.on("pageerror", lambda e: ed_errs.append(str(e)))
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/")
     pg.evaluate("() => localStorage.clear()")
     pg.set_input_files("#photoInput", PNG)
     pg.wait_for_timeout(2500)

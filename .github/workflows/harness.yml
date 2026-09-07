@@ -6,22 +6,36 @@ name: harness
 #   postgres  real parallelism, where the rate-limiter reservation race lives
 #   mp4       a browser with an H.264 encoder, which Playwright's Chromium lacks
 
-# WHO RUNS WHAT — the September 2026 minutes lesson, round two.
+# WHO RUNS WHAT — and WHY, which was written down wrong.
 #
 # The full battery below (three jobs, 89 suites each, 40-90 minutes a job) used
 # to run on EVERY pull request AND every merge: one shipped fix cost ~6 hours
-# of runner time, and an ordinary productive day (7 merges) burned the entire
-# monthly Actions allowance — 30 full runs in one day. cancel-in-progress
-# (below) had already closed the superseded-push hole; it cannot help when
-# every run is for a distinct event.
+# of runner time, and an ordinary productive day (7 merges) meant 30 full runs
+# in a day. cancel-in-progress (below) had already closed the superseded-push
+# hole; it cannot help when every run is for a distinct event.
 #
-# So: pull requests get ONE fast smoke job (the boot suite — does the app
-# start and serve at all), and the full three-job battery runs only on pushes
-# to main and on manual dispatch. The working rhythm this repo actually has —
-# the full affected suites run locally before every push, and their counts are
-# quoted in each PR — is what makes the PR-side trim safe: CI's job on a PR is
+# THAT WAS RECORDED HERE AS A BILL, AND IT IS NOT ONE. This repository is
+# public and every job below runs on `ubuntu-latest`, a standard GitHub-hosted
+# runner. Standard runners on public repositories have no minute allowance and
+# no per-minute charge, so "burned the entire monthly Actions allowance" —
+# what this note used to say — describes an allowance this repository does not
+# have. Whatever the visibility was on the day it happened, it is public now.
+# Runner SIZE is the billable knob (4-core and up, GPU, macOS, self-hosted),
+# and nothing here turns it.
+#
+# THE TRIM IS STILL RIGHT, FOR THE OTHER REASON. Three jobs at 40-90 minutes
+# is a long time to sit on a pull request whether or not anyone is invoiced
+# for it. So: pull requests get ONE fast smoke job (the boot suite — does the
+# app start and serve at all), and the full three-job battery runs only on
+# pushes to main and on manual dispatch. The working rhythm this repo actually
+# has — the full affected suites run locally before every push, and their
+# counts are quoted in each PR — is what makes that safe: CI's job on a PR is
 # to catch a broken push, not to re-verify a verified one. Merges to main keep
 # the complete record.
+#
+# Keeping the wrong reason attached to a right decision is how the decision
+# gets reversed by the first person who checks the reason. Corrected in v280,
+# during a release whose whole subject was claims that had stopped being true.
 on:
   push:
     branches: [main]
@@ -277,3 +291,34 @@ jobs:
             cat harness/LAST-RUN.txt >&2
             exit 1
           fi
+      - name: Write the MP4 attestation
+        # THE RESULT HAS TO REACH THE SEAL. Before this the job proved H.264
+        # and the sealed archive said only "skipped 1 (verify_mp4.py)", so a
+        # reader could not tell "not covered" from "covered somewhere you
+        # cannot see" — an audit of v278 called that an evidence gap, correctly.
+        #
+        # The TREE HASH is the load-bearing field: release_run.py accepts this
+        # file only when it matches the tree the release froze, because an
+        # attestation for different code is worse than none.
+        run: |
+          python - <<'PY' > harness/MP4-ATTESTATION.txt
+          import re, sys
+          sys.path.insert(0, "harness")
+          import release_run as r
+          rec = open("harness/LAST-RUN.txt").read()
+          n = re.search(r"^assertions passed:\s*(\d+)", rec, re.M)
+          print("tree:", r.tree_hash())
+          print("channel: chrome")
+          print("result: PASS")
+          print("assertions:", n.group(1) if n else "?")
+          import datetime
+          print("generated:",
+                datetime.datetime.now(datetime.timezone.utc)
+                .strftime("%Y-%m-%dT%H:%M:%SZ"))
+          PY
+          cat harness/MP4-ATTESTATION.txt
+      - name: Upload the MP4 attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: mp4-attestation
+          path: harness/MP4-ATTESTATION.txt

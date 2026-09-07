@@ -1,5 +1,6 @@
 import math, struct, wave, json
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 WAV = "/tmp/boombap.wav"
@@ -16,8 +17,7 @@ with wave.open(WAV, "wb") as _w:
     _w.writeframes(bytes(_buf))
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 STATE = """() => { const el=document.getElementById('autosaveStatus');
     const dot=el.querySelector('.autosave-dot');

@@ -33,6 +33,7 @@ surfaces and would fail if it did not, and duplicating that here would mean two
 places to update when a scene changes.
 """
 import json
+import re
 import pathlib
 import sys
 import urllib.request
@@ -42,6 +43,7 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from skribl.jsstrip import strip_bytes, strip_comments   # noqa: E402
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 STATIC = ROOT / "skribl" / "static"
@@ -49,9 +51,7 @@ STATIC = ROOT / "skribl" / "static"
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Each fixture is (label, source). The source must be an expression-producing
@@ -205,7 +205,33 @@ with sync_playwright() as sp:
 
     # ---- the number the ratchet is about -----------------------------------
     print("\nSTRIP — what the player parses")
-    player_js = ["app.js", "lib/photofit.js", "lib/looptrim.js", "lib/audioloop.js"]
+    # DERIVED FROM THE TEMPLATE, because the hand-maintained list this replaced
+    # named a population the player does not have. It was
+    # ["app.js", "lib/photofit.js", "lib/looptrim.js", "lib/audioloop.js"] —
+    # four files, one of which (photofit.js) v281 removed from the player, and
+    # missing five the player really loads: eventpoint, scrubkeys,
+    # audiosession, holdtiming, strokelayers, framebitmap.
+    #
+    # It measured 144,847 B against a real 150,839 B, so the assertion below
+    # was TRUE and proven with the wrong number, understating the player's JS
+    # by 5,992 B and its headroom under the target by more than three times.
+    # This is the same defect DECISIONS.md records for v280 — a suite asserting
+    # the right thing about the wrong population — and the reason it survived
+    # is that a hand list goes stale silently while the assertion stays green.
+    #
+    # The derived figure now agrees with verify_player_isolation.py's, which
+    # reads the same template independently: two suites, one number, and a
+    # disagreement between them is a real signal rather than two hand lists
+    # drifting apart.
+    _tpl = (ROOT / "skribl" / "templates" / "skribl" / "skribl_player.html")
+    _body = re.sub(r"\{#.*?#\}", "", _tpl.read_text(encoding="utf-8"), flags=re.S)
+    player_js = [a for a in re.findall(r"skribl_asset\('([^']+)'\)", _body)
+                 if a.endswith(".js")]
+    check("the player's JS list came from the template, not a hand list",
+          len(player_js) >= 5 and "app.js" in player_js,
+          ", ".join(player_js) or "no script tags found — the regex or the "
+          "template's asset helper changed, and an empty list measures 0 B "
+          "and passes every ratchet")
     src_total = sum((STATIC / f).stat().st_size for f in player_js)
     lean_total = sum(len(strip_bytes((STATIC / f).read_bytes(), f))
                      for f in player_js)
@@ -218,6 +244,19 @@ with sync_playwright() as sp:
     # directions: comment stripping plus token-aware whitespace collapse
     # (_collapse_whitespace) REACHES the target with room to spare. Assert it,
     # so any regression that pushes the player back over the line is loud.
+    # What keep_banner would cost, printed rather than asserted: it is the
+    # number jsstrip.strip_comments's docstring cites for having the flag off
+    # by default, and a figure in a docstring that nothing re-measures is how
+    # the previous one (4,491 B, over a player that never had those files)
+    # stayed wrong across several releases.
+    _banner = 0
+    for _f in player_js:
+        _m = re.match(r"\s*/\*.*?\*/", (STATIC / _f).read_text(encoding="utf-8"), re.S)
+        if _m:
+            _banner += len(_m.group(0))
+    print(f"    keeping our own leading block comments would add {_banner:,} B "
+          f"across {len(player_js)} player scripts (jsstrip's keep_banner=False)")
+
     check("REACHES the 153,600 target (strip + whitespace collapse)",
           lean_total <= 153_600,
           f"lean_total {lean_total:,} B ({153_600 - lean_total:,} B under)")

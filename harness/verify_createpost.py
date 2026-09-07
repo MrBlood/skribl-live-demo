@@ -40,6 +40,7 @@ import os
 import pathlib
 import sys
 import tempfile
+from assertions import make_check
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -47,9 +48,7 @@ sys.path.insert(0, str(ROOT))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 
 import sqlalchemy as sa
@@ -177,9 +176,16 @@ with host.app_context():
           and _durable("SELECT COUNT(*) FROM host_posts") == 1,
           f"posts {_durable('SELECT COUNT(*) FROM skribl_posts')}, "
           f"host {_durable('SELECT COUNT(*) FROM host_posts')}")
+    # STORED AS TEXT SINCE v279, so this compares "7" and not 7. The column was
+    # Integer while docs/INTEGRATION.md advertised "your user id", which meant a
+    # host with UUID or OAuth-subject identities could not integrate at all; an
+    # audit of v278 called that out. An integer host is unaffected — 42 stores
+    # as "42" and compares equal to "42" everywhere — and this raw SQL read is
+    # the one place that difference is visible, because it bypasses the type
+    # that normalises it.
+    _stamp = _durable("SELECT user_id FROM skribl_posts LIMIT 1")
     check("the author stamp is the id the host passed, not a guess",
-          _durable("SELECT user_id FROM skribl_posts LIMIT 1") == 7,
-          str(_durable("SELECT user_id FROM skribl_posts LIMIT 1")))
+          str(_stamp) == "7", repr(_stamp))
 
 print("\n4 — AND A HOST ROLLBACK TAKES THE SKRIBL WITH IT")
 with host.app_context():
@@ -287,6 +293,159 @@ with _bare.app_context():
         _bare_msg = f"{type(exc).__name__}: {exc}"
 check("an app with no Skribl blueprint gets a named error, not a silent store",
       "no Skribl blueprint" in _bare_msg, _bare_msg[:90])
+
+print("\n9 — A POST THAT CANNOT RESERVE ITS MEDIA DOES NOT SHIP")
+# THE FINDING, from an audit of v278. The pending-media claim exists to close a
+# race the tree documents in storage.py: the sweeper can delete an object
+# AFTER a successful age-touch, so touching alone is not enough. creation.py
+# wrapped the claim in `except Exception: pass` and called it best-effort,
+# "degrades to the pre-v266 age re-check" — degrading, that is, to the very
+# mechanism the other file says does not work. The result was that a post could
+# commit, durable and user-visible, pointing at media a concurrent sweep had
+# already removed.
+#
+# It now raises SkriblUnavailable (503). The trade is asymmetric: an
+# externalised object nobody references is collected by the next sweep, while a
+# published post with missing media is permanent damage.
+#
+# Driven by making the claim itself fail, which is the only way to reach the
+# branch — the ordinary path succeeds.
+import skribl.creation as _creation
+
+_before_ids = None
+with host.app_context():
+    _before_ids = {r[0] for r in db.session.execute(
+        sa.text("SELECT public_id FROM skribl_posts")).all()}
+
+_real_claim = _creation.claim_media
+
+
+def _broken_claim(*a, **k):
+    raise RuntimeError("simulated: the claim table is unreachable")
+
+
+# A payload carrying media, or media_keys is empty and the branch never runs.
+_PNG = ("data:image/png;base64,"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE"
+        "hQGAhKmMIQAAAABJRU5ErkJggg==")
+
+
+def _media_payload():
+    # baseSnapshot, NOT background.image. The first attempt used the latter and
+    # externalise_payload returned NO keys, so `if media_keys:` was false and
+    # this whole section passed over a branch it never entered. _iter_media_items
+    # walks `music`/`photo` as dicts carrying `.data`, plus a bare-data-URL
+    # `baseSnapshot`; a data URL under background.image is not a media slot at
+    # all. Verified non-empty before this was trusted.
+    return {"frames": [{"strokes": [], "strokeGroups": [],
+                        "background": {"color": "#101418"},
+                        "baseSnapshot": _PNG}]}
+
+
+# A REAL STORE, OR THE BRANCH IS UNREACHABLE. The first version of this section
+# reported ACCEPTED with the fix in place, because this harness host runs the
+# default InlineStore: the data URL stays in the JSON column, externalise_payload
+# returns no keys, and `if media_keys:` is false — so the assertion was passing
+# over a branch it never entered. A LocalDiskStore is what makes media_keys
+# non-empty and the reservation real.
+import tempfile as _tf
+from skribl.storage import LocalDiskStore as _LDS
+_store = _LDS(_tf.mkdtemp(), lambda k: "/media/" + k)
+
+_creation.claim_media = _broken_claim
+try:
+    with host.app_context():
+        try:
+            skribl.create_post(_media_payload(), author_id=1,
+                               media_store=_store)
+            _claim_outcome = "ACCEPTED"
+        except Exception as exc:                       # noqa: BLE001
+            _claim_outcome = type(exc).__name__
+        db.session.rollback()
+finally:
+    _creation.claim_media = _real_claim
+
+check("a failed media reservation refuses the post",
+      _claim_outcome == "SkriblUnavailable",
+      f"{_claim_outcome} — swallowing it publishes a post whose media a "
+      "concurrent sweep may already have deleted, which no later job repairs")
+check("...and it is a 503, not a 400 — the payload was fine",
+      getattr(_creation.SkriblUnavailable, "status", None) == 503,
+      "a client that retries the same bytes should succeed")
+
+with host.app_context():
+    _after_ids = {r[0] for r in db.session.execute(
+        sa.text("SELECT public_id FROM skribl_posts")).all()}
+check("...and no post row survived the refusal",
+      _after_ids == _before_ids,
+      f"{sorted(_after_ids - _before_ids)} left behind")
+
+# The ordinary path still works — a guard that fails everything is not a fix.
+with host.app_context():
+    _ok = skribl.create_post(_media_payload(), author_id=1,
+                             media_store=_store)
+    db.session.commit()
+check("a working reservation still posts normally", bool(_ok.public_id),
+      "the claim path must only refuse when the claim actually fails")
+
+print("\n10 — AN IDENTITY IS OPAQUE TEXT, WHATEVER SHAPE THE HOST USES")
+# THE FINDING, from an audit of v278: docs/INTEGRATION.md documents
+# `current_user_id` as "a callable returning your user id" and its worked
+# example passes the host's native `current_user.id` straight through — while
+# the column was Integer. A host identifying users by UUID, ULID, OAuth subject
+# or email could not integrate at all: creation failed at flush and the listing
+# endpoint coerced ?user_id= with int() and 400'd before querying.
+#
+# "Do not leave the API generic while the schema is not." It is text now, and
+# these are the shapes that have to work.
+_IDS = [
+    ("integer", 12345),
+    ("numeric string", "12345"),
+    ("UUID", "6f1c9a80-3b2e-4d5f-9a11-7c0de2f4b8a3"),
+    ("ULID", "01ARZ3NDEKTSV4RRFFQ69G5FAV"),
+    ("OAuth subject", "auth0|5f3c2b1a9d8e7f6a5b4c3d2e"),
+    ("email", "person@example.com"),
+]
+with host.app_context():
+    for _label, _uid in _IDS:
+        try:
+            _made = skribl.create_post(payload(title=f"id-{_label}"),
+                                       author_id=_uid)
+            db.session.commit()
+            _row = db.session.query(skribl.models.SkriblPost).filter_by(
+                public_id=_made.public_id).one()
+            _stored = _row.user_id
+            _reads = _row.visible_to(_uid)
+            _ok = _stored == str(_uid) and _reads is True
+            _detail = f"stored {_stored!r}, author can read: {_reads}"
+        except Exception as exc:                       # noqa: BLE001
+            _ok, _detail = False, f"{type(exc).__name__}: {exc}"
+        check(f"a {_label} author id round-trips", _ok, _detail)
+
+# AN INTEGER HOST MUST NOT NOTICE. 42 in, "42" stored, and ownership still
+# matches when the host passes the integer back — which is the whole reason
+# both sides of every comparison normalise.
+with host.app_context():
+    # PRIVATE, or this measures nothing: payload() defaults to "unlisted",
+    # which ANY reader may see, so visible_to() returned True for a stranger
+    # and the "a different id does not" assertion failed on a post that was
+    # never about ownership. Only private makes visible_to an ownership test.
+    _m = skribl.create_post(payload(title="int-host", visibility="private"),
+                            author_id=42)
+    db.session.commit()
+    _r = db.session.query(skribl.models.SkriblPost).filter_by(
+        public_id=_m.public_id).one()
+    check("an integer host still owns its post when it passes an int back",
+          _r.visible_to(42) is True and _r.visible_to("42") is True,
+          f"int:{_r.visible_to(42)} str:{_r.visible_to('42')}")
+    check("...and a DIFFERENT id still does not",
+          _r.visible_to(43) is False and _r.visible_to("4") is False,
+          "normalising must not make unrelated ids collide")
+
+# None is not an identity and must never become the string "None".
+check("None stays None rather than becoming a string",
+      skribl.models.normalise_user_id(None) is None,
+      'the string "None" would be an owner somebody could authenticate as')
 
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)

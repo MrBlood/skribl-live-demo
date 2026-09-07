@@ -1,5 +1,6 @@
 import re
 import _layout
+import browsing
 """v111 — regression suite for the external review findings.
 
 One assertion per reported issue, written to fail against v110. Numbering matches
@@ -56,18 +57,11 @@ class _Helpers:
 
 A = _Helpers()
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 results = []
-def check(name, ok, detail=""):
-    # The detail is recorded, not just printed. The summary at the bottom used
-    # to re-print only the NAME of each failure, so a run read through `tail`
-    # — which is how a 278-assertion suite is actually read — showed
-    # "FAILED: attempt and post budgets are separate" and nothing else. The
-    # measured values were sitting in the inline line thousands of lines up.
-    # A failure has to carry what it measured to the place it gets read.
-    results.append((bool(ok), name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results, with_detail=True)
 
 def post(payload, headers=None):
     h = {"Content-Type": "application/json"}
@@ -223,8 +217,7 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(900)
+    browsing.goto(pg, BASE, "/flip")
 
     def draw(x0, n=10):
         b = pg.locator("#pad").bounding_box()
@@ -702,8 +695,7 @@ with sync_playwright() as p5:
     br5 = p5.chromium.launch()
     ctx5 = br5.new_context(accept_downloads=True)
     pg5 = ctx5.new_page()
-    pg5.goto(BASE + "/flip", wait_until="load")
-    pg5.wait_for_timeout(900)
+    browsing.goto(pg5, BASE, "/flip")
     for i2 in range(4):
         pg5.evaluate("() => addFrame()")
         bb = pg5.locator("#pad").bounding_box()
@@ -931,8 +923,7 @@ with sync_playwright() as p7:
     pad7 = ctx7.new_page()
     perr7 = []
     pad7.on("pageerror", lambda e: perr7.append(str(e)))
-    pad7.goto(BASE + "/", wait_until="load")
-    pad7.wait_for_timeout(1000)
+    browsing.goto(pad7, BASE, "/")
     res = pad7.evaluate("""async (b64) => {
         const out = {};
         const text = () => new Uint8Array([104,101,108,108,111,33]);
@@ -969,8 +960,7 @@ with sync_playwright() as p7:
     flip7 = ctx7.new_page()
     ferr7 = []
     flip7.on("pageerror", lambda e: ferr7.append(str(e)))
-    flip7.goto(BASE + "/flip", wait_until="load")
-    flip7.wait_for_timeout(900)
+    browsing.goto(flip7, BASE, "/flip")
     check("Flip has the same checks (both surfaces, not just the Pad)",
           flip7.evaluate("() => typeof skriblDecodeCheckImage === 'function' && typeof skriblDecodeCheckAudio === 'function'"))
     fres = flip7.evaluate("""async () => await skriblDecodeCheckAudio(

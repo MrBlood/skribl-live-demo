@@ -33,6 +33,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = 5010
@@ -40,8 +41,7 @@ BASE = f"http://127.0.0.1:{PORT}"
 API = BASE + "/api/skribls"
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # A minimal, real WAV: the server signature-checks media, so random bytes are
@@ -143,15 +143,22 @@ try:
           headers.get("Content-Type", "").startswith("audio/wav"),
           headers.get("Content-Type", ""))
     check("served with nosniff", headers.get("X-Content-Type-Options") == "nosniff")
-    # Immutable PUBLIC caching only when every referencing post is public AND
-    # the deployment opted in (SKRIBL_PUBLIC_MEDIA_CACHE, set above). Content
+    # PUBLIC caching only when every referencing post is public AND the
+    # deployment opted in (SKRIBL_PUBLIC_MEDIA_CACHE, set above). Content
     # addressing makes the bytes unchanging; it does not make them public,
     # visibility is revocable, and a shared cache does not re-check
     # authorisation — hence the opt-in. Default behaviour is pinned in
     # verify_mediaauthz.py.
-    check("public media is cached immutably (behind the opt-in)",
-          "immutable" in headers.get("Cache-Control", ""),
-          headers.get("Cache-Control", ""))
+    #
+    # THIS USED TO ASSERT `immutable`, and an audit of v278 was right that it
+    # should not: the directive stops a cache revalidating even on a user
+    # reload, so a deleted object could not be shaken loose for the full
+    # max-age — which was a year. Bounded to routes.PUBLIC_MEDIA_MAX_AGE now.
+    # What is worth pinning here is that the opt-in still produces a
+    # shared-cacheable response at all.
+    _cc = headers.get("Cache-Control", "")
+    check("public media is shared-cacheable behind the opt-in",
+          "public" in _cc and "immutable" not in _cc, _cc)
 
     print("\nSTORAGE — keys are content-addressed")
     digest = hashlib.sha256(WAV).hexdigest()

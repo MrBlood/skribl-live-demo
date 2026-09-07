@@ -28,10 +28,66 @@ IT REFUSES RATHER THAN GUESSES. Interpolation needs the two pages to correspond
 — same strokes, moved — which is what Duplicate-then-drag produces. Two freehand
 redraws have nothing to pair, and inventing a pairing would produce a mess that
 looks like a bug in the tool rather than a limit of the idea.
+
+THE FADE IS AN 8-DIGIT HEX, AND THAT IS A PERFORMANCE DECISION, NOT A STYLE ONE.
+Both renderers decide whether to give a translucent stroke its own offscreen
+layer by matching the rgba() FUNCTION form — alphaOf in flip.js,
+parseStrokeAlpha in app.js, which is also the PLAYER's renderer — and neither
+matches a hex, while canvas accumulates #rrggbbaa either way. An exposure is 27
+samples of every stroke, so a six-limb figure was 162 translucent strokes and
+~486 full-canvas operations per frame: 221 ms against a 12 fps budget of 83 ms,
+versus 5.8 ms as hex. Layering is also simply wrong for this content — it exists
+to stop a stroke compounding at its own overlaps, and an exposure IS compounding
+overlaps.
+
+So this suite pins the RENDER COST, not the colour string. Teaching alphaOf to
+understand hex would make exposures slow again — not broken, just slow, which is
+exactly the kind of regression that ships — and a test on the string could stay
+green while the heuristic around it changed.
+
+A FIX THAT ONLY APPLIES TO NEW DATA LEAVES EVERY USER WHO ALREADY HIT THE BUG
+STILL HITTING IT. That happened three times in this one feature, each time
+reported again from the same phone after a fix had shipped. Hence: paintStatic
+carries a cost ceiling so pages built BEFORE the hex change paint direct
+(218 ms -> 5.1 ms) while a hand-drawn frame with six see-through strokes still
+layers — a ceiling, not a ban, and both halves are asserted; and "Rebuild
+in-betweens" re-runs the generator over pages already built.
+
+TWO CEILINGS, NOT ONE, AND ONLY ONE IS FIXED. The postable limit is a constant
+(MAX_POINTS_PER_FRAME, 20,000). The render allowance is 1000/fps, so the same
+exposure that is comfortable at 12 fps has half the slot at 24 — which is how a
+document already inside the point budget still stalled. The plan fits both and
+never drops below TWEEN_MIN_SAMPLES, so the exposure coarsens rather than the
+document becoming unshareable.
+
+RECOGNISING A GENERATED PAGE TAKES THREE SIGNALS, because nothing in the format
+marks one and a false positive overwrites somebody's drawing: 8-digit hex ink,
+neighbours that still interpolate, and a run count that is an exact multiple of
+the source's. Rebuild skips pages already at the right count, so running it
+twice is free and says so.
+
+NO BUDGET CLOSES A DEVICE GAP, which is why the frame bitmap cache exists.
+At 4x CPU throttle one in-between cost ~215 ms against a 41.7 ms slot. The frame
+is STATIC, so lib/framebitmap.js captures a heavy page's first paint and every
+later visit is one drawImage, on both playback surfaces. Only pages past 1,500
+points earn a bitmap, captures happen at the displayed resolution, and past
+64 MB — or one failed allocation — frames paint direct: slower, never broken.
+The play timer estimates a BLIT for cached frames, because subtracting a
+rasterisation cost that can no longer happen made cached loops rush.
+
+NO BLUR, DELIBERATELY. 26 unblurred samples are most of the way to the
+photograph and cost nothing, and the faint ribbing reads as a DRAWN in-between,
+which suits an app that looks like a printed zine. A real gaussian is one render
+attribute away — ctx.filter carries it and works in this engine — but that
+attribute is a contract the PLAYER would have to honour too, which is the same
+trap the `pressure` note in flip.js records. A decision to make on purpose, not
+a default to slide in.
 """
 import os
 import re
 import sys
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -44,9 +100,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # Two corresponding poses, built by writing the arrays directly. Drawing them by
@@ -78,8 +132,7 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1100, "height": 900})
     errs = []
     page.on("pageerror", lambda e: errs.append(str(e)))
-    page.goto(BASE + "/flip", wait_until="load")
-    page.wait_for_timeout(1500)
+    browsing.goto(page, BASE, "/flip")
 
     print("IN-BETWEEN — it generates a page between two poses")
     check("Flip booted", page.evaluate("() => !!(window.__skriblBoot && window.__skriblBoot.flip)"),

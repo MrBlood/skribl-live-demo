@@ -290,7 +290,11 @@
   <link rel="stylesheet" href="{{ skribl_asset('inlineplayer.css') }}">
   <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/holdtiming.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/sharecard.js') }}" defer></script>
+    {# lib/sharecard.js IS NOT LOADED HERE either, for the same reason as the
+     in-post macro this page mirrors: inlineplayer.js never reads
+     window.SkriblShareCard. The library page inherited the asset list rather
+     than the requirement. Removed in v281; verify_library.py passes without
+     it. #}
   <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 </body>

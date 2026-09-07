@@ -14,7 +14,21 @@
    offset — the word CONTINUES the mark's sweep instead of restarting it.
    Standalone includes (player, library) default to 65: the mark's own width,
    a full sweep across just the signature. #}
-<svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 30" fill="none" stroke="url(#skink-m)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="skink-m" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="{{ brand_sweep|default(65) }}" y2="0"><stop offset="0" class="brand-grad-a"/><stop offset="1" class="brand-grad-b"/></linearGradient></defs><g transform="skewX(-8)"><path class="st" d="M 13.6,15.6
+{# THE GRADIENT ID IS PER-SWEEP, and it was a bare "skink-m" until v281.
+   The Pad includes this twice — once in the header at brand_sweep=101, once
+   through _skribl_player_controls.html at the default 65 — so the page
+   carried two <linearGradient id="skink-m">. Duplicate ids are not merely
+   invalid: getElementById and an SVG url(#...) both take the FIRST, so the
+   "made with" mark under the player DECLARED x2="65" and RENDERED at 101,
+   sweeping its colours across a range half again too wide. Measured in the
+   browser, not reasoned about.
+   Keying the id to the sweep makes the two distinct, and two marks that DO
+   share a sweep are byte-identical, so sharing one gradient is correct
+   rather than merely harmless. verify_a11y.py fails a page with any
+   duplicate id now, which is the general form of this bug. #}
+{%- set _brand_sweep = brand_sweep|default(65) -%}
+{%- set _brand_grad = 'skink-m' ~ _brand_sweep -%}
+<svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 65 30" fill="none" stroke="url(#{{ _brand_grad }})" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="{{ _brand_grad }}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="{{ _brand_sweep }}" y2="0"><stop offset="0" class="brand-grad-a"/><stop offset="1" class="brand-grad-b"/></linearGradient></defs><g transform="skewX(-8)"><path class="st" d="M 13.6,15.6
 C 10.6,13.8 6.9,15.3 7.5,17.5
 C 8.1,19.9 12.7,19.1 13.1,21.4
 C 13.4,23.6 9.7,25.1 6.9,23.3

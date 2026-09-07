@@ -16,6 +16,8 @@ transparency + disposal flags). That closes the oldest gap in the handoff.
 """
 import os, sys
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -26,9 +28,7 @@ if _GIFENC is None:
              "      comment in the file itself, for the reproduce command.")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def parse_gif(b):
@@ -130,8 +130,7 @@ with sync_playwright() as p:
     flip = ctx.new_page()
     flip.on("pageerror", lambda e: flip_errors.append(str(e)))
     flip.on("request", lambda r: flip_reqs.append(r.url))
-    flip.goto(BASE + "/flip", wait_until="load")
-    flip.wait_for_timeout(1200)
+    browsing.goto(flip, BASE, "/flip")
 
     check("Flip does NOT ship gifenc on page load",
           not flip.evaluate(API)["hasGlobal"],
@@ -148,8 +147,7 @@ with sync_playwright() as p:
     pad = ctx.new_page()
     pad.on("pageerror", lambda e: pad_errors.append(str(e)))
     pad.on("request", lambda r: pad_reqs.append(r.url))
-    pad.goto(BASE + "/", wait_until="load")
-    pad.wait_for_timeout(1200)
+    browsing.goto(pad, BASE, "/")
     load_gifenc(pad)
     d = pad.evaluate(API)
     check("Pad exposes the same global", d["hasGlobal"] and d["hasEncoder"])
@@ -268,8 +266,7 @@ with sync_playwright() as p:
     gone_errors = []
     gone.on("pageerror", lambda e: gone_errors.append(str(e)))
     gone.route("**/gifenc.min.js*", lambda route: route.abort())
-    gone.goto(BASE + "/flip", wait_until="load")
-    gone.wait_for_timeout(1000)
+    browsing.goto(gone, BASE, "/flip")
     check("window.gifenc is undefined when the file can't be fetched",
           gone.evaluate("() => typeof window.gifenc") == "undefined")
     check("Flip still boots without it", gone.evaluate("() => Array.isArray(frames)"))

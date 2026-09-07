@@ -51,6 +51,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from skribl.storage import S3Store, sweep_orphans  # noqa: E402
+from assertions import make_check
 
 APP_PORT = 5036
 S3_PORT = 5037
@@ -60,9 +61,7 @@ AK, SK, REGION, BUCKET = "AKIAHARNESS", "harness-secret-key", "eu-west-2", "skri
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # --------------------------------------------------------------------------
@@ -408,9 +407,16 @@ try:
         check("the media serves through the app, out of the bucket",
               status == 200 and served == OBJECTS["media/" + key0][0],
               f"{status}, {len(served)} B, {headers.get('Content-Type')}")
-        check("a public post's media is cached immutably",
-              "immutable" in (headers.get("Cache-Control") or ""),
-              headers.get("Cache-Control"))
+        # WAS "cached immutably". The third suite to pin that, and an audit of
+        # v278 was right about all three: `immutable` stops a shared cache
+        # revalidating even on a reload, so a deleted object stayed servable
+        # for the whole max-age — a year. Bounded to routes.PUBLIC_MEDIA_MAX_AGE
+        # now; the bound itself is asserted in verify_mediaauthz.py, and what
+        # matters here is that the S3 path still emits the same header the
+        # local path does.
+        _cc = headers.get("Cache-Control") or ""
+        check("a public post's media is shared-cacheable, not immutable",
+              "public" in _cc and "immutable" not in _cc, _cc)
         check("and is never sniffable",
               headers.get("X-Content-Type-Options") == "nosniff")
     status, _b, _h = get("/media/" + "0" * 64 + ".wav")

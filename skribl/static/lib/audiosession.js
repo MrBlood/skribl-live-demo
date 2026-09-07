@@ -38,11 +38,24 @@
  * iOS ONLY. Everywhere else Web Audio already ignores the switch (there is no
  * switch), so the Control Center side effect would be pure cost.
  *
- * NOT VERIFIABLE IN THIS HARNESS. Chromium on Linux has no ringer switch and no
- * iOS audio session; verify_audiosession.py pins the MECHANISM — one element,
- * looping, playing, idempotent, released — and cannot pin the OUTCOME. app.js
- * already says the same of its own iOS branches: "Desktop never showed it …
- * including in the harness." The phone is the test.
+ * CONFIRMED ON A PHONE, 5 Sep 2026: the owner reported music audible in silent
+ * mode on the same iPhone that found the bug. That is the only evidence there
+ * can be for the OUTCOME.
+ *
+ * STILL NOT VERIFIABLE IN THIS HARNESS, and the confirmation does not change
+ * that. Chromium on Linux has no ringer switch and no iOS audio session;
+ * verify_audiosession.py pins the MECHANISM — one element, looping, playing,
+ * idempotent, released, claimed and released on the right edges — and cannot
+ * pin the OUTCOME. What it protects is the confirmation above: unwire this
+ * module and the phone's answer silently goes stale. app.js already says the
+ * same of its own iOS branches: "Desktop never showed it … including in the
+ * harness." The phone is the test.
+ *
+ * HOLD IT ONLY WHILE SOUND IS ACTUALLY WANTED. A held session is a Control
+ * Center and lock-screen entry the viewer cannot clear, so every claim needs a
+ * release on the edge that stops wanting sound — Pause, the last frame, Mute.
+ * The two editors' Preview Loop buttons pair them; the /s player did not, and
+ * held the session from the first Play until the tab closed.
  */
 (function (global) {
   'use strict';
@@ -69,9 +82,24 @@
 
   var API = {
     /* Call from the gesture. Idempotent: a second tap must not stack a second
-       element, which would leave one playing forever after release(). */
+       element, which would leave one playing forever after release().
+
+       THE FLAG FOLLOWS THE ELEMENT, NOT THE INTENTION. play() settles
+       ASYNCHRONOUSLY, so a synchronous `claimed = true` records that a claim
+       was ATTEMPTED and says nothing about whether the session was granted —
+       active() then answers a different question from the one it is named
+       for, and a caller that trusts it never retries. Two rules fix that
+       without making any of this async:
+
+         - a rejected play() clears the flag, so the next gesture retries;
+         - a claim on an element that exists but is PAUSED re-plays it rather
+           than returning a stale true.
+
+       The optimistic set stays: it is what makes a double tap a no-op, and
+       the reject path is the only thing that can contradict it. */
     claim: function () {
-      if (!isIOS() || claimed) return claimed;
+      if (!isIOS()) return false;
+      if (claimed && el && !el.paused) return true;
       if (!el) {
         el = global.document.createElement('audio');
         el.loop = true;
@@ -82,12 +110,12 @@
         el.style.display = 'none';
         global.document.body.appendChild(el);
       }
+      claimed = true;
       try {
         var p = el.play();
-        if (p && p.catch) p.catch(function () {});
-      } catch (e) { /* no gesture, or the element was removed */ }
-      claimed = true;
-      return true;
+        if (p && p.catch) p.catch(function () { claimed = false; });
+      } catch (e) { claimed = false; }   /* no gesture, or the element is gone */
+      return claimed;
     },
 
     /* The session is only worth holding while something wants sound. */

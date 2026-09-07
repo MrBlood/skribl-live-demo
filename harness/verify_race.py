@@ -12,6 +12,7 @@ _fileName exists but the duration doesn't.
 """
 import math, struct, wave
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 BIG = "/tmp/race42.wav"
@@ -25,9 +26,7 @@ with wave.open(BIG, "wb") as _w:
     _w.writeframes(bytes(_buf))
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 with sync_playwright() as p:
     br = p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])

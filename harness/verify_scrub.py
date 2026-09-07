@@ -21,15 +21,15 @@ import math
 import sys
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 MEASURE = """() => {
@@ -78,8 +78,7 @@ with sync_playwright() as b_ctx:
         pg = b.new_page(viewport={"width": vw, "height": vh})
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(BASE + "/", wait_until="load")
-        pg.wait_for_timeout(800)
+        browsing.goto(pg, BASE, "/")
         pg.evaluate("() => localStorage.clear()")
 
         # --- negative control -------------------------------------------------
@@ -153,8 +152,7 @@ with sync_playwright() as b_ctx:
     pg = b.new_page(viewport={"width": 1280, "height": 900})
     perrs = []
     pg.on("pageerror", lambda e: perrs.append(str(e)))
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(600)
+    browsing.goto(pg, BASE, "/")
     has_rules = pg.evaluate("""() => {
         let n = 0;
         for (const sh of document.styleSheets) {

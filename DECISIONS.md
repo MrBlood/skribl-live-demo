@@ -5445,3 +5445,1030 @@ and makes any pixel comparison of the editor flaky (verify_cssplit)". It seeds
 only a typed title now and leaves an unnamed drawing's field empty behind a
 static placeholder; the filename still resolves the timestamp at export time.
 
+
+## v278 -- the phone answered, and the 16px rule cost a pill
+
+**THESE FOUR ENTRIES WERE WRITTEN UNSEALED AND NUMBERED AFTERWARDS.** While the
+work was in the tree they sat under "Unsealed, on top of v277", because a
+heading with a number in it is a claim that `harness/release_run.py` froze a
+tree and passed, and none of that had happened yet. The number went on at the
+seal, which is the point at which the claim became true. The practice is worth
+keeping: an unsealed heading cannot be mistaken for a release by someone
+reading the log a year from now.
+
+**THE UNVERIFIED FIX IS VERIFIED.** v277 sealed `lib/audiosession.js` with the
+loudest disclaimer in this file -- "A green seal is not evidence this works.
+The phone is." On 5 Sep 2026 the owner reported *"Music works"* from the same
+iPhone that found the bug, in silent mode. That is the outcome the harness
+cannot reach, and it is now recorded in the two places a reader would look:
+START-HERE.md's shared-module index and `verify_audiosession.py`'s header.
+
+**The suite's closing disclaimer STAYS, and the reason is worth stating.** The
+temptation on a confirmation is to delete the caveat, because the thing it
+warned about turned out fine. That gets the logic backwards. Chromium on Linux
+still has no ringer switch, so the suite still cannot see the outcome -- the
+confirmation is evidence about the FIX, not about the HARNESS. What changes is
+the suite's job: it no longer stands in for a verification that never happened,
+it protects a verification that did. A future refactor that quietly unwires the
+silent `<audio>` element would leave the phone's answer stale and true-sounding,
+and this suite is the only thing that would notice. Its closing line now says
+both halves.
+
+**THE 16px RATCHET IS EMPTY.** v277 added the IOS ZOOM section to
+`verify_ux.py` naming seven fields that were under the threshold, on the
+argument that raising them changes real layout and wants a pass with eyes on
+it. That pass happened; all seven are at 16px and `_ZOOM_EXEMPT` is `{}`. The
+mechanism stays so a future exemption is a deliberate edit in that file rather
+than a number dropped quietly into a stylesheet.
+
+**AND THE PASS WAS NOT FREE, WHICH IS WHY THE EXEMPTIONS EXISTED.** Raising
+Flip's `.mb-offset` from 12px made a wide offset -- `-1000, -1000`, and also
+`-320, -240`, which is a full-canvas drag on a phone -- WRAP to a second line
+inside a pill that states `height: 30px`. The second line painted straight over
+the scope pill beside it, at 320, 360, 375 and 390.
+
+**Every geometry probe in the project passed it.** This is the part to keep.
+`verify_layout.py` opens by declaring the right rule -- "measure what the
+browser laid out, never what the CSS was told to do" -- and it was not enough,
+because a wrap does not move the BOX. `scrollWidth - clientWidth` was 0 at
+every width, the bar's height was unchanged, and section 1's reachability query
+reported "ok" while the bar looked broken in a screenshot. The measurement that
+sees it is `scrollHeight` against the box's own height: the CONTENT, not the
+container. New section 5 in `verify_layout.py` does that at five widths.
+
+**Two things about reproducing it.** Setting `textContent` directly did NOT
+reproduce the wrap; the offset has to be written through `applyMoveOffset()`,
+the function that ships. And a `Range` over the text node reports its LAYOUT
+box, which is unaffected by `overflow: hidden` -- so a probe built on that
+reports a paint bug that is no longer there. Both cost a wrong answer here
+before the right one.
+
+**The fix is `white-space: nowrap` plus a clipping `safe center`.** nowrap for
+the same reason `.mb-scope button` already carries it: a control with a stated
+height has nowhere to put a second line. `overflow: hidden` because without it
+the too-wide text painted 4.9px outside the pill at 320 and 4.7px at 360, over
+its neighbour. `safe center` rather than plain `center` because a centred
+overflow is clipped at BOTH ends -- it would eat the leading digits and show
+the middle of the number, which is worse than a truncation. `safe` falls back
+to start exactly when it overflows and is inert otherwise, so 375px and up are
+byte-for-byte unchanged. Both properties are pinned by name in section 5, so an
+edit that drops either fails there rather than in somebody's screenshot.
+
+**What was checked and found fine, so nobody re-checks it.** The export sheet's
+`.export-num` range row -- the tight two-field row the exemption list called
+out by name -- has 123px per field at 320px and needed nothing. The share
+sheet's caption textarea holds exactly three whole lines at 16px, the same as
+at 12.5px; the partial fourth line in a screenshot is ordinary textarea scroll,
+not a clipped box. The title drawer and the share URL clip long values
+horizontally, which is what a single-line input does.
+
+
+## v278, cont. -- what an outside reviewer found that the harness could not
+
+An external developer review of the sealed v277 archive. It verified the
+archive against its SHA-256, checked all 254 `SHA256SUMS` entries, ran
+`node --check` over all 69 JavaScript files, and declined to re-run the suites
+because its environment did not match the pinned Python -- treating the sealed
+evidence as evidence rather than replacing it with a non-equivalent run. That
+last decision is the right one and worth copying.
+
+Its findings were checked against the tree one at a time before any were acted
+on. **All five were real.** What follows is what each turned out to be.
+
+**THE ONE THAT MATTERED, AND WHY NO GATE COULD SEE IT.** The /s player claimed
+the iOS playback session on the play/pause tap BEFORE the branch that decides
+which of the two it is -- so a Pause tap claimed the session on its way to
+stopping the audio -- and released it on no path at all. The first Play held it
+until the tab closed.
+
+The failure is not silence. Sound works; what is wrong is a Control Center and
+lock-screen entry saying Skribl is playing when it is not, which the viewer
+cannot clear. That is the same shape as the bug `audiosession.js` exists for --
+the thing that is broken is not the thing anyone thought to measure -- and it is
+why v277's own audio sections stayed green over it. Section 3 pinned claim and
+release as an API. Section 4 pinned that sound comes out. Neither asked WHEN the
+session is let go.
+
+Fixed by routing every edge through one `syncAudioSession()`: Pause, the last
+frame, and Mute release; Play and Unmute claim. A loop restart deliberately does
+NOT release and reclaim -- `onEnded()` syncs only when it is not about to
+restart -- because a session dropped and retaken every lap is a Control Center
+entry flickering once per pass.
+
+**AND THE FEED'S CONTRACT IS DIFFERENT ON PURPOSE**, which the review asked to
+be made explicit rather than left to be inferred. The /s player holds the
+session while it is AUDIBLY PLAYING. The feed holds it while SOUND IS ENABLED,
+playing or not, because sound there is one session-scoped preference shared by
+every post and posts start and stop as you scroll: tying it to playback would
+flicker the entry down a feed and would need a cross-player refcount to know
+when the last one stopped. The cost -- sound on, nothing playing, iOS still
+shows Skribl as playing -- is bounded, clears on mute, and is now written in
+`inlineplayer.js` where the decision lives.
+
+**`active()` MEANT "ATTEMPTED", NOT "HELD".** `claim()` set its flag
+synchronously after a fire-and-forget `play()`. `play()` settles
+asynchronously, so a rejection left the module reporting a session it had never
+been granted -- and because `claim()` early-returned on that flag, no later
+gesture would ever retry. Two lines: clear the flag when `play()` rejects,
+re-play an element that exists but is paused.
+
+**THE REVIEW PREDICTED THE NEXT FAILURE AND THE FIX PRODUCED IT.** It said 600 B
+of player headroom was not meaningful "particularly while the audio-session
+behavior still needs lifecycle work". That lifecycle work took the player's JS
+to 153,251 B against a 153,000 ratchet. The prediction and its proof landed
+inside one change.
+
+It also said not to solve that by raising the target, which is right, and the
+repayment is `editor_tools.js`: `initMoreTools()` carved out of app.js, the
+tenth such bundle. Every branch in it is guarded on an element or a lib the
+player template does not load, so the player was parsing ~4.9 KB of source to
+run nothing -- behaviour-preserving there BY CONSTRUCTION rather than by an
+argument about reachability. 153,251 -> 149,946, and the ratchet went DOWN to
+150,000, the third time it has. The embed ratchet tightened too, 29,500 ->
+29,000 against 28,907 measured.
+
+**A DEAD HANDLER FELL OUT OF READING THE CODE WELL ENOUGH TO MOVE IT.** The
+block opened by binding a click on `#moreToggle` -- an id NO TEMPLATE HAS. It
+had never run. The isolation gate that would catch this counts ids the editor
+has and the player lacks; an id neither has is invisible to it. Deleted, and
+`verify_tools.py` now pins its absence so it cannot be resurrected by accident.
+
+**TWO RATCHETS DISAGREED ABOUT THE SAME FILE**, which is worse than one being
+wrong, because each looks corroborated by the other. `verify_inline.py` said
+`audiosession.js` "serves at 1,650 B ... because it builds its own silent WAV
+rather than carrying one as base64" -- describing an implementation replaced
+several releases earlier, in the present tense, while
+`verify_player_isolation.py` correctly described the shipped one. Measured:
+1,362 B. Prose is not checked, which is the whole reason the generated stanza
+exists, and these numbers are prose.
+
+**AND MY FIRST GATE FOR THE CARVE MEASURED THE MARKUP.** It counted the buttons
+inside each segmented control and passed with `editor_tools.js` deleted from
+the template -- the buttons ship in `_skribl_draw_drawer.html`; only the click
+handling comes from the `create()` call that moved. Rewritten to PRESS each
+segment and assert the selection moves, and to read `smoothingAlpha` before and
+after rather than asserting it is a positive number, which its default already
+satisfied. Eight of the nine assertions now fail when the bundle is removed.
+Same lesson v275 recorded under its own heading: a fixture too easy is a test
+that passes on the bug, and I wrote one again in the act of guarding a carve.
+
+## v278, cont. -- a Skribl can be taken back
+
+The v277 review's second high finding: the API "supports creation and reading
+but no obvious delete, archive, revoke, or visibility-update operation for an
+already published Skribl". For a product whose whole surface is sharing, that
+is the gap that matters -- people share the wrong drawing, publish something
+private, pick the wrong audience, delete the host post a Skribl hung off, or
+are asked to take something down.
+
+**THE FOUNDATION WAS ALREADY BUILT AND ALREADY TESTED.** `SkriblPostMedia`
+carries ON DELETE CASCADE, `sweep_orphans()` collects the bytes, and
+`verify_deletion_foundation.py` runs the whole sequence on PostgreSQL. Its own
+docstring says the host-controls proposal "puts delete_skribl() first on the
+build order" and that the claim "has never been executed". `skribl/deletion.py`
+is that function; nothing underneath it changed.
+
+**TWO OPERATIONS, BECAUSE THEY ARE TWO DIFFERENT WISHES.** `delete_post`
+removes the row. `set_post_visibility` revokes: the post survives, and the link
+the author already sent stops working for everyone but them. Collapsing them
+would force "I regret sharing this" to mean "destroy it".
+
+**ONE EXCEPTION FOR "MISSING" AND "NOT YOURS", DELIBERATELY.** A distinct
+`SkriblForbidden` would be the disclosure however carefully a route translated
+it: it confirms which public ids are real and who owns them. `SkriblNotFound`
+covers both, with the same message, and the suite asserts the message strings
+are equal rather than trusting the type. `author_id=None` is refused rather
+than privileged; a post with no author can only be removed with
+`require_author=False`, or any authenticated user of a host could claim every
+anonymous post in the table.
+
+**THE HTTP ROUTES DO NOT EXIST WITHOUT AN IDENTITY, and that is the design
+rather than a precaution.** Skribl's API is unauthenticated by default and
+every other route is safe under that, because the worst a stranger can do is
+create or read. A DELETE on an unauthenticated API is a button marked "erase
+any Skribl in this deployment", reachable by anyone who has been sent a public
+id. Shipping it behind a warning in the docs would repeat exactly the mistake
+v224's CSRF gate was written to stop: the safe state must be the one you get by
+NOT noticing. So the standalone app gets no destructive routes at all, a host
+that authenticated its users gets them scoped to the author, and the Python API
+is always there because a host calling it from its own view already knows who
+is asking. Asserted against Flask's url_map, not the source.
+
+**AND THE GATES CAUGHT TWO THINGS I GOT WRONG, both worth recording.**
+
+`verify_txcontract.py` failed `delete_skribl` by name for calling
+`session().commit()`. That is the P0 an earlier outside review found and this
+package was rewritten to stop doing: a commit on the SHARED session commits
+everything pending on it, so a host with an uncommitted row of its own would
+have had it made durable by a Skribl deletion. Being the newest route is not an
+exemption. The host owns the per-request commit; the routes flush.
+
+`verify_seam.py` failed a function-local `from .models import
+visibility_values` as an unresolved name. Hoisted.
+
+**MY OWN FIRST TEST OF THE ASSOCIATION CLEANUP MEASURED THE WRONG THING, and
+only the mutation said so.** It deleted a post, checked the association rows
+were gone, and PASSED with the explicit cleanup removed -- because
+`init_skribl` installs `enable_sqlite_foreign_keys()` and the declared cascade
+did the work. The assertion was crediting the pragma hook to the function under
+test. The second attempt set `PRAGMA foreign_keys=OFF` on the session's
+connection; that does not work either, because the pragma is per connection and
+the pool re-applies the hook on the next checkout -- caught by a guard
+assertion, which is the only reason it is not in the tree. What ships runs the
+REAL uncovered configuration: an app that registers the blueprint directly
+rather than through `init_skribl`, which is documented as equivalent and is
+equivalent in everything except that the hook lives in `init_skribl`. There the
+cascade genuinely does not fire, and the explicit delete is what keeps the
+orphan sweeper from counting deleted posts' media as still referenced.
+
+That is twice in one release that a first-draft assertion passed on the bug it
+was written for. Both were found the same way, and neither would have been
+found by reading it.
+
+## v278, cont. -- the feed draws the same picture now
+
+The last of the v277 review's five. It said the tree documents a wet/dry
+compositor difference in which strokes authored below 100% opacity render
+differently in the in-post player than on the canonical shared page, that
+documenting a limitation is good but "in a premium drawing product the drawing
+itself is the content", and that a feed representation should ideally not
+change its appearance.
+
+**THE TREE'S OWN DESCRIPTION UNDERSTATED IT.** `inlineplayer.js` said a
+translucent stroke "beads at its overlaps". Rendered side by side, the feed
+version of a self-crossing 50%-alpha stroke has scalloped edges and a banded
+interior where the canonical page has one smooth translucent mark. They are not
+the same drawing.
+
+**AND THE REASON FOR NOT DOING IT WAS ARITHMETIC THAT WAS WRONG.** The header
+said ~60 lines of offscreen canvas work per stroke was not obviously worth it
+"at feed scale -- twenty boxes, one playing". `play()` settles every other
+player, so exactly ONE post is ever playing: the cost is two offscreen canvases,
+not forty. It also allocates nothing for an all-opaque payload, which is most of
+them.
+
+**MY FIRST MEASUREMENT WAS CONFOUNDED AND I NEARLY BELIEVED IT.** Comparing this
+player against `/s/<id>` on the 96x96 grid `verify_inline.py` already uses gave
+a satisfying "19.2% of cells differ, 22% less ink" -- and I had already written
+it into the source as the justification. An OPAQUE control, which the compositor
+cannot affect, then scored WORSE (ink ratio 0.446). Most of what I was measuring
+was the two surfaces fitting the drawing to different boxes, which
+verify_inline's own notes say they do. A cross-surface comparison cannot isolate
+this feature, and the number was corrected in place rather than quietly dropped.
+
+The clean instrument is one surface with the feature absent. Same fixture, the
+in-post player only: 145,014 ink stamped, 177,246 composited, against 185,205 on
+`/s/<id>`. The gap to canonical closes from 21.7% to 4.3%, and the residual is
+that same fit difference.
+
+**IT COST 2,913 B and the embed ratchet went 29,000 -> 32,000**, the largest
+raise that number has taken -- in the same release that tightened it 29,500 ->
+29,000 on a measurement, which is how a ratchet is supposed to move: down when
+the truth is smaller, up when something real is bought, never to make a failure
+go away.
+
+**AND THE SUITE'S OWN NOTE SAID WHERE TO WIDEN THE PROOF.** verify_inline draws
+OPAQUE on purpose, because a pixel assertion over a translucent stroke would
+have been "quietly tolerant of a gap it cannot see", and it said that if the
+in-post player ever got the compositor, "that fixture is where to widen the
+proof". A second fixture does that now. The opaque one stays: absolute
+cross-surface ink is confounded whatever the compositor does, so the new
+assertion is a shape property on one surface, with a floor set between the
+stamped and composited figures. Removing the compositor drops it to exactly
+145,014.
+
+That is all five findings closed. Two of them (the audio-session lifecycle and
+this) were things no gate in the tree could see, because both are failures of
+APPEARANCE and RESOURCE STATE rather than of behaviour anything asserted. Two
+more (the missing delete contract, the exhausted byte budget) were things the
+tree already knew and had written down without acting on. The fifth was a
+comment that had been false for several releases. None of them needed access to
+anything the harness does not have -- they needed somebody outside the work to
+read it.
+
+## v279 -- absence is not a permission model
+
+An external audit read the sealed v278 archive and returned one High and eleven
+Mediums across three passes. Its verdict line was the one that set this
+release's shape: **"No-ship for the standalone premium product until P1-H-01 is
+resolved."** Every finding was checked against the tree before it was acted on,
+and every one held -- second review in a row where that was true, which is
+worth saying because the temptation on a long list is to triage by plausibility
+rather than by reading.
+
+**THE HIGH FINDING WAS THE PREVIOUS RELEASE'S OWN REMEDY.** v278 built
+`delete_post()` and `set_post_visibility()` -- the fix for v277's "no obvious
+delete" -- and then registered the HTTP routes only when the host had passed
+`current_user_id`. The reasoning is in that entry and it is not stupid: a DELETE
+on an unauthenticated API is a button that erases any Skribl anyone can name.
+
+The consequence is what the reasoning missed. The standalone app never passes
+`current_user_id`. The standalone app is the premium product. So the release
+that added revocation shipped it switched off for the only deployment that had
+no other way to revoke anything, and said so in three documents as though it
+were a security posture.
+
+**"NOBODY CAN DELETE IT" AND "ANYBODY CAN DELETE IT" ARE BOTH FAILURES.** The
+gate treated the second as the only one worth avoiding. What was missing was
+never authentication -- it was AUTHORISATION, and those are not the same
+requirement. A caller does not have to be a known user; it has to prove it is
+entitled to this specific post.
+
+**THE FORK, AND WHY THE CAPABILITY WON.** Three ways to authorise an anonymous
+author:
+
+  1. *Wait for accounts.* Honest, and it defers the product's worst gap behind a
+     feature with no date.
+  2. *A per-post password the author chooses.* Human-chosen, so it needs a real
+     password hash, a recovery story and a place in the UI for both.
+  3. *A capability token minted at creation* -- 256 bits of
+     `secrets.token_urlsafe(32)`, returned exactly once in the create response,
+     stored only as a SHA-256 digest.
+
+The question asked of all three was not which is simplest now but which one
+survives the arrival of accounts. (1) makes the back-catalogue the price of the
+upgrade. (2) becomes a second, weaker credential the moment there is a real
+one, and nobody ever deletes those. (3) composes: `_authorised_post()` has
+three ways to say yes -- an explicit in-code `require_author=False`, a matching
+token, an owning identity -- and a deployment that grows users keeps every
+anonymous post revocable through the capability while new owned posts authorise
+by identity. Nothing has to be migrated and nothing is stranded.
+
+**A PLAIN DIGEST, DELIBERATELY, AND THE COMMENT SAYS WHY.** bcrypt or argon2 on
+a 256-bit random token buys latency on every delete and defends against a
+dictionary that does not exist. What matters is that the stored value cannot be
+turned back into a usable token. `hmac.compare_digest` does the comparison, and
+`_token_matches()` returns a hard False when either side is empty -- which is
+the assertion that matters most, because every pre-v279 anonymous post has a
+NULL hash and an empty-matches-empty bug would have made all of them deletable
+by anybody.
+
+**THE ROUTES ARE UNCONDITIONAL NOW AND THAT IS THE SAFER SHAPE**, because the
+authorisation is in one function that all three entry points go through, rather
+than in a registration-time `if` that reads like a security control and is
+really a feature flag.
+
+## v279, cont. -- an identity is whatever the host calls a user
+
+`current_user_id` is documented as "a callable returning your user id", the
+worked example in `docs/INTEGRATION.md` passes `current_user.id` straight
+through, and the column was `Integer`. A host whose users are UUIDs, ULIDs,
+OAuth subjects, LDAP DNs or email addresses could not integrate at all:
+creation failed at flush, and the listing endpoint coerced `?user_id=` with
+`int()` and answered 400 before it ever queried.
+
+**DO NOT LEAVE THE API GENERIC WHILE THE SCHEMA IS NOT.** The docs were writing
+cheques the column could not cash, and every one of them read as a deliberate
+design choice.
+
+Text is the side to settle on, and the reason is narrow enough to state: Skribl
+never does arithmetic on this value, never sorts by it, and never joins it to a
+users table it does not own. It compares it for equality. An integer host loses
+nothing -- 42 stores as "42" -- and a textual host gains the ability to exist.
+
+**THE MIGRATION'S POSTGRESQL PATH IS THE INTERESTING PART.** PostgreSQL refuses
+to reinterpret an integer column as text without an explicit `USING`. The cast
+`user_id::varchar(255)` is total -- every integer has exactly one text form --
+and it produces exactly what `normalise_user_id()` produces for the same host
+on the next request, so ownership keeps matching across the upgrade. That
+sentence is the whole reason the migration is safe on a populated database, and
+it is in the migration rather than here.
+
+The downgrade REFUSES when any id is non-numeric instead of casting. A post
+whose owner silently became 0 is a post anybody with user 0 can delete; a
+failed migration is the better outcome.
+
+**THE SQLITE PATH WAS A NO-OP AND THE DRIFT CHECK WAS RIGHT TO FAIL IT.**
+SQLite's column types are advisory and the column already accepted text, so
+skipping the ALTER worked at runtime. But the chain's end state then declared
+INTEGER while the model declared String, and a database built by migration
+disagreed on paper with one built by `create_all()`. A schema that only happens
+to work is the kind that stops working. `batch_alter_table` rebuilds it.
+
+**NORMALISING THE ARGUMENT WAS NOT ENOUGH, and the suite that found that is the
+one that never touches a database.** The `TypeDecorator` covers what is stored
+and loaded. `verify_privacy.py` builds `SkriblPost(user_id=7)` in memory and
+never flushes it, so the decorator never runs -- and an author could not read
+their own private post. `visible_to()` and `_authorised_post()` now normalise
+BOTH sides. The type covers persistence; the comparison covers everything that
+was never persisted. Two mechanisms, two different reasons, and the one that
+looks redundant is the one that caught it.
+
+## v279, cont. -- role="slider" is a promise, not a label
+
+A separate accessibility audit, and `verify_a11y.py` exists as its own suite
+rather than as more of `verify_ux.py` because of the audit's structural point
+rather than its list: the tree carried thousands of assertions while basic
+keyboard failures were sitting in the source, legible to anyone who read it.
+
+All three playback scrubbers were pointer-exclusive. Two of them declared
+`role="slider"` with `aria-valuemin` and `aria-valuemax` and then supplied no
+`tabindex`, no `aria-valuenow` and not one key handler. The third -- the shared
+`/s/<id>` player, the surface strangers get sent a link to -- did not even
+claim it. Five `aria-modal="true"` dialogs did nothing about focus, two of them
+calling `blur()`, which is not focus management but throwing focus at the body.
+
+**DECLARING THE ROLE AND STOPPING IS WORSE THAN LEAVING THE DIV UNDECORATED**,
+because assistive technology then announces a control the user cannot operate.
+`lib/scrubkeys.js` sets the attributes itself, so a surface cannot claim the
+role without getting the behaviour -- the exact split that produced the
+finding. `lib/modalfocus.js` does focus-in, Tab-trap, focus-back and nothing
+else: the surfaces already own visibility and Escape, and they differ.
+
+**THE SUITE'S RULE IS: ASSERT THE BEHAVIOUR, NOT THE ATTRIBUTE.** `role="slider"`
+being present is precisely what was true while it was broken. So it presses
+keys and reads what moved, focuses things and reads where focus went.
+
+**AND THE FIRST VERSION OF ITS CONTRAST GATE WAS VACUOUS.** It exempted any line
+matching `--text-`, meaning to skip token definitions -- but `var(--text-dim)`
+contains `--text-`, so it skipped every USE as well. It reported 37/37 with a
+deliberately failing token on readable text. Only a mutation revealed it.
+Definitions are excluded by shape now (`^\s*--[a-z0-9-]+\s*:`), and the fixed
+gate immediately found `--text-faint-2` on `.accordion-count` at 3.47:1, plus
+five unnamed controls the audit had not seen.
+
+**SEVEN OF MY OWN ASSERTIONS WERE WRONG BEFORE THEY WERE RIGHT**, and they fail
+the same way: each one passed while measuring something adjacent to what it
+claimed. A carve gate that counted markup the templates always shipped. An
+ownership check run against an `unlisted` post, which anyone may read, so it
+measured visibility. A keyboard delta read a frame after dispatch, racing a
+render loop. An association-cleanup test that measured the pragma hook and
+passed with the cleanup deleted. `json=None` in a shape test, which sends no
+body and trips the Content-Length guard first, giving 411 for the 400 it
+wanted. The mutation is not optional: an assertion that does not move under the
+change it was written for is decoration.
+
+## v279, cont. -- what a seal can honestly say about a browser it does not have
+
+`verify_mp4.py` skips wherever Chromium is the browser, and until now the seal
+recorded `skipped 1 (verify_mp4.py)` and stopped. A reader could not tell "not
+covered" from "covered somewhere you cannot see". The audit called that an
+evidence gap rather than a defect, which is exactly the right classification --
+the `mp4 (real Chrome)` CI job does cover it, and its answer simply never
+reached the archive.
+
+`harness/MP4-ATTESTATION.txt` is that job's answer and `RELEASE.md` now carries
+an `mp4 (H.264)` line computed from it, with three outcomes stated rather than
+implied: verified, STALE, or NOT VERIFIED with the command that fixes it.
+
+**THE ATTESTATION IS BOUND TO A TREE HASH AND IS WORTHLESS WITHOUT IT.**
+Evidence about different code is worse than no evidence, because the seal would
+then assert coverage it does not have. STALE is a distinct outcome for that
+reason, not an error.
+
+**IT NEVER BLOCKS A RELEASE.** Whether an unverified MP4 path is shippable is a
+product decision. The seal's job is to state the fact.
+
+**AND I GOT THE EXPLANATION WRONG FIRST, in a note to the reviewer.** I probed
+`VideoEncoder` on `about:blank` and reported "no WebCodecs at all". The suite
+checks on a real page, where the API is present and the three `avc1.*` profiles
+are all unsupported. A probe run in a different context from the thing it is
+explaining is not a smaller version of that measurement; it is a different one.
+
+## v279, cont. -- a rule written down and not enforced is a rule that is already broken
+
+`CLAUDE.md` has said for many releases that no document may hand-type an
+assertion count outside the generated stanza. `verify_docs.py` enforced the
+suite-count half of that rule and not this half. While answering the audit I
+typed "4,392 assertions" into two current documents, correctly quoting the
+sealed figure, and both would have been wrong the moment this release ran.
+
+The gate is there now, and it is deliberately blunt: any four-or-more-digit
+number followed by "assertion" or "assertions" in a current document fails.
+Totals are that size; a sentence about two assertions is not. Re-inserting the
+number fails it by name.
+
+**THE LIST OF "CURRENT DOCUMENTS" WAS ALSO TOO SHORT.** It held README.md,
+harness/README.md, ARCHIVE-README.md and START-HERE.md. `docs/INTEGRATION.md`
+-- the document a host actually integrates against -- was outside it, along
+with FUTURE.md, DESIGN-DIRECTION.md and examples/README.md, for no reason
+anybody had written down. They are in it now. The changelogs
+(`DECISIONS.md`, `docs/HANDOFF.md`, `docs/REFACTOR-v132.md`) stay out on
+purpose: their entries are true of the version they sit under and are not
+maintained afterwards, which is stated at the head of each.
+
+**THE STALENESS SWEEP FOUND THE PREDICTABLE THING.** Prose describing behaviour
+this release changed: `docs/INTEGRATION.md` and START-HERE.md still documenting
+the identity-gated routes; START-HERE.md still calling the public media
+response `immutable`; README.md still pointing at a compositor gap that v278
+closed. All of them were true when written, and all of them are the reason the
+generated stanza exists at all -- the numbers are guarded and the sentences are
+not.
+
+## v280 -- a capability is not finished when the cryptography is
+
+A second adversarial audit read the sealed v279 and returned No-ship. One High
+of its own, one it re-raised, four Mediums and a Low; all seven checked against
+the tree before anything was acted on, all seven real. Two were LARGER than
+reported, which is worth recording because the temptation on a long list is to
+triage by plausibility.
+
+Its diagnosis is better than its list: *"The server-side primitive is the
+strongest part of the new design. The failure is lifecycle ownership around
+that secret."*
+
+**THAT IS THE LESSON AND IT GENERALISES.** v279 got the hard-looking parts
+right -- 256 bits of CSPRNG, hash-only storage, constant-time comparison, a
+hard False on an empty token -- and then handed the only copy to a
+`localStorage.setItem()` whose return value nothing read. Minting and
+verification felt like the security boundary because they are the parts that
+look like security. Creation, durable custody, recovery, migration and
+retirement are all inside it too, and four of them had no owner.
+
+**TWO WAYS TO PUBLISH SOMETHING IRREVOCABLE AND BE TOLD IT WENT FINE.**
+`write()` has always returned a boolean and `add()` has always dropped it, so
+quota exhaustion or private mode produced a live public post, no key, and a
+success message two lines later. And `write()` truncated to LIMIT on every
+call, so the 201st Skribl stranded the 1st and the 202nd stranded the next --
+deterministic, not an edge.
+
+The second one is the more instructive. The cap was correct when it was
+written: the list held titles and timestamps, and a tray that grows without
+limit is a real bug. What changed was the MEANING OF THE DATA, in a different
+release, in a different file. Nothing re-examined the policy, because policies
+are attached to mechanisms and this one was attached to a mechanism that had
+not changed. `capped()` now keeps the newest LIMIT entries plus every entry
+carrying a key: the cap governs what is RENDERED, which is what it was always
+for.
+
+**INDEXEDDB WAS THE OBVIOUS ANSWER AND I DID NOT TAKE IT.** The audit offered
+it as the stronger option and the owner asked which choice serves the future.
+Every store a page can reach -- localStorage, IndexedDB, Cache -- is cleared by
+the same user action and evicted by the same Safari sweep. Moving the key
+between them buys CAPACITY, and capacity was not what was missing. It would
+also have cost a second storage layer plus a browser-side migration for keys
+already written, which is real surface for a benefit that is not the one
+needed.
+
+What survives cleared site data, a new phone, and an account system that does
+not exist yet is the PERSON holding the key. So the fix is to show it: when the
+browser cannot keep it (`recoverykey.js`), before posting when it cannot keep
+anything (`warnIfVolatile`), and on demand in Your Skribls (Copy key). The
+routes already accept a pasted token, so surfacing cost almost nothing.
+
+**IT IS A RECOVERY KEY, NOT A DELETE TOKEN, IN EVERYTHING A USER READS.**
+Deletion is what it does today; the same secret is what a future account system
+would accept to CLAIM the post it belongs to. A name meaning only "delete"
+would have to be retired at exactly the moment the back-catalogue depended on
+people still recognising it.
+
+**AND THE LEGACY ROWS CANNOT BE FIXED, ONLY ANSWERED.** Every pre-v279
+anonymous post holds a NULL hash and no migration can invent authorship the
+server never held. The audit named the trap and it is a good one: do not turn
+possession of the share URL into deletion authority, because the URL is the
+thing the author gave away. `python -m skribl.takedown` is the operational
+answer instead, with `--list-orphans` as the census that says whether a given
+deployment has the problem at all. `require_author=False` had existed since
+v278 with nothing to invoke it, which is a capability the person answering the
+support mail does not have.
+
+## v280, cont. -- a suite can assert the right thing about the wrong population
+
+`verify_a11y.py` was written in v279 with an explicit rule at the top: assert
+the BEHAVIOUR, not the attribute, because `role="slider"` being present was
+precisely what was true while it was broken. It then tested one modal by hand
+while four others declared `aria-modal="true"` and implemented none of it.
+
+**THE RULE WAS RIGHT AND WAS APPLIED ONE LEVEL TOO LOW.** The audit's phrasing
+is the one to keep: a global semantic claim should generate its test population
+from the DOM, not from a manually chosen specimen. Asserting behaviour on a
+specimen still tells you about the specimen.
+
+Section 2 now reads `[aria-modal="true"]` out of the live page. A surface with
+no interaction recipe FAILS rather than being skipped -- that is the whole
+mechanism, because the alternative is a new dialog joining the tree silently. A
+recipe naming a surface that no longer exists fails too, since a recipe for a
+deleted dialog passes forever by testing nothing.
+
+**A DOM CENSUS TAKEN AT LOAD CANNOT SEE A DIALOG BUILT AT RUNTIME**, and
+`recoverykey.js` builds its overlay the first time it is shown. It is primed
+before the sweep. A template census backs that up for the opposite case, a
+dialog behind a branch that did not render this run. Neither alone is enough
+and the pair is stated rather than assumed.
+
+**MY FIRST TWO RECIPES WERE WRONG AND THE STRUCTURE MADE THAT LOUD.** Pad gates
+Post behind a finished take rather than behind ink, so `draw|click:#postBtn`
+timed out on a hidden disabled button; and `atRisk()` is `!flushPadDraft()`, so
+a draft that saves cleanly is not at risk and the leave confirm never opens.
+Under the old design both would have been silent -- no dialog, no assertion, no
+failure. Under this one they were timeouts and red lines.
+
+**THEN IT FOUND A REAL DEFECT IN modalfocus.js.** `close()` checked
+`isConnected`, and an opener can be connected but `display:none`: the leave
+confirm closes the menu holding its opener on the way up. `focus()` on a hidden
+node does nothing and throws nothing, so focus landed on `<body>` -- the exact
+outcome the utility was written to prevent, reached through the one door it did
+not cover. It checks `offsetParent` now and falls back to whatever had focus
+when the dialog opened. Widening a population is how you find the case the
+narrow one was chosen to avoid, usually without meaning to.
+
+## v280, cont. -- two gates that were representatives of a global contract
+
+The audit's second cross-cutting pattern turned out to describe two gates it
+had not looked at, which is the best kind of finding: it kept paying out after
+the specific instance was fixed.
+
+**verify_txcontract SCANNED TWO FILES** -- `ratelimit.py` and `routes.py`, the
+two where the v224 violation happened to be found -- while the contract covers
+the whole package. `takedown.py` could have committed the shared session from
+request-shaped code and the gate would have stayed green. An instrument aimed
+at the site of the last defect is a regression test, not a contract.
+
+It scans every module now, by AST rather than by grep, and the exemptions are
+named PER FUNCTION. Per function because widening it produced a finding on the
+first run: `storage.py` is a library a host imports, and only its batch
+function may legitimately commit, so a file-level allowlist would have waved
+the whole module through -- including any commit a later edit put in it.
+
+**AND ITS STALE-EXEMPTION CHECK CAUGHT MY OWN MISTAKE IMMEDIATELY.** I had
+exempted `sweep_orphans_report` on the assumption that a batch job commits. It
+does not. An exemption granted on an assumption is an exemption that will one
+day become true by accident, which is why that check exists at all.
+
+**verify_docs NOW GATES THE CI-COST CLAIM**, and the reason is that two of this
+release's findings were stale statements in SOURCE COMMENTS. The v279 staleness
+sweep read every `.md` in the tree and found neither: 22 lines above the delete
+routes still calling v278's identity gate "the whole design", and the header of
+`harness.yml` recording a heavy CI day as having burned a monthly Actions
+allowance. A sweep looks where it is pointed; a gate looks every run.
+
+The repository is public and every job runs on `ubuntu-latest`, so there is no
+allowance to burn -- standard hosted runners are free there, with no minute
+cap. Runner SIZE is the billable knob and nothing here turns it. The claim was
+in three places independently, and the gate found the third.
+
+**IT ASSERTS THE HALF THAT IS CHECKABLE OFFLINE.** Whether Actions bills this
+repository depends on visibility, which needs the network, and on runner
+labels, which do not. So: while every `runs-on` is a standard label, nothing
+current may describe this project's minutes as finite or billed. Move one job
+to a larger runner and the claim becomes true again, and the gate stands down
+and says why -- which is the behaviour a rule about cost should have, rather
+than a constant that somebody has to remember to flip.
+
+**A STANDING RULE THAT FIRES ON A FREE ACTION IS NOT HARMLESSLY CAUTIOUS.**
+`CLAUDE.md` had been asking for permission before spending nothing, and that
+trains the next session to ask theatrically -- which is how a real spending
+question gets waved through with the rest of the noise. Render, third-party
+paid tiers and usage-scaled billing are untouched. The PR-side CI trim also
+keeps its conclusion and loses its reason: three jobs at 40-90 minutes is a
+long time to sit on a pull request whether or not anyone is invoiced, and
+keeping a wrong reason attached to a right decision is how the decision gets
+reversed by the first person who checks it.
+
+## v281, cont. -- a description is a thing that can be wrong
+
+The recovery-key work above was v281's reason for existing. What followed was
+a staleness sweep that ran until two consecutive passes found nothing, and it
+is worth recording what it actually turned up, because the pattern was not the
+one anybody expected.
+
+**Twelve findings. Every one was a description that had drifted from a thing.
+Not one was a logic bug.**
+
+  a template loaded three modules nothing on those pages read
+  the shared-module index had three wrong rows and three missing ones
+  docs/INTEGRATION.md never mentioned `player_target`
+  :root defined two colour tokens no rule used and that cannot pass AA
+  README's route table did not mention DELETE -- the whole revocation feature
+  verify_jsstrip measured four of the player's nine scripts
+  two byte figures were measured on disk and reported as what a link costs
+  7.8 KB of CSS styled controls that do not exist
+  three assertions asserted the literal True
+  the Pad emitted two elements with id="skink-m"
+
+The tree carries 41,546 lines of harness and 13,608 of markdown against 35,832
+lines of shipped code. It contains more description of itself than self, and
+every restatement is a place where two things must be changed together or one
+of them becomes a lie. That is the whole mechanism. "Staleness" is not decay;
+it is the arithmetic of saying the same fact in more than one place.
+
+**THE ORDER OF PREFERENCE IS DERIVE, THEN DELETE, THEN GATE.** This sweep
+reached for the third six times, which is why the harness got heavier. Gating
+a restatement detects drift; it does not prevent it, and it costs a permanent
+assertion. Deriving it makes drift impossible. This repository already proved
+that with the generated HARNESS-COUNTS stanza: numbers in prose kept going
+stale, so they stopped being prose. The module index, the route table and the seam table are
+the same shape and should become generated stanzas in v282, at which point
+four of the gates added here can be deleted outright.
+
+## v281, cont. -- an instrument is wrong before the tree is
+
+Across the sweep, roughly as many probes were wrong as defects were found. A
+truncated `head` nearly reported a working control as permanently hidden. A
+`--` swallowed a `--include=*.md` and made a documentation census read Python.
+A regex took the first of eight exports and declared a live module dead. A CSS
+trimmer ate a comment terminator and corrupted the shared `.slider` rule --
+caught only because verify_sizeclass and verify_tray assert exactly that.
+
+And the sharpest one: the first version of the README route-table gate reused
+a set of PATHS, so GET, PATCH and DELETE on `/api/skribls/<public_id>`
+collapsed into one entry and any single row satisfied all three. **It would
+have passed on the tree that motivated it.** A mutation said so; nothing else
+would have.
+
+The rule this argues for is not "be careful". It is procedural:
+
+  CALIBRATE THE INSTRUMENT ON A KNOWN ANSWER BEFORE BELIEVING ITS OUTPUT.
+  Run every new probe against one case known to be bad and one known to be
+  good. If it cannot tell them apart, the probe is wrong, not the tree.
+
+That is the mutation test moved BEFORE the fix instead of after, and it would
+have caught nearly every instrument error in this release.
+
+A second rule, narrower and learned the expensive way: **do not edit
+mechanically where prose and code are interleaved.** Three automated passes
+over the stylesheets each produced new damage -- a stranded trailing comment,
+an emptied media query, a deleted note that documented a live token, and
+finally the corrupted rule above. Comments are prose and prose needs reading.
+
+
+## v282 -- the mechanisms that prevent regression became the thing to reduce
+
+v281 shipped with a harness larger than the application: 41,546 lines against
+35,832, plus 13,608 lines of markdown. An adversarial review named the
+condition precisely -- the tree contained more description of itself than self
+-- and set a decluttering plan. This release implements it, and the useful
+record is where the plan did NOT survive contact with measurement.
+
+**Measured, then declined: merging 99 suites toward 15.** The argument was
+partly that it would enable fewer browser launches. All 133 launches together
+cost ~78 seconds; fixed sleeps cost ~17 minutes. The target is also
+unreachable as stated -- 73 browser-using suites launch exactly once each, in
+their own process, so they cannot drop without the merge itself. Merging
+trades away process isolation (today one crash takes down one suite) for a
+benefit worth 78 seconds. The reviewer withdrew the "<=20 suites" target on
+seeing this.
+
+**Measured, then corrected: "all 99 suites define their own check()".** They
+defined NINE, differing on three axes with no record of why. Eleven printed
+detail only on failure; eleven kept it in the results tuple; one rendered an
+arrow instead of a dash. Two of those three had a reason written down in
+exactly one file each. Consolidating them saved ~300 lines, not "thousands" --
+and that is fine, because the point was removing hidden contracts, not lines.
+
+**THE HARNESS GOT BIGGER, and the honest number belongs here.** 42,806 ->
+43,353 lines. The new substrate (package.py, gen_docs.py, makeskribl.py,
+assertions.py, browsing.py) is 704 lines against ~400 removed. On lines of
+code this decluttering is a regression. What shrank is the count of facts a
+maintainer must know twice:
+
+    harness/fixtures/            2,737,166 B -> 0
+    check() implementations      9 -> 1
+    hand-maintained doc tables   2 -> 0
+    START-HERE.md                3,455 -> 2,038 lines
+    fixed-sleep budget           1,019s -> 929s
+
+The reviewer's reframing is the right metric and is adopted: count CONCEPTS,
+not files. How many facts, invariants, compatibility behaviours and historical
+explanations must be known twice?
+
+## v282, cont. -- deriving beats gating, and deleting the gate is the proof
+
+Two documentation tables now generate from source: START-HERE's shared-module
+index (surfaces from the templates that load each module, description from the
+module's own opening sentence) and README's route table (from routes.py, each
+purpose the handler's own docstring -- ten handlers gained one).
+
+**Both bespoke gates that policed those tables were DELETED**, 104 lines,
+replaced by one assertion that the generator ran. Keeping generator, gate and
+hand-maintained table together would have been the exact accumulation this
+release exists to reverse.
+
+Two of the four candidates did not qualify, which is worth recording so nobody
+re-attempts them: the host-seam table's descriptions are authored prose, so
+generating it relocates a list rather than eliminating one; and the env-knob
+"table" is a coverage check with no second copy to remove.
+
+## v282, cont. -- 708 lines of release narrative became 23 enforced invariants
+
+Fifteen "Closed in vNNN" sections left START-HERE.md. Each was read for the
+invariant that outlived it, that invariant was checked BY GREP against the
+suite that enforces it, and only then was the narrative deleted. The result is
+a table of 23 rules with their enforcer named; a rule with no enforcer is
+marked as such, because "we all know that" is how a rule stops being true.
+
+Ten of the fifteen were duplicates -- DECISIONS.md carries 2-6 entries each
+for v272 through v281. Five (v179, v184, v212, v213, v214) had NO entry here
+at all, so START-HERE was their only record outside git. Their durable content
+is in the invariants table and in CLAUDE.md; the rest is archaeology and git
+is the archive.
+
+**One invariant did not survive, and is recorded rather than dropped.** v179
+stated "segmented controls state a height". flip.css now says `--seg-h
+intentionally NOT set`, because the control has only been measured on one
+machine and its height follows the installed font. START-HERE asserted the
+superseded rule until this release -- a stale invariant in the file every new
+session reads first, which is the whole disease in one line.
+
+## v282, cont. -- calibrate the instrument before believing it
+
+Now a standing rule in CLAUDE.md, because this release produced roughly as
+many broken instruments as real defects:
+
+  * the README route-table gate reused a set of PATHS, so GET, PATCH and
+    DELETE collapsed into one entry -- IT WOULD HAVE PASSED ON THE TREE THAT
+    MOTIVATED IT;
+  * the packaging verifier called db.create_all() and never opened
+    alembic.ini, so it would have called a runtime package missing migrations
+    VERIFIED;
+  * verify_ux's ink measure counted alpha > 0, and Flip's canvas is opaque, so
+    it returned width*height/4 every time -- `ink > 5000` would have passed on
+    a blank page, and had since v206;
+  * `import browsing` landed below first use in five suites, past a check that
+    was "all 99 parse" -- a misplaced import is valid syntax.
+
+The rule: run every new check against one case known BAD and one known GOOD.
+A green check is not evidence until it has been shown to go red. Its
+corollaries, both learned the expensive way: mutate per COMPONENT rather than
+once per change (v212, where Flip self-healed the scenario its assertion
+claimed to pin), and do not edit mechanically where prose and code interleave.
+
+
+## v283 -- a readiness check that could not go red, in the release that wrote the rule against them
+
+`browsing.goto()` promised in its docstring that a page had finished booting and
+swallowed the timeout with `except: pass`. The comment defending it argued that
+a Pad which failed to boot still fails later, on the assertions that then find no
+editor. That is true and it is not enough: the failure surfaces three screens
+from its cause, as "no editor" rather than "flip.js died at line N", which is the
+misattribution that cost four debugging rounds in one session and is the entire
+reason the boot marker exists.
+
+**It shipped in v282 — the release that added "a green check is not evidence
+until it has been shown to go red" to CLAUDE.md.** The rule was written and not
+applied to the code being written beside it. An outside audit found it, not the
+harness, because the harness had no way to notice: the helper 45 suites navigate
+through could not fail.
+
+It fails closed now, and the fix is asserted by RUNNING it rather than by reading
+it. Eight cases live permanently in `verify_boot.py` — the suite already about
+scripts reaching their last line, so no new suite and no new module. Against the
+pre-fix implementation, extracted with `git show`, the same matrix scores 3/8
+with all three prevented-boot cases reporting success.
+
+**Two opt-outs exist and they are not the same case**, which is why each says
+which at its call site: `verify_example` points at a HOST app whose root is not a
+Skribl surface, and `verify_visual` aborts `app.js` on purpose to assert the
+editor is not blank while it downloads. `verify_gifenc` looked like a third and
+is not — it blocks one script and Flip still boots, which it asserts on the next
+line. If that opt-out's call-site count ever grows, that is itself the signal.
+
+## v283, cont. -- "dirty" meant two opposite things and the seal reported them identically
+
+The v282 seal recorded `Git commit : 0d88605-dirty` and an audit could not tell
+what it meant. It meant the release had written its own evidence into the tree:
+`harness/MP4-ATTESTATION.txt` is dropped in mid-run so `RELEASE.md` can report
+H.264 on the tree it describes. A bare suffix says that in the same words as
+somebody leaving uncommitted source behind.
+
+The audit's remedy — "require a clean working tree for a final seal" — would have
+forbidden the mid-run write that v282's own process fix requires, so the two
+rules could not both have stood. **Narrowed, with the reviewer's agreement, to
+the case that is actually a reproducibility hole:** block on modifications
+outside `release_run.GENERATED`, permit and ENUMERATE them inside it. The banner
+now lists the files rather than printing a suffix a reader has to trust.
+
+The exclusion list had existed twice inside `run_harness.sh` alone; it is one
+function used by both callers now.
+
+## v283, cont. -- 1,370 lines under a marker that said they were history
+
+`START-HERE.md` carried a divider at line 573 reading HISTORICAL NARRATIVE FROM
+HERE. Two thirds of the document whose job is current state sat below it.
+
+Fourteen rules that a change can still break came out of it, each enforcer
+verified by grep. **The most valuable had never been written down as an invariant
+at all: a point carries no field outside `{x, y, color, size, t, start, erase}`**
+— the contract that makes every post ever made keep working. It was a paragraph
+in a band a reader is told to distrust. So were COMPOSE MODE PUBLISHES NOTHING
+and the rule that the compose handshake targets an origin and never `'*'`.
+
+**The marker was also mis-scoped, and that is the sharper defect.** Inside the
+band it declared historical sat the GENERATED module index — a region
+`gen_docs.py` writes and `verify_docs` requires — telling a reader to verify it
+against a suite before acting on it. Documentation structure had become actively
+misleading rather than merely stale.
+
+Three rules were about how to WORK rather than about the product, and went to
+CLAUDE.md instead of the invariants table: procedure and rationale are different
+concepts, and collapsing them into one canonical location puts a rule somewhere
+nobody reads at the moment they need it. One of the three is against this
+session — v213 lost 68 assertions to `git checkout`, and `git stash` repeated it
+here.
+
+Measured against `DECISIONS.md` v234, the pen-palette and colour-ratchet sections
+were a near-verbatim SECOND COPY of reasoning this file already held. Duplication
+found by comparison, not by impression.
+
+## v283, cont. -- three hashes were wearing one name
+
+`RELEASE.md` said "tree hash" for a value that is the hash of the pre-stamp
+source subset, while `SHA256SUMS` covers delivered bytes and the MP4 attestation
+names a third. The reviewer's fix was a rename rather than another document:
+`release_run.py` emits `tested tree hash` and the generated prose says why the
+three differ, so the distinction is inherited by every record instead of
+explained in a paragraph somebody has to find.
+
+Both parsers were tightened to REQUIRE the new name. A loose substring would have
+matched either spelling and let the two drift apart silently, which is the same
+failure mode as the two generated-file lists.
+
+**The success measure for this work is not "one statement per concept."** The
+reviewer corrected that drift and the correction is recorded here because it is
+easy to lose: implementation, enforcement and a test's own statement may all
+legitimately restate a rule — an assertion that does not state its rule is not an
+assertion. What is countable waste is explanatory narrative beyond the point of
+enforcement. Applied carelessly to `strokeGroups`, where 11 files explain the
+partition rule and 63 merely use it, the wrong reading would delete ten
+explanations that make local contracts legible.
+
+## v284 -- a suite explains itself, and v282's reason for moving prose was measured and wrong
+
+v282 moved eleven per-suite sections out of `START-HERE.md` into
+`harness/README.md` and justified it in the block's own opening: "ten of the
+eleven were the ONLY prose describing their suite, which is why they moved
+rather than being deleted." That was reported at the time as a PLACEMENT fix
+and explicitly not counted as decluttering, which was right. The premise was
+still wrong, and nobody checked it for two releases.
+
+**Nine of the eleven were already documented in their own file** -- docstring,
+inline comment beside the code, or the assertion's own failure message.
+`verify_boot`'s section and `verify_boot.py`'s docstring share an opening
+sentence, the same four debugging rounds, the same temporal-dead-zone
+mechanism, the same marker rationale and the same Flip/Pad split. A verbatim
+line diff scored them as sharing ONE line.
+
+**THREE INSTRUMENTS FAILED BEFORE ONE WORKED**, and that is the part worth
+keeping. A verbatim diff reported ~1 shared line on a ~90% semantic duplicate:
+reworded duplication is the normal kind and exact matching cannot see it. A
+three-word phrase match reported rewordings as differences. Backticked
+IDENTIFIERS survive rewording and looked like the answer -- and under-reported,
+clearing `verify_pillfit`, whose section held a consequence stated nowhere else:
+"Saved" no longer appears on a phone at all, and if the reassurance is wanted
+back the fix is to give the pill somewhere to go rather than to weaken the
+overlap rule. That section was deleted on the identifier check before being
+read, caught on review, and restored into the suite. Only reading both sides
+worked, which is exactly what the reviewer said this item would need.
+
+What survived went to the suite that enforces it: `verify_boot` gained its
+`__tdzCanary` calibration and the declaration-order rule; `verify_tools` gained
+the page-reuse guidance; `verify_tween` gained six rules that existed nowhere
+else, including why the suite pins RENDER COST rather than the colour string,
+and that a fix applying only to new data leaves every already-affected user
+affected -- which happened three times in that one feature.
+
+`harness/README.md` 957 -> 399 lines. The rule that came out of it: **a suite
+explains itself.** Prose about a suite, kept anywhere but the suite, drifts from
+it and is read by nobody editing it.
+
+## v284, cont. -- not applicable is not skipped
+
+`verify_docs` reports 81 assertions inside a release run and 83 in CI, because
+two whole-run comparisons cannot apply until `LAST-RUN.txt` holds a whole-run
+record -- and it runs in batch 9 of 52, when that record describes batch 8. Both
+numbers were always correct. The record could not tell them apart, which let a
+v283 release summary claim 83/83 beside its own evidence saying 81/81 with
+neither being false. An outside audit caught it and was right to.
+
+The summary line now carries the denominator, after the `N/M passed` token that
+`run_harness.sh` parses with a leading-anchored regex:
+
+    81/81 passed  (2 not applicable: <both names>)
+
+**NOT APPLICABLE, NOT SKIPPED.** The pair already announced itself, as "SKIPPED
+(2 assertions)" -- and skipped implies coverage debt, where these are
+structurally inapplicable and run the moment the artifact exists. The
+distinction was the reviewer's, and it is the right one: what needed exposing
+was the denominator, not another subsystem.
+
+That block was also advising `git checkout harness/LAST-RUN.txt`, on a generated
+file holding the current run's record, in a tree whose CLAUDE.md now says never
+to do that. Replaced with the invocation that regenerates it.
+
+## v284, cont. -- what a failure earns, and what it does not
+
+The reviewer's rule, adopted: **a failure may create a test, an invariant, or a
+working rule; it does not automatically earn a permanent historical explanation
+everywhere that touches it.**
+
+v283 broke it three times over. `browsing.goto()`'s docstring carried a
+paragraph on what its first version did wrong and which release shipped it
+violating which rule -- release archaeology inside the fix whose own release was
+about removing exactly that. The PostgreSQL note speculated about which
+historical flake it explained. The MP4 note recounted learning its lesson
+release by release. All three kept their rule and their evidence and lost the
+story: `goto()` 44 -> 33 lines, `CLAUDE.md` 251 -> 240.
+
+**`docs/REFACTOR-v132.md` was proposed for deletion and is DECLINED.** v263
+already examined it and kept it, recording why: two live suites cite it. Both
+citations still carry a live rule -- `verify_seam` warns that a regex call graph
+sizes the prize but is never a safe-to-move list, because a split driven by
+those numbers was attempted and reverted; `verify_player_isolation` warns that
+153,600 is the honest distance and a session treating it as reachable will
+repeat v132. `verify_docs` also classifies the file structurally as a CHANGELOG,
+with this file and `docs/HANDOFF.md`, exempt from staleness scans because its
+entries are true of the version they sit under.
+
+This work moves history OUT of current-state documents INTO the log. Deleting
+the log is the inverse operation, and the same argument keeps the v283 entries
+above as written.

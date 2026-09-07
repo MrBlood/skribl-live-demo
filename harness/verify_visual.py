@@ -40,6 +40,8 @@ import sys
 import zlib
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 VIEWPORTS = [(1600, 950), (1280, 900), (1023, 931), (830, 914), (420, 850)]
@@ -67,9 +69,7 @@ open(PNG, "wb").write(_png(400, 300))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # The default size of a <canvas> with no width/height attribute. Seeing this on
@@ -143,15 +143,17 @@ with sync_playwright() as p:
         pg = ctx.new_page()
         pg.set_viewport_size({"width": vw, "height": vh})
         pg.route("**/app.js*", lambda route: route.abort())
-        pg.goto(BASE + "/", wait_until="load")
-        pg.wait_for_timeout(500)
+        # require_boot=False, case 2: app.js is aborted ON PURPOSE one line up,
+        # so this Pad can never set its marker. That is the whole assertion —
+        # the editor must not be blank in the window a visitor sits in while
+        # app.js downloads, which is the regression a user photographed.
+        browsing.goto(pg, BASE, "/", require_boot=False)
         frame_checks(pg, "editor pre-JS", vw)
         pg.close()
 
     print("\nVISUAL — the editor, settled")
     pg = ctx.new_page()
-    pg.goto(BASE + "/", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/")
     for vw, vh in VIEWPORTS:
         pg.set_viewport_size({"width": vw, "height": vh})
         pg.wait_for_timeout(350)

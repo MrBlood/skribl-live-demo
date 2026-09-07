@@ -27,9 +27,20 @@ than flattening it: Flip restores silently, because it persists pages, media and
 background and has nothing to warn about; Pad offers a banner, because its
 autosave holds strokes but NOT media bytes and a silent restore would present a
 partial drawing as the whole one.
+
+CALIBRATED BY REINTRODUCING THE BUG ON PURPOSE: the suite then fails with
+"Cannot access '__tdzCanary' before initialization" rather than with a missing
+filmstrip — it names the file that died instead of a symptom three screens away,
+which is the whole reason it exists.
+
+THE RULE THIS YIELDS, for anyone editing either editor script: state any early
+path can reach belongs WITH the early state, and anything touching state
+declared further down belongs in the load handler.
 """
 import json
 import sys
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
@@ -42,9 +53,7 @@ except ImportError:
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 SURFACES = [
@@ -151,6 +160,75 @@ with sync_playwright() as p:
         check(f"{label}: still no uncaught error after restoring",
               not errs, "; ".join(errs[:2]))
         page.close()
+
+    # THE READINESS HELPER ITSELF, MUTATION-TESTED. browsing.goto() is what
+    # every suite now uses to reach a surface, so a version of it that cannot
+    # notice a dead page weakens all 45 of them at once — which is exactly what
+    # shipped in v282: it swallowed the timeout with `except: pass`. An outside
+    # audit found it, in the same release that added "a green check is not
+    # evidence until it has been shown to go red" to CLAUDE.md.
+    #
+    # So the fix is not asserted by reading the code; the helper is RUN against
+    # pages that cannot boot. Against the pre-fix module these three cases all
+    # report success, which is the defect stated as a measurement.
+    print("\nBOOT [helper] — browsing.goto() can actually go red")
+
+    def _outcome(fn):
+        try:
+            fn()
+        except browsing.BootFailure:
+            return "BootFailure"
+        except Exception as e:
+            return type(e).__name__
+        return "succeeded"
+
+    def _nav(path, **kw):
+        # `block` and `init` are this helper's own; everything else is goto's.
+        block_js = kw.pop("block", None)
+        init_js = kw.pop("init", None)
+
+        def run():
+            pg = browser.new_page(viewport={"width": 1000, "height": 900})
+            if block_js:
+                pg.route(block_js, lambda r: r.abort())
+            if init_js:
+                pg.add_init_script(init_js)
+            try:
+                browsing.goto(pg, BASE, path, **kw)
+            finally:
+                pg.close()
+        return run
+
+    for label, path, key in SURFACES:
+        script = "**/app.js*" if key == "pad" else "**/flip.js*"
+        check(f"helper: {label} booting normally is allowed through",
+              _outcome(_nav(path)) == "succeeded",
+              "a readiness check that rejects a healthy page is worse than none")
+        check(f"helper: {label} with its script aborted RAISES",
+              _outcome(_nav(path, block=script, boot_timeout=2500)) == "BootFailure",
+              "the pre-fix helper returned success here — a dead page, reported "
+              "as ready, failing three screens later as 'no editor'")
+
+    check("helper: a surface whose marker never lands RAISES",
+          _outcome(_nav("/flip", boot_timeout=2500,
+                        init="Object.defineProperty(window,'__skriblBoot',"
+                             "{get:()=>undefined,set:()=>{}});")) == "BootFailure",
+          "the real defect shape: the script loads and throws before its last "
+          "line, so the marker is never set")
+
+    check("helper: require_boot=False lets a deliberately unbooted page through",
+          _outcome(_nav("/", block="**/app.js*", require_boot=False)) == "succeeded",
+          "verify_visual aborts app.js ON PURPOSE to assert the editor is not "
+          "blank while it downloads — that page can never set the marker")
+
+    check("helper: a path with no known marker is not required to have one",
+          _outcome(_nav("/no-such-surface")) == "succeeded",
+          "verify_example points BASE at the example HOST app, whose root is "
+          "not a Skribl surface at all")
+
+    check("helper: require_boot=True with no known marker RAISES",
+          _outcome(_nav("/no-such-surface", require_boot=True)) == "BootFailure",
+          "that combination is a programming error, not a slow page")
 
     browser.close()
 

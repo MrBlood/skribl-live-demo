@@ -1,6 +1,6 @@
 # What this archive is
 
-**Source version: `SKRIBL_VERSION = "v277"` (skribl/core.py).**
+**Source version: `SKRIBL_VERSION = "v284"` (skribl/core.py).**
 
 This is the sealed delivery of the Skribl source tree — the same files as the
 repository, packaged with the evidence of the run they were tested by.
@@ -16,6 +16,27 @@ an H.264 profile; a skipped suite contributes zero assertions and is not
 evidence of coverage.) The tree hash in `RELEASE.md` is computed, and every
 file here is listed in `SHA256SUMS`, so both claims are checkable without
 trusting this sentence.
+
+## Three packages, and which one you want
+
+`harness/package.py` builds the release as three archives rather than one, and
+each carries its own `SHA256SUMS`:
+
+    skribl-<version>-runtime.zip    what a deployment needs, and nothing else
+    skribl-<version>-source.zip     the repository as tracked
+    skribl-<version>-evidence.zip   harness, fixtures, release records, attestation
+
+**The runtime package is boot-verified, not merely filtered.**
+`python3 harness/package.py <dir> --verify` migrates a fresh database with
+`alembic upgrade head` — the same command the `Procfile` runs — then serves
+Pad, Flip, the library and the demo feed, posts a Skribl, renders its share
+card, and revokes it with the key issued at post time. Removing `alembic.ini`,
+`app.py` or `skribl/migrations` from the allowlist each fails that check by
+name, which is what makes the allowlist a claim rather than a guess.
+
+It does **not** exercise gunicorn, PostgreSQL, or anything the deployment
+platform reads for itself (`.python-version`); see the docstring on
+`verify_runtime` for the full list of what the check does not cover.
 
 ## Verifying the seal
 

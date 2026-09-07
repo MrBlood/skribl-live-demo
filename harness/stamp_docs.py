@@ -152,7 +152,7 @@ def _release_assertions(frozen_tree):
     if not rel.is_file():
         return None
     body = rel.read_text(encoding="utf-8")
-    m = re.search(r"tree hash\s+([0-9a-f]{12,64})", body)
+    m = re.search(r"tested tree hash\s+([0-9a-f]{12,64})", body)
     if not m or not frozen_tree or m.group(1)[:12] != frozen_tree[:12]:
         return None
     a = re.search(r"^\s*assertions\s+(\d+)\s*$", body, re.M)

@@ -46,6 +46,206 @@ source.
 every case; the lexer checking its own output proves nothing) and
 `verify_cssplit.py` on the second (eleven scenes, pixel-identical).
 
+## Invariants, and what enforces each one
+
+These outlived the releases that produced them. Each line is a rule a change
+can break, followed by the suite that would catch it — **checked by grep, not
+recalled.** An invariant with no enforcer is marked as such, because "we all
+know that" is how a rule stops being true.
+
+These rows replaced the "Closed in vNNN" narratives (708 lines, v282) and then
+the whole HISTORICAL NARRATIVE band (1,370 lines, v283). The reasoning behind
+each release lives in `DECISIONS.md`; the *history* lives in git. What has to be
+here is the rule you can break tomorrow.
+
+| invariant | enforced by |
+|---|---|
+| A route flushes; it never commits the shared session. | `verify_txcontract.py` (AST over every module, exemptions named per function) |
+| Undo stores a DRAWING, not a screenshot — replay reconstructs from strokes. | `verify_move.py`, `verify_stamps.py`, `verify_liquify.py` |
+| An anonymous post is revoked by a CAPABILITY, never by an account. | `verify_deletion.py`, `verify_posted.py` |
+| Possess the id and the key → revoke through the product, whatever this browser remembers. | `verify_posted.py` |
+| A 404 from DELETE means UNKNOWN. The client must not turn it into success. | `verify_posted.py` |
+| The player carries no editor-only module. | `verify_player_isolation.py` |
+| The player's JS stays under its ratchet, measured on what is SERVED (comments stripped), not what is on disk. | `verify_jsstrip.py`, `verify_player_isolation.py` |
+| `[hidden]` is honoured on every control that uses it. | `verify_layout.py`, `verify_help.py`, `verify_move.py` |
+| No readable text uses a token that fails WCAG AA. | `verify_a11y.py` |
+| A token that cannot pass AA must be USED somewhere the requirement does not reach, or not exist. | `verify_a11y.py` |
+| Every `aria-modal` surface is routed through `SkriblModal`, and the population is generated from the DOM and the JS source, not listed. | `verify_a11y.py` |
+| Every id on a rendered page is unique — `getElementById` and `url(#…)` both take the first match. | `verify_a11y.py` |
+| No page loads a `lib/` module nothing on that page reads. | `verify_surfaces.py` |
+| No stylesheet keeps a rule-set whose every selector is unmatched. | `verify_surfaces.py` |
+| Every route the blueprint registers is named in at least one document. | `verify_docs.py` |
+| Every host seam `create_blueprint()` accepts is documented in `docs/INTEGRATION.md`. | `verify_docs.py` (reflection over the signature) |
+| Every `SKRIBL_*` the code reads is named in a doc or `.env.example`. | `verify_docs.py` |
+| No document hand-types a tree hash or an assertion count outside the generated stanza. | `verify_docs.py` |
+| The generated doc tables match their source. | `verify_docs.py` → `gen_docs.py --check` |
+| A skipped suite contributes ZERO assertions and is not evidence of coverage. | `run_harness.sh` emits it; `stamp_docs.py` writes it into every stanza |
+| The release run must be the LAST harness invocation — anything after it rewrites `LAST-RUN.txt`. | `verify_docs.py` (RELEASE.md/LAST-RUN.txt agreement), and the guard in `stamp_docs.py` |
+| Every suite on disk appears in exactly one `release_run.py` batch. | `release_run.py` refuses to start otherwise |
+| The assertion output format is a contract `run_harness.sh` parses. | `harness/assertions.py` self-test, run by `verify_docs.py` |
+| Every tool emits ORDINARY STROKE POINTS — a point carries no field outside `{x, y, color, size, t, start, erase}`. A shape primitive or brush id would be a schema change every existing post has to survive. | `verify_tools.py`, `verify_inline.py`, `verify_tween.py` |
+| Replay joins consecutive points, so any group holding two distant places draws a line across the canvas. Flip refuses the share outright when `strokeGroups` does not account for every point. | `verify_strokegroups.py` |
+| `pauseMode` is serialized and preview speed is not — a setting that changes what the drawing IS travels with it; one that changes how you review it does not. | `verify_tools.py` |
+| COMPOSE MODE PUBLISHES NOTHING. "Add to post" hands the payload to the host; only the host publishes. | `verify_compose.py` |
+| The compose handshake targets a specific origin, never `'*'`. | `verify_compose.py` |
+| A host must limit its own compose view — Skribl's limiter cannot follow the payload into somebody else's composer. | `verify_compose.py` |
+| When the drawing stops, the music stops. | `verify_audiosession.py`, `verify_inline.py` |
+| Both editors build the pen palette from `lib/palette.js` — same list, same order, from the lib and not from a copy. | `verify_parity.py` |
+| Every grey the chrome paints is a token, not a literal — including the `rgb()` function form, which the first version of the ratchet could not see. | `verify_surfaces.py` |
+| `color`, `fill` and `stroke` hold no colour literal except `#fff` and `#0d0f14`. A red is not a neutral, so a grey audit walks straight past it. | `verify_theme.py` |
+| A token named for the CANVAS is not chrome and is exempt — naming it in `:root` is what makes that a decision rather than a literal somebody missed. | `verify_surfaces.py` |
+| A run whose suite names begin with `_` is a scratch probe and must never be published as the project's result. | `stamp_docs.py` refuses it |
+| Hiding a control is only safe when nothing reachable ONLY through it becomes unreachable. | **no enforcer** — found by looking; `beginPinch` revealing the zoom HUD is what made hiding Magnify safe |
+| A colour ratchet cannot see a mark that is white ON PURPOSE — five vanished in light mode and were found by eye. | **no enforcer** — `#fff` is exempt because it is nearly always text on a coloured fill |
+
+**One from v179 did NOT survive, and is recorded here rather than quietly
+dropped.** "Segmented controls state a height" was true when written; `flip.css`
+now says `--seg-h intentionally NOT set`, because the control has only been
+measured on one machine and its height follows the installed font. Opting it in
+would mean choosing a number for every viewer. The rule was superseded by a
+deliberate decision, and START-HERE asserted the old one until v282.
+
+### What the gates caught, including one I built last release
+
+**`verify_a11y`'s modal census passed over both new dialogs.** The v280 gate
+enumerated `[aria-modal="true"]` from the live DOM and primed the one
+runtime-built dialog it knew about by name. Two more arrived in `recoverykey.js`
+and the census could not see them, because a sweep taken at load cannot see a
+node that does not exist yet. That is the hole the v280 note warned about, in
+writing, one release before walking into it. There is now a **JS-source
+census** beside the template one: every non-minified `.js` under
+`skribl/static/` that mentions `aria-modal` has its assigned element ids
+extracted and required to be recipe-backed, so the next runtime-built dialog
+fails the suite instead of slipping through.
+
+**The wrong-key test passed with the bug fully restored.** Deleting a row calls
+`confirm()`, Playwright dismisses dialogs by default, so `destroy()` never ran
+and the assertion was checking that nothing had changed after nothing had
+happened. It drives `destroy()` directly now. Measuring something ADJACENT to
+the claim is the recurring failure of this whole sequence of releases — it has
+happened in most of them, to me, in assertions I had just written — and it is
+the argument for mutating every new assertion rather than trusting a green
+one.
+
+### `verify_a11y.py` generates its population now
+
+Three of seven `aria-modal` surfaces were routed through `SkriblModal`; the
+suite tested one of the three by hand and passed. The audit named the shape:
+*a global semantic claim should generate its test population from the DOM, not
+from a manually chosen specimen.* The suite had already learned to assert
+behaviour instead of attributes, and then asserted the right thing about the
+wrong population — the same error one level up.
+
+All eight surfaces route through the utility (the eighth is the new recovery
+panel). Section 2 reads `[aria-modal="true"]` out of the live DOM; a surface
+with no recipe **fails** rather than being skipped, a recipe naming a deleted
+surface fails too, and a template census backstops the dialog that lives behind
+an unrendered branch. A dialog built at runtime escapes a census taken at load,
+so `recoverykey.js`'s overlay is primed before the sweep — anything added the
+same way must be primed too, and the template census is what will say so.
+
+**It immediately found a defect in `modalfocus.js` itself.** `close()` checked
+`isConnected`, but an opener can be present and `display:none` — the leave
+confirm closes the menu holding its opener on the way up. `focus()` was then a
+silent no-op and the user landed on `<body>`: the exact outcome the utility
+exists to prevent, reached through the one door it did not cover. It checks
+`offsetParent` now and falls back to whatever had focus when the dialog opened.
+
+### Two gates that were representatives of a global contract
+
+`verify_txcontract.py` scanned two files — the two where the v224 violation
+happened to be found — so `takedown.py` could have committed the shared session
+from request-shaped code and stayed green. It scans every module now, by AST
+rather than by grep, with exemptions named **per function**. Per function
+because widening it produced a finding at once: `storage.py` is a library a
+host imports and only its batch function may commit, so a file-level allowlist
+would have waved the whole module through. Its stale-exemption check then
+caught an exemption I had granted on an assumption, for a function that does
+not commit at all.
+
+`verify_docs.py` gates the CI-cost claim. Two of this release's findings were
+stale statements in **source comments**, where the v279 sweep never looked: 22
+lines above the delete routes still calling the v278 identity gate "the whole
+design", and the header of `harness.yml`, which used to say a heavy CI day had
+burned a monthly Actions allowance. This repository is public and every job
+runs on `ubuntu-latest`, so there is no allowance — see `CLAUDE.md`. The gate
+asserts the half that is checkable offline: while every runner is standard,
+nothing current may call this project's minutes finite or billed. Move to a
+larger runner and the claim becomes sayable again and the gate stands down by
+itself.
+
+### `verify_a11y.py` — keyboard and assistive technology, as its own suite
+
+Added after an accessibility audit of v278, and a suite rather than more of
+`verify_ux.py` because of the audit's structural point: the tree carried
+thousands of assertions — the count is in `harness/RELEASE.md`, never typed
+here — while basic keyboard failures were visible in the source. Three
+playback scrubbers were pointer-only, two of them declaring `role="slider"`
+with no tabindex, no `aria-valuenow` and no key handler — announcing a control
+that could not be operated. Every `aria-modal` dialog did nothing about
+focus — this said "Five" until v280, when counting them for the enumeration
+gate found seven.
+Visible slider captions were not labels. Segmented controls kept selection in a
+CSS class. Nothing announced that a post had succeeded or failed.
+
+Its own rule: **assert the behaviour, not the attribute** — `role="slider"`
+being present is exactly what was true while it was broken. It presses keys and
+reads what moved, focuses things and reads where focus went.
+
+Two things it caught that the audit had not: five unnamed controls in Flip's
+share sheet and image drawer, and `--text-faint-2` on `.accordion-count` at
+3.47:1.
+
+And one about ITSELF. The contrast gate's first version exempted any line
+matching `--text-`, meaning to skip the token definitions — but
+`var(--text-dim)` contains `--text-`, so it skipped every use as well and the
+check was vacuous. Putting a failing token back on readable text left it at
+37/37. Definitions are excluded by shape now.
+
+### Identities are opaque text
+
+`skribl_posts.user_id` is `String(255)` behind a `TypeDecorator`, not `Integer`.
+The column was Integer while `docs/INTEGRATION.md` advertised "your user id",
+so a host using UUIDs, ULIDs or an OAuth subject could not integrate at all.
+Integer hosts are unaffected — 42 stores as "42" and both sides of every
+comparison normalise. `author.id` in the API is a JSON string now.
+
+**Both sides, not just the argument.** Normalising only the incoming id passed
+every suite that goes through `create_post` and failed `verify_privacy`, which
+builds `SkriblPost(user_id=7)` in memory and never flushes it — so the
+TypeDecorator never ran and an author could not read their own private post.
+The type covers what is stored and loaded; the comparison covers what was never
+persisted. Both are needed and for different reasons.
+
+### The MP4 attestation — what a seal can honestly say about H.264
+
+`verify_mp4.py` skips wherever Chromium is the browser: Playwright ships the
+open-source build, which has WebCodecs but no H.264 encoder. (Probing
+`VideoEncoder` on `about:blank` reports "no WebCodecs at all" and is
+misleading — the suite checks on a real page, where the API is present and the
+three `avc1.*` profiles are all unsupported.)
+
+The `mp4 (real Chrome)` CI job covers it, and until v279 its result never
+reached the archive: the seal said `skipped 1 (verify_mp4.py)` and nothing
+about whether the gap had been closed elsewhere, so a reader could not tell
+"not covered" from "covered somewhere you cannot see". An audit of v278 called
+that an evidence gap rather than a defect, which is exactly what it was.
+
+`harness/MP4-ATTESTATION.txt` is that job's answer, and `RELEASE.md` now
+carries an `mp4 (H.264)` line computed from it. **The tree hash in the
+attestation must match the one the release froze** — evidence about different
+code is worse than no evidence, because the seal would then assert coverage it
+does not have. Three outcomes, all stated rather than implied: verified, STALE,
+or NOT VERIFIED with the command to fix it.
+
+It never blocks a release. Whether an unverified MP4 path is shippable is a
+product decision; the seal's job is to state the fact.
+
+The file is excluded from BOTH tree-hash lists (`release_run.GENERATED` and
+`run_harness.sh`'s `_tree_files`) for the same reason `RELEASE.md` is: it names
+a hash, so including it would make writing the evidence change the thing the
+evidence is about. The two lists must stay identical — that is the v221 defect.
+
 ### Environment traps, in the order they will bite
 
 * `apt-get update` fails outright until the blocked nodesource repo is moved
@@ -229,11 +429,11 @@ questions; RELEASE.md is the one to quote.
 **The last recorded run** — generated by `stamp_docs.py`, never typed:
 
 <!-- HARNESS-COUNTS -->
-**PASS WITH SKIPS — 4300 assertions across 95 reporting suites (96 on disk, 1 skipped), none failing** on sqlite as of v277 (tree `2a685265d59d`).
+**PASS WITH SKIPS — 4598 assertions across 97 reporting suites (99 on disk, 2 skipped), none failing** on sqlite as of v284 (tree `d99346c2a97f`).
 
 These totals are generated by `harness/stamp_docs.py` from `harness/LAST-RUN.txt` — never typed. `verify_docs.py` fails if any doc disagrees with the recorded run.
 
-Skipped in that run: verify_mp4.py. A skipped suite contributes zero assertions and is not evidence of coverage.
+Skipped in that run: verify_mp4.py, verify_postgres.py. A skipped suite contributes zero assertions and is not evidence of coverage.
 <!-- /HARNESS-COUNTS -->
 
 **The deployed runtime is pinned to Python 3.12** (`.python-version`, mirrored
@@ -385,895 +585,6 @@ staler twice, which is worth knowing when deciding.
 
 ---
 
-# ============ HISTORICAL NARRATIVE FROM HERE ============
-
-**Everything from this line down to "Known-open, in the order worth doing" is a
-RECORD OF HOW THE TREE GOT HERE, not a description of how it is now.** Section
-headings in this band are written in the tense of the release that produced
-them: "most of it still to do", "will not extract", "the newest feature" were
-all true once and several are not now. Numbers in this band are that era's.
-
-The parenthetical warning at the top of this file said as much and was not
-enough — three entries in the KNOWN-OPEN list, which is not even in this band,
-still described fixed bugs as open and cost a session a day. So this divider is
-loud on purpose. **If you want the current state, read above this line and the
-known-open list below it; if a claim down here matters, verify it against a
-suite before acting.**
-
-## What was built in v142-v179
-
-Client work, all covered by suites that drive a real browser:
-
-* **Flip sends a typed title and caption** — it hardcoded `'Flip animation'`.
-* **Stylus pressure** on both editors, scaled into the existing per-point
-  `size` rather than a new field the player cannot read.
-* **Export sheet**: Size/Pages had NO CSS at all; plus a Loops control, because
-  video silently exported two passes.
-* **Help drawer search** across ~50 entries, with derived section counts.
-* **Your Skribls** (`lib/posted.js`) and **Report a problem** (`lib/report.js`,
-  captures JS errors — it loads first so it can see failures in the editors).
-* **Canvas presets shared by both editors** (`lib/canvassizes.js`); Pad used to
-  inherit the viewport, so a drawing's shape depended on window width.
-* **Styled tooltips** (`lib/tooltip.js`) and **first-use hints**
-  (`lib/hints.js`) — native `title` cannot be styled at all.
-* **A pixel-snapped canvas grid** with a sub-grid at every size.
-* **Move artwork** — see below. Its transform bar now states its own
-  geometry, and its offset readout accepts typed coordinates.
-
----
-
-## Move artwork as it landed (historical) — what it set up
-
-`Artwork` is a TOOL in Flip's tool shelf as of v226 — it was in the page bar
-until then, which is where the paragraphs below were written. Picking it enters
-a mode where dragging the canvas moves the whole page's drawing. The page bar is
-REPLACED by a transform bar (offset readout, This page / & after, Reset, Done).
-Escape cancels; Done commits.
-
-Design notes worth keeping:
-
-* It is a PAGE operation, so it lives with Copy/Hold/Delete, not with
-  Pen/Eraser — and the tool row is full on a phone anyway.
-* **Undo stores the inverse offset, not a snapshot.** A translation is exactly
-  reversible. Not bit-exact (float), so `verify_move.py` asserts to 1e-6.
-* **`actionLog` records the order of undoable actions** so undo after
-  "draw, move" undoes the MOVE. Flip's undo otherwise just pops stroke groups.
-* The offset applies to a working COPY of the original points, so a long drag
-  cannot drift and Reset lands exactly.
-* The drag is measured in canvas units (`CW / rect.width`), not screen pixels.
-
-**Selection — moving PART of a drawing — reuses all of this**: the mode, the
-bar, the readout, Reset, Done, Escape and the undo mechanism. Only hit-testing
-and a selection overlay are new. That was the argument for building the
-whole-page move first, and it is the natural next feature.
-
----
-
-## Closed since the v179 archive was cut
-
-* **`[hidden]` works everywhere now.** `styles.css` carries
-  `[hidden] { display: none !important; }`. The UA rule loses to any author
-  rule, so `el.hidden = true` drew nothing for 380 elements on Flip and 366 on
-  Pad — the page bar rendered 55px tall throughout Move artwork's life while
-  reporting `hidden === true`. Four one-off `.thing[hidden]` rules had been
-  written before anyone looked for the general case.
-* **Segmented controls state a height.** `--seg-h` was declared four times and
-  read nowhere, so a `.seg` inherited its height through `font: inherit` and
-  followed the VIEWER'S font: 20px headless, 23px on the owner's Mac, while
-  `.pb` matched exactly. `.seg` now reads `var(--seg-h)` with NO fallback, so
-  an unmeasured control keeps `auto` and opting one in is deliberate.
-  `.mb-scope` and `.mb-offset` are 30px; the export segs 32px.
-* **The offset readout takes typed coordinates.** Click it, type `40, -12`.
-  Same moveDx/moveDy as a drag, so the same Reset, Done and single undo entry.
-* **Skribl no longer steals a host application's homepage, and `docs/INTEGRATION.md`
-  is now a real guide.** Both came out of the first actual DROP-IN TEST: a
-  throwaway Flask host app, built from the docs, that is not `app.py`.
-  The blueprint registered `GET /` unconditionally — a second copy of the Pad
-  editor, there so the standalone demo had a landing page. Flask resolves
-  duplicate rules by registration order and the blueprint registers first, so
-  **mounting Skribl silently replaced the host's front page.** No error. It is
-  now `create_blueprint(index_route=False)` by default; `app.py` opts in.
-  Two more integration facts that were true but undiscoverable: a host's
-  `db.create_all()` creates **nothing** without
-  `skribl.models.attach_to_metadata(db.metadata)` — no tables, no error — and
-  `docs/INTEGRATION.md` was a v98–v136 planning record that opened by admitting
-  its own signature was obsolete, while `README.md` pointed integrators at it.
-  The plan is preserved in git history; the guide is rewritten
-  around a copy-pasteable example that was executed, not imagined.
-  `harness/verify_integration.py` (no browser, seconds; count in RELEASE.md) pins all
-  of it, including the negative controls — install a visibility policy, prove it
-  changes the outcome, clear it, prove the default returns.
-  One limitation was DECLARED rather than silent: the feed filters
-  `visibility == 'public'` in SQL and never consults the host policy, because a
-  Python predicate over a keyset-paginated query would break the pagination — a
-  policy-refused post could appear in the feed as metadata (no payload, no
-  image). **v224 built the `feed_filter` seam that paragraph asked for**: a host
-  contributes a SQL predicate the query composes, so authorization pages
-  correctly. It is a seam and not an automatic fix, and both directions are
-  pinned by `verify_hostseams.py` — without a filter the feed still lists every
-  public post, which is correct where a policy only restricts private and
-  unlisted. Install one if your policy can deny a PUBLIC post.
-* **Loop trim clamping is extracted to `lib/looptrim.js`, and it found a second
-  real bug.** The 20-second cap was a named constant on Flip
-  (`MAX_LOOP_SECONDS`, nine uses) and a **bare `20` on Pad, eight times, with no
-  constant in the file** — so changing the cap meant one edit on one surface and
-  eight on the other, with nothing failing if the second was missed.
-  **Flip re-clamped the cap inside `updateTrimUI`**, with a comment calling it
-  "the single choke point ... so the <=20s invariant can't be bypassed".
-  **Pad had no such line**: it enforced the cap on drag and nudge ONLY, so a
-  loop arriving any other way — a load, a draft restore, a re-add — kept
-  whatever length it came with, and travelled in the payload. Measured: a 60s
-  loop through `updateTrimUI` stayed 60s on Pad and became 20s on Flip. Pad now
-  has the same choke point and both read the shared constant.
-  The clamp rule itself existed in **six copies** across the two files, in two
-  behaviours: `'constrain'` (the dragged handle stops at the cap) on the main
-  track, `'slide'` (the OTHER end is pushed, so the window slides) on the zoom
-  track and nudge. **Pad and Flip are identical about this, path for path**, so
-  it is a design inconsistency faithfully duplicated, not drift — the mode is
-  now an explicit named argument at each call site rather than hidden inside
-  six copies of the arithmetic. Verified against all six transcribed sites
-  across 140 scenarios: zero disagreements.
-  **The player needed the module too** and the harness caught it: `updateTrimUI`
-  lives in `app.js`, which serves the player, so the player threw
-  `Cannot read properties of undefined` until `looptrim.js` was added to its
-  template. Any client constant `app.js` reads has to load on THREE templates,
-  not two.
-* **Photo fit geometry is extracted to `lib/photofit.js`, and extracting it
-  found a real bug.** Pad drew the background with `drawPhotoFitted`, Flip
-  computed it with `photoRect`, and the PLAYER used Pad's copy — three call
-  sites, two implementations. They agreed on cover and contain and disagreed on
-  the third mode's NAME, which is why the shared partial carried
-  `data-fit="{{ 'fill' if kind == 'flip' else 'stretch' }}"`: the markup had
-  been bent to fit two vocabularies. flip.js posts
-  `fit:(photoFit==='fill'?'stretch':fit)`, so **'stretch' is what the player and
-  the database see** — but Flip's restore whitelist was
-  `['cover','contain','fill']` and `photoRect` special-cased only `'fill'`.
-  **Flip could not read the value Flip writes.** Measured on a 100x50 image
-  before the fix, `fit='stretch'` returned `[-204,0,1224,612]` — byte-identical
-  to cover — while `'fill'` returned `[0,0,816,612]`, and the fit row showed no
-  active button at all. The lib treats `'fill'` as an alias of `'stretch'`, and
-  Flip normalises at both entry points, so the value round-trips. Neither
-  surface's PERSISTED vocabulary was changed: that is a decision about live
-  data, not a refactor. The template conditional and the split vocabulary are
-  still there, deliberately — see the open question below.
-  Verified behaviour-preserving by comparing the lib against BOTH pre-extraction
-  implementations across 405 combinations of size, canvas, offset, zoom and
-  fit: zero disagreements. `lib/photofit.js` loads on the editor, Flip AND the
-  player — the player draws photos through `app.js`, so omitting it there would
-  have left viewers a blank background.
-* **`lib/colorselect.js` is now covered by `verify_parity.py`.** It is the
-  fifth shared-controller extraction (after `eyedropper`, `recentcolors`,
-  `segslider`, `smoothing`) and it entered the archive with no parity
-  assertions naming it. The suite already asserted the BEHAVIOUR it
-  implements — hex validation, case normalisation, exactly one active swatch,
-  on both surfaces — and all of that still passed when Flip was given back its
-  own private copy of the logic. Behavioural parity says the copies agree
-  today, not that there is one copy. Nine assertions now pin the extraction
-  itself: one module, one URL including its content hash, one implementation,
-  and — the load-bearing one — each editor's setter is spied on to prove it
-  actually CALLS the module. Only that last assertion caught the re-inline;
-  `verify_ux.py`'s source grep for `classList.toggle('active'` passed 130/130
-  against a copy that merely wrote `classList["toggle"]("active"`.
-* **The loop magnifier is NOT unstyled** — a claim made and withdrawn this
-  session. `app.js` injects its CSS at runtime, including the
-  `position: relative` the seg pill needs. Grep both stylesheets AND the
-  injected `<style>` before believing a component has no rules.
-
-## Closed after the v184 dotfix
-
-* **The move-offset field summoned the wrong keyboard.** `#mbOffsetInput` takes
-  BOTH coordinates in one box (`"40, -12"`) and declared `inputmode="numeric"`,
-  which on a phone offers digits only — no comma, and on most keyboards no minus,
-  so a negative offset could not be typed at all. `decimal` is not the fix; that
-  adds a decimal POINT, not a separator. It is `text` now. The parser needed no
-  change: `parseOffsetEntry()` already accepts a comma or a space between the two
-  numbers plus a leading minus and decimals, and `verify_move.py` now asserts
-  both halves — the attribute, and that the parser takes every form the fuller
-  keyboard allows while still rejecting junk. Mutation-tested: restoring
-  `numeric` fails the assertion.
-
-* **The play scrubber's shape is no longer unverified — and it was correct.**
-  It had never been seen rendered. Driving Pad through draw → stop → play and
-  measuring the real shown state gives, at 1280x900 and at 390x844 alike: inset
-  **24px at both ends, exactly `--r-frame`**, flush to the canvas bottom (gap 0),
-  spanning wrap width less 48, radius reaching past half the height so the ends
-  read round. Nothing needed adjusting. `verify_scrub.py` (17) pins it, and its
-  FIRST assertion is the negative control: at rest the bar is genuinely not laid
-  out, because `positionScrub()` returns early on `hidden` — so an element forced
-  visible measures 0 wide and reads as catastrophic misalignment that is entirely
-  an artifact. A gate assertion also refuses to compare insets until a real
-  replay has actually shown the bar; a symmetric zero is a broken probe, not
-  agreement. Mutation-tested: zeroing `_inset` fails four assertions.
-
-* **`positionPlayScrub` does not exist.** The function is `positionScrub()`
-  (`app.js`). The name was wrong in the `styles.css` comment that points at it
-  and in the handoff, so anyone grepping for it found nothing. Corrected.
-
-* **`verify_deletion_foundation.py` is in `harness/` now, and it crashed on
-  arrival.** It resolved the repository root with `os.path.abspath(".")`, but
-  `run_harness.sh` does `cd $ROOT/harness` before invoking a suite — so `from app
-  import ...` raised `ModuleNotFoundError` and the suite reported zero assertions
-  rather than eight. It anchors on `__file__` now, matching `verify_storage.py`.
-  8/8 on PostgreSQL with the local media backend; it needs BOTH
-  `SKRIBL_MEDIA_BACKEND=local` and a Postgres `DATABASE_URL`, and skips cleanly
-  without them.
-
-* **Hand-typed counts that had drifted are gone rather than corrected.** Three
-  documents quoted three different line counts for `app.js` and none matched the
-  tree; four places hand-typed the suite count. Replacing a stale number with a
-  fresh one only resets the clock, so they now point at `wc -l` and at
-  `harness/RELEASE.md`. `verify_docs.py` caught the suite counts by itself the
-  moment the two new suites landed — that check works, and it is why this list
-  can be trusted where prose cannot.
-
-* **SQLite declared the foreign key and never enforced it.** `PRAGMA
-  foreign_keys` defaults to OFF per connection, so revision `c7e1a5f04b93`'s
-  `skribl_post_media.post_id -> skribl_posts.id` ON DELETE CASCADE was written
-  into the schema and ignored. Deleting a post left its association row behind,
-  `sweep_orphans` then read the media as still REFERENCED, and the bytes were
-  never reclaimed — the exact leak the constraint was added to close, still open
-  on the one engine the assertion had never been run against. It surfaced only
-  because `verify_deletion_foundation.py` joined the aggregate, which runs on
-  SQLite; standalone it had only ever run on PostgreSQL, where it passes 8/8
-  because PostgreSQL enforces the constraint natively.
-  **Access was never exposed** — `/media/<key>` authorises through an EXISTS join
-  to the post, so a deleted post's media is refused (404) whether or not the
-  orphan survives. It is a data-integrity and storage leak, not a security hole.
-  `models.enable_sqlite_foreign_keys()` now sets the pragma, installed from
-  `init_skribl()` so a process that merely imports Skribl without mounting it is
-  untouched. Measured both ways: cascade fires with it, orphan survives with
-  `SKRIBL_SQLITE_FOREIGN_KEYS=0`.
-  **Scope worth knowing before deploying on SQLite:** the pragma is a property of
-  the CONNECTION, so there is no way to enforce Skribl's foreign keys and not the
-  host's. A host whose own data violates a constraint it declared will now get an
-  error where it previously got silence. That is the correct outcome and it is a
-  behaviour change; the env var is the opt-out.
-
-* **A generated aggregate now survives being interrupted.** A full run needs
-  ~25 minutes, longer than some environments allow in one invocation, and
-  background processes do NOT reliably survive between invocations here —
-  ARCHIVE-README claims they do, and a run killed after batch 1 proved otherwise.
-  The tempting workaround is running batches by hand and adding up the totals,
-  which is the hand-typed number this project keeps abolishing. `release_run.py`
-  checkpoints after every batch instead (`--budget`, `--restart`; state lives
-  OUTSIDE the tree, or writing it would change the hash of the tree it describes)
-  and re-verifies the frozen tree hash on every resume — so an edit made between
-  invocations aborts the run exactly as an edit between batches does. The
-  checkpoint is deleted on completion, or the next release would silently resume
-  a finished one.
-
-## Player extraction, first cut (historical) — the target has since been MET
-
-**Do not read `verify_player_isolation.py` going green as "the player is
-extracted."** Its Half B assertions are RATCHETS: they hold the ground already
-won and state the target beside each number. Half A (playback) is the real
-regression net and must never go red.
-
-Where it stands, all measured:
-
-* **Down 56,727 bytes.** (SUPERSEDED — the target has since been met; see "The
-  next step, and the honest distance" above, and run `verify_jsstrip.py`. The
-  three figures in this bullet are v199's and are kept for the shape of the
-  climb, not as current values.) A player page downloaded 329,159 bytes of
-  JavaScript before that session and 272,432 after. The target is 153,600.
-  **v199: 155,843 B**, after the serve-time comment strip — 2,243 over the
-  target at the time, and the figure the ratchet was then set at. `verify_player_isolation.py`
-  measures `r.body()`, the decoded response, so this is what a browser parses;
-  the wire figure is 48,309 B and must never be quoted as the first number.
-* **What moved:** `editor_export.js` (the PNG/GIF/WebM encoders and share-card
-  builder) and `editor_post.js` (the post composer), lifted VERBATIM out of
-  `app.js` and loaded only by `skribl_editor.html`. Not rewritten — a second
-  implementation would drift, and this project has been bitten by exactly that.
-  Both were self-contained IIFEs; the only name crossing the boundary was
-  `drawPhotoFitted`, defined AND used inside the moved region (the two hits
-  outside it are comments). `verify_exportui` 45/45, `verify_exopts` 26/26 and
-  `verify_posted` 34/34 all still pass, and the isolation suite's own fixture
-  posts through the editor, so the moved composer is exercised on every run.
-* **Ground truth, from Chrome's coverage profiler** rather than from reading:
-  of 284 named functions in `app.js`, a player page executes **78**. The player
-  was calling `initExport()` and `initPostComposer()` on every shared link to
-  wire up controls it does not have.
-
-**Why the next cut is not another line-range move.** The two sections that came
-out were the only ones that could. Leak analysis on the other candidates —
-each name defined inside a region and referenced outside it:
-
-    more-tools drawer     498 lines   21.7 KB   21 names leak
-    overflow menu         329 lines   13.4 KB    2 names leak
-    draft save/autosave   336 lines   15.4 KB    9 names leak
-    music upload + trim   791 lines   34.2 KB   34 names leak
-    loop preview/seam     286 lines   10.5 KB    3 names leak
-
-The music drawer alone shares 34 names with the rest of the file. Moving these
-means separating shared STATE (`audioEl`, `trimStart`, `strokes`, the canvas
-handles) into a core module both halves import — real decoupling, not a cut.
-The overflow menu (2 names) and loop preview (3 names) are the next smallest
-and the sensible next targets.
-
-**A trap on the audio path.** The coverage above was taken with a fixture that
-has NO AUDIO, so every loop-building function reads as unused. Moving audio code
-on the strength of that measurement would break playback for every Skribl with
-music, and the isolation suite would not catch it, because its fixture is silent
-too. Add audio to the fixture BEFORE touching anything under
-"Sample-accurate live loop engine".
-
-* **The runner reported every failing suite as a crash.** `run_harness.sh`
-  matched a summary with `^[0-9]+/[0-9]+ passed$`, anchored at both ends. Suites
-  do not agree on one format — several print
-  `32/33 passed  FAILURES: <what failed>` on a single line — so the anchor
-  rejected it, the runner concluded NO SUMMARY, and the suite was reported as
-  "crashed before reporting": the one classification that says nothing about
-  what went wrong. A failing suite and a suite killed mid-run were
-  indistinguishable. `verify_amber` was written off as a flake on exactly this
-  evidence; it may have been a real assertion failure, and that can no longer be
-  recovered from the logs. The trailing anchor is gone; the leading one stays, so
-  a mid-sentence "1/2 passed" still cannot be mistaken for a summary. **If a
-  suite reports ERROR now, it really did crash.**
-
-## Player extraction — second and third cuts
-
-Cumulative, all measured by `verify_player_isolation.py`:
-
-    329,159 bytes / 7 globals   unsplit
-    272,432 / 6                 editor_export.js + editor_post.js
-    261,707 / 5                 editor_menu.js
-
-`editor_menu.js` holds the overflow menu, clear-all, the sheet gestures and the
-help drawer. The player has none of those and was running `initClearAllMenu()`
-and `setupSheetGestures()` on every shared link to attach handlers to elements
-it never paints. `openHelpDrawer` is no longer reachable there.
-
-**The obvious boundary was wrong.** Cutting the whole span from the "Overflow
-menu" comment to the next section would have swallowed `initBrandFit()`, whose
-inner `fit()` the PLAYER executes — it is why the header brand collapses
-correctly on a shared link. Chrome's coverage profile reports function NAMES, so
-a nested `fit()` is indistinguishable from any other until you look at where it
-is defined. The cut stops before it. `verify_help` 61/61, `verify_ux` 130/130,
-`verify_pages` 44/44 all still pass, and `verify_seam` still totals 2485
-editor-only lines against 2467 before any of this — nothing became
-player-reachable, the code only moved.
-
-**The loop-preview region is NOT movable, despite looking like the next easy
-cut.** Its leaked names are real calls, not guarded ones: `stopLoopPreview` is
-called from four places outside it (1237, 1450, 2520, 4166) and `playMusicLooped`
-from the editor replay path, and `stopLoopPreview` is in the player's executed
-set. Moving it would throw on the player. Compare `closeMenu`, the only name
-leaking out of the menu region, whose one external call site already reads
-`typeof closeMenu === 'function'` — inert on the player instead of fatal. **That
-guard is the difference between a movable region and one that is not**, and it is
-worth checking for before planning any further cut.
-
-## Why the music drawer would not extract (historical) — superseded below
-
-The region has **64 top-level names, 36 of them referenced by code the player
-executes.** Not all state: `audioEl`, `trimStart`, `trimEnd`, `audioCtx`,
-`currentAudioBuffer` and `loopCrossfadeMs` are genuinely shared, but so are
-`drawWaveform`, `drawZoomWaveform`, `updateTrimUI` and `updateZoomHandles` —
-**and those are called from `loadSkribl`, which the player runs.** The player is
-drawing waveforms into canvases it never paints.
-
-That is the real obstacle, and it is not a file boundary. **`loadSkribl` calls
-editor UI unconditionally, in player mode as well.** So the drawer cannot be
-moved while a shared function reaches into it. The unblocking change is to guard
-those calls the way the rest of `app.js` already guards
-(`document.body.classList.contains('player-mode')`), after which the drawer's
-dependency on shared code is one-directional and the cut becomes possible.
-Cutting first and guarding later gets a player that throws.
-
-`showToast` is also declared inside this region and used across the whole file —
-a general utility that ended up filed under music. It should move up to the
-shared section regardless of what happens to the drawer.
-
-**A caution about the measurement that produced this.** The first pass matched
-declarations with `^\s{0,2}(?:const|let|var)`, allowing two spaces of indent. It
-swept up locals declared inside IIFEs — `s`, `w`, `data`, `file`, `err` — and
-reported 65 names as shared state, which would have made the region look
-hopeless. Column-zero matching gives 36. Same failure as the flattened DOM
-selector that once invented a "mixed register" grammar problem: a loose pattern
-inventing structure that is not there. **Anchor at column zero when asking what
-is top-level.**
-
-## Step 7 as it stood then (historical) — shared paths guarded, drawer not yet cut
-
-`updateTrimUI` was never a UI function. It is **the choke point that clamps
-`trimStart`/`trimEnd` and enforces the 20s loop cap on load**, and the player
-reaches it through `loadSkribl`. The obvious decoupling — a player-mode guard
-around the whole function — would have let a shared link play a loop longer than
-either editor allows, reintroducing on the player exactly the bug that choke
-point was added to fix. It is now split: `clampTrim()` runs on both surfaces,
-the DOM half is guarded and null-checked.
-
-`loadSkribl` and `resetMediaForLoad` now separate state from drawer UI. The
-player no longer decodes waveforms into canvases it never shows, nor rewrites
-button labels for a drawer it does not have. `dragZoomPan` needed nothing — it
-is a drag handler for a zoom track the player has no markup for, and
-`updateTrimUI` is null-safe now regardless.
-
-**A ratchet was loosened, once, on purpose: 263,000 -> 264,000.** The guards cost
-about 1.7 KB. I first wrote that they unlock "roughly 34 KB" — that was the size
-of the whole region, claimed before measuring, and it is wrong. **Measured:**
-
-    music region              34,947 B total
-      stuck (player calls it) 14,891 B   drawWaveform, showToast, clampTrim, ...
-      no outside reference     6,067 B   the drag handlers, validateMusicFile, ...
-      top-level wiring        ~14,000 B
-
-The debt is written beside the number in `verify_player_isolation.py`: when the
-drawer moves, it must come back below 262,000. **If that line still reads 264,000
-with no drawer cut behind it, the prep was never cashed in.** Worth noting the
-ratchet fired on the change that set it — the mechanism caught its own author
-twice in one session, which is the only real test of whether it works.
-
-**The 6 KB is NOT independently movable, and this is the trap to avoid.** Those
-eight functions have no reference outside the region, which makes them look free
-to take. But they are called from TOP-LEVEL statements inside it —
-`dragHandle(handleStart, true)` at what is now line 2320, `dragZoomHandle(...)`
-at 1773, `validateMusicFile(file)` at 2044. Top-level calls evaluate at LOAD, on
-the player, so moving the function without its call site throws immediately on
-every shared link. Function and wiring have to travel together.
-
-**The recipe, in order:**
-
-1. Hoist the 12 stuck functions and the shared state declarations (`audioEl`,
-   `trimStart`, `trimEnd`, `audioCtx`, `currentAudioBuffer`, `loopCrossfadeMs`,
-   `audioDuration`) OUT of the region, into a marked shared section above it.
-   Shared state can never live in an editor-only file: a binding declared there
-   simply does not exist on the player, and any player code touching it throws.
-2. `showToast` goes with them — it is used file-wide and only lives here by
-   accident.
-3. What remains in the region is then wiring plus its own helpers, and moves
-   wholesale into `editor_music.js`.
-4. Re-measure. Tighten the ratchet below 262,000 or explain why not.
-
-## The editor shell is out of the player template
-
-**31,530 bytes of markup removed** — the player's template went 56,716 -> 25,186 B
-and the DOM ratchet reached its target: **0 authoring controls**, down from 8.
-
-Out: the overflow menu, export sheet, post composer and help drawer (422 lines,
-and safe to remove precisely BECAUSE the earlier cuts moved their JS into bundles
-the player never loads — the markup had nothing left to wire it up), then the
-record, post and undo buttons and the music and photo file inputs.
-
-**The stub pattern is what made the controls removable.** `app.js` writes to them
-from more than twenty places — `.disabled`, `.hidden`, `.innerHTML`,
-`.classList` — so guarding each site would have cost more bytes on every shared
-link than the markup it replaced, and would still have missed the next one added.
-Instead `_authoringCtl(id, tag)` falls back to a DETACHED element of the same
-kind: writes land harmlessly on something nothing renders, reads round-trip. Two
-genuine null-crashes still had to be fixed by hand first (`photoInputEl` and the
-autosave wiring, the latter rerouted through the `bindEl` helper that already
-null-checks and predates the problem).
-
-**The byte ratchet was measuring half the payload.** JS-only. So 31.5 KB of
-markup leaving the player was invisible, while the ~700 bytes of guards that MADE
-the removal safe registered as a regression and failed the run. A measurement
-that sees one half of the payload rewards moving weight across the boundary
-instead of removing it. There is now an HTML ratchet beside the JS one.
-
-**Two mistakes worth not repeating.** A regex ending `(?:</\1>|>)` matched a
-multi-line `<button>` only as far as its first `>`, orphaning the label and the
-closing tag — tag counts went 54 open / 57 close and the template stopped
-parsing. Match balanced tags, or count opens and closes. And when that produced a
-blank player, `'playerShell' in template` read False and looked like the cause:
-it is a red herring, `playerShell` lives in `_skribl_player_controls.html`, which
-is included, not inlined.
-
-**The next template target, found by a suite that caught up with reality.**
-`verify_review` asserted the player "really does render media inputs" — true and
-load-bearing when the player carried the whole shell, false now. Inverting it
-surfaced the follow-up: the draw, music and photo TAB PANELS are still in the
-player's template, and their `#photoUploadBtn` / `#musicUploadBtn` drop handlers
-are the only remaining reason `lib/media_validation.js` (7,130 B) loads on the
-player. Remove the panels and the module leaves with them.
-
-## The player is down to a player
-
-    JavaScript   329,159 -> 257,592 B
-    HTML          56,716 ->   7,989 B
-    total        385,875 -> 265,581 B   (-120,294, 31%)
-
-The tab bar and the draw, music and photo panels are out of the player template
-(862 lines -> under 150). That removed 87 elements the player never painted, 44
-of which `app.js` dereferenced, and it broke the player four times on the way —
-each caught by Half A and fixed at the source:
-
-* **12 load-time listeners** now go through the detached-element fallback.
-* **`waveformCanvas.getContext('2d')` at load.** A detached `<canvas>` returns a
-  real 2D context, so `drawWaveform` and every `clearRect` downstream work
-  unchanged and paint into nothing.
-* **Three drag installers take an ELEMENT, not an id**, so the stub cannot help
-  at the call site. One guard at each function's entry covers every caller.
-* **The photo teardown in `resetMediaForLoad`** mixed state resets with
-  unguarded DOM writes; split like the music half.
-
-**`lib/media_validation.js` is off the player** — 7,130 B. Its only callers are
-the photo and music drop/change handlers, and both upload buttons and both file
-inputs left with the panels. `verify_review` asserts the editors still load it
-and the player does not, so the saving cannot quietly revert.
-
-**The ratchet debt is repaid.** It was loosened to 264,000 with a promise to get
-back under 262,000; it is 257,592, and the ratchets now stand at 258,000 JS and
-9,000 HTML.
-
-**A test that something is ABSENT must match the mechanism, not the word.**
-`verify_review` failed on "the player does not load the module" because the
-template's comment explaining the absence contains the filename, and a substring
-check read the comment as the thing it was looking for. Both checks now match the
-`<script` tag. That is the third assertion in that file to encode a fact my
-changes made false — and each one pointed at the next target.
-
-## The music drawer's WIRING did move — the earlier "not worth cutting" was half wrong
-
-`editor_music.js`, **14,286 bytes**: the upload and drop handlers, the trim-track
-drag installers, the zoom-magnification and fine-tune controls, the remove
-button, and the five helpers only they call (`dragHandle`, `dragZoomHandle`,
-`dragRangeWindow`, `positionSegSlider`, `validateMusicFile`). Every call site of
-those five was inside the moved set, so nothing left in `app.js` names them.
-
-I had written this region off after measuring that only ~5.4 KB of FUNCTIONS were
-free. That was true and it was the wrong question. The region is three kinds of
-thing:
-
-    declarations   5,115 B   state + element handles — can never move
-    functions     18,358 B   mostly reached from loadSkribl — must stay
-    wiring        8,717 B    listeners and IIFEs — nothing names them
-
-Wiring moves even when the functions around it cannot, because a classic script
-loaded AFTER `app.js` can read every top-level `let`/`const` it declares. The
-direction that fails is the opposite one: a binding declared in an editor-only
-file does not exist on the player at all. **Ask which direction the reference
-runs, not whether the region is "shared".**
-
-Since the player template lost the music panel, these listeners had been
-attaching to detached stub elements on every shared link — work with no possible
-effect.
-
-## Photo drawer wiring out too
-
-`editor_photo.js`, **12,298 bytes**: upload and drop handlers, the fit buttons,
-reposition, the opacity and blur sliders and their nudgers, and the eraser
-cursor's canvas listeners. Same rule as `editor_music.js` — only STATEMENTS
-move; the functions they call stay in `app.js`.
-
-The eraser cursor's listeners are on `.canvas-wrap`, which the player DOES have.
-They are editor-only because the player has no eraser, not because the element is
-missing — worth noting, since "the element is absent" was the test for everything
-before this.
-
-**A gap in `verify_seam` that this exposed.** Its "editor-only extracted" figure
-counts named FUNCTION spans, so it read 951 lines both before and after 12.3 KB
-of wiring moved: `editor_photo.js` contains no top-level functions at all. The
-suite still passes and its leak assertion is still meaningful, but **that number
-cannot see a wiring extraction**, and anyone using it to judge progress will
-conclude nothing happened. `verify_player_isolation.py`'s byte ratchet is the
-measurement that tracks this work.
-
-## Closed in v212 — the trim strip, and an assertion that pinned nothing
-
-**The bug.** `drawWaveform()` sized `#waveformCanvas` straight from
-`musicTrack.getBoundingClientRect()` with no guard, and the decode chain is its
-ONLY caller. Sizing a canvas from a 0-wide rect is not a no-op: it sets
-`canvas.width = 0`, which CLEARS the bitmap, and the loop then paints zero
-peaks. So a decode landing while the music drawer was shut left the strip blank
-for the rest of the session, while `drawZoomWaveform` — guarded, and re-called
-from `updateTrimUI()` — drew Loop Detail correctly from the SAME buffer. One
-decoded buffer, two canvases, one painted. Reported from a phone, where the
-slower decode makes it easier to hit; the realistic routes in are a draft reload
-or closing the drawer before decode lands.
-
-Reproduced before any edit, by holding `decodeAudioData` until the drawer was
-shut: strip 0x0 with 0 ink, zoom 638x72 with 45,936 ink. That is the screenshot.
-
-**The fix.** The guard on `drawWaveform` on both editors, plus a repaint from
-Pad's `openDrawer()` music branch, two frames after opening so `musicTrack`
-reports real width rather than 0.
-
-**THE PART WORTH READING. My first Flip assertion pinned nothing, and only the
-mutation test found it.** The handoff note said "same on Flip, which had the
-identical unguarded line". The LINE is identical; the conclusion was wrong.
-Flip's `reveal()` already calls `requestZoomWaveformDraw()`, and Flip's copy of
-that repaints BOTH canvases — so **Flip self-heals this scenario and was never
-broken by it.** An assertion that Flip "shows a painted strip after opening the
-drawer" is green against the sealed v211 archive and green against the fix.
-
-So the two surfaces are pinned by DIFFERENT assertions, deliberately:
-
-* **Pad** fails the user-visible scenario, so the scenario is its pin.
-* **Flip** cannot fail that scenario, so its guard is pinned by the property the
-  guard actually governs: paint the strip, take the track's layout away, call
-  `drawWaveform`, restore layout WITHOUT scheduling a repaint, read the canvas.
-  Guarded, 9,499 ink survives; unguarded, the canvas is 0x0 and empty. The whole
-  sequence runs inside ONE `evaluate` so no rAF can slip in and repaint between
-  the wipe and the measurement — that would make the probe green for a reason
-  having nothing to do with the guard.
-
-**Generalises, and this project keeps relearning it.** `verify_parity`'s
-re-inline caught the same class: behavioural parity says the copies agree today,
-not that the assertion depends on the fix. **Run the mutation per COMPONENT, not
-once for the whole change** — a single all-or-nothing revert would have shown
-three reds and hidden that one of them was unreachable.
-
-Mutation matrix, each component reverted independently (the full revert is
-byte-identical to the sealed v211 `app.js` and `flip.js`):
-
-    mutation      pad gate  pad scenario  pad no-wipe  flip no-wipe   total
-    none            PASS       PASS          PASS         PASS       298/298
-    pad-guard       PASS       PASS          FAIL         PASS       297/298
-    pad-reveal      PASS       FAIL          FAIL         PASS       296/298
-    flip-guard      PASS       PASS          PASS         FAIL       297/298
-    all (= v211)    PASS       FAIL          FAIL         FAIL       295/298
-
-The gate assertion stays green under every mutation BY DESIGN — it asserts the
-scenario entered the failing state, so a red gate means a broken probe, not a
-caught bug. Under `pad-reveal` the no-wipe pin fails on its own self-gate
-(`before.ink > 500`), not on a wipe: the strip was never painted to begin with.
-Same colour, different reason, and worth reading the detail line rather than the
-column.
-
-**Cost: 209 B served, 2,428 B of source.** Almost all of it is the comment
-naming the pattern, which `jsstrip.py` removes from the response — this is the
-third "sized from a rect with no layout yet" bug in this drawer, so naming it in
-place is worth 209 B. The ratchet went 146,911 -> 147,120, set to fit, with the
-accounting line beside it.
-
-**A number from the previous handoff that was wrong: "+360 B".** It was recorded
-against a fix whose Flip half was mischaracterised, and the measured figure is
-209 B. Nothing from that note should be carried forward without re-measuring.
-
-## Also closed in v212 — two generators, one stanza, and they disagreed
-
-**Found while sealing this build, by causing it.** `release_run.py` drives
-`run_harness.sh` one batch at a time, so the record it leaves behind describes
-only the final batch. It already fixes that from one side: it rewrites
-`LAST-RUN.txt` to cover every batch and re-stamps. **That holds only while the
-release run is the LAST harness invocation.** A bare
-`./harness/run_harness.sh verify_docs.py` afterwards rewrites `LAST-RUN.txt` and
-re-stamps from it — publishing **a stanza claiming 36 assertions from a single
-batch, beside a `RELEASE.md` recording 2400 across every suite on disk, on the
-same frozen tree.**
-
-**This is worse than a hand-typed number, not better.** It is machine-generated,
-so it carries exactly the authority this project grants generated figures, and
-it is wrong. The generated-not-typed rule assumes ONE generator. There are two,
-and nothing made them agree.
-
-`stamp_docs.py` now REFUSES a stamp that would narrow the record for the same
-tree; `--force` is the deliberate override.
-
-* **It compares ASSERTION TOTALS, not suite counts.** `read_run()` counts suites
-  that REPORTED (59 here), while `RELEASE.md` counts suites reported INCLUDING
-  skips (61). A suite-count comparison refuses a legitimate full release. The
-  assertion total is the one figure both generators compute the same way,
-  because a skipped suite contributes zero to each.
-* **A `RELEASE.md` for a DIFFERENT tree does not gate at all.** It says nothing
-  about the run being stamped, and gating on it would wedge every build — which
-  is precisely the state the tree is in mid-release, since `RELEASE.md` is
-  written at the END.
-
-**The pin runs in an isolated temp ROOT, and that is load-bearing.** The first
-version drove the real `stamp_docs` against the real files and could not work:
-`stamp_docs` resolves `ROOT` from `__file__`, so mid-release it reads a
-`RELEASE.md` describing the PREVIOUS tree, the guard correctly declines to gate,
-and there is nothing to refuse — the assertion would fail inside the very run
-that seals the archive. It also restored "the real record" from disk, which at
-that moment WAS the damaged narrow one. Four assertions in `verify_docs.py` now
-build a fabricated tree instead: refuse-on-narrow, stanza-untouched (exit code
-alone would pass against a script that refuses loudly and writes anyway),
-stamp-on-wide, and no-gate-on-other-tree. Mutation-tested: remove the guard and
-the two refusal assertions go red while both controls stay green.
-
-**The general lesson, and it is the one this file keeps restating.** A second
-generator is a second place for a number to come from. When two of them write
-the same field, something has to make them agree, or "generated" stops meaning
-"trustworthy" and starts meaning "unattributable".
-
-## The v213 loss — commit before anything destructive
-
-**I destroyed several hours of harness work with `git checkout`.** The tree had
-exactly ONE commit — the v211 baseline — and everything since was uncommitted.
-`git checkout harness/verify_ux.py`, reached for as a cleanup after a botched
-edit script, reverted that file to the baseline and wiped all 68 v213
-assertions.
-
-The source survived (only that one file was named), so every feature still
-worked. What was gone was the evidence that it worked, which in this project is
-most of the value.
-
-**Root cause is not the command.** It is that nothing had been committed all
-session, so `git checkout` had nothing to fall back to except the beginning.
-`git checkout <file>` in a tree like that is not an undo, it is a delete.
-
-**Rules that follow.**
-
-* Commit before anything destructive, and commit as work lands rather than at
-  the end. A commit costs nothing and is the only thing that makes a mistake
-  cheap.
-* Never `git checkout` a file with uncommitted work in it. For mutation tests,
-  `cp` from a `/tmp` copy — that is what every source-file mutation in this
-  session did, and it is why app.js, flip.js and the libs all survived while the
-  one file handled with git did not.
-* When an edit script goes wrong, FIX IT FORWARD. The botched split turned a
-  2,770-line file into 3,941 by duplicating a range; that was recoverable by
-  inspection. Reverting was the destructive choice, taken because it looked
-  faster.
-
-**What made recovery possible** was `/tmp/ux.log` from the last green run: it
-held every assertion name WITH its measured detail values, so the rebuild could
-be checked against the figures the code had actually produced (peak alpha
-89/225, tall-grid aspect 0.99, 1,889ms against 410ms, 282x282 circles) rather
-than against fresh guesses. Keep run logs. They are cheap and they are the only
-reason this was a rebuild rather than a redesign.
-
-## When to split a suite — measure runtime, not assertions
-
-**The trigger is RUNTIME AND BROWSER LAUNCHES, not assertion count.** Assertions
-are nearly free; a `chromium.launch()` and a page load are not, and it is wall
-time that decides whether a suite still finishes inside one invocation. A suite
-of 400 cheap assertions sharing two pages is fine; one of 40 that launches a
-browser each is not.
-
-Measured at v214, on this container:
-
-    suite              launches   runtime   assertions
-    verify_ux.py            17      206 s          298
-    verify_tools.py         13      134 s           93
-
-`verify_ux` needed splitting at ~366 assertions and roughly 20 launches, when it
-stopped finishing in a single tool invocation and had to be run in the
-background and polled. That is the failure to avoid: **a suite that becomes slow
-enough stops being run**, and an unrun suite is worth less than no suite,
-because it still reads as coverage.
-
-**Rule of thumb: past ~150 s or ~15 launches, split BEFORE adding the next
-feature's pins, not after the suite becomes unreliable.** `verify_tools` is at
-134 s / 13 launches — close, so the next tool's pins should go into a new suite
-rather than onto the end of this one.
-
-**The cheap fix before splitting** is to share pages. The v213 mirror pin opened
-six browser contexts (one per mode per surface) and was cut to two by reusing
-one page and resetting the stroke arrays between cases. Reloads are the
-expensive part, not assertions.
-
-## Suites: verify_boot.py
-
-**The most expensive bug in this codebase, measured in debugging rounds**, is not
-a wrong pixel. It is `flip.js` throwing at top level and silently abandoning
-every line after the throw. The page still renders, the markup is all there, and
-an arbitrary SUFFIX of the behaviour is missing — so it presents as several
-unrelated features breaking at once and sends you after whichever one you
-noticed first. Four rounds in one session, every one the same shape: a function
-that runs during init (`setTool()` is the usual culprit) reaches a `let` declared
-further down and hits its temporal dead zone. `let` and `const` do not hoist the
-way `function` does, and **no `typeof` guard can rescue them — only declaration
-order can.**
-
-So each editor script ends with one statement whose only job is to say it got
-there — `window.__skriblBoot.flip = true` — and this suite reads it. That beats a
-page-error listener twice over: it also catches a throw something swallowed, and
-it names WHICH file died instead of reporting a symptom three screens away.
-Verified by reintroducing the bug on purpose: the suite fails with *"Cannot
-access '__tdzCanary' before initialization"* rather than with a missing
-filmstrip.
-
-**Rule going in: state any early path can reach belongs with the early state, and
-anything touching state declared further down belongs in the load handler.**
-
-The suite loads each surface twice, empty and restoring a draft, because restore
-is a second load-time path with its own ordering and it is the one a returning
-user takes. It pins the two surfaces' genuinely different behaviour rather than
-flattening it: Flip restores silently, Pad offers a "Discard / Restore" banner.
-(The banner is older than the fix: until v222 Pad's autosave held strokes but not media bytes.
-Since v222 the bytes are durable — see the IndexedDB section below — and the
-banner is a UX choice rather than a warning about lossy restore.)
-
-One trap worth remembering, found while writing it: `typeof frames !== 'undefined'`
-is **always true** in a browser — `window.frames` is the iframe list. On Flip a
-real top-level `let frames` shadows it and the expression worked by luck; on Pad
-it resolved to `window.frames[0]` and threw.
-
-## The pen palette lives in lib/palette.js
-
-It used to live in two places: seven `<button>`s written into
-`_skribl_draw_drawer.html` for Pad, and a `COLORS` array at the top of `flip.js`
-for Flip — the same seven hexes in the same order, kept in step by hand, with
-nothing comparing them. The failure mode of forgetting one is not an error. It
-is two editors quietly offering different colours, which nobody notices until
-someone switches surfaces mid-drawing. Both build from the lib now, and
-`verify_parity` asserts they render the same list, in the same order, and that
-the list came from the lib rather than from a copy.
-
-**The colours are Risograph inks** — fluorescent pink, hot orange, acid yellow,
-a printed green and a federal blue, plus paper white and a toner black. That is
-what small-press zines are actually printed with, and it is a deliberate
-replacement for what was there: a purple and a blue lifted straight from the UI
-accent, a mint green and a muddy amber. *A drawing palette that matches the
-chrome is a palette that was never chosen.* Riso inks are spot colours, mixed
-to sit on paper rather than to pass a contrast check, so they are strongest on
-the dark grounds the background swatches default to — acid yellow on white is
-nearly nothing, which is true of the ink as well.
-
-The lib marks its dark swatches with `dark: true` and deliberately does **not**
-say what colour their rim is. A near-black dot on a near-black drawer is an
-empty hole, but the drawer is near-*white* in light mode, where the dot needs no
-help and a light rim would be the thing that vanishes — so the rim is CSS,
-keyed off `[data-ink="dark"]`, and follows the theme.
-
-**Building the dots at runtime is what let the two lists become one.** Pad's
-click handler is delegated on `#colorGroup`, so a dot created after load needs
-no listener; Flip passes an `onPick` because it also closes the drawer. The
-custom picker and the eyedropper stay in the markup — they are controls, not
-colours, and they are what the dots get inserted before.
-
-## Colour ratchets: three of them, and each was added after something escaped
-
-1. **Neutrals outside `:root`** (`verify_surfaces`) — every grey the chrome
-   paints must be a token, or it will not follow a light theme.
-2. **Chromatic ink** (`verify_theme`) — stricter: `color`, `fill` and `stroke`
-   may hold no literal at all except `#fff` and `#0d0f14`. A red is not a
-   neutral by any measure, so the grey audit walked straight past `#f4326f` at
-   3.32:1 on a light sheet.
-3. **The `rgb()` function form** (`verify_surfaces`) — the first version of the
-   neutral ratchet only looked for `#hex`, so `background: rgb(23, 27, 35)` sat
-   on two controls and stayed dark in light mode with nothing to say so.
-
-There is one exemption and it is a rule rather than a list: a token named for
-the **canvas** is not chrome. `--on-canvas-rgb` is the empty-state hint, painted
-on the drawing surface, which follows no theme — and naming it in `:root` is
-what makes that a visible decision instead of a literal somebody missed.
-
-**What a ratchet cannot see is a mark that is white on purpose.** `#fff` is
-exempt because it is nearly always text on a coloured fill — but five marks were
-white against a surface that flips, and simply disappeared in light mode: the
-brush-size preview dot, the size-preset dots, the music playhead, the spinner's
-leading arc, and the ring around the selected swatch. Those were found by
-looking, not by asserting.
-
-## Suites: verify_fuzz.py
-
-**Every other suite here tests a feature. This one tests the document**, against
-the single rule that has broken three separate times for three unrelated
-reasons:
-
-```
-'frames[9].strokeGroups' accounts for 317 points, but the strokes array contains 318.
-```
-
-That is the server refusing a share. It is not cosmetic — the user has finished
-a drawing and the app will not let them post it — and all three occurrences were
-found the same way: in production, by the owner, on a phone. The causes were a
-second pointer landing mid-stroke, a page change mid-stroke, and a shape
-committing its group before its points. **Nothing they had in common was visible
-in a diff, and no feature suite would have caught any of them, because each one
-only appears when two features interleave.**
-
-So this drives the editor the way a person actually uses it — a shuffled stream
-of draws, erases, page adds and deletes, duplicates, selections, moves, mirrors,
-cuts, pastes, liquifies, undos and redos — and re-checks the invariants after
-**every** operation: strokes length equals the sum of strokeGroups, every group
-count is a positive integer, the page index is in range, every coordinate is
-finite. Then it posts the result and requires the server to take it. That last
-step is the one that matters: **the invariants are this file's model of the
-rule; the POST is the rule.** If `validation.py` and this file ever disagree,
-that assertion is what says so.
-
-**The seed is fixed and printed**, and the last dozen operations are dumped on
-failure. A fuzz failure that cannot be replayed is a story, not a bug report.
-
-**Two anti-vacuity assertions, and they are not decoration.** The first version
-guessed the page-operation names (`addPage`, `dupPage`, `delPage`; the real ones
-are `addFrame(copy)` and `delFrame(i)`) and wrapped them in
-`typeof fn === 'function'` guards. Every page operation became a silent no-op:
-the fuzz spent its whole budget on one page and reported a confident pass having
-never changed page at all — while the invariants, which an untouched empty
-document satisfies trivially, stayed green throughout. So the suite now asserts
-that it drew something *and* that it used more than one page. **A guard that
-skips is a guard that lies about coverage.**
-
-**A failure here does not mean "the fuzzer is flaky."** Every operation is
-something a person can do with a mouse, in an order a person could do it in. If
-this goes red, some pair of features has stopped composing.
-
 ## The shared modules, all of them
 
 `skribl/static/lib/` is where a rule lives once instead of twice. The two
@@ -1295,1649 +606,125 @@ ratchet in `verify_inline.py`, separate from the embed's: a page that only
 DISPLAYS Skribls never composes one and must not be charged for it.
 
 "in-post" is the fourth surface: the player a host embeds in a feed post (`skribl/static/inlineplayer.js`, `templates/skribl/_skribl_inline_player.html`).
-It loads exactly two of these — `canvassizes.js` for a legacy payload's default
-shape and `holdtiming.js` for what a per-page hold means — and reads nothing
-else from `lib/`, which is the point: those two are the rules it would otherwise
-have re-derived. `verify_inline.py` asserts both that it reads them and that the
+It loads THREE of these — `canvassizes.js` for a legacy payload's default
+shape, `holdtiming.js` for what a per-page hold means, and `audiosession.js`
+for the iOS ringer fix — and its own code reads all three. This said "exactly
+two ... and reads nothing else from `lib/`" until v281; `audiosession.js`
+arrived with the ringer fix and the sentence did not move.
+
+`sharecard.js` USED to be a fifth, and v281 dropped it. The idle poster's crop
+is literals in `inlineplayer.css`; nothing in the page ever read
+`window.SkriblShareCard`. The only reader was `verify_inline.py`, evaluating
+`band()` in the page to check those literals still agree with the module's
+arithmetic — a real assertion that did not need the payload. The suite injects
+the module now (by `evaluate()`, since the page's CSP correctly refuses an
+injected `<script>`), and the embed ratchet came down 32,000 → 31,000 rather
+than banking the saving as slack.
+
+**The saving is 993 B, not the 5,210 B this paragraph first claimed.** That was
+the size on disk; `jsstrip.py` serves these files without comments and the
+budget counts served bytes. The correct figure was in `verify_inline.py`'s own
+note the whole time. A five-fold overstatement in the direction that made the
+finding look better is exactly the kind worth writing down. `verify_inline.py` asserts both that it reads them and that the
 macro loads them, because reading a global nothing loads is a silent fallback
 rather than a shared rule.
 
+<!-- GEN:MODULE-INDEX -->
 | module | loaded on | what it owns |
-| --- | --- | --- |
+|---|---|---|
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
-| `audiosession.js` | Pad+Flip+player+in-post | Holds an iOS playback session so the ringer switch stops silencing Web Audio. |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
+| `audiosession.js` | Pad+Flip+player+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
-| `canvassizes.js` | Pad+Flip+in-post | Canvas presets — the one table both editors read. |
+| `brushfield.js` | Flip | The arithmetic behind tools that act on ink already on the page. |
+| `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
 | `colorselect.js` | Pad+Flip | Colour selection — the part both editors must agree on. |
+| `composehost.js` | HOST | The pad button's lifecycle, for a HOST's composer. |
 | `constrain.js` | Pad+Flip | Shift-to-constrain — snap a stroke to the nearest axis, shared by both editors. |
-| `composehost.js` | HOST | The pad button's lifecycle for a HOST's composer — the only lib no Skribl surface loads. |
 | `draftstore.js` | Pad+Flip | Draft media persistence — the bytes localStorage cannot hold. |
 | `drawerdetent.js` | Pad+Flip | The draw drawer's HALF detent — one implementation, both editors. |
-| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both |
+| `drawers.js` | Pad+Flip | Exclusive drawer controller — the ONE implementation of a machine both editors had hand-rolled: named panels above/below a toolbar, at most one open, the opener button reflecting state, and a scroll that reveals the opened panel without stranding it under browser chrome. |
 | `erasersize.js` | Pad+Flip | Eraser size — shared by both editors. |
 | `eventpoint.js` | Pad+Flip+player | Which contact a gesture belongs to — shared by Pad, Flip and the player. |
 | `eyedropper.js` | Pad+Flip | Eyedropper — the armed-state machine, shared by both editors. |
+| `floodfill.js` | Flip | Flood fill, expressed in the only vocabulary this project has: strokes. |
+| `framebitmap.js` | Flip+player | Frame bitmaps — a painted page is rasterised once per playback, shared rule. |
 | `gridoverlay.js` | Pad+Flip | Grid overlay — the alignment guides both editors draw over the canvas. |
 | `helpsearch.js` | Pad+Flip | Help drawer search + live section counts. |
 | `hints.js` | Pad+Flip | First-use hints — one short toast the first time a control is used. |
-| `holdtiming.js` | Pad+Flip+player+in-post | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip |
-| `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things |
+| `holdtiming.js` | Pad+Flip+player+library+in-post | Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip editor and the player. |
+| `inputsamples.js` | Flip | The points the browser already captured and the handler was throwing away. |
+| `keyregistry.js` | Flip | lib/keyregistry.js — what is bound to which key, and whether two things answer at once. |
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
-| `media_validation.js` | Pad+Flip+player | media_validation.js — one owner for media format policy and byte verification. |
+| `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
+| `modalfocus.js` | Pad+Flip | Focus for surfaces that declare aria-modal="true". |
+| `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
-| `floodfill.js` | Flip | Flood fill as scanline runs — a region expressed as strokes, because the format has no fill primitive. |
-| `inputsamples.js` | Flip | The coalesced pointer samples a per-frame listener drops, thinned by distance so a fast stroke keeps its curve without bloating the payload. |
-| `brushfield.js` | Flip | The falloff, colour mixing and point traversal that Liquify, Smudge and Blur share — including why a stroke-format blur is possible at all, and what it cannot do. |
-| `stamps.js` | Flip | The stamp shelf: normalising a selection onto its own centre, the compact encoding, and the byte budget that keeps a store which only grows from starving the draft it shares an origin with. |
-| `sizeclass.js` | Flip | One size decision for the whole app — compact vs regular, measured once, stamped on the root. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
-| `photofit.js` | Pad+Flip+player | Photo fit geometry — the part both editors and the player must agree on. |
+| `photofit.js` | Pad+Flip | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
-| `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
-| `postedaudio.js` | Pad+Flip | What a POST stores: the loop baked down to mono. Editors only — the player never posts. Its header records why 22.05 kHz was tried and reverted. |
+| `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `posted.js` | Pad+Flip | Your Skribls — a local record of what you have posted. |
-| `postedui.js` | Pad+Flip | Your Skribls — rendering. The store is lib/posted.js; this draws it. |
+| `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
+| `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
+| `postedui.js` | Pad+Flip | Your Skribls — rendering. |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
+| `recoverykey.js` | Pad+Flip | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
 | `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
-| `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
-| `sharecard.js` | Pad+Flip+in-post | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |
 | `selection.js` | Pad+Flip | Selection — pick a region, then move what is inside it. |
 | `shapes.js` | Pad+Flip | Shapes — line, rectangle and ellipse, expressed as ordinary stroke points. |
+| `sharecard.js` | Pad+Flip | /s/<id>/card.png: WHERE THE DRAWING SITS INSIDE IT. |
+| `sizeclass.js` | Flip | One size decision, made once, for the whole app. |
 | `smoothing.js` | Pad+Flip | Smoothing (the stroke stabilizer) — shared by both editors. |
+| `stamps.js` | Flip | Stamps — the clipboard, but named, persistent and multi-slot. |
 | `strokelayers.js` | Pad+Flip+player | Stroke layers — the see-through-stroke compositor's on/off, shared by both. |
 | `theme.js` | Pad+Flip | Light/dark chrome — the stored setting, and the one place that applies it. |
 | `toolshelf.js` | Pad+Flip | Tool shelf + overflow tray — shared by Pad and Flip. |
 | `tooltip.js` | Pad+Flip | Styled tooltips, replacing the browser's. |
+| `zoomstep.js` | Pad+Flip | The loop-detail magnification stepper — the ladder, the chrome, and the rule for stepping it, in one place because Pad and Flip both draw this control. |
+<!-- /GEN:MODULE-INDEX -->
+
+Generated by `harness/gen_docs.py`: the surfaces come from the templates that
+load each module and the description is the module's own opening sentence, so
+neither can drift from the thing it describes.
 
 Two are worth calling out because they were extracted after a bug, not before:
 `holdtiming.js` (the editor and the player disagreed about what a hold means)
 and the budget inside `strokelayers.js` (the editor capped its compositing cost
 and the player did not). Both are covered by `verify_sharedrules.py`.
 
-## Suites: verify_sharedrules.py
-
-**verify_parity.py guards the CONTROLS Pad and Flip share. This guards the
-RULES.** Three of them had two implementations apiece, and all three had
-drifted:
-
-| rule | Flip editor | player |
-| --- | --- | --- |
-| what a `hold` means | `frameHold` + `runPlayTimer` | `flipHolds` + `flipIndexAt` |
-| what one frame may spend layering | `LAYER_BUDGET` | *no ceiling at all* |
-| what alpha a stroke carries | `alphaOf` | `parseStrokeAlpha` |
-
-The hold: the player's cumulative table was right; the editor's timer read its
-delay off the page AFTER the one on screen and never wrapped its index, so a
-hold stretched the wrong page and stopped working after the first loop. The
-ceiling: Flip's editor caps compositing cost, the player never did, so a
-document could play smoothly while authoring and stall for a viewer. The alpha:
-Flip's regex was unanchored and matched `rgb()` too, so the greedy body let the
-BLUE channel land in the alpha group — `alphaOf('rgb(255,176,32)')` returned 32,
-and `tweenFade` multiplied by it and clamped, making an in-between of any such
-drawing fully opaque.
-
-`lib/holdtiming.js` and the budget in `lib/strokelayers.js` own the rules now.
-The two mechanisms stay different where they should — the player maps a clock to
-an index, the editor reschedules a timer — so the suite asserts not shared code
-but that they cannot disagree about the ANSWER, over a grid of hold tables and
-frame rates.
-
-**The recurring shape, and why it costs more than an ordinary bug:** when the
-EDITOR and the PLAYER disagree, nothing an author can see reveals it. The
-preview is not the product. The suite's first block checks that every surface
-actually loads the modules, because `skribl_player.html` loads a handful of libs
-rather than the editors' thirty-odd — a new dependency is easy to add everywhere
-except the surface that needs it most. That happened twice while writing it.
-
-One block is a SOURCE check rather than a behavioural one, annotated as such:
-the behavioural version was tried first and cannot work on that canvas, because
-Pad's draw path strips a colour's alpha and leans on a `globalAlpha` that is 1
-outside a live stroke — so layered and un-layered frames come out pixel-identical
-there. Asserting the wiring is honest; asserting something weaker and calling it
-behavioural would not be.
-
-## Suites: verify_pillfit.py
-
-**The autosave pill sat on the pen button, on every phone, on both surfaces.**
-`.autosave-status` is `position: fixed` at bottom-left; on a phone the tool row
-is at the bottom too. Desktop never collides, which is why it lasted — *it is
-invisible on the machine it was built on.*
-
-A rule for a nearby case already existed: the pill fades while a drawer is open,
-because "a pill covering a destructive button is worse than one you cannot see".
-That rule was right and too narrow — it fixed the collision somebody noticed
-rather than the general one, and CSS cannot ask whether two boxes intersect. So
-`lib/pillfit.js` measures it, and the fade is a class the measurement sets.
-
-**A warning is never faded, and that is the point of the suite.** `failed` and
-`partial` (saved without media) stay on screen deliberately — `flip.js` records
-why: *"a warning that fades claims it was resolved."* Hiding one because it
-happened to overlap would trade a cosmetic problem for a durability one,
-silently, in the exact situation where the user most needs telling. Most of the
-assertions here are on that distinction rather than on the easy half.
-
-**The pill has always been `pointer-events: none`**, so none of this was ever
-about blocking taps — it obscures a control without disabling it. That lowers
-the stakes, and it is asserted, so a later change cannot quietly make the pill
-interactive and turn an overlap into a dead button.
-
-**The consequence, stated plainly: "Saved" no longer appears on a phone.** It
-appeared on top of a control before, so this is a change from *visible and in
-the way* to *not shown*, not from visible to hidden. The warnings — the states
-that actually need reading — still show everywhere. If the reassurance turns out
-to be wanted on mobile, the fix is to give the pill somewhere to go rather than
-to weaken this rule.
-
-Two anti-vacuity guards: the suite asserts the pill **does** overlap at phone
-size before asserting that it fades (otherwise the section proves nothing), and
-it resizes a live window to check the verdict is recomputed on layout rather
-than decided once at load — which would leave a rotated phone wrong.
-
-## Suites: verify_tween.py
-
-**A generated page that looks like a long exposure.** The reference was
-stop-motion shot with the shutter open while the puppet moved, so one frame
-integrates the whole path between two poses. What sells that look is not blur —
-it is that the blur is **uneven**. The feet, which barely travelled, come out
-nearly sharp; the arms, which swung furthest, smear away to nothing.
-
-That gradient is why this can be done honestly in a stroke document. Sample the
-motion between two pages at N steps and draw every step faintly: a point that
-hardly moves lays all N copies on top of each other and stays crisp; a point
-that travels far spreads them along its path and goes soft. **Nobody authors the
-falloff** — it is what integrating a motion means, and it falls out of the
-arithmetic. The suite pins exactly that (arm spans 150px, foot spans 2px, ratio
-> 20×), because it is the property a later "optimisation" of the sampling would
-quietly destroy while every other assertion still passed.
-
-**It is ordinary stroke data.** No new field, no raster layer, nothing the
-player must learn — opacity already rides inside each point's `rgba()` and the
-player already honours it. So the generated page is editable, erasable,
-exportable and postable like any other, and the suite proves that end to end
-rather than asserting it.
-
-**The fade is an 8-digit hex, and that is a performance decision, not a style
-one.** Reported from a phone: *"it takes 2 seconds to play 3 frames."*
-`paintStatic` gives every translucent stroke its own offscreen layer — clear a
-full canvas, redraw, composite back — to stop a see-through stroke beading at
-its own overlaps. An exposure is 27 samples of *every* stroke, so a six-limb
-figure is **162 translucent strokes and ~486 full-canvas operations per frame**:
-measured at **221 ms against a 12 fps budget of 83 ms**. The render blocks the
-play timer, so the *previous* frame sits on screen while it works — which is why
-the stall appeared on the page **before** the in-between as well as on it.
-
-The layering is also simply wrong for this content: it exists to stop a stroke
-compounding at its own overlaps, and an exposure *is* compounding overlaps —
-the density where samples pile up is the whole effect.
-
-Both renderers decide whether to layer by matching the `rgba()` **function**
-form — `alphaOf` in `flip.js`, `parseStrokeAlpha` in `app.js`, which is also the
-**player's** renderer — and neither matches a hex. Canvas honours `#rrggbbaa`
-and accumulates it either way. **221 ms → 5.8 ms, the same picture** (+3% ink
-from the extra accumulation), with no new field, no renderer edit, and nothing
-for the player to learn.
-
-**Fixing the generator was not enough, and that is the lesson.** Writing the
-fade as hex only helps in-betweens made *after* the change. Every one already
-sitting in somebody's draft still carried `rgba()` and still cost 218 ms —
-reported a second time from the phone after the first fix shipped: *"it still
-pauses on the blurred slides."* **A fix that only applies to new data leaves
-every user who already hit the bug still hitting it.**
-
-So `paintStatic` now carries a cost ceiling: layering costs a full-canvas round
-trip per translucent stroke (~1.4 ms measured), so a frame holding more than a
-frame-budget's worth paints direct instead. Old pages **218 ms → 5.1 ms**, and
-a hand-drawn frame with six see-through strokes still layers normally — the
-guard is a ceiling, not a ban, and both halves are asserted.
-
-It is a deliberate use of the form. Teaching `alphaOf` to understand hex would
-make exposures slow again — *not broken, just slow*, which is exactly the kind
-of regression that ships — so the suite pins the **render cost**, which is the
-assertion that catches it. A test on the colour string would not: the string
-could stay the same while the heuristic around it changed.
-
-**The point budget is the hazard.** Multiplying a page by 27 is precisely how a
-feature makes a drawing unpostable: the server refuses a frame over 20,000
-points, and it would refuse it at the moment the user tried to share, with no
-earlier warning. N adapts to the page — a light page gets all 26 samples, a
-heavy one gets fewer and a coarser exposure. Measured in the suite: a 900-point
-page that would have produced 24,300 points produces 14,400 instead.
-
-**The point budget is not the render budget, and the second one moves with the
-frame rate.** The server's 20,000-point ceiling is a fixed number; the time a
-frame has to paint is `1000/fps`, so the same exposure that is comfortable at
-12 fps has half the slot at 24 and a third of it at 36. Reported that way:
-*"it still stalls on the in-between slides"* on a 24 fps document, in a build
-whose exposure was already within budget. The plan now fits two ceilings — the
-postable one, which is fixed, and a render allowance that falls with the slot —
-and never drops below `TWEEN_MIN_SAMPLES`, so the exposure gets coarser rather
-than the document getting unshareable.
-
-**And then, for the third time in this feature, a fix that only new pages could
-reach.** The rate budget applies where the exposure is BUILT; 22 in-betweens
-already sitting in the reported file kept the count they were given. "Rebuild
-in-betweens" in the ... menu re-runs the generator over the generated pages at
-the current rate — 270,692 -> 155,060 points on that file. It has to RECOGNISE a
-generated page, because nothing in the format marks one and a false positive
-overwrites a drawing: 8-digit hex ink, neighbours that still interpolate, and a
-run count that is an exact multiple of the source's, all three. It skips pages
-already at the right count, so running it twice is free and says so.
-
-**And then the fourth report, which ended the sample-budget era.** The same
-file, in-betweens re-added by hand at 12fps (where the budget thins nothing),
-played at "about 5.5 seconds for 46 slides." At 4x CPU throttle — a mid-range
-phone — one in-between costs ~215ms against a 41.7ms slot; rebuilt, ~123ms.
-No budget closes a 5x device gap. The frame is STATIC: `lib/framebitmap.js`
-now captures a heavy page's first paint as a bitmap and every later visit is
-one drawImage, on BOTH playback surfaces. First loop fills the cache; cached
-loops measured 1911ms/1916ms against 1917 nominal on the same file and
-throttle. Only pages past 1,500 points earn a bitmap, captures happen at the
-displayed resolution, and past 64MB — or one failed allocation — frames paint
-direct: slower, never broken. The play timer estimates a BLIT for cached
-frames, because subtracting a rasterisation cost that can no longer happen
-made cached loops rush (measured 1.5s for a 1.92s loop).
-
-**It refuses rather than guessing.** Interpolating needs the two pages to
-correspond — same strokes, moved — which is what Duplicate-then-drag produces.
-Two freehand redraws have nothing to pair up, and inventing a pairing would
-produce a mess that reads as a bug in the tool rather than a limit of the idea.
-Both refusals say what is needed, and both are asserted.
-
-**No blur, deliberately.** 26 samples unblurred is most of the way to the
-photograph and costs nothing; the faint ribbing left over reads as a *drawn*
-in-between rather than a photographic one, which suits an app that looks like a
-printed zine. A real gaussian is one render attribute away (`ctx.filter` carries
-it, and it works in this engine — measured) but that attribute is a contract the
-**player** would have to honour too, which is the same trap the `pressure` note
-in `flip.js` records. A decision to make on purpose, not a default to slide in.
-
-## The page counter reads "21/43", not "Page 21 / 43"
-
-The word cost 69px against 30px, in a `nowrap` bar whose contents already
-measured **369px inside 340** at a 360px viewport — the Delete button was being
-clipped off the end, before any of the in-between work went near it. In a bar
-whose every other control is a page operation, sitting directly above a
-filmstrip of numbered pages, "Page" was spending real estate to say what the
-context already said.
-
-**The accessible name keeps the full sentence** — `aria-label="Page 21 of 43"`.
-That is the trade a visual abbreviation should always make, and `verify_tween`
-asserts both halves so a later tidy-up cannot drop the spoken one.
-`verify_pages` used to assert `"Page " in textContent`; it now asserts the
-*intent* — a digit on screen and "Page" in the accessible name — rather than the
-wording.
-
-## Suites: verify_liquify.py
-
-**The name is part of the design.** This was built as "Smudge" — that is what
-was asked for, and what the mental slot is called — and renamed before it
-reached main, because the word promises something it cannot do. A control that
-lies about itself is worse than one that is merely limited.
-
-A real smudge is **colour transport**: Photoshop, Procreate and Krita's Color
-Smudge engine all sample the pixels under the brush, carry that colour along the
-drag, and blend it down. *Blending two colours and softening a hard edge are what
-people reach for smudge to do, and this does neither.* The family it actually
-belongs to is Photoshop's **Liquify → Forward Warp**, Procreate's
-**Liquify → Push**, and Inkscape's Tweak tool in "push parts of paths" mode,
-which displaces path nodes by a distance-weighted delta exactly as this does.
-
-**And colour transport was never on the table here.** Blending needs pixels to
-sample, and Skribl has none. A page is a list of points, and that same list is
-what the player replays, what export walks and what the draft stores.
-Rasterising a page to blend it would invent a second kind of content that undo,
-export, the draft schema and the player would all have to learn — and it would
-kill replay outright, because a flattened image has no stroke order left to
-animate.
-
-So this moves the **geometry**. Points inside the brush are dragged along with
-the pointer, weighted by distance from its centre, and the strokes bend. For a
-line document that is the better instrument anyway: it moves the ink you drew
-rather than averaging it into mud, and it is lossless where a raster smudge is
-not — ten undo/redo round trips come back bit-identical.
-
-**What it costs, stated plainly:** no colour bleed. Two crossing strokes bend
-towards each other but never mix, and nothing in this format can make them mix.
-**What it keeps** is the reason to do it this way — replay, export, the player,
-the draft, and an exact undo. The suite proves that end to end: it liquifies a
-page, posts it, and loads the result in the player, which was never taught
-about liquify and does not need to be.
-
-**`LIQUIFY_STRENGTH` is what makes it a pull instead of a spike.** At full
-strength a point in the centre of the brush moves the entire delta — which lands
-it back in the centre for the next move event, at weight 1 again. It rides the
-cursor forever, and every line the brush crosses gets dragged to the same single
-point. Measured on three parallel lines: all three converged to one vertex.
-Below 1 the ink lags behind the brush, slides toward the rim, and sheds on its
-own — which is what dragging a finger through wet ink actually does. The suite
-pins the *property* rather than the constant: three parallel lines must still be
-three lines afterwards.
-
-**Undo stores coordinates, not a displacement**, for the reason `selRestore`'s
-comment already gives: a liquify stroke accumulates over dozens of move events at a
-different weight each time, so there is no single delta to negate and
-re-deriving one would walk the artwork further from home on every cycle. Ten
-undo/redo round trips are asserted to leave it bit-identical.
-
-**A liquify stroke belongs to the page it started on.** The frame index is pinned at
-pointerdown, exactly as `strokeFrame` is for a stroke. Changing page mid-drag
-and re-reading `frame()` would apply the back half of the gesture to different
-artwork, at indices that mean something else there, and hand undo a
-before/after pair for strokes nobody touched.
-
-**A tap logs nothing.** Neither does a drag across empty canvas. A no-op on the
-history puts the stroke the user actually wants back one press further away than
-they expect.
-
-**One test-isolation trap, found the hard way and worth repeating.** `fresh()`
-originally reset the document but not the *tool* — so a section that left liquify
-selected made the next section's setup silently draw nothing, and the assertions
-downstream then passed or failed for reasons unrelated to what they named. One
-of them passed *vacuously*: "undo restores the exact coordinates" compared an
-untouched page against itself. `fresh()` now restores the pen and asserts it,
-and `line()` asserts that it actually drew something. **A setup step that
-quietly does nothing is worse than one that fails.**
-
-## Suites: verify_theme.py
-
-Light mode, and the four things that make a second palette a feature rather
-than a liability.
-
-**It is opt-in, and that is a decision.** There is no
-`@media (prefers-color-scheme: light)` rule in the sheet. The first pass had
-one, and it flipped the default for every visitor whose OS is set to light —
-which is most of them, on an app whose entire identity is dark. Skribl would
-have changed for everyone overnight without anyone asking. Following the system
-is one block away (wrap the light ramp in the media query and guard it with
-`:root:not([data-theme="dark"])`) but it is the owner's call about the product,
-not a detail of the implementation. The suite emulates **both** OS preferences
-and asserts the default load is dark under each, because a rule that only
-misfires under one of them is exactly what nearly shipped.
-
-**It does not flash.** The setting lives in localStorage, which no stylesheet
-can read, and every script in both templates is deferred (`verify_surfaces`
-pins that). Stamped by a deferred script, the browser would paint a dark frame
-first — a black flash on every navigation for the people who chose light
-specifically to avoid one. `_skribl_theme_boot.html` is a tiny inline script in
-`<head>`; the test for it serves the page with **every external script
-aborted** and asserts the theme is still right. If it needs anything deferred,
-it flashes.
-
-**The canvas does not follow it.** This is the load-bearing rule and the reason
-the job was scoped to chrome only. A drawing's ground is part of the drawing —
-exported, posted, seen by other people — so a UI preference must never repaint
-it. The check reads an actual pixel from the middle of the canvas in both
-themes and demands they be identical; `#0d0f14` is excluded from the palette
-and from both colour ratchets for the same reason.
-
-**The ramp cannot rot.** Add a token to `:root` next month, forget the light
-value, and that one control keeps its dark colour while everything around it
-flips — silently. Rather than a hand-kept list, the assertion is structural:
-every *neutral* colour token must be overridden, which lets the accent family
-and the radii and easings through automatically because they are not neutral
-colours.
-
-**Chromatic ink was the half phase 1 could not see.** That pass moved neutrals,
-because greys are what a theme obviously flips, and left every coloured literal
-alone. But the danger red, the warn amber and the ok green were all picked
-against a near-black ground: `#f4326f` measures **3.32:1** on the light menu
-sheet — below AA for body text, and it is what "Clear all" is written in. So
-v233 tokenised them (`--danger`, `--warn`, `--good`, and friends) at their
-existing dark values, restated them darker at the same hues for light, and the
-ratchet for ink is stricter than the one for greys: **no literal at all**, with
-`#fff` and `#0d0f14` the only exemptions.
-
-**The legibility threshold is relative, not absolute, and getting that wrong
-cost a round.** Demanding 4.5:1 of every label failed on `.menu-version` at
-4.42 — the version footer, deliberately tertiary, dim in *both* themes.
-Satisfying it would have meant darkening the upper half of the light text ramp,
-i.e. breaking the mirrored relationship on purpose to fix something this work
-never touched. What light mode is answerable for is not regressing, so each
-element is measured in both themes: a floor of 3:1, and a drop is a failure
-only if it lands under AA *and* loses more than 15%. `#f4326f` went 5.5 → 3.32,
-caught twice over. White on the accent (4.35:1, identical in both themes and
-older than this work) is printed as a number rather than asserted — it is a
-palette question about the accent, not a theme one.
-
-**A sweep over a hidden element measures nothing and passes.** The first
-version swept a closed menu, found no neutral-ground text on Flip, and reported
-a triumphant 99:1 having measured zero elements. It opens the menu now, and
-asserts the count of laid-out elements before trusting the numbers.
-
-## Suites: verify_flipdraft.py
-
-Closes the bug the owner reported as "autosave is failing on pad". It was not
-Pad's fault: localStorage is capped at roughly **5 MB per origin** and both
-editors share it, and Flip was writing its media into that budget as base64 data
-URLs — inflated 4/3 by the encoding, so a 30-second WAV is ~6.7 MB on its own.
-One Flip draft measured 2.7 MB of the shared 5 MB, and Pad's autosave was what
-fell over.
-
-The spill to IndexedDB already existed, but only as an EMERGENCY path reached
-after localStorage had refused the write — which made a 5 MB quota the thing
-standing between a user and their drawing. It is the normal path now: strokes
-and media metadata to localStorage, media bytes to `lib/draftstore.js`. The
-merge on the restore side was written for the quota case and was correct all
-along; what changed is that it is reached on purpose.
-
-The number this suite exists to hold: **the same draft that wrote 1,683,508 B
-to localStorage now writes about 3,500 B.**
-
-Backward compatibility is the last section and is not optional — anyone with a
-draft saved before this has the old full payload sitting in localStorage with
-media inline, and it has to keep restoring.
-
-Two isolation traps are documented in the file itself, because both produced
-failures that lied about their cause. `clean()` must empty the DOCUMENT as well
-as the stores, or the live page saves its media back on the next unload. And the
-legacy section runs on a **fresh page**: `_sessionOwnedDraft` licenses `saveNow()`
-to delete the slot when the document is empty, so emptying a page that had
-already saved made the flush remove the planted record, and the section reported
-0 strokes against a backward-compatibility failure that did not exist.
-
-## Suites: verify_select.py
-
-Select exists on Flip and **must not** exist on Pad, and this suite pins both
-halves of that.
-
-v219 pulled Select from Pad because Pad records a timed performance: moving
-points that were already recorded made replay draw a stroke at its NEW position
-at its OLD timestamp. Flip has no timeline within a page — playback reveals
-strokes in index order — so moving a point changes only where it is, never when.
-Flip's own Move mode has translated whole pages this way since v213. The last
-section asserts Pad's registry still does not list the tool, so a future "make
-the surfaces match" cannot quietly reintroduce the bug v219 removed.
-
-**Transform (v228)** adds four corner handles and a rotate grip. Scale is
-UNIFORM and corners-only: a point carries one scalar `size`, so a non-uniform
-scale has no honest answer for stroke weight — stretch a drawing horizontally
-and the verticals would need to be thicker than the horizontals — and edge
-handles are absent by design rather than missing. A scale multiplies `size`
-along with position, which is what makes it worth having: shrink a drawing and
-its strokes get thinner, rather than the same-weight outline of a smaller shape.
-Rotation leaves `size` alone. Both are pinned.
-
-A transform's undo RESTORES COORDINATES rather than inverting itself, unlike
-`selmove`, which negates its dx/dy. Negating a translate is exact; dividing by a
-scale ratio is not, and repeated undo/redo would walk the artwork off its mark.
-Every gesture also recomputes from a snapshot taken on pointerdown rather than
-applying to the previous frame — compounding a ratio sixty times a second walks
-the geometry away from the finger, and a drag out and back would not return.
-
-**Mirror, duplicate, cut and paste (v229)** live on `#selbar`, which REPLACES
-the page bar while a selection exists — the pattern `setMoveMode()` established.
-Five more actions do not fit on a 320px phone as extra chrome; they fit as a
-different job for the same row, and `.pb-tx` already drops the labels below 640.
-
-All four share ONE undo shape, `selframe`, carrying a before/after pair of that
-page's `strokes` and `strokeGroups`. `selmove` negates its dx/dy and a transform
-restores coordinates, because both leave the arrays the same length. These do
-not — duplicate appends, cut splices, paste appends — and undoing an index-range
-edit whose indices have since moved is the class of bug this codebase keeps
-finding. The entry carries the arrays instead of the arithmetic.
-
-Cut writes to a clipboard rather than just deleting: a flipbook's real use for
-cut is taking artwork off one page and putting it on the next, and the suite
-pins that cross-page paste. Paste is hidden until the clipboard has something —
-on a bar this tight a disabled control is a cell of dead width. Duplicate leaves
-the COPY selected, not the original, because the two sit on top of each other
-and moving the wrong one would be silent.
-
-Two properties carry the design and are pinned hardest:
-
-* **Whole strokes, never fragments.** The marquee selects by GROUP, so a box
-  that clips a stroke takes all of it or none. Moving half a stroke would leave
-  `strokeGroups` accounting for points that had walked away from their run.
-* **Undo is an operation, not a snapshot.** Pad had to clone the selected point
-  objects *before* snapshotting, or `strokes.slice()` aliased them and undo
-  silently restored the moved position. Flip's `actionLog` stores what was done,
-  so undo is the same translation negated and there is nothing to alias. Pinned
-  by moving, undoing and redoing and comparing every point to its original.
-
-Note `fresh()`: Flip autosaves and restores on load, so a section that has just
-drawn leaves its strokes waiting for the next one. Clearing localStorage is **not
-enough on its own** — the live page still holds the drawing in memory and saves
-on the way out, so the draft is written back after the clear and restored by the
-very reload meant to be rid of it. `fresh()` empties the document first, then
-clears, then reloads, and asserts zero points afterwards; without that last check
-a polluted page turns every stroke-index assertion into a coin flip.
-
-## Suites: verify_tray.py
-
-Guards a **process**, not a bug. Flip's bottom row was holding two populations
-out of one width budget: the document controls (colour, undo, redo, image,
-music, magnify), which are a closed set, and the mark-making tools, which are
-not. They shared one shelf, so every new tool competed with undo for the same
-pixels and each addition became a fresh fitting exercise across six breakpoints
-and two surfaces. Measured before the tray: a fourth cell takes the pill
-121 -> 158px and wraps the row at 320, 344, 360, 375, 390 and 431.
-
-`verify_tray.py` runs on BOTH surfaces and is mostly ONE assertion repeated at
-six widths each:
-**adding a tool does not change the pill's width.** If that stops being true the
-tray has failed at the only job it was built for.
-
-The two rosters differ on purpose and this suite is where that is recorded: Pad
-ships `pen/eraser/shape`, Flip ships those plus `select` since v227, so Pad is
-asserted dormant (three cells, chevron hidden) and Flip asserted overflowing
-(three cells ending in the chevron). The trial tool it registers is called
-`trial` rather than `select` for the same reason — `register()` returns false
-for a duplicate id, so registering `select` on Flip silently stopped testing
-anything and the width assertions compared a shelf against itself.
-
-It also carries two regression pins for bugs the first version did not catch:
-the chevron is a `.tool-btn`, so it was swept up by the binding that calls
-`setTool(btn.dataset.tool)` on every tool cell — it has no `data-tool`, so
-opening the tray called `setTool(undefined)` and left Pad with no tool selected;
-and the tray cells were styled `font: 600 10px/1 inherit`, an invalid shorthand
-whose family slot rejects `inherit`, so the whole declaration was dropped.
-
-The fourth tool is registered through the surface's own `register()` — the
-real extension point, not a test seam. It is how a tool will actually be added,
-so testing registration is testing the feature, and this file never has to ship
-a fake tool of its own. Nothing here asserts that Select, Fill or Text exist:
-they do not, and the tray was never a promise that they would.
-
-Below 641 the cells are icon-only and the width must not move at all. At 900 the
-labels are visible, so swapping "Shape" for "More" legitimately changes it; that
-width is pinned on not wrapping instead.
-
-## Suites: verify_tools.py
-
-Split from `verify_ux.py` at v213, which had reached 366 assertions and a dozen
-browser launches and stopped finishing inside a single tool invocation. **A
-suite that cannot be run in one go stops being run** — the same failure this
-project writes pins against.
-
-`verify_tools.py` holds the v213 tool work: the five settings that had no
-control (stroke layers, eraser width, grid density, pause handling, pressure)
-and the four new behaviours (shift-constrain, shortcuts, shapes, mirror).
-`verify_ux.py` keeps V213/V213b, which are behaviour fixes to recording and
-drawing rather than tools.
-
-When writing pins here, reuse ONE page per surface and reset state between
-cases instead of reloading. Three reloads per surface is what pushed the old
-combined suite over the limit.
-
-## Closed in v213 — nine settings, four tools, four carves
-
-**The shape of the release.** Five behaviours the code already had and no
-control could reach were exposed; four genuinely new tools were added; and the
-draw path was carved out of `app.js`. Everything is on BOTH editors unless
-noted, and lives in `harness/verify_tools.py`, split out of
-`verify_ux.py` when that suite stopped finishing in one invocation.
-
-**Exposed, not invented** — stroke layers, eraser width, grid density, pause
-handling (Pad only), pressure. Each is asserted through the code path that USES
-it — painted pixels, `_eraserSize`, the grid overlay, `getPlaybackDuration` —
-never through the control's own aria state. A switch that updates itself and
-nothing else passes every attribute check ever written, and the eraser mutation
-proved it: re-inlining Pad's copy left *"the editor CALLS lib/erasersize.js"*
-GREEN while the draw-path assertion caught it.
-
-**New** — shift-to-constrain, keyboard shortcuts, shapes, mirror, brushes,
-preview speed (Pad only), selection (Pad only).
-
-### The one rule that shaped every new tool
-
-**Shapes, mirror and brushes all generate ORDINARY STROKE POINTS.** A Skribl is
-a flat array of `{x, y, color, size, t, start, erase}` that the player replays
-by calling `drawLine`; a shape primitive, a mirror flag or a brush id would each
-mean a schema change, new rendering in the player, and every existing post
-needing to keep working. Instead each feature shapes the numbers at CAPTURE
-time. Three separate pins assert that no point carries a field outside that set
-— that is what catches the format opening up.
-
-The corollary is worth keeping: **anything a feature wants that cannot be said
-in a position, a width and an `rgba()` is not available.** That is why the brush
-list stops where it does. Texture, scatter and blend modes are not omissions.
-
-### Two settings that look alike and go opposite ways
-
-`pauseMode` IS serialized; preview speed is NOT. They sit one row apart in the
-same drawer, and the distinction is whether the setting describes **the work**
-or **the act of reviewing it**. Pause handling changes what the drawing is, so a
-viewer must get the author's choice — the pin loads an author's `keep` drawing
-into a browser set to `tight` and requires the same duration. Preview speed is
-zoom, not content; posting it would impose one author's review habits on
-everyone opening the link.
-
-The mutation is the reason the round-trip assertion exists: with `loadSkribl`'s
-adopt removed, *"the choice is written into the payload"* stayed GREEN while the
-author's 1,903ms replay collapsed to 410ms for the viewer.
-
-### Grouping, and the connecting-line family of bugs
-
-Mirror emits **one group per reflection**; selection selects **whole groups**;
-shapes commit as **one run**. All three are the same rule: the replay joins
-consecutive points, so any structure that puts two distant places in one group
-draws a line straight across the canvas between them. Flip refuses a share
-outright when `strokeGroups` does not account for every point, so on that
-surface the failure is a rejected upload rather than a stray line.
-
-### The carves, and doing them in the right order
-
-`editor_draw.js` is the fourth, after `editor_music.js`, `editor_photo.js` and
-`editor_shapes.js`. The whole stroke CAPTURE path moved; `drawLine`, `drawDot`,
-`getPos`, `pressureSize`, `_eraserSize` and `_brushWidth` stayed, because
-`replayTimelineToCanvas` hands the first two to the PLAYER as its painters. The
-listeners moved WITH the functions — a binding left behind would ReferenceError
-on every player load.
-
-**The numbers make the ordering lesson concrete.** The shape tool was built in
-the shared file and carved afterwards: it cost the player 3,191 B, then a
-second pass to get 2,337 B back. Selection was built AFTER `editor_draw.js`
-existed and cost **195 B**. Same size of feature, one-sixteenth the price.
-Carve first when the target is a tool the player has no use for.
-
-`verify_player_isolation` now asserts the carve DIRECTLY as well as by bytes: no
-editor-only file is referenced by the player template, and `startDraw`/`endDraw`
-are absent from `app.js`. A byte ratchet notices size coming back; it does not
-notice code coming back, and a later raise would hide it.
-
-### Latent bug: the history stack aliases its points
-
-`makeHistoryState()` does `strokes.slice()` — the ARRAY is copied, the point
-objects are not. Every other writer in this codebase APPENDS points, so nothing
-had ever mutated an existing one and the aliasing had never mattered. Selection
-moves points in place, so it edited the undo snapshot too and Ctrl+Z restored
-the moved position: undo "succeeding" and changing nothing.
-
-Fixed by snapshotting FIRST and only then swapping the selected points for
-clones. **The order is the fix** — cloning first captures the clones and fails
-identically one step later, which is the mistake I made on the first attempt.
-Mutation-tested; the reversed order reproduces the silent no-op exactly.
-
-### Two assertions that were wrong rather than failing
-
-* `verify_seam`'s *"a split is still worth doing"* was a TODO wearing a test's
-  clothes: it asserted `editor_lines > player_lines` and could only pass while
-  the work was OUTSTANDING. It went red the moment `editor_draw.js` landed.
-  Inverted to guard the achievement instead — what is left in the shared file
-  must STAY below the player's reachable set.
-* `V213e`'s grid probe COUNTED grid lines and divided. With only ~4 columns on
-  a `tall` canvas, missing one boundary swung the count 4→3 and the aspect
-  0.99→1.31, and it flipped red when an unrelated tune row changed the panel
-  height by a few pixels. It now measures MEDIAN SPACING between adjacent
-  lines, which a missed edge cannot distort — and which turned out to be more
-  accurate too, reporting the true 8x6 where the count version had undercounted
-  at 7x5 all along.
-
-### Scratch probes must not be published as the project's result
-
-`stamp_docs.py` now refuses a run whose suite names begin with `_`. A one-off
-`_probe_mir.py` (deleted afterwards, and deliberately not in the tree),
-written to look at a screenshot, put *"RUN NOT GREEN — 1
-suite(s) failed"* into four docs. The v212 narrowing guard did not catch it:
-that only engages when `RELEASE.md` describes the CURRENT tree, and a scratch
-probe is usually run mid-change when it does not.
-
-### The tool row is full
-
-Four tools plus five controls did not fit a 375px phone, which is what drove the
-v219 redesign: Select left Pad and Flip Mode moved to the overflow menu, and the
-row is now eight controls that fit from 360px. Magnify is hidden below 641px —
-pinch already zooms, and the button exists where the gesture does not — but **hiding it was not safe as
-written**: the zoom HUD is where Fit lives, and `beginPinch` enabled the zoom
-without ever revealing the HUD, so a pinch-zoomed user would have had no way
-back to 100%. `beginPinch` now reveals it. Hiding a control is only safe when
-nothing reachable ONLY through it becomes unreachable.
-
-**CORRECTED — the buttons are NOT at 44px.** That claim was carried for several
-releases and is wrong: `styles.css` sets `.tool-open` and `.toolbar .undo-btn`
-below 640px, and the smallest control *renders* well under 44px on every phone
-width, including the v214 row this note was written against. 44px is the desktop
-value. Re-measured on the v219 tree:
-
-    320px       bar 288px  WRAPS (safety net)   smallest control 34px
-    360px       bar 328px  one row              smallest control 34px
-    375px       bar 343px  one row              smallest control 34px
-    393px       bar 361px  one row              smallest control 36px
-    430px       bar 398px  one row              smallest control 36px
-    641px+      bar 565px  one row              smallest control 40px
-
-So the row was never at the tap-target minimum, and any argument that started
-"there is no room because we are already at 44" was resting on a number that
-had not been true for some time. Whether 34px is acceptable is a decision, and
-`verify_layout.py` pins it in ONE place (`MIN_TOUCH_PX`) so raising it is a
-deliberate edit rather than a discovery.
-
-## Closed in v214 — seven defects from two external review passes
-
-**Read this before touching media, document loading, or touch gestures.** All
-seven came from external review of the sealed v213 archive. None was found by
-the harness, which was green throughout: they are phone-specific gesture
-lifecycle bugs and asynchronous ordering bugs, and a steady-state desktop suite
-cannot see either.
-
-### The two families
-
-**Touch cancellation (3 defects).** `touchcancel` is a real termination that a
-browser or OS can deliver INSTEAD of `touchend` — a system gesture, an incoming
-call, a scroll taking the pointer. Cleanup keyed only to `touchend` leaves the
-move listener installed and the drag state set, so the next unrelated touch goes
-on driving a gesture that is already over.
-
-* `editor_music.js` — three trim drags. Reproduced: after a cancel, a further
-  move took `trimStart` 1.129 -> 3.386 with `.dragging` still set.
-* `editor_menu.js` — the mobile sheet swipe. Kept `transition: none` and its
-  `translateY`, and carried the cancelled drag from 50px to 90px.
-* `editor_photo.js` — the eraser ring left painted with no finger near it.
-
-**Asynchronous ordering (4 defects).** An operation that completes LAST is not
-the operation the user is looking at. Each of these let a superseded completion
-write into current state.
-
-* Music decode, Pad and Flip. A=3.00s, B=9.00s, B lands then A: Pad left
-  `currentAudioBuffer` at 3.00s while `audioDuration` read 9.00s. The poster
-  crops from the buffer, so the track shown and the audio shipped were
-  different recordings. Flip's stale completion also rewrote `audioDuration`
-  and the trim window.
-* `loadSkribl` document loads. A rewrote buffer, duration AND `trimEnd` of the
-  open Skribl — and `loadSkribl` schedules `writeAutosave` 300ms later, so the
-  corruption PERSISTS. This is the only one that reaches disk.
-* Flip draft restore. `applyPayload()` clears `currentAudioBuffer` and
-  `ensureAudio()` only builds the `<audio>` element, so `loadDraftFile` restored
-  music with no decoded buffer. `buildSharePayload()` crops to the loop ONLY
-  when that buffer exists and otherwise ships the whole sample: **588,082 B
-  posted after a fresh selection against 3,528,082 B after restoring the same
-  draft, both reporting the same 5.00s loop.** A user's saved work posting six
-  times the audio, with only a `console.warn` to say so.
-* Flip image `Image.onload`. The token guarded validation and the FileReader
-  but stopped before the Image load, so `bgImageObj` (what `render()` draws)
-  could be A while `bgImage` and the serialized payload were B.
-
-### The rule that came out of it
-
-**A generation token must be checked at the WRITE, not before the await.**
-`musicSelectionSeq` already existed and Pad's handler checked it TWICE — both
-before `decodeAudioData` was awaited, which proves only that the selection was
-current when the decode STARTED. That is not the question. Every async
-completion that writes shared state now re-checks its token immediately before
-writing.
-
-`skriblLoadSeq` (app.js) is the document-load version: stamped once per
-`loadSkribl` and checked at all five completions. A uniform token beats a guard
-per callback, because the failure mode is a callback nobody remembered.
-
-Flip bumps `imageSelectionSeq` and `musicSelectionSeq` on draft load, because a
-draft load is a DOCUMENT BOUNDARY — a selection made moments earlier must not
-complete into the new document.
-
-### THE TWO UNPINNED GUARDS — defence in depth, not demonstrated behaviour
-
-Both are labelled in the source at their own line. **Do not read them as tested,
-and do not delete them assuming the suite would catch it — it would not.**
-
-1. **`loadSkribl`'s deferred `writeAutosave` guard** (app.js). Removing it
-   reddens nothing. With the other four guards holding, the state at 300ms IS
-   the current document, so a stale timer autosaves the RIGHT thing and no
-   assertion can see the difference. Pinning it would need a COMPOUND mutation
-   (this guard and another removed together), which is weaker evidence than
-   none. It earns its place only if one of the others is ever removed.
-2. **Flip's draft-boundary `imageSelectionSeq++; musicSelectionSeq++`**
-   (flip.js, in `loadDraftFile`). Added beyond the review's report because the
-   model is right — a draft load is a new document. Removing it reddens
-   nothing: no scenario drives a selection that is still in flight when a draft
-   file is opened. Reasonable, unproven.
-
-The other three `loadSkribl` guards and every guard in the other six fixes ARE
-demonstrated: remove one and its specific assertion goes red.
-
-### The pre-seal mutation pass earned its place
-
-Removing each guard independently found that **three of five were decoration**.
-Two were then given scenarios:
-
-* The **fetch** guard reddened nothing because a `data:` URL fetch resolves long
-  before the second load starts. Gating `window.fetch` as well as
-  `decodeAudioData` exercises it, and it fails properly: `elDur` drops to 3
-  while the decoded buffer stays 9. **A third split-state variant, found only by
-  the mutation pass** — the `<audio>` element the transport plays from swapped
-  to A's track while the buffer the poster crops from stayed B's.
-* The **base snapshot** guard reddened nothing because the payloads carried no
-  `baseSnapshot`. Now pinned with two known snapshot colours: remove it and the
-  open document's blue canvas is overwritten by A's red.
-
-**Run the mutation pass BEFORE sealing, not after.** A guard with no assertion
-behind it is indistinguishable from a comment.
-
-### FOUR TEST DEFECTS, all false confidence
-
-Each would have produced a wrong result, and three of them made a WORKING fix
-look broken or a BROKEN one look fixed:
-
-1. **Hand-copied the flow instead of calling it.** The draft probe replicated
-   `loadDraftFile`'s steps inline; the replica diverged from the code the moment
-   the fix landed and reported a working fix as ineffective. Drive the real
-   entry point — construct a `File` and call `loadDraftFile(f)`.
-2. **Read the wrong payload path.** `pay.music` instead of
-   `pay.frames[0].music`. Both routes read `None`, so the comparison was
-   vacuous and passed.
-3. **Targeted the wrong element.** `#photoInput` instead of `#imageInput`.
-4. **Released gated images by INDEX.** Each `loadSkribl` enqueues more than one
-   image, so "index 1 is B's" released one of A's. The GATE caught it as a black
-   canvas rather than letting the real assertion pass for the wrong reason —
-   release by load RANGE instead.
-
-Add to the earlier vacuous-range-window case and the window-listener
-contamination case, and the pattern is clear: **when an assertion behaves
-strangely, suspect the probe first.** A gate assertion that proves the scenario
-actually entered the failing state is what turns these from silent passes into
-visible failures.
-
-### Techniques worth reusing
-
-* **Gate the async primitive into a queue released by index or range.**
-  `decodeAudioData`, `window.fetch` and the `HTMLImageElement.prototype.src`
-  setter are all overridable in an init script. This makes "B finishes first, A
-  finishes last" EXACT. A sleep-based version passes whenever the machine
-  happens to order them the other way.
-* **Assert the invariant the user cares about.** For the image race that is
-  "rendered and serialized AGREE", not "both are B" — a split between preview
-  and posted content is worse than either being wrong alone, because nothing on
-  screen says so.
-* **Assert equivalence between routes, not a fixed number.** The draft pin
-  compares restore against fresh selection, so it fails if EITHER route changes.
-* **Mutate per component.** All three music trim paths went red from one removal
-  until the probe cleared stale WINDOW listeners between cases; per-path
-  isolation is what tells you which path a fix belongs to.
-
-### The touch audit is now an assertion (V214b)
-
-The first audit was described as whole-tree and was not: it matched
-`window.addEventListener` only, so element-local registrations were invisible —
-which is exactly how the menu sheet and eraser cursor escaped it. **An audit
-that matches a RECEIVER NAME is the same mistake as an assertion that matches a
-word instead of a mechanism.**
-
-`verify_tools.py` now scans ANY receiver every run, with a three-entry allowlist
-(`scheduleAutosave` — save triggers, not drag cleanups) and a check that no
-exemption is stale. It matches by RECEIVER, not handler name, because the menu's
-correct fix uses a DIFFERENT function for cancel — `onTouchEnd` dismisses the
-menu past 80px, so wiring cancel to it would let a gesture the OS took away
-commit a dismissal the user never finished. The weaker invariant is stated at
-the assertion site; the behavioural pins cover the semantics.
-
-## Closed in v272 — a day of live phone review, and one real performance bug
-
-Thirteen shipped changes, every one of them an owner report from a phone or a
-desktop in front of the live site. Most are chrome manners in the v271 line and
-are recorded in DECISIONS; four carry invariants a next session can break.
-
-**Undo stores a DRAWING, not a screenshot — and this is the one to read.**
-`makeHistoryState()` used to copy the whole canvas into an offscreen canvas on
-EVERY stroke start and keep thirty of them. On a desktop hi-DPI canvas that is
-~17 MB a copy: half a gigabyte pinned for undo, plus one multi-MB allocation
-per dot. A thousand dots made the owner's machine unusable, and restoring that
-draft was worse — the rebuild rendered AND snapshotted every stroke boundary in
-one synchronous burst. States are now `{base, strokes, strokeGroups,
-hasContent}` and `restoreHistoryState()` repaints, because the canvas at any
-stroke boundary IS `preRecordSnapshot + paintStrokesStatic(strokes)` — the same
-identity `stopPlayback()` has always used to restore the drawing after a
-preview. **THE INVARIANT THAT MAKES THIS SAFE:** every pixel must be
-describable by the stroke list. Ink drawn while NOT recording is not — it never
-enters `strokes` — so `unrecordedInk` (app.js) tracks exactly that window and
-states carry a real snapshot while it is up. A fresh-take base capture (which
-bakes the ink into `preRecordSnapshot`), a clear, or a load drops the flag, and
-`restoreHistoryState()` settles it, since a restore determines the canvas
-exactly. If you add a path that puts pixels on the canvas without adding
-strokes, it MUST raise that flag or undo will silently lose them. Measured at
-1414x1414 with 1,000 strokes: 0 pixel entries, 9 MB heap, undo 0.8 ms, restore
-0.48 s where it used to freeze; undo/redo pixel-compared exact against live
-reference states across pen, eraser and shape.
-
-**The draw drawer opens at a HALF detent on phones** (`lib/drawerdetent.js`),
-so choosing a colour no longer hides the art you are judging it against. The
-reveal is the part that fought back: the owner's iPhone shipped the "Brush,
-smoothing & more" button below the fold through TWO scrollIntoView-based
-rounds while every Chromium run scrolled perfectly. `revealPanelEnd()` now
-computes the target itself and writes `document.scrollingElement.scrollTop`,
-measures the fold against `visualViewport.height` (iOS Safari's bottom bar
-overlays the layout viewport, so `innerHeight` lies), and re-asserts at 300 /
-700 / 1200 ms because the device settles URL bar, layout and its own competing
-scrolls on a schedule no single timeout catches. Each assert is a no-op when
-the end is already visible.
-
-**The post-record lock got an affordance.** A finished take locks the canvas
-and the only explanation was a toast fired by the press that had already
-failed. `#addTakePill` floats at the locked canvas's bottom edge, appends a
-take on tap, nudges when a press lands on the locked canvas, and hides under
-`body.replaying` — it sits where the replay performs. It lives OUTSIDE
-`#zoomLayer` so magnifying never scales it, and the player template never
-ships it (the `_authoringCtl` stub keeps app.js's writes harmless there).
-
-**One gradient sweep across the whole lockup.** The mark and its mode word each
-restarted the accent gradient. Both now run `gradientUnits="userSpaceOnUse"` in
-the shared 30-unit hand: the mark runs 0 -> the lockup's full width, passed in
-as the `brand_sweep` Jinja variable by the including page (101 pad, 95 flip),
-and each word's gradient starts at the matching NEGATIVE x. A standalone
-include (player, library) passes nothing and defaults to its own width. If you
-change the word svg's viewBox or the flex gap, `brand_sweep` moves with it.
-
-Also in v272, each recorded in DECISIONS: chrome recedes to 10% while the pen
-is down (`body.stroking`, both editors); the status pill yields to open menus
-and sheets as it already did to drawers; Flip's Duplicate / Blank / In-between
-stopped wearing the dashed-and-hollow costume this app reserves for "nothing
-here yet"; the restore banner clears the toolbar on phones (its 20px anchor was
-written for a desktop where the bottom edge is empty); and the custom swatch
-keeps its rainbow as a ring around the picked colour while recents record the
-COMMITTED pick (`change`) rather than every shade a drag passes through
-(`input`) — which had filled the row with gradations of one colour.
-
-**CI economics changed with this release, and the rule outlives it.** A single
-productive day ran the full three-job harness thirty times and consumed the
-account's entire monthly Actions allowance. Pull requests now run one smoke job
-(`verify_boot.py`); the full sqlite/postgres/mp4 battery runs on pushes to main
-and manual dispatch only. That trim is safe because the affected suites are run
-LOCALLY before every push and their counts are quoted in the PR — CI's job on a
-PR is to catch a broken push, not to re-verify a verified one. `CLAUDE.md` now
-carries the owner's standing rule: **ask before taking any action that could
-create or increase a bill on their accounts**, CI triggers explicitly included.
-Do not widen those triggers to "fix" a red PR.
-
-## Closed in v275 — the in-post player, and the three surfaces around it
-
-Five changes that are one change: a Skribl can now be shown inside somebody
-else's post, put there from their composer, listed on a profile, and it carries
-its own picture and its own loop control. They were built in that order over one
-session and they are sealed together because none of them is finished alone —
-the player is what makes compose worth having, compose is what puts anything in
-a feed, and the share card is the player's idle frame.
-
-**Read this before the next change to any of it:** the in-post player is a
-SECOND playback implementation, and the subsections below say what holds it to
-the sealed one. The counts for every suite named here are in
-`harness/RELEASE.md`; none are typed in this file.
-
-### The in-post player — a fourth surface
-
-A Skribl inside somebody else's feed post. It had existed only as a mockup in a
-conversation; it is in the tree now, it plays real posted Skribls, and
-`verify_inline.py` is what says so.
-
-    skribl/static/inlineplayer.js       the player   (read its header first)
-    skribl/static/inlineplayer.css      its styles, scoped, host-safe
-    templates/skribl/_skribl_inline_player.html   two macros a host imports
-    templates/skribl/skribl_feed.html + static/feed.js + GET /feed
-                                        the smallest honest host, over the
-                                        real GET /api/skribls listing
-    harness/verify_inline.py            the proof (count: harness/RELEASE.md)
-
-**IT IS A SECOND PLAYBACK IMPLEMENTATION, and that is the risk to understand
-before touching it.** The sealed player is a page — app.js plus eight modules,
-an app shell, a full transport. Twenty of those in a feed is not a feed. So
-inlineplayer.js replays payloads itself, and `verify_sharedrules.py`'s warning
-applies one surface further out: the author opens `/s/<id>`, it looks right, and
-every viewer scrolling past sees something else. Three things hold it:
-
-  * the RULES come out of `lib/` — `holdtiming.js` for what a hold means,
-    `canvassizes.js` for a legacy payload's default shape;
-  * what is retyped (the capped-gap timeline, `drawDot`/`drawLine`) is retyped
-    verbatim and names its origin in app.js;
-  * `verify_inline.py` plays the SAME posted drawing in both, from the same
-    clock, and compares where each has got to and what each has drawn.
-
-**The comparison's numbers were set by mutation, and the first set was
-worthless.** A 32x32 grid at tolerance 48 passed while the in-post player read a
-BLANK canvas (the selector matched the first post in the feed, not the one
-playing) and passed again with the gap cap deliberately set to 500 ms, the two
-players 0.58 and 0.34 through the same drawing. It is 96x96 at tolerance 18 now,
-plus a scale-free ink-mass ratio, and it is floor-subtracted because the two
-surfaces paint the drawing's ground in different places — the in-post player on
-the canvas, the sealed player on `.canvas-wrap` behind it. Compared absolutely,
-all 9,216 cells differ and the assertion is about paint order.
-
-**Known gap, deliberate and named:** the wet/dry stroke compositor is not
-implemented, so a sub-100%-opacity stroke beads at its overlaps where it does
-not on `/s/<id>`. The fixture draws opaque so the pixel assertion stays
-meaningful rather than quietly tolerant of a gap it cannot see.
-
-**Two things found while building it, both real:**
-
-  * **`POST /api/skribls` defaults to `unlisted` and Pad's composer has no
-    visibility control**, so nothing posted from Pad ever appears in
-    `GET /api/skribls`. `/feed` was empty on its first run and the suite was
-    asserting against an empty list. The default is correct — it is what a
-    link-sharing product should do — but it means a host feed's composer is what
-    sends `"visibility": "public"`, and `/feed`'s empty state now says so
-    instead of telling you to go and post from the Pad.
-  * **`asset_url()` built a RELATIVE endpoint** (`url_for(".static")`), which
-    resolves against `request.blueprint` — always Skribl's, while every caller
-    was a template Skribl rendered. The embed macros render on the HOST's view,
-    where a leading dot raises BuildError. It names the blueprint outright now,
-    which is identical inside Skribl's pages and works everywhere else, and
-    `init_skribl()` adds `skribl_asset` as the ONE app-wide template global —
-    added, never overwritten.
-
-**What a host downloads: 23,502 B served**, ratcheted at 24,000 in
-`verify_inline.py`. A third of that is `inlineplayer.css`, which is not
-comment-stripped — `jsstrip.py` is JavaScript-only — and is left that way
-deliberately. Measure it at the BUSTED URLs the page requests: bare, the
-JavaScript reads 28,739 B, and a ratchet on that number prices every explanatory
-comment as if it shipped.
-
-**The idle poster is `/s/<id>/card.png` CROPPED**, and the crop is the one piece
-of geometry two files now share. The card is a branded 1200x630 Open Graph image
-and the only per-post picture the server has; whole, it reads as an advert
-twenty times down a feed. `lib/sharecard.js` owns where the drawing sits inside
-it — `editor_post.js` composites from it, `inlineplayer.css` crops from it, and
-`verify_inline.py` measures the RENDERED poster against the module, so a change
-to one side fails rather than drifts.
-
-Vertically the crop is exact (the drawing is contained, so its height and y are
-identical in every card: 492 of 630, from 27). Horizontally it cannot be: the
-drawing's width depends on its own aspect and nothing in the feed knows that —
-`canvasSize` is inside `payload_json` and `GET /api/skribls` defers that column
-deliberately. The drawing IS centred, though, so a symmetric side crop can only
-remove ground as long as the window is at least as wide as the widest canvas.
-That is 16:9, so the box is 16:9; a 1:1 drawing then leaves 22% of the box as
-ground instead of 59%. A narrower drawing still shows some of the card's frame.
-The real fix is the canvas size as a real COLUMN, which is a migration.
-
-**And the ratchet caught the CSS.** Cropping added 2,800 B of explanation to
-`inlineplayer.css` and pushed the embed past its byte ratchet — correctly:
-`jsstrip.py` strips a JavaScript response and NOTHING strips CSS, so prose in
-that file ships to every host on every page. It moved into `inlineplayer.js`'s
-header and the CSS kept the numbers and a pointer. Same words, a third of the
-weight.
-
-### Compose mode — a Skribl attached to somebody else's draft post
-
-The other half of the in-post player. That one answers "how does a Skribl LOOK
-in a feed"; this answers "how does one GET there".
-
-    skribl/static/editor_compose.js     the handshake (read its header first)
-    /skribl-pad?compose=1               the same editor, ending differently
-    skribl/static/feed.js               ~150 lines of HOST code, written to be
-                                        read as the recipe
-    harness/verify_compose.py           the proof (count: harness/RELEASE.md)
-
-**THE RULE: COMPOSE MODE PUBLISHES NOTHING.** "Add to post" hands the host the
-PAYLOAD, not an id. This is forced, not chosen:
-
-  * `POST /api/skribls` is CREATE-ONLY — routes.py registers one POST and two
-    GETs. "Publish on Add, republish on edit" therefore ORPHANS a skribl per
-    edit, each having spent a slot of the author's posting quota.
-  * An abandoned draft would leave a published, shareable skribl behind that
-    the host cannot withdraw.
-
-So verify_compose.py's main instrument is a COUNT OF POSTS, not a "does it
-work": zero while attaching, zero after an edit, exactly one when the host
-posts. Mutation-tested by disabling the compose branch — five assertions fail,
-starting with that one.
-
-**One builder, two endings.** editor_post.js's `submit()` was split: everything
-that prepares a payload for posting (serialise, share-card thumbnail, mono audio
-bake) is now `buildPostPayload()`, and both endings call it. A composed skribl is
-byte-for-byte a Pad-posted one. Two paths preparing "the payload, but for
-posting" is exactly the shape of that file's own BUG B — a post-time step that
-silently stopped running on one path while the metadata looked identical.
-
-**Three defects found by building it, all real and all fixed:**
-
-  * `setState('idle')` hardcoded `'Post to Skribl'`, overwriting the label the
-    TEMPLATE had already rendered. It was a duplicate string before compose
-    mode existed; with it, the attach button relabelled itself to publishing
-    the first time anything reset the sheet. The label now comes from the DOM.
-  * The post sheet stayed open after delivering. The host closes its overlay
-    immediately so nobody sees it — until the pad icon is pressed again, which
-    reopens the SAME iframe, and the sheet is then sitting over the canvas.
-    Found by a probe that could not draw on the second edit.
-  * **The underlay repaint moved time.** `img.onload` in inlineplayer.js called
-    `render(elapsed, true)`, and `elapsed` is 0 while idle — so on a drawing
-    with a photo or a base snapshot, the underlay finishing its decode wiped the
-    canvas and repainted the FIRST frame. Invisible on a posted skribl (the
-    poster hides it) and fatal on a draft, where idle is the finished drawing:
-    the composer showed an empty box. Every Pad recording has a baseSnapshot, so
-    this fired every time.
-
-**Posterless idle is a real state now.** A posted skribl idles at time zero
-behind its cropped share card; a DRAFT has no card, so it idles showing the
-finished drawing. `SkriblInline.attach(el, payload)` is that path — the real
-player on a payload with no id, so the composer previews what it will publish
-rather than a thumbnail standing in for it.
-
-**The handshake targets an origin, never `'*'`.** Skribl mounts into a Flask
-host as a blueprint, so the overlay is normally same-origin and a direct
-contentWindow call would work; postMessage anyway, because it is the same code
-if the host ever splits deployments and because a wildcard would hand the
-author's drawing to whatever page is framing the editor. Asserted in the suite.
-
-### The profile's Skribls tab — /library stops being a mock
-
-The third surface for the same player. The feed shows a Skribl in a post; the
-composer shows one on a draft; this is a page ABOUT the drawings — one stage
-with a full transport (play, restart, scrub, loop, mute, copy link) and a grid
-of share cards beside it.
-
-    skribl/static/library.js       rewritten: real listing, no replay engine
-    skribl/templates/skribl/skribl_library.html    the same chrome, real data
-    harness/verify_library.py      the suite that replaced a README warning
-
-**WHAT IT REPLACED IS THE POINT.** `library.js` carried its OWN replay engine
-and a table of hand-drawn motifs — a bolt, a cassette, a smiley — and rendered
-those. Nothing on the page had been posted by anyone, while the route was
-registered the whole time, so a host mounting Skribl served invented drawings
-from their own URL space and README.md had to carry a warning saying so. The
-problem was never the pretending: a page that draws its own content cannot tell
-you whether the thing it previews WORKS.
-
-**It contains no player.** The stage is `inlineplayer.js`, driven through the
-handle (`play`, `pause`, `seek`, `setLoop`, `state`) — three replay
-implementations would drift, and verify_sharedrules.py's note says what that
-costs. `verify_library.py` gates it at the source: no `requestAnimationFrame`
-in `library.js`.
-
-**The transport is the difference between the two surfaces, deliberately.** A
-post gets a play tap and a mute button because a feed is not a media player
-(inlineplayer.css says so at the mute rule). A profile tab is a page somebody
-came to on purpose, so scrub and restart and a loop toggle belong. `setLoop` is
-new on the player for exactly this and defaults ON, so a post is unchanged.
-
-**One payload at a time.** Tiles are share-card images; only the stage's drawing
-is fetched. Mutation-tested by prefetching every tile — the assertion fails.
-
-**TWO OF ITS GATES WERE SUBSTRING SEARCHES THAT PASSED ON THEIR OWN PROSE.** One
-looked for `offset` and matched a comment explaining why offset paging is wrong;
-one looked for `cassette` and matched this file's own description of the motifs
-it deleted. Same failure a v273 gate already made by searching for "Pillow" and
-matching a comment that mentioned it. They match syntax now (`offset=`), and the
-second was replaced by a check on the DOCUMENTS: a page that stops lying while
-its docs keep saying the old thing has moved the lie, not removed it.
-
-**FOUND WHILE BUILDING IT — fixed in the subsection below: Flip posts had no
-share card.**
-`editor_post.js` builds `payload.thumbnail` at post time and `flip.js` never
-does — grep it, there is no `payload.thumbnail` anywhere in that file. So every
-Flip post falls back to the static branded og-card: on its `/s/<id>` unfurl, as
-the in-post player's idle poster in a feed, and as its tile here. It looks like
-an advert in all three places. The fix is to share the card BUILDER the way
-`lib/sharecard.js` now shares its geometry, and wire Flip's post path to it;
-that is a change to a 437 KB file with its own post flow, so it got its own
-pass — the next subsection.
-
-### Flip's missing share card, and a 16x encoding mistake
-
-The gap the profile tab turned up: `buildShareCardDataURL()` lived in
-`editor_post.js`, which is PAD-ONLY, and `flip.js` set no `thumbnail` at all. So
-every Flip Skribl ever posted fell back to the static branded og-card in three
-places at once — its `/s/<id>` unfurl, the in-post player's idle poster in a
-feed, and its tile on the profile. An advert where the drawing should be, and
-invisible because the person who posts one does not look at their own unfurl.
-Same shape as the title bug `verify_flipmeta.py` records: a whole control
-surface built on one of the two editors.
-
-    skribl/static/lib/postedcard.js   the compositor, editors only
-    skribl/static/lib/sharecard.js    the geometry, editors AND the in-post player
-    harness/verify_sharecard.py       both editors, one builder, round-tripped
-
-**TWO MODULES, NOT ONE, and the ratchet is what said so.** The first version put
-the compositor beside the geometry in `sharecard.js` — which the in-post player
-loads, because it crops the poster by `band()`. `verify_inline.py`'s embed
-ratchet failed on the next run: 2 KB of canvas work on every feed page in the
-world, to composite a card a feed never makes. Split on the same rule
-`lib/postedaudio.js` states: THE READER IS NOT THE WRITER. A host embeds the
-geometry and never the compositor, because it never posts.
-
-**AND THE ENCODING RULE WAS WRONG BY 16x.** The builder chose PNG for line art
-and JPEG for photos, on the recorded grounds that "PNG is both SMALLER and
-crisp" for lines. Measured on the actual card: **451,824 B as PNG against
-28,062 B as JPEG q0.92.** The cause is the accent wash — Chromium DITHERS a
-canvas gradient, putting per-pixel noise across all 1,200x630 that PNG cannot
-compress — so the rule was true before the wash existed and was never
-re-checked. It survived because a 450 KB card is not wrong, only expensive:
-nobody looks at their own unfurl's byte count. The in-post player is what made
-it matter, by turning this image into the IDLE COST OF EVERY POST IN A FEED —
-a screenful was over five megabytes to show twelve thumbnails.
-
-The fix is to stop having a rule: encode both, keep the smaller. Real cards are
-now ~20 KB. `verify_sharecard.py` pins a 200,000 B ceiling, which is the check
-that would have caught the original.
-
-**Two suites broke on this change and both were right to.**
-
-  * `verify_flipmeta.py` read the POST body as JSON. `lib/posted.js` gzips any
-    body over 4,096 B, and its fixture — one stroke, no media — sat under that
-    until a 25 KB card was attached. It inflates now.
-  * `verify_library.py`'s search matched `verify_inline.py`'s "Harness fixture
-    A" as well as its own, because `run_harness.sh` gives one database to every
-    suite in an invocation. Its fixtures carry a per-run token now. Exactly the
-    cross-suite state this file warns passes the seal and fails CI.
-
-### A post gets a loop control, and the music stops with the drawing
-
-Owner's call, and it reverses a decision recorded three sections up. The in-post
-player shipped with ONE viewer control — mute — on the argument that a feed is
-not a media player and a Pad replay stopping dead on its finished drawing reads
-as a broken GIF. Both halves of that are still true; what was missing is that
-some drawings are two seconds long and a viewer may simply want them to stop.
-
-**Two controls now, in one cluster at bottom-left, and the asymmetry between
-them is deliberate:**
-
-    mute   PAGE-WIDE, session-remembered, off by default
-    loop   PER POST, not remembered, on by default
-
-Sound is environmental — someone in a quiet room wants it off for the whole
-feed. Repeating is a property of the drawing in front of you, and a two-second
-loop you want to watch twice says nothing about the next post. A silent Skribl
-hides its mute button and keeps its loop button, because a silent drawing still
-repeats.
-
-**WHEN THE DRAWING STOPS, THE MUSIC STOPS**, and that is one call rather than
-two: the end of a non-looping replay routes through `pause()`, which takes the
-audio down in the same breath. It could have been a `cancelAnimationFrame` and
-a class change, and then a finished drawing would sit there with a loop still
-playing under it — a post that will not shut up, which is worse than one that
-never started. `verify_inline.py` measures it on the AUDIO GRAPH with the
-analyser tap verify_player_isolation.py uses, and it is mutation-tested: stop
-the drawing without routing through `pause()` and the peak stays at 71 where it
-should read 0.
-
-That suite grew a third fixture WITH A REAL TRIMMED LOOP to make the assertion
-possible. "The music stops" is a claim about sound and cannot be checked from
-the DOM.
-
-**Turning loop back on while a replay sits finished restarts it**, rather than
-appearing to do nothing until the next tap.
-
-**The embed ratchet moved 26,000 -> 27,500** for about 1.5 KB of stylesheet and
-handler. Unlike the transport the profile tab needed, this one is paid for by
-the caller that uses it.
-
-**Three documents said "mute is the only viewer control"** and are corrected:
-README.md, docs/INTEGRATION.md and the /feed page's own note. A claim that
-becomes false the moment a control is added is exactly what `verify_docs.py`
-cannot catch, because it is prose about behaviour rather than a name or a
-number.
-
-## Closed in v276 — the drop-in becomes something you can run
-
-v275 made a Skribl displayable in somebody else's post. It did not make the
-integration OBTAINABLE: a host still read four documents and wrote the same
-hundred and fifty lines everyone writes. Three pieces close that, and the
-general lesson of the release is in the third.
-
-    skribl/creation.py                   create_post(), carved out of the route
-    skribl/static/lib/composehost.js     the pad button's lifecycle, once
-    examples/host_app/                   a host you can actually run
-    harness/verify_createpost.py         agreement between the two callers
-    harness/verify_example.py            the example, driven in a browser
-
-### create_post() — for a host whose composer is a FORM
-
-`POST /api/skribls` serves a host whose composer is a browser. skribls.net's is
-a server-side form, and that host already has the payload, the author and its
-own CSRF token — so POSTing to its own JSON endpoint buys a second request, a
-second auth and a SEPARATE TRANSACTION. `create_post` runs in the caller's
-request on the caller's session, so one commit makes the Skribl and the host's
-own row durable together, or neither.
-
-**IT IS A CARVE.** Everything in `creation.py` was MOVED out of
-`create_skribl`'s body and the route now calls it. Two functions that both
-"validate a payload and insert a post" is `editor_post.js`'s own BUG B. What
-stayed in the route is what is HTTP: the two rate budgets, CSRF, the
-Idempotency-Key header, jsonify.
-
-**THE LIMITER CANNOT FOLLOW, and the mutation is what proved it.** The plan was
-to document that a host calling create_post is unthrottled. The mutation written
-to prove that assertion never reached it — it died on "Working outside of
-request context", because `_client_ip()` reads the Flask `request` and the
-reservation settles in a teardown. Not a policy; a fact about what the limiter
-is made of. **A host must limit its own compose view.**
-
-**The instrument for a carve is AGREEMENT**: ten bad payloads through both
-callers from one table, comparing status and message.
-
-### lib/composehost.js — and a comment corrected by a mutation
-
-Four rules that are identical in every host: lazy `src`, the re-edit push, the
-reset on clear, origin in and out. Its own comment claimed that without the push
-the editor "reopens EMPTY" — it does not, because the iframe keeps the drawing,
-so a host that skips the rule LOOKS correct while trusting the editor's retained
-state. The rule earns its place when the draft and the editor differ
-(`setPayload` on a saved post). Written from reasoning, corrected by a mutation
-that failed to fail.
-
-**And verify_compose did not cover it**: disabling the rule left it at 29/29,
-because the ink assertion measures what the editor kept. It counts the
-`skribl:compose:load` message now. One assertion in that file was
-`check(..., True, ...)` — the literal True, in the file that names lazy loading
-as a rule.
-
-**Two byte ratchets now**, because display and compose are paid by different
-pages: the embed's scrape would otherwise have charged every feed page in the
-world for a module only a composer loads.
-
-### examples/host_app — and the three copies it exposed
-
-    python examples/host_app/app.py
-
-A separate Flask site, its own users and posts, blueprint under a PREFIX,
-composing with a server-side form. `verify_example.py` boots it as a real server
-and drives a real browser through it, then checks on a FRESH connection that the
-host's row and the Skribl were committed together. An example nothing runs is a
-document that goes stale silently.
-
-**THE THIRD CALLER IS WHAT EXPOSES DUPLICATION, BECAUSE THE FIRST TWO EACH HAD A
-REASON.** A draft has no public id and the macro required one, so
-`skribl_feed.html` hand-copied twenty lines of the player's internals and
-`skribl_library.html` copied a variant — and the example was about to be the
-third. It is one macro now (`skribl_inline_draft(id, controls)`), and the gate
-added for it — no template outside the macro file writes the player's internal
-class names — FAILED ON ITS FIRST RUN and named the library. Found, not guessed.
-
-### Two things caught by gates rather than by reading
-
-**A route literal in the one file whose comment says it never uses one.**
-`inlineplayer.js` fell back to `'/api/skribls'` when `data-skribl-api` was
-absent. Under a prefix that fetches a path that does not exist and fails quietly
-into the error panel — the exact defect the surrounding comment describes as the
-reason the attribute exists. `verify_seam.py` caught it; there is no fallback
-now. The comment and the line contradicting it were written by the same hand in
-the same hour. **A comment is not a gate.**
-
-**Two hand-typed counts in one sentence of this file** — batches and suites.
-`verify_docs` caught the suite count; nothing checks the batch count and it was
-stale too. Both removed rather than updated.
-
-## Closed in v277 — five things the owner found on a phone
-
-Every one came from using the app on an iPhone, not from a suite going red. The
-harness is Chromium on Linux; four of the five are invisible there by
-construction. That is the pattern worth taking from this release.
-
-    skribl/static/lib/audiosession.js    the iOS playback session (UNVERIFIED)
-    harness/verify_audiosession.py       its mechanism, and preview's first
-                                         assertion that sound comes out at all
-    _skribl_export.html                  a file-name field; the GIF row
-    skribl_editor.html                   the sound marker, one macro'd glyph
-    styles.css                           --good lifted, --good-rgb added
-
-### The four small ones
-
-**The post sheet shows the toolbar's music mark**, so a Skribl with a loop and
-one without stop looking identical at the moment of posting. The owner's sketch
-beat mine — I proposed a chip that borrowed the tool row's green, they asked why
-not use the tool row's mark. ONE GLYPH: a macro, called by both, compared as
-RENDERED rather than grepped, because a copy satisfies any grep and drifts the
-first time either is redrawn.
-
-**Exports can be named.** Every one was a hardcoded literal — `skribl.gif`,
-`skribl-flip.mp4` — so two exports of one drawing were indistinguishable and
-titling the drawing changed nothing. `lib/nametab.js` had named drafts properly
-for releases; the media exports were never wired to it.
-
-**Placing that field's label found a bug no suite could see.**
-`.export-optlbl` lived only in `flip.css`, which Pad does not load, while the
-shared partial uses it outside the flip-only block — so Pad rendered
-"Background" at browser-default size for releases. `verify_exportui`'s sweep
-concatenates both stylesheets, so a class styled for ONE surface passed as if
-styled for both. Split by surface now; the hole was demonstrated by reverting
-the class.
-
-**The GIF background control is a row, not a banner.** `width: 100%` was
-commented "Full width so both labels fit" and did not survive measurement.
-Restoring it fails the suite in the most telling way: both labels forced to
-143px, so the sliding pill cannot tell them apart.
-
-**And `--good` was too dull** — #1bcf8f to #30e8a7. Never short of contrast
-(9.6:1) but of vividness, and it is spent on 6-7px dots. Three rules hardcoded
-the token's own RGB and would have kept the old hue; they read `--good-rgb` now.
-
-### iOS silences Web Audio when the ringer switch is off
-
-`harness/verify_audiosession.py`, `skribl/static/lib/audiosession.js`.
-
-Found by the owner on their own phone: **Test Seam plays and Preview Loop does
-not**, on a phone set to silent. Test Seam is a plain `<audio>` element; Preview
-Loop is Web Audio. iOS routes Web Audio into an "ambient" session the hardware
-switch mutes and leaves `<audio>` alone.
-
-**THE SCOPE IS NOT THE PREVIEW BUTTON.** `/s/<id>` and the in-post player are
-both Web Audio, so on an iPhone in silent mode a shared link's music and every
-feed post's music are silent too. For a component whose whole purpose is playing
-in somebody else's feed, that is the feature not working.
-
-**Why every existing guard missed it.** app.js has an elaborate hand-off for a
-context that never unlocks, and every one of its tests is `state !== 'running'`.
-In silent mode the context reaches `running` perfectly well and is merely
-inaudible — so all the guards pass, the native `<audio>` fallback is
-deliberately suppressed, and the result is confident silence. app.js's own
-warning, *"A source object existing is NOT the same as audible playback"*,
-applies one level further out than where it was written.
-
-**The fix holds a silent looping `<audio>` element**, which moves the session to
-"playback". Claimed only on a gesture that asks for sound — the unmute tap, the
-Preview button — never at load, because a held session shows Skribl as playing
-media in Control Center. Overriding the switch is defensible here only because
-sound is never automatic: the in-post player ships muted.
-
-**IT IS NOT VERIFIED, AND THE SUITE SAYS SO.** Chromium on Linux has no ringer
-switch. `verify_audiosession.py` pins the mechanism — one element, silent,
-looping, playing, idempotent, released, loaded on all four surfaces — and prints
-a closing line saying none of it proves an iPhone is audible. The phone is the
-test. This is the same limit app.js already records: *"Desktop never showed it
-… including in the harness."*
-
-It also closed a gap that let a person find this before a suite did:
-`verify_audiostate` drove Preview Loop under a HUNG unlock and asserted the
-fallback plumbing, but nothing anywhere asserted that preview makes a sound.
-
 ## Known-open, in the order worth doing
 
-### Open at the v214 seal
+### Deferred: the bottom-toolbar redesign (owner-approved, still open)
 
-**1. Bottom-toolbar redesign (owner-approved, deliberately deferred).** A
-proposal exists to replace the current bar with Pen / Eraser / Shape / Select /
-Color / **Tools** on Pad (Flip drops Shape), moving Image, Music and Magnify
-into a labelled "Tools" action sheet — NOT another `•••`, because the top menu
-already owns that symbol and two identical glyphs meaning different collections
-is avoidable ambiguity.
+The proposal: replace the bottom bar with Pen / Eraser / Shape / Select / Colour
+/ **Tools** on Pad (Flip drops Shape), moving Image, Music and Magnify into a
+labelled "Tools" action sheet — NOT another `•••`, because the top menu already
+owns that glyph and two identical symbols meaning different collections is
+avoidable ambiguity. Two things were never resolved: where Undo/Redo go once
+they leave the bar, and whether Image/Music belong in "Tools" at all when they
+are content rather than tools.
 
-Measured premise, verified before deferring: **Pad WRAPS at 320px** (Image and
-Music orphaned on a second row, bar 113px tall against 68px at 375px) and
-**Flip OVERFLOWS horizontally by 16px at 320px** — different failures, and
-Flip's is worse because content is clipped with no cue that anything is missing.
+**Its measured premise no longer holds, and that is why the 208 lines of
+measurement that used to sit here are gone.** The section argued from a v213
+bug report: Pad WRAPPED at 320px with Image and Music orphaned on a second row
+and the bar 113px tall, and Flip OVERFLOWED horizontally by 16px, which it
+called the worse of the two because content was clipped with no cue. Re-measured
+at 320px on the v282 tree:
 
-Two things unresolved. The spec removes Undo/Redo from the bar without saying
-where they go, and the header has NO free space: at 320px idle the actions block
-is already 210 of 286px, and it is the same header that overflowed and wrapped
-the record pill in the v213 bug report. And the owner noted Image/Music may be
-COMBINED later, which would change whether a Tools sheet is needed at all.
+    Pad    toolbar 92px          horizontal overflow 0
+    Flip   toolbar 56px          horizontal overflow 0
+    both   document overflow 0 — content is narrower than the viewport
 
-**CLOSED IN v219 — but NOT the way the v215 note said, and that note was wrong.**
-
-The bottom bar was redesigned. What actually shipped, measured on the v219 tree:
-
-    Pad   320px  288px  WRAPS (safety net)   360-390px  326px  one row
-          393px+ 359px  one row              641px+     565px  one row
-    Flip  320px  scrolls (deliberate)        360px+     334px  one row
-
-  * **The Image + Music + Magnify merge was tried and REVERTED.** A v215 note
-    here claimed it shipped; it did not. Removing Select from Pad freed the room
-    the merge was for, and measured, the merge then saved 3px — 305px against
-    308px. It cost two real bugs while it was in. Image and music are two
-    buttons again, restored verbatim from v214.
-  * **What actually fixed the row was removing Select** (Pad-only, and it
-    conflicted with Pad being a performance capture) and moving **Flip Mode into
-    the ••• menu**.
-  * **360px is the design target, 320px the safety net.** Pad wraps at 320,
-    Flip scrolls — `flip.css` sets `overflow-x: auto` below 560px on purpose.
-    Both keep every control reachable; `verify_layout.py` asserts reachability
-    rather than a mechanism.
-  * **The Pointer tool was never added.** It appeared in one review mockup and
-    not the other, and it costs exactly the breakpoint the redesign bought.
-  * **The 641px step is REAL but this line's numbers were never re-measured, and
-    the remedy it asked for was built.** It read "one pixel takes Pad's bar from
-    359px to 565px". Measured on the current tree at 900px tall, Pad's bar goes
-    the OTHER WAY — 608.0px at 640 to 569.3px at 641 — and `scrollWidth` equals
-    `clientWidth` at every width tested on BOTH surfaces, so nothing is clipped
-    or wrapped at the boundary. The remedy this line prescribed ("size classes,
-    not a pixel breakpoint") shipped as `lib/sizeclass.js`, whose own suite pins
-    the boundary at 640/640.4 — so the remaining step IS the size class
-    changing, by design, rather than a cliff. Re-measure before calling it a
-    defect again; the numbers above are the ones this tree produced, not the
-    ones this bullet carried for eight releases.
-
-`harness/verify_layout.py` covers this. It is a NEW suite, as the deferral
-required.
-
-**A THIRD UNPINNED GUARD: the history-stack aliasing fix.** `makeHistoryState()`
-does `strokes.slice()` — the ARRAY is copied, the point objects are not. Every
-writer in this codebase APPENDS, so nothing had ever mutated an existing point
-and the aliasing never mattered. Selection was the first thing that did: it
-moved points in place, edited the undo snapshot too, and Ctrl+Z "succeeded"
-while changing nothing. The fix is to snapshot FIRST and only then swap the
-selected points for clones — **the order IS the fix**, and it is still in the
-code and must stay there.
-
-**v218 removed Select from Pad**, because it edited already-recorded points, so
-replay drew a stroke at its NEW position at its OLD timestamp — a conflict with
-what Pad is, not a bug in Select. Its seven assertions in `verify_tools.py`
-(V213n) are PARKED behind `_SELECT_TOOL_ON_PAD = False`, not deleted, because
-one of them — *"undo restores the pre-move coordinates EXACTLY"* — was the only
-thing pinning the aliasing fix. Set that flag to `True` if Select ever returns
-and the block runs again as written.
-
-**2. THE RECORDING HEADER IS NO LONGER OVER BUDGET — this entry is CLOSED, and
-the number it used to carry is a good example of why numbers go stale.** It read
-396px needed against 355 available at 375px. That was true when measured on
-v214. Moving Flip Mode into the ••• menu freed 40px of header, which is more than
-the overage, and it closed as a side effect of a change made for discoverability.
-Re-measured on v219: recording has **+124px of slack at 375px**, +109px at 360px.
-The header stays one row and the wordmark collapses to logo-only under pressure,
-which is `fitBrand()` behaving as designed rather than clipping.
-
-**2. The two unpinned guards.** Described in the v214 section. Neither is
-demonstrated; both are labelled at their own line in the source.
-
-**3. `verify_mp4.py` has still never run anywhere but real Chrome.** Unchanged
-since v211. The headless Chromium here reports WebCodecs present but supports no
-H.264 profile.
-
-**4. PostgreSQL — CLOSED, and this entry outlived the fact by several
-releases.** `verify_postgres.py` reports PASS in the sealed run; read the count
-from `harness/RELEASE.md` rather than from here. The text above described the
-v214 era, when mp4 AND postgres were both skipping and external review flagged
-postgres as the more valuable of the two, because SQLite cannot establish the
-multi-process and concurrency behaviour the suite covers. That argument was
-right and it was acted on. `verify_mp4.py` is now the only skip.
-
-**5. The stray line from the v213 bug report remains unexplained — but its
-LEAD is CLOSED, and this entry said the opposite for several releases.** A
-stroke that shot off-screen mid-draw, reported once and never reproduced. The
-lead was `getPos`'s `e.touches[0]` assuming the first touch on the SCREEN is the
-drawing finger, which a resting thumb or a palm breaks. This entry used to say that
-lead was UNTESTED long after it had been tested, measured and fixed: v264 moved
-contact identity into `skribl/static/lib/eventpoint.js`, which reads
-`targetTouches` — the contacts that began on the element — and both editors and
-the player now share it. The defect was measured rather than argued: with a
-thumb resting off-canvas, a Pad stroke drew at the thumb's x instead of the
-finger's.
-
-**What is still open is the REPORT, not the lead.** The stray line has never
-been shown to be that defect. `DESIGN-DIRECTION.md` has drawn this distinction
-correctly since v264 and this list did not, so the two documents disagreed —
-the same CURRENT-vs-PAST failure an external review already caught in the
-Python-runtime section above. A session trusting this entry goes hunting for a
-bug that is already fixed.
-
-
-**Comments no longer ship to users, and the guidance that followed from that is
-withdrawn.** This section used to say that long reasoning belonged in
-START-HERE and the code should carry "a short warning and a pointer", because
-`app.js` reached every visitor uncompressed. There is still no build step, but
-there is now a serve step: `skribl/jsstrip.py` strips comments from the response
-and the file on disk is untouched. **Write the comment.** The v199 measurement
-is that 32% of `app.js` was comment text and removing it from the wire cost the
-source nothing — so a comment is no longer a trade against a viewer's download,
-and the ratchet can no longer be fired by explaining yourself.
-
-Two things to know before relying on that. Only URLs carrying a `?v=` bust are
-stripped, because that is the only cache key available and lexing `app.js` costs
-~90 ms; an unbusted request serves the file whole. And a comment inside a
-template-literal `${...}` substitution survives the strip — there are currently
-none, and `verify_jsstrip.py` would not fail if you added one, it would just be
-bytes.
-
-
-1. **`verify_mp4.py` has never run.** Headless Chromium has WebCodecs but no
-   H.264 encoder, so it SKIPS. MP4 export works in the real world (confirmed by
-   hand on an iPhone) but no suite has proven it. The CI `mp4` job runs it on
-   real Chrome.
-2. **Pad's stylus path is unverified on a device.** `touchType` is an iOS
-   extension with no `Touch` constructor support, so an Apple Pencil stroke
-   cannot be synthesised in Chromium. An Android stylus draws at constant width
-   — Android touch events expose no `touchType`.
-3. **The record does not cover every suite.** See RELEASE.md for which
-   reported and which skipped; CI is configured for the rest.
-4. **A full single-invocation run hangs.** Name suites explicitly, in batches.
-5. **The two editors duplicate their controllers.** `app.js` and `flip.js`
-   drive the SAME shared partials. Sizes are deliberately not quoted here —
-   three documents carried three different line counts for `app.js` and none
-   matched the tree. Run `wc -l skribl/static/app.js skribl/static/flip.js`. The controllers
-   extracted to `lib/` — `eyedropper`, `recentcolors`, `segslider`,
-   `smoothing`, `colorselect`, `photofit` and `looptrim` — are each pinned
-   by parity assertions that prove both editors CALL the shared module, not
-   merely that they behave alike. What remains in both photo and music is the
-   DRAWER WIRING rather than the logic: the fit slider, drag-to-reposition,
-   opacity/blur/zoom, the waveform renderers (`drawWaveform`,
-   `drawZoomWaveform`), `updateTrimUI`'s DOM half and the preview transport.
-   The pure arithmetic under both is now shared. Count the references before
-   planning the work rather than trusting a number in a handoff: the counts
-   quoted between sessions have not matched the tree.
-
-   **TWO DECISIONS ARE WAITING HERE.** Neither is an assistant's to make.
-   (a) The third photo fit is `'stretch'` on Pad and `'fill'` on Flip for the
-   same button, and the shared partial branches to emit both. `photofit` makes
-   them one mode behaviourally, but unifying the spelling changes what Flip
-   persists in existing drafts and posts — a live-data decision.
-   (b) Dragging a trim handle past the 20s cap **constrains** the handle on the
-   main track and **slides** the far end on the zoom track and nudge. Both
-   surfaces do both, identically, so nothing is broken — but it is one control
-   behaving two ways depending on which track you grabbed. `looptrim` makes the
-   choice a named argument, so picking one is now a small edit at six call
-   sites instead of a rewrite. Every fix must be made twice, and most bugs this session were one
-   surface having a fix the other lacked. Extracting the shared drawer
-   controllers is the highest-value refactor available. Use an AST, not a
-   regex; `node` is available. See docs/REFACTOR-v132.md.
-6. **`app.js` is still loaded by both editor and player** — but "every viewer
-   downloads the authoring surface" is NO LONGER TRUE and this entry said it
-   for several releases. All nine `editor_*.js` carves are absent from the
-   player and `verify_player_isolation.py` asserts it, over a list read off
-   disk; the player links its own
-   `player.css`; the JS target is met. What remains is `app.js` itself plus a
-   handful of reachable editor globals, counted against a zero target by that
-   same suite. The v132 split was attempted and reverted, and the AST tool that
-   was supposed to de-risk a second attempt was built and DISPROVED.
-7. **Payloads are ~476 KB inline in Postgres — the S3 backend now EXISTS**
-   (`S3Store`, foot of `skribl/storage.py`, `SKRIBL_MEDIA_BACKEND=s3`).
-   SigV4 signed with the stdlib, no boto3, so `requirements.txt` is unchanged.
-   `verify_s3.py` drives it against a fake bucket that RECOMPUTES the signature
-   and 403s a mismatch, with a bad-secret negative control.
-   **Objects are served through /media/<key>, not as bucket URLs.** The obvious
-   design puts the bucket URL in the payload, and `routes.media` used to say an
-   S3 deployment "never routes through here" — which would route around the
-   authorisation that route exists for, re-opening the bug where a private
-   Skribl's audio was readable by anyone holding the URL. Put a CDN in front of
-   /media/<key> instead; the response is already immutable for public-only
-   objects and `private, no-store` otherwise, a distinction a bucket cannot make.
-   **What is NOT proven: Amazon.** Nothing here can reach a real bucket, so the
-   requests are proven well-formed and correctly signed, not accepted. Point it
-   at MinIO or a test prefix once; that is a minute of work and closes it.
-   Layers are no longer blocked on storage.
-8. **Opaque custom-store media URLs** cannot have their associations
-   reconstructed. Severity is lower than it sounds; see ARCHIVE-README.
-9. **Multi-take** has no data model, by design.
-
----
+Flip's clipping is gone and Pad's bar is 21px shorter than the number the
+argument rested on. The proposal may still be worth doing on design grounds;
+the emergency it was written up as is over. Anyone reviving it should re-measure
+first rather than trust a snapshot — which is the whole reason this replaced it.
 
 ## Things that will bite an unwary assistant
 

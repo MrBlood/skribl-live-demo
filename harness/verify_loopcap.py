@@ -10,6 +10,7 @@ bug would have failed them. These assertions pin the numbers instead.
 """
 import base64, json, math, struct, wave
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 LONG = "/tmp/long42.wav"
@@ -27,9 +28,7 @@ with wave.open(LONG, "wb") as _w:
 RAW_WAV_BYTES = len(open(LONG, "rb").read())
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 def scribble(pg, box, seed, n=120):
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2

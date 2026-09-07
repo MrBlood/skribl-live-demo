@@ -15,6 +15,7 @@ unverified — so it is worth pinning even though the encode isn't reachable.
 """
 import os, sys
 from playwright.sync_api import sync_playwright
+from assertions import make_check
 
 BASE = "http://127.0.0.1:5001"
 
@@ -28,9 +29,7 @@ if _MUXER is None:
              "      Copy it in from the repo to run this suite.")
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 API = """() => ({
     hasGlobal: typeof window.Mp4Muxer !== 'undefined',

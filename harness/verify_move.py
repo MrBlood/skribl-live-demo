@@ -18,14 +18,13 @@ move — undoing something the user did not do last.
 """
 import os
 import sys
+from assertions import make_check
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail and not ok else ""))
+check = make_check(results, detail_on_pass=False)
 
 
 def summarise_and_exit():

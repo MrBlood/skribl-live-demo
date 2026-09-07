@@ -32,6 +32,8 @@ deliberately made. Losing one has to be their decision.
 """
 import os
 import sys
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -44,9 +46,7 @@ except ImportError:                                    # pragma: no cover
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 SNAP = """() => { const f = frame();
@@ -101,8 +101,7 @@ with sync_playwright() as p:
         page = br.new_page(viewport={"width": 1280, "height": 900})
         errs = []
         page.on("pageerror", lambda e: errs.append(str(e)))
-        page.goto(BASE + "/flip", wait_until="networkidle")
-        page.wait_for_timeout(700)
+        browsing.goto(page, BASE, "/flip")
 
         print("\nTHE LIB — pure, and it knows nothing about frames")
         check("lib/stamps.js is loaded on Flip",
@@ -473,8 +472,7 @@ with sync_playwright() as _p:
         # vanish, so a desktop-width test would pass while the reported bug
         # stood.
         pg = _b.new_page(viewport={"width": 430, "height": 900})
-        pg.goto(BASE + "/flip", wait_until="load")
-        pg.wait_for_timeout(1200)
+        browsing.goto(pg, BASE, "/flip")
         pg.evaluate("() => localStorage.clear()")
         pg.reload(wait_until="load")
         pg.wait_for_timeout(1200)
@@ -651,8 +649,7 @@ with sync_playwright() as _sp2:
     _sb = _sp2.chromium.launch()
     try:
         sp = _sb.new_page(viewport={"width": 430, "height": 900})
-        sp.goto(BASE + "/flip", wait_until="load")
-        sp.wait_for_timeout(1200)
+        browsing.goto(sp, BASE, "/flip")
         sp.evaluate("() => localStorage.clear()")
         sp.reload(wait_until="load")
         sp.wait_for_timeout(1200)

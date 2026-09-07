@@ -44,13 +44,13 @@ except Exception as exc:                                   # pragma: no cover
     raise SystemExit(77)
 
 import sqlalchemy as sa
+from assertions import make_check
+import browsing
 
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 def free_port():
@@ -163,8 +163,11 @@ try:
         pg.on("request", lambda r: api_posts.append(r.url)
               if r.method == "POST" and "/api/skribls" in r.url else None)
 
-        pg.goto(BASE + "/", wait_until="load")
-        pg.wait_for_timeout(800)
+        # require_boot=False, case 1: BASE is the EXAMPLE HOST APP, not Skribl.
+        # Its "/" is the host's own page and raises no __skriblBoot marker,
+        # so requiring one would spend the timeout and then fail a page that
+        # is behaving correctly.
+        browsing.goto(pg, BASE, "/", require_boot=False)
 
         print("\n2 — SIGN IN, AND THE COMPOSER APPEARS")
         check("signed out, there is no composer",
@@ -240,9 +243,14 @@ try:
               joined == 1,
               f"{joined} joined row(s) — if this is 0 the two landed in "
               f"different transactions")
+        # str() BOTH SIDES: skribl_posts.user_id is text since v279 while the
+        # host's own author_id column is whatever the host chose — here an
+        # integer. That the two agree AS IDENTITIES is the assertion; that they
+        # share a SQL type never was, and requiring it would force every host
+        # to store ids the way Skribl does.
         check("the author stamp on the Skribl is the host's user",
-              durable("SELECT user_id FROM skribl_posts LIMIT 1") ==
-              durable("SELECT author_id FROM host_posts LIMIT 1"))
+              str(durable("SELECT user_id FROM skribl_posts LIMIT 1")) ==
+              str(durable("SELECT author_id FROM host_posts LIMIT 1")))
         check("the host set it public, so it is feed content not a hidden link",
               durable("SELECT visibility FROM skribl_posts LIMIT 1") == "public")
         check("the words became the caption",

@@ -22,6 +22,7 @@ Uses the runner's server on :5001 like the other browser suites.
 """
 import sys, time
 from pathlib import Path
+from assertions import make_check
 
 try:
     from playwright.sync_api import sync_playwright
@@ -33,9 +34,7 @@ BASE = "http://127.0.0.1:5001"
 ROOT = Path(__file__).resolve().parents[1]
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 # One tiny real PNG, drawn in-page, so the media path exercises the real
 # validators rather than a fake byte string they would rightly reject.

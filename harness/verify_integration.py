@@ -17,6 +17,7 @@ fast and has no port to collide on.
 """
 import sys
 from pathlib import Path
+from assertions import make_check
 
 # Same idiom as verify_migrations.py: the suite imports the package under test.
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,9 +26,7 @@ sys.path.insert(0, str(ROOT))
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 try:
@@ -153,7 +152,10 @@ pid = c4.post("/s/api/skribls", json=payload("owned")).get_json()["id"]
 with app4.app_context():
     owner = db4.session.execute(
         db4.text("select user_id from skribl_posts")).first()[0]
-check("current_user_id decides authorship", owner == 42, f"stored user_id={owner}")
+# Text since v279 — see docs/INTEGRATION.md. An integer host is unaffected
+# everywhere except a raw read of the column, which this is.
+check("current_user_id decides authorship", str(owner) == "42",
+      f"stored user_id={owner!r}")
 
 # A policy that is never consulted passes every test that only checks the
 # default, so install one, prove it changes the outcome, then clear it.

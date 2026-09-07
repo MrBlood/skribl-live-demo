@@ -24,15 +24,40 @@ from .core import (MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
-                     _visibility_policy, as_utc, session,
-                     feed_filter, author_dict)
+                     _visibility_policy, as_utc, normalise_user_id,
+                     session, feed_filter, author_dict)
 from .storage import KEY_RE, LocalDiskStore
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
 from .validation import _decode_data_url_image
 from .creation import (SkriblIdempotencyRace, SkriblRejected, SkriblUnavailable,
                        create_post)
+from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
+                       set_post_visibility)
 
+
+# How long a shared cache may hold an authorisation-dependent response, when a
+# deployment has opted into public caching at all.
+#
+# THIS NUMBER IS THE REVOCATION WINDOW, and it used to be a year. /media/<key>
+# answered `public, max-age=31536000, immutable` and the share card
+# `public, max-age=86400`, on the reasoning that content-addressed bytes never
+# change — which is true of the BYTES and irrelevant to the question a cache is
+# actually being asked. What can change is who may read them. An audit of v278
+# put it plainly: a one-year immutable response is incompatible with deletion,
+# moderation, privacy requests and takedowns, because a CDN keeps serving the
+# object without ever reaching Flask again.
+#
+# `immutable` was the worst of it. It tells a cache not to revalidate even when
+# the user reloads, so the one recovery path a person has left is closed too.
+# Dropped.
+#
+# Five minutes is chosen to be short enough that "I deleted it" is true in any
+# human timeframe, and long enough to absorb the burst a shared link produces —
+# which is the whole reason the opt-in exists. A deployment that needs longer
+# needs a CDN purge hook, not a bigger number here, and should keep the default
+# (no shared caching at all) until it has one.
+PUBLIC_MEDIA_MAX_AGE = 300
 
 # --- feed cursors -----------------------------------------------------------
 # Opaque to clients on purpose: an obviously-decodable "offset=40" invites
@@ -184,10 +209,12 @@ def register_routes(bp, *, index_route=False):
     if index_route:
         @bp.get("/")
         def home():
+            """Standalone-site root, registered only when index_route=True."""
             return render_template("skribl/skribl_editor.html")
 
     @bp.get("/skribl-pad")
     def skribl_editor():
+        """Pad — the record-and-replay editor."""
         # COMPOSE MODE. ?compose=1 is the Pad opened from a host's post
         # composer — an overlay over their feed, not a page somebody navigated
         # to. It ends in "Add to post", which hands the finished drawing back to
@@ -204,12 +231,14 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/flip")
     def skribl_flip():
+        """Flip — the frame-by-frame animator."""
         # Flip Mode — the frame-by-frame animation editor (standalone page for now;
         # folds into the pad as an in-app mode in a later phase).
         return render_template("skribl/skribl_flip.html")
 
     @bp.get("/library")
     def skribl_library():
+        """The profile's Skribls tab: the listing, with a full transport."""
         # CONCEPT PREVIEW — a per-user library with an inline player that replays
         # each skribl. Served as a real route so it can be seen live and the
         # player iterated on; the tiles are self-contained demo drawings, not yet
@@ -218,6 +247,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/feed")
     def skribl_feed():
+        """The demo host page: the in-post player and composer over the real listing."""
         # PREVIEW ROUTE for the in-post player — the smallest honest host. It
         # renders no posts of its own: the page fetches GET /api/skribls and
         # clones the skribl_inline() macro for each item, so what it shows is
@@ -235,6 +265,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
+        """The public player a shared link opens."""
         # Server-render Open Graph / Twitter card metadata so shared links unfurl
         # with the Skribl's title + caption — social scrapers don't run the client
         # JS that fills those in. The lookup is best-effort: on a missing post or a
@@ -293,6 +324,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/s/<public_id>/card.png")
     def skribl_card(public_id):
+        """The share-card image link unfurls use."""
         # Serve the per-Skribl share-card thumbnail generated client-side at post
         # time and stored in the payload. Best-effort and render-always: on a
         # missing post, missing/'malformed thumbnail, or a transient DB error we
@@ -367,7 +399,8 @@ def register_routes(bp, *, index_route=False):
                         if (post.visibility == "public"
                                 and post.visible_to(None)
                                 and bp.skribl_public_media_cache):
-                            resp.headers["Cache-Control"] = "public, max-age=86400"
+                            resp.headers["Cache-Control"] = (
+                                f"public, max-age={PUBLIC_MEDIA_MAX_AGE}")
                         else:
                             resp.headers["Cache-Control"] = "private, no-store"
                         return resp
@@ -378,6 +411,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.post("/api/skribls")
     def create_skribl():
+        """Create a post."""
         # Two budgets (review #7). The ATTEMPT budget is charged on every request
         # and exists to stop request floods; the POST budget is charged only when
         # a post commits, so a burst of malformed bodies can no longer exhaust a
@@ -503,14 +537,26 @@ def register_routes(bp, *, index_route=False):
                 # cheap and safe.
                 g._skribl_post_reservation = (client_ip, post_token, False)
 
-        return jsonify({
+        body = {
             "id": public_id,
             # Was f"/s/{public_id}" — a root literal, which returned the wrong
             # path the moment Skribl mounted under a prefix. The client trusts
             # this value for the share link, so it has to be built from the
             # route, not from a string. (verify_prefix.py pins it.)
             "url": url_for(".skribl_player", public_id=public_id)
-        }), 201
+        }
+        # THE ONLY TIME THIS VALUE EXISTS. An anonymous post gets a revocation
+        # capability; only its SHA-256 is stored, so this response is the sole
+        # opportunity to hand the raw token to whoever made the post. A client
+        # that discards it has published something it can never withdraw, which
+        # is why the standalone app writes it into the local "Your Skribls"
+        # entry in the same tick.
+        #
+        # Absent for an owned post: that one is authorised by its owner and a
+        # second credential would only be something else to leak.
+        if made.delete_token:
+            body["deleteToken"] = made.delete_token
+        return jsonify(body), 201
 
     @bp.get("/media/<key>")
     def media(key):
@@ -586,7 +632,9 @@ def register_routes(bp, *, index_route=False):
                 # media of a host-defined 'draft' post while the post itself
                 # was refused.
                 sa.or_(SkriblPost.visibility.in_(("public", "unlisted")),
-                       sa.and_(SkriblPost.user_id == viewer,
+                       # Normalised for the same reason every other comparison
+                       # is: the column is text and an integer host passes 42.
+                       sa.and_(SkriblPost.user_id == normalise_user_id(viewer),
                                sa.literal(viewer is not None))))
             granted = session().query(readable.exists()).scalar()
         else:
@@ -653,7 +701,11 @@ def register_routes(bp, *, index_route=False):
                         public_only = False
                         break
         if public_only:
-            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            # Bounded, and NOT immutable — see PUBLIC_MEDIA_MAX_AGE. The bytes
+            # are immutable; the permission to read them is not, and only the
+            # second one matters to a cache.
+            resp.headers["Cache-Control"] = (
+                f"public, max-age={PUBLIC_MEDIA_MAX_AGE}")
         else:
             resp.headers["Cache-Control"] = "private, no-store"
         # Never let a stored blob be re-interpreted as something executable.
@@ -695,15 +747,21 @@ def register_routes(bp, *, index_route=False):
 
         author = request.args.get("user_id")
         if author is not None:
-            try:
-                author = int(author)
-            except (TypeError, ValueError):
-                return jsonify({"error": "user_id must be a number."}), 400
+            # NO int() COERCION. It used to parse this and 400 on anything
+            # non-numeric, which made the endpoint unusable for a host whose
+            # user ids are UUIDs, ULIDs or an OAuth subject — the identities
+            # docs/INTEGRATION.md invites, since `current_user_id` is
+            # documented as returning "your user id". The column is text now,
+            # so the filter compares text; a bounded length is all the
+            # validation an opaque identifier can honestly get.
+            if len(author) > 255:
+                return jsonify({"error": "user_id is too long."}), 400
+            author = normalise_user_id(author)
             q = q.filter(SkriblPost.user_id == author)
             # Private posts are visible on their author's own listing, and only
             # there. Unlisted stay out of listings entirely — they are reachable
             # by link, which is what "unlisted" means.
-            if viewer is not None and author == viewer:
+            if viewer is not None and author == normalise_user_id(viewer):
                 q = q.filter(SkriblPost.visibility.in_(("public", "private")))
             else:
                 q = q.filter(SkriblPost.visibility == "public")
@@ -748,6 +806,7 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/api/skribls/<public_id>")
     def get_skribl(public_id):
+        """Fetch one post as JSON."""
         if not _valid_public_id(public_id):
             return jsonify({"error": "Skribl not found."}), 404
         post = session().query(SkriblPost).filter_by(public_id=public_id).first()
@@ -784,3 +843,139 @@ def register_routes(bp, *, index_route=False):
             "author": author_dict(post.user_id),
             "skribl": payload
         })
+
+    # ---- taking one back ---------------------------------------------------
+    # REGISTERED UNCONDITIONALLY SINCE v279, and the reasoning changed rather
+    # than being abandoned. v278 gated these on `skribl_has_identity` because a
+    # DELETE on an unauthenticated API is a button marked "erase any Skribl in
+    # this deployment". That is still true of an UNAUTHORISED delete — and the
+    # gate's cost was that the standalone product, which is the deployed one,
+    # could not revoke anything at all. An audit called that out: the mechanism
+    # existed and the product contract did not.
+    #
+    # What makes the route safe without an identity is not the absence of the
+    # route, it is the capability. An anonymous post carries a 256-bit secret
+    # minted at creation, returned once, stored only as a hash. No token, no
+    # deletion — and `_authorised_post` refuses a NULL-owner post to a merely
+    # authenticated caller just as firmly as to an anonymous one. So a stranger
+    # with a public id still cannot delete anything; the person who made it can.
+    #
+    # CSRF: create_blueprint refuses to build a blueprint with current_user_id
+    # and no explicit csrf decision. An anonymous deployment has no ambient
+    # authority to abuse — the token is a bearer credential in the BODY, not a
+    # cookie, so a third-party page cannot cause a deletion it does not already
+    # hold the secret for.
+    #
+    # BE PRECISE ABOUT THE OWNED-POST CASE, because this comment used to wave
+    # at it with "an authenticated deployment has already settled it" and that
+    # is not what settles it. The host's csrf verifier is consulted on POST and
+    # NOWHERE ELSE — these two routes never call it. An owned post is
+    # authorised by the session cookie, which is exactly the ambient authority
+    # CSRF exists to protect.
+    #
+    # What actually protects them is the request shape: DELETE and PATCH with
+    # `Content-Type: application/json` are not simple requests, so a
+    # cross-origin caller gets a CORS preflight, and this blueprint sends no
+    # Access-Control-Allow-* header anywhere (SKRIBL_EMBED_ORIGINS is CSP
+    # frame-ancestors, not CORS). The browser refuses before the real request
+    # leaves. A <form> cannot issue either verb at all.
+    #
+    # SO THE PROTECTION IS REAL AND IT IS NOT THE ONE NAMED. Three changes
+    # would remove it without touching this file: adding CORS headers,
+    # accepting the token from a query string or form encoding, or a host
+    # mounting the blueprint behind something that reflects Origin. Any of
+    # those makes enforcing bp.skribl_csrf here a prerequisite, and the clients
+    # already send the header (lib/postedui.js, lib/recoverykey.js) so that
+    # change would be one `if` on each route.
+
+    def _submitted_delete_token():
+        """The capability from the body, or None.
+
+        Read with silent=True and type-checked: a DELETE with no body at
+        all is the ordinary owned-post case, and a non-object root must not
+        reach an index. The same shape mistake that made PATCH answer 500
+        in v278.
+        """
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return None
+        tok = data.get("deleteToken")
+        return tok if isinstance(tok, str) and tok else None
+
+    @bp.delete("/api/skribls/<public_id>")
+    def delete_skribl(public_id):
+        """Take a post down — by its author, or with the revocation key issued at post time."""
+        # The id shape is checked first so a malformed one cannot reach the
+        # query, exactly as GET does.
+        if not _valid_public_id(public_id):
+            return jsonify({"error": "Skribl not found."}), 404
+        try:
+            delete_post(public_id,
+                        author_id=bp.skribl_current_user_id(),
+                        delete_token=_submitted_delete_token())
+        except SkriblNotFound as exc:
+            # 404 for "no such post" AND for "not yours" — the module
+            # raises one exception for both so this route cannot leak the
+            # difference even by accident.
+            return jsonify({"error": exc.message}), 404
+        # NO COMMIT HERE. The first version of this route called
+        # session().commit(), and verify_txcontract.py failed it by name —
+        # correctly. A commit on the SHARED session commits everything
+        # pending on it, so a host with an uncommitted row of its own,
+        # mid-request, would have that row made durable by a Skribl
+        # deletion. That is the P0 an earlier outside review found and this
+        # package was rewritten to stop doing; the fact that deletion is
+        # the newest route does not exempt it.
+        #
+        # The HOST owns the per-request commit — app.py does it in
+        # after_request for the standalone deployment, skipping 5xx, with a
+        # teardown rollback behind it. delete_post has flushed, so the row
+        # is gone as far as this transaction is concerned, and it becomes
+        # durable when the host says so.
+        #
+        # 204: there is nothing left to describe.
+        return "", 204
+
+    @bp.patch("/api/skribls/<public_id>")
+    def update_skribl_visibility(public_id):
+        """Revoke, or re-publish. The only field a post may change."""
+        if not _valid_public_id(public_id):
+            return jsonify({"error": "Skribl not found."}), 404
+        # THE SHAPE IS CHECKED BEFORE ANYTHING IS INDEXED, and the first
+        # version of this route did not do that. `"visibility" in body`
+        # is true for the JSON array ["visibility"] and for the JSON
+        # string "visibility" — membership works on both — and the
+        # `body["visibility"]` that followed then raised TypeError, so a
+        # malformed-but-valid request came back 500 instead of 400.
+        # Reproduced on both roots before this was written.
+        #
+        # The exact-key test is the other half. The docstring above says
+        # visibility is the only field a post may change, and
+        # {"visibility": "private", "extra": 1} was accepted with a 200,
+        # so the route was looser than its own description. A contract
+        # stated in a docstring and not enforced is not a contract.
+        body = request.get_json(silent=True)
+        # "visibility" is required; "deleteToken" is the optional
+        # capability an anonymous author presents instead of ownership.
+        # Anything else is refused, so the route stays as narrow as its
+        # docstring claims.
+        if (not isinstance(body, dict)
+                or "visibility" not in body
+                or not set(body) <= {"visibility", "deleteToken"}):
+            # Deliberately NOT a general-purpose PATCH. Title and caption
+            # are part of the posted artefact; visibility is a decision
+            # about it, and it is the one the review asked for. Widening
+            # this later is a decision, not a default.
+            return jsonify({
+                "error": "Only 'visibility' can be changed."}), 400
+        try:
+            new = set_post_visibility(
+                public_id, body["visibility"],
+                author_id=bp.skribl_current_user_id(),
+                delete_token=body.get("deleteToken"))
+        except SkriblRefused as exc:
+            return jsonify({"error": exc.message}), 400
+        except SkriblNotFound as exc:
+            return jsonify({"error": exc.message}), 404
+        # Flushed, not committed — see the note in delete_skribl above.
+        return jsonify({"id": public_id, "visibility": new})

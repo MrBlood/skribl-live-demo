@@ -23,12 +23,12 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from assertions import make_check
 
 ROOT = Path(__file__).resolve().parents[1]
 
 results = []
-def check(name, ok, detail=""):
-    results.append((ok, name)); print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 BEGIN, END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
@@ -84,10 +84,34 @@ check("no document references a harness suite that does not exist",
 # suite nobody can find is a suite nobody maintains. Scans every tracked .md
 # in the repo, not just DOCS: a suite documented only in e.g. DECISIONS.md is
 # documented.
+#
+# v281: GENERATED DOCUMENTS DO NOT COUNT AS DOCUMENTATION, and until now they
+# did. harness/RELEASE.md carries a per-suite results table listing every suite
+# by construction, so "named in at least one .md" was satisfied for ANY suite
+# the moment a release run finished — including 17 that no hand-written
+# document mentioned at all. The check could not fail for the case it exists
+# to catch, which is the same defect as the contrast gate that exempted every
+# use of a token by matching its definition.
+#
+# The whole point is "a suite nobody can find is a suite nobody maintains". A
+# reader looking for what verify_posted.py covers is not helped by a row in a
+# generated results table saying it passed.
+# ONE ENTRY, AND NOT THE FIVE .md IN release_run.GENERATED, which is the
+# mistake waiting to be made here. Those five are excluded from the TREE HASH,
+# and four of them — README.md, harness/README.md, docs/HANDOFF.md,
+# START-HERE.md — are hand-written documents that merely carry a stamped
+# stanza. They are exactly where a suite SHOULD be documented, so excluding
+# them from this census would gut it.
+#
+# The question here is different: is the whole file machine-produced? Only
+# harness/RELEASE.md is. Do not "fix" this by syncing it with GENERATED — the
+# two lists answer different questions and are supposed to differ.
+_GENERATED_MD = {"harness/RELEASE.md"}
 _all_md_text = "\n".join(
     p.read_text(encoding="utf-8")
     for p in ROOT.rglob("*.md")
-    if "__pycache__" not in p.parts and p.is_file())
+    if "__pycache__" not in p.parts and p.is_file()
+    and str(p.relative_to(ROOT)).replace("\\", "/") not in _GENERATED_MD)
 _undocumented = sorted(
     p.name for p in (ROOT / "harness").glob("verify_*.py")
     if p.name not in _all_md_text)
@@ -131,8 +155,23 @@ for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
 # served /static/skribl/ URLs the lookbehind above already handles: a correct
 # reference in a different namespace. Only .html is resolved this way, and only
 # after the literal path has failed, so a genuinely missing file still fails.
+# Files a CI job PRODUCES rather than files the tree carries. Naming one in a
+# document is not a broken reference — it is how a reader learns the artefact
+# exists and where it lands. Kept as an explicit short list rather than a
+# pattern, so adding one is a decision: an entry here is a promise that
+# something actually writes it.
+_PRODUCED = {
+    # Written by the 'mp4 (real Chrome)' job in .github/workflows/harness.yml,
+    # read by release_run.mp4_attestation(). Absent from a normal checkout by
+    # design — it is evidence about a specific tree, not source.
+    "harness/MP4-ATTESTATION.txt",
+}
+
+
 def _resolves(rel):
     if (ROOT / rel).is_file():
+        return True
+    if rel in _PRODUCED:
         return True
     return (rel.startswith("skribl/") and rel.endswith(".html")
             and (ROOT / "skribl" / "templates" / rel).is_file())
@@ -166,6 +205,15 @@ check("every route the blueprint registers is named in at least one .md",
       ", ".join(_undoc_routes) + " — README.md's route table and "
       "docs/INTEGRATION.md's list are where a host looks")
 
+# THE README ROUTE-TABLE GATE LIVED HERE AND IS GONE. It asserted that
+# README.md's "## Routes" table named every method+path the blueprint
+# registers, after v281 found it missing GET /media/<key>, PATCH and DELETE —
+# the last being the whole revocation capability. harness/gen_docs.py now
+# GENERATES that table from routes.py, with each purpose taken from the
+# handler's own docstring, so the table cannot be missing a route that exists.
+# The check above still stands and is doing different work: it asks whether a
+# route is named in ANY .md, which catches a route documented nowhere at all.
+
 # EVERY SKRIBL_* THE CODE READS MUST BE NAMED SOMEWHERE. Six were not:
 # SKRIBL_RATE_HMAC_KEY, SKRIBL_ALLOW_EPHEMERAL_SECRET, SKRIBL_FORCE_SECURE_COOKIES,
 # SKRIBL_MAX_REQUEST_BYTES, SKRIBL_MAX_GROUPS_PER_FRAME, SKRIBL_RATE_CLEANUP_BATCH.
@@ -174,7 +222,11 @@ check("every route the blueprint registers is named in at least one .md",
 # identity hash — and a deployer who never learns a knob exists cannot set it.
 # .env.example counts as documentation here: it is the file they actually open.
 _env_named = _all_md_text + (ROOT / ".env.example").read_text(encoding="utf-8")
-_env_read = set(re.findall(r'environ(?:\.get)?\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
+# `os.getenv` is in the alternation because nothing in the tree uses it TODAY
+# and a check that only holds while one spelling is in fashion is not a check:
+# the next `os.getenv("SKRIBL_...")` would have been read by nobody and gated
+# by nothing.
+_env_read = set(re.findall(r'(?:environ(?:\.get)?|getenv)\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
 _env_read |= set(re.findall(r'_env_(?:int|bool|str)\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
 _env_read |= set(re.findall(r'config\.get\(\s*["\']([A-Z_][A-Z0-9_]*)["\']', _src))
 _undoc_env = sorted(v for v in _env_read
@@ -315,8 +367,16 @@ claims = []
 # docs/HANDOFF.md is a CHANGELOG: "112 assertions across 8 suites (was 60 across
 # 5)" is a true statement about v-something, not a claim about this tree. Only
 # documents that describe the current state are checked.
+# The documents that describe the tree AS IT IS, as opposed to the changelogs
+# (DECISIONS.md, docs/HANDOFF.md, docs/REFACTOR-v132.md), whose entries are
+# true of the version they sit under and are deliberately not maintained. The
+# integration guide, the direction notes and the examples README were outside
+# this list until v279 for no reason anybody wrote down — they are read by the
+# same people as README.md and go stale the same way.
 _current = [ROOT / "README.md", ROOT / "harness" / "README.md",
-            ROOT / "ARCHIVE-README.md", ROOT / "START-HERE.md"]
+            ROOT / "ARCHIVE-README.md", ROOT / "START-HERE.md",
+            ROOT / "docs" / "INTEGRATION.md", ROOT / "FUTURE.md",
+            ROOT / "DESIGN-DIRECTION.md", ROOT / "examples" / "README.md"]
 for doc in _current:
     if not doc.is_file():
         continue
@@ -325,6 +385,28 @@ for doc in _current:
     body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", body, flags=re.S)
     for m in re.finditer(r"\b(\d+)\s+suites\b", body):
         claims.append((doc.relative_to(ROOT), int(m.group(1))))
+
+# ...AND THE SAME FOR ASSERTION COUNTS, which CLAUDE.md forbids outside the
+# generated stanza in exactly these words and which nothing enforced. Two were
+# typed into current documents while answering an audit — "the tree carried
+# 4,392 assertions" — and both would have been wrong the moment the next seal
+# ran. The suite-count check above has existed for releases; this is its twin,
+# missing because the rule was written down and the gate was not.
+#
+# Any four-or-more-digit number followed by "assertion(s)" is refused: totals
+# are that size and a sentence about "two assertions" is not.
+_typed_counts = []
+for doc in _current:
+    if not doc.is_file():
+        continue
+    body = doc.read_text(encoding="utf-8")
+    body = re.sub(re.escape(BEGIN) + r".*?" + re.escape(END), "", body, flags=re.S)
+    for m in re.finditer(r"\b(\d[\d,]{3,})\s+assertions?\b", body):
+        _typed_counts.append(f"{doc.relative_to(ROOT)}: {m.group(1)}")
+check("no current document hand-types an assertion total",
+      not _typed_counts,
+      "; ".join(_typed_counts) + " — point at harness/RELEASE.md instead; a "
+      "typed total is wrong from the next seal onward and looks authoritative")
 wrong = [(d, n) for d, n in claims if n != len(on_disk)]
 check(f"no hand-typed suite count disagrees with the {len(on_disk)} on disk",
       not wrong, "; ".join(f"{d} says {n}" for d, n in wrong))
@@ -404,6 +486,89 @@ if src:
               all(c == n_tables for c in claimed),
               f"claims {claimed}, metadata has {n_tables}")
 
+print("\nDOCS — the stamp has exactly one place to write in each document")
+# NEARLY SHIPPED THIS. The v281 notes described the generated-stanza pattern and
+# quoted its marker literally, so START-HERE.md ended up with TWO opening
+# markers — one in prose, hundreds of lines above the real stanza. stamp_docs.py
+# finds the first BEGIN and the first END after it, so the next stamp would have
+# replaced everything between a sentence and the real stanza with a counts line,
+# silently deleting the section in between.
+#
+# It was caught by diffing what the stamp WOULD write instead of running it,
+# which is the same rule the rest of this release argues for: calibrate before
+# believing. This assertion is the cheap permanent version of that check.
+_STAMPED = {"START-HERE.md", "README.md", "docs/HANDOFF.md", "harness/README.md"}
+_BEGIN, _END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
+_marker_bad = []
+for _rel in sorted(_STAMPED):
+    _f = ROOT / _rel
+    if not _f.is_file():
+        _marker_bad.append(f"{_rel}: missing")
+        continue
+    _t = _f.read_text(encoding="utf-8")
+    _o, _c = _t.count(_BEGIN), _t.count(_END)
+    if _o != 1 or _c != 1:
+        _marker_bad.append(f"{_rel}: {_o} opening, {_c} closing")
+    elif _t.index(_BEGIN) > _t.index(_END):
+        _marker_bad.append(f"{_rel}: closing marker precedes the opening one")
+check("each stamped document has exactly one HARNESS-COUNTS region",
+      not _marker_bad,
+      "; ".join(_marker_bad) +
+      " — stamp_docs.py writes between the FIRST pair it finds, so a second "
+      "marker anywhere (a doc quoting the pattern, say) makes the next stamp "
+      "delete everything in between"
+      if _marker_bad else
+      f"{len(_STAMPED)} documents, one well-formed region each")
+
+# THE GENERATED TABLES MUST BE CURRENT, and this ONE assertion replaces the TWO
+# bespoke censuses v281 wrote — the shared-module index check in
+# verify_surfaces.py and the README route-table check above. Both compared a
+# hand-maintained table against source; harness/gen_docs.py now writes those
+# tables FROM source, so what is left to verify is only that nobody edited the
+# generated region by hand or changed the source without regenerating.
+#
+# That is the whole argument for deriving over gating: one check that a
+# generator ran, instead of one bespoke matcher per duplicated fact.
+_gen = subprocess.run([sys.executable, str(ROOT / "harness" / "gen_docs.py"), "--check"],
+                capture_output=True, text=True, cwd=str(ROOT))
+check("the generated documentation tables are current",
+      _gen.returncode == 0,
+      (_gen.stdout + _gen.stderr).strip().replace("\n", "; ") or
+      "harness/gen_docs.py --check failed")
+
+# THE ASSERTION FORMAT IS A HARNESS-WIDE CONTRACT. run_harness.sh parses
+# "  [PASS] ..." lines and the "N/M passed" summary out of every suite's
+# stdout, so a change to how check() renders is not a cosmetic edit — it
+# reads downstream as suites failing or vanishing. All 99 suites now share
+# one implementation (harness/assertions.py), which makes that contract a
+# single point of failure and therefore worth asserting on every run.
+#
+# The self-test compares the shared check() against the literal strings the
+# NINE hand-written variants used to produce, including the one suite that
+# rendered "→" instead of "—".
+_fmt = subprocess.run([sys.executable, str(ROOT / "harness" / "assertions.py")],
+                      capture_output=True, text=True, cwd=str(ROOT))
+check("the shared check() still renders every historical variant",
+      _fmt.returncode == 0,
+      (_fmt.stdout + _fmt.stderr).strip().splitlines()[-1]
+      if (_fmt.stdout or _fmt.stderr) else "harness/assertions.py self-test failed")
+
+# Marker integrity for the GEN regions too, for the same reason it exists for
+# HARNESS-COUNTS: a second opening marker anywhere in the file (a note quoting
+# the pattern, say) makes the next generation replace everything in between.
+_GEN_REGIONS = [("MODULE-INDEX", "START-HERE.md"), ("ROUTES", "README.md")]
+_gen_bad = []
+for _name, _rel in _GEN_REGIONS:
+    _t = (ROOT / _rel).read_text(encoding="utf-8")
+    _o, _c = _t.count(f"<!-- GEN:{_name} -->"), _t.count(f"<!-- /GEN:{_name} -->")
+    if _o != 1 or _c != 1:
+        _gen_bad.append(f"{_rel}:{_name} has {_o} opening, {_c} closing")
+    elif _t.index(f"<!-- GEN:{_name} -->") > _t.index(f"<!-- /GEN:{_name} -->"):
+        _gen_bad.append(f"{_rel}:{_name} closes before it opens")
+check("each generated table has exactly one well-formed region",
+      not _gen_bad, "; ".join(_gen_bad) or
+      f"{len(_GEN_REGIONS)} generated regions, one marker pair each")
+
 print("\nDOCS — the two generated records describe the SAME run")
 # There are two generators: run_harness.sh writes LAST-RUN.txt (and stamp_docs.py
 # stamps the docs from it), and release_run.py writes RELEASE.md. release_run
@@ -419,6 +584,16 @@ _lr = ROOT / "harness" / "LAST-RUN.txt"
 # invocation. Like the stamped stanzas, this therefore validates the PREVIOUS
 # release — verify_docs runs inside the suite loop, so it cannot see a record
 # that has not been written yet.
+# NOT APPLICABLE IS NOT SKIPPED, AND THE SUMMARY NOW SAYS WHICH. These two run
+# only when LAST-RUN.txt holds a whole-run record. Inside release_run.py it does
+# not — verify_docs runs in batch 9 of 52, when the record describes batch 8 —
+# so the suite honestly reports 81 where CI, running all 99 in one invocation,
+# reports 83. Both numbers were correct and the record could not tell them
+# apart, which let a release summary and its own evidence disagree without
+# either being false. "Skipped" would have been the wrong word: it implies
+# coverage debt, and these are structurally inapplicable until the whole-run
+# artifact exists.
+_not_applicable = []
 if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(encoding="utf-8"):
     _rel_n = re.search(r"^\s*assertions\s+(\d+)", _rel.read_text(encoding="utf-8"), re.M)
     _lr_n = re.search(r"^assertions passed:\s*(\d+)", _lr.read_text(encoding="utf-8"), re.M)
@@ -428,11 +603,30 @@ if _rel.is_file() and _lr.is_file() and "whole release run" in _lr.read_text(enc
           f"LAST-RUN.txt says {_lr_n.group(1) if _lr_n else '?'} — a release run "
           "must rewrite the record for the WHOLE run, not leave the final batch "
           "standing as it")
-    _rel_t = re.search(r"^\s*tree hash\s+([0-9a-f]{64})", _rel.read_text(encoding="utf-8"), re.M)
+    _rel_t = re.search(r"^\s*tested tree hash\s+([0-9a-f]{64})", _rel.read_text(encoding="utf-8"), re.M)
     _lr_t = re.search(r"^Tree SHA-256\s*:\s*([0-9a-f]{64})", _lr.read_text(encoding="utf-8"), re.M)
     check("and on the tree they were produced from",
           bool(_rel_t and _lr_t) and _rel_t.group(1) == _lr_t.group(1),
           "one of them describes a different tree")
+else:
+    # SAY SO, AND SAY IT WITH THE RIGHT WORD. Not running this pair is
+    # legitimate — a targeted run_harness.sh invocation owns LAST-RUN.txt and
+    # has no whole-run record to compare — but doing it QUIETLY means the suite
+    # reports 81/81 in one place and 83/83 in another with nothing to explain
+    # the gap, and the reader's first guess is that two assertions regressed.
+    # That is not hypothetical: a v283 release summary and its own evidence
+    # disagreed exactly this way, and neither was false.
+    #
+    # NOT APPLICABLE, NOT SKIPPED. "Skipped" implies coverage debt; these are
+    # structurally inapplicable until the whole-run artifact exists, and they
+    # run and pass the moment it does. The distinction is the point — the
+    # denominator is what needed exposing, not another subsystem.
+    _not_applicable = ["RELEASE.md and LAST-RUN.txt agree on the assertion count",
+                       "and on the tree they were produced from"]
+    print("    NOT APPLICABLE (2 assertions): harness/LAST-RUN.txt is not a "
+          "whole-run record, so there is nothing to compare RELEASE.md against.")
+    print("    They run in any single invocation that covers the whole suite "
+          "set — CI, or a bare ./harness/run_harness.sh.")
 
 print("\nDOCS — a run with skips is not published as 'all green'")# The runner reports PASS WITH SKIPS when nothing failed but something was
 # skipped; the stanza generator decided on failures alone and wrote "all green",
@@ -572,7 +766,7 @@ def _fake_root(tmp, assertions, rel_assertions, tree="a1b2c3d4e5f6" + "0" * 52):
     (tmp / "harness" / "RELEASE.md").write_text(
         "# Release evidence\n\n"
         "    result           PASS\n"
-        f"    tree hash        {tree}\n"
+        f"    tested tree hash {tree}\n"
         "    suites on disk   61\n"
         "    suites reported  61\n"
         f"    assertions       {rel_assertions}\n"
@@ -649,13 +843,16 @@ if _wf.is_file():
     check("the mp4 lane FAILS on a skip rather than reporting green",
           "SKIPPED on the job that exists to run it" in _wf_text,
           "a lane that tolerates the skip it exists to prevent is not a lane")
-    # THE MINUTES ARE A FINITE RESOURCE AND THIS PROJECT EXHAUSTED THEM.
-    # Three jobs of 20-30 minutes started on every push; without a concurrency
-    # group the superseded runs finished anyway, against commits nobody would
-    # merge. Pinned here because the symptom -- runs dying in a second with 404
-    # logs -- looks nothing like its cause, and the block is one deletable
-    # stanza that nothing else in the workflow depends on.
-    check("superseded pull-request runs are cancelled rather than paid for",
+    # SUPERSEDED PUSHES SHOULD NOT KEEP RUNNING. Three jobs of 20-30 minutes
+    # started on every push; without a concurrency group the runs finished
+    # anyway, against commits nobody would merge. This comment used to open
+    # "THE MINUTES ARE A FINITE RESOURCE AND THIS PROJECT EXHAUSTED THEM",
+    # which is not true of a public repository on standard runners — see the
+    # gate at the foot of this file. The stanza is still worth pinning: a
+    # superseded run occupies a runner and delays the one that matters, and
+    # the symptom (runs dying in a second with 404 logs) looks nothing like
+    # its cause.
+    check("superseded pull-request runs are cancelled rather than left running",
           re.search(r"^concurrency:$", _wf_text, re.M) is not None
           and "cancel-in-progress:" in _wf_text,
           "no concurrency group — every push leaves the previous three jobs running")
@@ -730,6 +927,73 @@ EXEMPT = re.compile(r"SUPERSEDED|\(history\)|\(historical|historical from here|"
                     r"was DECLARED|used to (say|read|be|end|state|claim)|no longer|"
                     r"requirement, as written|"
                     r"until v\d|before v\d|as of v\d", re.I)
+
+
+# ...AND THE SAME DISCIPLINE FOR A CLAIM THAT IS NOT A NUMBER: what CI costs.
+#
+# v280. Two of this release's findings were stale statements sitting in SOURCE
+# COMMENTS rather than in documents, where nothing looks: 22 lines above the
+# delete routes still calling the v278 identity gate "the whole design", and
+# the header of .github/workflows/harness.yml recording a day of heavy CI as
+# having "burned the entire monthly Actions allowance". The v279 staleness
+# sweep read every .md and found neither, which is the argument for gating a
+# claim rather than trusting a sweep.
+#
+# THE INVARIANT IS CHECKABLE OFFLINE AND THAT IS THE WHOLE POINT. Whether
+# Actions bills this repository depends on two facts: the repository's
+# visibility, which needs the network, and the runner labels, which do not.
+# So this asserts the half that can be proved from the tree — if every job
+# runs on a STANDARD GitHub-hosted runner, then nothing current may describe
+# this project's Actions minutes as a finite or billed resource. Should the
+# project ever move to a larger runner, the claim becomes sayable again and
+# this gate steps out of the way on its own, which is the behaviour a rule
+# about cost should have.
+_STANDARD_RUNNER = re.compile(
+    r"^\s*runs-on:\s*(ubuntu|windows|macos)-(latest|\d+\.\d+|\d+)\s*$", re.M)
+_ANY_RUNNER = re.compile(r"^\s*runs-on:", re.M)
+_wf_dir = ROOT / ".github" / "workflows"
+_wf_all = "\n".join(f.read_text(encoding="utf-8")
+                    for f in sorted(_wf_dir.glob("*.yml"))) if _wf_dir.is_dir() else ""
+_all_runners = len(_ANY_RUNNER.findall(_wf_all))
+_std_runners = len(_STANDARD_RUNNER.findall(_wf_all))
+_all_standard = _all_runners > 0 and _all_runners == _std_runners
+
+# A small closed list of phrasings that ASSERT metered minutes, in the same
+# spirit as EXEMPT below: each entry is a way a writer says "this costs us",
+# not a general notion of talking about money. A sentence may mention an
+# allowance while denying there is one — the corrections in CLAUDE.md do
+# exactly that — so the exemption window applies here too.
+_COST_CLAIM = re.compile(
+    r"monthly Actions allowance|metered Actions minutes|"
+    r"Actions minutes (are|were) (finite|metered|limited)|"
+    r"minutes are a finite resource", re.I)
+
+if _all_standard:
+    _cost_hits = []
+    for rel in ["CLAUDE.md", ".github/workflows/harness.yml"] + \
+               [str(d.relative_to(ROOT)) for d in _current]:
+        f = ROOT / rel
+        if not f.is_file():
+            continue
+        lines = f.read_text(encoding="utf-8").splitlines()
+        for n, line in enumerate(lines):
+            if not _COST_CLAIM.search(line):
+                continue
+            # The same six-line window the denial checks use: a quotation of a
+            # retired claim, marked as one, stays sayable.
+            window = "\n".join(lines[max(0, n - 6):n + 1])
+            if EXEMPT.search(window):
+                continue
+            _cost_hits.append(f"{rel}:{n + 1}")
+    check("nothing current claims CI minutes are metered while every runner "
+          "is standard", not _cost_hits,
+          ", ".join(_cost_hits) + f" — all {_all_runners} job(s) run on "
+          "standard GitHub-hosted runners, which are free on a public "
+          "repository; mark the line superseded if it is quoting history")
+else:
+    check("the runner audit ran", True,
+          f"{_all_runners - _std_runners} non-standard runner(s) — a cost "
+          "claim is sayable again, so the check above stands down")
 
 # v273: CLAUDE.md has always said "no doc may hand-type a tree hash or an
 # assertion count outside the generated stanza". The tree-hash half was
@@ -938,8 +1202,43 @@ check("...and an unrelated sentence is not a false positive",
                    CLAIMS[0][2]))
 
 
+print("\nDOCS — every host seam is in the guide a host is sent to")
+# CLAUDE.md sends an integrator to docs/INTEGRATION.md to mount Skribl in
+# another Flask app, and by v281 `player_target` had never appeared in it:
+# eight of nine create_blueprint() arguments documented, and the ninth — the
+# one that decides whether posting navigates THE HOST'S top-level document
+# away — known only to the source. A seam a host cannot find is a seam that
+# does not exist for them, and the default being the safe one is exactly what
+# stops anybody noticing.
+#
+# Reflection over the real signature, not a list: a list is the thing that
+# went stale. The app-local seams init_skribl() pops from kwargs count too —
+# they are arguments a host passes and cannot see any other way.
+import ast as _ast
+_src = (ROOT / "skribl" / "__init__.py").read_text(encoding="utf-8")
+_seams = []
+for _n in _ast.walk(_ast.parse(_src)):
+    if isinstance(_n, _ast.FunctionDef) and _n.name == "create_blueprint":
+        _seams += [a.arg for a in _n.args.args] + [a.arg for a in _n.args.kwonlyargs]
+_seams += re.findall(r'kwargs\.pop\("([a-z_]+)"', _src)
+_guide = (ROOT / "docs" / "INTEGRATION.md").read_text(encoding="utf-8")
+_undocumented = [s for s in _seams if s not in _guide]
+
+check("docs/INTEGRATION.md names every seam a host can pass",
+      _seams and not _undocumented,
+      ", ".join(_undocumented) + " — read out of create_blueprint()'s "
+      "signature, so adding an argument is what fails this"
+      if _undocumented else
+      f"all {len(_seams)} seams, read from the signature rather than a list")
+
+
 bad = [r for r in results if not r[0]]
+# The leading "N/M passed" token is a contract run_harness.sh parses with a
+# LEADING-anchored regex, so trailing text is safe — that is how the FAILURES
+# tail already works. Anything added here goes after it, never before.
 print(f"\n{'='*62}\n{len(results)-len(bad)}/{len(results)} passed" +
+      (f"  ({len(_not_applicable)} not applicable: "
+       + "; ".join(_not_applicable) + ")" if _not_applicable else "") +
       ("" if not bad else "  FAILURES: " + ", ".join(r[1] for r in bad)))
 # This suite printed its failures and then exited 0, so run_harness.sh — which
 # takes ok/FAIL from the exit code — reported it as "ok — 32/33 passed" and the

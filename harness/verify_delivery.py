@@ -40,6 +40,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from app import app  # noqa: E402
+from assertions import make_check
 
 # Registered BEFORE the first request: Flask refuses route registration after
 # one has been handled. A route the host owns, used below to prove that neither
@@ -52,9 +53,7 @@ def _host_only_probe():
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 GZIP = {"Accept-Encoding": "gzip"}

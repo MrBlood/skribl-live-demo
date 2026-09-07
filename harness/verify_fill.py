@@ -34,6 +34,8 @@ WHAT ROTS QUIETLY HERE, and what each section is really for:
 """
 import os
 import sys
+from assertions import make_check
+import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 
@@ -46,9 +48,7 @@ except ImportError:                                    # pragma: no cover
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 STATE = "() => ({ pts: frame().strokes.length, groups: frame().strokeGroups.length })"
@@ -61,8 +61,7 @@ with sync_playwright() as p:
         page = br.new_page(viewport={"width": 1280, "height": 900})
         errs = []
         page.on("pageerror", lambda e: errs.append(str(e)))
-        page.goto(BASE + "/flip", wait_until="networkidle")
-        page.wait_for_timeout(700)
+        browsing.goto(page, BASE, "/flip")
 
         print("\nTHE LIB — geometry, separable from the canvas")
         check("lib/floodfill.js is loaded on Flip",

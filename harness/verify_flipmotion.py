@@ -31,15 +31,15 @@ import math
 import sys
 
 from playwright.sync_api import sync_playwright
+from assertions import make_check
+import browsing
 
 BASE = "http://127.0.0.1:5001"
 
 results = []
 
 
-def check(name, ok, detail=""):
-    results.append((bool(ok), name))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f"  — {detail}" if detail else ""))
+check = make_check(results)
 
 
 # The guide is drawn in a blue-violet no default brush or backdrop uses, so
@@ -72,8 +72,7 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={"width": 1100, "height": 950})
     errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto(BASE + "/flip", wait_until="load")
-    pg.wait_for_timeout(1200)
+    browsing.goto(pg, BASE, "/flip")
 
     # Eight pages, the drawing accelerating left to right so the spacing between
     # guide dots is visibly uneven — an even path would not prove much.
