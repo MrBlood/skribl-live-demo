@@ -746,6 +746,44 @@ if req.is_file() and lock.is_file():
     absent = sorted(wanted - locked)
     check("every requirement appears in the pinned lockfile", not absent,
           ", ".join(absent) + "  — a strict hashed install would omit it")
+
+    # AND THE RUNNING ENVIRONMENT IS THE LOCKED ONE. The check above proves the
+    # lock COVERS every requirement; nothing proved the interpreter running this
+    # harness had actually installed from it. requirements.txt carries ranges
+    # (Flask>=3.0,<4.0), constraints.txt carries the hashes, and `pip install -r
+    # requirements.txt` satisfies the first while ignoring the second.
+    #
+    # It had already happened and no one could see it: the v284 seal recorded
+    # SQLAlchemy 2.0.52 in harness/LAST-RUN.txt while constraints.txt pinned
+    # 2.0.51. Sealed evidence produced on dependencies the lock does not name
+    # describes a configuration nobody deploys — the same argument that pins the
+    # interpreter twenty lines above, which was written after Render built on
+    # 3.14 against a cp312 lock.
+    #
+    # Only packages that ARE installed are compared, so a source-only run in a
+    # bare environment is not failed for what it never needed.
+    try:
+        from importlib.metadata import version as _ver, PackageNotFoundError
+    except Exception:
+        _ver = None
+    if _ver is not None:
+        _pins = dict((norm(m), v) for m, v in re.findall(
+            r"^([A-Za-z][A-Za-z0-9_.-]*)==([^\s\\]+)",
+            lock.read_text(encoding="utf-8"), re.M))
+        _drift, _seen = [], 0
+        for _name, _want in sorted(_pins.items()):
+            try:
+                _got = _ver(_name)
+            except Exception:
+                continue
+            _seen += 1
+            if _got != _want:
+                _drift.append(f"{_name} {_got} installed, lock says {_want}")
+        check("the installed packages are the ones constraints.txt pins",
+              not _drift,
+              "; ".join(_drift[:4]) + f"  — evidence produced on unlocked "
+              f"dependencies describes a configuration nobody deploys "
+              f"({_seen} locked packages present)")
     check("the lockfile documents the install command that actually works",
           "--require-hashes" in lock.read_text(encoding="utf-8"))
 
