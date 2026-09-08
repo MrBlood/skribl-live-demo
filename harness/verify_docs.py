@@ -165,6 +165,10 @@ _PRODUCED = {
     # read by release_run.mp4_attestation(). Absent from a normal checkout by
     # design — it is evidence about a specific tree, not source.
     "harness/MP4-ATTESTATION.txt",
+    # Written by the 'postgres' job in the same workflow, read by
+    # release_run.postgres_attestation(). Absent from a checkout for the same
+    # reason: evidence about a specific tree, not source.
+    "harness/POSTGRES-ATTESTATION.txt",
 }
 
 
@@ -683,6 +687,61 @@ check("MUTATION: an MP4 attestation for a DIFFERENT tree is PENDING, not atteste
 _att3, _pend3 = _rr.external_coverage("0" * 64, ["verify_nolane.py"])
 check("a skip with NO named lane is pending and says so",
       not _att3 and "NOT covered anywhere" in _pend3[0], f"{_pend3}")
+
+# THE POSTGRES LANE IS ATTESTABLE NOW, and this proves the MECHANISM rather
+# than the current state of a file. Both fixtures are written OUTSIDE the tree
+# and read by absolute path, so nothing here can create, resemble or be
+# mistaken for a real attestation — the only file release_run reads for real is
+# the one the `postgres` CI job writes.
+#
+# A green attestation nobody checks is worse than none, so the known-BAD case
+# is the one that matters: an attestation naming a DIFFERENT tree must be
+# refused. That is the whole reason the tree hash is in the file.
+import tempfile as _tf, os as _os
+
+def _att_file(tree, result="PASS"):
+    fd, path = _tf.mkstemp(prefix="skribl-att-", suffix=".txt")
+    with _os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(f"tree: {tree}\nengine: postgresql\nresult: {result}\n"
+                 f"assertions: 41\ngenerated: 2026-01-01T00:00:00Z\n")
+    return path
+
+_good = _att_file("a" * 64)
+_wrong = _att_file("b" * 64)
+_failed = _att_file("a" * 64, result="FAIL")
+try:
+    check("a PostgreSQL attestation naming THIS tree reads as verified",
+          _rr.read_attestation(_good, "a" * 64, "engine", "").startswith(
+              "verified on postgresql"),
+          _rr.read_attestation(_good, "a" * 64, "engine", ""))
+    check("MUTATION: one naming a DIFFERENT tree is STALE, not verified",
+          _rr.read_attestation(_wrong, "a" * 64, "engine", "").startswith("STALE"),
+          _rr.read_attestation(_wrong, "a" * 64, "engine", "") +
+          " — an attestation for another tree is evidence about other code")
+    check("MUTATION: one that says FAIL is not verified either",
+          _rr.read_attestation(_failed, "a" * 64, "engine", "").startswith("FAILED"),
+          _rr.read_attestation(_failed, "a" * 64, "engine", ""))
+    check("a missing attestation names the job that writes it",
+          "postgres" in _rr.postgres_attestation("a" * 64)
+          and _rr.postgres_attestation("a" * 64).startswith("NOT VERIFIED"),
+          _rr.postgres_attestation("a" * 64))
+finally:
+    for _p in (_good, _wrong, _failed):
+        try:
+            _os.unlink(_p)
+        except OSError:
+            pass
+
+# And the consequence: with BOTH mandatory lanes attested there is nothing
+# pending, so FULL RELEASE PASS is reachable by evidence rather than
+# unreachable by construction. It was the second that three reviews objected
+# to — `LOCAL PASS` was truthful, and no amount of green could ever improve it.
+check("with every mandatory lane attested, the headline can reach FULL "
+      "RELEASE PASS", _rr.release_status(True, []) == "FULL RELEASE PASS")
+check("...and both mandatory lanes now have a reader, so neither is merely "
+      "CLAIMED", set(_rr.SKIP_COVERAGE) == {"verify_mp4.py", "verify_postgres.py"},
+      f"{sorted(_rr.SKIP_COVERAGE)} — a lane added here without an attestation "
+      f"reader is counted as claimed, not covered")
 
 print("\nDOCS — CI cannot report a green run that tested nothing")
 # Both CI jobs invoked ./harness/run_harness.sh with NO arguments. The suite loop

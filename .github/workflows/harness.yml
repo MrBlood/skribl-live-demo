@@ -238,6 +238,54 @@ jobs:
             -c "CREATE DATABASE migrations_only OWNER skribl;"
           python -m alembic upgrade head
           python -m alembic check
+      - name: Fail if verify_postgres only SKIPPED
+        # A skip contributes zero assertions and proves nothing about
+        # PostgreSQL. On the one job whose purpose is to prove it, a skip is a
+        # failure. NOT the mp4 job's "suites skipped : 0" test: that job runs a
+        # single suite, this one runs the whole battery and legitimately skips
+        # verify_mp4. The per-suite line is the thing to read.
+        run: |
+          if grep -Eq '^  verify_postgres\.py: ok' harness/LAST-RUN.txt; then
+            echo "verify_postgres ran."
+          else
+            echo "verify_postgres did not report ok on the job that exists to run it." >&2
+            grep -E '^  verify_postgres' harness/LAST-RUN.txt >&2 || true
+            exit 1
+          fi
+      - name: Write the PostgreSQL attestation
+        # THE SAME ARGUMENT AS THE MP4 ATTESTATION, one lane later. Until now a
+        # seal could only say `verify_postgres.py` was skipped and CLAIMED by a
+        # CI job — existence of a job, not a result — so `release status` could
+        # never be better than LOCAL PASS however green that job was. Three
+        # outside reviews called that truthful and incomplete, in those terms.
+        #
+        # Written AFTER the migration-chain step above, so a green attestation
+        # means the suite ran AND the chain applies to an empty database. The
+        # TREE HASH is the load-bearing field exactly as it is for mp4:
+        # release_run.py refuses one that names a different tree, because an
+        # attestation about different code is worse than none.
+        run: |
+          python - <<'PY' > harness/POSTGRES-ATTESTATION.txt
+          import re, sys
+          sys.path.insert(0, "harness")
+          import release_run as r
+          rec = open("harness/LAST-RUN.txt").read()
+          n = re.search(r"^  verify_postgres\.py: ok — (\d+)/", rec, re.M)
+          print("tree:", r.tree_hash())
+          print("engine: postgresql")
+          print("result: PASS")
+          print("assertions:", n.group(1) if n else "?")
+          import datetime
+          print("generated:",
+                datetime.datetime.now(datetime.timezone.utc)
+                .strftime("%Y-%m-%dT%H:%M:%SZ"))
+          PY
+          cat harness/POSTGRES-ATTESTATION.txt
+      - name: Upload the PostgreSQL attestation
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-attestation
+          path: harness/POSTGRES-ATTESTATION.txt
       - name: Upload the run record
         if: always()
         uses: actions/upload-artifact@v4

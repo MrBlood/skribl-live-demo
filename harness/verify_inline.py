@@ -1154,7 +1154,30 @@ with sync_playwright() as sp:
     # goes no further: 32,000 is exactly where the ratchet stood before that
     # saving, so the embed has never been more expensive than it already was.
     # The next spender inherits no slack and has to argue as v281 asked.
-    EMBED_RATCHET = 32_000
+    #
+    # 32,000 -> 32,500, measured 32,417, AND THE NEXT SPENDER WAS THE VERY NEXT
+    # RELEASE, so here is the argument that paragraph demanded.
+    #
+    # v286 centralized how long a page lasts and how much of it is revealed,
+    # and an outside review then found that the two, composed, could never show
+    # a drawing page FINISHED: indexAtMs() owns a page over [start, end), so
+    # the clock leaves at the instant progress would reach 1, and dueCount()
+    # releases the last point only at 1. Measured on the same 26-point page
+    # this suite posts: the 26th point was never due while that page was up.
+    # Its final mark never appeared, and where that point began a stroke the
+    # whole stroke was missing.
+    #
+    # So this is not a feature and there is no cheaper version of it. The bytes
+    # are displayAt() in the module (331 B) and this player calling it (116 B).
+    # Spent before asking, again: the jump path passes displayAt() no `last`
+    # rather than re-deriving index and progress beside it, which is 82 B and
+    # one fewer place that could disagree about what a scrub shows.
+    #
+    # It does cross the 32,000 that stood before v281 banked its saving. Said
+    # plainly: a host now pays 417 B more than at any previous point in this
+    # file's history, and what that buys is a player that does not silently
+    # drop the last mark of every drawing page.
+    EMBED_RATCHET = 32_500
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -764,16 +764,15 @@
          * that page must reach its complete recorded state before the clock
          * may leave it. `full` marks the repaints that move time backwards —
          * `jump` is a SCRUB and only a scrub: someone dragging the bar asked
-         * for that page and must get it, so a jump goes straight there and
-         * merely records what it put on screen. A LOOP RESTART is not a jump —
+         * for that page and must get it. Passing no `last` is how displayAt()
+         * is told there is nothing owed, so a jump lands where it aimed. A
+         * LOOP RESTART is not a jump —
          * it is the clock coming round, and the page it is leaving is owed its
          * last frame exactly as any other page turn is, which is why this
          * cannot key off `full`: the loop repaints fully too. See
          * lib/holdtiming.js. */
         var shown = H
-          ? (jump ? { index: H.indexAtMs(flipMs, cyc),
-                      progress: H.progressAt(flipMs, flipFrames, cyc) }
-                  : H.displayAt(flipMs, flipFrames, cyc, lastShown))
+          ? H.displayAt(flipMs, flipFrames, cyc, jump ? null : lastShown)
           : { index: Math.min(flipFrames.length - 1,
                               Math.floor(at / Math.max(1, totalMs) * flipFrames.length)),
               progress: 0 };

@@ -40,6 +40,7 @@ HARNESS = ROOT / "harness"
 # they are written AFTER a run, so including them means recording a result
 # changes the tree whose hash was just recorded. Kept in step by verify_docs.
 ATTESTATION = "harness/MP4-ATTESTATION.txt"
+PG_ATTESTATION = "harness/POSTGRES-ATTESTATION.txt"
 
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
@@ -59,7 +60,12 @@ GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              # parity check in verify_docs.py compares the two lists as LITERAL
              # strings, so a name that reaches this set through a variable is
              # invisible to it. Caught by that check on the first run.
-             "harness/MP4-ATTESTATION.txt"}
+             "harness/MP4-ATTESTATION.txt",
+             # The postgres lane's attestation, for the same reason and on the
+             # same terms. run_harness.sh's _drop_generated must carry this
+             # name too, spelled the same way — the v221 defect was exactly
+             # these two lists disagreeing by one entry.
+             "harness/POSTGRES-ATTESTATION.txt"}
 
 # WHY A SUITE IS ALONE IN A BATCH — the whole decision, stated once.
 #
@@ -223,12 +229,55 @@ def mp4_attestation(frozen):
     release: whether an unverified MP4 path is shippable is a product decision,
     and the seal's job is to state the fact, not to make it.
     """
-    f = ROOT / ATTESTATION
+    return read_attestation(ATTESTATION, frozen, "channel",
+                            "Run the 'mp4 (real Chrome)' CI job, or "
+                            "SKRIBL_BROWSER_CHANNEL=chrome "
+                            "./harness/run_harness.sh verify_mp4.py on a "
+                            "machine with Google Chrome.")
+
+
+def postgres_attestation(frozen):
+    """What the seal can honestly say about PostgreSQL, for THIS tree.
+
+    Same argument as mp4_attestation() above, one lane later and three outside
+    reviews after it. verify_postgres.py skips wherever no cluster is reachable
+    — which is the DESIGNED local configuration, since running one during a
+    seal perturbs the browser timing suites (CLAUDE.md records the measurement:
+    verify_hold's worst frame deviation goes 1ms -> 32ms with the cluster up).
+    The `postgres` CI job runs it in an environment this one lacks.
+
+    Until this existed the seal could say only that the suite was skipped and
+    CLAIMED by that job — the EXISTENCE of a job, not a result — so no local
+    run could ever reach FULL RELEASE PASS however green the lane was. That was
+    truthful and incomplete, and incomplete in a way that made the strongest
+    label unreachable by construction rather than by evidence.
+
+    The tree hash is load-bearing here exactly as it is for mp4: an attestation
+    naming a different tree is evidence about different code, and is refused.
+    """
+    return read_attestation(PG_ATTESTATION, frozen, "engine",
+                            "Run the 'postgres' CI job in "
+                            ".github/workflows/harness.yml, or "
+                            "DATABASE_URL=postgresql://... "
+                            "./harness/run_harness.sh verify_postgres.py "
+                            "against a real cluster.")
+
+
+def read_attestation(path, frozen, where, advice):
+    """One reader for every external lane's attestation.
+
+    ONE function rather than one per lane, because the rule they enforce is the
+    single thing that makes any of them evidence: the file must name the tree
+    this run froze. A second copy of that comparison is a second place it could
+    be written slightly differently, which is the duplication that produced
+    every finding this release answered.
+
+    Never raises and never blocks a release. Whether an unverified path is
+    shippable is a product decision; the seal states the fact.
+    """
+    f = ROOT / path
     if not f.is_file():
-        return ("NOT VERIFIED for this tree — no attestation. Run the "
-                "'mp4 (real Chrome)' CI job, or "
-                "SKRIBL_BROWSER_CHANNEL=chrome ./harness/run_harness.sh "
-                "verify_mp4.py on a machine with Google Chrome.")
+        return f"NOT VERIFIED for this tree — no attestation. {advice}"
     fields = {}
     for line in f.read_text(encoding="utf-8").splitlines():
         if ":" in line:
@@ -239,8 +288,8 @@ def mp4_attestation(frozen):
         return (f"STALE — the attestation describes tree {got[:12] or '?'}, "
                 f"this release is {frozen[:12]}. Evidence about different code.")
     if fields.get("result", "").upper() != "PASS":
-        return f"FAILED on {fields.get('channel', '?')} — {fields.get('result')}"
-    return (f"verified on {fields.get('channel', '?')}, "
+        return f"FAILED on {fields.get(where, '?')} — {fields.get('result')}"
+    return (f"verified on {fields.get(where, '?')}, "
             f"{fields.get('assertions', '?')} assertions, "
             f"{fields.get('generated', 'time unknown')}")
 
@@ -251,25 +300,32 @@ def external_coverage(frozen, skipped):
     The local run proves what ran locally. Two kinds of coverage live outside it
     and they are NOT the same kind of thing, so they are never summed:
 
-      ATTESTED — the `mp4` lane writes harness/MP4-ATTESTATION.txt, which names
-      the tree it describes. mp4_attestation() refuses one for a different tree,
-      so a local run can actually CHECK this.
+      ATTESTED — the lane writes a file naming the tree it describes, and
+      read_attestation() refuses one for a different tree, so a local run can
+      actually CHECK it. Both mandatory lanes do this now: `mp4` writes
+      harness/MP4-ATTESTATION.txt and `postgres` writes
+      harness/POSTGRES-ATTESTATION.txt.
 
       CLAIMED — SKIP_COVERAGE says some CI job runs a suite this environment
       skipped. Nothing a local run can read says that job was green on this
       tree. verify_docs.py checks the job EXISTS in the workflow; existence is
-      not a result.
+      not a result. NO MANDATORY LANE IS MERELY CLAIMED ANY MORE, and this
+      branch stays because that is a fact about today's lanes, not a property
+      of the design: the next skip added without an attestation lands here and
+      says so, instead of being quietly counted as covered.
 
     Returns (attested, pending) as display strings. Anything in `pending` means
     the local record cannot speak for that lane.
     """
+    readers = {"verify_mp4.py": mp4_attestation,
+               "verify_postgres.py": postgres_attestation}
     attested, pending = [], []
     for name in skipped:
         lane = SKIP_COVERAGE.get(name)
         if lane is None:
             pending.append(f"`{name}` — NOT covered anywhere")
-        elif name == "verify_mp4.py":
-            line = mp4_attestation(frozen)
+        elif name in readers:
+            line = readers[name](frozen)
             (attested if line.startswith("verified") else pending).append(
                 f"`{name}` — {line.split(',')[0]}")
         else:
@@ -551,6 +607,7 @@ def main():
         f"    skipped          {len(skipped)}" +
         (f"  ({', '.join(skipped)})" if skipped else ""),
         f"    mp4 (H.264)      {mp4_attestation(frozen)}",
+        f"    postgresql       {postgres_attestation(frozen)}",
         f"    external lanes   {len(_attested)} attested, {len(_pending)} pending",
         f"    generated        {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
         "",

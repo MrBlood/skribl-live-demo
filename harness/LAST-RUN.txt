@@ -1,11 +1,12 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-08T10:57:20Z
+UTC timestamp           : 2026-09-08T10:58:33Z
 Host                    : Linux x86_64
-Tree SHA-256            : ab78420176426302a66dc97bc93d7f2a331157e2df761a9733ca0d3c953f288b
-Git commit              : ee2c6e9
+Tree SHA-256            : 7d5960cef86758549502a189e19257557f4592602a523d99d3c0b7bc8444077a
+Git commit              : 258969a
 Source state            : DIRTY OUTSIDE THE GENERATED SET — these are not recorded by any commit
-                            harness/verify_hold.py
-                            harness/verify_sharedrules.py
+                            harness/verify_inline.py
+                            harness/verify_player_isolation.py
+                            skribl/static/inlineplayer.js
 SKRIBL_VERSION          : v286
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -13,18 +14,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.DceKCA8CeZ/harness.db)
+Database reset          : yes (fresh /tmp/tmp.oXqMs2Zzih/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : ./harness/run_harness.sh verify_sharedrules.py
+Command                 : ./harness/run_harness.sh verify_player_isolation.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 1
-  verify_sharedrules.py: ok — 67/67 passed
-assertions passed: 67   (skipped suites contribute 0)
+  verify_player_isolation.py: ok — 22/22 passed
+assertions passed: 22   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
