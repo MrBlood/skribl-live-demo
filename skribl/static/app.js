@@ -4132,6 +4132,8 @@ function showPlayerError(msg) {
      `let` read before its declaration is executed is a temporal-dead-zone
      throw, not an undefined. Its meaning belongs with drawFlipFrame below. */
   let lastFlipDrawn = -1;
+  /* What drawFlipFrame last put on screen: displayAt()'s input. */
+  let lastShown = null;
   /* Same placement rule as lastFlipDrawn, same reason. Created lazily inside
      drawFlipFrame — the frames it caches are immutable for the life of the
      page, so index keys are safe and the store never needs invalidating except
@@ -4157,6 +4159,7 @@ function showPlayerError(msg) {
     // blank player, and the reset costs nothing to keep beside the assignment
     // that causes it.
     lastFlipDrawn = -1;
+    lastShown = null;     // nothing on the new backing store is owed a finish
     flipBitmaps = null;   // captures describe the old backing store
   }
   sizePlayerCanvas();
@@ -4268,6 +4271,7 @@ function showPlayerError(msg) {
      store (sizePlayerCanvas), whose captures it describes. */
   function drawFlipFrame(fi, prog) {
     const at = Math.max(0, Math.min(flipFrames.length - 1, fi));
+    lastShown = { index: at, progress: prog };   // what is on screen, for displayAt
     const fr0 = flipFrames[at];
     /* A DRAWING PAGE IS EXEMPT FROM BOTH MEMOS, and for the same reason it is
        exempt from fps: it changes. `at === lastFlipDrawn` skips a repaint of
@@ -4512,6 +4516,7 @@ function showPlayerError(msg) {
     setPlayIcon();
     if (isFlip) {
       const cycT = flipDurMs ? (targetMs % flipDurMs) : 0;
+      // A SCRUB ASKED FOR THIS PAGE: no finish-first guard (lib/holdtiming.js).
       drawFlipFrame(flipIndexAt(cycT), flipProgressAt(cycT));
       elapsedBase = targetMs; setProgress(frac); hideNib();
       return;
@@ -4554,7 +4559,12 @@ function showPlayerError(msg) {
     const elapsed = elapsedBase + (performance.now() - segStart);
     if (isFlip) {
       const cycT = flipDurMs ? (elapsed % flipDurMs) : 0;
-      drawFlipFrame(flipIndexAt(cycT), flipProgressAt(cycT));
+      /* THROUGH displayAt(): no instant of the live clock supplies progress 1
+         while a drawing page is still current, so without it nothing ever
+         paints that page's last stroke. See lib/holdtiming.js. */
+      const _d = _hold ? _hold.displayAt(flipMs, flipFrames, cycT, lastShown)
+                       : { index: flipIndexAt(cycT), progress: flipProgressAt(cycT) };
+      drawFlipFrame(_d.index, _d.progress);
       setProgress(flipDurMs ? cycT / flipDurMs : 1);
       hideNib();
       if (!loop && elapsed >= flipDurMs) { drawFlipFrame(flipFrames.length - 1, 1); onEnded(); return; }

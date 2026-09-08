@@ -244,6 +244,68 @@ with sync_playwright() as p:
     check("an empty or missing page reveals nothing rather than throwing",
           due["empty"] == 0 and due["nul"] == 0, str(due))
 
+    print("\n" + "THE COMPOSITION: A PAGE REACHES ITS END BEFORE IT YIELDS")
+    # pageMs() and dueCount() were each right and together could never show a
+    # drawing page finished. indexAtMs() owns a page over [start, end), so the
+    # clock leaves at exactly the instant progress would reach 1, and dueCount
+    # releases the last point only AT 1. The 26th point of a 26-point page was
+    # never due while that page was up. The invariant is about the composition,
+    # not any one of the three, so it is asserted by stepping a clock.
+    comp = pg.evaluate("""() => {
+      const H = window.SkriblHold;
+      const pts = []; for (let i = 0; i < 26; i++) pts.push({ t: i * 46 });
+      const draw = { draw: true, strokes: pts };
+      const frames = [draw, { hold: 1 }];
+      const ms = H.msTable(frames, 6);
+      const step = 1000 / 60;
+      const run = guarded => {
+        let last = null, sawComplete = false, sawPrefix = false,
+            completeBeforeTurn = false, turned = false, mono = true, prev = 0,
+            turns = 0;
+        for (let e = 0; e <= 1600; e += step) {
+          const d = guarded ? H.displayAt(ms, frames, e, last)
+                            : { index: H.indexAtMs(ms, e),
+                                progress: H.progressAt(ms, frames, e) };
+          const n = H.dueCount(frames[d.index], d.progress);
+          if (d.index === 0) {
+            if (turned) turns++;            // came back round: a second visit
+            if (n < prev) mono = false;
+            prev = n;
+            if (n === 26) sawComplete = true;
+            else if (n > 0) sawPrefix = true;
+          } else if (!turned) {
+            turned = true;
+            completeBeforeTurn = sawComplete;
+          }
+          last = d;
+        }
+        return { sawComplete, sawPrefix, completeBeforeTurn, mono, turned,
+                 revisits: turns };
+      };
+      return { guarded: run(true), bare: run(false) }; }""")
+    check("the composition sweep ran", bool(comp), "SkriblHold missing")
+    if comp:
+        g, bare = comp["guarded"], comp["bare"]
+        check("a drawing page REACHES its complete recorded state on the live "
+              "clock", g["sawComplete"],
+              "no stepped instant showed every point while the page was current")
+        check("...and does so BEFORE the clock moves to the next page",
+              g["completeBeforeTurn"],
+              "the page turned first — its last stroke would never be seen")
+        check("...having shown a prefix first, so it revealed rather than "
+              "appearing whole", g["sawPrefix"])
+        check("...and the reveal never goes backwards", g["mono"])
+        check("...and the guard yields rather than holding the page forever",
+              g["turned"], "the clock never reached the second page")
+        # The known-bad case, in the same run, so the assertion above cannot
+        # quietly become vacuous: indexAtMs+progressAt alone must NOT get there.
+        check("stated as the defect it fixes: indexAtMs and progressAt alone "
+              "never reach the complete state",
+              not bare["sawComplete"] and bare["sawPrefix"],
+              f"unguarded sweep reported {bare} — if this ever shows complete, "
+              f"the guard is no longer what is producing the terminal state and "
+              f"the assertions above have stopped meaning anything")
+
     print("\n" + "EXPORT SAMPLES THE MILLISECOND TIMELINE, NOT THE fps GRID")
     # A drawing page is exempt from fps. The exporter must tick in the document
     # frame rate anyway — a file has frames — so the question is whether the

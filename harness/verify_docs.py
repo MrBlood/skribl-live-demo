@@ -165,6 +165,10 @@ _PRODUCED = {
     # read by release_run.mp4_attestation(). Absent from a normal checkout by
     # design — it is evidence about a specific tree, not source.
     "harness/MP4-ATTESTATION.txt",
+    # Written by the 'postgres' job in the same workflow, read by
+    # release_run.postgres_attestation(). Absent from a checkout for the same
+    # reason: evidence about a specific tree, not source.
+    "harness/POSTGRES-ATTESTATION.txt",
 }
 
 
@@ -683,6 +687,116 @@ check("MUTATION: an MP4 attestation for a DIFFERENT tree is PENDING, not atteste
 _att3, _pend3 = _rr.external_coverage("0" * 64, ["verify_nolane.py"])
 check("a skip with NO named lane is pending and says so",
       not _att3 and "NOT covered anywhere" in _pend3[0], f"{_pend3}")
+
+# THE POSTGRES LANE IS ATTESTABLE NOW, and this proves the MECHANISM rather
+# than the current state of a file. Both fixtures are written OUTSIDE the tree
+# and read by absolute path, so nothing here can create, resemble or be
+# mistaken for a real attestation — the only file release_run reads for real is
+# the one the `postgres` CI job writes.
+#
+# A green attestation nobody checks is worse than none, so the known-BAD case
+# is the one that matters: an attestation naming a DIFFERENT tree must be
+# refused. That is the whole reason the tree hash is in the file.
+import tempfile as _tf, os as _os
+
+def _att_file(tree, result="PASS"):
+    fd, path = _tf.mkstemp(prefix="skribl-att-", suffix=".txt")
+    with _os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(f"tree: {tree}\nengine: postgresql\nresult: {result}\n"
+                 f"assertions: 41\ngenerated: 2026-01-01T00:00:00Z\n")
+    return path
+
+_good = _att_file("a" * 64)
+_wrong = _att_file("b" * 64)
+_failed = _att_file("a" * 64, result="FAIL")
+try:
+    check("a PostgreSQL attestation naming THIS tree reads as verified",
+          _rr.read_attestation(_good, "a" * 64, "engine", "").startswith(
+              "verified on postgresql"),
+          _rr.read_attestation(_good, "a" * 64, "engine", ""))
+    check("MUTATION: one naming a DIFFERENT tree is STALE, not verified",
+          _rr.read_attestation(_wrong, "a" * 64, "engine", "").startswith("STALE"),
+          _rr.read_attestation(_wrong, "a" * 64, "engine", "") +
+          " — an attestation for another tree is evidence about other code")
+    check("MUTATION: one that says FAIL is not verified either",
+          _rr.read_attestation(_failed, "a" * 64, "engine", "").startswith("FAILED"),
+          _rr.read_attestation(_failed, "a" * 64, "engine", ""))
+    # AND THE SAME QUESTION ASKED SO THAT SHIPPING THE FEATURE CANNOT BREAK IT.
+    # This first read: "a missing attestation names the job that writes it",
+    # asserting postgres_attestation() on a bogus tree starts with NOT
+    # VERIFIED. That was only true while NO attestation had ever been carried
+    # in — with the file present and naming another tree the honest answer is
+    # STALE, so carrying the first postgres attestation is what turned it red.
+    # An assertion that can only pass while the work is outstanding is a TODO
+    # in a test's clothes; this project has the rule written down and it caught
+    # this one on the very next run.
+    #
+    # The property that actually matters holds in BOTH states: a tree this
+    # release did not test must never read as verified.
+    _bogus = _rr.postgres_attestation("a" * 64)
+    check("a bogus tree never reads as verified on the postgres lane",
+          not _bogus.startswith("verified")
+          and (_bogus.startswith("STALE") or _bogus.startswith("NOT VERIFIED")),
+          _bogus)
+    # And the missing-file path is exercised on a path that does not exist,
+    # rather than by depending on the real attestation being absent.
+    _absent = _rr.read_attestation(_att_file("zzz") + ".missing", "a" * 64,
+                                   "engine", "SENTINEL-ADVICE")
+    check("a missing attestation says so and hands back the advice that names "
+          "the job", _absent.startswith("NOT VERIFIED")
+          and "SENTINEL-ADVICE" in _absent, _absent)
+    # The advice each reader hands back is a named constant, so this asks
+    # whether it names the job WITHOUT depending on the presence of a file.
+    check("...and each lane's advice names the CI job that writes its "
+          "attestation",
+          "postgres" in _rr.PG_ADVICE and "mp4" in _rr.MP4_ADVICE,
+          f"{_rr.PG_ADVICE!r} / {_rr.MP4_ADVICE!r}")
+finally:
+    for _p in (_good, _wrong, _failed):
+        try:
+            _os.unlink(_p)
+        except OSError:
+            pass
+
+# And the consequence: with BOTH mandatory lanes attested there is nothing
+# pending, so FULL RELEASE PASS is reachable by evidence rather than
+# unreachable by construction. It was the second that three reviews objected
+# to — `LOCAL PASS` was truthful, and no amount of green could ever improve it.
+# A RESUMED RUN MUST REPORT THE WORKING TREE, NOT A DICT. release_run reused
+# the name `state` for the checkpoint it loads on resume, 120 lines after the
+# same name held the working-tree state RELEASE.md reports — so every resumed
+# run rendered `source state unknown (README.md)`, naming a file as if it were
+# a reason. Uninterrupted runs never touched the resume path, so it hid until a
+# release had to seal in budgeted slices.
+#
+# Asserted on the SHAPE the renderer depends on, which is what actually broke:
+# source_state's first element is one of the four strings the render tests for,
+# and its second is a list. A dict there is the defect.
+_sstate, _spaths = _rr.source_state()
+check("source_state returns one of the states RELEASE.md knows how to render",
+      _sstate in {"clean", "generated-only dirty", "dirty", "unknown"},
+      f"{_sstate!r} — anything else falls through the render's conditional "
+      f"chain to the unknown branch and prints whatever paths happens to hold")
+check("...and a list of paths beside it, never a checkpoint",
+      isinstance(_spaths, list)
+      and all(isinstance(x, str) for x in _spaths), repr(_spaths)[:120])
+# MUTATION: the exact shape the resume path used to leave behind.
+_render = (lambda st, ps: "clean" if st == "clean" else
+           f"{st} ({', '.join(ps)})" if st == "generated-only dirty" else
+           "DIRTY" if st == "dirty" else
+           f"unknown ({ps[0] if ps else 'git did not answer'})")
+check("MUTATION: a non-string state renders as a bare filename, which is the "
+      "false line this guards",
+      _render({"frozen": "x"}, ["README.md"]) == "unknown (README.md)",
+      "if this stops reproducing, the render changed and the guard above needs "
+      "restating against the new one")
+
+check("with every mandatory lane attested, the headline can reach FULL "
+      "RELEASE PASS", _rr.release_status(True, []) == "FULL RELEASE PASS")
+check("...and both mandatory lanes now have a reader, so neither is merely "
+      "CLAIMED", set(_rr.SKIP_COVERAGE) == {"verify_mp4.py", "verify_postgres.py"},
+      f"{sorted(_rr.SKIP_COVERAGE)} — a lane added here without an attestation "
+      f"reader is counted as claimed, not covered")
 
 print("\nDOCS — CI cannot report a green run that tested nothing")
 # Both CI jobs invoked ./harness/run_harness.sh with NO arguments. The suite loop

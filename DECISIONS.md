@@ -6863,3 +6863,247 @@ The embed lands exactly on 32,000, which is where that ratchet stood before
 v281's saving banked it down to 31,000. So the embed has never cost a host more
 than it already did, and the next spender inherits no slack, which is the term
 v281 set.
+
+## v287 -- the third contract: when does a page STOP being current?
+
+An adversarial review of the sealed v286 found the defect its own two
+centralisations left between them, and it was right. Reproduced against the
+shipped module before anything was touched:
+
+    elapsed 1149.999  idx 0  prog 0.999999  count 25/26
+    elapsed 1150      idx 1  prog 0.000000  count  0/2
+
+`indexAtMs()` owns a page over the HALF-OPEN interval `[start, end)`, so at
+`end` the next page is already current. `dueCount()` releases the last point
+at progress 1. Between them there is no live instant at which a drawing page
+is current AND finished. On a 1,150ms page of 26 points the 26th was never
+due while that page was up: its final mark never appeared, and where that
+point began a stroke the whole stroke was missing.
+
+Both contracts were individually correct. v286 asserted "progress 1 reveals
+every point" and proved it -- of the FUNCTION. Nothing asserted that the live
+clock could ever supply 1. That is the lesson, and it is not "extract another
+helper": it is that a composition needs its own assertion, through the actual
+surface clock, because three green contracts can compose into a state that
+never occurs.
+
+An inclusive stroke timeline does not fit a half-open display interval and
+something has to give. Not dueCount's millisecond semantics -- an epsilon
+there would corrupt the one clean thing, and the review said so before I could
+be tempted. So the last thing RENDERED gives instead. `displayAt()` holds an
+unfinished drawing page for one more frame when the clock has moved off it,
+then yields; the caller passes back what it painted, which is what terminates
+it. One frame late at a page turn, the same tolerance the exporter already
+accepts.
+
+The editor already completed (startReveal's tail paints the whole list) and
+the exporter already emitted a final unit at progress 1. It was the two
+PLAYERS that could not -- the same surface split as P1-M-01, one release on.
+
+A SEEK IS NOT A PAGE TURN: a scrub asks for a page and must get it, so seek
+passes no `last` and lands where it aimed. A LOOP RESTART is not a seek,
+though, and in inlineplayer that could not key off `full` -- the loop repaints
+fully too -- so render() takes an explicit `jump`.
+
+## v287, cont. -- the instrument was wrong first. Again. Differently.
+
+The /s/ probe PASSED against a deliberately broken player.
+
+Not the v286 cause. That player's IDLE state is the finished drawing, so a
+sampler armed before the click recorded the endpoint from the POSTER and
+reported success whatever playback did. It now discards everything before the
+reveal starts and takes its reference from that same idle render -- one
+document, one canvas, so "whole" means a real render of the very thing that
+must appear.
+
+    /s/     broken: corner 0 vs 9878 whole    fixed: 9878 vs 9878
+    inline  broken: corner 0 vs 6983 whole    fixed: 6983 vs 6983
+
+Three releases, three instruments that passed on the tree they were written to
+condemn, three different reasons: a substring matching its own explanation
+(v285), a probe sampling a millisecond off the boundary it named (v286), a
+probe reading a poster instead of playback (v287). The rule in CLAUDE.md is
+not a formality and the failure does not repeat its shape.
+
+Seeking cannot test this at all -- seek deliberately bypasses the guard -- so
+both regressions drive REAL PLAYBACK and sample on every animation frame,
+which is the only way to catch a state that lasts one frame. The fixture's
+last point is a big isolated corner mark on its own stroke: a missing endpoint
+hides easily inside a whole-canvas ink tolerance and cannot hide in "was that
+corner ever painted".
+
+`verify_sharedrules` asserts the composition by stepping a clock, and asserts
+IN THE SAME RUN that `indexAtMs` + `progressAt` alone never reach the complete
+state -- so if the guard is ever removed the assertions cannot quietly become
+vacuous.
+
+## v287, cont. -- the postgres lane, and a label that was unreachable by construction
+
+Separate work, deliberately kept in its own commit: the reviews were explicit
+that attestation infrastructure must not ride along with a product fix.
+
+`verify_postgres.py` skips locally BY DESIGN. Running a cluster during a seal
+perturbs the browser timing suites -- CLAUDE.md carries the measurement, 1ms
+against 32ms worst frame deviation on verify_hold. The `postgres` CI job runs
+it where it belongs.
+
+But the seal could only ever say the suite was skipped and CLAIMED by that
+job: the existence of a job, not a result. Truthful, and incomplete in a way
+that made `FULL RELEASE PASS` unreachable BY CONSTRUCTION rather than by
+evidence -- no amount of green could improve it. Three reviews in a row said
+the same thing about it and each time deferred it as not-a-blocker.
+
+The job now writes an attestation naming the tree, on the mp4 lane's terms and
+after the migration-chain step, so green means the suite ran AND the chain
+applies to an empty database. Its skip guard is its own: the mp4 job's
+"suites skipped : 0" would be wrong here, because that job runs one suite and
+this one runs the whole battery and legitimately skips verify_mp4.
+
+ONE reader for both lanes, not a copy each. The rule that makes any
+attestation evidence is a single tree-hash comparison, and a second copy of it
+is a second place it could drift -- which is the shape of every finding this
+arc produced. Calibrated on the mechanism: this tree verifies, another tree is
+STALE, FAIL is not verified, missing names the job. The fixtures live outside
+the tree, so nothing in the harness can create or resemble a real attestation.
+
+## v287, cont. -- the ratchets, and a line I said would not move
+
+    player JS   152,300 -> 152,900   (measured 152,794; target 153,600)
+    embed        32,000 ->  32,500   (measured  32,417)
+
+v286 put the embed at exactly 32,000 and said the next spender would inherit
+no slack and would have to argue. The next spender was the very next release,
+and this is the argument: it buys no feature. It buys a player that does not
+silently drop the last mark of every drawing page.
+
+Stated plainly, because it is the first time it is true: a host now pays 417
+bytes more than at any previous point in this file's history. The cheaper
+version does not exist -- the guard has to live where the composition does,
+and both players have to consult it.
+
+Spent before asking, again: the jump path passes `displayAt()` no `last`
+rather than re-deriving index and progress beside it. 82 bytes, and one fewer
+place that could disagree about what a scrub shows.
+
+## v287, cont. -- the suite I did not run
+
+The first v287 CI run went red on both database lanes, and it was mine:
+
+    verify_seam.py: FAIL -- 257/258   the player's reachable set has not ballooned
+
+1,701 lines against a 1,700 ceiling. I ran the suites I EXPECTED the change to
+touch -- inline, hold, sharedrules, player_isolation, docs -- and not the one
+that measures what the player reaches. CLAUDE.md says, in as many words, that
+for a change touching many suites the sample IS the full run, and that the
+reason is precisely this: the suites you predict are not the suites that fail.
+
+The fix was not to raise the number first. Two call sites each recorded what
+they had painted, so drawFlipFrame() records it once -- one owner, and no call
+site can forget -- and an explanation already written in full in
+lib/holdtiming.js came out of app.js. That took the addition from +17 lines to
++11 and left it one line over.
+
+The last line stayed, and the ratchet moved to 1730. Deleting prose to hit a
+ceiling is the habit this repo's own history warns about twice, and a
+constraint met by shaving comments is not a constraint. 30 lines of headroom,
+so the next edit here is a decision instead of an accident.
+
+Cost of the mistake: one full CI battery and one abandoned local seal, both on
+a tree that could never have passed.
+
+## v287, cont. -- the remedy that was not reachable
+
+CLAUDE.md's rule for carrying an attestation into the sealing tree is: the
+egress proxy here refuses GitHub's artifact blob storage, so transcribe from
+the job's own `cat` step. That worked for mp4 and did NOT work for postgres,
+for a reason the rule could not have anticipated.
+
+The postgres job runs a service container. Teardown dumps roughly sixty-five
+lines of PostgreSQL container log after the last step, so the `cat` beside the
+write step sits about a hundred and sixty lines from the end -- past what the
+log reader can return. The mp4 job has no service container, which is the only
+reason the same protocol worked there. Measured, not assumed: the proxy's own
+status endpoint records the denial against
+productionresultssa15.blob.core.windows.net.
+
+The attestation is now printed again as the LAST thing the job does. A
+documented remedy that cannot be executed on one of the two lanes it covers is
+not a remedy, and the alternative was to infer the assertion count -- which is
+precisely the fabrication the tree-hash field exists to make impossible.
+
+Cost: a third tree for this release, and the seal restarted at batch 48 of 52.
+Worth saying plainly, because the temptation at batch 48 is to write the number
+down and move on.
+
+## v287, cont. -- a TODO in a test's clothes, caught one run later
+
+The first sealed re-run went FAIL on one assertion, and it was the right call:
+
+    verify_docs.py: a missing attestation names the job that writes it
+
+It asserted that `postgres_attestation()` on a bogus tree starts with NOT
+VERIFIED. True only while NO attestation had ever been carried in -- with the
+file present and naming another tree, the honest answer is STALE. So CARRYING
+THE FIRST POSTGRES ATTESTATION IS WHAT BROKE IT: the feature succeeding turned
+its own test red, which is exactly the shape `verify_seam`'s "a split is still
+worth doing" had, and which this file already warns about.
+
+Restated so it holds in both states: a tree this release did not test must
+never read as verified. The missing-file path is exercised on a path that does
+not exist rather than by depending on the real file's absence.
+
+I then wrote the replacement's third check state-dependently TOO -- asserting
+the reader's advice names its CI job by reading the reader's return value,
+which says STALE once a file exists. The advice is now a named constant on each
+lane, so the check asks the question without depending on a file at all. Twice
+in five minutes; the pattern is easy to fall into precisely when you are sure
+you have just learned it.
+
+## v287, cont. -- "not a git checkout", which was not true
+
+The same record carried a second false line: `source state unknown (not a git
+checkout)`. The tree was a checkout. `source_state()` ran `git diff` once and
+degraded any failure -- exception or non-zero exit -- to "unknown", which the
+renderer then printed as that specific claim.
+
+It runs at the start of every slice, and a seal is easy to poll alongside; the
+most likely trigger is another git process holding the index lock, which is to
+say my own status checks. A transient lock must not become an assertion about
+the repository in sealed evidence. It retries once now and reports what
+actually happened instead of inventing a reason.
+
+## v287, cont. -- `source state unknown (README.md)`, and why slicing found it
+
+The sealed record read:
+
+    source state     unknown (README.md)
+
+which names a FILE as if it were a REASON. My first attempt blamed
+`source_state()` and made it retry a failing `git diff` -- a real improvement,
+and not the bug. The line came back on the very next seal, which is the useful
+part: a fix that does not move the symptom is a wrong diagnosis, and saying so
+is cheaper than shipping the next guess.
+
+The actual cause is variable shadowing across a hundred and twenty lines.
+`release_run.py` reads the working-tree state into `state` near the top of
+main(), and the checkpoint-resume path later does:
+
+    state = json.loads(state_path.read_text())
+
+so on a RESUME `state` is a dict by the time RELEASE.md renders. It matches
+none of "clean" / "generated-only dirty" / "dirty", falls through to the
+unknown branch, and prints `paths[0]` -- which still holds the real file list.
+Renamed to `saved`.
+
+**It can only fire on a resume, so it had never fired.** Every previous seal ran
+uninterrupted; this release had to run in budgeted slices because long
+background processes here are reaped while the session is idle, and every slice
+after the first is a resume. The workaround for an environment limitation is
+what exposed a latent defect in the release tool -- which is the second time
+this release that being forced onto an unusual path found something the usual
+path hides.
+
+Guarded on the SHAPE the renderer depends on: source_state's first element is
+one of the four strings the render tests for, its second is a list of strings.
+Plus a mutation that reproduces the exact false line from a dict, so the guard
+cannot quietly stop describing the thing it was written for.

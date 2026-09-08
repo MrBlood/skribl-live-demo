@@ -181,6 +181,43 @@
     return n;
   }
 
+  /* WHICH PAGE TO PAINT, AND HOW MUCH OF IT — the composition, not a third
+   * helper beside the other two.
+   *
+   * pageMs() and dueCount() were each correct and still could not, together,
+   * ever show a drawing page finished. indexAtMs() owns a page over the
+   * HALF-OPEN interval [start, end): at end the next page is current. So a
+   * drawing page's progress climbs toward 1 and the clock takes the page away
+   * before it arrives, and dueCount() releases the last point only at 1. On a
+   * 1,150ms page of 26 points the 26th was never due while that page was up —
+   * its final mark simply never appeared, and if that mark began a stroke, the
+   * whole stroke was missing. An inclusive stroke timeline does not fit a
+   * half-open display interval; something has to give, and it must not be the
+   * millisecond semantics of dueCount().
+   *
+   * So the last thing RENDERED gives instead. When the clock has moved off a
+   * drawing page that has not yet been shown whole, this returns that page at
+   * progress 1 for one more display frame, and only then yields. The caller
+   * passes back what it last painted, which is what makes this terminate: once
+   * that carries progress 1, the next call moves on. One frame late at a page
+   * turn, which is the same tolerance the exporter already accepts, and it is
+   * the only way the invariant can read the same on every surface:
+   *
+   *   a drawing page begins empty, reveals monotonically, reaches its complete
+   *   recorded state, and only then yields to the next page.
+   *
+   * NOT FOR SEEKING. A scrub asks for a page and must get that page; the guard
+   * belongs to playback, where the pages go by on their own. (Outside review of
+   * v286, P1-M-03.) */
+  function displayAt(ms, frames, elapsedMs, last) {
+    var i = indexAtMs(ms, elapsedMs);
+    if (last && last.index !== i && last.index >= 0 && last.progress < 1
+        && drawOf(frames && frames[last.index])) {
+      return { index: last.index, progress: 1 };
+    }
+    return { index: i, progress: progressAt(ms, frames, elapsedMs) };
+  }
+
   function fpsOf(fps) {
     var f = Number(fps);
     return (isFinite(f) && f > 0) ? f : 12;
@@ -198,7 +235,8 @@
     cycleMs: cycleMs,
     indexAtMs: indexAtMs,
     progressAt: progressAt,
-    dueCount: dueCount
+    dueCount: dueCount,
+    displayAt: displayAt
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;

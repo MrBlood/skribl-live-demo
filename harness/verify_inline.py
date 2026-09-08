@@ -799,6 +799,124 @@ with sync_playwright() as sp:
               not derrs, "; ".join(derrs[:2]))
         dp.close()
 
+    # ---- AND IT MUST REACH THE END BEFORE THE PAGE TURNS -------------------
+    #
+    # dueCount() releases the last point at progress 1, and indexAtMs() owns a
+    # page over [start, end) — so the live clock climbs toward 1 and the page
+    # is taken away before it arrives. Both contracts were individually right
+    # and together could never show a drawing page finished: on a 1,150ms page
+    # of 26 points the 26th was never due while that page was up. Fixed by
+    # displayAt(), which holds an unfinished drawing page for one more frame.
+    #
+    # SEEKING CANNOT TEST THIS. seek() is a jump and deliberately bypasses the
+    # guard, so this drives real playback and samples the canvas on every
+    # animation frame — which sees every state the player actually painted,
+    # including one that lasts a single frame.
+    #
+    # The last point is a BIG ISOLATED MARK in a corner, its own stroke, far
+    # from the rest of the drawing. A missing endpoint hides easily inside a
+    # whole-canvas ink tolerance; it cannot hide when the assertion is "did
+    # that corner ever get painted at all".
+    def post_endpoint_pair():
+        body = [{"x": 60 + i * 20, "y": 300, "color": "#ffffff", "size": 14,
+                 "t": i * 46, "erase": False, "start": i == 0} for i in range(25)]
+        tail = {"x": 740, "y": 60, "color": "#ffffff", "size": 44,
+                "t": 1150, "erase": False, "start": True}
+        page = {"strokes": body + [tail], "strokeGroups": [25, 1]}
+        rest = {"strokes": [dict(q, y=520) for q in body[:5]],
+                "strokeGroups": [5], "hold": 1}
+
+        def mk(title, first):
+            return {"title": title, "visibility": "public", "version": 2,
+                    "schemaVersion": 2, "playbackMode": "flip", "fps": 6,
+                    "frames": [first, rest],
+                    "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+
+        out = []
+        for title, first in (("Harness endpoint draw", dict(page, draw=True)),
+                             ("Harness endpoint still", dict(page, hold=1))):
+            req = urllib.request.Request(
+                BASE + "/api/skribls", data=json.dumps(mk(title, first)).encode(),
+                headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                out.append(json.loads(r.read().decode())["id"])
+        return out
+
+    # Every painted frame, as (corner ink, body ink). Registered before play,
+    # re-arming itself each frame, so nothing the player draws goes unseen.
+    SAMPLER = """(sel) => {
+      window.__f = [];
+      var c = document.querySelector(sel);
+      if (!c) return false;
+      var g = document.createElement('canvas'); g.width = 96; g.height = 96;
+      var gx = g.getContext('2d');
+      var tick = function () {
+        gx.clearRect(0, 0, 96, 96);
+        gx.drawImage(c, 0, 0, 96, 96);
+        var d = gx.getImageData(0, 0, 96, 96).data, corner = 0, body = 0;
+        for (var y = 0; y < 96; y++) for (var x = 0; x < 96; x++) {
+          var i = (y * 96 + x) * 4;
+          var v = (0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]) * (d[i+3] / 255);
+          if (x >= 80 && y <= 16) corner += v; else body += v;
+        }
+        window.__f.push([Math.round(corner), Math.round(body)]);
+        window.requestAnimationFrame(tick);
+      };
+      window.requestAnimationFrame(tick);
+      return true; }"""
+
+    draw2 = still2 = None
+    try:
+        draw2, still2 = post_endpoint_pair()
+    except Exception as exc:
+        check("an endpoint fixture pair was posted", False, f"{type(exc).__name__}: {exc}")
+    if draw2 and still2:
+        check("an endpoint fixture pair was posted", True, f"{draw2} / {still2}")
+
+        def watch(sid, ms):
+            """Play `sid` for `ms` and return every frame the player painted."""
+            wp = b.new_page(viewport={"width": 620, "height": 900})
+            browsing.goto(wp, BASE, "/feed")
+            sel = '[data-skribl-id="%s"] .skribl-inline-canvas' % sid
+            wp.evaluate("(id) => document.querySelector("
+                        "'[data-skribl-id=\"' + id + '\"]').click()", sid)
+            wp.wait_for_function("(id) => window.SkriblInline.find(id)"
+                                 " && window.SkriblInline.find(id).state().loaded",
+                                 arg=sid, timeout=15000)
+            armed = wp.evaluate(SAMPLER, sel)
+            wp.evaluate("(id) => window.SkriblInline.find(id).play()", sid)
+            wp.wait_for_timeout(ms)
+            frames = wp.evaluate("() => window.__f") if armed else None
+            wp.close()
+            return frames
+
+        # One and a bit cycles: the drawing page is 1,150ms (fps-exempt) and the
+        # still page one 6fps unit, so ~1,317ms round trip.
+        seen = watch(draw2, 2100)
+        ref = watch(still2, 900)
+        check("the endpoint sampler recorded frames on both fixtures",
+              bool(seen) and bool(ref), f"{len(seen or [])} / {len(ref or [])}")
+        if seen and ref:
+            corner_full = max(f[0] for f in ref)
+            corner_max = max(f[0] for f in seen)
+            check("the still twin proves the corner mark is visible at all "
+                  "(fixture calibration)", corner_full > 200, str(corner_full))
+            check("a Draw-on page REACHES its last stroke before the page turns",
+                  corner_max > corner_full * 0.5,
+                  f"the corner mark peaked at {corner_max} against the same page "
+                  f"rendered whole: {corner_full}. The last recorded point is "
+                  f"only due at progress 1, and the live clock leaves the page "
+                  f"before progress 1 — so it never painted at all")
+            # ...and it was a REVEAL, not the page simply appearing finished:
+            # some painted frame carried the body without the endpoint.
+            body_full = max(f[1] for f in ref)
+            prefix = [f for f in seen
+                      if f[0] <= corner_full * 0.1 and 0 < f[1] < body_full * 0.8]
+            check("...having first shown a PREFIX, so it revealed rather than "
+                  "arriving whole", bool(prefix),
+                  f"no painted frame carried part of the body without the "
+                  f"endpoint (body full {body_full})")
+
     # ---- the rules that must not be retyped --------------------------------
     # lib/holdtiming.js exists so the Flip editor and the player cannot disagree
     # about which page is on screen at time t (see its header). A third surface
@@ -1036,7 +1154,30 @@ with sync_playwright() as sp:
     # goes no further: 32,000 is exactly where the ratchet stood before that
     # saving, so the embed has never been more expensive than it already was.
     # The next spender inherits no slack and has to argue as v281 asked.
-    EMBED_RATCHET = 32_000
+    #
+    # 32,000 -> 32,500, measured 32,417, AND THE NEXT SPENDER WAS THE VERY NEXT
+    # RELEASE, so here is the argument that paragraph demanded.
+    #
+    # v286 centralized how long a page lasts and how much of it is revealed,
+    # and an outside review then found that the two, composed, could never show
+    # a drawing page FINISHED: indexAtMs() owns a page over [start, end), so
+    # the clock leaves at the instant progress would reach 1, and dueCount()
+    # releases the last point only at 1. Measured on the same 26-point page
+    # this suite posts: the 26th point was never due while that page was up.
+    # Its final mark never appeared, and where that point began a stroke the
+    # whole stroke was missing.
+    #
+    # So this is not a feature and there is no cheaper version of it. The bytes
+    # are displayAt() in the module (331 B) and this player calling it (116 B).
+    # Spent before asking, again: the jump path passes displayAt() no `last`
+    # rather than re-deriving index and progress beside it, which is 82 B and
+    # one fewer place that could disagree about what a scrub shows.
+    #
+    # It does cross the 32,000 that stood before v281 banked its saving. Said
+    # plainly: a host now pays 417 B more than at any previous point in this
+    # file's history, and what that buys is a player that does not silently
+    # drop the last mark of every drawing page.
+    EMBED_RATCHET = 32_500
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

@@ -40,6 +40,19 @@ HARNESS = ROOT / "harness"
 # they are written AFTER a run, so including them means recording a result
 # changes the tree whose hash was just recorded. Kept in step by verify_docs.
 ATTESTATION = "harness/MP4-ATTESTATION.txt"
+PG_ATTESTATION = "harness/POSTGRES-ATTESTATION.txt"
+
+# What a reader tells you to run when the attestation is MISSING. Named
+# constants rather than literals inside the two functions, so a check can
+# assert they name their CI job without depending on whether an attestation
+# happens to be present — the state-dependence that made the first version of
+# that assertion go red the moment the first postgres attestation was carried in.
+MP4_ADVICE = ("Run the 'mp4 (real Chrome)' CI job, or "
+              "SKRIBL_BROWSER_CHANNEL=chrome ./harness/run_harness.sh "
+              "verify_mp4.py on a machine with Google Chrome.")
+PG_ADVICE = ("Run the 'postgres' CI job in .github/workflows/harness.yml, or "
+             "DATABASE_URL=postgresql://... ./harness/run_harness.sh "
+             "verify_postgres.py against a real cluster.")
 
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
@@ -59,7 +72,12 @@ GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              # parity check in verify_docs.py compares the two lists as LITERAL
              # strings, so a name that reaches this set through a variable is
              # invisible to it. Caught by that check on the first run.
-             "harness/MP4-ATTESTATION.txt"}
+             "harness/MP4-ATTESTATION.txt",
+             # The postgres lane's attestation, for the same reason and on the
+             # same terms. run_harness.sh's _drop_generated must carry this
+             # name too, spelled the same way — the v221 defect was exactly
+             # these two lists disagreeing by one entry.
+             "harness/POSTGRES-ATTESTATION.txt"}
 
 # WHY A SUITE IS ALONE IN A BATCH — the whole decision, stated once.
 #
@@ -223,12 +241,46 @@ def mp4_attestation(frozen):
     release: whether an unverified MP4 path is shippable is a product decision,
     and the seal's job is to state the fact, not to make it.
     """
-    f = ROOT / ATTESTATION
+    return read_attestation(ATTESTATION, frozen, "channel", MP4_ADVICE)
+
+
+def postgres_attestation(frozen):
+    """What the seal can honestly say about PostgreSQL, for THIS tree.
+
+    Same argument as mp4_attestation() above, one lane later and three outside
+    reviews after it. verify_postgres.py skips wherever no cluster is reachable
+    — which is the DESIGNED local configuration, since running one during a
+    seal perturbs the browser timing suites (CLAUDE.md records the measurement:
+    verify_hold's worst frame deviation goes 1ms -> 32ms with the cluster up).
+    The `postgres` CI job runs it in an environment this one lacks.
+
+    Until this existed the seal could say only that the suite was skipped and
+    CLAIMED by that job — the EXISTENCE of a job, not a result — so no local
+    run could ever reach FULL RELEASE PASS however green the lane was. That was
+    truthful and incomplete, and incomplete in a way that made the strongest
+    label unreachable by construction rather than by evidence.
+
+    The tree hash is load-bearing here exactly as it is for mp4: an attestation
+    naming a different tree is evidence about different code, and is refused.
+    """
+    return read_attestation(PG_ATTESTATION, frozen, "engine", PG_ADVICE)
+
+
+def read_attestation(path, frozen, where, advice):
+    """One reader for every external lane's attestation.
+
+    ONE function rather than one per lane, because the rule they enforce is the
+    single thing that makes any of them evidence: the file must name the tree
+    this run froze. A second copy of that comparison is a second place it could
+    be written slightly differently, which is the duplication that produced
+    every finding this release answered.
+
+    Never raises and never blocks a release. Whether an unverified path is
+    shippable is a product decision; the seal states the fact.
+    """
+    f = ROOT / path
     if not f.is_file():
-        return ("NOT VERIFIED for this tree — no attestation. Run the "
-                "'mp4 (real Chrome)' CI job, or "
-                "SKRIBL_BROWSER_CHANNEL=chrome ./harness/run_harness.sh "
-                "verify_mp4.py on a machine with Google Chrome.")
+        return f"NOT VERIFIED for this tree — no attestation. {advice}"
     fields = {}
     for line in f.read_text(encoding="utf-8").splitlines():
         if ":" in line:
@@ -239,8 +291,8 @@ def mp4_attestation(frozen):
         return (f"STALE — the attestation describes tree {got[:12] or '?'}, "
                 f"this release is {frozen[:12]}. Evidence about different code.")
     if fields.get("result", "").upper() != "PASS":
-        return f"FAILED on {fields.get('channel', '?')} — {fields.get('result')}"
-    return (f"verified on {fields.get('channel', '?')}, "
+        return f"FAILED on {fields.get(where, '?')} — {fields.get('result')}"
+    return (f"verified on {fields.get(where, '?')}, "
             f"{fields.get('assertions', '?')} assertions, "
             f"{fields.get('generated', 'time unknown')}")
 
@@ -251,25 +303,32 @@ def external_coverage(frozen, skipped):
     The local run proves what ran locally. Two kinds of coverage live outside it
     and they are NOT the same kind of thing, so they are never summed:
 
-      ATTESTED — the `mp4` lane writes harness/MP4-ATTESTATION.txt, which names
-      the tree it describes. mp4_attestation() refuses one for a different tree,
-      so a local run can actually CHECK this.
+      ATTESTED — the lane writes a file naming the tree it describes, and
+      read_attestation() refuses one for a different tree, so a local run can
+      actually CHECK it. Both mandatory lanes do this now: `mp4` writes
+      harness/MP4-ATTESTATION.txt and `postgres` writes
+      harness/POSTGRES-ATTESTATION.txt.
 
       CLAIMED — SKIP_COVERAGE says some CI job runs a suite this environment
       skipped. Nothing a local run can read says that job was green on this
       tree. verify_docs.py checks the job EXISTS in the workflow; existence is
-      not a result.
+      not a result. NO MANDATORY LANE IS MERELY CLAIMED ANY MORE, and this
+      branch stays because that is a fact about today's lanes, not a property
+      of the design: the next skip added without an attestation lands here and
+      says so, instead of being quietly counted as covered.
 
     Returns (attested, pending) as display strings. Anything in `pending` means
     the local record cannot speak for that lane.
     """
+    readers = {"verify_mp4.py": mp4_attestation,
+               "verify_postgres.py": postgres_attestation}
     attested, pending = [], []
     for name in skipped:
         lane = SKIP_COVERAGE.get(name)
         if lane is None:
             pending.append(f"`{name}` — NOT covered anywhere")
-        elif name == "verify_mp4.py":
-            line = mp4_attestation(frozen)
+        elif name in readers:
+            line = readers[name](frozen)
             (attested if line.startswith("verified") else pending).append(
                 f"`{name}` — {line.split(',')[0]}")
         else:
@@ -316,13 +375,30 @@ def source_state():
     so the rule is narrowed to the second case and the first is enumerated rather
     than trusted.
     """
-    try:
-        out = subprocess.run(["git", "-C", str(ROOT), "diff", "--name-only", "HEAD"],
-                             capture_output=True, text=True, timeout=30)
-    except Exception:
-        return "unknown", []
-    if out.returncode != 0:
-        return "unknown", []
+    # RETRIED, AND THE REASON KEPT. A single failed `git diff` used to degrade
+    # silently to "unknown", which RELEASE.md then printed as the specific
+    # claim "not a git checkout" — a statement that was FALSE in sealed
+    # evidence the one time it fired. The tree was a checkout; git simply did
+    # not answer, most likely because another git process held the index lock
+    # (this runs at the start of every slice, and a seal is easy to poll
+    # alongside). A transient lock must not turn into an assertion about the
+    # repository, so it retries once and then says what actually happened.
+    why = "git did not answer"
+    for attempt in (0, 1):
+        try:
+            out = subprocess.run(["git", "-C", str(ROOT), "diff", "--name-only", "HEAD"],
+                                 capture_output=True, text=True, timeout=30)
+        except Exception as exc:
+            why = f"git could not be run: {type(exc).__name__}"
+        else:
+            if out.returncode == 0:
+                break
+            err = (out.stderr or "").strip().splitlines()
+            why = err[-1] if err else f"git exited {out.returncode}"
+        if attempt == 0:
+            time.sleep(2)
+    else:
+        return "unknown", [why]
     dirty = sorted(p for p in out.stdout.split("\n") if p.strip())
     if not dirty:
         return "clean", []
@@ -417,27 +493,38 @@ def main():
         print("checkpoint discarded (--restart)")
 
     if state_path.exists():
-        state = json.loads(state_path.read_text())
-        if state.get("frozen") != frozen:
+        # `saved`, NOT `state`. This used to reuse the name `state`, which 120
+        # lines earlier held the WORKING-TREE state that RELEASE.md reports —
+        # so a resumed run rendered its source-state line from a dict, matched
+        # none of "clean"/"generated-only dirty"/"dirty", and fell through to
+        # the unknown branch while `paths` still held the real file list. The
+        # record then read `source state unknown (README.md)`: a false line,
+        # naming a file as if it were a reason.
+        #
+        # It can only happen on a RESUME, so an uninterrupted run never showed
+        # it and it sat here undetected until this release had to seal in
+        # budgeted slices. Every slice after the first is a resume.
+        saved = json.loads(state_path.read_text())
+        if saved.get("frozen") != frozen:
             # Refuse rather than silently starting over: a resumed run that
             # quietly restarts on a different tree would report batches from
             # two trees under one hash, which is the exact claim this file
             # exists to make impossible.
             print(f"ABORT: the tree changed since the checkpoint was written "
-                  f"({tree_hash()[:12]} != {state['frozen'][:12]}).\n"
+                  f"({tree_hash()[:12]} != {saved['frozen'][:12]}).\n"
                   f"       Release evidence must describe ONE tree. Re-run with "
                   f"--restart to begin a fresh run on the current tree.")
             return 1
-        if state.get("batches") != [list(b) for b in BATCHES]:
+        if saved.get("batches") != [list(b) for b in BATCHES]:
             print("ABORT: the batch layout changed since the checkpoint was "
                   "written. Re-run with --restart.")
             return 1
-        rows = [tuple(r) for r in state["rows"]]
-        skipped = state["skipped"]
-        total = state["total"]
-        failed = state["failed"]
-        diagnostics = state["diagnostics"]
-        done = state["done"]
+        rows = [tuple(r) for r in saved["rows"]]
+        skipped = saved["skipped"]
+        total = saved["total"]
+        failed = saved["failed"]
+        diagnostics = saved["diagnostics"]
+        done = saved["done"]
         print(f"resuming: {done}/{len(BATCHES)} batches already recorded "
               f"on tree {frozen[:12]}")
 
@@ -540,7 +627,7 @@ def main():
             f"DIRTY, --allow-dirty used ({', '.join(paths)}) — "
             f"NOT A SEALABLE RUN"
             if state == "dirty" else
-            "unknown (not a git checkout)"),
+            f"unknown ({paths[0] if paths else 'git did not answer'})"),
         f"    SKRIBL_VERSION   " + re.search(
             r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
             (ROOT / "skribl" / "core.py").read_text()).group(1),
@@ -551,6 +638,7 @@ def main():
         f"    skipped          {len(skipped)}" +
         (f"  ({', '.join(skipped)})" if skipped else ""),
         f"    mp4 (H.264)      {mp4_attestation(frozen)}",
+        f"    postgresql       {postgres_attestation(frozen)}",
         f"    external lanes   {len(_attested)} attested, {len(_pending)} pending",
         f"    generated        {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
         "",

@@ -821,7 +821,19 @@ with sync_playwright() as sp:
     # 334 and the net is 166. The fallback rule is unchanged and still costs
     # nothing — without the lib a drawing page plays as a still one rather
     # than reimplementing the reveal here.
-    BYTES_RATCHET, BYTES_TARGET = 152_300, 153_600
+    #
+    # 152,300 -> 152,900, measured 152,794, and like the one above it corrects
+    # rather than adds. dueCount() and pageMs() were each right and could not,
+    # composed with indexAtMs(), ever produce a drawing page's final state: the
+    # clock left the page at exactly the instant its progress would have
+    # reached 1. lib/holdtiming.js gains displayAt() (331 B) and this player
+    # routes its flip loop through it (243 B).
+    #
+    # The scrub path deliberately does NOT: a drag asks for a page and must get
+    # that page, so it keeps the direct call it already had. That is the whole
+    # of the surface's share — no second copy of the guard, and the fallback
+    # rule is untouched and still free.
+    BYTES_RATCHET, BYTES_TARGET = 152_900, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
