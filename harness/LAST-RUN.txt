@@ -1,13 +1,15 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-08T15:56:42Z
+UTC timestamp           : 2026-09-08T17:02:05Z
 Host                    : Linux x86_64
-Tree SHA-256            : 3bc36e820c6dce7800196b58abf33f7c79499cae217b1cad91705d7274359dfe
-Git commit              : 0820d43
+Tree SHA-256            : f14e4ce71ac82edf771bbd2efcb1d6d3ec42c8d171dbd21cf2ca5c1c6adbe79b
+Git commit              : c900919
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
                             docs/HANDOFF.md
                             harness/LAST-RUN.txt
+                            harness/MP4-ATTESTATION.txt
+                            harness/POSTGRES-ATTESTATION.txt
                             harness/README.md
 SKRIBL_VERSION          : v287
 Python                  : 3.12.3
@@ -16,7 +18,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.Cxo6yROSvU/harness.db)
+Database reset          : yes (fresh /tmp/tmp.jO7VHTmcOe/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -48,7 +50,7 @@ suites requested : 99
   verify_deletion.py: ok — 63/63 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: ok — 96/96 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
+  verify_docs.py: ok — 99/99 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 29/29 passed
   verify_example.py: ok — 32/32 passed
@@ -127,6 +129,6 @@ suites requested : 99
   verify_ux.py: ok — 333/333 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 4655   (skipped suites contribute 0)
+assertions passed: 4658   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
