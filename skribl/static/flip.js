@@ -2897,15 +2897,18 @@ function _spanOf(f){
 function startReveal(f, durMs){
   const p = f.strokes;
   if(!p.length){ renderPartial(f, 0); return; }
-  const t0 = p[0].t, span = Math.max(1, p[p.length-1].t - t0);
   revealStart = performance.now();
+  /* How many points a given progress has revealed is lib/holdtiming.js's
+   * answer. This loop owned a copy of it, and so did the /s/ player and the
+   * inline player; the three disagreed at progress 0, which is how a page that
+   * revealed here arrived on the feed already finished. */
+  const H = window.SkriblHold;
+  const due = prog => H ? H.dueCount(f, prog)
+                        : (prog >= 1 ? p.length : 0);
   const tick = () => {
     if(!playing || scrubbingFrames) return;
     const e = performance.now() - revealStart;
-    const revealMs = (e / Math.max(1, durMs)) * span;
-    let count = 0;
-    while(count < p.length && (p[count].t - t0) <= revealMs) count++;
-    renderPartial(f, count);
+    renderPartial(f, due(e / Math.max(1, durMs)));
     if(e < durMs) revealRAF = requestAnimationFrame(tick);
     else renderPartial(f, p.length);
   };
@@ -3722,11 +3725,13 @@ if(window.SkriblStrokeLayers){
 function drawFrameTo(c, f, prog){
   drawBackdrop(c);
   const pts = (f && f.strokes) || [];
-  if(prog == null || prog >= 1 || !frameDraw(f) || pts.length < 2){ paintFrame(c, pts); return; }
-  const t0 = pts[0].t, span = Math.max(1, pts[pts.length-1].t - t0);
-  const due = Math.max(0, Math.min(1, prog)) * span;
-  let k = 0; while(k < pts.length && (pts[k].t - t0) <= due) k++;
-  paintFrame(c, pts.slice(0, k));
+  /* No prog means a still page and no module means the feature is not
+   * available on this load, which by holdtiming.js's fallback rule plays a
+   * drawing page as a still one. Everything else asks dueCount(), so the
+   * exported file reveals exactly what the three live surfaces reveal. */
+  const H = (typeof window !== 'undefined') ? window.SkriblHold : null;
+  if(prog == null || !frameDraw(f) || pts.length < 2 || !H){ paintFrame(c, pts); return; }
+  paintFrame(c, pts.slice(0, H.dueCount(f, prog)));
 }
 
 /* THE EXPORTED FILE HAS TO SHOW WHAT THE PLAYER SHOWS. Both export paths used
@@ -3739,7 +3744,21 @@ function drawFrameTo(c, f, prog){
  * into as many units as its OWN duration needs — it is exempt from fps, so
  * that count comes from pageMs, not from a hold — and each carries how far
  * through the page it is. lib/holdtiming.js owns the duration, as everywhere
- * else, so the file and the player cannot disagree about it. */
+ * else, so the file and the player cannot disagree about it.
+ *
+ * SAMPLE THE MILLISECOND TIMELINE; DO NOT RE-DENOMINATE IT IN SLOTS. Unit k
+ * is on screen from k*slot to (k+1)*slot, so the progress it carries is that
+ * real time over the page's real duration. Deriving it as (k+1)/steps instead
+ * stretched the reveal to fit whatever the rounded step count happened to be,
+ * which put fps back into a feature defined as exempt from it: a 437ms page
+ * exported as 500ms at 6fps and 417ms at 12 and 24 — the same page, three
+ * durations, and at 12fps 20ms of the drawing simply never appeared.
+ *
+ * Whole frames cannot land on an arbitrary millisecond, so the residue is
+ * ceil()'d rather than round()'d and the contract is one-sided: an exported
+ * drawing page runs at least its true duration and less than one frame period
+ * over, at every fps. Rounding could fall short, and a page that ends early is
+ * a page whose last strokes are missing from the file. */
 function exportUnits(fromI, toI){
   const out = [], slot = 1000 / fps;
   for(let i = fromI; i <= toI; i++){
@@ -3748,8 +3767,8 @@ function exportUnits(fromI, toI){
       const ms = (typeof window !== 'undefined' && window.SkriblHold)
         ? window.SkriblHold.pageMs(f, fps)
         : Math.max(320, Math.min(8000, _spanOf(f)));
-      const steps = Math.max(1, Math.round(ms / slot));
-      for(let k = 0; k < steps; k++) out.push({ i: i, prog: (k + 1) / steps });
+      const steps = Math.max(1, Math.ceil(ms / slot));
+      for(let k = 0; k < steps; k++) out.push({ i: i, prog: Math.min(1, ((k + 1) * slot) / ms) });
     } else {
       for(let k = 0; k < frameHold(f); k++) out.push({ i: i, prog: 1 });
     }

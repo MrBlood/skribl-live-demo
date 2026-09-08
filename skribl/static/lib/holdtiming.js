@@ -1,5 +1,6 @@
-/* Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip
- * editor and the player.
+/* Per-page timing — the ONE definition of how long a page lasts and how much
+ * of a drawing page has been revealed, shared by the Flip editor and every
+ * surface that plays one.
  *
  * A page with `hold: n` occupies n base-fps slots instead of one. That is a
  * two-line idea, and it was implemented twice:
@@ -44,6 +45,22 @@
  * is page i" is the duplication this file was extracted to remove. A document
  * with no `draw` gets identical numbers either way, so no existing post
  * changes.
+ *
+ * AND THE SECOND HALF OF THE SAME LESSON, learned one release later. `draw`
+ * shipped with pageMs() shared and the RENDER left to each surface, so four of
+ * them — the editor's reveal loop, app.js, inlineplayer.js and flip.js's
+ * exporter — each turned a progress into a stroke count themselves. They
+ * agreed in the middle of the range and disagreed at both ends. The inline
+ * player decided a page was still whenever its progress read 0, which is also
+ * what a drawing page reads at the instant it begins, so on the feed alone a
+ * Draw-on page opened FINISHED and then wiped and redrew; the exporter
+ * re-denominated the page in fps slots and ran it short. Neither was visible
+ * from the editor, which is the same blind spot as the original bug above.
+ *
+ *     dueCount()   how much of page i is on screen at progress p
+ *
+ * is therefore here beside pageMs(), and for the same reason: how long a page
+ * lasts and how much of it you can see are one question asked twice.
  *
  * The two mechanisms stay different — the player maps a clock to an index, the
  * editor reschedules a timer — because they are solving different problems.
@@ -140,6 +157,30 @@
   }
 
 
+  /* THE OTHER ONE ANSWER: how much of a drawing page is on screen at progress
+   * `prog`. pageMs() owns how long a page lasts; this owns what that duration
+   * has revealed, and it is here for the same reason — four surfaces were each
+   * computing it, and they disagreed at the boundaries.
+   *
+   * Progress 0 reveals NOTHING. That is the case the copies got wrong: the
+   * inline player read progress 0 as "not a drawing page" and painted the
+   * finished picture, so a page that reveals in the editor and in /s/ arrived
+   * on the feed already drawn, then redrew. The three classes are exactly:
+   *   prog <= 0   -> 0 points        (the page has not started)
+   *   0 < prog < 1 -> a prefix       (the points whose t has come due)
+   *   prog >= 1   -> every point     (the page is complete)
+   * A non-finite prog is a clock that has not produced a reading yet, which is
+   * the start of the page, so it lands on 0 with every other non-positive. */
+  function dueCount(frame, prog) {
+    var p = frame && frame.strokes, q = Number(prog), n = 0;
+    if (!p || !p.length || !(q > 0)) return 0;
+    if (q >= 1) return p.length;
+    var t0 = Number(p[0].t);
+    var due = q * Math.max(1, Number(p[p.length - 1].t) - t0);
+    while (n < p.length && Number(p[n].t) - t0 <= due) n++;
+    return n;
+  }
+
   function fpsOf(fps) {
     var f = Number(fps);
     return (isFinite(f) && f > 0) ? f : 12;
@@ -156,7 +197,8 @@
     msTable: msTable,
     cycleMs: cycleMs,
     indexAtMs: indexAtMs,
-    progressAt: progressAt
+    progressAt: progressAt,
+    dueCount: dueCount
   };
 
   if (typeof window !== 'undefined') window.SkriblHold = api;

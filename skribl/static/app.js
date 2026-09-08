@@ -4276,16 +4276,16 @@ function showPlayerError(msg) {
        than wrong here — it would serve a half-drawn capture as the whole page
        for the rest of the document's life, because the store is keyed by frame
        index and never invalidated. So: no memo, no cache read, no capture. */
-    if (_drawOf(fr0)) {
+    if (_hold && _drawOf(fr0)) {
       const s0 = getCanvasLogicalSize();
       ctx.clearRect(0, 0, s0.width, s0.height);
+      /* How much has come due is lib/holdtiming.js's answer, not this file's.
+         It used to be computed here, and the copy differed from the others at
+         progress 0 — it revealed the first point of a page that had not yet
+         started, where the editor revealed none. One owner, one boundary. */
       const pts = (fr0 && Array.isArray(fr0.strokes)) ? fr0.strokes : [];
       if (pts.length) {
-        const t0 = pts[0].t;
-        const span = Math.max(1, pts[pts.length - 1].t - t0);
-        const revealMs = Math.max(0, Math.min(1, Number(prog) || 0)) * span;
-        let n = 0;
-        while (n < pts.length && (pts[n].t - t0) <= revealMs) n++;
+        const n = _hold.dueCount(fr0, prog);
         if (n) paintStrokesStatic(pts.slice(0, n));
       }
       lastFlipDrawn = -1;   // the next still page must repaint over this

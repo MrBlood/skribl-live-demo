@@ -691,6 +691,114 @@ with sync_playwright() as sp:
               "600 ms is page 1 and 1150 ms is page 2")
         fp.close()
 
+    # ---- DRAW-ON, AT ITS THREE BOUNDARIES, ON THIS SURFACE SPECIFICALLY ----
+    #
+    # One semantic timeline, four renderers. The editor, /s/ and the exporter
+    # each turned progress into a stroke count themselves, and so did this
+    # player — which tested `progress > 0` to decide whether a page draws.
+    # progressAt() returns 0 for a still page AND for a drawing page at the
+    # instant it starts, so on the feed, and ONLY on the feed, a drawing page
+    # appeared finished for its first frame and then wiped and redrew.
+    #
+    # It is asserted here rather than at the module because the module was
+    # never wrong: dueCount() is one function and this suite is the only place
+    # that watches the feed's actual canvas. The three classes are the whole
+    # contract — nothing at the start, some of it partway, all of it at the end
+    # — and the comparison is against the SAME page posted without `draw`, so
+    # "all of it" means a measured full render and not this player's own idea
+    # of one.
+    def post_draw_pair():
+        # 26 points spread over 1,150 ms and across the canvas, so the ink a
+        # prefix carries rises with the prefix. Points bunched in one corner
+        # would grid down to nearly the same mass at every progress and the
+        # measure would not be able to tell the classes apart.
+        pts = [{"x": 90 + i * 24, "y": 300, "color": "#ffffff", "size": 16,
+                "t": i * 46, "erase": False, "start": i == 0} for i in range(26)]
+        page = {"strokes": pts, "strokeGroups": [len(pts)]}
+        edge = [{"strokes": [dict(q, y=60) for q in pts[:4]],
+                 "strokeGroups": [4], "hold": 1}]
+
+        # THE DRAWING PAGE IS FIRST, and that is the whole point of the
+        # fixture. progressAt() returns exactly 0 only when the clock is AT a
+        # page's start, and the one moment a viewer reliably lands there is
+        # elapsed 0 — every load of the post, and every time the loop comes
+        # round. Put the drawing page second and probe a millisecond after the
+        # boundary and progress is already 0.0009, the broken branch is not
+        # taken, and the assertion passes on the defect: measured, it did.
+        def body(title, first):
+            return {"title": title, "visibility": "public", "version": 2,
+                    "schemaVersion": 2, "playbackMode": "flip", "fps": 6,
+                    "frames": [first] + edge + edge,
+                    "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+
+        out = []
+        for title, mid in (("Harness draw-on page", dict(page, draw=True)),
+                           ("Harness still page", dict(page, hold=1))):
+            req = urllib.request.Request(
+                BASE + "/api/skribls", data=json.dumps(body(title, mid)).encode(),
+                headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                out.append(json.loads(r.read().decode())["id"])
+        return out
+
+    draw_id = still_id = None
+    try:
+        draw_id, still_id = post_draw_pair()
+    except Exception as exc:
+        check("a Draw-on flip and its still twin were posted (fixture)", False,
+              f"{type(exc).__name__}: {exc}")
+    if draw_id and still_id:
+        check("a Draw-on flip and its still twin were posted (fixture)", True,
+              f"{draw_id} / {still_id}")
+        dp = b.new_page(viewport={"width": 620, "height": 900})
+        derrs = []
+        dp.on("pageerror", lambda e: derrs.append(str(e)))
+        browsing.goto(dp, BASE, "/feed")
+
+        def ink_at(sid, ms):
+            dp.evaluate("(id) => document.querySelector("
+                        "'[data-skribl-id=\"' + id + '\"]').click()", sid)
+            dp.wait_for_function("(id) => window.SkriblInline.find(id)"
+                                 " && window.SkriblInline.find(id).state().loaded",
+                                 arg=sid, timeout=15000)
+            dp.evaluate("([id, t]) => window.SkriblInline.find(id).seek(t)", [sid, ms])
+            dp.wait_for_timeout(120)
+            g = dp.evaluate(GRID, f'[data-skribl-id="{sid}"] .skribl-inline-canvas')
+            return ink_mass(g) if g else None
+
+        # 6 fps, drawing page first: exempt from fps, it runs its own 1,150 ms
+        # span from 0. seek() pauses, so each of these is read at exactly the
+        # time named — and 0 is read at exactly 0, which is the case that was
+        # broken. The still twin's first page is an ordinary one-unit page, so
+        # 40 ms is safely inside it and reads the page rendered whole.
+        full = ink_at(still_id, 40)
+        start = ink_at(draw_id, 0)
+        mid = ink_at(draw_id, 575)
+        end = ink_at(draw_id, 1145)
+        check("the Draw-on probe read a canvas at all",
+              None not in (full, start, mid, end),
+              f"full={full} start={start} mid={mid} end={end}")
+        if None not in (full, start, mid, end) and full:
+            check("a Draw-on page opens EMPTY on the feed, not finished",
+                  start < full * 0.25,
+                  f"ink {start} against a full page's {full} — at elapsed 0, "
+                  f"which is every load and every loop, the feed was painting "
+                  f"the completed drawing and then wiping it to redraw. The "
+                  f"editor and /s/ open this page blank")
+            check("...reveals a PREFIX partway through",
+                  full * 0.25 < mid < full * 0.85,
+                  f"ink {mid} against a full page's {full} — partway through, "
+                  f"a reveal is neither blank nor finished")
+            check("...and is COMPLETE by the end of its own span",
+                  end > full * 0.90,
+                  f"ink {end} against the same page posted still: {full} — a "
+                  f"reveal that never finishes drops its last strokes")
+            check("the three classes are strictly ordered",
+                  start < mid < end, f"{start} / {mid} / {end}")
+        check("no JS errors while a Draw-on page reveals on the feed",
+              not derrs, "; ".join(derrs[:2]))
+        dp.close()
+
     # ---- the rules that must not be retyped --------------------------------
     # lib/holdtiming.js exists so the Flip editor and the player cannot disagree
     # about which page is on screen at time t (see its header). A third surface
@@ -912,7 +1020,23 @@ with sync_playwright() as sp:
     #
     # It does not spend all of what v281 banked: 31,900 against the 32,000 that
     # stood before, so the saving is still worth something.
-    EMBED_RATCHET = 31_900
+    #
+    # 31,900 -> 32,000, measured at 31,970, and this one is NOT a feature. The
+    # per-page draw above shipped with the reveal arithmetic written out on
+    # each surface separately, and this player's copy asked the wrong question:
+    # it decided a page was still whenever its progress was 0, which is also
+    # what a drawing page reads at the instant it begins. So on the feed — and
+    # nowhere else — a Draw-on page appeared FINISHED for its first frame and
+    # then wiped and redrew. lib/holdtiming.js now owns progress -> strokes as
+    # dueCount(), the same way it already owned how long a page lasts.
+    #
+    # The module grew 1,937 -> 2,271 B and this player shrank 17,751 -> 17,587,
+    # because its copy went; the net is 170 B to make four surfaces agree at a
+    # boundary where they did not. That spends the rest of what v281 banked and
+    # goes no further: 32,000 is exactly where the ratchet stood before that
+    # saving, so the embed has never been more expensive than it already was.
+    # The next spender inherits no slack and has to argue as v281 asked.
+    EMBED_RATCHET = 32_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
