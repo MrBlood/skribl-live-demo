@@ -292,6 +292,25 @@ jobs:
         with:
           name: last-run-postgres
           path: harness/LAST-RUN.txt
+      - name: Print the PostgreSQL attestation LAST
+        # A SECOND cat, and not a redundant one. The attestation has to be
+        # carried into the sealing tree by hand, because release_run.py reads it
+        # from the local working tree and this environment's egress proxy
+        # refuses GitHub's artifact blob storage (403 on CONNECT - measured,
+        # productionresultssa15.blob.core.windows.net). CLAUDE.md's remedy is to
+        # transcribe from the job's own log, and that only works if the line is
+        # REACHABLE.
+        #
+        # It was not. This job has a service container, so teardown dumps ~65
+        # lines of PostgreSQL container log after the last step, and the cat
+        # beside the write step sits ~166 lines from the end - past what the log
+        # reader could return. The mp4 job has no service container, which is
+        # the only reason the same protocol worked there.
+        #
+        # So the file is printed again as the last thing the job does. Cheap,
+        # and it makes the documented remedy actually available on this lane.
+        if: always()
+        run: cat harness/POSTGRES-ATTESTATION.txt || echo "no attestation written"
 
   mp4:
     name: mp4 export (real Chrome)

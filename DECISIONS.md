@@ -7010,3 +7010,27 @@ so the next edit here is a decision instead of an accident.
 
 Cost of the mistake: one full CI battery and one abandoned local seal, both on
 a tree that could never have passed.
+
+## v287, cont. -- the remedy that was not reachable
+
+CLAUDE.md's rule for carrying an attestation into the sealing tree is: the
+egress proxy here refuses GitHub's artifact blob storage, so transcribe from
+the job's own `cat` step. That worked for mp4 and did NOT work for postgres,
+for a reason the rule could not have anticipated.
+
+The postgres job runs a service container. Teardown dumps roughly sixty-five
+lines of PostgreSQL container log after the last step, so the `cat` beside the
+write step sits about a hundred and sixty lines from the end -- past what the
+log reader can return. The mp4 job has no service container, which is the only
+reason the same protocol worked there. Measured, not assumed: the proxy's own
+status endpoint records the denial against
+productionresultssa15.blob.core.windows.net.
+
+The attestation is now printed again as the LAST thing the job does. A
+documented remedy that cannot be executed on one of the two lanes it covers is
+not a remedy, and the alternative was to infer the assertion count -- which is
+precisely the fabrication the tree-hash field exists to make impossible.
+
+Cost: a third tree for this release, and the seal restarted at batch 48 of 52.
+Worth saying plainly, because the temptation at batch 48 is to write the number
+down and move on.
