@@ -259,6 +259,104 @@ with sync_playwright() as p:
               player.evaluate("() => !!document.getElementById('canvas')"))
         player.close()
 
+    # ---- THE /s/ PLAYER REACHES THE END OF A DRAWING PAGE -----------------
+    #
+    # The same end-boundary as verify_inline's, asserted on the OTHER live
+    # surface, because one does not prove the other — that assumption is what
+    # let P1-M-01 ship on the feed while the editor and /s/ were correct.
+    #
+    # indexAtMs() owns a page over [start, end) and dueCount() releases the
+    # last point at progress 1, so the live clock could never show a drawing
+    # page finished: it left the page first. displayAt() holds an unfinished
+    # drawing page for one more frame. The last point here is a large isolated
+    # corner mark on its own stroke, so a missing endpoint cannot hide inside
+    # a whole-canvas ink tolerance.
+    def post_endpoint(draw):
+        body = [{"x": 50 + i * 20, "y": 240, "color": "#ffffff", "size": 12,
+                 "t": i * 46, "erase": False, "start": i == 0} for i in range(25)]
+        tail = {"x": 590, "y": 45, "color": "#ffffff", "size": 40,
+                "t": 1150, "erase": False, "start": True}
+        first = {"strokes": body + [tail], "strokeGroups": [25, 1]}
+        first["draw" if draw else "hold"] = True if draw else 1
+        rest = {"strokes": [dict(q, y=420) for q in body[:5]],
+                "strokeGroups": [5], "hold": 1}
+        r = ctx.request.post(BASE + "/api/skribls", data={
+            "title": "endpoint harness", "playbackMode": "flip", "fps": 6,
+            "canvasSize": {"cssWidth": 640, "cssHeight": 460, "dpr": 1},
+            "frames": [first, rest]})
+        return r.json().get("id")
+
+    SAMPLER = """(sel) => {
+      window.__f = [];
+      var c = document.querySelector(sel);
+      if (!c) return false;
+      var g = document.createElement('canvas'); g.width = 96; g.height = 96;
+      var gx = g.getContext('2d');
+      var tick = function () {
+        gx.clearRect(0, 0, 96, 96);
+        gx.drawImage(c, 0, 0, 96, 96);
+        var d = gx.getImageData(0, 0, 96, 96).data, corner = 0, body = 0;
+        for (var y = 0; y < 96; y++) for (var x = 0; x < 96; x++) {
+          var i = (y * 96 + x) * 4;
+          var v = (0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]) * (d[i+3] / 255);
+          if (x >= 80 && y <= 16) corner += v; else body += v;
+        }
+        window.__f.push([Math.round(corner), Math.round(body)]);
+        window.requestAnimationFrame(tick);
+      };
+      window.requestAnimationFrame(tick);
+      return true; }"""
+
+    ep_draw = post_endpoint(True)
+    check("the /s/ endpoint fixture was posted", bool(ep_draw), str(ep_draw))
+    if ep_draw:
+        def watch(pid, ms):
+            """(corner ink of the page rendered WHOLE, frames painted while playing).
+
+            The reference comes from this player's own idle state, which is the
+            FINISHED drawing — same document, same page, same canvas, so the
+            comparison is against a real render of the very thing that must
+            appear, not against a second fixture whose timing differs.
+
+            That idle poster is also why the record is reset after play starts:
+            a sampler armed before the click records the endpoint from the
+            poster and then reports success whatever playback does. Measured —
+            this assertion passed against a deliberately broken player until
+            the reset went in.
+            """
+            pg2 = ctx.new_page()
+            pg2.goto(f"{BASE}/s/{pid}", wait_until="load")
+            pg2.wait_for_selector("#canvas", timeout=15000)
+            pg2.wait_for_timeout(1200)          # let the idle poster settle
+            armed = pg2.evaluate(SAMPLER, "#canvas")
+            pg2.wait_for_timeout(120)
+            idle = pg2.evaluate("() => window.__f.length ? Math.max.apply("
+                                "null, window.__f.map(f => f[0])) : 0")
+            # #playerPlayBtn, not #playBtn: the editor's transport is present in
+            # the player's markup but hidden (play-wrap[hidden]), so clicking
+            # that one waits forever on an invisible button.
+            pg2.click("#playerPlayBtn")
+            pg2.wait_for_timeout(250)           # a few points into a 1,150ms reveal
+            pg2.evaluate("() => { window.__f = []; }")
+            pg2.wait_for_timeout(ms)
+            got = pg2.evaluate("() => window.__f") if armed else None
+            pg2.close()
+            return idle, got
+
+        idle_c, seen_s = watch(ep_draw, 1900)
+        check("the /s/ sampler recorded painted frames", bool(seen_s),
+              str(len(seen_s or [])))
+        check("the idle poster shows the corner mark, so the probe can see it "
+              "at all (calibration)", idle_c > 200, str(idle_c))
+        if seen_s and idle_c > 200:
+            got_c = max(f[0] for f in seen_s)
+            check("on /s/ too, a Draw-on page reaches its last stroke before "
+                  "the page turns", got_c > idle_c * 0.5,
+                  f"during playback the corner mark peaked at {got_c}; the same "
+                  f"page rendered whole is {idle_c}. The last recorded point is "
+                  f"due only at progress 1 and the clock leaves the page before "
+                  f"progress 1 ever arrives")
+
     check("no Flip page errors across the whole feature", not errs, "; ".join(errs[:2]))
 
     br.close()
