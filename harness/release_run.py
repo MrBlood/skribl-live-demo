@@ -493,27 +493,38 @@ def main():
         print("checkpoint discarded (--restart)")
 
     if state_path.exists():
-        state = json.loads(state_path.read_text())
-        if state.get("frozen") != frozen:
+        # `saved`, NOT `state`. This used to reuse the name `state`, which 120
+        # lines earlier held the WORKING-TREE state that RELEASE.md reports —
+        # so a resumed run rendered its source-state line from a dict, matched
+        # none of "clean"/"generated-only dirty"/"dirty", and fell through to
+        # the unknown branch while `paths` still held the real file list. The
+        # record then read `source state unknown (README.md)`: a false line,
+        # naming a file as if it were a reason.
+        #
+        # It can only happen on a RESUME, so an uninterrupted run never showed
+        # it and it sat here undetected until this release had to seal in
+        # budgeted slices. Every slice after the first is a resume.
+        saved = json.loads(state_path.read_text())
+        if saved.get("frozen") != frozen:
             # Refuse rather than silently starting over: a resumed run that
             # quietly restarts on a different tree would report batches from
             # two trees under one hash, which is the exact claim this file
             # exists to make impossible.
             print(f"ABORT: the tree changed since the checkpoint was written "
-                  f"({tree_hash()[:12]} != {state['frozen'][:12]}).\n"
+                  f"({tree_hash()[:12]} != {saved['frozen'][:12]}).\n"
                   f"       Release evidence must describe ONE tree. Re-run with "
                   f"--restart to begin a fresh run on the current tree.")
             return 1
-        if state.get("batches") != [list(b) for b in BATCHES]:
+        if saved.get("batches") != [list(b) for b in BATCHES]:
             print("ABORT: the batch layout changed since the checkpoint was "
                   "written. Re-run with --restart.")
             return 1
-        rows = [tuple(r) for r in state["rows"]]
-        skipped = state["skipped"]
-        total = state["total"]
-        failed = state["failed"]
-        diagnostics = state["diagnostics"]
-        done = state["done"]
+        rows = [tuple(r) for r in saved["rows"]]
+        skipped = saved["skipped"]
+        total = saved["total"]
+        failed = saved["failed"]
+        diagnostics = saved["diagnostics"]
+        done = saved["done"]
         print(f"resuming: {done}/{len(BATCHES)} batches already recorded "
               f"on tree {frozen[:12]}")
 

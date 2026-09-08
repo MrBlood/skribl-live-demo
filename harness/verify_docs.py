@@ -762,6 +762,35 @@ finally:
 # pending, so FULL RELEASE PASS is reachable by evidence rather than
 # unreachable by construction. It was the second that three reviews objected
 # to — `LOCAL PASS` was truthful, and no amount of green could ever improve it.
+# A RESUMED RUN MUST REPORT THE WORKING TREE, NOT A DICT. release_run reused
+# the name `state` for the checkpoint it loads on resume, 120 lines after the
+# same name held the working-tree state RELEASE.md reports — so every resumed
+# run rendered `source state unknown (README.md)`, naming a file as if it were
+# a reason. Uninterrupted runs never touched the resume path, so it hid until a
+# release had to seal in budgeted slices.
+#
+# Asserted on the SHAPE the renderer depends on, which is what actually broke:
+# source_state's first element is one of the four strings the render tests for,
+# and its second is a list. A dict there is the defect.
+_sstate, _spaths = _rr.source_state()
+check("source_state returns one of the states RELEASE.md knows how to render",
+      _sstate in {"clean", "generated-only dirty", "dirty", "unknown"},
+      f"{_sstate!r} — anything else falls through the render's conditional "
+      f"chain to the unknown branch and prints whatever paths happens to hold")
+check("...and a list of paths beside it, never a checkpoint",
+      isinstance(_spaths, list)
+      and all(isinstance(x, str) for x in _spaths), repr(_spaths)[:120])
+# MUTATION: the exact shape the resume path used to leave behind.
+_render = (lambda st, ps: "clean" if st == "clean" else
+           f"{st} ({', '.join(ps)})" if st == "generated-only dirty" else
+           "DIRTY" if st == "dirty" else
+           f"unknown ({ps[0] if ps else 'git did not answer'})")
+check("MUTATION: a non-string state renders as a bare filename, which is the "
+      "false line this guards",
+      _render({"frozen": "x"}, ["README.md"]) == "unknown (README.md)",
+      "if this stops reproducing, the render changed and the guard above needs "
+      "restating against the new one")
+
 check("with every mandatory lane attested, the headline can reach FULL "
       "RELEASE PASS", _rr.release_status(True, []) == "FULL RELEASE PASS")
 check("...and both mandatory lanes now have a reader, so neither is merely "

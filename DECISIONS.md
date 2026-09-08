@@ -7071,3 +7071,39 @@ most likely trigger is another git process holding the index lock, which is to
 say my own status checks. A transient lock must not become an assertion about
 the repository in sealed evidence. It retries once now and reports what
 actually happened instead of inventing a reason.
+
+## v287, cont. -- `source state unknown (README.md)`, and why slicing found it
+
+The sealed record read:
+
+    source state     unknown (README.md)
+
+which names a FILE as if it were a REASON. My first attempt blamed
+`source_state()` and made it retry a failing `git diff` -- a real improvement,
+and not the bug. The line came back on the very next seal, which is the useful
+part: a fix that does not move the symptom is a wrong diagnosis, and saying so
+is cheaper than shipping the next guess.
+
+The actual cause is variable shadowing across a hundred and twenty lines.
+`release_run.py` reads the working-tree state into `state` near the top of
+main(), and the checkpoint-resume path later does:
+
+    state = json.loads(state_path.read_text())
+
+so on a RESUME `state` is a dict by the time RELEASE.md renders. It matches
+none of "clean" / "generated-only dirty" / "dirty", falls through to the
+unknown branch, and prints `paths[0]` -- which still holds the real file list.
+Renamed to `saved`.
+
+**It can only fire on a resume, so it had never fired.** Every previous seal ran
+uninterrupted; this release had to run in budgeted slices because long
+background processes here are reaped while the session is idle, and every slice
+after the first is a resume. The workaround for an environment limitation is
+what exposed a latent defect in the release tool -- which is the second time
+this release that being forced onto an unusual path found something the usual
+path hides.
+
+Guarded on the SHAPE the renderer depends on: source_state's first element is
+one of the four strings the render tests for, its second is a list of strings.
+Plus a mutation that reproduces the exact false line from a dict, so the guard
+cannot quietly stop describing the thing it was written for.

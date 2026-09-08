@@ -1,15 +1,14 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-08T14:40:52Z
+UTC timestamp           : 2026-09-08T15:56:42Z
 Host                    : Linux x86_64
-Tree SHA-256            : 6d96ab19b186aa0c6f898ff9084344990b6c148c0ce15a5bca0d0dca9d8de2dc
-Git commit              : 641f544
+Tree SHA-256            : 3bc36e820c6dce7800196b58abf33f7c79499cae217b1cad91705d7274359dfe
+Git commit              : 0820d43
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
                             docs/HANDOFF.md
                             harness/LAST-RUN.txt
                             harness/README.md
-                            harness/RELEASE.md
 SKRIBL_VERSION          : v287
 Python                  : 3.12.3
 Flask                   : 3.1.3
@@ -17,7 +16,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.gS7L7Q9Dm4/harness.db)
+Database reset          : yes (fresh /tmp/tmp.Cxo6yROSvU/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -49,7 +48,7 @@ suites requested : 99
   verify_deletion.py: ok — 63/63 passed
   verify_deletion_foundation.py: ok — 17/17 passed
   verify_delivery.py: ok — 26/26 passed
-  verify_docs.py: FAIL — exit 1, 93/94 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)  FAILURES: a missing attestation names the job that writes it
+  verify_docs.py: ok — 96/96 passed  (2 not applicable: RELEASE.md and LAST-RUN.txt agree on the assertion count; and on the tree they were produced from)
   verify_dots.py: ok — 11/11 passed
   verify_drafts.py: ok — 29/29 passed
   verify_example.py: ok — 32/32 passed
@@ -128,6 +127,6 @@ suites requested : 99
   verify_ux.py: ok — 333/333 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 4559   (skipped suites contribute 0)
+assertions passed: 4655   (skipped suites contribute 0)
 suites skipped   : 2
-suites with problems: 1
+suites with problems: 0
