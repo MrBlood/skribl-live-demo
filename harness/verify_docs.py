@@ -721,10 +721,36 @@ try:
     check("MUTATION: one that says FAIL is not verified either",
           _rr.read_attestation(_failed, "a" * 64, "engine", "").startswith("FAILED"),
           _rr.read_attestation(_failed, "a" * 64, "engine", ""))
-    check("a missing attestation names the job that writes it",
-          "postgres" in _rr.postgres_attestation("a" * 64)
-          and _rr.postgres_attestation("a" * 64).startswith("NOT VERIFIED"),
-          _rr.postgres_attestation("a" * 64))
+    # AND THE SAME QUESTION ASKED SO THAT SHIPPING THE FEATURE CANNOT BREAK IT.
+    # This first read: "a missing attestation names the job that writes it",
+    # asserting postgres_attestation() on a bogus tree starts with NOT
+    # VERIFIED. That was only true while NO attestation had ever been carried
+    # in — with the file present and naming another tree the honest answer is
+    # STALE, so carrying the first postgres attestation is what turned it red.
+    # An assertion that can only pass while the work is outstanding is a TODO
+    # in a test's clothes; this project has the rule written down and it caught
+    # this one on the very next run.
+    #
+    # The property that actually matters holds in BOTH states: a tree this
+    # release did not test must never read as verified.
+    _bogus = _rr.postgres_attestation("a" * 64)
+    check("a bogus tree never reads as verified on the postgres lane",
+          not _bogus.startswith("verified")
+          and (_bogus.startswith("STALE") or _bogus.startswith("NOT VERIFIED")),
+          _bogus)
+    # And the missing-file path is exercised on a path that does not exist,
+    # rather than by depending on the real attestation being absent.
+    _absent = _rr.read_attestation(_att_file("zzz") + ".missing", "a" * 64,
+                                   "engine", "SENTINEL-ADVICE")
+    check("a missing attestation says so and hands back the advice that names "
+          "the job", _absent.startswith("NOT VERIFIED")
+          and "SENTINEL-ADVICE" in _absent, _absent)
+    # The advice each reader hands back is a named constant, so this asks
+    # whether it names the job WITHOUT depending on the presence of a file.
+    check("...and each lane's advice names the CI job that writes its "
+          "attestation",
+          "postgres" in _rr.PG_ADVICE and "mp4" in _rr.MP4_ADVICE,
+          f"{_rr.PG_ADVICE!r} / {_rr.MP4_ADVICE!r}")
 finally:
     for _p in (_good, _wrong, _failed):
         try:

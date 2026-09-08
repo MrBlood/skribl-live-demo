@@ -7034,3 +7034,40 @@ precisely the fabrication the tree-hash field exists to make impossible.
 Cost: a third tree for this release, and the seal restarted at batch 48 of 52.
 Worth saying plainly, because the temptation at batch 48 is to write the number
 down and move on.
+
+## v287, cont. -- a TODO in a test's clothes, caught one run later
+
+The first sealed re-run went FAIL on one assertion, and it was the right call:
+
+    verify_docs.py: a missing attestation names the job that writes it
+
+It asserted that `postgres_attestation()` on a bogus tree starts with NOT
+VERIFIED. True only while NO attestation had ever been carried in -- with the
+file present and naming another tree, the honest answer is STALE. So CARRYING
+THE FIRST POSTGRES ATTESTATION IS WHAT BROKE IT: the feature succeeding turned
+its own test red, which is exactly the shape `verify_seam`'s "a split is still
+worth doing" had, and which this file already warns about.
+
+Restated so it holds in both states: a tree this release did not test must
+never read as verified. The missing-file path is exercised on a path that does
+not exist rather than by depending on the real file's absence.
+
+I then wrote the replacement's third check state-dependently TOO -- asserting
+the reader's advice names its CI job by reading the reader's return value,
+which says STALE once a file exists. The advice is now a named constant on each
+lane, so the check asks the question without depending on a file at all. Twice
+in five minutes; the pattern is easy to fall into precisely when you are sure
+you have just learned it.
+
+## v287, cont. -- "not a git checkout", which was not true
+
+The same record carried a second false line: `source state unknown (not a git
+checkout)`. The tree was a checkout. `source_state()` ran `git diff` once and
+degraded any failure -- exception or non-zero exit -- to "unknown", which the
+renderer then printed as that specific claim.
+
+It runs at the start of every slice, and a seal is easy to poll alongside; the
+most likely trigger is another git process holding the index lock, which is to
+say my own status checks. A transient lock must not become an assertion about
+the repository in sealed evidence. It retries once now and reports what
+actually happened instead of inventing a reason.

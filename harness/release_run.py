@@ -42,6 +42,18 @@ HARNESS = ROOT / "harness"
 ATTESTATION = "harness/MP4-ATTESTATION.txt"
 PG_ATTESTATION = "harness/POSTGRES-ATTESTATION.txt"
 
+# What a reader tells you to run when the attestation is MISSING. Named
+# constants rather than literals inside the two functions, so a check can
+# assert they name their CI job without depending on whether an attestation
+# happens to be present — the state-dependence that made the first version of
+# that assertion go red the moment the first postgres attestation was carried in.
+MP4_ADVICE = ("Run the 'mp4 (real Chrome)' CI job, or "
+              "SKRIBL_BROWSER_CHANNEL=chrome ./harness/run_harness.sh "
+              "verify_mp4.py on a machine with Google Chrome.")
+PG_ADVICE = ("Run the 'postgres' CI job in .github/workflows/harness.yml, or "
+             "DATABASE_URL=postgresql://... ./harness/run_harness.sh "
+             "verify_postgres.py against a real cluster.")
+
 GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              "harness/README.md", "docs/HANDOFF.md", "START-HERE.md",
              "harness/RELEASE.md",
@@ -229,11 +241,7 @@ def mp4_attestation(frozen):
     release: whether an unverified MP4 path is shippable is a product decision,
     and the seal's job is to state the fact, not to make it.
     """
-    return read_attestation(ATTESTATION, frozen, "channel",
-                            "Run the 'mp4 (real Chrome)' CI job, or "
-                            "SKRIBL_BROWSER_CHANNEL=chrome "
-                            "./harness/run_harness.sh verify_mp4.py on a "
-                            "machine with Google Chrome.")
+    return read_attestation(ATTESTATION, frozen, "channel", MP4_ADVICE)
 
 
 def postgres_attestation(frozen):
@@ -255,12 +263,7 @@ def postgres_attestation(frozen):
     The tree hash is load-bearing here exactly as it is for mp4: an attestation
     naming a different tree is evidence about different code, and is refused.
     """
-    return read_attestation(PG_ATTESTATION, frozen, "engine",
-                            "Run the 'postgres' CI job in "
-                            ".github/workflows/harness.yml, or "
-                            "DATABASE_URL=postgresql://... "
-                            "./harness/run_harness.sh verify_postgres.py "
-                            "against a real cluster.")
+    return read_attestation(PG_ATTESTATION, frozen, "engine", PG_ADVICE)
 
 
 def read_attestation(path, frozen, where, advice):
@@ -372,13 +375,30 @@ def source_state():
     so the rule is narrowed to the second case and the first is enumerated rather
     than trusted.
     """
-    try:
-        out = subprocess.run(["git", "-C", str(ROOT), "diff", "--name-only", "HEAD"],
-                             capture_output=True, text=True, timeout=30)
-    except Exception:
-        return "unknown", []
-    if out.returncode != 0:
-        return "unknown", []
+    # RETRIED, AND THE REASON KEPT. A single failed `git diff` used to degrade
+    # silently to "unknown", which RELEASE.md then printed as the specific
+    # claim "not a git checkout" — a statement that was FALSE in sealed
+    # evidence the one time it fired. The tree was a checkout; git simply did
+    # not answer, most likely because another git process held the index lock
+    # (this runs at the start of every slice, and a seal is easy to poll
+    # alongside). A transient lock must not turn into an assertion about the
+    # repository, so it retries once and then says what actually happened.
+    why = "git did not answer"
+    for attempt in (0, 1):
+        try:
+            out = subprocess.run(["git", "-C", str(ROOT), "diff", "--name-only", "HEAD"],
+                                 capture_output=True, text=True, timeout=30)
+        except Exception as exc:
+            why = f"git could not be run: {type(exc).__name__}"
+        else:
+            if out.returncode == 0:
+                break
+            err = (out.stderr or "").strip().splitlines()
+            why = err[-1] if err else f"git exited {out.returncode}"
+        if attempt == 0:
+            time.sleep(2)
+    else:
+        return "unknown", [why]
     dirty = sorted(p for p in out.stdout.split("\n") if p.strip())
     if not dirty:
         return "clean", []
@@ -596,7 +616,7 @@ def main():
             f"DIRTY, --allow-dirty used ({', '.join(paths)}) — "
             f"NOT A SEALABLE RUN"
             if state == "dirty" else
-            "unknown (not a git checkout)"),
+            f"unknown ({paths[0] if paths else 'git did not answer'})"),
         f"    SKRIBL_VERSION   " + re.search(
             r'SKRIBL_VERSION\s*=\s*"([^"]+)"',
             (ROOT / "skribl" / "core.py").read_text()).group(1),
