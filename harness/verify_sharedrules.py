@@ -216,6 +216,117 @@ with sync_playwright() as p:
           edge["drawEmpty"] >= 320,
           f"{edge['drawEmpty']} — a zero-length page is one the clock skips")
 
+    print("\n" + "PROGRESS -> STROKES: ONE ANSWER, THREE CLASSES")
+    # dueCount() exists because four renderers each turned progress into a
+    # stroke count and disagreed at the ends of the range. The classes are the
+    # contract; everything downstream is asserted against them.
+    due = pg.evaluate("""() => { const H = window.SkriblHold;
+      const f = { draw:true, strokes:[{t:0},{t:100},{t:200},{t:300},{t:400}] };
+      return {
+        zero: H.dueCount(f, 0), neg: H.dueCount(f, -1),
+        nan: H.dueCount(f, NaN), undef: H.dueCount(f, undefined),
+        tiny: H.dueCount(f, 1e-9), half: H.dueCount(f, 0.5),
+        nearly: H.dueCount(f, 0.999), one: H.dueCount(f, 1),
+        over: H.dueCount(f, 2),
+        empty: H.dueCount({draw:true, strokes:[]}, 0.5),
+        nul: H.dueCount(null, 0.5) }; }""")
+    check("progress 0 reveals NOTHING", due["zero"] == 0, str(due["zero"]))
+    check("a negative, NaN or missing progress is the start of the page, not the end",
+          due["neg"] == due["nan"] == due["undef"] == 0,
+          f"{due['neg']} / {due['nan']} / {due['undef']} — a clock that has not "
+          f"produced a reading yet must not reveal the finished drawing")
+    check("progress 1 reveals EVERY point", due["one"] == 5, str(due["one"]))
+    check("progress past 1 does not overrun the stroke list",
+          due["over"] == 5, str(due["over"]))
+    check("a progress between them reveals a PREFIX, and it grows",
+          0 < due["tiny"] <= due["half"] <= due["nearly"] < 5,
+          f"{due['tiny']} / {due['half']} / {due['nearly']}")
+    check("an empty or missing page reveals nothing rather than throwing",
+          due["empty"] == 0 and due["nul"] == 0, str(due))
+
+    print("\n" + "EXPORT SAMPLES THE MILLISECOND TIMELINE, NOT THE fps GRID")
+    # A drawing page is exempt from fps. The exporter must tick in the document
+    # frame rate anyway — a file has frames — so the question is whether the
+    # PAGE's duration survives that. It did not: the step count was rounded and
+    # the progress was then spread over the rounded count, so the same page ran
+    # 500 ms at 6 fps and 417 ms at 12 and 24, and at the shorter rates the last
+    # strokes never appeared. Measured across every rate the editor offers.
+    ep = browser.new_page(viewport={"width": 1000, "height": 860})
+    eerrs = []
+    ep.on("pageerror", lambda e: eerrs.append(str(e)))
+    browsing.goto(ep, BASE, "/flip")
+    exp = ep.evaluate("""() => {
+      const H = window.SkriblHold;
+      const mk = span => { const pts = [];
+        const step = Math.max(1, Math.round(span / 20));
+        for (let t = 0; t <= span; t += step) pts.push({ x:0, y:0, t: t });
+        return { draw: true, strokes: pts, strokeGroups: [pts.length] }; };
+      const SPANS = [320, 450, 700, 1000, 1234, 3333];
+      const rows = [];
+      const keepFrames = frames, keepFps = fps;
+      for (const span of SPANS) {
+        const f = mk(span);
+        frames = [f];
+        const trueMs = H.pageMs(f, 12);        // exempt from fps by definition
+        const per = {};
+        for (const rate of [6, 12, 24]) {
+          fps = rate;
+          const u = exportUnits(0, 0);
+          const slot = 1000 / rate;
+          per[rate] = { dur: u.length * slot, slot: slot,
+                        first: u[0].prog, last: u[u.length - 1].prog,
+                        mono: u.every((x, i) => i === 0 || x.prog >= u[i-1].prog),
+                        // what the file shows at a fixed wall-clock instant
+                        atHalf: H.dueCount(f, u[Math.min(u.length - 1,
+                                  Math.floor((trueMs / 2) / slot))].prog),
+                        points: f.strokes.length };
+        }
+        rows.push({ span: span, trueMs: trueMs, per: per });
+      }
+      frames = keepFrames; fps = keepFps;
+      return rows; }""")
+    check("the export sweep ran", bool(exp), "exportUnits or frames unreachable")
+    if exp:
+        short = [f"{r['span']}ms at {rate}fps ran {r['per'][str(rate)]['dur']:.0f}"
+                 f" against {r['trueMs']:.0f}"
+                 for r in exp for rate in (6, 12, 24)
+                 if r["per"][str(rate)]["dur"] < r["trueMs"] - 1e-6]
+        check("an exported drawing page is never SHORTER than its own duration",
+              not short, "; ".join(short[:3]) + " — the missing time is the "
+              "end of the drawing, so the file loses its last strokes")
+        over = [(r["per"][str(rate)]["dur"] - r["trueMs"]) / r["per"][str(rate)]["slot"]
+                for r in exp for rate in (6, 12, 24)]
+        check("...and never longer than it by a whole frame",
+              max(over) < 1.0,
+              f"worst overrun {max(over):.3f} of a frame — whole frames cannot "
+              f"land on an arbitrary millisecond, but the residue is the "
+              f"encoder's floor and nothing more")
+        ends = [r["per"][str(rate)]["last"] for r in exp for rate in (6, 12, 24)]
+        check("the last exported frame of a drawing page is the COMPLETE page",
+              all(abs(e - 1) < 1e-9 for e in ends), f"lowest {min(ends)}")
+        check("progress never goes backwards within a page",
+              all(r["per"][str(rate)]["mono"] for r in exp for rate in (6, 12, 24)))
+        firsts = [r["per"][str(rate)]["first"] for r in exp for rate in (6, 12, 24)]
+        check("the first exported frame is a prefix, not the finished page",
+              all(0 < f < 1 for f in firsts),
+              f"highest {max(firsts)} — a first frame at 1 is the old bug, "
+              f"where a one-step page opened finished")
+        # The parity the feature promises: at the same instant of wall clock,
+        # the file shows the same amount of the drawing whatever the document's
+        # frame rate. Compared in POINTS revealed, within one frame's worth.
+        worst, where = 0, ""
+        for r in exp:
+            got = [r["per"][str(rate)]["atHalf"] for rate in (6, 12, 24)]
+            spread = (max(got) - min(got)) / r["per"]["6"]["points"]
+            if spread > worst:
+                worst, where = spread, f"{r['span']}ms span: {got} points at 6/12/24fps"
+        check("halfway through, 6, 12 and 24 fps show the same amount of the drawing",
+              worst < 0.12,
+              f"{where} — {worst:.0%} of the page apart; a drawing page is "
+              f"exempt from fps and the exported file has to honour that too")
+    check("no JS errors while sweeping export units", not eerrs, "; ".join(eerrs[:2]))
+    ep.close()
+
     # ---- the layering ceiling ---------------------------------------------
     print("\nTHE LAYERING CEILING — the same budget on both surfaces")
     budget = pg.evaluate("""() => {

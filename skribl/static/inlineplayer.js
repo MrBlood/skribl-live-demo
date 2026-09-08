@@ -761,23 +761,27 @@
         clear();
         var fr = flipFrames[idx];
         if (fr && fr.strokes && fr.strokes.length) {
-          /* A DRAWING PAGE REVEALS. Its progress within the page decides how
-           * much of its stroke list has come due — the same arithmetic the
-           * editor and the /s/ player run, from the same module, so all three
-           * agree about what a viewer sees. */
-          /* NOT `prog`: that name is the progress ELEMENT in this closure, and
-           * `var` is function-scoped, so declaring it here shadowed the element
-           * for the whole of render() — including the replay branch, which then
-           * threw on undefined.style at the last line and was swallowed by the
-           * load path's catch as "Couldn't load this Skribl". A flip-only edit
-           * broke every REPLAY post on the feed. */
-          var drawProg = H ? H.progressAt(flipMs, flipFrames, cyc) : 0;
-          if (drawProg > 0) {
-            var pts = fr.strokes, t0 = pts[0].t;
-            var span = Math.max(1, pts[pts.length - 1].t - t0);
-            var due = drawProg * span, n = 0;
-            while (n < pts.length && (pts[n].t - t0) <= due) n++;
-            if (n) paintStatic(ctx, pts.slice(0, n), canvas);
+          /* A DRAWING PAGE REVEALS, and dueCount() owns how much — the same
+           * answer the editor and the /s/ player get, from the same module, so
+           * all three agree about what a viewer sees.
+           *
+           * BRANCH ON THE PAGE, NOT ON THE PROGRESS. progressAt() returns 0
+           * for two different pages: a still one, which has no progress, and a
+           * drawing one at the instant it starts. Testing `progress > 0` read
+           * the first frame of every reveal as still and painted the FINISHED
+           * picture, which then wiped and redrew from nothing — while the same
+           * page revealed cleanly in the editor and in /s/. drawOf() is the
+           * question actually being asked.
+           *
+           * DO NOT NAME A LOCAL `prog` IN HERE: that is the progress ELEMENT
+           * of this closure (see below), and `var` is function-scoped, so a
+           * local by that name shadows it for the whole of render() —
+           * including the replay branch, which then threw on undefined.style
+           * and was swallowed by the load path's catch as "Couldn't load this
+           * Skribl". A flip-only edit broke every REPLAY post on the feed. */
+          if (H && H.drawOf(fr)) {
+            var n = H.dueCount(fr, H.progressAt(flipMs, flipFrames, cyc));
+            if (n) paintStatic(ctx, fr.strokes.slice(0, n), canvas);
           } else {
             paintStatic(ctx, fr.strokes, canvas);
           }
