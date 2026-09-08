@@ -6984,3 +6984,29 @@ and both players have to consult it.
 Spent before asking, again: the jump path passes `displayAt()` no `last`
 rather than re-deriving index and progress beside it. 82 bytes, and one fewer
 place that could disagree about what a scrub shows.
+
+## v287, cont. -- the suite I did not run
+
+The first v287 CI run went red on both database lanes, and it was mine:
+
+    verify_seam.py: FAIL -- 257/258   the player's reachable set has not ballooned
+
+1,701 lines against a 1,700 ceiling. I ran the suites I EXPECTED the change to
+touch -- inline, hold, sharedrules, player_isolation, docs -- and not the one
+that measures what the player reaches. CLAUDE.md says, in as many words, that
+for a change touching many suites the sample IS the full run, and that the
+reason is precisely this: the suites you predict are not the suites that fail.
+
+The fix was not to raise the number first. Two call sites each recorded what
+they had painted, so drawFlipFrame() records it once -- one owner, and no call
+site can forget -- and an explanation already written in full in
+lib/holdtiming.js came out of app.js. That took the addition from +17 lines to
++11 and left it one line over.
+
+The last line stayed, and the ratchet moved to 1730. Deleting prose to hit a
+ceiling is the habit this repo's own history warns about twice, and a
+constraint met by shaving comments is not a constraint. 30 lines of headroom,
+so the next edit here is a decision instead of an accident.
+
+Cost of the mistake: one full CI battery and one abandoned local seal, both on
+a tree that could never have passed.
