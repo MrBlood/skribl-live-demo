@@ -6863,3 +6863,124 @@ The embed lands exactly on 32,000, which is where that ratchet stood before
 v281's saving banked it down to 31,000. So the embed has never cost a host more
 than it already did, and the next spender inherits no slack, which is the term
 v281 set.
+
+## v287 -- the third contract: when does a page STOP being current?
+
+An adversarial review of the sealed v286 found the defect its own two
+centralisations left between them, and it was right. Reproduced against the
+shipped module before anything was touched:
+
+    elapsed 1149.999  idx 0  prog 0.999999  count 25/26
+    elapsed 1150      idx 1  prog 0.000000  count  0/2
+
+`indexAtMs()` owns a page over the HALF-OPEN interval `[start, end)`, so at
+`end` the next page is already current. `dueCount()` releases the last point
+at progress 1. Between them there is no live instant at which a drawing page
+is current AND finished. On a 1,150ms page of 26 points the 26th was never
+due while that page was up: its final mark never appeared, and where that
+point began a stroke the whole stroke was missing.
+
+Both contracts were individually correct. v286 asserted "progress 1 reveals
+every point" and proved it -- of the FUNCTION. Nothing asserted that the live
+clock could ever supply 1. That is the lesson, and it is not "extract another
+helper": it is that a composition needs its own assertion, through the actual
+surface clock, because three green contracts can compose into a state that
+never occurs.
+
+An inclusive stroke timeline does not fit a half-open display interval and
+something has to give. Not dueCount's millisecond semantics -- an epsilon
+there would corrupt the one clean thing, and the review said so before I could
+be tempted. So the last thing RENDERED gives instead. `displayAt()` holds an
+unfinished drawing page for one more frame when the clock has moved off it,
+then yields; the caller passes back what it painted, which is what terminates
+it. One frame late at a page turn, the same tolerance the exporter already
+accepts.
+
+The editor already completed (startReveal's tail paints the whole list) and
+the exporter already emitted a final unit at progress 1. It was the two
+PLAYERS that could not -- the same surface split as P1-M-01, one release on.
+
+A SEEK IS NOT A PAGE TURN: a scrub asks for a page and must get it, so seek
+passes no `last` and lands where it aimed. A LOOP RESTART is not a seek,
+though, and in inlineplayer that could not key off `full` -- the loop repaints
+fully too -- so render() takes an explicit `jump`.
+
+## v287, cont. -- the instrument was wrong first. Again. Differently.
+
+The /s/ probe PASSED against a deliberately broken player.
+
+Not the v286 cause. That player's IDLE state is the finished drawing, so a
+sampler armed before the click recorded the endpoint from the POSTER and
+reported success whatever playback did. It now discards everything before the
+reveal starts and takes its reference from that same idle render -- one
+document, one canvas, so "whole" means a real render of the very thing that
+must appear.
+
+    /s/     broken: corner 0 vs 9878 whole    fixed: 9878 vs 9878
+    inline  broken: corner 0 vs 6983 whole    fixed: 6983 vs 6983
+
+Three releases, three instruments that passed on the tree they were written to
+condemn, three different reasons: a substring matching its own explanation
+(v285), a probe sampling a millisecond off the boundary it named (v286), a
+probe reading a poster instead of playback (v287). The rule in CLAUDE.md is
+not a formality and the failure does not repeat its shape.
+
+Seeking cannot test this at all -- seek deliberately bypasses the guard -- so
+both regressions drive REAL PLAYBACK and sample on every animation frame,
+which is the only way to catch a state that lasts one frame. The fixture's
+last point is a big isolated corner mark on its own stroke: a missing endpoint
+hides easily inside a whole-canvas ink tolerance and cannot hide in "was that
+corner ever painted".
+
+`verify_sharedrules` asserts the composition by stepping a clock, and asserts
+IN THE SAME RUN that `indexAtMs` + `progressAt` alone never reach the complete
+state -- so if the guard is ever removed the assertions cannot quietly become
+vacuous.
+
+## v287, cont. -- the postgres lane, and a label that was unreachable by construction
+
+Separate work, deliberately kept in its own commit: the reviews were explicit
+that attestation infrastructure must not ride along with a product fix.
+
+`verify_postgres.py` skips locally BY DESIGN. Running a cluster during a seal
+perturbs the browser timing suites -- CLAUDE.md carries the measurement, 1ms
+against 32ms worst frame deviation on verify_hold. The `postgres` CI job runs
+it where it belongs.
+
+But the seal could only ever say the suite was skipped and CLAIMED by that
+job: the existence of a job, not a result. Truthful, and incomplete in a way
+that made `FULL RELEASE PASS` unreachable BY CONSTRUCTION rather than by
+evidence -- no amount of green could improve it. Three reviews in a row said
+the same thing about it and each time deferred it as not-a-blocker.
+
+The job now writes an attestation naming the tree, on the mp4 lane's terms and
+after the migration-chain step, so green means the suite ran AND the chain
+applies to an empty database. Its skip guard is its own: the mp4 job's
+"suites skipped : 0" would be wrong here, because that job runs one suite and
+this one runs the whole battery and legitimately skips verify_mp4.
+
+ONE reader for both lanes, not a copy each. The rule that makes any
+attestation evidence is a single tree-hash comparison, and a second copy of it
+is a second place it could drift -- which is the shape of every finding this
+arc produced. Calibrated on the mechanism: this tree verifies, another tree is
+STALE, FAIL is not verified, missing names the job. The fixtures live outside
+the tree, so nothing in the harness can create or resemble a real attestation.
+
+## v287, cont. -- the ratchets, and a line I said would not move
+
+    player JS   152,300 -> 152,900   (measured 152,794; target 153,600)
+    embed        32,000 ->  32,500   (measured  32,417)
+
+v286 put the embed at exactly 32,000 and said the next spender would inherit
+no slack and would have to argue. The next spender was the very next release,
+and this is the argument: it buys no feature. It buys a player that does not
+silently drop the last mark of every drawing page.
+
+Stated plainly, because it is the first time it is true: a host now pays 417
+bytes more than at any previous point in this file's history. The cheaper
+version does not exist -- the guard has to live where the composition does,
+and both players have to consult it.
+
+Spent before asking, again: the jump path passes `displayAt()` no `last`
+rather than re-deriving index and progress beside it. 82 bytes, and one fewer
+place that could disagree about what a scrub shows.
