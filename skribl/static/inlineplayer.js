@@ -548,6 +548,10 @@
     var totalMs = 0, size = null, under = null;
     var state = 'idle';                       // idle | playing | paused
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
+    /* The page and progress this player last PAINTED, which is how
+     * lib/holdtiming.js's displayAt() knows a drawing page has not yet been
+     * shown whole. Null means nothing is owed a finish. */
+    var lastShown = null;
     /* Rebuilt on every full repaint; null for an all-opaque payload. */
     var comp = null;
     var buffer = null, srcNode = null, gainNode = null, decoding = false;
@@ -594,7 +598,7 @@
         if (!payload) return false;
         pause();
         elapsed = Math.max(0, Math.min(ms, totalMs));
-        render(elapsed, true);
+        render(elapsed, true, true);
         return true;
       }
     };
@@ -750,14 +754,31 @@
     /* Full repaint from zero. The incremental path below only appends, which is
      * what makes a replay cheap; anything that moves time backwards (seek,
      * loop, a resize) comes through here. */
-    function render(at, full) {
+    function render(at, full, jump) {
       if (!payload) return;
       if (flipFrames) {
         var H = global.SkriblHold;
         var cyc = at % Math.max(1, totalMs);
-        var idx = H ? H.indexAtMs(flipMs, cyc)
-                    : Math.min(flipFrames.length - 1,
-                               Math.floor(at / Math.max(1, totalMs) * flipFrames.length));
+        /* THROUGH displayAt() WHEN PLAYING, because no instant of the live
+         * clock supplies progress 1 while a drawing page is still current, and
+         * that page must reach its complete recorded state before the clock
+         * may leave it. `full` marks the repaints that move time backwards —
+         * `jump` is a SCRUB and only a scrub: someone dragging the bar asked
+         * for that page and must get it, so a jump goes straight there and
+         * merely records what it put on screen. A LOOP RESTART is not a jump —
+         * it is the clock coming round, and the page it is leaving is owed its
+         * last frame exactly as any other page turn is, which is why this
+         * cannot key off `full`: the loop repaints fully too. See
+         * lib/holdtiming.js. */
+        var shown = H
+          ? (jump ? { index: H.indexAtMs(flipMs, cyc),
+                      progress: H.progressAt(flipMs, flipFrames, cyc) }
+                  : H.displayAt(flipMs, flipFrames, cyc, lastShown))
+          : { index: Math.min(flipFrames.length - 1,
+                              Math.floor(at / Math.max(1, totalMs) * flipFrames.length)),
+              progress: 0 };
+        lastShown = shown;
+        var idx = shown.index;
         clear();
         var fr = flipFrames[idx];
         if (fr && fr.strokes && fr.strokes.length) {
@@ -780,7 +801,7 @@
            * and was swallowed by the load path's catch as "Couldn't load this
            * Skribl". A flip-only edit broke every REPLAY post on the feed. */
           if (H && H.drawOf(fr)) {
-            var n = H.dueCount(fr, H.progressAt(flipMs, flipFrames, cyc));
+            var n = H.dueCount(fr, shown.progress);
             if (n) paintStatic(ctx, fr.strokes.slice(0, n), canvas);
           } else {
             paintStatic(ctx, fr.strokes, canvas);
