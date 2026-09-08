@@ -808,7 +808,20 @@ with sync_playwright() as sp:
     # without the lib a drawing page plays as a still one, which is exactly
     # what this player did before the field existed. Those two took the cost
     # from +2,535 B to +1,215 B. What remains is the feature itself.
-    BYTES_RATCHET, BYTES_TARGET = 152_100, 153_600
+    #
+    # 152,100 -> 152,300, measured 152,220, and this one buys no feature at
+    # all: it corrects the one above. Per-page draw shipped with the reveal
+    # arithmetic — progress in, stroke count out — written separately on each
+    # surface that renders it, and the copies disagreed at the ends of the
+    # range. lib/holdtiming.js now owns that as dueCount(), which is the same
+    # module and the same reason it already owns how long a page lasts.
+    #
+    # Spent before asking, on this surface: app.js's copy was DELETED, not
+    # left beside the module's, so the player gives back 168 B of the module's
+    # 334 and the net is 166. The fallback rule is unchanged and still costs
+    # nothing — without the lib a drawing page plays as a still one rather
+    # than reimplementing the reveal here.
+    BYTES_RATCHET, BYTES_TARGET = 152_300, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

@@ -1,5 +1,6 @@
-/* Per-page hold — the ONE definition of what a hold MEANS, shared by the Flip
- * editor and the player.
+/* Per-page timing — the ONE definition of how long a page lasts and how much
+ * of a drawing page has been revealed, shared by the Flip editor and every
+ * surface that plays one.
  *
  * A page with `hold: n` occupies n base-fps slots instead of one. That is a
  * two-line idea, and it was implemented twice:
@@ -44,6 +45,22 @@
  * is page i" is the duplication this file was extracted to remove. A document
  * with no `draw` gets identical numbers either way, so no existing post
  * changes.
+ *
+ * AND THE SECOND HALF OF THE SAME LESSON, learned one release later. `draw`
+ * shipped with pageMs() shared and the RENDER left to each surface, so four of
+ * them — the editor's reveal loop, app.js, inlineplayer.js and flip.js's
+ * exporter — each turned a progress into a stroke count themselves. They
+ * agreed in the middle of the range and disagreed at both ends. The inline
+ * player decided a page was still whenever its progress read 0, which is also
+ * what a drawing page reads at the instant it begins, so on the feed alone a
+ * Draw-on page opened FINISHED and then wiped and redrew; the exporter
+ * re-denominated the page in fps slots and ran it short. Neither was visible
+ * from the editor, which is the same blind spot as the original bug above.
+ *
+ *     dueCount()   how much of page i is on screen at progress p
+ *
+ * is therefore here beside pageMs(), and for the same reason: how long a page
+ * lasts and how much of it you can see are one question asked twice.
  *
  * The two mechanisms stay different — the player maps a clock to an index, the
  * editor reschedules a timer — because they are solving different problems.

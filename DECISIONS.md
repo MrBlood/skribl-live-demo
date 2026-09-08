@@ -6779,3 +6779,87 @@ the field existed. Those two took the cost from +2,535 B to +1,215 B.
 The help was audited on both surfaces afterwards. Flip's Draw-on tip still
 called it "a playback style" set "in the Draw menu"; both halves had stopped
 being true. Pad's claims were checked against the code and none was stale.
+
+## v286 -- Draw-on had four renderers, and they disagreed at both ends
+
+Outside review of the SEALED v285 read the source rather than the record and
+found two Draw-on boundary defects. Both are one root cause, and it is not the
+one v285 thought it had closed.
+
+v285 extracted `pageMs()` so no surface could invent its own answer to *how
+long is page i*. It did not extract the other half. *How much of a drawing page
+is on screen at progress p* stayed written out on each surface that renders a
+reveal -- the editor's `startReveal()`, `app.js`, `inlineplayer.js`, and
+`drawFrameTo()` in the exporter. Four copies of five lines of arithmetic. They
+agreed in the middle of the range, which is where every test looked, and
+disagreed at both ends.
+
+**THE ONE THAT SHIPPED.** `inlineplayer.js` decided whether a page draws by
+testing `progress > 0`. `progressAt()` returns 0 for two different pages: a
+still one, which has no progress, and a drawing one at the instant it begins.
+So the first frame of every reveal was read as "still" and painted the
+FINISHED drawing, which then wiped and redrew from nothing -- on the feed, and
+only on the feed, while the same page revealed correctly in the editor and at
+`/s/`. The moment a viewer reliably lands on progress exactly 0 is elapsed 0,
+so this fired on every load of a post whose first page draws, and again every
+time the loop came round. It now branches on `drawOf()`, which is the question
+being asked.
+
+The in-product help had already promised the thing this broke: *"a shared link,
+a Skribl in somebody's feed and an exported GIF or video all show what you
+previewed."* No help copy needed changing; the code needed to become true.
+
+**THE LATENT ONE.** `exportUnits()` rounded a page's duration to whole fps
+slots and then spread progress over the rounded count, putting fps back into a
+feature defined as exempt from it. Measured across the three rates the editor
+offers, a 437 ms page exported as 500 ms at 6 fps and 417 ms at 12 and 24 --
+the same page, three durations -- and where it fell short the last strokes
+never appeared at all. Units now sample the millisecond timeline at the
+encoder's cadence, and the residue is ceil'd rather than rounded: an exported
+drawing page runs at least its own duration and less than one frame over, at
+every rate. One-sided on purpose. Rounding can fall short, and a page that ends
+early is a page missing the end of its drawing.
+
+`lib/holdtiming.js` now owns `dueCount(frame, prog)` beside `pageMs()`, for the
+same reason it owns `pageMs()`. Three classes, one answer, no copies: progress
+0 reveals nothing, between reveals a prefix, 1 reveals all.
+
+## v286, cont. -- the instrument was wrong first, again
+
+The inline assertion PASSED on the defect the first time it ran.
+
+It seeked to one millisecond past the page boundary, where progress is already
+0.0009. The broken branch tests `progress > 0`, so it was never taken and the
+probe watched the correct path do the correct thing. The fixture now puts the
+drawing page FIRST and reads elapsed 0 exactly -- which is also the realistic
+case, being every load and every loop. Against the defect it reads ink 36,720
+where a whole page is 36,720: the finding stated in its own terms. Against the
+fix it reads 0.
+
+That is the third time a check has been written against the WORD rather than
+the mechanism, and this one is a new shape of it: the assertion named the right
+boundary in its own message and then sampled a millisecond away from it. Naming
+the boundary is not testing it.
+
+The export sweep was red on the pre-fix arithmetic first time, on two counts --
+the page ran short of its own duration at three of the rates swept, and each
+frame's progress was off the millisecond timeline by up to 9.6% of the page.
+A third assertion drafted alongside them was DELETED rather than kept: it
+compared what two frame rates show at the same instant, which cannot agree to
+better than one frame at the coarser rate and had nothing to do with the
+defect. A check that cannot be satisfied by a correct tree is not a check.
+
+## v286, cont. -- the ratchets
+
+    player JS   152,100 -> 152,300   (measured 152,220; target 153,600)
+    embed       31,900  -> 32,000    (measured 31,970)
+
+Neither buys a feature; both pay for the correction above. `dueCount()` costs
+334 B in the module, and both surfaces gave their copies back -- `app.js` 168 B,
+`inlineplayer.js` 164 B -- so the net is 166 B on the player and 170 B on the
+embed.
+
+The embed lands exactly on 32,000, which is where that ratchet stood before
+v281's saving banked it down to 31,000. So the embed has never cost a host more
+than it already did, and the next spender inherits no slack, which is the term
+v281 set.
