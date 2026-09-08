@@ -718,10 +718,17 @@ with sync_playwright() as sp:
         edge = [{"strokes": [dict(q, y=60) for q in pts[:4]],
                  "strokeGroups": [4], "hold": 1}]
 
-        def body(title, mid):
+        # THE DRAWING PAGE IS FIRST, and that is the whole point of the
+        # fixture. progressAt() returns exactly 0 only when the clock is AT a
+        # page's start, and the one moment a viewer reliably lands there is
+        # elapsed 0 — every load of the post, and every time the loop comes
+        # round. Put the drawing page second and probe a millisecond after the
+        # boundary and progress is already 0.0009, the broken branch is not
+        # taken, and the assertion passes on the defect: measured, it did.
+        def body(title, first):
             return {"title": title, "visibility": "public", "version": 2,
                     "schemaVersion": 2, "playbackMode": "flip", "fps": 6,
-                    "frames": edge + [mid] + edge,
+                    "frames": [first] + edge + edge,
                     "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
 
         out = []
@@ -759,23 +766,25 @@ with sync_playwright() as sp:
             g = dp.evaluate(GRID, f'[data-skribl-id="{sid}"] .skribl-inline-canvas')
             return ink_mass(g) if g else None
 
-        # 6 fps. Page 0 is a still page of one unit, so page 1 opens at 166.7 ms
-        # and, being exempt from fps, runs its own 1,150 ms span from there.
-        # seek() pauses, so each of these is read at exactly the time named.
-        P1 = 1000 / 6
-        full = ink_at(still_id, P1 + 40)
-        start = ink_at(draw_id, P1 + 1)
-        mid = ink_at(draw_id, P1 + 575)
-        end = ink_at(draw_id, P1 + 1145)
+        # 6 fps, drawing page first: exempt from fps, it runs its own 1,150 ms
+        # span from 0. seek() pauses, so each of these is read at exactly the
+        # time named — and 0 is read at exactly 0, which is the case that was
+        # broken. The still twin's first page is an ordinary one-unit page, so
+        # 40 ms is safely inside it and reads the page rendered whole.
+        full = ink_at(still_id, 40)
+        start = ink_at(draw_id, 0)
+        mid = ink_at(draw_id, 575)
+        end = ink_at(draw_id, 1145)
         check("the Draw-on probe read a canvas at all",
               None not in (full, start, mid, end),
               f"full={full} start={start} mid={mid} end={end}")
         if None not in (full, start, mid, end) and full:
             check("a Draw-on page opens EMPTY on the feed, not finished",
                   start < full * 0.25,
-                  f"ink {start} against a full page's {full} — at the instant "
-                  f"the page starts the feed was painting the completed "
-                  f"drawing, which the editor and /s/ do not")
+                  f"ink {start} against a full page's {full} — at elapsed 0, "
+                  f"which is every load and every loop, the feed was painting "
+                  f"the completed drawing and then wiping it to redraw. The "
+                  f"editor and /s/ open this page blank")
             check("...reveals a PREFIX partway through",
                   full * 0.25 < mid < full * 0.85,
                   f"ink {mid} against a full page's {full} — partway through, "
@@ -1011,7 +1020,23 @@ with sync_playwright() as sp:
     #
     # It does not spend all of what v281 banked: 31,900 against the 32,000 that
     # stood before, so the saving is still worth something.
-    EMBED_RATCHET = 31_900
+    #
+    # 31,900 -> 32,000, measured at 31,970, and this one is NOT a feature. The
+    # per-page draw above shipped with the reveal arithmetic written out on
+    # each surface separately, and this player's copy asked the wrong question:
+    # it decided a page was still whenever its progress was 0, which is also
+    # what a drawing page reads at the instant it begins. So on the feed — and
+    # nowhere else — a Draw-on page appeared FINISHED for its first frame and
+    # then wiped and redrew. lib/holdtiming.js now owns progress -> strokes as
+    # dueCount(), the same way it already owned how long a page lasts.
+    #
+    # The module grew 1,937 -> 2,271 B and this player shrank 17,751 -> 17,587,
+    # because its copy went; the net is 170 B to make four surfaces agree at a
+    # boundary where they did not. That spends the rest of what v281 banked and
+    # goes no further: 32,000 is exactly where the ratchet stood before that
+    # saving, so the embed has never been more expensive than it already was.
+    # The next spender inherits no slack and has to argue as v281 asked.
+    EMBED_RATCHET = 32_000
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

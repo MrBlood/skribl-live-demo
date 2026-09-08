@@ -276,9 +276,13 @@ with sync_playwright() as p:
           per[rate] = { dur: u.length * slot, slot: slot,
                         first: u[0].prog, last: u[u.length - 1].prog,
                         mono: u.every((x, i) => i === 0 || x.prog >= u[i-1].prog),
-                        // what the file shows at a fixed wall-clock instant
-                        atHalf: H.dueCount(f, u[Math.min(u.length - 1,
-                                  Math.floor((trueMs / 2) / slot))].prog),
+                        // Unit k is on screen until (k+1)*slot. THE PROGRESS
+                        // IT CARRIES MUST BE THE PROGRESS THAT INSTANT HAS
+                        // REACHED on the page's own millisecond timeline —
+                        // that is what "samples the ms timeline" means, and
+                        // what denominating it in rounded slots destroyed.
+                        drift: Math.max.apply(null, u.map((x, k) =>
+                          Math.abs(x.prog - Math.min(1, ((k + 1) * slot) / trueMs)))),
                         points: f.strokes.length };
         }
         rows.push({ span: span, trueMs: trueMs, per: per });
@@ -311,19 +315,35 @@ with sync_playwright() as p:
               all(0 < f < 1 for f in firsts),
               f"highest {max(firsts)} — a first frame at 1 is the old bug, "
               f"where a one-step page opened finished")
-        # The parity the feature promises: at the same instant of wall clock,
-        # the file shows the same amount of the drawing whatever the document's
-        # frame rate. Compared in POINTS revealed, within one frame's worth.
-        worst, where = 0, ""
+        # THE PARITY THE FEATURE PROMISES, stated where it can actually be
+        # held. Two rates cannot show the same thing at the same instant to
+        # better than a frame — a file has frames, and the coarser rate's is
+        # wider. What CAN hold at every rate is that each exported frame
+        # carries the progress the page's own millisecond timeline had reached
+        # when that frame went up. Re-denominating the page in rounded slots
+        # broke exactly this: progress was spread over however many steps the
+        # rounding produced, so it ran ahead of, or behind, the real drawing.
+        worst, where = 0.0, ""
         for r in exp:
-            got = [r["per"][str(rate)]["atHalf"] for rate in (6, 12, 24)]
-            spread = (max(got) - min(got)) / r["per"]["6"]["points"]
-            if spread > worst:
-                worst, where = spread, f"{r['span']}ms span: {got} points at 6/12/24fps"
-        check("halfway through, 6, 12 and 24 fps show the same amount of the drawing",
-              worst < 0.12,
-              f"{where} — {worst:.0%} of the page apart; a drawing page is "
-              f"exempt from fps and the exported file has to honour that too")
+            for rate in (6, 12, 24):
+                d = r["per"][str(rate)]["drift"]
+                if d > worst:
+                    worst, where = d, f"{r['span']}ms span at {rate}fps"
+        check("every exported frame carries the progress its own instant has "
+              "reached on the millisecond timeline",
+              worst < 0.01,
+              f"{where} is off by {worst:.1%} of the page — the file's reveal "
+              f"is running on the fps grid rather than on the page's own clock")
+        # And the consequence a viewer would actually notice: the same page
+        # runs for the same length of time at every rate, to within the
+        # coarsest frame the editor offers.
+        durs = [(r["span"], [r["per"][str(rate)]["dur"] for rate in (6, 12, 24)])
+                for r in exp]
+        wide = [f"{sp}ms span exports as {[round(d) for d in ds]}"
+                for sp, ds in durs if max(ds) - min(ds) > 1000 / 6 + 1e-6]
+        check("...so one page runs the same length at 6, 12 and 24 fps, within "
+              "a frame of the slowest",
+              not wide, "; ".join(wide[:3]))
     check("no JS errors while sweeping export units", not eerrs, "; ".join(eerrs[:2]))
     ep.close()
 

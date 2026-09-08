@@ -155,15 +155,12 @@
    * A non-finite prog is a clock that has not produced a reading yet, which is
    * the start of the page, so it lands on 0 with every other non-positive. */
   function dueCount(frame, prog) {
-    var p = frame && frame.strokes;
-    if (!p || !p.length) return 0;
-    var q = Number(prog);
-    if (!(q > 0)) return 0;
+    var p = frame && frame.strokes, q = Number(prog), n = 0;
+    if (!p || !p.length || !(q > 0)) return 0;
     if (q >= 1) return p.length;
     var t0 = Number(p[0].t);
-    var span = Math.max(1, Number(p[p.length - 1].t) - t0);
-    var due = q * span, n = 0;
-    while (n < p.length && (Number(p[n].t) - t0) <= due) n++;
+    var due = q * Math.max(1, Number(p[p.length - 1].t) - t0);
+    while (n < p.length && Number(p[n].t) - t0 <= due) n++;
     return n;
   }
 
