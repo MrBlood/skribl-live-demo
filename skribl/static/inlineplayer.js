@@ -544,7 +544,7 @@
      * meant to be. Posterless, idle is the FINISHED drawing. */
     var hasPoster = !!poster;
     var payload = null, loading = false, failed = false;
-    var timeline = null, flipFrames = null, flipHolds = null, flipFps = 12;
+    var timeline = null, flipFrames = null, flipMs = null, flipFps = 12;
     var totalMs = 0, size = null, under = null;
     var state = 'idle';                       // idle | playing | paused
     var elapsed = 0, t0 = 0, raf = null, drawn = 0;
@@ -698,10 +698,17 @@
       if (isFlip(payload, frames)) {
         flipFrames = frames;
         flipFps = payload.fps || 12;
+        /* PER-PAGE MILLISECONDS. A page carrying `draw` replays its own
+         * strokes over their recorded timing and is exempt from fps, so a page
+         * is no longer a whole number of fps slots. Without the lib this
+         * degrades to one slot per page, which is what it did before per-page
+         * holds existed — the fallback's job is to keep a page turning, not to
+         * reproduce a feature. */
         var H = global.SkriblHold;
-        flipHolds = H ? H.table(frames) : frames.map(function () { return 1; });
-        totalMs = H ? H.durationMs(flipHolds, flipFps)
-                    : Math.max(1, (flipHolds.length / flipFps) * 1000);
+        flipMs = H ? H.msTable(frames, flipFps)
+                   : frames.map(function () { return 1000 / flipFps; });
+        totalMs = H ? H.cycleMs(flipMs)
+                    : Math.max(1, (frames.length / flipFps) * 1000);
       } else {
         timeline = buildTimeline(f0.strokes || [], payload.pauseMode);
         totalMs = timeline.length ? timeline[timeline.length - 1].playT : 0;
@@ -747,13 +754,34 @@
       if (!payload) return;
       if (flipFrames) {
         var H = global.SkriblHold;
-        var idx = H ? H.indexAt(flipHolds, flipFps, at % Math.max(1, totalMs))
+        var cyc = at % Math.max(1, totalMs);
+        var idx = H ? H.indexAtMs(flipMs, cyc)
                     : Math.min(flipFrames.length - 1,
                                Math.floor(at / Math.max(1, totalMs) * flipFrames.length));
         clear();
         var fr = flipFrames[idx];
-        if (fr && fr.strokes && fr.strokes.length)
-        paintStatic(ctx, fr.strokes, canvas);
+        if (fr && fr.strokes && fr.strokes.length) {
+          /* A DRAWING PAGE REVEALS. Its progress within the page decides how
+           * much of its stroke list has come due — the same arithmetic the
+           * editor and the /s/ player run, from the same module, so all three
+           * agree about what a viewer sees. */
+          /* NOT `prog`: that name is the progress ELEMENT in this closure, and
+           * `var` is function-scoped, so declaring it here shadowed the element
+           * for the whole of render() — including the replay branch, which then
+           * threw on undefined.style at the last line and was swallowed by the
+           * load path's catch as "Couldn't load this Skribl". A flip-only edit
+           * broke every REPLAY post on the feed. */
+          var drawProg = H ? H.progressAt(flipMs, flipFrames, cyc) : 0;
+          if (drawProg > 0) {
+            var pts = fr.strokes, t0 = pts[0].t;
+            var span = Math.max(1, pts[pts.length - 1].t - t0);
+            var due = drawProg * span, n = 0;
+            while (n < pts.length && (pts[n].t - t0) <= due) n++;
+            if (n) paintStatic(ctx, pts.slice(0, n), canvas);
+          } else {
+            paintStatic(ctx, fr.strokes, canvas);
+          }
+        }
         setNib(null);
       } else {
         /* THE COMPOSITOR HAS TO OUTLIVE THE FRAME. The replay path is

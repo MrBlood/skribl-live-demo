@@ -6472,3 +6472,310 @@ entries are true of the version they sit under.
 This work moves history OUT of current-state documents INTO the log. Deleting
 the log is the inverse operation, and the same argument keeps the v283 entries
 above as written.
+
+## v285 -- the splitting rule was written nineteen times and stated nowhere
+
+`release_run.py`'s BATCHES block carried a reason beside almost every solo
+batch and nowhere stated the rule those reasons were instances of. Nineteen of
+them said one thing in different words: this suite measures something, a second
+Chromium in the batch competes for the same CPU, so it runs alone. A maintainer
+placing a new suite could read all nineteen and still have to infer the
+criterion, because the criterion was the one thing not written down.
+
+It is now, once, above the list:
+
+    measures    it reads rendered geometry, canvas pixels or frame pacing, and
+                a contention spike would read as a moved pixel or a pacing
+                failure rather than as load
+    size        it will not finish inside one sandbox invocation, and a batch
+                that never finishes never checkpoints
+    store       it mutates state a neighbour can SEE -- a media root, the
+                shared server's posts, a database
+
+Everything else shares. Each solo batch keeps a one-word tag naming which
+applies; `store` is the only reason that names specific neighbours, so those
+batches keep their note and the others lost theirs.
+
+**THE v284 RULE DOES NOT APPLY HERE, AND THAT WAS CHECKED RATHER THAN
+ASSUMED.** "A suite explains itself" would send each reason into the suite it
+describes. Reading all 99 for placement language found none: the four that
+mention contention -- `verify_hold`, `verify_cssplit`, `verify_padcanvas`,
+`verify_review` -- do so about an assertion's own TOLERANCE, not about where
+the suite runs. Placement is a fact about the relationship between suites in a
+run, and no single suite owns it, so the concept's home is this file and the
+fix was to state it once rather than relocate it.
+
+**Reading found three claims that had gone stale in place**, which is the
+argument for the change independent of its size:
+
+  * `verify_ux` "is 284 assertions" -- it is 333 on the sealed tree;
+  * `verify_sweepjob` "shares a batch with the other cheap v224 suite" -- it
+    has a batch of its own, and so does the suite named;
+  * `verify_tween`'s "nothing but this comment says so", about needing a line
+    per suite -- START-HERE.md's invariants table says so, and the coverage
+    refusal is what actually enforces it.
+
+**A fourth output is the honest one: `unrecorded`.** Nine solo batches meet
+none of the three criteria -- they neither measure nor mutate, and sit alone
+because that is how the list grew. Two of the old comments admitted it in
+passing (`verify_pagespan` "shares a batch with nothing only because the two
+suites either side of it are already alone"). The tag records that no reason is
+on file; it deliberately does NOT say merging them is safe, because nobody has
+measured that. Making the gap visible is worth more than nine invented reasons.
+
+**The batch layout did not change and that was proved, not asserted.** Old and
+new modules were imported side by side and their BATCHES compared -- a reorder,
+a moved suite or a dropped suite each make that comparison go red, checked
+against all three. The block went 205 -> 112 lines, 145 -> 51 of them comment,
+with the run it describes byte-identical.
+
+**THIS ENTRY IS UNSEALED BY DECISION, so main carries a v285 heading above a
+tree whose `SKRIBL_VERSION` still reads v284.** That is deliberate and not
+drift. Nothing here can move a suite result: `BATCHES`, `GENERATED` and
+`SKIP_COVERAGE` are identical to v284's, and no suite executes this file except
+`verify_docs`, which imports it for `SKIP_COVERAGE` alone. A seal would
+therefore spend its ~42 minutes restating v284's counts under a new tree hash,
+immediately after the run that produced them. The owner's call was to let it
+ride: the bump to v285 and the aggregate happen when the next
+behaviour-changing work lands, and that one seal covers both.
+
+## v285, cont. -- the split trigger was a citation, not a rule
+
+`verify_a11y` and `verify_layout` each justified their existence partly by
+saying another suite was "past the split trigger". Nothing defined it. Searched
+the whole history, not just the current tree: `git log -S"split trigger" --all`
+returns five commits, and in every version of every file the phrase appears in
+exactly two places -- `verify_layout.py`, where it entered, and
+`verify_a11y.py`, which took it from there. It was never a rule. It was one
+docstring citing another docstring's phrasing.
+
+**BOTH DOCSTRINGS ALREADY GAVE THE REAL REASON, one sentence later.**
+`verify_layout`: "More to the point, every assertion here is about LAYOUT, and
+layout is the one thing this project has repeatedly got wrong while every
+attribute passed." `verify_a11y`: "A suite that asks those questions by name is
+how they stop being optional." Both are cohesion arguments and both stand
+alone, so deleting the trigger clause loses nothing -- which is why the outside
+review's instruction was to establish that before inventing a threshold to
+replace it.
+
+It was also already rotting in the ordinary way: `verify_layout` said
+`verify_tools` was at 125 assertions, the seal says 130. Two hand-typed
+assertion counts left the tree with the clause, in source comments -- where the
+v279 staleness sweep never looked, and where v284 found two more.
+
+**NO SUITE WAS SPLIT AND NO THRESHOLD WAS WRITTEN.** The review was explicit
+that inventing a numeric trigger would turn two historical comments into a
+project-wide policy that never existed, and that splitting `verify_ux` or
+`verify_tools` was warranted only by a current concrete problem. None was
+found: both are green, both are cohesive, and neither has failed anybody.
+
+The one operational rule in this neighbourhood is real and is already stated
+once, by the entry above: a suite gets its own BATCH when it will not finish
+inside one invocation. That is about placement in a release run, not about how
+big a file may be, and the deleted phrase blurred the two. A suite is its own
+suite because it asks one kind of question.
+
+## v285, cont. -- the arc that started at v282 ends here, by decision
+
+`CLAUDE.md` gains a stopping condition, in the reviewer's own words: continue
+only while a targeted semantic review identifies a specific duplicated or
+obsolete concept with concrete maintenance cost; "load-bearing" and "reason
+unknown" are valid outcomes rather than invitations to keep searching.
+
+Three things were declined, and the declining is the point:
+
+  * **`docs/HANDOFF.md` against `DECISIONS.md`** -- not investigated. The
+    hypothesis came from file shape, not from a stale claim, a contradiction or
+    anybody's failure. Auditing thousands of lines to find out whether there
+    *might* be duplication is the exact work the rule above stops.
+  * **The nine `unrecorded` batches** -- not consolidated. The tag records that
+    no reason is on file; it is not evidence that merging is safe. If a future
+    change touches one of those suites, measure then.
+  * **A fourth deduplication instrument** -- not built. Three failed in v284 and
+    reading worked; this release read history and two docstrings.
+
+The metrics go too. Markdown line count is confounded by the architecture this
+project chose on purpose -- current-state docs stay concise BECAUSE the log
+grows -- so it stops being a direction-of-travel number. Harness comment density
+is 17% against the app's own 29%; nothing suggests 17% is bad, and it is not a
+target either.
+
+**The sign that the campaign worked is not that nothing is left to delete. It is
+that deletion needs a reason again.**
+
+**THE REVIEW ASKED FOR A SEAL, THE OWNER DEFERRED, AND THE REVIEW THEN WITHDREW
+THE CONDITION.** The reviewer's sixth condition was "freeze the source and run
+the ordinary release seal" -- deciding whether this tranche was ready to become
+a release. The owner's question was the next one: what does a seal buy on a tree
+where nothing executes differently?
+
+Measured against v284, this tranche changes five files and no behaviour. The
+only diff lines that execute are batch entries that gained a trailing comment,
+with the layout proved identical by importing both modules and comparing; both
+suite edits are docstrings. An aggregate would spend its ~42 minutes reproducing
+v284's assertion total under a new tree hash, and the MP4 attestation would be
+hand-carried for an H.264 path nobody touched. Shown that, the review withdrew
+condition 6: **accepted, intentionally unsealed; v284 remains the latest sealed
+release.**
+
+So `SKRIBL_VERSION` reading v284 beside a v285 heading is the accurate statement
+rather than drift -- v285 names the development tranche, v284 the sealed
+product. Until a seal exists this is not released, shipped, in production or
+release-approved. It is accepted unsealed maintenance work.
+
+**WHAT ENDS THE RIDE.** The next change touching production behaviour, test
+behaviour, assertions or contracts, batch topology, release enforcement,
+packaging, generated-evidence semantics, or security/recovery/storage seals
+normally, and these commits ride into that frozen tree and are covered by it.
+Documentation-only changes do not queue up here in the meantime: a bucket of
+them is the campaign restarting under another name, which the stopping condition
+in CLAUDE.md exists to prevent.
+
+## v285, cont. -- the release headline stopped outrunning its evidence
+
+An outside retest of v284 found one Medium, and it is worth the entry because
+the defect was a WORD rather than a gate. `RELEASE.md`'s top line said `PASS`,
+computed from `ok = not failed and not never` -- the local suite ledger, and
+nothing else. A skip lands in `skipped` and never in `failed`, and
+`mp4_attestation()` is rendered BESIDE the result rather than gating it. So a
+sealed record could read `result PASS` above a STALE attestation and a
+PostgreSQL lane nobody had run, and anybody consuming that token would take it
+for whole-release coverage.
+
+**The gate is deliberate and did not change.** `mp4_attestation()`'s own
+docstring already said why: whether an unverified H.264 path is shippable is a
+product decision, and the seal's job is to state the fact rather than make it.
+The review offered a final-gate model as an alternative and it was declined for
+exactly that reason -- it would reverse a decision this tree made on purpose and
+wrote down. What shipped is the state model:
+
+    release status   FULL RELEASE PASS | LOCAL PASS -- EXTERNAL COVERAGE PENDING | FAIL
+    local result     PASS   (every suite that ran here, on this tree)
+    external lanes   N attested, M pending
+
+**TWO THINGS WERE BEING SUMMED THAT ARE NOT THE SAME KIND OF THING**, which is
+the part worth keeping. The `mp4` lane is ATTESTED: `MP4-ATTESTATION.txt` names
+the tree it describes, so a local run can actually check it and reports STALE on
+a mismatch. A `SKIP_COVERAGE` lane is CLAIMED: `verify_docs` proves the CI job
+EXISTS in the workflow, and existence is not a result. `external_coverage()`
+keeps them apart and names every pending lane in the record.
+
+**FULL RELEASE PASS IS CURRENTLY UNREACHABLE, AND THAT IS THE FINDING RESTATED
+RATHER THAN A BUG.** PostgreSQL has no attestation: nothing the `postgres` job
+produces reaches the local tree, so no local seal can prove that lane was green.
+Before this change the record said `PASS` anyway. Now it says `LOCAL PASS --
+EXTERNAL COVERAGE PENDING` and names PostgreSQL, which is the true statement.
+The status becomes reachable the day the `postgres` job writes a tree-bound
+attestation the way `mp4` does -- deliberately NOT done here, because the review
+was explicit that this is a small trust-semantics fix and not another release-
+framework project.
+
+Six assertions in `verify_docs`, four of them negative controls, and the whole
+thing was calibrated against the pre-fix predicate in a throwaway copy: green on
+the fix, red on `return "FULL RELEASE PASS" if ok else "FAIL"`. A green check is
+not evidence until it has been shown to go red.
+
+**This is the behaviour-changing work the v285 tranche was waiting for.** It
+alters release enforcement and generated-evidence semantics -- two of the
+categories named above as ending the ride -- so the batching and docstring
+commits now have a seal to ride into.
+
+## v285, cont. -- a page can draw itself, and the field finally travels
+
+The owner asked for per-page Draw-on. What existed was a document-wide toggle
+in the Draw drawer -- real, shipped, and PREVIEW-ONLY: it appeared in neither
+`serializeFlip()` nor `buildSharePayload()`, so a Skribl posted with it on
+played as an ordinary flip for everyone who opened the link. The author was the
+only person who ever saw the thing they chose.
+
+**A DRAWING PAGE IS EXEMPT FROM fps, which is the whole design.** "When it gets
+to that page it just draws it like a pad page" -- so its duration is its own
+stroke span, and a stroke span is not a whole number of fps slots at any frame
+rate. `lib/holdtiming.js` is therefore denominated in MILLISECONDS now.
+`pageMs()` is the one answer both questions are built on: a still page is
+`holdOf()/fps`, a drawing page is its own span. The slot-denominated half
+(`table`/`units`/`durationMs`/`indexAt`/`slotMs`) was DELETED rather than kept
+beside it -- two ways to ask "how long is page i" is the duplication that module
+was extracted to remove.
+
+Measured before believing: on a document with no `draw`, the ms model and the
+slot model agree on total duration AND on the page index at every 7ms step
+across a whole cycle. Nothing about an existing post changes.
+
+**The control exists twice because per-page controls in Flip do** -- `#pagebar`
+on the regular strip, the per-tile menu on compact, and only one is ever
+rendered. A control added to one vanishes at the other size class. The strip
+carries a pencil mark that NAMES ITSELF, because a tile is a bare `<div>` with
+no accessible name of its own and a decorative mark would have made the state
+sighted-only.
+
+**One playback clock, not two.** `drawOnMode` had a parallel loop that ignored
+`hold` entirely; its reveal arithmetic survives in `startReveal()`, scoped to
+one page and driven by the same timer that schedules every other page. Two loops
+disagreeing about timing is precisely the bug this module was extracted to end,
+and keeping one alive beside the cure would have re-created it. The drawer
+switch is a bulk setter now, reading "on" only while every page is on.
+
+All four surfaces honour it -- editor, `/s/<id>`, the in-post player -- and so
+does the exported file: both export paths expand a drawing page into as many
+base-fps units as its own duration needs, each carrying its progress. A drawing
+page is exempt from the frame-bitmap cache on every surface, because the cache
+exists on the premise that a page does not change.
+
+## v285, cont. -- three bugs the work walked into, and what each cost
+
+**PER-PAGE HOLDS HAVE NEVER TRAVELLED WITH A POST.** `buildSharePayload()`
+wrote no `hold` at all. Set a page to x4, preview it, post it, and every viewer
+saw uniform timing; months of Flip posts carry no holds and cannot be repaired,
+because the field is simply absent from their payloads. Their authors would have
+to re-post.
+
+Why nothing caught it is the useful half. `verify_hold` already knew that
+proving a hold is WRITTEN says nothing about whether it comes BACK, and had
+grown a round trip for exactly that. The same gap sat one step further out and
+nothing was looking: the API check posts a payload built BY HAND, and the timing
+check reads the exported GIF. Neither touches the editor's own Share path, which
+is the only thing that could have failed. Adjacent to the claim, again. The new
+assertion reads the hold off `buildSharePayload()` and is calibrated -- 57/58
+against the pre-fix tree, 58/58 after.
+
+**A `var` SHADOWED THE PROGRESS ELEMENT AND BROKE EVERY REPLAY POST.** `var prog`
+declared inside `render()`'s flip branch in `inlineplayer.js` is function-scoped,
+so it shadowed the outer `prog` -- the DOM element -- for the whole function, and
+the REPLAY branch threw on `undefined.style` at its last line. The load path's
+`.catch` swallowed it as "Couldn't load this Skribl", so a flip-only edit
+silently broke every replay in a feed with no error visible anywhere. Found by
+instrumenting that catch: the same lesson START-HERE records about suites
+sending stderr to DEVNULL, which is that the traceback you need is the one being
+discarded.
+
+Two process notes, because both cost real time. I bisected the reveal block and
+MISREAD the result -- I read the tail line, which was a different failure, and
+threw away a correct answer. And I only trusted "I broke it" after running the
+v284 baseline three times.
+
+**AND THE SEAL ITSELF WAS RUNNING ON UNLOCKED DEPENDENCIES.** v284 recorded
+SQLAlchemy 2.0.52 while `constraints.txt` pins 2.0.51. `requirements.txt`
+carries ranges, the lock carries hashes, and `pip install -r requirements.txt`
+satisfies the first while ignoring the second -- so the sealed evidence
+described a configuration nobody deploys. That is the argument that pins the
+interpreter, one layer down, and nothing was checking it. `verify_docs` compares
+installed versions against the lock now, calibrated against two real
+environments: the container's system 3.12 fails it, the locked venv passes.
+
+## v285, cont. -- the ratchets, and what was spent before asking for them
+
+    player JS   151,000 -> 152,100   (measured 152,054; target 153,600)
+    embed       31,000  -> 31,900    (measured 31,800)
+
+v281's note beside the embed ratchet set the terms -- "leaving it at 32,000
+would have banked the saving as slack for the next thing to spend without
+arguing for it" -- so the argument is written at each ratchet, and the spending
+came first: the slot API deleted rather than carried, and `app.js`'s inline
+fallback deliberately NOT reimplementing the reveal, since without the lib a
+drawing page should play as a still one, which is what that player did before
+the field existed. Those two took the cost from +2,535 B to +1,215 B.
+
+The help was audited on both surfaces afterwards. Flip's Draw-on tip still
+called it "a playback style" set "in the Draw menu"; both halves had stopped
+being true. Pad's claims were checked against the code and none was stale.

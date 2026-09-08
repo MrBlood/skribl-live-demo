@@ -151,6 +151,14 @@
         <button type="button" class="pb pb-move" id="pbLeft" title="Move this page left" aria-label="Move this page left"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span><span class="pb-tx">Left</span></button>
         <button type="button" class="pb pb-move" id="pbRight" title="Move this page right" aria-label="Move this page right"><span class="pb-tx">Right</span><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></button>
         <button type="button" class="pb" id="pbCopy" title="Copy this page" aria-label="Copy this page"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg></span><span class="pb-tx">Copy</span></button>
+        {# DRAW-ON, per page. A page set to draw replays its own strokes over their
+         recorded timing instead of snapping in, and is EXEMPT FROM fps for that
+         reason — see lib/holdtiming.js. role="switch" rather than a plain
+         button because it is a state, not an action: the other four here DO
+         something and this one IS something, and a screen reader should hear
+         the difference. Its twin lives in the compact strip's ⋯ menu; both
+         must exist or the control vanishes at one size class. #}
+        <button type="button" class="pb" id="pbDraw" role="switch" aria-checked="false" title="Draw this page on" aria-label="Draw this page on"><span class="pb-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 9.5-9.5a2 2 0 0 0-3-3L5 16l-1 4z"/></svg></span><span class="pb-tx">Draw</span></button>
         {# Moving the artwork is a PAGE operation — it belongs with Copy, Hold and
          Move, not with Pen and Eraser, and the tool row has no space anyway.
          Labelled "Artwork" because "Move" already means reorder, two buttons

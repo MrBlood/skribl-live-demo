@@ -188,6 +188,29 @@ with sync_playwright() as p:
     check("...and the unheld pages come back at the default",
           restored[0] == 1 and restored[2] == 1, str(restored))
 
+    # THE THIRD LAYER, and it was empty too. This suite learned once that
+    # proving a hold is WRITTEN says nothing about whether it comes BACK. The
+    # same gap sat one step further out: nothing asked whether it reaches a
+    # VIEWER. serializeFlip() is the draft; buildSharePayload() is the POST
+    # body, and it wrote no hold at all — so a page held for four beats
+    # previewed correctly, posted, and played at uniform timing for everyone
+    # who opened the link. Months of Flip posts carry no holds because of it.
+    #
+    # Everything that existed here passed with that bug fully present: the
+    # API-accepts-a-hold check posts a payload built BY HAND, and the GIF check
+    # reads the EXPORT. Neither touches the editor's own Share path, which is
+    # the only thing that could have failed. Adjacent to the claim, again.
+    #
+    # So this reads the hold off the POSTED body, from the same function the
+    # Share button calls.
+    posted = pg.evaluate("() => buildSharePayload().frames.map(f => f.hold)")
+    check("a hold reaches the POSTED payload, not just the draft",
+          posted[1] == 3,
+          f"{posted} — buildSharePayload() is what a viewer gets; a hold that "
+          f"lives only in serializeFlip() is one the author alone can see")
+    check("...and unheld pages stay absent from the post, as in the draft",
+          posted[0] is None and posted[2] is None, str(posted))
+
     print("\nTIMING — read out of the exported GIF, not off the state")
     fps = pg.evaluate("() => fps")
     base_cs = round(round(1000 / fps) / 10)

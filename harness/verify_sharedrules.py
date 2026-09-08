@@ -118,23 +118,34 @@ with sync_playwright() as p:
     swept = pg.evaluate("""() => {
       const H = window.SkriblHold;
       if (!H) return null;
+      // A page carrying `draw` is EXEMPT FROM fps and lasts its own stroke
+      // span, so the sweep covers both kinds. `d` marks a drawing page; its
+      // strokes are shaped to a known span so the expected window is knowable.
+      const mkDraw = ms => ({ draw: true, strokes: [{t:0},{t:ms}] });
       const CASES = [[[1,1,1],12],[[1,2,1,3,1],12],[[4,1,4],8],[[2],12],
-                     [[1,3],30],[[1,1,4,1],24],[[3,3,3],12],[[1,2,3,4,1],15]];
+                     [[1,3],30],[[1,1,4,1],24],[[3,3,3],12],[[1,2,3,4,1],15],
+                     [[1,'d1200',1],12],[['d600'],24],[[2,'d900',3,'d400'],6],
+                     [['d2000','d320'],30]];
       const rows = [];
       for (const [hs, fps] of CASES) {
-        const frames = hs.map(h => ({ hold: h }));
-        const t = H.table(frames);
+        const frames = hs.map(h => typeof h === 'string'
+          ? mkDraw(parseInt(h.slice(1), 10)) : ({ hold: h }));
+        const ms = H.msTable(frames, fps);
         let acc = 0, worst = 0, order = true;
-        for (let i = 0; i < t.length; i++) {
-          const start = (acc / fps) * 1000, end = ((acc + t[i]) / fps) * 1000;
-          const diff = Math.abs(H.slotMs(frames[i], fps) - (end - start));
+        for (let i = 0; i < ms.length; i++) {
+          const start = acc, end = acc + ms[i];
+          // pageMs IS the window the clock keeps that page for — the editor's
+          // timer and the player's clock reading the same number is the whole
+          // point of this module.
+          const diff = Math.abs(H.pageMs(frames[i], fps) - (end - start));
           if (diff > worst) worst = diff;
-          if (H.indexAt(t, fps, start + 0.001) !== i) order = false;
-          if (H.indexAt(t, fps, (start + end) / 2) !== i) order = false;
-          if (H.indexAt(t, fps, end - 0.001) !== i) order = false;
-          acc += t[i];
+          if (H.indexAtMs(ms, start + 0.001) !== i) order = false;
+          if (H.indexAtMs(ms, (start + end) / 2) !== i) order = false;
+          if (H.indexAtMs(ms, end - 0.001) !== i) order = false;
+          acc += ms[i];
         }
-        rows.push({ hs, fps, worst, order, dur: H.durationMs(t, fps), units: H.units(t) });
+        rows.push({ hs, fps, worst, order, dur: H.cycleMs(ms),
+                    sum: ms.reduce((a, b) => a + b, 0) });
       }
       return rows; }""")
     check("the swept comparison ran", swept is not None, "window.SkriblHold missing")
@@ -147,7 +158,7 @@ with sync_playwright() as p:
         check("and the clock stays on that page for the whole window",
               not _o, "page changes inside its own slot at: " + ", ".join(_o[:4]))
         _u = [f"{r['hs']}@{r['fps']}" for r in swept
-              if abs(r["dur"] - (r["units"] / r["fps"]) * 1000) > 1e-9]
+              if abs(r["dur"] - r["sum"]) > 1e-9]
         check("a cycle lasts exactly its hold units at the frame rate", not _u, ", ".join(_u[:4]))
         check("the sweep covered several rates, not just 12fps",
               len(set(r["fps"] for r in swept)) >= 4,
@@ -175,11 +186,21 @@ with sync_playwright() as p:
           f"{clamp['viaFlip']} vs {clamp['read']} — the editor keeps a second rule")
 
     print("\nEDGES")
-    edge = pg.evaluate("""() => { const H = window.SkriblHold; return {
-        before: H.indexAt([1,2,1],12,-500), after: H.indexAt([1,2,1],12,1e9),
-        empty: H.indexAt([],12,10), emptyDur: H.durationMs([],12),
-        zeroFps: H.slotMs({hold:2},0), negFps: H.slotMs({hold:2},-5),
-        nanFps: H.slotMs({hold:2},NaN), twelve: H.slotMs({hold:2},12) }; }""")
+    # The ms API, same edges. A page is denominated in milliseconds now, so the
+    # tables these are handed are ms rather than slots — the questions are
+    # unchanged: does time before the start land on page 0, does time past the
+    # end land on the last page, does an empty document divide by zero, and
+    # does an absurd frame rate fall back rather than returning Infinity.
+    edge = pg.evaluate("""() => { const H = window.SkriblHold;
+      const ms = H.msTable([{hold:1},{hold:2},{hold:1}], 12); return {
+        before: H.indexAtMs(ms,-500), after: H.indexAtMs(ms,1e9),
+        empty: H.indexAtMs([],10), emptyDur: H.cycleMs([]),
+        zeroFps: H.pageMs({hold:2},0), negFps: H.pageMs({hold:2},-5),
+        nanFps: H.pageMs({hold:2},NaN), twelve: H.pageMs({hold:2},12),
+        // A drawing page ignores the frame rate entirely — that IS its edge.
+        drawAt6: H.pageMs({draw:true,strokes:[{t:0},{t:900}]},6),
+        drawAt60: H.pageMs({draw:true,strokes:[{t:0},{t:900}]},60),
+        drawEmpty: H.pageMs({draw:true,strokes:[]},12) }; }""")
     check("time before the start lands on the first page", edge["before"] == 0, str(edge["before"]))
     check("time past the end lands on the last page", edge["after"] == 2, str(edge["after"]))
     check("an empty document does not divide by zero",
@@ -187,6 +208,13 @@ with sync_playwright() as p:
     check("a missing or absurd frame rate falls back instead of returning Infinity",
           edge["zeroFps"] == edge["twelve"] and edge["negFps"] == edge["twelve"]
           and edge["nanFps"] == edge["twelve"], str(edge))
+    check("a DRAWING page is exempt from the frame rate — same span at 6 and 60",
+          edge["drawAt6"] == edge["drawAt60"] == 900,
+          f"{edge['drawAt6']} vs {edge['drawAt60']} — a page that draws itself "
+          f"lasts as long as its strokes took, whatever the document's fps")
+    check("...and a drawing page with no strokes still occupies time",
+          edge["drawEmpty"] >= 320,
+          f"{edge['drawEmpty']} — a zero-length page is one the clock skips")
 
     # ---- the layering ceiling ---------------------------------------------
     print("\nTHE LAYERING CEILING — the same budget on both surfaces")

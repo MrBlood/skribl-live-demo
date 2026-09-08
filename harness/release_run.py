@@ -61,210 +61,116 @@ GENERATED = {"harness/LAST-RUN.txt", "SHA256SUMS", "README.md",
              # invisible to it. Caught by that check on the first run.
              "harness/MP4-ATTESTATION.txt"}
 
-# Batches exist because a bare run hangs. Grouped so a browser batch stays
-# small enough to finish, and so the server/security suites — which do not
-# drive Chromium — are not held hostage to a browser batch timing out.
+# WHY A SUITE IS ALONE IN A BATCH — the whole decision, stated once.
+#
+# Batches exist because a bare run hangs. A suite SHARES a batch unless one of
+# three things is true of it, and every solo batch below is tagged with which:
+#
+#   measures  It reads rendered geometry, canvas pixels or frame pacing. A
+#             second Chromium in the same batch competes for the same CPU, and
+#             a contention spike then reads as a moved pixel or a pacing
+#             failure rather than as load. This is the common case, and it is
+#             not theoretical: verify_hold flaked exactly this way in the v264
+#             run, and its assertion carries a contention tolerance because of
+#             it (see the note at that tolerance in verify_hold.py).
+#   size      It will not finish inside one sandbox invocation. A batch that
+#             never finishes never checkpoints, so a killed run restarts from
+#             the top instead of resuming where it stopped.
+#   store     It mutates state a neighbour can SEE — a media root, the shared
+#             server's posts, a database. This is CORRECTNESS rather than
+#             speed, and it is the only reason that names specific neighbours,
+#             so those batches keep a note saying which and why. Nothing else
+#             below needs one.
+#
+#   unrecorded  Marks a solo batch that meets none of the three. The suite
+#             neither measures nor mutates, and sits alone only because that is
+#             how this list grew. The tag records that no reason is on file —
+#             NOT that merging it is safe, which nobody has measured.
+#
+# ADDING A SUITE MEANS ADDING A LINE HERE. The run refuses to start while any
+# suite on disk is in no batch; that refusal has caught an unplaced suite three
+# times, and it is the only thing that does.
 BATCHES = [
-    # v210: verify_ux is 284 assertions and no longer finishes alongside three
-    # other suites inside one sandbox invocation, so the checkpoint after
-    # batch 1 was never written and every re-invoke restarted from the top.
-    # It gets a batch of its own; the three it shared with move to batch 2.
-    ["verify_ux.py"],
-    # Keyboard and assistive-technology contracts. Its own batch for the same
-    # reason verify_ux has one: it drives both editors and the shared player
-    # through full page loads, and it presses keys against a PLAYING scrubber,
-    # so sharing a server with a suite that posts would make its timings a
-    # function of somebody else's work.
-    ["verify_a11y.py"],
-    # verify_tools.py holds the v213 tool work, split out of verify_ux when that
-    # suite outgrew a single invocation. Its own batch for the same reason.
-    ["verify_tools.py"],
+    ["verify_ux.py"],                      # size
+    ["verify_a11y.py"],                    # measures — keys against a playing scrubber
+    ["verify_tools.py"],                   # size
     ["verify_move.py", "verify_pages.py"],
-    # verify_hold times a real playback loop and asserts frame-pacing evenness,
-    # so — like verify_player_isolation below — it must not share a batch with a
-    # browser competing for the same CPU, or a contention spike reads as a
-    # pacing failure. (Its own flake in the v264 release run.)
-    ["verify_hold.py"],
+    ["verify_hold.py"],                    # measures — frame pacing
     ["verify_review.py", "verify_help.py", "verify_tips.py"],
     ["verify_exportui.py", "verify_exopts.py", "verify_dots.py", "verify_fix.py"],
     ["verify_amber.py", "verify_posted.py", "verify_report.py", "verify_canvas.py"],
     ["verify_padcanvas.py", "verify_pressure.py", "verify_lib.py", "verify_docs.py",
      "verify_integration.py", "verify_scrub.py"],
-    # Posts through the editor and then loads the share link, so it needs the
-    # whole authoring path working; it also holds the ratchets on the player
-    # split. Alone in a batch because it is slow and because a browser it shares
-    # a batch with is a browser competing for the same CPU during a timing-
-    # sensitive replay.
-    ["verify_player_isolation.py"],
-    # THE IN-POST PLAYER'S FOUR SUITES, spread rather than stacked. Each of them
-    # records a real drawing in Pad and posts it — verify_inline authors three,
-    # one carrying an audio loop — and then drives a browser through a replay
-    # whose timing it asserts on. Sharing a batch means two browsers competing
-    # for the same CPU during exactly that measurement, which is the flake
-    # verify_hold and verify_player_isolation already have their own batches to
-    # avoid. verify_sharecard is the cheap one (two posts, then bytes off the
-    # card route) so it rides with the photo suite.
-    ["verify_inline.py"],
-    ["verify_compose.py"],
-    # Server-side creation and server-side DELETION, the two host-facing Python
-    # entry points. No browser and no harness server between them: each builds
-    # its own Flask apps over its own temporary SQLite files, so neither counts
-    # somebody else's posts and neither can be counted. They keep this batch to
-    # themselves for that reason rather than for isolation from each other.
+    ["verify_player_isolation.py"],        # measures, size
+    ["verify_inline.py"],                  # measures
+    ["verify_compose.py"],                 # measures
+    # store: server-side creation and server-side DELETION, the two host-facing
+    # Python entry points. Each builds its own Flask apps over its own temporary
+    # SQLite file, so neither counts somebody else's posts and neither can be
+    # counted. They keep this batch to themselves for that reason, not for
+    # isolation from each other.
     #
-    # verify_deletion is placed here rather than beside verify_deletion_foundation
+    # verify_deletion sits here rather than beside verify_deletion_foundation
     # despite the name: that suite sweeps orphans FOR REAL against a live media
-    # root, and sharing a batch with it is what the note beside it warns off.
-    # This one never touches a store.
+    # root. This one never touches a store.
     ["verify_createpost.py", "verify_deletion.py"],
-    # The worked example, driven in a browser against its OWN server on its own
-    # port and its own database. It shares nothing with the harness instance,
-    # so it could batch with anything — but it is a browser suite recording a
-    # real drawing, which is the kind that wants a quiet CPU.
-    ["verify_example.py"],
-    # Audio measured on the graph through an analyser tap, so it wants the same
-    # quiet CPU verify_player_isolation and verify_hold get their own batch for.
-    ["verify_audiosession.py"],
-    ["verify_library.py"],
+    ["verify_example.py"],                 # measures — records a real drawing
+    ["verify_audiosession.py"],            # measures — audio off an analyser tap
+    ["verify_library.py"],                 # unrecorded
     ["verify_player_photo.py", "verify_sharecard.py"],
-    ["verify_visual.py"],
-    ["verify_flipmotion.py"],
-    # v263: the playback bitmap cache. Browser-heavy (it plays loops on both
-    # surfaces and times them), so it gets a batch of its own.
-    ["verify_framecache.py"],
-    ["verify_parity.py"],
+    ["verify_visual.py"],                  # measures
+    ["verify_flipmotion.py"],              # measures
+    ["verify_framecache.py"],              # measures
+    ["verify_parity.py"],                  # measures
     ["verify_audio.py", "verify_seam.py", "verify_loopcap.py", "verify_audiostate.py"],
     ["verify_gifenc.py", "verify_muxer.py", "verify_mp4.py", "verify_flipmeta.py"],
     ["verify_feed.py", "verify_media.py", "verify_storage.py", "verify_privacy.py",
-     # Runs LAST in its batch and brings its own local-media server, on its own
-     # port with an isolated media root, because it calls sweep_orphans with
-     # dry_run=False. Pointed at a shared root it deletes other suites' media —
-     # observed doing exactly that. It must never share a store with verify_media
-     # or verify_storage, which is also why it cannot just take the ambient
-     # backend: verify_storage asserts the default instance stores media INLINE.
+     # store: verify_deletion_foundation runs LAST here and brings its own
+     # local-media server, on its own port with an isolated media root, because
+     # it calls sweep_orphans with dry_run=False. Pointed at a shared root it
+     # deletes other suites' media — observed doing exactly that. It must never
+     # share a store with verify_media or verify_storage, which is also why it
+     # cannot just take the ambient backend: verify_storage asserts the default
+     # instance stores media INLINE.
      "verify_deletion_foundation.py"],
     ["verify_csp.py", "verify_csrf.py", "verify_race.py", "verify_prefix.py",
      "verify_delivery.py", "verify_surfaces.py"],
     ["verify_version.py", "verify_migrations.py", "verify_postgres.py"],
-    # v199 suites. They were on disk and in no batch, which is the one thing
-    # the coverage check refuses to let a release paper over — so the release
-    # could not start at all until they were placed. Each brings its own server
-    # on its own port with its own media root and database, so placement here is
-    # about wall clock and CPU contention, not isolation.
-    #
-    # externalised and backfill each boot TWO instances and post through them.
-    # They are kept out of verify_deletion_foundation's batch because that suite
-    # sweeps orphans for real.
+    # store: externalised and backfill each boot TWO instances and post through
+    # them, so they are kept out of verify_deletion_foundation's batch.
     ["verify_externalised.py", "verify_backfill.py", "verify_mediaauthz.py"],
-    # Alone: eleven scenes, screenshotted against two stylesheets.
-    ["verify_cssplit.py"],
+    ["verify_cssplit.py"],                 # measures
     ["verify_keys.py", "verify_strokegroups.py", "verify_sheetfit.py",
      "verify_apiedges.py", "verify_txcontract.py", "verify_assetcache.py",
      "verify_mimeparity.py"],
-    ["verify_jsstrip.py"],
-    ["verify_s3.py"],
-    # v219. Same story as the v199 suites above, and the coverage check caught it
-    # the same way: verify_layout.py was written during the v219 build, the build
-    # was never run, and so nothing ever noticed it belonged to no batch. The
-    # first release run after it was added refused to start. That refusal is the
-    # feature — a suite on disk and in no batch is a suite whose absence would
-    # have read as an absence of failures.
-    #
-    # Alone, and deliberately: it measures rendered geometry at eight viewport
-    # widths across both editors, and a browser sharing its batch is a browser
-    # competing for CPU while it takes those measurements.
-    ["verify_layout.py"],
-    # Browser suite with deliberate multi-second settles (IndexedDB puts, a
-    # ~7 MB decode) — like verify_layout it runs alone rather than compete
-    # for CPU during timing-sensitive waits. Added v222 with the durability
-    # work; the refusal above is what flagged it into this list.
-    ["verify_drafts.py"],
-    # v223. TEN suites were on disk and in no batch — verify_boot, flipdraft,
-    # fuzz, liquify, pillfit, select, sharedrules, theme, tray, tween — so
-    # RELEASE.md could not be regenerated at all and stayed frozen describing a
-    # 64-suite tree at v222 while 74 suites were passing. Every other doc points
-    # at RELEASE.md for volatile facts, so the authority was the stale one.
-    #
-    # That is the third time this has happened (v199, v219, now v223) and the
-    # refusal worked every time; what fails is remembering to place a suite when
-    # writing it. Adding a suite means adding a line here, and nothing but this
-    # comment says so.
-    #
-    # Alone: it renders a 6x5 grid of in-betweens — thirty full canvas reads —
-    # and shares nothing well while doing it.
-    ["verify_tween.py"],
-    # Alone for the same reason: liquify subdivides strokes and diffs the canvas
-    # pixel by pixel.
-    ["verify_liquify.py"],
-    # sharedrules posts and then opens the PLAYER, so it needs the whole
-    # authoring path; theme screenshots both stylesheets. Grouped with the two
-    # small structural suites rather than the timing-sensitive ones.
+    ["verify_jsstrip.py"],                 # unrecorded
+    ["verify_s3.py"],                      # unrecorded
+    ["verify_layout.py"],                  # measures — geometry at eight widths
+    ["verify_drafts.py"],                  # measures — multi-second settles
+    ["verify_tween.py"],                   # measures
+    ["verify_liquify.py"],                 # measures
     ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
-  # v268: the shared name tab (Pad + Flip). Browser-driven but light — it drives
-  # both editor headers and reads window.SkriblName, no pixel measurement.
-  ["verify_nametab.py"],
+    ["verify_nametab.py"],                 # unrecorded
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
-    # v224. Media resource limits (outside review #5). It drives a browser only
-    # to BUILD fixtures — real PNG/JPEG/WebP out of Chromium's encoders and a
-    # real GIF out of vendored gifenc — then does everything else against the
-    # pure functions and the API, so it is fast and shares CPU well. It posts
-    # four rejected payloads and one accepted one to the shared server, which is
-    # why it stays away from verify_deletion_foundation's batch: that suite
-    # sweeps orphans for real.
+    # store: posts four rejected payloads and one accepted one to the shared
+    # server, so it stays out of verify_deletion_foundation's batch.
     ["verify_medialimits.py"],
-    # v224. The orphan-sweep job (outside review #6). Entirely in-process
-    # against a temp SQLite file and a temp media root — no server, no browser
-    # — and it drives `python -m skribl.sweep` as a real subprocess so the exit
-    # codes asserted are the ones cron would see. Isolated by construction, so
-    # it shares a batch with the other cheap v224 suite.
-    ["verify_sweepjob.py"],
-    # Its own batch beside the sweeper for the same reason: both drive a CLI
-    # as a subprocess against their own temp database, so neither wants a
-    # neighbour's server or schema in the way.
+    ["verify_sweepjob.py"],                # unrecorded
+    # store: drives a CLI as a subprocess against its own temp database, so it
+    # wants no neighbour's server or schema in the way.
     ["verify_takedown.py"],
-    # v224. The four host seams from the outside review (#3 feed filter, #4
-    # csrf=False, #7 visibility values, #8 author resolver). In-process
-    # throwaway apps over one temp SQLite file, like verify_privacy — no
-    # server, no browser, so it costs almost nothing to run.
-    ["verify_hostseams.py"],
-    # v224. The three configuration defects from the review's low list: the
-    # title/caption limit stated in three disagreeing places, production
-    # detection that only knew Render, and the per-process rate limiter behind
-    # multiple workers. It boots app.py in eleven scrubbed subprocesses, which
-    # is cheap, and posts a handful of payloads to the shared server.
-    ["verify_hostconfig.py"],
-    # v225. The translucent-stroke pixel regression (outside review R2). Draws
-    # one Air-brush stroke, repaints it three ways and compares ALPHA profiles,
-    # so it needs a browser and a quiet CPU: a repaint measured while another
-    # Chromium competes is still correct, but the reason it is alone here is
-    # that it reads the full canvas four times.
-    ["verify_beading.py"],
-    # v226. Page spans on Flip's strip. Browser-driven but cheap — it drives
-    # the strip and reads array order rather than pixels — so it shares a batch
-    # with nothing only because the two suites either side of it are already
-    # alone for timing reasons.
-    ["verify_pagespan.py"],
-    # v226. The size class. It resizes the viewport repeatedly and asserts a
-    # computed style on both sides of one pixel, so it wants a batch that is not
-    # also running a second Chromium competing for the frame.
-    ["verify_sizeclass.py"],
-    # v227. Stage 4: the compact surface drops the page bar for a per-tile menu.
-    # It resizes across the boundary and drives a keyboard through a popover, so
-    # it wants the same quiet CPU verify_sizeclass does.
-    ["verify_compactops.py"],
-    # v230. Fill is its own batch for the same reason the others are: it drives
-    # a real canvas and reads pixels back, which does not share a page well.
-    ["verify_fill.py"],
-    ["verify_input.py"],
-    ["verify_smudgeblur.py"],
-    # v238. Stamps drive a real canvas twice over — placements onto the pad and
-    # a thumbnail render per shelf slot — so they get the same solitary batch
-    # the other canvas suites do.
-    ["verify_stamps.py"],
-    # v239. Rasterises every tray glyph and measures its ink box, so it wants a
-    # page to itself like the other canvas suites.
-    ["verify_icons.py"],
+    ["verify_hostseams.py"],               # unrecorded
+    ["verify_hostconfig.py"],              # unrecorded
+    ["verify_beading.py"],                 # measures — alpha profiles
+    ["verify_pagespan.py"],                # unrecorded
+    ["verify_sizeclass.py"],               # measures
+    ["verify_compactops.py"],              # measures
+    ["verify_fill.py"],                    # measures
+    ["verify_input.py"],                   # unrecorded
+    ["verify_smudgeblur.py"],              # measures
+    ["verify_stamps.py"],                  # measures
+    ["verify_icons.py"],                   # measures — rasterised ink boxes
 ]
 
 
@@ -337,6 +243,57 @@ def mp4_attestation(frozen):
     return (f"verified on {fields.get('channel', '?')}, "
             f"{fields.get('assertions', '?')} assertions, "
             f"{fields.get('generated', 'time unknown')}")
+
+
+def external_coverage(frozen, skipped):
+    """Which mandatory EXTERNAL lanes have tree-bound evidence in hand.
+
+    The local run proves what ran locally. Two kinds of coverage live outside it
+    and they are NOT the same kind of thing, so they are never summed:
+
+      ATTESTED — the `mp4` lane writes harness/MP4-ATTESTATION.txt, which names
+      the tree it describes. mp4_attestation() refuses one for a different tree,
+      so a local run can actually CHECK this.
+
+      CLAIMED — SKIP_COVERAGE says some CI job runs a suite this environment
+      skipped. Nothing a local run can read says that job was green on this
+      tree. verify_docs.py checks the job EXISTS in the workflow; existence is
+      not a result.
+
+    Returns (attested, pending) as display strings. Anything in `pending` means
+    the local record cannot speak for that lane.
+    """
+    attested, pending = [], []
+    for name in skipped:
+        lane = SKIP_COVERAGE.get(name)
+        if lane is None:
+            pending.append(f"`{name}` — NOT covered anywhere")
+        elif name == "verify_mp4.py":
+            line = mp4_attestation(frozen)
+            (attested if line.startswith("verified") else pending).append(
+                f"`{name}` — {line.split(',')[0]}")
+        else:
+            pending.append(f"`{name}` — claimed by the `{lane}` CI job, "
+                           "no tree-bound attestation reaches this run")
+    return attested, pending
+
+
+def release_status(ok, pending):
+    """The headline, which must never outrun the evidence under it.
+
+    A bare `PASS` was read — correctly, by an outside review — as a claim about
+    the whole release when the predicate behind it only ever covered the local
+    suite ledger: a skip lands in `skipped`, never in `failed`, and the MP4
+    attestation is rendered beside the result rather than gating it. That is a
+    deliberate design (the seal states the fact, it does not make the shipping
+    decision) and the defect was the WORD, not the gate. So the gate is
+    unchanged and the label is split.
+    """
+    if not ok:
+        return "FAIL"
+    if pending:
+        return "LOCAL PASS — EXTERNAL COVERAGE PENDING"
+    return "FULL RELEASE PASS"
 
 
 def source_state():
@@ -565,12 +522,15 @@ def main():
     seen = {r[0] for r in rows}
     never = [s for s in on_disk if s not in seen]
     ok = not failed and not never
+    _attested, _pending = external_coverage(frozen, skipped)
 
     lines = [
         "# Release evidence", "",
         "Generated by `harness/release_run.py`. Every fact here is computed, "
         "not typed — see the note at the top of that file for why.", "",
-        f"    result           {'PASS' if ok else 'FAIL'}",
+        f"    release status   {release_status(ok, _pending)}",
+        f"    local result     {'PASS' if ok else 'FAIL'}"
+        f"   (every suite that ran here, on this tree)",
         f"    tested tree hash {frozen}",
         f"    source state     " + (
             "clean"
@@ -591,10 +551,23 @@ def main():
         f"    skipped          {len(skipped)}" +
         (f"  ({', '.join(skipped)})" if skipped else ""),
         f"    mp4 (H.264)      {mp4_attestation(frozen)}",
+        f"    external lanes   {len(_attested)} attested, {len(_pending)} pending",
         f"    generated        {datetime.datetime.now(datetime.timezone.utc):%Y-%m-%dT%H:%M:%SZ}",
         "",
         "A skip is not coverage. Suites that skip are listed above by name so "
         "that an absence of failures is never read as an absence of gaps.", "",
+        "THE HEADLINE IS SPLIT IN TWO BECAUSE THE PREDICATE ONLY EVER COVERED "
+        "HALF OF IT. `local result` is computed from the suites that ran here: "
+        "a skip lands in the skipped list, never in the failed one, and the MP4 "
+        "attestation is stated beside the result rather than gating it — "
+        "deliberately, because whether an unverified path is shippable is a "
+        "product decision and the seal's job is to state the fact. So a single "
+        "`PASS` could sit above a STALE attestation and a postgres lane nobody "
+        "had run. `release status` is FULL RELEASE PASS only when the local run "
+        "is green AND every external lane below has tree-bound evidence in "
+        "hand; otherwise it says LOCAL PASS — EXTERNAL COVERAGE PENDING and "
+        "names what is missing. The gate did not change. The word did. "
+        "(Outside review of v285, P1-M-01.)", "",
         "THREE HASHES IN THIS PROJECT ARE NOT THE SAME HASH, and calling all of "
         "them \"the tree hash\" is how they get confused. The TESTED TREE HASH "
         "above is the one this run froze and the suites ran against; it "
@@ -622,6 +595,14 @@ def main():
             "suite skips there too."
             if lane else
             "NOT covered anywhere. This is a real gap in the release.")]
+    if _pending:
+        lines += ["**External lanes this record cannot speak for:**"]
+        lines += [f"  * {d}" for d in _pending]
+        lines += [""]
+    if _attested:
+        lines += ["**External lanes attested for THIS tree:**"]
+        lines += [f"  * {d}" for d in _attested]
+        lines += [""]
     if skipped:
         lines += [""]
     lines += [

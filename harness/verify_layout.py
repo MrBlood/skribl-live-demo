@@ -1,11 +1,11 @@
 """Rendered geometry for the header and tool row — the class of defect no
 attribute check can see.
 
-WHY THIS IS A NEW SUITE. verify_tools.py is at 125 assertions and ~30 browser
-launches, past the split trigger. More to the point, every assertion here is
-about LAYOUT, and layout is the one thing this project has repeatedly got wrong
-while every attribute passed: the v213 record pill wrapped, Pad wrapped at
-320px, and the harness was green throughout.
+WHY THIS IS A NEW SUITE. Every assertion here is about LAYOUT, and layout is
+the one thing this project has repeatedly got wrong while every attribute
+passed: the v213 record pill wrapped, Pad wrapped at 320px, and the harness was
+green throughout. A suite is its own suite because it asks one kind of
+question, never because another suite passed a size.
 
 THE RULE THIS SUITE ENFORCES ON ITSELF. Measure what the browser laid out,
 never what the CSS was told to do. Flex shrinks controls before anything

@@ -14,8 +14,7 @@ Its diagnosis is the part worth keeping: "the existing test architecture is not
 asking enough questions about focus order, accessible names, ARIA state, or
 keyboard equivalence", and accessibility should be part of the component state
 machine rather than markup added afterwards. A suite that asks those questions
-by name is how they stop being optional. verify_ux.py is already at 333
-assertions and past the split trigger anyway.
+by name is how they stop being optional.
 
 THE RULE THIS SUITE ENFORCES ON ITSELF. Assert the BEHAVIOUR, not the
 attribute. `role="slider"` present is worth nothing — that was the defect. So

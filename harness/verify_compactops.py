@@ -127,13 +127,33 @@ with sync_playwright() as p:
                 return it.length >= 4 && it.every(b => b.tagName === 'BUTTON'
                        && b.getAttribute('role') === 'menuitem');
               }"""))
+        # DERIVED FROM THE ROW, not frozen as a list. This assertion is named
+        # for an invariant — the compact menu carries every operation the page
+        # bar does — and was implemented as a snapshot of the four labels that
+        # existed when it was written. It therefore went red the moment the row
+        # legitimately gained a fifth (Draw), reporting a correct mirror as a
+        # failure, which is the "match the mechanism, not the word" rule in
+        # CLAUDE.md arriving from the opposite direction: a check that pins a
+        # value cannot see whether the property still holds.
+        #
+        # Both sides are read out of the DOM now. The labels differ by design —
+        # the row is terse because it sits under an icon ("Left"), the menu
+        # spells the operation out ("Move left") — so a row control is matched
+        # to the menu item whose label CONTAINS it. That is the correspondence
+        # a person checks by eye, and it goes red when either side gains an
+        # operation the other lacks.
+        _row = page.evaluate(
+            "() => [...document.querySelectorAll('#pagebar button')]"
+            ".map(b => (b.textContent || '').trim()).filter(Boolean)")
+        _menu = page.evaluate(
+            "() => [...document.querySelectorAll('.pageops-item')]"
+            ".map(b => (b.textContent || '').trim())")
+        _missing = [r for r in _row
+                    if not any(r.lower() in m.lower() for m in _menu)]
         check("...every operation the row carried is here",
-              sorted(page.evaluate(
-                  "() => [...document.querySelectorAll('.pageops-item')]"
-                  ".map(b => b.textContent.trim())"))
-              == ["Copy", "Delete", "Move left", "Move right"],
-              str(page.evaluate("() => [...document.querySelectorAll('.pageops-item')]"
-                                ".map(b => b.textContent.trim())")))
+              _row and not _missing and len(_menu) == len(_row),
+              f"row {_row} vs menu {_menu}"
+              + (f" — no menu item for {_missing}" if _missing else ""))
         check("...focus moved INTO the menu on open",
               page.evaluate("() => document.activeElement"
                             ".classList.contains('pageops-item')"),
