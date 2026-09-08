@@ -1,5 +1,5 @@
 tree: 6d96ab19b186aa0c6f898ff9084344990b6c148c0ce15a5bca0d0dca9d8de2dc
-channel: chrome
+engine: postgresql
 result: PASS
-assertions: 12
-generated: 2026-09-08T12:24:55Z
+assertions: 20
+generated: 2026-09-08T12:59:25Z
