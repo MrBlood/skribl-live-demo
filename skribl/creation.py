@@ -274,11 +274,14 @@ def create_post(payload, *, author_id=None, media_store=None,
         if len(_value) > _cap:
             # The editors show this string to the user as-is (editor_post.js
             # and flip.js surface e.error), so it is written for them, not for
-            # a log: no quoted field name, no counts. The field is still named,
-            # in lower case, so the API's own callers can match on it
-            # (verify_apiedges reads "caption" out of the refusal).
+            # a log: no quoted field name. It still names the field in lower
+            # case and states both numbers, because the API's callers match on
+            # those (verify_apiedges reads "caption"; verify_hostconfig reads
+            # the limit AND the length) and a person pasting 81 characters is
+            # helped by hearing how far over they are.
             raise SkriblRejected(
-                f"A {_field} can be up to {_cap} characters.")
+                f"A {_field} can be up to {_cap} characters "
+                f"\u2014 this one is {len(_value)}.")
     # True only when there are actual audio bytes, whether stored top-level
     # (legacy) or inside a frame (frame-format). See _payload_has_audio.
     has_audio = _payload_has_audio(payload)
