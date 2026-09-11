@@ -280,6 +280,18 @@ with sync_playwright() as sp:
           not re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible),
           (re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/\S*", _visible) or [""])[0]
           if re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible) else "")
+    # IT FOLLOWS THE HOST'S THEME (inlineplayer.js header): every chrome colour
+    # is var(--token, fallback), with the token NAMES a feed already has. So a
+    # host that sets --bg-elev on its root recolours the box, and one that sets
+    # nothing gets the fallback. Asserted by setting the token on the page and
+    # reading the computed background — a literal in the sheet would ignore it.
+    _host_bg = pg.evaluate("""() => {
+      document.documentElement.style.setProperty('--bg-elev', '#f6f8fa');
+      const el = document.querySelector('.skribl-inline');
+      return el ? getComputedStyle(el).backgroundColor : null; }""")
+    check("the in-post box takes its ground from the host's --bg-elev",
+          _host_bg == "rgb(246, 248, 250)", repr(_host_bg))
+    pg.evaluate("() => document.documentElement.style.removeProperty('--bg-elev')")
     _listing = json.loads(urllib.request.urlopen(BASE + "/api/skribls", timeout=20).read())
     _items = _listing.get("items", _listing) if isinstance(_listing, dict) else _listing
     _named = sum(1 for it in _items if it.get("user_id") is not None)

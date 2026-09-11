@@ -852,7 +852,11 @@ with sync_playwright() as sp:
     # this page cannot be seeked from a keyboard. Same reasoning as the JS
     # ratchet above.
     # 11,000 -> 10,900: one fewer <script> tag, 10,946 -> 10,872.
-    HTML_RATCHET = 10_900
+    # 10,900 -> 11,200 at v288 for the inline theme boot (_skribl_theme_boot.html,
+    # ~270 B): an embedding host passes ?theme=light and the attribute has to
+    # land before first paint or the frame flashes dark — the same no-flash
+    # rule verify_theme pins for the editors. Just above the new floor of 11,171.
+    HTML_RATCHET = 11_200
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
