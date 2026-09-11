@@ -269,6 +269,26 @@ with sync_playwright() as sp:
           mounted >= 3, f"{mounted} mounted")
     check("no page errors on the feed", not errs, "; ".join(errs[:2]))
 
+    # THE FEED PAGE IS NOT A REQUEST LOG. Its header read "GET /api/skribls"
+    # and an anonymous post's byline read "Someone". The mechanism pinned: no
+    # HTTP-method-plus-path token anywhere in the page's visible text (a
+    # method name followed by a slash is how a route is written, never how a
+    # sentence is), and a post with no user_id renders no byline at all —
+    # counted against the listing the page itself rendered from. Red on v287.
+    _visible = pg.evaluate("() => document.body.innerText")
+    check("the feed's visible text names no endpoint",
+          not re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible),
+          (re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/\S*", _visible) or [""])[0]
+          if re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible) else "")
+    _listing = json.loads(urllib.request.urlopen(BASE + "/api/skribls", timeout=20).read())
+    _items = _listing.get("items", _listing) if isinstance(_listing, dict) else _listing
+    _named = sum(1 for it in _items if it.get("user_id") is not None)
+    _bylines = pg.evaluate("() => document.querySelectorAll('.phead .dn').length")
+    _heads = pg.evaluate("() => document.querySelectorAll('.phead').length")
+    check("a post with no user_id renders no byline",
+          _heads >= 3 and _bylines == _named,
+          f"{_bylines} byline(s) for {_named} attributed post(s) of {_heads}")
+
     # NOTHING FETCHES UNTIL SOMEBODY ASKS. GET /api/skribls/<id> returns the
     # WHOLE payload including base64 audio; a feed that prefetched a screenful
     # of those would move tens of megabytes to render thumbnails. This is the

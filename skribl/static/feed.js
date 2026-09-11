@@ -50,9 +50,12 @@
     who.className = 'dn';
     /* The listing carries a user_id and no display name — resolving one is the
        host's job (init_skribl's author_resolver seam), and inventing a handle
-       here would be the preview lying about what the API returns. */
-    who.textContent = item.user_id == null ? 'Someone' : 'User ' + item.user_id;
-    head.appendChild(who);
+       here would be the preview lying about what the API returns. With no
+       user_id at all there is no byline: "Someone" read as a shrug. */
+    if (item.user_id != null) {
+      who.textContent = 'User ' + item.user_id;
+      head.appendChild(who);
+    }
     var meta = document.createElement('span');
     meta.className = 'tm';
     meta.textContent = when(item.created_at);

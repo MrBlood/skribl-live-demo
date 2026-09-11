@@ -38,6 +38,7 @@ MUTATION-TESTED, and one of the three mutations taught something.
 """
 import os
 import pathlib
+import re
 import sys
 import tempfile
 from assertions import make_check
@@ -151,6 +152,31 @@ with host.app_context():
               f"status {fn_status}")
         check(f"{label}: BOTH give the same message", route_msg == fn_msg,
               f"route={route_msg!r} fn={fn_msg!r}")
+
+print("\n2b — WHAT THE USER READS: the rejection is copy, and a title is trimmed")
+# The editors surface `error` from a 400 verbatim (editor_post.js, flip.js), so
+# the string create_post raises IS the sentence the user sees. It used to be
+# "'title' is too long (81 characters; limit 80)." — a log line. The mechanism
+# pinned here is the shape, not the wording: no quoted field name, the limit
+# stated. Calibrated red on the v287 tree, which quoted the field.
+from skribl.core import MAX_TITLE_CHARS as _TCAP
+with host.app_context():
+    try:
+        skribl.create_post(payload(title="z" * (_TCAP + 1)), author_id=None)
+        _msg = None
+    except skribl.SkriblRejected as exc:
+        _msg = exc.message
+    db.session.rollback()
+    check("an over-length title is refused with a sentence, not a log line",
+          _msg is not None and not re.search(r"'\w+'", _msg) and str(_TCAP) in _msg,
+          repr(_msg))
+    # "   " used to survive .strip() as '' and be stored: the player then fell
+    # back to the product name in og:title while the library said "Untitled
+    # Skribl". Whitespace is the same as nothing typed.
+    _ws = skribl.create_post(payload(title="   \t "), author_id=None)
+    check("a whitespace-only title stores as the default, not as ''",
+          _ws.post.title == "Untitled Skribl", repr(_ws.post.title))
+    db.session.rollback()
 
 print("\n3 — ONE TRANSACTION: the host's row and the Skribl commit together")
 with host.app_context():

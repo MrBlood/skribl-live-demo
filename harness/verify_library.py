@@ -233,6 +233,17 @@ with sync_playwright() as sp:
           "loaded" in foot.lower(),
           f"{foot!r} — the listing is keyset-paginated and the API has no "
           f"search, so a box that looked like it searched everything would lie")
+    # The unfiltered footer read "Newest first, from GET /api/skribls." and the
+    # bio spoke of "the transport a post does not get". A visitor is not the
+    # reader of a route table: no method-plus-path token in the page's visible
+    # text, in either footer state. Red on v287.
+    pg.fill("#search", "")
+    pg.wait_for_timeout(300)
+    _visible = pg.evaluate("() => document.body.innerText")
+    check("the library's visible text names no endpoint",
+          not re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible),
+          (re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/\S*", _visible) or [""])[0]
+          if re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible) else "")
     pg.close()
 
     # ---- the source gates --------------------------------------------------

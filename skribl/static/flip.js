@@ -4216,7 +4216,7 @@ function openShareCompose(){
 const _shareCap=document.getElementById('flipShareCaption');
 const _shareCount=document.getElementById('flipShareCount');
 if(_shareCap && _shareCount){
-  const _sync=()=>{ _shareCount.textContent=_shareCap.value.length+' / 280'; };
+  const _sync=()=>{ _shareCount.textContent=_shareCap.value.length+' / '+_shareCap.maxLength; };
   _shareCap.addEventListener('input', _sync); _sync();
 }
 const _shareSubmit=document.getElementById('flipShareSubmit');

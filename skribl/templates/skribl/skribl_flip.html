@@ -409,7 +409,7 @@
                placeholder="Untitled Skribl" autocomplete="off">
         <textarea id="flipShareCaption" aria-label="Caption" class="flip-share-url flip-share-caption" maxlength="{{ skribl_limits.caption }}"
                   rows="3" placeholder="Say something about it…"></textarea>
-        <span class="flip-share-count" id="flipShareCount">0 / 280</span>
+        <span class="flip-share-count" id="flipShareCount">0 / {{ skribl_limits.caption }}</span>
         {# A failed post used to report itself only as a transient chip. On a
            phone that is easy to miss entirely, so a 500 read as "the button
            does nothing" rather than "it failed" — which is what happened when

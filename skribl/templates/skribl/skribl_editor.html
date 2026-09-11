@@ -224,7 +224,7 @@
           <label class="post-field">
             <span class="post-field-label">Caption <span class="post-field-optional">optional</span></span>
             <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" placeholder="Say something about it…"></textarea>
-            <span class="post-char-count" id="postCharCount">0 / 280</span>
+            <span class="post-char-count" id="postCharCount">0 / {{ skribl_limits.caption }}</span>
           </label>
         </div>
       </div>
