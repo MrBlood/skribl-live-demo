@@ -36,6 +36,7 @@ SECTION 6 — no meaningful text below the AA contrast floor.
 Requires a running server:
     ./harness/run_harness.sh verify_a11y.py
 """
+import json
 import pathlib
 import re
 import sys
@@ -543,6 +544,116 @@ with sync_playwright() as p:
               f"{r} — without it a node whose children change announces only "
               "the fragment, which for the toast is the bare Undo button")
     pg.close()
+
+    # ------------------------------------------------------------ section 7
+    print("\nA11Y 7 — every page has one heading and one main region")
+    # The v287 audit found no <h1> and no landmark on Pad, Flip, the player or
+    # the library: a screen-reader user landing on a page had no name for it
+    # and no "skip to content". These ARE attribute assertions, like the live
+    # regions in section 5 — a heading is a contract with the accessibility
+    # tree and there is nothing to press. Counted in the TREE, not the DOM: an
+    # h1 inside a [hidden] panel (the Pad carries the player partial in its
+    # posted panel) is not a heading anyone hears. Red on v287 for all five.
+    import urllib.request as _ur
+    _req = _ur.Request(BASE + "/api/skribls", method="POST",
+                       data=json.dumps({"frames": [{"strokes": [], "strokeGroups": [],
+                                                    "background": {"color": "#101418"}}],
+                                        "title": "Heading fixture"}).encode(),
+                       headers={"Content-Type": "application/json"})
+    with _ur.urlopen(_req, timeout=15) as _r:
+        _pid = json.loads(_r.read())["id"]
+    TREE = """() => {
+      const live = el => { for (let n = el; n; n = n.parentElement) {
+          if (n.hidden || getComputedStyle(n).display === 'none') return false; }
+        return true; };
+      const h1 = [...document.querySelectorAll('h1')].filter(live);
+      const mains = [...document.querySelectorAll('main, [role="main"]')].filter(live);
+      return { h1: h1.map(h => (h.textContent || '').trim()), mains: mains.length }; }"""
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip"), ("/s/" + _pid, "the player"),
+                         ("/library", "the library"), ("/feed", "the host feed")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(1200)
+        _t = _pg.evaluate(TREE)
+        check(f"{_name}: exactly one heading, and it says something",
+              len(_t["h1"]) == 1 and bool(_t["h1"][0]), str(_t["h1"]))
+        check(f"{_name}: exactly one main region", _t["mains"] == 1, f"{_t['mains']} main regions")
+        _pg.close()
+
+    # ------------------------------------------------------------ section 8
+    print("\nA11Y 8 — every Tab stop looks focused")
+    # Nine `outline: none` declarations across the stylesheets. Most hand off
+    # to a later :focus-visible rule or change the border colour, and the
+    # audit could not tell which from the source — so this presses Tab and
+    # reads what changed, per the rule at the head of this file. Snapshot every
+    # focusable's resting style, walk the Tab order, and any stop whose computed
+    # outline/box-shadow/border/background/colour is identical to its resting
+    # style is a control the keyboard user cannot see they are on. Red on v287
+    # for the host feed's composer.
+    SNAP = """() => {
+      const sel = 'a[href], button, input, select, textarea, [tabindex]';
+      const key = el => el.id ? '#' + el.id
+        : (el.tagName.toLowerCase() + '.' + [...el.classList].join('.'));
+      const style = el => { const s = getComputedStyle(el);
+        return [s.outlineStyle, s.outlineWidth, s.outlineColor, s.boxShadow,
+                s.borderColor, s.backgroundColor, s.color].join('|'); };
+      const out = {};
+      for (const el of document.querySelectorAll(sel)) {
+        if (el.disabled || el.tabIndex < 0) continue;
+        if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') continue;
+        out[key(el)] = style(el);
+      }
+      window.__a11ySnap = out; window.__a11yStyle = style; window.__a11yKey = key;
+      return Object.keys(out).length; }"""
+    STOP = """() => { const el = document.activeElement;
+      if (!el || el === document.body) return null;
+      const k = window.__a11yKey(el);
+      return { k, changed: window.__a11ySnap[k] === undefined ? null
+                          : window.__a11ySnap[k] !== window.__a11yStyle(el) }; }"""
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip"),
+                         ("/library", "the library"), ("/feed", "the host feed")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(1200)
+        _n = _pg.evaluate(SNAP)
+        _seen, _plain, _stops = set(), [], 0
+        for _ in range(_n + 10):
+            _pg.keyboard.press("Tab")
+            _st = _pg.evaluate(STOP)
+            if _st is None or _st["k"] in _seen:
+                if _stops:
+                    break
+                continue
+            _seen.add(_st["k"]); _stops += 1
+            if _st["changed"] is False:
+                _plain.append(_st["k"])
+        check(f"{_name}: Tab reaches something", _stops > 0,
+              f"{_n} focusables, {_stops} stop(s)")
+        check(f"{_name}: every Tab stop changes its look",
+              not _plain, f"unchanged at: {', '.join(_plain)}" if _plain
+              else f"all {_stops} stops changed")
+        _pg.close()
+
+    # ------------------------------------------------------------ section 9
+    print("\nA11Y 9 — a lit Post never refuses")
+    # Flip's Post was enabled on an empty page and answered a tap with a chip
+    # while the Pad's was disabled in the same state (verify_compose pins the
+    # Pad). A primary action that refuses is a control whose state lies; the
+    # disabled attribute is what assistive tech reads, so this is asserted on
+    # the property before and after the one thing that changes it.
+    _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_pg, BASE, "/flip")
+    check("Flip: Post is disabled while there is nothing to post",
+          _pg.evaluate("() => document.getElementById('postBtn').disabled") is True)
+    _box = _pg.locator("#pad").bounding_box()
+    _pg.mouse.move(_box["x"] + 60, _box["y"] + 60)
+    _pg.mouse.down()
+    _pg.mouse.move(_box["x"] + 150, _box["y"] + 130, steps=8)
+    _pg.mouse.up()
+    _pg.wait_for_timeout(300)
+    check("Flip: one stroke enables it",
+          _pg.evaluate("() => document.getElementById('postBtn').disabled") is False)
+    _pg.close()
     browser.close()
 
 # ------------------------------------------------------------------ section 6

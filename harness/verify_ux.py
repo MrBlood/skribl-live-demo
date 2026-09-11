@@ -215,9 +215,12 @@ with sync_playwright() as _p:
     check("and the scrim hides with it", not _scrim_open())
 
     # The state that actually breaks a session: a scrim still painted while the
-    # menu is gone swallows every subsequent click on the app.
+    # menu is gone swallows every subsequent click on the app. Hit-tested on
+    # #moreBtn, the control that was just used and is enabled on an empty page;
+    # #postBtn is disabled until there is something to post (v288) and a
+    # disabled button falls through elementFromPoint, which read as a scrim.
     check("the toolbar is reachable again afterwards",
-          _pg.evaluate("() => { const b = document.getElementById('postBtn');"
+          _pg.evaluate("() => { const b = document.getElementById('moreBtn');"
                        " const r = b.getBoundingClientRect();"
                        " const top = document.elementFromPoint("
                        "   r.left + r.width / 2, r.top + r.height / 2);"

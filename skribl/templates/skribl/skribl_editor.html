@@ -24,6 +24,9 @@
   {% include 'skribl/_skribl_theme_boot.html' %}
 </head>
 <body>
+  {# The page's one heading. Visually the brand mark is the title; assistive
+     tech gets the same fact as text. #}
+  <h1 class="vis-hidden">Skribl Pad</h1>
 
  <div class="app">
   <div class="header">
@@ -246,7 +249,7 @@
     </div>
   </div>
 
-  <div class="canvas-area">
+  <div class="canvas-area" role="main">
   <div class="canvas-wrap">
     <div id="zoomLayer" class="zoom-layer">
     <img id="photoBgImg" class="photo-bg-img" style="display:none" alt="">

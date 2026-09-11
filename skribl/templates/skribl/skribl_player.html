@@ -75,7 +75,7 @@
      drove it now lives in an editor-only bundle the player never loads.
      Markup that nothing can wire up is dead weight on every shared link. #}
 
-  <div class="canvas-area">
+  <div class="canvas-area" role="main">
   <div class="canvas-wrap">
     <img id="photoBgImg" class="photo-bg-img" style="display:none" alt="">
     <canvas id="canvas"></canvas>
@@ -124,7 +124,7 @@
 
   <!-- Read-only player shell (shown only in player-mode) -->
   <!-- Player shell (shared partial — editor preview + public player) -->
-  {% include 'skribl/_skribl_player_controls.html' %}
+  {% with title_tag='h1' %}{% include 'skribl/_skribl_player_controls.html' %}{% endwith %}
   {# The brand moment, PLAYER-ONLY: the "made with" signature draws itself
      once as the page loads — a shared skribl's first second demonstrates the
      whole product before the visitor's drawing does the same thing. The

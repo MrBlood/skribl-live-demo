@@ -2804,6 +2804,11 @@ window.addEventListener('keyup', e=>{
 window.addEventListener('blur', ()=> endFlipHold(true));
 
 /* ---- flip playback ---- */
+// ONE definition of "nothing to post", read by the two share entry points
+// and by the button's disabled state, so the button can never promise what
+// the sheet then refuses (it did: Post was lit on an empty page and answered
+// with a chip). The Pad disables its Post the same way.
+function nothingToShare(){ return frames.length===1 && !frames[0].strokes.length && !bgImage; }
 const playBtn=document.getElementById('play');
 const liveBadge=document.querySelector('.flip-live');
 function updateToolState(){
@@ -2827,6 +2832,8 @@ function updateToolState(){
   const redoB=document.getElementById('redo');
   redoB.disabled = redoStack.length === 0;
   redoB.style.opacity = redoB.disabled ? .38 : 1;
+  const postB=document.getElementById('postBtn');
+  if(postB) postB.disabled = nothingToShare();
 }
 const flipPlayer=document.getElementById('flipPlayer'), flipProgress=document.getElementById('flipProgress'), flipProgressFill=document.getElementById('flipProgressFill');
 const drawOnBtn=document.getElementById('drawOnBtn');
@@ -4117,8 +4124,7 @@ function _shareCardDataURL(){
 }
 async function shareSkribl(){
   if(sharing) return;
-  const empty = frames.length===1 && !frames[0].strokes.length && !bgImage;
-  if(empty){ chip('Draw something to share'); return; }
+  if(nothingToShare()){ chip('Draw something to share'); return; }
   if(playing) stop();
   sharing=true; chip('Posting…');
   try{
@@ -4192,8 +4198,7 @@ function openShareCompose(){
   // tapping a button that did nothing, with no way to tell whether the app was
   // busy, refusing, or broken.
   if(sharing){ chip('Still posting…'); return; }
-  const empty = frames.length===1 && !frames[0].strokes.length && !bgImage;
-  if(empty){ chip('Draw something to share'); return; }
+  if(nothingToShare()){ chip('Draw something to share'); return; }
   if(playing) stop();
   const m=document.getElementById('flipShare');
   const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
@@ -4503,7 +4508,10 @@ function syncMusicUI(){
   musicTabDot.hidden = !hasMus;
   if(hasMus) updateTrimUI();
 }
-function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); refreshPendingCards(); }
+// updateToolState last: a background image alone is something to post, and every
+// path that adds or removes one ends here (setBgImage, removeBgImage, the
+// autosave spill restore), while none of them touches a stroke.
+function syncMediaUI(){ syncPhotoUI(); syncMusicUI(); refreshPendingCards(); if(typeof updateToolState==='function') updateToolState(); }
 
 // The Draw/Image/Music drawers are shared partials, so Flip already HAS the Pad's
 // #musicPending / #photoPending re-add cards in its DOM — it just never drove them.

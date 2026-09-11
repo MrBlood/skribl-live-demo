@@ -10,6 +10,7 @@
 {% include 'skribl/_skribl_theme_boot.html' %}
 </head>
 <body class="flip-app">
+  <h1 class="vis-hidden">Skribl Flip</h1>
   <div class="app">
     <div class="header">
       <div class="flip-lead">
@@ -35,7 +36,7 @@
           </button>
           <span id="flipDuration" class="duration-badge">0:00</span>
         </div>
-        <button type="button" class="btn post" id="postBtn" title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
+        <button type="button" class="btn post" id="postBtn" disabled title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
         <button type="button" id="moreBtn" class="tool-open" title="More — save, export, help" aria-label="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       </div>
     </div>
@@ -68,7 +69,7 @@
       </div>
     </div>
 
-    <div class="flip-stage">
+    <div class="flip-stage" role="main">
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
         <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas>
