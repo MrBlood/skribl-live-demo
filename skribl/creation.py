@@ -264,14 +264,24 @@ def create_post(payload, *, author_id=None, media_store=None,
     # REJECT, don't truncate. [:80] returned 201 for an over-length title and
     # stored half a sentence, so the caller was told it succeeded and the user
     # lost text with nothing to see.
-    title = (payload.get("title") or "Untitled Skribl").strip()
+    # .strip() FIRST, then default: "   " used to survive as '', so the
+    # player fell back to the product name while the library said
+    # "Untitled Skribl" — one post, two names.
+    title = (payload.get("title") or "").strip() or "Untitled Skribl"
     caption = (payload.get("caption") or "").strip()
     for _field, _value, _cap in (("title", title, MAX_TITLE_CHARS),
                                  ("caption", caption, MAX_CAPTION_CHARS)):
         if len(_value) > _cap:
+            # The editors show this string to the user as-is (editor_post.js
+            # and flip.js surface e.error), so it is written for them, not for
+            # a log: no quoted field name. It still names the field in lower
+            # case and states both numbers, because the API's callers match on
+            # those (verify_apiedges reads "caption"; verify_hostconfig reads
+            # the limit AND the length) and a person pasting 81 characters is
+            # helped by hearing how far over they are.
             raise SkriblRejected(
-                f"'{_field}' is too long ({len(_value)} characters; "
-                f"limit {_cap}).")
+                f"A {_field} can be up to {_cap} characters "
+                f"\u2014 this one is {len(_value)}.")
     # True only when there are actual audio bytes, whether stored top-level
     # (legacy) or inside a frame (frame-format). See _payload_has_audio.
     has_audio = _payload_has_audio(payload)

@@ -36,6 +36,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _layout import STATIC_DIR, template  # noqa: E402
 from assertions import make_check
 
+sys.path.insert(0, ROOT)
+from skribl.core import MAX_CAPTION_CHARS  # noqa: E402
+
 results = []
 
 
@@ -157,6 +160,17 @@ with sync_playwright() as p:
     check("the caption counter tracks what was typed",
           pg.inner_text("#flipShareCount").startswith(str(len(CAPTION))),
           pg.inner_text("#flipShareCount"))
+    # THE OTHER HALF OF THE COUNTER. maxlength is rendered from
+    # skribl_limits.caption (300); the "/ N" beside it was a literal 280 in two
+    # scripts and two templates, so a user could read "300 / 280". The limit
+    # the counter names must be the limit the field enforces, and that must be
+    # the column width. Red on v287.
+    _maxlen = pg.get_attribute("#flipShareCaption", "maxlength")
+    check("Flip's caption field enforces the configured limit",
+          _maxlen == str(MAX_CAPTION_CHARS), repr(_maxlen))
+    check("and Flip's counter names that same limit",
+          pg.inner_text("#flipShareCount") == f"{len(CAPTION)} / {_maxlen}",
+          pg.inner_text("#flipShareCount"))
 
     pg.click("#flipShareSubmit")
     pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
@@ -212,6 +226,40 @@ with sync_playwright() as p:
           stored2.get("title") == "Untitled Skribl", repr(stored2.get("title")))
     check("an untyped caption stores as empty, not null",
           stored2.get("caption") == "", repr(stored2.get("caption")))
+
+    # -----------------------------------------------------------------------
+    print("\nFLIP METADATA — section 4: the Pad's counter, same contract")
+    # Same defect, other editor: editor_post.js had its own ' / 280'. Pinned
+    # here rather than in a Pad suite because this file is where the two
+    # editors' title/caption surfaces are held to one contract.
+    # The Pad's Post is disabled until a take exists: draw on #canvas and stop
+    # the recording, the way verify_sheetfit's author() does.
+    pg3 = b.new_page()
+    pg3.goto(f"{BASE}/", wait_until="load")
+    pg3.wait_for_timeout(1500)
+    box = pg3.locator("#canvas").bounding_box()
+    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    pg3.mouse.move(cx, cy)
+    pg3.mouse.down()
+    for i in range(30):
+        pg3.mouse.move(cx + i * 4, cy + (i % 7) * 6)
+        if i % 10 == 0:
+            pg3.wait_for_timeout(80)
+    pg3.mouse.up()
+    pg3.wait_for_timeout(400)
+    pg3.click("#recordBtn")
+    pg3.wait_for_timeout(400)
+    pg3.click("#postBtn")
+    pg3.wait_for_timeout(600)
+    _maxlen3 = pg3.get_attribute("#postCaptionInput", "maxlength")
+    check("the Pad's caption field enforces the configured limit",
+          _maxlen3 == str(MAX_CAPTION_CHARS), repr(_maxlen3))
+    pg3.fill("#postCaptionInput", "x" * MAX_CAPTION_CHARS)
+    pg3.wait_for_timeout(100)
+    check("a full caption reads N / N on the Pad, never N / less-than-N",
+          pg3.inner_text("#postCharCount") == f"{MAX_CAPTION_CHARS} / {_maxlen3}",
+          pg3.inner_text("#postCharCount"))
+    pg3.close()
 
     b.close()
 

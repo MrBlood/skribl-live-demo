@@ -222,7 +222,9 @@
   }
 
   function updateCharCount() {
-    charCount.textContent = captionInput.value.length + ' / 280';
+    // The limit is whatever the field enforces (rendered from
+    // skribl_limits.caption); a literal here drifted to 280 against 300.
+    charCount.textContent = captionInput.value.length + ' / ' + captionInput.maxLength;
   }
 
   // states: 'idle' | 'sending' | 'success' | 'error'

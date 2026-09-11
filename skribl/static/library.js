@@ -270,7 +270,7 @@
      * believed. */
     foot.textContent = !items.length ? ''
       : (q ? 'Filtering the ' + items.length + ' loaded so far. Load more to search further.'
-           : 'Newest first, from GET /api/skribls. Pick one to play it.');
+           : 'Newest first. Pick one to play it.');
   }
 
   function loadPage() {

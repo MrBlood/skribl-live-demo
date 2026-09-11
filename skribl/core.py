@@ -18,7 +18,7 @@ import re
 SKRIBL_VERSION = "v287"
 
 OG_DEFAULT_TITLE = "Skribl Pad"
-OG_DEFAULT_DESCRIPTION = "A drawing that replays in time with music."
+OG_DEFAULT_DESCRIPTION = "A drawing that replays the way it was made."
 
 
 def _og_meta(title, caption):
