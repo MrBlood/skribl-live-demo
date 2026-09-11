@@ -11,7 +11,15 @@
 
    Kept deliberately tiny and total: any read failure (Safari private mode
    throws on ACCESS, not just on write) and any unrecognised value leave the
-   attribute off, which is dark, which is the app as it has always looked. #}
+   attribute off, which is dark, which is the app as it has always looked.
+
+   ?theme=light|dark ON THE URL WINS, for this document only (v288). A host
+   that iframes /s/<id> cannot reach into the frame's localStorage and the
+   frame cannot see the host's data-theme, so the host passes the theme it
+   already stamps on its own page as a query parameter. Exact values only;
+   anything else falls through to the stored preference. This is the one
+   place a Skribl page follows something other than its own setting — and it
+   is still not the OS: standalone stays dark by default (DECISIONS v232). #}
 <script nonce="{{ csp_nonce }}">
-(function(){try{if(localStorage.getItem('skribl_theme_v1')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();
+(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:localStorage.getItem('skribl_theme_v1');if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();
 </script>

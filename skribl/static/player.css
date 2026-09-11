@@ -1548,3 +1548,150 @@ body.player-mode #canvas {
   .play-wrap { height: 36px; }
   .play-wrap > #playBtn.btn.play { height: 34px; }
 }
+
+/* ---------- v232: light mode --------------------------------------------
+   PHASE 2. Phase 1 moved every neutral the chrome paints into :root without
+   changing a pixel; this block is what that was for. Nothing here is new
+   plumbing -- it redefines the same tokens and the whole interface follows.
+
+   DARK IS THE BASE, so this inverts the usual pattern: `:root` above stays
+   dark and light is what the stamp opts into. There are two states here, not
+   three: light applies when, and only when, something has put
+   data-theme="light" on <html>. The paragraph below says why there is no
+   third, system-following state.
+
+   THE RAMP IS MIRRORED BY RELATIONSHIP, NOT BY ARITHMETIC. Inverting each
+   luminance mechanically gives you a light theme where every contrast is
+   technically preserved and nothing looks right: the darkest surface is the
+   one the eye reads as furthest back, and in a light interface that is the
+   LIGHTEST. So --surface-deep, the toolbar row's ground, becomes white, and
+   the ramp climbs away from it in the opposite direction. The cool blue-grey
+   hue the dark palette carries (~220deg, low saturation) is kept throughout;
+   a neutral grey here would read as a different product.
+
+   THE CANVAS IS NOT IN THIS BLOCK, deliberately, and that is the owner's call.
+   The drawing's background is the document's own colour -- saved, shared,
+   exported -- so a Skribl looks the same to every viewer whatever their
+   interface is set to.
+
+   The accent family is untouched. #7c5cff sits at L110 and works on both a
+   near-black and a white ground, which is why it was picked. */
+/* NO `@media (prefers-color-scheme: light)` BLOCK, and that is a decision.
+   Adding one was the obvious move and it was wrong: it flips the DEFAULT for
+   every visitor whose OS is set to light, which is most of them, on an app
+   whose whole identity is dark. Skribl would have changed for everyone
+   overnight without anyone asking for it.
+
+   So light is OPT-IN: it applies only when something has stamped
+   data-theme="light" on <html>. Following the system instead is one block --
+   wrap the rule below in `@media (prefers-color-scheme: light)` and guard it
+   with `:root:not([data-theme="dark"])` so an explicit dark choice still wins
+   on a light OS -- but that is the owner's call about the product, not a
+   detail of the implementation. */
+:root[data-theme="light"] {
+  color-scheme: light;   /* the counterpart of the note on :root */
+
+  /* Surfaces — the deepest dark becomes the lightest light */
+  --surface-deep:            #ffffff;   /* the toolbar row's ground */
+  --surface-base:            #fbfcfd;
+  --surface-raised:          #f6f8fa;
+  --surface-sheet:           #f3f5f8;
+  --surface-panel:           #f1f3f7;
+  --surface-sheet-2:         #eff2f6;
+  --surface-well:            #eaeef4;   /* inset wells read as recessed, so darker */
+  --surface-well-2:          #eaeef4;
+  --surface-control:         #edf0f4;
+  --surface-control-hover:   #e2e7ee;
+  --surface-nudge:           #dde3ec;   /* a step button sits ON a control, so it
+                                           steps AWAY from it — lighter than its tray
+                                           in dark, darker than it in light */
+  --surface-nudge-hover:     #d1d9e5;
+  --surface-pop:             #ffffff;   /* popovers float ABOVE the page: white plus their shadow */
+
+  /* Violet-tinted surfaces keep their hue, not just their lightness */
+  --surface-tint:            #f0edff;
+  --surface-tint-lit:        #e6e0ff;
+
+  /* Lines */
+  --line-faint:              #e6e9ef;
+  --line:                    #e0e5ec;
+  --line-2:                  #dde2ea;
+  --line-mid:                #d5dbe4;
+  --line-mid-2:              #d0d7e1;
+  --line-strong:             #ccd3de;
+  --line-loud:               #b7c0cf;
+
+  /* Text — the brightest becomes the darkest ink */
+  --text-dim:                #8c94a3;
+  --text-muted:              #6c7483;
+  --text-soft:               #5f6775;
+  --text-soft-2:             #5f6775;
+  --text-soft-3:             #5c6472;
+  --text-secondary:          #545c6a;
+  --text-tool-3:             #4b535f;
+  --text-tool-2:             #4b535f;
+  --text-tool:               #48505d;   /* .tool-btn at rest */
+  --text-tool-lit:           #434b58;   /* .tool-open at rest */
+  --text-bright-2:           #343b47;
+  --text-bright:             #343b47;
+  --text-brightest:          #2d3440;
+  --text-strong-2:           #1f252f;
+  --text-strong-3:           #1f252f;
+  --text-strong:             #1f252f;
+  --text-heading:            #171c25;
+  --text-primary:            #11161e;
+  --text-on-accent-soft:     #3a2a80;   /* text on a translucent accent fill */
+  /* The signature switches pens in daylight (owner: "black on white looks
+     wrong"). Near-black cursive on a light header lost everything the dark
+     lockup has — the halo disappears against white, and heavy dark script
+     reads as handwriting, not identity. A deep violet in the accent's own
+     hue keeps it unmistakably the brand's pen, at ~9:1 contrast on the
+     header so legibility gives up nothing. */
+  --brand-ink:               #4a33c2;
+  /* Light flips the rim: a near-white edge, light catching the card. */
+  --header-rim:              rgba(255, 255, 255, 0.9);
+  /* Letterpress for a light surface: the classic bright ledge below the
+     ink, a whisper of shade above. */
+  --brand-relief: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
+                  drop-shadow(0 -0.5px 0.5px rgba(30, 20, 80, 0.30));
+
+  /* Washes and hairlines invert outright */
+  --wash-rgb:                0,0,0;   /* every hover fill and translucent rule flips with this line */
+  --hairline:                rgba(0,0,0,0.09);
+  --hairline-strong:         rgba(0,0,0,0.15);
+  --accent-glow:             rgba(0,0,0,0.16);   /* a glow on dark is a shadow on light */
+  /* Translucent surfaces — near-white frosted panels rather than near-black.
+     These were the last thing in the chrome still painting dark: the header,
+     the page bar, the filmstrip well and the autosave pill are a colour at
+     partial opacity, and phase 1 converted rgba(255,255,255,a) only. */
+  --glass-deep-rgb:          255,255,255;
+  --glass-deep-2-rgb:        253,254,255;
+  --glass-base-rgb:          250,251,253;
+  --glass-raised-rgb:        247,249,251;
+  --surface-sheet-rgb:       243,245,248;
+  --surface-panel-rgb:       241,243,247;
+  --surface-well-2-rgb:      234,238,244;
+  --surface-control-rgb:     237,240,244;
+  --line-rgb:                224,229,236;
+
+  /* Semantic colours, restated for a light ground. Same hues, dropped in
+     luminance until each clears 4.5:1 against the DEEPEST light surface
+     (#edf0f4) — the worst case, so they hold on every lighter one too.
+     Measured: danger 5.34, warn 5.14, warn-2 5.06, good 5.13, tint 7.22.
+     --danger-fill is a solid button in both themes and does not move. */
+  --danger:        #c1104a;
+  --danger-mid:    #b32a45;
+  --danger-soft:   #b81447;
+  --danger-soft-2: #b81447;
+  --danger-soft-3: #b81447;
+  --warn:          #8a5b00;
+  --warn-2:        #96560a;
+  /* NOT lifted with the dark theme's. This one sits on white, where brighter
+     means less readable — the dark theme's problem was a dim dot on near-black
+     and does not exist here. */
+  --good:          #0a7350;
+  --good-rgb:      10, 115, 80;
+  --accent-tint:   #4c31c4;
+  --accent-tint-2: #4c31c4;
+
+}

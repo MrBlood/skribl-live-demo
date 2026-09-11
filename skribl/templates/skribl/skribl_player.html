@@ -21,6 +21,10 @@
   <meta name="twitter:description" content="{{ og_description }}">
   {% if og_image %}<meta name="twitter:image" content="{{ og_image }}">{% endif %}
 
+  {# The theme boot, so an embedding host's ?theme=light lands before first
+     paint. The light ramp itself reaches player.css through css_live.json
+     (":root[data-theme=\"light\"]" is listed as live for the player). #}
+  {% include 'skribl/_skribl_theme_boot.html' %}
   <!-- player.css, NOT styles.css: a derived strict subset of the rules a
        player page can actually match. styles.css dwarfs what a shared link can
        match — measure both rather than trusting a figure here; this comment

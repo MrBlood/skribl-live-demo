@@ -101,6 +101,16 @@ cache. `GET /api/skribls/<id>` is
 issued on the first tap and never again for that post. Do not prefetch it: that
 endpoint returns the whole payload, base64 audio included.
 
+**Theme.** The box follows your page: every colour in `inlineplayer.css` is
+`var(--token, fallback)` and the token names are the ones a feed already has —
+`--bg-elev`, `--border`, `--radius`, `--accent`, `--accent-2`. Define them
+under whatever stamps your theme (skribls.net uses `data-theme` on `<html>`)
+and the player re-colours with the page; define nothing and it is dark. The
+drawing itself never follows a theme — its ground is part of the drawing. If
+you iframe `/s/<id>` instead, the frame cannot see your page's attribute, so
+pass it: `/s/<id>?theme=light` (or `dark`); anything else leaves the player at
+its own default, which is dark whatever the OS says.
+
 **What a viewer gets.** Tap to play, tap to pause. The drawing redraws itself
 with a progress hairline along the bottom edge and a nib at the pen. Two
 controls, and only two — no scrub, no speed, no frame-step; those live on

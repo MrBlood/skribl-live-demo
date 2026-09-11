@@ -492,6 +492,68 @@ with sync_playwright() as p:
           page.evaluate("() => document.documentElement.getAttribute('data-theme')") is None
           and page.evaluate(f"() => localStorage.getItem('{KEY}')") == "dark")
 
+    print("\nTHEME — the player follows the URL when it is embedded, and only then")
+    # v288, the owner's call: standalone stays dark by default; an EMBEDDED
+    # player follows its host. An in-post box reads the host's tokens (verify_
+    # inline pins that); an iframed /s/<id> cannot see the host's attribute or
+    # its storage, so the host passes ?theme=light|dark and the boot script
+    # stamps it before first paint. The player page never carried the boot
+    # script or the light ramp before, so every line here was red on v287.
+    import json as _json
+    import urllib.request as _ur
+    _req = _ur.Request(BASE + "/api/skribls", method="POST",
+                       data=_json.dumps({"frames": [{"strokes": [], "strokeGroups": [],
+                                                     "background": {"color": "#101418"}}],
+                                         "title": "Theme fixture"}).encode(),
+                       headers={"Content-Type": "application/json"})
+    with _ur.urlopen(_req, timeout=15) as _r:
+        _pid = _json.loads(_r.read())["id"]
+    _player = "/s/" + _pid
+
+    def _attr(pg_):
+        return pg_.evaluate("() => document.documentElement.getAttribute('data-theme')")
+
+    def _body_lum(pg_):
+        return lum(parse(pg_.evaluate("() => getComputedStyle(document.body).backgroundColor")))
+
+    for _q, _want, _why in (("", None, "no parameter: dark, whatever the OS says"),
+                            ("?theme=light", "light", "the host said light"),
+                            ("?theme=banana", None, "an unknown value is ignored"),
+                            ("?theme=light&x=1", "light", "the parameter is read wherever it sits")):
+        pg3 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")
+        pg3.goto(BASE + _player + _q, wait_until="load")
+        pg3.wait_for_timeout(600)
+        check(f"player {_q or '(bare)'}: {_why}", _attr(pg3) == _want,
+              f"data-theme={_attr(pg3)!r}")
+        if _want == "light":
+            check(f"player {_q}: ...and the chrome is actually light",
+                  _body_lum(pg3) > 150, f"body luminance {_body_lum(pg3):.0f}")
+        pg3.close()
+
+    # The URL beats a stored preference — for an embed the HOST decides.
+    pg3 = browser.new_page(viewport={"width": 1000, "height": 900})
+    pg3.goto(BASE + "/", wait_until="load")
+    pg3.wait_for_timeout(500)
+    pg3.evaluate(f"() => localStorage.setItem('{KEY}', 'light')")
+    pg3.goto(BASE + _player + "?theme=dark", wait_until="load")
+    pg3.wait_for_timeout(600)
+    check("player ?theme=dark overrides a stored light preference",
+          _attr(pg3) is None, f"data-theme={_attr(pg3)!r}")
+    pg3.goto(BASE + _player, wait_until="load")
+    pg3.wait_for_timeout(600)
+    check("...and without the parameter the stored preference is back",
+          _attr(pg3) == "light", f"data-theme={_attr(pg3)!r}")
+    pg3.close()
+
+    # No flash: light lands with every script file blocked, so it was the
+    # inline boot and not something deferred.
+    naked3 = browser.new_page(viewport={"width": 1000, "height": 900})
+    naked3.route("**/*.js", lambda route: route.abort())
+    naked3.goto(BASE + _player + "?theme=light", wait_until="domcontentloaded")
+    check("player ?theme=light is applied with EVERY script file blocked",
+          _attr(naked3) == "light", "the embed would flash dark before going light")
+    naked3.close()
+
     print("\nTHEME — a browser that refuses storage still renders")
     page2 = browser.new_page(viewport={"width": 1000, "height": 900})
     page2.add_init_script("""
