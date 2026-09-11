@@ -126,8 +126,8 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(4000)
     pg.evaluate("() => { const s = document.querySelector('.bg-swatch:not(.active)'); if (s) s.click(); }")
     pg.wait_for_timeout(300)
-    pg.click("#recordBtn")
-    pg.wait_for_timeout(400)
+    # v288: a photo is not ink, so the canvas is still "blank" to the auto-arm
+    # and the first stroke starts the take; there is no idle Record button.
     scribble(pg, pg.locator("#canvas").bounding_box())
     pg.wait_for_timeout(600)
     pg.click("#recordBtn")

@@ -897,12 +897,12 @@ with _sp204() as _p:
 
     # v205-fix: the compact/recording row (Record, Play, Post, menu) must be one
     # uniform height — Play was a short .btn-icon (~29px) among 44px pills.
-    pg.evaluate("() => document.getElementById('recordBtn').click()")
-    pg.wait_for_timeout(300)
-    pg.mouse.move(300, 300); pg.mouse.down(); pg.mouse.move(360, 340); pg.mouse.up()
+    pg.mouse.move(300, 300); pg.mouse.down(); pg.mouse.move(360, 340); pg.mouse.up()   # arms the take (v288)
     pg.wait_for_timeout(200)
-    pg.evaluate("() => document.getElementById('recordBtn').click()")
+    pg.evaluate("() => document.getElementById('recordBtn').click()")   # stop
     pg.wait_for_timeout(500)
+    # After the take the Record button is hidden (v288) and reads 0 here, which
+    # the `if v` filter below drops; the row that remains is Play, Post, menu.
     rowh = pg.evaluate("""() => {
         const h = s => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().height) : null; };
         return { record: h('#recordBtn'), play: h('.btn.play'), post: h('#postBtn'), menu: h('#menuBtn') };
@@ -945,10 +945,15 @@ with _sp204() as _p:
     # close it and sync ARIA — recording hides the Tune button, so an open
     # drawer would have no visible opener. And stopping must NOT reopen it.
     pg.click("#tuneBtn"); pg.wait_for_timeout(300)
-    check("F4 setup: tune drawer is open before Record", pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
-    pg.click("#recordBtn"); pg.wait_for_timeout(350)
+    check("F4 setup: tune drawer is open before the take", pg.evaluate("() => document.getElementById('tuneShell').classList.contains('open')"))
+    # v288: no idle Record button. This page already holds a finished take (the
+    # V205 block above), so the canvas is locked and the way to start another
+    # take is the "+ Add take" pill — the same beginRecording path, which is
+    # what must close the drawer.
+    pg.click("#addTakePill"); pg.wait_for_timeout(350)
+    check("F4 setup: Add take started a take", pg.evaluate("() => recording === true"))
     _st = pg.evaluate("() => { const sh = document.getElementById('tuneShell'), b = document.getElementById('tuneBtn'); return { open: sh.classList.contains('open'), ariaHidden: sh.getAttribute('aria-hidden'), expanded: b.getAttribute('aria-expanded') }; }")
-    check("F4: Record closes the tune drawer (no .open)", not _st["open"], str(_st))
+    check("F4: starting a take closes the tune drawer (no .open)", not _st["open"], str(_st))
     check("F4: ...shell aria-hidden='true'", _st["ariaHidden"] == "true", str(_st))
     check("F4: ...button aria-expanded='false'", _st["expanded"] == "false", str(_st))
     pg.click("#recordBtn"); pg.wait_for_timeout(350)   # stop
@@ -1136,7 +1141,7 @@ with _sp204() as _p:
     # stop. Reproduces the reported 600px overlap + stuck-brand bug.
     narrow = _b.new_page(viewport={"width": 600, "height": 800})
     browsing.goto(narrow, BASE, "/")
-    narrow.evaluate("() => document.getElementById('recordBtn').click()")
+    narrow.evaluate("() => { if (!recording) beginRecording(false); }")   # v288: no idle Record button
     narrow.wait_for_timeout(400)
     check("V204-fix: the tune button is hidden while recording (reclaims width)",
           narrow.evaluate("() => { const t = document.getElementById('tuneBtn');"
@@ -1358,16 +1363,17 @@ with _sp204() as _p:
     # label until ~720px where the long one genuinely fits.
     for pw in (641, 660, 700):
         _n = _b.new_page(viewport={"width": pw, "height": 900}); _n.goto(BASE + "/", wait_until="load"); _n.wait_for_timeout(600)
-        _n.click("#recordBtn"); _n.wait_for_timeout(250)
-        _bb = _n.locator("#canvas").bounding_box(); _n.mouse.move(_bb["x"] + 200, _bb["y"] + 200); _n.mouse.down()
+        _bb = _n.locator("#canvas").bounding_box(); _n.mouse.move(_bb["x"] + 200, _bb["y"] + 200); _n.mouse.down()   # arms the take (v288)
         for _i in range(1, 10): _n.mouse.move(_bb["x"] + 200 + _i * 12, _bb["y"] + 200 + _i * 7)
         _n.mouse.up(); _n.wait_for_timeout(300); _n.click("#recordBtn"); _n.wait_for_timeout(450)
         _g = _n.evaluate("""() => { const h = document.querySelector('.header'); const p = document.getElementById('postBtn'); const r = document.getElementById('recordBtn');
             const ph = p.getBoundingClientRect().height, rh = r.getBoundingClientRect().height;
             return { overflow: h.scrollWidth > h.clientWidth + 1, postH: Math.round(ph), recordH: Math.round(rh), headerH: Math.round(h.getBoundingClientRect().height) }; }""")
         check(f"V207: at {pw}px post-record the header does not overflow", not _g["overflow"], str(_g))
-        check(f"V207: at {pw}px Post/Record pills are single-line (<=48px tall, not wrapped)",
-              _g["postH"] <= 48 and _g["recordH"] <= 48, str(_g))
+        # v288: Record is hidden after a take (recordH reads 0); Post is the pill
+        # that can still wrap here.
+        check(f"V207: at {pw}px the Post pill is single-line (<=48px tall, not wrapped)",
+              _g["postH"] <= 48, str(_g))
         _n.close()
 
     # v207: onion on/off moved from the header into the tune drawer's Onion row
@@ -2059,7 +2065,7 @@ with sync_playwright() as _b13:
     _p13 = _c13.new_page()
     _p13.goto(BASE + "/", wait_until="load"); _p13.wait_for_timeout(700)
     _p13.evaluate("() => localStorage.clear()")
-    _p13.click("#recordBtn"); _p13.wait_for_timeout(350)
+    _p13.evaluate("() => { if (!recording) beginRecording(false); }"); _p13.wait_for_timeout(350)   # v288: no idle Record button
     _baseline = _p13.evaluate(_HDR)
 
     def _stroke13(x0, y0, x1, y1):
@@ -2183,6 +2189,49 @@ check("the export file-name field is at least 16px",
 _stale = sorted(k for k in _ZOOM_EXEMPT if k not in _seen)
 check("no exemption names a field that no longer exists",
       not _stale, "stale: " + ", ".join(_stale))
+
+print("\nAUTO-RECORD — the header button is a Stop button, and one honest exception")
+# v288 (the v287 audit, owner's call). The first stroke has armed a take since
+# the auto-arm in editor_draw.js; an idle "Record" beside "Recording starts
+# automatically" was two ways to say one thing. The button now shows for what
+# only a button can do — stop a take, or start one over ink that is on the
+# canvas but not in a take — and is otherwise gone. Asserted on the hidden
+# property through the real transitions; red on v287, where the button was
+# always in the header.
+with _sp204() as _ar:
+    _arb = _ar.chromium.launch()
+    _arp = _arb.new_page(viewport={"width": 1100, "height": 900})
+    browsing.goto(_arp, BASE, "/")
+    _arp.evaluate("() => localStorage.clear()")
+    _arp.reload(wait_until="load"); _arp.wait_for_timeout(700)
+    _AR = """() => { const b = document.getElementById('recordBtn');
+        return { hidden: b.hidden, active: b.classList.contains('active'), recording: recording,
+                 pill: !document.getElementById('addTakePill').hidden }; }"""
+    _s0 = _arp.evaluate(_AR)
+    check("AUTO-RECORD: an empty canvas offers no Record button",
+          _s0["hidden"] and not _s0["recording"], str(_s0))
+    draw(_arp, "#canvas", 120, 120, n=18)
+    _arp.wait_for_timeout(300)
+    _s1 = _arp.evaluate(_AR)
+    check("AUTO-RECORD: the first stroke starts the take and the button appears as Stop",
+          _s1["recording"] and not _s1["hidden"] and _s1["active"], str(_s1))
+    _arp.click("#recordBtn"); _arp.wait_for_timeout(500)
+    _s2 = _arp.evaluate(_AR)
+    check("AUTO-RECORD: after Stop the button is gone and the Add take pill is the way on",
+          not _s2["recording"] and _s2["hidden"] and _s2["pill"], str(_s2))
+    # The exception, driven through the same function: ink with no take (a
+    # restored draft's unrecorded pixels) is where the auto-arm does not fire
+    # and a button is the only way to start recording over it.
+    _arp2 = _arb.new_page(viewport={"width": 1100, "height": 900})
+    browsing.goto(_arp2, BASE, "/")
+    _arp2.evaluate("() => localStorage.clear()")
+    _arp2.reload(wait_until="load"); _arp2.wait_for_timeout(700)
+    _s3 = _arp2.evaluate("""() => { hasContent = true; recorded = false; recording = false;
+        updateEmptyHint(); const b = document.getElementById('recordBtn');
+        return { hidden: b.hidden, active: b.classList.contains('active') }; }""")
+    check("AUTO-RECORD: unrecorded ink with no take brings Record back, not Stop",
+          not _s3["hidden"] and not _s3["active"], str(_s3))
+    _arp2.close(); _arp.close(); _arb.close()
 
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")

@@ -226,6 +226,22 @@ const canvasEmptyHint = document.getElementById('canvasEmptyHint');
 const addTakePill = _authoringCtl('addTakePill');
 function updateEmptyHint() {
   if (canvasEmptyHint) canvasEmptyHint.classList.toggle('hidden', hasContent);
+  syncRecordBtn();
+}
+
+// AUTO-RECORD (v288, owner's call after the v287 audit). The first stroke on a
+// blank canvas has armed a take since the auto-arm in editor_draw.js, so an
+// idle "Record" beside "Recording starts automatically" was two ways to say one
+// thing — the dual mental model the audit flagged. The header button now
+// exists for what only a button can do: STOP a take in progress, and start one
+// over ink that is on the canvas but not in a take (a restored draft's
+// unrecorded pixels), where the auto-arm deliberately does not fire. On an
+// empty canvas and on a finished take it is gone — the canvas itself, and the
+// "+ Add take" pill, are the affordances. Called from updateEmptyHint (every
+// hasContent transition) and from the two ends of a take; the player's stub
+// (_authoringCtl) takes the property harmlessly.
+function syncRecordBtn() {
+  recordBtn.hidden = !recording && !(hasContent && !recorded);
 }
 
 // Recompute all derived UI state after a history change (undo/redo).
@@ -1312,6 +1328,7 @@ function beginRecording(continueTake) {
   if (typeof pickingColor !== 'undefined' && pickingColor) stopPicking();
   recordBtn.innerHTML = ICON_STOP + LABEL_STOP;
   recordBtn.classList.add('active');
+  syncRecordBtn();
   canvasWrap.classList.add('recording');
   document.body.classList.add('recording');
   document.querySelector('.header').classList.add('compact');
@@ -1348,6 +1365,7 @@ function endRecordingTake() {
   if (typeof updateRepositionUI === 'function') updateRepositionUI();
   recordBtn.innerHTML = ICON_RECORD + LABEL_RECORD;
   recordBtn.classList.remove('active');
+  syncRecordBtn();
   canvasWrap.classList.remove('recording');
   document.body.classList.remove('recording');
   recIndicator.hidden = true;

@@ -321,7 +321,10 @@ with sync_playwright() as _b4:
     _p4.goto(BASE + "/", wait_until="load"); _p4.wait_for_timeout(800)
     _p4.evaluate("() => localStorage.clear()")
     _p4.reload(wait_until="load"); _p4.wait_for_timeout(800)
-    _p4.click("#recordBtn"); _p4.wait_for_timeout(300)
+    # v288: no idle Record button (a stroke arms the take). This suite measures
+    # capture mechanics, so it arms the take directly rather than through a
+    # first pen stroke that would enter the geometry it reads.
+    _p4.evaluate("() => { if (!recording) beginRecording(false); }"); _p4.wait_for_timeout(300)
 
     _bx4 = _p4.locator("#canvas").bounding_box()
     _GAP = 1500
@@ -654,7 +657,7 @@ with sync_playwright() as _b8:
     _p8.goto(BASE + "/", wait_until="load"); _p8.wait_for_timeout(800)
     _p8.evaluate("() => localStorage.clear()")
     _p8.reload(wait_until="load"); _p8.wait_for_timeout(800)
-    _p8.click("#recordBtn"); _p8.wait_for_timeout(300)
+    _p8.evaluate("() => { if (!recording) beginRecording(false); }"); _p8.wait_for_timeout(300)
 
     _geos = {}
     for _kind in ("line", "rect", "ellipse", "poly"):
@@ -817,7 +820,7 @@ with sync_playwright() as _b9:
         _p9.evaluate("() => localStorage.clear()")
         _p9.reload(wait_until="load"); _p9.wait_for_timeout(900)
         if _rec9:
-            _p9.click("#recordBtn"); _p9.wait_for_timeout(300)
+            _p9.evaluate("() => { if (!recording) beginRecording(false); }"); _p9.wait_for_timeout(300)
         for _mode in ("off", "vertical", "both"):
             _p9.evaluate("""() => {
               if (typeof strokes !== 'undefined') { strokes = []; strokeGroups = []; }
@@ -881,7 +884,7 @@ with sync_playwright() as _b10:
     _p10.goto(BASE + "/", wait_until="load"); _p10.wait_for_timeout(800)
     _p10.evaluate("() => localStorage.clear()")
     _p10.reload(wait_until="load"); _p10.wait_for_timeout(800)
-    _p10.click("#recordBtn"); _p10.wait_for_timeout(300)
+    _p10.evaluate("() => { if (!recording) beginRecording(false); }"); _p10.wait_for_timeout(300)
     _bx10 = _p10.locator("#canvas").bounding_box()
     for _k, (_x0, _y0) in enumerate(((80, 80), (80, 300))):
         _p10.mouse.move(_bx10["x"] + _x0, _bx10["y"] + _y0); _p10.mouse.down()
@@ -1003,7 +1006,7 @@ with sync_playwright() as _b11:
         _p11.evaluate("() => localStorage.clear()")
         _p11.reload(wait_until="load"); _p11.wait_for_timeout(900)
         if _rec11:
-            _p11.click("#recordBtn"); _p11.wait_for_timeout(300)
+            _p11.evaluate("() => { if (!recording) beginRecording(false); }"); _p11.wait_for_timeout(300)
 
         _got11 = {}
         for _brush in ("pen", "marker", "pencil", "airbrush"):
@@ -1102,7 +1105,7 @@ if _SELECT_TOOL_ON_PAD:
     _p12.goto(BASE + "/", wait_until="load"); _p12.wait_for_timeout(900)
     _p12.evaluate("() => localStorage.clear()")
     _p12.reload(wait_until="load"); _p12.wait_for_timeout(900)
-    _p12.click("#recordBtn"); _p12.wait_for_timeout(300)
+    _p12.evaluate("() => { if (!recording) beginRecording(false); }"); _p12.wait_for_timeout(300)
 
     def _sstroke(_x0, _y0):
         _b = _p12.locator("#canvas").bounding_box()
