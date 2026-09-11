@@ -4124,7 +4124,7 @@ function _shareCardDataURL(){
 }
 async function shareSkribl(){
   if(sharing) return;
-  if(nothingToShare()){ chip('Draw something to share'); return; }
+  if(nothingToShare()){ chip('Draw something to post'); return; }
   if(playing) stop();
   sharing=true; chip('Posting…');
   try{
@@ -4146,7 +4146,7 @@ async function shareSkribl(){
       const why = data.error || (res.status >= 500
         ? 'The server could not save it (error ' + res.status + '). Your Skribl is safe here — try again in a moment.'
         : 'The server refused it (error ' + res.status + '). Your Skribl is safe here — nothing was lost.');
-      showShareError(why); chip('Share failed'); sharing=false; return;
+      showShareError(why); chip('Post failed'); sharing=false; return;
     }
     const url=location.origin + (data.url || (window.SKRIBL_PLAYER_BASE+'/'+data.id));
     // Record it locally. Without accounts the link is the only handle on a
@@ -4169,7 +4169,7 @@ async function shareSkribl(){
   }catch(err){
     console.error('[skribl] Share failed:', err);
     showShareError('Could not reach the server. Check your connection — your Skribl is still here.');
-    chip('Share failed');
+    chip('Post failed');
   }
   sharing=false;
 }
@@ -4198,7 +4198,7 @@ function openShareCompose(){
   // tapping a button that did nothing, with no way to tell whether the app was
   // busy, refusing, or broken.
   if(sharing){ chip('Still posting…'); return; }
-  if(nothingToShare()){ chip('Draw something to share'); return; }
+  if(nothingToShare()){ chip('Draw something to post'); return; }
   if(playing) stop();
   const m=document.getElementById('flipShare');
   const compose=document.getElementById('flipShareCompose'), result=document.getElementById('flipShareResult');
@@ -4206,7 +4206,7 @@ function openShareCompose(){
     // The sheet is missing entirely. Say so rather than appear dead, and name
     // it in the console so lib/report.js carries it off the device.
     console.error('[skribl] #flipShare is missing — cannot open the share sheet');
-    chip('Share is unavailable — please reload');
+    chip('Posting is unavailable — please reload');
     return;
   }
   if(compose) compose.hidden=false;
