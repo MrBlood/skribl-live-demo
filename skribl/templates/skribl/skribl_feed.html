@@ -58,6 +58,8 @@
       color: #e8eaef; font: inherit; font-size: 17px; padding: 6px 0;
     }
     .composer-text:focus { outline: none; }
+    .composer-text:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
+    .vis-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
     .composer-text::placeholder { color: #6f7686; }
     .composer-attach { margin: 8px 0 4px; }
     .attach-actions { display: flex; gap: 8px; margin-top: 8px; }
@@ -136,7 +138,7 @@
     </div>
   </div>
 
-  <div class="shell">
+  <div class="shell" role="main">
     <header class="fhead">
       <h1>Feed</h1>
       <span class="sub">Latest Skribls</span>
@@ -147,6 +149,7 @@
        attachment buttons are disabled on purpose: they belong to a real host
        and faking them would make this page claim things it cannot do. #}
     <form class="composer" id="composer" autocomplete="off">
+      <label for="composerText" class="vis-hidden">What's happening?</label>
       <textarea id="composerText" class="composer-text" rows="2"
                 placeholder="What's happening?" maxlength="280"></textarea>
 
