@@ -7274,3 +7274,67 @@ sheet carries no dialog role and no aria-modal, so it escapes verify_a11y's
 modal census and traps no focus; the census can only see what declares
 itself, which is the shape of the gap. And the audit's two P2s stand: a 404
 served as 200, and the sheet's Cancel/back-arrow asymmetry.
+
+## v290 -- one menu, one dialog, one status: three seams the shell still showed
+
+Three PRs, each reproduced and measured before it was written, each check red
+on the tree before its fix. Two were the owner's direct asks; the third was the
+finding v289 recorded for the next tier, plus the audit's last P2.
+
+**The two ⋯ menus were two designs (owner: "they look different?").** The same
+items in two bodies. Pad's rows were 44px with a 10px radius on a blurred 220px
+sheet; Flip's 37px with a 9px radius on an opaque 232px card, 17px icons
+against 18, weight 400 against 500, a separator after nearly every item, "How
+Flip works" and "Clear all pages" where Pad says "How it works" and "Clear all",
+and a "Rebuild in-betweens" item Pad has no counterpart for. v270 had mirrored
+the numbers by hand on the compact surface; the desktop popover was never
+brought in step, and hand-mirrored numbers are the shape of every parity bug
+this file records. Flip's menu now wears the Pad's classes -- .menu-item,
+.menu-item-text, .menu-divider, .menu-row, .menu-row-label -- so the rows are
+styled once in styles.css and not at all in flip.css; the container stays
+Flip's, an absolutely placed popover, but takes .menu-sheet's surface. "Rebuild
+in-betweens" and its three helpers are gone at the owner's call: an in-between
+keeps the sample count it was made with. verify_parity opens both menus at
+1280 and 390 and compares them item by item -- labels and order, then each
+shared item's height, padding, font, weight, radius, gap and icon, then the
+surface, the width and the pill height -- and was red on every count.
+
+**The pills at the bottom of BOTH menus were 12px tall (owner: "small").** With
+no --seg-h the seg hugged its buttons, and a button with `padding: 0` is as
+tall as its 11px line: On/Off, Dark/Light, 4:3/16:9 were twelve-pixel targets.
+They are 28px in a 34px seg now, at 12px type, one width for Tips, Theme and
+Canvas with no flex-shrink -- squeezed, the two came out 146 and 151, which
+verify_tips caught -- and the desktop menus are 240px wide on both to hold
+them. Found on the way: Pad's bottom sheet is a column flexbox capped at 88dvh,
+and when the menu passed the cap every row lost 2px before the sheet scrolled
+(the grabber's note already records the same crush). The rows keep their size.
+
+**Flip's post sheet was a div (v289's recorded gap).** No role, no aria-modal:
+a screen reader met a div, Tab walked out into the page underneath, closing it
+left focus wherever it had wandered -- and verify_a11y's modal census, which
+counts what declares itself, had only ever walked the Pad. Now role="dialog",
+aria-modal, lib/modalfocus.js in and out with the Post button as the opener,
+and ONE closeShare() behind all four doors -- Cancel, ×, the backdrop, and an
+Escape claim registered with KeyRegistry, whose scoped-claim ratchet moves
+6 -> 7 with the note it asks for. The census walks both editors now and drives
+the sheet by recipe: focus in, 25 Tabs in, Escape back to postBtn. Under
+mutation of the open call, Tab escapes and focus lands on onionTintBtn.
+
+**A missing Skribl answered 200 with a dead "Try again" (SK-BUG-005).** The
+route's note said it "never 404s the page" by design, and the design half of
+that stands: the SHELL is render-always, so the page can say so itself. The
+STATUS is not. A post that is not there, or that this viewer may not see,
+renders the same page with a 404 -- a crawler or a link preview no longer
+caches a 200 for a page with no content, monitoring can tell missing from fine,
+and being a 404 it takes the restrictive framing every 404 gets -- while a
+failed database read is not a missing post and keeps the 200. The client's
+error panel knows which failure it is showing: "Try again" is withheld for a
+404, because a reload cannot make a missing Skribl appear, and kept for a
+network failure, which verify_player_isolation drives by aborting the fetch on
+a real post so the button's absence in one case is not its absence in the
+other. The player JS ratchet moves 152,900 -> 153,000 for the 81 B that tell
+the two failures apart; the previous tree sat 12 B under.
+
+**What is left from the audit.** Its structural note S1 -- Flip has a back
+arrow in its header and Pad has none -- is a product call about how the two
+editors relate, not a defect with a measurement, and stands as written.
