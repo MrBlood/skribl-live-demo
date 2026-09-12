@@ -930,6 +930,58 @@ with sync_playwright() as p:
           f"{pos} — left/top force layout and paint every pointermove, so the "
           "ring cannot be composited independently of the stroke")
 
+    print("\nPARITY — the two ⋯ menus are one design")
+    # Owner, v290: "reconcile Pad's ⋯ menu and Flip's ⋯ menu — they look
+    # different?" They did: the same items in two bodies. Pad's rows were 44px
+    # with 12/14px padding and a 10px radius on a blurred 220px sheet; Flip's
+    # were 37px with 10/12px padding and a 9px radius on an opaque 232px card,
+    # a separator after nearly every item, "How Flip works" and "Clear all
+    # pages" where Pad says "How it works" and "Clear all", and a "Rebuild
+    # in-betweens" item Pad has no counterpart for. The pills at the bottom of
+    # BOTH were 12px tall. Measured, not eyeballed: the same labels, and for
+    # each label the same box, on both surfaces at both widths.
+    MENU = """() => {
+      const root = document.getElementById('menuSheet') || document.getElementById('moreMenu');
+      if (!root || root.hidden) return null;
+      const num = v => Math.round(parseFloat(v) || 0);
+      const items = [...root.querySelectorAll('button, a')]
+        .filter(el => !el.closest('.seg') && el.offsetParent !== null)
+        .map(el => { const s = getComputedStyle(el); const svg = el.querySelector('svg');
+          // The label is the row's words: not the icon's glyph text, not the sub-line.
+          const c = el.cloneNode(true); c.querySelectorAll('svg, .menu-item-sub').forEach(n => n.remove());
+          const label = (c.textContent || '').replace(/\\s+/g, ' ').trim();
+          return { label, box: [Math.round(el.getBoundingClientRect().height), num(s.paddingTop), num(s.paddingLeft),
+                   num(s.fontSize), s.fontWeight, num(s.borderRadius), num(s.columnGap || s.gap),
+                   svg ? Math.round(svg.getBoundingClientRect().width) : 0].join('/') }; });
+      const cs = getComputedStyle(root);
+      const pills = [...root.querySelectorAll('.seg button')].map(b => Math.round(b.getBoundingClientRect().height));
+      return { items, surface: [cs.backgroundColor, num(cs.borderTopLeftRadius), cs.boxShadow !== 'none', num(cs.paddingLeft)].join('|'),
+               width: Math.round(root.getBoundingClientRect().width), pillMin: Math.min(...pills), pillMax: Math.max(...pills) }; }"""
+    for _w, _vp in (("1280", {"width": 1280, "height": 900}), ("390", {"width": 390, "height": 844})):
+        _pp = b.new_page(viewport=_vp); _pp.goto(f"{BASE}/skribl-pad", wait_until="load"); _pp.wait_for_timeout(700)
+        _fp = b.new_page(viewport=_vp); _fp.goto(f"{BASE}/flip", wait_until="load"); _fp.wait_for_timeout(700)
+        _fp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _pp.click("#menuBtn"); _fp.click("#moreBtn"); _pp.wait_for_timeout(600); _fp.wait_for_timeout(600)
+        _pm, _fm = _pp.evaluate(MENU), _fp.evaluate(MENU)
+        check(f"at {_w}: both menus are open and measurable", bool(_pm) and bool(_fm), f"pad {bool(_pm)} flip {bool(_fm)}")
+        if _pm and _fm:
+            _pl = [i["label"] for i in _pm["items"] if i["label"] != "Flip Mode"]   # Flip has a back link in its header instead
+            _fl = [i["label"] for i in _fm["items"]]
+            check(f"at {_w}: the same items, in the same order (Flip Mode aside)",
+                  _pl == _fl, f"pad {_pl}\n      flip {_fl}")
+            _pb = {i["label"]: i["box"] for i in _pm["items"]}
+            _diff = [f"{i['label']}: pad {_pb.get(i['label'])} flip {i['box']}"
+                     for i in _fm["items"] if i["label"] in _pb and _pb[i["label"]] != i["box"]]
+            check(f"at {_w}: every shared item has the same box on both (height/pad/font/radius/gap/icon)",
+                  not _diff, "; ".join(_diff))
+            check(f"at {_w}: the two menus share one surface (ground, radius, shadow, inset) and width",
+                  _pm["surface"] == _fm["surface"] and abs(_pm["width"] - _fm["width"]) <= 1,
+                  f"pad {_pm['surface']} {_pm['width']}px vs flip {_fm['surface']} {_fm['width']}px")
+            check(f"at {_w}: the pills at the bottom are tap-sized on both, and the same size",
+                  _pm["pillMin"] >= 26 and _fm["pillMin"] >= 26 and _pm["pillMin"] == _fm["pillMin"],
+                  f"pad {_pm['pillMin']}-{_pm['pillMax']}px, flip {_fm['pillMin']}-{_fm['pillMax']}px")
+        _pp.close(); _fp.close()
+
     print("\nPARITY — no surface is silently erroring on load")
     check("Pad loads without JS errors", not errs["pad"], "; ".join(errs["pad"][:2]))
     check("Flip loads without JS errors", not errs["flip"], "; ".join(errs["flip"][:2]))

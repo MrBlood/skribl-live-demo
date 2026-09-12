@@ -661,9 +661,21 @@
   .addcol .addbtn { flex: 1 1 76px; width: auto; max-width: 150px;
     padding: 7px 6px; font-size: 11.5px; }
   /* "More" popover menu (image / music / save / export). */
-  .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; min-width: 232px;
-    background: var(--surface-raised); border: 1px solid var(--hairline-strong); border-radius: 14px;
-    box-shadow: 0 24px 60px rgba(0,0,0,.55); padding: 6px; }
+  /* THE SAME MENU AS THE PAD'S, in every number the eye reads (v290; owner:
+     "they look different?"). The container is Flip's own — an absolutely
+     placed popover here, a fixed overlay there, for reasons in flip.js — but
+     the surface (ground, blur, border, radius, shadow, inset, width) is
+     styles.css's .menu-sheet at 641px+, and the ROWS are .menu-item / .menu-row
+     from styles.css, not a second set of rules. verify_parity measures both
+     menus item by item and fails on any number that differs. */
+  .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; width: 240px;
+    background: rgba(var(--surface-control-rgb), 0.9);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid var(--hairline-strong); border-radius: 16px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5); padding: 6px; }
+  /* The Pad's desktop rows are a third tighter than its touch rows (a mouse
+     reads 9/12 better than 12/14); the size class says which surface this is. */
+  :where(body[data-size="regular"]) .flip-menu .menu-item { padding: 9px 12px; }
   .flip-menu[hidden] { display: none; }
   /* On COMPACT the ⋯ menu is a BOTTOM SHEET, exactly like Pad's — the two
      menus carried the same items in two different bodies (popover here,
@@ -673,7 +685,7 @@
      640 question ONCE, via [data-size] (v226/v228). :where() keeps the
      prefix at zero specificity so source order still decides ties, exactly
      as the ladder below the boundary requires. */
-  :where(body[data-size="compact"]) .flip-menu { position: fixed; top: auto; left: 10px; right: 10px; bottom: 0;
+  :where(body[data-size="compact"]) .flip-menu { position: fixed; top: auto; left: 0; right: 0; bottom: 0;
     min-width: 0; width: auto; box-sizing: border-box;
     border: 0; border-radius: 20px 20px 0 0;
     padding: 8px 12px calc(16px + env(safe-area-inset-bottom));
@@ -683,16 +695,9 @@
      Pad's sheets — a ::before drew inconsistently on the owner's iPhone.
      styles.css shows .menu-handle only at sheet widths, so the desktop
      popover stays clean for free. */
-  /* The sheet BODY matches Pad's too — same row height (15px 14px padding),
-     same 18px icon column, same divider rhythm. Two menus with the same
-     items in the same body should not read as two designs (owner, phone
-     review: "the menus do not look the same?"). Desktop keeps the compact
-     popover metrics. The .flip-menu prefix outranks the base metric rules,
-     which sit later in this file and would win a same-specificity tie. */
-  :where(body[data-size="compact"]) .flip-menu .flip-menu-item { padding: 15px 14px; gap: 12px; border-radius: 10px; }
-  :where(body[data-size="compact"]) .flip-menu .flip-menu-item .mi-ic { width: 18px; }
-  :where(body[data-size="compact"]) .flip-menu .flip-menu-item .mi-ic svg { width: 18px; height: 18px; }
-  :where(body[data-size="compact"]) .flip-menu .flip-menu-sep { margin: 6px 8px; }
+  /* The sheet BODY is the Pad's: the rows are .menu-item and the dividers
+     .menu-divider from styles.css, so there is no second set of metrics to
+     keep in step (v270 mirrored them by hand; v290 stopped having two). */
   @keyframes flip-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
   /* Matches Pad's .menu-overlay::before — same alpha, same blur — so the two
      surfaces dim identically. z-index sits just under .flip-menu's 60. */
@@ -700,20 +705,9 @@
     background: rgba(0, 0, 0, 0.4);
     -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
   .flip-menu-scrim[hidden] { display: none; }
-  .flip-menu-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
-    background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 14px;
-    padding: 10px 12px; border-radius: 9px; cursor: pointer; }
-  .flip-menu-item:hover { background: var(--surface-control); }
-  .flip-menu-item .mi-ic { width: 18px; display: inline-flex; align-items: center; justify-content: center; opacity: .82; }
-  .flip-menu-item .mi-ic svg { width: 17px; height: 17px; display: block; }
-  .flip-menu-item.busy { opacity: .55; pointer-events: none; }
-  .flip-menu-sep { height: 1px; background: var(--hairline); margin: 5px 8px; }
-  /* Any menu row can carry a dim sub-line under its label (the current title
-     under "Name this skribl", the file hint under "Save draft"). A column flex
-     is a no-op for the rows that are just a text node. */
-  .flip-menu-item .mi-tx { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-  .flip-menu-item .mi-sub { font-size: 12px; font-weight: 400; color: var(--text-soft-2);
-    line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  /* A row that is busy (saving) dims and takes no taps; styles.css's .busy
+     only positions, so this half stays Flip's. */
+  .flip-menu .menu-item.busy { opacity: .55; pointer-events: none; }
   #moreBtn.on { color: var(--ui-hi); background: rgba(124,92,255,.16); box-shadow: inset 0 0 0 1px rgba(124,92,255,.45); }
 
 
@@ -1090,33 +1084,8 @@
 }
 
 /* --- v110: canvas size picker in the ⋯ menu -------------------------------- */
-.flip-menu-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px 4px;
-}
-.flip-menu-row .fm-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-/* Tips matches Canvas exactly — they sit one above the other, and two
-   segmented controls at different heights in the same menu reads as a mistake
-   rather than a hierarchy. */
-/* --seg-h intentionally NOT set: this control has only ever been
-   measured on one machine, and its height follows the installed font.
-   Opting it in means choosing a number for every viewer, so it waits
-   for a measurement on a real device. The dead `--seg-h: 26px` that
-   used to sit here rendered nowhere and is gone rather than left to
-   look like a decision. */
-.canvas-seg, .hint-seg, .theme-seg { margin-left: auto; }
-/* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
-   hole between the word "Tips" and its switch while "Canvas" sat snug against
-   its own. Matching the widths closes it, and the two rows read as a pair. */
-.hint-seg, .theme-seg { width: 147px; }
-.hint-seg button, .theme-seg button { flex: 1 1 0; }
-.canvas-seg button, .hint-seg button, .theme-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
+/* The Tips / Theme / Canvas rows are .menu-row from styles.css since v290, on
+   both editors: one rule for the label, one for the pills, one height. */
 
 /* --- v130: playback settings drawer ---------------------------------------
    Slides down from the header that opens it. The animation is on
@@ -1390,12 +1359,8 @@
      two you press under time pressure. */
   .movebar .pb { min-height: 38px; }
 
-/* v206: Clear all pages in the ... menu — danger + armed states, matching the
-   Pad's .menu-item.danger/.armed so the two editors' menus read the same. */
-.flip-menu-item.danger { color: var(--danger); }
-.flip-menu-item.danger .mi-ic svg { color: var(--danger); }
-.flip-menu-item.armed { background: rgba(244,50,111,.14); color: var(--danger); font-weight: 600; }
-.flip-menu-item.armed .mi-ic svg { color: var(--danger); }
+/* v206's Clear-all danger/armed states are styles.css's .menu-item.danger /
+   .armed now that the row IS a .menu-item (v290). */
 
 /* v207: the add-page buttons' plus is an SVG glyph (was the fullwidth text
    character), sized to sit on the label's baseline. */

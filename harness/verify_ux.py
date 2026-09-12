@@ -1222,7 +1222,7 @@ with _sp204() as _p:
     pg = _b.new_page(viewport={"width": 1280, "height": 900})
     pg.goto(BASE + "/", wait_until="load"); pg.wait_for_timeout(600)
     pad_items = pg.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item, .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
-    flip_items = fp.evaluate("() => [...document.querySelectorAll('.flip-menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
+    flip_items = fp.evaluate("() => [...document.querySelectorAll('#moreMenu .menu-item')].map(b => b.textContent.replace(/\\s+/g,' ').trim())")
     def has(items, s): return any(s in x for x in items)
     # v269: the extension moved out of the action's name into a sub-label —
     # "Save draft" is the action, ".skribl" is a detail. Parity still holds:
@@ -1236,7 +1236,7 @@ with _sp204() as _p:
           not has(pad_items, "(.skribl)") and not has(flip_items, "(.skribl)"),
           str([x for x in pad_items + flip_items if "(.skribl)" in x]))
     check("V206: Pad menu says 'Export…' like Flip", has(pad_items, "Export\u2026"), str(pad_items))
-    check("V206: Flip menu has 'Clear all pages' (was drawer-only)", has(flip_items, "Clear all pages"), str(flip_items))
+    check("V206: Flip menu has 'Clear all' (was drawer-only; 'pages' dropped in v290 for the Pad's words)", has(flip_items, "Clear all"), str(flip_items))
     check("V206: Pad menu has 'Clear all'", has(pad_items, "Clear all"), str(pad_items))
     # .skribl file input accepts the types iOS tags an unknown-ext JSON file with
     for page_, nm in ((pg, "Pad"), (fp, "Flip")):
