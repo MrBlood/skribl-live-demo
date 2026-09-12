@@ -301,6 +301,11 @@ with sync_playwright() as p:
         # below — which only ever walked the Pad — and trapped no focus. The
         # opener refuses an empty flip, so the recipe draws first, on #pad.
         "flipShare":    ("/flip", "flipdraw|click:#postBtn", "postBtn"),
+        # FLIP'S MORE MENU (v291). It was role="menu" over rows of switches and
+        # segs a menu does not admit, and trapped no focus; Pad's #menuSheet,
+        # the same design since v290, is a dialog. Now it declares itself and
+        # the census walks it: focus in, Tab stays, Escape back to #moreBtn.
+        "moreMenu":     ("/flip", "click:#moreBtn", "moreBtn"),
     }
 
     def _draw_on_pad(pg):
@@ -828,7 +833,12 @@ with sync_playwright() as p:
     # option is a single letter standing in for a word. Numbers are values
     # and are allowed (12 fps, 3 pages).
     SEGS = """() => {
-      const out = { unnamed: [], letters: [] };
+      const out = { unnamed: [], letters: [], strays: [] };
+      // A menuitem belongs to a menu. Flip's More menu was role="menu" until
+      // v291 and Pad's #menuSheet, a dialog, kept one role="menuitem" on the
+      // Flip Mode row: the role is read by the mechanism, so match it there.
+      for (const it of document.querySelectorAll('[role="menuitem"]'))
+        if (!it.closest('[role="menu"],[role="menubar"]')) out.strays.push(it.id ? '#' + it.id : it.tagName.toLowerCase());
       for (const seg of document.querySelectorAll('.seg')) {
         const btns = [...seg.querySelectorAll('button')];
         if (!btns.length) continue;
@@ -847,6 +857,7 @@ with sync_playwright() as p:
         _sg = _pg.evaluate(SEGS)
         check(f"{_name}: every segmented control is a named group", not _sg["unnamed"], ", ".join(_sg["unnamed"]))
         check(f"{_name}: no option is a single letter standing in for a word", not _sg["letters"], ", ".join(_sg["letters"]))
+        check(f"{_name}: no menuitem outside a menu", not _sg["strays"], ", ".join(_sg["strays"]))
         _pg.close()
     browser.close()
 
