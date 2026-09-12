@@ -296,6 +296,11 @@ with sync_playwright() as p:
         "recoverOverlay": ("/",   "js:window.SkriblRecoveryKey.openRecover()", None),
         "clearKeysOverlay": ("/", "js:window.SkriblRecoveryKey.confirmClear("
                                   "[{id:'x',tok:'k'}], function () {})", None),
+        # FLIP'S POST SHEET, the one dialog this census could not see (v290).
+        # It carried no role and no aria-modal, so it escaped the DOM sweep
+        # below — which only ever walked the Pad — and trapped no focus. The
+        # opener refuses an empty flip, so the recipe draws first, on #pad.
+        "flipShare":    ("/flip", "flipdraw|click:#postBtn", "postBtn"),
     }
 
     def _draw_on_pad(pg):
@@ -313,32 +318,49 @@ with sync_playwright() as p:
         pg.mouse.up()
         pg.wait_for_timeout(300)
 
+    def _draw_on_flip(pg):
+        """One real stroke on FLIP's canvas, which is #pad (see _draw_on_pad)."""
+        box = pg.locator("#pad").bounding_box()
+        cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+        pg.mouse.move(cx - 60, cy)
+        pg.mouse.down()
+        pg.mouse.move(cx + 60, cy)
+        pg.mouse.up()
+        pg.wait_for_timeout(300)
+
     def _drive(pg, recipe):
         """Run one recipe's steps. Kept tiny on purpose: a recipe that needed
         real logic would be a second implementation of the product."""
         for step in recipe.split("|"):
             if step == "draw":
                 _draw_on_pad(pg)
+            elif step == "flipdraw":
+                _draw_on_flip(pg)
             elif step.startswith("click:"):
                 pg.click(step[6:])
             elif step.startswith("js:"):
                 pg.evaluate(step[3:])
             pg.wait_for_timeout(450)
 
-    pg = browser.new_page(viewport={"width": 1280, "height": 900})
-    browsing.goto(pg, BASE, "/")
-    # Prime the runtime-built dialog so the census can see it (see above).
-    for _prime, _shut in (
-            ("present({key:'census'})", "close()"),
-            ("openRecover()", "closeRecover()"),
-            ("confirmClear([{id:'c',tok:'k'}], function () {})", "closeClear()")):
-        pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_prime}")
+    # BOTH SURFACES. The census walked the Pad only, so a dialog that exists on
+    # Flip alone (its post sheet) could declare modal semantics — or fail to —
+    # and never be counted (v290).
+    found = set()
+    for _surface in ("/", "/flip"):
+        pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(pg, BASE, _surface)
+        # Prime the runtime-built dialog so the census can see it (see above).
+        for _prime, _shut in (
+                ("present({key:'census'})", "close()"),
+                ("openRecover()", "closeRecover()"),
+                ("confirmClear([{id:'c',tok:'k'}], function () {})", "closeClear()")):
+            pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_prime}")
+            pg.wait_for_timeout(150)
+            pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_shut}")
         pg.wait_for_timeout(150)
-        pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_shut}")
-    pg.wait_for_timeout(150)
-    found = pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
-        .map(el => el.id || '(no id)')""")
-    pg.close()
+        found |= set(pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
+            .map(el => el.id || '(no id)')"""))
+        pg.close()
 
     unrecipe = sorted(set(found) - set(MODALS))
     check("every aria-modal surface in the DOM has a recipe here",

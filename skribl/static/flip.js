@@ -4215,9 +4215,23 @@ function openShareCompose(){
   // Ask before creating server state, not after — see lib/recoverykey.js.
   if(window.SkriblRecoveryKey && compose) window.SkriblRecoveryKey.warnIfVolatile(compose);
   m.hidden=false;
+  // A modal: focus moves in, Tab stays in, and close() hands focus back to
+  // the Post button that opened it (lib/modalfocus.js, same as Pad's sheet).
+  if(window.SkriblModal) window.SkriblModal.open(m, document.getElementById('postBtn'));
   const t=document.getElementById('flipShareTitle');
   if(t) setTimeout(()=>{ try{ t.focus(); }catch(_){ } }, 30);
 }
+/* ONE way out, for all four doors — Cancel, ×, the backdrop and Escape — so
+   the focus hand-back cannot be skipped by one of them. */
+function closeShare(){
+  const m=document.getElementById('flipShare');
+  if(!m || m.hidden) return;
+  m.hidden=true;
+  if(window.SkriblModal) window.SkriblModal.close(m);
+}
+KeyRegistry.register({surface:'flip', label:'close the post sheet',
+  keys:['Escape'], scope:()=>{ const m=document.getElementById('flipShare'); return !!m && !m.hidden; }});
+document.addEventListener('keydown',e=>{ const m=document.getElementById('flipShare'); if(e.key==='Escape' && m && !m.hidden){ e.preventDefault(); closeShare(); } });
 const _shareCap=document.getElementById('flipShareCaption');
 const _shareCount=document.getElementById('flipShareCount');
 if(_shareCap && _shareCount){
@@ -4227,13 +4241,13 @@ if(_shareCap && _shareCount){
 const _shareSubmit=document.getElementById('flipShareSubmit');
 if(_shareSubmit) _shareSubmit.addEventListener('click', shareSkribl);
 const _shareCancel=document.getElementById('flipShareCancel');
-if(_shareCancel) _shareCancel.addEventListener('click',()=>{ document.getElementById('flipShare').hidden=true; });
+if(_shareCancel) _shareCancel.addEventListener('click', closeShare);
 // Enter in the title field submits; the caption is a textarea and keeps newlines.
 const _shareTitle=document.getElementById('flipShareTitle');
 if(_shareTitle) _shareTitle.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); shareSkribl(); } });
 
-bindEl('flipShareClose', 'click',()=>{ document.getElementById('flipShare').hidden=true; });
-bindEl('flipShare', 'click',e=>{ if(e.target.id==='flipShare') e.currentTarget.hidden=true; });
+bindEl('flipShareClose', 'click', closeShare);
+bindEl('flipShare', 'click',e=>{ if(e.target.id==='flipShare') closeShare(); });
 bindEl('flipShareCopy', 'click',async()=>{
   const url=document.getElementById('flipShareUrl').value;
   try{ await navigator.clipboard.writeText(url); chip('Link copied'); }

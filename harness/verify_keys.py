@@ -94,8 +94,14 @@ with sync_playwright() as sp:
     # sheet, panel or drawer is open. Without that it would have been live at
     # the same time as four of the other five, which is exactly the collision
     # KeyRegistry.collisions() is for.
-    check("all six Escape claims are scoped, none unconditional",
-          len(escapes) == 6 and all(r["scoped"] for r in escapes),
+    # RATCHET RAISED 6 -> 7, v290, FLAGGED. The new claim is "close the post
+    # sheet": Flip's post sheet became a declared modal (role, aria-modal,
+    # lib/modalfocus.js) and a modal with no keyboard exit is the dead end the
+    # overflow menu's note above describes. Scoped to the sheet being open,
+    # which is a state no menu or drawer shares — the sheet is opened from the
+    # header's Post button, never from inside another surface.
+    check("all seven Escape claims are scoped, none unconditional",
+          len(escapes) == 7 and all(r["scoped"] for r in escapes),
           f"{len(escapes)} Escape claims: "
           + ", ".join(r["label"] for r in escapes))
 

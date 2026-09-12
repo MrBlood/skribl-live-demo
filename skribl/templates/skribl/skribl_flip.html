@@ -393,7 +393,11 @@
        hardcoded title:'Flip animation' with no caption at all, so every Flip
        share landed in the platform indistinguishable from every other one.
        Limits match the Pad's inputs (60/280); the server truncates at 80/300. -->
-  <div class="flip-export" id="flipShare" hidden>
+  {# A DIALOG, and it says so: role + aria-modal are what the a11y census
+     counts and what a screen reader announces, and lib/modalfocus.js is what
+     keeps Tab inside and hands focus back to Post on close (v290; it had
+     neither, and escaped verify_a11y's census by not declaring itself). #}
+  <div class="flip-export" id="flipShare" role="dialog" aria-modal="true" aria-label="Post your Skribl" hidden>
     <div class="flip-export-card flip-share-card">
       <button type="button" class="flip-share-close" id="flipShareClose" aria-label="Close">&#x2715;</button>
 
