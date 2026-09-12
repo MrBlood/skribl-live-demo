@@ -726,6 +726,13 @@ with sync_playwright() as p:
         // can be tapped, so nothing there is dead space.
         return e ? (isCtrl(e) ? 'neighbour' : 'dead') : 'edge'; };
       const dead = [], floor = [];
+      // THE ONE TIER THAT RECORDS A SMALLER BOX. Below 360px Flip's tool bar
+      // holds its icons at 32px with a 4px reach — 40, not 44 — and flip.css
+      // says why at that rule: the bar's padding is 4px, a 6px reach on the
+      // row's last control overflows the bar (verify_layout's pin), and two
+      // more pixels of padding wrap the row at 320 (measured, v291). The bar
+      // is at its limit; the census holds it to the box the tier records.
+      const narrowBar = innerWidth < 360 ? document.querySelector('.flip-tools') : null;
       for (const el of document.querySelectorAll(SEL)) {
         if (el.tagName === 'INPUT' && el.type === 'file') continue;
         // A link inside a sentence is 2.5.8's own exception (the text sets its size).
@@ -737,7 +744,7 @@ with sync_playwright() as p:
         const name = key(el) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height);
         const at = d => ({ L: own(el, cx - d, cy), R: own(el, cx + d, cy),
                            T: own(el, cx, cy - d), B: own(el, cx, cy + d) });
-        const big = at(21.5), small = at(11.5);
+        const big = at(narrowBar && narrowBar.contains(el) ? 19.5 : 21.5), small = at(11.5);
         const deadSides = Object.entries(big).filter(([, v]) => v === 'dead').map(([k]) => k);
         if (deadSides.length) dead.push(name + ' (' + deadSides.join('') + ')');
         const under = Object.entries(small).filter(([, v]) => v !== 'own' && v !== 'edge').map(([k]) => k);
@@ -749,8 +756,13 @@ with sync_playwright() as p:
                ("/library", "the library", None), ("/feed", "the host feed", None),
                ("/s/" + _pid, "the player", None))
     for _path, _name, _open in _states:
+        # 360 and 320 too (v291): the header tiers in flip.css shrink their
+        # controls to 33 and 30px below 360, which is exactly where a visual
+        # measurement stops telling you anything and only the hit box can.
         for _vw, _vp in (("1280", {"width": 1280, "height": 900}),
-                         ("390", {"width": 390, "height": 844})):
+                         ("390", {"width": 390, "height": 844}),
+                         ("360", {"width": 360, "height": 780}),
+                         ("320", {"width": 320, "height": 568})):
             _pg = browser.new_page(viewport=_vp)
             _pg.goto(BASE + _path, wait_until="load")
             _pg.wait_for_timeout(1000)
@@ -767,6 +779,40 @@ with sync_playwright() as p:
             check(f"{_name} at {_vw}: no control leaves dead space inside its 44px box",
                   not _hb["dead"], "; ".join(_hb["dead"]))
             _pg.close()
+
+    # ------------------------------------------------------------ section 11
+    print("\nA11Y 11 — every page lets the person zoom, and survives it")
+    # Flip's viewport meta said user-scalable=no, maximum-scale=1 — the one
+    # page of five that forbade pinch-zoom, on the surface with the smallest
+    # controls (outside review of v290, finding 1). Two halves: the META is the
+    # mechanism that forbids zoom, so it is read as written on every page; and
+    # 200% browser zoom on a 1280x900 window is a 640x450 CSS viewport at
+    # device scale 2, so each page is laid out exactly that way and must show
+    # no horizontal overflow and keep its primary control on screen.
+    for _path, _name, _primary in (("/", "Pad", "#postBtn"), ("/flip", "Flip", "#postBtn"),
+                                   ("/s/" + _pid, "the player", "#playerPlayBtn"),
+                                   ("/library", "the library", "#btnRestart"),
+                                   ("/feed", "the host feed", "#postBtn")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(600)
+        _meta = _pg.evaluate("() => { const m = document.querySelector('meta[name=viewport]');"
+                             " return m ? m.getAttribute('content') : ''; }")
+        _forbids = ("user-scalable=no" in _meta.replace(" ", "")
+                    or any(f"maximum-scale={v}" in _meta.replace(" ", "") for v in ("1", "1.0", "1.00")))
+        check(f"{_name}: the viewport meta does not forbid zoom", not _forbids, _meta)
+        _pg.close()
+        _zc = browser.new_context(viewport={"width": 640, "height": 450}, device_scale_factor=2)
+        _zp = _zc.new_page()
+        _zp.goto(BASE + _path, wait_until="load")
+        _zp.wait_for_timeout(900)
+        _z = _zp.evaluate("""(sel) => { const d = document.documentElement;
+          const el = document.querySelector(sel); const r = el ? el.getBoundingClientRect() : null;
+          return { over: d.scrollWidth - d.clientWidth,
+                   primary: !!(r && r.width > 0 && r.right <= d.clientWidth + 1 && r.left >= -1) }; }""", _primary)
+        check(f"{_name} at 200% zoom: no horizontal overflow", _z["over"] <= 1, f"{_z['over']}px past the edge")
+        check(f"{_name} at 200% zoom: the primary control is on screen", _z["primary"], _primary)
+        _zc.close()
     browser.close()
 
 # ------------------------------------------------------------------ section 6
