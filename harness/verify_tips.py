@@ -272,6 +272,74 @@ with sync_playwright() as p:
           "it covers the thumbnails it tells you to tap")
     mp.close()
 
+    print("\nHINTS — the intro yields to the canvas and to every sheet, and hangs on the column")
+    # v287 audit SK-BUG-008. The intro toast ("New here?") is the only
+    # onboarding, and it competed with everything: on a phone it sat over the
+    # top-right of page 1 and STAYED THERE THROUGH THE POST SHEET — its
+    # z-index (380) was above every dialog tier — and on a desktop it hung off
+    # the browser window's right edge, detached from the 720px column it is
+    # supposed to be pointing at. Three properties, each measured the way a
+    # person meets it: what elementFromPoint returns at the toast's centre once
+    # a sheet is open (the real stacking, not a z-index read), whether a press on
+    # the canvas puts it away, and where its box lands against the column.
+    ip = b.new_page(viewport={"width": 390, "height": 844})
+    ip.goto(f"{BASE}/flip", wait_until="load")
+    ip.wait_for_timeout(1300)
+
+    def intro_up():
+        return ip.evaluate("() => { const h = document.querySelector('.skribl-hint');"
+                           " return !!h && h.classList.contains('in'); }")
+
+    check("the intro is up on a first load", intro_up())
+    # A page to post, added without a pointer press (a press is what the next
+    # assertion is about), then the sheet — and PROOF it opened, because the
+    # opener refuses an empty flip and a refused sheet would leave nothing on
+    # top of the toast, which read as a pass in this section's first draft.
+    _open = ip.evaluate("() => { addFrame(true); openShareCompose();"
+                        " return !document.getElementById('flipShare').hidden; }")
+    ip.wait_for_timeout(400)
+    check("the post sheet is open over it", _open is True)
+    _over = ip.evaluate("""() => {
+      const h = document.querySelector('.skribl-hint');
+      if (!h || !h.classList.contains('in')) return 'gone';
+      const r = h.getBoundingClientRect();
+      const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return e ? (e.closest('.skribl-hint') ? 'hint' : (e.id || e.className)) : null;
+    }""")
+    check("with the post sheet open, the toast is not what is on top at its own centre",
+          _over != 'hint', f"elementFromPoint at the toast's centre: {_over!r} — "
+          "a hint above a modal breaks the modal")
+    ip.evaluate("() => { document.getElementById('flipShare').hidden = true; }")
+    ip.evaluate("() => window.SkriblHints.reset()")
+    ip.reload(wait_until="load")
+    ip.wait_for_timeout(1300)
+    check("...re-armed, it is up again for the next test", intro_up())
+    _pad = ip.locator("#pad").bounding_box()
+    ip.mouse.move(_pad["x"] + 120, _pad["y"] + 160)
+    ip.mouse.down()
+    ip.mouse.move(_pad["x"] + 150, _pad["y"] + 190)
+    ip.mouse.up()
+    ip.wait_for_timeout(350)
+    check("the first press on the canvas puts the intro away", not intro_up(),
+          "the person has started; a toast asking if they are new is now in the way")
+    ip.close()
+
+    for width in (1280, 1900):
+        dp = b.new_page(viewport={"width": width, "height": 900})
+        dp.goto(f"{BASE}/flip", wait_until="load")
+        dp.wait_for_timeout(1300)
+        _geo = dp.evaluate("""() => {
+          const h = document.querySelector('.skribl-hint');
+          if (!h || !h.classList.contains('in')) return null;
+          const r = h.getBoundingClientRect();
+          const c = document.querySelector('.app').getBoundingClientRect();
+          return { hl: r.left, hr: r.right, cl: c.left, cr: c.right };
+        }""")
+        check(f"at {width}px the intro hangs inside the app column",
+              _geo is not None and _geo["hr"] <= _geo["cr"] + 1 and _geo["hl"] >= _geo["cl"] - 1,
+              f"{_geo} — the column edge is the contract, not the window's")
+        dp.close()
+
     print("\nHINTS — the toggle is reachable and reflects its state")
     # Open through openMenu(), not by unhiding the node: the toggle re-reads
     # the stored state on open, which is the behaviour being checked.

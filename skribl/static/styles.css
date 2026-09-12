@@ -5253,7 +5253,13 @@ body.player-mode #canvas {
    above the bottom toolbar rather than centred, so it never covers the canvas
    the hint is telling you about. */
 .skribl-hint {
-  position: fixed; z-index: 380;
+  /* z-index 80: ABOVE the working chrome (toolbar 41, shape popover 44, tool
+     tray 46) and BELOW every sheet and scrim (leave 90, help 100, Flip's
+     share/export 200, restore banner 250, menu 300, posted 320). It was 380,
+     which put the intro toast on top of the open post sheet — a hint above a
+     modal breaks the modal (v287 audit SK-BUG-008). verify_tips asserts the
+     stacking by elementFromPoint, not by reading this number. */
+  position: fixed; z-index: 80;
   /* TOP, not bottom. At bottom: 96px it landed on Flip's filmstrip — covering
      the thumbnails the page-move hint tells you to tap. Flip's bottom chrome
      (page bar + strip + tools) is ~230px tall and Pad's is ~90, so no single

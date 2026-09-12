@@ -72,7 +72,14 @@
      spotlight used a hard-coded 6000 while an action hint dwells DURATION * 2,
      so the ring went out six seconds before the sentence explaining it did. */
   var onHide = null;
-  function hide() {
+  var currentKey = null;
+  /* hide(key): put the toast away only if it is THAT hint. A canvas press
+     dismisses the intro ("New here?") because the person has answered it by
+     drawing — but the same press must not kill a hint that is about the
+     canvas, such as the page-move or selection hints. The key says which. */
+  function hide(key) {
+    if (key && key !== currentKey) return;
+    currentKey = null;
     clearTimeout(timer);
     var cb = onHide; onHide = null;
     if (cb) { try { cb(); } catch (e) {} }
@@ -108,7 +115,23 @@
     // Anchored hints hang under the header's right edge (the ⋯ / info cluster
     // they point at) instead of floating over the canvas. Toggled per show()
     // because the node is reused by every hint.
-    node.classList.toggle('skribl-hint--anchored', !!(opts && opts.anchor === 'top-right'));
+    var anchored = !!(opts && opts.anchor === 'top-right');
+    node.classList.toggle('skribl-hint--anchored', anchored);
+    /* Anchored means under the header's right edge — the HEADER's, not the
+       browser window's. The app is a 720px column centred with margin auto, so
+       on a wide window `right: 14px` hung the toast in the gutter beside the
+       column it was pointing at (v287 audit SK-BUG-008). Read the header's
+       rect at show time; the stylesheet's 14px is the fallback for a surface
+       without one. */
+    node.style.right = '';
+    if (anchored) {
+      var hdr = document.querySelector('.header');
+      if (hdr) {
+        var hr = hdr.getBoundingClientRect();
+        if (hr.width) node.style.right = Math.max(14, Math.round(global.innerWidth - hr.right + 14)) + 'px';
+      }
+    }
+    currentKey = key;
     clearTimeout(timer);
     node.textContent = '';
     /* An optional glyph, shown BEFORE the text. It exists because a hint that
@@ -136,7 +159,7 @@
       a.onclick = function (e) { e.stopPropagation(); hide(); action.onClick(); };
       node.appendChild(a);
     }
-    node.onclick = hide;               // tap anywhere on the toast to dismiss
+    node.onclick = function () { hide(); };   // tap anywhere on the toast to dismiss
     node.hidden = false;
     global.requestAnimationFrame(function () { node.classList.add('in'); });
     // Longer dwell when there is an action to read + tap; still auto-dismisses.

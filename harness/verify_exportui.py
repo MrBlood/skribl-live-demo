@@ -334,8 +334,12 @@ with sync_playwright() as p:
         w.wait_for_timeout(300)
 
         sheet = w.locator("#exportSheet").bounding_box()
+        # `.app` IS the 720px column. This read `.flip-app` — which is the
+        # <body> class on Flip, so the reference rect was the whole window and
+        # the check could not go red at any width (found by verify_tips
+        # reusing it, v289). The column edge is the contract, so read the column.
         col = w.evaluate(
-            "() => { const el = document.querySelector('.flip-app') || document.body;"
+            "() => { const el = document.querySelector('.app');"
             " const r = el.getBoundingClientRect();"
             " return { left: r.left, right: r.right }; }")
 
