@@ -7202,3 +7202,75 @@ path a person on that page has.
 Shipped as four squash-merged PRs plus this one, each with its affected
 suites run locally and, for the two that touched many suites, the full
 battery -- which earned its keep both times.
+
+## v289 -- the P1 tier: four layout defects, and an instrument that counts what a finger can reach
+
+v288 shipped the audit's P0 list. v289 is its P1 list -- the four findings
+graded High that v288 left named and untouched -- shipped as four squash-merged
+PRs, each reproduced on the sealed v288 tree before anything was written, each
+check shown red on the tree before its fix, and the full battery run on the
+tree carrying all four.
+
+**The restore prompt covered the tools (SK-BUG-007).** The banner is
+position:fixed at the bottom of the viewport, and so is the Pad's toolbar, on
+every width. The rule that seated it a toolbar higher lived inside a
+`max-width: 640px` query, written for a phone report on the belief that the
+desktop's bottom edge was empty air. At 1280x900 it covered Eraser, Shape,
+colour, Undo and Redo until the person chose. The seat is unconditional now;
+verify_drafts measures the rectangle overlap on both widths.
+
+**Flip's intro toast competed with everything (SK-BUG-008).** Its z-index
+(380) sat above every dialog tier, so "New here?" stayed painted over the open
+post sheet; on a phone it sat over the top-right of page 1 for twelve seconds
+whatever the person did; on a desktop it hung off the browser window's edge,
+detached from the column it points at. Now z 80 -- above the working chrome,
+below every sheet and scrim, the tier list beside the number -- dismissed by
+the first canvas press through a key-scoped `hide('flip-intro')` so a hint ABOUT
+the canvas survives the same press, and anchored to the header's rect read at
+show time. verify_tips asserts the stacking by elementFromPoint with the sheet
+open, and with proof the sheet opened: the opener refuses an empty flip, and a
+refused sheet read as a pass in the section's first draft. The same section
+found verify_exportui's "anchored to the app" check reading `.flip-app`, which
+is the body class on Flip, so its column was the whole window and it could not
+go red at any width. It reads `.app` now.
+
+**The poster was the card (SK-BUG-006).** Every feed post and library tile
+showed /s/<id>/card.png cropped to the drawing's band. For a post with a
+thumbnail that is the drawing; for one without -- every post a host creates
+through the API, every one whose post-time card build failed -- the fallback
+was the branded 1200x630 og-card, and cropped to the band it is "ibl Pad /
+that replay in time with music" with a clipped Play badge, twenty times down a
+feed. The card is what a link unfurls with, and for a thumbnail-less post the
+branded card IS the right unfurl; the poster is a different question, so it is
+a different route. /s/<id>/poster serves the same thumbnail through the same
+reader -- one `_thumbnail_response()` carrying the visibility check, the
+externalised-store resolution, the size cap and the cache rule -- and falls
+back to poster-blank.svg, a 1200x630 canvas ground so the band crop lands the
+same. The checks follow the src the page renders to where it lands, because an
+<img> cannot tell you where a redirect went and fetch() can.
+
+**Touch targets, measured (SK-A11Y-005).** The audit counted 23 of 27
+focusables on the Pad under 44px by reading getBoundingClientRect. Measured the
+way a finger meets it -- elementFromPoint at the four points 21.5px out from
+each control's centre, for controls whose centre is actually on top -- the Pad
+was already there: the count had included pills inside a closed drawer and
+glyphs whose hit box this stylesheet already grows with a transparent ::before.
+What was not there, on both editors, the library, the host feed and the player:
+Flip's More button; the tune drawer's pills, 24-28px tall in 44px rows; Flip's
+page-add row, strip badges and colour swatch; the library's transport and
+search; the feed's composer; the player's 6px progress track, 27px copy button
+and CTA. Each got a band the way the tree already does it, and two of the
+tree's own pins shaped the last one: verify_ux's header-overflow check caught a
+centred box on the last button in the header reaching past its edge at 360px,
+and verify_sizeclass refused the width query that fixed it, because the size
+class is the one answer to that question. verify_a11y's section 10 asserts the
+property on seven page states at two widths, with exemptions that match the
+mechanism -- an inline link in a sentence, a point past the nearest clipping
+ancestor's client box, a point where not even <html> is -- and each component
+was shown red under its own mutation.
+
+**Two things found and not fixed, recorded for the next tier.** Flip's post
+sheet carries no dialog role and no aria-modal, so it escapes verify_a11y's
+modal census and traps no focus; the census can only see what declares
+itself, which is the shape of the gap. And the audit's two P2s stand: a 404
+served as 200, and the sheet's Cancel/back-arrow asymmetry.
