@@ -4487,9 +4487,20 @@ body.player-mode #canvas {
   height: 6px;
   border-radius: 999px;
   background: rgba(var(--wash-rgb), 0.08);
-  overflow: hidden;
+  /* visible, not hidden: the 24px band below must reach past the 6px track,
+     and the fill carries its own radius so nothing needed the clip. */
+  overflow: visible;
+  position: relative;
   cursor: pointer;
   touch-action: none;
+}
+/* A 6px track is a 6px target; the band makes it 44 (v287 audit
+   SK-A11Y-005). It reaches under the title above, which takes no taps, and
+   over the transport below, which is later in the DOM and so keeps its own.
+   The seek handlers read clientX, so a tap on the band lands where it looks. */
+.player-progress::before {
+  content: ''; position: absolute;
+  left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%);
 }
 .player-progress-fill {
   height: 100%;
@@ -4514,6 +4525,12 @@ body.player-mode #canvas {
   transition: color 0.15s ease, background 0.15s ease;
 }
 .player-link svg { width: 15px; height: 15px; }
+/* 27px tall: the 44px box via --tap-grow, like every sub-44 control here. */
+.player-link { position: relative; z-index: 1; --tap-grow: 9px; }
+.player-link::before {
+  content: ''; position: absolute; inset: calc(-1 * var(--tap-grow));
+  background: transparent; border-radius: inherit;
+}
 .player-link:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), 0.04); }
 
 .player-btn {
@@ -4576,6 +4593,11 @@ body.player-mode #canvas {
   box-shadow: 0 8px 18px var(--accent-glow);
 }
 .player-cta:active { transform: translateY(0); }
+.player-cta { position: relative; --tap-grow: 3px; }   /* 39 tall -> 45 tap */
+.player-cta::before {
+  content: ''; position: absolute; inset: calc(-1 * var(--tap-grow));
+  background: transparent; border-radius: inherit;
+}
 
 .player-brand {
   font-size: 11px;
@@ -5352,6 +5374,13 @@ body.player-mode #canvas {
   cursor: pointer; text-decoration: none;
 }
 .skribl-hint-action:hover { background: rgba(124, 92, 255, 0.14); }
+/* 27px tall in a toast that takes no pointer: the button is the only thing
+   here a finger can hit, so it gets the 44px box (--tap-grow, as above). */
+.skribl-hint-action { position: relative; --tap-grow: 9px; }
+.skribl-hint-action::before {
+  content: ''; position: absolute; inset: calc(-1 * var(--tap-grow));
+  background: transparent; border-radius: inherit;
+}
 
 /* ============================================================
    Tune drawer + grid overlay (v204) — Pad gained the tune drawer
@@ -5504,7 +5533,7 @@ body.playing .flip-grid { display: none; }
 .color-dot  { --tap-grow: 8px; }   /* 30 visual -> 44+ tap */
 .smooth-btn { --tap-grow: 9px; }   /* ~28 tall -> 44+ tap */
 .loop-btn   { --tap-grow: 5px; }   /* 36 tall  -> 44+ tap */
-.pb         { --tap-grow: 3px; }   /* 40 tall  -> 44+ tap */
+.pb         { --tap-grow: 5px; }   /* 38 tall  -> 48 tap (was 3px for a 40px button; at 38 the band ended 1px short of the 44 box verify_a11y samples) */
 .nudge-btn  { --tap-grow: 7px; }   /* 32 visual -> 44+ tap (readout between - and + keeps them apart) */
 .pending-dismiss { --tap-grow: 7px; }  /* 32 -> 44+ */
 .eyedropper-btn  { --tap-grow: 8px; }  /* 30 visual (dot-sized, on purpose) -> 44+ tap; it sat beside dots that had it and lacked its own */
@@ -6088,6 +6117,31 @@ body.playing .flip-grid { display: none; }
   top: 50%; height: 44px;
   transform: translateY(-50%);
 }
+/* The END pills reach 4px past the group's edge — into its padding, where
+   nothing else is — so a 36px pill at the end of the row has a 44px box on
+   its open side. NOT the inner edges: two neighbouring bands would overlap
+   and the later sibling would take a tap meant for the earlier one. */
+#toolGroup .tool-btn:first-of-type::before { left: -4px; }
+/* "Last" is the last one SHOWING — the Pad hides a trailing tool button at
+   some widths, and :last-of-type would hand the open side to a control
+   nobody can see. */
+#toolGroup .tool-btn:not(:has(~ .tool-btn:not([hidden])))::before { right: -4px; }
+
+/* THE TUNE DRAWER'S PILLS get the same band. Mirror, Pauses, Preview speed,
+   Speed and Onion skin are 24-28px tall in a 44px row (v287 audit
+   SK-A11Y-005): the row's height IS the target, the pill is the glyph. Same
+   shape as #toolGroup above — vertical only, because the pills abut and a
+   horizontal band would hand a tap to the neighbour — with the end pills
+   reaching 5px past the seg's edge on their open side. */
+.tune-row .seg button::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%; height: 44px;
+  transform: translateY(-50%);
+}
+.tune-row .seg button:first-of-type::before { left: -5px; }   /* of-type: lib/segslider.js puts its highlight first */
+.tune-row .seg button:last-of-type::before  { right: -5px; }
 
 /* ---------- v225: the header is a 36px row, and tune/⋯ have no box ----------
    Flip's header already read this way and Pad's did not: Flip draws its tune
