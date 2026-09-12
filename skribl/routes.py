@@ -322,13 +322,19 @@ def register_routes(bp, *, index_route=False):
             og_url=url_for(".skribl_player", public_id=public_id, _external=True),
         )
 
-    @bp.get("/s/<public_id>/card.png")
-    def skribl_card(public_id):
-        """The share-card image link unfurls use."""
-        # Serve the per-Skribl share-card thumbnail generated client-side at post
-        # time and stored in the payload. Best-effort and render-always: on a
-        # missing post, missing/'malformed thumbnail, or a transient DB error we
-        # redirect to the static branded card so the og:image never 404s.
+    def _thumbnail_response(public_id):
+        """The post's own thumbnail as a response, or None for the caller's fallback.
+
+        One reader for two routes. /s/<id>/card.png is what a link unfurls
+        with, and /s/<id>/poster is what the in-post player and the library
+        tile show idle; both serve the thumbnail generated client-side at post
+        time and stored in the payload, and they part only in what they serve
+        when there is none. Best-effort and never an error: on a missing post,
+        a missing or malformed thumbnail, or a transient DB error this returns
+        None and each route redirects to ITS static fallback, so neither URL
+        ever 404s. The visibility check, the externalised-store resolution,
+        the size cap and the cache rule are all here, once.
+        """
         try:
             # Savepoint for the same reason as the player shell above: recover
             # from OUR failed read without rolling back the host's transaction.
@@ -407,7 +413,28 @@ def register_routes(bp, *, index_route=False):
         except Exception:
             # The savepoint already unwound; the host's transaction is intact.
             pass
-        return redirect(url_for(".static", filename="og-card.png"))
+        return None
+
+    @bp.get("/s/<public_id>/card.png")
+    def skribl_card(public_id):
+        """The share-card image link unfurls use."""
+        # No thumbnail: the branded card. For an unfurl that is the right
+        # picture — a link to Skribl, with nothing of the post to show.
+        return (_thumbnail_response(public_id)
+                or redirect(url_for(".static", filename="og-card.png")))
+
+    @bp.get("/s/<public_id>/poster")
+    def skribl_poster(public_id):
+        """The idle poster the in-post player and the library tiles show: the drawing, or a blank canvas — never the branded card."""
+        # No thumbnail: a blank canvas, 1200x630 like the card so the poster
+        # crop (lib/sharecard.js band()) lands the same. The branded card here
+        # was the v287 audit's SK-BUG-006: cropped to the drawing's band, every
+        # API-created post's tile read "ibl Pad / that replay in time with
+        # music", a fragment of an advert where the person's picture belongs.
+        # A blank is what "the drawing on its canvas" degrades to when there
+        # is no drawing to show.
+        return (_thumbnail_response(public_id)
+                or redirect(url_for(".static", filename="poster-blank.svg")))
 
     @bp.post("/api/skribls")
     def create_skribl():

@@ -238,7 +238,7 @@ with sync_playwright() as sp:
     # than an empty rectangle where a post should be.
     feed_html = urllib.request.urlopen(BASE + "/feed", timeout=20).read().decode()
     check("the feed page server-renders the poster before any script runs",
-          "skribl-inline-poster" in feed_html and "/card.png" in feed_html)
+          "skribl-inline-poster" in feed_html and "/poster" in feed_html)
     check("the feed page server-renders the play affordance",
           "skribl-inline-play" in feed_html)
     check("the in-post markup carries the listing endpoint from url_for, "
@@ -993,6 +993,17 @@ with sync_playwright() as sp:
     # the right answer. evaluate() runs through the debugger protocol and is
     # not a page script, so the module's IIFE installs window.SkriblShareCard
     # without the page ever being allowed to load one.
+    # WHAT THE POSTER LANDS ON. These fixtures carry no thumbnail (see the note
+    # at POST_PUBLIC), so the bytes behind every poster here are the server's
+    # fallback — which used to be the branded 1200x630 share card, cropped by
+    # the rule below into a fragment of a wordmark (v287 audit SK-BUG-006).
+    # fetch() reports the URL a redirect landed on; the <img> cannot.
+    _landed = cp.evaluate("""async () => {
+        const img = document.querySelector('.feed .skribl-inline-poster, .skribl-inline-poster');
+        const r = await fetch(img.getAttribute('src'));
+        return r.url; }""")
+    check("a post with no thumbnail does NOT land its poster on the branded card",
+          "og-card" not in _landed, f"landed on {_landed}")
     cp.evaluate((ROOT / "skribl" / "static" / "lib" / "sharecard.js")
                 .read_text(encoding="utf-8"))
     geom = cp.evaluate("""() => {

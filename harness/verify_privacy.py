@@ -253,6 +253,14 @@ for _viewer, _label in [(999, "a different user"), (None, "an anonymous viewer")
           and "og-card" in _card.headers.get("Location", ""),
           f"{_card.status_code} {_card.headers.get('Location', '')[-20:]}"
           + "  — the thumbnail IS the drawing")
+    # The poster route reads the same thumbnail through the same visibility
+    # check, so it must fall back the same way — to ITS fallback, the blank
+    # canvas, and never to bytes that are the drawing.
+    _poster = _c.get(f"/s/{_pid}/poster")
+    check(f"{_label}: the poster falls back to the blank canvas",
+          _poster.status_code in (302, 301)
+          and "poster-blank" in _poster.headers.get("Location", ""),
+          f"{_poster.status_code} {_poster.headers.get('Location', '')[-24:]}")
 
 # Rebuild the author's app. The process-global session that made this necessary
 # is FIXED as of v135 — the factory now lives in app.extensions["skribl"], so

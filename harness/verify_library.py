@@ -116,9 +116,21 @@ with sync_playwright() as sp:
           len(payload_reqs) == 1,
           f"{len(payload_reqs)} payload fetch(es) for {tiles} tiles: "
           f"{payload_reqs}")
-    check("every tile's picture is the share card, which is one cached image",
+    check("every tile's picture is the poster, which is one cached image",
           pg.evaluate("""() => [...document.querySelectorAll('.card .art img')]
-             .every(i => /\\/s\\/[^/]+\\/card\\.png$/.test(i.getAttribute('src')))"""))
+             .every(i => /\\/s\\/[^/]+\\/poster$/.test(i.getAttribute('src')))"""))
+    # FOLLOWED, not read. These fixtures are posted through serializeSkribl()
+    # and carry no thumbnail, so whatever the tile's src is, the bytes that
+    # arrive are the server's fallback — and the fallback used to be the
+    # branded 1200x630 share card, which every tile then showed cropped to
+    # "ibl Pad / that replay in time with music" (v287 audit SK-BUG-006). fetch()
+    # exposes the URL a redirect landed on; an <img> does not.
+    _landed = pg.evaluate("""async () => {
+        const img = document.querySelector('.card .art img');
+        const r = await fetch(img.getAttribute('src'));
+        return r.url; }""")
+    check("a tile with no thumbnail does NOT land on the branded share card",
+          "og-card" not in _landed, f"landed on {_landed}")
 
     # ---- the stage IS the in-post player -----------------------------------
     st = pg.evaluate("""() => {

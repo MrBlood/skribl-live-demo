@@ -112,6 +112,7 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `GET /media/<key>` | Serve a content-addressed blob. |
 | `/s/<id>` | The public player a shared link opens. |
 | `/s/<id>/card.png` | The share-card image link unfurls use. |
+| `/s/<id>/poster` | The idle poster the in-post player and the library tiles show: the drawing, or a blank canvas — never the branded card. |
 | `/skribl-pad` | Pad — the record-and-replay editor. |
 <!-- /GEN:ROUTES -->
 
