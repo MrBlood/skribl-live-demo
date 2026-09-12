@@ -7107,3 +7107,98 @@ Guarded on the SHAPE the renderer depends on: source_state's first element is
 one of the four strings the render tests for, its second is a list of strings.
 Plus a mutation that reproduces the exact false line from a dict, so the guard
 cannot quietly stop describing the thing it was written for.
+
+## v288 -- the shell tier: an audit, three product calls, and what measuring withdrew
+
+v287 sealed the engine. An adversarial UI/UX, accessibility and robustness
+audit of the shell around it (the editors, `/s/`, the in-post player, the demo
+feed and the library, driven headless at 1280 and 390, dark and light, reduced
+motion, 200% text, offline and 404) then graded the product a buyer's design
+team would see first. Its verdict -- acquire the engine, not the shell as-is --
+and its P0 list are what v288 is. Every finding below was reproduced against
+the running tree before it was accepted, and three were withdrawn BY measuring,
+which is the part worth recording.
+
+**Copy that reached users as developer language.** The feed header read
+`GET /api/skribls`; the library footer read "Newest first, from GET
+/api/skribls"; its bio spoke of "the transport a post does not get"; an
+anonymous post's byline was "Someone"; and an over-length title came back as
+`'title' is too long (81 characters; limit 80).`, which both editors show
+verbatim. The gate is the mechanism, not the words: no HTTP-method-plus-path
+token in a page's visible text, and a refusal that names its field in lower
+case and states both numbers -- because `verify_apiedges` matches on the field
+and `verify_hostconfig` on the length, and the full battery caught each of
+those in turn after a four-suite sample had passed. "A title can be up to 80
+characters -- this one is 81."
+
+**The counter that named a limit the field did not enforce.** `maxlength` was
+rendered from `skribl_limits.caption` (300) while "/ 280" was a literal in two
+scripts and two templates, so a person could read "300 / 280". core.py's note
+that "nothing types a length beside them any more" was true of the attribute
+and not of the counter. Both counters now read the field's `maxLength`, and
+`verify_flipmeta` asserts `N / maxlength` on both editors with `maxlength`
+equal to the column width.
+
+**A whitespace title was stored as `''`** and gave one post three names
+(product name in og:title, "Untitled Skribl" in the library). `.strip()` then
+default.
+
+**Headings and landmarks.** No page had an `<h1>` or a main region.
+`verify_a11y` now counts both in the accessibility tree -- an `h1` inside a
+hidden panel does not count, which matters because the Pad includes the
+player partial under its own heading -- on all five pages.
+
+**What measuring withdrew.** The audit's first draft listed Flip's icon
+buttons and the player's copy button as unnamed (they are named, by `title`
+and by text; the probe had checked `aria-label` only), nine `outline: none`
+declarations as focus-ring removals (a Tab-through of every page found one
+control whose computed style did not change on focus, the demo feed's
+composer), and a 0x0 Unmute in the tab order (it is `display: none`). The
+Tab-through is now a section of `verify_a11y`; the report was corrected and
+the accessibility score moved from 41 to 52. The lesson is the one this file
+keeps relearning: a probe that reads an attribute is not an instrument until
+it has been shown to go red on the mechanism.
+
+**Three product calls, the owner's.** (1) *Post, everywhere*: Flip's sheet
+said "Share your Skribl / Share it" for the action the Pad calls "Post";
+Flip now uses the Pad's words. (2) *Auto-record*: the empty canvas said
+"Recording starts automatically" and the header offered a Record button
+beside it. Both were true -- the first stroke has armed a take since the
+auto-arm in editor_draw.js -- so the button was a second way to do one thing.
+It is now a Stop button while a take runs, appears idle only over unrecorded
+ink (a restored draft's pixels, where the auto-arm deliberately does not
+fire), and is otherwise gone; the "+ Add take" pill was already the way on
+from a finished take. Twenty suites had pressed an idle Record to start a
+take; where a stroke follows they let the stroke arm it, the tool-mechanics
+suites arm directly so a priming stroke does not enter the geometry they
+read. (3) *Dark by default, follow the host when embedded*: the v232
+decision stands -- standalone Skribl does not follow `prefers-color-scheme`
+-- and embedding is where the host's theme applies. The in-post box already
+read the host's tokens (`--bg-elev`, `--border`, `--accent`, `--accent-2`,
+which are exactly the names skribls.net defines under the `data-theme`
+attribute it stamps on `<html>`; read from a saved copy of its home page);
+that is now pinned. An iframed `/s/<id>` can see neither the host's attribute
+nor its storage, so the host passes `?theme=light|dark`; the theme boot
+script honours it ahead of the stored preference, for that document only,
+and is included on the player page, which had never carried the boot or a
+light ramp. The ramp reaches player.css by listing `:root[data-theme="light"]`
+as live for the player in css_live.json.
+
+**Ratchets that moved, and why.** The player HTML ratchet 10,900 -> 11,200
+for the ~270 B inline theme boot (the no-flash rule verify_theme pins for the
+editors applies to an embed too). The same ratchet caught a PR 2 change at
+10,906 -- two blank lines from a Jinja `set` in the player partial -- which
+was trimmed rather than ratcheted, because whitespace is not a feature.
+
+**Two instrument corrections found by the change itself.** `verify_ux`'s
+scrim probe hit-tested `#postBtn`, which PR 2 disables on an empty Flip; a
+disabled button falls through `elementFromPoint` and read as a stuck scrim.
+It now hit-tests `#moreBtn`, the control the test just used, calibrated
+against a forced scrim. And F4 ("starting a take closes the tune drawer")
+had started its take with the Record button on a page that already held a
+finished take; with no idle button it presses "+ Add take", which is the
+path a person on that page has.
+
+Shipped as four squash-merged PRs plus this one, each with its affected
+suites run locally and, for the two that touched many suites, the full
+battery -- which earned its keep both times.
