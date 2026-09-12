@@ -271,8 +271,14 @@ def register_routes(bp, *, index_route=False):
         # JS that fills those in. The lookup is best-effort: on a missing post or a
         # transient DB error we fall back to generic tags and still render the same
         # shell, so the existing client flow (which handles missing/invalid) is
-        # unchanged. This route stays render-always; it never 404s the page.
+        # unchanged. The SHELL is render-always; the STATUS is not (v290, v287
+        # audit SK-BUG-005): a Skribl that is not there, or that this viewer may
+        # not see, renders the same page with a 404, so a crawler or a link
+        # preview does not cache a 200 for a page with no content and monitoring
+        # can tell missing from fine. A failed read is not a missing post — the
+        # database's trouble is not the link's — so that path keeps the 200.
         title = caption = None
+        found = None            # True: the post is here; False: it is not; None: could not tell
         try:
             # A savepoint, not a rollback: this route is render-always by
             # design, so a database error must not take the page down — but the
@@ -301,6 +307,7 @@ def register_routes(bp, *, index_route=False):
                 # tags.
                 if post is not None and not post.visible_to(bp.skribl_current_user_id()):
                     post = None
+                found = post is not None
                 if post is not None:
                     title, caption = post.title, post.caption
         except Exception:
@@ -320,7 +327,7 @@ def register_routes(bp, *, index_route=False):
             # stops every shared link from unfurling with the same generic image.
             og_image=url_for(".skribl_card", public_id=public_id, _external=True),
             og_url=url_for(".skribl_player", public_id=public_id, _external=True),
-        )
+        ), (404 if found is False else 200)
 
     def _thumbnail_response(public_id):
         """The post's own thumbnail as a response, or None for the caller's fallback.

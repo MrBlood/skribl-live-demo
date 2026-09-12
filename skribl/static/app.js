@@ -4004,7 +4004,10 @@ if (typeof pendingMusicMeta !== 'undefined') {
 // a load succeeds). Instead, surface a persistent error panel with a retry and a
 // link to the editor. Enters player-mode and hides the shell so the panel is the
 // only thing shown.
-function showPlayerError(msg) {
+// canRetry: a reload can only help when the failure was the network's. For a
+// 404 the Skribl is not there and "Try again" is a promise the button cannot
+// keep (v287 audit SK-BUG-005), so it is not offered.
+function showPlayerError(msg, canRetry) {
   document.body.classList.add('player-mode');
   const shell = document.getElementById('playerShell');
   if (shell) shell.hidden = true;
@@ -4014,6 +4017,7 @@ function showPlayerError(msg) {
   if (m && msg) m.textContent = msg;
   err.hidden = false;
   const retry = document.getElementById('playerRetryBtn');
+  if (retry) retry.hidden = canRetry === false;
   if (retry && !retry._wired) {
     retry._wired = true;
     retry.addEventListener('click', () => location.reload());
@@ -4034,7 +4038,7 @@ function showPlayerError(msg) {
     try {
       const res = await fetch(apiBase + '/' + encodeURIComponent(pid));
       if (!res.ok) {
-        showPlayerError(res.status === 404 ? "This Skribl couldn't be found." : "Couldn't load this Skribl.");
+        showPlayerError(res.status === 404 ? "This Skribl couldn't be found." : "Couldn't load this Skribl.", res.status !== 404);
         return;
       }
       // Server envelope: { id, title, caption, hasAudio, createdAt, author, skribl }
