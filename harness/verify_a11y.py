@@ -654,6 +654,97 @@ with sync_playwright() as p:
     check("Flip: one stroke enables it",
           _pg.evaluate("() => document.getElementById('postBtn').disabled") is False)
     _pg.close()
+
+    # ------------------------------------------------------------ section 10
+    print("\nA11Y 10 — every control you can see has a 44px hit box, or 24px and a neighbour")
+    # The v287 audit counted 23 of 27 focusables on the Pad under 44px, by
+    # reading getBoundingClientRect. Two things that number could not tell
+    # apart: a control inside a CLOSED drawer (it has a rect; nobody can reach
+    # it), and a control whose visual box is 32px but whose hit box is 44 —
+    # this stylesheet grows sub-44 controls with a transparent ::before (the
+    # --tap-grow mechanism) precisely so the glyph can stay small. So this is
+    # measured the way a finger meets it: for every control whose centre is
+    # actually on top (elementFromPoint), the four points 21.5px out from its
+    # centre must land on the control — or on ANOTHER control, which is a dense
+    # row (WCAG 2.5.8's spacing case: a segmented pill's neighbours are the
+    # width it cannot have). A point landing on dead space is the defect. And
+    # a hard floor underneath: the four points 11.5px out must land on the
+    # control itself, which is the 24px AA minimum with no exception. Red on
+    # v288 for Flip's More button, its page-add row and strip badges, the tune
+    # drawer's pills on both editors, the library's transport and search, the
+    # host feed's composer tools, and the player's progress bar, copy button
+    # and call-to-action.
+    HITBOX = """() => {
+      const SEL = 'button,a[href],input:not([type=hidden]),select,textarea,[role=button],[role=switch],[role=tab],[role=slider]';
+      const key = el => el.id ? '#' + el.id
+        : el.tagName.toLowerCase() + '.' + [...el.classList].slice(0, 2).join('.');
+      const isCtrl = e => !!e.closest(SEL);
+      // The edge of the world for a control is the nearest ancestor that clips
+      // (a strip tile, a scrolling row, Flip's overflow-x:hidden body): no band
+      // can reach past it without a layout change, and a tap there was never
+      // going to be this control's.
+      const clipBox = el => { for (let n = el.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+          const s = getComputedStyle(n);
+          if (s.overflow !== 'visible' || s.overflowX !== 'visible' || s.overflowY !== 'visible') {
+            // The CLIENT box: a scrollbar's gutter is inside the border box and outside the page.
+            const r = n.getBoundingClientRect();
+            return { left: r.left + n.clientLeft, top: r.top + n.clientTop,
+                     right: r.left + n.clientLeft + n.clientWidth, bottom: r.top + n.clientTop + n.clientHeight }; } }
+        return null; };
+      const own = (el, x, y) => {
+        // clientWidth, not innerWidth: a point under a classic scrollbar is not on the page.
+        if (x < 0 || y < 0 || x > document.documentElement.clientWidth || y > document.documentElement.clientHeight) return 'edge';
+        const c = clipBox(el);
+        if (c && (x < c.left || x > c.right || y < c.top || y > c.bottom)) return 'edge';
+        const e = document.elementFromPoint(x, y);
+        if (e && (e === el || el.contains(e))) return 'own';
+        // null: not even <html> is there — the point is past the document's own
+        // edge (Flip at 390 lays its body 10px wider than the html box, and the
+        // body's overflow-x:hidden propagates to the viewport). Nothing there
+        // can be tapped, so nothing there is dead space.
+        return e ? (isCtrl(e) ? 'neighbour' : 'dead') : 'edge'; };
+      const dead = [], floor = [];
+      for (const el of document.querySelectorAll(SEL)) {
+        if (el.tagName === 'INPUT' && el.type === 'file') continue;
+        // A link inside a sentence is 2.5.8's own exception (the text sets its size).
+        if (el.tagName === 'A' && getComputedStyle(el).display === 'inline') continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (own(el, cx, cy) !== 'own') continue;           // not on top: not reachable
+        const name = key(el) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height);
+        const at = d => ({ L: own(el, cx - d, cy), R: own(el, cx + d, cy),
+                           T: own(el, cx, cy - d), B: own(el, cx, cy + d) });
+        const big = at(21.5), small = at(11.5);
+        const deadSides = Object.entries(big).filter(([, v]) => v === 'dead').map(([k]) => k);
+        if (deadSides.length) dead.push(name + ' (' + deadSides.join('') + ')');
+        const under = Object.entries(small).filter(([, v]) => v !== 'own' && v !== 'edge').map(([k]) => k);
+        if (under.length) floor.push(name + ' (' + under.join('') + ')');
+      }
+      return { dead, floor }; }"""
+    _states = (("/", "Pad", None), ("/", "Pad, tune drawer open", "#tuneBtn"),
+               ("/flip", "Flip", None), ("/flip", "Flip, tune drawer open", "#tuneBtn"),
+               ("/library", "the library", None), ("/feed", "the host feed", None),
+               ("/s/" + _pid, "the player", None))
+    for _path, _name, _open in _states:
+        for _vw, _vp in (("1280", {"width": 1280, "height": 900}),
+                         ("390", {"width": 390, "height": 844})):
+            _pg = browser.new_page(viewport=_vp)
+            _pg.goto(BASE + _path, wait_until="load")
+            _pg.wait_for_timeout(1000)
+            if _open:
+                _pg.click(_open)
+                _pg.wait_for_timeout(600)
+            # The intro toast is not a page control and sits over the canvas's
+            # own buttons until it dismisses; measure the page, not the toast.
+            _pg.evaluate("() => { if (window.SkriblHints) window.SkriblHints.hide(); }")
+            _pg.wait_for_timeout(300)
+            _hb = _pg.evaluate(HITBOX)
+            check(f"{_name} at {_vw}: nothing under the 24px floor",
+                  not _hb["floor"], "; ".join(_hb["floor"]))
+            check(f"{_name} at {_vw}: no control leaves dead space inside its 44px box",
+                  not _hb["dead"], "; ".join(_hb["dead"]))
+            _pg.close()
     browser.close()
 
 # ------------------------------------------------------------------ section 6

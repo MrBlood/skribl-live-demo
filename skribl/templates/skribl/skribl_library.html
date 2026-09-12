@@ -134,6 +134,9 @@
     .tbtn:hover { background: var(--control-hi); }
     .tbtn:active { transform: translateY(1px); }
     .tbtn svg { width: 18px; height: 18px; }
+    /* 38 visual -> a 44px box, centred; the 46px play button's box sits inside it. */
+    .tbtn { position: relative; z-index: 1; }
+    .tbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
     .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #0b0616; box-shadow: 0 5px 18px var(--accent-glow); }
     .tbtn.on { color: var(--accent-tint); border-color: #3a336a; background: rgba(124,92,255,.14); }
     .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
@@ -147,7 +150,8 @@
     .chip:hover { border-color: #34506a; color: var(--text); }
     .chip.active { background: var(--accent); border-color: transparent; color: #0b0616; font-weight: 600; }
     .search { position: relative; }
-    .search input { width: 180px; max-width: 44vw; font-family: var(--font-mono); font-size: 12.5px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
+    /* min-height 44: an input has no ::before to grow a tap band with, so the box is the box. */
+    .search input { width: 180px; max-width: 44vw; min-height: 44px; box-sizing: border-box; font-family: var(--font-mono); font-size: 12.5px; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 7px 12px 7px 30px; outline: none; }
     .search input:focus { border-color: var(--accent); }
     .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-3); }
   
