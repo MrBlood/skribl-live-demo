@@ -6134,11 +6134,11 @@ body.playing .flip-grid { display: none; }
    nothing else is — so a 36px pill at the end of the row has a 44px box on
    its open side. NOT the inner edges: two neighbouring bands would overlap
    and the later sibling would take a tap meant for the earlier one. */
-#toolGroup .tool-btn:first-of-type::before { left: -4px; }
+#toolGroup .tool-btn:first-of-type::before { left: -7px; }   /* 7, not 4: at 320px the pills are 31 wide, and 31 + 8 fell short of 44 */
 /* "Last" is the last one SHOWING — the Pad hides a trailing tool button at
    some widths, and :last-of-type would hand the open side to a control
    nobody can see. */
-#toolGroup .tool-btn:not(:has(~ .tool-btn:not([hidden])))::before { right: -4px; }
+#toolGroup .tool-btn:not(:has(~ .tool-btn:not([hidden])))::before { right: -7px; }
 
 /* THE TUNE DRAWER'S PILLS get the same band. Mirror, Pauses, Preview speed,
    Speed and Onion skin are 24-28px tall in a 44px row (v287 audit

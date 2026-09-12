@@ -102,7 +102,18 @@
      and any reach past its right edge is header overflow at 360px, which
      verify_ux pins. */
   #moreBtn { --tap-grow: 7px; }
-  #moreBtn::before { left: calc(100% - 44px); right: 0; }
+  /* A rounded SQUARE band, not the circle the button's 50% radius would
+     hand the pseudo-element: on a 44px circle the point 21.5px below the
+     centre sits on the rim and misses (v291, the 360/320 census). */
+  #moreBtn::before { left: calc(100% - 44px); right: 0; border-radius: 10px; }
+  /* The back link at the header's other end had no band at all, and the
+     tiers below shrink it to 32 and 30px (v291; the outside review of v290
+     asked for a hit census at the narrowest widths, and this is what it
+     found). A 44px box centred on it: the header's left padding is the
+     room it reaches into. */
+  .flip-lead .icon-btn { position: relative; z-index: 1; }
+  .flip-lead .icon-btn::before { content: ''; position: absolute; left: 50%; top: 50%;
+    width: 44px; height: 44px; transform: translate(-50%, -50%); }
   /* On the regular surface the header has air to the right of it, so the
      band is centred there like every other opener's (36 -> 44). The size
      class, not a width query: verify_sizeclass pins that one answer. */
@@ -268,7 +279,7 @@
   /* 34 visual -> a 44px box, centred (the swatch keeps its size on purpose). */
   .color-current { position: relative; z-index: 1; }
   .color-current::before { content: ''; position: absolute; left: 50%; top: 50%;
-    width: 44px; height: 44px; transform: translate(-50%, -50%); border-radius: 50%; }
+    width: 44px; height: 44px; transform: translate(-50%, -50%); border-radius: 10px; }
   .color-current[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--ui-line); }
   /* Drawers are normal in-flow blocks living in .flip-drawers, directly below the
      toolbar. Opening one doesn't move or cover the canvas — the page just grows and

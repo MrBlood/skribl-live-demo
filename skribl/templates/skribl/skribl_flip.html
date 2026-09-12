@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+{# No maximum-scale, no user-scalable=no: Flip was the one page of five that
+   forbade pinch-zoom, on the surface with the smallest controls (v291; outside
+   review of v290). The Pad, player, feed and library never did. verify_a11y
+   reads the meta on every page and lays each out at 200% zoom. #}
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
