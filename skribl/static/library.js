@@ -95,10 +95,11 @@
     return d.toLocaleDateString();
   }
 
-  /* The share card, which is also the in-post player's idle poster. Built from
-   * the player base the server gave us — never assembled from a literal path,
-   * so a host's url_prefix is honoured. */
-  function cardUrl(id) { return playerBase + '/' + encodeURIComponent(id) + '/card.png'; }
+  /* The poster: the share card's drawing, or a blank canvas for a post that
+   * has no thumbnail — never the branded card itself (v287 audit SK-BUG-006).
+   * Built from the player base the server gave us — never assembled from a
+   * literal path, so a host's url_prefix is honoured. */
+  function posterUrl(id) { return playerBase + '/' + encodeURIComponent(id) + '/poster'; }
 
   /* ---- the stage ---------------------------------------------------------- */
 
@@ -209,7 +210,7 @@
     el.className = 'card';
     el.setAttribute('data-id', item.id);
 
-    /* The tile's picture is the share card, cropped by the same rule the feed
+    /* The tile's picture is the poster, cropped by the same rule the feed
      * poster uses — sharecard.js's geometry, expressed as literals in this
      * page's own CSS. The module itself is NOT loaded here (v281 removed it);
      * verify_inline.py is what holds the literals to band(). One cached image
@@ -217,7 +218,7 @@
     var art = document.createElement('div');
     art.className = 'art';
     var img = document.createElement('img');
-    img.src = cardUrl(item.id);
+    img.src = posterUrl(item.id);
     img.alt = item.title || 'A Skribl';
     img.loading = 'lazy';
     img.decoding = 'async';

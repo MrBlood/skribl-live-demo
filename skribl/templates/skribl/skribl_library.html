@@ -157,10 +157,11 @@
     .card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 12px 30px var(--accent-glow); }
     .card .art { position: relative; aspect-ratio: 4/3; }
     .card .art canvas { display: block; width: 100%; height: 100%; }
-    /* The tile picture is /s/<id>/card.png, cropped to the drawing's band by
-       the same numbers inlineplayer.css uses — lib/sharecard.js band(): scale
-       630/492, offset 27/492. Shown whole, every tile would be the branded
-       share card and the grid would read as a page of adverts. */
+    /* The tile picture is /s/<id>/poster — the share card's drawing, or a
+       blank canvas for a post with no thumbnail — cropped to the drawing's
+       band by the same numbers inlineplayer.css uses — lib/sharecard.js
+       band(): scale 630/492, offset 27/492. Shown whole, every tile would be
+       the branded share card and the grid would read as a page of adverts. */
     .card .art { overflow: hidden; }
     .card .art img { position: absolute; left: 50%; transform: translateX(-50%);
                      top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }

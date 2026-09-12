@@ -44,6 +44,7 @@ That is the whole integration. You now have:
     GET  /skribl/flip                     the frame-by-frame animation editor
     GET  /skribl/s/<public_id>            the public player
     GET  /skribl/s/<public_id>/card.png   share-card image
+    GET  /skribl/s/<public_id>/poster     the in-post poster (the drawing, or a blank)
     POST /skribl/api/skribls              create
     GET  /skribl/api/skribls              feed listing (metadata only)
     GET  /skribl/api/skribls/<id>         one Skribl, with payload
@@ -96,7 +97,7 @@ work without it.
 `inlineplayer.css`, `inlineplayer.js`, and the shared rule modules
 `lib/canvassizes.js`, `lib/holdtiming.js` and `lib/sharecard.js` — under 26 KB
 served, ratcheted by `harness/verify_inline.py`. Per post, idle, it costs ONE
-image: the share card at `/s/<id>/card.png`, about 20 KB, which your CDN can
+image: the poster at `/s/<id>/poster`, about 20 KB, which your CDN can
 cache. `GET /api/skribls/<id>` is
 issued on the first tap and never again for that post. Do not prefetch it: that
 endpoint returns the whole payload, base64 audio included.
@@ -148,7 +149,12 @@ registered the blueprint under a name other than `skribl`, pass it:
 `/s/<id>/card.png` is a 1200x630 Open Graph card — the drawing inside a bordered
 box under a "Skribl Pad" wordmark — because that is what it was built for, and it
 is the only per-post image the server has. Shown whole it reads as an advert
-twenty times down a feed, so the idle post crops it back to the drawing. The
+twenty times down a feed, so the idle post shows `/s/<id>/poster`, the same
+image cropped back to the drawing. The two routes serve the same bytes and part
+only when a post has no thumbnail (one your server created through the API,
+say): the card falls back to the branded image, which is the right unfurl, and
+the poster falls back to a blank canvas of the same size, because the branded
+card cropped to the drawing's band is a fragment of a wordmark. The
 vertical crop is exact; the horizontal one is a 16:9 window, which is the widest
 canvas a drawing can have, so it can only ever remove the card's ground and never
 the picture. A narrower drawing therefore still shows some of the card's frame

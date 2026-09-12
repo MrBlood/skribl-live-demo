@@ -205,6 +205,55 @@ check("the two cards carry different drawings",
       pad_bytes != flip_bytes,
       "identical bytes would mean one fixture's flat canvas never arrived")
 
+# THE POSTER IS NOT THE CARD. The card is what a link unfurls with, and for a
+# post that carries no thumbnail the right unfurl is the branded card. The
+# POSTER is what the in-post player and the library tile show idle, cropped to
+# the drawing's band — and cropped, the branded card is a fragment of a
+# wordmark and a tagline over a post that is not about either (v287 audit
+# SK-BUG-006). So the two are separate routes with separate fallbacks, and the
+# poster's is a blank canvas. Read through the URL the feed's markup actually
+# renders, so the assertion follows the mechanism and not a path typed here.
+feed_html = urllib.request.urlopen(BASE + "/feed", timeout=20).read().decode()
+_m = re.search(r'class="skribl-inline-poster"\s+src="([^"]+)"', feed_html)
+check("the feed's in-post markup renders a poster src", bool(_m), feed_html[:80])
+POSTER_TPL = _m.group(1) if _m else "/s/__ID__/card.png"
+
+
+def poster_of(pid):
+    """The bytes the in-post poster actually serves, and where it landed."""
+    return get(BASE + POSTER_TPL.replace("__ID__", pid))
+
+
+for pid, label in ((pad_id, "Pad"), (flip_id, "Flip")):
+    pb, landed = poster_of(pid)
+    check(f"a {label} post's poster is its drawing — the same bytes its card serves",
+          pb == card_of(pid)[0] and "og-card" not in landed,
+          f"{len(pb):,} B from {landed}")
+
+# A post with NO thumbnail: created through the API, which is how a host that
+# posts server-side creates one, and how every harness fixture that skips the
+# composer's post-time work creates one.
+_pts = [{"x": 90 + i * 24, "y": 300, "color": "#ffffff", "size": 16, "t": i * 46,
+         "erase": False, "start": i == 0} for i in range(26)]
+_body = {"title": "No-thumbnail fixture", "visibility": "public", "version": 2,
+         "schemaVersion": 2, "playbackMode": "flip", "fps": 6,
+         "frames": [{"strokes": _pts, "strokeGroups": [26], "draw": True}],
+         "canvasSize": {"cssWidth": 816, "cssHeight": 612}}
+_req = urllib.request.Request(BASE + "/api/skribls", data=json.dumps(_body).encode(),
+                              headers={"Content-Type": "application/json"})
+bare_id = json.loads(urllib.request.urlopen(_req, timeout=20).read().decode()).get("id")
+check("a post with no thumbnail was created through the API (fixture)", bool(bare_id))
+if bare_id:
+    _cb, _cl = card_of(bare_id)
+    check("its CARD still falls back to the branded image — that is the right unfurl",
+          _cb == GENERIC and "og-card" in _cl, _cl)
+    _pb, _pl = poster_of(bare_id)
+    check("its POSTER does NOT land on the branded card",
+          "og-card" not in _pl and _pb != GENERIC, f"landed on {_pl}")
+    check("...and is not anyone's drawing either: a blank canvas, and a small one",
+          _pb != pad_bytes and _pb != flip_bytes and 0 < len(_pb) < 2_000,
+          f"{len(_pb):,} B")
+
 passed = sum(1 for ok, _ in results if ok)
 bad = [name for ok, name in results if not ok]
 print("\n" + "=" * 62)

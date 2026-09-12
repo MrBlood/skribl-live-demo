@@ -49,7 +49,7 @@
    see the header of inlineplayer.js. #}
 <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
 {# lib/sharecard.js IS NOT LOADED HERE, and that is the point of this note.
-   The idle poster is /s/<id>/card.png with its brand strip cropped off, and
+   The idle poster is /s/<id>/poster — the share card's drawing with the brand strip cropped off, or a blank canvas — and
    the crop is literals in inlineplayer.css. Nothing on this page ever reads
    window.SkriblShareCard — inlineplayer.js cites the module in a comment and
    hardcodes the numbers.
@@ -130,11 +130,13 @@
      role="button"
      tabindex="0"
      aria-label="Play this Skribl">
-  {# The idle state. /s/<id>/card.png is visibility-checked server-side and
-     falls back to the generic branded card, so it never 404s for a post the
-     viewer may see — and never serves the drawing for one they may not. #}
+  {# The idle state. /s/<id>/poster is visibility-checked server-side and
+     falls back to a blank canvas (NOT the branded share card, which cropped
+     to the drawing's band is a fragment of a wordmark — v287 audit
+     SK-BUG-006), so it never 404s for a post the viewer may see — and never
+     serves the drawing for one they may not. #}
   <img class="skribl-inline-poster"
-       src="{{ url_for(bp ~ '.skribl_card', public_id=public_id) }}"
+       src="{{ url_for(bp ~ '.skribl_poster', public_id=public_id) }}"
        alt="{{ alt }}" loading="lazy" decoding="async">
 {{ _skribl_inline_insides() }}</div>
 {%- endmacro %}
