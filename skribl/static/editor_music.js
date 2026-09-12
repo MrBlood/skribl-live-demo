@@ -85,7 +85,7 @@ function positionSegSlider(group){ if(window.SkriblSegSlider) window.SkriblSegSl
   // came from. Its markup is lib/zoomstep.js's, not a literal here, because
   // this control used to exist as two literal strings -- one in this file and
   // one in flip.js -- that nothing forced to agree.
-  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + window.SkriblZoomStep.markup();
+  bar.innerHTML = '<span class="seg zoom-seg" data-role="focus" role="group" aria-label="Loop view focus" title="What the loop view centres on"><button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button><button type="button" class="zoom-mag-btn" data-focus="start">Start</button><button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>' + window.SkriblZoomStep.markup();
   zoomTrackWrap.parentNode.insertBefore(bar, zoomTrackWrap);
   attachSegSlider(bar.querySelector('.zoom-seg[data-role="focus"]'));
   bar.addEventListener('click', (e) => {

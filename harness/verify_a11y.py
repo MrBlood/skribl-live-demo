@@ -813,6 +813,41 @@ with sync_playwright() as p:
         check(f"{_name} at 200% zoom: no horizontal overflow", _z["over"] <= 1, f"{_z['over']}px past the edge")
         check(f"{_name} at 200% zoom: the primary control is on screen", _z["primary"], _primary)
         _zc.close()
+
+    # ------------------------------------------------------------ section 12
+    print("\nA11Y 12 — every segmented control is a named group whose options say what they are")
+    # Outside review of v290, findings 7 and 8. Tips said role="group"
+    # aria-label="First-use tips" and Theme "Interface theme"; Canvas, in the
+    # same three rows, said nothing — a screen reader met four bare buttons.
+    # And grid density read S / M / L, which a person could take for canvas
+    # size, line width or cell size (and a LARGE density gives SMALLER cells)
+    # while the data attribute underneath already said coarse / medium / fine.
+    # A census of the DOM on both editors: every .seg that holds buttons is a
+    # group with a name -- aria-label, or aria-labelledby resolving to text,
+    # which is how the export sheet names its Size and Loops rows -- and no
+    # option is a single letter standing in for a word. Numbers are values
+    # and are allowed (12 fps, 3 pages).
+    SEGS = """() => {
+      const out = { unnamed: [], letters: [] };
+      for (const seg of document.querySelectorAll('.seg')) {
+        const btns = [...seg.querySelectorAll('button')];
+        if (!btns.length) continue;
+        const key = seg.id ? '#' + seg.id : 'seg.' + [...seg.classList].join('.');
+        const by = (seg.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean)
+          .map(id => (document.getElementById(id) || {}).textContent || '').join(' ');
+        const named = (seg.getAttribute('aria-label') || '').trim() || by.trim();
+        if (seg.getAttribute('role') !== 'group' || !named) out.unnamed.push(key);
+        for (const b of btns) { const t = (b.textContent || '').trim(); if (/^[A-Za-z]$/.test(t)) out.letters.push(key + ' ' + JSON.stringify(t)); }
+      }
+      return out; }"""
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(900)
+        _sg = _pg.evaluate(SEGS)
+        check(f"{_name}: every segmented control is a named group", not _sg["unnamed"], ", ".join(_sg["unnamed"]))
+        check(f"{_name}: no option is a single letter standing in for a word", not _sg["letters"], ", ".join(_sg["letters"]))
+        _pg.close()
     browser.close()
 
 # ------------------------------------------------------------------ section 6
