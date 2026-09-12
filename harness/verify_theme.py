@@ -347,7 +347,7 @@ with sync_playwright() as p:
           const nodes = document.querySelectorAll(
             '.header, .toolbar, .flip-tools, .pagebar, .menu-sheet, .flip-menu,'
             + ' .drawer, .panel, .filmstrip, .autosave-status, .seg, .btn,'
-            + ' .icon-btn, .tool-btn, .tool-open, .menu-item, .flip-menu-item');
+            + ' .icon-btn, .tool-btn, .tool-open, .menu-item');
           for (const el of nodes) {
             const r = el.getBoundingClientRect();
             if (!r.width || !r.height) continue;
@@ -409,9 +409,9 @@ with sync_playwright() as p:
             return null;
           };
           const out = {};
-          const sel = '.menu-row-label, .fm-label, .menu-item span,'
-                    + ' .flip-menu-item .mi-tx, .menu-item.danger span,'
-                    + ' .flip-menu-item.danger .mi-tx, .header .btn-label,'
+          const sel = '.menu-row-label, .menu-item span,'
+                    + ' .menu-item .menu-item-text, .menu-item.danger span,'
+                    + ' .header .btn-label,'
                     + ' .menu-version, .menu-row-note, .autosave-status';
           let i = 0;
           for (const el of document.querySelectorAll(sel)) {

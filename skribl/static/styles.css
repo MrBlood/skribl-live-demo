@@ -3674,7 +3674,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .menu-sheet {
     top: 64px;
     right: max(18px, calc(50% - 360px + 18px));
-    width: 220px;
+    width: 240px;   /* 220 until v290: the Tips/Theme/Canvas rows' 34px pills needed the room */
     border-radius: 16px;
     transform: translateY(-8px) scale(0.96);
     opacity: 0;
@@ -5116,8 +5116,15 @@ body.player-mode #canvas {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px 4px;
+  padding: 6px 14px 4px;   /* 6 + 34 + 4 = a 44px row */
 }
+/* THE PILLS WERE 12PX TALL. With no --seg-h the seg hugged its buttons, and a
+   button with `padding: 0` is as tall as its 11px line: On/Off, Dark/Light,
+   4:3/16:9 were twelve-pixel targets at the bottom of both menus (owner, v290:
+   "the slider pills are small"). 34px is the export sheet's segs plus two;
+   the buttons stretch to fill it (the .mb-scope treatment), at 12px type. */
+.menu-row .seg { --seg-h: 34px; }
+.menu-row .seg button { height: 100%; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 .menu-row-label {
   font-size: 12px;
   font-weight: 500;
@@ -5127,10 +5134,9 @@ body.player-mode #canvas {
 /* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
    hole between the word "Tips" and its switch while "Canvas" sat snug against
    its own. Matching the widths closes it, and the two rows read as a pair. */
-.menu-row .hint-seg, .menu-row .theme-seg { width: 147px; }
-.menu-row .hint-seg button, .menu-row .theme-seg button { flex: 1 1 0; }
-.menu-row .hint-seg button, .menu-row .theme-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
-.menu-row .canvas-seg button { min-width: 34px; padding: 0 7px; font-size: 11px; }
+.menu-row .hint-seg, .menu-row .theme-seg, .menu-row .canvas-seg { width: 140px; flex: none; }   /* one width, and NO flex-shrink: squeezed segs came out 146 and 151 */
+.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { flex: 1 1 0; }
+.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { min-width: 0; padding: 0 4px; font-size: 12px; }
 .menu-row-note {
   padding: 0 14px 8px;
   font-size: 11px;
@@ -5552,6 +5558,13 @@ body.playing .flip-grid { display: none; }
 
 /* Menu rows: already ~44 from padding; pin the minimum so it can't shrink. */
 .menu-item { min-height: 44px; }
+/* AND NOT BY FLEX EITHER. The bottom sheet is a column flexbox capped at
+   88dvh, and when the menu's content passes the cap, flex shrinks every child
+   before the sheet scrolls — the grabber's own note above records the same
+   crush. On a Pad menu two items taller than Flip's, each row lost 2px at
+   390x844 and verify_parity read 62 against Flip's 64. The rows keep their
+   size; the sheet scrolls, which is what overflow-y: auto is for. */
+.menu-item, .menu-row, .menu-divider, .menu-row-note, .menu-version { flex-shrink: 0; }
 
 /* ---------- STATES: pressed / disabled / loading, defined once ---------- */
 /* Pressed: every interactive control gives the same tactile response — a

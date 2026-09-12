@@ -381,7 +381,7 @@ with sync_playwright() as p:
                          " tips: document.getElementById('hintSeg').getBoundingClientRect().width,"
                          " canvas: document.getElementById('canvasSeg').getBoundingClientRect().width,"
                          " gap: document.getElementById('hintSeg').getBoundingClientRect().left"
-                         "      - document.querySelectorAll('.flip-menu-row .fm-label')[0]"
+                         "      - document.querySelectorAll('#moreMenu .menu-row-label')[0]"
                          "        .getBoundingClientRect().right })")
     check("the Tips and Canvas switches are the same width",
           abs(widths["tips"] - widths["canvas"]) < 2,
