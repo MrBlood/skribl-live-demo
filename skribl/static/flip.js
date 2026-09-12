@@ -4889,8 +4889,13 @@ window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : 
   if(_mi) _mi.addEventListener('click', ()=>{ closeMenu(); if(window._skriblPostedUI) window._skriblPostedUI.open(); }); }
 function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
   if(window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
-  moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true'); }
-function closeMenu(){ moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); document.dispatchEvent(new CustomEvent('skribl:menu-closed')); }
+  moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true');
+  // AFTER the unhide, or focus() lands on a hidden node. The menu declares
+  // aria-modal="true" (v291) and lib/modalfocus.js is what makes that true:
+  // focus moves in, Tab stays inside, and closeMenu() hands it back to #moreBtn.
+  if(window.SkriblModal) window.SkriblModal.open(moreMenu, moreBtn); }
+function closeMenu(){ if(window.SkriblModal) window.SkriblModal.close(moreMenu);
+  moreMenu.hidden=true; if(moreScrim) moreScrim.hidden=true; moreBtn.classList.remove('on'); moreBtn.setAttribute('aria-expanded','false'); document.dispatchEvent(new CustomEvent('skribl:menu-closed')); }
 moreBtn.addEventListener('click',e=>{ e.stopPropagation(); (moreMenu.hidden?openMenu:closeMenu)(); });
 document.addEventListener('click',e=>{ if(!moreMenu.hidden && !e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')) closeMenu(); });
 // Escape closes it too. Every other dismissible surface here already does this
