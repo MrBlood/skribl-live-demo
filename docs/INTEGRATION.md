@@ -42,7 +42,7 @@ That is the whole integration. You now have:
 
     GET  /skribl/skribl-pad               the record-and-replay drawing editor
     GET  /skribl/flip                     the frame-by-frame animation editor
-    GET  /skribl/s/<public_id>            the public player
+    GET  /skribl/s/<public_id>            the public player (404, same page, when the Skribl is not there)
     GET  /skribl/s/<public_id>/card.png   share-card image
     GET  /skribl/s/<public_id>/poster     the in-post poster (the drawing, or a blank)
     POST /skribl/api/skribls              create

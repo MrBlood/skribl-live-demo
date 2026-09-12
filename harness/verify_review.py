@@ -407,11 +407,14 @@ with sync_playwright() as p2:
         return None
     check("the HTML player keeps permissive framing", fa(f"/s/{sid2}") is None, str(fa(f"/s/{sid2}")))
     check("the card image does NOT", fa(f"/s/{sid2}/card.png") == "frame-ancestors 'self'", str(fa(f"/s/{sid2}/card.png")))
-    # NB: /s/<unknown-id> is NOT a 404. The player shell is server-rendered and the
-    # client fetches the post, so an unknown id returns 200 and is legitimately the
-    # player page. Real 404s are what must be restrictive.
+    # /s/<unknown-id> IS a 404 since v290 (v287 audit SK-BUG-005): the shell is
+    # still server-rendered so the page can say so itself, but the STATUS says
+    # the Skribl is not there — crawlers and link previews cached a 200 for a
+    # page with no content, and monitoring could not tell missing from fine.
+    # Being a 404 it takes the restrictive framing, like every other 404.
     unknown = c2.request.get(BASE + "/s/not-a-real-id")
-    check("/s/<unknown-id> is a 200 player shell, not an error", unknown.status == 200, str(unknown.status))
+    check("/s/<unknown-id> is a 404 that still carries the player shell",
+          unknown.status == 404 and 'id="playerError"' in unknown.text(), str(unknown.status))
     check("a genuine 404 is restrictive", fa("/definitely-not-a-route") == "frame-ancestors 'self'",
           str(fa("/definitely-not-a-route")))
     check("the API does NOT get permissive framing",

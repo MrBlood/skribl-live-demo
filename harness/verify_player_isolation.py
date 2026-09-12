@@ -374,6 +374,43 @@ with sync_playwright() as sp:
     # the split is done — but a green run here does NOT mean the player is
     # extracted. It means the player is not getting worse. The definition of
     # done is in START-HERE; when a cut lands, tighten the number beside it.
+    print("\nMISSING — a Skribl that is not there says so, and offers no dead retry")
+    # v287 audit SK-BUG-005: /s/<unknown> answered 200 with "This Skribl
+    # couldn't be found. Try again" — a status that told crawlers the page had
+    # content, and a button that could not succeed (a reload cannot make a
+    # missing Skribl appear). The status is asserted on the wire; the panel and
+    # the button on the rendered page; and the retry's OTHER case — a network
+    # failure, where a reload is exactly right — is driven by aborting the fetch
+    # on a real post, so the button's absence here is not its absence everywhere.
+    import urllib.request as _ur, urllib.error as _ue
+    try:
+        with _ur.urlopen(BASE + "/s/not-a-real-id", timeout=15) as _r:
+            _st, _body = _r.status, _r.read().decode()
+    except _ue.HTTPError as _e:
+        _st, _body = _e.code, _e.read().decode()
+    check("GET /s/<unknown> answers 404", _st == 404, f"status {_st}")
+    check("...and still renders the player shell, so the page can say so itself",
+          'id="playerError"' in _body and 'id="playerShell"' in _body)
+    VIS = """() => { const vis = el => !!el && !el.hidden && el.offsetParent !== null;
+      return { panel: vis(document.getElementById('playerError')),
+               retry: vis(document.getElementById('playerRetryBtn')),
+               msg: (document.getElementById('playerErrorMsg') || {}).textContent || '' }; }"""
+    _mp = b.new_page(viewport={"width": 1280, "height": 900})
+    _mp.goto(BASE + "/s/not-a-real-id", wait_until="load")
+    _mp.wait_for_timeout(1200)
+    _m = _mp.evaluate(VIS)
+    check("the page says the Skribl could not be found", _m["panel"] and "found" in _m["msg"], str(_m))
+    check("...and offers no Try again for it", _m["retry"] is False,
+          "a reload cannot make a missing Skribl appear; the button is a promise it cannot keep")
+    _mp.close()
+    _np = b.new_page(viewport={"width": 1280, "height": 900})
+    _np.route("**/api/skribls/**", lambda route: route.abort())
+    _np.goto(link, wait_until="load")          # the /s/ URL the post sheet handed back above
+    _np.wait_for_timeout(1200)
+    _n = _np.evaluate(VIS)
+    check("a network failure on a real post keeps Try again", _n["panel"] and _n["retry"] is True, str(_n))
+    _np.close()
+
     print("\nHALF B — isolation ratchets (green ≠ done; see the targets)")
 
     # Tightened after each cut. Loosening one of these needs a reason written
@@ -833,7 +870,14 @@ with sync_playwright() as sp:
     # that page, so it keeps the direct call it already had. That is the whole
     # of the surface's share — no second copy of the guard, and the fallback
     # rule is untouched and still free.
-    BYTES_RATCHET, BYTES_TARGET = 152_900, 153_600
+    #
+    # 152,900 -> 153,000, measured 152,969, v290: +81 B in app.js so the error
+    # panel knows WHICH failure it is showing. A missing Skribl answers 404 now
+    # (v287 audit SK-BUG-005) and "Try again" is withheld for it — a reload
+    # cannot make a missing Skribl appear — while a network failure keeps it.
+    # The previous tree sat 12 B under the ceiling, so there was nothing on
+    # this surface to spend first that was not a comment.
+    BYTES_RATCHET, BYTES_TARGET = 153_000, 153_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
