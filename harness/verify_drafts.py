@@ -466,6 +466,47 @@ with sync_playwright() as p:
     ctx2.close()
     ctx.close()
 
+    # ---------- 7. the restore prompt must not cover the tools ---------------
+    print("\nBANNER — the restore prompt sits clear of the toolbar")
+    # The banner is position:fixed at the bottom of the viewport, and so is the
+    # toolbar — on every width, not only on a phone. At 1280x900 it landed on
+    # Eraser, Shape, colour, Undo and Redo and stayed there until the person
+    # chose (v287 audit SK-BUG-007). A prompt that hides the tools reads as an
+    # interruption, and Restore is the answer most people want. Measured as
+    # rectangle overlap between the banner and each visible toolbar button,
+    # because a bottom offset that clears one viewport is exactly what the old
+    # phone-only rule proved insufficient.
+    BANNER_VS_TOOLS = """() => {
+      const b = document.getElementById('restoreBanner');
+      if (!b || b.hidden) return null;
+      const br = b.getBoundingClientRect();
+      const hit = [];
+      for (const el of document.querySelectorAll('#toolBar button')) {
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const w = Math.min(br.right, r.right) - Math.max(br.left, r.left);
+        const h = Math.min(br.bottom, r.bottom) - Math.max(br.top, r.top);
+        if (w > 0 && h > 0) hit.push((el.id || el.className) + ' ' + Math.round(w) + 'x' + Math.round(h));
+      }
+      return hit;
+    }"""
+    for label, vp in (("desktop 1280x900", {"width": 1280, "height": 900}),
+                      ("phone 390x844", {"width": 390, "height": 844})):
+        ctx = b.new_context(viewport=vp)
+        pg = ctx.new_page()
+        pg.goto(f"{BASE}/", wait_until="load")
+        pg.wait_for_timeout(800)
+        pg.evaluate(DRAW_STROKE)
+        pg.wait_for_timeout(1600)          # past the 1.2s debounce: a real write
+        pg.reload(wait_until="load")
+        pg.wait_for_timeout(700)
+        hit = pg.evaluate(BANNER_VS_TOOLS)
+        check(f"{label}: the restore banner is up after the reload",
+              isinstance(hit, list), f"restoreBanner={hit}")
+        check(f"{label}: ...and overlaps no toolbar button",
+              hit == [], f"covers: {hit}")
+        ctx.close()
+
     b.close()
 
 bad = [r for r in results if not r[0]]

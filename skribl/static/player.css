@@ -851,17 +851,19 @@ body.player-mode .canvas-area { display: contents; }
 
 .restore-banner[hidden] { display: none; }
 
-/* On a phone the toolbar owns the bottom edge of the screen — the 20px
-   anchor above was written for desktop, where that edge is empty air — so
-   the banner landed ON the tools and covered them until dismissed (worst in
-   light theme, where the two surfaces sit close in tone; owner-reported).
-   Seat it a toolbar higher: 56px of toolbar + its 12px bottom margin + the
-   same 20px of air the desktop anchor keeps = 88px, floating over the
-   canvas's bottom edge with the tools fully visible beneath. */
-@media (max-width: 640px) {
-  .restore-banner {
-    bottom: calc(88px + env(safe-area-inset-bottom));
-  }}
+/* THE TOOLBAR OWNS THE BOTTOM EDGE ON EVERY WIDTH, so the banner is seated a
+   toolbar higher on every width: 56px of toolbar + its 12px bottom margin +
+   20px of air = 88px, floating over the canvas's bottom edge with the tools
+   fully visible beneath. This rule used to live inside a max-width: 640px
+   query, written when a phone report showed the banner landing ON the tools
+   (worst in light theme, where the two surfaces sit close in tone) — and the
+   20px anchor above was left for desktop on the belief that its bottom edge
+   was empty air. It is not: at 1280x900 the banner covered Eraser, Shape,
+   colour, Undo and Redo until the person chose (v287 audit SK-BUG-007).
+   verify_drafts measures the overlap on both widths. */
+.restore-banner {
+  bottom: calc(88px + env(safe-area-inset-bottom));
+}
 
 .restore-text {
   display: flex;
