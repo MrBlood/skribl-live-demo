@@ -4774,7 +4774,7 @@ function stepZoomMag(dir){
 }
 (function initZoomMagControl(){ if(!zoomTrackWrap||!zoomTrackWrap.parentNode) return;
   const bar=document.createElement('div'); bar.className='zoom-mag-bar';
-  bar.innerHTML='<span class="seg zoom-seg" data-role="focus" title="What the loop view centres on">'
+  bar.innerHTML='<span class="seg zoom-seg" data-role="focus" role="group" aria-label="Loop view focus" title="What the loop view centres on">'
     + '<button type="button" class="zoom-mag-btn on" data-focus="loop">Loop</button>'
     + '<button type="button" class="zoom-mag-btn" data-focus="start">Start</button>'
     + '<button type="button" class="zoom-mag-btn" data-focus="end">End</button></span>'
