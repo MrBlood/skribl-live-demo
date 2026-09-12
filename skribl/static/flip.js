@@ -7860,6 +7860,9 @@ updateFlipEmptyHint();
 pad.addEventListener('pointerdown', () => {
   const _eh = document.getElementById('flipEmptyHint');
   if (_eh) _eh.classList.add('hidden');
+  // And the intro toast: a person who has started drawing has answered "New
+  // here?". Key-scoped, so a hint ABOUT the canvas survives the press.
+  if (window.SkriblHints) window.SkriblHints.hide('flip-intro');
 }, { passive: true });
 // A fresh document (nothing restored) starts on the preset that displays
 // LARGEST in this device's stage — portrait phones get 9:16 instead of a 4:3
