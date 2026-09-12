@@ -162,9 +162,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
 
     print("\nVISUAL — author and post, so the player has something real to show")
-    pg.click("#recordBtn")
-    pg.wait_for_timeout(400)
-    scribble(pg)
+    scribble(pg)          # v288: the first stroke arms the take; no idle Record button
     pg.wait_for_timeout(400)
     pg.click("#recordBtn")
     pg.wait_for_timeout(600)

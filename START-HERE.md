@@ -553,8 +553,9 @@ ends, `updateCanvasLockCue()` sets `cursor: not-allowed` and the canvas is not
 drawable until you Record again or Clear. This looks like a dead end and is not:
 it is the multi-take model, and `endRecordingTake()` says so in a toast —
 *"Take saved — Play to preview, or Add take to draw more"* — and the way
-forward is an "+ Add take" pill floating on the locked canvas, not only the
-Record button the older wording named.
+forward is an "+ Add take" pill floating on the locked canvas; since v288 the
+header's Record button is not even there on a finished take (it is a Stop
+button while a take runs, and appears idle only over unrecorded ink).
 An external design pass in v215 read the lock as a bug and came close to
 recommending its removal, which would have turned every stray tap after a take
 into recorded timing. The round-trip through Record is the cost of knowing when
