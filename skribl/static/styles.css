@@ -3683,7 +3683,7 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   .menu-sheet {
     top: 64px;
     right: max(18px, calc(50% - 360px + 18px));
-    width: 240px;   /* 220 until v290: the Tips/Theme/Canvas rows' 34px pills needed the room */
+    width: 260px;   /* 220 until v290, 240 until v293: the Tips/Theme/Canvas rows' 34px pills needed the room, then their labels did */
     border-radius: 16px;
     transform: translateY(-8px) scale(0.96);
     opacity: 0;
@@ -5142,10 +5142,18 @@ body.player-mode #canvas {
 .menu-row .canvas-seg, .menu-row .hint-seg, .menu-row .theme-seg { margin-left: auto; }
 /* Tips is two buttons and Canvas is four, so right-aligning both left a 99px
    hole between the word "Tips" and its switch while "Canvas" sat snug against
-   its own. Matching the widths closes it, and the two rows read as a pair. */
-.menu-row .hint-seg, .menu-row .theme-seg, .menu-row .canvas-seg { width: 140px; flex: none; }   /* one width, and NO flex-shrink: squeezed segs came out 146 and 151 */
-.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { flex: 1 1 0; }
-.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { min-width: 0; padding: 0 4px; font-size: 12px; }
+   its own. Matching the widths closes it, and the three rows read as a set.
+   THE WIDTH IS SET BY THE FULLEST ROW, not the emptiest: at 140px the theme
+   row's "System" had 2px beside it and "16:9" under 5px (owner, v293, from a
+   phone: "theme and canvas sliders look cramped"). 160px is the theme row's
+   three labels at 8px a side with a little over; the pills share the seg from
+   their own content (basis auto) rather than in equal quarters, so a long
+   label is not cut to a short one's cell. The phone sheet is full-width and
+   has the room for more. verify_tips reads the room beside every pill. */
+.menu-row .hint-seg, .menu-row .theme-seg, .menu-row .canvas-seg { width: var(--menu-seg-w, 160px); flex: none; }   /* one width, and NO flex-shrink: squeezed segs came out 146 and 151 */
+.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { flex: 1 1 auto; }
+.menu-row .hint-seg button, .menu-row .theme-seg button, .menu-row .canvas-seg button { min-width: 0; padding: 0 8px; font-size: 12px; }
+@media (max-width: 640px) { .menu-row { --menu-seg-w: 184px; } }
 .menu-row-note {
   padding: 0 14px 8px;
   font-size: 11px;

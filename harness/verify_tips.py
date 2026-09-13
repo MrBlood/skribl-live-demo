@@ -396,6 +396,36 @@ with sync_playwright() as p:
           f"tips {heights['tips']} vs canvas {heights['canvas']} — two segmented "
           "controls stacked at different heights read as a mistake")
 
+    # Owner, v293, from a phone: "theme and canvas sliders look cramped." One
+    # shared width (140px) fitted the two-pill Tips row and squeezed the others:
+    # measured, "System" had 2px beside it and "16:9" under 5px. The room is
+    # the pill's box less its glyphs, halved — read from a Range around the
+    # text, so a wider phone font shows up here as it does on the phone. Both
+    # editors, both widths, every pill in the three rows.
+    ROOM = """() => {
+      const root = document.getElementById('menuSheet') || document.getElementById('moreMenu');
+      const out = [];
+      for (const b of root.querySelectorAll('#hintSeg button, #themeSeg button, #canvasSeg button')) {
+        const rg = document.createRange(); rg.selectNodeContents(b);
+        const room = (b.getBoundingClientRect().width - rg.getBoundingClientRect().width) / 2;
+        out.push([b.closest('.seg').id, b.textContent.trim(), Math.round(room * 10) / 10]);
+      }
+      const segs = ['hintSeg', 'themeSeg', 'canvasSeg'].map(i => Math.round(document.getElementById(i).getBoundingClientRect().right));
+      return { pills: out, rights: segs }; }"""
+    for _w, _path, _btn in ((1100, "/flip", "#moreBtn"), (1100, "/skribl-pad", "#menuBtn"),
+                            (390, "/flip", "#moreBtn"), (390, "/skribl-pad", "#menuBtn")):
+        _rp = b.new_page(viewport={"width": _w, "height": 844})
+        _rp.goto(f"{BASE}{_path}", wait_until="load"); _rp.wait_for_timeout(900)
+        _rp.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _rp.click(_btn); _rp.wait_for_timeout(500)
+        _room = _rp.evaluate(ROOM)
+        _tight = [f"{seg} {lab!r} {room}px" for seg, lab, room in _room["pills"] if room < 8]
+        check(f"at {_w} on {_path}: every menu pill keeps 8px beside its label",
+              not _tight, "; ".join(_tight))
+        check(f"at {_w} on {_path}: the three rows' switches share one right edge",
+              max(_room["rights"]) - min(_room["rights"]) <= 1, str(_room["rights"]))
+        _rp.close()
+
     fp.click("#hintSeg button[data-hints='off']")
     fp.wait_for_timeout(300)
     check("turning tips off on Flip stores it",
