@@ -2356,6 +2356,64 @@ with _sp() as _sh:
             _ctx.close()
     _shb.close()
 
+print("\nPOST RESULT (Pad) — one row of what to do next, and the title stays on screen")
+# Owner, v293, from a phone ("after post on pad"): the sheet kept the compose
+# form on screen at half opacity with its title and caption wiped, and under
+# it two full-width chips stacked. Flip's result is one row (Share / Copy
+# link / Open player). The Pad's is now the same shape — Watch / Share / Copy
+# link on one row, Share only where navigator.share is — the form returns to
+# full opacity, and the posted title stays in its field as the record of what
+# was just posted. Copy link is the mechanism, read from a clipboard stub.
+with _sp() as _pr:
+    _prb = _pr.chromium.launch()
+    for _w in (390, 1100):
+        _ctx = _prb.new_context(viewport={"width": _w, "height": 844 if _w == 390 else 900})
+        _ctx.add_init_script("""Object.defineProperty(navigator, 'share', { configurable: true, value: async (d) => { window.__shared = d; } });
+            Object.defineProperty(navigator, 'clipboard', { configurable: true,
+                value: { writeText: async (t) => { window.__copied = t; } } });""")
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/")
+        _pg.wait_for_timeout(600)
+        draw(_pg, "#canvas", 200, 200, n=16)
+        _pg.wait_for_timeout(300)
+        _pg.click("#recordBtn"); _pg.wait_for_timeout(500)
+        _pg.click("#postBtn"); _pg.wait_for_timeout(800)
+        _pg.fill("#postTitleInput", "Result probe")
+        _pg.click("#postSubmitBtn")
+        _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+        _pg.wait_for_timeout(600)
+        _st = _pg.evaluate("""() => {
+            const sheet = document.getElementById('postSheet').getBoundingClientRect();
+            const btns = ['postWatchBtn', 'postShareBtn', 'postCopyBtn'].map(id => {
+              const b = document.getElementById(id); if (!b || b.hidden) return null;
+              const r = b.getBoundingClientRect(); const lab = b.querySelector('span:last-child');
+            return { id, top: Math.round(r.top), h: Math.round(r.height), right: Math.round(r.right), w: Math.round(r.width),
+                     lines: Math.round(10 * lab.getBoundingClientRect().height / parseFloat(getComputedStyle(lab).fontSize)) / 10 }; });
+            return { title: document.getElementById('postTitleInput').value,
+                     bodyOpacity: getComputedStyle(document.getElementById('postBody')).opacity,
+                     sheetRight: Math.round(sheet.right), btns }; }""")
+        check(f"POST RESULT at {_w}: the posted title is still in its field",
+              _st["title"] == "Result probe", f"field reads {_st['title']!r}")
+        check(f"POST RESULT at {_w}: the form is back at full opacity, not dimmed under the result",
+              _st["bodyOpacity"] == "1", f"opacity {_st['bodyOpacity']}")
+        _b = [x for x in _st["btns"] if x]
+        check(f"POST RESULT at {_w}: Watch, Share and Copy link are all offered",
+              [x["id"] for x in _b] == ["postWatchBtn", "postShareBtn", "postCopyBtn"], str(_st["btns"]))
+        if len(_b) == 3:
+            check(f"POST RESULT at {_w}: ...on one row, each a tap target, inside the sheet",
+                  max(x["top"] for x in _b) - min(x["top"] for x in _b) <= 1 and min(x["h"] for x in _b) >= 44
+                  and max(x["right"] for x in _b) <= _st["sheetRight"], str(_b))
+            # "Copy link" wrapped to two lines in a 103px cell on the first cut:
+            # the label's box was 2.3x its font size; one line is under 1.3x.
+            check(f"POST RESULT at {_w}: no label in the row wraps",
+                  all(x["lines"] < 1.6 for x in _b), str([(x["id"], x["lines"]) for x in _b]))
+            _pg.click("#postCopyBtn"); _pg.wait_for_timeout(300)
+            _c = _pg.evaluate("() => window.__copied || null")
+            check(f"POST RESULT at {_w}: Copy link puts the player's absolute link on the clipboard",
+                  isinstance(_c, str) and _c.startswith(BASE) and "/s/" in _c, str(_c))
+        _ctx.close()
+    _prb.close()
+
 print("\nCOPY — one noun for the unit, a backup is a backup, and the two editors say how they relate")
 # Outside review of v291, SK-AUD-009/010/017/020. Flip said "page" on the
 # canvas and "frame" in the Tune drawer, the scrub bar and the export sheet;

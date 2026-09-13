@@ -3657,6 +3657,25 @@ body.player-mode #canvasEmptyHint { display: none !important; }
 }
 .post-watch .play-badge svg { width: 12px; height: 12px; }
 
+/* THE RESULT IS ONE ROW (v293): Watch / Share / Copy link, the shape of
+   Flip's .flip-share-actions. The row takes the CTA's margins so the buttons
+   in it carry none, and share the width evenly (Share is absent where
+   navigator.share is). Only Watch keeps the border pulse: three chips
+   pulsing at once is a fairground. */
+.post-result { display: flex; gap: 8px; margin: 2px 10px 6px; }
+.post-result[hidden] { display: none; }
+.post-result .post-submit { flex: 1 1 0; min-width: 0; margin: 0; padding: 12px 4px; }
+/* Three across a 390px phone is 103px each. "Copy link" at the CTA's 14px with
+   a 17px glyph and 8px gap wrapped to two lines (measured, first cut of v293);
+   the labels do not wrap, and the two soft chips run a size tighter. */
+.post-result .post-submit > span:last-child { white-space: nowrap; }
+.post-result .post-result-soft { animation: none; gap: 6px; font-size: 13px; }
+.post-result .post-result-soft svg { width: 15px; height: 15px; flex: none; }
+@media (min-width: 641px) {
+  .post-result { margin: 4px 12px 8px; }
+  #postSheet .post-result .post-submit { margin: 0; padding: 14px 8px; }
+  #postSheet .post-result .post-result-soft { font-size: 14px; }
+}
 .post-status { padding: 4px 14px 8px; }
 .post-status[hidden] { display: none; }
 .post-status.error .export-progress-fill { background: var(--danger); }
