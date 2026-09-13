@@ -482,6 +482,35 @@ with sync_playwright() as p:
           not any("re-add" in t.lower() for t in texts), f"pill read {sorted(set(texts))} during the restore")
     pg7.close()
 
+    print("\nPAD — a restored photo keeps its adjustments however long the decode takes (v294 audit, PR 2)")
+    # AUDIT, finding 4: the saved fit / opacity / blur / zoom were re-applied on
+    # a 140 ms timer after the change event and DROPPED if the image was not yet
+    # showing. Attach is async (a decode check, a FileReader, normalisation), so
+    # on a slow phone the timer won the race and the adjustments vanished
+    # without a word. Music re-applies in loadedmetadata; the photo now
+    # re-applies when the image itself loads. The decode check is slowed here
+    # to make the race certain rather than probable.
+    import base64, pathlib, tempfile
+    _png = pathlib.Path(tempfile.gettempdir()) / "skribl_amber_probe.png"
+    _png.write_bytes(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+    pg8, box8 = pad_page("orig(k, v)")
+    stroke(pg8, box8, 120); pg8.wait_for_timeout(600)
+    pg8.set_input_files("#photoInput", str(_png)); pg8.wait_for_timeout(1500)
+    pg8.evaluate("""() => { document.querySelector('.photo-fit-btn[data-fit="contain"]').click();
+        const o = document.getElementById('photoOpacity'); o.value = 40; o.dispatchEvent(new Event('input', { bubbles: true })); }""")
+    pg8.wait_for_timeout(2000)
+    saved8 = pg8.evaluate("() => { const d = JSON.parse(localStorage.getItem('skribl_autosave_v1') || '{}'); return d.photoMeta ? [d.photoMeta.fit, d.photoMeta.opacity] : null; }")
+    check("Pad: the adjustments are in the draft", saved8 == ["contain", 0.4], str(saved8))
+    pg8.reload(wait_until="load"); pg8.wait_for_timeout(1200)
+    pg8.evaluate("() => { window.skriblDecodeCheckImage = (f) => new Promise(r => setTimeout(() => r(null), 700)); }")
+    r8, r8why = try_click(pg8, "#restoreConfirm"); pg8.wait_for_timeout(3500)
+    got8 = pg8.evaluate("() => [photoFit, photoOpacityVal_, photoBgImg.style.display, photoBgImg.style.opacity]")
+    check("Pad: after a slow decode the restored photo is showing",
+          r8 and got8[2] == "block", f"{r8why} {got8}")
+    check("Pad: ...with its saved fit and opacity, not the defaults",
+          got8[0] == "contain" and abs(got8[1] - 0.4) < 0.01 and got8[3] == "0.4", str(got8))
+    pg8.close()
+
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()
 
