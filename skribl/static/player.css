@@ -159,6 +159,15 @@
   --text-secondary: #9aa2b1;
   --text-muted: #7d8496;
   --text-dim: #575f6e;
+  /* The increased-contrast counterparts (v292; outside review of v291,
+     SK-AUD-015). Mapped over the four above under prefers-contrast: more, at
+     the end of this sheet; defined HERE so the media block holds no literal
+     and the light ramp below carries its own four. muted clears 8.8:1 on the
+     lightest chrome surface, dim 6.3:1 — dim is decoration, not reading. */
+  --text-muted-hc: #b8bfcc;
+  --text-dim-hc: #9aa2b1;
+  --hairline-hc: rgba(255,255,255,0.22);
+  --hairline-strong-hc: rgba(255,255,255,0.34);
 
   /* The ink the signature is written in — the brand's pen in BOTH themes
      (owner, having seen the violet daylight ink: "I think the dark should
@@ -1645,6 +1654,10 @@ body.player-mode #canvas {
   /* Text — the brightest becomes the darkest ink */
   --text-dim:                #8c94a3;
   --text-muted:              #6c7483;
+  --text-muted-hc:           #3d4452;   /* prefers-contrast: more — 8.3:1 on the darkest light surface */
+  --text-dim-hc:             #4f5765;
+  --hairline-hc:             rgba(0,0,0,0.28);
+  --hairline-strong-hc:      rgba(0,0,0,0.42);
   --text-soft:               #5f6775;
   --text-soft-2:             #5f6775;
   --text-soft-3:             #5c6472;
@@ -1715,4 +1728,39 @@ body.player-mode #canvas {
   --accent-tint:   #4c31c4;
   --accent-tint-2: #4c31c4;
 
+}
+
+/* ---------- Increased contrast and forced colours (v292) ----------
+   Outside review of v291, SK-AUD-015: the sheet handled reduced motion and
+   two colour ramps, and nothing else the platform can ask for.
+
+   PREFERS-CONTRAST: MORE swaps four tokens for the -hc counterparts defined
+   beside them in each ramp. Tokens, not literals: the ratchets that keep
+   every neutral in :root (verify_surfaces) and every neutral overridden for
+   light (verify_theme) read this block as a mapping, which is what it is.
+
+   FORCED COLOURS replace every background with a system colour, so a state
+   told by background alone vanishes: the seg's sliding pill, a lit toggle's
+   tint. Under forced colours the edge does the telling — an outline, which
+   moves no layout — in the system's own Highlight, and the resting options
+   get a ButtonText edge so a row of three still reads as three. verify_a11y
+   section 14 emulates both and reads the computed styles. */
+@media (prefers-contrast: more) {
+  :root, :root[data-theme="light"] {
+    --text-muted: var(--text-muted-hc);
+    --text-dim: var(--text-dim-hc);
+    --hairline: var(--hairline-hc);
+    --hairline-strong: var(--hairline-strong-hc);
+  }
+}
+@media (forced-colors: active) {
+  .seg button, .smooth-btn, .gif-seg-btn {
+    outline: 1px solid ButtonText; outline-offset: -1px;
+  }
+  .seg button[aria-pressed="true"], .smooth-btn[aria-pressed="true"], .gif-seg-btn[aria-pressed="true"],
+  .tool-btn.active, .tool-btn[aria-pressed="true"],
+  .onion-tint.active, [role="switch"][aria-checked="true"] {
+    outline: 3px solid Highlight; outline-offset: -3px;
+  }
+  .seg-slider { display: none; }   /* a background that would paint as nothing; the outline says it now */
 }
