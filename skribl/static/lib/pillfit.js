@@ -12,10 +12,21 @@
  * noticed and not the general one. CSS cannot ask whether two boxes intersect,
  * so the general case needs this.
  *
- * IT IS PURELY VISUAL. The pill is pointer-events:none, so it has never
- * intercepted a tap — it obscures the button without disabling it. That lowers
- * the stakes and does not remove them: a control you cannot see is a control
- * you do not press.
+ * IT IS PURELY VISUAL, AND THE PILL IS NOT ALWAYS INERT (v294). This file
+ * moves the pill and nothing else: it never changes what the pill does. The
+ * pill's own pointer-events are `none` while it is only a status, so a
+ * reassuring "Saved" floating over a control obscures that control without
+ * disabling it — which lowers the stakes of a collision and does not remove
+ * them, because a control you cannot see is a control you do not press.
+ *
+ * Since v294 the pill can CARRY controls: an amber that names a missing file
+ * makes its text a route to the drawer, and both ambers show a × that
+ * dismisses. Those turn pointer-events back on for themselves
+ * (lib/autosavepill.js, and the .actionable rules in styles.css), so "the pill
+ * intercepts nothing" is true of the RESTING pill only. The consequence for
+ * this file is the `blocked` flag below: when the pill is faded because it
+ * cannot be lifted clear, its controls must stop taking taps too, or an
+ * invisible button sits in the corner of the screen eating them.
  *
  * IT LIFTS RATHER THAN HIDES (v229), AND THE FIRST VERSION HAD THIS WRONG.
  * The original remedy for the collision was to fade the pill out. On a desktop

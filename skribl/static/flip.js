@@ -565,12 +565,14 @@ function saveNow(){
       // discriminate on. Either the warning is shown or the loss is silent.
       //
       // What made the old amber intolerable was never that it was wrong — it was
-      // that it went nowhere. The only control that clears a pending record is
-      // the re-add card, and that card measures 0x0 until its drawer is opened.
-      // So the pill is now the route to it (see showAutosaveStatus below): the
+      // that it went nowhere. The re-add card was the only control that cleared
+      // a pending record, and that card measures 0x0 until its drawer is
+      // opened. So the pill became the route to it (lib/autosavepill.js): the
       // warning is true, and one tap reaches the Re-add and Dismiss it is
-      // telling you about. Dismissing clears the record, which schedules a save,
-      // which reports plain 'saved' — the amber ends because the situation did.
+      // telling you about. Since v294 the pill carries its own × as well, so
+      // the record can be given up without the drawer trip at all. Either way
+      // the record is cleared, which schedules a save, which reports plain
+      // 'saved' — the amber ends because the situation did.
       //
       // A pending record is checked rather than hasMedia because reaching here
       // means hasMedia is FALSE: there is no photo and no track on this page, so
@@ -718,7 +720,11 @@ let _mediaSpillState = 'none';
 // and bytes together — sat in the store until the next save that happened to
 // have media. The bytes go when the media goes now, through this one owner.
 let _mediaRecordInStore = false;
+// True while tryRestore() is fetching the payload: the record is not this
+// session's to delete until that read has landed (v294 bug check).
+let _mediaFetchPending = false;
 function dropStoredMedia(){
+  if(_mediaFetchPending) return;
   if(!_mediaRecordInStore || !window.SkriblDraftStore) return;
   _mediaRecordInStore = false;
   SkriblDraftStore.del('flip:draft').catch(()=>{});
@@ -838,6 +844,11 @@ function tryRestore(){
       // fallback, exactly as before.
       if (d.mediaInIdb && window.SkriblDraftStore) {
         _mediaRecordInStore = true;   // written by an earlier session; still ours to clean up
+        // ...and OFF LIMITS until this read lands. A save that runs while the
+        // fetch is in flight takes the no-media path (the payload has not been
+        // applied yet) and would delete the very record being read — reload,
+        // background the app, and the media is gone for good.
+        _mediaFetchPending = true;
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
           // The guard here USED to be `localStorage.getItem(KEY) !== raw` — a
@@ -893,7 +904,7 @@ function tryRestore(){
           ensureAudio();
           if (musicData) decodeForWaveform();
           fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-        }).catch(() => {});
+        }).catch(() => {}).finally(() => { _mediaFetchPending = false; });
       }
     }
     const ok = applyPayload(d);
@@ -7807,8 +7818,18 @@ document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
    hold gets the sheet. The predicate is a top-level function so a harness can
    stub it the way it stubs the Pad's flush. */
 function mediaBytesAtRisk(){
+  // READ THE STATE BEFORE THE FLUSH, because the flush is what changes it.
+  // saveNow() re-spills the whole payload whenever media is present, so after
+  // it the state is ALWAYS 'saving' and a predicate reading it afterwards said
+  // "at risk" on every single tap of the Skribl Pad row — a 1.5s pause on a
+  // healthy session, and the sheet whenever a put outran the wait (the spill
+  // note above measures 4.2 MB on a phone). What matters is whether the bytes
+  // were already durable when the tap happened: if they were, the copy in the
+  // store is good and the put now in flight is a refresh of it.
+  const before = _mediaSpillState;
   flushFlipDraft();
-  return !!(bgImage || musicData) && (_mediaSpillState === 'saving' || _mediaSpillState === 'failed');
+  if(!(bgImage || musicData)) return false;
+  return before !== 'durable';
 }
 (function guardPadNavigation(){
   const padBtn=document.getElementById('padBtn'), sheet=document.getElementById('leaveSheet');
@@ -7823,6 +7844,10 @@ function mediaBytesAtRisk(){
   const leave=()=>{ released=true; window.location.href=padBtn.getAttribute('href'); };
   padBtn.addEventListener('click',(e)=>{
     if(released) return;
+    // A SECOND TAP WHILE THE FIRST IS WAITING must not start a second decision:
+    // the poll below can still resolve to leave(), and it would then navigate
+    // out from under the sheet this tap opened.
+    if(waiting){ e.preventDefault(); e.stopPropagation(); return; }
     if(!mediaBytesAtRisk()) return;
     e.preventDefault(); e.stopPropagation();
     closeMenu();   // the row lives in the ⋯ menu; the confirm must not stack on it

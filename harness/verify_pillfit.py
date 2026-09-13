@@ -106,10 +106,42 @@ with sync_playwright() as p:
         check(f"{label}: lib/pillfit.js is loaded",
               page.evaluate("() => !!window.SkriblPillFit"),
               "the player has no autosave and deliberately does not load it")
-        check(f"{label}: the pill never intercepts taps",
+        check(f"{label}: a RESTING pill never intercepts taps",
               page.evaluate(READ)["pointer"] == "none",
               "it obscures a control without disabling it — and must keep doing "
               "only that, or an overlap becomes a dead button")
+        # ...and the exception, which is not one: since v294 an amber pill
+        # carries controls (the text is a route to the re-add card, the × is
+        # the way out), so it takes taps FOR THOSE — and gives them up again
+        # when pillfit fades it, or an invisible button sits in the corner of
+        # the screen eating them. The claim "the pill intercepts nothing" was
+        # true of every state until v294 and is true of the resting one now.
+        state = page.evaluate("""() => { SkriblAutosavePill.configure({ pending: () => true });
+            SkriblAutosavePill.show('saved-no-media');
+            const el = document.getElementById('autosaveStatus');
+            const x = document.getElementById('autosaveStatusDismiss');
+            return { pill: getComputedStyle(el).pointerEvents, x: getComputedStyle(x).pointerEvents }; }""")
+        check(f"{label}: an amber pill that carries a control takes taps for it",
+              state["pill"] == "auto" and state["x"] == "auto", str(state))
+        # AND GIVES THEM UP WHERE IT ACTUALLY HAS TO. The first cut of this pin
+        # added `blocked` by hand and measured the rule that answers it — but
+        # this file only ever sets `blocked` on a NON-warning (`!warning &&
+        # hits(el)` below), so an amber pill is never faded by it and the
+        # assertion was reading the stylesheet rather than the app. The state
+        # that does happen, on every phone, is an open drawer or menu: the
+        # rule in styles.css fades the pill — warning included — and a control
+        # nobody can see must not keep taking taps. Driven through the real
+        # opener, so it fails if that rule is narrowed.
+        opened = page.evaluate("""() => { const b = document.getElementById('musicOpenBtn')
+                || document.getElementById('musicBtn'); if (!b) return null; b.click(); return true; }""")
+        page.wait_for_timeout(350)
+        under = page.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+            const x = document.getElementById('autosaveStatusDismiss');
+            const cs = getComputedStyle(el);
+            return { opacity: cs.opacity, pill: cs.pointerEvents, x: getComputedStyle(x).pointerEvents }; }""")
+        check(f"{label}: ...and gives them up under an open drawer, where it cannot be seen",
+              opened and under["opacity"] == "0" and under["pill"] == "none" and under["x"] == "none",
+              str(under))
         page.close()
 
     for label, path in SURFACES:

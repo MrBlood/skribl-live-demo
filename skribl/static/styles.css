@@ -2857,6 +2857,19 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
   opacity: 0;
   pointer-events: none;
 }
+/* AND ITS CONTROLS WITH IT. `.autosave-dismiss` sets `pointer-events: auto` of
+   its own — it has to, because on the amber with no re-add route the pill
+   itself stays inert and only the × is live — and that override survived the
+   rule above: with a drawer open the pill was invisible and its × went on
+   taking taps, which is the exact "invisible button eating taps in the corner
+   of the screen" this whole treatment exists to prevent. Found by the pin that
+   replaced one measuring an unreachable state (v294 bug check). */
+body:has(.tab-panel:not([hidden])) .autosave-dismiss,
+body:has(#drawPanel:not([hidden])) .autosave-dismiss,
+body:has(.menu-overlay:not([hidden])) .autosave-dismiss,
+body:has(#moreMenu:not([hidden])) .autosave-dismiss {
+  pointer-events: none;
+}
 .autosave-status[hidden] { display: none; }
 
 .autosave-dot {
@@ -2897,7 +2910,14 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
 .autosave-status.actionable #autosaveStatusText:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 6px; }
 .autosave-status.actionable:active { filter: brightness(1.25); }
 /* pillfit fades the pill to nothing when it cannot lift it clear of a bar; an
-   INVISIBLE pill must not keep taking taps in the corner of the screen. */
+   INVISIBLE pill must not keep taking taps in the corner of the screen.
+   BELT AND BRACES as the code stands: lib/pillfit.js sets `blocked` only on a
+   NON-warning, and every pill that carries a control is amber — so today this
+   pair is reached by nothing. The live protection is the open-surface rule
+   further down (a drawer or menu fades the pill, warning included), which
+   verify_pillfit drives. Kept because it is the correct answer if that policy
+   ever changes, and named here so the next reader does not mistake it for the
+   mechanism that is doing the work. */
 .autosave-status.actionable.blocked { pointer-events: none; }
 /* A THUMB TARGET, NOT A GLYPH. 44px each way (the owner's phone: "so small
    when you push it you are over the canvas and likely to draw"), with negative

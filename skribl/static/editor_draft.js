@@ -14,14 +14,24 @@
 //                           navigation and on pagehide/visibilitychange —
 //                           the debounce window is no longer a loss window.
 //   SkriblDraftStore        media BYTES go to IndexedDB (lib/draftstore.js)
-//                           at attach time, so "Saved without media" becomes
-//                           a failure signal instead of a designed limitation
-//                           — and it no longer fades: a durability problem is
-//                           a state, not a toast.
+//                           when the file is picked, and AGAIN on any later
+//                           save while that write has failed — a phone can
+//                           accept a multi-megabyte put and never settle it,
+//                           so the write also has a deadline (v294). "Saved
+//                           without media" is therefore a failure signal
+//                           about THIS save rather than a verdict carried
+//                           from attach time, and it no longer fades: a
+//                           durability problem is a state, not a toast. It
+//                           can be acknowledged, which hides the note without
+//                           pretending the media is safe.
 //   the leave guard         fires on !durable rather than on media presence.
-//                           With working storage it never fires, which is the
-//                           direction doc's intended end state; with broken
-//                           storage it fires for exactly the work at risk.
+//                           A write still in flight is neither, so it gets
+//                           1.5s to land before the sheet is the answer
+//                           (v294); with working storage the guard then never
+//                           fires, which is the direction doc's intended end
+//                           state, and with broken storage it fires for
+//                           exactly the work at risk. Flip has the same guard
+//                           on its Skribl Pad row, for the same reason.
 //
 // LOAD ORDER: classic script reading app.js globals (canvas, strokes, hasContent,
 // photoBgImg, audioEl, pendingPhotoMeta, ...). After app.js and after
@@ -58,12 +68,22 @@ const mediaDraft = { photo: 'none', music: 'none' };
 // front of the user. Flip re-spills its whole payload on every save and heals
 // by itself; the Pad's per-file write now heals the same way.
 const _mediaFile = { photo: null, music: null };
+// ONE WRITE OWNS A SLOT AT A TIME, and a superseded write must go quiet. The
+// deadline below fires twelve seconds after a put is issued; if the file was
+// removed, replaced, or the draft discarded in the meantime, that timer used
+// to land on a slot it no longer described and mark it 'failed' — amber, and
+// the leave guard armed, on a page with no media at all, with no way back
+// because the retry needs a file the session no longer has (v294 bug check).
+// Every path that ends a slot's life bumps this, and both arms check it.
+const _mediaSeq = { photo: 0, music: 0 };
 const MEDIA_STORE_TIMEOUT_MS = 12000;   // Flip's SPILL_TIMEOUT_MS, for the same reason
 function storeMediaBytes(kind) {
   const file = _mediaFile[kind];
   if (!file) return;
   if (!window.SkriblDraftStore) { mediaDraft[kind] = 'failed'; return; }
   if (mediaDraft[kind] === 'saving') return;   // one write in flight at a time; a hung one is given up below
+  const seq = ++_mediaSeq[kind];
+  const current = () => seq === _mediaSeq[kind];
   mediaDraft[kind] = 'saving';
   // A put that never settles is not a put that is still working. Past the
   // deadline the bytes are treated as not durable — the truthful reading — and
@@ -71,7 +91,7 @@ function storeMediaBytes(kind) {
   // both arms, and the retry is what confirms the bytes.
   let settled = false;
   const deadline = setTimeout(() => {
-    if (settled) return;
+    if (settled || !current()) return;
     settled = true;
     mediaDraft[kind] = 'failed';
     _refreshMediaPill();
@@ -79,8 +99,8 @@ function storeMediaBytes(kind) {
   }, MEDIA_STORE_TIMEOUT_MS);
   SkriblDraftStore.put('pad:' + kind, {
     blob: file, name: file.name, type: file.type, savedAt: Date.now()
-  }).then(() => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'durable'; _refreshMediaPill(); })
-    .catch((e) => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'failed'; _refreshMediaPill();
+  }).then(() => { if (settled || !current()) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'durable'; _refreshMediaPill(); })
+    .catch((e) => { if (settled || !current()) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'failed'; _refreshMediaPill();
                     // NAMED, because there is no console on a phone and lib/report.js
                     // carries this line: two screenshots from the owner's iPhone showed
                     // the failure and nothing about its cause (v294).
@@ -346,6 +366,7 @@ function clearAutosave() {
   }
   mediaDraft.photo = 'none'; mediaDraft.music = 'none';
   _mediaFile.photo = null; _mediaFile.music = null;
+  _mediaSeq.photo++; _mediaSeq.music++;   // a write still in flight no longer describes this session
 }
 
 function readAutosave() {
@@ -619,6 +640,7 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
   if (rm) rm.addEventListener('click', () => {
     mediaDraft[kind] = 'none';
     _mediaFile[kind] = null;
+    _mediaSeq[kind]++;   // a put still in flight is about a file that is gone
     // WRITE THE DRAFT FIRST, DELETE THE BYTES SECOND (v294 audit, finding 8).
     // The draft was rewritten by the 1.2 s debounce while the bytes went at
     // once, so a tab that died in that window came back offering a re-add card
@@ -818,7 +840,7 @@ document.addEventListener('visibilitychange', () => {
   // the common path, which teaches people to tap Leave unread.
   const GUARD_WAIT_MS = 1500;
   const writeInFlight = () => mediaDraft.photo === 'saving' || mediaDraft.music === 'saving';
-  let released = false, waiting = false;
+  let released = false, waiting = false;   // `waiting`: a tap is polling an in-flight write
   const openSheet = () => {
     leaveSheet.hidden = false;
     const scrim = document.getElementById('leaveScrim');
@@ -833,7 +855,12 @@ document.addEventListener('visibilitychange', () => {
   const leave = () => { released = true; window.location.href = flipBtn.getAttribute('href'); };
 
   flipBtn.addEventListener('click', (e) => {
-    if (released || !atRisk()) return;
+    if (released) return;
+    // A SECOND TAP WHILE THE FIRST IS WAITING must not start a second decision:
+    // the poll can still resolve to leave(), and it would then navigate out
+    // from under the sheet this tap opened (v294 bug check).
+    if (waiting) { e.preventDefault(); return; }
+    if (!atRisk()) return;
     e.preventDefault();
     // Flip now lives IN the overflow menu, so that menu is open at this moment.
     // Leaving it up would stack the confirm on top of it.
