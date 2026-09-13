@@ -49,6 +49,7 @@ function openMenu() {
 function closeMenu(instant) {
   menuOverlay.classList.remove('open');
   if (menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
+  if (window._skriblDisarmClearAll) window._skriblDisarmClearAll();   // a closed menu holds no armed confirmation
   clearTimeout(menuCloseTimer);
   // Return focus to whatever opened it. Before this, closing left focus
   // wherever it had been when the sheet appeared — usually nowhere.
@@ -122,18 +123,27 @@ function clearAllWithUndo() {
   if (!item) return;
   let armed = false, armTimer = null;
   const label = item.querySelector('span');
-  const disarm = () => { armed = false; item.classList.remove('armed'); if (label) label.textContent = 'Clear all'; };
+  const disarm = () => { clearTimeout(armTimer); armed = false; item.classList.remove('armed'); if (label) label.textContent = 'Clear all'; };
+  // THE ARM HOLDS UNTIL THE PERSON LEAVES IT, not for three seconds (v292;
+  // outside review of v291, SK-AUD-018): it disarms when the menu closes, when
+  // focus leaves the item, and on a long safety net. A destructive action
+  // should not be a race against a timer — a slow second tap met a disarmed
+  // button and armed it again. And the armed label is SPOKEN, through the live
+  // region the template carries for it, not only shown.
+  const announce = (text) => { const st = document.getElementById('confirmStatus'); if (st) { st.textContent = ''; st.textContent = text; } };
+  window._skriblDisarmClearAll = disarm;
+  item.addEventListener('focusout', () => { if (armed) disarm(); });
   item.addEventListener('click', () => {
     if (recording) { showToast('Stop recording before clearing', item); return; }
     if (!armed) {
       armed = true;
       item.classList.add('armed');
       if (label) label.textContent = 'Tap again to clear all';
+      announce('Tap again to clear all');
       clearTimeout(armTimer);
-      armTimer = setTimeout(disarm, 3000);
+      armTimer = setTimeout(disarm, 20000);
       return;   // keep the menu open for the confirm tap
     }
-    clearTimeout(armTimer);
     disarm();
     // "Clear all" wipes strokes, music, photo AND the background — then calls
     // clearAutosave(), so even the recovery copy is gone. The two-tap arm above
