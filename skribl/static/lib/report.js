@@ -105,6 +105,13 @@
       'Surface: ' + mode,
       'Page: ' + safe(function () { return location.pathname; }, '?'),
       'Browser: ' + safe(function () { return navigator.userAgent; }, '?'),
+      // The media store as the editor sees it (v294): "Saved without media"
+      // on a phone is a store write that failed, and this line plus the
+      // console.error the write leaves are the only account of why.
+      'Media store: ' + safe(function () {
+        return (typeof indexedDB === 'undefined' ? 'no IndexedDB; ' : '')
+          + (global.skriblMediaStoreState ? global.skriblMediaStoreState() : 'n/a');
+      }, '?'),
       'Screen: ' + safe(function () { return global.innerWidth + 'x' + global.innerHeight; }, '?')
         + ' @ ' + safe(function () { return global.devicePixelRatio || 1; }, 1) + 'x'
     ];
