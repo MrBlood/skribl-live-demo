@@ -671,7 +671,7 @@
      styles.css's .menu-sheet at 641px+, and the ROWS are .menu-item / .menu-row
      from styles.css, not a second set of rules. verify_parity measures both
      menus item by item and fails on any number that differs. */
-  .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; width: 240px;
+  .flip-menu { position: absolute; top: 58px; right: 12px; z-index: 60; width: 260px;   /* tracks styles.css .menu-sheet (v293: 240 -> 260 for the Theme row) */
     background: rgba(var(--surface-control-rgb), 0.9);
     -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
     border: 1px solid var(--hairline-strong); border-radius: 16px;
