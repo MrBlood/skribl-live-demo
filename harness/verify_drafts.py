@@ -72,10 +72,9 @@ with sync_playwright() as p:
     # flush can have written the draft.
     pg.reload(wait_until="load")
     pg.wait_for_timeout(600)
-    banner = pg.evaluate("() => { const el = document.getElementById('restoreBanner');"
-                         " return el ? !el.hidden : null; }")
-    check("the restore banner appears after an instant reload",
-          banner is True, f"restoreBanner visible={banner} — the pagehide flush "
+    back = pg.evaluate("() => strokes.length")
+    check("the drawing is back after an instant reload",
+          back >= 1, f"strokes.length={back} — the pagehide flush "
           "is the only thing that can have saved this")
     check("no page errors across draw/reload", not errors, "; ".join(errors[:2]))
     ctx.close()
@@ -170,9 +169,7 @@ with sync_playwright() as p:
           pill in ("Saved", "(hidden)"), f"{pill!r} — amber now means FAILURE, "
           "and nothing failed")
     pg.reload(wait_until="load")
-    pg.wait_for_timeout(600)
-    pg.evaluate("() => document.getElementById('restoreConfirm').click()")
-    pg.wait_for_timeout(2500)   # IDB get + DataTransfer re-add + image decode
+    pg.wait_for_timeout(3100)   # restore at boot (v294) + IDB get + DataTransfer re-add + image decode
     photo = pg.evaluate("() => { const img = document.getElementById('photoBgImg');"
                         " return img ? { shown: img.style.display !== 'none',"
                         " hasSrc: !!img.src && img.src.length > 40, name: img._fileName || null } : null; }")
@@ -490,6 +487,10 @@ with sync_playwright() as p:
       }
       return hit;
     }"""
+    # v294 (audit finding 5): there is no banner to overlap anything. The
+    # measurement above is kept as the record of why the banner had to move,
+    # and the pin is what replaced it: the drawing is simply back, at both
+    # widths, with nothing asking.
     for label, vp in (("desktop 1280x900", {"width": 1280, "height": 900}),
                       ("phone 390x844", {"width": 390, "height": 844})):
         ctx = b.new_context(viewport=vp)
@@ -501,10 +502,9 @@ with sync_playwright() as p:
         pg.reload(wait_until="load")
         pg.wait_for_timeout(700)
         hit = pg.evaluate(BANNER_VS_TOOLS)
-        check(f"{label}: the restore banner is up after the reload",
-              isinstance(hit, list), f"restoreBanner={hit}")
-        check(f"{label}: ...and overlaps no toolbar button",
-              hit == [], f"covers: {hit}")
+        back = pg.evaluate("() => strokes.length")
+        check(f"{label}: the drawing is back after the reload with nothing asking",
+              hit is None and back >= 1, f"banner={hit} strokes={back}")
         ctx.close()
 
     b.close()

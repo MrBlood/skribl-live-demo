@@ -489,12 +489,14 @@ function restoreAutosave(data) {
   pendingPhotoMeta = (data.photoMeta && data.photoMeta.name) ? data.photoMeta : null;
   refreshPendingCards();
 
-  // The bytes are asked for next (reAddMediaFromStore, from the banner's
-  // Restore). The route amber is shown by the store lookup when it MISSES,
-  // not here: shown at this moment it was a false alarm flashed on every
-  // healthy restore (v294 audit, finding 3), teaching the user to ignore the
-  // real one.
-  showToast('Drawing restored', null);
+  // The bytes are asked for next (reAddMediaFromStore, below). The route amber
+  // is shown by the store lookup when it MISSES, not here: shown at this
+  // moment it was a false alarm flashed on every healthy restore (v294 audit,
+  // finding 3), teaching the user to ignore the real one.
+  //
+  // The same words Flip says, because it is the same event (v294 audit,
+  // finding 5). "Drawing restored" belongs to Clear's undo, in app.js.
+  showToast('Draft restored', null);
 }
 
 // ---------- Autosave wiring ----------
@@ -504,60 +506,43 @@ function restoreAutosave(data) {
   // #skribl=<id> hash player.
   if ((typeof window !== 'undefined' && window.SKRIBL_MODE === 'player') ||
       /^#skribl=/.test(location.hash || '')) return;
-  const banner = document.getElementById('restoreBanner');
-  const sub = document.getElementById('restoreSub');
-  const confirmBtn = document.getElementById('restoreConfirm');
-  const discardBtn = document.getElementById('restoreDiscard');
-  let bannerTimer = null;
-
-  function hideBanner() {
-    banner.classList.remove('show');
-    bannerTimer = setTimeout(() => { banner.hidden = true; }, 400);
-  }
-
-  // On load: if there's a saved drawing, offer to restore it.
+  // ONE RESTORE MODEL, AND IT IS FLIP'S (v294 audit, finding 5; owner:
+  // "Restore is your recommendation"). The Pad used to ASK — a banner offering
+  // "Unsaved drawing found / Discard / Restore" — while Flip applied its draft
+  // at boot and said so with a chip. The asking had a reason: the Pad's
+  // autosave held strokes but not media BYTES, so a silent restore would have
+  // presented a partial drawing as the whole one. The bytes come back from
+  // IndexedDB since v222, so the reason is gone, and what remained was two
+  // editors that felt like two products on the one screen a returning user
+  // sees first.
+  //
+  // So: the draft is applied, the toast says "Draft restored", and the media
+  // follows from the store. Discarding is Clear all in the ⋯ menu, which
+  // clears the canvas, the media and the autosave — the same thing the
+  // banner's Discard did, in the place a person looks for it rather than in a
+  // prompt they must answer before they can draw.
+  //
+  // OWNERSHIP: a restore claims the slot, exactly as the banner's Restore did
+  // and as Flip's tryRestore() does. A later empty canvas is then a deliberate
+  // clear rather than a fresh tab's flush, which is what the fence in
+  // writeAutosave() protects.
+  //
+  // SAFE AT PARSE TIME: app.js calls resizeCanvas() synchronously while it
+  // loads, so the canvas has its real size before this file runs.
   const saved = readAutosave();
   if (saved) {
-    const bits = [];
-    if (saved.savedAt) {
-      try {
-        const d = new Date(saved.savedAt);
-        bits.push(d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }));
-      } catch (e) {}
-    }
-    const media = [];
-    if (saved.musicMeta && saved.musicMeta.name) media.push('music');
-    if (saved.photoMeta && saved.photoMeta.name) media.push('photo');
-    if (media.length) bits.push(media.join(' + ') + ' to re-add');
-    sub.textContent = bits.join(' · ') || 'From your last session';
-
-    banner.hidden = false;
-    requestAnimationFrame(() => banner.classList.add('show'));
-
-    confirmBtn.addEventListener('click', () => {
-      restoreAutosave(saved);
-      // Confirming the restore is taking OWNERSHIP of the slot (same rule as
-      // Flip's tryRestore): the session now holds this content, so a later
-      // empty state is a deliberate clear. An unclaimed banner confers
-      // nothing — the idle-flush fence keeps protecting the record.
-      sessionOwnedDraft = true;
-      hideBanner();
-      // Media bytes come back from IndexedDB by driving the SAME pipeline a
-      // manual re-add uses: put the stored File on the real <input> and
-      // dispatch a real change event. Validation, the drawer handlers, and the
-      // pendingPhotoMeta/pendingMusicMeta settings-reapply wiring in app.js
-      // all run exactly as if the user had picked the file — because as far as
-      // the app can tell, they did. No second attach path to keep correct.
-      reAddMediaFromStore('photo', 'photoInput', saved.photoMeta);
-      reAddMediaFromStore('music', 'musicInput', saved.musicMeta);
-      // Write a fresh autosave reflecting the restored state, so reloading
-      // again doesn't re-show this same prompt.
-      setTimeout(writeAutosave, 200);
-    });
-    discardBtn.addEventListener('click', () => {
-      clearAutosave();
-      hideBanner();
-    });
+    restoreAutosave(saved);
+    sessionOwnedDraft = true;
+    // Media bytes come back from IndexedDB by driving the SAME pipeline a
+    // manual re-add uses: put the stored File on the real <input> and dispatch
+    // a real change event. Validation, the drawer handlers, and the
+    // pendingPhotoMeta/pendingMusicMeta settings-reapply wiring all run exactly
+    // as if the user had picked the file — because as far as the app can tell,
+    // they did. No second attach path to keep correct.
+    reAddMediaFromStore('photo', 'photoInput', saved.photoMeta);
+    reAddMediaFromStore('music', 'musicInput', saved.musicMeta);
+    // Write a fresh autosave reflecting the restored state.
+    setTimeout(writeAutosave, 200);
   }
 
   // Triggers: schedule an autosave whenever the drawing meaningfully changes.

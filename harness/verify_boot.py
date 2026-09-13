@@ -132,18 +132,19 @@ with sync_playwright() as p:
               "is the one a returning user takes")
         check(f"{label}: no uncaught error while restoring", not errs, "; ".join(errs[:2]))
 
-        # THE TWO SURFACES DIFFER HERE, deliberately, and pinning one shape on
-        # both hides that. Flip restores its draft silently — it persists pages,
-        # media and background, so there is nothing to warn about. Pad ASKS,
-        # with a "Unsaved drawing found / Discard / Restore" banner, because its
-        # autosave holds strokes but not media bytes and a silent restore would
-        # quietly present a partial drawing as the whole one.
+        # ONE RESTORE MODEL (v294 audit, finding 5; owner: "Restore is your
+        # recommendation"). The two surfaces used to differ here on purpose:
+        # Flip restored silently and the Pad ASKED, with a "Unsaved drawing
+        # found / Discard / Restore" banner, because its autosave once held
+        # strokes but not media bytes. The bytes come back from IndexedDB now
+        # (v222), so the reason for asking is gone and a returning user sees
+        # their work at once on both editors. Clear all in the ⋯ menu is the
+        # discard, as it always was.
         if key == "pad":
-            check("Pad: a draft is offered rather than applied",
+            check("Pad: the draft is applied at boot, as Flip's is — no banner asks first",
                   page.evaluate("() => { const b = document.getElementById('restoreBanner');"
-                                " return !!b && !b.hidden; }"),
-                  "Pad's autosave holds strokes but not media bytes, so it asks")
-            page.click("#restoreConfirm")
+                                " return (!b || b.hidden) && strokes.length > 0; }"),
+                  "a banner, or an empty canvas, on the return visit")
             page.wait_for_timeout(700)
         # NOT `typeof frames !== 'undefined'`. `window.frames` is the iframe
         # list and exists in every browser, so that test is always true — on

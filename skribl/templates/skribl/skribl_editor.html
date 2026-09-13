@@ -318,17 +318,10 @@
   <div id="toast" class="toast" role="status" aria-live="polite"
        aria-atomic="true" hidden></div>
 
-  <!-- Autosave restore prompt -->
-  <div id="restoreBanner" class="restore-banner" hidden>
-    <div class="restore-text">
-      <span class="restore-title">Unsaved drawing found</span>
-      <span class="restore-sub" id="restoreSub">From your last session</span>
-    </div>
-    <div class="restore-actions">
-      <button type="button" id="restoreDiscard" class="restore-btn discard">Discard</button>
-      <button type="button" id="restoreConfirm" class="restore-btn confirm">Restore</button>
-    </div>
-  </div>
+  {# The restore banner is gone (v294 audit, finding 5): the draft is applied
+     at boot, as Flip's is, and Clear all in the ⋯ menu is the discard. The
+     copy in the PLAYER's template and the .restore-banner rules in styles.css
+     were already dead before this and are a separate cleanup. #}
 
   <!-- Read-only player shell (shown only in player-mode) -->
   <!-- Player shell (shared partial — editor preview + public player) -->
