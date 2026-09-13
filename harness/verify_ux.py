@@ -781,7 +781,9 @@ with sync_playwright() as _p:
 print("\nCANVAS — the edge survives every state, and a stroke survives the edge")
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
-    _pd = _b.new_page(viewport={"width": 1000, "height": 900})
+    # The ring's rgba is the DARK theme's; since v292 a bare page follows the
+    # OS, and headless Chromium says light. Ask for the theme the pin measures.
+    _pd = _b.new_page(viewport={"width": 1000, "height": 900}, color_scheme="dark")
     _errs = []
     _pd.on("pageerror", lambda e: _errs.append(str(e)))
     _pd.goto(f"{BASE}/skribl-pad", wait_until="load")
@@ -1379,7 +1381,8 @@ with _sp204() as _p:
     # v207: onion on/off moved from the header into the tune drawer's Onion row
     # (frees header space), styled as an .onion-tint toggle so it lights ORANGE
     # like grid / motion / tint. setOnion() and the row-mute behaviour unchanged.
-    _o = _b.new_page(viewport={"width": 1280, "height": 900}); _o.goto(BASE + "/flip", wait_until="load"); _o.wait_for_timeout(800)
+    # The orange below is the dark theme's shade (v292: a bare page follows the OS, so ask for dark).
+    _o = _b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark"); _o.goto(BASE + "/flip", wait_until="load"); _o.wait_for_timeout(800)
     _o.evaluate("() => { const t = document.querySelector('.skribl-hint'); if (t) t.click(); }")
     check("V207: the onion toggle is no longer in the header",
           _o.evaluate("() => !document.querySelector('.header #onion')"))

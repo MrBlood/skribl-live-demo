@@ -1600,18 +1600,15 @@ body.player-mode #canvas {
 
    The accent family is untouched. #7c5cff sits at L110 and works on both a
    near-black and a white ground, which is why it was picked. */
-/* NO `@media (prefers-color-scheme: light)` BLOCK, and that is a decision.
-   Adding one was the obvious move and it was wrong: it flips the DEFAULT for
-   every visitor whose OS is set to light, which is most of them, on an app
-   whose whole identity is dark. Skribl would have changed for everyone
-   overnight without anyone asking for it.
-
-   So light is OPT-IN: it applies only when something has stamped
-   data-theme="light" on <html>. Following the system instead is one block --
-   wrap the rule below in `@media (prefers-color-scheme: light)` and guard it
-   with `:root:not([data-theme="dark"])` so an explicit dark choice still wins
-   on a light OS -- but that is the owner's call about the product, not a
-   detail of the implementation. */
+/* NO `@media (prefers-color-scheme: light)` BLOCK, and that is still a
+   decision, for a different reason than it was. v232 made light opt-in and
+   dark the default for everyone; v292 (outside review of v291, SK-AUD-014)
+   follows the device's appearance until a person chooses otherwise: with
+   nothing stored the page follows prefers-color-scheme, and an explicit dark
+   or light ignores it. That resolution lives in _skribl_theme_boot.html and
+   lib/theme.js, which stamp data-theme="light" on <html> before first paint.
+   The stylesheet keeps ONE light ramp, the block below, keyed on that
+   attribute; a media rule would be a second copy of it to drift. */
 :root[data-theme="light"] {
   color-scheme: light;   /* the counterpart of the note on :root */
 

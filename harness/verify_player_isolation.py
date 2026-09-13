@@ -900,7 +900,11 @@ with sync_playwright() as sp:
     # ~270 B): an embedding host passes ?theme=light and the attribute has to
     # land before first paint or the frame flashes dark — the same no-flash
     # rule verify_theme pins for the editors. Just above the new floor of 11,171.
-    HTML_RATCHET = 11_200
+    # 11,200 -> 11,300 at v292: the boot resolves "system" through
+    # prefers-color-scheme before first paint (~150 B, a storage that throws
+    # falling through to the OS included), so a bare page follows the OS
+    # without a flash. Measured 11,327.
+    HTML_RATCHET = 11_400
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",

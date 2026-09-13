@@ -19,7 +19,12 @@
    already stamps on its own page as a query parameter. Exact values only;
    anything else falls through to the stored preference. This is the one
    place a Skribl page follows something other than its own setting — and it
-   is still not the OS: standalone stays dark by default (DECISIONS v232). #}
+   is one of two places a Skribl page follows something other than its own
+   setting; the other is the OS, since v292: with nothing stored (or "system"
+   stored) the page follows prefers-color-scheme, and an explicit dark or
+   light ignores it. Resolved HERE, before first paint, for the same reason
+   the stored value is — a deferred script would flash. lib/theme.js is the
+   same resolution for everything that runs afterwards; keep them agreeing. #}
 <script nonce="{{ csp_nonce }}">
-(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:localStorage.getItem('skribl_theme_v1');if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();
+(function(){try{var m=/[?&]theme=(light|dark)(?:&|$)/.exec(location.search);var t=m?m[1]:null;if(!t){try{t=localStorage.getItem('skribl_theme_v1');}catch(e){t=null;}}if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}if(t==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}})();
 </script>

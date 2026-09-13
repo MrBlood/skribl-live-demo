@@ -4945,7 +4945,7 @@ if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
   const seg=document.getElementById('themeSeg');
   if(!seg || !window.SkriblTheme) return;
   function sync(){
-    const mode=window.SkriblTheme.get();
+    const mode=window.SkriblTheme.mode();   // the CHOICE (system|dark|light), not the effective mode
     seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.theme===mode));
     if(window.SkriblSegSlider) window.SkriblSegSlider.place(seg);
   }

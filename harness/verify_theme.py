@@ -6,13 +6,15 @@ moved 179 neutral literals into `:root` so a second ramp could exist at all.
 This suite guards the four things that make that ramp a feature rather than a
 liability.
 
-1. IT IS OPT-IN. There is deliberately no `@media (prefers-color-scheme: light)`
-   rule. A first pass had one, and it flipped every user on a light desktop —
-   including this harness's headless Chromium, which reports `light` — into a
-   theme nobody had asked for. Following the OS is a product decision the owner
-   has not made, so the assertion here is that the default load is dark no
-   matter what the OS says. Both media preferences are emulated, because a rule
-   that only misfires under one of them is exactly what got shipped last time.
+1. IT FOLLOWS THE DEVICE UNTIL TOLD OTHERWISE (v292; outside review of v291,
+   SK-AUD-014, reversing v232). With nothing stored the chrome follows
+   `prefers-color-scheme`; an explicit dark or light ignores it, in both
+   directions. The resolution lives in the inline boot and lib/theme.js, NOT
+   in a `@media (prefers-color-scheme: light)` rule — the light ramp is one
+   block keyed on data-theme="light", and a media rule would be a second copy
+   of it to drift. Both OS preferences are emulated for each of the four
+   cases, because a rule that only misfires under one of them is exactly what
+   nearly shipped in v232.
 
 2. IT DOES NOT FLASH. The setting lives in localStorage, which no stylesheet can
    read. Every script in both templates is deferred (verify_surfaces.py pins
@@ -152,16 +154,17 @@ check("every ink in the chrome is a token, not a literal",
       or "a chromatic literal is a colour that cannot follow the theme, and it "
          "will not show up in a grey audit")
 
-check("no prefers-color-scheme rule flips the default for anyone",
+check("no prefers-color-scheme rule in the stylesheet: the ramp is one block, resolved by the boot",
       "prefers-color-scheme" not in re.sub(r"/\*.*?\*/", "", css, flags=re.S),
-      "following the OS would move every user on a light desktop to a theme "
-      "they never chose — light is a setting someone turns on")
+      "a media rule would be a second copy of the light ramp to drift — the OS "
+      "is followed by stamping data-theme, in _skribl_theme_boot.html and lib/theme.js")
 
 print("\nTHEME — both surfaces carry the same switch, wired to the same key")
 for name in ("skribl_editor.html", "skribl_flip.html"):
     html = (TPL / name).read_text(encoding="utf-8")
-    check(f"{name}: has a Theme row",
-          'id="themeSeg"' in html and ">Theme<" in html)
+    check(f"{name}: has a Theme row with System, Dark and Light",
+          'id="themeSeg"' in html and ">Theme<" in html
+          and 'data-theme="system"' in html and 'data-theme="dark"' in html and 'data-theme="light"' in html)
     check(f"{name}: stamps the theme before paint, inline and undeferred",
           "_skribl_theme_boot.html" in html,
           "a deferred script cannot beat the first paint")
@@ -217,23 +220,50 @@ with sync_playwright() as p:
     browser = p.chromium.launch()
 
     for label, path in SURFACES:
-        print(f"\nTHEME [{label}] — the default is dark whatever the OS says")
+        print(f"\nTHEME [{label}] — nothing stored follows the OS; a choice ignores it")
         for scheme in ("light", "dark"):
-            page = browser.new_page(viewport={"width": 1000, "height": 900},
-                                    color_scheme=scheme)
-            page.goto(BASE + path, wait_until="load")
-            page.wait_for_timeout(500)
-            page.evaluate("() => { for (const k of Object.keys(localStorage))"
-                          " if (k.indexOf('skribl') === 0) localStorage.removeItem(k); }")
-            page.reload(wait_until="load")
-            page.wait_for_timeout(700)
-            attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
-            bg = parse(page.evaluate(
-                "() => getComputedStyle(document.body).backgroundColor"))
-            check(f"{label}: an OS set to {scheme} still loads dark",
-                  attr is None and bg is not None and lum(bg) < 60,
-                  f"data-theme={attr!r} body luminance {lum(bg):.0f}")
-            page.close()
+            for stored, want in ((None, scheme), ("system", scheme), ("dark", "dark"), ("light", "light")):
+                page = browser.new_page(viewport={"width": 1000, "height": 900},
+                                        color_scheme=scheme)
+                page.goto(BASE + path, wait_until="load")
+                page.wait_for_timeout(400)
+                page.evaluate("() => { for (const k of Object.keys(localStorage))"
+                              " if (k.indexOf('skribl') === 0) localStorage.removeItem(k); }")
+                if stored:
+                    page.evaluate(f"(v) => localStorage.setItem('{KEY}', v)", stored)
+                page.reload(wait_until="load")
+                page.wait_for_timeout(700)
+                attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+                bg = parse(page.evaluate(
+                    "() => getComputedStyle(document.body).backgroundColor"))
+                _ok = (attr == "light" and bg is not None and lum(bg) > 150) if want == "light" \
+                      else (attr is None and bg is not None and lum(bg) < 60)
+                check(f"{label}: OS {scheme}, stored {stored or 'nothing'} -> {want}",
+                      _ok, f"data-theme={attr!r} body luminance {lum(bg):.0f}")
+                _mode = page.evaluate("() => window.SkriblTheme.mode()")
+                check(f"{label}: ...and the switch shows the CHOICE, {stored or 'system'}",
+                      _mode == (stored or "system") and page.evaluate(
+                          f"() => document.querySelector('#themeSeg button.on').dataset.theme") == (stored or "system"),
+                      f"mode={_mode!r}")
+                page.close()
+        # THE OS CHANGES ITS MIND while a system-following page is open.
+        page = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="dark")
+        page.goto(BASE + path, wait_until="load")
+        page.wait_for_timeout(400)
+        page.evaluate(f"() => localStorage.removeItem('{KEY}')")
+        page.reload(wait_until="load")
+        page.wait_for_timeout(600)
+        page.emulate_media(color_scheme="light")
+        page.wait_for_timeout(300)
+        check(f"{label}: a system-following page follows the OS when it changes",
+              page.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light",
+              "the attribute did not follow the media query's change event")
+        page.evaluate("() => window.SkriblTheme.set('dark')")
+        page.emulate_media(color_scheme="light")
+        page.wait_for_timeout(300)
+        check(f"{label}: ...and an explicit dark does not",
+              page.evaluate("() => document.documentElement.getAttribute('data-theme')") is None)
+        page.close()
 
         print(f"THEME [{label}] — the switch sets it, and it survives a reload")
         page = browser.new_page(viewport={"width": 1000, "height": 900})
@@ -493,8 +523,8 @@ with sync_playwright() as p:
           and page.evaluate(f"() => localStorage.getItem('{KEY}')") == "dark")
 
     print("\nTHEME — the player follows the URL when it is embedded, and only then")
-    # v288, the owner's call: standalone stays dark by default; an EMBEDDED
-    # player follows its host. An in-post box reads the host's tokens (verify_
+    # v288, the owner's call: an EMBEDDED player follows its host, and the URL
+    # beats everything else; v292: bare, it follows the OS like every page. An in-post box reads the host's tokens (verify_
     # inline pins that); an iframed /s/<id> cannot see the host's attribute or
     # its storage, so the host passes ?theme=light|dark and the boot script
     # stamps it before first paint. The player page never carried the boot
@@ -516,9 +546,13 @@ with sync_playwright() as p:
     def _body_lum(pg_):
         return lum(parse(pg_.evaluate("() => getComputedStyle(document.body).backgroundColor")))
 
-    for _q, _want, _why in (("", None, "no parameter: dark, whatever the OS says"),
+    # Every page here is opened with an OS set to LIGHT: bare, it follows the
+    # OS since v292 — so the bare case reads light, and the parameter cases
+    # show the URL winning over both the OS and the stored choice.
+    for _q, _want, _why in (("", "light", "no parameter: follows the OS, which says light"),
                             ("?theme=light", "light", "the host said light"),
-                            ("?theme=banana", None, "an unknown value is ignored"),
+                            ("?theme=banana", "light", "an unknown value is ignored, and the OS is followed"),
+                            ("?theme=dark", None, "the host said dark on a light OS"),
                             ("?theme=light&x=1", "light", "the parameter is read wherever it sits")):
         pg3 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")
         pg3.goto(BASE + _player + _q, wait_until="load")
@@ -554,8 +588,8 @@ with sync_playwright() as p:
           _attr(naked3) == "light", "the embed would flash dark before going light")
     naked3.close()
 
-    print("\nTHEME — a browser that refuses storage still renders")
-    page2 = browser.new_page(viewport={"width": 1000, "height": 900})
+    print("\nTHEME — a browser that refuses storage still renders, and follows the OS")
+    page2 = browser.new_page(viewport={"width": 1000, "height": 900}, color_scheme="light")
     page2.add_init_script("""
       Object.defineProperty(window, 'localStorage', {
         configurable: true,
@@ -565,9 +599,9 @@ with sync_playwright() as p:
     errs = []
     page2.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(page2, BASE, "/")
-    check("a page whose localStorage throws on ACCESS still loads dark",
-          page2.evaluate("() => document.documentElement.getAttribute('data-theme')") is None,
-          "; ".join(errs[:2]) or "falls back to the app as it has always looked")
+    check("a page whose localStorage throws on ACCESS still loads, following the OS (light here)",
+          page2.evaluate("() => document.documentElement.getAttribute('data-theme')") == "light",
+          "; ".join(errs[:2]) or "with no choice readable, the OS is the choice — in the boot AND the lib, or it flashes")
     check("...and the theme code did not throw",
           not [e for e in errs if "theme" in e.lower() or "storage is disabled" in e],
           "; ".join(errs[:2]))
