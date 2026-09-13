@@ -91,7 +91,11 @@ EDITOR_INK = """() => {
 
 with sync_playwright() as sp:
     b = sp.chromium.launch()
-    pg = b.new_page(viewport={"width": 1240, "height": 980})
+    # THE DARK THEME, EXPLICITLY (v292): the literals below are the dark ramp's amber. Since
+    # v292 a bare page follows the OS and headless Chromium says light, on which amber is
+    # rgb(138, 91, 0). The pin is the semantics (amber, not green, not red); measured on the
+    # ramp it was written for.
+    pg = b.new_page(viewport={"width": 1240, "height": 980}, color_scheme="dark")
 
     errs = []
     posts = []
@@ -327,7 +331,7 @@ with sync_playwright() as sp:
           tmpl.count("{{ music_glyph() }}") == 2,
           f"{tmpl.count(chr(123)*2 + ' music_glyph() ' + chr(125)*2)} call(s)")
 
-    pad = b.new_page(viewport={"width": 1180, "height": 900})
+    pad = b.new_page(viewport={"width": 1180, "height": 900}, color_scheme="dark")
     perrs = []
     pad.on("pageerror", lambda e: perrs.append(str(e)))
     browsing.goto(pad, BASE, "/")
