@@ -5224,6 +5224,9 @@ body.player-mode #canvas {
 .posted-empty { text-align: center; padding: 34px 16px; }
 .posted-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 5px; }
 .posted-empty-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+/* Above the list since v292 (outside review of v291, SK-AUD-020): the
+   browser-local truth is read BEFORE the list reads as a library. */
+.posted-foot-top { border-top: 0; border-bottom: 1px solid var(--hairline); }
 .posted-foot { border-top: 1px solid var(--hairline); padding: 10px 16px;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   font-size: 11px; color: var(--text-secondary); }

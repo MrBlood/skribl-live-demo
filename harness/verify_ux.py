@@ -1135,7 +1135,7 @@ with _sp204() as _p:
     check("V219: ...and it has a real box once the menu is open (a row nobody can reach is not a relocation)",
           _fl["w"] > 100 and _fl["h"] >= 40, str(_fl))
     check("V219: ...and it carries the subtitle that says what Flip Mode IS — the 40px icon could not",
-          "Draw a frame-by-frame animation" in _fl["text"], str(_fl))
+          "page by page" in _fl["text"] and "separate draft" in _fl["text"], str(_fl))
     pg.keyboard.press("Escape"); pg.wait_for_timeout(250)
 
     # v204-fix: at ~600px, recording must not let the tune button crowd the
@@ -1230,10 +1230,12 @@ with _sp204() as _p:
     # "Save draft" is the action, ".skribl" is a detail. Parity still holds:
     # both editors carry the same words, and neither puts "(.skribl)" back in
     # the label itself.
-    check("V269: Pad menu says 'Save draft' like Flip", has(pad_items, "Save draft"), str(pad_items))
-    check("V269: Pad menu says 'Open draft…' like Flip", has(pad_items, "Open draft"), str(pad_items))
-    check("V269: Flip menu says 'Save draft' / 'Open draft…' too",
-          has(flip_items, "Save draft") and has(flip_items, "Open draft"), str(flip_items))
+    # v292: a backup, not a draft — autosave is the persistence model, the file
+    # is the copy you keep or move.
+    check("V269: Pad menu says 'Save a backup' like Flip", has(pad_items, "Save a backup"), str(pad_items))
+    check("V269: Pad menu says 'Open a backup…' like Flip", has(pad_items, "Open a backup"), str(pad_items))
+    check("V269: Flip menu says 'Save a backup' / 'Open a backup…' too",
+          has(flip_items, "Save a backup") and has(flip_items, "Open a backup"), str(flip_items))
     check("V269: neither menu titles an action with '(.skribl)' any more",
           not has(pad_items, "(.skribl)") and not has(flip_items, "(.skribl)"),
           str([x for x in pad_items + flip_items if "(.skribl)" in x]))
@@ -2353,6 +2355,64 @@ with _sp() as _sh:
                     check(f"SHARE ({_name}): ...and Copy link is what it always was", _copy is True, f"copy={_copy}")
             _ctx.close()
     _shb.close()
+
+print("\nCOPY — one noun for the unit, a backup is a backup, and the two editors say how they relate")
+# Outside review of v291, SK-AUD-009/010/017/020. Flip said "page" on the
+# canvas and "frame" in the Tune drawer, the scrub bar and the export sheet;
+# a person learning holds and Draw-on was also translating two nouns for one
+# unit. The unit is a PAGE everywhere the person reads; "frames per second"
+# survives once, in Help, as the explanation of the fps pill. "Save draft"
+# downloaded a file and read as the persistence model, when autosave is;
+# it is a backup and says so. Your Skribls stated its browser-local truth
+# at the BOTTOM of the list, after the person had read the list as a
+# library; it says it first. And Help opens, on both editors, with one
+# sentence on how Pad and Flip relate.
+with _sp() as _cp:
+    _cb = _cp.chromium.launch()
+    _fp = _cb.new_page(viewport={"width": 1100, "height": 900})
+    browsing.goto(_fp, BASE, "/flip")
+    _fp.wait_for_timeout(600)
+    _fp.click("#tuneBtn"); _fp.wait_for_timeout(300)
+    _words = _fp.evaluate("""() => {
+      const out = [];
+      const hiddenUp = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { if (e.hidden || e.id === 'helpDrawer' || getComputedStyle(e).display === 'none') return true; } return false; };
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let n; while ((n = walker.nextNode())) { const t = n.textContent; if (/\\bframes?\\b/i.test(t) && !hiddenUp(n.parentElement)) out.push('text: ' + t.trim().slice(0, 60)); }
+      for (const el of document.querySelectorAll('[aria-label], [title]')) {
+        if (hiddenUp(el)) continue;
+        for (const a of ['aria-label', 'title']) { const v = el.getAttribute(a) || ''; if (/\\bframes?\\b/i.test(v)) out.push((el.id || el.tagName) + ' ' + a + ': ' + v.slice(0, 60)); }
+      }
+      return out; }""")
+    check("COPY (Flip): the editor's chrome says page, never frame — one noun for the unit",
+          not _words, "; ".join(_words[:6]))
+    _fp.click("#moreBtn"); _fp.wait_for_timeout(300)
+    _fp.click("#miInfo"); _fp.wait_for_timeout(500)
+    _help = _fp.evaluate("() => document.getElementById('helpDrawer').textContent.replace(/\\s+/g, ' ')")
+    check("COPY (Flip): Help explains fps as pages per second, once, and says how Pad and Flip relate",
+          "pages per second" in _help and "two ways to make a Skribl" in _help, _help[:200])
+    _fp.close()
+    _pp = _cb.new_page(viewport={"width": 1100, "height": 900})
+    browsing.goto(_pp, BASE, "/")
+    _pp.wait_for_timeout(600)
+    _pp.click("#menuBtn"); _pp.wait_for_timeout(400)
+    _items = _pp.evaluate("() => [...document.querySelectorAll('#menuSheet .menu-item')].map(b => b.textContent.replace(/\\s+/g, ' ').trim())")
+    check("COPY (Pad): the menu says Save a backup / Open a backup, not draft",
+          any("Save a backup" in x for x in _items) and any("Open a backup" in x for x in _items)
+          and not any("draft" in x.lower() for x in _items if "backup" in x.lower()), str(_items))
+    check("COPY (Pad): the Flip Mode row says it is a separate draft, page by page",
+          any("page by page" in x and "separate" in x for x in _items), str([x for x in _items if "Flip" in x]))
+    _pp.click("#helpItem"); _pp.wait_for_timeout(500)
+    _helpp = _pp.evaluate("() => document.getElementById('helpDrawer').textContent.replace(/\\s+/g, ' ')")
+    check("COPY (Pad): Help opens with how Pad and Flip relate", "two ways to make a Skribl" in _helpp, _helpp[:200])
+    _pp.keyboard.press("Escape"); _pp.wait_for_timeout(400)
+    _pp.click("#menuBtn"); _pp.wait_for_timeout(300)
+    _pp.click("#postedItem"); _pp.wait_for_timeout(500)
+    _order = _pp.evaluate("""() => { const f = document.querySelector('#postedDrawer .posted-foot'), l = document.getElementById('postedList');
+      if (!f || !l) return null; return { foot: f.getBoundingClientRect().top, list: l.getBoundingClientRect().top, text: f.textContent.trim().slice(0, 40) }; }""")
+    check("COPY (Pad): Your Skribls says 'saved in this browser only' ABOVE the list, before it reads as a library",
+          _order and _order["foot"] < _order["list"] and "browser" in _order["text"], str(_order))
+    _pp.close()
+    _cb.close()
 
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")

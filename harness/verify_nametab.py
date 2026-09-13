@@ -118,7 +118,7 @@ def run(page, label, path):
     save_open = page.evaluate("() => document.getElementById('nameShell').classList.contains('open')")
     check(f"[{label}] Save draft opens the name drawer (you name it as you save)", save_open)
     btn = page.evaluate("() => document.getElementById('nameDone').textContent")
-    check(f"[{label}] the drawer's button reads 'Save draft' on that path", btn == "Save draft", repr(btn))
+    check(f"[{label}] the drawer's button reads 'Save a backup' on that path", btn == "Save a backup", repr(btn))
 
 
 with sync_playwright() as p:
