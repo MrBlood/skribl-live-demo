@@ -438,6 +438,50 @@ with sync_playwright() as p:
           f"puts={pg5.evaluate('() => window.__puts')} {s['text']!r}")
     pg5.close()
 
+    print("\nPAD — media is a draft; a restore reads the store, and speaks only when it misses (v294 audit, PR 1)")
+    # AUDIT, finding 1: a photo or a track with no strokes was "nothing
+    # meaningful" — the draft was never written, the banner never offered, and
+    # the bytes already in IndexedDB were orphaned. Finding 2: a restore replayed
+    # the attach pipeline, whose first step wrote the same bytes to the store
+    # again (the write that hangs on a phone). Finding 3: the route amber was
+    # shown at the moment of restore, before the store had been asked — a false
+    # alarm flashed on every healthy restore.
+    pg6, box6 = pad_page("orig(k, v)")   # a working store; the hook counts puts
+    pg6.set_input_files("#musicInput", WAV); pg6.wait_for_timeout(4500)
+    check("Pad: a track with no strokes is saved as a draft",
+          pg6.evaluate("() => { const r = localStorage.getItem('skribl_autosave_v1'); return !!(r && JSON.parse(r).musicMeta && JSON.parse(r).musicMeta.name); }"),
+          "the draft slot is empty: media alone was 'nothing meaningful' and the bytes in the store are orphans")
+    pg6.reload(wait_until="load"); pg6.wait_for_timeout(1200)
+    offered = pg6.evaluate("() => { const b = document.getElementById('restoreBanner'); return !!b && !b.hidden; }")
+    check("Pad: ...and offered back on reload", offered, "no restore banner for a media-only draft")
+    rc6, rw6 = try_click(pg6, "#restoreConfirm")
+    pg6.wait_for_timeout(5000)
+    check("Pad: Restore brings a media-only draft's bytes back from the store",
+          rc6 and pg6.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"), rw6)
+    pg6.close()
+
+    # Findings 2 and 3, on a draft that restores today (a stroke plus the track).
+    pg7, box7 = pad_page("orig(k, v)")
+    stroke(pg7, box7, 120); pg7.wait_for_timeout(1800)
+    pg7.set_input_files("#musicInput", WAV); pg7.wait_for_timeout(4500)
+    pg7.reload(wait_until="load"); pg7.wait_for_timeout(1200)
+    pg7.evaluate("""() => { const orig = SkriblDraftStore.put.bind(SkriblDraftStore); window.__puts = 0;
+        SkriblDraftStore.put = (k, v) => { window.__puts++; return orig(k, v); }; window.__pillTexts = [];
+        setInterval(() => { const el = document.getElementById('autosaveStatus'); if (el && !el.hidden) window.__pillTexts.push(document.getElementById('autosaveStatusText').textContent); }, 100); }""")
+    rc7, rw7 = try_click(pg7, "#restoreConfirm")
+    pg7.wait_for_timeout(5000)
+    check("Pad: Restore brings the bytes back from the store",
+          rc7 and pg7.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"), rw7)
+    check("Pad: ...without writing them to the store again",
+          pg7.evaluate("() => window.__puts") == 0, f"puts={pg7.evaluate('() => window.__puts')} — the attach pipeline's first step is the write that hangs on a phone")
+    check("Pad: ...and the slot reads durable at once, so nothing is amber",
+          pg7.evaluate("() => mediaDraft.music") == "durable" and "partial" not in pg7.evaluate(STATE)["cls"],
+          f"{pg7.evaluate('() => mediaDraft.music')} {pg7.evaluate(STATE)['text']!r}")
+    texts = pg7.evaluate("() => window.__pillTexts")
+    check("Pad: a healthy restore never says the media is missing",
+          not any("re-add" in t.lower() for t in texts), f"pill read {sorted(set(texts))} during the restore")
+    pg7.close()
+
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()
 

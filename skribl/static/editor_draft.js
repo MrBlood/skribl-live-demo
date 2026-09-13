@@ -179,6 +179,16 @@ function _pendingPhotoLost() {
             && !(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName));
 }
 function _pendingMediaLost() { return _pendingMusicLost() || _pendingPhotoLost(); }
+// A photo or a track IS a draft (v294 audit, finding 1). The empty-state test
+// below asked only about ink, so a session with media and no strokes was
+// "nothing meaningful": never written, never offered back, and the bytes
+// already in IndexedDB became orphans. Flip has always counted media.
+function _mediaPresent() {
+  return !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
+            || (audioEl && audioEl._fileName)
+            || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta)
+            || (typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta));
+}
 if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
   pending: _pendingMediaLost,
   open: () => {
@@ -201,7 +211,7 @@ function writeAutosave() {
   // Nothing meaningful on the canvas AND nothing undone to preserve → clear any
   // stale save. (Keep it when redo is pending, so undoing to blank then reloading
   // can still redo the undone strokes.)
-  if (!hasContent && strokes.length === 0 && redoStack.length === 0) {
+  if (!hasContent && strokes.length === 0 && redoStack.length === 0 && !_mediaPresent()) {
     try {
       // Two fences before an empty state may clear the slot:
       //   1. OWNERSHIP — this session must have written real work here first.
@@ -337,7 +347,8 @@ function readAutosave() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     const hasDrawing = (data.strokes && data.strokes.length) || data.baseSnapshot;
-    return hasDrawing ? data : null;
+    const hasMedia = (data.photoMeta && data.photoMeta.name) || (data.musicMeta && data.musicMeta.name);
+    return (hasDrawing || hasMedia) ? data : null;
   } catch (e) {
     return null;
   }
@@ -471,12 +482,12 @@ function restoreAutosave(data) {
   pendingPhotoMeta = (data.photoMeta && data.photoMeta.name) ? data.photoMeta : null;
   refreshPendingCards();
 
-  const hadMedia = pendingMusicMeta || pendingPhotoMeta;
-  showToast(hadMedia ? 'Restored — re-add your media below' : 'Drawing restored', null);
-  // Amber at once, the same as Flip's restore: the record is waiting and the
-  // pill is the route to it. If the bytes come back from the store (below,
-  // through the real <input>), that change schedules a save which says 'saved'.
-  if (hadMedia) showAutosaveStatus('saved-no-media');
+  // The bytes are asked for next (reAddMediaFromStore, from the banner's
+  // Restore). The route amber is shown by the store lookup when it MISSES,
+  // not here: shown at this moment it was a false alarm flashed on every
+  // healthy restore (v294 audit, finding 3), teaching the user to ignore the
+  // real one.
+  showToast('Drawing restored', null);
 }
 
 // ---------- Autosave wiring ----------
@@ -575,14 +586,22 @@ function restoreAutosave(data) {
 
 
 // ---------- Media bytes: IndexedDB capture, removal, and restore ----------
-// Bytes are stored ONCE, at attach time — they only change when the user picks
-// a different file, so writing them on every autosave would be pure waste.
-// Capture-phase listeners see the File before any other handler can clear the
-// input's value. A put that resolves marks the slot durable; a put that
-// rejects marks it failed, which keeps the amber pill up and arms the guard.
+// Bytes are written when the user picks a file, and written AGAIN on later
+// saves while that write has failed (storeMediaBytes, above) — never on every
+// autosave, which would be pure waste, and never on a restore, whose bytes
+// came out of the store a moment ago. Capture-phase listeners see the File
+// before any other handler can clear the input's value. A put that resolves
+// marks the slot durable; one that rejects or hangs marks it failed, which
+// keeps the amber pill up and arms the guard.
 
 const _MEDIA_INPUTS = { photo: 'photoInput', music: 'musicInput' };
 const _MEDIA_REMOVES = { photo: 'photoRemove', music: 'musicRemove' };
+// Set by reAddMediaFromStore for the one change event it dispatches: the File
+// on the input CAME FROM the store, so the slot is durable by definition and
+// the attach pipeline's write is skipped. Until v294 a restore re-wrote a
+// multi-megabyte blob that was already there — on a phone, the write that
+// hangs — and sat amber for the deadline over a session that was fine.
+const _fromStore = { photo: false, music: false };
 
 function _refreshMediaPill() {
   // Only speak when a save has already spoken — this refines the pill the
@@ -600,6 +619,7 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     _mediaFile[kind] = file;
+    if (_fromStore[kind]) { _fromStore[kind] = false; mediaDraft[kind] = 'durable'; _refreshMediaPill(); return; }
     mediaDraft[kind] = 'none';   // a fresh file is a fresh attempt, never a hung one's shadow
     storeMediaBytes(kind);
   }, true);  // capture: run even if a later handler clears the input
@@ -612,22 +632,29 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
 });
 
 function reAddMediaFromStore(kind, inputId, meta) {
-  if (!window.SkriblDraftStore || !meta || !meta.name) return;
+  if (!meta || !meta.name) return;
+  // Every way the bytes can fail to come back ends here: the pending record
+  // stays, and the pill says so and is the route to the re-add card. This is
+  // the ONE place the route amber is raised on restore.
+  const missed = () => { showAutosaveStatus('saved-no-media'); };
+  if (!window.SkriblDraftStore) { missed(); return; }
   SkriblDraftStore.get('pad:' + kind).then((rec) => {
     // The stored bytes must be THE file the metadata describes — a name
     // mismatch means the draft and the blob are from different sessions,
     // and re-attaching the wrong file is worse than the amber pill.
-    if (!rec || !rec.blob || rec.name !== meta.name) return;
+    if (!rec || !rec.blob || rec.name !== meta.name) { missed(); return; }
     const input = document.getElementById(inputId);
-    if (!input) return;
+    if (!input) { missed(); return; }
     let file;
     try { file = new File([rec.blob], rec.name, { type: rec.type || rec.blob.type || '' }); }
-    catch (e) { return; }
+    catch (e) { missed(); return; }
     const dt = new DataTransfer();
     dt.items.add(file);
     input.files = dt.files;
+    _fromStore[kind] = true;
     input.dispatchEvent(new Event('change', { bubbles: true }));
-  }).catch(() => {});
+    _fromStore[kind] = false;   // consumed by the capture listener above; never left armed
+  }).catch(() => { missed(); });
 }
 
 // ---------- Flush on leave: the debounce is never a loss window ----------
