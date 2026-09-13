@@ -77,7 +77,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span class="btn-label">Post<span class="post-long"> to Skribl</span></span>
       </button>
-      <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options">
+      <button type="button" id="menuBtn" class="icon-btn" title="More" aria-label="More options" aria-haspopup="dialog" aria-controls="menuSheet" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
       </button>
     </div>
@@ -363,7 +363,7 @@
           </button>{# The shelf's overflow cell. HIDDEN while every tool fits on the
             shelf, which today is all three of them — so this changes nothing you
             can see until a fourth tool is registered. lib/toolshelf.js owns the
-            hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
+            hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-controls="toolTray" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"/></svg>
             <span class="tool-btn-label">More</span>
           </button>        </div>

@@ -36,6 +36,7 @@ function openMenu() {
   if (window._skriblSyncHintToggle) window._skriblSyncHintToggle();
   if (window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
   menuOverlay.hidden = false;
+  if (menuBtn) menuBtn.setAttribute('aria-expanded', 'true');   // the popup contract (v292): the opener says so
   requestAnimationFrame(() => {
     menuOverlay.classList.add('open');
     // AFTER the unhide, or focus() lands on a hidden node and does nothing.
@@ -47,6 +48,7 @@ function openMenu() {
 
 function closeMenu(instant) {
   menuOverlay.classList.remove('open');
+  if (menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
   clearTimeout(menuCloseTimer);
   // Return focus to whatever opened it. Before this, closing left focus
   // wherever it had been when the sheet appeared — usually nowhere.
