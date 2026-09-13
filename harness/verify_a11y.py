@@ -288,6 +288,9 @@ with sync_playwright() as p:
         # sheet are all still the product's.
         ("/", "leaveSheet"):   ("js:window.flushPadDraft = () => false"
                                   "|click:#menuBtn|click:#flipBtn", None),
+        # Flip's copy (v294 audit, finding 6): same stub, its own predicate.
+        ("/flip", "leaveSheet"): ("js:window.mediaBytesAtRisk = () => true"
+                                  "|click:#moreBtn|click:#padBtn", None),
         ("/", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present("
                                   "{key:'test-recovery-key-abc123'})", None),
         # The import half of the recovery key, and the guard that stands

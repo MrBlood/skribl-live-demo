@@ -405,6 +405,19 @@
   </div>
 
   <!-- Autosave status pill (Pad component) + export progress overlay -->
+{# Leave confirm — the Pad's, for the same reason (v294 audit, finding 6):
+   the media bytes go to IndexedDB in a write that can die with the page, so
+   with the store broken they are exactly the work at risk. Shown only then;
+   durable media leaves freely. TOP LEVEL, outside #moreMenu, as on the Pad. #}
+<div class="leave-scrim" id="leaveScrim" hidden></div>
+<div class="leave-sheet" id="leaveSheet" role="dialog" aria-modal="true" aria-labelledby="leaveSheetTitle" hidden>
+  <h2 class="leave-title" id="leaveSheetTitle">Leave Flip?</h2>
+  <p class="leave-body">Your music or background image couldn&rsquo;t be saved to your browser&rsquo;s storage &mdash; if you leave now, it may be lost.</p>
+  <div class="leave-actions">
+    <button type="button" class="leave-btn" id="leaveCancel">Keep drawing</button>
+    <button type="button" class="leave-btn danger" id="leaveGo">Leave</button>
+  </div>
+</div>
   <div id="autosaveStatus" class="autosave-status" hidden><span class="autosave-dot"></span><span id="autosaveStatusText">Saved</span></div>
   <div class="flip-export" id="flipExport" hidden>
     <div class="flip-export-card">

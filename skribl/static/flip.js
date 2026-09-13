@@ -7777,6 +7777,48 @@ document.querySelectorAll('#helpDrawer .accordion-header').forEach(header=>{
     if(body && body.classList.contains('accordion-body')) body.classList.toggle('open', isOpen); });
 });
 
+/* ---- leaving for the Pad: the guard the Pad has, for the same reason ----
+   v294 audit, finding 6. Flip had no guard "because it persists its media" —
+   true while the bytes went to localStorage, and not since the spill: they go
+   to IndexedDB in a write that can die with the page. So: durable media leaves
+   freely; a write in flight gets a moment to land; media the store could not
+   hold gets the sheet. The predicate is a top-level function so a harness can
+   stub it the way it stubs the Pad's flush. */
+function mediaBytesAtRisk(){
+  flushFlipDraft();
+  return !!(bgImage || musicData) && (_mediaSpillState === 'saving' || _mediaSpillState === 'failed');
+}
+(function guardPadNavigation(){
+  const padBtn=document.getElementById('padBtn'), sheet=document.getElementById('leaveSheet');
+  const go=document.getElementById('leaveGo'), cancel=document.getElementById('leaveCancel'), scrim=document.getElementById('leaveScrim');
+  if(!padBtn||!sheet||!go||!cancel) return;
+  const GUARD_WAIT_MS=1500;
+  const inFlight=()=>_mediaSpillState==='saving';
+  let released=false, waiting=false;
+  const open=()=>{ sheet.hidden=false; if(scrim) scrim.hidden=false;
+    if(window.SkriblModal) window.SkriblModal.open(sheet, padBtn); cancel.focus(); };
+  const close=()=>{ sheet.hidden=true; if(scrim) scrim.hidden=true; if(window.SkriblModal) window.SkriblModal.close(sheet); };
+  const leave=()=>{ released=true; window.location.href=padBtn.getAttribute('href'); };
+  padBtn.addEventListener('click',(e)=>{
+    if(released) return;
+    if(!mediaBytesAtRisk()) return;
+    e.preventDefault(); e.stopPropagation();
+    closeMenu();   // the row lives in the ⋯ menu; the confirm must not stack on it
+    if(inFlight() && !waiting){
+      waiting=true; const started=Date.now();
+      const poll=()=>{
+        if(!inFlight() && _mediaSpillState==='durable'){ waiting=false; leave(); return; }
+        if(!inFlight() || Date.now()-started>GUARD_WAIT_MS){ waiting=false; open(); return; }
+        setTimeout(poll,50); };
+      poll(); return;
+    }
+    open();
+  });
+  cancel.addEventListener('click', close);
+  go.addEventListener('click', leave);
+  sheet.addEventListener('keydown',(e)=>{ if(e.key==='Escape'){ e.stopPropagation(); close(); } });
+})();
+
 /* ---- boot ---- */
 const restored = tryRestore();
 onionEl.classList.toggle('active', onion); onionEl.setAttribute('aria-checked', String(onion));

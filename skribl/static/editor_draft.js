@@ -695,14 +695,15 @@ document.addEventListener('visibilitychange', () => {
   //       direction doc's intended end state. With broken storage it fires
   //       for exactly the work that would be lost.
   const atRisk = () => !flushPadDraft();
-  let released = false;
-
-  flipBtn.addEventListener('click', (e) => {
-    if (released || !atRisk()) return;
-    e.preventDefault();
-    // Flip now lives IN the overflow menu, so that menu is open at this moment.
-    // Leaving it up would stack the confirm on top of it.
-    if (typeof closeMenu === 'function') closeMenu(true);
+  // A store write still in flight is not yet at risk and not yet safe: it gets
+  // this long to land before the sheet is the answer (v294 audit, finding 6).
+  // "Not durable" used to include 'saving', so the sheet opened for up to the
+  // twelve-second deadline after every attach on a phone — a false alarm on
+  // the common path, which teaches people to tap Leave unread.
+  const GUARD_WAIT_MS = 1500;
+  const writeInFlight = () => mediaDraft.photo === 'saving' || mediaDraft.music === 'saving';
+  let released = false, waiting = false;
+  const openSheet = () => {
     leaveSheet.hidden = false;
     const scrim = document.getElementById('leaveScrim');
     if (scrim) scrim.hidden = false;
@@ -712,18 +713,36 @@ document.addEventListener('visibilitychange', () => {
     // rather than whichever button the markup happens to list first.
     if (window.SkriblModal) window.SkriblModal.open(leaveSheet, flipBtn);
     leaveCancel.focus();   // focus the SAFE choice
+  };
+  const leave = () => { released = true; window.location.href = flipBtn.getAttribute('href'); };
+
+  flipBtn.addEventListener('click', (e) => {
+    if (released || !atRisk()) return;
+    e.preventDefault();
+    // Flip now lives IN the overflow menu, so that menu is open at this moment.
+    // Leaving it up would stack the confirm on top of it.
+    if (typeof closeMenu === 'function') closeMenu(true);
+    if (writeInFlight() && !waiting) {
+      waiting = true;
+      const started = Date.now();
+      const poll = () => {
+        if (!writeInFlight() && draftIsDurable()) { waiting = false; leave(); return; }
+        if (!writeInFlight() || Date.now() - started > GUARD_WAIT_MS) { waiting = false; openSheet(); return; }
+        setTimeout(poll, 50);
+      };
+      poll();
+      return;
+    }
+    openSheet();
   });
   const close = () => { leaveSheet.hidden = true;
     const scrim = document.getElementById('leaveScrim');
     if (scrim) scrim.hidden = true;
     if (window.SkriblModal) window.SkriblModal.close(leaveSheet); };
   leaveCancel.addEventListener('click', close);
-  leaveGo.addEventListener('click', () => {
-    released = true;
-    // Navigate directly rather than re-clicking the anchor: a synthetic click
-    // re-enters this handler, and `released` is all that stops the loop.
-    window.location.href = flipBtn.getAttribute('href');
-  });
+  // Navigate directly rather than re-clicking the anchor: a synthetic click
+  // re-enters this handler, and `released` is all that stops the loop.
+  leaveGo.addEventListener('click', leave);
   leaveSheet.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.stopPropagation(); close(); }
   });
