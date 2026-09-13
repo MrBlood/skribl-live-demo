@@ -515,7 +515,9 @@ function saveNow(){
     // Pad's sessionOwnedDraft in editor_draft.js; found by the v222 release
     // aggregate when the flush ate verify_strokegroups' planted draft.)
     if (!_sessionOwnedDraft) return;
-    try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {} return;
+    try { localStorage.removeItem(AUTOSAVE_KEY); } catch (_) {}
+    dropStoredMedia();   // the draft is gone; its bytes go with it
+    return;
   }
   _sessionOwnedDraft = true;
   // v231: MEDIA BYTES NEVER GO TO localStorage. They used to, and the spill to
@@ -575,6 +577,10 @@ function saveNow(){
       // this write really did omit nothing. The record is about media the
       // session is still missing, which is a fact about now, not about history.
       showAutosaveStatus((pendingPhotoMeta || pendingMusicMeta) ? 'saved-no-media' : 'saved');
+      // Reaching here means the document has NO media: whatever is in the
+      // store describes media this document no longer has (v294, audit
+      // finding 7). Removing the last track or image lands here.
+      dropStoredMedia();
       return;
     } catch (e) {
       if (!isQuotaError(e)) { console.error('[skribl] autosave failed:', e); showAutosaveStatus('failed'); return; }
@@ -604,6 +610,7 @@ function saveNow(){
   const stamp = Date.now();
   if (window.SkriblDraftStore) {
     _mediaSpillState = 'saving';
+    _mediaRecordInStore = true;   // a put is on its way; the record is ours to clean up
     // A PUT THAT NEVER SETTLES IS NOT A PUT THAT IS STILL WORKING. IndexedDB on
     // iOS Safari can accept a multi-megabyte write and then neither resolve nor
     // reject it, and nothing below has a timeout of its own: the promise simply
@@ -704,6 +711,18 @@ function saveNow(){
 // made it to IndexedDB. 'failed' means the amber pill is telling the truth
 // the old way: settings survive, bytes do not.
 let _mediaSpillState = 'none';
+// IS THERE A RECORD IN THE STORE? Set when this session spills, and at restore
+// when the lite record says the bytes are in IndexedDB. Nothing ever deleted
+// flip:draft before v294 (audit finding 7): remove the track, or clear
+// everything, and the lite record forgot the media while the payload — frames
+// and bytes together — sat in the store until the next save that happened to
+// have media. The bytes go when the media goes now, through this one owner.
+let _mediaRecordInStore = false;
+function dropStoredMedia(){
+  if(!_mediaRecordInStore || !window.SkriblDraftStore) return;
+  _mediaRecordInStore = false;
+  SkriblDraftStore.del('flip:draft').catch(()=>{});
+}
 // For lib/report.js: the media store as this session sees it.
 window.skriblMediaStoreState = () => 'spill ' + _mediaSpillState;
 // Flush NOW — the 800ms debounce must never be a loss window (review P0-2).
@@ -818,6 +837,7 @@ function tryRestore(){
       // stale copy. On any miss, the pendingMeta re-add cards above are the
       // fallback, exactly as before.
       if (d.mediaInIdb && window.SkriblDraftStore) {
+        _mediaRecordInStore = true;   // written by an earlier session; still ours to clean up
         SkriblDraftStore.get('flip:draft').then((rec) => {
           if (!rec || !rec.json) return;
           // The guard here USED to be `localStorage.getItem(KEY) !== raw` — a
