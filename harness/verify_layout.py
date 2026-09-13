@@ -133,6 +133,13 @@ HEADER_GEOMETRY = """() => {
 def measure(ctx, path, width, height=800, evaluate=GEOMETRY, prepare=None):
     pg = ctx.new_page()
     pg.set_viewport_size({"width": width, "height": height})
+    # A CLEAN EDITOR FOR EVERY MEASUREMENT. These pages share one context, so
+    # the draft one case leaves behind is in storage for the next — and since
+    # v294 the Pad APPLIES its draft at boot instead of offering it in a banner
+    # (audit finding 5), which put the "review" state's page into a restored
+    # take with no Record button to click. An init script runs before the page
+    # scripts, so the slot is empty before the restore would read it.
+    pg.add_init_script("try { localStorage.removeItem('skribl_autosave_v1'); } catch (e) {}")
     pg.goto(BASE + path, wait_until="load")
     if prepare:
         prepare(pg)

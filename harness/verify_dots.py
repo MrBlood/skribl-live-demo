@@ -108,7 +108,7 @@ with sync_playwright() as p:
     pg.mouse.up(); pg.wait_for_timeout(1800)
     pg.set_input_files("#musicInput", WAV); pg.wait_for_timeout(4500)
     pg.reload(wait_until="load"); pg.wait_for_timeout(2000)
-    pg.locator("#restoreConfirm").click(); pg.wait_for_timeout(4000)   # Pad gates restore behind a banner; IDB re-add + decode
+    pg.wait_for_timeout(4000)   # restore at boot (v294); IDB re-add + decode
     # CONTRACT CHANGE (v222): restore used to leave an amber pending dot —
     # the bytes were gone by design and re-adding was the user's job. The
     # bytes now come back from IndexedDB through the real change pipeline,

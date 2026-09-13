@@ -405,10 +405,10 @@ with sync_playwright() as p:
           pgm.evaluate("() => document.getElementById('autosaveStatus').hidden") is True and pgm.evaluate("() => strokes.length") == strokes_m,
           f"hidden={pgm.evaluate('() => document.getElementById(\'autosaveStatus\').hidden')} strokes {strokes_m} -> {pgm.evaluate('() => strokes.length')}")
     pgm.close()
-    pg3.reload(wait_until="load"); pg3.wait_for_timeout(1200)
-    rc, rwhy = try_click(pg3, "#restoreConfirm")
-    check("Pad: the restore banner offers the draft back", rc, rwhy)
-    pg3.wait_for_timeout(1500)
+    pg3.reload(wait_until="load"); pg3.wait_for_timeout(2700)
+    check("Pad: the draft is applied at boot, with no banner (v294)",
+          pg3.evaluate("() => { const b = document.getElementById('restoreBanner'); return (!b || b.hidden) && strokes.length > 0; }"),
+          "a banner, or an empty canvas, on the return visit")
     s = pg3.evaluate(STATE)
     check("Pad: amber immediately on restore", "partial" in s["cls"], f"{s['text']!r} cls={s['cls']!r}")
     pill3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
@@ -517,27 +517,27 @@ with sync_playwright() as p:
     check("Pad: a track with no strokes is saved as a draft",
           pg6.evaluate("() => { const r = localStorage.getItem('skribl_autosave_v1'); return !!(r && JSON.parse(r).musicMeta && JSON.parse(r).musicMeta.name); }"),
           "the draft slot is empty: media alone was 'nothing meaningful' and the bytes in the store are orphans")
-    pg6.reload(wait_until="load"); pg6.wait_for_timeout(1200)
-    offered = pg6.evaluate("() => { const b = document.getElementById('restoreBanner'); return !!b && !b.hidden; }")
-    check("Pad: ...and offered back on reload", offered, "no restore banner for a media-only draft")
-    rc6, rw6 = try_click(pg6, "#restoreConfirm")
-    pg6.wait_for_timeout(5000)
-    check("Pad: Restore brings a media-only draft's bytes back from the store",
-          rc6 and pg6.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"), rw6)
+    pg6.reload(wait_until="load"); pg6.wait_for_timeout(6000)
+    check("Pad: ...and back at boot, bytes and all, for a media-only draft",
+          pg6.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"),
+          "the track did not come back from the store on the return visit")
     pg6.close()
 
     # Findings 2 and 3, on a draft that restores today (a stroke plus the track).
     pg7, box7 = pad_page("orig(k, v)")
     stroke(pg7, box7, 120); pg7.wait_for_timeout(1800)
     pg7.set_input_files("#musicInput", WAV); pg7.wait_for_timeout(4500)
-    pg7.reload(wait_until="load"); pg7.wait_for_timeout(1200)
-    pg7.evaluate("""() => { const orig = SkriblDraftStore.put.bind(SkriblDraftStore); window.__puts = 0;
-        SkriblDraftStore.put = (k, v) => { window.__puts++; return orig(k, v); }; window.__pillTexts = [];
-        setInterval(() => { const el = document.getElementById('autosaveStatus'); if (el && !el.hidden) window.__pillTexts.push(document.getElementById('autosaveStatusText').textContent); }, 100); }""")
-    rc7, rw7 = try_click(pg7, "#restoreConfirm")
-    pg7.wait_for_timeout(5000)
-    check("Pad: Restore brings the bytes back from the store",
-          rc7 and pg7.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"), rw7)
+    # The restore runs at boot now, so the instruments go in BEFORE the page
+    # scripts: a setter trap catches the store the moment lib/draftstore.js
+    # defines it, and the pill is sampled from the first frame.
+    pg7.add_init_script("""(() => { let real;
+        Object.defineProperty(window, 'SkriblDraftStore', { configurable: true, get: () => real,
+          set: (v) => { const orig = v.put.bind(v); window.__puts = 0; v.put = (k, val) => { window.__puts++; return orig(k, val); }; real = v; } });
+        window.__pillTexts = [];
+        setInterval(() => { const el = document.getElementById('autosaveStatus'); if (el && !el.hidden) window.__pillTexts.push(document.getElementById('autosaveStatusText').textContent); }, 100); })();""")
+    pg7.reload(wait_until="load"); pg7.wait_for_timeout(6000)
+    check("Pad: the bytes are back from the store at boot",
+          pg7.evaluate("() => !!(audioEl && audioEl._fileName === 'boombap.wav')"), "no track on the return visit")
     check("Pad: ...without writing them to the store again",
           pg7.evaluate("() => window.__puts") == 0, f"puts={pg7.evaluate('() => window.__puts')} — the attach pipeline's first step is the write that hangs on a phone")
     check("Pad: ...and the slot reads durable at once, so nothing is amber",
@@ -567,12 +567,15 @@ with sync_playwright() as p:
     pg8.wait_for_timeout(2000)
     saved8 = pg8.evaluate("() => { const d = JSON.parse(localStorage.getItem('skribl_autosave_v1') || '{}'); return d.photoMeta ? [d.photoMeta.fit, d.photoMeta.opacity] : null; }")
     check("Pad: the adjustments are in the draft", saved8 == ["contain", 0.4], str(saved8))
-    pg8.reload(wait_until="load"); pg8.wait_for_timeout(1200)
-    pg8.evaluate("() => { window.skriblDecodeCheckImage = (f) => new Promise(r => setTimeout(() => r(null), 700)); }")
-    r8, r8why = try_click(pg8, "#restoreConfirm"); pg8.wait_for_timeout(3500)
+    # The slow decode check has to be in place before the boot restore runs;
+    # media_validation.js assigns the real one at load, so a setter trap
+    # replaces whatever is assigned.
+    pg8.add_init_script("""Object.defineProperty(window, 'skriblDecodeCheckImage', { configurable: true,
+        get: () => ((f) => new Promise(r => setTimeout(() => r(null), 700))), set: () => {} });""")
+    pg8.reload(wait_until="load"); pg8.wait_for_timeout(4700)
     got8 = pg8.evaluate("() => [photoFit, photoOpacityVal_, photoBgImg.style.display, photoBgImg.style.opacity]")
     check("Pad: after a slow decode the restored photo is showing",
-          r8 and got8[2] == "block", f"{r8why} {got8}")
+          got8[2] == "block", f"{got8}")
     check("Pad: ...with its saved fit and opacity, not the defaults",
           got8[0] == "contain" and abs(got8[1] - 0.4) < 0.01 and got8[3] == "0.4", str(got8))
     pg8.close()
