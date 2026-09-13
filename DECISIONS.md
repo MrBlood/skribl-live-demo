@@ -7338,3 +7338,77 @@ the two failures apart; the previous tree sat 12 B under.
 **What is left from the audit.** Its structural note S1 -- Flip has a back
 arrow in its header and Pad has none -- is a product call about how the two
 editors relate, not a defect with a measurement, and stands as written.
+
+## v291 -- the outside review of v290: zoom, the narrowest widths, and what the DOM says it is
+
+An outside reviewer read the v290 packet -- the diff, the record, the
+measurements -- without a running instance, and returned ten findings. Five
+were concrete, each verifiable in the DOM or the stylesheet, and they are this
+tier: three squash-merged PRs, each check red on the tree before its fix and
+red again under mutation of its own component. The other five are product
+questions -- how Pad and Flip relate, what a first run should teach, whether
+the microcopy explains enough -- and are answered in the conversation, not the
+tree; a blind audit of a running instance is the owner's to commission.
+
+**Every page let a person zoom, except the one that said not to (finding 1,
+graded High).** Flip's viewport meta carried `maximum-scale=1, user-scalable=no`
+-- a relic of the days when a pinch on the canvas also zoomed the page -- and
+so on a phone nothing on Flip could be enlarged, which WCAG 1.4.4 does not
+allow. Pad's meta never said it. The clause is gone; the canvas already owns
+its own pinch through pointer events, and `touch-action` is what keeps the
+page still under a drawing finger, not the meta. verify_a11y's section 11
+reads the meta on all five pages -- both editors, the player, the library and
+the host feed -- and refuses `user-scalable=no` or a `maximum-scale` of 1,
+then lays each out at 640x450 with a device scale factor of 2, which is 200%
+browser zoom on a 1280x900 window, and asserts no horizontal overflow and the
+primary control still on screen.
+
+**The hit census stopped at 390 (finding 5).** Section 10 measured at 1280
+and 390; the reviewer counted 30-31px header controls at 360 and 320 from the
+stylesheet, and was right that nothing pinned them. The census now walks
+1280, 390, 360 and 320, and the two new widths found three things: the back
+link at the header's left end had no band at all and the tiers shrink it to
+32 and 30px; the More button's band inherited the button's 50% radius, so on
+a 44px circle the point 21.5px below the centre sat on the rim and missed;
+and the tool pills at 320 are 31px wide, so 31 plus the 4px reach on each
+end fell short of 44. Each got a rounded-square band the way the tree already
+does it. At the narrowest tier `.flip-tools` deliberately holds
+its tool buttons to a 40px band -- the +2px that would make 44 wraps the row
+at 320, measured in v289 -- so the census carries an exemption that matches
+that mechanism: below 360, `.flip-tools` is sampled at 19.5px, not 21.5. An
+exemption written as "skip Flip's toolbar" would have hidden a regression on
+the same row; this one names the tier and the number.
+
+**Segmented controls said nothing about themselves (findings 7 and 8).** Tips
+and Theme in the ⋯ menu were role="group" with a name; Canvas, in the same
+three rows, was four bare buttons. A census of the DOM found six more the same
+way -- grid density on both editors, Flip's fps and onion depth, the loop-view
+focus seg both editors build in script -- while the export sheet's Size and
+Loops were already named through aria-labelledby. Every seg that holds buttons
+now carries role="group" and an accessible name. And grid density read S / M /
+L, which a person could take for canvas size or line width, and a LARGE
+density gives SMALLER cells; it says Coarse / Medium / Fine, which is what the
+data attribute underneath already said. Section 12 walks both editors: every
+seg is a group named by aria-label or by aria-labelledby resolving to text --
+the mechanism, since the export rows are named that way -- and no option is a
+single letter standing in for a word. Numbers are values and allowed.
+
+**Flip's More menu was a menu in name only (finding 6).** role="menu" over
+rows a menu does not admit -- Tips, Theme and Canvas are switches and segs,
+not menu items -- and no focus management: Tab walked out into the page
+underneath, closing left focus wherever it had wandered. Pad's #menuSheet, the
+same design since v290, is a dialog. Now Flip's is too: role="dialog",
+aria-modal, lib/modalfocus.js in openMenu and out in closeMenu, so every door
+-- scrim, grabber, outside click, Escape -- hands focus back to the More
+button. The eight role="menuitem" are gone, and so is the one Pad's dialog had
+kept on its Flip Mode row. The modal census walks #moreMenu by recipe; under
+mutation of the open call focus lands on penToolBtn. Section 12 also asserts
+no menuitem outside a menu, by role and closest(): the page-ops menu on the
+strip is a real menu and keeps its items.
+
+**A note on the instrument.** Two of the reviewer's five concrete findings
+were things the harness had measured at one width and not another (the
+census) or in one editor and not the other (the modal census, before v290).
+The pattern is the one CLAUDE.md records: a check that samples proves the
+sample. Where a property is meant to hold everywhere, the census now names
+every width and every editor it holds on.
