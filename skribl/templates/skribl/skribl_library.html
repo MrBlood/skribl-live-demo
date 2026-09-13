@@ -72,6 +72,15 @@
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .14em; font-size: 15px; }
     .brand .mark { display: flex; align-items: center; }
     .brand .mark .brand-mark { height: 21px; width: auto; display: block; overflow: visible; }
+    /* THE MARK'S INK. _skribl_brand_mark.html strokes with a gradient whose two
+       stops carry these classes, and styles.css colours them; this page does
+       not load styles.css (by design, above), so without these two lines the
+       stops fall to the SVG default and the signature paints BLACK on the dark
+       ground (owner, v294, from a phone). Same tokens as styles.css's rules;
+       verify_library reads the computed stop colours on every page that carries
+       the mark. */
+    .brand-grad-a { stop-color: var(--accent); }
+    .brand-grad-b { stop-color: var(--accent-2); }
     .brand .tag {
       font-weight: 700; letter-spacing: .2em; font-size: 12px;
       text-transform: uppercase; color: var(--text-2);

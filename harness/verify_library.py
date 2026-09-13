@@ -287,6 +287,36 @@ with sync_playwright() as sp:
     check("no document still calls /library a page of demo tiles",
           not stale, ", ".join(stale))
 
+    print("\nBRAND — the mark is drawn in the accent on every page that carries it")
+    # Owner, v294, from a phone: on /library the skribl mark top-left was
+    # BLACK on the dark ground. The mark is one partial stroked with a
+    # gradient whose two stops carry .brand-grad-a / .brand-grad-b, and those
+    # classes are coloured only in styles.css. The library inlines its own
+    # stylesheet (host-independent, CSP-safe) and never carried the two rules,
+    # so the stops fell to the SVG default. Keyed by ROUTE: one partial is not
+    # one paint. The reference is what `color: var(--accent)` computes to on
+    # the same page, read from a probe element, so a page that lacks the token
+    # fails the same way a page that lacks the rule does.
+    GRAD = """() => { const a = document.querySelector('.brand-grad-a'), b2 = document.querySelector('.brand-grad-b');
+      if (!a || !b2) return null;
+      const probe = document.createElement('i'); probe.style.color = 'var(--accent)'; document.body.appendChild(probe);
+      const probe2 = document.createElement('i'); probe2.style.color = 'var(--accent-2)'; document.body.appendChild(probe2);
+      const out = { a: getComputedStyle(a).stopColor, b: getComputedStyle(b2).stopColor,
+                    accent: getComputedStyle(probe).color, accent2: getComputedStyle(probe2).color };
+      probe.remove(); probe2.remove(); return out; }"""
+    for _route in ("/", "/flip", f"/s/{ids[0]}", "/library"):
+        _bp = b.new_page(viewport={"width": 390, "height": 844})
+        browsing.goto(_bp, BASE, _route)
+        _bp.wait_for_timeout(500)
+        _g = _bp.evaluate(GRAD)
+        check(f"{_route}: the brand mark is on the page", bool(_g),
+              "both gradient stops found" if _g else "no .brand-grad-a/.brand-grad-b stops found")
+        if _g:
+            check(f"{_route}: its gradient runs accent to accent-2, not the SVG default black",
+                  _g["a"] == _g["accent"] and _g["b"] == _g["accent2"] and _g["a"] != "rgb(0, 0, 0)",
+                  f"stops {_g['a']} -> {_g['b']}; accent {_g['accent']} -> {_g['accent2']}")
+        _bp.close()
+
     b.close()
 
 passed = sum(1 for ok, _ in results if ok)
