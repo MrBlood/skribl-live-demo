@@ -508,11 +508,17 @@ with sync_playwright() as p:
         check(f"{_name}: every range input carries the shared slider styling",
               info["bare"] == [],
               f"{info['bare']} fall back to the UA control out of {info['total']}")
-        check(f"{_name}: the document declares a dark color-scheme, so anything "
+        # The theme is whatever the OS says until chosen (v292), so pin the
+        # PROPERTY — the declared color-scheme follows the theme — in both
+        # directions, with the theme set explicitly each time.
+        tp.evaluate("() => document.documentElement.removeAttribute('data-theme')")
+        tp.wait_for_timeout(150)
+        check(f"{_name}: under the dark theme the document declares a dark color-scheme, so anything "
               "the UA does paint defaults dark rather than light",
-              info["scheme"] == "dark", f"color-scheme: {info['scheme']}")
-        # And the opt-in light theme has to say so too, or a light-mode user
-        # gets the mirror image of this bug.
+              tp.evaluate("() => getComputedStyle(document.documentElement).colorScheme") == "dark",
+              f"color-scheme: {info['scheme']}")
+        # And the light theme has to say so too, or a light-mode user gets the
+        # mirror image of this bug.
         tp.evaluate("() => document.documentElement.setAttribute('data-theme', 'light')")
         tp.wait_for_timeout(150)
         check(f"{_name}: and it flips to light when the light theme is chosen",
