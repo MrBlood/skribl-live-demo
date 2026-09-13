@@ -7583,9 +7583,11 @@ the instrument the tree cannot replace.
 
 ## v294 -- the media a session loses, and the one control that admits it
 
-Twelve squash-merged PRs, and the tier is one subject: what happens to a photo
-or a music track between the moment it is attached and the moment it comes
-back. It started with the owner on an iPhone -- "the re-add media button
+Twelve squash-merged PRs. TEN are one subject: what happens to a photo or a
+music track between the moment it is attached and the moment it comes back.
+(The other two are at the end of this entry, and saying so is the point -- a
+tier that claims to be about one thing while carrying two strangers is how a
+record starts drifting from its tree.) It started with the owner on an iPhone -- "the re-add media button
 doesn't go away unless I click it or go to img/music drawer and x out ...
 shouldn't they be unified?" -- and it ended two audits later with the two
 editors doing the same thing the same way, and with the phone able to say WHY
@@ -7672,6 +7674,28 @@ One option was considered and rejected, and building it is what showed why:
 making the whole pill dismiss on the amber with no re-add route would have put
 a 211px tap-absorbing bar over the canvas for as long as the warning stood,
 swallowing strokes.
+
+**The two that are not about media.** PR 1: the skribl signature at the top
+left of /library rendered BLACK on the dark ground. The mark is one partial
+stroked with a gradient whose stops are coloured in styles.css, and /library
+inlines its own stylesheet by design -- host-independent, CSP-safe -- so the
+two rules never reached it and SVG fell back to its default. The library's
+stylesheet carries them now, and the census that found it is keyed by ROUTE:
+every page that renders the mark is asked what its stops COMPUTE to, against
+what `color: var(--accent)` computes to on that same page. Red on /library
+alone.
+
+PR 9 is the one the tier did not choose. verify_player_isolation went red on
+MAIN and stayed red for three PRs: v294, 5 put the load-based photo re-apply
+in app.js, which the player downloads, and the player's JavaScript passed its
+153,000B ceiling at 153,349. Neither of that PR's two local batches included
+the isolation suite, so nothing said so until a later batch happened to run
+it. The whole re-add block is editor_draft.js's now and the player measures
+149,960B, with the ratchet lowered to 150,500 so the next editor-only addition
+to app.js is caught rather than absorbed. The lesson is not "run everything"
+-- the tier ran 99 suites per seal -- it is that a PR's OWN batch is a guess
+about blast radius, and a file the player downloads makes that guess wrong in
+a direction no suite in the batch can see.
 
 **What the tier taught the instrument.** Three things, each paid for.
 

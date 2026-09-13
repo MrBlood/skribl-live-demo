@@ -106,10 +106,30 @@ with sync_playwright() as p:
         check(f"{label}: lib/pillfit.js is loaded",
               page.evaluate("() => !!window.SkriblPillFit"),
               "the player has no autosave and deliberately does not load it")
-        check(f"{label}: the pill never intercepts taps",
+        check(f"{label}: a RESTING pill never intercepts taps",
               page.evaluate(READ)["pointer"] == "none",
               "it obscures a control without disabling it — and must keep doing "
               "only that, or an overlap becomes a dead button")
+        # ...and the exception, which is not one: since v294 an amber pill
+        # carries controls (the text is a route to the re-add card, the × is
+        # the way out), so it takes taps FOR THOSE — and gives them up again
+        # when pillfit fades it, or an invisible button sits in the corner of
+        # the screen eating them. The claim "the pill intercepts nothing" was
+        # true of every state until v294 and is true of the resting one now.
+        state = page.evaluate("""() => { SkriblAutosavePill.configure({ pending: () => true });
+            SkriblAutosavePill.show('saved-no-media');
+            const el = document.getElementById('autosaveStatus');
+            const x = document.getElementById('autosaveStatusDismiss');
+            const live = { pill: getComputedStyle(el).pointerEvents, x: getComputedStyle(x).pointerEvents };
+            el.classList.add('blocked');
+            const faded = { pill: getComputedStyle(el).pointerEvents, x: getComputedStyle(x).pointerEvents };
+            el.classList.remove('blocked');
+            SkriblAutosavePill.show('saved');
+            return { live, faded }; }""")
+        check(f"{label}: an amber pill that carries a control takes taps for it",
+              state["live"]["pill"] == "auto" and state["live"]["x"] == "auto", str(state["live"]))
+        check(f"{label}: ...and gives them up when this file fades it",
+              state["faded"]["pill"] == "none" and state["faded"]["x"] == "none", str(state["faded"]))
         page.close()
 
     for label, path in SURFACES:
