@@ -104,6 +104,14 @@ around it. And do not write an example of a machine-read literal in prose the
 machine reads: the v281 stamp nearly deleted a whole section because notes
 quoted the counts marker verbatim.
 
+**A POPULATION THAT SPANS ROUTES CARRIES THE ROUTE IN ITS IDENTITY.** The modal
+census swept Pad and Flip for `aria-modal` ids and put them in one set, so the
+shared Help and Export dialogs — one template, included by both editors — were
+counted twice and driven once, on the Pad. Flip's copies had no focus
+management at all and the census was green (v292; outside review of v291).
+Same markup is not same behaviour: key a cross-page census by `(route, id)`,
+and a shared id is two instances until each has been driven on its own page.
+
 **An assertion that can only pass while the work is OUTSTANDING is a TODO in a
 test's clothes.** `verify_seam`'s "a split is still worth doing" asserted
 `editor_lines > player_lines` and went red the moment `editor_draw.js` landed —
