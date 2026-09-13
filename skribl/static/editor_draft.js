@@ -619,6 +619,13 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
   if (rm) rm.addEventListener('click', () => {
     mediaDraft[kind] = 'none';
     _mediaFile[kind] = null;
+    // WRITE THE DRAFT FIRST, DELETE THE BYTES SECOND (v294 audit, finding 8).
+    // The draft was rewritten by the 1.2 s debounce while the bytes went at
+    // once, so a tab that died in that window came back offering a re-add card
+    // for a file the user had removed. This listener is registered after
+    // editor_music.js's and editor_photo.js's, so the media globals are
+    // already cleared and the flush writes a record that names no file.
+    flushPadDraft();
     if (window.SkriblDraftStore) SkriblDraftStore.del('pad:' + kind).catch(() => {});
   });
 });

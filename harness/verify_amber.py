@@ -504,6 +504,49 @@ with sync_playwright() as p:
           "Media store:" in rep and "music failed" in rep, rep[-400:])
     pg9.close()
 
+    print("\nTHE BYTES GO WHEN THE MEDIA GOES (v294 audit, PR 6)")
+    # AUDIT, finding 7: Flip's store record holds the WHOLE payload, frames and
+    # media bytes together, and nothing ever deleted it. Remove the track, or
+    # clear everything, and the lite record forgot it while the bytes sat in
+    # IndexedDB until the next save that happened to have media. Finding 8: the
+    # Pad deletes the bytes the moment Remove is tapped but rewrites the draft
+    # 1.2 s later, so a tab that dies in that window comes back offering a
+    # re-add card for a track the user removed.
+    fp6 = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    fp6.goto(BASE+"/flip", wait_until="load"); fp6.wait_for_timeout(700)
+    fp6.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+    fbox6 = fp6.locator("#pad").bounding_box()
+    scribble(fp6, fbox6, 0.0)
+    fp6.set_input_files("#musicInput", WAV); fp6.wait_for_timeout(5000)
+    stored6 = fp6.evaluate("() => SkriblDraftStore.get('flip:draft').then(r => !!(r && r.json)).catch(() => false)")
+    check("Flip: the spill put the payload in the store", stored6 is True)
+    fp6.evaluate("() => removeMusic()"); fp6.wait_for_timeout(2000)
+    left6 = fp6.evaluate("() => SkriblDraftStore.get('flip:draft').then(r => !!(r && r.json)).catch(() => false)")
+    check("Flip: removing the last media deletes the stored payload with it",
+          left6 is False,
+          "the bytes outlive the media that owned them — and the frames are in there twice over")
+    fp6.close()
+
+    pd6 = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    pd6.goto(BASE+"/skribl-pad", wait_until="load"); pd6.wait_for_timeout(1200)
+    pd6.evaluate("() => localStorage.clear()")
+    pbox6 = pd6.locator("canvas").first.bounding_box()
+    pd6.mouse.move(pbox6["x"]+120, pbox6["y"]+120); pd6.mouse.down()
+    for i in range(50): pd6.mouse.move(pbox6["x"]+120+i*3, pbox6["y"]+120+math.sin(i/4)*30)
+    pd6.mouse.up(); pd6.wait_for_timeout(1800)
+    pd6.set_input_files("#musicInput", WAV); pd6.wait_for_timeout(4500)
+    # Remove, then read the DRAFT immediately — inside the 1.2 s debounce, which
+    # is the window a dying tab falls into.
+    pd6.evaluate("() => document.getElementById('musicRemove').click()")
+    pd6.wait_for_timeout(150)
+    draft6 = pd6.evaluate("() => { const r = localStorage.getItem('skribl_autosave_v1'); return r ? !!(JSON.parse(r).musicMeta && JSON.parse(r).musicMeta.name) : null; }")
+    check("Pad: Remove writes the draft before it deletes the bytes",
+          draft6 is False,
+          "the record still names a track whose bytes are already gone: a tab that "
+          "dies in the debounce window comes back offering a re-add card for a file "
+          "the user removed")
+    pd6.close()
+
     print("\nPAD — media is a draft; a restore reads the store, and speaks only when it misses (v294 audit, PR 1)")
     # AUDIT, finding 1: a photo or a track with no strokes was "nothing
     # meaningful" — the draft was never written, the banner never offered, and
