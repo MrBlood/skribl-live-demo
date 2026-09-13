@@ -5014,6 +5014,10 @@ function openExportSheet(){
   clearTimeout(_exCloseT);
   exportOverlay.hidden=false;
   requestAnimationFrame(()=>{ exportOverlay.classList.add('open');
+    // Focus AFTER the reveal (modalfocus skips anything with no offsetParent).
+    // The sheet declares aria-modal; this is what makes it true on Flip — the
+    // Pad's editor_export.js has done the same since v279 (v292, SK-AUD-002).
+    if(window.SkriblModal) window.SkriblModal.open(exportSheet);
     if(gifToggle && !gifToggle.hidden){ const seg=gifToggle.querySelector('.gif-seg'); if(seg) requestAnimationFrame(()=>positionSegSlider(seg)); }
   });
 }
@@ -5127,7 +5131,11 @@ if(exLoopsSeg) exLoopsSeg.addEventListener('click', e=>{
   syncExportOptions();
 });
 
-function closeExportSheet(){ exportOverlay.classList.remove('open'); _exCloseT=setTimeout(()=>{ exportOverlay.hidden=true; },350); }
+function closeExportSheet(){ exportOverlay.classList.remove('open');
+  // Hand focus back now, not on the 350ms timer: a keyboard user should not be
+  // focus-less for a third of a second while the sheet animates out.
+  if(window.SkriblModal) window.SkriblModal.close(exportSheet);
+  _exCloseT=setTimeout(()=>{ exportOverlay.hidden=true; },350); }
 bindEl('miExport', 'click', openExportSheet);
 exportOverlay.addEventListener('click', e=>{ if(!e.target.closest('.menu-sheet')) closeExportSheet(); });
 KeyRegistry.register({surface:'flip', label:'close the export sheet',
@@ -7753,8 +7761,14 @@ fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b
 /* ---- help drawer (How Flip works) — same component as the Pad ---- */
 const helpDrawer=document.getElementById('helpDrawer'), helpClose=document.getElementById('helpClose'), helpBackdrop=document.getElementById('helpBackdrop');
 let helpCloseTimer=null;
-function openHelpDrawer(){ clearTimeout(helpCloseTimer); document.documentElement.classList.add('help-open'); helpDrawer.hidden=false; helpDrawer.classList.remove('closing'); requestAnimationFrame(()=>helpDrawer.classList.add('open')); }
-function closeHelpDrawer(){ clearTimeout(helpCloseTimer); if(document.activeElement && document.activeElement.blur) document.activeElement.blur(); helpDrawer.classList.add('closing'); helpDrawer.classList.remove('open');
+// aria-modal="true" is declared on the shared template; the calls below are
+// the half that makes it true on THIS editor. Until v292 only the Pad's copy
+// had them (outside review of v291, SK-AUD-001): here the drawer was unhidden
+// and focus stayed behind it, and close() blurred — dropping focus on <body>.
+// Same markup, same owner now: lib/modalfocus.js, as editor_menu.js does it.
+function openHelpDrawer(){ clearTimeout(helpCloseTimer); document.documentElement.classList.add('help-open'); helpDrawer.hidden=false; helpDrawer.classList.remove('closing');
+  requestAnimationFrame(()=>{ helpDrawer.classList.add('open'); if(window.SkriblModal) window.SkriblModal.open(helpDrawer); }); }
+function closeHelpDrawer(){ clearTimeout(helpCloseTimer); if(window.SkriblModal) window.SkriblModal.close(helpDrawer); helpDrawer.classList.add('closing'); helpDrawer.classList.remove('open');
   helpCloseTimer=setTimeout(()=>{ helpDrawer.hidden=true; helpDrawer.classList.remove('closing'); document.documentElement.classList.remove('help-open'); }, 250); }
 bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 // Clear all from the ... menu (v206; the Pad's words since v290). Same two-tap arm as the Pad's Clear

@@ -270,42 +270,62 @@ with sync_playwright() as p:
     # the same way must be primed here too, and the template census that
     # follows is the backstop that says so.
     MODALS = {
-        # id            (surface, how to open, expected focus-return target)
-        "menuSheet":    ("/",     "click:#menuBtn",                "menuBtn"),
-        "helpDrawer":   ("/",     "click:#menuBtn|click:#helpItem", None),
-        "postedDrawer": ("/",     "click:#menuBtn|click:#postedItem", None),
-        "exportSheet":  ("/",     "click:#menuBtn|click:#exportItem", None),
-        "reportSheet":  ("/",     "click:#menuBtn|click:#reportItem", None),
+        # (route, id)          (how to open, expected focus-return target)
+        ("/", "menuSheet"):    ("click:#menuBtn",                "menuBtn"),
+        ("/", "helpDrawer"):   ("click:#menuBtn|click:#helpItem", None),
+        ("/", "postedDrawer"): ("click:#menuBtn|click:#postedItem", None),
+        ("/", "exportSheet"):  ("click:#menuBtn|click:#exportItem", None),
+        ("/", "reportSheet"):  ("click:#menuBtn|click:#reportItem", None),
         # Post is gated on a FINISHED take, not on ink: drawing auto-starts
         # recording and #recordBtn stops it. The first recipe here was
         # "draw|click:#postBtn" and timed out on a button that is hidden and
         # disabled mid-take — the enumeration turning a silent no-op into a
         # loud failure, which is the whole reason it replaced the specimen.
-        "postSheet":    ("/",     "draw|click:#recordBtn|click:#postBtn", None),
+        ("/", "postSheet"):    ("draw|click:#recordBtn|click:#postBtn", None),
         # atRisk() is `!flushPadDraft()`, so a draft that saves cleanly is not
         # at risk and the anchor simply navigates. Stubbing the flush puts the
         # app in the state the sheet exists for; the click, the handler and the
         # sheet are all still the product's.
-        "leaveSheet":   ("/",     "js:window.flushPadDraft = () => false"
+        ("/", "leaveSheet"):   ("js:window.flushPadDraft = () => false"
                                   "|click:#menuBtn|click:#flipBtn", None),
-        "reckeyOverlay": ("/",    "js:window.SkriblRecoveryKey.present("
+        ("/", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present("
                                   "{key:'test-recovery-key-abc123'})", None),
         # The import half of the recovery key, and the guard that stands
         # between "Clear list" and every key it would take with it. Both are
         # built by lib/recoverykey.js the first time they are shown.
-        "recoverOverlay": ("/",   "js:window.SkriblRecoveryKey.openRecover()", None),
-        "clearKeysOverlay": ("/", "js:window.SkriblRecoveryKey.confirmClear("
+        ("/", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
+        ("/", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear("
                                   "[{id:'x',tok:'k'}], function () {})", None),
         # FLIP'S POST SHEET, the one dialog this census could not see (v290).
         # It carried no role and no aria-modal, so it escaped the DOM sweep
         # below — which only ever walked the Pad — and trapped no focus. The
         # opener refuses an empty flip, so the recipe draws first, on #pad.
-        "flipShare":    ("/flip", "flipdraw|click:#postBtn", "postBtn"),
+        ("/flip", "flipShare"):    ("flipdraw|click:#postBtn", "postBtn"),
         # FLIP'S MORE MENU (v291). It was role="menu" over rows of switches and
         # segs a menu does not admit, and trapped no focus; Pad's #menuSheet,
         # the same design since v290, is a dialog. Now it declares itself and
         # the census walks it: focus in, Tab stays, Escape back to #moreBtn.
-        "moreMenu":     ("/flip", "click:#moreBtn", "moreBtn"),
+        ("/flip", "moreMenu"):     ("click:#moreBtn", "moreBtn"),
+        # THE SHARED DIALOGS, ON THEIR SECOND ROUTE (v292; outside review of
+        # v291, SK-AUD-003). Help and Export are one template included by both
+        # editors, and until v292 this table was keyed by id alone: the DOM
+        # sweep found "helpDrawer" on Pad and on Flip, put both into one set,
+        # and drove the one recipe — Pad's. Flip's copies were counted and
+        # never tested, and Flip's open/close code did not use the modal owner
+        # (SK-AUD-001/002). Same markup is not same behaviour; the key is
+        # (route, id) so a shared id is two instances.
+        ("/flip", "helpDrawer"):   ("click:#moreBtn|click:#miInfo", None),
+        ("/flip", "exportSheet"):  ("click:#moreBtn|click:#miExport", None),
+        # ...and the rest of what the honest sweep found on Flip the moment it
+        # kept the route: the posted list, the report sheet, and the three
+        # recovery-key dialogs, all shared modules, all counted once before.
+        ("/flip", "postedDrawer"): ("click:#moreBtn|click:#miPosted", None),
+        ("/flip", "reportSheet"):  ("click:#moreBtn|click:#miReport", None),
+        ("/flip", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present("
+                                    "{key:'test-recovery-key-abc123'})", None),
+        ("/flip", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
+        ("/flip", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear("
+                                       "[{id:'x',tok:'k'}], function () {})", None),
     }
 
     def _draw_on_pad(pg):
@@ -363,23 +383,29 @@ with sync_playwright() as p:
             pg.wait_for_timeout(150)
             pg.evaluate(f"window.SkriblRecoveryKey && window.SkriblRecoveryKey.{_shut}")
         pg.wait_for_timeout(150)
-        found |= set(pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
-            .map(el => el.id || '(no id)')"""))
+        # (route, id), NOT id: a shared partial's dialog is one instance per
+        # page it is included on, and each page's script may drive it
+        # differently — which is exactly what SK-AUD-001/002 found.
+        found |= {(_surface, _id) for _id in pg.evaluate("""() => [...document.querySelectorAll('[aria-modal="true"]')]
+            .map(el => el.id || '(no id)')""")}
         pg.close()
 
-    unrecipe = sorted(set(found) - set(MODALS))
+    def _rid(rid):
+        return f"{rid[1]} on {rid[0]}"
+    unrecipe = sorted(_rid(r) for r in set(found) - set(MODALS))
     check("every aria-modal surface in the DOM has a recipe here",
           not unrecipe,
           ", ".join(unrecipe) + " — a dialog claiming modal semantics that "
           "nothing drives is exactly what this section was rewritten to stop")
-    stale = sorted(set(MODALS) - set(found))
+    stale = sorted(_rid(r) for r in set(MODALS) - set(found))
     check("every recipe here names a surface that still exists",
           not stale,
           ", ".join(stale) + " — a recipe for a deleted dialog passes forever "
           "by testing nothing")
 
-    for mid in sorted(set(found) & set(MODALS)):
-        path, recipe, back_to = MODALS[mid]
+    for path, mid in sorted(set(found) & set(MODALS)):
+        recipe, back_to = MODALS[(path, mid)]
+        _tag = f"{mid} on {path}"
         pg = browser.new_page(viewport={"width": 1280, "height": 900})
         pg.goto(BASE + path, wait_until="load")
         pg.wait_for_timeout(1200)
@@ -388,7 +414,7 @@ with sync_playwright() as p:
         inside = pg.evaluate("""(id) => {
             const d = document.getElementById(id), a = document.activeElement;
             return !!(d && a && d.contains(a)); }""", mid)
-        check(f"{mid}: opening moves focus into it", inside,
+        check(f"{_tag}: opening moves focus into it", inside,
               "focus stayed on whatever had it, behind the sheet")
 
         # Tab all the way round: focus must still be inside.
@@ -397,7 +423,7 @@ with sync_playwright() as p:
         still = pg.evaluate("""(id) => {
             const d = document.getElementById(id), a = document.activeElement;
             return !!(d && a && d.contains(a)); }""", mid)
-        check(f"{mid}: Tab stays inside it", still,
+        check(f"{_tag}: Tab stays inside it", still,
               "25 tabs escaped the dialog — a keyboard user reaches the page "
               "underneath while a modal covers it")
 
@@ -413,10 +439,10 @@ with sync_playwright() as p:
         # about: focus must not be dumped on <body>, which is where blur()
         # used to leave it and which loses the user's place entirely.
         if back_to:
-            check(f"{mid}: closing returns focus to {back_to}", landed == back_to,
+            check(f"{_tag}: closing returns focus to {back_to}", landed == back_to,
                   f"focus on {landed!r}")
         else:
-            check(f"{mid}: closing does not drop focus on <body>",
+            check(f"{_tag}: closing does not drop focus on <body>",
                   landed != "(body)", f"focus on {landed!r}")
         pg.close()
 
@@ -451,7 +477,7 @@ with sync_playwright() as p:
         if "aria-modal" not in body:
             continue
         _js_modals |= set(re.findall(r"\.id\s*=\s*['\"]([A-Za-z0-9_-]+)['\"]", body))
-    _js_untested = sorted(_js_modals - set(MODALS))
+    _js_untested = sorted(_js_modals - {k[1] for k in MODALS})
     check("every dialog built in JavaScript is recipe-backed",
           not _js_untested, ", ".join(_js_untested) +
           " — built at runtime, so the DOM census above cannot see it unless "
@@ -471,7 +497,7 @@ with sync_playwright() as p:
           not _idless, ", ".join(sorted(set(_idless))) +
           " — an id is how this suite addresses it; without one it cannot be "
           "enumerated and cannot be tested")
-    _untested = sorted(_tpl_modals - set(MODALS))
+    _untested = sorted(_tpl_modals - {k[1] for k in MODALS})
     check("every aria-modal in a template is recipe-backed",
           not _untested, ", ".join(_untested) +
           " — declared in markup, never opened by this suite; a dialog behind "
