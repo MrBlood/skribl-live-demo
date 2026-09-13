@@ -4187,7 +4187,17 @@ function showShareResult(url){
   if(compose) compose.hidden=true;
   if(result) result.hidden=false;
   if(inp) inp.value=url; if(open) open.href=url; if(m) m.hidden=false;
+  // Share, where the device has a share sheet (v292, SK-AUD-016). Feature-
+  // detected at show time, not at load: the button exists for everyone and
+  // is revealed only when navigator.share does.
+  const nat=document.getElementById('flipShareNative'); if(nat) nat.hidden=!(navigator.share);
 }
+bindEl('flipShareNative', 'click', async()=>{
+  const url=document.getElementById('flipShareUrl').value;
+  const t=document.getElementById('flipShareTitle'); const title=(t && t.value.trim()) || 'My Skribl';
+  try{ await navigator.share({ title: title, url: url }); }
+  catch(e){ if(!e || e.name!=='AbortError') chip('Sharing didn\u2019t work \u2014 copy the link instead'); }
+});
 
 /* ---- compose step ---------------------------------------------------------
    The emptiness check lives HERE, before the sheet opens, so a user is not

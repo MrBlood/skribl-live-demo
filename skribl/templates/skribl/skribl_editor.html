@@ -242,6 +242,12 @@
         <span class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
         <span>Watch your Skribl</span>
       </button>
+      {# Shown only where navigator.share exists (v292; outside review of
+         v291, SK-AUD-016): "Send it" on a phone is the system share sheet. #}
+      <button type="button" class="post-submit post-watch" id="postShareBtn" hidden>
+        <span class="play-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span>
+        <span>Share your Skribl</span>
+      </button>
       {# Posting is the one flow where "did that work?" has a real cost, and
          it announced nothing: started, succeeded and failed were all silent. #}
       <div class="post-status" id="postStatus" role="status"
