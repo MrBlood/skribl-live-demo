@@ -2291,6 +2291,69 @@ with _sp() as _cp:
         _pg.close()
     _cb.close()
 
+print("\nSHARE — on a device with a share sheet, Send it is a Share button; Copy link stays")
+# Outside review of v291, SK-AUD-016. The product's thesis is "Make it. Send
+# it." and the post result ended at Copy link — a clipboard step and a manual
+# switch to wherever the link was going. Where navigator.share exists (every
+# phone, Safari on the Mac) the result offers Share, which opens the system
+# sheet with the title and the link; where it does not, the button is not
+# there and Copy link is what it always was. navigator.share is stubbed in the
+# page and its argument read back: the mechanism is the call, with the URL
+# the page shows.
+with _sp() as _sh:
+    _shb = _sh.chromium.launch()
+    for _path, _name, _btn in (("/flip", "Flip", "#flipShareNative"), ("/", "Pad", "#postShareBtn")):
+        for _has in (True, False):
+            _ctx = _shb.new_context(viewport={"width": 1100, "height": 900})
+            if _has:
+                _ctx.add_init_script("""Object.defineProperty(navigator, 'share', { configurable: true,
+                    value: async (d) => { window.__shared = d; } });""")
+            else:
+                _ctx.add_init_script("""Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });""")
+            _pg = _ctx.new_page()
+            browsing.goto(_pg, BASE, _path)
+            _pg.wait_for_timeout(600)
+            if _path == "/flip":
+                draw(_pg, "#pad", 200, 200, n=16)
+                _pg.wait_for_timeout(300)
+                _pg.click("#postBtn")
+                _pg.wait_for_timeout(400)
+                _pg.fill("#flipShareTitle", "Share probe")
+                _pg.click("#flipShareSubmit")
+                _pg.wait_for_selector("#flipShareUrl", state="visible", timeout=20000)
+                _pg.wait_for_timeout(500)
+                _url = _pg.evaluate("() => document.getElementById('flipShareUrl').value")
+            else:
+                draw(_pg, "#canvas", 200, 200, n=16)
+                _pg.wait_for_timeout(300)
+                _pg.click("#recordBtn")
+                _pg.wait_for_timeout(500)
+                _pg.click("#postBtn")
+                _pg.wait_for_timeout(800)
+                _pg.fill("#postTitleInput", "Share probe")
+                _pg.click("#postSubmitBtn")
+                _pg.wait_for_selector("#postWatchBtn", state="visible", timeout=20000)
+                _pg.wait_for_timeout(400)
+                _url = None
+            _vis = _pg.evaluate(f"() => {{ const b = document.querySelector('{_btn}'); return b ? (!b.hidden && getComputedStyle(b).display !== 'none') : null; }}")
+            _copy = _pg.evaluate("() => { const c = document.getElementById('flipShareCopy'); return c ? !c.hidden : null; }") if _path == "/flip" else True
+            if _has:
+                check(f"SHARE ({_name}): with navigator.share the result offers Share", _vis is True, f"visible={_vis}")
+                if _vis:
+                    _pg.click(_btn)
+                    _pg.wait_for_timeout(300)
+                    _d = _pg.evaluate("() => window.__shared || null")
+                    _ok = _d and isinstance(_d.get("url"), str) and "/s/" in _d["url"] and (not _url or _d["url"] == _url) and (_d.get("title") or "").strip() != ""
+                    check(f"SHARE ({_name}): Share hands the system sheet the title and the link the page shows", bool(_ok), str(_d))
+                if _path == "/flip":
+                    check(f"SHARE ({_name}): ...and Copy link is still there beside it", _copy is True, f"copy={_copy}")
+            else:
+                check(f"SHARE ({_name}): without navigator.share there is no Share button", not _vis, f"visible={_vis}")
+                if _path == "/flip":
+                    check(f"SHARE ({_name}): ...and Copy link is what it always was", _copy is True, f"copy={_copy}")
+            _ctx.close()
+    _shb.close()
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:

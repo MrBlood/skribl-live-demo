@@ -439,6 +439,10 @@
         <p class="flip-share-sub">Anyone with the link can watch it play — with your loop, image, and controls.</p>
         <input type="text" id="flipShareUrl" aria-label="Share link" class="flip-share-url" readonly>
         <div class="flip-share-actions">
+          {# Shown only where navigator.share exists (v292; outside review of
+             v291, SK-AUD-016): the system share sheet is how a phone sends a
+             link. Copy link stays for everyone, beside it. #}
+          <button type="button" class="panel-btn flip-share-open" id="flipShareNative" hidden>Share</button>
           <button type="button" class="panel-btn" id="flipShareCopy">Copy link</button>
           <a id="flipShareOpen" class="panel-btn flip-share-open" target="{{ skribl_player_target }}" rel="noopener">Open player</a>
         </div>

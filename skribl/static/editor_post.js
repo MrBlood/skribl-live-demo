@@ -28,7 +28,8 @@
   const soundDot = document.getElementById('postSoundDot');
   const soundText = document.getElementById('postSoundText');
   const watchBtn = document.getElementById('postWatchBtn');
-  let lastPostUrl = null;
+  const shareBtn = document.getElementById('postShareBtn');
+  let lastPostUrl = null, lastPostTitle = '';
   const status = document.getElementById('postStatus');
   const statusLabel = document.getElementById('postStatusLabel');
   const progressFill = document.getElementById('postProgressFill');
@@ -245,6 +246,7 @@
       status.classList.remove('error');
       progressFill.style.width = '0%';
       if (watchBtn) watchBtn.hidden = true;
+      if (shareBtn) shareBtn.hidden = true;
       body.style.opacity = '';
       titleInput.disabled = false;
       captionInput.disabled = false;
@@ -471,6 +473,7 @@
     try {
       const res = await sendSkribl(payload);
       lastPostUrl = (res && res.url) || null;
+      lastPostTitle = payload.title || '';   // the field is cleared below; Share needs the title that was posted
       const localOnly = !!(res && res.local);
       // Record it locally, but ONLY a real post. A local fallback is not
       // shareable, so listing it under links you can send would be a lie.
@@ -511,6 +514,9 @@
         showToast('Posted! 🎨', null);
       }
       if (watchBtn && lastPostUrl) watchBtn.hidden = false;
+      // Share, where the device has a share sheet (v292, SK-AUD-016); a local
+      // fallback (#skribl=…) is not a link anyone else can open, so not then.
+      if (shareBtn && lastPostUrl && !localOnly && lastPostUrl.charAt(0) !== '#' && navigator.share) shareBtn.hidden = false;
     } catch (e) {
       setState('error');
       if (e && e.message) statusLabel.textContent = e.message;
@@ -519,6 +525,13 @@
 
   captionInput.addEventListener('input', updateCharCount);
   submitBtn.addEventListener('click', submit);
+  if (shareBtn) shareBtn.addEventListener('click', async () => {
+    if (!lastPostUrl || !navigator.share) return;
+    const abs = new URL(lastPostUrl, location.href).href;
+    const title = lastPostTitle || 'My Skribl';
+    try { await navigator.share({ title, url: abs }); }
+    catch (e) { if (!e || e.name !== 'AbortError') showToast('Sharing didn\u2019t work \u2014 open it and copy the link', shareBtn); }
+  });
   if (watchBtn) watchBtn.addEventListener('click', () => {
     if (!lastPostUrl) return;
     if (lastPostUrl.charAt(0) === '#') {
