@@ -547,6 +547,49 @@ with sync_playwright() as p:
           "the user removed")
     pd6.close()
 
+    print("\nTHE DISMISS IS A BUTTON YOU CAN SEE (v294; owner: \"should the button be big so people don't stress\")")
+    # An invisible 44px target stopped the accidental stroke and did nothing for
+    # the aiming: nothing on screen said the button was bigger than its 12px
+    # glyph. The puck is the button as far as the eye is concerned — drawn at
+    # rest, filled when pressed — and the 44px box around it is the forgiveness
+    # margin. Read from ::before, which is where the puck lives; the button's
+    # own background must stay transparent or the pressed state overhangs the
+    # pill again (the previous bug, owner: "when I push it it shows big").
+    SEEN = r"""() => { const x = document.getElementById('autosaveStatusDismiss');
+        const p = document.getElementById('autosaveStatus');
+        const b = getComputedStyle(x, '::before'), s = getComputedStyle(x);
+        const px = v => Math.round(parseFloat(v) || 0);
+        const clear = c => !c || c === 'transparent' || /rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)/.test(c);
+        return { pill: Math.round(p.getBoundingClientRect().height),
+                 target: Math.round(x.getBoundingClientRect().height),
+                 puck: px(b.width), puckFill: b.backgroundColor, puckBorder: px(b.borderTopWidth),
+                 boxFill: s.backgroundColor, restVisible: !clear(b.backgroundColor) || px(b.borderTopWidth) > 0 }; }"""
+    for _label, _vp, _touch in (("phone", {"width": 390, "height": 664}, True),
+                                ("desktop", {"width": 1280, "height": 900}, False)):
+        _ctx = b.new_context(viewport=_vp, color_scheme="dark", has_touch=_touch, is_mobile=_touch)
+        _p = _ctx.new_page()
+        _p.goto(BASE + "/skribl-pad", wait_until="load"); _p.wait_for_timeout(1200)
+        _p.evaluate("() => { window.SkriblHints && window.SkriblHints.hide(); SkriblAutosavePill.show('saved-no-media'); }")
+        _p.wait_for_timeout(500)
+        _s = _p.evaluate(SEEN)
+        check(f"{_label}: the × is drawn at rest, not only when touched",
+              _s["restVisible"], f"puck fill {_s['puckFill']} border {_s['puckBorder']}px — "
+              "an affordance nobody can see is an affordance nobody aims at")
+        check(f"{_label}: ...and the drawn button sits INSIDE the pill",
+              0 < _s["puck"] <= _s["pill"], f"puck {_s['puck']}px in a {_s['pill']}px pill")
+        check(f"{_label}: ...while the 44px target stays the forgiveness margin, unseen",
+              _s["target"] >= 44 and _s["boxFill"] in ("rgba(0, 0, 0, 0)", "transparent"),
+              f"target {_s['target']}px, box fill {_s['boxFill']} — a filled 44px box overhangs a 28px pill, "
+              "which is what made a tap look like the button growing")
+        if _touch:
+            # On a finger the pill carries two actions on the route amber: the
+            # words re-add, the × dismisses. Both have to be thumb-sized.
+            check("phone: the pill itself is thumb-sized, so the words are a target too",
+                  _s["pill"] >= 44, f"{_s['pill']}px tall at 13px type")
+            check("phone: ...and the drawn button is at least 28px",
+                  _s["puck"] >= 28, f"{_s['puck']}px")
+        _ctx.close()
+
     print("\nPAD — media is a draft; a restore reads the store, and speaks only when it misses (v294 audit, PR 1)")
     # AUDIT, finding 1: a photo or a track with no strokes was "nothing
     # meaningful" — the draft was never written, the banner never offered, and
