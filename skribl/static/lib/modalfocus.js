@@ -40,10 +40,17 @@
 (function (global) {
   'use strict';
 
+  /* THE TAB SEQUENCE, not "everything focusable": tabindex="-1" is excluded
+     on every kind, not only the bare [tabindex] entry. Since v292 a seg's
+     unselected options carry tabindex="-1" (lib/segslider.js, one Tab stop
+     per seg), and with them counted here the trap's idea of the LAST control
+     in Flip's More menu was an option the browser would never Tab to — so
+     from the real last stop, Tab left the dialog. verify_a11y's census caught
+     it the same run the roving stop landed. */
   var FOCUSABLE = [
-    'a[href]', 'button:not([disabled])', 'input:not([disabled])',
-    'select:not([disabled])', 'textarea:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])'
+    'a[href]:not([tabindex="-1"])', 'button:not([disabled]):not([tabindex="-1"])',
+    'input:not([disabled]):not([tabindex="-1"])', 'select:not([disabled]):not([tabindex="-1"])',
+    'textarea:not([disabled]):not([tabindex="-1"])', '[tabindex]:not([tabindex="-1"])'
   ].join(',');
 
   /* Visible only. A dialog full of hidden rows would otherwise send focus to

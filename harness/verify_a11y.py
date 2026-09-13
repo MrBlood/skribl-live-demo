@@ -556,7 +556,7 @@ with sync_playwright() as p:
     SEGSTATE = """() => {
       const groups = [...document.querySelectorAll('.seg, .smooth-seg, .gif-seg')].filter(g => g.querySelectorAll('button').length);
       const key = g => g.id ? '#' + g.id : g.tagName.toLowerCase() + '.' + [...g.classList].join('.');
-      const out = { count: groups.length, missing: [], many: [], none: [], disagree: [] };
+      const out = { count: groups.length, missing: [], many: [], none: [], disagree: [], stops: [] };
       for (const g of groups) {
         const btns = [...g.querySelectorAll('button')];
         const lit = b => b.classList.contains('on') || b.classList.contains('active');
@@ -565,6 +565,10 @@ with sync_playwright() as p:
         if (pressed.length > 1) out.many.push(key(g));
         if (pressed.length === 0 && g.dataset.role !== 'focus') out.none.push(key(g));
         if (btns.some(b => (b.getAttribute('aria-pressed') === 'true') !== lit(b))) out.disagree.push(key(g));
+        // ONE TAB STOP (SK-AUD-007): among the enabled options exactly one is
+        // in the sequence; the arrows reach the rest.
+        const stops = btns.filter(b => !b.disabled && b.getAttribute('tabindex') !== '-1');
+        if (btns.filter(b => !b.disabled).length > 1 && stops.length !== 1) out.stops.push(key(g) + ' (' + stops.length + ')');
       }
       return out; }"""
     for _path, _name in (("/", "Pad"), ("/flip", "Flip")):
@@ -578,6 +582,8 @@ with sync_playwright() as p:
               "more than one: " + ", ".join(r["many"]) + "; none: " + ", ".join(r["none"]))
         check(f"{_name}: the ARIA state agrees with the visual state", not r["disagree"],
               ", ".join(r["disagree"]) + " — a class-only selection is visible and unannounced")
+        check(f"{_name}: every seg is one Tab stop, not one per option", not r["stops"],
+              ", ".join(r["stops"]) + " — a keyboard user pays a press per option to cross a row")
         # ...and it FOLLOWS a click, on a seg that was class-only before v292.
         if _path == "/":
             _seg = "#hintSeg"          # Tips, in the ⋯ menu
@@ -598,6 +604,19 @@ with sync_playwright() as p:
         _after = pg.evaluate(f"""() => [...document.querySelectorAll('{_seg} button')].map(b => b.getAttribute('aria-pressed'))""")
         check(f"{_name}: after a click on {_seg} the pressed state moved with it",
               _after.count("true") == 1 and _after[_target] == "true", str(_after))
+        # ...and the ARROW moves it: focus the pressed option, press Right, and
+        # the next option is both pressed and focused — the seg's own handler
+        # ran (the state moved) and the stop moved with the selection.
+        pg.evaluate(f"() => document.querySelector('{_seg} button[aria-pressed=\"true\"]').focus()")
+        pg.keyboard.press("ArrowRight")
+        pg.wait_for_timeout(250)
+        _arrow = pg.evaluate(f"""() => {{ const bs = [...document.querySelectorAll('{_seg} button')];
+          return {{ pressed: bs.map(b => b.getAttribute('aria-pressed')), focus: bs.indexOf(document.activeElement),
+                    stops: bs.map(b => b.getAttribute('tabindex')) }}; }}""")
+        _want = (_target + 1) % _n
+        check(f"{_name}: ArrowRight on {_seg} selects and focuses the next option",
+              _arrow["pressed"].count("true") == 1 and _arrow["pressed"][_want] == "true" and _arrow["focus"] == _want,
+              str(_arrow))
         pg.close()
 
     # ------------------------------------------------------------ section 5
