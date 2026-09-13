@@ -7582,18 +7582,29 @@ function invalidateClearUndo(){
   clearFramesBackup=null;
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=true;
 }
-bindEl('clear', 'click',e=>{
-  if(playing) return;
-  const empty = frames.length===1 && frames[0].strokes.length===0;
-  if(empty) return;                                  // nothing to delete
-  const lbl=document.getElementById('clearLabel');
-  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear pages'; e.currentTarget.title='Tap again to delete all pages'; return; }
-  armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear all pages'; e.currentTarget.title='Delete all pages (keeps music and background)';
+// THE ACTION, apart from either confirmation (v292; outside review of v291,
+// SK-AUD-019). The drawer's button and the ⋯ menu's item each arm in their
+// own way and then call this; the menu used to reach it by dispatching two
+// synthetic clicks at the drawer's button, riding its armed state — one
+// control's business logic coupled to another control's confirmation UI.
+function clearAllPages(){
   clearFramesBackup = { frames: frames.map(deepCopy), idx: idx };   // pages only — see note above
   frames=[newFrame()]; idx=0; redoStack.length=0;
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
   const cu=document.getElementById('clearUndo'); if(cu) cu.disabled=false;
+}
+// An armed label is spoken as well as shown: the live region both editors
+// carry for exactly this (SK-AUD-018).
+function announceConfirm(text){ const st=document.getElementById('confirmStatus'); if(st){ st.textContent=''; st.textContent=text; } }
+bindEl('clear', 'click',e=>{
+  if(playing) return;
+  const empty = frames.length===1 && frames[0].strokes.length===0;
+  if(empty) return;                                  // nothing to delete
+  const lbl=document.getElementById('clearLabel');
+  if(!armedClear){ disarmAll(); armedClear=true; e.currentTarget.classList.add('armed'); if(lbl) lbl.textContent='Tap again to clear pages'; e.currentTarget.title='Tap again to delete all pages'; announceConfirm('Tap again to clear pages'); return; }
+  armedClear=false; e.currentTarget.classList.remove('armed'); if(lbl) lbl.textContent='Clear all pages'; e.currentTarget.title='Delete all pages (keeps music and background)';
+  clearAllPages();
 });
 bindEl('clearUndo', 'click',()=>{
   if(!clearFramesBackup) return;
@@ -7773,23 +7784,26 @@ function closeHelpDrawer(){ clearTimeout(helpCloseTimer); if(window.SkriblModal)
   helpCloseTimer=setTimeout(()=>{ helpDrawer.hidden=true; helpDrawer.classList.remove('closing'); document.documentElement.classList.remove('help-open'); }, 250); }
 bindEl('miInfo', 'click',()=>{ closeMenu(); openHelpDrawer(); });
 // Clear all from the ... menu (v206; the Pad's words since v290). Same two-tap arm as the Pad's Clear
-// all: first tap arms (menu stays open for the confirm), second tap clears.
-// Delegates to the draw-drawer #clear button so it inherits the frames backup +
-// Clear-undo. Auto-disarms after 3s or when the menu closes.
+// all: first tap arms (menu stays open for the confirm), second tap clears,
+// through clearAllPages() — the same action the drawer's button calls.
+// THE ARM HOLDS UNTIL THE PERSON LEAVES IT, not for three seconds (v292,
+// SK-AUD-018): it disarms when the menu closes, when focus leaves the item,
+// and on a long safety net — a destructive action should not be a race
+// against a timer, where a slow second tap met a disarmed button and armed it
+// again. The armed label is also spoken (announceConfirm).
 (function(){
   const item=document.getElementById('miClearAll'); if(!item) return;
   const label=item.querySelector('.menu-item-text, span:not([class])'); let armed=false, t=null;
-  const disarm=()=>{ armed=false; item.classList.remove('armed'); if(label) label.textContent='Clear all'; };
+  const disarm=()=>{ clearTimeout(t); armed=false; item.classList.remove('armed'); if(label) label.textContent='Clear all'; };
   item.addEventListener('click',e=>{ e.stopPropagation();
     if(playing) return;
     const empty = frames.length===1 && frames[0].strokes.length===0;
     if(empty){ chip('Nothing to clear'); closeMenu(); return; }
-    if(!armed){ armed=true; item.classList.add('armed'); if(label) label.textContent='Tap again to clear all'; clearTimeout(t); t=setTimeout(disarm,3000); return; }
-    clearTimeout(t); disarm(); closeMenu();
-    // fire the drawer's clear twice: once to arm it, once to execute — the
-    // drawer button owns backup/undo, so we go THROUGH it rather than copy it.
-    const cb=document.getElementById('clear'); if(cb){ cb.click(); cb.click(); }
+    if(!armed){ armed=true; item.classList.add('armed'); if(label) label.textContent='Tap again to clear all'; announceConfirm('Tap again to clear all'); clearTimeout(t); t=setTimeout(disarm,20000); return; }
+    disarm(); closeMenu(); disarmAll();
+    clearAllPages();
   });
+  item.addEventListener('focusout', ()=>{ if(armed) disarm(); });
   document.addEventListener('skribl:menu-closed', disarm);
 })();
 helpClose.addEventListener('click', closeHelpDrawer);

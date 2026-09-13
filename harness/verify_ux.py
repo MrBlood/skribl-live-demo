@@ -2233,6 +2233,61 @@ with _sp204() as _ar:
           not _s3["hidden"] and not _s3["active"], str(_s3))
     _arp2.close(); _arp.close(); _arb.close()
 
+print("\nCLEAR ALL — arming is announced, does not race a timer, and Flip's menu clears through the action")
+# Outside review of v291, SK-AUD-018/019. The two-tap arm relabelled the item
+# and disarmed on a 3-second timer: a screen reader heard nothing change, and
+# a slow second tap met a disarmed button and armed it again — a destructive
+# action behind a race. And Flip's menu item executed by dispatching TWO
+# synthetic clicks at the drawer's Clear button, riding its confirmation
+# state to reach its backup+undo. Now: the armed label is written to a live
+# region; the arm holds until the person leaves it (menu closed, focus gone,
+# a long safety net) rather than for three seconds; and both Flip controls
+# call one clearAllPages() after their own confirmation.
+with _sp() as _cp:
+    _cb = _cp.chromium.launch()
+    for _path, _name, _item in (("/", "Pad", "#clearMenuItem"), ("/flip", "Flip", "#miClearAll")):
+        _pg = _cb.new_page(viewport={"width": 1100, "height": 900})
+        browsing.goto(_pg, BASE, _path)
+        _pg.wait_for_timeout(600)
+        if _path == "/flip":
+            draw(_pg, "#pad", 200, 200, n=16)
+            _pg.evaluate("() => addFrame(true)")
+            _pg.wait_for_timeout(300)
+            _pg.evaluate("() => { window.__cbClicks = 0; document.getElementById('clear').addEventListener('click', () => window.__cbClicks++); }")
+        else:
+            # Drawing auto-starts a take and Clear all is disabled mid-take; Stop first.
+            draw(_pg, "#canvas", 200, 200, n=16)
+            _pg.wait_for_timeout(300)
+            _pg.click("#recordBtn")
+            _pg.wait_for_timeout(500)
+        _pg.click("#menuBtn" if _path == "/" else "#moreBtn")
+        _pg.wait_for_timeout(500)
+        _pg.click(_item)
+        _pg.wait_for_timeout(200)
+        _armed = _pg.evaluate(f"""() => {{ const it = document.querySelector('{_item}');
+          const st = document.getElementById('confirmStatus');
+          return {{ armed: it.classList.contains('armed'), label: it.textContent.replace(/\\s+/g, ' ').trim(),
+                    status: st ? st.textContent.trim() : null }}; }}""")
+        check(f"CLEAR ALL ({_name}): the first tap arms and the live region says so",
+              _armed["armed"] and _armed["status"] and _armed["status"] in _armed["label"], str(_armed))
+        _pg.wait_for_timeout(3600)
+        _still = _pg.evaluate(f"() => document.querySelector('{_item}').classList.contains('armed')")
+        check(f"CLEAR ALL ({_name}): the arm does not expire in three seconds under the person's finger", _still,
+              "disarmed on a timer — a slow second tap re-arms instead of clearing")
+        _pg.click(_item)
+        _pg.wait_for_timeout(600)
+        if _path == "/flip":
+            _after = _pg.evaluate("() => ({ frames: frames.length, strokes: frames[0].strokes.length, undo: !document.getElementById('clearUndo').disabled, cbClicks: window.__cbClicks })")
+            check(f"CLEAR ALL ({_name}): the second tap clears every page and offers Undo",
+                  _after["frames"] == 1 and _after["strokes"] == 0 and _after["undo"], str(_after))
+            check(f"CLEAR ALL ({_name}): ...through the shared action, not by clicking the drawer's button for it",
+                  _after["cbClicks"] == 0, f"{_after['cbClicks']} synthetic clicks on #clear")
+        else:
+            _after = _pg.evaluate("() => ({ content: typeof hasContent !== 'undefined' ? hasContent : null, armed: document.querySelector('#clearMenuItem').classList.contains('armed') })")
+            check(f"CLEAR ALL ({_name}): the second tap clears the drawing", _after["content"] is False and not _after["armed"], str(_after))
+        _pg.close()
+    _cb.close()
+
 ok = sum(1 for o, _ in results if o)   # recount AFTER the amendment pins
 print(f"{ok}/{len(results)} passed")
 for o, n in results:

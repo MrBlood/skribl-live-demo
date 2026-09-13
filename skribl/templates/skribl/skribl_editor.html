@@ -296,6 +296,10 @@
    be worse than silence. Failures that need interrupting say so at their
    own call site. aria-atomic because the Undo button is appended INTO
    this node — without it a screen reader announces the fragment. #}
+{# A destructive two-tap arm relabels its button; a screen reader hears
+     nothing change unless the new label is also spoken. Every arm writes its
+     label here (v292; outside review of v291, SK-AUD-018). #}
+  <div class="vis-hidden" id="confirmStatus" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"
        aria-atomic="true" hidden></div>
 

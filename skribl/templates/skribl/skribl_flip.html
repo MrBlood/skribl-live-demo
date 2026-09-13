@@ -320,6 +320,10 @@
 
     </div>
 
+  {# A destructive two-tap arm relabels its button; a screen reader hears
+     nothing change unless the new label is also spoken. Every arm writes its
+     label here (v292; outside review of v291, SK-AUD-018). #}
+    <div class="vis-hidden" id="confirmStatus" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="flip-chip" id="flipChip"></div>
 
     <!-- "More" menu: the Pad's overflow actions — save/load draft + export. -->
