@@ -5191,7 +5191,22 @@ body.player-mode #canvas {
   gap: 2px; text-decoration: none; color: inherit; }
 .posted-title { font-size: 13px; color: var(--text-primary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.posted-sub { font-size: 11px; color: var(--text-secondary); }
+/* ONE LINE, always (v293): the meta is "4 pages · 41 min ago", and on a
+   phone the row that holds three actions used to squeeze it to a word per
+   line. The actions yield (they stack, below) — the words never do. */
+.posted-sub { font-size: 11px; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.posted-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+/* On a phone, a row with three actions puts them on their own line under
+   the title, indented past the thumb so they read as the row's; the × keeps
+   the title line's right edge. A one-action row is unchanged. A width query
+   rather than the size class: the drawer is shared and the Pad does not load
+   lib/sizeclass.js — this sheet's own compact tier is max-width 640. */
+@media (max-width: 640px) {
+  .posted-row-keyed { flex-wrap: wrap; }
+  .posted-row-keyed .posted-actions { order: 2; flex: 1 1 100%; justify-content: flex-start; padding-left: 52px; }
+  .posted-row-keyed .posted-del { order: 1; }
+}
 /* The destructive sibling of .posted-copy. Danger-toned so it does not read
    as another neutral utility beside "Copy link", and only rendered at all when
    this browser holds the post's revocation key. */

@@ -221,7 +221,11 @@
         // player base, never to a hand-written path.
         var base = global.SKRIBL_PLAYER_BASE || '';
         var url = store.absolute(e.url || (base ? base + '/' + e.id : ''));
-        return '<div class="posted-row" data-id="' + esc(e.id) + '">' +
+        // .posted-row-keyed: three actions, not one; on the compact size class
+        // they stack under the title (v293 — the meta line wrapped a word per
+        // line beside them on a phone). The actions share one wrapper so the
+        // stylesheet can move them as a group; the × stays on the title line.
+        return '<div class="posted-row' + (e.tok ? ' posted-row-keyed' : '') + '" data-id="' + esc(e.id) + '">' +
           '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
             (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
           /* HONOURS player_target, which it did not until v281. __init__.py
@@ -238,6 +242,7 @@
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
             '<span class="posted-sub">' + esc(sub) + '</span>' +
           '</a>' +
+          '<span class="posted-actions">' +
           '<button type="button" class="posted-copy" data-url="' + esc(url) + '">Copy link</button>' +
           /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
              removed the local entry and nothing else — the Skribl stayed live
@@ -262,6 +267,7 @@
                 esc(e.id) + '" aria-label="Copy the recovery key for this ' +
                 'Skribl">Copy key</button>'
             : '') +
+          '</span>' +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
             'aria-label="Remove from this list, keeping the Skribl online">' +
             '\u2715</button>' +
