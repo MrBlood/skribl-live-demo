@@ -885,6 +885,87 @@ with sync_playwright() as p:
         check(f"{_name}: no option is a single letter standing in for a word", not _sg["letters"], ", ".join(_sg["letters"]))
         check(f"{_name}: no menuitem outside a menu", not _sg["strays"], ", ".join(_sg["strays"]))
         _pg.close()
+
+    # ------------------------------------------------------------ section 13
+    print("\nA11Y 13 — hidden means unreachable")
+    # Outside review of v291, SK-AUD-004/005. The Name and Tune drawers close
+    # to a zero-height grid row and say aria-hidden="true" — which removes them
+    # from the accessibility tree and does NOTHING to the tab order. Tab walked
+    # into an invisible input; a screen reader met a control its tree said was
+    # not there. And the Name drawer focused its input on a 160ms timer that
+    # nothing cancelled, so a fast dismissal put focus into the closed drawer.
+    #
+    # THE MECHANISM IS SEQUENTIAL FOCUS, so that is what is walked: Tab from
+    # the top of the page until the cycle repeats, and no stop may lie inside
+    # a surface that declares itself hidden. The census names every
+    # aria-hidden surface holding a focusable control, so a new drawer joins
+    # the walk by existing. Exemption: none — a surface that is out of the
+    # tree is out of the tab order, or it is not hidden.
+    TABWALK = """() => {
+      const FOC = 'button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])';
+      const hidden = [...document.querySelectorAll('[aria-hidden="true"]')].filter(h => h.querySelector(FOC));
+      const key = h => h.id ? '#' + h.id : h.tagName.toLowerCase() + '.' + [...h.classList].join('.');
+      return { surfaces: hidden.map(key) }; }"""
+    INSIDE_HIDDEN = """() => {
+      const a = document.activeElement; if (!a || a === document.body) return null;
+      const h = a.closest('[aria-hidden="true"]');
+      return h ? (h.id ? '#' + h.id : h.tagName.toLowerCase()) + ' > ' + (a.id ? '#' + a.id : a.tagName.toLowerCase() + ' ' + (a.textContent || '').trim().slice(0, 14)) : null; }"""
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(900)
+        _surf = _pg.evaluate(TABWALK)["surfaces"]
+        check(f"{_name}: the census finds hidden surfaces holding controls (else it walks nothing)",
+              len(_surf) >= 2, ", ".join(_surf))
+        _pg.evaluate("() => { document.activeElement && document.activeElement.blur(); }")
+        _seen, _bad, _first = set(), [], None
+        for _i in range(400):
+            _pg.keyboard.press("Tab")
+            _where = _pg.evaluate("""() => { const a = document.activeElement;
+              return a === document.body ? '(body)' : (a.id || a.tagName + ':' + (a.textContent || '').trim().slice(0, 20)); }""")
+            _in = _pg.evaluate(INSIDE_HIDDEN)
+            if _in and _in not in _bad:
+                _bad.append(_in)
+            if _first is None:
+                _first = _where
+            elif _where == _first and _i > 5:
+                break
+            _seen.add(_where)
+        check(f"{_name}: Tab never lands inside a hidden surface ({len(_seen)} stops walked)",
+              not _bad, ", ".join(_bad))
+        # THE TIMER RACE. Open Name from the menu, dismiss before the focus
+        # timer fires, then wait past it: focus must not be in the closed
+        # drawer. 40ms is the drawer's own open delay; 160ms the focus timer.
+        # ...AND THE PROPERTY THE GUARD GOVERNS, because `inert` alone makes
+        # the scenario pass: focus() on an inert node is a no-op, so a stale
+        # timer that still fires is invisible to the check above (the Flip
+        # reveal() lesson in CLAUDE.md). So focus() is instrumented, and a
+        # call whose target sits inside a hidden surface is the defect —
+        # whether or not the browser then honoured it.
+        _menu = "#menuBtn" if _path == "/" else "#moreBtn"
+        _pg.evaluate("""() => { const f = HTMLElement.prototype.focus; window.__hiddenFocus = [];
+          HTMLElement.prototype.focus = function (...a) {
+            const h = this.closest('[aria-hidden="true"], [inert]');
+            if (h) window.__hiddenFocus.push((h.id ? '#' + h.id : h.tagName) + ' > ' + (this.id ? '#' + this.id : this.tagName));
+            return f.apply(this, a); }; }""")
+        _pg.click(_menu)
+        _pg.wait_for_timeout(300)
+        _pg.click("#nameItem")
+        _pg.wait_for_timeout(90)          # open has fired (40ms); focus (200ms) has not
+        # A DOM click, not Playwright's: its actionability wait holds the click
+        # until the drawer's 260ms slide has settled, which is AFTER the timer
+        # fires and defeats the race. (Escape is not the door here: it lives on
+        # the input, which has no focus yet.)
+        _pg.evaluate("() => document.getElementById('nameDone').click()")
+        _pg.wait_for_timeout(500)         # well past the timer
+        _late = _pg.evaluate(INSIDE_HIDDEN)
+        _open = _pg.evaluate("() => document.getElementById('nameShell').classList.contains('open')")
+        _calls = _pg.evaluate("() => window.__hiddenFocus")
+        check(f"{_name}: dismissing Name before its focus timer fires leaves focus out of the closed drawer",
+              not _open and not _late, f"open={_open} focus={_late}")
+        check(f"{_name}: ...and no focus() call ever targets a hidden node (the timer was cancelled, not merely ignored)",
+              not _calls, ", ".join(_calls))
+        _pg.close()
     browser.close()
 
 # ------------------------------------------------------------------ section 6
