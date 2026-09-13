@@ -25,11 +25,20 @@
  *
  * 'failed', 'full' and 'saved-no-media' STAY UP — each describes an ongoing
  * durability problem, and a warning that fades claims it was resolved. A
- * later successful save replaces them with 'saved', which fades. */
+ * later successful save replaces them with 'saved', which fades.
+ *
+ * THE AMBER WITH NOTHING TO RE-ADD CAN BE ACKNOWLEDGED (v294). "Saved without
+ * media" is true — the bytes did not reach the store — and it had no exit:
+ * owner, from a phone, "it never leaves". The same × acknowledges it for the
+ * session and the pill goes quiet; it is not a lie hidden, because the leave
+ * guard the editors arm on that state is untouched. Any OTHER state speaks
+ * again — a later save that lands the bytes shows green, a new loss shows the
+ * route — so an acknowledgement is of this warning, not of warnings. */
 (function () {
   'use strict';
   var cfg = { pending: function () { return false; }, open: null, dismiss: null };
   var bound = false;
+  var acknowledged = false;   // the no-route amber, quiet until the state changes
 
   function ensureDismiss(pill) {
     var x = document.getElementById('autosaveStatusDismiss');
@@ -38,27 +47,44 @@
     x.type = 'button';
     x.id = 'autosaveStatusDismiss';
     x.className = 'autosave-dismiss';
-    x.setAttribute('aria-label', 'Dismiss — keep the drawing without its media');
-    x.title = 'Keep the drawing without its media';
     x.textContent = '✕';
     x.hidden = true;
     pill.appendChild(x);
     return x;
   }
 
-  function setActionable(pill, txt, on) {
+  // The 'show' class is added on the NEXT frame, and a save reports 'saving'
+  // and its outcome in the same tick: a hide that only removed the class lost
+  // the race to the frame still queued by 'saving', and an acknowledged pill
+  // came back reading "Saving…" for good (found by the pin, first cut). The
+  // queued frame is cancelled here, and the hide timer is the pill's one.
+  function hide(pill) {
+    cancelAnimationFrame(pill._showRaf);
+    pill.classList.remove('show');
+    clearTimeout(pill._hideTimer);
+    pill._hideTimer = setTimeout(function () { pill.hidden = true; }, 300);
+  }
+
+  // `on`: the pill is a route (pending record). `amber`: either amber wording,
+  // which is when the × is offered — as Dismiss for a route, as acknowledge
+  // for the warning with nowhere to go.
+  function setActionable(pill, txt, on, amber) {
     pill.classList.toggle('actionable', !!on);
     var x = ensureDismiss(pill);
     if (on) {
       txt.setAttribute('role', 'button');
       txt.setAttribute('tabindex', '0');
       txt.setAttribute('title', 'Open the drawer holding the missing file');
-      x.hidden = false;
     } else {
       txt.removeAttribute('role');
       txt.removeAttribute('tabindex');
       txt.removeAttribute('title');
-      x.hidden = true;
+    }
+    x.hidden = !amber;
+    if (amber) {
+      x.setAttribute('aria-label', on ? 'Dismiss — keep the drawing without its media'
+                                      : 'Dismiss this warning for now');
+      x.title = on ? 'Keep the drawing without its media' : 'Hide this warning for now';
     }
     if (bound) return;
     bound = true;
@@ -76,7 +102,9 @@
     });
     x.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
-      if (cfg.dismiss) cfg.dismiss();
+      if (pill.classList.contains('actionable')) { if (cfg.dismiss) cfg.dismiss(); return; }
+      acknowledged = true;
+      hide(pill);
     });
   }
 
@@ -85,9 +113,13 @@
     var txt = document.getElementById('autosaveStatusText');
     if (!pill || !txt) return;
     clearTimeout(pill._hideTimer);
+    var pending = state === 'saved-no-media' && !!(cfg.pending && cfg.pending());
+    // The acknowledged warning stays quiet; 'saving' passes through it (every
+    // save says so first) without resetting it; anything else is a new fact.
+    if (state === 'saved-no-media' && !pending && acknowledged) { hide(pill); return; }
+    if (state !== 'saving') acknowledged = false;
     pill.hidden = false;
     pill.classList.remove('saving', 'failed', 'partial');
-    var pending = false;
     if (state === 'saving') { pill.classList.add('saving'); txt.textContent = 'Saving…'; }
     // 'failed' and 'full' are both red, and the difference matters: 'full'
     // means the browser's storage for this origin is out of room and the
@@ -103,12 +135,12 @@
     // would send them to an empty drawer.
     else if (state === 'saved-no-media') {
       pill.classList.add('partial');
-      pending = !!(cfg.pending && cfg.pending());
       txt.textContent = pending ? 'Media missing — tap to re-add' : 'Saved without media';
     }
     else { txt.textContent = 'Saved'; }
-    setActionable(pill, txt, state === 'saved-no-media' && pending);
-    requestAnimationFrame(function () { pill.classList.add('show'); });
+    setActionable(pill, txt, pending, state === 'saved-no-media');
+    cancelAnimationFrame(pill._showRaf);
+    pill._showRaf = requestAnimationFrame(function () { pill.classList.add('show'); });
     if (state !== 'saving' && state !== 'failed' && state !== 'full' && state !== 'saved-no-media') {
       pill._hideTimer = setTimeout(function () {
         pill.classList.remove('show');

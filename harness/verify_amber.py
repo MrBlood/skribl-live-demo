@@ -142,6 +142,23 @@ with sync_playwright() as p:
           f"{noroute} — the media is still loaded here; a control promising to "
           "bring it back would open an empty drawer")
 
+    print("\nFLIP — the amber with nothing to re-add can be acknowledged (v294)")
+    # Owner, from a phone: "Saved without media ... stays and doesn't fade and
+    # media is there. It never leaves." The warning is true — the bytes did not
+    # reach the store — and it had no exit. The × acknowledges it for the
+    # session; a change of state speaks again.
+    ack = pg2.evaluate("""() => { const x = document.getElementById('autosaveStatusDismiss');
+        return x ? { hidden: x.hidden, pe: getComputedStyle(x).pointerEvents, label: x.getAttribute('aria-label') || '' } : null; }""")
+    check("the × is offered on this amber too, and takes taps",
+          bool(ack) and ack["hidden"] is False and ack["pe"] == "auto" and ack["label"] != "", str(ack))
+    ackc, ackwhy = try_click(pg2, "#autosaveStatusDismiss")
+    pg2.wait_for_timeout(500)
+    check("acknowledging hides the pill", ackc and pg2.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, ackwhy)
+    scribble(pg2, box2, 7.5); pg2.wait_for_timeout(1600)
+    check("...and it stays quiet on the next save",
+          pg2.evaluate("() => document.getElementById('autosaveStatus').hidden") is True,
+          "an acknowledged warning that comes back on the next stroke was never acknowledged")
+
     print("\nFLIP — re-add card in the music drawer after reload (store still broken)")
     pg2.reload(wait_until="load"); pg2.wait_for_timeout(1500)
     snap_pending = pg2.evaluate("() => Object.fromEntries(Object.entries(localStorage))")
@@ -328,6 +345,17 @@ with sync_playwright() as p:
     check("Pad: amber with nothing to re-add does NOT pretend to be a route",
           noroute3["actionable"] is False and noroute3["role"] is None and "re-add" not in noroute3["text"].lower(),
           str(noroute3))
+    ack3 = pg3.evaluate("""() => { const x = document.getElementById('autosaveStatusDismiss');
+        return x ? { hidden: x.hidden, pe: getComputedStyle(x).pointerEvents } : null; }""")
+    check("Pad: the × is offered on this amber too", bool(ack3) and ack3["hidden"] is False and ack3["pe"] == "auto", str(ack3))
+    a3c, a3why = try_click(pg3, "#autosaveStatusDismiss"); pg3.wait_for_timeout(500)
+    check("Pad: acknowledging hides the pill", a3c and pg3.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, a3why)
+    pg3.mouse.move(pbox3["x"]+300, pbox3["y"]+200); pg3.mouse.down()
+    for i in range(40): pg3.mouse.move(pbox3["x"]+300+i*3, pbox3["y"]+200+math.cos(i/4)*30)
+    pg3.mouse.up(); pg3.wait_for_timeout(1800)
+    check("Pad: ...and it stays quiet on the next save",
+          pg3.evaluate("() => document.getElementById('autosaveStatus').hidden") is True,
+          "an acknowledged warning that comes back on the next stroke was never acknowledged")
     pg3.reload(wait_until="load"); pg3.wait_for_timeout(1200)
     rc, rwhy = try_click(pg3, "#restoreConfirm")
     check("Pad: the restore banner offers the draft back", rc, rwhy)
@@ -359,6 +387,56 @@ with sync_playwright() as p:
           "the × must do what the card's Dismiss does")
     check("Pad: no uncaught page errors", not errs3, "; ".join(errs3[:3]))
     pg3.close()
+
+    print("\nPAD — the store write is retried, not decided once (v294)")
+    # The Pad wrote the bytes to IndexedDB exactly once, at attach time, and
+    # carried that verdict for the whole session: one rejected write was a
+    # permanent amber over media that was loaded and in front of the user.
+    # Flip re-spills the whole payload on every save and heals by itself.
+    def pad_page(hook):
+        pg = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+        pg.goto(BASE+"/skribl-pad", wait_until="load"); pg.wait_for_timeout(1200)
+        pg.evaluate("() => localStorage.clear()")
+        pg.evaluate("""(hook) => { const orig = SkriblDraftStore.put.bind(SkriblDraftStore); window.__puts = 0;
+            SkriblDraftStore.put = (k, v) => { window.__puts++; return (window.__puts === 1) ? hook() : orig(k, v); }; }""".replace("hook()", hook))
+        box = pg.locator("canvas").first.bounding_box()
+        return pg, box
+    def stroke(pg, box, y):
+        pg.mouse.move(box["x"]+120, box["y"]+y); pg.mouse.down()
+        for i in range(50): pg.mouse.move(box["x"]+120+i*3, box["y"]+y+math.sin(i/4)*30)
+        pg.mouse.up()
+    pg4, box4 = pad_page("Promise.reject(new Error('transient'))")
+    stroke(pg4, box4, 120); pg4.wait_for_timeout(1800)
+    pg4.set_input_files("#musicInput", WAV); pg4.wait_for_timeout(500)   # before the attach's own save retries
+    s = pg4.evaluate(STATE)
+    check("Pad: amber after the store refuses the bytes once", "partial" in s["cls"], f"{s['text']!r}")
+    r4c, r4why = try_click(pg4, "#autosaveStatusDismiss"); pg4.wait_for_timeout(500)
+    check("Pad: acknowledged", r4c and pg4.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, r4why)
+    stroke(pg4, box4, 260); pg4.wait_for_timeout(2500)
+    s = pg4.evaluate(STATE)
+    puts = pg4.evaluate("() => window.__puts")
+    check("Pad: the next save retries the write, the bytes land, and the pill speaks again — green",
+          puts >= 2 and "partial" not in s["cls"] and pg4.evaluate("() => document.getElementById('autosaveStatus').hidden") is False,
+          f"puts={puts} {s['text']!r} hidden={pg4.evaluate('() => document.getElementById(\'autosaveStatus\').hidden')}")
+    ok4 = pg4.evaluate("""() => window.SkriblDraftStore.get('pad:music').then(r => !!(r && r.blob && r.blob.size > 0)).catch(() => false)""")
+    check("Pad: ...because the retry stored them", ok4 is True)
+    pg4.close()
+
+    pg5, box5 = pad_page("new Promise(() => {})")
+    stroke(pg5, box5, 120); pg5.wait_for_timeout(1800)
+    pg5.set_input_files("#musicInput", WAV); pg5.wait_for_timeout(2500)
+    s = pg5.evaluate(STATE)
+    check("Pad: amber while a write that never settles is in flight", "partial" in s["cls"], f"{s['text']!r}")
+    stroke(pg5, box5, 260); pg5.wait_for_timeout(2500)
+    check("Pad: a save inside the deadline does not pile a second write on a hung one",
+          pg5.evaluate("() => window.__puts") == 1, f"puts={pg5.evaluate('() => window.__puts')}")
+    pg5.wait_for_timeout(9000)   # past the 12s deadline in total
+    stroke(pg5, box5, 400); pg5.wait_for_timeout(2500)
+    s = pg5.evaluate(STATE)
+    check("Pad: past the deadline the hung write is given up, retried on the next save, and the amber ends",
+          pg5.evaluate("() => window.__puts") >= 2 and "partial" not in s["cls"],
+          f"puts={pg5.evaluate('() => window.__puts')} {s['text']!r}")
+    pg5.close()
 
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()

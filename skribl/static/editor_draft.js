@@ -50,6 +50,38 @@ let durableRev = 0;
 // rejected — private mode, quota, no IndexedDB). 'failed' keeps the amber
 // pill up PERSISTENTLY and arms the leave guard.
 const mediaDraft = { photo: 'none', music: 'none' };
+// The attached File itself, per slot, so a failed store write can be RETRIED
+// on a later save. Until v294 the bytes went to IndexedDB exactly once, at
+// attach time, and that verdict stood for the whole session: one rejected or
+// hung write (WebKit on iOS can accept a multi-megabyte put and never settle
+// it) was a permanent "Saved without media" over media that was loaded and in
+// front of the user. Flip re-spills its whole payload on every save and heals
+// by itself; the Pad's per-file write now heals the same way.
+const _mediaFile = { photo: null, music: null };
+const MEDIA_STORE_TIMEOUT_MS = 12000;   // Flip's SPILL_TIMEOUT_MS, for the same reason
+function storeMediaBytes(kind) {
+  const file = _mediaFile[kind];
+  if (!file) return;
+  if (!window.SkriblDraftStore) { mediaDraft[kind] = 'failed'; return; }
+  if (mediaDraft[kind] === 'saving') return;   // one write in flight at a time; a hung one is given up below
+  mediaDraft[kind] = 'saving';
+  // A put that never settles is not a put that is still working. Past the
+  // deadline the bytes are treated as not durable — the truthful reading — and
+  // the next save tries again. A late resolve is ignored: `settled` guards
+  // both arms, and the retry is what confirms the bytes.
+  let settled = false;
+  const deadline = setTimeout(() => {
+    if (settled) return;
+    settled = true;
+    mediaDraft[kind] = 'failed';
+    _refreshMediaPill();
+    console.error('[skribl] ' + kind + ' bytes: store write did not settle in ' + MEDIA_STORE_TIMEOUT_MS + 'ms');
+  }, MEDIA_STORE_TIMEOUT_MS);
+  SkriblDraftStore.put('pad:' + kind, {
+    blob: file, name: file.name, type: file.type, savedAt: Date.now()
+  }).then(() => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'durable'; _refreshMediaPill(); })
+    .catch(() => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'failed'; _refreshMediaPill(); });
+}
 // One id per page load, stamped into every record this tab writes. Autosave is
 // a single slot per mode (review #20); full multi-draft arbitration needs a
 // project model this tree does not have, but the cheapest and worst clobber —
@@ -221,6 +253,10 @@ function writeAutosave() {
     }
     durableRev = rev;
     sessionOwnedDraft = true;   // real work written: later empty = deliberate clear
+    // A slot whose bytes failed to store gets another write with every save
+    // (v294). The amber below is then a report on THIS save, not a verdict
+    // carried from attach time.
+    Object.keys(mediaDraft).forEach((kind) => { if (mediaDraft[kind] === 'failed' && _mediaFile[kind]) storeMediaBytes(kind); });
     const hasPhoto = !!((photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName)
                         || (typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta));
     const hasMusic = !!((audioEl && audioEl._fileName)
@@ -292,6 +328,7 @@ function clearAutosave() {
     SkriblDraftStore.del('pad:music').catch(() => {});
   }
   mediaDraft.photo = 'none'; mediaDraft.music = 'none';
+  _mediaFile.photo = null; _mediaFile.music = null;
 }
 
 function readAutosave() {
@@ -562,16 +599,14 @@ Object.keys(_MEDIA_INPUTS).forEach((kind) => {
   if (input) input.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    if (!window.SkriblDraftStore) { mediaDraft[kind] = 'failed'; return; }
-    mediaDraft[kind] = 'saving';
-    SkriblDraftStore.put('pad:' + kind, {
-      blob: file, name: file.name, type: file.type, savedAt: Date.now()
-    }).then(() => { mediaDraft[kind] = 'durable'; _refreshMediaPill(); })
-      .catch(() => { mediaDraft[kind] = 'failed'; _refreshMediaPill(); });
+    _mediaFile[kind] = file;
+    mediaDraft[kind] = 'none';   // a fresh file is a fresh attempt, never a hung one's shadow
+    storeMediaBytes(kind);
   }, true);  // capture: run even if a later handler clears the input
   const rm = document.getElementById(_MEDIA_REMOVES[kind]);
   if (rm) rm.addEventListener('click', () => {
     mediaDraft[kind] = 'none';
+    _mediaFile[kind] = null;
     if (window.SkriblDraftStore) SkriblDraftStore.del('pad:' + kind).catch(() => {});
   });
 });
