@@ -7412,3 +7412,115 @@ census) or in one editor and not the other (the modal census, before v290).
 The pattern is the one CLAUDE.md records: a check that samples proves the
 sample. Where a property is meant to hold everywhere, the census now names
 every width and every editor it holds on.
+
+## v292 -- the extreme review: five laws, and the one green check that was hiding a red surface
+
+A second outside review read the whole v291 tree -- source, record, decisions
+-- and returned twenty findings under one verdict: the next jump comes from
+making classes of defect impossible, not from more assertions. The owner's
+answer was "fix everything", and this tier is nine squash-merged PRs against
+every finding that has a fix in the tree. Each check was red on the tree
+before its fix and red again under mutation of its own component. The three
+findings that remain are the ones with no fix in a tree: a first-run test with
+five strangers, Flip's page management as direct manipulation rather than
+controls, and the blind audit of a running instance.
+
+**Modal means modal on every route (SK-AUD-001/002/003, PR 1).** The modal
+census swept Pad and Flip for aria-modal ids into one set and keyed its
+recipes by id. Help and Export are one template included by both editors, so
+they were counted twice and driven once -- on the Pad. Flip's copies had no
+focus management at all: the drawer was unhidden with focus left behind it,
+and close() called blur(), the exact anti-pattern lib/modalfocus.js's own
+header describes. The census was green throughout. Keyed by (route, id) now,
+and the honest sweep found seven Flip instances with no recipe -- Help,
+Export, the posted list, the report sheet, the three recovery-key dialogs --
+each of which has one. Against the old flip.js the census is red on exactly
+the two paths without the modal owner; the other five, shared modules,
+already held. CLAUDE.md records the rule: a population that spans routes
+carries the route in its identity.
+
+**Hidden means unreachable (SK-AUD-004/005, PR 2).** The Name and Tune
+drawers closed to a zero-height grid row and said aria-hidden="true", which
+removes them from the accessibility tree and does nothing to the tab order.
+Measured: from a closed drawer, Tab reached the Name input, Done and every
+Tune pill -- twelve ghost stops on the Pad, fourteen on Flip. `inert` on the
+closed shell, in the markup and on every toggle, makes hidden and unreachable
+one state. The Name drawer's 160ms focus timer, which nothing held, is held,
+cancelled on close, and re-reads the state when it fires. The census walks
+Tab from the top of each editor until the cycle repeats; then the race, with
+a DOM click because Playwright's actionability wait would hold the click past
+the timer; and because inert alone makes the race pass -- focus() on an inert
+node is a no-op, the Flip reveal() lesson again -- focus() is instrumented and
+a call targeting a hidden node is the defect. Red under mutation of the timer
+fix alone.
+
+**Selected means selected, one owner, one keyboard (SK-AUD-006/007/008/012,
+PRs 3 and 4).** The draw drawer's segs carried aria-pressed; every other seg
+lit a class and said nothing -- eighteen groups across both editors, more
+than the review counted. One owner now, by the mechanism the pill already
+uses: lib/segslider.js watches the .on/.active class on every seg to move the
+pill, and the same document-level observer writes aria-pressed. No toggle
+site changed. The same module gives every seg one Tab stop (the selected
+option) with the arrows moving among the rest; moving is selecting. That
+change broke the modal trap, which counted tabindex="-1" buttons as Tab stops
+and let Tab leave Flip's More menu from its real last stop -- the census
+caught it the same run, and the trap reads the Tab sequence now. Four of
+Flip's openers said aria-haspopup="true" over dialogs beside one that said
+"dialog"; all say "dialog" and name their target, the Pad's ⋯ button included,
+and the popup contract is walked. Help said Your Skribls twice; once.
+
+**A destructive action is not a race (SK-AUD-018/019, PR 5).** Flip's menu
+Clear all executed by dispatching two synthetic clicks at the drawer's Clear
+button, riding its armed state; it calls clearAllPages() now, the same action
+the drawer's button calls after its own arm. On both editors the two-tap arm
+disarmed on a three-second timer, so a slow second tap met a disarmed button
+and armed it again -- measured at 3.6 s -- and the relabel was silent to a
+screen reader. Each arm writes its label to a live region and holds until
+the person leaves it: the menu closes, focus leaves, or a long safety net.
+
+**Platform fit (SK-AUD-014/015/016, PRs 6, 7 and 8).** Three reversals or
+additions the review argued for and the owner took:
+
+*The chrome follows the device until told otherwise,* reversing v232. The
+stored choice is system, dark or light, with nothing stored meaning system;
+the effective mode resolves a system choice through prefers-color-scheme and
+lets the two explicit choices ignore it, in both directions. The resolution
+lives in the inline boot and lib/theme.js -- a storage that throws falls
+through to the OS in both, so a private-mode page does not boot dark and flip
+light when the lib loads -- and the stylesheet keeps one light ramp keyed on
+the attribute, for the same reason as before with a different premise: a
+media rule would be a second copy of the ramp to drift. Six suites whose pins
+measured dark-theme literals -- a ring's rgba, a toggle's orange, a thumb's
+ink, and the amber that three suites read on a music dot -- now ask for the
+dark theme they measure, since the harness's headless Chromium says light;
+the last three were found by CI's full battery, not locally, which is what
+the PR-side trim costs and the release run is for.
+
+*Forced colours and increased contrast.* Under forced colours the selected
+option of a seg and an unselected one computed identically and a switch on
+looked like a switch off -- the pill and the tint are backgrounds, and forced
+colours erase backgrounds. The edge does the telling now: a 3px Highlight
+outline on every pressed option, lit tool and checked switch, a 1px ButtonText
+outline on the resting options, the pill hidden. Under prefers-contrast: more
+four tokens map to -hc counterparts defined beside them in each ramp, so the
+media block holds no literal and the token ratchets read it as the mapping it
+is.
+
+*Send it is a Share button* where navigator.share exists, on both editors'
+post results, with the posted title and the link; Copy link stays. Feature-
+detected at show time; a local fallback is not a link anyone else can open.
+
+**Copy (SK-AUD-009/010/017/020, PR 9).** The unit is a page everywhere the
+person reads, with "frames per second" surviving once in Help as the
+explanation of the fps pill; a backup is a backup, with autosave named as the
+persistence model; Your Skribls says "saved in this browser only" above the
+list, before it reads as a library; and Help opens on both editors with one
+sentence on how Pad and Flip relate -- two ways to make a Skribl, each with
+its own draft, the link between them a door and not a conversion.
+
+**What this tier taught the instrument.** The route lesson is in CLAUDE.md.
+Two more, recorded here: a fix can be masked by a stronger fix beside it
+(inert hid the timer race), and then the property the weaker fix governs has
+to be pinned directly; and a mechanism change can break a sibling that shared
+an assumption (tabindex="-1" and the trap), which is what running the whole
+census on every PR is for.
