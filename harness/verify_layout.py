@@ -421,6 +421,9 @@ with sync_playwright() as p:
             pg.mouse.down(); pg.mouse.move(box["x"] + 110, box["y"] + 80, steps=6); pg.mouse.up()
             pg.wait_for_timeout(150)
         before = pg.url
+        # v293: the link is a row in the ⋯ menu (the mirror of the Pad's Flip
+        # Mode row), opened AFTER the stroke — a press on the canvas closes it.
+        pg.click("#moreBtn"); pg.wait_for_timeout(400)
         back.click()
         pg.wait_for_timeout(300)
         check("Flip — leaving navigates freely; Flip persists its work, so a confirm would be a false alarm",

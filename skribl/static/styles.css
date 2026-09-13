@@ -4940,7 +4940,7 @@ body.player-mode #canvas {
      gap sets off Post (the commit) and then ⋯ (overflow). */
   .actions { gap: 3px; }
   .btn.post { margin-left: 11px; }
-  #menuBtn  { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room */
+  #menuBtn, #moreBtn { margin-left: 8px; margin-right: 2px; }     /* + edge breathing room; Flip's ⋯ too (v293) */
 
   /* Toolbar magnify sized to match Pen/Eraser. */
   .magnify-tool svg { width: 22px; height: 22px; }  /* v205-fix: phone tier-1 icon */
@@ -4993,7 +4993,7 @@ body.player-mode #canvas {
   .actions,
   .header.compact .actions { gap: 9px; justify-content: flex-end; }
   .btn.post { margin-left: 0; }
-  #menuBtn  { margin-left: 0; margin-right: 2px; }
+  #menuBtn, #moreBtn { margin-left: 0; margin-right: 2px; }
 
   /* After a take (Play visible), Record drops to a bare dot — grouped beside
      Play so it still reads as a control — which pulls the cluster further right
@@ -6209,34 +6209,9 @@ body.playing .flip-grid { display: none; }
 .header .actions .btn { height: 36px; padding: 0 16px; }
 .header .actions .btn.play { height: 36px; }
 
-/* ---------- v225: Flip's back arrow is navigation, not an action -----------
-   It was the last bordered tile in either header once tune and the overflow
-   menu lost theirs, and at 44px it outweighed the wordmark beside it: the
-   heaviest thing in the lead was the control you press least.
-
-   It does NOT simply join the 36px tier with tune and the menu, and that is
-   deliberate. Those two act ON the drawing; this one leaves the surface
-   entirely. Sizing it identically would say they are peers. 32px in a muted
-   grey reads as chrome -- findable, clearly a control, quieter than everything
-   beside it.
-
-   The 44px tap band survives at --tap-grow: 6px, and the ::before needs its
-   z-index for the same reason every other grown target does; see the
-   "Invisible expanded tap area" block. */
-.flip-lead .icon-btn {
-  width: 32px; height: 32px;
-  border: none; background: none;
-  color: var(--text-soft-2);
-  position: relative; z-index: 1; --tap-grow: 6px;   /* 32 visual -> 44 tap */
-}
-.flip-lead .icon-btn::before {
-  content: ""; position: absolute; inset: calc(-1 * var(--tap-grow, 6px));
-  background: transparent; border-radius: inherit;
-}
-.flip-lead .icon-btn svg { width: 20px; height: 20px; }
-@media (hover: hover) {
-  .flip-lead .icon-btn:hover { color: var(--text-primary); background: rgba(var(--wash-rgb), 0.05); }
-}
+/* Flip's back arrow left the header in v293 — the way back to the Pad is a
+   row in Flip's ⋯ menu, the mirror of the Pad's Flip Mode row, so the two
+   headers hold the same five things. Its rules lived here (v225). */
 
 /* ---------- v225: a lit .tool-open must be SQUARE ---------------------------
    Borderless, .tool-open paints nothing and its box is invisible -- so nobody

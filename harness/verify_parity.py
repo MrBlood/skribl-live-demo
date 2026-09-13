@@ -965,9 +965,12 @@ with sync_playwright() as p:
         _pm, _fm = _pp.evaluate(MENU), _fp.evaluate(MENU)
         check(f"at {_w}: both menus are open and measurable", bool(_pm) and bool(_fm), f"pad {bool(_pm)} flip {bool(_fm)}")
         if _pm and _fm:
-            _pl = [i["label"] for i in _pm["items"] if i["label"] != "Flip Mode"]   # Flip has a back link in its header instead
-            _fl = [i["label"] for i in _fm["items"]]
-            check(f"at {_w}: the same items, in the same order (Flip Mode aside)",
+            # The row that leads to the OTHER editor sits in the same slot on both
+            # (v293: Pad's "Flip Mode", Flip's "Skribl Pad"); compared as one.
+            _other = {"Flip Mode": "(the other editor)", "Skribl Pad": "(the other editor)"}
+            _pl = [_other.get(i["label"], i["label"]) for i in _pm["items"]]
+            _fl = [_other.get(i["label"], i["label"]) for i in _fm["items"]]
+            check(f"at {_w}: the same items, in the same order (the row to the other editor as one)",
                   _pl == _fl, f"pad {_pl}\n      flip {_fl}")
             _pb = {i["label"]: i["box"] for i in _pm["items"]}
             _diff = [f"{i['label']}: pad {_pb.get(i['label'])} flip {i['box']}"
@@ -980,6 +983,57 @@ with sync_playwright() as p:
             check(f"at {_w}: the pills at the bottom are tap-sized on both, and the same size",
                   _pm["pillMin"] >= 26 and _fm["pillMin"] >= 26 and _pm["pillMin"] == _fm["pillMin"],
                   f"pad {_pm['pillMin']}-{_pm['pillMax']}px, flip {_fm['pillMin']}-{_fm['pillMax']}px")
+        _pp.close(); _fp.close()
+
+    print("\nPARITY — the two headers are one design")
+    # Owner, v293, from a phone: "flip top menu is super tight compared to
+    # pad's spacing which feels appropriate." Pad's header holds five things —
+    # wordmark, tune, play, a Post pill with its label, more. Flip's held six:
+    # a back arrow first, and the compact tiers paid for it by dropping Post's
+    # label, shrinking every control to 33/31/30px and halving the gaps. The
+    # back link lives in Flip's ⋯ menu now, the mirror of Pad's Flip Mode row,
+    # and the header is the SAME five items at the same sizes and gaps. Read
+    # from the DOM on both, at three widths, and compared item by item; the
+    # Pad is the reference the owner named.
+    HEADER = """() => {
+      const h = document.querySelector('.header'); if (!h) return null;
+      const vis = el => el.offsetParent !== null && el.getBoundingClientRect().width > 0;
+      const role = el => el.matches('.brand, .flip-word') ? 'wordmark' : el.id === 'tuneBtn' ? 'tune'
+        : el.closest('.play-wrap') ? 'play' : el.id === 'postBtn' ? 'post'
+        : (el.id === 'menuBtn' || el.id === 'moreBtn') ? 'more' : (el.id || el.className);
+      const ctrls = [...h.querySelectorAll('button, a, .brand, .flip-word')].filter(vis)
+        .filter(el => !el.closest('.duration-badge') && !(el.matches('a') && el.closest('.brand, .flip-word')));
+      const items = ctrls.map(el => { const r = el.getBoundingClientRect(); return { role: role(el), x: r.left, w: Math.round(r.width), h: Math.round(r.height) }; })
+        .sort((a, b) => a.x - b.x);
+      const gaps = items.slice(1).map((it, i) => Math.round(it.x - (items[i].x + items[i].w)));
+      const post = document.getElementById('postBtn'); const lbl = post && post.querySelector('.btn-label');
+      const mark = h.querySelector('.brand-mark'); const cs = getComputedStyle(h);
+      return { roles: items.map(i => i.role), heights: items.map(i => i.role + ':' + i.h),
+               gaps: gaps, minGap: gaps.length ? Math.min(...gaps) : null,
+               postLabel: lbl && getComputedStyle(lbl).display !== 'none' ? lbl.textContent.replace(/\\s+/g, ' ').trim() : null,
+               mark: mark ? Math.round(mark.getBoundingClientRect().height) : null,
+               pad: [Math.round(parseFloat(cs.paddingLeft)), Math.round(parseFloat(cs.paddingTop))].join('/'),
+               height: Math.round(h.getBoundingClientRect().height) }; }"""
+    for _w, _vp in (("1280", {"width": 1280, "height": 900}), ("390", {"width": 390, "height": 844}), ("360", {"width": 360, "height": 780})):
+        _pp = b.new_page(viewport=_vp); _pp.goto(f"{BASE}/", wait_until="load"); _pp.wait_for_timeout(700)
+        _fp = b.new_page(viewport=_vp); _fp.goto(f"{BASE}/flip", wait_until="load"); _fp.wait_for_timeout(700)
+        for _q in (_pp, _fp): _q.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+        _ph, _fh = _pp.evaluate(HEADER), _fp.evaluate(HEADER)
+        check(f"header at {_w}: the same items, in the same order", _ph and _fh and _ph["roles"] == _fh["roles"],
+              f"pad {_ph and _ph['roles']} flip {_fh and _fh['roles']}")
+        check(f"header at {_w}: every item is the same height on both", _ph and _fh and _ph["heights"] == _fh["heights"],
+              f"pad {_ph and _ph['heights']} flip {_fh and _fh['heights']}")
+        # The FIRST gap is the free space after the wordmark, and the two words
+        # are different widths by nature ("pad" against "flip"); the gaps that
+        # are design are the ones between the controls.
+        check(f"header at {_w}: the gaps between the controls match (within 1px)",
+              _ph and _fh and len(_ph["gaps"]) == len(_fh["gaps"]) and all(abs(a - c) <= 1 for a, c in zip(_ph["gaps"][1:], _fh["gaps"][1:])),
+              f"pad {_ph and _ph['gaps']} flip {_fh and _fh['gaps']}")
+        check(f"header at {_w}: Post carries its label on both", _ph and _fh and _ph["postLabel"] and _ph["postLabel"] == _fh["postLabel"],
+              f"pad {_ph and _ph['postLabel']!r} flip {_fh and _fh['postLabel']!r}")
+        check(f"header at {_w}: the wordmark is the same height, and the card the same padding and height",
+              _ph and _fh and _ph["mark"] == _fh["mark"] and _ph["pad"] == _fh["pad"] and abs(_ph["height"] - _fh["height"]) <= 1,
+              f"pad mark {_ph and _ph['mark']} pad {_ph and _ph['pad']} h {_ph and _ph['height']}; flip mark {_fh and _fh['mark']} pad {_fh and _fh['pad']} h {_fh and _fh['height']}")
         _pp.close(); _fp.close()
 
     print("\nPARITY — no surface is silently erroring on load")

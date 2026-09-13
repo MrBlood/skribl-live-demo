@@ -162,6 +162,7 @@ try:
         check("Flip's back link is prefix-derived", 
               back_href is not None and back_href.startswith(PREFIX + "/"),
               str(back_href))
+        fp.click("#moreBtn"); fp.wait_for_timeout(400)   # v293: the link is a ⋯ menu row
         fp.click('a[aria-label="Back to Skribl Pad"]')
         fp.wait_for_load_state("load")
         check("clicking it lands under the prefix",
