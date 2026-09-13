@@ -41,7 +41,7 @@
           <span id="flipDuration" class="duration-badge">0:00</span>
         </div>
         <button type="button" class="btn post" id="postBtn" disabled title="Post — get a shareable link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg><span class="btn-label">Post<span class="post-long"> to Skribl</span></span></button>
-        <button type="button" id="moreBtn" class="tool-open" title="More — save, export, help" aria-label="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        <button type="button" id="moreBtn" class="tool-open" aria-controls="moreMenu" title="More — save, export, help" aria-label="More" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       </div>
     </div>
 
@@ -262,7 +262,7 @@
         </button>{# The shelf's overflow cell. HIDDEN while every tool fits on the
           shelf, which today is all three of them — so this changes nothing you
           can see until a fourth tool is registered. syncToolShelf() owns the
-          hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
+          hidden attribute; nothing else may set it. #}<button type="button" class="tool-btn tool-more" id="toolMoreBtn" aria-haspopup="dialog" aria-controls="toolTray" aria-expanded="false" aria-label="More tools" title="More tools" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14.5 12 8.5l6 6"/></svg>
           <span class="tool-btn-label">More</span>
         </button>
@@ -274,14 +274,14 @@
         {# Flip needed MARKUP where Pad needed only a wrapper: #colorCurrent IS the
            button, so there was no inner element to be the core. flip.js writes to
            #colorCurrentCore instead. #}
-        <button type="button" class="color-current" id="colorCurrent" title="Colours and brush" aria-haspopup="true" aria-expanded="false">
+        <button type="button" class="color-current" id="colorCurrent" title="Colours and brush" aria-haspopup="dialog" aria-controls="drawPanel" aria-expanded="false">
           <span class="color-ring"><span class="color-core" id="colorCurrentCore"></span></span>
         </button>
       </div>
       <button class="t-btn" id="undo" title="Undo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-1"/></svg></button>
       <button class="t-btn" id="redo" title="Redo stroke"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h1"/></svg></button>
-      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="true" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span></button>
-      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="true" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span></button>
+      <button class="tool-open magnify-tool" id="imageBtn" title="Background image" aria-haspopup="dialog" aria-controls="photoPanel" aria-expanded="false" aria-label="Background image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span id="photoTabDot" class="tab-dot" hidden></span></button>
+      <button class="tool-open magnify-tool" id="musicBtn" title="Music loop" aria-haspopup="dialog" aria-controls="musicPanel" aria-expanded="false" aria-label="Music loop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicTabDot" class="tab-dot" hidden></span></button>
       {# Magnify. MARKUP ONLY — flip.js already had the whole control: initCanvasZoom()
          looks up #magnifyBtn, defines setMagnify(), binds the click, toggles .active
          and aria-pressed. The button was simply never in this template, so all of

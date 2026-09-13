@@ -126,6 +126,70 @@
     reflow();
   }
 
+  /* SELECTED MEANS SELECTED (v292; outside review of v291, SK-AUD-006).
+   *
+   * The draw drawer's segs carried aria-pressed and kept it in step by hand.
+   * Every other seg — Speed, grid density, onion depth, Tips, Theme, Canvas,
+   * export Size and Loops, the GIF background, the loop-view focus, pause and
+   * speed on the Pad, the move scope on Flip — lit a class and said nothing,
+   * so a screen reader heard "Playback speed, group. 6. 12. 24." and no word
+   * on which. Eighteen groups, a dozen toggle sites, two editors.
+   *
+   * ONE OWNER, BY THE SAME MECHANISM THE PILL ALREADY USES: the selected
+   * option is the one lit by .on or .active, and this module already watches
+   * exactly that class to move the pill. So one document-level observer
+   * writes aria-pressed from the class on every seg, including segs built
+   * later by script and segs inside sheets that ship hidden. No toggle site
+   * needs to know. A seg that manages aria-pressed itself (the draw drawer)
+   * is written the same value it already holds. The attributeFilter is
+   * 'class' alone, so writing aria-pressed here cannot re-enter the observer.
+   *
+   * verify_a11y section 4 is the census: every option carries the state,
+   * exactly one is pressed per one-of-N seg (a data-role="focus" group has a
+   * free state and may have none), the state agrees with the class, and it
+   * follows a click.
+   */
+  var SEGS = '.seg, .smooth-seg, .gif-seg';
+  function lit(b) { return b.classList.contains('on') || b.classList.contains('active'); }
+  function syncPressed(group) {
+    var btns = group.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      var want = lit(btns[i]) ? 'true' : 'false';
+      if (btns[i].getAttribute('aria-pressed') !== want) btns[i].setAttribute('aria-pressed', want);
+    }
+  }
+  function syncAll(root) {
+    var gs = (root || document).querySelectorAll(SEGS);
+    for (var i = 0; i < gs.length; i++) syncPressed(gs[i]);
+  }
+  function watchDocument() {
+    if (global.__skriblSegPressed) return;
+    global.__skriblSegPressed = true;
+    syncAll();
+    if (typeof MutationObserver === 'undefined') return;
+    new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        var m = muts[i], t = m.target;
+        if (!t || t.nodeType !== 1) continue;
+        if (m.type === 'attributes') {
+          var g = t.closest ? t.closest(SEGS) : null;
+          if (g) syncPressed(g);
+        } else {
+          for (var j = 0; j < m.addedNodes.length; j++) {
+            var n = m.addedNodes[j];
+            if (n.nodeType !== 1) continue;
+            if (n.matches && n.matches(SEGS)) syncPressed(n);
+            else if (n.closest && n.closest(SEGS)) syncPressed(n.closest(SEGS));
+            if (n.querySelectorAll) syncAll(n);
+          }
+        }
+      }
+    }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchDocument);
+  else watchDocument();
+
   global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place,
-                             attach: attach, placeAttached: placeAttached };
+                             attach: attach, placeAttached: placeAttached,
+                             syncPressed: syncPressed, syncAll: syncAll };
 })(window);

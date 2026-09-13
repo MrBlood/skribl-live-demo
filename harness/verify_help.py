@@ -117,7 +117,7 @@ with sync_playwright() as p:
     # -----------------------------------------------------------------------
     print("\nHELP — search, on both surfaces")
     #
-    # 46 entries across 7 sections is past the point where an accordion alone
+    # Forty-odd entries across 7 sections is past the point where an accordion alone
     # is findable. These assert the behaviours that make search worth having,
     # not merely that a field exists: cross-section reach, a real empty state,
     # and highlighting that survives repeated keystrokes.

@@ -542,34 +542,63 @@ with sync_playwright() as p:
         pg.close()
 
     # ------------------------------------------------------------ section 4
-    print("\nA11Y 4 — a one-of-N control says WHICH")
-    pg = browser.new_page(viewport={"width": 1280, "height": 900})
-    browsing.goto(pg, BASE, "/")
-    seg = pg.evaluate("""() => {
-        const out = {};
-        for (const id of ['smoothSeg']) {
-          const el = document.getElementById(id);
-          if (!el) { out[id] = 'missing'; continue; }
-          const btns = [...el.querySelectorAll('button')];
-          out[id] = {
-            allHaveState: btns.every(b => b.hasAttribute('aria-pressed')),
-            pressedCount: btns.filter(
-              b => b.getAttribute('aria-pressed') === 'true').length,
-            agrees: btns.every(b =>
-              (b.getAttribute('aria-pressed') === 'true')
-              === b.classList.contains('active')),
-          };
-        }
-        return out; }""")
-    for _id, r in seg.items():
-        check(f"#{_id}: every option carries aria-pressed",
-              r != "missing" and r["allHaveState"], str(r))
-        check(f"#{_id}: exactly one is pressed",
-              r != "missing" and r["pressedCount"] == 1, str(r))
-        check(f"#{_id}: the ARIA state agrees with the visual state",
-              r != "missing" and r["agrees"],
-              f"{r} — a class-only selection is visible and unannounced")
-    pg.close()
+    print("\nA11Y 4 — a one-of-N control says WHICH, on every seg, on both editors")
+    # Until v292 this section read ONE seg (#smoothSeg) on the Pad, and the
+    # draw drawer's segs were the only ones that carried aria-pressed. Speed,
+    # grid density, onion depth, Tips, Theme, Canvas, export Size and Loops,
+    # the GIF background and the loop-view focus lit a class and said nothing
+    # (outside review of v291, SK-AUD-006): "Playback speed, group. 6. 12. 24."
+    # with no word on which. The state is owned once now, in lib/segslider.js,
+    # which already watches every seg's classes to move the pill — the same
+    # observer writes aria-pressed — so this is a census, not a specimen.
+    # Exemption, by mechanism: a group with data-role="focus" has a free state
+    # in which nothing is selected, so zero pressed is its truth.
+    SEGSTATE = """() => {
+      const groups = [...document.querySelectorAll('.seg, .smooth-seg, .gif-seg')].filter(g => g.querySelectorAll('button').length);
+      const key = g => g.id ? '#' + g.id : g.tagName.toLowerCase() + '.' + [...g.classList].join('.');
+      const out = { count: groups.length, missing: [], many: [], none: [], disagree: [] };
+      for (const g of groups) {
+        const btns = [...g.querySelectorAll('button')];
+        const lit = b => b.classList.contains('on') || b.classList.contains('active');
+        const pressed = btns.filter(b => b.getAttribute('aria-pressed') === 'true');
+        if (btns.some(b => !b.hasAttribute('aria-pressed'))) out.missing.push(key(g));
+        if (pressed.length > 1) out.many.push(key(g));
+        if (pressed.length === 0 && g.dataset.role !== 'focus') out.none.push(key(g));
+        if (btns.some(b => (b.getAttribute('aria-pressed') === 'true') !== lit(b))) out.disagree.push(key(g));
+      }
+      return out; }"""
+    for _path, _name in (("/", "Pad"), ("/flip", "Flip")):
+        pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(pg, BASE, _path)
+        pg.wait_for_timeout(600)
+        r = pg.evaluate(SEGSTATE)
+        check(f"{_name}: the census finds segmented controls ({r['count']})", r["count"] >= 10, str(r["count"]))
+        check(f"{_name}: every option carries aria-pressed", not r["missing"], ", ".join(r["missing"]))
+        check(f"{_name}: exactly one option is pressed in every one-of-N seg", not r["many"] and not r["none"],
+              "more than one: " + ", ".join(r["many"]) + "; none: " + ", ".join(r["none"]))
+        check(f"{_name}: the ARIA state agrees with the visual state", not r["disagree"],
+              ", ".join(r["disagree"]) + " — a class-only selection is visible and unannounced")
+        # ...and it FOLLOWS a click, on a seg that was class-only before v292.
+        if _path == "/":
+            _seg = "#hintSeg"          # Tips, in the ⋯ menu
+            pg.click("#menuBtn")
+        else:
+            _seg = "#fps"              # Speed, in the Tune drawer
+            pg.click("#tuneBtn")
+        pg.wait_for_timeout(400)
+        _btns = pg.locator(f"{_seg} button")
+        _n = _btns.count()
+        _target = None
+        for _i in range(_n):
+            if _btns.nth(_i).get_attribute("aria-pressed") != "true":
+                _target = _i
+                break
+        _btns.nth(_target).click()
+        pg.wait_for_timeout(250)
+        _after = pg.evaluate(f"""() => [...document.querySelectorAll('{_seg} button')].map(b => b.getAttribute('aria-pressed'))""")
+        check(f"{_name}: after a click on {_seg} the pressed state moved with it",
+              _after.count("true") == 1 and _after[_target] == "true", str(_after))
+        pg.close()
 
     # ------------------------------------------------------------ section 5
     print("\nA11Y 5 — asynchronous status reaches a live region")
@@ -884,6 +913,32 @@ with sync_playwright() as p:
         check(f"{_name}: every segmented control is a named group", not _sg["unnamed"], ", ".join(_sg["unnamed"]))
         check(f"{_name}: no option is a single letter standing in for a word", not _sg["letters"], ", ".join(_sg["letters"]))
         check(f"{_name}: no menuitem outside a menu", not _sg["strays"], ", ".join(_sg["strays"]))
+        # THE POPUP CONTRACT (v292; SK-AUD-008). aria-haspopup="true" means a
+        # MENU. Four of Flip's openers said it over dialogs while #toolMoreBtn
+        # beside them said "dialog". Every opener that advertises a popup names
+        # its target with aria-controls, and the type it advertises is the
+        # role the target has; then it is clicked, and aria-expanded follows.
+        POPUPS = """() => [...document.querySelectorAll('[aria-haspopup]')].map(b => {
+          const t = b.getAttribute('aria-haspopup'); const cid = b.getAttribute('aria-controls');
+          const target = cid ? document.getElementById(cid) : null;
+          const role = target ? (target.getAttribute('role') || '') : null;
+          const want = t === 'true' ? 'menu' : t;
+          return { id: b.id || b.className, type: t, controls: cid, role: role,
+                   ok: !!target && role === want, expanded: b.getAttribute('aria-expanded') }; })"""
+        _pops = _pg.evaluate(POPUPS)
+        _badpop = [f"{p['id']} says {p['type']} over {p['role']!r} ({p['controls']})" for p in _pops if not p["ok"]]
+        check(f"{_name}: every popup opener names a target whose role is the type it advertises ({len(_pops)} openers)",
+              _pops and not _badpop, ", ".join(_badpop))
+        _noexp = [p["id"] for p in _pops if p["expanded"] != "false"]
+        check(f"{_name}: every popup opener says aria-expanded=false while closed", not _noexp, ", ".join(_noexp))
+        for _p in _pops:
+            _pg.evaluate(f"() => document.getElementById('{_p['id']}').click()")
+            _pg.wait_for_timeout(450)
+            _st = _pg.evaluate(f"""() => {{ const b = document.getElementById('{_p['id']}'), t = document.getElementById('{_p['controls']}');
+              return {{ expanded: b.getAttribute('aria-expanded'), shown: !!t && !t.hidden && getComputedStyle(t).display !== 'none' }}; }}""")
+            check(f"{_name}: clicking #{_p['id']} opens #{_p['controls']} and says so", _st["expanded"] == "true" and _st["shown"], str(_st))
+            _pg.reload(wait_until="load")
+            _pg.wait_for_timeout(700)
         _pg.close()
 
     # ------------------------------------------------------------ section 13
