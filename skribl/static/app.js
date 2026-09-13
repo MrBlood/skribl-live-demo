@@ -3207,7 +3207,12 @@ function refreshPendingCards() {
     } else {
       mCard.hidden = true;
       musicUploadBtn.hidden = false;
+      // HIDDEN, not just un-pending — this function owns the dot (Flip's copy
+      // always did). Dismissing from the pill left a solid GREEN dot claiming
+      // media the session does not have, because only the card's own Dismiss
+      // button hid it (v294 bug check).
       musicTabDot.classList.remove('pending');
+      musicTabDot.hidden = !(audioEl && audioEl._fileName);
     }
   }
 
@@ -3230,7 +3235,9 @@ function refreshPendingCards() {
     } else {
       pCard.hidden = true;
       photoUploadBtn.hidden = false;
-      { const d = document.getElementById('photoTabDot'); if (d) d.classList.remove('pending'); }
+      { const d = document.getElementById('photoTabDot');
+        if (d) { d.classList.remove('pending');
+                 d.hidden = !(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName); } }
     }
   }
 }

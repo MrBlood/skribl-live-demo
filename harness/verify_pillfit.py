@@ -120,16 +120,28 @@ with sync_playwright() as p:
             SkriblAutosavePill.show('saved-no-media');
             const el = document.getElementById('autosaveStatus');
             const x = document.getElementById('autosaveStatusDismiss');
-            const live = { pill: getComputedStyle(el).pointerEvents, x: getComputedStyle(x).pointerEvents };
-            el.classList.add('blocked');
-            const faded = { pill: getComputedStyle(el).pointerEvents, x: getComputedStyle(x).pointerEvents };
-            el.classList.remove('blocked');
-            SkriblAutosavePill.show('saved');
-            return { live, faded }; }""")
+            return { pill: getComputedStyle(el).pointerEvents, x: getComputedStyle(x).pointerEvents }; }""")
         check(f"{label}: an amber pill that carries a control takes taps for it",
-              state["live"]["pill"] == "auto" and state["live"]["x"] == "auto", str(state["live"]))
-        check(f"{label}: ...and gives them up when this file fades it",
-              state["faded"]["pill"] == "none" and state["faded"]["x"] == "none", str(state["faded"]))
+              state["pill"] == "auto" and state["x"] == "auto", str(state))
+        # AND GIVES THEM UP WHERE IT ACTUALLY HAS TO. The first cut of this pin
+        # added `blocked` by hand and measured the rule that answers it — but
+        # this file only ever sets `blocked` on a NON-warning (`!warning &&
+        # hits(el)` below), so an amber pill is never faded by it and the
+        # assertion was reading the stylesheet rather than the app. The state
+        # that does happen, on every phone, is an open drawer or menu: the
+        # rule in styles.css fades the pill — warning included — and a control
+        # nobody can see must not keep taking taps. Driven through the real
+        # opener, so it fails if that rule is narrowed.
+        opened = page.evaluate("""() => { const b = document.getElementById('musicOpenBtn')
+                || document.getElementById('musicBtn'); if (!b) return null; b.click(); return true; }""")
+        page.wait_for_timeout(350)
+        under = page.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+            const x = document.getElementById('autosaveStatusDismiss');
+            const cs = getComputedStyle(el);
+            return { opacity: cs.opacity, pill: cs.pointerEvents, x: getComputedStyle(x).pointerEvents }; }""")
+        check(f"{label}: ...and gives them up under an open drawer, where it cannot be seen",
+              opened and under["opacity"] == "0" and under["pill"] == "none" and under["x"] == "none",
+              str(under))
         page.close()
 
     for label, path in SURFACES:
