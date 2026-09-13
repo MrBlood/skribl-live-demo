@@ -7524,3 +7524,59 @@ Two more, recorded here: a fix can be masked by a stronger fix beside it
 to be pinned directly; and a mechanism change can break a sibling that shared
 an assumption (tabindex="-1" and the trap), which is what running the whole
 census on every PR is for.
+
+## v293 -- five screenshots from a phone: what the owner's thumb found that the instrument had not
+
+After v292 the owner posted five iPhone screenshots and one sentence each:
+the first Your Skribls row was "scrunched"; the Theme and Canvas sliders
+"look cramped"; the Pad's post result; Flip's post result; and "flip top menu
+is super tight compared to pad's spacing which feels appropriate." Every one
+of these surfaces had green pins, which is the lesson of the tier: the pins
+measured properties that held while the eye's complaint was about a
+different property nobody had named. Four squash-merged PRs, each pinning the
+property the screenshot named, red on the tree before it and green after.
+
+**One header on both editors (PR 1).** Flip's header held six things where
+the Pad's held five: a back arrow first, and the compact tiers paid for it by
+dropping Post's label, shrinking every control to 33/31/30px and halving the
+gaps. The back link is a row in Flip's ⋯ menu now, the mirror of Pad's Flip
+Mode row, and Flip's header is the same five items at the same sizes and
+gaps at 1280, 390 and 360. verify_parity reads both headers from the DOM and
+compares them item by item; the first gap differs by the wordmark's width and
+is excluded on purpose. The Pad is the reference the owner named.
+
+**A Your Skribls row keeps its words (PR 2).** A row with a revocation key
+carries three actions beside its title; at 390 the meta line wrapped under
+the buttons and the title was cut short. Keyed rows wrap their actions under
+the title on a phone, the meta line never wraps, and plain rows are
+untouched. The first cut scoped the rule to Flip's size class and did nothing
+on the Pad, which does not load lib/sizeclass.js: the rule is a width query
+in the shared stylesheet, and the pin runs on the Pad.
+
+**The menu's pills get room beside their labels (PR 3).** The three menu
+rows shared one 140px width, sized for the two-pill Tips row, so "System" had
+2px beside it and "16:9" under 5px. The shared width is set by the fullest
+row -- 160px in the desktop dropdown, 184px on the full-width phone sheet --
+with every pill padded 8px a side, the pills sharing a seg from their own
+content rather than in equal cells, and both desktop menus 20px wider so the
+label-to-switch gaps stay where they were. verify_tips reads the room beside
+every pill from a Range around its text, on both editors at both widths, and
+pins the three rows to one right edge. A width mutation could not move the
+right-edge pin, because the alignment is by margin; the mutation that does is
+dropping the margin, and that is the one recorded.
+
+**The Pad's post result is one row (PR 4).** After posting, the Pad kept the
+compose form on screen at the sending state's half opacity with its title
+and caption wiped, and stacked two full-width chips under it. Flip's result
+is one row. The Pad's is the same shape now -- Watch / Share / Copy link --
+the form returns to full strength and the posted title stays in its field as
+the record of what was just posted. "Copy link" wrapped to two lines in a
+103px cell on the first cut; the labels do not wrap, and the pin measures the
+label's box against its font size.
+
+**What this tier taught the instrument.** A green pin on a surface is not a
+finding that the surface is right; it is a finding that one named property
+holds. The owner's eye named four properties in five screenshots -- gap,
+wrap, room, opacity -- and none of them had a name in the tree. The pins
+exist now, and the tier is a reminder that the person holding the phone is
+the instrument the tree cannot replace.
