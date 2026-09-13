@@ -46,7 +46,11 @@ def scribble(pg, box, seed, n=200):
     pg.mouse.up()
 
 with sync_playwright() as p:
-    b = p.chromium.launch(); pg = b.new_page(viewport={"width":1280,"height":900})
+    # THE DARK THEME, EXPLICITLY (v292): the literals below are the dark ramp's amber. Since
+    # v292 a bare page follows the OS and headless Chromium says light, on which amber is
+    # rgb(138, 91, 0). The pin is the semantics (amber, not green, not red); measured on the
+    # ramp it was written for.
+    b = p.chromium.launch(); pg = b.new_page(viewport={"width":1280,"height":900}, color_scheme="dark")
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
 
     print("\nFLIP")
@@ -77,7 +81,7 @@ with sync_playwright() as p:
           not c["dotPending"] and c["cardHidden"] is True,
           f"{c['dotBg']} pending={c['dotPending']} cardHidden={c['cardHidden']}")
 
-    pgB = b.new_page(viewport={"width":1280,"height":900})
+    pgB = b.new_page(viewport={"width":1280,"height":900}, color_scheme="dark")
     errsB = []; pgB.on("pageerror", lambda e: errsB.append(str(e)))
     pgB.add_init_script(
         "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")

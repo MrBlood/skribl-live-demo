@@ -55,7 +55,11 @@ def scribble(pg, box, seed, n=200):
 
 with sync_playwright() as p:
     b = p.chromium.launch()
-    pg = b.new_page(viewport={"width":1280,"height":900})
+    # THE DARK THEME, EXPLICITLY (v292): the literals below are the dark ramp's amber. Since
+    # v292 a bare page follows the OS and headless Chromium says light, on which amber is
+    # rgb(138, 91, 0). The pin is the semantics (amber, not green, not red); measured on the
+    # ramp it was written for.
+    pg = b.new_page(viewport={"width":1280,"height":900}, color_scheme="dark")
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
 
     print("\nFLIP — light turns amber when the file is dropped")
@@ -104,7 +108,7 @@ with sync_playwright() as p:
     # This is where 'amber and STAYS amber' lives now: media attached, quota
     # hit, and no IndexedDB to spill to — the session genuinely is not fully
     # recoverable, and the light must say so for as long as it is true.
-    pg2 = b.new_page(viewport={"width":1280,"height":900})
+    pg2 = b.new_page(viewport={"width":1280,"height":900}, color_scheme="dark")
     errs2 = []; pg2.on("pageerror", lambda e: errs2.append(str(e)))
     pg2.add_init_script(
         "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
