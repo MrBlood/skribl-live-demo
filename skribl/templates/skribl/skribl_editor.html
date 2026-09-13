@@ -125,11 +125,11 @@
          says "Save (.pages)". The sub still teaches what file to look for. #}
       <button type="button" class="menu-item" id="saveDraftItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        <span class="menu-item-text">Save draft<span class="menu-item-sub">Downloads a .skribl file</span></span>
+        <span class="menu-item-text">Save a backup<span class="menu-item-sub">A .skribl file to keep or move</span></span>
       </button>
       <button type="button" class="menu-item" id="loadDraftItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        <span class="menu-item-text">Open draft&hellip;<span class="menu-item-sub">A .skribl file you saved</span></span>
+        <span class="menu-item-text">Open a backup&hellip;<span class="menu-item-sub">A .skribl file you saved</span></span>
       </button>
       <button type="button" class="menu-item" id="exportItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -139,7 +139,7 @@
          <a href> so open-in-new-tab works, still id="flipBtn" so the guard binds. #}
       <a href="{{ url_for('.skribl_flip') }}" id="flipBtn" class="menu-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C9.5 4.9 6.4 4.6 3 5.2v13c3.4-.6 6.5-.3 9 1.3 2.5-1.6 5.6-1.9 9-1.3v-13c-3.4-.6-6.5-.3-9 1.3z"/><path d="M12 6.5v13.3"/></svg>
-        <span class="menu-item-text">Flip Mode<span class="menu-item-sub">Draw a frame-by-frame animation</span></span>
+        <span class="menu-item-text">Flip Mode<span class="menu-item-sub">Make an animation page by page &mdash; a separate draft from this one</span></span>
       </a>
       <button type="button" class="menu-item" id="postedItem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>

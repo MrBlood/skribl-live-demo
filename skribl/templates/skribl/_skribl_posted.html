@@ -23,6 +23,18 @@
     </div>
     <div class="help-search-count" id="postedCount" aria-live="polite"></div>
 
+    <div class="posted-foot posted-foot-top">
+      <span>Saved in this browser only &middot; clearing site data removes them,
+        and the key that can delete them</span>
+      {# The other half of the recovery key. Until v281 the product could show
+         a key and never accept one back, so a user who did as they were told
+         — save it, then lose the browser — held the credential and had no way
+         to spend it. Sits beside Clear list because this is where somebody
+         goes when the list is not what they expected. #}
+      <button type="button" id="postedRecover" class="posted-clearbtn">Use a recovery key</button>
+      <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
+    </div>
+
     <div class="posted-list" id="postedList"></div>
 
     {# Deletion succeeds or fails asynchronously and the row simply vanishes on
@@ -39,16 +51,5 @@
        said until v281 — a key the author copied out can be handed back below.
        It forfeits the copies kept here, which for anyone who exported nothing
        is the same thing. #}
-    <div class="posted-foot">
-      <span>Saved in this browser only &middot; clearing site data removes them,
-        and the key that can delete them</span>
-      {# The other half of the recovery key. Until v281 the product could show
-         a key and never accept one back, so a user who did as they were told
-         — save it, then lose the browser — held the credential and had no way
-         to spend it. Sits beside Clear list because this is where somebody
-         goes when the list is not what they expected. #}
-      <button type="button" id="postedRecover" class="posted-clearbtn">Use a recovery key</button>
-      <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
-    </div>
   </div>
 </div>

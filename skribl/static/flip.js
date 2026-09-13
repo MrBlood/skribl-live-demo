@@ -2082,7 +2082,7 @@ function buildStrip(){
       +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
       +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
         +'title="Hold this page longer — tap to cycle" '
-        +'aria-label="Hold page '+(i+1)+', currently '+_h+' frame'+(_h===1?'':'s')+'">'
+        +'aria-label="Hold page '+(i+1)+', shown '+_h+' time'+(_h===1?'':'s')+'">'
         +'\u00d7'+_h+'</button>'
       // A page that draws itself has to SAY so on the strip. The hold badge is
       // the precedent: a per-page property nobody can see is one people set by
@@ -4266,7 +4266,7 @@ bindEl('flipShareCopy', 'click',async()=>{
 function exportPNG(){
   const cv=document.createElement('canvas'); cv.width=CW; cv.height=CH; const c=cv.getContext('2d');
   drawFrameTo(c, frame());
-  cv.toBlob(b=>{ if(b) download(b, window.SkriblName ? window.SkriblName.exportName('png', ' frame '+(idx+1)) : 'skribl-frame-'+(idx+1)+'.png'); }, 'image/png');
+  cv.toBlob(b=>{ if(b) download(b, window.SkriblName ? window.SkriblName.exportName('png', ' page '+(idx+1)) : 'skribl-page-'+(idx+1)+'.png'); }, 'image/png');
 }
 let exporting=false;
 function exportWebM(){
@@ -4973,8 +4973,8 @@ if(moreScrim) moreScrim.addEventListener('click',()=>closeMenu());
 
 bindEl('postBtn', 'click', openShareCompose);
 bindEl('miSave', 'click',()=>{ closeMenu();
-  // Name it as part of saving — the drawer's button reads "Save draft".
-  if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save draft', onConfirm:saveDraft}); }
+  // Name it as part of saving — the drawer's button reads "Save a backup".
+  if(window.SkriblName && window.SkriblName.open){ window.SkriblName.open({label:'Save a backup', onConfirm:saveDraft}); }
   else { saveDraft(); } });
 bindEl('miLoad', 'click',()=>{ closeMenu(); draftInput.click(); });
 /* ---- Export sheet: the Pad's shared chooser (_skribl_export.html), wired to

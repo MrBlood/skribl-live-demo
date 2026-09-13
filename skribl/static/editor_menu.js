@@ -166,9 +166,9 @@ function clearAllWithUndo() {
 bindEl('saveDraftItem', 'click', () => {
   closeMenu();
   // Name it as part of saving: the drawer opens with the current/auto name and
-  // its button reads "Save draft" — confirming runs the actual download.
+  // its button reads "Save a backup" — confirming runs the actual download.
   if (window.SkriblName && window.SkriblName.open) {
-    window.SkriblName.open({ label: 'Save draft', onConfirm: saveDraft });
+    window.SkriblName.open({ label: 'Save a backup', onConfirm: saveDraft });
   } else {
     saveDraft();
   }
