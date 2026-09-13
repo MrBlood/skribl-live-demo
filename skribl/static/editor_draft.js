@@ -14,14 +14,24 @@
 //                           navigation and on pagehide/visibilitychange —
 //                           the debounce window is no longer a loss window.
 //   SkriblDraftStore        media BYTES go to IndexedDB (lib/draftstore.js)
-//                           at attach time, so "Saved without media" becomes
-//                           a failure signal instead of a designed limitation
-//                           — and it no longer fades: a durability problem is
-//                           a state, not a toast.
+//                           when the file is picked, and AGAIN on any later
+//                           save while that write has failed — a phone can
+//                           accept a multi-megabyte put and never settle it,
+//                           so the write also has a deadline (v294). "Saved
+//                           without media" is therefore a failure signal
+//                           about THIS save rather than a verdict carried
+//                           from attach time, and it no longer fades: a
+//                           durability problem is a state, not a toast. It
+//                           can be acknowledged, which hides the note without
+//                           pretending the media is safe.
 //   the leave guard         fires on !durable rather than on media presence.
-//                           With working storage it never fires, which is the
-//                           direction doc's intended end state; with broken
-//                           storage it fires for exactly the work at risk.
+//                           A write still in flight is neither, so it gets
+//                           1.5s to land before the sheet is the answer
+//                           (v294); with working storage the guard then never
+//                           fires, which is the direction doc's intended end
+//                           state, and with broken storage it fires for
+//                           exactly the work at risk. Flip has the same guard
+//                           on its Skribl Pad row, for the same reason.
 //
 // LOAD ORDER: classic script reading app.js globals (canvas, strokes, hasContent,
 // photoBgImg, audioEl, pendingPhotoMeta, ...). After app.js and after

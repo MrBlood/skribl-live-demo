@@ -565,12 +565,14 @@ function saveNow(){
       // discriminate on. Either the warning is shown or the loss is silent.
       //
       // What made the old amber intolerable was never that it was wrong — it was
-      // that it went nowhere. The only control that clears a pending record is
-      // the re-add card, and that card measures 0x0 until its drawer is opened.
-      // So the pill is now the route to it (see showAutosaveStatus below): the
+      // that it went nowhere. The re-add card was the only control that cleared
+      // a pending record, and that card measures 0x0 until its drawer is
+      // opened. So the pill became the route to it (lib/autosavepill.js): the
       // warning is true, and one tap reaches the Re-add and Dismiss it is
-      // telling you about. Dismissing clears the record, which schedules a save,
-      // which reports plain 'saved' — the amber ends because the situation did.
+      // telling you about. Since v294 the pill carries its own × as well, so
+      // the record can be given up without the drawer trip at all. Either way
+      // the record is cleared, which schedules a save, which reports plain
+      // 'saved' — the amber ends because the situation did.
       //
       // A pending record is checked rather than hasMedia because reaching here
       // means hasMedia is FALSE: there is no photo and no track on this page, so
