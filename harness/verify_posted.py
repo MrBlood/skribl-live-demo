@@ -461,6 +461,47 @@ with sync_playwright() as p:
           f"{copied!r} — a button that copies the URL under a key's label is "
           "how somebody thinks they have saved a credential and has not")
 
+    print("\nYOUR SKRIBLS — on a phone, a row with three actions keeps its words on one line")
+    # Owner, v293, from an iPhone: the one row that holds a deletion key —
+    # Copy link, Delete, Copy key — starved its title column until "4 pages ·
+    # 41 min ago" wrapped one word per line. Every other row has one action
+    # and never showed it; this suite measured rows at a desktop width only.
+    # The meta line is the thing that never yields: it stays one line, and on
+    # the compact size class a row with more than one action puts its actions
+    # under the title instead of beside it. Measured at 390 with a keyed row
+    # and a plain one seeded side by side.
+    pm = b.new_page(viewport={"width": 390, "height": 844})
+    pm.goto(BASE + "/", wait_until="load")
+    pm.wait_for_timeout(700)
+    pm.evaluate("""() => {
+        localStorage.setItem('skribl_posted_v1', '[]');
+        window.SkriblPosted.add({ id: 'keyedrow', title: 'F.', kind: 'flip', pages: 4, tok: 'k' });
+        window.SkriblPosted.add({ id: 'plainrow', title: 'Tttt', kind: 'pad' });
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+      }""")
+    pm.click("#menuBtn"); pm.wait_for_timeout(300)
+    pm.click("#postedItem"); pm.wait_for_timeout(500)
+    _rows = pm.evaluate("""() => {
+        const out = {};
+        for (const id of ['keyedrow', 'plainrow']) {
+          const r = document.querySelector('.posted-row[data-id="' + id + '"]'); if (!r) { out[id] = null; continue; }
+          const sub = r.querySelector('.posted-sub'), main = r.querySelector('.posted-main');
+          const acts = [...r.querySelectorAll('.posted-copy, .posted-delete, .posted-key')];
+          const lh = parseFloat(getComputedStyle(sub).lineHeight) || 14;
+          out[id] = { subLines: Math.round(sub.getBoundingClientRect().height / lh),
+                      subText: sub.textContent.trim(), actions: acts.length,
+                      actionsBelow: acts.length ? Math.min(...acts.map(a => a.getBoundingClientRect().top)) >= main.getBoundingClientRect().bottom - 1 : null,
+                      minActionH: acts.length ? Math.min(...acts.map(a => Math.round(a.getBoundingClientRect().height))) : null,
+                      rowW: Math.round(r.getBoundingClientRect().width), overflow: r.scrollWidth > r.clientWidth + 1 }; }
+        return out; }""")
+    _k, _p = _rows.get("keyedrow"), _rows.get("plainrow")
+    check("at 390: the keyed row's meta line is ONE line", _k and _k["subLines"] == 1, str(_k))
+    check("at 390: ...and its three actions sit under the title, not beside it", _k and _k["actions"] == 3 and _k["actionsBelow"], str(_k))
+    check("at 390: ...each still tall enough to tap (24px floor, a neighbour on each side)", _k and _k["minActionH"] >= 24, str(_k))
+    check("at 390: the plain row keeps its one action beside the title", _p and _p["actions"] == 1 and _p["actionsBelow"] is False and _p["subLines"] == 1, str(_p))
+    check("at 390: neither row overflows its box", _k and _p and not _k["overflow"] and not _p["overflow"], f"{_k} {_p}")
+    pm.close()
+
     print("\nRECOVERY — the journey the key exists for, end to end")
     # THE INVARIANT, in the words of the audit that found it missing:
     #
