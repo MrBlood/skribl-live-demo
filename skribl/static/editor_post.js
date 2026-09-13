@@ -29,6 +29,8 @@
   const soundText = document.getElementById('postSoundText');
   const watchBtn = document.getElementById('postWatchBtn');
   const shareBtn = document.getElementById('postShareBtn');
+  const copyBtn = document.getElementById('postCopyBtn');
+  const resultRow = document.getElementById('postResult');
   let lastPostUrl = null, lastPostTitle = '';
   const status = document.getElementById('postStatus');
   const statusLabel = document.getElementById('postStatusLabel');
@@ -245,8 +247,10 @@
       status.hidden = true;
       status.classList.remove('error');
       progressFill.style.width = '0%';
+      if (resultRow) resultRow.hidden = true;
       if (watchBtn) watchBtn.hidden = true;
       if (shareBtn) shareBtn.hidden = true;
+      if (copyBtn) copyBtn.hidden = true;
       body.style.opacity = '';
       titleInput.disabled = false;
       captionInput.disabled = false;
@@ -268,6 +272,11 @@
       progressFill.style.width = '100%';
       statusLabel.textContent = 'Posted!';
       submitBtn.hidden = true;
+      // The form stays on screen at full strength as the record of what was
+      // posted; its fields stay disabled (set by 'sending') until the sheet
+      // is opened again. It used to sit at the sending state's half opacity
+      // with the title wiped (owner, v293, from a phone).
+      body.style.opacity = '';
     } else if (state === 'error') {
       posting = false;
       status.classList.add('error');
@@ -473,7 +482,7 @@
     try {
       const res = await sendSkribl(payload);
       lastPostUrl = (res && res.url) || null;
-      lastPostTitle = payload.title || '';   // the field is cleared below; Share needs the title that was posted
+      lastPostTitle = payload.title || '';   // what was posted, with the default applied; Share hands it on
       const localOnly = !!(res && res.local);
       // Record it locally, but ONLY a real post. A local fallback is not
       // shareable, so listing it under links you can send would be a lie.
@@ -496,9 +505,9 @@
           window.SkriblRecoveryKey.present({ key: kept.key, url: res.url });
         }
       }
-      titleInput.value = '';
-      captionInput.value = '';
-      updateCharCount();
+      // The title and caption are NOT cleared: they stay in their fields as
+      // the record of what was just posted, and are still there for the next
+      // post of the same drawing. Wiping them read as losing them.
       setState('success');
       // A posted (or locally-saved) Skribl is finished, so drop the crash-recovery
       // autosave — otherwise returning to the editor (e.g. via "Make your own
@@ -513,7 +522,11 @@
       } else {
         showToast('Posted! 🎨', null);
       }
+      if (resultRow && lastPostUrl) resultRow.hidden = false;
       if (watchBtn && lastPostUrl) watchBtn.hidden = false;
+      // Copy link, for a real link only: a local fallback (#skribl=…) opens
+      // nowhere but here, so there is nothing to hand anyone.
+      if (copyBtn && lastPostUrl && !localOnly && lastPostUrl.charAt(0) !== '#') copyBtn.hidden = false;
       // Share, where the device has a share sheet (v292, SK-AUD-016); a local
       // fallback (#skribl=…) is not a link anyone else can open, so not then.
       if (shareBtn && lastPostUrl && !localOnly && lastPostUrl.charAt(0) !== '#' && navigator.share) shareBtn.hidden = false;
@@ -531,6 +544,12 @@
     const title = lastPostTitle || 'My Skribl';
     try { await navigator.share({ title, url: abs }); }
     catch (e) { if (!e || e.name !== 'AbortError') showToast('Sharing didn\u2019t work \u2014 open it and copy the link', shareBtn); }
+  });
+  if (copyBtn) copyBtn.addEventListener('click', async () => {
+    if (!lastPostUrl) return;
+    const abs = new URL(lastPostUrl, location.href).href;
+    try { await navigator.clipboard.writeText(abs); showToast('Link copied', null); }
+    catch (e) { showToast('Couldn\u2019t copy \u2014 open it and copy the address', copyBtn); }
   });
   if (watchBtn) watchBtn.addEventListener('click', () => {
     if (!lastPostUrl) return;
