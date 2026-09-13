@@ -2905,6 +2905,11 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
   border: 0; border-radius: 50%; background: transparent; color: inherit;
   font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
 }
+/* The base pill is pointer-events:none; the × is a control on BOTH ambers,
+   including the one where the pill itself is not, so it takes taps by itself
+   — and gives them up with the pill when pillfit has faded it (.blocked). */
+.autosave-dismiss { pointer-events: auto; }
+.autosave-status.blocked .autosave-dismiss { pointer-events: none; }
 .autosave-dismiss:hover { background: rgba(var(--surface-control-rgb), 1); }
 .autosave-dismiss:focus-visible { outline: 2px solid var(--warn); outline-offset: 1px; }
 .autosave-dismiss[hidden] { display: none; }
