@@ -153,10 +153,47 @@
   function lit(b) { return b.classList.contains('on') || b.classList.contains('active'); }
   function syncPressed(group) {
     var btns = group.querySelectorAll('button');
+    var stop = -1;
     for (var i = 0; i < btns.length; i++) {
       var want = lit(btns[i]) ? 'true' : 'false';
       if (btns[i].getAttribute('aria-pressed') !== want) btns[i].setAttribute('aria-pressed', want);
+      if (stop < 0 && want === 'true' && !btns[i].disabled) stop = i;
     }
+    // ONE TAB STOP PER SEG (v292; SK-AUD-007). Every option was its own Tab
+    // stop, so Flip's Tune drawer alone cost a keyboard user a dozen presses
+    // to cross. The selected option carries the stop (the first enabled one
+    // when nothing is selected, as in a data-role="focus" group's free state)
+    // and the arrows, below, move among the rest — the pattern a native
+    // segmented control and a radio group both follow.
+    if (stop < 0) for (var k = 0; k < btns.length; k++) if (!btns[k].disabled) { stop = k; break; }
+    for (var j = 0; j < btns.length; j++) {
+      var ti = j === stop ? '0' : '-1';
+      if (btns[j].getAttribute('tabindex') !== ti) btns[j].setAttribute('tabindex', ti);
+    }
+  }
+  /* Arrow keys move the selection: Left/Up to the previous enabled option,
+   * Right/Down to the next, wrapping; Home and End to the ends. Moving IS
+   * selecting — the option is clicked, so every seg's own handler runs and the
+   * observer above moves the stop with it. */
+  function onSegKey(e) {
+    var b = e.target;
+    if (!b || b.tagName !== 'BUTTON' || !b.closest) return;
+    var g = b.closest(SEGS);
+    if (!g) return;
+    var all = [].slice.call(g.querySelectorAll('button'));
+    var btns = [];
+    for (var i = 0; i < all.length; i++) if (!all[i].disabled) btns.push(all[i]);
+    var at = btns.indexOf(b);
+    if (at < 0 || btns.length < 2) return;
+    var to = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = (at + 1) % btns.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = (at - 1 + btns.length) % btns.length;
+    else if (e.key === 'Home') to = 0;
+    else if (e.key === 'End') to = btns.length - 1;
+    if (to < 0) return;
+    e.preventDefault();
+    btns[to].focus();
+    btns[to].click();
   }
   function syncAll(root) {
     var gs = (root || document).querySelectorAll(SEGS);
@@ -188,6 +225,7 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchDocument);
   else watchDocument();
+  document.addEventListener('keydown', onSegKey);
 
   global.SkriblSegSlider = { track: track, trackAll: trackAll, place: place,
                              attach: attach, placeAttached: placeAttached,
