@@ -833,6 +833,19 @@ body.player-mode .canvas-area { display: contents; }
   flex-shrink: 0;
   transition: background 0.2s ease;
 }
+/* ON A FINGER, THE WHOLE PILL IS A CONTROL SURFACE. At 28px tall and 11px type
+   it was sized as a status, and it now carries two actions on the route amber
+   — the words re-add, the × dismisses. Two controls in a 28px bar is the
+   cramped feeling itself. On a coarse pointer the pill is 40px tall at 13px
+   type: the words get a comfortable target, the × grows to 30px, and neither
+   crowds the other. A mouse keeps the compact pill, where hover already says
+   what is live. */
+@media (pointer: coarse) {
+  .autosave-status { padding: 9px 13px; font-size: 13px; gap: 9px; }
+  .autosave-dot { width: 8px; height: 8px; }
+  .autosave-dismiss { width: 44px; height: 44px; margin: -10px -14px -10px -2px; font-size: 14px; }
+  .autosave-dismiss::before { width: 30px; height: 30px; }
+}
 
 /* ---------- Autosave restore banner ---------- */
 .restore-banner {
