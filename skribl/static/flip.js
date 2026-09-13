@@ -704,6 +704,8 @@ function saveNow(){
 // made it to IndexedDB. 'failed' means the amber pill is telling the truth
 // the old way: settings survive, bytes do not.
 let _mediaSpillState = 'none';
+// For lib/report.js: the media store as this session sees it.
+window.skriblMediaStoreState = () => 'spill ' + _mediaSpillState;
 // Flush NOW — the 800ms debounce must never be a loss window (review P0-2).
 // saveNow() is synchronous for the localStorage half; the IndexedDB half was
 // written at the last quota save and only re-runs if this flush hits quota too.

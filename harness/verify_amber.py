@@ -487,6 +487,23 @@ with sync_playwright() as p:
           f"puts={pg5.evaluate('() => window.__puts')} {s['text']!r}")
     pg5.close()
 
+    print("\nPAD — a refused store write names its reason where a phone can carry it (v294)")
+    # Owner, from a phone, twice: "Saved without media" with the media loaded,
+    # then after a reload "Media missing — tap to re-add". The bytes never
+    # reached the store, and the code swallowed the reason: a silent catch on
+    # the write, a silent miss on the restore. There is no console on a phone;
+    # lib/report.js is the channel that exists, and it carries console.error
+    # lines. So the reason is logged there, and the report states the store.
+    pg9, box9 = pad_page("Promise.reject(Object.assign(new Error('boom-store'), { name: 'QuotaExceededError' }))")
+    stroke(pg9, box9, 120); pg9.wait_for_timeout(600)
+    pg9.set_input_files("#musicInput", WAV); pg9.wait_for_timeout(600)   # before the attach's save retries
+    rep = pg9.evaluate("() => SkriblReport.collect()")
+    check("Pad: the report names the refused write and its reason",
+          "QuotaExceededError" in rep and "boom-store" in rep, rep[-400:])
+    check("Pad: ...and states the media store's slots",
+          "Media store:" in rep and "music failed" in rep, rep[-400:])
+    pg9.close()
+
     print("\nPAD — media is a draft; a restore reads the store, and speaks only when it misses (v294 audit, PR 1)")
     # AUDIT, finding 1: a photo or a track with no strokes was "nothing
     # meaningful" — the draft was never written, the banner never offered, and

@@ -80,8 +80,15 @@ function storeMediaBytes(kind) {
   SkriblDraftStore.put('pad:' + kind, {
     blob: file, name: file.name, type: file.type, savedAt: Date.now()
   }).then(() => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'durable'; _refreshMediaPill(); })
-    .catch(() => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'failed'; _refreshMediaPill(); });
+    .catch((e) => { if (settled) return; settled = true; clearTimeout(deadline); mediaDraft[kind] = 'failed'; _refreshMediaPill();
+                    // NAMED, because there is no console on a phone and lib/report.js
+                    // carries this line: two screenshots from the owner's iPhone showed
+                    // the failure and nothing about its cause (v294).
+                    console.error('[skribl] ' + kind + ' bytes: store write failed: ' + _errName(e)); });
 }
+function _errName(e) { return e ? ((e.name || 'Error') + (e.message ? ': ' + e.message : '')) : 'unknown'; }
+// For lib/report.js: the media store as this session sees it.
+window.skriblMediaStoreState = () => 'photo ' + mediaDraft.photo + ', music ' + mediaDraft.music;
 // One id per page load, stamped into every record this tab writes. Autosave is
 // a single slot per mode (review #20); full multi-draft arbitration needs a
 // project model this tree does not have, but the cheapest and worst clobber —
@@ -636,25 +643,29 @@ function reAddMediaFromStore(kind, inputId, meta) {
   // Every way the bytes can fail to come back ends here: the pending record
   // stays, and the pill says so and is the route to the re-add card. This is
   // the ONE place the route amber is raised on restore.
-  const missed = () => { showAutosaveStatus('saved-no-media'); };
-  if (!window.SkriblDraftStore) { missed(); return; }
+  const missed = (why) => {
+    console.error('[skribl] ' + kind + ' bytes: not restored from the store: ' + why);
+    showAutosaveStatus('saved-no-media');
+  };
+  if (!window.SkriblDraftStore) { missed('no store'); return; }
   SkriblDraftStore.get('pad:' + kind).then((rec) => {
     // The stored bytes must be THE file the metadata describes — a name
     // mismatch means the draft and the blob are from different sessions,
     // and re-attaching the wrong file is worse than the amber pill.
-    if (!rec || !rec.blob || rec.name !== meta.name) { missed(); return; }
+    if (!rec || !rec.blob) { missed('no record for ' + meta.name); return; }
+    if (rec.name !== meta.name) { missed('record is ' + rec.name + ', draft wants ' + meta.name); return; }
     const input = document.getElementById(inputId);
-    if (!input) { missed(); return; }
+    if (!input) { missed('no input'); return; }
     let file;
     try { file = new File([rec.blob], rec.name, { type: rec.type || rec.blob.type || '' }); }
-    catch (e) { missed(); return; }
+    catch (e) { missed('File: ' + _errName(e)); return; }
     const dt = new DataTransfer();
     dt.items.add(file);
     input.files = dt.files;
     _fromStore[kind] = true;
     input.dispatchEvent(new Event('change', { bubbles: true }));
     _fromStore[kind] = false;   // consumed by the capture listener above; never left armed
-  }).catch(() => { missed(); });
+  }).catch((e) => { missed(_errName(e)); });
 }
 
 // ---------- Flush on leave: the debounce is never a loss window ----------
