@@ -7649,6 +7649,7 @@ function setTune(open){
   if(!tuneBtn||!tuneShell) return;
   tuneShell.classList.toggle('open', open);
   tuneShell.setAttribute('aria-hidden', String(!open));
+  tuneShell.inert = !open;   // hidden means unreachable (v292): out of the tab order too
   tuneBtn.classList.toggle('open', open);
   tuneBtn.setAttribute('aria-expanded', String(open));
   if(open) requestAnimationFrame(()=>{ positionSeg(); positionOnionSeg(); });

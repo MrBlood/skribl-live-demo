@@ -85,7 +85,7 @@
 
   <!-- Name drawer — a title for the skribl; drops down from the header exactly
        like the Tune drawer (same grid-rows animation). -->
-  <div class="name-shell" id="nameShell" aria-hidden="true">
+  <div class="name-shell" id="nameShell" aria-hidden="true" inert>
     <div class="name-clip">
       <div class="name-panel" id="namePanel">
         <input type="text" id="skriblName" class="name-input" maxlength="80" placeholder="Untitled" autocomplete="off" spellcheck="false" aria-label="Name your skribl">
@@ -96,7 +96,7 @@
 
   <!-- Tune drawer — attached under the header so it slides down FROM the bar
        that opens it, exactly like Flip. Same tune-shell markup and animation. -->
-  <div class="tune-shell" id="tuneShell" aria-hidden="true">
+  <div class="tune-shell" id="tuneShell" aria-hidden="true" inert>
     <div class="tune-clip">
       <div class="tune-panel" id="tunePanel">
         <div class="tune-row" id="tuneGridRow"><span class="tune-label"><span class="tune-name">Grid</span><span class="tune-hint">alignment guides</span></span><button type="button" id="gridBtn" class="onion-tint" role="switch" aria-checked="false" title="Overlay alignment guides on the canvas" aria-label="Grid overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="1.5"/><line x1="4" y1="10.7" x2="20" y2="10.7"/><line x1="4" y1="17.3" x2="20" y2="17.3"/><line x1="10.7" y1="4" x2="10.7" y2="20"/><line x1="17.3" y1="4" x2="17.3" y2="20"/></svg></button><span class="onion-group" id="gridDensityGroup" hidden><span class="seg onion-seg" id="gridDensitySeg" role="group" aria-label="Grid density" title="How fine the alignment grid is"><span class="seg-slider"></span><button type="button" data-density="coarse" title="Fewer, larger cells">Coarse</button><button type="button" data-density="medium" class="on" title="The default grid">Medium</button><button type="button" data-density="fine" title="More, smaller cells">Fine</button></span></span></div>

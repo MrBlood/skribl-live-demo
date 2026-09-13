@@ -157,18 +157,32 @@
     el.placeholder = computeDefault();
     var pending = null;   // a callback to run when the drawer is confirmed
 
+    var focusTimer = null;
     function setOpen(open) {
       shell.classList.toggle('open', open);
+      // HIDDEN MEANS UNREACHABLE (v292; outside review of v291, SK-AUD-004).
+      // aria-hidden takes the drawer out of the accessibility tree and does
+      // nothing to the tab order: closed, its input and Done were still Tab
+      // stops. `inert` is the attribute that makes both true at once.
       shell.setAttribute('aria-hidden', String(!open));
+      shell.inert = !open;
+      clearTimeout(focusTimer);
       if (open) {
         // One drawer at a time: close Tune if it happens to be open.
         var ts = document.getElementById('tuneShell');
         if (ts && ts.classList.contains('open')) {
-          ts.classList.remove('open'); ts.setAttribute('aria-hidden', 'true');
+          ts.classList.remove('open'); ts.setAttribute('aria-hidden', 'true'); ts.inert = true;
           var tb = document.getElementById('tuneBtn');
           if (tb) { tb.classList.remove('open'); tb.setAttribute('aria-expanded', 'false'); }
         }
-        setTimeout(function () { el.focus(); el.select(); }, 160);
+        // Held and cancelled on close, and it re-reads the state when it
+        // fires: a dismissal inside 160ms used to have the input focused
+        // AFTER the drawer had closed (SK-AUD-005).
+        focusTimer = setTimeout(function () {
+          focusTimer = null;
+          if (!shell.classList.contains('open')) return;
+          el.focus(); el.select();
+        }, 160);
       }
     }
     API._setOpen = setOpen;

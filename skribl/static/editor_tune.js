@@ -173,6 +173,7 @@
     if (open && _padDrawerCtl) _padDrawerCtl.open(null);   // exclusive with media drawers
     tuneShellEl.classList.toggle('open', open);
     tuneShellEl.setAttribute('aria-hidden', String(!open));
+    tuneShellEl.inert = !open;   // hidden means unreachable (v292): out of the tab order too
     tuneBtnEl.classList.toggle('open', open);
     tuneBtnEl.setAttribute('aria-expanded', String(open));
     if (open) {
