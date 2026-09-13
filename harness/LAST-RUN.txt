@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-13T00:21:46Z
+UTC timestamp           : 2026-09-13T08:54:32Z
 Host                    : Linux x86_64
-Tree SHA-256            : 6271b5ddfecf74d1f703f59c1d98af57d29219d7a540961f2027e030b6b02a70
-Git commit              : 76a535a
+Tree SHA-256            : 2ed8e675739b7a3794bd1b1ef07f370bdfb0ca69f5d6fb5c734f7274057a89cb
+Git commit              : b66d993
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
@@ -11,14 +11,14 @@ Source state            : generated-only dirty
                             harness/MP4-ATTESTATION.txt
                             harness/POSTGRES-ATTESTATION.txt
                             harness/README.md
-SKRIBL_VERSION          : v291
+SKRIBL_VERSION          : v292
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.t9UWLEhnat/harness.db)
+Database reset          : yes (fresh /tmp/tmp.G9wgUm8nhU/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -30,7 +30,7 @@ Command                 : /home/user/skribl-live-demo/harness/run_harness.sh ver
 ================ AGGREGATE (machine-generated) ================
 # whole release run: 52 batches recorded as one run
 suites requested : 99
-  verify_a11y.py: ok — 177/177 passed
+  verify_a11y.py: ok — 234/234 passed
   verify_amber.py: ok — 31/31 passed
   verify_apiedges.py: ok — 31/31 passed
   verify_assetcache.py: ok — 12/12 passed
@@ -120,15 +120,15 @@ suites requested : 99
   verify_surfaces.py: ok — 12/12 passed
   verify_sweepjob.py: ok — 52/52 passed
   verify_takedown.py: ok — 27/27 passed
-  verify_theme.py: ok — 51/51 passed
+  verify_theme.py: ok — 86/86 passed
   verify_tips.py: ok — 51/51 passed
   verify_tools.py: ok — 130/130 passed
   verify_tray.py: ok — 121/121 passed
   verify_tween.py: ok — 77/77 passed
   verify_txcontract.py: ok — 83/83 passed
-  verify_ux.py: ok — 338/338 passed
+  verify_ux.py: ok — 359/359 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 4816   (skipped suites contribute 0)
+assertions passed: 4929   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
