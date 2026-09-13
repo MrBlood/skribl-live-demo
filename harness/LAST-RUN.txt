@@ -1,24 +1,23 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-13T08:54:32Z
+UTC timestamp           : 2026-09-13T14:53:43Z
 Host                    : Linux x86_64
-Tree SHA-256            : 2ed8e675739b7a3794bd1b1ef07f370bdfb0ca69f5d6fb5c734f7274057a89cb
-Git commit              : b66d993
+Tree SHA-256            : fe33e67f4c994607692dbced0e6c3755daec97214a9b7df59ea16182574bfceb
+Git commit              : 3c7291d
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
                             docs/HANDOFF.md
                             harness/LAST-RUN.txt
-                            harness/MP4-ATTESTATION.txt
                             harness/POSTGRES-ATTESTATION.txt
                             harness/README.md
-SKRIBL_VERSION          : v292
+SKRIBL_VERSION          : v293
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.G9wgUm8nhU/harness.db)
+Database reset          : yes (fresh /tmp/tmp.7zJMyVwsKZ/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -93,11 +92,11 @@ suites requested : 99
   verify_padcanvas.py: ok — 28/28 passed
   verify_pages.py: ok — 58/58 passed
   verify_pagespan.py: ok — 49/49 passed
-  verify_parity.py: ok — 128/128 passed
+  verify_parity.py: ok — 143/143 passed
   verify_pillfit.py: ok — 20/20 passed
   verify_player_isolation.py: ok — 27/27 passed
   verify_player_photo.py: ok — 9/9 passed
-  verify_posted.py: ok — 74/74 passed
+  verify_posted.py: ok — 79/79 passed
   verify_postgres.py: SKIPPED (0 assertions) — cannot connect to PostgreSQL at the configured DSN (OperationalError)
   verify_prefix.py: ok — 33/33 passed
   verify_pressure.py: ok — 27/27 passed
@@ -121,14 +120,14 @@ suites requested : 99
   verify_sweepjob.py: ok — 52/52 passed
   verify_takedown.py: ok — 27/27 passed
   verify_theme.py: ok — 86/86 passed
-  verify_tips.py: ok — 51/51 passed
+  verify_tips.py: ok — 59/59 passed
   verify_tools.py: ok — 130/130 passed
   verify_tray.py: ok — 121/121 passed
   verify_tween.py: ok — 77/77 passed
   verify_txcontract.py: ok — 83/83 passed
-  verify_ux.py: ok — 359/359 passed
+  verify_ux.py: ok — 371/371 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 4929   (skipped suites contribute 0)
+assertions passed: 4969   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
