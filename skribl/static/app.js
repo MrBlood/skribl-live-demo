@@ -3893,109 +3893,11 @@ bindEl('draftInput', 'change', (e) => {
 // ---------- Autosave wiring: moved to editor_draft.js ----------
 
 
-// Reapply saved media settings when the user re-adds a file after a restore.
-if (typeof pendingMusicMeta !== 'undefined') {
-  const musicInputEl = document.getElementById('musicInput');
-  // Music trim reapply is handled in the main loadedmetadata handler
-  // (applyPendingMusicSettings) to avoid a listener-timing race.
-
-  const photoInputEl = document.getElementById('photoInput');
-  // Absent on the player, which has no photo picker.
-  if (photoInputEl) photoInputEl.addEventListener('change', () => {
-    if (!pendingPhotoMeta) return;
-    const meta = pendingPhotoMeta;
-    pendingPhotoMeta = null;
-    const pCard = document.getElementById('photoPending');
-    if (pCard) pCard.hidden = true;
-    photoUploadBtn.hidden = false;
-    // The dot stays AMBER without this. Amber means "remembered but missing —
-    // re-add it"; the user has just re-added it, so it must go green. This
-    // path cleared the meta and the card by hand but never the dot's .pending
-    // class, and refreshPendingCards is the only function that owns it.
-    refreshPendingCards();
-    // WHEN THE IMAGE LOADS, not 140 ms later. Attach is async — a decode
-    // check, a FileReader, normalisation — and this listener runs on the change
-    // event before any of it; a timer fired before the image was showing and
-    // the saved fit, opacity, blur and zoom were dropped without a word (v294
-    // audit, finding 4; the music side has always re-applied in
-    // loadedmetadata). The name guard keeps a stale listener from dressing a
-    // different photo if this attach was refused.
-    const apply = () => {
-      if (!photoBgImg || photoBgImg.style.display === 'none') return;
-      if (meta.fit) {
-        photoFit = meta.fit;
-        const fitMap = { cover: 'cover', contain: 'contain', stretch: 'fill' };
-        photoBgImg.style.objectFit = fitMap[photoFit] || 'cover';
-        const fitBtns = [...document.querySelectorAll('.photo-fit-btn')];
-        fitBtns.forEach(b => b.classList.toggle('active', b.dataset.fit === photoFit));
-        const activeIdx = fitBtns.findIndex(b => b.dataset.fit === photoFit);
-        const moveSlider = () => {
-          if (activeIdx < 0 || !photoFitSlider) return;
-          const off = fitBtns.slice(0, activeIdx).reduce((s, b) => s + b.offsetWidth, 0);
-          photoFitSlider.style.width = fitBtns[activeIdx].offsetWidth + 'px';
-          photoFitSlider.style.transform = `translateX(${off}px)`;
-        };
-        moveSlider();
-        setTimeout(moveSlider, 80);
-      }
-      if (meta.opacity != null) {
-        photoOpacityVal_ = meta.opacity;
-        photoBgImg.style.opacity = photoOpacityVal_;
-        const opEl = document.getElementById('photoOpacity');
-        opEl.value = Math.round(photoOpacityVal_ * 100);
-        _authoringCtl('photoOpacityVal').textContent = Math.round(photoOpacityVal_ * 100) + '%';
-        updateSliderFill(opEl);
-      }
-      if (meta.blur != null) {
-        photoBlur_ = meta.blur;
-        photoBgImg.style.filter = photoBlur_ > 0 ? `blur(${photoBlur_}px)` : '';
-        const blEl = document.getElementById('photoBlur');
-        blEl.value = photoBlur_;
-        _authoringCtl('photoBlurVal').textContent = photoBlur_ + 'px';
-        updateSliderFill(blEl);
-      }
-      if (meta.offset) {
-        photoOffsetX = meta.offset.x != null ? meta.offset.x : 0.5;
-        photoOffsetY = meta.offset.y != null ? meta.offset.y : 0.5;
-      }
-      photoZoom = clampPhotoZoom(meta.zoom);
-      setZoomSliderUI();
-      applyPhotoPosition();
-      updateRepositionUI();
-    };
-    const onLoad = () => {
-      photoBgImg.removeEventListener('load', onLoad);
-      if (meta.name && photoBgImg._fileName !== meta.name) return;
-      apply();
-    };
-    if (photoBgImg && photoBgImg.complete && photoBgImg.naturalWidth > 0
-        && photoBgImg.style.display !== 'none' && (!meta.name || photoBgImg._fileName === meta.name)) apply();
-    else if (photoBgImg) photoBgImg.addEventListener('load', onLoad);
-  });
-
-  // Pending card buttons: "Re-add" opens the file picker; "✕" dismisses.
-  const mBtn = document.getElementById('musicPendingBtn');
-  const mDismiss = document.getElementById('musicPendingDismiss');
-  if (mBtn) mBtn.addEventListener('click', () => musicInputEl.click());
-  if (mDismiss) mDismiss.addEventListener('click', () => {
-    pendingMusicMeta = null;
-    _authoringCtl('musicPending').hidden = true;
-    musicUploadBtn.hidden = false;
-    if (!audioEl) musicTabDot.hidden = true;
-    scheduleAutosave();
-  });
-
-  const pBtn = document.getElementById('photoPendingBtn');
-  const pDismiss = document.getElementById('photoPendingDismiss');
-  if (pBtn) pBtn.addEventListener('click', () => photoInputEl.click());
-  if (pDismiss) pDismiss.addEventListener('click', () => {
-    pendingPhotoMeta = null;
-    _authoringCtl('photoPending').hidden = true;
-    photoUploadBtn.hidden = false;
-    if (!photoBgImg || photoBgImg.style.display === 'none') _authoringCtl('photoTabDot').hidden = true;
-    scheduleAutosave();
-  });
-}
+// The re-add wiring — settings re-applied when a file comes back after a
+// restore, and the pending cards' Re-add / Dismiss buttons — is editor-only
+// and lives in editor_draft.js since v294. It sat here, in the file the player
+// downloads, until the photo re-apply (v294, 5) pushed the player's JavaScript
+// over its ratchet; the player never re-adds anything.
 
 // ==================== EXPORT / POST COMPOSER ====================
 // Both sections now live in editor_export.js and editor_post.js, loaded ONLY

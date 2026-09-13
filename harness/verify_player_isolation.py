@@ -877,7 +877,16 @@ with sync_playwright() as sp:
     # cannot make a missing Skribl appear — while a network failure keeps it.
     # The previous tree sat 12 B under the ceiling, so there was nothing on
     # this surface to spend first that was not a comment.
-    BYTES_RATCHET, BYTES_TARGET = 153_000, 153_600
+    #
+    # 153,000 -> 150,500, measured 149,960, v294: THE RATCHET WENT DOWN AGAIN,
+    # by 3,389 measured B, after v294, 5 had pushed it OVER (153,349) with the
+    # load-based photo re-apply — code the player never runs, in the file it
+    # downloads. The whole re-add block (that re-apply, and the pending cards'
+    # Re-add / Dismiss buttons) is editor_draft.js's now. Lowered to the
+    # measurement plus a 540 B allowance, the same margin the ceiling has
+    # always carried, so the next editor-only addition to app.js is caught
+    # rather than absorbed.
+    BYTES_RATCHET, BYTES_TARGET = 150_500, 150_500
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
