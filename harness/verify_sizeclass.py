@@ -661,7 +661,10 @@ if _Img:
         try:
             for _path, _name, _ctl, _sid in (("/flip", "Flip", "_flipDrawerCtl", "size"),
                                              ("/", "Pad", "_padDrawerCtl", "brushSizeRange")):
-                ap = _ab.new_page(viewport={"width": 430, "height": 950})
+                # A pixel pin (> 70 = ink on a dark ground): since v292 a bare
+                # page follows the OS, and headless Chromium says light, on
+                # which the whole strip is bright. Ask for the theme it measures.
+                ap = _ab.new_page(viewport={"width": 430, "height": 950}, color_scheme="dark")
                 ap.goto(BASE + _path, wait_until="load")
                 ap.wait_for_timeout(1200)
                 ap.evaluate(f"() => {_ctl}.open('draw')")

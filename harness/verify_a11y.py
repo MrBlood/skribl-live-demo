@@ -1040,6 +1040,62 @@ with sync_playwright() as p:
         check(f"{_name}: ...and no focus() call ever targets a hidden node (the timer was cancelled, not merely ignored)",
               not _calls, ", ".join(_calls))
         _pg.close()
+
+    # ------------------------------------------------------------ section 14
+    print("\nA11Y 14 — forced colours and increased contrast keep every state visible")
+    # Outside review of v291, SK-AUD-015. The stylesheet handled reduced
+    # motion and two colour ramps and nothing else the platform can ask for.
+    # Under forced colours (Windows High Contrast, and any browser's
+    # forced-colors emulation) every background is replaced by a system colour,
+    # so a state told by background alone — the seg's sliding pill, the lit
+    # toggle's tint — vanishes: three identical buttons, one of them selected.
+    # Under prefers-contrast: more, dim text that clears AA by a hair should
+    # clear more. Two emulations, both editors; the mechanism is the computed
+    # style of the selected option against an unselected one.
+    STATE = """(sel) => {
+      const seg = document.querySelector(sel); if (!seg) return null;
+      const on = seg.querySelector('button[aria-pressed="true"]');
+      const off = [...seg.querySelectorAll('button')].find(b => b.getAttribute('aria-pressed') !== 'true');
+      if (!on || !off) return null;
+      const pick = b => { const c = getComputedStyle(b); return c.borderWidth + '|' + c.borderStyle + '|' + c.borderColor + '|' + c.outlineWidth + '|' + c.outlineStyle + '|' + c.textDecorationLine; };
+      const edge = b => { const c = getComputedStyle(b); return (c.borderStyle !== 'none' && parseFloat(c.borderWidth) > 0) || (c.outlineStyle !== 'none' && parseFloat(c.outlineWidth) > 0); };
+      return { on: pick(on), off: pick(off), onEdge: edge(on) }; }"""
+    CONTRAST = """() => {
+      const cs = getComputedStyle(document.documentElement);
+      const hex = v => { const m = /#([0-9a-f]{6})/i.exec(v.trim()); if (!m) return null; const n = parseInt(m[1], 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+      const rel = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+      // --text-muted is the dim READING text (section 6 pins it at 4.5:1 on every
+      // surface); --text-dim is decoration and section 6 says so.
+      const t = hex(cs.getPropertyValue('--text-muted')), p = hex(cs.getPropertyValue('--surface-panel'));
+      if (!t || !p) return null;
+      const a = rel(t), b = rel(p); return { muted: cs.getPropertyValue('--text-muted').trim(), ratio: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) }; }"""
+    for _path, _name, _seg in (("/", "Pad", "#speedSeg"), ("/flip", "Flip", "#fps")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+        _pg.emulate_media(forced_colors="active")
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(700)
+        _pg.click("#tuneBtn")
+        _pg.wait_for_timeout(400)
+        _st = _pg.evaluate(STATE, _seg)
+        check(f"{_name}: under forced colours the selected option of {_seg} looks different from an unselected one",
+              _st and _st["on"] != _st["off"] and _st["onEdge"],
+              f"{_st} — the sliding pill is a background, and forced colours erase backgrounds")
+        _sw = _pg.evaluate("""() => { const b = document.getElementById('gridBtn'); const pick = () => { const c = getComputedStyle(b); return c.borderWidth + '|' + c.borderColor + '|' + c.outlineWidth + '|' + c.outlineStyle; };
+          const before = pick(); b.click(); const after = pick(); b.click(); return { before, after, checked: b.getAttribute('aria-checked') }; }""")
+        check(f"{_name}: under forced colours a switch that is on looks different from one that is off",
+              _sw["before"] != _sw["after"], f"{_sw} — the tint is a background")
+        _pg.close()
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+        _pg.goto(BASE + _path, wait_until="load")
+        _pg.wait_for_timeout(500)
+        _c0 = _pg.evaluate(CONTRAST)
+        _pg.emulate_media(contrast="more")
+        _pg.wait_for_timeout(200)
+        _c1 = _pg.evaluate(CONTRAST)
+        check(f"{_name}: under prefers-contrast: more the muted text token clears 7:1 on the panel and moved to do it",
+              _c0 and _c1 and _c1["ratio"] >= 7 and _c1["muted"] != _c0["muted"],
+              f"default {_c0}, more {_c1}")
+        _pg.close()
     browser.close()
 
 # ------------------------------------------------------------------ section 6
