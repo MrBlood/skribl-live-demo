@@ -134,43 +134,33 @@ function currentMusicMeta() {
   return { name: audioEl._fileName, trimStart: trimStart, trimEnd: trimEnd, crossfadeMs: loopCrossfadeMs };
 }
 
-function showAutosaveStatus(state) {
-  const el = document.getElementById('autosaveStatus');
-  const txt = document.getElementById('autosaveStatusText');
-  if (!el || !txt) return;
-  clearTimeout(el._hideTimer);
-  el.hidden = false;
-  el.classList.remove('saving', 'failed', 'partial');
-  if (state === 'saving') { el.classList.add('saving'); txt.textContent = 'Saving…'; }
-  // 'failed' and 'full' are both red, and the difference matters: 'full' means
-  // the browser's storage for this origin is out of room and the drawing is NOT
-  // saved, which the user can act on; 'failed' is anything else and they cannot.
-  // They used to be one message, and that is exactly why an "Autosave failed"
-  // report could not be diagnosed from the screenshot -- every possible
-  // exception, including a plain TypeError in serializeAutosave(), arrived as
-  // the same four words.
-  else if (state === 'failed') { el.classList.add('failed'); txt.textContent = 'Autosave failed'; }
-  else if (state === 'full') { el.classList.add('failed'); txt.textContent = 'Storage full — not saved'; }
-  // Amber means: media is attached and its BYTES are not durably stored —
-  // the IndexedDB write failed or hasn't settled (lib/draftstore.js). With a
-  // working store this state is rare; when it shows, it is true, and it stays
-  // up until a successful save replaces it.
-  else if (state === 'saved-no-media') { el.classList.add('partial'); txt.textContent = 'Saved without media'; }
-  else { txt.textContent = 'Saved'; }
-  requestAnimationFrame(() => el.classList.add('show'));
-  // "Saved" fades after a moment; "saving" stays until resolved. 'failed' and
-  // 'saved-no-media' now STAY UP: each one describes an ONGOING durability
-  // problem (storage write failed / media bytes not persisted), and a warning
-  // that fades after 1.6s tells the user the problem went away when it did not
-  // (external review #3: "do not hide the only warning ... when it represents
-  // an ongoing durability state"). They clear when a later successful write
-  // replaces them with 'saved'.
-  if (state !== 'saving' && state !== 'failed' && state !== 'full' && state !== 'saved-no-media') {
-    el._hideTimer = setTimeout(() => {
-      el.classList.remove('show');
-      setTimeout(() => { el.hidden = true; }, 300);
-    }, 1600);
+/* The pill itself — its five states, the wording, and the way out — is
+   lib/autosavepill.js since v294, one owner for both editors. The Pad hands it
+   the three facts only the Pad knows. Until v294 the Pad's copy said "Saved
+   without media", did nothing when tapped, and with a pending record and no
+   bytes reported plain green (owner: "shouldn't they be unified?"). */
+function _pendingMusicLost() {
+  return !!(typeof pendingMusicMeta !== 'undefined' && pendingMusicMeta && !(audioEl && audioEl._fileName));
+}
+function _pendingPhotoLost() {
+  return !!(typeof pendingPhotoMeta !== 'undefined' && pendingPhotoMeta
+            && !(photoBgImg && photoBgImg.style.display !== 'none' && photoBgImg._fileName));
+}
+function _pendingMediaLost() { return _pendingMusicLost() || _pendingPhotoLost(); }
+if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
+  pending: _pendingMediaLost,
+  open: () => {
+    if (typeof refreshPendingCards === 'function') refreshPendingCards();
+    if (typeof _padDrawerCtl !== 'undefined' && _padDrawerCtl) _padDrawerCtl.open(_pendingMusicLost() ? 'music' : 'photo');
+  },
+  dismiss: () => {
+    pendingMusicMeta = null; pendingPhotoMeta = null;
+    if (typeof refreshPendingCards === 'function') refreshPendingCards();
+    scheduleAutosave();
   }
+});
+function showAutosaveStatus(state) {
+  if (window.SkriblAutosavePill) window.SkriblAutosavePill.show(state);
 }
 
 function writeAutosave() {
@@ -239,7 +229,10 @@ function writeAutosave() {
     // localStorage"). With IndexedDB holding the bytes it is a FAILURE signal:
     // media attached, and its store write failed or hasn't settled. When the
     // bytes are confirmed durable, the truthful pill is plain "Saved".
-    showAutosaveStatus((hasPhoto || hasMusic) && !mediaDurabilityOk()
+    // ...and amber too while a pending record has no bytes behind it: the
+    // session has LOST that file, and a green light over a re-add card in a
+    // shut drawer was the Pad's state until v294.
+    showAutosaveStatus(((hasPhoto || hasMusic) && !mediaDurabilityOk()) || _pendingMediaLost()
                        ? 'saved-no-media' : 'saved');
   } catch (e) {
     // Quota or private-mode failure — the pill says so, persistently, and
@@ -443,6 +436,10 @@ function restoreAutosave(data) {
 
   const hadMedia = pendingMusicMeta || pendingPhotoMeta;
   showToast(hadMedia ? 'Restored — re-add your media below' : 'Drawing restored', null);
+  // Amber at once, the same as Flip's restore: the record is waiting and the
+  // pill is the route to it. If the bytes come back from the store (below,
+  // through the real <input>), that change schedules a save which says 'saved'.
+  if (hadMedia) showAutosaveStatus('saved-no-media');
 }
 
 // ---------- Autosave wiring ----------
@@ -556,7 +553,7 @@ function _refreshMediaPill() {
   const el = document.getElementById('autosaveStatus');
   if (!el || el.hidden) return;
   if (durableRev === draftRev) {
-    showAutosaveStatus(mediaDurabilityOk() ? 'saved' : 'saved-no-media');
+    showAutosaveStatus(mediaDurabilityOk() && !_pendingMediaLost() ? 'saved' : 'saved-no-media');
   }
 }
 

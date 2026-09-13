@@ -719,78 +719,23 @@ function _pillPending(){
   return (pendingMusicMeta && !musicData) || (pendingPhotoMeta && !bgImage);
 }
 
-/* Make the pill a control, or stop it being one.
-   A DIV WITH role="button" RATHER THAN A <button>, deliberately: #autosaveStatus
-   is one shared element across Pad, Flip and the player, and only Flip can ever
-   have media to re-add. Changing the markup would put a button that does nothing
-   on the other two. The role and the tabindex are added exactly while the pill
-   has somewhere to go and removed the moment it does not, which is also the
-   honest answer for a screen reader — it announces a button only when there is
-   one. */
-let _pillBound = false;
-function _pillAction(on){
-  const el = document.getElementById('autosaveStatus');
-  if(!el) return;
-  el.classList.toggle('actionable', !!on);
-  if(on){
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
-    el.setAttribute('title', 'Open the drawer holding the missing file');
-  } else {
-    el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('title');
-  }
-  if(_pillBound) return;
-  _pillBound = true;
-  const go = (e) => {
-    if(!el.classList.contains('actionable')) return;
-    // The document-level handler below closes any open drawer on a click
-    // outside it. Without this the drawer would open and shut in the same
-    // event — opened here, closed by the same click still travelling upward.
-    e.stopPropagation();
-    e.preventDefault();
+/* The pill itself — its five states, the wording, and the way out — is
+   lib/autosavepill.js since v294, one owner for both editors. Flip hands it the
+   three facts only Flip knows: whether media is LOST (as opposed to merely not
+   durable), which drawer holds the card that puts it back, and how to give up
+   on it. Dismiss does exactly what the card's own Dismiss does. */
+if (window.SkriblAutosavePill) window.SkriblAutosavePill.configure({
+  pending: _pillPending,
+  open: function(){
     refreshPendingCards();
     // Music first only because a session can be missing both and one drawer has
     // to come up; the other card is still one tap away and its own dot marks it.
     _flipDrawerCtl.open((pendingMusicMeta && !musicData) ? 'music' : 'photo');
-  };
-  el.addEventListener('click', go);
-  el.addEventListener('keydown', (e) => {
-    if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') go(e);
-  });
-}
-
+  },
+  dismiss: function(){ pendingMusicMeta=null; pendingPhotoMeta=null; refreshPendingCards(); scheduleSave(); }
+});
 function showAutosaveStatus(state){
-  const el=document.getElementById('autosaveStatus'), txt=document.getElementById('autosaveStatusText'); if(!el||!txt) return;
-  clearTimeout(el._hideTimer); el.hidden=false; el.classList.remove('saving','failed','partial');
-  if(state==='saving'){ el.classList.add('saving'); txt.textContent='Saving…'; }
-  else if(state==='failed'){ el.classList.add('failed'); txt.textContent='Autosave failed'; }
-  // Drawing + all settings saved; the media files were too large for localStorage.
-  // Amber, not green — the session is not fully recoverable and the user should know
-  // without having to open a drawer to find out.
-  //
-  // TWO WORDINGS, because there are two amber situations and only one of them is
-  // something the user can act on. When a pending record is waiting, the file is
-  // GONE from the session and the re-add card can put it back, so the pill names
-  // the action. When there is no record — a spill with no store to spill to —
-  // the media is still loaded and in front of them; nothing needs re-adding, it
-  // simply will not survive a reload. Offering "tap to re-add" there would send
-  // them to an empty drawer.
-  else if(state==='saved-no-media'){
-    el.classList.add('partial');
-    txt.textContent = _pillPending() ? 'Media missing — tap to re-add'
-                                     : 'Saved without media';
-  }
-  else { txt.textContent='Saved'; }
-  // THE ROUTE OUT, and the whole reason the amber is allowed back. Reapplied on
-  // every call rather than bound once, because whether the pill does anything
-  // changes with the state it is showing — and a control that looks tappable
-  // and is not is worse than one that never offered.
-  _pillAction(state === 'saved-no-media' && _pillPending());
-  requestAnimationFrame(()=>el.classList.add('show'));
-  // 'failed' and 'saved-no-media' STAY UP — each describes an ongoing
-  // durability problem, and a warning that fades claims it was resolved
-  // (review #3). A later successful save replaces them with 'saved'.
-  if(state!=='saving' && state!=='failed' && state!=='saved-no-media'){ el._hideTimer=setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>{ el.hidden=true; }, 300); }, 1600); }
+  if(window.SkriblAutosavePill) window.SkriblAutosavePill.show(state);
 }
 // Export progress overlay + cancel.
 let _exportAbort=false;
