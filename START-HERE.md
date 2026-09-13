@@ -640,10 +640,10 @@ rather than a shared rule.
 <!-- GEN:MODULE-INDEX -->
 | module | loaded on | what it owns |
 |---|---|---|
-| `autosavepill.js` | Pad+Flip | The autosave pill — its five states and, when media is missing, the way out. |
 | `artwork.js` | Pad+Flip | The artwork stage — ONE implementation, shared by Pad and Flip. |
 | `audioloop.js` | Pad+Flip+player | Skribl shared audio-loop DSP — canonical copy (INTEGRATION step 3b). |
 | `audiosession.js` | Pad+Flip+player+in-post | Making Web Audio audible on an iPhone whose ringer switch is off. |
+| `autosavepill.js` | Pad+Flip | lib/autosavepill.js — the autosave pill: one owner for its five states and, when media is missing, the way out. |
 | `brushes.js` | Pad+Flip | Brushes — presets expressed entirely through per-point size and colour. |
 | `brushfield.js` | Flip | The arithmetic behind tools that act on ink already on the page. |
 | `canvassizes.js` | Pad+Flip+library+in-post | Canvas presets — the one table both editors read. |
