@@ -7580,3 +7580,120 @@ holds. The owner's eye named four properties in five screenshots -- gap,
 wrap, room, opacity -- and none of them had a name in the tree. The pins
 exist now, and the tier is a reminder that the person holding the phone is
 the instrument the tree cannot replace.
+
+## v294 -- the media a session loses, and the one control that admits it
+
+Twelve squash-merged PRs, and the tier is one subject: what happens to a photo
+or a music track between the moment it is attached and the moment it comes
+back. It started with the owner on an iPhone -- "the re-add media button
+doesn't go away unless I click it or go to img/music drawer and x out ...
+shouldn't they be unified?" -- and it ended two audits later with the two
+editors doing the same thing the same way, and with the phone able to say WHY
+when the storage underneath refuses.
+
+**The pill became one owner (PRs 2, 3).** Pad and Flip each had a
+showAutosaveStatus() -- Flip's marked "ported from the Pad" -- and they had
+drifted. Flip's amber named the action and opened the drawer holding the
+re-add card; the Pad's said "Saved without media", did nothing when tapped,
+and with a pending record and no bytes reported plain GREEN over a card in a
+shut drawer. lib/autosavepill.js owns the five states now, driven by three
+callbacks each editor supplies: is media LOST, which drawer holds the card,
+how to give the record up. The × the pill grew is the way out the warning
+never had.
+
+Then the Pad's half of the durability model turned out to be decided ONCE:
+the bytes went to IndexedDB at attach time and that verdict stood for the
+session, with no deadline on a write that never settles -- which is what
+WebKit does with a multi-megabyte put on a phone. One refused or hung write
+was a permanent amber over media that was loaded and in front of the user.
+The write is retried on every save while it has failed, given up after twelve
+seconds, and the amber that has nowhere to go can be acknowledged for the
+session.
+
+**Then the audit, because the owner could not narrow it down.** "It is
+inconsistent in its performance ... there are so many different ways it
+works." Nine findings, and the answer was that the inconsistency is
+STRUCTURAL: the two editors shared the store and the pill and nothing in
+between -- they persisted different things, restored in opposite orders, and
+handed control back at different moments. The six PRs that followed are the
+audit's own order.
+
+*Media is a draft (PR 4).* A photo or a track with no strokes was "nothing
+meaningful": never written, never offered back, and its bytes orphaned in the
+store. Flip had always counted media. The same PR stopped a restore
+re-writing the bytes it had just read -- the attach pipeline's first step is
+the write that hangs on a phone -- and moved the route amber to the store
+lookup's miss, where it belongs: shown at the moment of restore it was a
+false alarm flashed on every healthy return.
+
+*A restored photo keeps its adjustments (PR 5).* Fit, opacity, blur and zoom
+were re-applied on a 140ms timer and dropped if the image was not yet
+showing. Attach is three async stages; on a slow phone the timer won. The
+music side had always re-applied in loadedmetadata. The photo re-applies on
+the image's own load now.
+
+*The leave guard tells the truth on both surfaces (PR 7).* The Pad's guard
+counted a write in flight as not durable, so the sheet opened for up to the
+twelve-second deadline after every attach. Flip had no guard at all "because
+it persists its media" -- true while the bytes went to localStorage, and not
+since the spill: they go to IndexedDB in a write that can die with the page.
+A write in flight gets 1.5s to land; media the store could not hold gets the
+sheet, on both.
+
+*One restore model (PR 10).* The Pad asked -- a banner, Discard or Restore,
+nothing drawn until answered -- because its autosave once held strokes but
+not media bytes. The bytes have come back from IndexedDB since v222, so the
+reason was gone and what remained was two editors that felt like two products
+on the first screen a returning user sees. The draft is applied at boot on
+both, the toast says "Draft restored", and Clear all in the ⋯ menu is the
+discard.
+
+*The bytes go when the media goes (PR 11).* Flip never deleted its store
+record, so removing a track left the payload -- frames and bytes together --
+until the next save that happened to have media. The Pad deleted its bytes
+before it wrote the draft, so a tab dying inside the 1.2s debounce came back
+offering a re-add card for a file the user had removed. One owner deletes
+Flip's record from the two save paths that mean "no media here"; the Pad
+flushes first and deletes second.
+
+**The control the owner kept coming back to (PRs 6 and 12).** The × was 22px
+on the near edge of the canvas: a miss drew a stroke, which scheduled a save,
+which re-showed the warning being closed. It became a 44px target -- and the
+owner's next two messages are the whole lesson. "The x is small but when I
+push it it shows big": the hover fill from its 22px days now painted the
+entire 44px box, so a tap grew a disc that overhung the pill. And then the
+question that mattered: "should the button be big so people don't stress
+trying to hit the little x". An invisible target fixes the accident and not
+the aiming. The button is DRAWN now, 26px with its own edge, 30px on a phone
+where the pill is 44px tall -- the size of the pen and eraser below it -- and
+the 44px box is the forgiveness margin rather than the affordance.
+
+One option was considered and rejected, and building it is what showed why:
+making the whole pill dismiss on the amber with no re-add route would have put
+a 211px tap-absorbing bar over the canvas for as long as the warning stood,
+swallowing strokes.
+
+**What the tier taught the instrument.** Three things, each paid for.
+
+A pin written for a control measures the CONTROL, and the thing around it can
+still be wrong: the 44px target passed its pin twice while the pressed state
+overhung the pill and the button stayed invisible. Both complaints came from
+the owner's thumb, not from the suite.
+
+A green pin on a surface is not a finding that the surface is right. The
+Pad's drawer census was green while the re-add card measured 28px, because a
+stray </div> in a template edit had closed .app early and put the drawers in
+the body's flex row -- caught only because another pin measured a BOX rather
+than a flag. (Second time this file has recorded that lesson; the first was
+the 0x0 card inside a collapsed drawer, v238.)
+
+And a suite that shares one browser context shares its STORAGE: the moment
+the Pad started restoring at boot, a draft one layout case left behind
+restored into the next and hid the Record button. A measurement that depends
+on a clean slate has to ask for one.
+
+**What is still open.** The owner's phone refuses the store for a reason
+nothing in the tree could name, so PR 8 made it say so: the write logs its
+rejection, every restore miss names itself, and the problem report carries a
+Media store line. The reason decides the next fix, and it is not in this
+release.
