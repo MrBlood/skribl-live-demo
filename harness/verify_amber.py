@@ -151,9 +151,23 @@ with sync_playwright() as p:
         return x ? { hidden: x.hidden, pe: getComputedStyle(x).pointerEvents, label: x.getAttribute('aria-label') || '' } : null; }""")
     check("the × is offered on this amber too, and takes taps",
           bool(ack) and ack["hidden"] is False and ack["pe"] == "auto" and ack["label"] != "", str(ack))
-    ackc, ackwhy = try_click(pg2, "#autosaveStatusDismiss")
+    # THE × IS A THUMB TARGET (v294 audit, section 3; owner: keep the pill
+    # floating). It was 22px on the near edge of the canvas, so a miss by a few
+    # pixels drew a stroke — which schedules a save, which re-shows the warning
+    # being closed. The box is 44px each way now, and a tap 16px above the
+    # glyph's centre — outside the old box, inside the new — acknowledges the
+    # pill and draws nothing.
+    xbox = pg2.evaluate("() => { const r = document.getElementById('autosaveStatusDismiss').getBoundingClientRect(); return { w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; }")
+    check("the × is at least 44px each way", xbox["w"] >= 44 and xbox["h"] >= 44, f"{round(xbox['w'])}x{round(xbox['h'])}")
+    strokes_before = pg2.evaluate("() => frames[idx].strokes.length")
+    pg2.mouse.click(xbox["cx"], xbox["cy"] - 16)
     pg2.wait_for_timeout(500)
-    check("acknowledging hides the pill", ackc and pg2.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, ackwhy)
+    ackc, ackwhy = True, ""
+    check("a near miss on the × acknowledges the pill instead of drawing on the canvas",
+          pg2.evaluate("() => document.getElementById('autosaveStatus').hidden") is True
+          and pg2.evaluate("() => frames[idx].strokes.length") == strokes_before,
+          f"hidden={pg2.evaluate('() => document.getElementById(\'autosaveStatus\').hidden')} strokes {strokes_before} -> {pg2.evaluate('() => frames[idx].strokes.length')}")
+    check("acknowledging hides the pill", pg2.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, ackwhy)
     scribble(pg2, box2, 7.5); pg2.wait_for_timeout(1600)
     check("...and it stays quiet on the next save",
           pg2.evaluate("() => document.getElementById('autosaveStatus').hidden") is True,
@@ -348,14 +362,49 @@ with sync_playwright() as p:
     ack3 = pg3.evaluate("""() => { const x = document.getElementById('autosaveStatusDismiss');
         return x ? { hidden: x.hidden, pe: getComputedStyle(x).pointerEvents } : null; }""")
     check("Pad: the × is offered on this amber too", bool(ack3) and ack3["hidden"] is False and ack3["pe"] == "auto", str(ack3))
-    a3c, a3why = try_click(pg3, "#autosaveStatusDismiss"); pg3.wait_for_timeout(500)
-    check("Pad: acknowledging hides the pill", a3c and pg3.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, a3why)
+    xbox3 = pg3.evaluate("() => { const r = document.getElementById('autosaveStatusDismiss').getBoundingClientRect(); return { w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; }")
+    check("Pad: the × is at least 44px each way", xbox3["w"] >= 44 and xbox3["h"] >= 44, f"{round(xbox3['w'])}x{round(xbox3['h'])}")
+    strokes3 = pg3.evaluate("() => strokes.length")
+    pg3.mouse.click(xbox3["cx"], xbox3["cy"] - 16); pg3.wait_for_timeout(500)
+    check("Pad: a near miss on the × acknowledges the pill instead of drawing on the canvas",
+          pg3.evaluate("() => document.getElementById('autosaveStatus').hidden") is True and pg3.evaluate("() => strokes.length") == strokes3,
+          f"hidden={pg3.evaluate('() => document.getElementById(\'autosaveStatus\').hidden')} strokes {strokes3} -> {pg3.evaluate('() => strokes.length')}")
+    check("Pad: acknowledging hides the pill", pg3.evaluate("() => document.getElementById('autosaveStatus').hidden") is True, "")
     pg3.mouse.move(pbox3["x"]+300, pbox3["y"]+200); pg3.mouse.down()
     for i in range(40): pg3.mouse.move(pbox3["x"]+300+i*3, pbox3["y"]+200+math.cos(i/4)*30)
     pg3.mouse.up(); pg3.wait_for_timeout(1800)
     check("Pad: ...and it stays quiet on the next save",
           pg3.evaluate("() => document.getElementById('autosaveStatus').hidden") is True,
           "an acknowledged warning that comes back on the next stroke was never acknowledged")
+    # ON A PHONE, where the pill is lifted above the tool row and the only
+    # thing under a near miss is the canvas (the owner's complaint, verbatim:
+    # "when you push it you are over the canvas and likely to draw on canvas").
+    # 390x664 is what an iPhone's Safari gives the page once its own chrome is
+    # on screen; at that height the canvas reaches the pill. (At 393x852 it
+    # stops 9px short, and this pin would be vacuous.)
+    pgm = b.new_page(viewport={"width": 390, "height": 664}, color_scheme="dark")
+    pgm.add_init_script("Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
+    pgm.goto(BASE+"/skribl-pad", wait_until="load"); pgm.wait_for_timeout(1200)
+    pgm.evaluate("() => { localStorage.clear(); window.SkriblHints && window.SkriblHints.hide(); }")
+    # The 9:16 canvas a portrait phone actually shows (the owner's screenshot):
+    # it reaches the bottom of the screen, which is where the pill lives.
+    pgm.evaluate("() => { const b = document.querySelector('#canvasSeg [data-size=\"tall\"]'); if (b) b.click(); }")
+    pgm.wait_for_timeout(600)
+    mbox = pgm.locator("canvas").first.bounding_box()
+    pgm.mouse.move(mbox["x"]+80, mbox["y"]+120); pgm.mouse.down()
+    for i in range(40): pgm.mouse.move(mbox["x"]+80+i*3, mbox["y"]+120+math.sin(i/4)*30)
+    pgm.mouse.up(); pgm.wait_for_timeout(1800)
+    pgm.set_input_files("#musicInput", WAV); pgm.wait_for_timeout(4500)
+    sm = pgm.evaluate(STATE)
+    check("Pad phone: amber, with the pill over the canvas", "partial" in sm["cls"] and pgm.evaluate("""() => { const p = document.getElementById('autosaveStatus').getBoundingClientRect(), c = document.querySelector('canvas').getBoundingClientRect();
+        return !(p.right <= c.left || p.left >= c.right || p.bottom <= c.top || p.top >= c.bottom); }"""), f"{sm['text']!r}")
+    xm = pgm.evaluate("() => { const r = document.getElementById('autosaveStatusDismiss').getBoundingClientRect(); return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; }")
+    strokes_m = pgm.evaluate("() => strokes.length")
+    pgm.mouse.click(xm["cx"], xm["cy"] - 16); pgm.wait_for_timeout(600)
+    check("Pad phone: a near miss on the × acknowledges the pill and draws NOTHING",
+          pgm.evaluate("() => document.getElementById('autosaveStatus').hidden") is True and pgm.evaluate("() => strokes.length") == strokes_m,
+          f"hidden={pgm.evaluate('() => document.getElementById(\'autosaveStatus\').hidden')} strokes {strokes_m} -> {pgm.evaluate('() => strokes.length')}")
+    pgm.close()
     pg3.reload(wait_until="load"); pg3.wait_for_timeout(1200)
     rc, rwhy = try_click(pg3, "#restoreConfirm")
     check("Pad: the restore banner offers the draft back", rc, rwhy)

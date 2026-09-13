@@ -2899,9 +2899,15 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
 /* pillfit fades the pill to nothing when it cannot lift it clear of a bar; an
    INVISIBLE pill must not keep taking taps in the corner of the screen. */
 .autosave-status.actionable.blocked { pointer-events: none; }
+/* A THUMB TARGET, NOT A GLYPH. 44px each way (the owner's phone: "so small
+   when you push it you are over the canvas and likely to draw"), with negative
+   margins so the pill's own box stays the same height: the hit area reaches
+   8px above and below the pill and 6px past its right edge, and a near miss
+   lands on this button — which takes the tap — instead of on the canvas
+   beneath. The glyph stays small; the target does not. */
 .autosave-dismiss {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; margin: -4px -6px -4px 0;
+  width: 44px; height: 44px; margin: -15px -17px -15px -4px;
   border: 0; border-radius: 50%; background: transparent; color: inherit;
   font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
 }
