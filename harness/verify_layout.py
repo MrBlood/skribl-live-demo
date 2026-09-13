@@ -395,16 +395,14 @@ with sync_playwright() as p:
     # below said so while the assertion contradicted it — it read "the guard is
     # Pad-only", which is exactly right and was written as a failure message.
     #
-    # Flip has no leave-guard DELIBERATELY. It persists pages, music and the
-    # background image, so nothing is at risk when you leave and a confirm could
-    # only ever be a false alarm — the same reasoning that narrowed Pad's guard
-    # to attached media. Pad needs one only because its autosave cannot hold
-    # media bytes. So the asymmetry is the design, and when durable drafts land
-    # the correct outcome is Pad losing its guard too, not Flip gaining one.
-    #
-    # Pinned in that direction: Flip must navigate FREELY. If someone later adds
-    # a confirm here in the name of consistency, this fails and sends them to
-    # this comment.
+    # Flip had no leave-guard DELIBERATELY: it persisted pages, music and the
+    # background image, so nothing was at risk when you left. That held while
+    # the bytes went to localStorage; since the spill model they go to
+    # IndexedDB in a write that can die with the page, and v294 (finding 6 of
+    # the media-restore audit) gave Flip the Pad's guard for exactly that case
+    # — section 4b below. What this pin still holds, and must: with the store
+    # WORKING, Flip navigates FREELY. A confirm here with durable media is the
+    # false alarm this comment always warned about.
     pg = ctx.new_page()
     pg.goto(BASE + "/flip", wait_until="load")
     # Match on the accessible name, not the href literal: the href is now
@@ -429,6 +427,61 @@ with sync_playwright() as p:
         check("Flip — leaving navigates freely; Flip persists its work, so a confirm would be a false alarm",
               "/flip" not in pg.url,
               f"stayed on {pg.url} — a guard appeared on the surface that does not need one")
+    pg.close()
+
+    # ------------------------------------------------------------ section 4b
+    print("\nLAYOUT 4b — the guard waits for a write in flight, and Flip guards its own media (v294 audit, PR 4)")
+    # The v294 media-restore audit, finding 6. The Pad's guard read "not
+    # durable" while a store write was merely IN FLIGHT, so the sheet opened
+    # for up to twelve seconds after every attach on a phone — a false alarm
+    # on the common path. And the note above this section is out of date:
+    # since the spill model, Flip's media bytes go to IndexedDB in a write
+    # that "can die with the page", so with the store broken they are exactly
+    # the work at risk. The rule is the same on both editors now: a write in
+    # flight gets a moment to land; media whose bytes cannot be stored gets
+    # the sheet; durable media navigates freely (the pin above still holds).
+    import math as _m, struct as _st, wave as _wv
+    _wav = pathlib.Path(tempfile.gettempdir()) / "skribl_layout_guard.wav"
+    with _wv.open(str(_wav), "wb") as _w:
+        _w.setnchannels(2); _w.setsampwidth(2); _w.setframerate(44100)
+        _buf = bytearray()
+        for _i in range(30 * 44100):
+            _v = int(12000 * _m.sin(2 * _m.pi * 220 * _i / 44100)); _buf += _st.pack("<hh", _v, _v)
+        _w.writeframes(bytes(_buf))
+    pg = ctx.new_page(); pg.goto(BASE + "/", wait_until="load"); draw_a_stroke(pg)
+    pg.evaluate("() => { const orig = SkriblDraftStore.put.bind(SkriblDraftStore); SkriblDraftStore.put = (k, v) => new Promise(r => setTimeout(() => r(orig(k, v)), 800)); }")
+    pg.set_input_files("#musicInput", str(_wav)); pg.wait_for_timeout(300)
+    open_flip_entry(pg); pg.wait_for_timeout(2500)
+    check("Pad: a write still landing when Flip is tapped does not raise the sheet — it lands, and Flip opens",
+          "/flip" in pg.url, f"landed on {pg.url}")
+    pg.close()
+    pg = ctx.new_page(); pg.goto(BASE + "/", wait_until="load"); draw_a_stroke(pg)
+    pg.evaluate("() => { SkriblDraftStore.put = (k, v) => new Promise(() => {}); }")
+    pg.set_input_files("#musicInput", str(_wav)); pg.wait_for_timeout(300)
+    before = pg.url; open_flip_entry(pg); pg.wait_for_timeout(2500)
+    check("Pad: a write that never settles is at risk, and the sheet says so",
+          pg.url == before and pg.locator("#leaveSheet").is_visible(), f"{pg.url}")
+    pg.close()
+    pg = ctx.new_page()
+    pg.add_init_script("Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
+    pg.goto(BASE + "/flip", wait_until="load"); pg.wait_for_timeout(600)
+    pg.evaluate("() => window.SkriblHints && window.SkriblHints.hide()")
+    box = pg.locator("#pad").bounding_box()
+    pg.mouse.move(box["x"] + 40, box["y"] + 40); pg.mouse.down(); pg.mouse.move(box["x"] + 110, box["y"] + 80, steps=6); pg.mouse.up()
+    pg.set_input_files("#musicInput", str(_wav)); pg.wait_for_timeout(4000)
+    before = pg.url
+    pg.click("#moreBtn"); pg.wait_for_timeout(400); pg.click("#padBtn"); pg.wait_for_timeout(600)
+    fl_sheet = pg.locator("#leaveSheet")
+    check("Flip: media the store cannot hold — the Skribl Pad row confirms before leaving",
+          pg.url == before and fl_sheet.count() > 0 and fl_sheet.is_visible(), f"landed on {pg.url}; sheet={fl_sheet.count()}")
+    if pg.url == before and fl_sheet.count() > 0:
+        check("Flip: the confirm focuses the safe choice",
+              pg.evaluate("() => document.activeElement && document.activeElement.id") == "leaveCancel")
+        pg.click("#leaveCancel"); pg.wait_for_timeout(200)
+        check("Flip: 'Keep drawing' stays on Flip", pg.url == before, pg.url)
+        pg.click("#moreBtn"); pg.wait_for_timeout(400); pg.click("#padBtn"); pg.wait_for_timeout(400)
+        pg.click("#leaveGo"); pg.wait_for_timeout(600)
+        check("Flip: 'Leave' navigates to the Pad", "/flip" not in pg.url, pg.url)
     pg.close()
 
     # ------------------------------------------------------------ section 5
