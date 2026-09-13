@@ -57,7 +57,10 @@
     filter: var(--brand-relief); } /* letterpress, same press as Pad's — see the token in styles.css */
   @media (max-width: 480px) { .flip-word .brand-mark { height: 26px; } } /* phone step, same as Pad's */
   .flip-lead { display: flex; align-items: center; gap: 6px; flex: none; }
-  .flip-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+  /* No gap of its own: the container is .actions too, and the Pad's .actions
+     rules — 8px, 9px on a phone, 3px with margins at the narrowest — govern
+     both headers (v293). */
+  .flip-actions { display: flex; align-items: center; margin-left: auto; flex: none; }
   /* Below 640 the shared rule `.header .actions { margin-left: 12px }`
      (styles.css, inside its own max-width:640 block) replaces that auto
      margin with a fixed 12px, and the action cluster packs left against the
@@ -91,35 +94,24 @@
   /* 36, matching the ⋯ beside it and Pad's header (v225). It was 34 -- two
      pixels short of everything else in the row, for no reason anyone recorded. */
   .tune-tool { width: 36px; height: 36px; flex: none; }
-  #moreBtn { width: 34px; height: 34px; border-radius: 50%; }
+  #moreBtn { width: 36px; height: 36px; border-radius: 50%; }   /* the Pad's ⋯ is 36 at every tier; so is this (v293) */
   #moreBtn svg { width: 19px; height: 19px; }
-  /* The 44px tap box, WHATEVER the tier below sizes the glyph (34, 36, 33,
-     31, 30). .tool-open::before in styles.css is the band; it grows by
-     --tap-grow, which this button never set (v287 audit SK-A11Y-005). 7px is
-     the smallest tier's need and a taller band on the taller tiers is air.
-     Horizontally the band is flush with the RIGHT edge and reaches 44px to
-     the left, into the gap before it: this is the last thing in the header,
-     and any reach past its right edge is header overflow at 360px, which
-     verify_ux pins. */
-  #moreBtn { --tap-grow: 7px; }
+  /* The 44px tap box. .tool-open::before in styles.css is the band; it
+     grows by --tap-grow, which this button never set (v287 audit
+     SK-A11Y-005). The glyph is 36 at every tier since v293 (the Pad's ⋯
+     size), so 4px each side is the whole of it — centred, like every other
+     opener's. Until v293 the compact tiers shrank the glyph to 34/33/31/30
+     and the band was flush with the header's RIGHT edge, because any reach
+     past it was header overflow at 360px (verify_ux pins that); with the
+     back arrow gone the header carries the Pad's 14px padding and 2px
+     margin here, which is the room a centred band reaches into. */
+  #moreBtn { --tap-grow: 4px; }
   /* A rounded SQUARE band, not the circle the button's 50% radius would
      hand the pseudo-element: on a 44px circle the point 21.5px below the
      centre sits on the rim and misses (v291, the 360/320 census). */
-  #moreBtn::before { left: calc(100% - 44px); right: 0; border-radius: 10px; }
-  /* The back link at the header's other end had no band at all, and the
-     tiers below shrink it to 32 and 30px (v291; the outside review of v290
-     asked for a hit census at the narrowest widths, and this is what it
-     found). A 44px box centred on it: the header's left padding is the
-     room it reaches into. */
-  .flip-lead .icon-btn { position: relative; z-index: 1; }
-  .flip-lead .icon-btn::before { content: ''; position: absolute; left: 50%; top: 50%;
-    width: 44px; height: 44px; transform: translate(-50%, -50%); }
-  /* On the regular surface the header has air to the right of it, so the
-     band is centred there like every other opener's (36 -> 44). The size
-     class, not a width query: verify_sizeclass pins that one answer. */
-  :where(body[data-size="regular"]) #moreBtn::before { left: -4px; right: -4px; }
+  #moreBtn::before { left: -4px; right: -4px; border-radius: 10px; }
   /* Level the three action controls to one height so the row lines up. */
-  .flip-actions .seg, .flip-actions .grid-tool, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 34px; box-sizing: border-box; }
+  .flip-actions .seg, .flip-actions .grid-tool, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 36px; box-sizing: border-box; } /* the Pad's 36 at every tier (v293) */
   .flip-actions .btn.flip-play { padding-top: 0; padding-bottom: 0; }
   /* Grid overlay — a non-destructive alignment guide over the whole canvas (not
      saved, hidden while flipping). Three nested levels fill the canvas: big (8x6,
@@ -803,18 +795,17 @@
   fps, onion, grid and draw-on inline; measured now, 17px overflows by
   ZERO at 360, 375, 393 and 430, so the phone was reading thinner than the
   desktop for no remaining reason. */
-  /* Mobile chrome: Flip-it AND Post collapse to their icons; tighter header. */
+  /* Mobile chrome (v293): Flip-it collapses to its icon like the Pad's Play;
+     Post KEEPS its label like the Pad's. Heights, paddings and gaps are the
+     shared header's — nothing here shrinks a control the Pad does not shrink,
+     because the two headers are one design (verify_parity). The header's
+     vertical margin stays Flip's 7px: the stage is sized from it. */
   @media (max-width: 560px) {
-    .flip-play span, .btn.post .btn-label { display: none; }
-    .btn.flip-play, .btn.post { min-width: 0; padding: 9px 12px; }
-    .flip-app .header { padding: 11px 8px; margin: 7px; gap: 6px; }
-    .flip-lead { gap: 4px; }
-    .flip-lead .icon-btn { width: 32px; height: 32px; }
-    .flip-actions { gap: 5px; }
+    .flip-play span { display: none; }
+    .btn.flip-play { min-width: 0; padding: 9px 12px; }
+    .flip-app .header { margin: 7px 6px; }
     .fps-group { gap: 5px; }
     .flip-actions .seg button { padding: 5px 5px; }
-    .flip-actions .seg, .flip-actions .grid-tool, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 33px; }
-    #moreBtn { width: 33px; height: 33px; }
   }
   /* Tight controls + drop the fps LABEL and switch the wordmark to FM so the whole
      row (fps, onion, grid, draw-on, more, Flip it, Post) fits down to ~340px. */
@@ -823,22 +814,11 @@
     /* FULL wordmark stays here. It was dropped at 440px on a free-space
        calculation that understated the room — measured by forcing FLIPMODE and
        reading header.scrollWidth, overflow is ZERO from 360px up. */
-    #moreBtn { width: 31px; height: 31px; }
-    .flip-actions .seg, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 31px; }
-    .btn.flip-play, .btn.post { padding: 8px 10px; }
     .flip-actions .seg button { padding: 5px 4px; }
-    .flip-actions { gap: 4px; }
-    .flip-app .header { gap: 5px; padding: 11px 7px; }
   }
-  /* Narrowest — extra squeeze for ~320px phones. */
-  @media (max-width: 360px) {
-    .flip-actions { gap: 3px; }
-    .flip-actions .grid-tool, #moreBtn { width: 30px; height: 30px; }
-    .flip-actions .seg, .flip-actions .btn.flip-play, .flip-actions .btn.post { height: 30px; }
-    .btn.flip-play, .btn.post { padding: 7px 8px; }
-    .flip-lead .icon-btn { width: 30px; height: 30px; }
-    .flip-app .header { padding: 11px 6px; gap: 4px; }
-  }
+  /* The narrowest tier (≤360) is the Pad's: .actions gap 3px with the Post
+     and ⋯ margins that group Record+Play / Post / ⋯ — styles.css names
+     #moreBtn beside #menuBtn there (v293). */
 
 
 /* --- v107: onion skin depth + tint controls ------------------------------- */

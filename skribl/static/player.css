@@ -1471,7 +1471,7 @@ body.player-mode #canvas {
   /* Grouping via spacing: Record+Play stay a tight pair (actions gap); a bigger
      gap sets off Post (the commit) and then ⋯ (overflow). */
   .actions { gap: 3px; }
-  #menuBtn  { margin-left: 8px; margin-right: 2px; }}
+  #menuBtn, #moreBtn { margin-left: 8px; margin-right: 2px; }}
 
 /* ===================================================================
    Header spacing + recording fixes (v76)
@@ -1483,7 +1483,7 @@ body.player-mode #canvas {
      edge-to-edge, which pinned Record against the logo). */
   .actions,
   .header.compact .actions { gap: 9px; justify-content: flex-end; }
-  #menuBtn  { margin-left: 0; margin-right: 2px; }}
+  #menuBtn, #moreBtn { margin-left: 0; margin-right: 2px; }}
 
 /* ===================================================================
    Sleeker desktop header (v79) — Option 1: thinner pills, lighter
