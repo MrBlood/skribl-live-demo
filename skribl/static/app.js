@@ -3913,7 +3913,14 @@ if (typeof pendingMusicMeta !== 'undefined') {
     // path cleared the meta and the card by hand but never the dot's .pending
     // class, and refreshPendingCards is the only function that owns it.
     refreshPendingCards();
-    setTimeout(() => {
+    // WHEN THE IMAGE LOADS, not 140 ms later. Attach is async — a decode
+    // check, a FileReader, normalisation — and this listener runs on the change
+    // event before any of it; a timer fired before the image was showing and
+    // the saved fit, opacity, blur and zoom were dropped without a word (v294
+    // audit, finding 4; the music side has always re-applied in
+    // loadedmetadata). The name guard keeps a stale listener from dressing a
+    // different photo if this attach was refused.
+    const apply = () => {
       if (!photoBgImg || photoBgImg.style.display === 'none') return;
       if (meta.fit) {
         photoFit = meta.fit;
@@ -3955,7 +3962,15 @@ if (typeof pendingMusicMeta !== 'undefined') {
       setZoomSliderUI();
       applyPhotoPosition();
       updateRepositionUI();
-    }, 140);
+    };
+    const onLoad = () => {
+      photoBgImg.removeEventListener('load', onLoad);
+      if (meta.name && photoBgImg._fileName !== meta.name) return;
+      apply();
+    };
+    if (photoBgImg && photoBgImg.complete && photoBgImg.naturalWidth > 0
+        && photoBgImg.style.display !== 'none' && (!meta.name || photoBgImg._fileName === meta.name)) apply();
+    else if (photoBgImg) photoBgImg.addEventListener('load', onLoad);
   });
 
   // Pending card buttons: "Re-add" opens the file picker; "✕" dismisses.
