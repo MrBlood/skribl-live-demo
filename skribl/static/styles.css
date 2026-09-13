@@ -2878,6 +2878,36 @@ body:has(#moreMenu:not([hidden])) .autosave-status {
    the pulsing amber of an in-flight save. */
 .autosave-status.partial .autosave-dot { background: var(--warn); }
 .autosave-status.partial { color: var(--warn); }
+/* ---- The pill when it has somewhere to go (lib/autosavepill.js, v294) ----
+   Both editors: a pending record with no bytes behind it makes the pill's TEXT
+   a control that opens the drawer holding the re-add card, and shows a × that
+   does what the card's Dismiss does. These lived in flip.css from v238 to v294
+   as "Flip only", while the Pad could be in exactly the same state.
+
+   pointer-events IS THE WHOLE FIX. The base pill sets `pointer-events: none`
+   so a status that happens to sit over a control cannot eat the tap meant for
+   it — right while the pill is only a status, and exactly why making it
+   tappable is a CSS change and not just a listener. A ring in the warn colour,
+   so the affordance and the severity are the same signal. NOT a transform on
+   :active — lib/pillfit.js lifts the pill with translateY and a transform
+   here would replace the lift, out from under the finger pressing it. */
+.autosave-status.actionable { pointer-events: auto; box-shadow: 0 0 0 1px var(--warn) inset; }
+.autosave-status.actionable #autosaveStatusText { cursor: pointer; }
+.autosave-status.actionable:hover { background: rgba(var(--surface-control-rgb), 0.95); }
+.autosave-status.actionable #autosaveStatusText:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; border-radius: 6px; }
+.autosave-status.actionable:active { filter: brightness(1.25); }
+/* pillfit fades the pill to nothing when it cannot lift it clear of a bar; an
+   INVISIBLE pill must not keep taking taps in the corner of the screen. */
+.autosave-status.actionable.blocked { pointer-events: none; }
+.autosave-dismiss {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; margin: -4px -6px -4px 0;
+  border: 0; border-radius: 50%; background: transparent; color: inherit;
+  font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
+}
+.autosave-dismiss:hover { background: rgba(var(--surface-control-rgb), 1); }
+.autosave-dismiss:focus-visible { outline: 2px solid var(--warn); outline-offset: 1px; }
+.autosave-dismiss[hidden] { display: none; }
 
 /* ---------- Autosave restore banner ---------- */
 .restore-banner {

@@ -144,6 +144,7 @@ with sync_playwright() as p:
 
     print("\nFLIP — re-add card in the music drawer after reload (store still broken)")
     pg2.reload(wait_until="load"); pg2.wait_for_timeout(1500)
+    snap_pending = pg2.evaluate("() => Object.fromEntries(Object.entries(localStorage))")
     s = pg2.evaluate(STATE)
     check("amber immediately on restore", "partial" in s["cls"], f"{s['text']!r}")
     card = pg2.evaluate("""() => { const c=document.getElementById('musicPending');
@@ -172,11 +173,15 @@ with sync_playwright() as p:
     # deletes the route and keeps the warning, every assertion above still passes
     # and the product is back to the state its owner already rejected once. These
     # are the assertions that would fail.
+    # v294: the control is the pill's TEXT, not the pill. A × sits beside it,
+    # and a button inside a role=button is invalid nesting; the status stays a
+    # status and holds two controls.
     pill = pg2.evaluate("""() => { const el = document.getElementById('autosaveStatus');
+        const t = document.getElementById('autosaveStatusText');
         const cs = getComputedStyle(el);
-        return { text: document.getElementById('autosaveStatusText').textContent,
+        return { text: t.textContent,
                  actionable: el.classList.contains('actionable'),
-                 role: el.getAttribute('role'), tab: el.getAttribute('tabindex'),
+                 role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
                  pe: cs.pointerEvents }; }""")
     check("the amber pill NAMES the way out",
           "re-add" in pill["text"].lower(),
@@ -197,7 +202,7 @@ with sync_playwright() as p:
           "a listener without this is a control that silently ignores every tap")
     pg2.evaluate("() => _flipDrawerCtl.open(null)")
     pg2.wait_for_timeout(200)
-    clicked, why = try_click(pg2, "#autosaveStatus")
+    clicked, why = try_click(pg2, "#autosaveStatusText")
     pg2.wait_for_timeout(400)
     check("the pill can be clicked at all",
           clicked,
@@ -238,6 +243,39 @@ with sync_playwright() as p:
           "a status that still looks tappable after there is nowhere to go "
           "sends the user to an empty drawer")
 
+    print("\nFLIP — the pill carries its own Dismiss (v294)")
+    # Owner, v294, from a phone: "the re-add media button doesn't go away
+    # unless I click it or go to the drawer and x out." The card's Dismiss is
+    # the only thing that ended the amber, two taps away. The pill has a × of
+    # its own that does the same thing. The pending record is put back the
+    # honest way: the draft as it was BEFORE the card was dismissed, restored
+    # into storage and reloaded, so the × acts on a real restore.
+    # NOT a reload: pagehide flushes the CURRENT draft (no record) over whatever
+    # storage holds, so a snapshot written before a reload is gone by the time
+    # the page comes back. Close the editor first, seed from a same-origin page
+    # that runs no editor, then open a fresh one.
+    pg2.goto(BASE + "/static/lib/drawers.js", wait_until="load")   # the editor's pagehide flush has now run, on the OLD state
+    pg2.evaluate("(snap) => { localStorage.clear(); for (const [k, v] of Object.entries(snap)) localStorage.setItem(k, v); }", snap_pending)
+    pg2.goto(BASE+"/flip", wait_until="load"); pg2.wait_for_timeout(1500)
+    s = pg2.evaluate(STATE)
+    check("amber again on the restore", "partial" in s["cls"], f"{s['text']!r}")
+    xbtn = pg2.evaluate("""() => { const x = document.getElementById('autosaveStatusDismiss');
+        if (!x) return null; const r = x.getBoundingClientRect();
+        return { hidden: x.hidden, w: Math.round(r.width), h: Math.round(r.height), label: x.getAttribute('aria-label') || '' }; }""")
+    check("the pill carries a Dismiss of its own, with a name",
+          bool(xbtn) and xbtn["hidden"] is False and xbtn["w"] > 0 and xbtn["h"] > 0 and xbtn["label"] != "",
+          str(xbtn))
+    xclicked, xwhy = try_click(pg2, "#autosaveStatusDismiss")
+    check("...that takes a tap", xclicked, xwhy)
+    pg2.wait_for_timeout(1600)
+    s = pg2.evaluate(STATE)
+    check("the pill's Dismiss ENDS the amber without a drawer",
+          "partial" not in s["cls"] and pg2.evaluate("() => _flipDrawerCtl.current()") is None,
+          f"{s['text']!r} drawer={pg2.evaluate('() => _flipDrawerCtl.current()')}")
+    check("...and the record is gone, so the card is too",
+          pg2.evaluate("() => pendingMusicMeta === null && document.getElementById('musicPending').hidden"),
+          "the × must do what the card's Dismiss does, not merely hide the pill")
+
     print("\nFLIP — re-adding the file restores the loop and clears the warning")
     pg2.evaluate("() => { trimStart=0; trimEnd=6; }")   # pretend the saved loop was 0-6s
     pg2.evaluate("() => { pendingMusicMeta = {name:'boombap.wav', trimStart:1, trimEnd:7, crossfadeMs:40, enabled:true}; }")
@@ -266,6 +304,61 @@ with sync_playwright() as p:
     ok_bytes = pg.evaluate("""() => window.SkriblDraftStore.get('pad:music')
         .then(r => !!(r && r.blob && r.blob.size > 0)).catch(() => false)""")
     check("because the attach stored them", ok_bytes is True)
+
+    print("\nPAD — a pending record is the same amber, the same route, the same way out (v294)")
+    # The Pad reported GREEN "Saved" with a re-add card waiting in a drawer
+    # nothing pointed at: hasMusic counted the pending record but
+    # mediaDurabilityOk() had nothing failed. Same contract as Flip's now, and
+    # driven the same way — store broken, track attached, reload, restore.
+    pg3 = b.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark")
+    errs3 = []; pg3.on("pageerror", lambda e: errs3.append(str(e)))
+    pg3.add_init_script(
+        "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true });")
+    pg3.goto(BASE+"/skribl-pad", wait_until="load"); pg3.wait_for_timeout(1200)
+    pg3.evaluate("() => localStorage.clear()")
+    pbox3 = pg3.locator("canvas").first.bounding_box()
+    pg3.mouse.move(pbox3["x"]+120, pbox3["y"]+120); pg3.mouse.down()
+    for i in range(60): pg3.mouse.move(pbox3["x"]+120+i*3, pbox3["y"]+120+math.sin(i/4)*40)
+    pg3.mouse.up(); pg3.wait_for_timeout(1800)
+    pg3.set_input_files("#musicInput", WAV); pg3.wait_for_timeout(4500)
+    s = pg3.evaluate(STATE)
+    check("Pad: amber with the track loaded and no store to hold it", "partial" in s["cls"], f"{s['text']!r}")
+    noroute3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
+        return { text: t.textContent, actionable: el.classList.contains('actionable'), role: t.getAttribute('role') }; }""")
+    check("Pad: amber with nothing to re-add does NOT pretend to be a route",
+          noroute3["actionable"] is False and noroute3["role"] is None and "re-add" not in noroute3["text"].lower(),
+          str(noroute3))
+    pg3.reload(wait_until="load"); pg3.wait_for_timeout(1200)
+    rc, rwhy = try_click(pg3, "#restoreConfirm")
+    check("Pad: the restore banner offers the draft back", rc, rwhy)
+    pg3.wait_for_timeout(1500)
+    s = pg3.evaluate(STATE)
+    check("Pad: amber immediately on restore", "partial" in s["cls"], f"{s['text']!r} cls={s['cls']!r}")
+    pill3 = pg3.evaluate("""() => { const el = document.getElementById('autosaveStatus'), t = document.getElementById('autosaveStatusText');
+        return { text: t.textContent, role: t.getAttribute('role'), tab: t.getAttribute('tabindex'),
+                 pe: getComputedStyle(el).pointerEvents }; }""")
+    check("Pad: the amber pill NAMES the way out", "re-add" in pill3["text"].lower(), f"{pill3['text']!r}")
+    check("Pad: ...and is a real control that receives taps",
+          pill3["role"] == "button" and pill3["tab"] == "0" and pill3["pe"] == "auto", str(pill3))
+    pc, pwhy = try_click(pg3, "#autosaveStatusText")
+    pg3.wait_for_timeout(400)
+    opened3 = pg3.evaluate("""() => { const c = document.getElementById('musicPending'); const r = c.getBoundingClientRect();
+        return { drawer: _padDrawerCtl.isOpen('music'), cardHidden: c.hidden, w: Math.round(r.width), h: Math.round(r.height) }; }""")
+    check("Pad: tapping the pill opens the drawer holding the missing file, with a card of real size",
+          pc and opened3["drawer"] is True and opened3["cardHidden"] is False and opened3["w"] > 100 and opened3["h"] > 20,
+          f"{pwhy} {json.dumps(opened3)}")
+    pg3.evaluate("() => _padDrawerCtl.open(null)"); pg3.wait_for_timeout(300)
+    xc, xwhy3 = try_click(pg3, "#autosaveStatusDismiss")
+    pg3.wait_for_timeout(1600)
+    s = pg3.evaluate(STATE)
+    check("Pad: the pill's Dismiss ENDS the amber without a drawer",
+          xc and "partial" not in s["cls"] and pg3.evaluate("() => _padDrawerCtl.current()") is None,
+          f"{xwhy3} {s['text']!r}")
+    check("Pad: ...and the record is gone, so the card is too",
+          pg3.evaluate("() => pendingMusicMeta === null && document.getElementById('musicPending').hidden"),
+          "the × must do what the card's Dismiss does")
+    check("Pad: no uncaught page errors", not errs3, "; ".join(errs3[:3]))
+    pg3.close()
 
     check("no uncaught page errors", not errs, "; ".join(errs[:3]))
     b.close()
