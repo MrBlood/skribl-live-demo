@@ -498,10 +498,16 @@ with sync_playwright() as p:
           f"idx is {ac.evaluate('() => idx')} — a drifting tap used to suppress "
           f"its own click and leave you on the page you started from")
 
-    # 3. A DRAG WITHOUT THE HOLD DOES NOTHING. Since v295 the reorder is armed
-    #    by a ~400 ms hold, so travelling the whole strip without waiting is a
-    #    gesture the app deliberately ignores — that is the scroll case, and
+    # 3. A DRAG WITHOUT THE HOLD DOES NOTHING — that is the scroll case, and
     #    ignoring it is the entire point.
+    #
+    #    CALIBRATION, because this one is not held by the mechanism it reads
+    #    like. Arming instantly leaves it GREEN: a flick's first pointermove
+    #    already exceeds STRIP_JITTER, so the disarm branch kills the drag
+    #    before the timer can matter. It is the DISARM this pins, not the hold
+    #    length, and it goes red only on the gesture actually reported from the
+    #    phone — arm on contact AND never disarm, which is v294. Under that
+    #    pair, 1, 2 and 3 all go red together and 4 stays green.
     ac.evaluate("() => { go(0); strip.scrollLeft = 0; }")
     ac.wait_for_timeout(150)
     b0 = tile_box(0); b3 = tile_box(3)
