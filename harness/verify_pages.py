@@ -498,8 +498,10 @@ with sync_playwright() as p:
           f"idx is {ac.evaluate('() => idx')} — a drifting tap used to suppress "
           f"its own click and leave you on the page you started from")
 
-    # 3. AND A DELIBERATE DRAG STILL REORDERS, which is the assertion that stops
-    #    the two above from being satisfied by breaking the feature outright.
+    # 3. A DRAG WITHOUT THE HOLD DOES NOTHING. Since v295 the reorder is armed
+    #    by a ~400 ms hold, so travelling the whole strip without waiting is a
+    #    gesture the app deliberately ignores — that is the scroll case, and
+    #    ignoring it is the entire point.
     ac.evaluate("() => { go(0); strip.scrollLeft = 0; }")
     ac.wait_for_timeout(150)
     b0 = tile_box(0); b3 = tile_box(3)
@@ -507,10 +509,42 @@ with sync_playwright() as p:
     ac.mouse.move(b3["x"], b3["y"], steps=10)
     ac.mouse.up()
     ac.wait_for_timeout(250)
-    check("but a deliberate drag across the strip still reorders",
+    check("a drag with no hold first does not reorder",
+          ac.evaluate(tags) == before,
+          f"{before} became {ac.evaluate(tags)} — a flick across the strip is a "
+          f"scroll, and it moved a page")
+
+    # 4. AND A HOLD THEN A DRAG STILL REORDERS, which is the assertion that
+    #    stops the three above from being satisfied by breaking reordering.
+    ac.evaluate("() => { go(0); strip.scrollLeft = 0; }")
+    ac.wait_for_timeout(150)
+    b0 = tile_box(0); b3 = tile_box(3)
+    ac.mouse.move(b0["x"], b0["y"]); ac.mouse.down()
+    ac.wait_for_timeout(550)                 # past the ~400 ms arm
+    ac.mouse.move(b3["x"], b3["y"], steps=10)
+    ac.mouse.up()
+    ac.wait_for_timeout(250)
+    check("but a hold and THEN a drag reorders",
           ac.evaluate(tags) != before,
           f"order is still {before} — the fix cannot be 'reordering never "
           f"happens'")
+
+    # 5. SELECTING A RANGE HAS A HOME, and it is not a gesture any more. The
+    #    sweep that used to do this shared the strip's scroll direction; it now
+    #    sits in a page's own popover beside Move and Copy, which already speak
+    #    in spans.
+    _ops = ac.evaluate(
+        "() => { const t = strip.querySelectorAll('.frame')[3];"
+        "        const o = t && t.querySelector('.pageops');"
+        "        if (!o) return null;"
+        "        o.click();"
+        "        return [...document.querySelectorAll('.popmenu button, .pageops-menu button,"
+        "                 .pop button, .popover button')].map(b => b.textContent.trim()); }")
+    ac.wait_for_timeout(250)
+    check("a page's own menu offers to select through it",
+          bool(_ops) and any("through here" in l.lower() for l in (_ops or [])),
+          f"{_ops} — the sweep gesture is gone, so this is the only way left on "
+          f"a touch screen to take a run of pages")
 
     # The reason reachability matters: the control inserts NEXT TO the page you
     # are on, not at the end. If it appended, scrolling to the end would be the
