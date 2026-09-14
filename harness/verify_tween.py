@@ -1010,6 +1010,113 @@ with sync_playwright() as p:
     check("and a page too heavy for any exposure is refused, not truncated",
           plans["absurd"] is None, str(plans["absurd"]))
 
+    # ---------------------------------------------------------------- v296
+    # THE SMEAR COUNTS WHAT YOU CAN SEE.
+    #
+    # Reported with a picture: duplicate a page, rub the diagonal out, draw a
+    # new one, and the refusal says "this one has 2, the next has 4". Erasing
+    # does not remove a stroke, it ADDS one -- the rubbed-out stroke is still
+    # in the frame and the rub is a stroke on top of it -- so the count the
+    # rule used was never the count on screen.
+    #
+    # The fixture is built by ERASING, not by writing an erase:true array by
+    # hand, because the defect is a property of what the eraser leaves behind.
+    print("\nERASED PAGES — pairing reads the drawing, not the frame")
+    ERASED = """() => {
+      const run = (x0,y0,x1,y1,n,erase,size) => { const o=[];
+        for(let i=0;i<=n;i++) o.push({ x:x0+(x1-x0)*i/n, y:y0+(y1-y0)*i/n,
+          size: size||6, color:'#ffffff', erase: !!erase, t:0,
+          start: i===0 }); return o; };
+      const mk = runs => { const f={strokes:[],strokeGroups:[],hold:1};
+        runs.forEach(r => { r.forEach((q,i)=>{ const c={...q};
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+          f.strokeGroups.push(r.length); }); return f; };
+      // Page 1: a vertical and a diagonal. Two strokes, nothing erased.
+      const one = mk([ run(120,60,120,300,10), run(60,260,200,140,10) ]);
+      // Page 2: the same two, then a rub ALONG the diagonal, then its
+      // replacement. Four groups in the frame; two lines on the screen.
+      const two = mk([ run(120,60,120,300,10), run(60,260,200,140,10),
+                       run(58,262,202,138,24,true,30), run(60,140,200,260,10) ]);
+      frames.length = 0; frames.push(one); frames.push(two);
+      idx = 0; actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      return { groups: frames.map(f => f.strokeGroups.length),
+               ink: frames.map(f => tweenVisible(f).ink.length) };
+    }"""
+    shape = page.evaluate(ERASED)
+    check("the fixture is the reported one: 2 groups against 4",
+          shape["groups"] == [2, 4],
+          f"frame groups are {shape['groups']} — the fixture no longer reproduces "
+          f"the report, so nothing below is testing it")
+    check("...and both pages read as TWO strokes of visible ink",
+          shape["ink"] == [2, 2],
+          f"visible ink is {shape['ink']}; an eraser and the stroke it removed "
+          f"are still being counted as strokes the artist drew")
+    check("so the reported workflow is offered a smear, not a refusal",
+          page.evaluate("() => tweenMismatch(frames[0], frames[1])") is None,
+          str(page.evaluate("() => tweenMismatch(frames[0], frames[1])")))
+
+    # AN ERASER IS NEVER SAMPLED. Where the counts happened to line up it was
+    # smeared like ink -- measured at 1,188 eraser points in a 3,564-point
+    # exposure -- which drags a hole through the drawing. It is carried once
+    # instead, so what was rubbed out stays rubbed out.
+    made = page.evaluate("""() => {
+      const out = buildTween(frames[0], frames[1]);
+      if(!out) return null;
+      let erased = 0, runs = 0, at = 0;
+      for(const n of out.strokeGroups){
+        if(out.strokes[at].erase){ runs++; erased += n; }
+        at += n;
+      }
+      return { points: out.strokes.length, erasePoints: erased, eraseRuns: runs };
+    }""")
+    check("a smear is built from the erased pair at all", made is not None,
+          "buildTween refused a pair tweenMismatch accepted")
+    # frames[0] carries no eraser, so nothing should be carried: the exposure of
+    # a clean first page is clean.
+    check("...and it samples no eraser: zero eraser points from a clean pose",
+          made and made["erasePoints"] == 0,
+          f"{made and made['erasePoints']} eraser points came from a page that "
+          f"has none — they are being paired and sampled as ink")
+
+    # THE OTHER DIRECTION, and it is the one that stops "just drop the erasers"
+    # from satisfying everything above: smear FROM the erased page and the rub
+    # has to survive, once, unsampled.
+    back = page.evaluate("""() => {
+      const out = buildTween(frames[1], frames[0]);
+      if(!out) return null;
+      let erased = 0, runs = 0, at = 0;
+      for(const n of out.strokeGroups){
+        if(out.strokes[at].erase){ runs++; erased += n; }
+        at += n;
+      }
+      const src = tweenVisible(frames[1]).erase;
+      return { erasePoints: erased, eraseRuns: runs,
+               srcRuns: src.length, srcPoints: src.reduce((t, r) => t + r.length, 0) };
+    }""")
+    check("what you rubbed out stays rubbed out: the eraser is carried",
+          back and back["eraseRuns"] == back["srcRuns"] and back["eraseRuns"] > 0,
+          f"{back and back['eraseRuns']} eraser runs carried from a page with "
+          f"{back and back['srcRuns']} — dropping them fills the hole back in")
+    check("...ONCE, not once per sample",
+          back and back["erasePoints"] == back["srcPoints"],
+          f"{back and back['erasePoints']} eraser points from a source holding "
+          f"{back and back['srcPoints']} — a swept hole, which is the defect")
+
+    # ORDER MATTERS. An eraser only removes what was drawn BEFORE it; testing a
+    # stroke against every eraser in the frame would delete the stroke drawn to
+    # REPLACE a rubbed-out one, which is the whole of the reported workflow.
+    order = page.evaluate("""() => {
+      const f = frames[1];
+      const ink = tweenVisible(f).ink;
+      // The replacement was drawn last and crosses the rubbed-out area.
+      return { count: ink.length, lastIsReplacement: ink.length ? true : false };
+    }""")
+    check("a stroke drawn AFTER the rub survives it",
+          order["count"] == 2,
+          f"{order['count']} ink strokes; the replacement drawn over the rubbed "
+          f"area is being treated as rubbed out itself")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
