@@ -501,6 +501,20 @@ function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800)
    a person keeps on disk; a recipe there would be a schema change for every
    other reader. Recipes are opt-in per call site and only the autosave asks. */
 
+/* THE RECIPE IS NOT A FIELD ON THE FRAME, and verify_tween is what said so:
+   "the frame itself is still strokes/strokeGroups/hold" went red the moment a
+   `gen` key appeared on one. That assertion sits under "no new field, so an
+   older player can draw it", and it is right -- a frame is ordinary stroke data
+   and every reader of the format is entitled to assume it.
+
+   So the recipe lives beside the frame, in a WeakMap keyed by it. Which turns
+   out to be the better mechanism anyway: an operation that CLONES a frame --
+   duplicate, undo, anything that rebuilds the array -- does not carry the entry
+   with it, so the clone is stored as strokes. Falling back to the safe
+   behaviour is the default rather than something each call site has to
+   remember. */
+const genRecipe = new WeakMap();
+
 // Cheap enough to run on every debounced save: length, plus the coordinates of
 // every sixteenth point. An edit moves one of the two.
 function genPrint(f){
@@ -533,11 +547,12 @@ function serializeFlip(opts){
       // A generated page, still sitting between the two pages that made it,
       // still holding what they made. Any of those three untrue and it is
       // written out in full like anything else.
-      if(recipes && f.gen && f.gen.print){
+      const g = recipes ? genRecipe.get(f) : null;
+      if(g && g.print){
         const prev = frames[i - 1], next = frames[i + 1];
-        if(genSame(f.gen.print, genPrint(f))
-           && genSame(f.gen.a, genPrint(prev)) && genSame(f.gen.b, genPrint(next))){
-          const o = { gen: { k: f.gen.k, n: f.gen.n, passes: f.gen.passes },
+        if(genSame(g.print, genPrint(f))
+           && genSame(g.a, genPrint(prev)) && genSame(g.b, genPrint(next))){
+          const o = { gen: { k: g.k, n: g.n, passes: g.passes },
                       background: bgColor };
           if(h > 1) o.hold = h;
           if(frameDraw(f)) o.draw = true;
@@ -888,11 +903,8 @@ function applyPayload(d){
       if (draw) built.draw = true;
       // Re-stamped so the NEXT save can store this as a recipe too, rather than
       // paying full price for it once and then for ever.
-      if (built.gen) {
-        built.gen.print = genPrint(built);
-        built.gen.a = genPrint(prev);
-        built.gen.b = genPrint(next);
-      }
+      const r2 = genRecipe.get(built);
+      if (r2) { r2.print = genPrint(built); r2.a = genPrint(prev); r2.b = genPrint(next); }
       frames[i] = built;
     } else {
       delete frames[i].__gen; delete frames[i].__draw;
@@ -5797,8 +5809,8 @@ function buildTween(a, b, want){
   }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
   // What it would take to make this page again, which is all the draft needs to
-  // store instead of the points below.
-  out.gen = { k: 'smear', n: n, passes: blur.length };
+  // store instead of the points below. Beside the frame, never on it.
+  genRecipe.set(out, { k: 'smear', n: n, passes: blur.length });
   for(let s = 0; s <= n; s++){
     const t = s / n;
     for(let p = 0; p < blur.length; p++){
@@ -5850,7 +5862,8 @@ function addTween(){
   if(!t) return;
   // The three fingerprints the draft checks before it trusts the recipe: this
   // page, and the two it was made from.
-  if(t.gen){ t.gen.print = genPrint(t); t.gen.a = genPrint(a); t.gen.b = genPrint(b); }
+  const _r = genRecipe.get(t);
+  if(_r){ _r.print = genPrint(t); _r.a = genPrint(a); _r.b = genPrint(b); }
   invalidateClearUndo(); redoStack.length = 0;
   frames.splice(idx + 1, 0, t); idx++;
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);

@@ -478,15 +478,19 @@ with sync_playwright() as p:
     _rt = page.evaluate("""() => {
       const sig = f => f.strokes.length + '/' + f.strokes.slice(0, 80)
         .map(p => Math.round(p.x) + ',' + Math.round(p.y)).join('|');
-      const was = sig(frames[1]), wasN = frames.length;
+      const was = sig(frames[1]), wasN = frames.length, wasPts = frames[1].strokes.length;
       applyPayload(JSON.parse(JSON.stringify(serializeFlip({recipes: true}))));
       return { same: sig(frames[1]) === was, pages: frames.length === wasN,
-               pts: frames[1].strokes.length,
+               pts: frames[1].strokes.length, wasPts,
                restamped: !!(frames[1].gen && frames[1].gen.print) }; }""")
     check("a recipe restores the same page, point for point",
           _rt["same"] and _rt["pages"], str(_rt))
+    # Against what it HAD, not an absolute: this fixture's poses are six points
+    # each, so a threshold tuned on the stick figure called a correct 648-point
+    # rebuild a placeholder.
     check("...and it is a real page again, not a placeholder",
-          _rt["pts"] > 1000, f"{_rt['pts']} points")
+          _rt["pts"] == _rt["wasPts"] and _rt["pts"] > 20,
+          f"{_rt['pts']} points against the {_rt['wasPts']} it had")
     check("...re-stamped, so the next save is a recipe too",
           _rt["restamped"],
           "paying full price once and for ever after is the bug this replaces")
