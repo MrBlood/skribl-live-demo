@@ -5731,12 +5731,90 @@ function tweenRuns(f){
   return out;
 }
 
+/* ---------- v296: the smear counts what you can SEE -------------------------
+
+   Reported with a picture: two pages, each showing two lines, the second made
+   by duplicating the first, rubbing out the diagonal and drawing a new one.
+   The refusal read "this one has 2, the next has 4".
+
+   ERASING DOES NOT REMOVE A STROKE, IT ADDS ONE. The eraser is a stroke like
+   any other -- points carrying erase:true, painted destination-out -- so the
+   rubbed-out diagonal is still in the frame underneath it, and the rub itself
+   is a third stroke on top. The page shows two lines and holds four, which is
+   exactly what the message said and exactly why it made no sense to read.
+
+   So the count the rule used was never the count the artist can see, and a
+   page that has been erased on could hardly ever be smeared against a page
+   that has not.
+
+   AND WHERE THE COUNTS HAPPENED TO LINE UP IT WAS WORSE. An eraser pairs with
+   whatever sits at its index on the other page and is then sampled across the
+   motion exactly like ink -- measured: 1,188 eraser points inside a 3,564
+   point exposure -- so the generated page carries a hole swept through the
+   drawing.
+
+   Both are one mistake: pairing read the frame STRUCTURE where it meant the
+   frame APPEARANCE. It now reads what is visible.
+
+     - an eraser is not a stroke to pair, and never something to sample;
+     - an ink stroke that later erasers have completely covered is not there
+       to pair either -- which is what makes the reported workflow line up,
+       since the rubbed-out diagonal drops and both pages read as two;
+     - the first page's erasers carry into the exposure ONCE, unsampled, so
+       what you rubbed out stays rubbed out.
+
+   A partially erased stroke still pairs as one stroke. That is not a
+   concession: it is one stroke, and you can see it. */
+
+// A point is gone when its CENTRE lies in the band an eraser swept. Centre
+// rather than footprint on purpose -- the test is "does this read as still
+// there", and erring toward "still there" would leave the reported workflow
+// refusing on account of a stroke nobody can see.
+function tweenCovered(p, erasers){
+  for(const run of erasers){
+    if(run.length === 1){
+      const r = (run[0].size || 1) / 2;
+      const dx = p.x - run[0].x, dy = p.y - run[0].y;
+      if(dx * dx + dy * dy <= r * r) return true;      // a tap erases a disc
+      continue;
+    }
+    for(let i = 1; i < run.length; i++){
+      const a = run[i - 1], b = run[i];
+      const r = Math.max(a.size || 1, b.size || 1) / 2;
+      if(_segDist2(p.x, p.y, a.x, a.y, b.x, b.y) <= r * r) return true;
+    }
+  }
+  return false;
+}
+/* The runs of f split into what you can see and what took it away. ORDER
+   MATTERS: an eraser can only have removed what was drawn BEFORE it, so each
+   ink run is tested against the erasers that FOLLOW it and never against all
+   of them -- otherwise re-drawing over a rubbed-out area would delete the new
+   stroke instead of the old one. */
+function tweenVisible(f){
+  const runs = tweenRuns(f);
+  const ink = [], erase = [];
+  for(let i = 0; i < runs.length; i++){
+    const run = runs[i];
+    if(run.length && run[0].erase){ erase.push(run); continue; }
+    const later = [];
+    for(let j = i + 1; j < runs.length; j++)
+      if(runs[j].length && runs[j][0].erase) later.push(runs[j]);
+    if(later.length && run.length && run.every(p => tweenCovered(p, later))) continue;
+    ink.push(run);
+  }
+  return { ink: ink, erase: erase };
+}
+
 /* Both pages resampled onto a shared structure. Returns {a, b} frame-shaped
    COPIES -- the user's pages are never touched, so an in-between they undo
    leaves the poses exactly as they drew them. Null when the stroke counts
    differ, which is the one case still declined. */
 function tweenAlign(a, b){
-  const ra = tweenRuns(a), rb = tweenRuns(b);
+  // The INK of each page, not its runs: see tweenVisible. An eraser is not a
+  // pose to interpolate.
+  const ra = tweenVisible(a).ink, rb = tweenVisible(b).ink;
+  if(!ra.length || !rb.length) return null;
   if(ra.length !== rb.length) return null;
   const A = { strokes: [], strokeGroups: [] };
   const B = { strokes: [], strokeGroups: [] };
@@ -5755,12 +5833,18 @@ function tweenMismatch(a, b){
   if(!a || !b) return 'two pages';
   if(!a.strokes.length || !b.strokes.length) return 'two pages with drawing on them';
   /* v255: the POINT counts are no longer part of this. They used to be, and
-     that made a hand-redrawn pose refuse -- see the tweenAlign note above.
-     The stroke COUNT still is: pairing three strokes against four means
-     choosing which one has no partner, and that guess is still declined. */
-  if(a.strokeGroups.length !== b.strokeGroups.length)
-    return 'the same NUMBER of strokes on both pages — this one has '
-         + a.strokeGroups.length + ', the next has ' + b.strokeGroups.length;
+     that made a hand-redrawn pose refuse -- see the tweenAlign note above. The
+     stroke COUNT still is: pairing three strokes against four means choosing
+     which one has no partner, and that guess is still declined.
+
+     v296: and the count is of VISIBLE INK. strokeGroups counts erasers and
+     strokes that have been rubbed out; neither is on the page, and a refusal
+     naming them is one nobody can act on. */
+  const ia = tweenVisible(a).ink, ib = tweenVisible(b).ink;
+  if(!ia.length || !ib.length) return 'two pages with drawing on them';
+  if(ia.length !== ib.length)
+    return 'the same NUMBER of strokes on both pages \u2014 this one has '
+         + ia.length + ', the next has ' + ib.length;
   return null;
 }
 
@@ -5818,6 +5902,9 @@ function buildTween(a, b, want){
      takes the denser of the two runs, so the exposure can be built from more
      points than either page holds and budgeting on the source would let it
      past the server's cap. */
+  // Captured BEFORE the reassignment below: tweenAlign returns ink-only copies,
+  // so this is the last moment the page's own erasers are in hand.
+  const carried = tweenVisible(a).erase;
   const aligned = tweenAlign(a, b);
   if(!aligned){ chip('A motion smear needs the same number of strokes on both pages'); return null; }
   a = aligned.a; b = aligned.b;
@@ -5892,6 +5979,20 @@ function buildTween(a, b, want){
         at += count;
       }
     }
+  }
+  /* WHAT YOU RUBBED OUT STAYS RUBBED OUT. The erasers are not sampled -- an
+     eraser swept across the motion is a hole dragged through the drawing, and
+     that is the defect this release fixed -- but they are not dropped either,
+     or the hole the artist made in the first pose would fill itself back in.
+     They go on LAST because destination-out only removes what is already
+     painted, and once, at the position they were drawn. */
+  for(const run of carried){
+    run.forEach((p, i) => {
+      const q = Object.assign({}, p);
+      if(i === 0) q.start = true; else delete q.start;
+      out.strokes.push(q);
+    });
+    out.strokeGroups.push(run.length);
   }
   return out;
 }
@@ -6059,7 +6160,13 @@ function ibUnapply(pts, T){
 function buildInbetween(a, b, t){
   const why = tweenMismatch(a, b);
   if(why){ chip('An in-between needs ' + why); return null; }
-  const ra = tweenRuns(a), rb = tweenRuns(b);
+  /* THE SAME RUNS tweenMismatch JUST COUNTED. This read tweenRuns while the
+     guard above counted visible ink, so on an erased page the guard passed on
+     2 and the loop walked 4 -- pairing the new diagonal's partner against the
+     rubbed-out one, and indexing past the end of the other page when the
+     erased page came first. Two readings of "the strokes of this page" in
+     eleven lines is one too many. */
+  const ra = tweenVisible(a).ink, rb = tweenVisible(b).ink;
   const out = newFrame();
   for(let s = 0; s < ra.length; s++){
     const n = Math.max(ra[s].length, rb[s].length);

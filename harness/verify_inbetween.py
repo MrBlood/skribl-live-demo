@@ -270,6 +270,54 @@ with sync_playwright() as p:
           bool(help_txt) and "motion smear" in help_txt.lower(),
           (help_txt or "")[-200:])
 
+    # ---------------------------------------------------------------- v296
+    # AN ERASED PAGE IS THE SAME PAGE TO BOTH BUTTONS.
+    #
+    # tweenMismatch counts visible ink since v296, and buildInbetween read
+    # tweenRuns — so the guard passed on 2 while the loop walked 4, pairing
+    # the replacement's partner against the stroke it replaced and indexing
+    # past the end of the other page when the erased page came first. Both
+    # readings of "the strokes of this page" have to be the same reading.
+    print("\nERASED PAGES — the in-between pairs the ink, like the smear")
+    ERASED = """(order) => {
+      const run = (x0,y0,x1,y1,n,erase,size) => { const o=[];
+        for(let i=0;i<=n;i++) o.push({ x:x0+(x1-x0)*i/n, y:y0+(y1-y0)*i/n,
+          size: size||6, color:'#ffffff', erase: !!erase, t:0 }); return o; };
+      const mk = runs => { const f={strokes:[],strokeGroups:[],hold:1};
+        runs.forEach(r => { r.forEach((q,i)=>{ const c={...q};
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+          f.strokeGroups.push(r.length); }); return f; };
+      const clean  = mk([ run(120,60,120,300,10), run(60,260,200,140,10) ]);
+      const erased = mk([ run(120,70,120,310,10), run(70,250,210,130,10),
+                          run(68,252,212,128,24,true,30), run(64,242,216,138,10) ]);
+      // ORDER MATTERS to the bug: with the erased page FIRST the old code
+      // walked four runs against two and read rb[2] as undefined.
+      frames.length = 0;
+      frames.push(order === 'erasedFirst' ? erased : clean);
+      frames.push(order === 'erasedFirst' ? clean : erased);
+      idx = 0; actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      let out = null, threw = null;
+      try { out = buildInbetween(frames[0], frames[1], 0.5); }
+      catch (e) { threw = String(e); }
+      return { threw: threw, groups: out ? out.strokeGroups.length : null,
+               points: out ? out.strokes.length : null,
+               erasePoints: out ? out.strokes.filter(q => q.erase).length : null };
+    }"""
+    for order in ("cleanFirst", "erasedFirst"):
+        r = page.evaluate(ERASED, order)
+        check(f"an in-between is built with the erased page {order[:-5]}",
+              r["threw"] is None and r["groups"] is not None,
+              f"threw {r['threw']}; the two readings of the page disagree")
+        check(f"...over the TWO strokes you can see, not the four it holds ({order[:-5]})",
+              r["groups"] == 2,
+              f"{r['groups']} groups in the pose; an eraser or the stroke it "
+              f"removed is being interpolated as if it were drawn")
+        check(f"...and the pose carries no eraser ({order[:-5]})",
+              r["erasePoints"] == 0,
+              f"{r['erasePoints']} eraser points in a single generated POSE, "
+              f"which is one crisp drawing and has nothing to rub out")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
