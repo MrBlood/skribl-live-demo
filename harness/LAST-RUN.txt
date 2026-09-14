@@ -1,9 +1,10 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-14T01:50:25Z
+UTC timestamp           : 2026-09-14T02:01:52Z
 Host                    : Linux x86_64
-Tree SHA-256            : 4b123f7cbe149a9d23c0af5a81387d713588fd62df9deba7dbb0b15a223ce430
-Git commit              : e04d18d
+Tree SHA-256            : f0263549e3d6218d8bfd0ff9e910bda43f460e105c15a357ec165377c9147396
+Git commit              : ef46ea0
 Source state            : DIRTY OUTSIDE THE GENERATED SET — these are not recorded by any commit
+                            harness/verify_tween.py
                             skribl/static/flip.js
 SKRIBL_VERSION          : v294
 Python                  : 3.12.3
@@ -12,7 +13,7 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.1W4HoU27CQ/harness.db)
+Database reset          : yes (fresh /tmp/tmp.kXrI5earFH/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -23,7 +24,7 @@ Command                 : ./harness/run_harness.sh verify_tween.py
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 1
-  verify_tween.py: FAIL — exit 1, 81/82 passed  FAILURES: ...and a page holding few samples drops its halo rather than ringing
-assertions passed: 0   (skipped suites contribute 0)
+  verify_tween.py: ok — 81/81 passed
+assertions passed: 81   (skipped suites contribute 0)
 suites skipped   : 0
-suites with problems: 1
+suites with problems: 0
