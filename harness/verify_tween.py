@@ -1356,6 +1356,12 @@ with sync_playwright() as p:
           and back[2] and back[2]["rev"] is True,
           f"{back} — without the flag the stroke interpolates end-to-start "
           f"and turns inside out on the way across")
+    # WHAT THIS DOES NOT COVER, recorded rather than left to be discovered:
+    # it pins the FLAG, not the use of it. A mutation that computes the flag
+    # correctly and then ignores it downstream passes, because every stroke in
+    # this fixture is straight — reversing a straight line interpolates it
+    # along itself, which looks identical. Catching that needs a curved stroke,
+    # and no fixture here has one.
 
     # A 4px mark and a scrawl across the whole page: nothing about them is the
     # same stroke, and the length guard is what says so.
