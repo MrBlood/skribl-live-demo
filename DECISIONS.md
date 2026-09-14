@@ -7721,3 +7721,103 @@ nothing in the tree could name, so PR 8 made it say so: the write logs its
 rejection, every restore miss names itself, and the problem report carries a
 Media store line. The reason decides the next fix, and it is not in this
 release.
+
+---
+
+## v295 -- the button that was lying, and the page that was eating the phone
+
+**A rename, a new button, a revert, and the fix the phone finally named.**
+
+THE EFFECT WAS NEVER AN IN-BETWEEN. An in-between, to an animator, is a single
+intermediate POSE. buildTween samples the motion at up to 26 steps and draws
+every step faintly into one page, so what comes back is the whole path -- a long
+exposure, deliberately, and verify_tween exists to protect the uneven falloff
+that makes it read as one. It is not failed code. It is a misclassified effect,
+and the only thing lying about it was the label. PR 1 renamed it Motion Smear
+and changed nothing else.
+
+The label had never been PINNED, which is why it could lie for so long:
+verify_pages passed it around as assertion prose -- ("addtween", "In-between")
+fed the message string and nothing read the button. It now reads the RENDERED
+accessible name out of the DOM, because flip.js by then carried a paragraph
+explaining why this is not an in-between, and a substring search over the file
+would have read the explanation as the thing it was looking for.
+
+THEN THE NAME WAS FREE, so PR 2 built the thing it promised. One crisp pose,
+64 points against the smear's 5,184. Three independent pieces, each measured
+failing on five drawn cases before the code that fixes it was written:
+
+    a closed shape's perimeter through the middle  -13.2% -> -1.7%  (phase)
+    a swinging limb's length through the middle    -18.1% ->  0.0%  (similarity)
+    points on the generated page                    5,184 ->    64  (one pose)
+
+**Two instruments were wrong before any code was.** The first closed-path
+fixture was two circles begun half a turn apart -- index pairing collapses them
+to a single dot, so it looked like the harshest test available. It passed with
+the phase search deleted: a circle is the one closed shape where a phase offset
+IS a rotation, so the similarity fit repaired it as a side effect. And the
+recipe round-trip pin stayed green with recipes switched off entirely, because
+it asserted that a draft round trip preserves a page -- true of every draft ever
+written, and silent about the rebuild it was written for. Both times the code
+was fine and the measurement was not, and only mutating found either.
+
+**THE SPAN SHIPPED AND WAS REVERTED, and the reason is the lesson of this
+release.** PR 3 broke the smear into consecutive pages, one per slice of the
+path, and the render measurement was real: 152.7 ms to 64.0 ms per frame at 4x
+CPU throttle, clearing a 12 fps budget the single page missed by nearly 2x. It
+was aimed at the wrong constraint. The owner's phone then sent a problem report
+with no media loaded at all:
+
+    Has music: false   Has image: false
+    autosave failed even without media: QuotaExceededError
+
+Generated pages were stored in the localStorage draft verbatim -- 722 KB each,
+so SEVEN of them filled a 5 MB origin quota and autosave stopped for good. The
+span was 1,051 KB, taking that draft from dying at seven to dying at four: a net
+regression for the person who reported the problem, shipped because the
+measurement chosen was the one the COMPLAINT named rather than the one the
+FAILURE named. It reverted the same day.
+
+PR 5 fixed the real defect, which predated all of it. A generated page is
+reproducible from its two neighbours and its sample plan, so the draft stores
+{k, n, passes} and three fingerprints -- 58 bytes -- and rebuilds on restore.
+734 KB becomes 12 KB. frames[] always holds real strokes, so posting, export,
+playback, the player and undo are untouched; this is a storage representation
+and nothing else. Self-verifying rather than flagged, because there is no single
+place a page is edited: the save recomputes a fingerprint of the page and both
+neighbours and writes real strokes unless all three still match.
+
+And the recipe is NOT A FIELD ON THE FRAME, which verify_tween said before I
+did: "the frame itself is still strokes/strokeGroups/hold" went red the moment a
+gen key appeared on one. It lives in a WeakMap keyed by the frame, which is the
+better mechanism anyway -- an operation that CLONES a frame does not carry the
+entry, so the clone is stored as strokes and the safe fallback is the default.
+
+**THE FILMSTRIP, from the same phone.** The thumbnails "move super easy, so if
+you are trying to scroll the strip you might move one of the slides out of
+order", and tapping one to change pages is hard. Both halves are one cause: a
+reorder began after SIX PIXELS of horizontal travel, no time gate, on a strip
+that scrolls horizontally -- the two gestures were the same gesture separated by
+six pixels, and a tap that drifted that far suppressed its own click. The slop
+went to 14, but a threshold alone cannot fix it because any scroll long enough
+passes any threshold. So the strip decides: if its scrollLeft moved while the
+finger was down, the finger was scrolling and no reorder begins however far the
+drag goes.
+
+**What the owner found that the instrument could not.** Nine findings of media
+audit in v294, and the defect that was actually breaking the phone had nothing
+to do with media. It took a problem report to say so. The same report reframed
+Motion Smear: rendered side by side, the effect looks good when ONE PART of a
+drawing moves and the rest holds still, and like a grey blob when the whole
+figure travels. Every bad example produced during this release was the second
+case. Selecting the part that moves is written up in FUTURE.md 6c, and it fits
+the code as it stands -- selection.js selects BY STROKE GROUP and buildTween
+pairs BY STROKE GROUP index, so a selection is already the argument it wants.
+
+**What is still open.** The span's render win was real and its storage objection
+is now gone, so whether it returns is a live question rather than a closed one.
+Layers are noted unexplored with their schema cost stated (FUTURE.md 6d). And
+strokes still pair in drawing order on both buttons: redraw a pose with its
+strokes in another order and the outline pairs with the mouth. That needs a
+matcher, the Help says so rather than the suite pretending otherwise, and it is
+not in this release.
