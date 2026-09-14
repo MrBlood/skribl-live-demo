@@ -13,12 +13,22 @@ measured is the handful of geometric invariants that a visibly-melted in-between
 always violates, and each assertion below was measured failing before the code
 that makes it pass was written:
 
-    a circle's radius through the middle      0.0 px -> 38.0 px   (phase)
-    a swinging limb's length through the middle  -18.1% -> 0.0%   (similarity)
-    points on the generated page             5,184 -> 64          (one pose)
+    a closed shape's perimeter through the middle  -13.2% -> -1.7%  (phase)
+    a swinging limb's length through the middle    -18.1% ->  0.0%  (similarity)
+    points on the generated page                    5,184 ->    64  (one pose)
 
 Each number is the real before-and-after from the bake-off the feature was
 designed against, and each is the difference between a drawing and a mess.
+
+AND ONE OF THEM WAS WRONG FIRST, which is the more useful record. The closed
+path started as two circles begun half a turn apart -- the case where index
+pairing collapses the drawing to a single dot, so it looked like the harshest
+fixture available. It passed with the phase search deleted. A circle is the one
+closed shape where a phase offset IS a rotation, and the similarity fit models
+rotation exactly, so it repaired the phase error as a side effect and the
+assertion pinned nothing. The fixture is a loop with no rotational symmetry now,
+and the measure is perimeter rather than radius, because radius did not move
+either (2.2% against 2.3%) while perimeter moved 1.7% against 13.2%.
 
 THE CASE THIS DELIBERATELY DOES NOT PIN is a pose redrawn with its strokes in a
 different ORDER. Pairing is by drawing order, as Motion Smear's is, and no
@@ -43,15 +53,26 @@ results = []
 check = make_check(results)
 
 
-# A CLOSED PATH HAS NO FIRST POINT, which is the whole of this fixture. Two
-# circles of the same radius, begun half a turn apart. Pair them by index and
-# every point meets its antipode, so the halfway drawing is the CENTRE: a dot.
-CIRCLES = """(phase) => {
+# A CLOSED PATH HAS NO FIRST POINT, which is the whole of this fixture: the same
+# loop on both pages, begun half way round on the second. Paired by index, every
+# point meets one on the far side of the shape.
+#
+# AND IT IS DELIBERATELY NOT A CIRCLE. The first version of this fixture was two
+# circles begun half a turn apart, which looks like the harshest possible case --
+# every point meets its antipode and the drawing collapses to a single dot. It
+# cannot tell the two mechanisms apart. On a circle a phase offset IS a rotation,
+# and the similarity fit models rotation exactly, so it repairs the phase error
+# as a side effect and the assertion passed with the phase search deleted.
+# Measured on a loop with no rotational symmetry, where a phase offset is not any
+# rigid motion: perimeter holds to -1.7% with the phase search and falls -13.2%
+# without it.
+LOOP = """(phase) => {
   const mk = (cx, start) => {
-    const pts = [], N = 40;
+    const pts = [], N = 60;
     for (let i = 0; i <= N; i++) {
       const a = start + (i / N) * Math.PI * 2;
-      pts.push({ x: cx + Math.cos(a) * 60, y: 300 + Math.sin(a) * 60,
+      const r = 60 + 14 * Math.sin(3 * a) + 8 * Math.cos(5 * a);
+      pts.push({ x: cx + Math.cos(a) * r, y: 300 + Math.sin(a) * r,
                  color: '#ffffff', size: 6, t: i, erase: false });
     }
     pts[0].start = true;
@@ -83,15 +104,10 @@ LIMB = """(deg) => {
   idx = 0; buildStrip(); render();
 }"""
 
-# Mean distance from the run's own centroid: the radius, without assuming where
-# the centre is.
-RADIUS = """(f) => {
-  const pts = frames[f].strokes;
-  const n = pts.length;
-  const cx = pts.reduce((s, p) => s + p.x / n, 0);
-  const cy = pts.reduce((s, p) => s + p.y / n, 0);
-  return pts.reduce((s, p) => s + Math.hypot(p.x - cx, p.y - cy), 0) / n;
-}"""
+# Perimeter. A shape blended with a shifted copy of itself cuts its own corners
+# and comes out shorter, which mean radius does not see: measured, radius moved
+# 2.2% -> 2.3% between a correct and a wrongly-phased midpoint while perimeter
+# moved 1.7% -> 13.2%. Measure the thing that actually moves.
 
 LENGTH = """(f) => {
   const pts = frames[f].strokes;
@@ -124,22 +140,24 @@ with sync_playwright() as p:
           bool(btn) and "exposure" not in btn["title"].lower()
           and "smear" not in btn["title"].lower(), str(btn))
 
-    print("\nA CLOSED PATH: the circle has to survive the middle")
-    page.evaluate(CIRCLES, 3.14159265358979)      # begun half a turn apart
-    r_src = page.evaluate(RADIUS, 0)
+    print("\nA CLOSED PATH: the shape has to survive the middle")
+    page.evaluate(LOOP, 3.14159265358979)         # begun half way round
+    r_src = page.evaluate(LENGTH, 0)
     page.evaluate("() => addInbetween()")
     page.wait_for_timeout(300)
     check("a page was inserted BETWEEN the two poses",
           page.evaluate("() => frames.length") == 3
           and page.evaluate("() => idx") == 1,
           str(page.evaluate("() => ({ n: frames.length, idx })")))
-    r_mid = page.evaluate(RADIUS, 1)
-    # 0.0 is what index pairing produces here, and it is not a near miss: every
-    # point meets its opposite, so the whole circle arrives at one spot.
-    check("the circle keeps its radius through the middle",
-          abs(r_mid - r_src) / r_src < 0.02,
-          f"{r_mid:.1f}px against the drawn {r_src:.1f}px — pairing by index "
-          f"through a half-turn phase offset collapses it to a dot")
+    r_mid = page.evaluate(LENGTH, 1)
+    # -13.2% is what index pairing produces here: the loop is averaged with the
+    # far side of itself and the contour caves in. The -1.7% the aligned one
+    # spends is arc-length resampling, which every path through this code pays.
+    check("the closed shape keeps its perimeter through the middle",
+          abs(r_mid - r_src) / r_src < 0.05,
+          f"{r_mid:.1f}px against the drawn {r_src:.1f}px "
+          f"({100 * (r_mid - r_src) / r_src:+.1f}%) — pairing by index across a "
+          f"phase offset averages the loop with the far side of itself")
     check("...and it is still ONE stroke, not a scribble",
           page.evaluate("() => frames[1].strokeGroups.length") == 1,
           str(page.evaluate("() => frames[1].strokeGroups")))
