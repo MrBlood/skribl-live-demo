@@ -1,22 +1,23 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-13T23:55:52Z
+UTC timestamp           : 2026-09-14T16:25:22Z
 Host                    : Linux x86_64
-Tree SHA-256            : cc9c283939c0fa3686d7866966d68cc6f49abbe1e33bbc4b7cbacb98d6b62ab9
-Git commit              : 4137341
+Tree SHA-256            : 9b3468c4f1ff67e97f94e9a91284454ccdc37e590e1bfe8643962d0dac1cdb02
+Git commit              : d720ea2
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
                             docs/HANDOFF.md
                             harness/LAST-RUN.txt
                             harness/README.md
-SKRIBL_VERSION          : v294
+                            harness/RELEASE.md
+SKRIBL_VERSION          : v295
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.CLcvA6U7XH/harness.db)
+Database reset          : yes (fresh /tmp/tmp.sHhgPLdBTI/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -26,8 +27,8 @@ Command                 : /home/user/skribl-live-demo/harness/run_harness.sh ver
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-# whole release run: 52 batches recorded as one run
-suites requested : 99
+# whole release run: 53 batches recorded as one run
+suites requested : 100
   verify_a11y.py: ok — 237/237 passed
   verify_amber.py: ok — 87/87 passed
   verify_apiedges.py: ok — 31/31 passed
@@ -69,6 +70,7 @@ suites requested : 99
   verify_hostconfig.py: ok — 55/55 passed
   verify_hostseams.py: ok — 32/32 passed
   verify_icons.py: ok — 35/35 passed
+  verify_inbetween.py: ok — 22/22 passed
   verify_inline.py: ok — 79/79 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 14/14 passed
@@ -89,7 +91,7 @@ suites requested : 99
   verify_muxer.py: ok — 18/18 passed
   verify_nametab.py: ok — 27/27 passed
   verify_padcanvas.py: ok — 28/28 passed
-  verify_pages.py: ok — 58/58 passed
+  verify_pages.py: ok — 69/69 passed
   verify_pagespan.py: ok — 49/49 passed
   verify_parity.py: ok — 143/143 passed
   verify_pillfit.py: ok — 24/24 passed
@@ -122,11 +124,11 @@ suites requested : 99
   verify_tips.py: ok — 59/59 passed
   verify_tools.py: ok — 130/130 passed
   verify_tray.py: ok — 121/121 passed
-  verify_tween.py: ok — 77/77 passed
+  verify_tween.py: ok — 85/85 passed
   verify_txcontract.py: ok — 83/83 passed
   verify_ux.py: ok — 371/371 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5047   (skipped suites contribute 0)
+assertions passed: 5088   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0
