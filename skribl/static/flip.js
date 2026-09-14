@@ -5770,6 +5770,50 @@ function tweenShapeCost(A, B){
   }
   return { cost: Math.min(fwd, rev) / n, reversed: rev < fwd };
 }
+/* ---------- v296: A STROKE THAT DID NOT MOVE IS NOT SAMPLED ----------------
+
+   This is what makes the effect look right without anybody aiming it, and the
+   reason it is worth doing is measured rather than assumed.
+
+   THERE IS NO FREE SAMPLING. An exposure lays down 27 translucent copies of a
+   stroke plus its halo passes, and that greys and fattens the stroke whether
+   or not it moved. Measured on one 6px stroke against a copy of itself:
+
+       displacement      ink pixels        brightness
+       drawn once             1,596               254
+       moved 1px             2,392  (+50%)        183   (-28%)
+       moved 6px             3,231 (+102%)        185
+       moved 24px            8,002 (+401%)        131
+
+   One pixel of movement already costs 28% of the stroke's brightness and half
+   again its area -- for a trail one pixel long, which nobody can see. That is
+   the grey in "it looks like a grey blob": not the motion, the sampling of
+   things that did not move.
+
+   SO THE LINE IS WHERE A TRAIL BECOMES READABLE, and against the stroke's own
+   pen width, because that is what a trail has to out-measure to be seen at
+   all. Below its own width a stroke's exposure is the stroke, dimmer. Both
+   sides of the comparison are in page units and both scale with the drawing,
+   so there is no constant here to go stale on another canvas.
+
+   IT ALSO ANSWERS THE COMPLAINT THAT AIMING WAS TOO HARD. Selection takes
+   whole strokes that touch the marquee, and on a figure whose limbs cross
+   there is often NO box that picks out the one you mean -- measured: a box
+   drawn around the arm selected the body and the leg with it. Nobody has to
+   draw that box now. Aiming by hand still works and still overrides. */
+function tweenHeldStill(a, b){
+  const n = Math.min(a.length, b.length);
+  if(!n) return false;
+  let moved = 0, width = 0;
+  for(let i = 0; i < n; i++){
+    const t = i / Math.max(1, a.length - 1);
+    const j = Math.round(t * (b.length - 1));
+    moved += Math.hypot(a[i].x - b[j].x, a[i].y - b[j].y);
+    width += (typeof a[i].size === 'number' ? a[i].size : 6);
+  }
+  return (moved / n) <= (width / n);
+}
+
 /* For each ink run of a, the ink run of b it pairs with -- or null, meaning
    "nothing here is decisively its partner", which the caller draws once. */
 function tweenMatch(inkA, inkB){
@@ -6022,12 +6066,31 @@ function tweenAlign(a, b){
      its partner -- and a run with no partner is not a failure, it is a stroke
      that did not move, which the caller draws once. */
   const pairing = tweenMatch(ra, rb);
+  /* IF NOTHING MOVED, SAMPLE EVERYTHING. Holding a stroke still is a way of
+     separating the part that moves from the part that does not, and where
+     nothing moves there is nothing to separate -- so the rule switches itself
+     off rather than deciding, on the artist's behalf, that the button they
+     pressed had nothing to do. Two nearly identical pages get exactly the
+     exposure they got before this release. */
+  let anyMoved = false;
+  for(let s = 0; s < ra.length; s++){
+    const m = pairing[s];
+    if(!m) continue;
+    if(!tweenHeldStill(ra[s], m.reversed ? rb[m.j].slice().reverse() : rb[m.j])){
+      anyMoved = true; break;
+    }
+  }
   const A = { strokes: [], strokeGroups: [] };
   const B = { strokes: [], strokeGroups: [] };
   const unpaired = [];
   for(let s = 0; s < ra.length; s++){
     const m = pairing[s];
     if(!m){ unpaired.push(ra[s]); continue; }
+    // Drawn once, not sampled: see tweenHeldStill. An unpaired stroke and an
+    // unmoved one get the same treatment because they want the same picture.
+    if(anyMoved && tweenHeldStill(ra[s], m.reversed ? rb[m.j].slice().reverse() : rb[m.j])){
+      unpaired.push(ra[s]); continue;
+    }
     // A limb redrawn from the other end is the same limb, and the matcher says
     // so -- but the interpolation has to see it that way too, or the stroke
     // turns itself inside out on the way across.

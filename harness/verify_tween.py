@@ -190,11 +190,22 @@ with sync_playwright() as p:
             return int(c[7:9], 16) / 255
         m = re.search(r"rgba\([^)]*,\s*([\d.]+)\s*\)", c)
         return float(m.group(1)) if m else 1.0
-    faded = [_alpha(q.get("color")) for q in tw["strokes"]]
+    # SAMPLES ARE WHAT IS FADED, and since v296 a generated page holds two
+    # kinds of stroke: the exposure's samples, and the strokes that did not
+    # move, carried through once at full strength. Indexing by position would
+    # tie this to the order they happen to be emitted in; alpha is what
+    # actually distinguishes them, so that is what selects here.
+    faded = [_alpha(q.get("color")) for q in tw["strokes"] if _alpha(q.get("color")) < 1]
+    solid = [q for q in tw["strokes"] if _alpha(q.get("color")) >= 1]
     check("the samples are faded, not solid",
           faded and all(0 < a < 0.5 for a in faded),
           f"alphas {sorted(set(round(a, 3) for a in faded))[:4]} — solid samples "
           f"would read as stacked copies, not an exposure")
+    check("...and the page also carries strokes at FULL strength",
+          bool(solid),
+          "every stroke is faded, so nothing was held still — the parts that "
+          "did not move are supposed to come through as ink, not as 27 "
+          "translucent copies of themselves")
 
     print("\nIN-BETWEEN — it has to be cheap enough to PLAY")
     # REPORTED FROM A PHONE: "it takes 2 seconds to play 3 frames". paintStatic
@@ -272,7 +283,15 @@ with sync_playwright() as p:
     page.evaluate(POSES, 150)
     page.evaluate("() => addTween()")
     page.wait_for_timeout(400)
-    form = page.evaluate("() => frames[1].strokes[0].color")
+    # A SAMPLE's colour, not strokes[0]. Since v296 the first strokes on a
+    # generated page are the ones that did NOT move, carried through at full
+    # strength — and '#ffffff' is the right answer for those, which made this
+    # read as a regression when it was reading the wrong stroke.
+    form = page.evaluate("""() => {
+      const q = frames[1].strokes.find(z => /^#[0-9a-f]{8}$/i.test(z.color)
+                                         || /rgba/i.test(z.color));
+      return q ? q.color : frames[1].strokes[0].color;
+    }""")
     check("...because the fade is an 8-digit hex, not rgba()",
           isinstance(form, str) and form.startswith("#") and len(form) == 9,
           f"{form!r} — rgba() would send every sample through its own "
@@ -284,27 +303,34 @@ with sync_playwright() as p:
     # made sampling uniform in SPACE rather than in TIME, or clamped the spread,
     # this is what would catch it — and the picture would silently stop looking
     # like a long exposure while every other assertion here still passed.
+    # THE FALLOFF, MEASURED ON THE SAMPLES. This read every group as a sample
+    # and labelled them by position (g % 2 — arm, foot, arm, foot). Since v296
+    # a generated page also carries the strokes that did NOT move, once each,
+    # so that alternation no longer holds and the labels landed on the wrong
+    # strokes. Samples are the faded groups; carried strokes are the solid
+    # ones, and telling them apart by alpha does not care what order they are
+    # emitted in.
     spread = page.evaluate("""() => {
       const f = frames[1];
-      const arm = [], foot = [];
+      const isSample = c => /^#[0-9a-f]{8}$/i.test(c || '') && !/ff$/i.test(c);
+      const arm = [], carried = [];
       let at = 0;
       for (let g = 0; g < f.strokeGroups.length; g++) {
-        const n = f.strokeGroups[g];
-        // group 0 of each sample is the arm, group 1 is the foot
-        (g % 2 === 0 ? arm : foot).push(f.strokes[at + 2].y);
+        const n = f.strokeGroups[g], first = f.strokes[at];
+        // The arm is what got sampled; anything solid was held still.
+        (isSample(first.color) ? arm : carried).push(f.strokes[at + 2].y);
         at += n;
       }
-      const rng = a => Math.max(...a) - Math.min(...a);
-      return { arm: rng(arm), foot: rng(foot) };
+      const rng = a => a.length ? Math.max(...a) - Math.min(...a) : 0;
+      return { arm: rng(arm), carried: rng(carried), carriedGroups: carried.length };
     }""")
     check("the part that moved FAR is spread across the exposure",
           spread["arm"] > 100, f"arm tip spans {spread['arm']:.0f}px")
-    check("...and the part that barely moved stays piled up (nearly sharp)",
-          spread["foot"] < 6, f"foot spans {spread['foot']:.0f}px")
-    check("the ratio is the falloff, and nobody authored it",
-          spread["arm"] > spread["foot"] * 20,
-          f"{spread['arm']:.0f}px against {spread['foot']:.0f}px — this is what "
-          f"makes it read as a long exposure rather than a smudge")
+    check("...and the part that barely moved is carried ONCE, not sampled",
+          spread["carriedGroups"] == 1 and spread["carried"] == 0,
+          f"{spread['carriedGroups']} carried groups spanning "
+          f"{spread['carried']:.0f}px — a foot that moved 2px was being laid "
+          f"down 27 times, which costs 28% of its brightness for a 2px trail")
 
     print("\nIN-BETWEEN — a HAND-REDRAWN pose (v255)")
     # THE CASE THE FEATURE WAS MOST WANTED FOR AND USED TO REFUSE. Until v255
