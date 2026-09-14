@@ -354,7 +354,7 @@ with sync_playwright() as p:
     PROBE = """() => {
       const s = strip, sr = s.getBoundingClientRect();
       const col = document.querySelector('.addcol');
-      const seen = {};
+      const seen = {}, names = {};
       for (const id of ['addcopy', 'addblank', 'addtween']) {
         const el = document.getElementById(id);
         const r = el && el.getBoundingClientRect();
@@ -370,8 +370,16 @@ with sync_playwright() as p:
           hit = !!(t && (t === el || el.contains(t)));
         }
         seen[id] = hit;
+        // The RENDERED name, not the source that produces it. flip.js carries
+        // paragraphs explaining why this button is no longer called the
+        // in-between, and a substring search over the file would read the
+        // explanation as the thing it is looking for (CLAUDE.md, three times).
+        // What a user reads is the label plus the tooltip, so that is what is
+        // collected here.
+        names[id] = ((el ? el.textContent : '') + ' ' + (el ? el.title : ''))
+                      .replace(/\s+/g, ' ').trim();
       }
-      return { seen, inStrip: s.contains(col),
+      return { seen, names, inStrip: s.contains(col),
                overflows: s.scrollWidth > s.clientWidth + 8,
                scrollLeft: Math.round(s.scrollLeft),
                cols: document.querySelectorAll('.addcol').length }; }"""
@@ -384,9 +392,22 @@ with sync_playwright() as p:
           not left["inStrip"],
           "they are a child of the box that scrolls, so they scroll with it")
     for _id, _label in (("addcopy", "Duplicate"), ("addblank", "Blank"),
-                        ("addtween", "In-between")):
+                        ("addtween", "Motion Smear")):
         check(f"{_label} is on screen while page 2 is being edited",
               left["seen"][_id], "the button is not visible")
+        check(f"and it is the control that says {_label}",
+              _label.lower() in left["names"][_id].lower(),
+              f"reads {left['names'][_id]!r}")
+
+    # v295: THE NAME WAS THE PROMISE. This effect integrates the whole path
+    # between two poses; "in-between" is an animator's word for one intermediate
+    # POSE, which it has never produced. The label was the only thing that said
+    # otherwise, so nothing a user can read on these controls may say it again --
+    # and the real In-between, when it exists, is a different button.
+    for _id in ("addcopy", "addblank", "addtween"):
+        check(f"nothing a user reads on {_id} calls it an in-between",
+              "in-between" not in left["names"][_id].lower(),
+              f"reads {left['names'][_id]!r}")
 
     # Scroll position must be irrelevant now — that is the whole point.
     ac.evaluate("() => { strip.scrollLeft = strip.scrollWidth; }")

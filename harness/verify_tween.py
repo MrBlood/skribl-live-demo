@@ -1,4 +1,12 @@
-"""The in-between: a generated page that looks like a long exposure.
+"""Motion Smear: a generated page that looks like a long exposure.
+
+THE BUTTON SAID "IN-BETWEEN" UNTIL v295 AND THE EFFECT NEVER WAS ONE. An
+in-between, to an animator, is a single intermediate POSE; this integrates
+the WHOLE PATH between two poses into one page, deliberately, and every
+property pinned below is a property of doing that. Renaming it is the whole
+of that change: not one assertion here moved, because nothing about the
+effect moved. This file keeps its name, and so does `addtween` -- an
+internal name for an algorithm nobody is replacing.
 
 WHAT IT IMITATES. Stop-motion shot with the shutter open while the puppet moves,
 so one frame integrates the whole path between two poses. What sells that look is
