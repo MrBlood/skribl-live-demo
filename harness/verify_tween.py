@@ -480,9 +480,13 @@ with sync_playwright() as p:
         .map(p => Math.round(p.x) + ',' + Math.round(p.y)).join('|');
       const was = sig(frames[1]), wasN = frames.length, wasPts = frames[1].strokes.length;
       applyPayload(JSON.parse(JSON.stringify(serializeFlip({recipes: true}))));
+      // ASKED OF THE BEHAVIOUR, not of the frame. The recipe lives in a
+      // WeakMap beside the page precisely so it is not a field on it, so
+      // "is it re-stamped" can only honestly mean "does saving again still
+      // produce a recipe" -- which is the property anyone cares about.
       return { same: sig(frames[1]) === was, pages: frames.length === wasN,
                pts: frames[1].strokes.length, wasPts,
-               restamped: !!(frames[1].gen && frames[1].gen.print) }; }""")
+               restamped: !!serializeFlip({recipes: true}).frames[1].gen }; }""")
     check("a recipe restores the same page, point for point",
           _rt["same"] and _rt["pages"], str(_rt))
     # Against what it HAD, not an absolute: this fixture's poses are six points
