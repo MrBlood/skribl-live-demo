@@ -162,9 +162,9 @@ with sync_playwright() as p:
     page.evaluate("() => addTween()")
     page.wait_for_timeout(400)
     _sp = span()
-    # The arm tip travels 150px here, so travel/30 wants five pages.
+    # The arm tip travels far past the cap here, so the span is the cap: four.
     check("a span of pages was inserted BETWEEN the two poses",
-          _sp["m"] == 5 and _sp["idx"] == 1, str(_sp))
+          _sp["m"] == 4 and _sp["idx"] == 1, str(_sp))
     check("...and the two poses are untouched either side of it",
           page.evaluate("() => frames[0].strokes.length") == 6
           and page.evaluate("() => frames[frames.length - 1].strokes.length") == 6,
@@ -207,31 +207,19 @@ with sync_playwright() as p:
           f"alphas {sorted(set(round(a, 3) for a in faded))[:4]} — solid samples "
           f"would read as stacked copies, not an exposure")
 
-    # A HALO NEEDS SAMPLES TO HIDE IN, and this is the assertion that says so.
-    # The falloff table was tuned against 26 samples, where three passes read as
-    # a soft edge along the travel. Over the two or three samples a six-page span
-    # gives each page there is nothing to blend into: every pass lands as a
-    # visible copy at its own width and the drawing comes out ringed like a
-    # target. Seen directly when the span was first rendered at eight pages.
-    #
-    # Counted by WIDTH, which is the mechanism: the core is drawn at the stroke's
-    # own size and each halo at size + softEdge * its own d, so the number of
-    # distinct widths on a page IS the number of passes it used.
-    page.evaluate(POSES, 260)          # travels far enough to want six pages
-    page.evaluate("() => addTween()")
+    # THE SPAN IS CAPPED, and the cap is about density rather than tidiness.
+    # `fade` is 2.6/n clamped to 0.30, so a page with few samples draws each of
+    # them several times as opaque as a page with many -- the exposure has to
+    # stay readable on fewer copies -- and opaque copies with gaps between them
+    # are a stack rather than a smear. However far the ink travels, the span
+    # stops where the samples per page stay dense enough to blend.
+    page.evaluate(POSES, 260)          # travels far past the cap
+    _far = page.evaluate("""() => {
+      const m0 = frames.length; addTween();
+      return { m: frames.length - 2 }; }""")
     page.wait_for_timeout(400)
-    _halo = page.evaluate("""() => {
-      const m = frames.length - 2;
-      const f = frames[1];
-      const widths = [...new Set(f.strokes.map(q => Math.round(q.size * 100)))];
-      return { m, passes: widths.length,
-               samples: f.strokeGroups.length / (widths.length * 2) }; }""")
-    check("a long travel is spread over the most pages the span allows",
-          _halo["m"] == 6, str(_halo))
-    check("...and a page holding few samples drops its halo rather than ringing",
-          _halo["passes"] <= 2,
-          f"{_halo['passes']} widths over about {_halo['samples']:.0f} samples — "
-          f"three passes over three samples is three visible copies, not a blur")
+    check("however far the ink travels, the span stops at its cap",
+          _far["m"] == 4, str(_far))
 
     print("\nMOTION SMEAR — it has to be cheap enough to PLAY")
     # REPORTED FROM A PHONE: "it takes 2 seconds to play 3 frames". paintStatic

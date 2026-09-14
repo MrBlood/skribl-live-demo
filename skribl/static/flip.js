@@ -5353,7 +5353,21 @@ const TWEEN_MIN_SAMPLES = 6;
    over four. That is the change, not a side effect of it -- a motion drawn
    across four pages IS four pages long. */
 const TWEEN_SPAN_PX = 30;
-const TWEEN_SPAN_MAX = 6;
+/* WHAT MAKES A SPAN PAGE COMB, and it is not the sample count on its own.
+   `fade` is 2.6/n clamped to 0.30, so a page with six samples draws each of
+   them THREE TIMES as opaque as a page with twenty-six -- the exposure has to
+   stay readable on fewer copies. Opaque copies with gaps between them are a
+   stack, not a smear, and the first span rendered visibly hatched for exactly
+   that reason: too few samples per page, each too solid.
+
+   Sampling on distance instead fixed the look and cost 2-4x the whole span in
+   points, which is the opposite of what splitting the path is for. So the
+   samples stay proportional -- the span carries about what one page carried --
+   and the SPAN is capped where the samples per page stay dense enough to
+   blend. Four pages of six-to-seven samples is the setting that reads as
+   motion blur; six pages of four is where it starts to comb. */
+const TWEEN_SPAN_MIN_SAMPLES = 6;
+const TWEEN_SPAN_MAX = 4;
 const TWEEN_POINT_CAP = 14000;
 /* The server also refuses a frame over MAX_GROUPS_PER_FRAME (5,000) and every
    pass of every sample is its own group, so the group count has to be budgeted
@@ -5695,15 +5709,6 @@ function buildTween(a, b, opts){
   // The blur passes actually used: the LAST `passes` of the table, so dropping
   // one drops the widest, faintest halo and keeps the core.
   let blur = TWEEN_BLUR.slice(TWEEN_BLUR.length - plan.passes);
-  /* A HALO NEEDS SAMPLES TO HIDE IN. The falloff table was tuned against 26 of
-     them, where three passes read as a soft edge along the travel. Lay the same
-     three over two or three samples and there is nothing to blend: each pass is
-     a visible copy at its own width, so the drawing comes out ringed like a
-     target. Seen directly when the span was first rendered at eight pages.
-     Halos are capped by the sample count; the core is never one of them, so
-     the floor of this is the unblurred exposure the feature began as. */
-  const halos = n >= 10 ? 3 : n >= 5 ? 2 : 1;
-  if(blur.length - 1 > halos) blur = blur.slice(blur.length - 1 - halos);
   // Enough per sample that the exposure sums to a readable figure, capped so a
   // short sample count does not come out as a stack of hard copies. Trimmed
   // when there is a halo carrying part of the weight.
@@ -5788,9 +5793,11 @@ function addTween(){
   const a = frames[idx], b = frames[idx + 1];
   if(!b){ chip('A motion smear goes BETWEEN two pages — add the next pose first'); return; }
   const m = tweenSpanCount(a, b);
-  // Samples PER PAGE, so the spacing along the ink is what it always was rather
-  // than m times denser. The floor travels with it for the same reason.
-  const per = Math.max(2, Math.round(TWEEN_SAMPLES / m));
+  // Proportional, so the span carries about what the single page carried, with
+  // a floor that keeps each page dense enough to blend rather than comb. The
+  // budget still has the last word: tweenPlan trims this to what a page can
+  // hold, and a coarser exposure beats a refusal.
+  const per = Math.max(TWEEN_SPAN_MIN_SAMPLES, Math.round(TWEEN_SAMPLES / m));
   const made = [];
   for(let k = 0; k < m; k++){
     const t = buildTween(a, b, { t0: k / m, t1: (k + 1) / m, n: per,
