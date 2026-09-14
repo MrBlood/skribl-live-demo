@@ -1264,9 +1264,20 @@ with sync_playwright() as p:
         f.strokeGroups.push(r.length);});
       return f;
     }"""
-    def pose(deg, extra=False, scramble=False):
-        return page.evaluate("""([mk,deg,extra,scr]) => {
+    def pose(deg, extra=False, scramble=False, shift=0, reverse_arm=False):
+        return page.evaluate("""([mk,deg,extra,scr,shift,revArm]) => {
           const f = new Function('return ' + mk)()(deg, extra);
+          if(shift) f.strokes.forEach(q => { q.x += shift; });
+          if(revArm){
+            const runs=[]; let at=0;
+            f.strokeGroups.forEach(n=>{ runs.push(f.strokes.slice(at,at+n)); at+=n; });
+            runs[2].reverse();
+            const g={strokes:[],strokeGroups:[],hold:1};
+            runs.forEach(r=>{ r.forEach((q,i)=>{const c={...q};
+              if(i===0)c.start=true; else delete c.start; g.strokes.push(c);});
+              g.strokeGroups.push(r.length); });
+            return g;
+          }
           if(!scr) return f;
           // redraw the SAME pose with its strokes in another order
           const runs=[]; let at=0;
@@ -1277,7 +1288,7 @@ with sync_playwright() as p:
             if(i===0)c.start=true; else delete c.start; g.strokes.push(c);});
             g.strokeGroups.push(r.length); });
           return g;
-        }""", [FIGM, deg, extra, scramble])
+        }""", [FIGM, deg, extra, scramble, shift, reverse_arm])
 
     def smear(a, b):
         return page.evaluate("""([a,b]) => {
@@ -1296,21 +1307,58 @@ with sync_playwright() as p:
     plain = smear(pose(20), pose(-125))
     check("an arm swinging 145 degrees is smeared", not plain["refused"], str(plain))
 
-    scram = smear(pose(20), pose(-125, scramble=True))
-    check("the same pose redrawn in ANOTHER STROKE ORDER still pairs correctly",
-          not scram["refused"] and abs(scram["points"] - plain["points"]) < 400,
-          f"{scram.get('points')} against {plain.get('points')} for the same "
-          f"motion — pairing by drawing order is what put the outline with the mouth")
+    # ASSERT THE PAIRING, NOT THE PAGE SIZE. The first version of this block
+    # checked that a scrambled-order pose produced a page of about the same
+    # number of points as an in-order one -- and a WRONG pairing produces a
+    # page of about the same size too, so three of four mutations passed it:
+    # pairing by drawing order, comparing in page coordinates instead of about
+    # each page's centre, and ignoring that a limb may be redrawn backwards.
+    # All three were invisible to it. The pairing itself is what this measures
+    # now, which is the mechanism rather than a shadow of it.
+    def pairing(a, b):
+        return page.evaluate("""([a,b]) => {
+          const ia = tweenVisible(a).ink, ib = tweenVisible(b).ink;
+          return tweenMatch(ia, ib).map(m => m ? { j: m.j, rev: !!m.reversed } : null);
+        }""", [a, b])
 
-    extra = smear(pose(20), pose(-125, extra=True))
-    check("FOUR strokes against FIVE produces a page, not a refusal",
-          not extra["refused"],
-          f"{extra.get('chip')!r} — differing counts are the wall v296 removed")
-    check("...and the extra stroke does not vanish from it",
-          not extra["refused"] and extra["groups"] >= plain["groups"],
-          f"{extra.get('groups')} groups against {plain.get('groups')}")
+    inorder = pairing(pose(20), pose(-125))
+    check("in drawing order, every stroke pairs with its own partner",
+          [m and m["j"] for m in inorder] == [0, 1, 2, 3], str(inorder))
 
-    # THE PIN THAT STOPS "PAIR EVERYTHING" FROM SATISFYING THE REST.
+    # SCRAMBLED: the same four strokes, recorded in the order 3,0,2,1. Pairing
+    # by index would return 0,1,2,3 and be wrong for three of the four.
+    scram = pairing(pose(20), pose(-125, scramble=True))
+    check("redrawn in ANOTHER STROKE ORDER, they still pair by shape",
+          [m and m["j"] for m in scram] == [1, 3, 2, 0],
+          f"{scram} — pairing by the order your hand took is what put the "
+          f"outline with the mouth")
+
+    # TRAVELLED: the whole figure moves 90px right. Comparing in page
+    # coordinates pairs each stroke with whatever is now nearest, which is the
+    # wrong stroke; comparing about each page's own centre does not.
+    moved = pairing(pose(20), pose(20, shift=90))
+    check("when the WHOLE drawing travels, every stroke still finds itself",
+          [m and m["j"] for m in moved] == [0, 1, 2, 3],
+          f"{moved} — measured about each page's own centre, or 'which stroke "
+          f"is nearest' is answered by the wrong stroke")
+
+    # BACKWARDS: one limb recorded end-to-start. It is the same limb, and the
+    # interpolation has to know, or the stroke turns itself inside out.
+    # THE SAME POSE, with the arm recorded end-to-start. Comparing it against a
+    # pose rotated 145 degrees — which the first version of this pin did — asks
+    # the wrong question: reversing a straight line is close to flipping it 180
+    # degrees, so on that pair the UN-reversed comparison genuinely wins and
+    # rev:False is the right answer. The reversal has to be the only difference
+    # for the flag to mean anything.
+    back = pairing(pose(20), pose(20, reverse_arm=True))
+    check("a limb redrawn BACKWARDS pairs with itself, and is flagged reversed",
+          [m and m["j"] for m in back] == [0, 1, 2, 3]
+          and back[2] and back[2]["rev"] is True,
+          f"{back} — without the flag the stroke interpolates end-to-start "
+          f"and turns inside out on the way across")
+
+    # A 4px mark and a scrawl across the whole page: nothing about them is the
+    # same stroke, and the length guard is what says so.
     junk = page.evaluate("""() => ({
       strokes: [{x:10,y:10,size:6,color:'#fff',erase:false,t:0,start:true},
                 {x:13,y:13,size:6,color:'#fff',erase:false,t:1}],
@@ -1321,11 +1369,11 @@ with sync_playwright() as p:
                 {x:295,y:20,size:6,color:'#fff',erase:false,t:2},
                 {x:30,y:30,size:6,color:'#fff',erase:false,t:3}],
       strokeGroups: [4], hold: 1 })""")
-    nope = smear(junk, scrawl)
-    check("a 4px mark against a page-wide scrawl is still declined",
-          nope["refused"],
-          "pairing these smears a tiny mark across the whole page, which reads "
-          "as a bug in the tool rather than a limit of the idea")
+    # AND NOTHING PAIRS WITH ANYTHING: the pin that stops "pair everything"
+    # from satisfying all of the above.
+    nothing = pairing(junk, scrawl)
+    check("a 4px mark pairs with nothing on a page-wide scrawl",
+          nothing == [None], str(nothing))
 
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
