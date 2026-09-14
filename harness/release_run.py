@@ -166,6 +166,7 @@ BATCHES = [
     ["verify_layout.py"],                  # measures — geometry at eight widths
     ["verify_drafts.py"],                  # measures — multi-second settles
     ["verify_tween.py"],                   # measures
+    ["verify_inbetween.py"],               # measures — geometry through the middle
     ["verify_liquify.py"],                 # measures
     ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
     ["verify_nametab.py"],                 # unrecorded
