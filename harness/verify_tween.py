@@ -221,6 +221,23 @@ with sync_playwright() as p:
     check("however far the ink travels, the span stops at its cap",
           _far["m"] == 4, str(_far))
 
+    # AND THE HELP HAS TO SAY THE SAME NUMBER. It said "up to six" for one
+    # commit after the cap moved to four, because the copy spelled a constant
+    # out in words and nothing tied the two together. Read the constant from
+    # the running page and the number from the rendered tip, so the next person
+    # to change the cap finds out here rather than from a reader.
+    _cap = page.evaluate("() => TWEEN_SPAN_MAX")
+    _tip = page.evaluate("""() => {
+      const t = [...document.querySelectorAll('.help-tip')].find(
+        e => (e.querySelector('.help-pill')||{}).textContent === 'Motion Smear');
+      return t ? t.textContent.replace(/\\s+/g, ' ') : ''; }""")
+    _words = {1:'one', 2:'two', 3:'three', 4:'four', 5:'five', 6:'six',
+              7:'seven', 8:'eight', 9:'nine', 10:'ten'}
+    check("the Help spells the same page cap the code enforces",
+          _words.get(_cap, str(_cap)) in _tip.lower(),
+          f"the cap is {_cap} ({_words.get(_cap)}) and the tip reads: "
+          f"...{_tip[-210:]}")
+
     print("\nMOTION SMEAR — it has to be cheap enough to PLAY")
     # REPORTED FROM A PHONE: "it takes 2 seconds to play 3 frames". paintStatic
     # gives every translucent stroke its own offscreen layer — clear a full
