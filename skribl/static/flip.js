@@ -467,8 +467,69 @@ function scheduleSave(){ clearTimeout(_saveT); _saveT = setTimeout(saveNow, 800)
 // rebuild everything except the files themselves and prompt the user to re-add
 // them. Used only by the localStorage autosave, which has a ~5 MB quota; the
 // .skribl draft download (saveDraft) still serializes the full media.
+/* ---------- v295: a generated page is a RECIPE in the draft ----------------
+
+   WHAT THIS FIXES, reported from a phone with no media loaded at all:
+
+       Has music: false   Has image: false
+       autosave failed even without media: QuotaExceededError
+
+   A Motion Smear page is up to 27 samples of every stroke, four passes deep,
+   and the draft stored every one of those points as JSON. Measured: 722 KB for
+   one smear against 12 KB for the two poses that made it, so SEVEN of them fill
+   a 5 MB origin quota and autosave stops working for good. Nothing in the app
+   ever collapsed them, because the page is ordinary stroke data by design and
+   nothing marked it as reproducible.
+
+   It is reproducible: the same two neighbours and the same sample plan give the
+   same page. So the draft stores {k, n, passes} and three fingerprints instead
+   of the points -- about 120 bytes -- and the page is rebuilt on restore.
+
+   THE IN-MEMORY PAGE IS NEVER A RECIPE. frames[] always holds real strokes, so
+   posting, export, playback, the player, undo and every suite see exactly what
+   they saw before. This is a storage representation and nothing else.
+
+   AND IT IS SELF-VERIFYING, because a flag would go stale. There is no single
+   place a page is edited -- six call sites push strokes into a frame -- so
+   rather than trust a mark, the save recomputes a cheap fingerprint of the page
+   and of both its neighbours. All three matching means the recipe still
+   describes the page; anything else means it has been drawn on, or the pages
+   around it moved, and the real strokes are written instead. Wrong in the safe
+   direction: the cost of a false mismatch is the bytes it was trying to save.
+
+   NOT IN THE .skribl FILE. saveDraft() writes the format the Pad also reads and
+   a person keeps on disk; a recipe there would be a schema change for every
+   other reader. Recipes are opt-in per call site and only the autosave asks. */
+
+/* THE RECIPE IS NOT A FIELD ON THE FRAME, and verify_tween is what said so:
+   "the frame itself is still strokes/strokeGroups/hold" went red the moment a
+   `gen` key appeared on one. That assertion sits under "no new field, so an
+   older player can draw it", and it is right -- a frame is ordinary stroke data
+   and every reader of the format is entitled to assume it.
+
+   So the recipe lives beside the frame, in a WeakMap keyed by it. Which turns
+   out to be the better mechanism anyway: an operation that CLONES a frame --
+   duplicate, undo, anything that rebuilds the array -- does not carry the entry
+   with it, so the clone is stored as strokes. Falling back to the safe
+   behaviour is the default rather than something each call site has to
+   remember. */
+const genRecipe = new WeakMap();
+
+// Cheap enough to run on every debounced save: length, plus the coordinates of
+// every sixteenth point. An edit moves one of the two.
+function genPrint(f){
+  if(!f || !f.strokes) return null;
+  const n = f.strokes.length;
+  let sum = 0;
+  for(let i = 0; i < n; i += 16) sum += f.strokes[i].x + f.strokes[i].y * 7;
+  return n + ':' + Math.round(sum);
+}
+function genSame(a, b){ return !!a && !!b && a === b; }
+
 function serializeFlip(opts){
   const withMedia = !opts || opts.media !== false;
+  // Opt-in: the autosave asks, saveDraft()'s .skribl file never does.
+  const recipes = !!(opts && opts.recipes);
   return {
     schemaVersion: 2, version: 2,
     playbackMode: 'flip', fps: fps,
@@ -481,12 +542,27 @@ function serializeFlip(opts){
     music: withMedia ? (musicData || null) : null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : (pendingMusicMeta || null),
-    frames: frames.map(f => {
+    frames: frames.map((f, i) => {
+      const h = frameHold(f);
+      // A generated page, still sitting between the two pages that made it,
+      // still holding what they made. Any of those three untrue and it is
+      // written out in full like anything else.
+      const g = recipes ? genRecipe.get(f) : null;
+      if(g && g.print){
+        const prev = frames[i - 1], next = frames[i + 1];
+        if(genSame(g.print, genPrint(f))
+           && genSame(g.a, genPrint(prev)) && genSame(g.b, genPrint(next))){
+          const o = { gen: { k: g.k, n: g.n, passes: g.passes },
+                      background: bgColor };
+          if(h > 1) o.hold = h;
+          if(frameDraw(f)) o.draw = true;
+          return o;
+        }
+      }
       // NOT f.strokes.slice(): that is what wrote a half-captured stroke into
       // the autosave and made the next reload unshareable. See balancedPair.
       const b = balancedPair(f);
       const o = { strokes: b.strokes, strokeGroups: b.strokeGroups, background: bgColor };
-      const h = frameHold(f);
       if(h > 1) o.hold = h;      // omitted at the default => payload unchanged
       if(frameDraw(f)) o.draw = true;   // same rule: absent at the default
       return o;
@@ -551,7 +627,7 @@ function saveNow(){
     // Nothing to spill: the lite payload IS the full payload, so this is one
     // synchronous write and no IndexedDB round trip.
     try {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true })));
       // v238: 'saved' when this write omitted nothing AND nothing is waiting;
       // amber when a media record IS waiting to be re-added.
       //
@@ -594,7 +670,7 @@ function saveNow(){
     // bytes. Try the old way — the whole payload into localStorage — and let
     // the quota decide. This is the ONLY route that still attempts it.
     try {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip()));
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true })));
       showAutosaveStatus('saved');
       return;
     } catch (e) {
@@ -640,7 +716,7 @@ function saveNow(){
       showAutosaveStatus('saved-no-media');
       console.error('[skribl] media spill to IndexedDB timed out after ' + SPILL_TIMEOUT_MS + 'ms');
     }, SPILL_TIMEOUT_MS);
-    SkriblDraftStore.put('flip:draft', { json: JSON.stringify(serializeFlip()), savedAt: stamp })
+    SkriblDraftStore.put('flip:draft', { json: JSON.stringify(serializeFlip({ recipes: true })), savedAt: stamp })
       .then(() => { if (settled) return; settled = true; clearTimeout(spillTimer);
                     _mediaSpillState = 'durable';
                     // The session IS fully recoverable now — say so. (Only if
@@ -664,7 +740,7 @@ function saveNow(){
     _mediaSpillState = 'failed';
   }
   try {
-    const lite = serializeFlip({ media: false });
+    const lite = serializeFlip({ media: false, recipes: true });
     lite.mediaInIdb = true; lite.idbSavedAt = stamp;
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(lite));
     // THE DRAWING IS SAFE; THE MEDIA BYTES ARE STILL IN FLIGHT. Until v229 this
@@ -780,6 +856,12 @@ function applyPayload(d){
   }
   if (!d || !Array.isArray(d.frames) || !d.frames.length) return false;
   frames = d.frames.map(f => {
+    // A RECIPE, not a page: {k, n, passes} and no strokes. Held aside here and
+    // rebuilt below, once its neighbours are real frames.
+    if (f && f.gen && !Array.isArray(f.strokeGroups)) {
+      return { strokes: [], strokeGroups: [], hold: frameHold(f),
+               __gen: f.gen, __draw: !!f.draw };
+    }
     if (Array.isArray(f.strokeGroups)) {
       // current pad-format frame. Healed rather than trusted: a draft written
       // mid-stroke by an older build restores permanently unshareable, and the
@@ -796,6 +878,39 @@ function applyPayload(d){
     });
     return { strokes: flat, strokeGroups: groups, hold: frameHold(f) };
   });
+  /* Rebuild the recipes. Left to right, so a page always sees real neighbours:
+     a smear is inserted BETWEEN two pages and two of them are never adjacent,
+     and if the pages around one ever did move, the save that noticed would have
+     written its strokes out in full instead of a recipe.
+
+     IF A REBUILD FAILS the page comes back empty rather than wrong, and that is
+     the honest failure for this: the strokes are not stored, so there is nothing
+     to fall back to. The save-time fingerprints are what make it unlikely --
+     they refuse the recipe unless this page and both its neighbours are exactly
+     what they were when it was generated. */
+  for (let i = 0; i < frames.length; i++) {
+    const g = frames[i] && frames[i].__gen;
+    if (!g) continue;
+    const prev = frames[i - 1], next = frames[i + 1];
+    const hold = frames[i].hold, draw = frames[i].__draw;
+    let built = null;
+    if (prev && next && !prev.__gen && !next.__gen
+        && prev.strokes && prev.strokes.length && next.strokes && next.strokes.length) {
+      try { built = buildTween(prev, next, g); } catch (_) { built = null; }
+    }
+    if (built) {
+      built.hold = hold;
+      if (draw) built.draw = true;
+      // Re-stamped so the NEXT save can store this as a recipe too, rather than
+      // paying full price for it once and then for ever.
+      const r2 = genRecipe.get(built);
+      if (r2) { r2.print = genPrint(built); r2.a = genPrint(prev); r2.b = genPrint(next); }
+      frames[i] = built;
+    } else {
+      delete frames[i].__gen; delete frames[i].__draw;
+      if (draw) frames[i].draw = true;
+    }
+  }
   idx = Math.min(d.editIdx != null ? d.editIdx : (d.idx || 0), frames.length - 1);
   const savedBg = (d.frames[0] && d.frames[0].background) || d.background;
   if (typeof savedBg === 'string' && /^#[0-9a-f]{6}$/i.test(savedBg)) bgColor = savedBg;
@@ -3954,6 +4069,9 @@ function loopPosition(){
 
 /* ---- save / load draft as a .skribl file (same format the Pad reads) ---- */
 function saveDraft(){
+  // NO RECIPES HERE. This writes the .skribl file the Pad also reads and a
+  // person keeps on disk; a recipe in it would be a schema change for every
+  // other reader of the format.
   const data=serializeFlip();
   const blob=new Blob([JSON.stringify(data)], { type:'application/json' });
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -4003,7 +4121,7 @@ function loadDraftFile(file){
       // claiming the same 5s loop.
       if (musicData) decodeForWaveform();
       fitPad(); buildStrip(); render(); sizeFill(); setBg(bgColor); syncMediaUI();
-      try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip())); }catch(_){ }  // best-effort
+      try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeFlip({ recipes: true }))); }catch(_){ }  // best-effort
       chip(ok?'Draft loaded':'Loaded');
     }catch(err){ chip('Could not read file'); }
   };
@@ -5643,7 +5761,7 @@ function tweenFade(col, mul){
 
 /* Builds the exposure between pages A and B. Returns a frame, or null with the
    reason already chipped. */
-function buildTween(a, b){
+function buildTween(a, b, want){
   const why = tweenMismatch(a, b);
   if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
@@ -5656,7 +5774,14 @@ function buildTween(a, b){
   if(!aligned){ chip('A motion smear needs the same number of strokes on both pages'); return null; }
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
-  const plan = tweenPlan(per, a.strokeGroups.length);
+  // A REBUILT PAGE HAS TO COME BACK THE SAME. The plan depends on the frame
+  // rate through tweenRenderCap, so regenerating a stored smear at a different
+  // Tune setting would quietly produce a coarser or finer page than the one the
+  // artist accepted. The recipe carries the plan it was made with, and a rebuild
+  // asks for exactly that (v295).
+  const plan = (want && typeof want.n === 'number' && typeof want.passes === 'number')
+    ? { n: want.n, passes: want.passes }
+    : tweenPlan(per, a.strokeGroups.length);
   if(!plan){
     chip('This page is too heavy for a motion smear');
     return null;
@@ -5683,6 +5808,9 @@ function buildTween(a, b){
     fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
   }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
+  // What it would take to make this page again, which is all the draft needs to
+  // store instead of the points below. Beside the frame, never on it.
+  genRecipe.set(out, { k: 'smear', n: n, passes: blur.length });
   for(let s = 0; s <= n; s++){
     const t = s / n;
     for(let p = 0; p < blur.length; p++){
@@ -5732,6 +5860,10 @@ function addTween(){
   if(!b){ chip('A motion smear goes BETWEEN two pages — add the next pose first'); return; }
   const t = buildTween(a, b);
   if(!t) return;
+  // The three fingerprints the draft checks before it trusts the recipe: this
+  // page, and the two it was made from.
+  const _r = genRecipe.get(t);
+  if(_r){ _r.print = genPrint(t); _r.a = genPrint(a); _r.b = genPrint(b); }
   invalidateClearUndo(); redoStack.length = 0;
   frames.splice(idx + 1, 0, t); idx++;
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
