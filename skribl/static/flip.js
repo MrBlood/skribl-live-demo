@@ -2183,7 +2183,7 @@ function buildStrip(){
   // SVG icons in the page bar beside it.
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
-    +'<button class="addbtn mini" id="addtween" title="Generate the motion between this page and the next, like a long exposure"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>In-between</button>'
+    +'<button class="addbtn mini" id="addtween" title="Show the movement between two drawings, the way a long exposure catches a moving puppet"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>Motion Smear</button>'
     ;   // Paste is no longer here — see the ghost tile in buildStrip (v226).
   // The add controls live OUTSIDE the scrolling strip, as a row above the
   // thumbnails. Inside it they were its last child, so on a long flip they
@@ -5268,8 +5268,21 @@ function selRestore(pts){
     p.x = o.x; p.y = o.y; if(o.size != null) p.size = o.size; }
 }
 
-/* ---------- v237: the in-between -------------------------------------------
+/* ---------- v237: the in-between, renamed in v295 --------------------------
    A GENERATED PAGE THAT LOOKS LIKE A LONG EXPOSURE.
+
+   THE BUTTON NOW SAYS MOTION SMEAR, and the code below is unchanged by that.
+   "In-between" is what an animator calls a single intermediate POSE, and
+   this has never produced one: it integrates the whole path between two
+   pages into one exposure, on purpose, and every property described below
+   is about that. The name was the only thing making a promise the effect
+   does not keep, so the name is what changed (v295; outside review of
+   v294). The identifier stays `addtween` and this suite stays
+   verify_tween.py -- an internal name for an algorithm nobody is
+   replacing. A real In-between, which emits ONE pose and therefore costs
+   roughly a source page rather than 26 of them, is a separate feature and
+   is not built yet; when it exists it takes the primary slot and this one
+   moves under it.
 
    The reference is stop-motion: a puppet photographed while it MOVED, so one
    frame integrates the whole path between two poses. What sells it is not the
@@ -5630,7 +5643,7 @@ function tweenFade(col, mul){
    reason already chipped. */
 function buildTween(a, b){
   const why = tweenMismatch(a, b);
-  if(why){ chip('An in-between needs ' + why); return null; }
+  if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
      them index for index, so aligning HERE leaves all of it unchanged. The
      budget is computed on the aligned count, not the original: resampling
@@ -5638,12 +5651,12 @@ function buildTween(a, b){
      points than either page holds and budgeting on the source would let it
      past the server's cap. */
   const aligned = tweenAlign(a, b);
-  if(!aligned){ chip('An in-between needs the same number of strokes on both pages'); return null; }
+  if(!aligned){ chip('A motion smear needs the same number of strokes on both pages'); return null; }
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
   const plan = tweenPlan(per, a.strokeGroups.length);
   if(!plan){
-    chip('This page is too heavy for an in-between');
+    chip('This page is too heavy for a motion smear');
     return null;
   }
   const n = plan.n;
@@ -5714,13 +5727,13 @@ function addTween(){
   if(playing) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
-  if(!b){ chip('An in-between goes BETWEEN two pages — add the next pose first'); return; }
+  if(!b){ chip('A motion smear goes BETWEEN two pages — add the next pose first'); return; }
   const t = buildTween(a, b);
   if(!t) return;
   invalidateClearUndo(); redoStack.length = 0;
   frames.splice(idx + 1, 0, t); idx++;
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
-  chip('In-between added');
+  chip('Motion smear added');
 }
 
 /* ---------- v236: liquify ----------------------------------------------------

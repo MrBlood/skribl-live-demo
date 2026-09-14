@@ -1,4 +1,12 @@
-"""The in-between: a generated page that looks like a long exposure.
+"""Motion Smear: a generated page that looks like a long exposure.
+
+THE BUTTON SAID "IN-BETWEEN" UNTIL v295 AND THE EFFECT NEVER WAS ONE. An
+in-between, to an animator, is a single intermediate POSE; this integrates
+the WHOLE PATH between two poses into one page, deliberately, and every
+property pinned below is a property of doing that. Renaming it is the whole
+of that change: not one assertion here moved, because nothing about the
+effect moved. This file keeps its name, and so does `addtween` -- an
+internal name for an algorithm nobody is replacing.
 
 WHAT IT IMITATES. Stop-motion shot with the shutter open while the puppet moves,
 so one frame integrates the whole path between two poses. What sells that look is
@@ -400,9 +408,9 @@ with sync_playwright() as p:
     # they want is unsupported when it is the one that just started working.
     _help = page.evaluate("""() => {
       const tips = [...document.querySelectorAll('.help-tip')];
-      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'In-between');
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Motion Smear');
       return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
-    check("the help describes the in-between's ACTUAL requirement",
+    check("the help describes the effect's ACTUAL requirement",
           _help and "number" in _help.lower() and "same strokes on both" not in _help,
           f"{(_help or '')[-190:]!r} — the old text told people to duplicate "
           f"rather than redraw, which is exactly the workflow v255 unblocked")
