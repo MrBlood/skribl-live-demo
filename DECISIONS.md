@@ -7798,11 +7798,53 @@ you are trying to scroll the strip you might move one of the slides out of
 order", and tapping one to change pages is hard. Both halves are one cause: a
 reorder began after SIX PIXELS of horizontal travel, no time gate, on a strip
 that scrolls horizontally -- the two gestures were the same gesture separated by
-six pixels, and a tap that drifted that far suppressed its own click. The slop
-went to 14, but a threshold alone cannot fix it because any scroll long enough
-passes any threshold. So the strip decides: if its scrollLeft moved while the
-finger was down, the finger was scrolling and no reorder begins however far the
-drag goes.
+six pixels, and a tap that drifted that far suppressed its own click.
+
+The first fix raised the slop to 14 and made the strip its own witness: if
+scrollLeft moved while the finger was down, the finger was scrolling and no
+reorder begins however far the drag goes. That is a discriminator rather than a
+guess, it shipped, and the owner read it and said **"it still seems sketchy"**.
+He was right, and the sentence that says why is his: *"cant it be one of those
+where you hold the slide long enough and it makes a bump to let you know you've
+selected it long enough to move it?"*
+
+A threshold decides after the fact and tells you nothing while you are moving. A
+HOLD separates the two gestures by construction -- you cannot hold still for
+400 ms while flicking -- and it ANNOUNCES itself: the tile lifts, the device
+buzzes, and the user knows the reorder is armed before committing to it. Any
+movement before the bump disarms it completely. It is also the idiom every phone
+already teaches, which is the part no amount of cleverness in here could buy.
+
+**The most sophisticated mechanism in the release lost to the one every user
+already knows.** The scrollLeft witness is cleverer and it is gone.
+
+Selecting a range was collateral: it was a 450 ms hold and then a sweep, and the
+sweep shared the strip's scroll direction. The hold now arms a reorder, so it
+moves into the per-page menu as "Select through here", where it needs no gesture
+at all -- that popover already speaks in spans ("Move these 4 pages left"), so
+"through here" finishes a sentence the menu was already writing. The first home
+tried was the top-level menu, and verify_parity refused it: Pad and Flip menus
+hold the same items in the same order since v292. The pin was right and the
+popover is the better home.
+
+**AND ONE PIN WAS MEASURING SOMETHING ELSE.** "A drag with no hold first does not
+reorder" stays GREEN when the arm timer fires instantly, because a flick's first
+pointermove already exceeds the jitter floor and the disarm branch kills the drag
+before the timer matters. It pins the DISARM, not the hold length. Only v294's
+actual pair -- arm on contact AND never disarm -- reddens it, and under that pair
+all three refusals go red together while "a hold and THEN a drag reorders" stays
+green. The mutation went next to the assertion, since the next person to break
+the timer and see green would conclude the pin was dead.
+
+verify_compactops then refused the new menu item, with len(menu) == len(row)
+sitting directly beneath its own comment explaining why a snapshot cannot see
+whether a property still holds. The named invariant is one-directional -- the
+compact menu carries every operation the page bar does -- and "Select through
+here" is compact-only by construction, because at regular size the span extends
+by shift-clicking a tile and a phone has no shift key. The row is not the whole
+of what the regular size can do, so it cannot cap the compact menu. The count
+still guards against an uncurated menu, so it moved to the reason: a menu-only
+item must be named with why the row does not carry it.
 
 **What the owner found that the instrument could not.** Nine findings of media
 audit in v294, and the defect that was actually breaking the phone had nothing
@@ -7816,6 +7858,9 @@ pairs BY STROKE GROUP index, so a selection is already the argument it wants.
 
 **What is still open.** The span's render win was real and its storage objection
 is now gone, so whether it returns is a live question rather than a closed one.
+The hold is 400 ms because that is where the platforms sit; nobody has held a
+phone and told me it feels long or short, and that is the one number in here
+with no measurement behind it.
 Layers are noted unexplored with their schema cost stated (FUTURE.md 6d). And
 strokes still pair in drawing order on both buttons: redraw a pose with its
 strokes in another order and the outline pairs with the mouth. That needs a
