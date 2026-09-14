@@ -5335,6 +5335,25 @@ function selRestore(pts){
    frame the server will reject. */
 const TWEEN_SAMPLES = 26;
 const TWEEN_MIN_SAMPLES = 6;
+/* v295: THE SMEAR IS A SPAN OF PAGES, NOT ONE PAGE. One page holding the whole
+   path is a still photograph of a movement: it says where the arm went and
+   nothing about when, and on a phone it is the heaviest page Flip makes. Broken
+   into consecutive pages, each holding its own slice of the path, the same
+   arithmetic reads as animation with motion blur -- and each page costs a
+   fraction of what the single one did, which is the budget that was actually
+   biting.
+
+   HOW MANY. Scaled by how far the furthest point actually travels, floored at
+   one: a small nudge still produces exactly one page, exactly as before, and
+   nothing gets four near-identical copies of itself. Measured on the fixture
+   this was designed against, a 110px move wants four.
+
+   WHAT IT COSTS, stated because it is not free: the movement now occupies as
+   many slots as it has pages, so a flip that used to cross it in one plays it
+   over four. That is the change, not a side effect of it -- a motion drawn
+   across four pages IS four pages long. */
+const TWEEN_SPAN_PX = 30;
+const TWEEN_SPAN_MAX = 6;
 const TWEEN_POINT_CAP = 14000;
 /* The server also refuses a frame over MAX_GROUPS_PER_FRAME (5,000) and every
    pass of every sample is its own group, so the group count has to be budgeted
@@ -5457,7 +5476,7 @@ const TWEEN_GOOD_SAMPLES = 16;
    gets half, which put that page at 16 samples and about 26ms.
 
    IT NEVER CAUSES A REFUSAL. A render heuristic that turned "here is a coarser
-   exposure" into "this page is too heavy for an in-between" would be trading a
+   exposure" into "this page is too heavy for a motion smear" would be trading a
    feature for a frame rate. Below TWEEN_MIN_SAMPLES the render ceiling simply
    stops applying and the page is drawn at the floor. */
 function tweenRenderCap(atFps){
@@ -5465,7 +5484,7 @@ function tweenRenderCap(atFps){
   if(f <= 12) return TWEEN_POINT_CAP;
   return Math.max(1, Math.round(TWEEN_POINT_CAP * 12 / f));
 }
-function tweenPlan(per, groupsPer, atFps){
+function tweenPlan(per, groupsPer, atFps, minSamples){
   const renderCap = tweenRenderCap(typeof atFps === 'number' ? atFps : fps);
   // The most samples that fit BOTH caps at a given pass count. Groups are
   // capped separately because every pass of every sample is its own group:
@@ -5481,9 +5500,16 @@ function tweenPlan(per, groupsPer, atFps){
   };
   // The SERVER cap decides whether an exposure is possible at all; the render
   // cap only decides how fine it is.
+  // The floor is a DENSITY floor wearing a count's clothes. Six samples read as
+  // a smear rather than six ghosts because they were spread over the whole
+  // path; a page covering a quarter of it needs a quarter as many for the same
+  // spacing along the ink. While there was only ever one page the distinction
+  // could not show, and the constant was right by accident (v295).
+  const floor = Math.max(2, Math.round(
+    typeof minSamples === 'number' ? minSamples : TWEEN_MIN_SAMPLES));
   const postable = fit(1, TWEEN_POINT_CAP);
-  if(postable < TWEEN_MIN_SAMPLES) return null;
-  const bare = Math.max(TWEEN_MIN_SAMPLES, Math.min(postable, fit(1, renderCap)));
+  if(postable < floor) return null;
+  const bare = Math.max(floor, Math.min(postable, fit(1, renderCap)));
   const keep = Math.min(bare, TWEEN_GOOD_SAMPLES);
   for(let passes = TWEEN_BLUR.length; passes >= 2; passes--)
     if(fit(passes, renderCap) >= keep) return { passes: passes, n: fit(passes, renderCap) };
@@ -5643,7 +5669,10 @@ function tweenFade(col, mul){
 
 /* Builds the exposure between pages A and B. Returns a frame, or null with the
    reason already chipped. */
-function buildTween(a, b){
+function buildTween(a, b, opts){
+  opts = opts || {};
+  const t0 = typeof opts.t0 === 'number' ? opts.t0 : 0;
+  const t1 = typeof opts.t1 === 'number' ? opts.t1 : 1;
   const why = tweenMismatch(a, b);
   if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
@@ -5656,15 +5685,25 @@ function buildTween(a, b){
   if(!aligned){ chip('A motion smear needs the same number of strokes on both pages'); return null; }
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
-  const plan = tweenPlan(per, a.strokeGroups.length);
+  const plan = tweenPlan(per, a.strokeGroups.length, undefined, opts.minSamples);
   if(!plan){
     chip('This page is too heavy for a motion smear');
     return null;
   }
-  const n = plan.n;
+  const n = (typeof opts.n === 'number')
+    ? Math.max(2, Math.min(plan.n, Math.round(opts.n))) : plan.n;
   // The blur passes actually used: the LAST `passes` of the table, so dropping
   // one drops the widest, faintest halo and keeps the core.
   let blur = TWEEN_BLUR.slice(TWEEN_BLUR.length - plan.passes);
+  /* A HALO NEEDS SAMPLES TO HIDE IN. The falloff table was tuned against 26 of
+     them, where three passes read as a soft edge along the travel. Lay the same
+     three over two or three samples and there is nothing to blend: each pass is
+     a visible copy at its own width, so the drawing comes out ringed like a
+     target. Seen directly when the span was first rendered at eight pages.
+     Halos are capped by the sample count; the core is never one of them, so
+     the floor of this is the unblurred exposure the feature began as. */
+  const halos = n >= 10 ? 3 : n >= 5 ? 2 : 1;
+  if(blur.length - 1 > halos) blur = blur.slice(blur.length - 1 - halos);
   // Enough per sample that the exposure sums to a readable figure, capped so a
   // short sample count does not come out as a stack of hard copies. Trimmed
   // when there is a halo carrying part of the weight.
@@ -5684,7 +5723,7 @@ function buildTween(a, b){
   }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
   for(let s = 0; s <= n; s++){
-    const t = s / n;
+    const t = t0 + (t1 - t0) * (s / n);
     for(let p = 0; p < blur.length; p++){
       const pass = blur[p];
       let at = 0;
@@ -5724,18 +5763,48 @@ function buildTween(a, b){
    removed in v290 at the owner's call: an in-between keeps the sample count it
    was made with, and a page that should be lighter is re-added, not rebuilt. */
 
-/* Inserts the exposure between this page and the next. */
+/* How far the furthest-travelling point actually goes. Not the centroid: a
+   figure whose body holds still while one arm swings has barely moved on
+   average, and the arm is the whole reason anyone reached for this. */
+function tweenTravel(a, b){
+  const aligned = tweenAlign(a, b);
+  if(!aligned) return 0;
+  const pa = aligned.a.strokes, pb = aligned.b.strokes;
+  let far = 0;
+  for(let i = 0; i < pa.length; i++)
+    far = Math.max(far, Math.hypot(pb[i].x - pa[i].x, pb[i].y - pa[i].y));
+  return far;
+}
+function tweenSpanCount(a, b){
+  const far = tweenTravel(a, b);
+  return Math.max(1, Math.min(TWEEN_SPAN_MAX, Math.round(far / TWEEN_SPAN_PX)));
+}
+
+/* Inserts the smear between this page and the next, as one page per slice of
+   the path. */
 function addTween(){
   if(playing) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
   if(!b){ chip('A motion smear goes BETWEEN two pages — add the next pose first'); return; }
-  const t = buildTween(a, b);
-  if(!t) return;
+  const m = tweenSpanCount(a, b);
+  // Samples PER PAGE, so the spacing along the ink is what it always was rather
+  // than m times denser. The floor travels with it for the same reason.
+  const per = Math.max(2, Math.round(TWEEN_SAMPLES / m));
+  const made = [];
+  for(let k = 0; k < m; k++){
+    const t = buildTween(a, b, { t0: k / m, t1: (k + 1) / m, n: per,
+                                 minSamples: TWEEN_MIN_SAMPLES / m });
+    // The first failure has already said why in a chip; the rest would only
+    // repeat it, and half a span is worse than none.
+    if(!t) return;
+    made.push(t);
+  }
   invalidateClearUndo(); redoStack.length = 0;
-  frames.splice(idx + 1, 0, t); idx++;
+  frames.splice(idx + 1, 0, ...made); idx++;
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
-  chip('Motion smear added');
+  chip(made.length === 1 ? 'Motion smear added'
+                         : 'Motion smear added — ' + made.length + ' pages');
 }
 
 /* ---------- v295: the in-between, for real ----------------------------------
