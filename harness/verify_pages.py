@@ -445,6 +445,76 @@ with sync_playwright() as p:
     ac.set_viewport_size({"width": 393, "height": 820})
     ac.wait_for_timeout(250)
 
+    # ------------------------------------------------------------------
+    # v295 — THE STRIP SCROLLS THE WAY A REORDER DRAGS.
+    #
+    # Reported from a phone: the thumbnails "move super easy, so if you are
+    # trying to scroll the strip you might move one of the slides out of order",
+    # and tapping one to change pages often did nothing. Both halves are the
+    # same cause — a reorder began after SIX pixels of travel, below every
+    # platform's touch slop, so a scroll flick was a reorder and a tap that
+    # drifted set _pdragSuppressClick and never selected.
+    #
+    # A threshold alone cannot fix it: any scroll long enough passes any
+    # threshold. So the strip itself decides — if its scrollLeft moved while the
+    # finger was down, that finger was scrolling and no reorder begins however
+    # far the drag goes. These three assertions are the three gestures.
+    # ------------------------------------------------------------------
+    def _order():
+        return ac.evaluate("() => frames.map((f, i) => i)") and ac.evaluate(
+            "() => window.__ord || frames.length")
+    ac.evaluate("() => { go(0); strip.scrollLeft = 0; "
+                "        frames.forEach((f, i) => { f.__tag = i; }); }")
+    ac.wait_for_timeout(150)
+    tags = "() => frames.map(f => f.__tag).join(',')"
+    before = ac.evaluate(tags)
+
+    def tile_box(i):
+        return ac.evaluate("""(i) => { const t = strip.querySelectorAll('.frame')[i];
+            const r = t.getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""", i)
+
+    # 1. A SCROLL WINS. Finger down on a tile, the strip scrolls under it, then
+    #    the finger travels far enough that the old six-pixel rule would long
+    #    since have committed to a reorder.
+    b0 = tile_box(0)
+    ac.mouse.move(b0["x"], b0["y"]); ac.mouse.down()
+    ac.evaluate("() => { strip.scrollLeft = strip.scrollLeft + 40; }")
+    ac.mouse.move(b0["x"] + 120, b0["y"], steps=6)
+    ac.mouse.up()
+    ac.wait_for_timeout(200)
+    check("scrolling the strip does not reorder a page",
+          ac.evaluate(tags) == before,
+          f"{before} became {ac.evaluate(tags)} — the strip scrolled under the "
+          f"finger and a page moved anyway")
+
+    # 2. A TAP THAT DRIFTS STILL SELECTS. The other half of the same report.
+    ac.evaluate("() => { go(0); strip.scrollLeft = 0; }")
+    ac.wait_for_timeout(150)
+    b2 = tile_box(2)
+    ac.mouse.move(b2["x"], b2["y"]); ac.mouse.down()
+    ac.mouse.move(b2["x"] + 9, b2["y"], steps=3)     # inside the slop, over the old 6
+    ac.mouse.up()
+    ac.wait_for_timeout(250)
+    check("a tap that drifts a few pixels still changes page",
+          ac.evaluate("() => idx") == 2,
+          f"idx is {ac.evaluate('() => idx')} — a drifting tap used to suppress "
+          f"its own click and leave you on the page you started from")
+
+    # 3. AND A DELIBERATE DRAG STILL REORDERS, which is the assertion that stops
+    #    the two above from being satisfied by breaking the feature outright.
+    ac.evaluate("() => { go(0); strip.scrollLeft = 0; }")
+    ac.wait_for_timeout(150)
+    b0 = tile_box(0); b3 = tile_box(3)
+    ac.mouse.move(b0["x"], b0["y"]); ac.mouse.down()
+    ac.mouse.move(b3["x"], b3["y"], steps=10)
+    ac.mouse.up()
+    ac.wait_for_timeout(250)
+    check("but a deliberate drag across the strip still reorders",
+          ac.evaluate(tags) != before,
+          f"order is still {before} — the fix cannot be 'reordering never "
+          f"happens'")
+
     # The reason reachability matters: the control inserts NEXT TO the page you
     # are on, not at the end. If it appended, scrolling to the end would be the
     # honest interaction and there would be nothing to fix.
