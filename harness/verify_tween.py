@@ -408,9 +408,9 @@ with sync_playwright() as p:
     # they want is unsupported when it is the one that just started working.
     _help = page.evaluate("""() => {
       const tips = [...document.querySelectorAll('.help-tip')];
-      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'In-between');
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Motion Smear');
       return t ? t.textContent.replace(/\\s+/g, ' ') : null; }""")
-    check("the help describes the in-between's ACTUAL requirement",
+    check("the help describes the effect's ACTUAL requirement",
           _help and "number" in _help.lower() and "same strokes on both" not in _help,
           f"{(_help or '')[-190:]!r} — the old text told people to duplicate "
           f"rather than redraw, which is exactly the workflow v255 unblocked")
