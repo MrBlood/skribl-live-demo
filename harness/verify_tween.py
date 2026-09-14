@@ -233,11 +233,14 @@ with sync_playwright() as p:
       return t ? t.textContent.replace(/\\s+/g, ' ') : ''; }""")
     _words = {1:'one', 2:'two', 3:'three', 4:'four', 5:'five', 6:'six',
               7:'seven', 8:'eight', 9:'nine', 10:'ten'}
-    # The message quotes the CLAUSE that carries the number rather than the end
-    # of the paragraph, because "the tip does not say four" is not a finding a
-    # reader can act on without being shown what it says instead.
-    _clause = next((c.strip() for c in re.split(r"[.\u2014]", _tip)
-                    if "up to" in c.lower() or "how many" in c.lower()), _tip[:160])
+    # The message quotes the SENTENCE that carries the number, because "the tip
+    # does not say four" is not a finding a reader can act on without being
+    # shown what it says instead. Sentence, not clause: the first attempt split
+    # on the em-dash too and matched "how many pages depends on how far things
+    # travel" -- the half of the sentence with no number in it, which is a
+    # failure message that reports the problem and hides the evidence.
+    _clause = next((c.strip() for c in _tip.split(".")
+                    if "how many" in c.lower() or "up to" in c.lower()), _tip[:160])
     check("the Help spells the same page cap the code enforces",
           _words.get(_cap, str(_cap)) in _tip.lower(),
           f"the cap is {_cap} ({_words.get(_cap)}) and the tip says: {_clause!r}")
