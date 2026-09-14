@@ -188,9 +188,9 @@ let pageClip = null;
    `idx` is always its other end, so a span needs exactly one extra number. */
 /* v295: _spanSweep and its 450 ms tile hold are gone — the hold now arms a
    REORDER, which is what a phone teaches and what the owner asked for twice.
-   Selecting a range moved to "Select pages" in the menu, where it is visible
-   instead of hidden behind a gesture that collided with scrolling. */
-let spanAnchor = null, _spanPick = false, _pdragArmTimer = null;
+   Selecting a range moved to "Select through here" in a page's own ⋯ popover,
+   beside Move and Copy, which already speak in spans. */
+let spanAnchor = null, _pdragArmTimer = null;
 // Selection tokens — see the note in app.js. Flip is more exposed than the Pad
 // because it clears the input immediately, so a second pick during a slow decode
 // is easy. Bumped on selection AND removal. (Review round 9, #1)
@@ -2288,7 +2288,6 @@ function buildStrip(){
          carry, and the difference that matters is not the gesture — it is that
          a mode you turned on in a menu is one you know you are in, where a
          gesture you triggered by accident is one you are merely surprised by. */
-      if(_spanPick){ extendSpanTo(i); setSpanPick(false); return; }
       // A plain tap means "this page", so it retires the range rather than
       // quietly keeping one the user has visually moved past — the same rule
       // the stroke selection follows for a stray tap outside its box.
@@ -2419,6 +2418,15 @@ function openPageOps(trigger, i){
     ['Move right', 'Move ' + what + ' right', () => spanMove(1),
      sp ? sp.to === n - 1 : i === n - 1],
     ['Copy',       'Copy ' + what,            () => spanCopy(),  false],
+    /* WHERE SELECTING A RANGE LIVES NOW. It was a 450 ms hold on a tile and
+       then a sweep; that hold arms a reorder since v295, because the sweep
+       shared the strip's own scroll direction and a flick moved a page instead.
+       Here it needs no mode and no gesture: this popover already speaks in
+       spans -- Move and Copy above it say "these N pages" -- so "through here"
+       reads as the sentence the rest of the menu is already writing. Disabled
+       on the page you are already on, where it would select nothing. */
+    ['Select through here', 'Select every page from the one you are on through this one',
+     () => extendSpanTo(i), i === idx],
     // The ⋯ menu's half of the Draw switch. The page bar carries the other
     // half and only one of the two is ever rendered, so both must exist or the
     // control disappears at one size class — the split this whole menu exists
@@ -2700,8 +2708,7 @@ function setSpanAnchor(a){
 }
 function clearSpan(quiet){
   if(spanAnchor == null) return false;
-  spanAnchor = null; _spanPick = false;
-  { const b = document.getElementById('miSelectPages'); if(b) b.classList.remove('on'); }
+  spanAnchor = null;
   if(!quiet){ buildStrip(); }
   return true;
 }
@@ -5034,23 +5041,6 @@ musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); 
 const moreScrim=document.getElementById('moreScrim');
 // Shared with Pad via lib/postedui.js — neither editor carries a copy.
 window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : null;
-/* SELECT PAGES. Turns the strip into a "…through here" picker for one gesture's
-   worth of work: the anchor is wherever you are, and the next tap takes the run
-   between. It ends the moment it has done its job, because a mode that outlives
-   its purpose is a trap — and Escape already clears a span, which clears this
-   with it (see clearSpan). Shift-click on a desktop never needed any of this
-   and is untouched. */
-function setSpanPick(on){
-  _spanPick = !!on;
-  const b = document.getElementById('miSelectPages');
-  if(b) b.classList.toggle('on', _spanPick);
-  if(_spanPick){ setSpanAnchor(idx); chip('Tap a page to select through it'); }
-  buildStrip();
-}
-{ const _mi=document.getElementById('miSelectPages');
-  if(_mi) _mi.addEventListener('click', ()=>{
-    if(frames.length < 2){ chip('There is only one page'); return; }
-    closeMenu(); setSpanPick(!_spanPick); }); }
 { const _mi=document.getElementById('miPosted');
   if(_mi) _mi.addEventListener('click', ()=>{ closeMenu(); if(window._skriblPostedUI) window._skriblPostedUI.open(); }); }
 function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
