@@ -2227,7 +2227,11 @@ function buildStrip(){
         if(i !== idx) extendSpanTo(i); else buildStrip();
         if(navigator.vibrate) try{ navigator.vibrate(8); }catch(_){}
       }, 450);
-      _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false, centers:stripTileCenters() };
+      // scrollLeft AT THE MOMENT THE FINGER LANDED, which is what tells a
+      // reorder from a scroll further down. Captured here because by the time
+      // the first pointermove arrives the strip may already have moved.
+      _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false,
+               scroll0: strip.scrollLeft, centers:stripTileCenters() };
     });
     el.addEventListener('click',ev=>{
       // moveOrigin is keyed by ARRAY INDEX, so selecting, adding, deleting or
@@ -2572,10 +2576,36 @@ document.addEventListener('pointermove', ev=>{
 });
 document.addEventListener('pointerup', ()=>{ _spanSweep = false; });
 document.addEventListener('pointercancel', ()=>{ _spanSweep = false; });
+/* THE STRIP SCROLLS THE WAY A REORDER DRAGS, so for a long time they were the
+   same gesture separated by six pixels of travel. Reported from a phone: the
+   thumbnails "move super easy, so if you are trying to scroll the strip you
+   might move one of the slides out of order" -- and the other half of the same
+   report, that tapping one to change pages often did nothing, because a tap
+   that drifts six pixels sets _pdragSuppressClick and the click never lands.
+
+   SIX PIXELS IS BELOW EVERY PLATFORM'S TOUCH SLOP. iOS treats about ten as
+   still-a-tap and a finger on a moving strip travels further than a finger on a
+   button, so the floor goes up -- but a threshold alone cannot fix this, since
+   any scroll long enough eventually passes any threshold.
+
+   SO THE STRIP ITSELF DECIDES. If its scrollLeft moved while the finger was
+   down, the finger was scrolling, and a reorder never begins however far the
+   drag goes. That is a discriminator rather than a guess: it reads what the
+   gesture actually DID instead of how far it went. A reorder already in
+   progress is left alone -- the tile is lifted and following the finger, and
+   snatching it away mid-drag would be worse than either bug. */
+const STRIP_SLOP = 14;
 document.addEventListener('pointermove', ev=>{
   if(!_pdrag) return;
+  if(!_pdrag.moved && strip.scrollLeft !== _pdrag.scroll0){
+    // A scroll won. Drop the reorder AND the pending span sweep: neither is
+    // what this finger is doing.
+    clearTimeout(_spanHoldTimer);
+    _pdrag = null;
+    return;
+  }
   const dx=ev.clientX-_pdrag.startX;
-  if(!_pdrag.moved && Math.abs(dx)<6) return;
+  if(!_pdrag.moved && Math.abs(dx)<STRIP_SLOP) return;
   // Moving cancels the pending sweep: this is a reorder, decided by the finger.
   clearTimeout(_spanHoldTimer);
   if(!_pdrag.moved){ _pdrag.moved=true; _pdrag.el.classList.add('dragging'); }

@@ -6,7 +6,11 @@ the WHOLE PATH between two poses into one page, deliberately, and every
 property pinned below is a property of doing that. Renaming it is the whole
 of that change: not one assertion here moved, because nothing about the
 effect moved. This file keeps its name, and so does `addtween` -- an
-internal name for an algorithm nobody is replacing.
+internal name for an algorithm nobody is replacing. The prose below still says
+"in-between" throughout: it narrates what was decided when it was decided, and
+rewriting it would make the history read as though the name had always been
+right. Where a paragraph described something that no longer EXISTS rather than
+something since renamed, it has been corrected and says so.
 
 WHAT IT IMITATES. Stop-motion shot with the shutter open while the puppet moves,
 so one frame integrates the whole path between two poses. What sells that look is
@@ -58,8 +62,11 @@ STILL HITTING IT. That happened three times in this one feature, each time
 reported again from the same phone after a fix had shipped. Hence: paintStatic
 carries a cost ceiling so pages built BEFORE the hex change paint direct
 (218 ms -> 5.1 ms) while a hand-drawn frame with six see-through strokes still
-layers — a ceiling, not a ban, and both halves are asserted; and "Rebuild
-in-betweens" re-runs the generator over pages already built.
+layers — a ceiling, not a ban, and both halves are asserted. A "Rebuild
+in-betweens" menu item did the other half, re-running the generator over pages
+already built; it was REMOVED in v290 at the owner's call, on the grounds that a
+page which should be lighter is re-added rather than rebuilt. The ceiling is
+what carries old pages now, and it is the half that is pinned.
 
 TWO CEILINGS, NOT ONE, AND ONLY ONE IS FIXED. The postable limit is a constant
 (MAX_POINTS_PER_FRAME, 20,000). The render allowance is 1000/fps, so the same
@@ -68,11 +75,14 @@ document already inside the point budget still stalled. The plan fits both and
 never drops below TWEEN_MIN_SAMPLES, so the exposure coarsens rather than the
 document becoming unshareable.
 
-RECOGNISING A GENERATED PAGE TAKES THREE SIGNALS, because nothing in the format
-marks one and a false positive overwrites somebody's drawing: 8-digit hex ink,
+RECOGNISING A GENERATED PAGE TOOK THREE SIGNALS, because nothing in the format
+marked one and a false positive overwrites somebody's drawing: 8-digit hex ink,
 neighbours that still interpolate, and a run count that is an exact multiple of
-the source's. Rebuild skips pages already at the right count, so running it
-twice is free and says so.
+the source's. That heuristic went with Rebuild in v290 and nothing here asserts
+it. Since v295 a generated page IS marked, though not in the format: the editor
+keeps a recipe beside the frame in a WeakMap, which is what lets the draft store
+{k, n, passes} instead of the points. It is deliberately not a field on the
+frame — see "the frame itself is still strokes/strokeGroups/hold" below.
 
 NO BUDGET CLOSES A DEVICE GAP, which is why the frame bitmap cache exists.
 At 4x CPU throttle one in-between cost ~215 ms against a 41.7 ms slot. The frame

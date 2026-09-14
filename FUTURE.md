@@ -267,6 +267,73 @@ a claim committed at the stat seam must spare the object — lives in
 verify_sweepjob and fails if the per-key re-check is removed. See DECISIONS.md
 (v266) for the design and the honest SQLite bound.
 
+## 6c. Motion Smear, aimed rather than applied (owner, v295)
+
+THE FINDING THAT PRODUCED THIS. The smear looks good when ONE PART of a drawing
+moves and the rest holds still -- a swinging arm, a turning head. It reads as a
+grey blob when the WHOLE figure travels, because nothing stays solid and the eye
+has no anchor. Rendered side by side, same code and same settings, the two cases
+are not close. Every bad example produced during the v295 work was the second
+case, which is why the effect looked worse than it is.
+
+SELECT THE PART THAT MOVES. The owner's proposal, and it fits the code almost
+exactly as it stands: `lib/selection.js` selects BY STROKE GROUP, never by
+individual point, and `buildTween` pairs BY STROKE GROUP index. Same unit. A
+selection is already the argument the smear wants, with no new bookkeeping and
+nothing new in the payload.
+
+  * Sample only the selected runs across the motion; draw every other run once.
+  * Measured on a four-stroke figure: 6,912 points against 1,241, 5.6x lighter.
+    The ratio GROWS with the drawing, because a real page has far more strokes
+    holding still than moving -- which also moves the "too heavy for a motion
+    smear" refusal a long way out.
+  * The bad case becomes unreachable. You cannot select everything and mean it.
+
+Open questions, none blocking: what a smear with NO selection should do (keep
+today's whole-page behaviour is the obvious answer); which page the unselected
+strokes should be drawn from when they are not identical on both (page A, and
+say so in Help); and whether the trail should FADE along the motion rather than
+using flat alpha for every sample, which is one line in the sample loop and
+visibly better where the pose lands.
+
+## 6d. Layers (owner, v295, unexplored)
+
+Raised alongside the selection idea and not yet thought through. Worth noting
+that Skribl has deliberately had no layer concept: a page is a flat list of
+points, which is what makes replay, export, the player and the draft format
+simple enough to have stayed stable across three hundred versions. A layer is a
+schema change every reader of the format would have to honour -- the same trap
+the `pressure` note in flip.js and the blur note in verify_tween both record.
+So: possible, and expensive in a way that is not obvious from the UI side. If
+the motivation is "smear this part and not that part", the selection above buys
+most of it for none of the cost.
+
+## 6e. The filmstrip reorders when you meant to scroll (owner, v295, from a phone)
+
+REPORTED: the page thumbnails are hard to tap to switch pages, and they move too
+easily -- scrolling the strip drags a page out of order.
+
+DIAGNOSED, flip.js: a reorder begins after SIX PIXELS of horizontal movement
+(`if(!_pdrag.moved && Math.abs(dx)<6) return;`) with no time gate. The strip
+SCROLLS HORIZONTALLY, so the scroll gesture and the reorder gesture are the same
+gesture, separated by 6px. On a phone that is nothing, and a scroll flick is a
+reorder. It also explains the other half of the report: a tap that drifts
+slightly sets `_pdragSuppressClick`, so the page never changes.
+
+THE OWNER'S FIX -- hold longer before it moves -- is the right shape, and it
+collides with something: those tiles already use a 450 ms hold for the SPAN
+SWEEP (hold still, then sweep to select a range), so long-press is taken.
+Rehoming that gesture is the real decision.
+
+Two changes that need no gesture redesign and should be tried first:
+
+  * Raise the slop. Six pixels is below every platform's touch slop; iOS uses
+    about ten and a filmstrip wants more, not less.
+  * Let the scroll win. If the strip's own scrollLeft moved during the gesture,
+    the finger was scrolling -- abandon the reorder rather than competing with
+    it. This is the discriminator the current code lacks entirely, and unlike a
+    threshold it cannot be beaten by a longer drag.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
