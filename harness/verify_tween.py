@@ -142,21 +142,42 @@ with sync_playwright() as p:
     page.on("pageerror", lambda e: errs.append(str(e)))
     browsing.goto(page, BASE, "/flip")
 
-    print("IN-BETWEEN — it generates a page between two poses")
+    # v295: THE SMEAR IS A SPAN. Everything between the two poses is what
+    # addTween inserted, and how many there are is scaled by travel. Written as
+    # a helper because eight assertions below used to say "frames[1]" and each
+    # of them meant "what was generated", which is now more than one page.
+    def span():
+        return page.evaluate("""() => {
+          const m = frames.length - 2;
+          return { m, idx, pages: frames.length,
+                   first: m > 0 ? 1 : -1, last: m > 0 ? m : -1 }; }""")
+    def span_pages(field="strokes"):
+        return page.evaluate("""(f) => frames.slice(1, frames.length - 1)
+                                          .map(p => p[f].length)""", field)
+
+    print("MOTION SMEAR — it generates a span of pages between two poses")
     check("Flip booted", page.evaluate("() => !!(window.__skriblBoot && window.__skriblBoot.flip)"),
           "; ".join(errs[:2]))
     page.evaluate(POSES, 150)
     page.evaluate("() => addTween()")
     page.wait_for_timeout(400)
-    check("a page was inserted BETWEEN the two poses",
-          page.evaluate("() => frames.length") == 3
-          and page.evaluate("() => idx") == 1,
-          f"{page.evaluate('() => frames.length')} pages, at index "
-          f"{page.evaluate('() => idx')}")
+    _sp = span()
+    # The arm tip travels 150px here, so travel/30 wants five pages.
+    check("a span of pages was inserted BETWEEN the two poses",
+          _sp["m"] == 5 and _sp["idx"] == 1, str(_sp))
     check("...and the two poses are untouched either side of it",
           page.evaluate("() => frames[0].strokes.length") == 6
-          and page.evaluate("() => frames[2].strokes.length") == 6,
-          "an in-between must not edit what it interpolates")
+          and page.evaluate("() => frames[frames.length - 1].strokes.length") == 6,
+          "a smear must not edit what it interpolates")
+    # THE POINT OF THE SPAN, and the budget that was actually biting: a page of
+    # the span is a fraction of the single page it replaced, while the span as a
+    # whole carries about what that page did. Per page is what the frame budget
+    # and the server cap are measured against.
+    _each = span_pages()
+    check("each page of the span is a fraction of one whole-path exposure",
+          max(_each) < 0.45 * sum(_each),
+          f"pages {_each} — if one page carries most of the span, the split is "
+          f"not doing the thing it exists for")
 
     tw = page.evaluate("() => frames[1]")
     check("the generated page is made of ordinary strokes",
@@ -186,7 +207,33 @@ with sync_playwright() as p:
           f"alphas {sorted(set(round(a, 3) for a in faded))[:4]} — solid samples "
           f"would read as stacked copies, not an exposure")
 
-    print("\nIN-BETWEEN — it has to be cheap enough to PLAY")
+    # A HALO NEEDS SAMPLES TO HIDE IN, and this is the assertion that says so.
+    # The falloff table was tuned against 26 samples, where three passes read as
+    # a soft edge along the travel. Over the two or three samples a six-page span
+    # gives each page there is nothing to blend into: every pass lands as a
+    # visible copy at its own width and the drawing comes out ringed like a
+    # target. Seen directly when the span was first rendered at eight pages.
+    #
+    # Counted by WIDTH, which is the mechanism: the core is drawn at the stroke's
+    # own size and each halo at size + softEdge * its own d, so the number of
+    # distinct widths on a page IS the number of passes it used.
+    page.evaluate(POSES, 260)          # travels far enough to want six pages
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
+    _halo = page.evaluate("""() => {
+      const m = frames.length - 2;
+      const f = frames[1];
+      const widths = [...new Set(f.strokes.map(q => Math.round(q.size * 100)))];
+      return { m, passes: widths.length,
+               samples: f.strokeGroups.length / (widths.length * 2) }; }""")
+    check("a long travel is spread over the most pages the span allows",
+          _halo["m"] == 6, str(_halo))
+    check("...and a page holding few samples drops its halo rather than ringing",
+          _halo["passes"] <= 2,
+          f"{_halo['passes']} widths over about {_halo['samples']:.0f} samples — "
+          f"three passes over three samples is three visible copies, not a blur")
+
+    print("\nMOTION SMEAR — it has to be cheap enough to PLAY")
     # REPORTED FROM A PHONE: "it takes 2 seconds to play 3 frames". paintStatic
     # gives every translucent stroke its own offscreen layer — clear a full
     # canvas, redraw, composite back — to stop a see-through stroke beading at
@@ -274,8 +321,14 @@ with sync_playwright() as p:
     # made sampling uniform in SPACE rather than in TIME, or clamped the spread,
     # this is what would catch it — and the picture would silently stop looking
     # like a long exposure while every other assertion here still passed.
+    # v295: read across the WHOLE span. The uneven falloff is the property, and
+    # a span holds it twice over — inside each page, and across the run of them.
+    # Reading one page would measure a fifth of the travel and call it a
+    # regression.
     spread = page.evaluate("""() => {
-      const f = frames[1];
+      const f = { strokes: [], strokeGroups: [] };
+      for (const p of frames.slice(1, frames.length - 1)) {
+        f.strokes.push(...p.strokes); f.strokeGroups.push(...p.strokeGroups); }
       const arm = [], foot = [];
       let at = 0;
       for (let g = 0; g < f.strokeGroups.length; g++) {
@@ -287,8 +340,27 @@ with sync_playwright() as p:
       const rng = a => Math.max(...a) - Math.min(...a);
       return { arm: rng(arm), foot: rng(foot) };
     }""")
-    check("the part that moved FAR is spread across the exposure",
+    check("the part that moved FAR is spread across the span",
           spread["arm"] > 100, f"arm tip spans {spread['arm']:.0f}px")
+    # And inside a single page, which is what makes each page read as motion
+    # rather than as a still: the same falloff, over its own slice of the path.
+    one = page.evaluate("""() => {
+      const f = frames[1], arm = [], foot = [];
+      let at = 0;
+      for (let g = 0; g < f.strokeGroups.length; g++) {
+        (g % 2 === 0 ? arm : foot).push(f.strokes[at + 2].y);
+        at += f.strokeGroups[g];
+      }
+      const rng = a => Math.max(...a) - Math.min(...a);
+      return { arm: rng(arm), foot: rng(foot) }; }""")
+    check("...and one page of the span carries its own slice of that travel",
+          10 < one["arm"] < spread["arm"] * 0.6,
+          f"one page spans {one['arm']:.0f}px of the span's {spread['arm']:.0f}px — "
+          f"at the bottom it is a still frame, at the top it is the old one-page "
+          f"exposure wearing a span's clothes")
+    check("...with the falloff intact inside that one page",
+          one["arm"] > one["foot"] * 4,
+          f"{one['arm']:.0f}px against {one['foot']:.0f}px")
     check("...and the part that barely moved stays piled up (nearly sharp)",
           spread["foot"] < 6, f"foot spans {spread['foot']:.0f}px")
     check("the ratio is the falloff, and nobody authored it",
@@ -322,13 +394,14 @@ with sync_playwright() as p:
     page.wait_for_timeout(400)
     _hand = page.evaluate("""() => ({
         pages: frames.length,
+        m: frames.length - 2,
         mid: frames[1] ? frames[1].strokes.length : 0,
         poseA: frames[0].strokeGroups.slice(),
-        poseB: frames[2] ? frames[2].strokeGroups.slice() : null,
+        poseB: frames.length > 2 ? frames[frames.length - 1].strokeGroups.slice() : null,
         sums: frames[1] ? frames[1].strokeGroups.reduce((a,b)=>a+b,0) === frames[1].strokes.length : false,
         starts: frames[1] ? frames[1].strokes.filter(p=>p.start).length === frames[1].strokeGroups.length : false })""")
     check("two HAND-DRAWN poses with different point counts now interpolate",
-          _hand["pages"] == 3 and _hand["mid"] > 0,
+          _hand["m"] >= 1 and _hand["mid"] > 0,
           f"{_before[0]} vs {_before[1]} -> {_hand} — a redrawn pose lands a "
           f"different vertex count every time; requiring them to match refused "
           f"the ordinary way people animate")
@@ -359,13 +432,13 @@ with sync_playwright() as p:
     }""")
     page.evaluate("() => addTween()")
     page.wait_for_timeout(350)
-    _dot = page.evaluate("""() => { const f = frames[1]; if (!f) return { pages: frames.length };
-        return { pages: frames.length, pts: f.strokes.length,
+    _dot = page.evaluate("""() => { const f = frames[1]; if (frames.length < 3) return { m: 0 };
+        return { m: frames.length - 2, pts: f.strokes.length,
                  runs: [...new Set(f.strokeGroups)],
                  sums: f.strokeGroups.reduce((a,b)=>a+b,0) === f.strokes.length,
                  starts: f.strokes.filter(p=>p.start).length === f.strokeGroups.length }; }""")
     check("a dot paired against a real run resamples UP to that run's count",
-          _dot.get("pages") == 3 and _dot.get("runs") == [3],
+          _dot.get("m", 0) >= 1 and _dot.get("runs") == [3],
           f"{_dot} — the dot has no arc length to walk, so it must be emitted as "
           f"n copies; returning it unchanged leaves the two poses mismatched, "
           f"which is the exact bug this change is about")
@@ -441,13 +514,18 @@ with sync_playwright() as p:
     }""")
     page.evaluate("() => addTween()")
     page.wait_for_timeout(500)
-    made = page.evaluate("() => frames.length === 3 ? frames[1].strokes.length : 0")
-    check("a heavy page still gets an in-between",
+    made = page.evaluate("() => frames.length > 2 ? Math.max("
+                         "...frames.slice(1, frames.length - 1).map(f => f.strokes.length)) : 0")
+    check("a heavy page still gets a motion smear",
           made > 0, "refusing outright would be worse than a coarser exposure")
-    check("...and it stays under the server's 20,000-point cap",
+    # PER PAGE, because that is what the server refuses and what the frame
+    # budget pays for. The span's total may exceed one page's cap; no single
+    # page of it may.
+    check("...and every page of it stays under the server's 20,000-point cap",
           0 < made < 20000,
-          f"{made} points — 27 samples of this page would be {900*27}, which the "
-          f"server would refuse at the moment the user tried to share")
+          f"heaviest page {made} points — 27 samples of this page would be "
+          f"{900*27}, which the server would refuse at the moment the user "
+          f"tried to share")
 
     print("\nIN-BETWEEN — and the server takes it")
     page.evaluate(POSES, 150)
