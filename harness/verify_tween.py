@@ -382,34 +382,72 @@ with sync_playwright() as p:
     check("...and the page it produces is still well-formed",
           bool(_dot.get("sums")) and bool(_dot.get("starts")), str(_dot))
 
-    print("\nIN-BETWEEN — it refuses rather than guessing")
-    # WHAT IS STILL DECLINED, and it is now the ONLY thing declined: pages with
-    # a different NUMBER of strokes. Pairing three strokes against four means
-    # choosing which one has no partner, and that guess would produce a mess
-    # that reads as a bug in the tool rather than a limit of the idea.
+    print("\nMISMATCHED COUNTS — accepted since v296, not refused")
+    # INVERTED, DELIBERATELY. This block used to assert that pages with a
+    # different NUMBER of strokes produce NO page, and that the refusal names
+    # the two counts. Both were true and both are now the opposite of what the
+    # tool should do: the counts were the wall the owner hit every time he drew
+    # the next pose by hand -- "this one has 5, the next has 7" -- and strokes
+    # are paired by shape since v296, with an unpartnered stroke drawn once.
+    #
+    # An assertion that can only pass while the limitation STANDS is a record of
+    # the limitation, not a guard on the tool. So it guards the achievement now:
+    # this pair must produce a page, and the page must contain the stroke that
+    # had no partner rather than dropping it.
+    # A FIXTURE WHERE THE RIGHT ANSWER IS NOT IN DOUBT. The first version of
+    # this was two 2-point strokes against two more, close enough together that
+    # the runner-up test declined them — defensibly, since a person would
+    # hesitate too. A pin whose correct answer is arguable measures the pin.
+    # This is a figure of two clear strokes against the same figure plus an
+    # extra mark: the two that correspond are obvious, and the extra one has no
+    # partner and must simply be drawn once.
     page.evaluate("""() => {
+      const run = (x0,y0,x1,y1,n) => { const o=[];
+        for(let i=0;i<=n;i++) o.push({ x:x0+(x1-x0)*i/n, y:y0+(y1-y0)*i/n,
+          size:6, color:'#ffffff', erase:false, t:i, start:i===0 }); return o; };
+      const mk = runs => { const f={strokes:[],strokeGroups:[],hold:1};
+        runs.forEach(r=>{ r.forEach((q,i)=>{ const c={...q};
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+          f.strokeGroups.push(r.length); }); return f; };
       frames.length = 0;
-      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
-                              {x:90,y:90,color:'#fff',size:6,t:1,erase:false}],
-                    strokeGroups: [2], hold: 1 });
-      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
-                              {x:50,y:50,color:'#fff',size:6,t:1,erase:false},
-                              {x:10,y:80,color:'#fff',size:6,t:2,erase:false,start:true},
-                              {x:90,y:90,color:'#fff',size:6,t:3,erase:false}],
-                    strokeGroups: [2, 2], hold: 1 });
-      idx = 0; buildStrip(); render();
+      frames.push(mk([ run(120,60,120,240,12), run(120,120,60,180,10) ]));
+      frames.push(mk([ run(120,60,120,240,12), run(120,120,180,180,10),
+                       run(220,60,250,90,6) ]));
+      idx = 0; selSpans = []; buildStrip(); render();
     }""")
     page.evaluate("() => addTween()")
     page.wait_for_timeout(300)
-    check("pages with a different NUMBER of strokes produce no page",
-          page.evaluate("() => frames.length") == 2,
-          "inventing a pairing would produce a mess that reads as a bug in the "
-          "tool rather than a limit of the idea")
-    _msg = page.evaluate("() => (document.getElementById('flipChip')||{}).textContent") or ""
-    check("...and the refusal says what is needed, with the two counts",
-          "number of strokes" in _msg.lower() and "1" in _msg and "2" in _msg,
-          f"{_msg!r} — 'the same strokes on both' did not say WHICH of the two "
-          f"things it meant, and after v255 only one of them is still required")
+    check("one stroke against two now PRODUCES a page",
+          page.evaluate("() => frames.length") == 3,
+          "the count wall is what v296 removed; refusing here is the old "
+          "behaviour, not a safety net")
+    check("...and the refusal message is gone with it",
+          "number of strokes" not in (page.evaluate(
+              "() => (document.getElementById('flipChip')||{}).textContent") or "").lower(),
+          "the chip is still explaining a rule the tool no longer has")
+
+    # AND WHAT IS STILL DECLINED: two drawings with nothing in common, where
+    # every pairing would be a guess. This is the pin that stops "pair anything
+    # with anything" from satisfying the two above.
+    page.evaluate("""() => {
+      frames.length = 0;
+      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
+                              {x:14,y:14,color:'#fff',size:6,t:1,erase:false}],
+                    strokeGroups: [2], hold: 1 });
+      frames.push({ strokes: [{x:300,y:300,color:'#fff',size:6,t:0,erase:false,start:true},
+                              {x:20,y:290,color:'#fff',size:6,t:1,erase:false},
+                              {x:295,y:20,color:'#fff',size:6,t:2,erase:false},
+                              {x:30,y:30,color:'#fff',size:6,t:3,erase:false}],
+                    strokeGroups: [4], hold: 1 });
+      idx = 0; selSpans = []; buildStrip(); render();
+    }""")
+    _before = page.evaluate("() => frames.length")
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(300)
+    check("a tiny mark against a huge scrawl is still declined",
+          page.evaluate("() => frames.length") == _before,
+          "pairing these would smear a 4px mark across the whole page, which "
+          "reads as a bug in the tool rather than a limit of the idea")
 
     # THE HELP HAS TO AGREE WITH THE TOOL. It said "It needs the same strokes on
     # both pages, so duplicate and move rather than redrawing from scratch" --
