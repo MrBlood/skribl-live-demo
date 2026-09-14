@@ -91,6 +91,13 @@ with sync_playwright() as p:
     dst = tiles.nth(1).bounding_box()
     pg.mouse.move(src["x"] + src["width"] / 2, src["y"] + src["height"] / 2)
     pg.mouse.down()
+    # HOLD FIRST — v295. The strip scrolls the way a reorder drags, so from a
+    # phone a flick along it shuffled pages and a tap that drifted six pixels
+    # suppressed its own click. The reorder is armed by a ~400 ms hold now, and
+    # any movement before that disarms it: a drag with no wait is a scroll, and
+    # the app is meant to ignore it. This wait is the gesture, not a settle —
+    # delete it and these two assertions go red because nothing moves.
+    pg.wait_for_timeout(550)
     for k in range(12):
         pg.mouse.move(src["x"] + src["width"] / 2 + (dst["x"] - src["x"]) * (k + 1) / 12,
                       src["y"] + src["height"] / 2)
