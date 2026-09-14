@@ -1125,6 +1125,88 @@ with sync_playwright() as p:
           f"{order['count']} ink strokes; the replacement drawn over the rubbed "
           f"area is being treated as rubbed out itself")
 
+    # ---------------------------------------------------------------- v296
+    # AIMED AT THE PART THAT MOVES.
+    print("\nAIMED — the selection is the argument the effect wanted")
+    FIG = """(deg) => {
+      const line=(x0,y0,x1,y1,n)=>{const o=[];for(let i=0;i<=n;i++)
+        o.push({x:x0+(x1-x0)*i/n,y:y0+(y1-y0)*i/n,size:6,color:'#ffffff',t:0});return o;};
+      const rot=(pts,cx,cy,d)=>{const r=d*Math.PI/180,c=Math.cos(r),sn=Math.sin(r);
+        return pts.map(q=>({...q,x:cx+(q.x-cx)*c-(q.y-cy)*sn,y:cy+(q.x-cx)*sn+(q.y-cy)*c}));};
+      const runs=[line(240,60,240,180,12), line(240,188,240,380,12),
+                  rot(line(240,240,240,380,10),240,240,deg), line(240,380,320,500,10)];
+      const f={strokes:[],strokeGroups:[],hold:1};
+      runs.forEach(r=>{r.forEach((q,i)=>{const c={...q};
+        if(i===0)c.start=true; else delete c.start; f.strokes.push(c);});
+        f.strokeGroups.push(r.length);});
+      return f;
+    }"""
+    SETUP = """([mk, deg, sel]) => {
+      const f = new Function('return ' + mk)();
+      frames.length = 0; frames.push(f(20)); frames.push(f(deg));
+      idx = 0; actionLog.length = 0; redoStack.length = 0;
+      const v = tweenVisible(frames[0]);
+      selSpans = sel === null ? [] : sel.map(i => v.inkSpans[i]);
+      buildStrip(); render();
+      const before = frames.length;
+      addTween();
+      if(frames.length === before) return null;
+      const g = frames[1];
+      return { points: g.strokes.length, groups: g.strokeGroups.length,
+               recipe: (function(){ const r = genRecipe.get(g);
+                 return r ? { n: r.n, passes: r.passes, aim: r.aim || null } : null; })() };
+    }"""
+    whole = page.evaluate(SETUP, [FIG, -125, None])
+    armed = page.evaluate(SETUP, [FIG, -125, [2]])
+    check("a smear with nothing selected is the whole page, as before",
+          whole and whole["recipe"] and whole["recipe"]["aim"] is None,
+          f"{whole and whole['recipe']} — an empty selection must not aim anything")
+    check("selecting one stroke aims the smear at it",
+          armed and armed["recipe"] and armed["recipe"]["aim"] == [2],
+          f"{armed and armed['recipe']} — the selection was not read")
+    check("...and the page is lighter for it",
+          armed and whole and armed["points"] < whole["points"],
+          f"{armed and armed['points']} aimed vs {whole and whole['points']} whole")
+    check("...because the still strokes are drawn ONCE, not sampled",
+          # three unaimed runs of 13, 13 and 11 points, once each
+          armed and (armed["points"] - 37) % (armed["recipe"]["n"] + 1) == 0,
+          f"{armed and armed['points']} points do not decompose into the still "
+          f"strokes plus a whole number of samples")
+
+    # SELECTING EVERYTHING IS NOT A SPECIAL CASE, and this is the pin that stops
+    # "aim at nothing" from satisfying the three above.
+    allsel = page.evaluate(SETUP, [FIG, -125, [0, 1, 2, 3]])
+    check("selecting every stroke is the whole page again",
+          allsel and allsel["recipe"] and allsel["recipe"]["aim"] is None
+          and allsel["points"] == whole["points"],
+          f"{allsel and allsel['recipe']}, {allsel and allsel['points']} points "
+          f"against {whole and whole['points']}")
+
+    # THE AIM IS PART OF THE RECIPE, or a stored page comes back un-aimed. This
+    # drives the real round trip rather than reading the WeakMap.
+    #
+    # RE-ARMED FIRST, deliberately. The select-everything case above leaves an
+    # UNAIMED page in frames[1], and running the round trip on that reported
+    # "the aim did not survive" against code that was fine — the test's own
+    # ordering, caught by this pin on its first run.
+    page.evaluate(SETUP, [FIG, -125, [2]])
+    trip = page.evaluate("""() => {
+      const json = JSON.stringify(serializeFlip({ recipes: true }));
+      const stored = JSON.parse(json).frames[1];
+      const was = frames[1].strokes.length;
+      applyPayload(JSON.parse(json));
+      return { viaRecipe: !!(stored && stored.gen), aim: stored && stored.gen && stored.gen.aim,
+               was: was, now: frames[1] ? frames[1].strokes.length : null };
+    }""")
+    check("an aimed page is stored as a recipe", trip["viaRecipe"],
+          "it was written out in full, so this proves nothing about the recipe")
+    check("...whose aim survives the draft", trip["aim"] == [2],
+          f"gen.aim is {trip['aim']} — the rebuild would un-aim the page")
+    check("...and it rebuilds to the SAME page, not a whole-page smear",
+          trip["was"] == trip["now"],
+          f"{trip['was']} points saved, {trip['now']} rebuilt — a draft that "
+          f"reloads different from the one it stored")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
