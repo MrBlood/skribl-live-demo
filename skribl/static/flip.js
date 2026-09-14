@@ -6103,7 +6103,7 @@ function tweenAlign(a, b){
     B.strokes.push(...pb); B.strokeGroups.push(pb.length);
   }
   if(!A.strokeGroups.length) return null;      // nothing paired at all
-  return { a: A, b: B, unpaired: unpaired };
+  return { a: A, b: B, unpaired: unpaired, anyMoved: anyMoved };
 }
 
 function tweenMismatch(a, b){
@@ -6177,7 +6177,10 @@ function tweenFade(col, mul){
 
 /* Builds the exposure between pages A and B. Returns a frame, or null with the
    reason already chipped. */
+// What the last buildTween sampled and what it carried, for the message.
+let tweenLastReport = null;
 function buildTween(a, b, want){
+  tweenLastReport = null;
   const why = tweenMismatch(a, b);
   if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
@@ -6212,6 +6215,7 @@ function buildTween(a, b, want){
   // A stroke the matcher could not place is drawn once, exactly like a stroke
   // the artist chose not to aim at. Same picture, same code path.
   if(aligned.unpaired && aligned.unpaired.length) still = still.concat(aligned.unpaired);
+  const anyMovedHere = !!aligned.anyMoved;
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
   // A REBUILT PAGE HAS TO COME BACK THE SAME. The plan depends on the frame
@@ -6270,6 +6274,14 @@ function buildTween(a, b, want){
      not storing it at all. */
   genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, aim: aim.slice() }
                          : { k: 'smear', n: n, passes: blur.length });
+  /* WHAT IT DID, for the caller to say out loud. Reported with a picture: a
+     generated page that "is just a copy of slide 1" -- which is exactly what a
+     smear looks like when nothing on the two pages moved far enough to sample,
+     and the chip said "Motion smear added" either way. A person cannot tell
+     "it worked and the motion is small" from "it found nothing to smear", and
+     neither could I from the screenshot. The page says so now. */
+  tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
+                      anyMoved: anyMovedHere };
   for(let s = 0; s <= n; s++){
     const t = s / n;
     for(let p = 0; p < blur.length; p++){
@@ -6348,10 +6360,19 @@ function addTween(){
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
   // Say WHICH it was. A person who selected part of the drawing and got the
   // same six words as always cannot tell whether the selection was read.
-  chip(aim
-    ? ('Motion smear of ' + aim.length + (aim.length === 1 ? ' stroke' : ' strokes')
-       + ' \u2014 the rest drawn once')
-    : 'Motion smear added');
+  const rep = tweenLastReport;
+  const nOf = (k) => k + (k === 1 ? ' stroke' : ' strokes');
+  /* THE CASE THAT PROMPTED THIS: "the middle slide is just a copy of slide 1".
+     That is what a smear looks like when nothing travelled far enough to leave
+     a trail, and the old message said "Motion smear added" regardless -- so
+     there was no way to tell a working smear of a small motion from a page
+     with nothing to smear. Now the page says which. */
+  chip(!rep ? 'Motion smear added'
+    : !rep.anyMoved
+      ? 'These two pages look the same \u2014 nothing moved far enough to smear'
+    : rep.carried === 0 ? 'Motion smear added'
+    : ('Motion smear \u2014 ' + nOf(rep.sampled) + ' moved, '
+       + rep.carried + ' drawn once'));
 }
 
 /* ---------- v295: the in-between, for real ----------------------------------

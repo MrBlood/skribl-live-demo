@@ -1407,6 +1407,23 @@ with sync_playwright() as p:
     check("a 4px mark pairs with nothing on a page-wide scrawl",
           nothing == [None], str(nothing))
 
+    # THE PAGE SAYS WHAT IT DID. Reported with a picture: a generated page that
+    # "is just a copy of slide 1" — which is exactly what a smear looks like
+    # when nothing travelled far enough to leave a trail, and the chip said
+    # "Motion smear added" either way. There was no way for the artist, or for
+    # me reading the screenshot, to tell a working smear of a small motion from
+    # a page with nothing to smear.
+    print("\nWHAT THE PAGE SAYS IT DID")
+    said = smear(pose(20), pose(-125))
+    check("a smear that moved one stroke says so, and says what it kept",
+          said["chip"] and "1 stroke moved" in said["chip"]
+          and "drawn once" in said["chip"], repr(said["chip"]))
+    same = smear(pose(20), pose(20))
+    check("two pages that look the same say THAT, rather than 'added'",
+          same["chip"] and "nothing moved far enough" in same["chip"].lower(),
+          f"{same['chip']!r} — a page that looks like a copy of the one before "
+          f"it needs to say why, or it reads as the tool being broken")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
