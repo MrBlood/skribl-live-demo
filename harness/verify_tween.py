@@ -382,34 +382,72 @@ with sync_playwright() as p:
     check("...and the page it produces is still well-formed",
           bool(_dot.get("sums")) and bool(_dot.get("starts")), str(_dot))
 
-    print("\nIN-BETWEEN — it refuses rather than guessing")
-    # WHAT IS STILL DECLINED, and it is now the ONLY thing declined: pages with
-    # a different NUMBER of strokes. Pairing three strokes against four means
-    # choosing which one has no partner, and that guess would produce a mess
-    # that reads as a bug in the tool rather than a limit of the idea.
+    print("\nMISMATCHED COUNTS — accepted since v296, not refused")
+    # INVERTED, DELIBERATELY. This block used to assert that pages with a
+    # different NUMBER of strokes produce NO page, and that the refusal names
+    # the two counts. Both were true and both are now the opposite of what the
+    # tool should do: the counts were the wall the owner hit every time he drew
+    # the next pose by hand -- "this one has 5, the next has 7" -- and strokes
+    # are paired by shape since v296, with an unpartnered stroke drawn once.
+    #
+    # An assertion that can only pass while the limitation STANDS is a record of
+    # the limitation, not a guard on the tool. So it guards the achievement now:
+    # this pair must produce a page, and the page must contain the stroke that
+    # had no partner rather than dropping it.
+    # A FIXTURE WHERE THE RIGHT ANSWER IS NOT IN DOUBT. The first version of
+    # this was two 2-point strokes against two more, close enough together that
+    # the runner-up test declined them — defensibly, since a person would
+    # hesitate too. A pin whose correct answer is arguable measures the pin.
+    # This is a figure of two clear strokes against the same figure plus an
+    # extra mark: the two that correspond are obvious, and the extra one has no
+    # partner and must simply be drawn once.
     page.evaluate("""() => {
+      const run = (x0,y0,x1,y1,n) => { const o=[];
+        for(let i=0;i<=n;i++) o.push({ x:x0+(x1-x0)*i/n, y:y0+(y1-y0)*i/n,
+          size:6, color:'#ffffff', erase:false, t:i, start:i===0 }); return o; };
+      const mk = runs => { const f={strokes:[],strokeGroups:[],hold:1};
+        runs.forEach(r=>{ r.forEach((q,i)=>{ const c={...q};
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+          f.strokeGroups.push(r.length); }); return f; };
       frames.length = 0;
-      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
-                              {x:90,y:90,color:'#fff',size:6,t:1,erase:false}],
-                    strokeGroups: [2], hold: 1 });
-      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
-                              {x:50,y:50,color:'#fff',size:6,t:1,erase:false},
-                              {x:10,y:80,color:'#fff',size:6,t:2,erase:false,start:true},
-                              {x:90,y:90,color:'#fff',size:6,t:3,erase:false}],
-                    strokeGroups: [2, 2], hold: 1 });
-      idx = 0; buildStrip(); render();
+      frames.push(mk([ run(120,60,120,240,12), run(120,120,60,180,10) ]));
+      frames.push(mk([ run(120,60,120,240,12), run(120,120,180,180,10),
+                       run(220,60,250,90,6) ]));
+      idx = 0; selSpans = []; buildStrip(); render();
     }""")
     page.evaluate("() => addTween()")
     page.wait_for_timeout(300)
-    check("pages with a different NUMBER of strokes produce no page",
-          page.evaluate("() => frames.length") == 2,
-          "inventing a pairing would produce a mess that reads as a bug in the "
-          "tool rather than a limit of the idea")
-    _msg = page.evaluate("() => (document.getElementById('flipChip')||{}).textContent") or ""
-    check("...and the refusal says what is needed, with the two counts",
-          "number of strokes" in _msg.lower() and "1" in _msg and "2" in _msg,
-          f"{_msg!r} — 'the same strokes on both' did not say WHICH of the two "
-          f"things it meant, and after v255 only one of them is still required")
+    check("one stroke against two now PRODUCES a page",
+          page.evaluate("() => frames.length") == 3,
+          "the count wall is what v296 removed; refusing here is the old "
+          "behaviour, not a safety net")
+    check("...and the refusal message is gone with it",
+          "number of strokes" not in (page.evaluate(
+              "() => (document.getElementById('flipChip')||{}).textContent") or "").lower(),
+          "the chip is still explaining a rule the tool no longer has")
+
+    # AND WHAT IS STILL DECLINED: two drawings with nothing in common, where
+    # every pairing would be a guess. This is the pin that stops "pair anything
+    # with anything" from satisfying the two above.
+    page.evaluate("""() => {
+      frames.length = 0;
+      frames.push({ strokes: [{x:10,y:10,color:'#fff',size:6,t:0,erase:false,start:true},
+                              {x:14,y:14,color:'#fff',size:6,t:1,erase:false}],
+                    strokeGroups: [2], hold: 1 });
+      frames.push({ strokes: [{x:300,y:300,color:'#fff',size:6,t:0,erase:false,start:true},
+                              {x:20,y:290,color:'#fff',size:6,t:1,erase:false},
+                              {x:295,y:20,color:'#fff',size:6,t:2,erase:false},
+                              {x:30,y:30,color:'#fff',size:6,t:3,erase:false}],
+                    strokeGroups: [4], hold: 1 });
+      idx = 0; selSpans = []; buildStrip(); render();
+    }""")
+    _before = page.evaluate("() => frames.length")
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(300)
+    check("a tiny mark against a huge scrawl is still declined",
+          page.evaluate("() => frames.length") == _before,
+          "pairing these would smear a 4px mark across the whole page, which "
+          "reads as a bug in the tool rather than a limit of the idea")
 
     # THE HELP HAS TO AGREE WITH THE TOOL. It said "It needs the same strokes on
     # both pages, so duplicate and move rather than redrawing from scratch" --
@@ -1206,6 +1244,142 @@ with sync_playwright() as p:
           trip["was"] == trip["now"],
           f"{trip['was']} points saved, {trip['now']} rebuilt — a draft that "
           f"reloads different from the one it stored")
+
+    # ---------------------------------------------------------------- v296
+    # PAIRED BY SHAPE, AND AIMED WITHOUT BEING ASKED.
+    print("\nMATCHING — which stroke is which, and which of them moved")
+    FIGM = """(deg, extra) => {
+      const line=(x0,y0,x1,y1,n)=>{const o=[];for(let i=0;i<=n;i++)
+        o.push({x:x0+(x1-x0)*i/n,y:y0+(y1-y0)*i/n,size:6,color:'#ffffff',erase:false,t:0});return o;};
+      const circ=(cx,cy,r)=>{const o=[];for(let i=0;i<=28;i++){const a=i/28*Math.PI*2;
+        o.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,size:6,color:'#ffffff',erase:false,t:0});}return o;};
+      const rot=(q,cx,cy,d)=>{const r=d*Math.PI/180,c=Math.cos(r),sn=Math.sin(r);
+        return q.map(z=>({...z,x:cx+(z.x-cx)*c-(z.y-cy)*sn,y:cy+(z.x-cx)*sn+(z.y-cy)*c}));};
+      const runs=[circ(240,140,48), line(240,188,240,380,12),
+                  rot(line(240,240,240,380,10),240,240,deg), line(240,380,320,500,10)];
+      if(extra) runs.push(line(300,120,340,140,6));
+      const f={strokes:[],strokeGroups:[],hold:1};
+      runs.forEach(r=>{r.forEach((q,i)=>{const c={...q};
+        if(i===0)c.start=true; else delete c.start; f.strokes.push(c);});
+        f.strokeGroups.push(r.length);});
+      return f;
+    }"""
+    def pose(deg, extra=False, scramble=False, shift=0, reverse_arm=False):
+        return page.evaluate("""([mk,deg,extra,scr,shift,revArm]) => {
+          const f = new Function('return ' + mk)()(deg, extra);
+          if(shift) f.strokes.forEach(q => { q.x += shift; });
+          if(revArm){
+            const runs=[]; let at=0;
+            f.strokeGroups.forEach(n=>{ runs.push(f.strokes.slice(at,at+n)); at+=n; });
+            runs[2].reverse();
+            const g={strokes:[],strokeGroups:[],hold:1};
+            runs.forEach(r=>{ r.forEach((q,i)=>{const c={...q};
+              if(i===0)c.start=true; else delete c.start; g.strokes.push(c);});
+              g.strokeGroups.push(r.length); });
+            return g;
+          }
+          if(!scr) return f;
+          // redraw the SAME pose with its strokes in another order
+          const runs=[]; let at=0;
+          f.strokeGroups.forEach(n=>{ runs.push(f.strokes.slice(at,at+n)); at+=n; });
+          const order=[3,0,2,1].concat(runs.length>4?[4]:[]);
+          const g={strokes:[],strokeGroups:[],hold:1};
+          order.forEach(k=>{ const r=runs[k]; r.forEach((q,i)=>{const c={...q};
+            if(i===0)c.start=true; else delete c.start; g.strokes.push(c);});
+            g.strokeGroups.push(r.length); });
+          return g;
+        }""", [FIGM, deg, extra, scramble, shift, reverse_arm])
+
+    def smear(a, b):
+        return page.evaluate("""([a,b]) => {
+          frames.length = 0; frames.push(a); frames.push(b);
+          idx = 0; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+          buildStrip(); render();
+          const n = frames.length;
+          addTween();
+          if(frames.length === n) return { refused: true,
+            chip: (document.getElementById('flipChip')||{}).textContent };
+          return { refused: false, points: frames[1].strokes.length,
+                   groups: frames[1].strokeGroups.length,
+                   chip: (document.getElementById('flipChip')||{}).textContent };
+        }""", [a, b])
+
+    plain = smear(pose(20), pose(-125))
+    check("an arm swinging 145 degrees is smeared", not plain["refused"], str(plain))
+
+    # ASSERT THE PAIRING, NOT THE PAGE SIZE. The first version of this block
+    # checked that a scrambled-order pose produced a page of about the same
+    # number of points as an in-order one -- and a WRONG pairing produces a
+    # page of about the same size too, so three of four mutations passed it:
+    # pairing by drawing order, comparing in page coordinates instead of about
+    # each page's centre, and ignoring that a limb may be redrawn backwards.
+    # All three were invisible to it. The pairing itself is what this measures
+    # now, which is the mechanism rather than a shadow of it.
+    def pairing(a, b):
+        return page.evaluate("""([a,b]) => {
+          const ia = tweenVisible(a).ink, ib = tweenVisible(b).ink;
+          return tweenMatch(ia, ib).map(m => m ? { j: m.j, rev: !!m.reversed } : null);
+        }""", [a, b])
+
+    inorder = pairing(pose(20), pose(-125))
+    check("in drawing order, every stroke pairs with its own partner",
+          [m and m["j"] for m in inorder] == [0, 1, 2, 3], str(inorder))
+
+    # SCRAMBLED: the same four strokes, recorded in the order 3,0,2,1. Pairing
+    # by index would return 0,1,2,3 and be wrong for three of the four.
+    scram = pairing(pose(20), pose(-125, scramble=True))
+    check("redrawn in ANOTHER STROKE ORDER, they still pair by shape",
+          [m and m["j"] for m in scram] == [1, 3, 2, 0],
+          f"{scram} — pairing by the order your hand took is what put the "
+          f"outline with the mouth")
+
+    # TRAVELLED: the whole figure moves 90px right. Comparing in page
+    # coordinates pairs each stroke with whatever is now nearest, which is the
+    # wrong stroke; comparing about each page's own centre does not.
+    moved = pairing(pose(20), pose(20, shift=90))
+    check("when the WHOLE drawing travels, every stroke still finds itself",
+          [m and m["j"] for m in moved] == [0, 1, 2, 3],
+          f"{moved} — measured about each page's own centre, or 'which stroke "
+          f"is nearest' is answered by the wrong stroke")
+
+    # BACKWARDS: one limb recorded end-to-start. It is the same limb, and the
+    # interpolation has to know, or the stroke turns itself inside out.
+    # THE SAME POSE, with the arm recorded end-to-start. Comparing it against a
+    # pose rotated 145 degrees — which the first version of this pin did — asks
+    # the wrong question: reversing a straight line is close to flipping it 180
+    # degrees, so on that pair the UN-reversed comparison genuinely wins and
+    # rev:False is the right answer. The reversal has to be the only difference
+    # for the flag to mean anything.
+    back = pairing(pose(20), pose(20, reverse_arm=True))
+    check("a limb redrawn BACKWARDS pairs with itself, and is flagged reversed",
+          [m and m["j"] for m in back] == [0, 1, 2, 3]
+          and back[2] and back[2]["rev"] is True,
+          f"{back} — without the flag the stroke interpolates end-to-start "
+          f"and turns inside out on the way across")
+    # WHAT THIS DOES NOT COVER, recorded rather than left to be discovered:
+    # it pins the FLAG, not the use of it. A mutation that computes the flag
+    # correctly and then ignores it downstream passes, because every stroke in
+    # this fixture is straight — reversing a straight line interpolates it
+    # along itself, which looks identical. Catching that needs a curved stroke,
+    # and no fixture here has one.
+
+    # A 4px mark and a scrawl across the whole page: nothing about them is the
+    # same stroke, and the length guard is what says so.
+    junk = page.evaluate("""() => ({
+      strokes: [{x:10,y:10,size:6,color:'#fff',erase:false,t:0,start:true},
+                {x:13,y:13,size:6,color:'#fff',erase:false,t:1}],
+      strokeGroups: [2], hold: 1 })""")
+    scrawl = page.evaluate("""() => ({
+      strokes: [{x:300,y:300,size:6,color:'#fff',erase:false,t:0,start:true},
+                {x:20,y:290,size:6,color:'#fff',erase:false,t:1},
+                {x:295,y:20,size:6,color:'#fff',erase:false,t:2},
+                {x:30,y:30,size:6,color:'#fff',erase:false,t:3}],
+      strokeGroups: [4], hold: 1 })""")
+    # AND NOTHING PAIRS WITH ANYTHING: the pin that stops "pair everything"
+    # from satisfying all of the above.
+    nothing = pairing(junk, scrawl)
+    check("a 4px mark pairs with nothing on a page-wide scrawl",
+          nothing == [None], str(nothing))
 
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()

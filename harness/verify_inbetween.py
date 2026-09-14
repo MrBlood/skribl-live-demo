@@ -117,6 +117,18 @@ LENGTH = """(f) => {
   return L;
 }"""
 
+# Two identical pages, built fresh, so the last-page test owns its own state.
+ONE_PAIR = """() => {
+  const one = { strokes: [
+    { x: 100, y: 100, color: '#ffffff', size: 6, t: 0, erase: false, start: true },
+    { x: 200, y: 200, color: '#ffffff', size: 6, t: 1, erase: false }],
+    strokeGroups: [2], hold: 1 };
+  frames.length = 0;
+  frames.push(one, JSON.parse(JSON.stringify(one)));
+  idx = 0; buildStrip(); render();
+}"""
+
+
 with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page(viewport={"width": 1100, "height": 900})
@@ -216,20 +228,32 @@ with sync_playwright() as p:
         strokeGroups: [2, 2], hold: 1 };
       frames.length = 0; frames.push(one, two); idx = 0; buildStrip(); render(); }""")
     page.evaluate("() => addInbetween()")
-    page.wait_for_timeout(300)
-    check("a different number of strokes is refused rather than guessed at",
-          page.evaluate("() => frames.length") == 2,
-          "inventing a pairing produces a mess that reads as a broken tool")
+    # INVERTED IN v296, for the same reason as its twin in verify_tween: this
+    # asserted that a different NUMBER of strokes is refused, which was the
+    # wall the owner hit on every hand-drawn pose. Strokes pair by shape now
+    # and one with no partner is carried rather than guessed at, so the pin
+    # guards the achievement instead of remembering the limitation.
+    check("a different number of strokes now produces a pose",
+          page.evaluate("() => frames.length") == 3,
+          "the count wall is what v296 removed; refusing here is the old "
+          "behaviour, not a safety net")
     msg = page.evaluate("() => (document.getElementById('flipChip')||{}).textContent") or ""
-    check("...and the refusal names an in-between, not a smear",
-          "in-between" in msg.lower() and "smear" not in msg.lower(), repr(msg))
+    check("...and nothing refuses on the count any more",
+          "number of strokes" not in msg.lower(), repr(msg))
 
-    page.evaluate("() => { go(1); }")
+    # ITS OWN STATE, not whatever the block above left behind. That block used
+    # to leave two frames and this one relied on it; now that it leaves three,
+    # "go to the last page" landed on a page that HAS a next one and an
+    # in-between was added where a refusal was expected. A test that depends on
+    # its predecessor's leftovers is measuring the predecessor.
+    page.evaluate(ONE_PAIR)
+    page.evaluate("() => { go(frames.length - 1); }")
+    _n = page.evaluate("() => frames.length")
     page.evaluate("() => addInbetween()")
     page.wait_for_timeout(300)
     msg = page.evaluate("() => (document.getElementById('flipChip')||{}).textContent") or ""
     check("on the last page it explains there is no next pose",
-          page.evaluate("() => frames.length") == 2 and "BETWEEN" in msg, repr(msg))
+          page.evaluate("() => frames.length") == _n and "BETWEEN" in msg, repr(msg))
 
     print("\nORDINARY STROKE DATA — the player has learned nothing new")
     page.evaluate(LIMB, 70)

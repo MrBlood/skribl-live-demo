@@ -5669,6 +5669,148 @@ function tweenPlan(per, groupsPer, atFps, reserve){
   return { passes: 1, n: bare };
 }
 
+/* ---------- v296: WHICH STROKE IS WHICH ------------------------------------
+
+   Strokes paired by DRAWING ORDER, and the two pages had to hold the same
+   number of them. Both halves of that were wrong on real drawings, and the
+   owner hit each in turn: redraw a pose and the outline pairs with the mouth;
+   draw the next pose freehand and the counts differ, so the answer is a
+   refusal -- "this one has 5, the next has 7" -- with no way forward.
+
+   The pairing is MEASURED now. Every candidate was scored against nine
+   fixtures whose correct pairing is stated rather than admired: same order,
+   scrambled order, whole figure travelling, five against seven, seven against
+   five, four same-length limbs, a limb redrawn backwards, scrambled AND
+   travelling, and one stroke replaced by an unrelated one.
+
+     measure                          fixtures solved
+     stroke length alone                    8/9   <- and only by accident; the
+                                                     first fixture set had five
+                                                     strokes of five distinct
+                                                     lengths, which is why the
+                                                     same-length-limbs case is
+                                                     in the set at all
+     centroid / endpoints / bbox            7/9   <- all failed whenever the
+                                                     whole drawing moved
+     shape, page-relative                   9/9
+
+   TRANSLATION-INVARIANCE WAS THE WHOLE DIFFERENCE. When an entire drawing
+   travels, "which stroke is nearest" is answered by the wrong stroke. Each
+   page is compared about its OWN centre, so a figure that walks across the
+   page still pairs head to head.
+
+   THE REJECTION IS A LENGTH GUARD, and getting there cost three wrong turns.
+
+     rejection                  kept   MISPAIRED   MOTION DROPPED
+     none                      61/61       2              0
+     length guard alone        61/61       1              0
+     length guard + a ratio    60/61       1              1
+
+   THE RIGHT-HAND COLUMN IS THE ONE THAT DECIDED IT, and it only exists because
+   the first scoring was wrong. Every unpaired stroke was counted the same,
+   which made a setting look best while it was quietly rejecting the swinging
+   arm. They are not the same. A STILL stroke left unpaired is drawn once --
+   exactly what it looks like, so it costs nothing. The stroke that MOVED, left
+   unpaired, means the smear leaves the motion out: the feature failing
+   silently, which is worse than a visible wrong answer because nobody can see
+   what to report.
+
+   A COST CEILING IS WRONG IN PRINCIPLE, whatever its value, because big motion
+   IS big distance -- so a ceiling rejects exactly the stroke somebody wants
+   smeared. Measured: an arm swinging 145 degrees, dropped. The first fixtures
+   all moved a little, which is why the set could not see it.
+
+   A RUNNER-UP RATIO reads well and earns nothing. Accept a pair only when it
+   beats that stroke's second choice -- and a stroke that moved far is barely
+   closer to its own partner than to anything else, so the test rejects it.
+   Measured, it cost one moving stroke and prevented no mispairing the length
+   guard had not already caught.
+
+   SO THE GUARD IS LENGTH. A stroke can travel any distance and still be the
+   same stroke; what it cannot do is become four times longer. That separates a
+   4px mark from a scrawl across the whole page without touching a limb that
+   swings, and it is flat from 2x to 12x on the set -- 4 is the middle of a
+   plateau, not a tuned edge.
+
+   WHAT IS LEFT, STATED PLAINLY: one mispair in the set, where a stroke was
+   deleted and an unrelated one drawn elsewhere. Nothing measured here
+   separates "a stroke that moved a long way" from "a different stroke" in that
+   case, and both guards that might have cost more than they saved. It is one
+   unusual edit, the result is visible rather than silent, and undo is one
+   tap. */
+const TWEEN_MATCH_LENGTH = 4;
+// Shorter than this and there is no length to compare: a dot, or a tap.
+const TWEEN_MATCH_DOT = 2;
+const TWEEN_MATCH_SAMPLES = 12;
+
+// Each page about its own centre, so a drawing that travels still pairs.
+function tweenCentred(runs){
+  let x = 0, y = 0, n = 0;
+  for(const r of runs) for(const p of r){ x += p.x; y += p.y; n++; }
+  const cx = x / Math.max(1, n), cy = y / Math.max(1, n);
+  return runs.map(r => r.map(p => ({ x: p.x - cx, y: p.y - cy })));
+}
+/* Mean distance between correspondingly sampled points, taking the better of
+   forwards and backwards -- a limb redrawn from the other end is the same limb,
+   and the fixture for it is in the set above. */
+function tweenShapeCost(A, B){
+  const n = TWEEN_MATCH_SAMPLES;
+  const at = (r, t) => {
+    const i = t * (r.length - 1), k = Math.floor(i), f = i - k;
+    const p = r[k], q = r[Math.min(k + 1, r.length - 1)];
+    return { x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f };
+  };
+  let fwd = 0, rev = 0;
+  for(let i = 0; i < n; i++){
+    const t = i / (n - 1);
+    const a = at(A, t);
+    const bf = at(B, t), br = at(B, 1 - t);
+    fwd += Math.hypot(a.x - bf.x, a.y - bf.y);
+    rev += Math.hypot(a.x - br.x, a.y - br.y);
+  }
+  return { cost: Math.min(fwd, rev) / n, reversed: rev < fwd };
+}
+/* For each ink run of a, the ink run of b it pairs with -- or null, meaning
+   "nothing here is decisively its partner", which the caller draws once. */
+function tweenMatch(inkA, inkB){
+  const ca = tweenCentred(inkA), cb = tweenCentred(inkB);
+  // How far the pen travelled along a run, which is what the length guard
+  // compares. Measured on the ORIGINAL runs, not the recentred copies: moving
+  // a stroke does not change its length, which is the entire point.
+  const runLength = (r) => {
+    let t = 0;
+    for(let i = 1; i < r.length; i++) t += Math.hypot(r[i].x - r[i-1].x, r[i].y - r[i-1].y);
+    return t;
+  };
+  const lenA = inkA.map(runLength), lenB = inkB.map(runLength);
+  const pairs = [];
+  for(let i = 0; i < ca.length; i++)
+    for(let j = 0; j < cb.length; j++){
+      const r = tweenShapeCost(ca[i], cb[j]);
+      pairs.push({ i: i, j: j, cost: r.cost, reversed: r.reversed });
+    }
+  pairs.sort((p, q) => p.cost - q.cost);
+  const out = new Array(ca.length).fill(null), taken = {};
+  for(const c of pairs){
+    if(out[c.i] || taken[c.j]) continue;
+    // Decisively better than this stroke's second choice, or not at all.
+    /* No stroke becomes four times longer by moving, so this is not that
+       stroke however well the shapes happen to line up.
+
+       A DOT IS EXEMPT, and deliberately: a tap has no arc length at all, so
+       every partner is infinitely longer and the guard would refuse the one
+       thing v255 went out of its way to support — pairing a dot against the
+       run it becomes. Below a pen-width there is no length to compare, so the
+       question is left to shape and to the runner-up test. */
+    const la = lenA[c.i], lb = lenB[c.j], lo = Math.min(la, lb);
+    if(lo > TWEEN_MATCH_DOT
+       && Math.max(la, lb) > lo * TWEEN_MATCH_LENGTH) continue;
+    out[c.i] = { j: c.j, reversed: c.reversed };
+    taken[c.j] = true;
+  }
+  return out;
+}
+
 /* Two pages can be interpolated only if their strokes line up: same number of
    groups, same number of points in each. Returns null when they do not, and the
    caller turns that into a sentence rather than a shrug. */
@@ -5874,18 +6016,31 @@ function tweenAlign(a, b){
   // pose to interpolate.
   const ra = tweenVisible(a).ink, rb = tweenVisible(b).ink;
   if(!ra.length || !rb.length) return null;
-  if(ra.length !== rb.length) return null;
+  /* PAIRED BY SHAPE, not by the order your hand happened to take, and not
+     requiring the two pages to hold the same number of strokes. tweenMatch
+     returns a partner for each run of a, or null where nothing is decisively
+     its partner -- and a run with no partner is not a failure, it is a stroke
+     that did not move, which the caller draws once. */
+  const pairing = tweenMatch(ra, rb);
   const A = { strokes: [], strokeGroups: [] };
   const B = { strokes: [], strokeGroups: [] };
+  const unpaired = [];
   for(let s = 0; s < ra.length; s++){
+    const m = pairing[s];
+    if(!m){ unpaired.push(ra[s]); continue; }
+    // A limb redrawn from the other end is the same limb, and the matcher says
+    // so -- but the interpolation has to see it that way too, or the stroke
+    // turns itself inside out on the way across.
+    const partner = m.reversed ? rb[m.j].slice().reverse() : rb[m.j];
     // The denser of the two, so the pose that was drawn more carefully is the
     // one that keeps its detail.
-    const n = Math.max(ra[s].length, rb[s].length);
-    const pa = tweenResample(ra[s], n), pb = tweenResample(rb[s], n);
+    const n = Math.max(ra[s].length, partner.length);
+    const pa = tweenResample(ra[s], n), pb = tweenResample(partner, n);
     A.strokes.push(...pa); A.strokeGroups.push(pa.length);
     B.strokes.push(...pb); B.strokeGroups.push(pb.length);
   }
-  return { a: A, b: B };
+  if(!A.strokeGroups.length) return null;      // nothing paired at all
+  return { a: A, b: B, unpaired: unpaired };
 }
 
 function tweenMismatch(a, b){
@@ -5901,9 +6056,16 @@ function tweenMismatch(a, b){
      naming them is one nobody can act on. */
   const ia = tweenVisible(a).ink, ib = tweenVisible(b).ink;
   if(!ia.length || !ib.length) return 'two pages with drawing on them';
-  if(ia.length !== ib.length)
-    return 'the same NUMBER of strokes on both pages \u2014 this one has '
-         + ia.length + ', the next has ' + ib.length;
+  /* THE COUNTS NO LONGER HAVE TO AGREE. They did until v296, and the refusal
+     that enforced it -- "this one has 5, the next has 7" -- was the wall the
+     owner hit every time he drew the next pose by hand instead of duplicating
+     it. Strokes are paired by shape now, and one with no partner is drawn
+     once rather than refused. What is left to decline is the case where NOTHING
+     on the two pages resembles anything: two unrelated drawings, where every
+     pairing would be a guess. */
+  if(!tweenMatch(ia, ib).some(m => m))
+    return 'two poses with something in common \u2014 nothing on this page '
+         + 'resembles anything on the next one';
   return null;
 }
 
@@ -5964,30 +6126,29 @@ function buildTween(a, b, want){
   // Captured BEFORE the reassignment below: tweenAlign returns ink-only copies,
   // so this is the last moment the page's own erasers are in hand.
   const carried = tweenVisible(a).erase;
-  /* AIMED, when the artist selected the part that moves. The aim names INK RUN
-     ORDINALS, which both pages share because tweenMismatch has already refused
-     any pair whose visible ink counts differ -- run 2 of this page is run 2 of
-     the next one. The unaimed runs are not interpolated at all: they are drawn
-     ONCE, from THIS page, exactly as they sit on it. */
+  /* AIMED, when the artist selected the part that moves. The aim names ink run
+     ordinals ON THIS PAGE ONLY. It used to name them on both, which was fair
+     while the counts had to agree -- run 2 here was run 2 there -- and is
+     wrong now that they need not: the matcher finds each aimed stroke's
+     partner wherever it sits on the next page. The unaimed runs are not
+     interpolated at all: they are drawn ONCE, from THIS page, exactly as they
+     sit on it. */
   const aim = (want && Array.isArray(want.aim) && want.aim.length) ? want.aim : null;
   let still = [];
   if(aim){
-    const va = tweenVisible(a), vb = tweenVisible(b);
-    const pick = (runs) => {
-      const f = { strokes: [], strokeGroups: [], hold: 1 };
-      aim.forEach(i => { const r = runs[i]; if(!r) return;
-        r.forEach(q => f.strokes.push(q)); f.strokeGroups.push(r.length); });
-      return f;
-    };
+    const va = tweenVisible(a);
+    const f = { strokes: [], strokeGroups: [], hold: 1 };
+    aim.forEach(i => { const r = va.ink[i]; if(!r) return;
+      r.forEach(q => f.strokes.push(q)); f.strokeGroups.push(r.length); });
+    if(!f.strokeGroups.length){ chip('A motion smear needs a stroke to aim at'); return null; }
     still = va.ink.filter((_, i) => aim.indexOf(i) < 0);
-    a = pick(va.ink); b = pick(vb.ink);
-    if(!a.strokeGroups.length || a.strokeGroups.length !== b.strokeGroups.length){
-      chip('A motion smear needs the same strokes selected on both pages');
-      return null;
-    }
+    a = f;                       // b is left whole: the matcher searches all of it
   }
   const aligned = tweenAlign(a, b);
-  if(!aligned){ chip('A motion smear needs the same number of strokes on both pages'); return null; }
+  if(!aligned){ chip('A motion smear needs two poses with something in common'); return null; }
+  // A stroke the matcher could not place is drawn once, exactly like a stroke
+  // the artist chose not to aim at. Same picture, same code path.
+  if(aligned.unpaired && aligned.unpaired.length) still = still.concat(aligned.unpaired);
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
   // A REBUILT PAGE HAS TO COME BACK THE SAME. The plan depends on the frame
