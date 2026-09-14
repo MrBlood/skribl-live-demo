@@ -148,12 +148,37 @@ with sync_playwright() as p:
         _menu = page.evaluate(
             "() => [...document.querySelectorAll('.pageops-item')]"
             ".map(b => (b.textContent || '').trim())")
+        #
+        # AND THE REVERSE DIRECTION IS NOT AN EQUALITY, which is the same
+        # mistake once more. This assertion also read len(_menu) == len(_row),
+        # so it forbade the menu from carrying anything the row does not — and
+        # went red in v295 on "Select through here", which is a COMPACT-ONLY
+        # operation by construction: at regular size the span is extended by
+        # shift-clicking a tile, and a phone has no shift key. The row is not
+        # the whole of what the regular size can do, so it cannot be the cap on
+        # what the compact menu offers.
+        #
+        # A count still guards something real — a menu nobody curates becomes a
+        # dumping ground — so the gate stays and moves to the reason: an item
+        # the row lacks must be named here, with why the row does not carry it.
+        # A new unexplained item goes red; a deliberate one is a one-line edit
+        # that records its justification next to the assertion.
+        COMPACT_ONLY = {
+            # label: why the regular-size page bar does not carry it
+            "Select through here":
+                "regular size extends the span by shift-clicking a tile",
+        }
         _missing = [r for r in _row
                     if not any(r.lower() in m.lower() for m in _menu)]
+        _extra = [m for m in _menu
+                  if not any(r.lower() in m.lower() for r in _row)
+                  and m not in COMPACT_ONLY]
         check("...every operation the row carried is here",
-              _row and not _missing and len(_menu) == len(_row),
+              bool(_row) and not _missing and not _extra,
               f"row {_row} vs menu {_menu}"
-              + (f" — no menu item for {_missing}" if _missing else ""))
+              + (f" — no menu item for {_missing}" if _missing else "")
+              + (f" — menu-only and unexplained: {_extra}; if the row cannot "
+                 f"carry it, say why in COMPACT_ONLY" if _extra else ""))
         check("...focus moved INTO the menu on open",
               page.evaluate("() => document.activeElement"
                             ".classList.contains('pageops-item')"),

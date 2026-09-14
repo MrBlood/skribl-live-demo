@@ -186,7 +186,11 @@ let pageClip = null;
    flip.js is a classic script, and a `let` reached during init throws and
    silently kills every line after it. `spanAnchor` is where a range began;
    `idx` is always its other end, so a span needs exactly one extra number. */
-let spanAnchor = null, _spanSweep = false, _spanHoldTimer = null;
+/* v295: _spanSweep and its 450 ms tile hold are gone — the hold now arms a
+   REORDER, which is what a phone teaches and what the owner asked for twice.
+   Selecting a range moved to "Select through here" in a page's own ⋯ popover,
+   beside Move and Copy, which already speak in spans. */
+let spanAnchor = null, _pdragArmTimer = null;
 // Selection tokens — see the note in app.js. Flip is more exposed than the Pad
 // because it clears the input immediately, so a second pick during a slow decode
 // is easy. Bumped on selection AND removal. (Review round 9, #1)
@@ -2213,25 +2217,36 @@ function buildStrip(){
          || ev.target.closest('.pageops')) return;
       // Shift is the desktop gesture: "…through here", from wherever you are.
       if(ev.shiftKey){ ev.preventDefault(); extendSpanTo(i); return; }
-      // And touch gets the same reach without a modifier key: hold still for a
-      // beat, then sweep. The two gestures cannot collide because they are
-      // separated by what the finger does FIRST — move within 450ms and it is a
-      // reorder, stay put and it becomes a sweep. Committing on the timer
-      // rather than on movement is what makes it feel decided rather than
-      // ambiguous, and the tile lifts so the change of mode is visible.
-      clearTimeout(_spanHoldTimer);
-      _spanHoldTimer = setTimeout(()=>{
-        if(!_pdrag || _pdrag.moved) return;
-        _pdrag = null; _spanSweep = true;
-        setSpanAnchor(i);
-        if(i !== idx) extendSpanTo(i); else buildStrip();
+      /* HOLD UNTIL IT BUMPS, THEN DRAG — v295, and the reasoning it replaces is
+         worth keeping because it was right in a vacuum and wrong on a phone.
+         The old rule read: "the two gestures cannot collide because they are
+         separated by what the finger does FIRST — move within 450ms and it is a
+         reorder, stay put and it becomes a sweep." On a strip that SCROLLS
+         horizontally, "move within 450ms" is also how you scroll, so a flick
+         reordered a page and a tap that drifted six pixels suppressed its own
+         click. Reported twice from a phone.
+
+         A threshold cannot separate them, because any scroll long enough passes
+         any threshold. A HOLD can, and by construction rather than by guess:
+         you cannot hold still for 400 ms while flicking. So the hold arms the
+         reorder, the tile lifts and the device buzzes to say so, and any
+         movement BEFORE that disarms it completely — that gesture was a scroll
+         or a tap, and neither should ever move a page.
+
+         This is also the idiom every phone already teaches, which is the part
+         no amount of cleverness in here could buy. */
+      clearTimeout(_pdragArmTimer);
+      _pdragArmTimer = setTimeout(()=>{
+        if(!_pdrag || _pdrag.armed) return;
+        _pdrag.armed = true;
+        _pdrag.el.classList.add('dragging');
         if(navigator.vibrate) try{ navigator.vibrate(8); }catch(_){}
-      }, 450);
+      }, 400);
       // scrollLeft AT THE MOMENT THE FINGER LANDED, which is what tells a
       // reorder from a scroll further down. Captured here because by the time
       // the first pointermove arrives the strip may already have moved.
       _pdrag={ i:i, el:el, startX:ev.clientX, lastX:ev.clientX, moved:false,
-               scroll0: strip.scrollLeft, centers:stripTileCenters() };
+               armed:false, scroll0: strip.scrollLeft, centers:stripTileCenters() };
     });
     el.addEventListener('click',ev=>{
       // moveOrigin is keyed by ARRAY INDEX, so selecting, adding, deleting or
@@ -2246,7 +2261,6 @@ function buildStrip(){
       if(playing) return;
       if(moveMode){ chip('Finish or cancel the move first'); return; }
       if(_pdragSuppressClick) return;
-      if(_spanSweep){ _spanSweep = false; return; }   // the sweep already chose
       if(ev.target.closest('.holdbadge')){
         ev.stopPropagation();
         holdCycle(i);
@@ -2269,6 +2283,11 @@ function buildStrip(){
         delFrame(i); return;
       }
       disarmAll();
+      /* SELECT PAGES: while the mode is on, a tap says "…through here" instead
+         of "just this one". It replaces the hold-and-sweep the strip used to
+         carry, and the difference that matters is not the gesture — it is that
+         a mode you turned on in a menu is one you know you are in, where a
+         gesture you triggered by accident is one you are merely surprised by. */
       // A plain tap means "this page", so it retires the range rather than
       // quietly keeping one the user has visually moved past — the same rule
       // the stroke selection follows for a stray tap outside its box.
@@ -2399,6 +2418,15 @@ function openPageOps(trigger, i){
     ['Move right', 'Move ' + what + ' right', () => spanMove(1),
      sp ? sp.to === n - 1 : i === n - 1],
     ['Copy',       'Copy ' + what,            () => spanCopy(),  false],
+    /* WHERE SELECTING A RANGE LIVES NOW. It was a 450 ms hold on a tile and
+       then a sweep; that hold arms a reorder since v295, because the sweep
+       shared the strip's own scroll direction and a flick moved a page instead.
+       Here it needs no mode and no gesture: this popover already speaks in
+       spans -- Move and Copy above it say "these N pages" -- so "through here"
+       reads as the sentence the rest of the menu is already writing. Disabled
+       on the page you are already on, where it would select nothing. */
+    ['Select through here', 'Select every page from the one you are on through this one',
+     () => extendSpanTo(i), i === idx],
     // The ⋯ menu's half of the Draw switch. The page bar carries the other
     // half and only one of the two is ever rendered, so both must exist or the
     // control disappears at one size class — the split this whole menu exists
@@ -2563,19 +2591,6 @@ function stripTileCenters(){
     const r=el.getBoundingClientRect(); return r.left + r.width/2;
   });
 }
-/* A sweep extends the span to whichever tile the finger is over. Hit-testing
-   the tile under the pointer rather than accumulating dx means a sweep that
-   wanders vertically off the strip and back still lands on the right pages. */
-document.addEventListener('pointermove', ev=>{
-  if(!_spanSweep) return;
-  const el = document.elementFromPoint(ev.clientX, ev.clientY);
-  const tile = el && el.closest && el.closest('#strip .frame');
-  if(!tile) return;
-  const i = [...strip.children].indexOf(tile);
-  if(i >= 0 && i !== idx){ ev.preventDefault(); extendSpanTo(i); }
-});
-document.addEventListener('pointerup', ()=>{ _spanSweep = false; });
-document.addEventListener('pointercancel', ()=>{ _spanSweep = false; });
 /* THE STRIP SCROLLS THE WAY A REORDER DRAGS, so for a long time they were the
    same gesture separated by six pixels of travel. Reported from a phone: the
    thumbnails "move super easy, so if you are trying to scroll the strip you
@@ -2594,26 +2609,29 @@ document.addEventListener('pointercancel', ()=>{ _spanSweep = false; });
    gesture actually DID instead of how far it went. A reorder already in
    progress is left alone -- the tile is lifted and following the finger, and
    snatching it away mid-drag would be worse than either bug. */
-const STRIP_SLOP = 14;
+// Jitter, not intent. A finger resting on glass wanders a pixel or two, and a
+// hold that a tremor cancels is a hold nobody can perform.
+const STRIP_JITTER = 8;
 document.addEventListener('pointermove', ev=>{
   if(!_pdrag) return;
-  if(!_pdrag.moved && strip.scrollLeft !== _pdrag.scroll0){
-    // A scroll won. Drop the reorder AND the pending span sweep: neither is
-    // what this finger is doing.
-    clearTimeout(_spanHoldTimer);
-    _pdrag = null;
+  const dx=ev.clientX-_pdrag.startX;
+  if(!_pdrag.armed){
+    // Before the bump, movement means this was never a reorder. The strip's own
+    // scrollLeft is the second witness: it says the finger scrolled even when
+    // the pointer barely travelled, which is what a flick on a momentum
+    // scroller looks like.
+    if(Math.abs(dx) > STRIP_JITTER || strip.scrollLeft !== _pdrag.scroll0){
+      clearTimeout(_pdragArmTimer);
+      _pdrag = null;
+    }
     return;
   }
-  const dx=ev.clientX-_pdrag.startX;
-  if(!_pdrag.moved && Math.abs(dx)<STRIP_SLOP) return;
-  // Moving cancels the pending sweep: this is a reorder, decided by the finger.
-  clearTimeout(_spanHoldTimer);
-  if(!_pdrag.moved){ _pdrag.moved=true; _pdrag.el.classList.add('dragging'); }
+  if(!_pdrag.moved) _pdrag.moved = true;
   ev.preventDefault();
   _pdrag.el.style.transform='translateX('+dx+'px)';
 });
 document.addEventListener('pointerup', ()=>{
-  clearTimeout(_spanHoldTimer);
+  clearTimeout(_pdragArmTimer);
   if(!_pdrag) return;
   const d=_pdrag; _pdrag=null;
   d.el.style.transform=''; d.el.classList.remove('dragging');
@@ -2650,7 +2668,7 @@ document.addEventListener('pointerup', ()=>{
 });
 document.addEventListener('pointermove', ev=>{ if(_pdrag) _pdrag.lastX=ev.clientX; });
 document.addEventListener('pointercancel', ()=>{
-  clearTimeout(_spanHoldTimer);
+  clearTimeout(_pdragArmTimer);
   if(!_pdrag) return;
   _pdrag.el.style.transform=''; _pdrag.el.classList.remove('dragging'); _pdrag=null;
 });
@@ -2690,7 +2708,7 @@ function setSpanAnchor(a){
 }
 function clearSpan(quiet){
   if(spanAnchor == null) return false;
-  spanAnchor = null; _spanSweep = false;
+  spanAnchor = null;
   if(!quiet){ buildStrip(); }
   return true;
 }
