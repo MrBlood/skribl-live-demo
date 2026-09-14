@@ -479,16 +479,25 @@ with sync_playwright() as p:
       const sig = f => f.strokes.length + '/' + f.strokes.slice(0, 80)
         .map(p => Math.round(p.x) + ',' + Math.round(p.y)).join('|');
       const was = sig(frames[1]), wasN = frames.length, wasPts = frames[1].strokes.length;
-      applyPayload(JSON.parse(JSON.stringify(serializeFlip({recipes: true}))));
+      const d = JSON.parse(JSON.stringify(serializeFlip({recipes: true})));
+      // PROVE A RECIPE WAS INVOLVED. Without this, the assertion below passes on
+      // a draft that stored the points -- true of every draft ever written, and
+      // silent about the rebuild. Measured: it stayed green with recipes
+      // switched off entirely, which makes it an assertion about round trips in
+      // general rather than about the thing this change added.
+      const viaRecipe = !!(d.frames[1] && d.frames[1].gen);
+      applyPayload(d);
       // ASKED OF THE BEHAVIOUR, not of the frame. The recipe lives in a
       // WeakMap beside the page precisely so it is not a field on it, so
       // "is it re-stamped" can only honestly mean "does saving again still
       // produce a recipe" -- which is the property anyone cares about.
-      return { same: sig(frames[1]) === was, pages: frames.length === wasN,
+      return { viaRecipe, same: sig(frames[1]) === was, pages: frames.length === wasN,
                pts: frames[1].strokes.length, wasPts,
                restamped: !!serializeFlip({recipes: true}).frames[1].gen }; }""")
+    check("the draft really did store a recipe rather than the points",
+          _rt["viaRecipe"], str(_rt))
     check("a recipe restores the same page, point for point",
-          _rt["same"] and _rt["pages"], str(_rt))
+          _rt["viaRecipe"] and _rt["same"] and _rt["pages"], str(_rt))
     # Against what it HAD, not an absolute: this fixture's poses are six points
     # each, so a threshold tuned on the stick figure called a correct 648-point
     # rebuild a placeholder.
