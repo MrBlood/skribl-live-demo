@@ -6160,7 +6160,13 @@ function ibUnapply(pts, T){
 function buildInbetween(a, b, t){
   const why = tweenMismatch(a, b);
   if(why){ chip('An in-between needs ' + why); return null; }
-  const ra = tweenRuns(a), rb = tweenRuns(b);
+  /* THE SAME RUNS tweenMismatch JUST COUNTED. This read tweenRuns while the
+     guard above counted visible ink, so on an erased page the guard passed on
+     2 and the loop walked 4 -- pairing the new diagonal's partner against the
+     rubbed-out one, and indexing past the end of the other page when the
+     erased page came first. Two readings of "the strokes of this page" in
+     eleven lines is one too many. */
+  const ra = tweenVisible(a).ink, rb = tweenVisible(b).ink;
   const out = newFrame();
   for(let s = 0; s < ra.length; s++){
     const n = Math.max(ra[s].length, rb[s].length);
