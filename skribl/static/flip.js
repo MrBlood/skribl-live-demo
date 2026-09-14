@@ -556,7 +556,10 @@ function serializeFlip(opts){
         const prev = frames[i - 1], next = frames[i + 1];
         if(genSame(g.print, genPrint(f))
            && genSame(g.a, genPrint(prev)) && genSame(g.b, genPrint(next))){
-          const o = { gen: { k: g.k, n: g.n, passes: g.passes },
+          // g.aim rides along or an aimed page comes back un-aimed: the
+          // rebuild calls buildTween(prev, next, gen) and gen is all it gets.
+          const o = { gen: g.aim ? { k: g.k, n: g.n, passes: g.passes, aim: g.aim }
+                                 : { k: g.k, n: g.n, passes: g.passes },
                       background: bgColor };
           if(h > 1) o.hold = h;
           if(frameDraw(f)) o.draw = true;
@@ -5631,8 +5634,17 @@ function tweenRenderCap(atFps){
   if(f <= 12) return TWEEN_POINT_CAP;
   return Math.max(1, Math.round(TWEEN_POINT_CAP * 12 / f));
 }
-function tweenPlan(per, groupsPer, atFps){
+function tweenPlan(per, groupsPer, atFps, reserve){
   const renderCap = tweenRenderCap(typeof atFps === 'number' ? atFps : fps);
+  /* ROOM FOR WHAT IS NOT BEING SAMPLED. An aimed smear draws the unselected
+     strokes once into the same page, and those points count against the
+     server's per-frame cap exactly like the exposure's do. Planning without
+     them would aim a drawing right up to the cap and then add a few thousand
+     more, which is a page the server refuses -- the failure landing at POST,
+     long after the button that caused it. Both caps shrink by the reserve.
+     One group per still stroke, which is why the group cap moves too. */
+  const keepPts = Math.max(0, (reserve && reserve.points) || 0);
+  const keepGrp = Math.max(0, (reserve && reserve.groups) || 0);
   // The most samples that fit BOTH caps at a given pass count. Groups are
   // capped separately because every pass of every sample is its own group:
   // a page of many short strokes can clear the point cap and still be
@@ -5641,8 +5653,9 @@ function tweenPlan(per, groupsPer, atFps){
     // Both are "-1" because the sample loop runs s = 0..n inclusive and so
     // emits n+1 samples. Without it the plan overshot its own budget: a
     // 150-point page planned 14,250 points against a cap of 14,000.
-    const byPoints = Math.floor(cap / Math.max(1, per * passes)) - 1;
-    const byGroups = Math.floor(TWEEN_GROUP_CAP / Math.max(1, groupsPer * passes)) - 1;
+    const byPoints = Math.floor(Math.max(0, cap - keepPts) / Math.max(1, per * passes)) - 1;
+    const byGroups = Math.floor(Math.max(0, TWEEN_GROUP_CAP - keepGrp)
+                                / Math.max(1, groupsPer * passes)) - 1;
     return Math.min(TWEEN_SAMPLES, byPoints, byGroups);
   };
   // The SERVER cap decides whether an exposure is possible at all; the render
@@ -5793,17 +5806,63 @@ function tweenCovered(p, erasers){
    stroke instead of the old one. */
 function tweenVisible(f){
   const runs = tweenRuns(f);
-  const ink = [], erase = [];
+  const ink = [], erase = [], inkSpans = [];
+  let at = 0;
   for(let i = 0; i < runs.length; i++){
     const run = runs[i];
+    const from = at; at += run.length;
     if(run.length && run[0].erase){ erase.push(run); continue; }
     const later = [];
     for(let j = i + 1; j < runs.length; j++)
       if(runs[j].length && runs[j][0].erase) later.push(runs[j]);
     if(later.length && run.length && run.every(p => tweenCovered(p, later))) continue;
     ink.push(run);
+    // Where this run's points live in f.strokes, which is the space a
+    // selection is expressed in (lib/selection.js hands back index ranges).
+    inkSpans.push([from, at]);
   }
-  return { ink: ink, erase: erase };
+  return { ink: ink, erase: erase, inkSpans: inkSpans };
+}
+
+/* ---------- v296: AIMING a smear at the part that moves ----------------------
+
+   The effect reads as motion when ONE part of a drawing moves and the rest
+   holds still, and as a grey blob when the whole figure travels. Every bad
+   example this project produced was the second case, and the owner said so
+   after watching them side by side: "it looks good when one part moves".
+
+   Nothing had to be invented to aim it. Selection is BY STROKE GROUP and
+   buildTween pairs BY STROKE GROUP, so a selection is already exactly the
+   argument the effect wants. What aiming changes, measured on a four-stroke
+   figure with the shipped planner:
+
+       whole page   6,912 points, the still parts 27 translucent copies
+       aimed        1,241 points, the still parts drawn once, as ink
+
+   AND IT IS NOT MAINLY A SAVING. tweenPlan maximises samples against a fixed
+   cap, so aiming at fewer points buys more SAMPLES rather than a smaller page:
+   19 -> 27 on a simple character, 11 -> 18 on a busy one, and a very busy
+   drawing that is refused outright today plans comfortably. The exposure gets
+   smoother; the page costs about what it did. Aiming turns a refusal into a
+   feature, which is the part that matters most.
+
+   Selecting everything is not a special case: it aims at every stroke, which
+   is what the whole page already did. */
+function tweenAimFromSelection(f){
+  if(!f || !selSpans || !selSpans.length) return null;
+  const vis = tweenVisible(f);
+  const aim = [];
+  vis.inkSpans.forEach((span, i) => {
+    // A run is aimed when the selection covers any of it. Whole strokes only,
+    // which is the same rule the marquee itself uses -- half a stroke is not
+    // something this effect could pair against the next page anyway.
+    for(const [a, b] of selSpans)
+      if(span[0] < b && a < span[1]){ aim.push(i); return; }
+  });
+  // Every stroke aimed is the whole page, which is what the button did before
+  // there was a selection. Saying so costs a recipe field and a branch below.
+  if(!aim.length || aim.length === vis.ink.length) return null;
+  return aim;
 }
 
 /* Both pages resampled onto a shared structure. Returns {a, b} frame-shaped
@@ -5905,6 +5964,28 @@ function buildTween(a, b, want){
   // Captured BEFORE the reassignment below: tweenAlign returns ink-only copies,
   // so this is the last moment the page's own erasers are in hand.
   const carried = tweenVisible(a).erase;
+  /* AIMED, when the artist selected the part that moves. The aim names INK RUN
+     ORDINALS, which both pages share because tweenMismatch has already refused
+     any pair whose visible ink counts differ -- run 2 of this page is run 2 of
+     the next one. The unaimed runs are not interpolated at all: they are drawn
+     ONCE, from THIS page, exactly as they sit on it. */
+  const aim = (want && Array.isArray(want.aim) && want.aim.length) ? want.aim : null;
+  let still = [];
+  if(aim){
+    const va = tweenVisible(a), vb = tweenVisible(b);
+    const pick = (runs) => {
+      const f = { strokes: [], strokeGroups: [], hold: 1 };
+      aim.forEach(i => { const r = runs[i]; if(!r) return;
+        r.forEach(q => f.strokes.push(q)); f.strokeGroups.push(r.length); });
+      return f;
+    };
+    still = va.ink.filter((_, i) => aim.indexOf(i) < 0);
+    a = pick(va.ink); b = pick(vb.ink);
+    if(!a.strokeGroups.length || a.strokeGroups.length !== b.strokeGroups.length){
+      chip('A motion smear needs the same strokes selected on both pages');
+      return null;
+    }
+  }
   const aligned = tweenAlign(a, b);
   if(!aligned){ chip('A motion smear needs the same number of strokes on both pages'); return null; }
   a = aligned.a; b = aligned.b;
@@ -5916,7 +5997,8 @@ function buildTween(a, b, want){
   // asks for exactly that (v295).
   const plan = (want && typeof want.n === 'number' && typeof want.passes === 'number')
     ? { n: want.n, passes: want.passes }
-    : tweenPlan(per, a.strokeGroups.length);
+    : tweenPlan(per, a.strokeGroups.length, undefined,
+                { points: still.reduce((t, r) => t + r.length, 0), groups: still.length });
   if(!plan){
     chip('This page is too heavy for a motion smear');
     return null;
@@ -5943,9 +6025,27 @@ function buildTween(a, b, want){
     fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
   }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
+  /* WHAT DID NOT MOVE, drawn once and at full strength, before the exposure so
+     the trail lays over it. This is the whole visible difference between an
+     aimed smear and the shipped one: the still parts stop being 27 translucent
+     copies of themselves and go back to being ink. */
+  for(const run of still){
+    run.forEach((q, i) => {
+      const c = Object.assign({}, q);
+      if(i === 0) c.start = true; else delete c.start;
+      out.strokes.push(c);
+    });
+    out.strokeGroups.push(run.length);
+  }
   // What it would take to make this page again, which is all the draft needs to
   // store instead of the points below. Beside the frame, never on it.
-  genRecipe.set(out, { k: 'smear', n: n, passes: blur.length });
+  /* THE AIM IS PART OF THE RECIPE. applyPayload rebuilds a stored page by
+     calling buildTween(prev, next, recipe), so a recipe that does not carry
+     the aim rebuilds an AIMED page as a whole-page smear -- a draft that comes
+     back different from the one that was saved, silently, which is worse than
+     not storing it at all. */
+  genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, aim: aim.slice() }
+                         : { k: 'smear', n: n, passes: blur.length });
   for(let s = 0; s <= n; s++){
     const t = s / n;
     for(let p = 0; p < blur.length; p++){
@@ -6007,7 +6107,13 @@ function addTween(){
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
   if(!b){ chip('A motion smear goes BETWEEN two pages — add the next pose first'); return; }
-  const t = buildTween(a, b);
+  /* AIMED BY THE SELECTION, when there is one. Select the arm and the arm
+     smears while the figure stays ink -- which is the picture the effect is
+     named after, and what it looked like on every example that read as motion
+     rather than as a grey blob. With nothing selected this is the whole page,
+     exactly as before. */
+  const aim = tweenAimFromSelection(a);
+  const t = buildTween(a, b, aim ? { aim: aim } : undefined);
   if(!t) return;
   // The three fingerprints the draft checks before it trusts the recipe: this
   // page, and the two it was made from.
@@ -6016,7 +6122,12 @@ function addTween(){
   invalidateClearUndo(); redoStack.length = 0;
   frames.splice(idx + 1, 0, t); idx++;
   buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
-  chip('Motion smear added');
+  // Say WHICH it was. A person who selected part of the drawing and got the
+  // same six words as always cannot tell whether the selection was read.
+  chip(aim
+    ? ('Motion smear of ' + aim.length + (aim.length === 1 ? ' stroke' : ' strokes')
+       + ' \u2014 the rest drawn once')
+    : 'Motion smear added');
 }
 
 /* ---------- v295: the in-between, for real ----------------------------------
