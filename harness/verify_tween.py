@@ -449,6 +449,75 @@ with sync_playwright() as p:
           f"{made} points — 27 samples of this page would be {900*27}, which the "
           f"server would refuse at the moment the user tried to share")
 
+    # ---------------------------------------------------------------- v295
+    # THE DRAFT DOES NOT STORE THE POINTS. A smear is up to 27 samples of every
+    # stroke, four passes deep, and the autosave wrote every one of them as
+    # JSON: 722 KB for one page, so seven of them fill a 5 MB origin quota and
+    # autosave dies for good. Reported from a phone, with no media loaded at
+    # all, as QuotaExceededError "even without media".
+    #
+    # The page is reproducible from its two neighbours and its sample plan, so
+    # the draft stores that instead. What is pinned here is the SIZE (the whole
+    # point), the ROUND TRIP (it has to come back the same), the three ways it
+    # must refuse to use a recipe, and the file format it must stay out of.
+    print("\nMOTION SMEAR — the draft stores a recipe, not the points")
+    page.evaluate(POSES, 150)
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
+    _sz = page.evaluate("""() => ({
+        full: JSON.stringify(serializeFlip()).length,
+        lean: JSON.stringify(serializeFlip({recipes: true})).length }) """)
+    check("the draft is dramatically smaller with the smear as a recipe",
+          _sz["lean"] * 8 < _sz["full"],
+          f"{_sz['full']:,} bytes written out against {_sz['lean']:,} as a recipe "
+          f"— measured 61x on the fixture this was built for; anything under 8x "
+          f"means the points are still in there somewhere")
+
+    # THE ROUND TRIP IS THE WHOLE RISK. The strokes are not stored, so a rebuild
+    # that comes back different is a page the artist cannot get back.
+    _rt = page.evaluate("""() => {
+      const sig = f => f.strokes.length + '/' + f.strokes.slice(0, 80)
+        .map(p => Math.round(p.x) + ',' + Math.round(p.y)).join('|');
+      const was = sig(frames[1]), wasN = frames.length;
+      applyPayload(JSON.parse(JSON.stringify(serializeFlip({recipes: true}))));
+      return { same: sig(frames[1]) === was, pages: frames.length === wasN,
+               pts: frames[1].strokes.length,
+               restamped: !!(frames[1].gen && frames[1].gen.print) }; }""")
+    check("a recipe restores the same page, point for point",
+          _rt["same"] and _rt["pages"], str(_rt))
+    check("...and it is a real page again, not a placeholder",
+          _rt["pts"] > 1000, f"{_rt['pts']} points")
+    check("...re-stamped, so the next save is a recipe too",
+          _rt["restamped"],
+          "paying full price once and for ever after is the bug this replaces")
+
+    # Three refusals. Each is the safe direction: writing the strokes costs only
+    # the bytes the recipe was trying to save, while a wrongly-trusted recipe
+    # rebuilds a page from pages that are no longer the ones it came from.
+    _edit = page.evaluate("""() => {
+      frames[1].strokes.push({x:10,y:10,color:'#ff0000',size:5,t:0,erase:false,start:true});
+      frames[1].strokeGroups.push(1);
+      const o = serializeFlip({recipes: true}).frames[1];
+      return { recipe: !!o.gen, strokes: Array.isArray(o.strokeGroups) }; }""")
+    check("a page that has been drawn on is written out in full",
+          not _edit["recipe"] and _edit["strokes"], str(_edit))
+
+    page.evaluate(POSES, 150)
+    page.evaluate("() => addTween()")
+    page.wait_for_timeout(400)
+    _nb = page.evaluate("""() => {
+      frames[0].strokes.push({x:5,y:5,color:'#00ff00',size:5,t:0,erase:false,start:true});
+      frames[0].strokeGroups.push(1);
+      const o = serializeFlip({recipes: true}).frames[1];
+      return { recipe: !!o.gen, strokes: Array.isArray(o.strokeGroups) }; }""")
+    check("a page whose NEIGHBOUR moved is written out in full",
+          not _nb["recipe"] and _nb["strokes"], str(_nb))
+
+    # saveDraft() writes the format the Pad reads and a person keeps on disk.
+    check("the .skribl file carries no recipe, only ordinary stroke data",
+          not page.evaluate("() => serializeFlip().frames.some(f => !!f.gen)"),
+          "a recipe in the file format is a schema change for every other reader")
+
     print("\nIN-BETWEEN — and the server takes it")
     page.evaluate(POSES, 150)
     page.evaluate("() => addTween()")
