@@ -377,7 +377,7 @@ with sync_playwright() as p:
         // What a user reads is the label plus the tooltip, so that is what is
         // collected here.
         names[id] = ((el ? el.textContent : '') + ' ' + (el ? el.title : ''))
-                      .replace(/\s+/g, ' ').trim();
+                      .replace(/\\s+/g, ' ').trim();
       }
       return { seen, names, inStrip: s.contains(col),
                overflows: s.scrollWidth > s.clientWidth + 8,
@@ -460,9 +460,6 @@ with sync_playwright() as p:
     # finger was down, that finger was scrolling and no reorder begins however
     # far the drag goes. These three assertions are the three gestures.
     # ------------------------------------------------------------------
-    def _order():
-        return ac.evaluate("() => frames.map((f, i) => i)") and ac.evaluate(
-            "() => window.__ord || frames.length")
     ac.evaluate("() => { go(0); strip.scrollLeft = 0; "
                 "        frames.forEach((f, i) => { f.__tag = i; }); }")
     ac.wait_for_timeout(150)
