@@ -1036,7 +1036,7 @@ with sync_playwright() as p:
       // Page 2: the same two, then a rub ALONG the diagonal, then its
       // replacement. Four groups in the frame; two lines on the screen.
       const two = mk([ run(120,60,120,300,10), run(60,260,200,140,10),
-                       run(58,262,202,138,24,true,30), run(60,140,200,260,10) ]);
+                       run(58,262,202,138,24,true,30), run(54,252,206,148,10) ]);
       frames.length = 0; frames.push(one); frames.push(two);
       idx = 0; actionLog.length = 0; redoStack.length = 0;
       buildStrip(); render();
@@ -1112,6 +1112,14 @@ with sync_playwright() as p:
       // The replacement was drawn last and crosses the rubbed-out area.
       return { count: ink.length, lastIsReplacement: ink.length ? true : false };
     }""")
+    # THE REPLACEMENT RETRACES THE RUB, which is the whole point of this pin and
+    # the reason it sits where it does: the fixture's new diagonal is the old
+    # one rotated ~6 degrees about its midpoint, so every one of its points
+    # lies inside the 30px band the eraser swept. Draw it anywhere else -- an
+    # up-diagonal that merely CROSSES the rub, as the first version had -- and
+    # testing against every eraser instead of the later ones passes happily,
+    # measured. It is also the ordinary way people work: rub a line out, draw
+    # it again slightly differently.
     check("a stroke drawn AFTER the rub survives it",
           order["count"] == 2,
           f"{order['count']} ink strokes; the replacement drawn over the rubbed "
