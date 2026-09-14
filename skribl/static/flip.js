@@ -5699,45 +5699,45 @@ function tweenPlan(per, groupsPer, atFps, reserve){
    page is compared about its OWN centre, so a figure that walks across the
    page still pairs head to head.
 
-   AND THE REJECTION IS A RATIO, NOT A CEILING. No absolute cost separates
-   true pairings from false ones -- measured: 11 of 50 true pairs cost more
-   than the cheapest false pair -- so any fixed number either drops real pairs
-   or admits junk. A pair is accepted when it is decisively better than that
-   stroke's SECOND-best option, which is the question a person asks looking at
-   it: obviously the partner, or a toss-up?
+   THE REJECTION IS A LENGTH GUARD, and getting there cost three wrong turns.
 
-     rejection                        true pairs kept   MISPAIRED
-     none                                   61/61           2
-     ratio alone                            51/61           1
-     ratio + a length guard                 51/61           0
+     rejection                  kept   MISPAIRED   MOTION DROPPED
+     none                      61/61       2              0
+     length guard alone        61/61       1              0
+     length guard + a ratio    60/61       1              1
 
-   Zero mispairs wins, and the asymmetry is why -- but only once it is stated
-   correctly, because the obvious version of it is wrong. Declining a stroke
-   that did not move costs nothing: it is drawn once, sharp, which is what it
-   looks like anyway. Declining the stroke that DID move is the whole feature
-   failing quietly, and that is what a cost ceiling did. A ceiling tuned on
-   poses that move a little rejected an arm swinging 145 degrees -- precisely
-   the stroke somebody wants smeared -- because a big motion is a big distance.
-   The fixture set had no big motion in it until that happened.
+   THE RIGHT-HAND COLUMN IS THE ONE THAT DECIDED IT, and it only exists because
+   the first scoring was wrong. Every unpaired stroke was counted the same,
+   which made a setting look best while it was quietly rejecting the swinging
+   arm. They are not the same. A STILL stroke left unpaired is drawn once --
+   exactly what it looks like, so it costs nothing. The stroke that MOVED, left
+   unpaired, means the smear leaves the motion out: the feature failing
+   silently, which is worse than a visible wrong answer because nobody can see
+   what to report.
 
-   SO THE SECOND GUARD IS LENGTH, NOT DISTANCE. A stroke can travel any
-   distance and still be the same stroke; what it cannot do is become four
-   times longer. That separates the 4px mark from the scrawl across the page
-   without touching a limb that swings, and it is flat from 2x to 12x on the
-   set -- 4 is the middle of a plateau rather than a tuned edge.
+   A COST CEILING IS WRONG IN PRINCIPLE, whatever its value, because big motion
+   IS big distance -- so a ceiling rejects exactly the stroke somebody wants
+   smeared. Measured: an arm swinging 145 degrees, dropped. The first fixtures
+   all moved a little, which is why the set could not see it.
 
-   BOTH GUARDS ARE NEEDED AND EACH COVERS THE OTHER'S BLIND SPOT. The ratio
-   test has nothing to compare against when there is only ONE candidate, so
-   alone it pairs the mark with the scrawl; the length guard cannot tell two
-   plausible candidates apart. Measured with both extremes in the set. */
-/* 0.85, not 0.7. The sweep said both gave zero mispairs on the fixture set, so
-   the tighter one looked free -- and then a realistic pair (a figure of two
-   strokes against the same figure plus an extra mark) measured 37 against a
-   runner-up of 47, a ratio of 0.79, and 0.7 declined a pairing no person would
-   hesitate over. The set was not wrong, it was thin: nothing in it landed
-   between 0.7 and 0.85. Where two values are equally safe on the evidence,
-   take the one that refuses less. */
-const TWEEN_MATCH_RATIO = 0.85;
+   A RUNNER-UP RATIO reads well and earns nothing. Accept a pair only when it
+   beats that stroke's second choice -- and a stroke that moved far is barely
+   closer to its own partner than to anything else, so the test rejects it.
+   Measured, it cost one moving stroke and prevented no mispairing the length
+   guard had not already caught.
+
+   SO THE GUARD IS LENGTH. A stroke can travel any distance and still be the
+   same stroke; what it cannot do is become four times longer. That separates a
+   4px mark from a scrawl across the whole page without touching a limb that
+   swings, and it is flat from 2x to 12x on the set -- 4 is the middle of a
+   plateau, not a tuned edge.
+
+   WHAT IS LEFT, STATED PLAINLY: one mispair in the set, where a stroke was
+   deleted and an unrelated one drawn elsewhere. Nothing measured here
+   separates "a stroke that moved a long way" from "a different stroke" in that
+   case, and both guards that might have cost more than they saved. It is one
+   unusual edit, the result is visible rather than silent, and undo is one
+   tap. */
 const TWEEN_MATCH_LENGTH = 4;
 // Shorter than this and there is no length to compare: a dot, or a tap.
 const TWEEN_MATCH_DOT = 2;
@@ -5784,18 +5784,11 @@ function tweenMatch(inkA, inkB){
   };
   const lenA = inkA.map(runLength), lenB = inkB.map(runLength);
   const pairs = [];
-  const bestOf = new Array(ca.length).fill(null), nextOf = new Array(ca.length).fill(null);
-  for(let i = 0; i < ca.length; i++){
-    const row = [];
+  for(let i = 0; i < ca.length; i++)
     for(let j = 0; j < cb.length; j++){
       const r = tweenShapeCost(ca[i], cb[j]);
-      row.push({ j: j, cost: r.cost, reversed: r.reversed });
       pairs.push({ i: i, j: j, cost: r.cost, reversed: r.reversed });
     }
-    row.sort((p, q) => p.cost - q.cost);
-    bestOf[i] = row[0] ? row[0].cost : null;
-    nextOf[i] = row[1] ? row[1].cost : null;
-  }
   pairs.sort((p, q) => p.cost - q.cost);
   const out = new Array(ca.length).fill(null), taken = {};
   for(const c of pairs){
@@ -5812,8 +5805,6 @@ function tweenMatch(inkA, inkB){
     const la = lenA[c.i], lb = lenB[c.j], lo = Math.min(la, lb);
     if(lo > TWEEN_MATCH_DOT
        && Math.max(la, lb) > lo * TWEEN_MATCH_LENGTH) continue;
-    // And, where there is a choice, decisively better than the runner-up.
-    if(nextOf[c.i] !== null && c.cost > nextOf[c.i] * TWEEN_MATCH_RATIO) continue;
     out[c.i] = { j: c.j, reversed: c.reversed };
     taken[c.j] = true;
   }

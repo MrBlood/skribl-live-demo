@@ -1245,6 +1245,88 @@ with sync_playwright() as p:
           f"{trip['was']} points saved, {trip['now']} rebuilt — a draft that "
           f"reloads different from the one it stored")
 
+    # ---------------------------------------------------------------- v296
+    # PAIRED BY SHAPE, AND AIMED WITHOUT BEING ASKED.
+    print("\nMATCHING — which stroke is which, and which of them moved")
+    FIGM = """(deg, extra) => {
+      const line=(x0,y0,x1,y1,n)=>{const o=[];for(let i=0;i<=n;i++)
+        o.push({x:x0+(x1-x0)*i/n,y:y0+(y1-y0)*i/n,size:6,color:'#ffffff',erase:false,t:0});return o;};
+      const circ=(cx,cy,r)=>{const o=[];for(let i=0;i<=28;i++){const a=i/28*Math.PI*2;
+        o.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,size:6,color:'#ffffff',erase:false,t:0});}return o;};
+      const rot=(q,cx,cy,d)=>{const r=d*Math.PI/180,c=Math.cos(r),sn=Math.sin(r);
+        return q.map(z=>({...z,x:cx+(z.x-cx)*c-(z.y-cy)*sn,y:cy+(z.x-cx)*sn+(z.y-cy)*c}));};
+      const runs=[circ(240,140,48), line(240,188,240,380,12),
+                  rot(line(240,240,240,380,10),240,240,deg), line(240,380,320,500,10)];
+      if(extra) runs.push(line(300,120,340,140,6));
+      const f={strokes:[],strokeGroups:[],hold:1};
+      runs.forEach(r=>{r.forEach((q,i)=>{const c={...q};
+        if(i===0)c.start=true; else delete c.start; f.strokes.push(c);});
+        f.strokeGroups.push(r.length);});
+      return f;
+    }"""
+    def pose(deg, extra=False, scramble=False):
+        return page.evaluate("""([mk,deg,extra,scr]) => {
+          const f = new Function('return ' + mk)()(deg, extra);
+          if(!scr) return f;
+          // redraw the SAME pose with its strokes in another order
+          const runs=[]; let at=0;
+          f.strokeGroups.forEach(n=>{ runs.push(f.strokes.slice(at,at+n)); at+=n; });
+          const order=[3,0,2,1].concat(runs.length>4?[4]:[]);
+          const g={strokes:[],strokeGroups:[],hold:1};
+          order.forEach(k=>{ const r=runs[k]; r.forEach((q,i)=>{const c={...q};
+            if(i===0)c.start=true; else delete c.start; g.strokes.push(c);});
+            g.strokeGroups.push(r.length); });
+          return g;
+        }""", [FIGM, deg, extra, scramble])
+
+    def smear(a, b):
+        return page.evaluate("""([a,b]) => {
+          frames.length = 0; frames.push(a); frames.push(b);
+          idx = 0; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+          buildStrip(); render();
+          const n = frames.length;
+          addTween();
+          if(frames.length === n) return { refused: true,
+            chip: (document.getElementById('flipChip')||{}).textContent };
+          return { refused: false, points: frames[1].strokes.length,
+                   groups: frames[1].strokeGroups.length,
+                   chip: (document.getElementById('flipChip')||{}).textContent };
+        }""", [a, b])
+
+    plain = smear(pose(20), pose(-125))
+    check("an arm swinging 145 degrees is smeared", not plain["refused"], str(plain))
+
+    scram = smear(pose(20), pose(-125, scramble=True))
+    check("the same pose redrawn in ANOTHER STROKE ORDER still pairs correctly",
+          not scram["refused"] and abs(scram["points"] - plain["points"]) < 400,
+          f"{scram.get('points')} against {plain.get('points')} for the same "
+          f"motion — pairing by drawing order is what put the outline with the mouth")
+
+    extra = smear(pose(20), pose(-125, extra=True))
+    check("FOUR strokes against FIVE produces a page, not a refusal",
+          not extra["refused"],
+          f"{extra.get('chip')!r} — differing counts are the wall v296 removed")
+    check("...and the extra stroke does not vanish from it",
+          not extra["refused"] and extra["groups"] >= plain["groups"],
+          f"{extra.get('groups')} groups against {plain.get('groups')}")
+
+    # THE PIN THAT STOPS "PAIR EVERYTHING" FROM SATISFYING THE REST.
+    junk = page.evaluate("""() => ({
+      strokes: [{x:10,y:10,size:6,color:'#fff',erase:false,t:0,start:true},
+                {x:13,y:13,size:6,color:'#fff',erase:false,t:1}],
+      strokeGroups: [2], hold: 1 })""")
+    scrawl = page.evaluate("""() => ({
+      strokes: [{x:300,y:300,size:6,color:'#fff',erase:false,t:0,start:true},
+                {x:20,y:290,size:6,color:'#fff',erase:false,t:1},
+                {x:295,y:20,size:6,color:'#fff',erase:false,t:2},
+                {x:30,y:30,size:6,color:'#fff',erase:false,t:3}],
+      strokeGroups: [4], hold: 1 })""")
+    nope = smear(junk, scrawl)
+    check("a 4px mark against a page-wide scrawl is still declined",
+          nope["refused"],
+          "pairing these smears a tiny mark across the whole page, which reads "
+          "as a bug in the tool rather than a limit of the idea")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
