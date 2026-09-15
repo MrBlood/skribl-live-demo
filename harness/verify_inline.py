@@ -1220,7 +1220,32 @@ with sync_playwright() as sp:
     # plainly: a host now pays 417 B more than at any previous point in this
     # file's history, and what that buys is a player that does not silently
     # drop the last mark of every drawing page.
-    EMBED_RATCHET = 32_500
+    # 32,500 -> 33,500, measured 33,406, and this one buys no feature: it
+    # removes a defect this player has always had and nobody had measured.
+    #
+    # A Motion Smear's ghosts are see-through strokes whose alpha rides in an
+    # 8-digit hex colour, and parseStrokeAlpha matches rgba() only -- so the
+    # wet/dry compositor above, whose whole job is to stop a translucent stroke
+    # stacking against itself, has never seen one. Drawn dot-then-line-per-
+    # segment, a ghost written at alpha 46/255 painted at 83 and the trail wore
+    # a ladder of bright bands, ON EVERY FEED SHOWING A SMEAR. The owner spotted
+    # it in a render; no assertion here could, because nothing measured it.
+    #
+    # The fix is a single canvas path per uniform run, which cannot stack
+    # against itself and is FEWER canvas calls than the walk it replaces. It is
+    # the same fidelity argument the compositor made at 29,000 -> 32,000, for a
+    # third of the bytes: a feed representation must not change the drawing's
+    # appearance.
+    #
+    # WHAT WAS SPENT BEFORE ASKING, which is this ratchet's rule. The shared
+    # rule lives in lib/strokelayers.js, so this file carries only the inline
+    # fallback every lib here gets -- lib/strokelayers.js is NOT among the
+    # embed's assets and adding it would have cost a request and more bytes
+    # than the fallback. The fallback and the run walk were then compacted
+    # (-101 B measured) and every word of the reasoning lives in flip.js, which
+    # is in no byte budget, rather than here -- though jsstrip means comments in
+    # THIS file were never the cost. What remains, 906 B, is the code.
+    EMBED_RATCHET = 33_500
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone

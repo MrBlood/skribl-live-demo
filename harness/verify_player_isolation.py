@@ -886,7 +886,35 @@ with sync_playwright() as sp:
     # measurement plus a 540 B allowance, the same margin the ceiling has
     # always carried, so the next editor-only addition to app.js is caught
     # rather than absorbed.
-    BYTES_RATCHET, BYTES_TARGET = 150_500, 150_500
+    # 150,500 -> 150,600, measured 150,517, v297: lib/strokelayers.js gains
+    # uniformRun, the rule that a see-through run of one colour and one width is
+    # drawn as a SINGLE canvas path rather than a dot plus a line per segment.
+    # Per segment it composites against itself wherever the round caps overlap,
+    # and a Motion Smear ghost written at alpha 46/255 painted at 83.
+    #
+    # That raise noted that this surface was PAYING for the rule without
+    # spending it — app.js did not call uniformRun, so the sealed player still
+    # beaded a smear — and said the change would cost more than 17 B and should
+    # argue for itself. Here it is, arguing.
+    #
+    # 150,600 -> 151,500, measured 151,376, v297: app.js's paintStrokesStatic
+    # walks runs and draws a uniform see-through one as a single path, and
+    # makeStrokeCompositor gains pathFn to lay that run onto the dry layer in
+    # order. Measured on this surface: a ghost written at alpha 46/255 painted
+    # at 83 before, 46 after, on BOTH settings of the stroke-layers flag —
+    # which is the branch that mattered, the compositor being on by default.
+    # paintStrokesStatic is where the player renders a Flip document's frames,
+    # so this is what a share link has been showing.
+    #
+    # Spent before asking, twice over. At the previous raise uniformRun was
+    # compacted three times (-36 B measured). Here app.js carries NO inline
+    # fallback for it (-296 B measured): that is this file's own precedent for
+    # this very module — the overBudget call beside it treats an absent lib as
+    # "not over budget" rather than keeping a second copy — so without the lib
+    # a run simply paints the way it did before. The prose lives in
+    # lib/strokelayers.js and flip.js; jsstrip means comments here are free
+    # anyway, which the previous raise recorded after believing otherwise.
+    BYTES_RATCHET, BYTES_TARGET = 151_500, 151_500
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

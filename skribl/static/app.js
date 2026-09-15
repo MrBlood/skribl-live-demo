@@ -511,6 +511,14 @@ function parseStrokeAlpha(c) {
   const m = c.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i);
   return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : 1;
 }
+/* The alpha in any form, the 8-digit hex a Motion Smear writes included.
+   NOT parseStrokeAlpha: that one decides the wet layer, and teaching it this
+   hex would put every generated page on a per-stroke round trip. See the note
+   on uniformRun in lib/strokelayers.js. */
+function anyStrokeAlpha(c) {
+  const h = typeof c === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(c.trim());
+  return h ? parseInt(h[1], 16) / 255 : parseStrokeAlpha(c);
+}
 function solidStrokeColor(c) {
   if (typeof c !== 'string') return c;
   const m = c.match(/^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*[\d.]+\s*\)$/i);
@@ -629,6 +637,19 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       if (wetActive) drawLineOn(wctx, x1, y1, x2, y2, solidStrokeColor(color), size);
       else dryLine(x1, y1, x2, y2, color, size, erase);
     },
+    /* ONE PATH for a uniform see-through run -- see lib/strokelayers.js. Onto
+       the DRY layer, after closing any wet stroke, so it lands in order; the
+       run carries its own alpha in its colour and needs no wet layer at all,
+       which is the whole point of it being one path. */
+    pathFn(seg) {
+      if (wetActive) bakeWet();
+      const p = seg[0];
+      dctx.strokeStyle = p.color; dctx.lineWidth = p.size;
+      dctx.lineCap = 'round'; dctx.lineJoin = 'round';
+      dctx.beginPath(); dctx.moveTo(p.x, p.y);
+      for (let i = 1; i < seg.length; i++) dctx.lineTo(seg[i].x, seg[i].y);
+      dctx.stroke();
+    },
     present() {
       visCtx.save();
       visCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -653,23 +674,41 @@ function paintStrokesStatic(strokeArr) {
   // while authoring and stalled for the viewer. Same ceiling, same module.
   const _sl = (typeof window !== 'undefined') ? window.SkriblStrokeLayers : null;
   const _over = !!(_sl && _sl.overBudget && _sl.overBudget(strokeArr, parseStrokeAlpha));
-  if (strokeLayersOn() && !_over) {
-    const comp = makeStrokeCompositor(ctx, canvas);
-    for (let i = 0; i < strokeArr.length; i++) {
-      const p = strokeArr[i];
-      if (p.start || i === 0) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
-      else { const prev = strokeArr[i - 1]; comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
+  const comp = (strokeLayersOn() && !_over) ? makeStrokeCompositor(ctx, canvas) : null;
+  /* A see-through run of one colour and one width is ONE PATH, not a dot plus a
+     line per segment: lib/strokelayers.js carries the reasoning. */
+  /* No inline fallback, which is this file's own precedent for THIS module:
+     the overBudget call above treats an absent lib as "not over budget" rather
+     than carrying a second copy. Absent, a run paints as it did before. */
+  const _uni = _sl && _sl.uniformRun;
+  let i = 0;
+  while (i < strokeArr.length) {
+    let j = i + 1;
+    while (j < strokeArr.length && !strokeArr[j].start) j++;
+    const seg = strokeArr.slice(i, j);
+    if (_uni && _uni(seg, anyStrokeAlpha)) {
+      if (comp) comp.pathFn(seg);
+      else {
+        const p = seg[0];
+        ctx.strokeStyle = p.color; ctx.lineWidth = p.size;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y);
+        for (let k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
+        ctx.stroke();
+      }
+    } else for (let k = i; k < j; k++) {
+      const p = strokeArr[k], prev = strokeArr[k - 1];
+      if (p.start || k === 0) {
+        if (comp) comp.dotFn(p.x, p.y, p.color, p.size, p.erase);
+        else drawDot(p.x, p.y, p.color, p.size, p.erase);
+      } else if (comp) comp.lineFn(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+      else drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
     }
-    comp.finish();
-    comp.present();
-  } else {
-    for (let i = 0; i < strokeArr.length; i++) {
-      const p = strokeArr[i];
-      if (p.start || i === 0) drawDot(p.x, p.y, p.color, p.size, p.erase);
-      else { const prev = strokeArr[i - 1]; drawLine(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase); }
-    }
+    i = j;
   }
+  if (comp) { comp.finish(); comp.present(); }
 }
+
 
 // Pure replay core shared by preview playback and video export, so stroke
 // timing can never diverge between them. Draws every timeline point whose
@@ -3302,7 +3341,7 @@ function normalizeSkribl(payload) {
     schemaVersion: payload.schemaVersion || 2,
     playbackMode: playbackMode,
     fps: fps,
-    frames: frames,
+    frames: (window.SkriblPointWrite ? SkriblPointWrite.frames(frames) : frames),
     // legacy top-level mirror of the current frame (keeps loadSkribl et al. intact)
     strokes: f0.strokes || [],
     strokeGroups: f0.strokeGroups || [],
@@ -3349,7 +3388,9 @@ function serializeSkribl() {
     playbackMode: 'replay', // 1 frame ⇒ timed replay
     pauseMode: pauseMode,   // how idle gaps replay; see PAUSE_CAPS
     fps: null,              // replay Skribls don't use fps
-    frames: [ frame ],
+    // The same rule Flip writes through — lib/pointwrite.js, so the two
+    // surfaces cannot drift on how a point is spelled.
+    frames: (window.SkriblPointWrite ? SkriblPointWrite.frames([frame]) : [frame]),
     draftId: 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     userId: null,               // server stamps this later
     createdAt: new Date().toISOString(),

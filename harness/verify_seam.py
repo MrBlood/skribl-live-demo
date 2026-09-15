@@ -306,8 +306,27 @@ if _marker in _appjs:
     # explanation with a right to exist; deleting prose to hit a ceiling is the
     # habit this file's own history warns about. 30 lines of headroom instead
     # of nought, so the next edit here is a decision rather than an accident.
+    # 1730 -> 1760 at v297, measured 1738, and again the spending came first.
+    #
+    # What grew: paintStrokesStatic walks runs and draws a uniform see-through
+    # one as a single canvas path, and makeStrokeCompositor gains pathFn to lay
+    # that run onto the dry layer in order. That is the beading fix, and it is
+    # PLAYER code in the player -- paintStrokesStatic is where a Flip document's
+    # frames are rendered for a viewer, and a Motion Smear ghost written at
+    # alpha 46/255 was painting at 83 there. Not editor code leaking in, which
+    # is what this assertion exists to catch: the two assertions that measure
+    # that both hold (editor-only 2638 against a floor of 2200, and still above
+    # the reachable set).
+    #
+    # Removed before asking: no inline fallback for uniformRun, because the
+    # overBudget call beside it already treats an absent lib as "not over
+    # budget" rather than keeping a second copy; and the explanation inside
+    # paintStrokesStatic cut to a pointer, the full version living in
+    # lib/strokelayers.js and flip.js. Those took the addition from 20 lines to
+    # 8. NOT shaved further -- deleting prose that exists nowhere else to hit a
+    # ceiling is the habit the note above warns about, twice.
     check("the player's reachable set has not ballooned",
-          _player_lines <= 1730,
+          _player_lines <= 1760,
           f"{_player_lines} lines reachable, was 1339")
     # THIS ASSERTION USED TO READ `_editor_lines > _player_lines`, under the
     # name "a split is still worth doing". It was a TODO wearing a test's

@@ -340,6 +340,12 @@ let editIdx = 0, armedDel = -1, armedClear = false;
 let revealRAF = null, revealStart = 0;
 
 function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
+/* Every payload leaves through here. Read defensively for the same reason
+   frameHold() is: a surface that somehow loads without lib/pointwrite.js writes
+   what it always wrote rather than throwing. */
+function writeFrames(list){
+  return (window.SkriblPointWrite ? SkriblPointWrite.frames(list) : list);
+}
 // Per-page hold: how many base-fps slots this page occupies. ALWAYS read through
 // this — never trust f.hold to exist. Pages loaded from a pre-v109 payload have no
 // hold field at all and must read as 1, which is what makes the change additive.
@@ -566,7 +572,9 @@ function serializeFlip(opts){
     music: withMedia ? (musicData || null) : null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : (pendingMusicMeta || null),
-    frames: frames.map((f, i) => {
+    // writeFrames AFTER the map, never before: genRecipe is keyed on the live
+    // frame objects, and tidying first would hand it copies it has never seen.
+    frames: writeFrames(frames.map((f, i) => {
       const h = frameHold(f);
       // A generated page, still sitting between the two pages that made it,
       // still holding what they made. Any of those three untrue and it is
@@ -578,9 +586,15 @@ function serializeFlip(opts){
            && genSame(g.a, genPrint(prev)) && genSame(g.b, genPrint(next))){
           // g.aim rides along or an aimed page comes back un-aimed: the
           // rebuild calls buildTween(prev, next, gen) and gen is all it gets.
-          const o = { gen: g.aim ? { k: g.k, n: g.n, passes: g.passes, aim: g.aim }
-                                 : { k: g.k, n: g.n, passes: g.passes },
-                      background: bgColor };
+          /* EVERY FIELD THE REBUILD NEEDS, not the ones this line happened to
+             know about when it was written. `lead` decides whether the page is
+             a light pose-with-a-trail or the old exposure, and listing fields
+             by hand dropped it -- so a saved light page came back as a 6,960
+             point exposure, silently, and only on reload. Spread the recipe and
+             name what is EXCLUDED instead: `print`, `a` and `b` are the
+             fingerprints this function just checked, not build inputs. */
+          const { print: _p, a: _ga, b: _gb, ...genOut } = g;
+          const o = { gen: genOut, background: bgColor };
           if(h > 1) o.hold = h;
           if(frameDraw(f)) o.draw = true;
           return o;
@@ -593,7 +607,7 @@ function serializeFlip(opts){
       if(h > 1) o.hold = h;      // omitted at the default => payload unchanged
       if(frameDraw(f)) o.draw = true;   // same rule: absent at the default
       return o;
-    })
+    }))
   };
 }
 // localStorage is capped at ~5 MB per origin. A background image and especially a
@@ -1142,7 +1156,40 @@ function strokeAlphaOf(col){
   return alphaOf(col);
 }
 function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
+/* Inline fallback for lib/strokelayers.js's uniformRun, as elsewhere in this
+   file. The note beside it there is the reasoning. */
+function _uniformRun(seg, alphaFn){
+  if(!seg || seg.length < 2) return 0;
+  const p = seg[0];
+  if(p.erase) return 0;
+  const a = alphaFn(p.color);
+  if(!(a < 1)) return 0;
+  for(let i = 1; i < seg.length; i++){
+    const q = seg[i];
+    if(q.erase || q.color !== p.color || q.size !== p.size) return 0;
+  }
+  return a;
+}
 function paintSeg(c, seg, solid){
+  /* ONE PATH when the run can take it -- see lib/strokelayers.js. Skipped when
+     `solid` is set, because that is the layer already doing this job and the
+     colour it hands down is opaque; and skipped while the mirror is live,
+     because drawLine paints the reflections and a path that goes around it
+     would drop them. */
+  if(!solid && !(window.SkriblMirror && SkriblMirror.active())){
+    const _fn = (typeof window !== 'undefined' && window.SkriblStrokeLayers
+                 && window.SkriblStrokeLayers.uniformRun)
+      ? window.SkriblStrokeLayers.uniformRun : _uniformRun;
+    if(_fn(seg, strokeAlphaOf)){
+      const p = seg[0];
+      c.strokeStyle = p.color; c.lineWidth = p.size;
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(seg[0].x, seg[0].y);
+      for(let i = 1; i < seg.length; i++) c.lineTo(seg[i].x, seg[i].y);
+      c.stroke();
+      return;
+    }
+  }
   for (let i = 0; i < seg.length; i++) {
     const p = seg[i]; const col = solid ? solidOf(p.color) : p.color;
     if (i === 0) drawDot(c, p.x, p.y, col, p.size, p.erase);
@@ -2064,7 +2111,9 @@ window.addEventListener('touchcancel', _pinchEnd);
 const strip = document.getElementById('strip');
 const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function disarmAll(){
-  if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
+  // _tiles(), not children: see refreshThumb. armedDel is a PAGE index and
+  // can be past the paste ghost, which would disarm a different tile's X.
+  if(armedDel >= 0){ const prev=_tiles()[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
   if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete all pages (keeps music and background)'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear all pages'; } }
 }
 /* ---- page toolbar (v124) --------------------------------------------------
@@ -2570,10 +2619,72 @@ document.addEventListener('keydown', e=>{
   }
 });
 
-function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent'; const c=cv.getContext('2d');
-  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); drawBackdrop(c); paintFrame(c, f.strokes); }
-function refreshAllThumbs(){ [...strip.children].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
-function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
+/* A PAGE'S THUMBNAIL IS REPAINTED ONLY WHEN THE PAGE CHANGES.
+
+   buildStrip() repaints every tile, and it is called on every insert, delete,
+   reorder, span change and hold tap -- so adding one page repainted all of them.
+   Measured on a 31-page document: 555ms in buildStrip, of which 510ms was
+   thumbnails and 2.1ms was the DOM. That is the whole of "each smear takes
+   longer than the last": the cost is proportional to everything already there.
+
+   The cache is keyed on the frame OBJECT and validated by a cheap CONTENT
+   signature, not by a dirty flag. A flag would have to be set at every place
+   that edits a page -- draw, erase, undo, liquify, smudge, fill, the transforms,
+   applyPayload -- and the one that gets missed shows the artist a thumbnail of
+   a drawing they no longer have. The signature costs one arithmetic pass over
+   the points and cannot be forgotten. */
+const _thumbCache = new WeakMap();
+// A change anywhere in the page changes this. Cheap enough to run on every
+// tile of every rebuild: arithmetic only, no canvas, no allocation.
+function _thumbSig(f){
+  const pts = f.strokes; let acc = pts.length * 31 + (f.strokeGroups||[]).length;
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    acc = (acc + p.x * 7.31 + p.y * 3.17 + (p.size || 0)) % 2147483647;
+  }
+  // The backdrop is not in the strokes, and neither is the eraser flag pattern.
+  return acc + '|' + pts.length + '|' + (bgColor || '') + '|' + (bgImage ? 1 : 0);
+}
+/* Bounded, for the reason lib/framebitmap.js is: bitmaps are how canvases die on
+   phones. 88x62 at dpr 2 is ~87KB a page, so a 200-page document would hold
+   ~17MB. Past the budget a tile simply paints direct -- slower, never wrong. */
+const THUMB_CACHE_BYTES = 8 * 1024 * 1024;
+let _thumbBytes = 0;
+function drawThumb(cv,f){
+  cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent';
+  const c=cv.getContext('2d');
+  const sig = _thumbSig(f), hit = _thumbCache.get(f);
+  if(hit && hit.sig === sig && hit.w === cv.width && hit.h === cv.height){
+    c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height);
+    c.drawImage(hit.cv, 0, 0);
+    return;
+  }
+  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH);
+  drawBackdrop(c); paintFrame(c, f.strokes);
+  const bytes = cv.width * cv.height * 4;
+  if(_thumbBytes + bytes > THUMB_CACHE_BYTES) return;   // paint direct from here on
+  try {
+    const off = document.createElement('canvas');
+    off.width = cv.width; off.height = cv.height;
+    off.getContext('2d').drawImage(cv, 0, 0);
+    if(!hit) _thumbBytes += bytes;
+    _thumbCache.set(f, { sig: sig, cv: off, w: cv.width, h: cv.height });
+  } catch(_){ /* canvas allocation may fail under memory pressure; direct is fine */ }
+}
+/* A TILE IS NOT A CHILD INDEX. The paste ghost is appended INSIDE the page loop,
+   immediately after the current page, so whenever the clipboard holds pages every
+   tile after `idx` sits one child further along than its page. Both of these
+   indexed `strip.children` directly and so repainted the WRONG tile for any page
+   after the current one -- drawing frames[i] into frames[i-1]'s thumbnail.
+
+   It has been latent because buildStrip() repaints every tile from scratch and
+   runs after most things, so a wrong refresh was overwritten before anyone saw
+   it. Caching the thumbnails removes that cover: a tile painted with the wrong
+   page now STAYS wrong until that page changes. Found while writing the cache's
+   own test, which read a neighbouring tile for the same reason. */
+const _tiles = () => strip.querySelectorAll('.frame:not(.ghost-paste)');
+function refreshAllThumbs(){ [..._tiles()].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
+function refreshThumb(i){ const el=_tiles()[i]; if(el && frames[i]) drawThumb(el.querySelector('canvas'),frames[i]); }
 // Reorder by one slot. Keeps `idx` pointing at the SAME page the user was on —
 // moving a page must never silently switch which page you're drawing on.
 function movePage(i,dir){
@@ -2862,7 +2973,10 @@ function deepCopy(f){ const b = balancedPair(f);
 // showing page 1. addFrame() was the only caller that scrolled, so the fix
 // existed but was never shared.
 function scrollStripToActive(smooth){
-  const el=strip.children[idx];
+  // Correct either way today -- the ghost is appended AFTER the current page, so
+  // children[idx] is still idx's tile -- but page indexes go through _tiles() so
+  // that stays true if the ghost ever moves.
+  const el=_tiles()[idx];
   if(!el) return;
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }
@@ -4259,7 +4373,7 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
   // /s/<id>/card.png fell through to the static branded og-card for every Flip
@@ -5532,6 +5646,53 @@ function selRestore(pts){
    page gets the full 26 samples, a heavy one gets fewer and a coarser exposure,
    and a page too heavy for even a handful says so rather than producing a
    frame the server will reject. */
+/* THE LIGHT SMEAR — a pose with a trail behind it, not an exposure.
+
+   The exposure below emits every stroke N times over M blur passes: 6,960 points
+   for one ball, against 174 for the drawing it was made from. Measured on the
+   owner's own file, that is what made the editor crawl -- buildStrip repaints a
+   thumbnail of every page on every insert, and its cost tracks POINTS, not page
+   count: 31 pages came to 599ms of strip rebuild with heavy pages and 93ms with
+   light ones, so the fifteenth smear took 697ms to add and the first took 302ms.
+
+   A light page is the same motion said in a tenth of the ink: ONE crisp in-between
+   at the midpoint, which is the position the eye actually reads, plus a short
+   faint trail behind it for the sense of travel. The trail is resampled COARSE --
+   a ghost at 9% alpha behind a moving figure carries no detail worth the drawing's
+   full point count, and that is where the rest of the weight was. */
+/* HOW MANY GHOSTS IS A PROPERTY OF THE BRUSH, NOT A CONSTANT.
+
+   Six was set on a 49px ball travelling 59px: the ghosts land ~5px apart, well
+   inside the ball's own width, so they overlap and read as one smear. The owner
+   then smeared a 3px LINE travelling 220px. The same six ghosts land 18px apart
+   with nothing 18px wide to bridge them, and the page reads as six separate
+   lines -- the failure the exposure had, at a tenth of the cost.
+
+   So the spacing is chosen, not the count: ghosts sit a fraction of a brush
+   width apart, which is what makes them merge. A wide brush moving a little
+   needs a handful; a hairline crossing the page needs many.
+
+   THE ALPHA DOES NOT FALL WITH THE COUNT, though -- dividing a fixed ink budget
+   among the ghosts was the first thing tried here and it is wrong. Ghosts do not
+   stack everywhere they exist, only where the brush covers the SAME pixel, and
+   once the spacing is a fraction of the brush that coverage is a constant
+   (1/OVERLAP of them) no matter how long the trail is. Budgeting by count dimmed
+   the ball from the 0.20 the owner asked for to 0.109 while changing nothing
+   about whether it reads as a slab. What is corrected below is COVERAGE, which
+   only departs from that constant when a clamp forces it to: a barely-moving
+   wide brush piles MIN ghosts on one spot, and that is the case worth thinning. */
+const SMEAR_TRAIL_OVERLAP = 0.7;  // ghost spacing, as a fraction of brush width
+const SMEAR_TRAIL_MIN = 4;
+const SMEAR_TRAIL_MAX = 28;       // bounds the cost of a hairline crossing the page
+/* 0.20, not the 0.09 this shipped with: on the owner's own drawing the trail
+   at 0.09 was there in a render and invisible on a phone. Raising it also
+   LENGTHENS the trail, because the faintest ghosts are dropped below the
+   alpha at which a pass can carry the ink's colour and a higher cap lifts
+   one of them back over it: 300 points at 0.09, 342 at 0.14 and above. */
+const SMEAR_TRAIL_ALPHA = 0.20;  // the darkest of them
+const SMEAR_TRAIL_FALLOFF = 2;   // t^2: what is older is fainter, fast
+const SMEAR_TRAIL_COARSE = 4;    // a ghost carries a quarter of the pose's points
+
 const TWEEN_SAMPLES = 26;
 const TWEEN_MIN_SAMPLES = 6;
 const TWEEN_POINT_CAP = 14000;
@@ -6295,6 +6456,105 @@ function buildTween(a, b, want){
     });
     out.strokeGroups.push(run.length);
   }
+  /* THE LIGHT PATH. Everything above -- the aim, the matcher, the strokes that
+     did not move -- is shared; only what gets emitted for the strokes that DID
+     move changes. `lead` rides in the recipe, so a stored page rebuilds through
+     this same branch and comes back the page that was saved. */
+  if(want && want.lead){
+    /* THE LEAD COVERS WHAT IS BEING SMEARED, NOT THE WHOLE PAGE. Built from
+       the pages AS THEY CAME IN it rebuilt every stroke -- including the ones
+       the loop above just
+       emitted once as `still` -- so an aimed page drew its unmoved strokes
+       TWICE and came out heavier than the un-aimed one it was supposed to beat
+       (94 points against 90). `a` and `b` here are post-alignment: exactly the
+       strokes that paired, which is exactly what the trail samples too. What
+       did not pair, and what the artist did not aim at, is in `still`. */
+    const lp = buildInbetween(a, b, 0.5);
+    if(lp){
+      /* Measured on the strokes being smeared, not on the whole page: how far
+         the ink travels, and how wide it is. `a` and `b` are post-alignment, so
+         index i on one is the same piece of ink as index i on the other. Mean
+         displacement rather than max, so one far-flung point does not set the
+         spacing for everything. */
+      let sumTravel = 0, sumSize = 0, nPair = 0;
+      for(let i = 0; i < a.strokes.length; i++){
+        const pa = a.strokes[i], pb = b.strokes[i];
+        if(!pa || !pb) continue;
+        sumTravel += Math.hypot(pb.x - pa.x, pb.y - pa.y);
+        sumSize += (typeof pa.size === 'number' ? pa.size : 6);
+        nPair++;
+      }
+      const travel = nPair ? sumTravel / nPair : 0;
+      const brush = nPair ? sumSize / nPair : 6;
+      // The trail spans half the travel: the pose sits at the midpoint.
+      const trailLen = travel * 0.5;
+      const step = Math.max(0.5, brush * SMEAR_TRAIL_OVERLAP);
+      const ghosts = Math.max(SMEAR_TRAIL_MIN,
+                              Math.min(SMEAR_TRAIL_MAX, Math.round(trailLen / step)));
+      /* How many ghosts land on one pixel: the brush divided by the gap, never
+         fewer than one and never more than there are. At the spacing above this
+         is 1/OVERLAP and the alpha comes out at exactly SMEAR_TRAIL_ALPHA, so
+         the ball is the ball. It rises only where a clamp piled them up. */
+      const cover = Math.max(1, Math.min(ghosts, brush / (trailLen / ghosts)));
+      const trailAlpha = SMEAR_TRAIL_ALPHA / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
+      for(let sIdx = 0; sIdx < ghosts; sIdx++){
+        const frac = sIdx / ghosts;
+        /* THE TRAIL REACHES BACK TO THE POSE, NOT PAST IT. The pose is at the
+           midpoint, so the ghosts span 0 -> 0.5 of the travel; spanning the
+           whole gap puts the faintest ones AHEAD of the ball, which renders as
+           a trail pointing the wrong way. `frac` still runs 0..1 for the alpha
+           ramp -- it is the POSITION that is halved. */
+        const pos = frac * 0.5;
+        const av = trailAlpha * Math.pow(frac, SMEAR_TRAIL_FALLOFF);
+        if(av * 255 < 3) continue;   // below this a pass cannot carry the ink's colour
+        let at2 = 0;
+        for(let g = 0; g < a.strokeGroups.length; g++){
+          const count = a.strokeGroups[g];
+          const run = [];
+          for(let k = 0; k < count; k++){
+            const pa = a.strokes[at2 + k], pb = b.strokes[at2 + k];
+            const q = Object.assign({}, pa);
+            q.x = pa.x + (pb.x - pa.x) * pos;
+            q.y = pa.y + (pb.y - pa.y) * pos;
+            if(typeof pa.size === 'number')
+              q.size = pa.size + tweenSoftEdge(pa.size) * (1 - frac);
+            q.color = tweenFade(pa.color, av);
+            run.push(q);
+          }
+          const cut = tweenResample(run, Math.max(3, Math.round(count / SMEAR_TRAIL_COARSE)));
+          cut.forEach((q, i) => {
+            if(i === 0) q.start = true; else delete q.start;
+            out.strokes.push(q);
+          });
+          out.strokeGroups.push(cut.length);
+          at2 += count;
+        }
+      }
+      // The pose last and at full strength: the trail is history, this is now.
+      let k2 = 0;
+      for(const cnt of lp.strokeGroups){
+        for(let i = 0; i < cnt; i++){
+          const q = Object.assign({}, lp.strokes[k2 + i]);
+          if(i === 0) q.start = true; else delete q.start;
+          out.strokes.push(q);
+        }
+        out.strokeGroups.push(cnt); k2 += cnt;
+      }
+      for(const run of carried){
+        run.forEach((q, i) => {
+          const c = Object.assign({}, q);
+          if(i === 0) c.start = true; else delete c.start;
+          out.strokes.push(c);
+        });
+        out.strokeGroups.push(run.length);
+      }
+      genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, aim: aim.slice() }
+                             : { k: 'smear', n: n, passes: 1, lead: 1 });
+      tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
+                          anyMoved: anyMovedHere };
+      return out;
+    }
+  }
   // What it would take to make this page again, which is all the draft needs to
   // store instead of the points below. Beside the frame, never on it.
   /* THE AIM IS PART OF THE RECIPE. applyPayload rebuilds a stored page by
@@ -6423,7 +6683,7 @@ function addTween(){
      rather than as a grey blob. With nothing selected this is the whole page,
      exactly as before. */
   const aim = tweenAimFromSelection(a);
-  const t = buildTween(a, b, aim ? { aim: aim } : undefined);
+  const t = buildTween(a, b, aim ? { lead: 1, aim: aim } : { lead: 1 });
   if(!t) return;
   // The three fingerprints the draft checks before it trusts the recipe: this
   // page, and the two it was made from.

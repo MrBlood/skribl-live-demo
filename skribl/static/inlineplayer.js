@@ -365,6 +365,14 @@
     return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : 1;
   }
 
+  /* The alpha in any form, the 8-digit hex a Motion Smear writes included.
+   * NOT parseStrokeAlpha: that one decides the wet layer, and teaching it this
+   * hex would put every generated page on a per-stroke round trip. */
+  function anyStrokeAlpha(c) {
+    var h = typeof c === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(c.trim());
+    return h ? parseInt(h[1], 16) / 255 : parseStrokeAlpha(c);
+  }
+
   function solidStrokeColor(c) {
     if (typeof c !== 'string') return c;
     var m = c.match(/^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*[\d.]+\s*\)$/i);
@@ -476,21 +484,48 @@
     return i;
   }
 
+  /* Inline fallback for lib/strokelayers.js's uniformRun, as for every lib. */
+  function uniformRun(seg, alphaFn) {
+    var p = seg[0], a, i, q;
+    if (seg.length < 2 || p.erase || !((a = alphaFn(p.color)) < 1)) return 0;
+    for (i = 1; i < seg.length; i++) { q = seg[i];
+      if (q.erase || q.color !== p.color || q.size !== p.size) return 0; }
+    return a;
+  }
+
   function paintStatic(ctx, strokes, canvas) {
     /* The idle poster and every non-replay repaint come through here, so the
      * compositor has to be on this path too — otherwise a post looks right
      * while playing and wrong the moment it settles. */
     var comp = canvas ? makeCompositor(ctx, canvas, strokes) : null;
-    for (var i = 0; i < strokes.length; i++) {
-      var p = strokes[i];
-      if (p.start || i === 0) {
-        if (comp) comp.dot(p.x, p.y, p.color, p.size, p.erase);
-        else drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
-      } else {
-        var prev = strokes[i - 1];
-        if (comp) comp.line(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+    var fn = (typeof window !== 'undefined' && window.SkriblStrokeLayers
+              && window.SkriblStrokeLayers.uniformRun)
+      ? window.SkriblStrokeLayers.uniformRun : uniformRun;
+    var i = 0, j, k, seg, p, prev;
+    while (i < strokes.length) {
+      /* One run = a start flag to the next; `i === 0` as replayTo allows. */
+      j = i + 1;
+      while (j < strokes.length && !strokes[j].start) j++;
+      seg = strokes.slice(i, j);
+      p = seg[0];
+      /* ONE PATH when the run can take it -- see lib/strokelayers.js. A smear's
+       * ghosts are the case the compositor cannot reach, their alpha being hex. */
+      if (!comp && fn(seg, anyStrokeAlpha)) {
+        ctx.strokeStyle = p.color; ctx.lineWidth = p.size;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y);
+        for (k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
+        ctx.stroke();
+      } else for (k = i; k < j; k++) {
+        p = strokes[k];
+        prev = strokes[k - 1];
+        if (p.start || k === 0) {
+          if (comp) comp.dot(p.x, p.y, p.color, p.size, p.erase);
+          else drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
+        } else if (comp) comp.line(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
         else drawLine(ctx, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
       }
+      i = j;
     }
     if (comp) { comp.finish(); comp.present(); }
   }

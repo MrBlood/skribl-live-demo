@@ -219,6 +219,91 @@ with sync_playwright() as p:
           f"accepts x{_cmax}: {_accepts(_cmax)}, "
           f"accepts x{_V.MAX_HOLD + 1}: {_accepts(_V.MAX_HOLD + 1)}")
 
+    # ---- HOW A POINT IS WRITTEN -------------------------------------------
+    print("\nHOW A POINT IS WRITTEN — the same spelling on both surfaces")
+    pw = pg.evaluate("""() => {
+      const W = window.SkriblPointWrite;
+      const src = [{ x: 127.04332313965341, y: 99.5023777173913, color: '#26b0ff',
+                     size: 7.343333333333333, t: 124272.30000001192,
+                     erase: false, start: true },
+                   { x: 3.14159265358979, y: 2.71828182845904, color: '#ffffff',
+                     size: 2.0000000001, t: 8.999999, erase: true }];
+      const one = { strokes: src, strokeGroups: [2] };
+      const out = W.frames([one])[0];
+      const raw = JSON.stringify(one), tidy = JSON.stringify(out);
+      return { raw: raw.length, tidy: tidy.length,
+               kept: out.strokes[0], eraser: out.strokes[1],
+               dx: Math.abs(out.strokes[0].x - src[0].x),
+               dy: Math.abs(out.strokes[0].y - src[0].y),
+               mutated: src[0].erase === false && src[0].x === 127.04332313965341,
+               norecipe: JSON.stringify(W.frames([{gen:{k:'smear'}}])[0]) }; }""")
+    check("writing a point costs fewer bytes than printing a double",
+          pw["tidy"] < pw["raw"], f'{pw["tidy"]} vs {pw["raw"]} bytes')
+    # The saving is worth nothing if it moves the drawing. 0.01px is a thirtieth
+    # of a device pixel at the largest canvas and dpr this app allows.
+    check("...and no point moves as much as a hundredth of a pixel",
+          pw["dx"] <= 0.005 and pw["dy"] <= 0.005, f'dx {pw["dx"]}, dy {pw["dy"]}')
+    check("a false erase is left out, a true one is kept",
+          not ("erase" in pw["kept"]) and pw["eraser"]["erase"] is True,
+          f'{pw["kept"]} / {pw["eraser"]}')
+    check("every other field survives untouched",
+          pw["kept"]["color"] == "#26b0ff" and pw["kept"]["start"] is True,
+          str(pw["kept"]))
+    # A serializer that edits the live drawing would round the artwork itself,
+    # and every later liquify pass would round its own output again.
+    check("the live drawing is not edited by being written",
+          pw["mutated"], "serializing mutated the frame it was handed")
+    check("a page with no strokes passes through rather than gaining an empty one",
+          '"gen"' in pw["norecipe"] and '"strokes"' not in pw["norecipe"],
+          pw["norecipe"])
+    # THE OMISSION IS ONLY SAFE WHILE EVERY READER TESTS TRUTHINESS. Asserted
+    # against the readers themselves, not against a memory of having checked.
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _bad = []
+    for _n in ("app.js", "flip.js", "inlineplayer.js",
+               "lib/stamps.js", "lib/strokelayers.js"):
+        _path = os.path.join(_root, "skribl", "static", *_n.split("/"))
+        if not os.path.exists(_path):
+            _bad.append(_n + " (missing)"); continue
+        with open(_path) as _fh: _src = _fh.read()
+        for _pat in ("erase === false", "erase !== false", "erase === undefined",
+                     "'erase' in ", '"erase" in '):
+            if _pat in _src: _bad.append(f"{_n}: {_pat}")
+    check("no reader distinguishes erase:false from erase absent",
+          not _bad, "; ".join(_bad[:3]))
+
+    # BOTH PAINTERS TAKE THE UNIFORM-RUN PATH, OR ONE OF THEM BEADS.
+    #
+    # A Motion Smear ghost is see-through and its alpha rides in an 8-digit hex.
+    # Both surfaces' LAYERING parsers match rgba() only, deliberately -- a
+    # generated page on a per-stroke round trip is the stall v239 fixed -- so no
+    # compositor sees a ghost, and painted dot-then-line-per-segment it stacks
+    # against itself at every joint: written at 46/255 it painted at 83.
+    # verify_beading measures that in PIXELS on the two surfaces a test page can
+    # reach: Flip, and app.js's paintStrokesStatic, which draws the Pad and the
+    # sealed /s/ player both. The in-post player's painter is module-private and
+    # reachable from no test page, and the players are exactly where this project
+    # keeps finding the second copy of a fixed bug -- so every surface is pinned
+    # here too, at the source, which is the mechanism: the call has to be there.
+    # MATCHED ON THE CALL, HANDED THE HEX-AWARE PARSER -- which is one pattern,
+    # not two, and that matters. The first draft of this check looked for
+    # "uniformRun(seg," and PASSED on a tree with the player's call deleted:
+    # each file carries an inline FALLBACK whose declaration reads
+    # `function uniformRun(seg, alphaFn)`, so the search found the definition of
+    # the thing it was checking for the use of. A mutation said so; nothing else
+    # would have. The call site hands in the surface's hex-aware alpha by name,
+    # and no declaration anywhere spells that.
+    _paint = []
+    for _n, _alpha in (("flip.js", "strokeAlphaOf"),
+                       ("inlineplayer.js", "anyStrokeAlpha"),
+                       ("app.js", "anyStrokeAlpha")):
+        _path = os.path.join(_root, "skribl", "static", _n)
+        with open(_path) as _fh: _src = _fh.read()
+        if f"(seg, {_alpha})" not in _src:
+            _paint.append(f"{_n}: no uniform-run test handed {_alpha}")
+    check("all three painters route a uniform see-through run through one path",
+          not _paint, "; ".join(_paint))
+
     print("\nEDGES")
     # The ms API, same edges. A page is denominated in milliseconds now, so the
     # tables these are handed are ms rather than slots — the questions are

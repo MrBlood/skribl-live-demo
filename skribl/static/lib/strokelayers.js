@@ -91,8 +91,27 @@
     return false;
   }
 
+  /* A UNIFORM SEE-THROUGH RUN IS ONE PATH, not a dot plus a line per segment:
+   * drawn per segment it composites against itself wherever the round caps
+   * overlap, which on a polyline is everywhere, and a smear ghost written at
+   * alpha 46/255 painted at 83. One path cannot stack against itself and is
+   * FEWER calls than the walk, so unlike the layer above it needs no budget.
+   * Only for a run of one colour and one width -- true of a generated ghost,
+   * false of a pressure stroke, which still gets the layer. Returns the run's
+   * alpha, or 0. `alphaFn` must read every form the alpha arrives in, the
+   * 8-digit hex included; a LAYERING parser here disables this rather than
+   * breaking it. flip.js paintSeg carries the full reasoning -- it is not in
+   * any byte budget and this file is in two. */
+  function uniformRun(seg, alphaFn) {
+    var p = seg[0], a, i, q;
+    if (seg.length < 2 || p.erase || !((a = alphaFn(p.color)) < 1)) return 0;
+    for (i = 1; i < seg.length; i++) { q = seg[i];
+      if (q.erase || q.color !== p.color || q.size !== p.size) return 0; }
+    return a;
+  }
+
   var api = { enabled: enabled, setEnabled: setEnabled, create: create,
-              BUDGET: BUDGET, overBudget: overBudget };
+              BUDGET: BUDGET, overBudget: overBudget, uniformRun: uniformRun };
   if (typeof window !== 'undefined') window.SkriblStrokeLayers = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();
