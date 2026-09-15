@@ -6393,7 +6393,13 @@ function carveForInsert(at){
        Bounded at 8x the artist's rate, which buys halves, quarters and eighths;
        past that the honest answer is that the interval is already as fine as
        this format cuts, and a page that cannot be carved for is not inserted. */
-    if(subdiv >= 8) return -1;
+    /* The bound is the FORMAT's, read off the document, not a counter of how
+       many times this session has subdivided. A counter that only grows refuses
+       on a document it has never seen -- a fresh page after a Clear all, or a
+       fixture that builds `frames` by hand -- and the refusal has nothing to do
+       with the pages actually in front of it. Doubling multiplies every hold, so
+       holds of 1 reach MAX_HOLD after three doublings and the check below is
+       self-limiting: subdiv cannot exceed 8 whatever the counter says. */
     // Doubling every hold must not push one past what holdOf() will read back,
     // or the clamp silently shortens it and the document speeds up.
     for(const f of frames) if(frameHold(f) * 2 > MAX_HOLD) return -1;
@@ -8497,7 +8503,13 @@ function invalidateClearUndo(){
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx };   // pages only — see note above
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv };
+  /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
+     subdiv only ever grew: a cleared page kept the finer time grid of the pages
+     that are gone, which spends the insert budget on nothing and leaves the
+     speed control showing a rate no page is using. Backed up with the frames
+     above, because undoing the clear has to bring the timing back with them. */
+  fps = poseRate(); subdiv = 1;
   frames=[newFrame()]; idx=0; redoStack.length=0;
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
@@ -8520,6 +8532,10 @@ bindEl('clearUndo', 'click',()=>{
   disarmAll();
   frames = clearFramesBackup.frames.map(deepCopy);
   idx = Math.min(clearFramesBackup.idx, frames.length-1);
+  // The pages come back with the time grid they were written for; restoring the
+  // frames alone would play them at the rate of the empty document.
+  if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
+  if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
