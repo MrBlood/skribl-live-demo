@@ -5628,7 +5628,12 @@ function selRestore(pts){
    a ghost at 9% alpha behind a moving figure carries no detail worth the drawing's
    full point count, and that is where the rest of the weight was. */
 const SMEAR_TRAIL_SAMPLES = 6;   // ghosts behind the pose
-const SMEAR_TRAIL_ALPHA = 0.09;  // the darkest of them
+/* 0.20, not the 0.09 this shipped with: on the owner's own drawing the trail
+   at 0.09 was there in a render and invisible on a phone. Raising it also
+   LENGTHENS the trail, because the faintest ghosts are dropped below the
+   alpha at which a pass can carry the ink's colour and a higher cap lifts
+   one of them back over it: 300 points at 0.09, 342 at 0.14 and above. */
+const SMEAR_TRAIL_ALPHA = 0.20;  // the darkest of them
 const SMEAR_TRAIL_FALLOFF = 2;   // t^2: what is older is fainter, fast
 const SMEAR_TRAIL_COARSE = 4;    // a ghost carries a quarter of the pose's points
 
