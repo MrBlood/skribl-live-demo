@@ -350,6 +350,180 @@ with sync_playwright() as p:
               f"{r['erasePoints']} eraser points in a single generated POSE, "
               f"which is one crisp drawing and has nothing to rub out")
 
+    # THE BUTTON, NOT THE BUILDER, and on pages whose stroke counts differ.
+    #
+    # buildInbetween pairs index for index. That was safe while tweenMismatch
+    # required the two pages to hold the same number of strokes -- and v296
+    # REMOVED that requirement, correctly, because pairing by SHAPE made it
+    # wrong: the owner draws the next pose by hand and it has a different
+    # number of strokes. buildTween got the matcher. addInbetween did not, and
+    # called the builder on the raw pages.
+    #
+    # So adding one stroke to a page shifted every pairing after it -- a line
+    # paired with a hexagon, a hexagon with a circle -- and where the first page
+    # had MORE runs than the second, rb[s] was undefined and the builder THREW.
+    # The owner found it in one drawing: "I added a vertical stroke to slide 1
+    # then put an in-between and this?"
+    #
+    # Driven through addInbetween because that is the surface that was broken;
+    # calling buildInbetween directly would pass on a tree with the bug in it.
+    _SHAPES = """(which) => {
+      const run = (pts) => pts.map((p, i) => ({ x: p[0], y: p[1],
+          color: '#ffffff', size: 6, t: i, erase: false, start: i === 0 }));
+      const poly = (cx, cy, r, n, rot) => { const o = [];
+        for (let i = 0; i <= n; i++) { const a = rot + i * 2 * Math.PI / n;
+          o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
+      const vline = (x, y0, y1) => { const o = [];
+        for (let i = 0; i <= 12; i++) o.push([x, y0 + (y1 - y0) * i / 12]);
+        return o; };
+      const page = (runs) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        for (const r of runs) { r.forEach(q => f.strokes.push(q));
+                                f.strokeGroups.push(r.length); } return f; };
+      const hexA = run(poly(220, 300, 70, 6, 0)), cirA = run(poly(430, 330, 60, 24, 0));
+      const hexB = run(poly(250, 300, 70, 6, 0.15)), cirB = run(poly(470, 330, 60, 24, 0));
+      const line = run(vline(180, 250, 560));
+      const A = which === 'extraOnFirst' ? page([line, hexA, cirA]) : page([hexA, cirA]);
+      const B = which === 'extraOnSecond' ? page([hexB, cirB, line]) : page([hexB, cirB]);
+      frames = [A, B]; idx = 0; fps = 24; subdiv = 1; selSpans = [];
+      buildStrip(); render();
+      const before = frames.length;
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = String(e); }
+      if (frames.length === before) return { threw, made: false };
+      const g = frames[1];
+      /* HOW ROUND IS EACH RUN? A hexagon paired with a hexagon stays a hexagon;
+         a hexagon paired with a LINE comes out a slack arc. Corner count is the
+         discriminator: the number of vertices where direction turns sharply. */
+      const corners = [];
+      let at = 0;
+      for (let k = 0; k < g.strokeGroups.length; k++) {
+        const n = g.strokeGroups[k], seg = g.strokes.slice(at, at + n);
+        at += n;
+        let turns = 0;
+        for (let i = 1; i + 1 < seg.length; i++) {
+          const ax = seg[i].x - seg[i-1].x, ay = seg[i].y - seg[i-1].y;
+          const bx = seg[i+1].x - seg[i].x, by = seg[i+1].y - seg[i].y;
+          const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+          if (la < 1e-6 || lb < 1e-6) continue;
+          const cos = (ax * bx + ay * by) / (la * lb);
+          if (cos < 0.85) turns++;             // a real corner, not a smooth bend
+        }
+        corners.push(turns);
+      }
+      return { threw, made: true, runs: g.strokeGroups.length, corners };
+    }"""
+    for _which, _label in (("extraOnFirst", "a stroke added to the FIRST page"),
+                           ("extraOnSecond", "a stroke added to the SECOND page")):
+        _r = page.evaluate(_SHAPES, _which)
+        check(f"In-between survives {_label}",
+              _r["threw"] is None and _r["made"],
+              f"threw {_r['threw']}; pairing index for index runs off the end "
+              f"of the shorter page")
+        # THE TWO DIRECTIONS DIFFER, AND THAT IS THE RULE, NOT A BUG. This
+        # check asserted 3 runs both ways on its first run and went red on the
+        # second -- and the CHECK was what was wrong.
+
+        # An in-between goes between this page and the next, and the pose is
+        # derived from this one. A stroke that exists only on THIS page is
+        # drawn once at full strength: it is on the page you are inserting
+        # after, so it is on screen at the midpoint. A stroke that exists only
+        # on the NEXT page is not drawn: it has not been drawn yet, and the
+        # half-way pose is before it exists. Draw both and a stroke appears an
+        # instant early; draw neither and one vanishes for a frame.
+        _want = 3 if _which == "extraOnFirst" else 2
+        check(f"...and keeps the strokes that are on the page ({_which})",
+              _r.get("runs") == _want,
+              f"{_r.get('runs')} runs in the pose, expected {_want} — a stroke "
+              f"with no partner on THIS page is drawn once, not dropped; one "
+              f"that exists only on the NEXT page is not drawn yet")
+        # THE SHAPES SURVIVE. One hexagon (its corners) and one near-circle
+        # (none). Mis-paired, the hexagon melts toward a line and the circle
+        # toward a hexagon, and this goes red.
+        # THE WHOLE MULTISET, NOT ITS ENDS. This read `_c[-1] >= 5 and
+        # _c[0] <= 1` first, and PASSED on the mis-pairing it exists to catch:
+        # with the line interpolated toward the hexagon the counts are [0,5,5],
+        # whose ends are still 0 and 5. Exactly one cornered run is the claim,
+        # so exactly one is what is counted.
+        _c = sorted(_r.get("corners") or [])
+        _cornered = [n for n in _c if n >= 5]
+        _smooth = [n for n in _c if n <= 1]
+        check(f"...and each shape is still itself ({_which})",
+              len(_c) == _want and len(_cornered) == 1
+              and len(_smooth) == _want - 1,
+              f"corner counts {_c} — expected exactly ONE cornered run (the "
+              f"hexagon) and {_want - 1} smooth"
+              + (" (the circle and the straight line)" if _want == 3
+                 else " (the circle)")
+              + "; a second cornered run is a stroke interpolated toward the "
+              + "wrong partner")
+
+    # A GENERATED POSE IS A VALID INPUT TO THE GENERATOR, which is what the
+    # owner did -- "an inbetween between an actual stroke and another
+    # in-between" -- and it is why his page looked so thoroughly scrambled
+    # rather than merely wrong. Chaining does not CAUSE the mis-pairing, but it
+    # compounds it: the generated page carries the wrong pairing forward, and
+    # the next in-between pairs wrongly again. Measured on the tree he was
+    # using, a hexagon and a circle against a page with one stroke added:
+    #
+    #   step 1   hexagon -> a 13-point run with NO corners (melted to the line)
+    #            circle  -> a 25-point run with 5 (melted to the hexagon)
+    #   step 2   the corner counts swap again -- it re-mangles every round
+    #
+    # Aligned, the chain is stable: step 2 produces the same shape profile as
+    # step 1, which is the property pinned here.
+    _CHAIN = """() => {
+      const run = (pts) => pts.map((p, i) => ({ x: p[0], y: p[1],
+          color: '#ffffff', size: 6, t: i, erase: false, start: i === 0 }));
+      const poly = (cx, cy, r, n, rot) => { const o = [];
+        for (let i = 0; i <= n; i++) { const a = rot + i * 2 * Math.PI / n;
+          o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
+      const vline = (x, y0, y1) => { const o = [];
+        for (let i = 0; i <= 12; i++) o.push([x, y0 + (y1 - y0) * i / 12]);
+        return o; };
+      const page = (runs) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        for (const r of runs) { r.forEach(q => f.strokes.push(q));
+                                f.strokeGroups.push(r.length); } return f; };
+      const profile = (f) => { const out = []; let at = 0;
+        for (let k = 0; k < f.strokeGroups.length; k++) {
+          const n = f.strokeGroups[k], seg = f.strokes.slice(at, at + n); at += n;
+          let turns = 0;
+          for (let i = 1; i + 1 < seg.length; i++) {
+            const ax = seg[i].x - seg[i-1].x, ay = seg[i].y - seg[i-1].y;
+            const bx = seg[i+1].x - seg[i].x, by = seg[i+1].y - seg[i].y;
+            const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+            if (la < 1e-6 || lb < 1e-6) continue;
+            if ((ax*bx + ay*by) / (la*lb) < 0.85) turns++;
+          }
+          out.push(n + ':' + turns);
+        } return out.join(','); };
+      // The extra stroke sits on the LATER page, the ordering that produces a
+      // picture instead of running off the end.
+      const A = page([run(poly(220, 300, 70, 6, 0)), run(poly(430, 330, 60, 24, 0))]);
+      const C = page([run(vline(180, 250, 560)), run(poly(250, 300, 70, 6, 0.15)),
+                      run(poly(470, 330, 60, 24, 0))]);
+      frames = [A, C]; idx = 0; fps = 24; subdiv = 1; selSpans = [];
+      buildStrip(); render();
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = String(e); }
+      if (frames.length < 3) return { threw, first: null, again: null };
+      const first = profile(frames[1]);
+      idx = 0;
+      const before = frames.length;
+      try { addInbetween(); } catch (e) { threw = threw || String(e); }
+      return { threw, first,
+               again: frames.length > before ? profile(frames[1]) : null };
+    }"""
+    _ch = page.evaluate(_CHAIN)
+    check("an in-between can be built AGAINST a generated pose",
+          _ch["threw"] is None and _ch["again"] is not None,
+          f"threw {_ch['threw']}; a generated page has to be a valid input to "
+          f"the generator — the owner chains them")
+    check("...and chaining is stable, not a fresh mangling each round",
+          _ch["first"] is not None and _ch["first"] == _ch["again"],
+          f"first pass {_ch['first']}, chained pass {_ch['again']} — the same "
+          f"shapes must come back; a changed profile is the pairing shifting "
+          f"again on a page that was already generated")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

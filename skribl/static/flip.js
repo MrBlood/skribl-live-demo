@@ -2404,7 +2404,7 @@ function buildStrip(){
   col.innerHTML='<button class="addbtn" id="addcopy" title="Add a page that copies this one, so you can nudge and redraw"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Duplicate</button>'
     +'<button class="addbtn mini" id="addblank" title="Add an empty page"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Blank</button>'
     +'<button class="addbtn mini" id="addinbetween" title="Add one drawing halfway between this page and the next"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12"/><path d="M12 8.5v7"/></svg>In-between</button>'
-    +'<button class="addbtn mini" id="addtween" title="Show the movement between two drawings, the way a long exposure catches a moving puppet"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6v12"/><path d="M19 6v12" opacity=".95"/><path d="M9.5 8.5v7" opacity=".55"/><path d="M14.5 8.5v7" opacity=".3"/></svg>Motion Smear</button>'
+    +'<button class="addbtn mini" id="addtween" title="Show the movement between two drawings, the way a long exposure catches a moving puppet"><svg class="addbtn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6v12"/><path d="M14 7.5v9" opacity=".5"/><path d="M10.5 9v6" opacity=".3"/><path d="M7.5 10v4" opacity=".18"/><path d="M5 11v2" opacity=".1"/></svg>Motion Smear</button>'
     ;   // Paste is no longer here — see the ghost tile in buildStrip (v226).
   // The add controls live OUTSIDE the scrolling strip, as a row above the
   // thumbnails. Inside it they were its last child, so on a long flip they
@@ -6862,6 +6862,18 @@ function buildInbetween(a, b, t){
   const ra = tweenVisible(a).ink, rb = tweenVisible(b).ink;
   const out = newFrame();
   for(let s = 0; s < ra.length; s++){
+    /* PAIRED BY INDEX HERE, which is only correct because every caller aligns
+       first -- and the guard that used to make that true by force is gone.
+       tweenMismatch required equal stroke counts until v296, when pairing by
+       SHAPE made the requirement wrong: the owner draws the next pose by hand
+       and it has a different number of strokes. buildTween got the matcher;
+       this did not, and addInbetween called it on the raw pages. Adding one
+       stroke to a page then shifted every pairing after it -- a line paired
+       with a hexagon, a hexagon with a circle -- and where `a` had more runs
+       than `b`, rb[s] was undefined and this line THREW. Both reproduced.
+       addInbetween aligns now. This skip is the belt: a caller that forgets
+       loses a stroke from the pose rather than crashing the editor. */
+    if(!rb[s]) continue;
     const n = Math.max(ra[s].length, rb[s].length);
     if(n < 2) continue;
     const pa = tweenResample(ra[s], n);
@@ -6899,8 +6911,24 @@ function addInbetween(){
   if(moveMode){ chip('Finish or cancel the move first'); return; }
   const a = frames[idx], b = frames[idx + 1];
   if(!b){ chip('An in-between goes BETWEEN two pages — add the next pose first'); return; }
-  const t = buildInbetween(a, b, 0.5);
+  /* ALIGNED FIRST, the same way buildTween does it, because buildInbetween
+     pairs index for index and the pages it is handed need not agree. Without
+     this, adding a stroke to one page mis-paired everything after it or threw.
+     A stroke the matcher cannot place is drawn ONCE at full strength -- the
+     same answer the smear gives an unpaired stroke, and the only honest one:
+     a pose has no half-way position for a stroke that exists on one page. */
+  const _al = tweenAlign(a, b);
+  if(!_al){ chip('An in-between needs two poses with something in common'); return; }
+  const t = buildInbetween(_al.a, _al.b, 0.5);
   if(!t) return;
+  for(const run of (_al.unpaired || [])){
+    run.forEach((q, i) => {
+      const c = Object.assign({}, q);
+      if(i === 0) c.start = true; else delete c.start;
+      t.strokes.push(c);
+    });
+    t.strokeGroups.push(run.length);
+  }
   const _at = carveForInsert(idx);
   if(_at < 0){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
