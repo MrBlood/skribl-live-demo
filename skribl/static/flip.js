@@ -166,6 +166,15 @@ window.addEventListener('resize', ()=>{ sizeStage(); positionSeg(); positionTool
 let frames = [ newFrame() ];
 let idx = 0;
 let color = "#ffffff", size = 7, erasing = false, onion = true, fps = 12;
+/* HOW FINELY TIME IS CUT, as a multiple of the speed the artist picked.
+
+   `fps` is the stored playback rate and, with `hold`, fully determines timing --
+   no reader needs this field. It exists so the SPEED CONTROL can still show what
+   the artist chose: once a document is subdivided, fps is 2x the pose rate and
+   the 24 button must still light up for a 48fps document. Written only when it
+   is above 1, so a document nobody subdivided posts the bytes it always did. */
+let subdiv = 1;
+const poseRate = () => fps / (subdiv || 1);
 // Onion skin depth/tint are view-only session state — deliberately NOT persisted
 // or posted, so they cannot affect the payload format or the player.
 let onionDepth = 1, onionTint = false;
@@ -339,6 +348,13 @@ function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
 // Inline fallback for a surface that somehow loads without the lib.
 const MAX_HOLD = (typeof window !== 'undefined' && window.SkriblHold)
   ? window.SkriblHold.MAX_HOLD : 4;
+/* What the BADGE offers, which is not what the format stores. MAX_HOLD is the
+   ceiling on the stored unit and doubles when a document is subdivided; this is
+   the number of steps a person cycles through, and it does not move. Reading the
+   storage ceiling here made the badge cycle 1..8 the moment MAX_HOLD rose. */
+const UI_MAX_HOLD = 4;
+// The artist's x1..x4, out of and into the stored unit.
+const artistHold = (f) => Math.max(1, Math.round(frameHold(f) / (subdiv || 1)));
 function frameHold(f){
   if(typeof window !== 'undefined' && window.SkriblHold) return window.SkriblHold.holdOf(f);
   const h = Math.round(Number(f && f.hold));
@@ -537,6 +553,10 @@ function serializeFlip(opts){
   return {
     schemaVersion: 2, version: 2,
     playbackMode: 'flip', fps: fps,
+    // Timing does not need this -- fps and hold decide it -- but the SPEED
+    // CONTROL does, or a reopened draft lights the wrong button. Omitted at the
+    // default so an unsubdivided document writes what it always wrote.
+    ...(subdiv > 1 ? { subdiv: subdiv } : {}),
     canvasSize: { cssWidth: CW, cssHeight: CH, dpr: 1 },
     title: (window.SkriblName && window.SkriblName.get()) || 'Untitled Skribl',
     savedAt: new Date().toISOString(),
@@ -941,9 +961,19 @@ function applyPayload(d){
   loopCrossfadeMs = typeof mm.crossfadeMs==='number' ? mm.crossfadeMs : 0;
   musicName = typeof mm.name==='string' ? mm.name : '';
   currentAudioBuffer = null; zoomMag = 1; zoomFocus = 'loop'; zoomCenter = null; if(typeof syncZoomMagStep==='function') syncZoomMagStep();
-  if (d.fps === 6 || d.fps === 12 || d.fps === 24) {
-    fps = d.fps;
-    [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === fps));
+  /* A SUBDIVIDED DOCUMENT IS A VALID DOCUMENT. This took only 6, 12 and 24 and
+     silently dropped anything else, so a 48fps file loaded at whatever fps the
+     editor happened to be on while its holds -- written for 48 -- survived. That
+     is a document that plays at a different speed than it was saved at, with no
+     error. lib/holdtiming.js's fpsOf() has always accepted any positive rate;
+     only this gate did not. The seg lights by POSE rate, not by stored fps. */
+  const _sd = Math.round(Number(d.subdiv));
+  subdiv = (isFinite(_sd) && _sd >= 1) ? _sd : 1;
+  const _f = Number(d.fps);
+  if (isFinite(_f) && _f > 0) {
+    fps = _f;
+    // A rate no button names leaves the seg alone rather than lighting a wrong one.
+    [...document.querySelectorAll('#fps button')].forEach(b=>b.classList.toggle('on', +b.dataset.fps === poseRate()));
   }
   return frames.some(f => f.strokes.length);
 }
@@ -2177,7 +2207,7 @@ function buildStrip(){
     // always a button — and CSS keeps a ×1 badge hidden unless the tile is the
     // active one, hovered or focused, which is exactly the rule the delete ✕
     // already follows. A page with no hold still shows nothing.
-    const _h = frameHold(f);
+    const _h = artistHold(f);
     el.innerHTML='<div class="num">'+_numTxt+'</div>'
       +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
       +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
@@ -2782,7 +2812,7 @@ function holdCycle(i){
   const sp = pageSpan();
   if(sp && SkriblPageSpan.contains(sp, i)) return spanHold();
   invalidateClearUndo();
-  frames[i].hold = (frameHold(frames[i]) % MAX_HOLD) + 1;
+  frames[i].hold = (((artistHold(frames[i]) % UI_MAX_HOLD) + 1)) * (subdiv || 1);
   buildStrip(); scheduleSave(); syncFlipDuration();
 }
 function spanHold(){
@@ -2791,8 +2821,8 @@ function spanHold(){
   // tap scatter them, which is the opposite of what selecting a range is for.
   const s = spanOrCurrent();
   invalidateClearUndo();
-  const next = (frameHold(frames[s.from]) % MAX_HOLD) + 1;
-  for(let i = s.from; i <= s.to; i++) frames[i].hold = next;
+  const next = (artistHold(frames[s.from]) % UI_MAX_HOLD) + 1;
+  for(let i = s.from; i <= s.to; i++) frames[i].hold = next * (subdiv || 1);
   buildStrip(); scheduleSave();
   if(s.from !== s.to) chip('×' + next + ' on ' + (s.to - s.from + 1) + ' pages');
 }
@@ -4229,7 +4259,7 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
   // /s/<id>/card.png fell through to the static branded og-card for every Flip
@@ -6103,7 +6133,7 @@ function tweenAlign(a, b){
     B.strokes.push(...pb); B.strokeGroups.push(pb.length);
   }
   if(!A.strokeGroups.length) return null;      // nothing paired at all
-  return { a: A, b: B, unpaired: unpaired };
+  return { a: A, b: B, unpaired: unpaired, anyMoved: anyMoved };
 }
 
 function tweenMismatch(a, b){
@@ -6177,7 +6207,10 @@ function tweenFade(col, mul){
 
 /* Builds the exposure between pages A and B. Returns a frame, or null with the
    reason already chipped. */
+// What the last buildTween sampled and what it carried, for the message.
+let tweenLastReport = null;
 function buildTween(a, b, want){
+  tweenLastReport = null;
   const why = tweenMismatch(a, b);
   if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
@@ -6212,6 +6245,7 @@ function buildTween(a, b, want){
   // A stroke the matcher could not place is drawn once, exactly like a stroke
   // the artist chose not to aim at. Same picture, same code path.
   if(aligned.unpaired && aligned.unpaired.length) still = still.concat(aligned.unpaired);
+  const anyMovedHere = !!aligned.anyMoved;
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
   // A REBUILT PAGE HAS TO COME BACK THE SAME. The plan depends on the frame
@@ -6270,6 +6304,14 @@ function buildTween(a, b, want){
      not storing it at all. */
   genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, aim: aim.slice() }
                          : { k: 'smear', n: n, passes: blur.length });
+  /* WHAT IT DID, for the caller to say out loud. Reported with a picture: a
+     generated page that "is just a copy of slide 1" -- which is exactly what a
+     smear looks like when nothing on the two pages moved far enough to sample,
+     and the chip said "Motion smear added" either way. A person cannot tell
+     "it worked and the motion is small" from "it found nothing to smear", and
+     neither could I from the screenshot. The page says so now. */
+  tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
+                      anyMoved: anyMovedHere };
   for(let s = 0; s <= n; s++){
     const t = s / n;
     for(let p = 0; p < blur.length; p++){
@@ -6325,6 +6367,50 @@ function buildTween(a, b, want){
    removed in v290 at the owner's call: an in-between keeps the sample count it
    was made with, and a page that should be lighter is re-added, not rebuilt. */
 
+/* THE INSERT TAKES ITS TIME FROM THE PAGE BEFORE IT, RATHER THAN ADDING TO IT.
+
+   This is the defect the whole feature was built on top of. addTween() spliced a
+   page in at hold 1 beside poses at hold 1, so the interval between two drawings
+   went from one slot to two and THE MOTION PLAYED AT HALF SPEED. Measured through
+   the button on two poses 200px apart: 83ms of travel became 125ms, and across a
+   long run it approaches 2x. A file with smears on the way out and none on the
+   way back came out with its two legs at 1.405 and 0.703 px/ms -- the artist drew
+   both legs at the same density, and the feature put the asymmetry there.
+
+   `hold` cannot go below 1, so a pose at hold 1 has no slot to give. It has to be
+   given one first: DOUBLE the stored rate and every stored hold, which changes no
+   page's duration at all, and then the pose can hand half of itself over. After
+   the carve, pose + in-between occupy exactly what the pose occupied alone.
+
+   Returns the index to insert at, having made room before it. */
+function carveForInsert(at){
+  if(frameHold(frames[at]) < 2){
+    /* SUBDIVIDING HAS TO BE BOUNDED, and the first version was not. Doubling
+       whenever the page before had no slot to give compounds: inserting beside a
+       page that is ITSELF an insert doubles again, and a run of fifteen poses
+       walked fps to 393,216 and subdiv to 16,384 before anyone noticed, because
+       every doubling makes more hold-1 pages for the next one to trip over.
+       Bounded at 8x the artist's rate, which buys halves, quarters and eighths;
+       past that the honest answer is that the interval is already as fine as
+       this format cuts, and a page that cannot be carved for is not inserted. */
+    /* The bound is the FORMAT's, read off the document, not a counter of how
+       many times this session has subdivided. A counter that only grows refuses
+       on a document it has never seen -- a fresh page after a Clear all, or a
+       fixture that builds `frames` by hand -- and the refusal has nothing to do
+       with the pages actually in front of it. Doubling multiplies every hold, so
+       holds of 1 reach MAX_HOLD after three doublings and the check below is
+       self-limiting: subdiv cannot exceed 8 whatever the counter says. */
+    // Doubling every hold must not push one past what holdOf() will read back,
+    // or the clamp silently shortens it and the document speeds up.
+    for(const f of frames) if(frameHold(f) * 2 > MAX_HOLD) return -1;
+    // Nothing on screen changes length -- every page keeps hold/fps.
+    fps *= 2; subdiv *= 2;
+    for(const f of frames) f.hold = frameHold(f) * 2;
+  }
+  frames[at].hold = frameHold(frames[at]) - 1;   // the slot the new page will use
+  return at + 1;
+}
+
 /* Inserts the exposure between this page and the next. */
 function addTween(){
   if(playing) return;
@@ -6343,15 +6429,27 @@ function addTween(){
   // page, and the two it was made from.
   const _r = genRecipe.get(t);
   if(_r){ _r.print = genPrint(t); _r.a = genPrint(a); _r.b = genPrint(b); }
+  const _at = carveForInsert(idx);
+  if(_at < 0){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
-  frames.splice(idx + 1, 0, t); idx++;
-  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+  t.hold = 1;
+  frames.splice(_at, 0, t); idx++;
+  buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   // Say WHICH it was. A person who selected part of the drawing and got the
   // same six words as always cannot tell whether the selection was read.
-  chip(aim
-    ? ('Motion smear of ' + aim.length + (aim.length === 1 ? ' stroke' : ' strokes')
-       + ' \u2014 the rest drawn once')
-    : 'Motion smear added');
+  const rep = tweenLastReport;
+  const nOf = (k) => k + (k === 1 ? ' stroke' : ' strokes');
+  /* THE CASE THAT PROMPTED THIS: "the middle slide is just a copy of slide 1".
+     That is what a smear looks like when nothing travelled far enough to leave
+     a trail, and the old message said "Motion smear added" regardless -- so
+     there was no way to tell a working smear of a small motion from a page
+     with nothing to smear. Now the page says which. */
+  chip(!rep ? 'Motion smear added'
+    : !rep.anyMoved
+      ? 'These two pages look the same \u2014 nothing moved far enough to smear'
+    : rep.carried === 0 ? 'Motion smear added'
+    : ('Motion smear \u2014 ' + nOf(rep.sampled) + ' moved, '
+       + rep.carried + ' drawn once'));
 }
 
 /* ---------- v295: the in-between, for real ----------------------------------
@@ -6543,9 +6641,12 @@ function addInbetween(){
   if(!b){ chip('An in-between goes BETWEEN two pages — add the next pose first'); return; }
   const t = buildInbetween(a, b, 0.5);
   if(!t) return;
+  const _at = carveForInsert(idx);
+  if(_at < 0){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
-  frames.splice(idx + 1, 0, t); idx++;
-  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
+  t.hold = 1;
+  frames.splice(_at, 0, t); idx++;
+  buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   chip('In-between added');
 }
 
@@ -8402,7 +8503,13 @@ function invalidateClearUndo(){
 // synthetic clicks at the drawer's button, riding its armed state — one
 // control's business logic coupled to another control's confirmation UI.
 function clearAllPages(){
-  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx };   // pages only — see note above
+  clearFramesBackup = { frames: frames.map(deepCopy), idx: idx, fps: fps, subdiv: subdiv };
+  /* THE SUBDIVISION BELONGS TO THE DOCUMENT, so it goes when the document does.
+     subdiv only ever grew: a cleared page kept the finer time grid of the pages
+     that are gone, which spends the insert budget on nothing and leaves the
+     speed control showing a rate no page is using. Backed up with the frames
+     above, because undoing the clear has to bring the timing back with them. */
+  fps = poseRate(); subdiv = 1;
   frames=[newFrame()]; idx=0; redoStack.length=0;
   buildStrip(); render(); updateToolState();
   scheduleSave();   // persist the cleared state instead of deleting the draft
@@ -8425,6 +8532,10 @@ bindEl('clearUndo', 'click',()=>{
   disarmAll();
   frames = clearFramesBackup.frames.map(deepCopy);
   idx = Math.min(clearFramesBackup.idx, frames.length-1);
+  // The pages come back with the time grid they were written for; restoring the
+  // frames alone would play them at the rate of the empty document.
+  if(typeof clearFramesBackup.fps === 'number') fps = clearFramesBackup.fps;
+  if(typeof clearFramesBackup.subdiv === 'number') subdiv = clearFramesBackup.subdiv;
   clearFramesBackup=null; redoStack.length=0;
   document.getElementById('clearUndo').disabled=true;
   buildStrip(); render(); updateToolState(); scheduleSave();
@@ -8580,7 +8691,9 @@ const fpsGroup=document.getElementById('fps');
 function positionSeg(){ const active=fpsGroup.querySelector('button.on'); const pill=fpsGroup.querySelector('.seg-slider');
   if(!active||!pill) return; pill.style.width=active.offsetWidth+'px'; pill.style.transform='translateX('+(active.offsetLeft-3)+'px)'; pill.style.opacity=1; }
 fpsGroup.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
-  fps=+b.dataset.fps; [...fpsGroup.querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  // The buttons mean POSES per second. In a subdivided document the stored rate
+  // is a multiple of that, so picking 24 on a halved document stores 48.
+  fps=(+b.dataset.fps)*(subdiv||1); [...fpsGroup.querySelectorAll('button')].forEach(x=>x.classList.remove('on')); b.classList.add('on');
   positionSeg(); scheduleSave(); syncFlipDuration(); if(playing){ stop(); play(); } });
 
 

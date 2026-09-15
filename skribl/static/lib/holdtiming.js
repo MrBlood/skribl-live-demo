@@ -72,7 +72,12 @@
 (function () {
   'use strict';
 
-  var MAX_HOLD = 4;
+  /* 8, not 4: subdividing a document doubles every stored hold (see flip.js's
+   * carveForInsert), so a page the artist holds x4 stores as 8. The ceiling is
+   * on the STORED unit, not on what anyone chooses in the editor -- the badge
+   * still cycles 1..4. skribl/validation.py carries the same number and
+   * verify_sharedrules.py fails if they part company. */
+  var MAX_HOLD = 8;
 
   /* Read defensively: a payload written before per-page holds has no `hold`
    * field at all, so every page must read as 1 and play bit-for-bit as it

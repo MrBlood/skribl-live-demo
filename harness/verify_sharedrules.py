@@ -167,15 +167,16 @@ with sync_playwright() as p:
     print("\nTHE CLAMP — one definition, read defensively")
     clamp = pg.evaluate("""() => {
       const H = window.SkriblHold;
+      const M = H.MAX_HOLD;
       const probe = [undefined, null, {}, {hold:null}, {hold:0}, {hold:-3},
-                     {hold:1}, {hold:2}, {hold:4}, {hold:5}, {hold:99},
+                     {hold:1}, {hold:2}, {hold:M}, {hold:M+1}, {hold:99},
                      {hold:'2'}, {hold:'x'}, {hold:2.4}, {hold:2.6}];
       return { max: H.MAX_HOLD, read: probe.map(f => H.holdOf(f)),
                viaFlip: probe.map(f => frameHold(f)) }; }""")
     check("a missing, zero, negative or junk hold reads as 1",
           clamp["read"][:6] == [1, 1, 1, 1, 1, 1], str(clamp["read"][:6]))
     check("a real hold is kept and an absurd one is clamped",
-          clamp["read"][6:11] == [1, 2, 4, clamp["max"], clamp["max"]],
+          clamp["read"][6:11] == [1, 2, clamp["max"], clamp["max"], clamp["max"]],
           f"{clamp['read'][6:11]} with MAX_HOLD={clamp['max']}")
     check("a numeric string reads, a non-numeric one does not",
           clamp["read"][11] == 2 and clamp["read"][12] == 1, str(clamp["read"][11:13]))
@@ -184,6 +185,39 @@ with sync_playwright() as p:
     check("flip.js's frameHold() gives the module's answer for every input",
           clamp["viaFlip"] == clamp["read"],
           f"{clamp['viaFlip']} vs {clamp['read']} — the editor keeps a second rule")
+
+    # ---- and the SERVER reads the same ceiling ----------------------------
+    # The suite's own thesis, one layer further out: the editor and the player
+    # disagreeing is expensive because nothing an author can see reveals it.
+    # Neither does the editor and the SERVER disagreeing. The server took a hold
+    # of 8 while every client clamped at 4, so a payload could post cleanly and
+    # then play at half the duration it was written with, silently and forever.
+    # Two independent literals in two languages with nothing tying them: the
+    # same shape as the three divergences in this file's opening note.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from skribl import validation as _V
+    def _accepts(h):
+        return _V._validate_payload_complexity({
+            "schemaVersion": 2, "version": 2, "playbackMode": "flip", "fps": 24,
+            "canvasSize": {"cssWidth": 944, "cssHeight": 531, "dpr": 1},
+            "frames": [{"strokes": [{"x": 10, "y": 10, "color": "#ffffff",
+                                     "size": 5, "t": 0, "erase": False,
+                                     "start": True}],
+                        "strokeGroups": [1], "hold": h}]}) is None
+    _cmax = clamp["max"]
+    check("the server's hold ceiling is the one the clients actually obey",
+          _V.MAX_HOLD == _cmax,
+          f"server accepts up to {_V.MAX_HOLD}, clients clamp at {_cmax}")
+    # Stated as behaviour and not as a number, so it still means something if
+    # both ceilings move together later.
+    _mute = [h for h in range(1, _V.MAX_HOLD + 1) if _accepts(h) and h > _cmax]
+    check("no hold the server accepts is one a client would silently shorten",
+          not _mute,
+          f"holds {_mute} post cleanly and play as x{_cmax}")
+    check("the ceiling itself posts, and one past it does not",
+          _accepts(_cmax) and not _accepts(_V.MAX_HOLD + 1),
+          f"accepts x{_cmax}: {_accepts(_cmax)}, "
+          f"accepts x{_V.MAX_HOLD + 1}: {_accepts(_V.MAX_HOLD + 1)}")
 
     print("\nEDGES")
     # The ms API, same edges. A page is denominated in milliseconds now, so the
