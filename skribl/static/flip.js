@@ -6372,9 +6372,6 @@ function tweenFade(col, mul){
 let tweenLastReport = null;
 function buildTween(a, b, want){
   tweenLastReport = null;
-  // The pages as they came in. `a` and `b` are reassigned below by the aim
-  // block and by tweenAlign, and buildInbetween does its own pairing.
-  const a0 = a, b0 = b;
   const why = tweenMismatch(a, b);
   if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
@@ -6465,7 +6462,8 @@ function buildTween(a, b, want){
      this same branch and comes back the page that was saved. */
   if(want && want.lead){
     /* THE LEAD COVERS WHAT IS BEING SMEARED, NOT THE WHOLE PAGE. Built from
-       a0/b0 it rebuilt every stroke -- including the ones the loop above just
+       the pages AS THEY CAME IN it rebuilt every stroke -- including the ones
+       the loop above just
        emitted once as `still` -- so an aimed page drew its unmoved strokes
        TWICE and came out heavier than the un-aimed one it was supposed to beat
        (94 points against 90). `a` and `b` here are post-alignment: exactly the
