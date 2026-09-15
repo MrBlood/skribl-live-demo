@@ -2078,7 +2078,9 @@ window.addEventListener('touchcancel', _pinchEnd);
 const strip = document.getElementById('strip');
 const DEL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function disarmAll(){
-  if(armedDel >= 0){ const prev=strip.children[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
+  // _tiles(), not children: see refreshThumb. armedDel is a PAGE index and
+  // can be past the paste ghost, which would disarm a different tile's X.
+  if(armedDel >= 0){ const prev=_tiles()[armedDel]; if(prev){ const pd=prev.querySelector('.del'); if(pd) pd.classList.remove('armed'); } armedDel=-1; }
   if(armedClear){ armedClear=false; const cb=document.getElementById('clear'); if(cb){ cb.classList.remove('armed'); cb.title='Delete all pages (keeps music and background)'; const cl=document.getElementById('clearLabel'); if(cl) cl.textContent='Clear all pages'; } }
 }
 /* ---- page toolbar (v124) --------------------------------------------------
@@ -2584,10 +2586,72 @@ document.addEventListener('keydown', e=>{
   }
 });
 
-function drawThumb(cv,f){ cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent'; const c=cv.getContext('2d');
-  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH); drawBackdrop(c); paintFrame(c, f.strokes); }
-function refreshAllThumbs(){ [...strip.children].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
-function refreshThumb(i){ const el=strip.children[i]; if(el) drawThumb(el.querySelector('canvas'),frames[i]); }
+/* A PAGE'S THUMBNAIL IS REPAINTED ONLY WHEN THE PAGE CHANGES.
+
+   buildStrip() repaints every tile, and it is called on every insert, delete,
+   reorder, span change and hold tap -- so adding one page repainted all of them.
+   Measured on a 31-page document: 555ms in buildStrip, of which 510ms was
+   thumbnails and 2.1ms was the DOM. That is the whole of "each smear takes
+   longer than the last": the cost is proportional to everything already there.
+
+   The cache is keyed on the frame OBJECT and validated by a cheap CONTENT
+   signature, not by a dirty flag. A flag would have to be set at every place
+   that edits a page -- draw, erase, undo, liquify, smudge, fill, the transforms,
+   applyPayload -- and the one that gets missed shows the artist a thumbnail of
+   a drawing they no longer have. The signature costs one arithmetic pass over
+   the points and cannot be forgotten. */
+const _thumbCache = new WeakMap();
+// A change anywhere in the page changes this. Cheap enough to run on every
+// tile of every rebuild: arithmetic only, no canvas, no allocation.
+function _thumbSig(f){
+  const pts = f.strokes; let acc = pts.length * 31 + (f.strokeGroups||[]).length;
+  for(let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    acc = (acc + p.x * 7.31 + p.y * 3.17 + (p.size || 0)) % 2147483647;
+  }
+  // The backdrop is not in the strokes, and neither is the eraser flag pattern.
+  return acc + '|' + pts.length + '|' + (bgColor || '') + '|' + (bgImage ? 1 : 0);
+}
+/* Bounded, for the reason lib/framebitmap.js is: bitmaps are how canvases die on
+   phones. 88x62 at dpr 2 is ~87KB a page, so a 200-page document would hold
+   ~17MB. Past the budget a tile simply paints direct -- slower, never wrong. */
+const THUMB_CACHE_BYTES = 8 * 1024 * 1024;
+let _thumbBytes = 0;
+function drawThumb(cv,f){
+  cv.width=88*DPR; cv.height=62*DPR; cv.style.background='transparent';
+  const c=cv.getContext('2d');
+  const sig = _thumbSig(f), hit = _thumbCache.get(f);
+  if(hit && hit.sig === sig && hit.w === cv.width && hit.h === cv.height){
+    c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height);
+    c.drawImage(hit.cv, 0, 0);
+    return;
+  }
+  c.setTransform(88*DPR/CW,0,0,62*DPR/CH,0,0); c.clearRect(0,0,CW,CH);
+  drawBackdrop(c); paintFrame(c, f.strokes);
+  const bytes = cv.width * cv.height * 4;
+  if(_thumbBytes + bytes > THUMB_CACHE_BYTES) return;   // paint direct from here on
+  try {
+    const off = document.createElement('canvas');
+    off.width = cv.width; off.height = cv.height;
+    off.getContext('2d').drawImage(cv, 0, 0);
+    if(!hit) _thumbBytes += bytes;
+    _thumbCache.set(f, { sig: sig, cv: off, w: cv.width, h: cv.height });
+  } catch(_){ /* canvas allocation may fail under memory pressure; direct is fine */ }
+}
+/* A TILE IS NOT A CHILD INDEX. The paste ghost is appended INSIDE the page loop,
+   immediately after the current page, so whenever the clipboard holds pages every
+   tile after `idx` sits one child further along than its page. Both of these
+   indexed `strip.children` directly and so repainted the WRONG tile for any page
+   after the current one -- drawing frames[i] into frames[i-1]'s thumbnail.
+
+   It has been latent because buildStrip() repaints every tile from scratch and
+   runs after most things, so a wrong refresh was overwritten before anyone saw
+   it. Caching the thumbnails removes that cover: a tile painted with the wrong
+   page now STAYS wrong until that page changes. Found while writing the cache's
+   own test, which read a neighbouring tile for the same reason. */
+const _tiles = () => strip.querySelectorAll('.frame:not(.ghost-paste)');
+function refreshAllThumbs(){ [..._tiles()].forEach((el,i)=>{ const cv=el.querySelector('canvas'); if(cv && frames[i]) drawThumb(cv, frames[i]); }); }
+function refreshThumb(i){ const el=_tiles()[i]; if(el && frames[i]) drawThumb(el.querySelector('canvas'),frames[i]); }
 // Reorder by one slot. Keeps `idx` pointing at the SAME page the user was on —
 // moving a page must never silently switch which page you're drawing on.
 function movePage(i,dir){
@@ -2876,7 +2940,10 @@ function deepCopy(f){ const b = balancedPair(f);
 // showing page 1. addFrame() was the only caller that scrolled, so the fix
 // existed but was never shared.
 function scrollStripToActive(smooth){
-  const el=strip.children[idx];
+  // Correct either way today -- the ghost is appended AFTER the current page, so
+  // children[idx] is still idx's tile -- but page indexes go through _tiles() so
+  // that stays true if the ghost ever moves.
+  const el=_tiles()[idx];
   if(!el) return;
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }

@@ -272,6 +272,125 @@ with sync_playwright() as p:
     check("no Pad page errors", not pad_errs, "; ".join(pad_errs[:2]))
 
     # -----------------------------------------------------------------------
+    print("\nTHUMBNAILS — cached on CONTENT, so a rebuild cannot show a stale page")
+    # buildStrip() repaints every tile and runs on every insert, delete, reorder
+    # and hold tap, so adding one page repainted all of them: measured 555ms on a
+    # 31-page document, of which 510ms was thumbnails and 2.1ms was the DOM. The
+    # cache removes that. What it must never do is show the artist a thumbnail of
+    # a drawing they no longer have, which is why it is keyed on a content
+    # signature rather than on a dirty flag somebody has to remember to set.
+    _tc = flip.evaluate("""() => {
+      const mk = (x) => { const pts = [];
+        for (let k = 0; k < 40; k++) pts.push({ x: x + k * 4, y: 100 + (k % 7) * 9,
+          color: '#ffffff', size: 6, t: k, erase: false, start: k === 0 });
+        return { strokes: pts, strokeGroups: [pts.length], hold: 1 }; };
+      frames.length = 0;
+      for (let i = 0; i < 12; i++) frames.push(mk(40 + i * 10));
+      idx = 0; if (typeof clearSpan === 'function') clearSpan(true);
+      buildStrip();
+      /* INK, not the data-URL's length. A 88x62 thumbnail of a single stroke is
+         about 870 characters, so a "longer than 2,000" blank-check called every
+         correct thumbnail empty -- and then the comparison it was guarding had
+         nothing left to say. Counting lit pixels is independent of DPR and of
+         how well PNG happened to compress. */
+      /* BY CLASS, not by child index. The strip carries a trailing ghost "+"
+         tile whose class is 'frame ghost-paste', so it matches .frame too and
+         an index into either list is not an index into frames -- this read a
+         NEIGHBOURING page, which had not changed, and called the cache stale. */
+      const tile = i => strip.querySelectorAll('.frame:not(.ghost-paste)')[i].querySelector('canvas');
+      const ink = cv => { const c = cv.getContext('2d');
+        const d = c.getImageData(0, 0, cv.width, cv.height).data;
+        let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++;
+        return n; };
+      const shot = i => tile(i).toDataURL();
+      const before = shot(3), inkBefore = ink(tile(3));
+      const sigBefore = (typeof _thumbSig === 'function') ? String(_thumbSig(frames[3])) : 'n/a';
+      // EDITED IN PLACE, which is how every tool in this editor edits a page. A
+      // cache keyed only on the frame object would hand back the old picture.
+      frames[3].strokes.forEach(q => { q.y += 60; });
+      buildStrip();
+      const after = shot(3);
+      // An untouched page must come back IDENTICAL -- the cache working, not
+      // merely not breaking.
+      const other = shot(5); buildStrip(); const otherAgain = shot(5);
+      const sigAfter = (typeof _thumbSig === 'function') ? String(_thumbSig(frames[3])) : 'n/a';
+      return { changed: before !== after, stable: other === otherAgain,
+               ink: inkBefore, inkAfter: ink(tile(3)),
+               sigMoved: sigBefore !== sigAfter, lens: [before.length, after.length],
+               tiles: strip.children.length, nFrames: frames.length }; }""")
+    check("a page edited in place gets a fresh thumbnail",
+          _tc["changed"],
+          f"tile unchanged after the edit — sig moved: {_tc['sigMoved']}, "
+          f"ink {_tc['ink']} -> {_tc['inkAfter']}, url {_tc['lens']}, "
+          f"{_tc['tiles']} tiles for {_tc['nFrames']} frames")
+    check("...and an untouched page redraws identically",
+          _tc["stable"], "the same page rebuilt to different pixels")
+    check("...and the thumbnails were not blank to begin with",
+          _tc["ink"] > 200,
+          f"{_tc['ink']} lit pixels — comparing two empty canvases proves nothing")
+    # THE SPEED IS THE POINT, so it is asserted -- with a wide margin, because
+    # CLAUDE.md is explicit that browser timings here are noisy under load. The
+    # measured gap is ~145x; anything under 3x means the cache is not being hit.
+    _ts = flip.evaluate("""() => {
+      const mk = (x) => { const pts = [];
+        for (let k = 0; k < 600; k++) pts.push({ x: x + (k % 80) * 9, y: 60 + (k / 80 | 0) * 30,
+          color: '#ffffff', size: 5, t: k, erase: false, start: k % 80 === 0 });
+        return { strokes: pts, strokeGroups: Array.from({length: 8}, () => 75), hold: 1 }; };
+      frames.length = 0;
+      for (let i = 0; i < 24; i++) frames.push(mk(30 + i * 3));
+      idx = 0;
+      const t0 = performance.now(); buildStrip(); const cold = performance.now() - t0;
+      const t1 = performance.now(); buildStrip(); const warm = performance.now() - t1;
+      return { cold, warm }; }""")
+    # THE PASTE GHOST SHIFTS EVERY TILE AFTER THE CURRENT PAGE. It is appended
+    # inside the page loop, right after `idx`, so strip.children stops lining up
+    # with frames the moment the clipboard holds anything — and refreshThumb(i)
+    # indexed children directly, repainting frames[i] into frames[i-1]'s tile.
+    # Latent until now because buildStrip repaints everything and runs after most
+    # things; with thumbnails cached, a tile painted from the wrong page STAYS
+    # wrong. Found because the cache's own test read the wrong tile for the same
+    # reason.
+    _gh = flip.evaluate("""() => {
+      const mk = (x) => { const pts = [];
+        for (let k = 0; k < 30; k++) pts.push({ x: x + k * 5, y: 120 + (k % 5) * 14,
+          color: '#ffffff', size: 7, t: k, erase: false, start: k === 0 });
+        return { strokes: pts, strokeGroups: [pts.length], hold: 1 }; };
+      frames.length = 0;
+      for (let i = 0; i < 6; i++) frames.push(mk(60 + i * 90));
+      idx = 0;
+      // A copied page puts the ghost on the strip, between page 0 and page 1.
+      pageClip = [JSON.parse(JSON.stringify(frames[0]))];
+      buildStrip();
+      const tiles = () => strip.querySelectorAll('.frame:not(.ghost-paste)');
+      const ink = i => { const cv = tiles()[i].querySelector('canvas');
+        const d = cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
+        let n = 0; for (let j = 3; j < d.length; j += 4) if (d[j] > 8) n++;
+        return n; };
+      const shot = i => tiles()[i].querySelector('canvas').toDataURL();
+      const hadGhost = strip.querySelectorAll('.ghost-paste').length === 1;
+      // Edit page 4 — well past the ghost — and refresh only that tile.
+      const before4 = shot(4), before3 = shot(3);
+      frames[4].strokes.forEach(q => { q.x += 120; });
+      refreshThumb(4);
+      const r = { hadGhost, ink4: ink(4),
+                  four: shot(4) !== before4, three: shot(3) !== before3 };
+      pageClip = null;
+      return r; }""")
+    check("the strip carries a paste ghost when the clipboard has pages",
+          _gh["hadGhost"], "no ghost — this check is not exercising the shift")
+    check("...and refreshing a page past it repaints THAT page's tile",
+          _gh["four"] and _gh["ink4"] > 100,
+          f"tile 4 unchanged after editing page 4 ({_gh['ink4']} lit pixels) — "
+          f"the refresh landed on a different tile")
+    check("...and leaves its neighbour alone",
+          not _gh["three"],
+          "editing page 4 repainted page 3's tile — the index is off by the ghost")
+
+    check("rebuilding a strip nobody changed does not repaint it",
+          _ts["cold"] > _ts["warm"] * 3,
+          f"cold {_ts['cold']:.0f}ms vs warm {_ts['warm']:.0f}ms — under 3x means "
+          f"every tile is being repainted from strokes on every rebuild")
+
     print("\nSTRIP SCROLL — a restored draft opens with its page in view")
     #
     # THE BUG. buildStrip() rebuilds the strip's children, which resets
@@ -467,7 +586,7 @@ with sync_playwright() as p:
     before = ac.evaluate(tags)
 
     def tile_box(i):
-        return ac.evaluate("""(i) => { const t = strip.querySelectorAll('.frame')[i];
+        return ac.evaluate("""(i) => { const t = strip.querySelectorAll('.frame:not(.ghost-paste)')[i];
             const r = t.getBoundingClientRect();
             return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""", i)
 
