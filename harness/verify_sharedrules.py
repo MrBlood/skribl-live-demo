@@ -279,11 +279,12 @@ with sync_playwright() as p:
     # generated page on a per-stroke round trip is the stall v239 fixed -- so no
     # compositor sees a ghost, and painted dot-then-line-per-segment it stacks
     # against itself at every joint: written at 46/255 it painted at 83.
-    # verify_beading measures that on the editor, in pixels. It cannot measure
-    # it on the PLAYER, whose painter is module-private and not reachable from
-    # any test page -- and the player is exactly where this project keeps
-    # finding the second copy of a fixed bug. So the player's half is pinned
-    # here, at the source, which is the mechanism: the call has to be there.
+    # verify_beading measures that in PIXELS on the two surfaces a test page can
+    # reach: Flip, and app.js's paintStrokesStatic, which draws the Pad and the
+    # sealed /s/ player both. The in-post player's painter is module-private and
+    # reachable from no test page, and the players are exactly where this project
+    # keeps finding the second copy of a fixed bug -- so every surface is pinned
+    # here too, at the source, which is the mechanism: the call has to be there.
     # MATCHED ON THE CALL, HANDED THE HEX-AWARE PARSER -- which is one pattern,
     # not two, and that matters. The first draft of this check looked for
     # "uniformRun(seg," and PASSED on a tree with the player's call deleted:
@@ -294,12 +295,13 @@ with sync_playwright() as p:
     # and no declaration anywhere spells that.
     _paint = []
     for _n, _alpha in (("flip.js", "strokeAlphaOf"),
-                       ("inlineplayer.js", "anyStrokeAlpha")):
+                       ("inlineplayer.js", "anyStrokeAlpha"),
+                       ("app.js", "anyStrokeAlpha")):
         _path = os.path.join(_root, "skribl", "static", _n)
         with open(_path) as _fh: _src = _fh.read()
         if f"(seg, {_alpha})" not in _src:
             _paint.append(f"{_n}: no uniform-run test handed {_alpha}")
-    check("both painters route a uniform see-through run through one path",
+    check("all three painters route a uniform see-through run through one path",
           not _paint, "; ".join(_paint))
 
     print("\nEDGES")

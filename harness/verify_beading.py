@@ -211,6 +211,67 @@ with sync_playwright() as p:
               f"mean {wet['mean']} -> beaded {beaded['mean']} -> "
               f"healed {healed['mean']}")
 
+        print("\nTHE SMEAR'S GHOSTS ON THIS SURFACE — app.js draws the Pad "
+              "AND the sealed /s/ player")
+        # paintStrokesStatic is where the player renders a Flip document's
+        # frames, so a smear posted to a share link came through here. Its
+        # ghosts are see-through runs whose alpha is an 8-digit hex, and
+        # parseStrokeAlpha -- which decides the wet layer -- reads rgba() only,
+        # so the compositor above never saw one however the flag was set.
+        #
+        # BOTH FLAG SETTINGS, because the compositor branch is the default and a
+        # fix that only worked with layers off would be a fix nobody gets. The
+        # first draft of this suite's Flip section measured only one path.
+        _ap = page.evaluate("""() => {
+          const COL = '#ffffff2e';                     // 46/255
+          const seg = [];
+          for (let k = 0; k < 24; k++)
+            seg.push({ x: 80 + k * 11, y: 120 + (k % 3) * 7, color: COL,
+                       size: 9, t: k, erase: false, start: k === 0 });
+          const read = () => {
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let lit = 0, max = 0;
+            for (let i = 3; i < d.length; i += 4) {
+              if (d[i] <= 8) continue; lit++; if (d[i] > max) max = d[i]; }
+            return { lit, max };
+          };
+          const run = (layers) => {
+            window.SKRIBL_STROKE_LAYERS = layers;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            paintStrokesStatic(seg);
+            return read();
+          };
+          const on = run(true), off = run(false);
+          // THE MUTATION, in the suite: the pre-fix emission, run on purpose.
+          window.SKRIBL_STROKE_LAYERS = true;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < seg.length; i++) {
+            const q = seg[i];
+            if (i === 0) drawDot(q.x, q.y, q.color, q.size, false);
+            else { const v = seg[i-1];
+                   drawLine(v.x, v.y, q.x, q.y, q.color, q.size, false); }
+          }
+          const raw = read();
+          return { written: 0x2e, on, off, raw };
+        }""")
+        check("the pre-fix painter DOES stack a ghost above its own alpha here",
+              _ap and _ap["raw"]["max"] > _ap["written"] + 12,
+              f"written {_ap and _ap['written']}, raw painter reached "
+              f"{_ap and _ap['raw']['max']} — this check is not exercising it")
+        check("...and paintStrokesStatic holds it AT that alpha, layers ON",
+              _ap and _ap["on"]["max"] <= _ap["written"] + 4,
+              f"written {_ap and _ap['written']}, painted "
+              f"{_ap and _ap['on']['max']} with the compositor engaged")
+        check("...and with layers OFF, which is the other branch",
+              _ap and _ap["off"]["max"] <= _ap["written"] + 4,
+              f"written {_ap and _ap['written']}, painted "
+              f"{_ap and _ap['off']['max']} on the direct path")
+        check("...covering the same ground either way",
+              _ap and abs(_ap["on"]["lit"] - _ap["raw"]["lit"]) <= _ap["raw"]["lit"] * 0.02
+              and _ap["on"]["lit"] == _ap["off"]["lit"],
+              f"raw {_ap and _ap['raw']['lit']} lit, layers-on "
+              f"{_ap and _ap['on']['lit']}, layers-off {_ap and _ap['off']['lit']}")
+
         # ------------------------------------------------------------------
         print("\nTHE SMEAR'S GHOSTS — the same beading, in the one path "
               "neither compositor reaches")

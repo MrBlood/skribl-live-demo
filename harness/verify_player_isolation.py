@@ -892,18 +892,29 @@ with sync_playwright() as sp:
     # Per segment it composites against itself wherever the round caps overlap,
     # and a Motion Smear ghost written at alpha 46/255 painted at 83.
     #
-    # THIS SURFACE PAYS FOR IT WITHOUT YET SPENDING IT, and that is recorded
-    # rather than hidden: the rule is in the shared module, which /s/ downloads
-    # for overBudget, but app.js — which is what renders here and on the Pad —
-    # does NOT call it yet. So the sealed player still beads a smear. Flip and
-    # the in-post player are fixed; this one is the third surface and needs its
-    # own change, which will cost more than these 17 B and should argue for
-    # itself then. Pinned just above the floor so that change is caught.
+    # That raise noted that this surface was PAYING for the rule without
+    # spending it — app.js did not call uniformRun, so the sealed player still
+    # beaded a smear — and said the change would cost more than 17 B and should
+    # argue for itself. Here it is, arguing.
     #
-    # Spent before asking: uniformRun was compacted three times against this
-    # ceiling (-36 B measured) and its prose moved to flip.js, which is in no
-    # byte budget — though jsstrip means comments here were never the cost.
-    BYTES_RATCHET, BYTES_TARGET = 150_600, 150_600
+    # 150,600 -> 151,500, measured 151,376, v297: app.js's paintStrokesStatic
+    # walks runs and draws a uniform see-through one as a single path, and
+    # makeStrokeCompositor gains pathFn to lay that run onto the dry layer in
+    # order. Measured on this surface: a ghost written at alpha 46/255 painted
+    # at 83 before, 46 after, on BOTH settings of the stroke-layers flag —
+    # which is the branch that mattered, the compositor being on by default.
+    # paintStrokesStatic is where the player renders a Flip document's frames,
+    # so this is what a share link has been showing.
+    #
+    # Spent before asking, twice over. At the previous raise uniformRun was
+    # compacted three times (-36 B measured). Here app.js carries NO inline
+    # fallback for it (-296 B measured): that is this file's own precedent for
+    # this very module — the overBudget call beside it treats an absent lib as
+    # "not over budget" rather than keeping a second copy — so without the lib
+    # a run simply paints the way it did before. The prose lives in
+    # lib/strokelayers.js and flip.js; jsstrip means comments here are free
+    # anyway, which the previous raise recorded after believing otherwise.
+    BYTES_RATCHET, BYTES_TARGET = 151_500, 151_500
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
