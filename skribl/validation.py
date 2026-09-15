@@ -456,14 +456,14 @@ MAX_FRAMES = _env_int("SKRIBL_MAX_FRAMES", 200, minimum=1)
 MAX_POINTS_PER_FRAME = _env_int("SKRIBL_MAX_POINTS_PER_FRAME", 20_000, minimum=1)
 MAX_TOTAL_POINTS = _env_int("SKRIBL_MAX_TOTAL_POINTS", 200_000, minimum=1)
 MAX_GROUPS_PER_FRAME = _env_int("SKRIBL_MAX_GROUPS_PER_FRAME", 5_000, minimum=1)
-# 4, because that is what the CLIENTS obey — lib/holdtiming.js clamps with
+# 8, because that is what the CLIENTS obey — lib/holdtiming.js clamps with
 # Math.min(h, MAX_HOLD) and flip.js and app.js both read it from there. This was
 # 8, so a payload with a hold of 5 to 8 posted cleanly and then played at up to
 # half the duration it was written with, in every player, with nothing anywhere
 # saying so. A limit enforced in one place and silently truncated in another is
 # not a limit. Raising this means raising lib/holdtiming.js in the same change;
 # verify_sharedrules.py fails if they part company again.
-MAX_HOLD = _env_int("SKRIBL_MAX_HOLD", 4, minimum=1)
+MAX_HOLD = _env_int("SKRIBL_MAX_HOLD", 8, minimum=1)
 MAX_CANVAS_EDGE = _env_int("SKRIBL_MAX_CANVAS_EDGE", 4096, minimum=16)
 COORD_LIMIT = 100_000
 MAX_BRUSH = 500

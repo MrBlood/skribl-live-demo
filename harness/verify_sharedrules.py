@@ -167,15 +167,16 @@ with sync_playwright() as p:
     print("\nTHE CLAMP — one definition, read defensively")
     clamp = pg.evaluate("""() => {
       const H = window.SkriblHold;
+      const M = H.MAX_HOLD;
       const probe = [undefined, null, {}, {hold:null}, {hold:0}, {hold:-3},
-                     {hold:1}, {hold:2}, {hold:4}, {hold:5}, {hold:99},
+                     {hold:1}, {hold:2}, {hold:M}, {hold:M+1}, {hold:99},
                      {hold:'2'}, {hold:'x'}, {hold:2.4}, {hold:2.6}];
       return { max: H.MAX_HOLD, read: probe.map(f => H.holdOf(f)),
                viaFlip: probe.map(f => frameHold(f)) }; }""")
     check("a missing, zero, negative or junk hold reads as 1",
           clamp["read"][:6] == [1, 1, 1, 1, 1, 1], str(clamp["read"][:6]))
     check("a real hold is kept and an absurd one is clamped",
-          clamp["read"][6:11] == [1, 2, 4, clamp["max"], clamp["max"]],
+          clamp["read"][6:11] == [1, 2, clamp["max"], clamp["max"], clamp["max"]],
           f"{clamp['read'][6:11]} with MAX_HOLD={clamp['max']}")
     check("a numeric string reads, a non-numeric one does not",
           clamp["read"][11] == 2 and clamp["read"][12] == 1, str(clamp["read"][11:13]))
