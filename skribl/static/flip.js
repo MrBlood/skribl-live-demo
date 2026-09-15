@@ -578,9 +578,15 @@ function serializeFlip(opts){
            && genSame(g.a, genPrint(prev)) && genSame(g.b, genPrint(next))){
           // g.aim rides along or an aimed page comes back un-aimed: the
           // rebuild calls buildTween(prev, next, gen) and gen is all it gets.
-          const o = { gen: g.aim ? { k: g.k, n: g.n, passes: g.passes, aim: g.aim }
-                                 : { k: g.k, n: g.n, passes: g.passes },
-                      background: bgColor };
+          /* EVERY FIELD THE REBUILD NEEDS, not the ones this line happened to
+             know about when it was written. `lead` decides whether the page is
+             a light pose-with-a-trail or the old exposure, and listing fields
+             by hand dropped it -- so a saved light page came back as a 6,960
+             point exposure, silently, and only on reload. Spread the recipe and
+             name what is EXCLUDED instead: `print`, `a` and `b` are the
+             fingerprints this function just checked, not build inputs. */
+          const { print: _p, a: _ga, b: _gb, ...genOut } = g;
+          const o = { gen: genOut, background: bgColor };
           if(h > 1) o.hold = h;
           if(frameDraw(f)) o.draw = true;
           return o;
@@ -5532,6 +5538,25 @@ function selRestore(pts){
    page gets the full 26 samples, a heavy one gets fewer and a coarser exposure,
    and a page too heavy for even a handful says so rather than producing a
    frame the server will reject. */
+/* THE LIGHT SMEAR — a pose with a trail behind it, not an exposure.
+
+   The exposure below emits every stroke N times over M blur passes: 6,960 points
+   for one ball, against 174 for the drawing it was made from. Measured on the
+   owner's own file, that is what made the editor crawl -- buildStrip repaints a
+   thumbnail of every page on every insert, and its cost tracks POINTS, not page
+   count: 31 pages came to 599ms of strip rebuild with heavy pages and 93ms with
+   light ones, so the fifteenth smear took 697ms to add and the first took 302ms.
+
+   A light page is the same motion said in a tenth of the ink: ONE crisp in-between
+   at the midpoint, which is the position the eye actually reads, plus a short
+   faint trail behind it for the sense of travel. The trail is resampled COARSE --
+   a ghost at 9% alpha behind a moving figure carries no detail worth the drawing's
+   full point count, and that is where the rest of the weight was. */
+const SMEAR_TRAIL_SAMPLES = 6;   // ghosts behind the pose
+const SMEAR_TRAIL_ALPHA = 0.09;  // the darkest of them
+const SMEAR_TRAIL_FALLOFF = 2;   // t^2: what is older is fainter, fast
+const SMEAR_TRAIL_COARSE = 4;    // a ghost carries a quarter of the pose's points
+
 const TWEEN_SAMPLES = 26;
 const TWEEN_MIN_SAMPLES = 6;
 const TWEEN_POINT_CAP = 14000;
@@ -6211,6 +6236,9 @@ function tweenFade(col, mul){
 let tweenLastReport = null;
 function buildTween(a, b, want){
   tweenLastReport = null;
+  // The pages as they came in. `a` and `b` are reassigned below by the aim
+  // block and by tweenAlign, and buildInbetween does its own pairing.
+  const a0 = a, b0 = b;
   const why = tweenMismatch(a, b);
   if(why){ chip('A motion smear needs ' + why); return null; }
   /* Everything below reads a.strokes / a.strokeGroups / b.strokes and pairs
@@ -6294,6 +6322,72 @@ function buildTween(a, b, want){
       out.strokes.push(c);
     });
     out.strokeGroups.push(run.length);
+  }
+  /* THE LIGHT PATH. Everything above -- the aim, the matcher, the strokes that
+     did not move -- is shared; only what gets emitted for the strokes that DID
+     move changes. `lead` rides in the recipe, so a stored page rebuilds through
+     this same branch and comes back the page that was saved. */
+  if(want && want.lead){
+    const lp = buildInbetween(a0, b0, 0.5);
+    if(lp){
+      const keep = SMEAR_TRAIL_SAMPLES;
+      for(let sIdx = 0; sIdx < keep; sIdx++){
+        const frac = sIdx / keep;
+        /* THE TRAIL REACHES BACK TO THE POSE, NOT PAST IT. The pose is at the
+           midpoint, so the ghosts span 0 -> 0.5 of the travel; spanning the
+           whole gap puts the faintest ones AHEAD of the ball, which renders as
+           a trail pointing the wrong way. `frac` still runs 0..1 for the alpha
+           ramp -- it is the POSITION that is halved. */
+        const pos = frac * 0.5;
+        const av = SMEAR_TRAIL_ALPHA * Math.pow(frac, SMEAR_TRAIL_FALLOFF);
+        if(av * 255 < 3) continue;   // below this a pass cannot carry the ink's colour
+        let at2 = 0;
+        for(let g = 0; g < a.strokeGroups.length; g++){
+          const count = a.strokeGroups[g];
+          const run = [];
+          for(let k = 0; k < count; k++){
+            const pa = a.strokes[at2 + k], pb = b.strokes[at2 + k];
+            const q = Object.assign({}, pa);
+            q.x = pa.x + (pb.x - pa.x) * pos;
+            q.y = pa.y + (pb.y - pa.y) * pos;
+            if(typeof pa.size === 'number')
+              q.size = pa.size + tweenSoftEdge(pa.size) * (1 - frac);
+            q.color = tweenFade(pa.color, av);
+            run.push(q);
+          }
+          const cut = tweenResample(run, Math.max(3, Math.round(count / SMEAR_TRAIL_COARSE)));
+          cut.forEach((q, i) => {
+            if(i === 0) q.start = true; else delete q.start;
+            out.strokes.push(q);
+          });
+          out.strokeGroups.push(cut.length);
+          at2 += count;
+        }
+      }
+      // The pose last and at full strength: the trail is history, this is now.
+      let k2 = 0;
+      for(const cnt of lp.strokeGroups){
+        for(let i = 0; i < cnt; i++){
+          const q = Object.assign({}, lp.strokes[k2 + i]);
+          if(i === 0) q.start = true; else delete q.start;
+          out.strokes.push(q);
+        }
+        out.strokeGroups.push(cnt); k2 += cnt;
+      }
+      for(const run of carried){
+        run.forEach((q, i) => {
+          const c = Object.assign({}, q);
+          if(i === 0) c.start = true; else delete c.start;
+          out.strokes.push(c);
+        });
+        out.strokeGroups.push(run.length);
+      }
+      genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, aim: aim.slice() }
+                             : { k: 'smear', n: n, passes: 1, lead: 1 });
+      tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
+                          anyMoved: anyMovedHere };
+      return out;
+    }
   }
   // What it would take to make this page again, which is all the draft needs to
   // store instead of the points below. Beside the frame, never on it.
@@ -6423,7 +6517,7 @@ function addTween(){
      rather than as a grey blob. With nothing selected this is the whole page,
      exactly as before. */
   const aim = tweenAimFromSelection(a);
-  const t = buildTween(a, b, aim ? { aim: aim } : undefined);
+  const t = buildTween(a, b, aim ? { lead: 1, aim: aim } : { lead: 1 });
   if(!t) return;
   // The three fingerprints the draft checks before it trusts the recipe: this
   // page, and the two it was made from.
