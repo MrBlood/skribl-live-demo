@@ -209,10 +209,18 @@ with sync_playwright() as p:
     page.evaluate("() => addTween()")
     page.wait_for_timeout(300)
     smear_pts = page.evaluate("() => frames[1].strokes.length")
-    check("...where the smear of the same motion is many times heavier",
-          smear_pts > mid_pts * 8,
-          f"smear {smear_pts} against in-between {mid_pts} — if these are close, "
-          f"one of the two is not doing its job")
+    # INVERTED IN v297. This asserted that a smear of the same motion is MANY
+    # TIMES heavier than an in-between -- which was true, and was the defect.
+    # A smear is now a lead pose plus a few coarse ghosts, so the two are close
+    # by construction, and the old pin could only go green again by putting the
+    # 6,960-point exposure back. CLAUDE.md names this shape: an assertion that
+    # can only pass while the work is outstanding is a TODO in a test's
+    # clothing. Guarding the ground instead -- a smear costs a small multiple of
+    # the pose it is built around, and going back to an exposure fails here.
+    check("...and the smear of the same motion costs a small multiple of it",
+          smear_pts <= mid_pts * 4,
+          f"smear {smear_pts} against in-between {mid_pts} — a smear that "
+          f"costs several times a pose is an exposure again")
 
     print("\nWHAT IT REFUSES, AND WHAT IT SAYS")
     page.evaluate("""() => {

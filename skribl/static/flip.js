@@ -6336,7 +6336,14 @@ function buildTween(a, b, want){
      move changes. `lead` rides in the recipe, so a stored page rebuilds through
      this same branch and comes back the page that was saved. */
   if(want && want.lead){
-    const lp = buildInbetween(a0, b0, 0.5);
+    /* THE LEAD COVERS WHAT IS BEING SMEARED, NOT THE WHOLE PAGE. Built from
+       a0/b0 it rebuilt every stroke -- including the ones the loop above just
+       emitted once as `still` -- so an aimed page drew its unmoved strokes
+       TWICE and came out heavier than the un-aimed one it was supposed to beat
+       (94 points against 90). `a` and `b` here are post-alignment: exactly the
+       strokes that paired, which is exactly what the trail samples too. What
+       did not pair, and what the artist did not aim at, is in `still`. */
+    const lp = buildInbetween(a, b, 0.5);
     if(lp){
       const keep = SMEAR_TRAIL_SAMPLES;
       for(let sIdx = 0; sIdx < keep; sIdx++){

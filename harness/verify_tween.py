@@ -310,27 +310,78 @@ with sync_playwright() as p:
     # strokes. Samples are the faded groups; carried strokes are the solid
     # ones, and telling them apart by alpha does not care what order they are
     # emitted in.
+    # BY POSITION, NOT BY ALPHA — and this is the third classifier this check
+    # has had. It began as `g % 2`, which v296 broke by emitting the strokes
+    # that did not move first; it became "faded is a sample, solid was held
+    # still", which v297 broke by giving the page a solid LEAD pose at the
+    # midpoint. Alpha and emission order are both implementation detail. The
+    # arm's third point sits at x=200 and the foot's at x=140 in both poses,
+    # and neither moves in x, so position tells them apart whatever the page
+    # is built out of.
     spread = page.evaluate("""() => {
       const f = frames[1];
-      const isSample = c => /^#[0-9a-f]{8}$/i.test(c || '') && !/ff$/i.test(c);
-      const arm = [], carried = [];
+      const arm = [], foot = [];
       let at = 0;
       for (let g = 0; g < f.strokeGroups.length; g++) {
-        const n = f.strokeGroups[g], first = f.strokes[at];
-        // The arm is what got sampled; anything solid was held still.
-        (isSample(first.color) ? arm : carried).push(f.strokes[at + 2].y);
+        const n = f.strokeGroups[g], p = f.strokes[at + 2];
+        if (p) (p.x > 170 ? arm : foot).push(p.y);
         at += n;
       }
       const rng = a => a.length ? Math.max(...a) - Math.min(...a) : 0;
-      return { arm: rng(arm), carried: rng(carried), carriedGroups: carried.length };
+      return { arm: rng(arm), foot: rng(foot), armN: arm.length, footN: foot.length };
     }""")
-    check("the part that moved FAR is spread across the exposure",
-          spread["arm"] > 100, f"arm tip spans {spread['arm']:.0f}px")
-    check("...and the part that barely moved is carried ONCE, not sampled",
-          spread["carriedGroups"] == 1 and spread["carried"] == 0,
-          f"{spread['carriedGroups']} carried groups spanning "
-          f"{spread['carried']:.0f}px — a foot that moved 2px was being laid "
-          f"down 27 times, which costs 28% of its brightness for a 2px trail")
+    # AS A RATIO, not as a pixel count. The old threshold was 100px, which only
+    # made sense while the page was an exposure spanning the WHOLE travel; a
+    # light page trails back from a lead at the midpoint, so the same uneven
+    # blur covers less ground. Unevenness is the property — it is what makes
+    # this look like motion rather than a double exposure — and a ratio still
+    # says it when the span changes again.
+    check("the part that moved FAR is spread across the page",
+          spread["arm"] > 20 and spread["arm"] > 8 * max(spread["foot"], 1),
+          f"arm spans {spread['arm']:.0f}px against the foot's "
+          f"{spread['foot']:.0f}px over {spread['armN']} arm groups")
+    # WHICH WAY DOES THE TRAIL POINT? Nothing asked, and the first version of
+    # the light page got it backwards: the pose sits at the midpoint but the
+    # ghosts spanned the WHOLE travel, so the faintest of them landed AHEAD of
+    # it and the trail read as pointing the wrong way. Caught by looking at a
+    # render, which is not a thing that happens reliably. A ghost is history: it
+    # belongs between where the object was and where the pose now is, never past.
+    _dir = page.evaluate("""() => {
+      const mk = (x) => ({ strokes: [
+          { x: x,      y: 100, color: '#ffffff', size: 6, t: 0, erase: false, start: true },
+          { x: x + 20, y: 100, color: '#ffffff', size: 6, t: 1, erase: false },
+          { x: x + 40, y: 100, color: '#ffffff', size: 6, t: 2, erase: false }],
+        strokeGroups: [3], hold: 1 });
+      frames.length = 0; frames.push(mk(100), mk(400));   // travels +300 in x
+      idx = 0; fps = 24; subdiv = 1; selSpans = [];
+      buildStrip(); render();
+      const before = frames.length;
+      addTween();
+      if (frames.length === before) return null;
+      const g = frames[1];
+      const faded = [], solid = [];
+      for (const q of g.strokes)
+        (/^#[0-9a-f]{8}$/i.test(q.color || '') && !/ff$/i.test(q.color) ? faded : solid).push(q.x);
+      return { trailMax: faded.length ? Math.max(...faded) : null,
+               trailMin: faded.length ? Math.min(...faded) : null,
+               leadMax: solid.length ? Math.max(...solid) : null,
+               n: faded.length };
+    }""")
+    check("the trail sits BEHIND the pose, never past it",
+          _dir and _dir["n"] > 0 and _dir["trailMax"] <= _dir["leadMax"] + 0.5,
+          f"trail reaches x={_dir and _dir['trailMax']} against a pose ending at "
+          f"x={_dir and _dir['leadMax']} — ink ahead of the pose is a trail "
+          f"pointing the wrong way")
+    check("...and it reaches back toward where the object came from",
+          _dir and _dir["trailMin"] < _dir["leadMax"] - 20,
+          f"trail starts at x={_dir and _dir['trailMin']} with the pose ending "
+          f"at x={_dir and _dir['leadMax']} — a trail that does not reach back "
+          f"is not a trail")
+
+    check("...and the part that barely moved barely spreads",
+          spread["foot"] <= 4,
+          f"foot spans {spread['foot']:.0f}px — it moved 2px between the poses, "
+          f"so ink spread wider than that is the smear inventing motion")
 
     print("\nIN-BETWEEN — a HAND-REDRAWN pose (v255)")
     # THE CASE THE FEATURE WAS MOST WANTED FOR AND USED TO REFUSE. Until v255
@@ -541,11 +592,15 @@ with sync_playwright() as p:
     _sz = page.evaluate("""() => ({
         full: JSON.stringify(serializeFlip()).length,
         lean: JSON.stringify(serializeFlip({recipes: true})).length }) """)
-    check("the draft is dramatically smaller with the smear as a recipe",
-          _sz["lean"] * 8 < _sz["full"],
-          f"{_sz['full']:,} bytes written out against {_sz['lean']:,} as a recipe "
-          f"— measured 61x on the fixture this was built for; anything under 8x "
-          f"means the points are still in there somewhere")
+    # 61x WAS A MEASUREMENT OF THE BLOAT, NOT OF THE RECIPE. It was taken when a
+    # generated page was an exposure -- 27 samples over 4 blur passes of every
+    # stroke -- so storing the recipe instead skipped an enormous page. v297 made
+    # the page itself light, and most of that 61x is now banked in the page
+    # rather than in the recipe. Holding the old ratio would mean the only way
+    # to pass is to put the bloat back.
+    check("the smear still costs less as a recipe than as points",
+          _sz["lean"] < _sz["full"],
+          f"{_sz['full']:,} bytes written out against {_sz['lean']:,} as a recipe")
 
     # THE ROUND TRIP IS THE WHOLE RISK. The strokes are not stored, so a rebuild
     # that comes back different is a page the artist cannot get back.
@@ -567,6 +622,7 @@ with sync_playwright() as p:
       // produce a recipe" -- which is the property anyone cares about.
       return { viaRecipe, same: sig(frames[1]) === was, pages: frames.length === wasN,
                pts: frames[1].strokes.length, wasPts,
+               posePts: frames[0].strokes.length,
                restamped: !!serializeFlip({recipes: true}).frames[1].gen }; }""")
     check("the draft really did store a recipe rather than the points",
           _rt["viaRecipe"], str(_rt))
@@ -575,9 +631,16 @@ with sync_playwright() as p:
     # Against what it HAD, not an absolute: this fixture's poses are six points
     # each, so a threshold tuned on the stick figure called a correct 648-point
     # rebuild a placeholder.
+    # A FLOOR RELATIVE TO THE POSES, not an absolute. 20 was tuned when a
+    # generated page was an exposure and could not be small; a light page on
+    # this fixture's six-point poses is legitimately fifteen points, and the
+    # absolute floor started calling a correct rebuild a placeholder. What the
+    # check is actually for is that the rebuild is not EMPTY and is not a stub:
+    # it has to come back with what it had, and with at least a drawing in it.
     check("...and it is a real page again, not a placeholder",
-          _rt["pts"] == _rt["wasPts"] and _rt["pts"] > 20,
-          f"{_rt['pts']} points against the {_rt['wasPts']} it had")
+          _rt["pts"] == _rt["wasPts"] and _rt["pts"] >= _rt["posePts"],
+          f"{_rt['pts']} points against the {_rt['wasPts']} it had, "
+          f"and a pose of {_rt['posePts']}")
     check("...re-stamped, so the next save is a recipe too",
           _rt["restamped"],
           "paying full price once and for ever after is the bug this replaces")
@@ -734,6 +797,7 @@ with sync_playwright() as p:
           all(v["plan"] and v["plan"]["n"] + 1 >= 6 for v in _fp.values()),
           f"{ {k: (v['plan'] and v['plan']['n'] + 1) for k, v in _fp.items()} } "
           f"samples — a None is a page that was declined outright")
+    TWEEN_POINT_CAP_EXPECT = page.evaluate("() => TWEEN_POINT_CAP")
     # AND IT REACHES THE GENERATED PAGE, not just the plan.
     _gen = page.evaluate("""() => {
         const mk = () => { const s = [], g = [];
@@ -752,10 +816,22 @@ with sync_playwright() as p:
           out[f] = frames[1].strokes.length;
         }
         return out; }""")
-    check("a page generated at 24fps really is lighter than the same one at 12",
-          _gen["24"] < _gen["12"] * 0.75,
-          f"{_gen['12']} points at 12fps vs {_gen['24']} at 24 — the plan has to "
-          f"reach buildTween, not just be computable")
+    # INVERTED IN v297, and this is the shape CLAUDE.md warns about: the old pin
+    # could only pass while a generated page was heavy enough to need rationing.
+    # It asserted that a page gets LIGHTER at 24fps than at 12 -- true of an
+    # exposure, whose sample count came out of the render budget, and the budget
+    # shrinks as the slot does. A light page is a lead pose plus six fixed
+    # ghosts: a few hundred points at any rate, nowhere near the ceiling, so
+    # there is nothing left to ration and nothing to vary. Making it vary again
+    # would mean putting the weight back.
+    #
+    # So the guarantee is now the stronger one: the page costs the SAME at any
+    # playback rate, and is far under the cap at all of them. A page that grew
+    # with the rate, or crept toward the ceiling, still fails here.
+    check("a generated page costs the same at any playback rate, and stays light",
+          _gen["12"] == _gen["24"] and _gen["24"] < TWEEN_POINT_CAP_EXPECT,
+          f"{_gen['12']} points at 12fps vs {_gen['24']} at 24 "
+          f"(ceiling {TWEEN_POINT_CAP_EXPECT:,})")
 
     # v261's REBUILD IN-BETWEENS section left with the feature (v290, owner's call).
 
@@ -1225,7 +1301,36 @@ with sync_playwright() as p:
       addTween();
       if(frames.length === before) return null;
       const g = frames[1];
-      return { points: g.strokes.length, groups: g.strokeGroups.length,
+      /* HOW MANY TIMES DOES A STILL POINT APPEAR? Asked directly, rather than
+         inferred from the page's point count. The old check decomposed the
+         total as (still + a whole number of samples), which only holds while
+         every moving stroke is emitted the same number of times -- an
+         exposure's shape. A light page is a lead plus a handful of coarse
+         ghosts, so the arithmetic stopped meaning anything. The PROPERTY it
+         was defending is untouched and can just be counted. */
+      let stillMax = 0;
+      if (sel !== null) {
+        const src = frames[0], at0 = [];
+        let acc = 0;
+        for (const c of src.strokeGroups) { at0.push(acc); acc += c; }
+        /* WHOLE RUNS, not points. Counting points that share a coordinate said
+           an unaimed stroke appeared twice on this fixture -- a stick figure
+           whose limbs meet, so the aimed stroke's lead lands exactly on a joint
+           the unaimed strokes also occupy. A run is only a copy of a source run
+           if EVERY one of its points matches, which a coincidence does not do. */
+        const runs = [];
+        let at = 0;
+        for (const cnt of g.strokeGroups) { runs.push(g.strokes.slice(at, at + cnt)); at += cnt; }
+        const same = (r, from, cnt) => r.length === cnt && r.every((q, i) =>
+          Math.abs(q.x - src.strokes[from + i].x) < 0.01 &&
+          Math.abs(q.y - src.strokes[from + i].y) < 0.01);
+        src.strokeGroups.forEach((cnt, gi) => {
+          if (sel.indexOf(gi) >= 0) return;          // aimed: it is smeared
+          stillMax = Math.max(stillMax,
+            runs.filter(r => same(r, at0[gi], cnt)).length);
+        });
+      }
+      return { points: g.strokes.length, groups: g.strokeGroups.length, stillMax,
                recipe: (function(){ const r = genRecipe.get(g);
                  return r ? { n: r.n, passes: r.passes, aim: r.aim || null } : null; })() };
     }"""
@@ -1240,11 +1345,11 @@ with sync_playwright() as p:
     check("...and the page is lighter for it",
           armed and whole and armed["points"] < whole["points"],
           f"{armed and armed['points']} aimed vs {whole and whole['points']} whole")
-    check("...because the still strokes are drawn ONCE, not sampled",
-          # three unaimed runs of 13, 13 and 11 points, once each
-          armed and (armed["points"] - 37) % (armed["recipe"]["n"] + 1) == 0,
-          f"{armed and armed['points']} points do not decompose into the still "
-          f"strokes plus a whole number of samples")
+    check("...because a stroke that was not aimed at appears exactly once",
+          armed and armed["stillMax"] == 1,
+          f"an unaimed stroke appears {armed and armed['stillMax']} "
+          f"times — more than once means it is being sampled like the ones that "
+          f"moved, which costs its brightness for no trail")
 
     # SELECTING EVERYTHING IS NOT A SPECIAL CASE, and this is the pin that stops
     # "aim at nothing" from satisfying the three above.
