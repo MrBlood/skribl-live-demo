@@ -378,6 +378,69 @@ with sync_playwright() as p:
           f"at x={_dir and _dir['leadMax']} — a trail that does not reach back "
           f"is not a trail")
 
+    # HOW FAR APART THE GHOSTS LAND IS THE WHOLE EFFECT, and until v297 it was
+    # a constant 6 of them however wide the brush. On a ball drawn that way the
+    # 6 landed inside the ball's own silhouette and read as one smear; on the
+    # owner's hairline crossing the page the same 6 landed 18px apart with
+    # nothing to bridge them, and the page read as SIX SEPARATE LINES. So the
+    # spacing is what is pinned, not the count: two brushes over the SAME
+    # travel, and the thin one has to ask for more.
+    #
+    # Brush 8 rather than 3 on purpose -- SMEAR_TRAIL_MAX caps a hairline, and
+    # a pin written on top of the cap would be pinning the cap.
+    _sp = page.evaluate("""() => {
+      const mk = (x, size) => ({ strokes: [
+          { x: x,      y: 100, color: '#ffffff', size, t: 0, erase: false, start: true },
+          { x: x + 20, y: 100, color: '#ffffff', size, t: 1, erase: false },
+          { x: x + 40, y: 100, color: '#ffffff', size, t: 2, erase: false }],
+        strokeGroups: [3], hold: 1 });
+      const run = (size) => {
+        frames.length = 0; frames.push(mk(100, size), mk(400, size));  // +300 in x
+        idx = 0; fps = 24; subdiv = 1; selSpans = [];
+        buildStrip(); render();
+        const before = frames.length;
+        addTween();
+        if (frames.length === before) return null;
+        // A ghost is one faded run; its position is its first point's x.
+        const g = frames[1]; const xs = []; let at = 0, alpha = 0;
+        for (let k = 0; k < g.strokeGroups.length; k++) {
+          const q = g.strokes[at];
+          if (q && /^#[0-9a-f]{8}$/i.test(q.color || '') && !/ff$/i.test(q.color)) {
+            xs.push(q.x);
+            alpha = Math.max(alpha, parseInt(q.color.slice(7, 9), 16) / 255);
+          }
+          at += g.strokeGroups[k];
+        }
+        xs.sort((u, v) => u - v);
+        let gap = 0;
+        for (let k = 1; k < xs.length; k++) gap = Math.max(gap, xs[k] - xs[k - 1]);
+        return { n: xs.length, gap, alpha, size };
+      };
+      return { thin: run(8), thick: run(40) };
+    }""")
+    _thin, _thick = (_sp or {}).get("thin"), (_sp or {}).get("thick")
+    check("ghosts land no further apart than the brush is wide",
+          _thin and _thick
+          and _thin["gap"] <= _thin["size"] and _thick["gap"] <= _thick["size"],
+          f"an 8px brush left {_thin and round(_thin['gap'], 1)}px between ghosts "
+          f"and a 40px brush {_thick and round(_thick['gap'], 1)}px — a gap wider "
+          f"than the brush is a row of repeats, not a smear")
+    check("...so a thinner brush asks for more of them over the same travel",
+          _thin and _thick and _thin["n"] > _thick["n"],
+          f"8px brush drew {_thin and _thin['n']} ghosts, 40px brush "
+          f"{_thick and _thick['n']} — the same count for both is the constant "
+          f"this replaced")
+    # AND MORE GHOSTS MUST NOT COST BRIGHTNESS. Dividing a fixed ink budget by
+    # the count was the first way this was written, and it dimmed the owner's
+    # ball from the 0.20 they had just asked for to 0.109: ghosts only stack
+    # where the brush covers the same pixel, which the spacing above already
+    # holds constant.
+    check("...and asking for more of them does not dim the trail",
+          _thin and _thick and _thin["alpha"] >= 0.10 and _thick["alpha"] >= 0.10,
+          f"brightest ghost was {_thin and round(_thin['alpha'], 3)} at 8px and "
+          f"{_thick and round(_thick['alpha'], 3)} at 40px — a trail that fades "
+          f"as it lengthens is a budget divided by the count")
+
     check("...and the part that barely moved barely spreads",
           spread["foot"] <= 4,
           f"foot spans {spread['foot']:.0f}px — it moved 2px between the poses, "

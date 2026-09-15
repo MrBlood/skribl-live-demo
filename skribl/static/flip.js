@@ -5627,7 +5627,30 @@ function selRestore(pts){
    faint trail behind it for the sense of travel. The trail is resampled COARSE --
    a ghost at 9% alpha behind a moving figure carries no detail worth the drawing's
    full point count, and that is where the rest of the weight was. */
-const SMEAR_TRAIL_SAMPLES = 6;   // ghosts behind the pose
+/* HOW MANY GHOSTS IS A PROPERTY OF THE BRUSH, NOT A CONSTANT.
+
+   Six was set on a 49px ball travelling 59px: the ghosts land ~5px apart, well
+   inside the ball's own width, so they overlap and read as one smear. The owner
+   then smeared a 3px LINE travelling 220px. The same six ghosts land 18px apart
+   with nothing 18px wide to bridge them, and the page reads as six separate
+   lines -- the failure the exposure had, at a tenth of the cost.
+
+   So the spacing is chosen, not the count: ghosts sit a fraction of a brush
+   width apart, which is what makes them merge. A wide brush moving a little
+   needs a handful; a hairline crossing the page needs many.
+
+   THE ALPHA DOES NOT FALL WITH THE COUNT, though -- dividing a fixed ink budget
+   among the ghosts was the first thing tried here and it is wrong. Ghosts do not
+   stack everywhere they exist, only where the brush covers the SAME pixel, and
+   once the spacing is a fraction of the brush that coverage is a constant
+   (1/OVERLAP of them) no matter how long the trail is. Budgeting by count dimmed
+   the ball from the 0.20 the owner asked for to 0.109 while changing nothing
+   about whether it reads as a slab. What is corrected below is COVERAGE, which
+   only departs from that constant when a clamp forces it to: a barely-moving
+   wide brush piles MIN ghosts on one spot, and that is the case worth thinning. */
+const SMEAR_TRAIL_OVERLAP = 0.7;  // ghost spacing, as a fraction of brush width
+const SMEAR_TRAIL_MIN = 4;
+const SMEAR_TRAIL_MAX = 28;       // bounds the cost of a hairline crossing the page
 /* 0.20, not the 0.09 this shipped with: on the owner's own drawing the trail
    at 0.09 was there in a render and invisible on a phone. Raising it also
    LENGTHENS the trail, because the faintest ghosts are dropped below the
@@ -6417,16 +6440,41 @@ function buildTween(a, b, want){
        did not pair, and what the artist did not aim at, is in `still`. */
     const lp = buildInbetween(a, b, 0.5);
     if(lp){
-      const keep = SMEAR_TRAIL_SAMPLES;
-      for(let sIdx = 0; sIdx < keep; sIdx++){
-        const frac = sIdx / keep;
+      /* Measured on the strokes being smeared, not on the whole page: how far
+         the ink travels, and how wide it is. `a` and `b` are post-alignment, so
+         index i on one is the same piece of ink as index i on the other. Mean
+         displacement rather than max, so one far-flung point does not set the
+         spacing for everything. */
+      let sumTravel = 0, sumSize = 0, nPair = 0;
+      for(let i = 0; i < a.strokes.length; i++){
+        const pa = a.strokes[i], pb = b.strokes[i];
+        if(!pa || !pb) continue;
+        sumTravel += Math.hypot(pb.x - pa.x, pb.y - pa.y);
+        sumSize += (typeof pa.size === 'number' ? pa.size : 6);
+        nPair++;
+      }
+      const travel = nPair ? sumTravel / nPair : 0;
+      const brush = nPair ? sumSize / nPair : 6;
+      // The trail spans half the travel: the pose sits at the midpoint.
+      const trailLen = travel * 0.5;
+      const step = Math.max(0.5, brush * SMEAR_TRAIL_OVERLAP);
+      const ghosts = Math.max(SMEAR_TRAIL_MIN,
+                              Math.min(SMEAR_TRAIL_MAX, Math.round(trailLen / step)));
+      /* How many ghosts land on one pixel: the brush divided by the gap, never
+         fewer than one and never more than there are. At the spacing above this
+         is 1/OVERLAP and the alpha comes out at exactly SMEAR_TRAIL_ALPHA, so
+         the ball is the ball. It rises only where a clamp piled them up. */
+      const cover = Math.max(1, Math.min(ghosts, brush / (trailLen / ghosts)));
+      const trailAlpha = SMEAR_TRAIL_ALPHA / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
+      for(let sIdx = 0; sIdx < ghosts; sIdx++){
+        const frac = sIdx / ghosts;
         /* THE TRAIL REACHES BACK TO THE POSE, NOT PAST IT. The pose is at the
            midpoint, so the ghosts span 0 -> 0.5 of the travel; spanning the
            whole gap puts the faintest ones AHEAD of the ball, which renders as
            a trail pointing the wrong way. `frac` still runs 0..1 for the alpha
            ramp -- it is the POSITION that is halved. */
         const pos = frac * 0.5;
-        const av = SMEAR_TRAIL_ALPHA * Math.pow(frac, SMEAR_TRAIL_FALLOFF);
+        const av = trailAlpha * Math.pow(frac, SMEAR_TRAIL_FALLOFF);
         if(av * 255 < 3) continue;   // below this a pass cannot carry the ink's colour
         let at2 = 0;
         for(let g = 0; g < a.strokeGroups.length; g++){
