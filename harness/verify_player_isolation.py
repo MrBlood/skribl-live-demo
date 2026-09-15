@@ -886,7 +886,24 @@ with sync_playwright() as sp:
     # measurement plus a 540 B allowance, the same margin the ceiling has
     # always carried, so the next editor-only addition to app.js is caught
     # rather than absorbed.
-    BYTES_RATCHET, BYTES_TARGET = 150_500, 150_500
+    # 150,500 -> 150,600, measured 150,517, v297: lib/strokelayers.js gains
+    # uniformRun, the rule that a see-through run of one colour and one width is
+    # drawn as a SINGLE canvas path rather than a dot plus a line per segment.
+    # Per segment it composites against itself wherever the round caps overlap,
+    # and a Motion Smear ghost written at alpha 46/255 painted at 83.
+    #
+    # THIS SURFACE PAYS FOR IT WITHOUT YET SPENDING IT, and that is recorded
+    # rather than hidden: the rule is in the shared module, which /s/ downloads
+    # for overBudget, but app.js — which is what renders here and on the Pad —
+    # does NOT call it yet. So the sealed player still beads a smear. Flip and
+    # the in-post player are fixed; this one is the third surface and needs its
+    # own change, which will cost more than these 17 B and should argue for
+    # itself then. Pinned just above the floor so that change is caught.
+    #
+    # Spent before asking: uniformRun was compacted three times against this
+    # ceiling (-36 B measured) and its prose moved to flip.js, which is in no
+    # byte budget — though jsstrip means comments here were never the cost.
+    BYTES_RATCHET, BYTES_TARGET = 150_600, 150_600
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

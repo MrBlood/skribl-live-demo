@@ -91,42 +91,22 @@
     return false;
   }
 
-  /* A UNIFORM SEE-THROUGH RUN IS ONE PATH, NOT A DOT PLUS A LINE PER SEGMENT.
-   *
-   * This is the v225 beading again, in the one place neither the layer above
-   * nor the player's compositor reaches. A run drawn the naive way issues a
-   * fill and then a stroke() per segment, and each one composites against the
-   * last: where the round caps overlap -- which on a polyline is EVERYWHERE --
-   * translucent ink stacks. Measured on a Motion Smear ghost written at alpha
-   * 46/255: the pixels came out at 83, and the trail wore a ladder of bright
-   * bands the owner spotted in a render.
-   *
-   * The layer fixes this by compositing the run once, and costs a full-canvas
-   * round trip to do it -- which is why generated pages are kept off it, and
-   * why both surfaces' LAYERING parsers deliberately cannot read the 8-digit
-   * hex a smear writes. A single canvas path buys the same thing for nothing:
-   * one path cannot stack against itself, and it is FEWER calls than the
-   * per-segment walk, not more.
-   *
-   * It only applies where every point of the run shares a colour and a width.
-   * That is exactly true of a generated ghost and exactly false of a hand-drawn
-   * stroke, whose width follows pressure -- so the strokes that need the layer
-   * still get it, and this never silently flattens one.
-   *
-   * Returns the run's alpha when it can be drawn as one path, 0 when it cannot.
-   * `alphaFn` is the caller's parser, as with overBudget -- but this one MUST
-   * see every form the alpha can arrive in, including that hex. Passing a
-   * layering parser here disables the fast path rather than breaking it. */
+  /* A UNIFORM SEE-THROUGH RUN IS ONE PATH, not a dot plus a line per segment:
+   * drawn per segment it composites against itself wherever the round caps
+   * overlap, which on a polyline is everywhere, and a smear ghost written at
+   * alpha 46/255 painted at 83. One path cannot stack against itself and is
+   * FEWER calls than the walk, so unlike the layer above it needs no budget.
+   * Only for a run of one colour and one width -- true of a generated ghost,
+   * false of a pressure stroke, which still gets the layer. Returns the run's
+   * alpha, or 0. `alphaFn` must read every form the alpha arrives in, the
+   * 8-digit hex included; a LAYERING parser here disables this rather than
+   * breaking it. flip.js paintSeg carries the full reasoning -- it is not in
+   * any byte budget and this file is in two. */
   function uniformRun(seg, alphaFn) {
-    if (!seg || seg.length < 2) return 0;
-    var p = seg[0];
-    if (p.erase) return 0;
-    var a = alphaFn(p.color);
-    if (!(a < 1)) return 0;
-    for (var i = 1; i < seg.length; i++) {
-      var q = seg[i];
-      if (q.erase || q.color !== p.color || q.size !== p.size) return 0;
-    }
+    var p = seg[0], a, i, q;
+    if (seg.length < 2 || p.erase || !((a = alphaFn(p.color)) < 1)) return 0;
+    for (i = 1; i < seg.length; i++) { q = seg[i];
+      if (q.erase || q.color !== p.color || q.size !== p.size) return 0; }
     return a;
   }
 

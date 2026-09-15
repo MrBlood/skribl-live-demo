@@ -365,17 +365,12 @@
     return m ? Math.max(0, Math.min(1, parseFloat(m[1]))) : 1;
   }
 
-  /* The alpha in any form a payload may carry it in, including the 8-digit hex
-   * a Motion Smear writes. Deliberately NOT parseStrokeAlpha: that one decides
-   * whether a stroke goes on the wet layer, and teaching it this hex would put
-   * every generated page on a per-stroke round trip -- the cost flip.js records
-   * beside its own alphaOf/strokeAlphaOf split. This one only decides whether a
-   * run can be drawn as a single path, which costs nothing. */
+  /* The alpha in any form, the 8-digit hex a Motion Smear writes included.
+   * NOT parseStrokeAlpha: that one decides the wet layer, and teaching it this
+   * hex would put every generated page on a per-stroke round trip. */
   function anyStrokeAlpha(c) {
-    if (typeof c !== 'string') return 1;
-    var h = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(c.trim());
-    if (h) return parseInt(h[1], 16) / 255;
-    return parseStrokeAlpha(c);
+    var h = typeof c === 'string' && /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(c.trim());
+    return h ? parseInt(h[1], 16) / 255 : parseStrokeAlpha(c);
   }
 
   function solidStrokeColor(c) {
@@ -489,19 +484,12 @@
     return i;
   }
 
-  /* Inline fallback for lib/strokelayers.js's uniformRun -- the player carries
-   * inline fallbacks for every lib it reads, because it is also served embedded
-   * in a post where a lib may not be. */
+  /* Inline fallback for lib/strokelayers.js's uniformRun, as for every lib. */
   function uniformRun(seg, alphaFn) {
-    if (!seg || seg.length < 2) return 0;
-    var p = seg[0];
-    if (p.erase) return 0;
-    var a = alphaFn(p.color);
-    if (!(a < 1)) return 0;
-    for (var i = 1; i < seg.length; i++) {
-      var q = seg[i];
-      if (q.erase || q.color !== p.color || q.size !== p.size) return 0;
-    }
+    var p = seg[0], a, i, q;
+    if (seg.length < 2 || p.erase || !((a = alphaFn(p.color)) < 1)) return 0;
+    for (i = 1; i < seg.length; i++) { q = seg[i];
+      if (q.erase || q.color !== p.color || q.size !== p.size) return 0; }
     return a;
   }
 
@@ -513,40 +501,29 @@
     var fn = (typeof window !== 'undefined' && window.SkriblStrokeLayers
               && window.SkriblStrokeLayers.uniformRun)
       ? window.SkriblStrokeLayers.uniformRun : uniformRun;
-    var i = 0, j, seg, p, prev;
+    var i = 0, j, k, seg, p, prev;
     while (i < strokes.length) {
-      /* One run = a start flag to the next. The `i === 0` allowance is the same
-       * one replayTo makes: a payload's first point may carry no flag. */
+      /* One run = a start flag to the next; `i === 0` as replayTo allows. */
       j = i + 1;
       while (j < strokes.length && !strokes[j].start) j++;
       seg = strokes.slice(i, j);
+      p = seg[0];
       /* ONE PATH when the run can take it -- see lib/strokelayers.js. A smear's
-       * ghosts are the case: uniform colour and width, see-through, and drawn
-       * per segment they stack into the beading the editor had. The compositor
-       * cannot reach them, by design, because their alpha is hex. */
+       * ghosts are the case the compositor cannot reach, their alpha being hex. */
       if (!comp && fn(seg, anyStrokeAlpha)) {
-        p = seg[0];
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = p.size;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(seg[0].x, seg[0].y);
-        for (var k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
+        ctx.strokeStyle = p.color; ctx.lineWidth = p.size;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(p.x, p.y);
+        for (k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
         ctx.stroke();
-        i = j;
-        continue;
-      }
-      for (var m = i; m < j; m++) {
-        p = strokes[m];
-        if (p.start || m === 0) {
+      } else for (k = i; k < j; k++) {
+        p = strokes[k];
+        prev = strokes[k - 1];
+        if (p.start || k === 0) {
           if (comp) comp.dot(p.x, p.y, p.color, p.size, p.erase);
           else drawDot(ctx, p.x, p.y, p.color, p.size, p.erase);
-        } else {
-          prev = strokes[m - 1];
-          if (comp) comp.line(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
-          else drawLine(ctx, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
-        }
+        } else if (comp) comp.line(prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
+        else drawLine(ctx, prev.x, prev.y, p.x, p.y, p.color, p.size, p.erase);
       }
       i = j;
     }
