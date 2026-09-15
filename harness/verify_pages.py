@@ -328,10 +328,30 @@ with sync_playwright() as p:
     check("...and the thumbnails were not blank to begin with",
           _tc["ink"] > 200,
           f"{_tc['ink']} lit pixels — comparing two empty canvases proves nothing")
-    # THE SPEED IS THE POINT, so it is asserted -- with a wide margin, because
-    # CLAUDE.md is explicit that browser timings here are noisy under load. The
-    # measured gap is ~145x; anything under 3x means the cache is not being hit.
-    _ts = flip.evaluate("""() => {
+    # THE SPEED IS THE POINT, AND A CLOCK IS THE WRONG WAY TO ASSERT IT.
+    #
+    # This was `cold > warm * 3` on wall-clock timings, with a wide margin
+    # precisely because CLAUDE.md warns these are noisy under load. The margin
+    # was not the problem: the ASSERTION was. It passed every local run and
+    # every sqlite CI job, and failed the PostgreSQL job twice on trees whose
+    # own sqlite job passed -- that job's database logged 105s and 160s
+    # checkpoints mid-run, which is the contention CLAUDE.md documents. A pin
+    # that goes red only when the box is busy reports on the box, not the tree,
+    # and CANNOT tell the two apart. That makes it useless in both directions:
+    # it cried wolf twice, and it would have said nothing if the cache broke on
+    # a quiet machine.
+    #
+    # So this asserts the MECHANISM instead, which is what "repainted only when
+    # its page changes" actually means and is exactly as strong on an idle box
+    # as on a loaded one. drawThumb stores a NEW entry object every time it
+    # repaints, so entry identity is the record of whether a repaint happened:
+    #
+    #   cold  -- every frame has an entry, and the cache has taken bytes
+    #   warm  -- every entry is the SAME OBJECT, and no bytes were added
+    #   edit  -- the edited frame's entry is a NEW object, its neighbours' are not
+    #
+    # No clock, no threshold, no margin to tune.
+    _tm = flip.evaluate("""() => {
       const mk = (x) => { const pts = [];
         for (let k = 0; k < 600; k++) pts.push({ x: x + (k % 80) * 9, y: 60 + (k / 80 | 0) * 30,
           color: '#ffffff', size: 5, t: k, erase: false, start: k % 80 === 0 });
@@ -339,9 +359,25 @@ with sync_playwright() as p:
       frames.length = 0;
       for (let i = 0; i < 24; i++) frames.push(mk(30 + i * 3));
       idx = 0;
-      const t0 = performance.now(); buildStrip(); const cold = performance.now() - t0;
-      const t1 = performance.now(); buildStrip(); const warm = performance.now() - t1;
-      return { cold, warm }; }""")
+      const entries = () => frames.map(f => _thumbCache.get(f));
+      buildStrip();
+      const cold = entries(), coldBytes = _thumbBytes;
+      buildStrip();
+      const warm = entries(), warmBytes = _thumbBytes;
+      // Edit ONE page, well away from index 0, and rebuild.
+      const EDIT = 9;
+      frames[EDIT].strokes.forEach(q => { q.x += 40; });
+      buildStrip();
+      const after = entries();
+      return {
+        n: frames.length,
+        cachedCold: cold.filter(Boolean).length,
+        coldBytes, warmBytes,
+        // Identity, not equality: a repaint replaces the object.
+        heldOnWarm: warm.filter((e, i) => e && e === cold[i]).length,
+        editedIsNew: !!after[EDIT] && after[EDIT] !== warm[EDIT],
+        neighboursHeld: after.filter((e, i) => i !== EDIT && e && e === warm[i]).length,
+      }; }""")
     # THE PASTE GHOST SHIFTS EVERY TILE AFTER THE CURRENT PAGE. It is appended
     # inside the page loop, right after `idx`, so strip.children stops lining up
     # with frames the moment the clipboard holds anything — and refreshThumb(i)
@@ -386,10 +422,21 @@ with sync_playwright() as p:
           not _gh["three"],
           "editing page 4 repainted page 3's tile — the index is off by the ghost")
 
+    check("a cold rebuild caches every page's thumbnail",
+          _tm and _tm["cachedCold"] == _tm["n"] and _tm["coldBytes"] > 0,
+          f"{_tm and _tm['cachedCold']}/{_tm and _tm['n']} pages cached, "
+          f"{_tm and _tm['coldBytes']} bytes held — with nothing cached there is "
+          f"nothing for the rebuild below to reuse")
     check("rebuilding a strip nobody changed does not repaint it",
-          _ts["cold"] > _ts["warm"] * 3,
-          f"cold {_ts['cold']:.0f}ms vs warm {_ts['warm']:.0f}ms — under 3x means "
-          f"every tile is being repainted from strokes on every rebuild")
+          _tm and _tm["heldOnWarm"] == _tm["n"] and _tm["warmBytes"] == _tm["coldBytes"],
+          f"{_tm and _tm['heldOnWarm']}/{_tm and _tm['n']} thumbnails survived the "
+          f"rebuild as the same entry ({_tm and _tm['coldBytes']} -> "
+          f"{_tm and _tm['warmBytes']} bytes) — a replaced entry is a repaint")
+    check("...but the page that CHANGED is repainted, and only that one",
+          _tm and _tm["editedIsNew"] and _tm["neighboursHeld"] == _tm["n"] - 1,
+          f"edited page repainted: {_tm and _tm['editedIsNew']}; "
+          f"{_tm and _tm['neighboursHeld']}/{_tm and _tm['n'] - 1} neighbours left "
+          f"alone — a cache that never notices an edit shows a drawing nobody has")
 
     print("\nSTRIP SCROLL — a restored draft opens with its page in view")
     #
