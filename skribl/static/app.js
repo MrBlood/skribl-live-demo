@@ -675,12 +675,8 @@ function paintStrokesStatic(strokeArr) {
   const _sl = (typeof window !== 'undefined') ? window.SkriblStrokeLayers : null;
   const _over = !!(_sl && _sl.overBudget && _sl.overBudget(strokeArr, parseStrokeAlpha));
   const comp = (strokeLayersOn() && !_over) ? makeStrokeCompositor(ctx, canvas) : null;
-  /* A SEE-THROUGH RUN OF ONE COLOUR AND ONE WIDTH IS ONE PATH, not a dot plus a
-     line per segment -- lib/strokelayers.js carries the reasoning and flip.js
-     the long form. A Motion Smear's ghosts are the case, and the compositor
-     above cannot reach them however it is configured: their alpha is an
-     8-digit hex and parseStrokeAlpha, which decides the wet layer, reads rgba()
-     only. Measured here: a ghost written at 46/255 painted at 83. */
+  /* A see-through run of one colour and one width is ONE PATH, not a dot plus a
+     line per segment: lib/strokelayers.js carries the reasoning. */
   /* No inline fallback, which is this file's own precedent for THIS module:
      the overBudget call above treats an absent lib as "not over budget" rather
      than carrying a second copy. Absent, a run paints as it did before. */
