@@ -457,6 +457,73 @@ with sync_playwright() as p:
               + "; a second cornered run is a stroke interpolated toward the "
               + "wrong partner")
 
+    # A GENERATED POSE IS A VALID INPUT TO THE GENERATOR, which is what the
+    # owner did -- "an inbetween between an actual stroke and another
+    # in-between" -- and it is why his page looked so thoroughly scrambled
+    # rather than merely wrong. Chaining does not CAUSE the mis-pairing, but it
+    # compounds it: the generated page carries the wrong pairing forward, and
+    # the next in-between pairs wrongly again. Measured on the tree he was
+    # using, a hexagon and a circle against a page with one stroke added:
+    #
+    #   step 1   hexagon -> a 13-point run with NO corners (melted to the line)
+    #            circle  -> a 25-point run with 5 (melted to the hexagon)
+    #   step 2   the corner counts swap again -- it re-mangles every round
+    #
+    # Aligned, the chain is stable: step 2 produces the same shape profile as
+    # step 1, which is the property pinned here.
+    _CHAIN = """() => {
+      const run = (pts) => pts.map((p, i) => ({ x: p[0], y: p[1],
+          color: '#ffffff', size: 6, t: i, erase: false, start: i === 0 }));
+      const poly = (cx, cy, r, n, rot) => { const o = [];
+        for (let i = 0; i <= n; i++) { const a = rot + i * 2 * Math.PI / n;
+          o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return o; };
+      const vline = (x, y0, y1) => { const o = [];
+        for (let i = 0; i <= 12; i++) o.push([x, y0 + (y1 - y0) * i / 12]);
+        return o; };
+      const page = (runs) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        for (const r of runs) { r.forEach(q => f.strokes.push(q));
+                                f.strokeGroups.push(r.length); } return f; };
+      const profile = (f) => { const out = []; let at = 0;
+        for (let k = 0; k < f.strokeGroups.length; k++) {
+          const n = f.strokeGroups[k], seg = f.strokes.slice(at, at + n); at += n;
+          let turns = 0;
+          for (let i = 1; i + 1 < seg.length; i++) {
+            const ax = seg[i].x - seg[i-1].x, ay = seg[i].y - seg[i-1].y;
+            const bx = seg[i+1].x - seg[i].x, by = seg[i+1].y - seg[i].y;
+            const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+            if (la < 1e-6 || lb < 1e-6) continue;
+            if ((ax*bx + ay*by) / (la*lb) < 0.85) turns++;
+          }
+          out.push(n + ':' + turns);
+        } return out.join(','); };
+      // The extra stroke sits on the LATER page, the ordering that produces a
+      // picture instead of running off the end.
+      const A = page([run(poly(220, 300, 70, 6, 0)), run(poly(430, 330, 60, 24, 0))]);
+      const C = page([run(vline(180, 250, 560)), run(poly(250, 300, 70, 6, 0.15)),
+                      run(poly(470, 330, 60, 24, 0))]);
+      frames = [A, C]; idx = 0; fps = 24; subdiv = 1; selSpans = [];
+      buildStrip(); render();
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = String(e); }
+      if (frames.length < 3) return { threw, first: null, again: null };
+      const first = profile(frames[1]);
+      idx = 0;
+      const before = frames.length;
+      try { addInbetween(); } catch (e) { threw = threw || String(e); }
+      return { threw, first,
+               again: frames.length > before ? profile(frames[1]) : null };
+    }"""
+    _ch = page.evaluate(_CHAIN)
+    check("an in-between can be built AGAINST a generated pose",
+          _ch["threw"] is None and _ch["again"] is not None,
+          f"threw {_ch['threw']}; a generated page has to be a valid input to "
+          f"the generator — the owner chains them")
+    check("...and chaining is stable, not a fresh mangling each round",
+          _ch["first"] is not None and _ch["first"] == _ch["again"],
+          f"first pass {_ch['first']}, chained pass {_ch['again']} — the same "
+          f"shapes must come back; a changed profile is the pairing shifting "
+          f"again on a page that was already generated")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
