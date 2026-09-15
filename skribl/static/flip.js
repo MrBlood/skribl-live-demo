@@ -1156,7 +1156,40 @@ function strokeAlphaOf(col){
   return alphaOf(col);
 }
 function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
+/* Inline fallback for lib/strokelayers.js's uniformRun, as elsewhere in this
+   file. The note beside it there is the reasoning. */
+function _uniformRun(seg, alphaFn){
+  if(!seg || seg.length < 2) return 0;
+  const p = seg[0];
+  if(p.erase) return 0;
+  const a = alphaFn(p.color);
+  if(!(a < 1)) return 0;
+  for(let i = 1; i < seg.length; i++){
+    const q = seg[i];
+    if(q.erase || q.color !== p.color || q.size !== p.size) return 0;
+  }
+  return a;
+}
 function paintSeg(c, seg, solid){
+  /* ONE PATH when the run can take it -- see lib/strokelayers.js. Skipped when
+     `solid` is set, because that is the layer already doing this job and the
+     colour it hands down is opaque; and skipped while the mirror is live,
+     because drawLine paints the reflections and a path that goes around it
+     would drop them. */
+  if(!solid && !(window.SkriblMirror && SkriblMirror.active())){
+    const _fn = (typeof window !== 'undefined' && window.SkriblStrokeLayers
+                 && window.SkriblStrokeLayers.uniformRun)
+      ? window.SkriblStrokeLayers.uniformRun : _uniformRun;
+    if(_fn(seg, strokeAlphaOf)){
+      const p = seg[0];
+      c.strokeStyle = p.color; c.lineWidth = p.size;
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(seg[0].x, seg[0].y);
+      for(let i = 1; i < seg.length; i++) c.lineTo(seg[i].x, seg[i].y);
+      c.stroke();
+      return;
+    }
+  }
   for (let i = 0; i < seg.length; i++) {
     const p = seg[i]; const col = solid ? solidOf(p.color) : p.color;
     if (i === 0) drawDot(c, p.x, p.y, col, p.size, p.erase);

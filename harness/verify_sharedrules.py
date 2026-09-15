@@ -272,6 +272,36 @@ with sync_playwright() as p:
     check("no reader distinguishes erase:false from erase absent",
           not _bad, "; ".join(_bad[:3]))
 
+    # BOTH PAINTERS TAKE THE UNIFORM-RUN PATH, OR ONE OF THEM BEADS.
+    #
+    # A Motion Smear ghost is see-through and its alpha rides in an 8-digit hex.
+    # Both surfaces' LAYERING parsers match rgba() only, deliberately -- a
+    # generated page on a per-stroke round trip is the stall v239 fixed -- so no
+    # compositor sees a ghost, and painted dot-then-line-per-segment it stacks
+    # against itself at every joint: written at 46/255 it painted at 83.
+    # verify_beading measures that on the editor, in pixels. It cannot measure
+    # it on the PLAYER, whose painter is module-private and not reachable from
+    # any test page -- and the player is exactly where this project keeps
+    # finding the second copy of a fixed bug. So the player's half is pinned
+    # here, at the source, which is the mechanism: the call has to be there.
+    # MATCHED ON THE CALL, HANDED THE HEX-AWARE PARSER -- which is one pattern,
+    # not two, and that matters. The first draft of this check looked for
+    # "uniformRun(seg," and PASSED on a tree with the player's call deleted:
+    # each file carries an inline FALLBACK whose declaration reads
+    # `function uniformRun(seg, alphaFn)`, so the search found the definition of
+    # the thing it was checking for the use of. A mutation said so; nothing else
+    # would have. The call site hands in the surface's hex-aware alpha by name,
+    # and no declaration anywhere spells that.
+    _paint = []
+    for _n, _alpha in (("flip.js", "strokeAlphaOf"),
+                       ("inlineplayer.js", "anyStrokeAlpha")):
+        _path = os.path.join(_root, "skribl", "static", _n)
+        with open(_path) as _fh: _src = _fh.read()
+        if f"(seg, {_alpha})" not in _src:
+            _paint.append(f"{_n}: no uniform-run test handed {_alpha}")
+    check("both painters route a uniform see-through run through one path",
+          not _paint, "; ".join(_paint))
+
     print("\nEDGES")
     # The ms API, same edges. A page is denominated in milliseconds now, so the
     # tables these are handed are ms rather than slots — the questions are

@@ -210,6 +210,99 @@ with sync_playwright() as p:
               and abs(healed["spread"] - wet["spread"]) <= 12,
               f"mean {wet['mean']} -> beaded {beaded['mean']} -> "
               f"healed {healed['mean']}")
+
+        # ------------------------------------------------------------------
+        print("\nTHE SMEAR'S GHOSTS — the same beading, in the one path "
+              "neither compositor reaches")
+        # A Motion Smear ghost is a translucent stroke whose alpha rides in an
+        # 8-DIGIT HEX colour. Both surfaces' layering parsers match rgba() only,
+        # deliberately -- a generated page on a per-stroke round trip is the
+        # stall v239 fixed -- so no compositor ever sees a ghost, and painted
+        # dot-then-line-per-segment it stacked against itself at every joint.
+        # Written at alpha 46/255 it came out at 83, and the trail wore a ladder
+        # of bright bands. A single canvas path cannot stack against itself and
+        # costs FEWER calls than the walk, so it needs no budget.
+        #
+        # Measured on the ghost alone, not on the page: the pose is opaque and
+        # would set `max` by itself.
+        flip = br.new_page(viewport={"width": 1280, "height": 950})
+        browsing.goto(flip, BASE, "/flip")
+        _bd = flip.evaluate("""() => {
+          const mk = (x) => ({ strokes: Array.from({ length: 24 }, (_, k) => ({
+              x: x + k * 11, y: 120 + (k % 3) * 7, color: '#ffffff', size: 9,
+              t: k, erase: false, start: k === 0 })),
+            strokeGroups: [24], hold: 1 });
+          frames.length = 0; frames.push(mk(80), mk(360));
+          idx = 0; fps = 24; subdiv = 1; selSpans = [];
+          buildStrip(); render();
+          const before = frames.length;
+          addTween();
+          if (frames.length === before) return null;
+          // The brightest ghost: written alpha highest, so stacking shows most.
+          const g = frames[1];
+          let at = 0, seg = null, best = -1, written = 0;
+          for (let k = 0; k < g.strokeGroups.length; k++) {
+            const q = g.strokes[at];
+            if (q && /^#[0-9a-f]{8}$/i.test(q.color || '') && !/ff$/i.test(q.color)) {
+              const av = parseInt(q.color.slice(7, 9), 16);
+              if (av > best) { best = av; written = av;
+                               seg = g.strokes.slice(at, at + g.strokeGroups[k]); }
+            }
+            at += g.strokeGroups[k];
+          }
+          if (!seg) return null;
+          const shot = (paint) => {
+            const cv = document.createElement('canvas');
+            cv.width = CW; cv.height = CH;
+            const c = cv.getContext('2d', { willReadFrequently: true });
+            paint(c);
+            const d = c.getImageData(0, 0, cv.width, cv.height).data;
+            let lit = 0, max = 0;
+            for (let i = 3; i < d.length; i += 4) {
+              if (d[i] <= 8) continue; lit++; if (d[i] > max) max = d[i]; }
+            return { lit, max };
+          };
+          const now = shot(c => paintStatic(c, seg));
+          // The pre-fix path, run on purpose: dot, then a line per segment.
+          const raw = shot(c => {
+            for (let i = 0; i < seg.length; i++) {
+              const q = seg[i];
+              if (i === 0) drawDot(c, q.x, q.y, q.color, q.size, false);
+              else { const v = seg[i-1];
+                     drawLine(c, v.x, v.y, q.x, q.y, q.color, q.size, false); }
+            }
+          });
+          return { written, now, raw, pts: seg.length };
+        }""")
+        check("the smear produced a see-through ghost to measure",
+              _bd and _bd["pts"] > 2 and _bd["written"] > 8,
+              f"no ghost, or too faint to read: {_bd}")
+        # THE MUTATION IS IN THE SUITE, as above: the raw path is run on purpose
+        # and REQUIRED to look worse, so this cannot pass on a blank canvas.
+        check("the pre-fix painter DOES stack the ghost above its own alpha",
+              _bd and _bd["raw"]["max"] > _bd["written"] + 12,
+              f"written {_bd and _bd['written']}, raw painter reached "
+              f"{_bd and _bd['raw']['max']} — if these match, this check is "
+              f"not exercising the beading")
+        check("...and the painter in use holds it AT the alpha it was written",
+              _bd and _bd["now"]["max"] <= _bd["written"] + 4,
+              f"written {_bd and _bd['written']}, painted "
+              f"{_bd and _bd['now']['max']} — ink brighter than it was written "
+              f"is a run compounding against itself")
+        check("...without losing any of the stroke",
+              _bd and abs(_bd["now"]["lit"] - _bd["raw"]["lit"]) <= _bd["raw"]["lit"] * 0.02,
+              f"{_bd and _bd['raw']['lit']} lit pixels became "
+              f"{_bd and _bd['now']['lit']} — one path must cover the same "
+              f"ground, not a thinner line")
+        # THE PLAYER'S HALF OF THIS IS PINNED WHERE THE PLAYER ACTUALLY RUNS.
+        # Its parseStrokeAlpha matches rgba() only too, so before this change it
+        # beaded exactly as the editor did -- the surfaces-disagree shape this
+        # project keeps meeting. Asserting it from /flip would mean reaching for
+        # a painter this page does not load, which is a check that passes by
+        # being unreachable. verify_inline drives the real player; the ceiling
+        # is pinned there.
+        flip.close()
+
     finally:
         br.close()
 
