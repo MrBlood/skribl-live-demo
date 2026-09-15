@@ -30,8 +30,11 @@ detached curl. The band below exempts it BY NAME so that the next person to run
 this suite finds the reasoning instead of a failing assertion inviting them to
 repeat the mistake.
 """
+import io
 import os
 import sys
+
+from PIL import Image
 from assertions import make_check
 import browsing
 
@@ -172,6 +175,46 @@ with sync_playwright() as p:
         cov = ", ".join(f"{i['label']} {i['cov']:.1f}%" for i in icons)
         check("the spread is recorded so a future change can be compared",
               True, cov)
+
+        # TWO BUTTONS SIDE BY SIDE MUST NOT LOOK THE SAME, and this one is
+        # measured the way the rest of this file is: rendered, not read off the
+        # path data. The owner asked "you have motion smear and in-between have
+        # the same icon?" and he was right -- they were built from the SAME two
+        # full-strength outer bars, differing only by one extra middle mark at
+        # 30-55% opacity. At 16px that mark is not there. The pair scored 29%
+        # of their ink differing; redrawn so the smear is a pose with a trail
+        # BEHIND it rather than a third bar BETWEEN two, they score 71%.
+        #
+        # Ink is whatever departs from the corner's background, so this reads
+        # the same in either theme rather than assuming dark-on-light.
+        _shots = {}
+        for _bid in ("addinbetween", "addtween"):
+            _el = page.query_selector("#" + _bid + " .addbtn-ic")
+            if not _el:
+                break
+            _shots[_bid] = Image.open(io.BytesIO(_el.screenshot())).convert("L")
+        check("both add buttons carry an icon to compare",
+              len(_shots) == 2,
+              f"found {len(_shots)} of 2 — this check is not comparing anything")
+        if len(_shots) == 2:
+            _a, _b = _shots["addinbetween"], _shots["addtween"]
+            if _a.size != _b.size:
+                _b = _b.resize(_a.size)
+            _pa, _pb = _a.load(), _b.load()
+            _W, _H = _a.size
+            _bg = _pa[0, 0]
+            _lit = _diff = 0
+            for _y in range(_H):
+                for _x in range(_W):
+                    _va, _vb = _pa[_x, _y], _pb[_x, _y]
+                    if abs(_va - _bg) > 25 or abs(_vb - _bg) > 25: _lit += 1
+                    if abs(_va - _vb) > 40: _diff += 1
+            _pct = 100.0 * _diff / max(_lit, 1)
+            check("In-between and Motion Smear do not look like the same button",
+                  _lit > 100 and _pct >= 50,
+                  f"{_pct:.0f}% of the two icons' ink differs over {_lit} lit "
+                  f"pixels — under half means they share their silhouette, which "
+                  f"is what the shipped pair did at 29%")
 
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
