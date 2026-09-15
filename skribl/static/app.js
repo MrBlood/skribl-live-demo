@@ -3302,7 +3302,7 @@ function normalizeSkribl(payload) {
     schemaVersion: payload.schemaVersion || 2,
     playbackMode: playbackMode,
     fps: fps,
-    frames: frames,
+    frames: (window.SkriblPointWrite ? SkriblPointWrite.frames(frames) : frames),
     // legacy top-level mirror of the current frame (keeps loadSkribl et al. intact)
     strokes: f0.strokes || [],
     strokeGroups: f0.strokeGroups || [],
@@ -3349,7 +3349,9 @@ function serializeSkribl() {
     playbackMode: 'replay', // 1 frame ⇒ timed replay
     pauseMode: pauseMode,   // how idle gaps replay; see PAUSE_CAPS
     fps: null,              // replay Skribls don't use fps
-    frames: [ frame ],
+    // The same rule Flip writes through — lib/pointwrite.js, so the two
+    // surfaces cannot drift on how a point is spelled.
+    frames: (window.SkriblPointWrite ? SkriblPointWrite.frames([frame]) : [frame]),
     draftId: 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     userId: null,               // server stamps this later
     createdAt: new Date().toISOString(),

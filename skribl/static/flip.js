@@ -340,6 +340,12 @@ let editIdx = 0, armedDel = -1, armedClear = false;
 let revealRAF = null, revealStart = 0;
 
 function newFrame(){ return { strokes: [], strokeGroups: [], hold: 1 }; }
+/* Every payload leaves through here. Read defensively for the same reason
+   frameHold() is: a surface that somehow loads without lib/pointwrite.js writes
+   what it always wrote rather than throwing. */
+function writeFrames(list){
+  return (window.SkriblPointWrite ? SkriblPointWrite.frames(list) : list);
+}
 // Per-page hold: how many base-fps slots this page occupies. ALWAYS read through
 // this — never trust f.hold to exist. Pages loaded from a pre-v109 payload have no
 // hold field at all and must read as 1, which is what makes the change additive.
@@ -566,7 +572,9 @@ function serializeFlip(opts){
     music: withMedia ? (musicData || null) : null,
     photo: bgImage ? { fit:photoFit, opacity:photoOpacity, blur:photoBlur, zoom:photoZoom, offX:photoOffX, offY:photoOffY, enabled:photoEnabled, name:imageName } : (pendingPhotoMeta || null),
     musicMeta: musicData ? { enabled:musicEnabled, trimStart:trimStart, trimEnd:trimEnd, crossfadeMs:loopCrossfadeMs, name:musicName } : (pendingMusicMeta || null),
-    frames: frames.map((f, i) => {
+    // writeFrames AFTER the map, never before: genRecipe is keyed on the live
+    // frame objects, and tidying first would hand it copies it has never seen.
+    frames: writeFrames(frames.map((f, i) => {
       const h = frameHold(f);
       // A generated page, still sitting between the two pages that made it,
       // still holding what they made. Any of those three untrue and it is
@@ -599,7 +607,7 @@ function serializeFlip(opts){
       if(h > 1) o.hold = h;      // omitted at the default => payload unchanged
       if(frameDraw(f)) o.draw = true;   // same rule: absent at the default
       return o;
-    })
+    }))
   };
 }
 // localStorage is capped at ~5 MB per origin. A background image and especially a
@@ -4265,7 +4273,7 @@ function buildSharePayload(){
   // substitutes 'Untitled Skribl' for an empty title, so sending '' is safe.
   const _t=document.getElementById('flipShareTitle');
   const _c=document.getElementById('flipShareCaption');
-  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:outFrames, canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
+  const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
   // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
   // /s/<id>/card.png fell through to the static branded og-card for every Flip
