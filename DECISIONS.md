@@ -7866,3 +7866,126 @@ strokes still pair in drawing order on both buttons: redraw a pose with its
 strokes in another order and the outline pairs with the mouth. That needs a
 matcher, the Help says so rather than the suite pretending otherwise, and it is
 not in this release.
+
+## v296 -- the guard that was the wall, and the two surfaces that disagreed
+
+**Strokes are paired by SHAPE, so the two pages no longer have to hold the same
+number of them.**
+
+The refusal -- "this one has 5, the next has 7" -- was the wall the owner hit
+every time he drew the next pose by hand instead of duplicating it. It was a
+fair guard while pairing was positional: pairing three strokes against four
+means choosing which one has no partner, and that guess is not the harness's to
+make. tweenMatch makes the guess unnecessary. Each run of one page is matched to
+the run it resembles on the other, and a run with no partner is DRAWN ONCE
+rather than refused -- a stroke that exists on one page has no half-way
+position, and saying so is the honest answer.
+
+Two things were counted wrongly on the way, both because "the strokes of this
+page" had two readings eleven lines apart. The count is of VISIBLE INK now:
+strokeGroups counts erasers and strokes that have been rubbed out, neither of
+which is on the page, and a refusal naming them is one nobody can act on.
+
+AND THE HOLD CEILING DID NOT AGREE ACROSS THE SEAM. The server accepted a hold
+of 8 and the clients clamped at 4, so a document the server had stored happily
+came back to its own author shortened. Aligned at 8, in one change, with the
+rule written beside both constants: raising one means raising the other in the
+same commit.
+
+## v297 -- a pose with a trail, and the beading nobody had measured
+
+**Motion Smear stopped being a 27-copy exposure. Then the owner looked at a
+render of his own drawing and found two things the harness could not see.**
+
+The exposure cost 6,960 points a page. A crisp in-between at the midpoint plus
+a coarse trail costs 342, and on the owner's own file that is 12.12 MB -> 0.53
+MB, 23x. Adding fifteen smears one at a time went 302 -> 697 ms before and
+72 -> 37 ms flat after, because thumbnails are cached on a content SIGNATURE
+rather than a dirty flag -- a flag has to be set everywhere a page can change,
+and the one that gets missed shows the artist a drawing they no longer have.
+That cache uncovered a bug older than itself: the paste ghost is appended INSIDE
+the page loop, so whenever the clipboard holds pages, strip.children stops lining
+up with frames and refreshThumb painted the wrong tile.
+
+**HOW FAR APART THE GHOSTS LAND IS A PROPERTY OF THE BRUSH, NOT A CONSTANT.**
+Six was set on a ball and shipped. On a hairline crossing the page the same six
+land 18px apart with nothing to bridge them and the page reads as six separate
+lines -- the exposure's failure at a tenth of the cost. Spacing is chosen now
+and the count follows. The per-ghost alpha is NOT divided among them: dividing a
+fixed ink budget was the first attempt and it dimmed the ball from the 0.20 the
+owner had just asked for to 0.109, because ghosts stack only where the brush
+covers the same pixel, which the spacing rule already holds constant.
+
+**AND THEN: "are you noticing the beading?"** No. It is the v225 bug, in the one
+path neither compositor reaches. A ghost is a see-through stroke whose alpha
+rides in an 8-digit hex, and every layering parser here matches rgba() only --
+deliberately, because a generated page on a per-stroke round trip is the stall
+v239 fixed. So no compositor had ever seen one. Drawn dot-then-line-per-segment
+a run composites against itself wherever the round caps overlap, which on a
+polyline is everywhere: written at alpha 46/255, it painted at 83.
+
+A single canvas path cannot stack against itself and is FEWER calls than the
+walk, so unlike the layer it needs no budget. All three surfaces had the same
+blind spot -- Flip, the in-post player, and app.js, which draws the Pad and the
+sealed /s/ player both, so a share link had been showing it too. That third one
+was found because the first fix's ratchet note recorded that app.js was paying
+for the shared rule without calling it.
+
+**FOUR GUARDS SAID NO, and each was spent against before it was raised**, which
+is those numbers' own rule: embed 32,500 -> 33,500, /s/ player JS 150,500 ->
+151,500, seam reachable set 1,730 -> 1,760. The fourth was not raised at all.
+verify_pages' wall-clock pin, cold > warm*3, failed the PostgreSQL job twice on
+trees whose own sqlite job passed, both times with the database logging 105s and
+160s checkpoints. **The margin was not the problem; the assertion was** -- a pin
+that goes red only when the box is busy reports on the box, not the tree, and is
+useless in both directions. It cried wolf twice and would have said nothing if
+the cache had broken on a quiet machine. It asserts cache-entry IDENTITY now: a
+warm rebuild holds the same entry objects, an edited page gets a new one. No
+clock.
+
+## v298 -- the button that had no matcher, and the two icons that were one icon
+
+**Everything here was found by the owner using the editor, and none of it by
+the harness.**
+
+"I added a vertical stroke to slide 1 then put an in-between and this?"
+
+buildInbetween pairs index for index. That was safe only while the two pages had
+to hold the same number of strokes -- and v296 removed that requirement,
+correctly, because pairing by SHAPE made it wrong. buildTween got the matcher in
+that release. **addInbetween did not**, and went on calling the builder on the
+raw pages. So one added stroke shifted every pairing after it, a line paired
+with a hexagon and a hexagon with a circle; and where the first page held more
+runs than the second, rb[s] was undefined and the editor THREW. The comment
+inside that loop already records this crash being fixed once, for erased pages.
+It came back by a different route, through a guard removed somewhere else for a
+good reason.
+
+The owner's own reading -- "it happened because it was an inbetween between an
+actual stroke and another in-between" -- was half right, and the right half is
+why his page looked scrambled rather than merely wrong. Chaining does not cause
+the mis-pairing. It COMPOUNDS it: the generated page carries the wrong pairing
+forward as ordinary points and the next in-between pairs wrongly again.
+
+**THE TWO DIRECTIONS DIFFER, DELIBERATELY.** A stroke that exists only on THIS
+page is drawn at the midpoint -- it is on the page you are inserting after. One
+that exists only on the NEXT page is not: it has not been drawn yet.
+
+**"you have motion smear and in-between have the same icon?"** They were built
+from the same two full-strength outer bars, differing only by one mark at
+30-55% opacity, which at 16px is not there. An in-between is symmetric -- two
+poses with one between them. A motion smear is DIRECTIONAL, a pose with a trail
+behind it, and it is drawn that way now. Measured rendered rather than read off
+the path data, because coordinates say nothing about what the eye responds to:
+29% of the two icons' ink differed before, 71% after.
+
+**TWO OF THIS RELEASE'S OWN PINS WERE WRONG FIRST, and mutation caught both
+where reading them had not.** The shape pin compared the ENDS of the sorted
+corner counts and PASSED on the exact mis-pairing it exists to catch, because a
+line melted toward a hexagon still leaves 0 at one end and 5 at the other. The
+run-count pin assumed the two directions were symmetric and went red against a
+tree that was right. A third, in v297, searched for `uniformRun(seg,` and passed
+on a tree with the player's call deleted -- each file carries an inline fallback
+whose DECLARATION reads exactly that, so the check found the definition of the
+thing it was checking for the use of. Three instruments, three releases, one
+habit: **a check is not evidence until it has been shown to go red.**
