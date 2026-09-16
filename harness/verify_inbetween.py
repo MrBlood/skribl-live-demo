@@ -536,6 +536,100 @@ with sync_playwright() as p:
     # group leaves a BLANK PAGE in the middle of the flip, and pressing undo
     # again then starts eating the artist's own drawing on the page before.
     # That is the scenario pinned here, on the surface that can produce it.
+    # ---------------------------------------------------------------- v299
+    # A SHAPE THAT TURNED IS FITTED AS TURNED.
+    #
+    # ibPhase picks which rotation of a closed path lines up with pose A. It
+    # used to score candidates by raw point distance and hand the winner to
+    # ibFit -- backwards, because for a shape that has turned, the pairing whose
+    # points land nearest in page coordinates is the one that explains the turn
+    # away. An L rotated a half-turn was fitted at 2.8 degrees carrying 44.42px
+    # of residual when 180 degrees at 0.00px was available, and the half-way
+    # pose came out a melted bean resembling neither end.
+    #
+    # ASSERT THE FITTED ANGLE, NOT THE PICTURE. Point counts and page sizes are
+    # the same either way -- that is precisely how this survived a corpus render
+    # -- so the discriminator is what the fit CONCLUDED. A half-turn must read as
+    # a half-turn and the residual must go to zero, because for a rigid rotation
+    # there is nothing left over once the turn is accounted for.
+    print("\nPHASE — the fit is scored after the rotation, not before it")
+
+    _rot = page.evaluate("""() => {
+      // An L, and the same L turned a half-turn about its own centre. A closed
+      // path, so there is a phase to get wrong.
+      const poly = (pts, per) => { const o=[];
+        for(let s=0;s<pts.length-1;s++){ const a=pts[s], b=pts[s+1];
+          for(let i=(s?1:0);i<=per;i++){ const u=i/per;
+            o.push({x:a[0]+(b[0]-a[0])*u, y:a[1]+(b[1]-a[1])*u,
+                    size:6, color:'#ffffff', erase:false, t:0}); } }
+        return o; };
+      const L = poly([[260,300],[450,300],[450,340],[300,340],[300,410],[260,410],[260,300]], 8);
+      const spin = (r, cx, cy, ang) => { const c=Math.cos(ang), s=Math.sin(ang);
+        return r.map(p => Object.assign({}, p,
+          { x: cx + (p.x-cx)*c - (p.y-cy)*s, y: cy + (p.x-cx)*s + (p.y-cy)*c })); };
+      const mk = (r) => { const f={strokes:[],strokeGroups:[],hold:1};
+        r.forEach((q,i)=>{ const c=Object.assign({},q);
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(r.length); return f; };
+      const A = mk(L), B = mk(spin(L, 353, 353, Math.PI));
+      const ra = tweenVisible(A).ink, rb = tweenVisible(B).ink;
+      const n = Math.max(ra[0].length, rb[0].length);
+      const pa = tweenResample(ra[0], n);
+      const pb = ibPhase(pa, tweenResample(rb[0], n));
+      const T = ibFit(pa, pb);
+      const loc = ibUnapply(pb, T);
+      let e = 0;
+      for(let i=0;i<n;i++) e += Math.hypot(loc[i].x-pa[i].x, loc[i].y-pa[i].y);
+      return { deg: Math.abs(T.angle) * 180 / Math.PI, scale: T.scale, resid: e/n };
+    }""")
+    check("a half-turn is fitted as a half-turn",
+          abs(_rot["deg"] - 180) < 1.0,
+          f"fitted {_rot['deg']:.2f}° — scored before the fit this reads "
+          f"2.8°, and the in-between is a melted bean")
+    check("...and a rigid turn leaves nothing to interpolate",
+          _rot["resid"] < 0.5 and abs(_rot["scale"] - 1.0) < 0.02,
+          f"residual {_rot['resid']:.2f}px, scale {_rot['scale']:.3f} — a shape "
+          f"that only turned has no residual; 44px of it is the turn being "
+          f"spent on deformation instead")
+
+    # THE OTHER HALF, and the reason residual alone is not the score. A CIRCLE
+    # is rotationally symmetric, so every spin of it fits with about the same
+    # residual -- there is no "better" correspondence for the fit to find, and
+    # scored on residual alone the winner is arbitrary. Measured: a circle whose
+    # second pose merely STARTS half a turn round is claimed as a 180-degree
+    # rotation. The circle did not spin; the pen began somewhere else on it, and
+    # that is the exact case this whole function exists to absorb.
+    #
+    # The penalty on |angle| is what breaks the tie, and this pin is what keeps
+    # it: a future simplification to "just minimise residual" looks right on the
+    # half-turn above and silently makes every symmetric shape spin.
+    _sym = page.evaluate("""() => {
+      const circle = (cx,cy,r,n,a0) => { const o=[];
+        for(let i=0;i<=n;i++){ const a=a0 + 2*Math.PI*i/n;
+          o.push({x:cx+r*Math.cos(a), y:cy+r*Math.sin(a),
+                  size:6, color:'#ffffff', erase:false, t:0}); } return o; };
+      const mk = (r) => { const f={strokes:[],strokeGroups:[],hold:1};
+        r.forEach((q,i)=>{ const c=Object.assign({},q);
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(r.length); return f; };
+      // Same circle, same place. Only where the pen STARTED differs.
+      const A = mk(circle(300, 300, 88, 40, 0));
+      const B = mk(circle(300, 300, 88, 40, Math.PI));
+      const ra = tweenVisible(A).ink, rb = tweenVisible(B).ink;
+      const n = Math.max(ra[0].length, rb[0].length);
+      const pa = tweenResample(ra[0], n);
+      const T = ibFit(pa, ibPhase(pa, tweenResample(rb[0], n)));
+      return { deg: T.angle * 180 / Math.PI, closed: ibClosed(pa) };
+    }""")
+    check("the symmetric-shape fixture really is a closed path",
+          _sym["closed"] is True,
+          "an open path takes the direction-only branch and pins nothing here")
+    check("a circle drawn from a different start point did NOT spin",
+          abs(_sym["deg"]) < 30,
+          f"fitted {_sym['deg']:.1f}° — every spin of a circle fits equally "
+          f"well, so residual alone picks one at random and the in-between "
+          f"rotates a shape that never moved")
+
     print("\nUNDO — an in-between is one action, and undoing it is not a blank page")
 
     _iu = page.evaluate("""() => {

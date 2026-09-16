@@ -6800,6 +6800,9 @@ function ibClosed(pts){
   return Math.hypot(pts[0].x - pts[pts.length-1].x,
                     pts[0].y - pts[pts.length-1].y) < len * 0.12;
 }
+/* Squared distance between correspondingly sampled points, with no fit in
+   between. Used for OPEN paths only -- see ibPhase for why asking the fit which
+   end of a stroke is its start gets the answer wrong. */
 function ibCost(pa, pb){
   let s = 0;
   for(let i = 0; i < pa.length; i++){
@@ -6810,35 +6813,93 @@ function ibCost(pa, pb){
 }
 const ibSpin = (a, k) => a.slice(k).concat(a.slice(0, k));
 
-/* The phase search, bounded. Trying every rotation of a 440-point circle at
-   full resolution is 440x440 distance sums PER STROKE, which is the kind of
-   arithmetic that shows up as a locked-up phone. Search at 24 points, then
-   refine at full resolution within one coarse step of the winner: same answer,
-   a couple of thousand operations instead of a couple of hundred thousand. */
+/* How much a turn has to EARN before the fit is allowed to claim it, as a
+   fraction of the arc a typical point would travel. See ibPhase. */
+const IB_TURN_PENALTY = 0.15;
+
+/* Which rotation of a closed path lines up with pose A -- SCORED AFTER THE
+   SIMILARITY FIT, not before it.
+
+   THIS USED TO SCORE BY RAW POINT DISTANCE and hand the winner to ibFit, which
+   is backwards: for a shape that has TURNED, the correspondence whose points
+   land nearest in page coordinates is exactly the one that explains the turn
+   away. The fit then had a wrong angle to work from, and ibApply rotated by a
+   wrong angle x t. Measured on the corpus at t = 0.5, an L rotated a half-turn
+   was fitted at 2.8 degrees carrying 44.42px of residual when 180.00 degrees
+   with 0.00px was available -- and that answer was the UNSPUN correspondence,
+   so the old scorer took a perfect pairing and spun it into a melted bean. A
+   square turning 51.6 degrees came out a rounded heptagon the same way.
+
+   RESIDUAL ALONE IS NOT ENOUGH, and this is the half that is easy to miss. A
+   straight line recorded end-to-start fits as a 180-degree rotation with
+   EXACTLY the residual of not turning at all -- both zero -- and an eye-lid arc
+   flattening to a line ties the same way. Scored on residual only, a stick
+   figure's arms swing the long way round and a gently tilting line snaps
+   vertical; both were measured, and neither is visible in the rotation cases
+   that motivated the change. So the score carries a penalty on |angle|, scaled
+   by the pose's mean radius so that it is in PIXELS, like the residual it joins.
+   Among explanations that fit equally well, the smaller motion is the one the
+   artist meant. Swept over 0, 0.05, 0.15, 0.30 and 0.60: at 0.15 three runs
+   improve and none regress, and the plateau is wide enough that the exact
+   value is not load-bearing.
+
+   WHAT IT STILL CANNOT DO, recorded rather than left to be discovered: ibFit is
+   a similarity -- rotation and UNIFORM scale. A squash is an anisotropic scale,
+   which the model cannot express, so a tall ellipse becoming a wide one is
+   explained as the same ellipse turned 90 degrees, at a residual of 5.85px
+   against 92.32px for any uniform-scale alternative. The penalty cannot close a
+   gap that size and should not try. Fixing that means fitting non-uniform
+   scale, which is a different change.
+
+   THE SEARCH IS COARSE THEN REFINED, AND SCORES AT FULL RESOLUTION THROUGHOUT.
+   Scoring the coarse pass on a 24-point resample is cheaper and loses the
+   optimum: measured, it misses the multi-object case by 1.3-2.6px at every
+   point count from 120 up. Probing full-resolution spins at a coarse STRIDE
+   instead matches an exhaustive search 25/25 at n = 120, 300 and 600, for about
+   the same cost -- the refine window dominates either way -- at roughly 8ms per
+   run at 600 points. */
 function ibPhase(pa, pb){
   const n = pa.length;
   const cands = [pb, pb.slice().reverse()];
+  let cx = 0, cy = 0;
+  for(const p of pa){ cx += p.x / n; cy += p.y / n; }
+  let rad = 0;
+  for(const p of pa) rad += Math.hypot(p.x - cx, p.y - cy) / n;
+  const score = (q) => {
+    const T = ibFit(pa, q), loc = ibUnapply(q, T);
+    let e = 0;
+    for(let i = 0; i < n; i++) e += Math.hypot(loc[i].x - pa[i].x, loc[i].y - pa[i].y);
+    return e / n + IB_TURN_PENALTY * Math.abs(T.angle) * rad;
+  };
   if(!(ibClosed(pa) && ibClosed(pb))){
-    // Open path: direction only. There is no phase to find -- the ends are the
-    // ends -- and spinning one would start the stroke in its own middle.
+    /* Open path: direction only, and judged by RAW DISTANCE rather than by the
+       score above. There is no phase to find -- the ends are the ends -- so the
+       only question is whether the stroke was drawn backwards, and proximity
+       answers it directly.
+
+       SCORING THIS BRANCH AFTER THE FIT IS WRONG, and it was tried: a limb
+       whose two poses SHARE their start point was fitted reversed, at 109
+       degrees and scale 0.786, because reversing lets a similarity transform
+       explain the shape more cheaply than the truth does. The in-between then
+       abandoned the shared start point and came out inside-out. Fitting decides
+       WHICH ROTATION of a closed loop lines up, where there is genuinely no
+       canonical first point; it must not be asked which END of an open stroke
+       is the start, because the drawing already says. */
     return ibCost(pa, cands[0]) <= ibCost(pa, cands[1]) ? cands[0] : cands[1];
   }
   const K = Math.min(n, 24);
-  const ca = tweenResample(pa, K);
-  let bestC = Infinity, bestOrient = 0, bestK = 0;
-  for(let o = 0; o < 2; o++){
-    const cb = tweenResample(cands[o], K);
-    for(let k = 0; k < K; k++){
-      const c = ibCost(ca, ibSpin(cb, k));
-      if(c < bestC){ bestC = c; bestOrient = o; bestK = k; }
+  const stride = Math.max(1, Math.floor(n / K));
+  let bc = Infinity, bestOrient = 0, bestK = 0;
+  for(let o = 0; o < 2; o++)
+    for(let k = 0; k < n; k += stride){
+      const c = score(ibSpin(cands[o], k));
+      if(c < bc){ bc = c; bestOrient = o; bestK = k; }
     }
-  }
-  const centre = Math.round(bestK * n / K), span = Math.ceil(n / K) + 1;
   const cand = cands[bestOrient];
-  let best = ibSpin(cand, ((centre % n) + n) % n), bc = ibCost(pa, best);
-  for(let d = -span; d <= span; d++){
-    const k = ((centre + d) % n + n) % n;
-    const r = ibSpin(cand, k), c = ibCost(pa, r);
+  let best = ibSpin(cand, bestK);
+  for(let d = -stride; d <= stride; d++){
+    const k = ((bestK + d) % n + n) % n;
+    const r = ibSpin(cand, k), c = score(r);
     if(c < bc){ bc = c; best = r; }
   }
   return best;
