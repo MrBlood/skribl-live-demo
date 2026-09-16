@@ -524,6 +524,58 @@ with sync_playwright() as p:
           f"shapes must come back; a changed profile is the pairing shifting "
           f"again on a page that was already generated")
 
+    # ---------------------------------------------------------------- v299
+    # UNDO ON AN IN-BETWEEN, WHICH FAILS DIFFERENTLY FROM UNDO ON A SMEAR.
+    #
+    # Both buttons carried the same defect — neither wrote to actionLog, so
+    # undoStroke fell through to its generic tail and popped the last stroke
+    # group off the page `idx` had just moved onto. But the VISIBLE outcome
+    # differs, so verify_tween's assertion does not cover this one: a smear page
+    # holds a pose plus many ghost runs, and losing one group leaves a trail
+    # with no head. An in-between page holds ONE crisp pose, so losing its only
+    # group leaves a BLANK PAGE in the middle of the flip, and pressing undo
+    # again then starts eating the artist's own drawing on the page before.
+    # That is the scenario pinned here, on the surface that can produce it.
+    print("\nUNDO — an in-between is one action, and undoing it is not a blank page")
+
+    _iu = page.evaluate("""() => {
+      const pt = (x, y) => ({ x: x, y: y, size: 6, color: '#ffffff',
+                              erase: false, t: 0 });
+      const mk = (x) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        for (let i = 0; i <= 14; i++) {
+          const q = pt(x, 200 + i * 12); if (i === 0) q.start = true;
+          f.strokes.push(q); }
+        f.strokeGroups.push(15); return f; };
+      frames.length = 0; frames.push(mk(200)); frames.push(mk(400));
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length;
+      addInbetween();
+      if (frames.length === before) return { made: false };
+      const madeGroups = frames[idx].strokeGroups.length;
+      undoStroke();
+      return { made: true, madeGroups: madeGroups, pages: frames.length,
+               idx: idx, fps: fps, subdiv: subdiv,
+               holds: frames.map(f => f.hold),
+               // Every page still carries the drawing it was made with.
+               groupsPerPage: frames.map(f => f.strokeGroups.length),
+               pointsPerPage: frames.map(f => f.strokes.length) };
+    }""")
+    check("the fixture generated an in-between at all", _iu.get("made") is True,
+          str(_iu))
+    check("undo removes the in-between page rather than emptying it",
+          _iu.get("pages") == 2 and 0 not in (_iu.get("groupsPerPage") or [0]),
+          f"{_iu} — an in-between holds ONE group, so popping it left a blank "
+          f"page sitting in the middle of the flip")
+    check("...and both of the artist's own pages are untouched",
+          _iu.get("pointsPerPage") == [15, 15],
+          f"{_iu.get('pointsPerPage')} — a second undo used to start eating the "
+          f"drawing on the page before")
+    check("...and the carve is undone with it",
+          _iu.get("fps") == 12 and _iu.get("subdiv") == 1
+          and _iu.get("holds") == [1, 1], str(_iu))
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

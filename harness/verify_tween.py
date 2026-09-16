@@ -1601,6 +1601,59 @@ with sync_playwright() as p:
           f"{same['chip']!r} — a page that looks like a copy of the one before "
           f"it needs to say why, or it reads as the tool being broken")
 
+    # ---------------------------------------------------------------- v299
+    # UNDO TAKES THE PAGE BACK, AND THE CARVE WITH IT.
+    #
+    # addTween inserted a page and cleared the redo stack but never wrote to
+    # actionLog, so undoStroke fell through to its generic tail — which pops the
+    # last stroke GROUP off the current page, and after `idx++` the current page
+    # is the generated one. Undo silently ate the crisp pose and left the trail
+    # behind it, while the chip still read "Motion smear added". The note at
+    # flip.js's matcher justifies a known mispairing risk with the words "undo
+    # is one tap"; this is what made that true.
+    #
+    # PAGE COUNT IS THE DISCRIMINATOR, not the point count. A mutation that
+    # removes the page but forgets the carve leaves the document running at
+    # double fps with one page missing, so fps/subdiv/holds are asserted too —
+    # they are the half of the action that has no visible page to notice.
+    print("\nUNDO — a generated page is one action, not a stroke")
+
+    def gen_undo(a, b, fn):
+        return page.evaluate("""([a,b,fn]) => {
+          frames.length = 0; frames.push(a); frames.push(b);
+          idx = 0; fps = 12; subdiv = 1; selSpans = [];
+          actionLog.length = 0; redoStack.length = 0;
+          buildStrip(); render();
+          const snap = () => ({ pages: frames.length, idx: idx, fps: fps,
+                                subdiv: subdiv, holds: frames.map(f => f.hold),
+                                groups: frames[idx] ? frames[idx].strokeGroups.length : -1 });
+          window[fn]();
+          const added = snap();
+          undoStroke();
+          const undone = snap();
+          redoStroke();
+          return { added: added, undone: undone, redone: snap(),
+                   chip: (document.getElementById('flipChip')||{}).textContent };
+        }""", [a, b, fn])
+
+    _u = gen_undo(pose(20), pose(-125), "addTween")
+    check("a smear is added as ONE action, and undo takes the page away",
+          _u["added"]["pages"] == 3 and _u["undone"]["pages"] == 2,
+          f"added {_u['added']['pages']} pages, undo left {_u['undone']['pages']} — "
+          f"undo used to pop a stroke group off the generated page instead, "
+          f"deleting the pose and keeping the trail")
+    check("...and puts the carve back with it",
+          _u["undone"]["fps"] == 12 and _u["undone"]["subdiv"] == 1
+          and _u["undone"]["holds"] == [1, 1],
+          f"{_u['undone']} — carving for the insert doubled fps and every hold; "
+          f"removing the page without those leaves the document faster than the "
+          f"artist left it")
+    check("...and the page the artist was on is the one they land on",
+          _u["undone"]["idx"] == 0, str(_u["undone"]["idx"]))
+    check("...and redo restores the page AND the carve exactly",
+          _u["redone"] == _u["added"],
+          f"{_u['redone']} vs {_u['added']}")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

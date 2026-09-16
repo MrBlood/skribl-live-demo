@@ -6671,6 +6671,41 @@ function carveForInsert(at){
   return at + 1;
 }
 
+/* ---------- undoing a generated page ----------------------------------------
+   A CARVE IS NOT A STROKE, AND UNDO USED TO TREAT IT AS ONE. addTween and
+   addInbetween inserted a page and cleared the redo stack but never wrote to
+   actionLog, so undoStroke fell straight through to its generic tail -- which
+   pops the last stroke GROUP off the current page. The current page, after
+   `idx++`, is the generated one. Measured on two poses: smear added ->
+   3 pages, groups 14, points 134; one Undo -> still 3 pages, groups 13, points
+   104, chip still reading "Motion smear added". The 30 points it removed were
+   the full-strength pose, so the page was left as a trail with nothing at its
+   head, and pressing Undo again ate into the artist's own stroke history. The
+   note at the head of the matcher justifies a known mispairing risk with the
+   words "undo is one tap"; it was not.
+
+   THE STATE IS RESTORED, NOT INVERTED -- the same reasoning selframe records.
+   carveForInsert may multiply fps and subdiv and rewrite every page's hold, and
+   inverting that means dividing, which does not round-trip once a hold has been
+   clamped. Snapshotting the three values and putting them back is exact. */
+function genCarveState(){
+  return { fps: fps, subdiv: subdiv, holds: frames.map(f => f.hold) };
+}
+
+function noteGenPage(at, was, page, label){
+  // `page` is kept by reference on purpose: genRecipe is a WeakMap keyed on the
+  // frame object, so holding the same object is what lets a redone page still
+  // rebuild from its recipe instead of falling back to raw strokes.
+  noteAction({ type: 'genpage', at: at, label: label, page: page,
+               before: was, after: genCarveState() });
+}
+
+function applyCarveState(s){
+  fps = s.fps; subdiv = s.subdiv;
+  for(let i = 0; i < frames.length && i < s.holds.length; i++)
+    frames[i].hold = s.holds[i];
+}
+
 /* Inserts the exposure between this page and the next. */
 function addTween(){
   if(playing) return;
@@ -6689,11 +6724,13 @@ function addTween(){
   // page, and the two it was made from.
   const _r = genRecipe.get(t);
   if(_r){ _r.print = genPrint(t); _r.a = genPrint(a); _r.b = genPrint(b); }
+  const _was = genCarveState();
   const _at = carveForInsert(idx);
   if(_at < 0){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
   t.hold = 1;
   frames.splice(_at, 0, t); idx++;
+  noteGenPage(_at, _was, t, 'Motion smear');
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   // Say WHICH it was. A person who selected part of the drawing and got the
   // same six words as always cannot tell whether the selection was read.
@@ -6929,11 +6966,13 @@ function addInbetween(){
     });
     t.strokeGroups.push(run.length);
   }
+  const _was = genCarveState();
   const _at = carveForInsert(idx);
   if(_at < 0){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
   t.hold = 1;
   frames.splice(_at, 0, t); idx++;
+  noteGenPage(_at, _was, t, 'In-between');
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   chip('In-between added');
 }
@@ -8321,6 +8360,21 @@ function undoStroke(){
   // a move would silently leave the move in place.
   if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'){
     const m = actionLog.pop();
+    // A GENERATED PAGE IS ONE ACTION: the page and the carve that made room for
+    // it. Removing the page without restoring fps/subdiv/holds would leave the
+    // document running at the carved rate with one page missing, which is what
+    // deleting a generated page by hand still does.
+    if(m.type === 'genpage'){
+      frames.splice(m.at, 1);
+      applyCarveState(m.before);
+      // Back to the page the artist was on when they pressed the button.
+      idx = Math.max(0, Math.min(m.at - 1, frames.length - 1));
+      redoStack.push(m);
+      chip((m.label || 'Page') + ' undone');
+      buildStrip(); render(); updateToolState(); scheduleSave();
+      syncFlipDuration(); scrollStripToActive(true);
+      return;
+    }
     // A selection move touches index ranges on ONE page; a Move-mode move
     // touches whole pages. The object branch used to assume the second, so
     // undoing a selection drag would have translated the entire page.
@@ -8432,6 +8486,18 @@ function redoStroke(){
     actionLog.push(m);            // back on the history it came off
     chip(m.idxs.length > 1 ? 'Move redone on ' + m.idxs.length + ' pages' : 'Move redone');
     render(); m.idxs.forEach(i=>refreshThumb(i)); updateToolState(); scheduleSave();
+    return;
+  }
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'genpage'){
+    const m = redoStack.pop();
+    frames.splice(m.at, 0, m.page);
+    applyCarveState(m.after);
+    idx = Math.min(m.at, frames.length - 1);
+    actionLog.push(m);            // back on the history it came off
+    chip((m.label || 'Page') + ' redone');
+    buildStrip(); render(); updateToolState(); scheduleSave();
+    syncFlipDuration(); scrollStripToActive(true);
     return;
   }
   if(typeof redoStack[redoStack.length-1] === 'object'
