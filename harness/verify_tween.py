@@ -1655,6 +1655,125 @@ with sync_playwright() as p:
           f"{_u['redone']} vs {_u['added']}")
 
     # ---------------------------------------------------------------- v299
+    # A STROKE THAT MOVED, DECLARED STILL BECAUSE IT WAS DRAWN CAREFULLY.
+    #
+    # tweenHeldStill decides whether a paired stroke is smeared or carried
+    # across once at full strength, and it walked `i < min(a.length, b.length)`
+    # while computing its parameter as `i / (a.length - 1)`. With a denser than
+    # b the loop ended long before the parameter reached 1, so it compared the
+    # LEADING FRACTION of a and called the rest of the stroke unexamined.
+    #
+    # Measured here: one pose taken slowly (400 points) and the next taken fast
+    # (4 points), the arm swung 40 degrees so its tip travels 68px against a 6px
+    # brush. The old measure compared 1% of the arc, found 0.4px of movement and
+    # sent the arm to `still` -- drawn ONCE, no trail, while the body beside it
+    # smeared normally. The motion the button exists to show is the motion it
+    # dropped, and it dropped it silently.
+    #
+    # THE FIXTURE'S TWO STROKES ARE 100px AND 500px, more than the 4x the
+    # matcher's length guard allows, so they cannot cross-pair. That keeps this
+    # an assertion about the still/moved measure and not about the matcher.
+    #
+    # ANGULAR SPREAD, NOT SAMPLE COUNT, is what makes this go red: a dropped arm
+    # and a smeared one both put ink on the page, and both leave the strokeGroup
+    # count identical. What separates them is that a smear lays the arm down at
+    # a range of angles. Measured: 0 faded copies spanning 0 degrees before,
+    # 3 spanning 15 after.
+    print("\nA CAREFULLY DRAWN STROKE THAT MOVED — it is not 'still'")
+
+    _dense = page.evaluate("""() => {
+      const seg = (x0,y0,x1,y1,n) => { const pts = [];
+        for (let i = 0; i < n; i++) { const t = i/(n-1);
+          pts.push({ x: x0+(x1-x0)*t, y: y0+(y1-y0)*t, color: '#ffffff',
+                     size: 6, t: i, erase: false }); }
+        pts[0].start = true; return pts; };
+      const arm = (deg, n) => seg(300, 200,
+        300 + 100*Math.cos(deg*Math.PI/180), 200 + 100*Math.sin(deg*Math.PI/180), n);
+      const body = (dx) => seg(300+dx, 220, 300+dx, 720, 60);
+      const mk = (runs) => ({ strokes: [].concat(...runs),
+                              strokeGroups: runs.map(r => r.length), hold: 1 });
+      frames.length = 0;
+      frames.push(mk([body(0),  arm(0, 400)]));     // taken slowly
+      frames.push(mk([body(40), arm(40, 4)]));      // taken fast
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length;
+      addTween();
+      if (frames.length <= before) return { made: false };
+      // Every copy of the ARM on the generated page, by arc length, with the
+      // alpha that says whether it is a smear sample or ink carried across.
+      const fr = frames[1]; let at = 0, faded = 0, solid = 0; const angles = [];
+      for (const g of fr.strokeGroups) {
+        const r = fr.strokes.slice(at, at + g); at += g;
+        let L = 0;
+        for (let i = 1; i < r.length; i++) L += Math.hypot(r[i].x-r[i-1].x, r[i].y-r[i-1].y);
+        if (L >= 200) continue;                     // the body, not the arm
+        const c = String(r[0].color || '');
+        const alpha = (c.length === 9 && c[0] === '#') ? parseInt(c.slice(7,9),16)/255 : 1;
+        if (alpha < 1) faded++; else solid++;
+        angles.push(Math.atan2(r[r.length-1].y - r[0].y, r[r.length-1].x - r[0].x) * 180/Math.PI);
+      }
+      return { made: true, faded: faded, solid: solid,
+               spread: angles.length ? Math.max(...angles) - Math.min(...angles) : 0 };
+    }""")
+
+    check("the fixture smeared at all", _dense.get("made") is True, str(_dense))
+    check("a stroke drawn at 400 points and redrawn at 4 is still SMEARED",
+          _dense.get("faded", 0) >= 1,
+          f"{_dense} — every copy of the arm is at full strength, so it was "
+          f"declared held still and carried across once. It swung 40 degrees")
+    check("...and the smear spans the angles it swung through",
+          _dense.get("spread", 0) >= 5,
+          f"spread {_dense.get('spread')}deg — ink on the page is not a smear; "
+          f"a dropped arm and a smeared one both leave the group count alone, "
+          f"and only the spread of angles tells them apart")
+
+    # THE PROPERTY UNDERNEATH BOTH SCENARIOS, pinned directly: the verdict is
+    # about the drawing, so it cannot depend on how either page was sampled --
+    # nor on which of the two the caller named first, which is the form the
+    # defect actually took.
+    #
+    # AND THE SECOND HALF IS NOT REDUNDANT — it is the one that was WRITTEN
+    # SECOND, because the first fix for this defect failed it. Walking both
+    # strokes over the whole arc and by a shared parameter, but reading each at
+    # the nearest VERTEX to that parameter, makes the quantisation the answer:
+    # on the 200px line below, 4 vertices against 512 land up to 33px apart on
+    # a stroke nobody touched. Measured on exactly that version, against
+    # exactly these two assertions: 0 of 81 asymmetric, and 42 of 81 identical
+    # gestures reported MOVED. Everything else in both suites stayed green,
+    # including the scenarios above -- this check is the whole of what stands
+    # between the tree and a fix that trades one sampling artifact for another.
+    _prop = page.evaluate("""() => {
+      const line = (n, deg) => { const o = [];
+        for (let i = 0; i < n; i++) { const t = i/(n-1);
+          o.push({ x: 100 + 200*t*Math.cos(deg*Math.PI/180),
+                   y: 100 + 200*t*Math.sin(deg*Math.PI/180), size: 6 }); }
+        return o; };
+      let pairs = 0, asym = 0, copies = 0, copyMoved = 0;
+      for (let na = 2; na <= 512; na *= 2) for (let nb = 2; nb <= 512; nb *= 2) {
+        pairs++;
+        // The same gesture at two densities: nothing moved, whatever the counts.
+        copies++;
+        if (!tweenHeldStill(line(na, 0), line(nb, 0))) copyMoved++;
+        // And a real 30-degree swing, asked both ways round.
+        if (tweenHeldStill(line(na, 0), line(nb, 30))
+            !== tweenHeldStill(line(nb, 30), line(na, 0))) asym++;
+      }
+      return { pairs: pairs, asym: asym, copies: copies, copyMoved: copyMoved };
+    }""")
+    check("the still/moved verdict does not depend on argument order",
+          _prop["asym"] == 0,
+          f"{_prop['asym']} of {_prop['pairs']} density pairs answered "
+          f"differently when the two pages were swapped — the same two poses, "
+          f"a different answer depending on which one the caller passed first")
+    check("...nor on how densely either pose was recorded",
+          _prop["copyMoved"] == 0,
+          f"{_prop['copyMoved']} of {_prop['copies']} identical gestures were "
+          f"called MOVED because the two recordings hold different point counts. "
+          f"Geometry describes the drawing; sampling describes how we observed it")
+
+    # ---------------------------------------------------------------- v299
     # THE SMEAR DIES ON A ZERO GROUP TOO, and separately.
     #
     # Same defect, its own call site: a group is a stroke's point count and must

@@ -717,6 +717,79 @@ with sync_playwright() as p:
           _iu.get("fps") == 12 and _iu.get("subdiv") == 1
           and _iu.get("holds") == [1, 1], str(_iu))
 
+    # ---------------------------------------------------------------- v299
+    # ONE POSE TAKEN SLOWLY, THE NEXT TAKEN FAST.
+    #
+    # tweenHeldStill decides whether a paired stroke is interpolated or carried
+    # across from this page untouched, and it walked its loop to the SHORTER of
+    # the two runs while parameterising by the FIRST. Where the first was the
+    # denser, the parameter never reached 1 and only the leading fraction of the
+    # stroke was ever compared. An arm swung 40 degrees, drawn with 400 points
+    # and redrawn with 4, presented 0.4px of movement against a 6px brush and
+    # was declared still.
+    #
+    # WHY THIS IS NOT verify_tween's ASSERTION IN A DIFFERENT SUITE. The two
+    # buttons are two call sites into tweenAlign and they spend `unpaired`
+    # differently: the smear puts the stroke in `still` and draws it once, so
+    # what is lost there is the trail, measurable as the spread of angles it was
+    # laid down at. Here the stroke is appended to the generated page from THIS
+    # pose, so what is lost is the half-way position -- there is no trail to
+    # measure and no angles to spread. Measured on the broken tree: 0.0 degrees
+    # where 20.0 was drawn, with the strokeGroup counts IDENTICAL either way,
+    # which is why the measure has to be geometric.
+    print("\nTWO DENSITIES: a stroke is not 'still' because it was drawn carefully")
+
+    # 100px arm against a 500px body -- past the 4x the matcher's length guard
+    # allows, so the two cannot cross-pair and this stays a test of the
+    # still/moved measure rather than of the matcher.
+    page.evaluate("""() => {
+      const seg = (x0,y0,x1,y1,n) => { const pts = [];
+        for (let i = 0; i < n; i++) { const t = i/(n-1);
+          pts.push({ x: x0+(x1-x0)*t, y: y0+(y1-y0)*t, color: '#ffffff',
+                     size: 6, t: i, erase: false }); }
+        pts[0].start = true; return pts; };
+      const arm = (deg, n) => seg(300, 200,
+        300 + 100*Math.cos(deg*Math.PI/180), 200 + 100*Math.sin(deg*Math.PI/180), n);
+      const body = (dx) => seg(300+dx, 220, 300+dx, 720, 60);
+      const mk = (runs) => ({ strokes: [].concat(...runs),
+                              strokeGroups: runs.map(r => r.length), hold: 1 });
+      frames.length = 0;
+      frames.push(mk([body(0),  arm(0, 400)]));     // taken slowly
+      frames.push(mk([body(40), arm(40, 4)]));      // taken fast
+      idx = 0; buildStrip(); render();
+    }""")
+    ARM = """(f) => {
+      const fr = frames[f]; let at = 0, best = null;
+      for (const g of fr.strokeGroups) {
+        const r = fr.strokes.slice(at, at + g); at += g;
+        let L = 0;
+        for (let i = 1; i < r.length; i++) L += Math.hypot(r[i].x-r[i-1].x, r[i].y-r[i-1].y);
+        if (L >= 200) continue;                     // the body, not the arm
+        best = { deg: Math.atan2(r[r.length-1].y - r[0].y,
+                                 r[r.length-1].x - r[0].x) * 180/Math.PI, len: L };
+      }
+      return best;
+    }"""
+    _a0 = page.evaluate(ARM, 0)
+    page.evaluate("() => addInbetween()")
+    page.wait_for_timeout(300)
+    _amid = page.evaluate(ARM, 1)
+    _a2 = page.evaluate(ARM, 2)
+    check("the two poses were interpolated at all",
+          _amid is not None and page.evaluate("() => frames.length") == 3,
+          f"{_amid} — no arm on the generated page")
+    check("the arm sits half way through its swing, not where this page left it",
+          _amid is not None and abs(_amid["deg"] - 20) < 5,
+          f"{_amid['deg']:.1f}deg between the drawn {_a0['deg']:.1f} and "
+          f"{_a2['deg']:.1f} — landing on {_a0['deg']:.1f} means the arm was "
+          f"called held still and carried across from this pose untouched, "
+          f"which is the in-between quietly leaving out the thing that moved"
+          if _amid else str(_amid))
+    check("...and it kept its length getting there",
+          _amid is not None and abs(_amid["len"] - _a0["len"]) / _a0["len"] < 0.05,
+          f"{_amid['len']:.1f}px against the drawn {_a0['len']:.1f}px"
+          if _amid else str(_amid))
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

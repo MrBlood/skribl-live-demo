@@ -6018,15 +6018,49 @@ function tweenShapeCost(A, B){
    there is often NO box that picks out the one you mean -- measured: a box
    drawn around the arm selected the body and the leg with it. Nobody has to
    draw that box now. Aiming by hand still works and still overrides. */
+/* BOTH STROKES READ AT THE SAME PARAMETER, and over the WHOLE of it. This
+   walked `i < Math.min(a.length, b.length)` while computing its parameter as
+   `i / (a.length - 1)`, so when a was the denser of the two the loop ran out
+   long before the parameter reached 1 and the comparison saw only the LEADING
+   FRACTION of a. Measured on an arm anchored at the origin, 100px long, drawn
+   with 400 points on one page and redrawn with 4 points swung 40 degrees on
+   the next -- the tip travels 68px against a 6px brush:
+
+       tweenHeldStill(dense, sparse)   held still     (1% of the arc compared)
+       tweenHeldStill(sparse, dense)   moved
+
+   The answer depended on which page was drawn more carefully, and in the
+   dropping direction: through tweenAlign the arm went to `unpaired` and was
+   drawn once, so the one stroke that moved is the one the in-between left out.
+   That is the silent failure the note above calls the worst outcome, and it
+   needs no unusual drawing to reach -- one pose taken slowly and the next
+   taken fast is how anybody animates.
+
+   WALKING BOTH BY INDEX IS NOT THE FIX, and measuring said so. Reading each
+   stroke at the nearest VERTEX to a shared parameter makes the quantisation
+   the whole answer: on a straight 100px line held perfectly still, four
+   vertices against four hundred land up to 17px apart for no reason but the
+   count, and the same arm that used to be wrongly called still is then
+   wrongly called moved. GEOMETRY DESCRIBES THE DRAWING; SAMPLING DESCRIBES HOW
+   WE OBSERVED IT. Displacement is a question about the first.
+
+   So both runs are resampled BY ARC LENGTH to a common count -- tweenResample,
+   the same walk tweenAlign performs on the pair it is about to interpolate, so
+   the verdict is measured on exactly the representation that will be tweened.
+   Arc length is a property of the path, so two recordings of one gesture agree
+   however densely either was taken; the denser of the two sets the count, as
+   it does everywhere else here, so detail is never thrown away to ask the
+   question. Pen width is read from both runs for the same reason the positions
+   are: nothing about this measure may depend on which page was passed first. */
 function tweenHeldStill(a, b){
-  const n = Math.min(a.length, b.length);
-  if(!n) return false;
+  if(!a.length || !b.length) return false;
+  const n = Math.max(a.length, b.length);
+  const pa = tweenResample(a, n), pb = tweenResample(b, n);
+  const size = (p) => (typeof p.size === 'number' ? p.size : 6);
   let moved = 0, width = 0;
   for(let i = 0; i < n; i++){
-    const t = i / Math.max(1, a.length - 1);
-    const j = Math.round(t * (b.length - 1));
-    moved += Math.hypot(a[i].x - b[j].x, a[i].y - b[j].y);
-    width += (typeof a[i].size === 'number' ? a[i].size : 6);
+    moved += Math.hypot(pa[i].x - pb[i].x, pa[i].y - pb[i].y);
+    width += (size(pa[i]) + size(pb[i])) / 2;
   }
   return (moved / n) <= (width / n);
 }
