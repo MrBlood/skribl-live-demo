@@ -1654,6 +1654,45 @@ with sync_playwright() as p:
           _u["redone"] == _u["added"],
           f"{_u['redone']} vs {_u['added']}")
 
+    # ---------------------------------------------------------------- v299
+    # THE SMEAR DIES ON A ZERO GROUP TOO, and separately.
+    #
+    # Same defect, its own call site: a group is a stroke's point count and must
+    # be strictly positive, healFrame's only test was that the entries SUM to
+    # the point count, and [0, 10] sums like [10]. tweenShapeCost then read
+    # r[0].x of the empty run. verify_inbetween pins the gate and the In-between
+    # button; this pins Motion Smear, because the two buttons are two call sites
+    # and a fix to one is not a fix to the other -- which is exactly how the
+    # generated-page undo turned out to need an assertion on each.
+    print("\nA ZERO GROUP — the smear survives one too")
+
+    _z = page.evaluate("""() => {
+      const line = (y, n) => { const o = [];
+        for (let i = 0; i < n; i++) o.push({ x: 100 + i*15, y: y, size: 6,
+          color: '#ffffff', erase: false, t: 0, ...(i === 0 ? {start:true} : {}) });
+        return o; };
+      // The stroke MOVES between the pages, so there is something to smear and
+      // a refusal cannot be mistaken for surviving.
+      const mk = (y) => ({ strokes: line(y, 10), strokeGroups: [0, 10], hold: 1 });
+      frames.length = 0; frames.push(mk(200)); frames.push(mk(420));
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length;
+      let threw = null;
+      try { addTween(); } catch (e) { threw = e.constructor.name + ': ' + e.message; }
+      return { threw: threw, made: frames.length > before,
+               chip: (document.getElementById('flipChip') || {}).textContent };
+    }""")
+    check("a zero group does not kill Motion Smear",
+          _z["threw"] is None and _z["made"] is True,
+          f"threw {_z['threw']!r}, made={_z['made']} — an uncaught TypeError "
+          f"here leaves the button dead with nothing said")
+    check("...and it still produces a smear, not a refusal",
+          bool(_z["chip"]) and "nothing moved" not in (_z["chip"] or "").lower(),
+          f"{_z['chip']!r} — the stroke travels 220px, so a refusal would mean "
+          f"the empty run had eaten the motion rather than the button")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

@@ -537,6 +537,53 @@ with sync_playwright() as p:
     # again then starts eating the artist's own drawing on the page before.
     # That is the scenario pinned here, on the surface that can produce it.
     # ---------------------------------------------------------------- v299
+    # A ZERO STROKE-GROUP KILLED THE BUTTON, SILENTLY.
+    #
+    # A group is a stroke's point count and must be strictly positive --
+    # skribl/validation.py says so at length and enforces it at POST, naming the
+    # editors that cannot emit one. healFrame is the gate for the paths the
+    # SERVER NEVER SEES: the autosave, a restored draft, a hand-edited .skribl.
+    # Its only test was that the entries SUM to the point count, and [0, 10]
+    # sums to 10 exactly as [10] does. Downstream, tweenShapeCost reads r[0].x
+    # of the empty run that produces, and BOTH generative buttons died on an
+    # uncaught TypeError with no chip: a dead button and no reason given.
+    #
+    # Two assertions because there are two guards, and they are reachable
+    # separately. The frame here is pushed STRAIGHT into frames, bypassing
+    # healFrame, so the button surviving is tweenVisible's doing; healFrame is
+    # measured on its own return value.
+    print("\nA ZERO GROUP — healed at the gate, and harmless past it")
+
+    _zero = page.evaluate("""() => {
+      const line = (y, n) => { const o = [];
+        for (let i = 0; i < n; i++) o.push({ x: 100 + i*15, y: y, size: 6,
+          color: '#ffffff', erase: false, t: 0, ...(i === 0 ? {start:true} : {}) });
+        return o; };
+      const mk = (y) => ({ strokes: line(y, 10), strokeGroups: [0, 10], hold: 1 });
+      const healed = healFrame(mk(200));
+      frames.length = 0; frames.push(mk(200)); frames.push(mk(320));
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length;
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = e.constructor.name + ': ' + e.message; }
+      return { healed: healed.strokeGroups, healedPts: healed.strokes.length,
+               threw: threw, made: frames.length > before,
+               chip: (document.getElementById('flipChip') || {}).textContent };
+    }""")
+    check("healFrame drops a zero group rather than carrying it",
+          _zero["healed"] == [10] and _zero["healedPts"] == 10,
+          f"{_zero['healed']} over {_zero['healedPts']} points — [0, 10] sums to "
+          f"10 exactly as [10] does, so a sum check alone lets it through")
+    check("...and a frame that still carries one does not kill the button",
+          _zero["threw"] is None and _zero["made"] is True,
+          f"threw {_zero['threw']!r}, made={_zero['made']} — the matcher read "
+          f"r[0].x of an empty run and the button died with no chip")
+    check("...and the page it makes says so",
+          bool(_zero["chip"]), f"{_zero['chip']!r}")
+
+    # ---------------------------------------------------------------- v299
     # A SHAPE THAT TURNED IS FITTED AS TURNED.
     #
     # ibPhase picks which rotation of a closed path lines up with pose A. It

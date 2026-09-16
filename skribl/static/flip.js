@@ -449,7 +449,23 @@ function healFrame(f){
      absurd or hand-edited value lands somewhere sane instead of propagating. */
   const hold = frameHold(f);
   const strokes = Array.isArray(f.strokes) ? f.strokes : [];
-  const groups = Array.isArray(f.strokeGroups) ? f.strokeGroups.slice() : [];
+  /* STRICTLY POSITIVE, the rule skribl/validation.py states and enforces at
+     POST and this side did not. A group is a stroke's point count, and neither
+     editor can emit a zero -- Flip sets curCount=1 before pushing, the Pad only
+     pushes a non-empty stroke. But healFrame is the gate for the paths the
+     SERVER never sees: the autosave, a restored draft, a hand-edited .skribl.
+     Its only test was that the entries SUM to the point count, and [0, 10]
+     sums to 10 exactly as [10] does, so a zero rode straight through.
+     Downstream, tweenShapeCost reads r[0].x of the empty run it produces, and
+     both the In-between and Motion Smear buttons died on an uncaught TypeError
+     with no chip -- a dead button and no reason given. Reproduced on both
+     before this was written.
+     Rounded and filtered rather than rejected, because a frame arriving from
+     an old draft should be healed into something usable, which is what every
+     other line of this function does. */
+  const groups = (Array.isArray(f.strokeGroups) ? f.strokeGroups : [])
+    .map(c => Math.round(Number(c)))
+    .filter(c => isFinite(c) && c > 0);
   let n = 0;
   for(const c of groups) n += c;
   if(n === strokes.length) return { strokes: strokes, strokeGroups: groups, hold: hold };
@@ -6198,7 +6214,15 @@ function tweenVisible(f){
   for(let i = 0; i < runs.length; i++){
     const run = runs[i];
     const from = at; at += run.length;
-    if(run.length && run[0].erase){ erase.push(run); continue; }
+    // AN EMPTY RUN IS NOT INK. This function already asks `run.length` before
+    // reading run[0] for the eraser cases and then fell through to push the
+    // empty run into `ink` anyway, where everything downstream assumes a first
+    // point. healFrame now drops the zero groups that produce one; this is the
+    // same rule stated where `ink` is actually built, so a frame that reaches
+    // here by some other road still cannot hand the matcher a run with nothing
+    // in it. Contributing 0 to `at`, it leaves inkSpans aligned either way.
+    if(!run.length) continue;
+    if(run[0].erase){ erase.push(run); continue; }
     const later = [];
     for(let j = i + 1; j < runs.length; j++)
       if(runs[j].length && runs[j][0].erase) later.push(runs[j]);
