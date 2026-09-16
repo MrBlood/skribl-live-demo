@@ -6982,15 +6982,41 @@ function ibFit(pa, pb){
   let cax = 0, cay = 0, cbx = 0, cby = 0;
   for(let i = 0; i < n; i++){ cax += pa[i].x / n; cay += pa[i].y / n;
                               cbx += pb[i].x / n; cby += pb[i].y / n; }
-  let num = 0, den = 0, norm = 0;
+  let num = 0, den = 0, norm = 0, normB = 0;
   for(let i = 0; i < n; i++){
     const ax = pa[i].x - cax, ay = pa[i].y - cay;
     const bx = pb[i].x - cbx, by = pb[i].y - cby;
-    num += ax * by - ay * bx; den += ax * bx + ay * by; norm += ax * ax + ay * ay;
+    num += ax * by - ay * bx; den += ax * bx + ay * by;
+    norm += ax * ax + ay * ay; normB += bx * bx + by * by;
   }
+  /* A RUN THAT COLLAPSES TO A POINT HAS NO ROTATION AND NO SCALE TO FIND, and
+     this guarded one of the two directions. `norm` is pa's spread about its own
+     centroid and was tested; pb's was not, and pb is the side that gets DIVIDED
+     BY -- ibUnapply carries pb back through 1 / T.scale.
+
+     `T.scale || 1` there is a guard against exactly zero, and the value it has
+     to survive is never exactly zero. A dot resampled to a run is n copies of
+     one point, so its centroid comes back as 399.99999999999994 rather than
+     400, every offset is float dust around 5e-14 instead of 0, and the fitted
+     scale is 4.1e-31 -- small enough to be meaningless, large enough to sail
+     past `|| 1`. Dividing by it put the in-between's stroke at x = 1.04e17.
+     Measured, and on the shipped tree: a line on one page and a tap on the next
+     produced a page whose ink was a hundred thousand million million pixels off
+     canvas, which reads as a page that simply came out blank.
+
+     THE MIRROR CASE ALREADY WORKED, which is why this went unseen: with the tap
+     on the FIRST page it is `norm` that collapses, and that one was tested. Same
+     two drawings, opposite order, one of them fine.
+
+     So both extents are tested, by the same floor, and a degenerate fit returns
+     the transform that is actually determined: the translation between the two
+     centroids. The shape interpolation below still carries the run into the dot
+     -- what is refused here is inventing a rotation and a scale out of dust. */
+  if(!(norm > 1e-9) || !(normB > 1e-9))
+    return { cax, cay, cbx, cby, angle: 0, scale: 1 };
   return { cax, cay, cbx, cby,
            angle: Math.atan2(num, den),
-           scale: norm > 1e-9 ? Math.hypot(den, num) / norm : 1 };
+           scale: Math.hypot(den, num) / norm };
 }
 // The fitted transform, partway. Rotation interpolates through the SHORT arc
 // because atan2 returns (-PI, PI]; a half turn is the one ambiguous case and
@@ -7041,7 +7067,37 @@ function buildInbetween(a, b, t){
        loses a stroke from the pose rather than crashing the editor. */
     if(!rb[s]) continue;
     const n = Math.max(ra[s].length, rb[s].length);
-    if(n < 2) continue;
+    /* A DOT HAS NO SHAPE, ONLY A PLACE -- and this used to `continue` on it,
+       which dropped the stroke from the generated page without a word. A tap is
+       ordinary drawing: it paints a filled disc of the pen's width (measured,
+       482 ink pixels at size 12), the matcher goes out of its way to pair one
+       against the run it becomes, and tweenResample carries a whole branch for
+       it. Every part of the machinery supports a dot except the one that emits
+       it. Two pages carrying [20, 1] produced an in-between carrying [20].
+
+       WHY THE GUARD WAS THERE, AND WHAT REPLACES IT rather than removing it: a
+       similarity fit needs two point pairs to have a rotation or a scale at
+       all, so ibFit on a single pair is not something to hand a dot to. But a
+       dot has no rotation and no scale to find -- interpolating its POSITION is
+       not an approximation of what the pipeline below would do, it is the whole
+       of what the pipeline below degenerates to. So the short case gets the
+       short answer instead of getting dropped.
+
+       n is exactly 1 here: it is the max of two run lengths, and tweenVisible
+       does not emit an empty run (v299, and verify_inbetween pins it), so both
+       runs hold their one point. */
+    if(n < 2){
+      const p = ra[s][0], q = rb[s][0];
+      const dot = Object.assign({}, p);
+      dot.x = p.x + (q.x - p.x) * t;
+      dot.y = p.y + (q.y - p.y) * t;
+      if(typeof p.size === 'number' && typeof q.size === 'number')
+        dot.size = p.size + (q.size - p.size) * t;
+      dot.start = true;
+      out.strokes.push(dot);
+      out.strokeGroups.push(1);
+      continue;
+    }
     const pa = tweenResample(ra[s], n);
     const pb = ibPhase(pa, tweenResample(rb[s], n));
     const T = ibFit(pa, pb);

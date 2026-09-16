@@ -790,6 +790,112 @@ with sync_playwright() as p:
           f"{_amid['len']:.1f}px against the drawn {_a0['len']:.1f}px"
           if _amid else str(_amid))
 
+    # ---------------------------------------------------------------- v299
+    # A TAP IS ORDINARY DRAWING, and the in-between had three separate ways of
+    # mishandling one. TWO MECHANISMS, in two functions, so they are mutated and
+    # asserted separately below -- an all-or-nothing revert shows red for one of
+    # them while the other's assertion pins nothing.
+    #
+    #   buildInbetween   `if (n < 2) continue` dropped a dot paired with a dot
+    #                    without a word; where the pages held NOTHING but dots it
+    #                    then refused the whole in-between, with a message saying
+    #                    the pages needed drawing on them.
+    #   ibFit            tested pa's spread about its centroid and not pb's, and
+    #                    pb is the side ibUnapply DIVIDES BY. A dot resampled to
+    #                    a run is n copies of one point, whose centroid comes
+    #                    back as 399.99999999999994 -- so the fitted scale is
+    #                    4.1e-31 rather than 0, sails past `T.scale || 1`, and
+    #                    1/4.1e-31 puts the stroke at x = 1.04e17.
+    #
+    # A DOT IS NOT AN EDGE CASE HERE. It paints a filled disc of the pen's width
+    # (measured: 482 ink pixels at size 12), tweenMatch exempts it from the
+    # length guard on purpose so it can pair with the run it becomes, and
+    # tweenResample carries a branch for it. Every part of the machinery supports
+    # a dot except the two that had to emit one.
+    print("\nA TAP: the in-between has to carry one, and both ways round")
+
+    DOTS = """(kind) => {
+      const pt = (x,y,s) => ({ x:x, y:y, color:'#ffffff', size:(s||6), t:0, erase:false });
+      const seg = (x0,y0,x1,y1,n) => { const o = [];
+        for (let i = 0; i < n; i++) { const t = i/(n-1);
+          o.push(pt(x0+(x1-x0)*t, y0+(y1-y0)*t)); }
+        o[0].start = true; return o; };
+      const dot = (x,y,s) => { const p = pt(x,y,s||12); p.start = true; return [p]; };
+      const mk = (runs) => ({ strokes: [].concat(...runs),
+                              strokeGroups: runs.map(r => r.length), hold: 1 });
+      const pages = {
+        // A line that plainly moves, and a tap that moves with it.
+        withLine: [[seg(100,100,300,100,20), dot(400,300)],
+                   [seg(100,200,300,200,20), dot(400,500)]],
+        // Nothing on either page BUT a tap.
+        only:     [[dot(200,200)], [dot(400,400)]],
+        // A line becoming a tap, and the same two drawings the other way round.
+        runToDot: [[seg(200,200,300,300,12)], [dot(400,400)]],
+        dotToRun: [[dot(200,200)], [seg(200,200,300,300,12)]]
+      }[kind];
+      frames.length = 0;
+      frames.push(mk(pages[0])); frames.push(mk(pages[1]));
+      idx = 0; buildStrip(); render();
+      const before = frames.length;
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = e.constructor.name + ': ' + e.message; }
+      if (frames.length <= before)
+        return { made: false, threw: threw,
+                 chip: (document.getElementById('flipChip') || {}).textContent };
+      let at = 0; const groups = [];
+      for (const n of frames[1].strokeGroups) {
+        const r = frames[1].strokes.slice(at, at + n); at += n;
+        let L = 0;
+        for (let i = 1; i < r.length; i++) L += Math.hypot(r[i].x-r[i-1].x, r[i].y-r[i-1].y);
+        groups.push({ n: n, len: L,
+                      cx: r.reduce((s,p) => s+p.x, 0)/n, cy: r.reduce((s,p) => s+p.y, 0)/n,
+                      deg: Math.atan2(r[n-1].y - r[0].y, r[n-1].x - r[0].x) * 180/Math.PI });
+      }
+      return { made: true, threw: threw, groups: groups };
+    }"""
+
+    # ---- mechanism 1: buildInbetween emits the dot instead of skipping it ----
+    _dl = page.evaluate(DOTS, "withLine")
+    _dots = [g for g in (_dl.get("groups") or []) if g["n"] == 1]
+    check("a tap paired with a tap is ON the generated page",
+          len(_dots) == 1,
+          f"{_dl} — both poses carry [20, 1] and the in-between carries what is "
+          f"listed here. A dropped tap says nothing and leaves no trace")
+    check("...and it sits half way between the two taps",
+          bool(_dots) and abs(_dots[0]["cx"] - 400) < 2 and abs(_dots[0]["cy"] - 400) < 2,
+          f"{_dots} — drawn at (400,300) and (400,500)")
+
+    _do = page.evaluate(DOTS, "only")
+    check("a page holding NOTHING but a tap still gets an in-between",
+          _do.get("made") is True,
+          f"{_do} — refusing here told the artist the pages needed drawing on "
+          f"them while they were looking at the drawing on them")
+
+    # ---- mechanism 2: ibFit refuses a fit it cannot compute ------------------
+    # CENTROID AND DIRECTION, because they fail differently and only one of them
+    # is the 1e17. With the tap on the SECOND page the stroke leaves the canvas;
+    # with the tap on the FIRST page it stays put and comes out ROTATED, because
+    # the angle is atan2 of the same dust. Same two drawings, opposite order.
+    _r2d = page.evaluate(DOTS, "runToDot")
+    _d2r = page.evaluate(DOTS, "dotToRun")
+    _g1 = (_r2d.get("groups") or [None])[0]
+    _g2 = (_d2r.get("groups") or [None])[0]
+    check("a line becoming a tap stays ON the canvas",
+          _g1 is not None and abs(_g1["cx"] - 325) < 2 and abs(_g1["cy"] - 325) < 2,
+          f"{_g1} — the two poses are centred at (250,250) and (400,400), so the "
+          f"middle of them is (325,325). A fitted scale of 4.1e-31 inverted to "
+          f"2.4e30 and put this at 1.04e17, which draws as a blank page")
+    check("...and a tap becoming a line points the way the line does",
+          _g2 is not None and abs(_g2["deg"] - 45) < 10,
+          f"{_g2} — the line it is turning into runs at 45deg. An angle fitted "
+          f"from float dust came out at -45: the right length, in the right "
+          f"place, square across the stroke it is supposed to be becoming")
+    check("...and the two orders are mirror images, as the drawings are",
+          _g1 is not None and _g2 is not None
+          and abs(_g1["len"] - _g2["len"]) < 1,
+          f"{_g1['len'] if _g1 else None} against {_g2['len'] if _g2 else None} — "
+          f"the same two drawings in the other order must spend the same ink")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
