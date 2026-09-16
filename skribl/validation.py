@@ -3,6 +3,7 @@
 Moved verbatim from app.py. No database or Flask coupling here at all.
 """
 import base64
+import json
 import math
 import re
 
@@ -630,4 +631,81 @@ def _validate_payload_media(payload):
         err = _validate_media_data_url(value, kind, cap, label)
         if err:
             return err
+    return None
+
+
+# --- Everything the checks above do NOT bound --------------------------------
+# THE CAPS ABOVE ARE EXCELLENT WHERE A CAP EXISTS, AND ABSENT ONE KEY AWAY.
+# _iter_media_items walks four slots; _validate_payload_complexity walks points,
+# frames, groups, hold and canvasSize. Every OTHER key rides into payload_json
+# verbatim, and creation.py preserves unknown keys on purpose so a client version
+# bump does not need a server release. Nothing measured what that costs.
+#
+# Measured, against this tree: gzip of {"strokes":[],"junk":"A"*24_000_000} is
+# 23,387 bytes on the wire, returns 201 in 0.43s, and writes a 24 MB row that
+# GET hands back in full. At 20 posts/hour/IP that is ~480 MB/hour/IP, from an
+# anonymous client, with no CSRF on the standalone default. The note at the head
+# of this section names that exact figure as the reason the media caps exist --
+# and it is still achievable by using a key the schema does not know.
+#
+# A CAP ON THE WHOLE PAYLOAD WOULD BE THE WRONG CONTROL, and the arithmetic is
+# why: MAX_TOTAL_POINTS is 200,000 and a point serialises to ~87 bytes, so a
+# structurally VALID drawing can legitimately reach ~17 MB. Any total-size cap
+# loose enough to admit that is too loose to stop the attack, and any cap tight
+# enough to stop it rejects real work. So this measures the REMAINDER: the
+# payload with the parts other validators already bound removed. For a real
+# Skribl that remainder is a few hundred bytes of metadata whatever the drawing
+# weighs, which is what makes a tight limit safe here and nowhere else.
+MAX_PAYLOAD_EXTRA_BYTES = _env_int("SKRIBL_MAX_PAYLOAD_EXTRA_BYTES",
+                                   256_000, minimum=1024)
+
+
+def _payload_skeleton(payload):
+    """The payload with every already-bounded container emptied.
+
+    Shallow copies only: the containers are replaced, never walked, so this
+    costs a handful of dict copies rather than a deep copy of a 25 MB body.
+    """
+    def strip(node):
+        if not isinstance(node, dict):
+            return node
+        out = dict(node)
+        # Bounded by _validate_points / _validate_stroke_groups.
+        if "strokes" in out:
+            out["strokes"] = []
+        if "strokeGroups" in out:
+            out["strokeGroups"] = []
+        # Bounded by _validate_payload_media, per item and by type.
+        for key in ("music", "photo"):
+            item = out.get(key)
+            if isinstance(item, dict) and "data" in item:
+                shrunk = dict(item)
+                shrunk["data"] = ""
+                out[key] = shrunk
+        if "baseSnapshot" in out:
+            out["baseSnapshot"] = ""
+        return out
+
+    out = strip(payload)
+    if "thumbnail" in out:
+        out["thumbnail"] = ""
+    frames = out.get("frames")
+    if isinstance(frames, list):
+        out["frames"] = [strip(f) for f in frames]
+    return out
+
+
+def _validate_payload_extra(payload):
+    """Caps what no other validator bounds. Returns an error or None."""
+    try:
+        extra = len(json.dumps(_payload_skeleton(payload), separators=(",", ":"),
+                               default=str))
+    except (TypeError, ValueError, RecursionError):
+        # Unserialisable or pathologically nested. It arrived as JSON, so this
+        # is not a shape we produced -- refuse it rather than carry it into the
+        # column and find out at render time.
+        return "Drawing data could not be read."
+    if extra > MAX_PAYLOAD_EXTRA_BYTES:
+        return (f"Drawing data carries too much extra content "
+                f"({extra} bytes; limit {MAX_PAYLOAD_EXTRA_BYTES}).")
     return None

@@ -186,6 +186,62 @@ check("a second anonymous client reusing the key gets its OWN post",
 st4, b4 = post({"frames": [frame]}, headers={"Idempotency-Key": "x" * 300})
 check("an oversized key is ignored, not stored", st4 == 201, f"{st4}")
 
+# --- what the schema does NOT know ------------------------------------------
+# The media caps bound four slots and the complexity check bounds points,
+# frames, groups, hold and canvasSize. EVERY OTHER KEY used to ride into
+# payload_json verbatim, bounded only by MAX_CONTENT_LENGTH. Gzip makes that an
+# amplifier: 23 KB on the wire inflated to a 24 MB row, at 20 posts/hour/IP,
+# anonymously. The figure the media caps are justified by -- ~480 MB/hour/IP
+# into a free-tier Postgres -- was still exactly achievable by using a key the
+# schema had never heard of.
+#
+# THE CAP IS ON THE REMAINDER, NOT ON THE PAYLOAD, and the assertions below are
+# in pairs for that reason. MAX_TOTAL_POINTS is 200,000 and a point serialises
+# to ~87 bytes, so a VALID drawing reaches ~14.5 MB: any whole-payload cap that
+# admits real work is far too loose to stop this. Each rejection below is
+# therefore paired with an acceptance that would fail under a naive size limit.
+_JUNK = "A" * 2_000_000
+st5, b5 = post({"strokes": [], "junk": _JUNK})
+check("an unknown key cannot carry an unbounded blob",
+      st5 == 400 and "extra content" in str(b5.get("error", "")),
+      f"{st5} {b5.get('error')} — 2 MB under a key the schema does not know")
+
+# `background` is type-checked as a dict and then walked by nothing, which is
+# the same defect baseSnapshot had before it was added to the media walk.
+st6, b6 = post({"strokes": [], "background": {"data": _JUNK}})
+check("...and neither can a known key that nothing walks", st6 == 400,
+      f"{st6} {b6.get('error')} — background.data is validated by no one")
+
+# Splitting the payload across many keys must not get under the limit.
+st7, b7 = post({"strokes": [], **{f"k{i}": "y" * 30_000 for i in range(20)}})
+check("...nor can many medium keys add up to the same thing", st7 == 400,
+      f"{st7} {b7.get('error')}")
+
+# THE PAIRED ACCEPTANCES. Without these the three above are satisfied by any
+# cap at all, including one that breaks the product.
+_pt = lambda i: {"x": i % 800 * 1.0, "y": i % 600 * 1.0, "size": 6,
+                 "color": "#ffffff", "erase": False, "t": i}
+st8, b8 = post({"strokes": [_pt(i) for i in range(20000)],
+                "strokeGroups": [20000], "fps": 12,
+                "canvasSize": {"cssWidth": 800, "cssHeight": 600},
+                "title": "a real drawing"})
+check("a 20,000-point drawing still posts", st8 == 201,
+      f"{st8} {b8.get('error')} — ~1.7 MB of legitimate stroke data, which a "
+      f"naive payload-size cap would reject")
+
+st9, b9 = post({"frames": [{"strokes": [_pt(i) for i in range(500)],
+                            "strokeGroups": [500], "hold": 1}
+                           for _ in range(100)], "fps": 24})
+check("...and so does a 100-page flipbook", st9 == 201,
+      f"{st9} {b9.get('error')}")
+
+# Forward compatibility is the reason unknown keys are preserved at all, so a
+# client version bump must still ride along.
+st10, b10 = post({"strokes": [], "someFutureField": {"a": 1, "b": [1, 2, 3]}})
+check("a small unknown key still rides along, as it is meant to", st10 == 201,
+      f"{st10} {b10.get('error')} — rejecting unknown keys outright would make "
+      f"every client change need a server release")
+
 bad = [(n, d) for ok, n, d in results if not ok]
 print("\n" + "=" * 62)
 print(f"{len(results) - len(bad)}/{len(results)} passed"
