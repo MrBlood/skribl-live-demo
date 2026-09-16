@@ -35,6 +35,7 @@ import pathlib
 import sys
 import tempfile
 from assertions import make_check
+import source
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -747,7 +748,8 @@ del os.environ["SKRIBL_RATE_HMAC_KEY"]
 # _sweep_tombstones being the only deleter that can touch a tombstoned row,
 # and on it dropping the tombstone in the same breath. Pinned here because
 # whoever adds the next deleter will read this file, not that comment.
-_f2_src = (ROOT / "skribl" / "ratelimit.py").read_text()
+# Code only -- ratelimit.py documents the pattern this looks for.
+_f2_src = source.read_py(ROOT / "skribl" / "ratelimit.py")
 check("the sweep drops the tombstone for every row it deletes (rowid reuse)",
       "store.pop(tok, None)" in _f2_src, "the sweep no longer clears the store")
 check("a release that SUCCEEDS records no tombstone — one add site only",

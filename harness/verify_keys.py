@@ -28,6 +28,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 from assertions import make_check
+import source
 import browsing
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -44,7 +45,8 @@ check = make_check(results)
 # an element-scoped keydown (a text input taking Enter/Escape) is not a global
 # binding and must not be counted, or the registry would be asked to describe
 # things that cannot collide with anything.
-SRC = (ROOT / "skribl" / "static" / "flip.js").read_text()
+# Code only -- a shortcut named in a comment is not a shortcut that is bound.
+SRC = source.read_js(ROOT / "skribl" / "static" / "flip.js")
 GLOBAL_KEYDOWN = re.findall(r"^(?:\s*)(?:window|document)\.addEventListener\(\s*'keydown'",
                             SRC, re.MULTILINE)
 

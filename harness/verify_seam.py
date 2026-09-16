@@ -27,6 +27,7 @@ from pathlib import Path
 
 import _layout
 from assertions import make_check
+import source
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -35,10 +36,11 @@ results = []
 check = make_check(results)
 
 
-def strip_comments(js):
-    """Remove // line and /* */ block comments so prose doesn't trip the guard."""
-    js = re.sub(r"/\*.*?\*/", "", js, flags=re.DOTALL)
-    return "\n".join(re.sub(r"//.*$", "", line) for line in js.split("\n"))
+# Was defined here, and was the tree's only working copy while nine other sites
+# matched code as raw text and needed it. Moved to harness/source.py in v299
+# after a mutation defeated verify_ux by putting the token it looks for inside
+# a comment; this name stays so the call sites below read as they did.
+strip_comments = source.strip_js
 
 
 # ---------------------------------------------------------------- section 1
@@ -89,26 +91,11 @@ for name, src in sorted(tpls.items()):
 
 
 print("\nSEAM 1c — the server builds share URLs from routes")
-def strip_py_comments(src):
-    """Drop # comments and docstrings, so prose about a fixed bug does not read
-    as the bug. (This guard caught its own changelog comment on first run.)"""
-    out = []
-    for line in src.split("\n"):
-        q = None
-        buf = []
-        for i, ch in enumerate(line):
-            if q:
-                buf.append(ch)
-                if ch == q and line[i-1:i] != "\\":
-                    q = None
-            elif ch in "\"'":
-                q = ch; buf.append(ch)
-            elif ch == "#":
-                break
-            else:
-                buf.append(ch)
-        out.append("".join(buf))
-    return "\n".join(out)
+# Drop # comments, so prose about a fixed bug does not read as the bug. (This
+# guard caught its own changelog comment on first run.) The implementation moved
+# to harness/source.py in v299 so the other suites reading code as text could
+# stop needing a copy they did not have.
+strip_py_comments = source.strip_py
 
 
 route_src = ""
