@@ -2258,7 +2258,7 @@ function buildStrip(){
     // already follows. A page with no hold still shows nothing.
     const _h = artistHold(f);
     el.innerHTML='<div class="num">'+_numTxt+'</div>'
-      +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
+      +'<button class="del" title="Delete frame" aria-label="Delete frame">'+DEL_SVG+'</button>'
       +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
         +'title="Hold this page longer — tap to cycle" '
         +'aria-label="Hold page '+(i+1)+', shown '+_h+' time'+(_h===1?'':'s')+'">'

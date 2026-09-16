@@ -97,12 +97,35 @@
     if (el) { el.classList.remove('in'); el.hidden = true; }
   }
 
+  /* Does this element still have a name once `title` is gone? aria-label and
+     aria-labelledby are names; so is visible text inside the control, which is
+     why a button reading "Post" needs nothing here. A button whose only content
+     is an <svg> has none of the three. */
+  function namedOtherwise(n) {
+    if (n.getAttribute('aria-label')) return true;
+    if (n.getAttribute('aria-labelledby')) return true;
+    return !!(n.textContent || '').trim();
+  }
+
   function adopt(root) {
     var nodes = (root || document).querySelectorAll('[title]');
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       var t = n.getAttribute('title');
       if (!t) continue;
+      /* THE TITLE IS THE NAME WHEN NOTHING ELSE IS, and this used to throw it
+         away. Stripping `title` is right -- it is what stops the native tooltip
+         doubling under the custom one -- but on an icon-only control `title`
+         was the ONLY accessible name, so four Flip controls (#colorCurrent,
+         #undo, #redo and the strip's delete button) announced as bare "button"
+         to a screen reader. Carrying it to aria-label keeps the name and still
+         removes the native tooltip, so the fix costs nothing visually.
+
+         IT HID ON DESKTOP ONLY, which is why review did not catch it: init()
+         returns early on a coarse pointer, so adopt() never runs on a phone and
+         `title` survives there as a perfectly good name. Chromium's AX tree read
+         "Colours and brush" at 390px and '' at 1280px, on the same markup. */
+      if (!namedOtherwise(n)) n.setAttribute('aria-label', t);
       n.setAttribute('data-tip', t);
       n.removeAttribute('title');
     }
