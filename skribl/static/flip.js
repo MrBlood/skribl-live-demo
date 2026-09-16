@@ -352,8 +352,18 @@ function writeFrames(list){
 // Owned by lib/holdtiming.js, which both this editor and the player read, so
 // the clamp cannot drift between what you preview and what a viewer gets.
 // Inline fallback for a surface that somehow loads without the lib.
+/* 8, NOT 4, and the 4 was a real 2x bug rather than a stale-looking number.
+   This is the ceiling on the STORED unit -- frameHold() clamps to it and
+   carveForInsert refuses a subdivision that would push any page past it -- and
+   subdividing a document doubles every hold, so a page the artist holds x4
+   stores as 8. holdtiming.js has said 8 since the carve landed and
+   validation.py agrees; only this fallback and app.js's were left at the
+   pre-subdivision number. On a surface that loaded without the lib, every
+   x8 page clamped to 4 and the flip played at half its length.
+   UI_MAX_HOLD below is the separate thing the BADGE cycles through, and that
+   one really is 4. */
 const MAX_HOLD = (typeof window !== 'undefined' && window.SkriblHold)
-  ? window.SkriblHold.MAX_HOLD : 4;
+  ? window.SkriblHold.MAX_HOLD : 8;
 /* What the BADGE offers, which is not what the format stores. MAX_HOLD is the
    ceiling on the stored unit and doubles when a document is subdivided; this is
    the number of steps a person cycles through, and it does not move. Reading the
