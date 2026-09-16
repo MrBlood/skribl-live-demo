@@ -6710,7 +6710,8 @@ function buildTween(a, b, want){
    page's duration at all, and then the pose can hand half of itself over. After
    the carve, pose + in-between occupy exactly what the pose occupied alone.
 
-   Returns the index to insert at, having made room before it. */
+   Returns {at, hold} -- where the page goes, and how many slots were freed for
+   it -- or null when the interval cannot be cut any finer. */
 function carveForInsert(at){
   if(frameHold(frames[at]) < 2){
     /* SUBDIVIDING HAS TO BE BOUNDED, and the first version was not. Doubling
@@ -6730,13 +6731,37 @@ function carveForInsert(at){
        self-limiting: subdiv cannot exceed 8 whatever the counter says. */
     // Doubling every hold must not push one past what holdOf() will read back,
     // or the clamp silently shortens it and the document speeds up.
-    for(const f of frames) if(frameHold(f) * 2 > MAX_HOLD) return -1;
+    for(const f of frames) if(frameHold(f) * 2 > MAX_HOLD) return null;
     // Nothing on screen changes length -- every page keeps hold/fps.
     fps *= 2; subdiv *= 2;
     for(const f of frames) f.hold = frameHold(f) * 2;
   }
-  frames[at].hold = frameHold(frames[at]) - 1;   // the slot the new page will use
-  return at + 1;
+  /* SPLIT THE INTERVAL, don't shave ONE SLOT off the end of it. This took a
+     single slot however long the pose was held, which is right at hold 2 and 3
+     and wrong at every hold above them -- and the badge offers x4 directly, so
+     a hold of 4 is one tap away on a fresh document:
+
+         pose held   was        is      at 12fps, where the midpoint lands
+              2      1:1       1:1      half way        half way
+              3      2:1       2:1      2/3 of the way  (3 slots cut no finer)
+              4      3:1       2:2      250 of 333ms -> 167 of 333ms
+              8      7:1       4:4      583 of 667ms -> 333 of 667ms
+
+     A GENERATED PAGE IS A MIDPOINT. Its geometry is the pose half way between
+     two drawings, and a midpoint that is shown for the last eighth of the
+     interval is not at the middle of anything -- it reads as the first pose
+     hanging and then a flicker before the second. That is the same complaint
+     the doubling above was written to answer, arriving by the other road: that
+     one was the interval getting LONGER, this one is it landing off centre.
+
+     The pose keeps the odd slot, because it is a drawing somebody made and the
+     other one is not. What must not change is the SUM: the pair occupies
+     exactly what the pose occupied alone, so no page after this one moves. */
+  const whole = frameHold(frames[at]);
+  // At least 2: either it already was, or the doubling above just made it so.
+  const give = Math.floor(whole / 2);
+  frames[at].hold = whole - give;
+  return { at: at + 1, hold: give };
 }
 
 /* ---------- undoing a generated page ----------------------------------------
@@ -6793,12 +6818,13 @@ function addTween(){
   const _r = genRecipe.get(t);
   if(_r){ _r.print = genPrint(t); _r.a = genPrint(a); _r.b = genPrint(b); }
   const _was = genCarveState();
-  const _at = carveForInsert(idx);
-  if(_at < 0){ chip('These pages are already as close together as they go'); return; }
+  const _c = carveForInsert(idx);
+  if(!_c){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
-  t.hold = 1;
-  frames.splice(_at, 0, t); idx++;
-  noteGenPage(_at, _was, t, 'Motion smear');
+  // The slots carveForInsert freed, not a hard 1: see the split note there.
+  t.hold = _c.hold;
+  frames.splice(_c.at, 0, t); idx++;
+  noteGenPage(_c.at, _was, t, 'Motion smear');
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   // Say WHICH it was. A person who selected part of the drawing and got the
   // same six words as always cannot tell whether the selection was read.
@@ -7152,12 +7178,13 @@ function addInbetween(){
     t.strokeGroups.push(run.length);
   }
   const _was = genCarveState();
-  const _at = carveForInsert(idx);
-  if(_at < 0){ chip('These pages are already as close together as they go'); return; }
+  const _c = carveForInsert(idx);
+  if(!_c){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
-  t.hold = 1;
-  frames.splice(_at, 0, t); idx++;
-  noteGenPage(_at, _was, t, 'In-between');
+  // The slots carveForInsert freed, not a hard 1: see the split note there.
+  t.hold = _c.hold;
+  frames.splice(_c.at, 0, t); idx++;
+  noteGenPage(_c.at, _was, t, 'In-between');
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   chip('In-between added');
 }

@@ -896,6 +896,68 @@ with sync_playwright() as p:
           f"{_g1['len'] if _g1 else None} against {_g2['len'] if _g2 else None} — "
           f"the same two drawings in the other order must spend the same ink")
 
+    # ---------------------------------------------------------------- v299
+    # WHERE IN TIME THE MIDDLE POSE LANDS.
+    #
+    # carveForInsert took ONE slot off the pose however long the pose was held.
+    # At hold 2 and 3 that is the evenest cut available; at 4 and above it is
+    # not, and the badge offers x4 directly, so it is one tap away on a fresh
+    # document. A page held x4 put its midpoint 250ms into a 333ms interval
+    # instead of 167ms; held x8, 583 of 667. The geometry was right and the
+    # timing was not, which reads as the first pose hanging and then a flicker.
+    #
+    # SWEPT, NOT SAMPLED. One fixture at one hold cannot tell "takes a slot"
+    # from "takes half", because at hold 2 and 3 the two rules agree -- and
+    # those are the holds every other fixture in this suite uses. The sweep is
+    # what separates them.
+    #
+    # THE SUM IS NOT A SECOND READING OF THE SPLIT. It is green under the old
+    # rule AND the new one -- both spend exactly what the pose held -- and it
+    # goes red on a HALF-APPLIED fix, which is the state this change passes
+    # through: measured, with carveForInsert splitting and this caller still
+    # writing a hard 1, the pair came out SHORTER than the pose had been and
+    # every page after it moved. The midpoint check catches that too; this one
+    # says which of the two things went wrong.
+    print("\nTHE CARVE: a middle pose has to land in the middle")
+
+    SWEEP = """() => {
+      const seg = (y) => { const o = [];
+        for (let i = 0; i < 10; i++)
+          o.push({ x: 100 + i*15, y: y, color: '#ffffff', size: 6, t: 0, erase: false });
+        o[0].start = true; return o; };
+      const mk = (y, h) => ({ strokes: seg(y), strokeGroups: [10], hold: h });
+      const rows = [];
+      for (let H = 1; H <= 8; H++) {
+        frames.length = 0; frames.push(mk(200, H)); frames.push(mk(420, 1));
+        idx = 0; fps = 12; subdiv = 1; selSpans = [];
+        actionLog.length = 0; redoStack.length = 0;
+        buildStrip(); render();
+        const before = frames.length;
+        addInbetween();
+        if (frames.length <= before) { rows.push({ H: H, made: false }); continue; }
+        // Post-carve the pose may have been doubled, so the interval to split
+        // is what the pair occupies now -- which is the thing that must equal
+        // what the pose occupied on its own.
+        rows.push({ H: H, made: true, pose: frames[0].hold, gen: frames[1].hold,
+                    was: H * (subdiv || 1) });
+      }
+      return rows;
+    }"""
+    _sw = page.evaluate(SWEEP)
+    _off = [r for r in _sw if not r["made"] or abs(r["pose"] - r["gen"]) > 1]
+    check("the in-between lands at the middle of the interval at EVERY hold",
+          not _off,
+          "; ".join(f"hold {r['H']} -> {r.get('pose')}:{r.get('gen')}" for r in _off)
+          + " — taking one slot off the pose centres the midpoint only while the "
+            "pose is held 2 or 3. A page held x4 is one tap away")
+    _sum = [r for r in _sw if r["made"] and r["pose"] + r["gen"] != r["was"]]
+    check("...without the pair occupying more than the pose did alone",
+          not _sum,
+          "; ".join(f"hold {r['H']} -> {r['pose']}+{r['gen']} against {r['was']}"
+                    for r in _sum)
+          + " — a longer pair moves every page after it, which is the bug the "
+            "carve exists to prevent")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

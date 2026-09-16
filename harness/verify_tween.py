@@ -1774,6 +1774,62 @@ with sync_playwright() as p:
           f"Geometry describes the drawing; sampling describes how we observed it")
 
     # ---------------------------------------------------------------- v299
+    # WHERE IN TIME THE SMEAR LANDS — and this is the smear's OWN assertion,
+    # not a copy of the in-between's, because carveForInsert reports the slots
+    # it freed and each button spends them at its own call site. Both said
+    # `t.hold = 1` and both had to stop. Mutated one at a time: fixing either
+    # caller alone leaves the other's sweep red.
+    #
+    # The carve took ONE slot off the pose however long the pose was held, which
+    # is the evenest cut available at hold 2 and 3 and not above them. The badge
+    # offers x4 directly, so a hold of 4 is one tap away on a fresh document: at
+    # 12fps its smear landed 250ms into a 333ms interval instead of 167ms, and
+    # at x8, 583 of 667.
+    #
+    # SWEPT, NOT SAMPLED: at hold 2 and 3 "take a slot" and "take half" agree,
+    # and those are the holds every other fixture here uses. Only the sweep
+    # separates the two rules.
+    print("\nTHE CARVE — a smear has to land in the middle of the interval")
+
+    _csw = page.evaluate("""() => {
+      const seg = (y) => { const o = [];
+        for (let i = 0; i < 10; i++)
+          o.push({ x: 100 + i*15, y: y, color: '#ffffff', size: 6, t: 0, erase: false });
+        o[0].start = true; return o; };
+      const mk = (y, h) => ({ strokes: seg(y), strokeGroups: [10], hold: h });
+      const rows = [];
+      for (let H = 1; H <= 8; H++) {
+        // The stroke MOVES 220px, so a refusal cannot be mistaken for a split.
+        frames.length = 0; frames.push(mk(200, H)); frames.push(mk(420, 1));
+        idx = 0; fps = 12; subdiv = 1; selSpans = [];
+        actionLog.length = 0; redoStack.length = 0;
+        buildStrip(); render();
+        const before = frames.length;
+        addTween();
+        if (frames.length <= before) { rows.push({ H: H, made: false }); continue; }
+        rows.push({ H: H, made: true, pose: frames[0].hold, gen: frames[1].hold,
+                    was: H * (subdiv || 1) });
+      }
+      return rows;
+    }""")
+    _coff = [r for r in _csw if not r["made"] or abs(r["pose"] - r["gen"]) > 1]
+    check("the smear lands at the middle of the interval at EVERY hold",
+          not _coff,
+          "; ".join(f"hold {r['H']} -> {r.get('pose')}:{r.get('gen')}" for r in _coff)
+          + " — one slot off the pose centres it only while the pose is held 2 "
+            "or 3, and the badge offers x4")
+    _csum = [r for r in _csw if r["made"] and r["pose"] + r["gen"] != r["was"]]
+    check("...without the pair occupying more than the pose did alone",
+          not _csum,
+          "; ".join(f"hold {r['H']} -> {r['pose']}+{r['gen']} against {r['was']}"
+                    for r in _csum)
+          + " — green under the old rule and the new one alike: both spend "
+            "exactly what the pose held. What reddens it is a HALF-APPLIED fix "
+            "— measured, with carveForInsert splitting and this caller still "
+            "writing a hard 1, the pair came out shorter than the pose had been "
+            "and every page after it moved")
+
+    # ---------------------------------------------------------------- v299
     # THE SMEAR DIES ON A ZERO GROUP TOO, and separately.
     #
     # Same defect, its own call site: a group is a stroke's point count and must
