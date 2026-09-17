@@ -6990,6 +6990,11 @@ const ibSpin = (a, k) => a.slice(k).concat(a.slice(0, k));
 
 /* How much a turn has to EARN before the fit is allowed to claim it, as a
    fraction of the arc a typical point would travel. See ibPhase. */
+/* How many of the coarse pass's brackets get refined. One is cheaper and was
+   measured failing: a local minimum 8% off the exhaustive answer on 1 of 75
+   fixtures. Three matches it exactly on all 75. The coarse scores are already
+   in hand, so the runners-up are free to keep. */
+const IB_PHASE_BRACKETS = 3;
 const IB_TURN_PENALTY = 0.15;
 
 /* Which rotation of a closed path lines up with pose A -- SCORED AFTER THE
@@ -7064,18 +7069,58 @@ function ibPhase(pa, pb){
   }
   const K = Math.min(n, 24);
   const stride = Math.max(1, Math.floor(n / K));
+  /* THE REFINE WINDOW WAS THE SCALING CLIFF. The coarse pass is 48 probes
+     whatever n is, but the refinement walked EVERY offset in +/- stride, and
+     stride is n/24 -- so the refinement grew with the drawing while each probe
+     is itself O(n). That is quadratic, and measured on a six-stroke figure it
+     is what the owner's "slow" is:
+
+         points per stroke      60    300    600   1200   2400
+         ibPhase, ms          0.35   1.28   2.67   7.93   26.7
+         the button, ms         19     50     84    167    353
+
+     Four times the points from 600 to 2400 cost ten times the time.
+
+     HALVING THE WINDOW INSTEAD, two probes a level, makes the refinement
+     logarithmic: 201 probes become 12 at n = 2400. On its own that is not
+     safe, and measuring said so -- the score surface is not always unimodal,
+     and across 75 fixtures one landed in a local minimum 8% worse than the
+     exhaustive answer.
+
+     SO THE BEST THREE COARSE BRACKETS ARE REFINED, NOT THE BEST ONE. The
+     coarse pass already computed all 48 scores; keeping the runners-up costs
+     nothing and buys the robustness back. Measured over the same 75 fixtures
+     -- five point counts, five phase offsets, three contour shapes -- against
+     the exhaustive search it replaces:
+
+         worst relative cost penalty    0.00%
+         fixtures worse by over 1%      0 of 75
+         refine probes at n = 2400      201 -> 36
+
+     Exact agreement, not merely close, and still logarithmic. */
+  const probes = [];
   let bc = Infinity, bestOrient = 0, bestK = 0;
   for(let o = 0; o < 2; o++)
     for(let k = 0; k < n; k += stride){
       const c = score(ibSpin(cands[o], k));
+      probes.push({ o: o, k: k, c: c });
       if(c < bc){ bc = c; bestOrient = o; bestK = k; }
     }
-  const cand = cands[bestOrient];
-  let best = ibSpin(cand, bestK);
-  for(let d = -stride; d <= stride; d++){
-    const k = ((bestK + d) % n + n) % n;
-    const r = ibSpin(cand, k), c = score(r);
-    if(c < bc){ bc = c; best = r; }
+  probes.sort((x, y) => x.c - y.c);
+  let best = ibSpin(cands[bestOrient], bestK);
+  for(const seed of probes.slice(0, IB_PHASE_BRACKETS)){
+    const cand = cands[seed.o];
+    let k0 = seed.k, cost = seed.c, win = stride;
+    while(win > 1){
+      const step = Math.max(1, Math.floor(win / 2));
+      for(const d of [-step, step]){
+        const k = ((k0 + d) % n + n) % n;
+        const c = score(ibSpin(cand, k));
+        if(c < cost){ cost = c; k0 = k; }
+      }
+      win = step;
+    }
+    if(cost < bc){ bc = cost; best = ibSpin(cand, k0); }
   }
   return best;
 }

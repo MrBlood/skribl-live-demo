@@ -1042,6 +1042,89 @@ with sync_playwright() as p:
           f"{_orub} — a hole made on THIS page is on the page you are "
           f"inserting after, so it comes through where it was put")
 
+    # ---------------------------------------------------------------- v300
+    # THE PHASE SEARCH HAD A SCALING CLIFF, and this gates the work rather than
+    # the clock.
+    #
+    # ibPhase's coarse pass is 48 probes whatever the drawing holds, but the
+    # refinement walked EVERY offset in +/- stride, and stride is n/24 -- so
+    # the refinement grew with the point count while each probe is itself
+    # O(n). Quadratic. Measured on a six-stroke figure before the change:
+    #
+    #     points per stroke     300    600   1200   2400
+    #     ibPhase, ms          1.28   2.67   7.93   26.7
+    #     the button, ms         50     84    167    353
+    #
+    # NOT A STOPWATCH, DELIBERATELY. This project already learned what a
+    # wall-clock pin is worth: verify_pages' cold > warm*3 failed twice on
+    # trees whose own sqlite job passed, both times because the box was busy,
+    # and DECISIONS records that a pin which goes red when the machine is
+    # loaded reports on the machine rather than on the tree. So the assertion
+    # counts ibFit CALLS, which is the work the algorithm actually does and is
+    # identical on every machine.
+    #
+    #     ibFit calls      300    600   1200   2400
+    #     shipped           75     99    149    249      doubling: linear
+    #     now               68     72     78     84      +6: logarithmic
+    print("\nPHASE SEARCH — the work must not grow with the drawing")
+
+    _cost = page.evaluate("""() => {
+      const loop = (n, spin) => { const o = [];
+        for (let i = 0; i < n; i++) { const a = spin + i/n*2*Math.PI;
+          const r = 90 + 22*Math.sin(3*a) + 12*Math.cos(5*a);
+          o.push({ x: 353 + Math.cos(a)*r, y: 353 + Math.sin(a)*r, size: 6 }); }
+        o.push(Object.assign({}, o[0])); return o; };
+      const real = window.ibFit;
+      const count = (n) => {
+        const pa = tweenResample(loop(n, 0), n), pb = tweenResample(loop(n, 1.9), n);
+        let calls = 0;
+        window.ibFit = function(){ calls++; return real.apply(null, arguments); };
+        try { ibPhase(pa, pb); } finally { window.ibFit = real; }
+        return calls;
+      };
+      const small = count(600), large = count(2400);
+
+      /* AND THE CHEAPER SEARCH MUST STILL FIND THE ANSWER. Checked at 300
+         points, where EVERY spin can be afforded -- a truly exhaustive sweep,
+         step of one, not a coarse reference. An earlier version of this used
+         step = n/240 and reported the search beating its own oracle by 71%,
+         which meant the oracle was the weaker instrument, not that the search
+         was inspired.
+
+         AND AT 600 RATHER THAN 300, because 300 does not discriminate: with
+         IB_PHASE_BRACKETS dropped to 1 this suite stayed green there, and a
+         check that cannot go red is not evidence. 600 is the contour and
+         phase offset where refining only the BEST coarse bracket lands in a
+         local minimum. Measured on this exact fixture: 8.02% off the
+         exhaustive answer with one bracket, 0.00% with three. */
+      const n = 600;
+      const pa = tweenResample(loop(n, 0), n), pb = tweenResample(loop(n, 1.9), n);
+      const cands = [pb, pb.slice().reverse()];
+      let cx = 0, cy = 0; for (const p of pa){ cx += p.x/n; cy += p.y/n; }
+      let rad = 0; for (const p of pa) rad += Math.hypot(p.x-cx, p.y-cy)/n;
+      const score = (q) => { const T = real(pa, q), loc = ibUnapply(q, T); let e = 0;
+        for (let i = 0; i < n; i++) e += Math.hypot(loc[i].x-pa[i].x, loc[i].y-pa[i].y);
+        return e/n + IB_TURN_PENALTY*Math.abs(T.angle)*rad; };
+      let bc = Infinity;
+      for (let o = 0; o < 2; o++) for (let k = 0; k < n; k++) {
+        const c = score(ibSpin(cands[o], k)); if (c < bc) bc = c; }
+      const chosen = score(ibPhase(pa, pb));
+      return { small: small, large: large, chosen: chosen, exhaustive: bc,
+               penalty: (chosen - bc) / Math.max(bc, 1e-9) };
+    }""")
+
+    check("the phase search's work barely grows when the drawing gets four "
+          "times denser",
+          _cost["large"] < _cost["small"] * 1.5,
+          f"{_cost['small']} fits at 600 points, {_cost['large']} at 2400 — "
+          f"x{_cost['large']/max(_cost['small'],1):.1f}. Walking every offset in "
+          f"a window of n/24 made this linear, and each probe is itself O(n)")
+    check("...and it still finds what an exhaustive sweep of every spin finds",
+          _cost["penalty"] < 0.01,
+          f"{_cost['chosen']:.3f} against {_cost['exhaustive']:.3f} over all 1200 "
+          f"spins at 600 points ({_cost['penalty']*100:+.1f}%) — cheaper is only "
+          f"worth having if it lands in the same place")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
