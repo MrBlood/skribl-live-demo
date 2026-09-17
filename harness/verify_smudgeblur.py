@@ -35,6 +35,7 @@ All of which is invisible in a screenshot, and is the thing most likely to be
 "simplified" back out by someone who reads the accumulator as ceremony.
 """
 import os
+import re
 import sys
 from assertions import make_check
 import browsing
@@ -110,6 +111,14 @@ with sync_playwright() as p:
           const B = window.SkriblBrushField;
           return { hex: B.mix('#ffffff', '#000000', 0.5),
                    keepsAlpha: B.mix('rgba(255, 0, 0, 0.4)', '#000000', 0.5),
+                   // THE SPELLING THIS PROJECT ACTUALLY USES. The assertion
+                   // below tested rgba() alone for four releases while every
+                   // translucent thing Flip generates -- the blur halo, and
+                   // every Motion Smear ghost -- carries an 8-digit hex,
+                   // because alphaOf only recognises rgba() and hex-8 is how a
+                   // translucent pass stays off the layer budget. So the guard
+                   // was real, documented, and fired on nothing.
+                   keepsHexAlpha: B.mix('#ffffff37', '#141414', 0.5),
                    junk: B.mix('not-a-colour', '#000000', 0.5),
                    zero: B.mix('#ffffff', '#000000', 0) };
         }""")
@@ -119,6 +128,25 @@ with sync_playwright() as p:
               "0.4" in mixed["keepsAlpha"],
               f"{mixed['keepsAlpha']} — blur must not quietly make a "
               "see-through stroke opaque")
+        # ...IN EITHER SPELLING, which is the half that was missing. Measured on
+        # the shipped tree: mix('#ffffff37', ...) returned 'rgb(185, 185, 185)',
+        # so a Motion Smear ghost at 22% opacity came back FULLY OPAQUE the
+        # moment Smudge touched it.
+        check("...whichever way the alpha is written",
+              re.match(r"^#[0-9a-f]{6}37$", mixed["keepsHexAlpha"] or "", re.I)
+              is not None,
+              f"{mixed['keepsHexAlpha']} — a ghost at alpha 0x37 must come back "
+              f"at alpha 0x37. Dropping it is what turns a Motion Smear opaque "
+              f"under the brush")
+        # AND IT HAS TO STAY HEX. Returning rgba() would preserve the number and
+        # break the budget: alphaOf recognises rgba() and not hex-8, so every
+        # mixed point would become layerable, LAYER_BUDGET is 24, and past it
+        # 'the whole frame paints direct and every other stroke on it changes'.
+        # A local gesture would repaint the page.
+        check("...and in the form that keeps it off the layer budget",
+              "rgba" not in (mixed["keepsHexAlpha"] or ""),
+              f"{mixed['keepsHexAlpha']} — hex-8 in, hex-8 out; rgba() out "
+              f"would make one smudge change how the whole frame composites")
         check("...and leaves a colour it cannot parse alone",
               mixed["junk"] == "not-a-colour",
               f"{mixed['junk']} — a parser that guesses turns one bad string "
@@ -606,6 +634,127 @@ with sync_playwright() as p:
             check(f"{_tool}: and does not claim the canvas is empty when it "
                   "is not", not (msg and "draw something first" in msg),
                   f"{msg!r} — there is a drawing on screen")
+
+        # ---------------------------------------------------------- v301
+        # A SMUDGE MUST NOT TURN A MOTION SMEAR SOLID.
+        #
+        # Reported from the app: a 2-3px drag on a generated Motion Smear put a
+        # large opaque scalloped white cap on the drawing. An outside review
+        # read that as the visible effect scaling with how many internal samples
+        # the smear was built from, and proposed blocking Smudge on generated
+        # pages until the architecture could be reworked.
+        #
+        # It is smaller than that. A Motion Smear ghost carries '#ffffff37' --
+        # 22% opacity, written as an 8-digit hex because alphaOf only recognises
+        # rgba() and hex-8 is how a translucent pass stays off LAYER_BUDGET.
+        # mix() preserved the alpha of rgba() and dropped it for hex-8, so every
+        # ghost point under the brush came back FULLY OPAQUE. Nothing about
+        # generated provenance was wrong; one colour function was.
+        #
+        # THE UNIT CHECK ABOVE CANNOT SEE THIS AND THIS CANNOT SEE THAT. mix()
+        # returning the right string is not the same claim as the page not
+        # turning white, and a future change that preserves alpha while
+        # breaking the brush would pass the first and fail this. Measured,
+        # same 3px gesture, near-opaque pixels before -> after:
+        #
+        #     plain O          1763 -> 1770      (+7, proportional)
+        #     smear, n=8          0 -> 2238
+        #     smear, n=18         0 -> 3455
+        #     smear, n=40         0 -> 3839
+        #
+        # An untouched Motion Smear has ZERO opaque pixels -- it is translucent
+        # everywhere -- which is what makes the count a clean instrument here
+        # and why the assertion is "still none" rather than a tolerance.
+        print("\nSMUDGE ON A MOTION SMEAR — translucent ink stays translucent")
+
+        SOLID = """(n) => {
+          const O = (cx) => { const o = [];
+            for (let i = 0; i <= 48; i++) { const a = 2*Math.PI*i/48;
+              o.push({ x: cx + 95*Math.cos(a), y: 350 + 125*Math.sin(a),
+                       size: 7, color: '#ffffff', erase: false, t: i*16 }); }
+            o[0].start = true; return o; };
+          const mk = (runs) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+            runs.forEach(r => { r.forEach((p, i) => { const q = Object.assign({}, p);
+              if (i === 0) q.start = true; else delete q.start; f.strokes.push(q); });
+              f.strokeGroups.push(r.length); }); return f; };
+          const A = mk([O(300)]), B = mk([O(470)]);
+          frames.length = 0; frames.push(A); frames.push(B);
+          idx = 0; fps = 12; subdiv = 1; selSpans = []; size = 7;
+          actionLog.length = 0; redoStack.length = 0;
+          buildStrip(); render();
+          const t = buildTween(A, B, { n: n, passes: 1 });
+          if (!t) return { made: false };
+          const page = t.frame || t;
+          frames.length = 0; frames.push(page); idx = 0; buildStrip(); render();
+          const c = document.createElement('canvas'); c.width = CW; c.height = CH;
+          const g = c.getContext('2d');
+          const solid = () => { g.setTransform(1,0,0,1,0,0);
+            g.fillStyle = '#000000'; g.fillRect(0,0,CW,CH);
+            paintStatic(g, frames[0].strokes);
+            const d = g.getImageData(0,0,CW,CH).data;
+            let k = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200) k++;
+            return k; };
+          const before = solid();
+          // The reported gesture: 3px down, on the top of the left O.
+          const x0 = 300, y0 = 350 - 125;
+          fieldBegin({ x: x0, y: y0 }, 'Smudge');
+          smudgeMove({ x: x0, y: y0 + 1 });
+          smudgeMove({ x: x0, y: y0 + 2 });
+          smudgeMove({ x: x0, y: y0 + 3 });
+          fieldEnd();
+          const after = solid();
+          const hex = frames[0].strokes.filter(p => /^#[0-9a-f]{8}$/i.test(p.color)).length;
+          const opaque = frames[0].strokes.filter(p => /^rgb[(]/i.test(p.color)
+                                                    || /^#[0-9a-f]{6}$/i.test(p.color)).length;
+          return { made: true, n: n, before: before, after: after,
+                   hexAlpha: hex, opaque: opaque, pts: frames[0].strokes.length };
+        }"""
+
+        _sm = [page.evaluate(SOLID, n) for n in (8, 18, 40)]
+        check("every smear fixture was built",
+              all(r.get("made") for r in _sm), str(_sm))
+        _untouched = [r for r in _sm if r.get("made") and r["before"] != 0]
+        check("an untouched Motion Smear is translucent everywhere",
+              not _untouched,
+              f"{_untouched} — if a smear already paints solid pixels the "
+              f"count below is measuring the wrong thing")
+        # NOT "after == 0", WHICH IS WHAT THIS ASSERTED FIRST AND WAS WRONG.
+        # Dragging translucent dabs into a heap SHOULD make that heap denser --
+        # that is the tool working, and a real smudge concentrates pigment the
+        # same way. Zero forbids the effect rather than the defect. Measured on
+        # the fixed tree the residue is 178/117/56 opaque pixels at n=8/18/40,
+        # invisible in the render; on the broken tree it was 2238/3455/3839 and
+        # a white cap you cannot miss. The ceiling sits between them and
+        # separates them at EVERY sample count, which is what makes it a
+        # discriminator rather than a number chosen to go green.
+        CAP = 600
+        _solidified = [(r["n"], r["before"], r["after"])
+                       for r in _sm if r.get("made") and r["after"] > CAP]
+        check("...and a smudge over it does not turn it into a solid cap",
+              not _solidified,
+              f"{_solidified} — (n, before, after) near-opaque pixels against a "
+              f"ceiling of {CAP}. Dropping the alpha of a '#rrggbbaa' ghost put "
+              f"thousands here and a white scalloped cap on the drawing")
+        # AND THE REVIEW'S OWN INVARIANT, which is the one that names the class:
+        # whatever the residue is, it must not GROW with how many samples the
+        # smear happens to hold. Implementation density is not artistic
+        # intensity. Broken: 2238 -> 3455 -> 3839, rising. Fixed: 178 -> 117 ->
+        # 56, falling, because a denser smear spreads the same dragged ink over
+        # more ghosts rather than piling it higher.
+        _byN = [(r["n"], r["after"]) for r in _sm if r.get("made")]
+        _grew = [_byN[i] for i in range(1, len(_byN)) if _byN[i][1] > _byN[0][1]]
+        check("...and the effect does not grow with the smear's sample count",
+              not _grew,
+              f"{_byN} — (n, opaque px). The visible result of one gesture must "
+              f"not depend on how many internal samples Skribl used to draw the "
+              f"smear. Rising with n is representation amplification")
+        _lost = [(r["n"], r["opaque"]) for r in _sm
+                 if r.get("made") and r["opaque"] > 0]
+        check("...because no ghost was rewritten into an opaque colour",
+              not _lost,
+              f"{_lost} — (n, points now carrying rgb()/6-digit hex). This "
+              f"names the mechanism where the pixel count names the symptom: "
+              f"one of them going red alone is the more useful signal")
 
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:

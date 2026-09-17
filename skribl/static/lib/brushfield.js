@@ -54,6 +54,12 @@
     return s === 1 ? t : Math.pow(t, s);
   }
 
+  /* Two lowercase hex digits, so a mixed colour comes back in the same shape it
+     went in. String concatenation, not toString(16) alone: 5 must be '05'. */
+  function _hex2(v) {
+    var n = Math.max(0, Math.min(255, Math.round(v)));
+    return (n < 16 ? '0' : '') + n.toString(16);
+  }
   function _clamp255(v) { return v < 0 ? 0 : (v > 255 ? 255 : Math.round(v)); }
 
   /* RGB out of the two forms this project's colours actually take: '#rrggbb'
@@ -77,7 +83,35 @@
 
   /* Blend `col` toward `toward` by t (0..1), preserving the ALPHA `col` already
      carried. Blur must not silently make a see-through stroke opaque, and the
-     brush preset that produced that alpha is not this file's business. */
+     brush preset that produced that alpha is not this file's business.
+
+     IN EITHER SPELLING, AND THAT IS THE HALF THIS MISSED FOR FOUR RELEASES.
+     The rule above was real, was documented, and fired on nothing that
+     mattered: it matched `rgba(...)` only, while every translucent thing Flip
+     GENERATES is written as an 8-digit hex -- the blur halo, and every Motion
+     Smear ghost. rgbOf reads the hex-8 form happily and drops the alpha on the
+     way past, so a ghost at '#ffffff37' came back 'rgb(185, 185, 185)':
+     22% opacity in, fully opaque out.
+
+     What that looked like in the app: a 2-3px Smudge on a generated Motion
+     Smear put a large opaque scalloped white cap on the drawing. Measured, the
+     same gesture, near-opaque pixels before -> after:
+
+         plain O          1763 -> 1770      (+7, proportional)
+         smear, n=8          0 -> 2238
+         smear, n=18         0 -> 3455
+         smear, n=40         0 -> 3839
+
+     An untouched Motion Smear paints NO opaque pixels at all -- it is
+     translucent everywhere -- so those are not a deformation getting stronger.
+     They are ink that stopped being see-through.
+
+     AND IT COMES BACK AS HEX, not as rgba(). alphaOf -- which decides whether a
+     stroke gets its own offscreen layer -- recognises rgba() and not hex-8, and
+     that asymmetry is deliberate: it is how a translucent pass stays off
+     LAYER_BUDGET. Returning rgba() here would preserve the number and break the
+     budget instead, and past the budget the whole frame paints direct and every
+     other stroke on it changes. One small smudge would repaint the page. */
   function mix(col, toward, t) {
     var a = rgbOf(col), b = rgbOf(toward);
     if (!a || !b) return col;
@@ -86,10 +120,11 @@
     var r = _clamp255(a[0] + (b[0] - a[0]) * t),
         g = _clamp255(a[1] + (b[1] - a[1]) * t),
         bl = _clamp255(a[2] + (b[2] - a[2]) * t);
-    var am = (typeof col === 'string')
-      ? col.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i)
-      : null;
+    var str = (typeof col === 'string') ? col : '';
+    var am = str.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i);
     if (am) return 'rgba(' + r + ', ' + g + ', ' + bl + ', ' + am[1] + ')';
+    var hx = str.match(/^#([0-9a-f]{6})([0-9a-f]{2})$/i);
+    if (hx) return '#' + _hex2(r) + _hex2(g) + _hex2(bl) + hx[2];
     return 'rgb(' + r + ', ' + g + ', ' + bl + ')';
   }
 
