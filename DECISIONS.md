@@ -7989,3 +7989,105 @@ on a tree with the player's call deleted -- each file carries an inline fallback
 whose DECLARATION reads exactly that, so the check found the definition of the
 thing it was checking for the use of. Three instruments, three releases, one
 habit: **a check is not evidence until it has been shown to go red.**
+
+## v299 -- six silent failures in the generative engine, and the sealing tool's own honesty
+
+**The engine work in this release came out of a seven-lens audit of v298, and
+every finding in it is a thing that produced no error message.** A crash
+announces itself; none of these did. The release's shape is that list.
+
+**A STROKE THAT MOVED WAS DECLARED STILL BECAUSE IT WAS DRAWN CAREFULLY.**
+tweenHeldStill decides whether a paired stroke is interpolated or carried
+across untouched. It walked `i < min(a.length, b.length)` while computing its
+parameter as `i / (a.length - 1)`, so where `a` was the denser of the two the
+loop ran out long before the parameter reached 1 and only the LEADING FRACTION
+of `a` was ever compared. An arm 100px long, drawn with 400 points and redrawn
+with 4 swung 40 degrees -- the tip travels 68px against a 6px brush --
+presented 0.4px of movement and was called still. `tweenHeldStill(dense,
+sparse)` said held still; `tweenHeldStill(sparse, dense)` said moved. The
+answer depended on which page was drawn more carefully, and it failed in the
+dropping direction: the one stroke that moved is the one both buttons left
+out, with the strokeGroup counts identical either way.
+
+**WALKING BOTH BY INDEX WAS THE FIRST FIX AND IT WAS WRONG**, which is why
+there are two property assertions and not one. Reading each stroke at the
+nearest VERTEX to a shared parameter is symmetric and covers the whole arc, and
+makes the quantisation the entire answer: on a 200px line held perfectly still,
+4 vertices against 512 land up to 33px apart. Measured on that version: 0 of 81
+asymmetric, and 42 of 81 identical gestures reported MOVED, with every scenario
+assertion in both suites still green. Both runs are resampled BY ARC LENGTH
+now -- the same walk tweenAlign performs on the pair it is about to interpolate.
+**Geometry describes the drawing; sampling describes how we observed it.**
+
+**A TAP IS ORDINARY DRAWING AND THE IN-BETWEEN HAD THREE WAYS OF LOSING ONE.**
+A dot paints a filled disc of the pen's width -- 482 ink pixels at size 12 --
+the matcher exempts it from the length guard on purpose so it can pair with the
+run it becomes, and tweenResample carries a branch for it. Every part of the
+machinery supported a dot except the two that had to emit one. buildInbetween's
+`if (n < 2) continue` dropped a dot paired with a dot without a word, and where
+the pages held nothing but taps it refused the whole in-between, telling the
+artist the pages needed drawing on them while they were looking at the drawing
+on them. And ibFit tested `pa`'s spread about its centroid and not `pb`'s --
+`pb` being the side ibUnapply DIVIDES BY. `T.scale || 1` guards against exactly
+zero and the value it has to survive is never exactly zero: a dot resampled to
+a run is n copies of one point, whose centroid comes back as 399.99999999999994,
+so the fitted scale is 4.1e-31. Dividing by it put the stroke at x = 1.04e17.
+**The mirror case already worked, which is why it went unseen** -- with the tap
+on the first page it is `norm` that collapses, and that one was tested.
+
+**A MIDDLE POSE HAS TO LAND IN THE MIDDLE.** carveForInsert took ONE slot off
+the pose however long the pose was held. At hold 2 and 3 that is the evenest
+cut available; above them it is not, and the badge offers x4 directly:
+
+    pose held    1    2    3    4    5    6    7    8
+    was        1:1  1:1  2:1  3:1  4:1  5:1  6:1  7:1
+    is         1:1  1:1  2:1  2:2  3:2  3:3  4:3  4:4
+
+At 12fps a page held x4 put its midpoint 250ms into a 333ms interval instead of
+167ms. The geometry was right and the timing was not, which reads as the first
+pose hanging and then a flicker -- the same complaint the doubling in that
+function was written to answer, arriving by the other road. The audit named
+hold 3 as the first bad case; the sweep says 3 is already optimal and the break
+is at 4. **Swept rather than sampled, deliberately: at hold 2 and 3 "take a
+slot" and "take half" agree, and those are the holds every other fixture used.**
+
+**AND THE CORPUS SAYS THE ROTATION CLIFF IS GONE.** All 22 cases were
+re-rendered on both trees with the same runner. Correspondence did not move in
+any of the 44 rows; 18 of 22 images are pixel-identical. The four that changed
+are every closed path under a real rotation, and no others: a closed path is
+the only kind with a phase to search, and scored before the fit a half-turn
+makes every point far from its counterpart, so the search picked an offset the
+rotation then had to explain as shape change. Case 22's melted bean is a sharp
+L at 90 degrees now, perimeter +15.5%. **Case 07 is a trade and is recorded as
+one**: the pointed diamond is gone, but a quarter turn explains an axis-swap
+squash almost exactly (-88.5 degrees, scale 1.005), so the midpoint now reads
+as a turn. Nothing in the geometry distinguishes the two, and an animator
+squashing a ball wants a circle there, which neither version gives.
+
+**THE CORPUS CANNOT SEE TWO OF THIS RELEASE'S OWN FIXES**, and that is recorded
+rather than glossed: every corpus page holds 1, the one hold at which the old
+carve rule and the new one agree, and no case contains a tap.
+
+**THEN THE TOOL THAT SEALS ALL THIS.** release_status had no `state` parameter,
+so a run on a dirty tree printed `FULL RELEASE PASS` two lines above `NOT A
+SEALABLE RUN`, strongest label on top. And a file could be in the frozen hash
+and in no commit: tree_hash walks `find . -type f` -- whatever is on disk --
+while source_state asked `git diff --name-only HEAD`, which reports only what
+git TRACKS, so an untracked file entered the hash while the record said clean.
+The check is DERIVED FROM tree_files() rather than restated beside it, so the
+two cannot drift.
+
+**THE JOB THAT RUNS ALL 100 SUITES WAS THE ONE WITH NO SKIP GUARD**, while the
+two jobs that run a single suite each had one. run_harness.sh exits 0 on a skip
+-- correctly, because two lanes are designed to skip there -- so a failed
+browser install would have left that job green having demonstrated almost
+nothing. The guard is not "no skips", which can never hold, but "only the two
+that are supposed to".
+
+**EVERY FIX IN THIS RELEASE WAS MUTATED PER COMPONENT**, and three times the
+mutation changed what was written. The two generative buttons spend `unpaired`
+differently, so they cannot share an assertion: the smear loses a trail, the
+in-between loses a position. Reverting only one caller of carveForInsert leaves
+the other's sweep red. And a check filed here as inert -- "the pair occupies
+what the pose did" -- turned out to catch the half-applied fix, so the note
+describing it was corrected before the commit rather than after.
