@@ -677,6 +677,108 @@ with sync_playwright() as p:
           f"well, so residual alone picks one at random and the in-between "
           f"rotates a shape that never moved")
 
+    # ---------------------------------------------------------------- v300
+    # THE PLAINEST THING THE FEATURE DOES, and until now the only one of the
+    # corpus's expectations with no assertion behind it: a drawing that MOVED
+    # and did nothing else. The half-turn above pins the case with a rotation in
+    # it and the circle pins the case with none; neither says where the ink
+    # lands, and "lands half way" is the whole promise of a middle pose.
+    #
+    # An outside review of v299 asked the corpus to state a per-case
+    # expectation rather than only a picture. Five of its six were already
+    # gated here -- the tap, the erased hole, the timing of the carve, the
+    # rigid turn, the density sweep -- and this was the gap.
+    #
+    # TWO READINGS, BECAUSE THEY FAIL SEPARATELY. Where the ink LANDED is
+    # ibApply's business; what the fit CONCLUDED is ibFit's. Measured, with
+    # ibApply's centroid lerp removed, the middle pose sits on top of the first
+    # one -- 90px out -- and the fit still reads a perfect translation, because
+    # nothing about the fit was touched.
+    #
+    # AND RECORDED AT TWO DENSITIES, because that is what the second reading is
+    # for. The same L, one pose taken at four times the samples along two of its
+    # arms: identical geometry, different recording. With tweenResample walking
+    # by INDEX instead of arc length the even pair is still exact -- it is
+    # uniformly sampled, so the two rules agree -- and the lopsided pair reads a
+    # 38.7 degree turn, a scale of 0.57 and 122px of residual on a drawing that
+    # only slid sideways. One fixture at one density cannot see it.
+    print("\nA DRAWING THAT ONLY MOVED lands half way, however it was recorded")
+
+    TRANS = """(lopsided) => {
+      // An L, and the same L 180 right and 90 down. Nothing else differs.
+      const seg = (a, b, per) => { const o = [];
+        for (let i = 0; i <= per; i++) { const u = i / per;
+          o.push({ x: a[0] + (b[0]-a[0])*u, y: a[1] + (b[1]-a[1])*u,
+                   size: 6, color: '#ffffff', erase: false, t: 0 }); } return o; };
+      const L = (dx, dy, lop) => {
+        const P = [[200,200],[440,200],[440,260],[300,260],[300,400],[200,400]];
+        const out = [];
+        for (let s = 0; s < P.length - 1; s++) {
+          const per = lop ? (s < 2 ? 48 : 6) : 16;
+          const r = seg([P[s][0]+dx, P[s][1]+dy], [P[s+1][0]+dx, P[s+1][1]+dy], per);
+          for (let i = (s ? 1 : 0); i < r.length; i++) out.push(r[i]);
+        }
+        return out; };
+      const mk = (r) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        r.forEach((q, i) => { const c = Object.assign({}, q);
+          if (i === 0) c.start = true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(r.length); return f; };
+      const A = mk(L(0, 0, false)), B = mk(L(180, 90, !!lopsided));
+      // The centre a person would point at: the middle of the INK, weighted by
+      // how much ink there is, not the mean of however many samples recorded it.
+      const arc = (r) => { let tot = 0, cx = 0, cy = 0;
+        for (let i = 1; i < r.length; i++) {
+          const d = Math.hypot(r[i].x - r[i-1].x, r[i].y - r[i-1].y);
+          tot += d; cx += (r[i].x + r[i-1].x) / 2 * d;
+                    cy += (r[i].y + r[i-1].y) / 2 * d; }
+        return tot > 0 ? { x: cx/tot, y: cy/tot } : { x: r[0].x, y: r[0].y }; };
+      frames.length = 0; frames.push(A); frames.push(B);
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const n0 = frames.length;
+      addInbetween();
+      if (frames.length <= n0) return { made: false };
+      const g = frames[1];
+      const ca = arc(A.strokes), cb = arc(B.strokes), cg = arc(g.strokes);
+      // What the fit concluded, read the way the half-turn pin above reads it.
+      const ra = tweenVisible(A).ink, rb = tweenVisible(B).ink;
+      const nn = Math.max(ra[0].length, rb[0].length);
+      const pa = tweenResample(ra[0], nn);
+      const pb = ibPhase(pa, tweenResample(rb[0], nn));
+      const T = ibFit(pa, pb);
+      const loc = ibUnapply(pb, T);
+      let e = 0;
+      for (let i = 0; i < nn; i++) e += Math.hypot(loc[i].x - pa[i].x, loc[i].y - pa[i].y);
+      return { made: true, dx: cg.x - (ca.x + cb.x) / 2, dy: cg.y - (ca.y + cb.y) / 2,
+               deg: Math.abs(T.angle) * 180 / Math.PI, scale: T.scale, resid: e / nn };
+    }"""
+
+    _tr = { "even": page.evaluate(TRANS, False),
+            "lopsided": page.evaluate(TRANS, True) }
+    check("both translation fixtures produced an in-between",
+          all(v.get("made") is True for v in _tr.values()), str(_tr))
+    _far = { k: (round(v.get("dx", 999), 2), round(v.get("dy", 999), 2))
+             for k, v in _tr.items()
+             if not v.get("made") or max(abs(v["dx"]), abs(v["dy"])) > 2.0 }
+    check("a drawing that only moved is drawn half way between, to the pixel",
+          not _far,
+          f"{_far} — the middle pose belongs at the midpoint of the two "
+          f"centres. Without ibApply's centroid lerp it sits on top of the "
+          f"first pose, 90px away, which reads as the drawing not moving "
+          f"until it jumps")
+    _bent = { k: (round(v.get("deg", 999), 2), round(v.get("scale", 0), 4),
+                  round(v.get("resid", 999), 2))
+              for k, v in _tr.items()
+              if not v.get("made") or v["deg"] > 1.0
+              or abs(v["scale"] - 1.0) > 0.02 or v["resid"] > 0.5 }
+    check("...and it is fitted as a move: no turn, no scale, nothing left over",
+          not _bent,
+          f"{_bent} — a slide has no rotation and no size change in it. "
+          f"Sampled by index rather than arc length the lopsided pose fits as "
+          f"a 38.7 degree turn at 0.57 scale carrying 122px of residual, and "
+          f"the evenly-recorded pair cannot tell you so")
+
     print("\nUNDO — an in-between is one action, and undoing it is not a blank page")
 
     _iu = page.evaluate("""() => {
