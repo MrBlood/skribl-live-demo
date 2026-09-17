@@ -378,13 +378,48 @@ the default brush) and **looks worse**: the whole held band moves as a rigid
 slab, so the V notch becomes a flat-bottomed trough with two horns. Rendered
 side by side, the shipped V is the better drawing. Rejected on the picture.
 
-**What is actually left** is the outside review's own suggestion, and it is a
-prototype rather than a change: compare this vector mechanism against an
-image-space smudge on a scratch raster, to find out whether the ceiling is the
-mechanism or the tuning. Do not commit to a storage-format change before that
-prototype says it is worth one. A frame is strokes, and a raster smudge would
-need a layer the format does not have -- which is the same honest limit
-`lib/brushfield.js` already states about blur.
+**THE RASTER PROTOTYPE WAS BUILT, AND THE ANSWER IS NO.** The outside review
+asked for an image-space smudge on a scratch raster, to learn whether the
+ceiling is the mechanism or the tuning. It exists, it works, and it loses.
+
+Five versions were needed before the compositing was even correct, and each
+failure is worth recording because a future attempt will otherwise rediscover
+them in the same order:
+
+1. *Stamping once per pointer sample.* An 84px tile stamped 90 times eats a
+   hole in the line it is dragging. Brushes stamp at a fraction of their own
+   diameter.
+2. *Coarse spacing to fix that.* Corduroy: every stamp shows as a ridge.
+3. *Smudging over an opaque white fill.* Every tile carries ~95% background, so
+   every stamp BLEACHES the line. No parameter avoids it. The layer has to be
+   transparent -- which Skribl already does for a frame (`frameCv`).
+4. *source-over on a transparent layer.* Only ever adds, so two dozen stamps
+   per brush-width composite to solid black whatever the strength.
+5. *Lerp on lay-down but not on pick-up.* The carry never dilutes crossing bare
+   canvas, so the streak comes out one density all the way down -- no taper.
+   Depletion is the taper.
+
+With all five fixed the compositing is right, and the output is still a soft
+grey band. **Every raster variant replaces a crisp line with mush, and the
+shipped V -- the one the owner does not like -- is the sharper, more legible
+drawing of the two.** A better-tuned raster smudge than this one certainly
+exists; what this establishes is that it is not cheap, and that the thing it
+buys is not obviously worth having on a drawing whose whole look is a clean
+stroke.
+
+**And the decisive argument does not depend on the prototype's quality at all.
+A FRAME IS STROKES.** Smudging to pixels means the page stops being strokes,
+and strokes are what Pad replays, what the player draws, what export reads and
+what the `.skribl` format stores. Raster smudge is not a rendering change, it
+is a format change, and it would cost the one property that makes Skribl
+unusual -- that the artefact is a process rather than a picture. That is the
+same limit `lib/brushfield.js` already states about blur, and it is the reason
+to stop here rather than tune further.
+
+**So the carry ceiling stands as a known, measured limitation.** If it is ever
+worth attacking, attack it in vector -- something that keeps strokes as strokes
+and beats the shipped V on a side-by-side. Rasterising the page is not the way
+past it.
 
 **And do not fix this by making the notch deeper.** Nothing above says the
 current output is ugly; it says the tool ignores most of a long gesture. If a
