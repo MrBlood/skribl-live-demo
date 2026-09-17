@@ -426,6 +426,97 @@ current output is ugly; it says the tool ignores most of a long gesture. If a
 prototype cannot beat the shipped V on a side-by-side, the right answer is to
 leave the mechanism alone and say in the UI what it does.
 
+## 6g. The crochet stitch on a Motion Smear (measured, v301)
+
+The owner looked closely at a smear and asked what the pattern was. It is not a
+texture: **it is the samples themselves.** A smear is N translucent copies of
+the drawing laid along the travel; a closed shape's copies cross their
+neighbours, and near the top and bottom of a loop they cross at a shallow angle
+and leave a brighter node. Regular spacing, regular nodes, visible moiré.
+
+**THE SAMPLE COUNT IS BRUSH-BLIND, AND THAT IS THE CAUSE.** The planner picks
+`min(TWEEN_SAMPLES, what fits the point cap, what fits the group cap)` and
+nothing in it knows how wide the brush is. Measured on one drawing at one
+travel, the planner chose **27 positions at every brush from 2px to 48px** --
+gap always 8.5px. What changes is only whether the brush can bridge it:
+
+    brush   gap/brush   ripple
+      2 px      4.25x    28.8%
+      3 px      2.83x    29.1%
+      7 px      1.21x    13.1%
+     20 px      0.42x     8.1%
+     48 px      0.18x     1.7%
+
+(Ripple is the tone wobble along the travel after the smooth part is subtracted,
+calibrated first against cases already known: 53% at 16 samples, 7.4% at 108.)
+
+**The trail already solved this and the samples never inherited it.**
+`SMEAR_TRAIL_OVERLAP` spaces trail ghosts at 0.7 of a brush width, and the
+comment beside it tells the owner's own story -- a 3px line travelling 220px,
+six ghosts 18px apart, "the page reads as six separate lines". Same failure,
+other population.
+
+**THREE FIXES WERE TRIED. ALL THREE ARE REJECTED, AND THE REASONS DIFFER.**
+
+*Sample denser.* Works: 26 -> 120 samples takes the ripple 32.3% -> 5.7%, and
+the per-frame budget allows it (39% of the 20,000-point cap). **It does not
+scale to a document.** `MAX_TOTAL_POINTS` is 200,000 for the whole Skribl, a
+smeared page costs ~1,755 points where a hand-drawn one costs ~65, and so:
+
+    samples      pts/page    smeared pages that fit    100 pages =
+      26 (now)      1,755                       113     88% of cap
+         120        7,865                        25    393% -- refused
+
+A hundred-slide flipbook of smears is already at 88% of the budget as it
+ships. Denser sampling caps it at 25.
+
+*Jitter the sample positions* -- free, breaks the regularity. Measured worse at
+every brush width (32.3% -> 36.9% at 2px) and worse to look at: a regular
+lattice becomes uneven clumping, which reads as a mistake rather than a texture.
+
+*Trade detail for samples* -- the trail's own trick (`SMEAR_TRAIL_COARSE`: a
+ghost carries a quarter of the pose's points). At a flat point total (1,755 ->
+1,785) the ripple collapses 32.3% -> 5.8%. It looked like the answer. Rendered,
+the O is a visible **polygon**; at 8 points per pose it is a hexagon.
+
+**AND THE INSTRUMENT COULD NOT SEE THAT, WHICH IS THE PART TO REMEMBER.** The
+ripple measure subtracts a moving average, so it reads high-frequency wobble.
+Faceting is a SMOOTH low-frequency error -- exactly what the subtraction
+removes. The number said "fixed" while the drawing got worse. Any future
+attempt here needs a shape-fidelity measure beside the ripple one, or it will
+be fooled the same way.
+
+So the stitch stands as a **known limit with a price nobody wants to pay**,
+not an oversight with a patch behind it. The fix that works does not scale and
+the fixes that scale do not work. Do not spend more here without a genuinely
+new idea, and whatever it is, judge it on a picture.
+
+## 6h. Nothing tells you the document budget until you post (v301)
+
+Found while measuring 6g, and it is the more actionable of the two.
+
+`MAX_TOTAL_POINTS` is 200,000 across a whole Skribl. **Nothing client-side
+tracks it.** The smear planner budgets per FRAME -- `TWEEN_POINT_CAP` 14,000,
+`TWEEN_GROUP_CAP` 4,500 -- and no code anywhere sums the document. The limit is
+enforced only by the server, at POST.
+
+It is not a silent failure: the server answers "Too many points overall (limit
+200000)" and `showShareError` puts it on screen, and the drawing is safe
+locally. But it arrives **at the end of the work**, and it names the limit
+rather than what is consuming it. A generated page costs roughly **27x a
+hand-drawn one** (~1,755 points against ~65 on the same drawing), so the real
+budget is "how many smears", and nothing says so until it is spent.
+
+Worth fixing, and cheaply: the editor already knows every frame's point count.
+A running total, and a check before the button rather than after it, would turn
+a wall at the end into a number you can watch. That is a smaller job than
+anything in 6g and it helps the exact user who hits 6g -- somebody making a
+long flipbook full of smears.
+
+**Do not "fix" it by raising MAX_TOTAL_POINTS.** The cap exists to stop a
+payload that pins a phone, and the comment above it in `validation.py` says so.
+The problem is that the client spends a budget it cannot see.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
