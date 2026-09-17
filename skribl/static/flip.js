@@ -5955,16 +5955,72 @@ function tweenPlan(per, groupsPer, atFps, reserve){
    case, and both guards that might have cost more than they saved. It is one
    unusual edit, the result is visible rather than silent, and undo is one
    tap. */
-const TWEEN_MATCH_LENGTH = 4;
+const TWEEN_MATCH_LENGTH = 6;
 // Shorter than this and there is no length to compare: a dot, or a tap.
 const TWEEN_MATCH_DOT = 2;
 const TWEEN_MATCH_SAMPLES = 12;
+/* HOW MUCH A LENGTH MISMATCH COSTS, as a fraction of the shape cost. The 4x
+   guard below is a cliff and nothing reaches it: a body of 192px against an
+   arm of 140px is 1.37x, so shape and position decided alone -- and when a
+   limb swings 145 degrees it lands about where the body is, leaving two
+   straight lines of similar length separated by 1.3 units out of 23. That is
+   luck, not a property, and the arc-length centre was enough to flip it.
+   Length is the honest discriminator and the guard already says so: a stroke
+   does not change length much by moving. Graded, so it breaks near-ties
+   without overruling shape; multiplicative, so it is scale-free. */
+const TWEEN_MATCH_LENSKEW = 1;
 
-// Each page about its own centre, so a drawing that travels still pairs.
+/* Each page about its own centre, so a drawing that travels still pairs.
+
+   WEIGHTED BY ARC LENGTH, NOT BY POINT COUNT -- v298's V19, open until now.
+   This summed every recorded POINT and divided by how many there were, so a
+   stroke taken slowly at 150 samples pulled the centre 150 times while the
+   same stroke swept at 20 pulled it 20. Density is a property of pen speed
+   (lib/inputsamples.js thins at MIN_DIST); it is not a property of the
+   drawing. GEOMETRY DESCRIBES THE DRAWING; SAMPLING DESCRIBES HOW WE OBSERVED
+   IT, and a reference centre is a question about the first.
+
+   It shows up where shape CANNOT break the tie: three identical circles with
+   the middle one moved (corpus case 19) pair [0,1,2] evenly sampled and
+   [1,0,2] as a hand records them, which draws as two circles colliding on the
+   left instead of the middle one travelling.
+
+   THE MEAN OF PER-STROKE CENTROIDS IS NOT THE FIX, and was tried first: it
+   weights a short stroke like a long one, so verify_inbetween's extraOnFirst
+   -- a page holding a line, a hexagon and a circle against a page holding only
+   the hexagon and circle -- moves the centre FURTHER than point-counting did.
+   An unpaired stroke is exactly what disturbs a page centre, and the cure has
+   to be no worse than the disease.
+
+   Integrating position along the ink is both: sampling-invariant, because arc
+   length is a property of the path, and proportionate, because a stroke counts
+   for its length rather than for existing. A TAP has no arc length and is
+   still ink, so it counts for the one length it does have -- its pen width. */
 function tweenCentred(runs){
-  let x = 0, y = 0, n = 0;
-  for(const r of runs) for(const p of r){ x += p.x; y += p.y; n++; }
-  const cx = x / Math.max(1, n), cy = y / Math.max(1, n);
+  let wx = 0, wy = 0, w = 0;
+  for(const r of runs){
+    if(!r.length) continue;
+    let span = 0;
+    for(let i = 1; i < r.length; i++){
+      const d = Math.hypot(r[i].x - r[i - 1].x, r[i].y - r[i - 1].y);
+      if(!(d > 0)) continue;
+      wx += (r[i].x + r[i - 1].x) / 2 * d;
+      wy += (r[i].y + r[i - 1].y) / 2 * d;
+      w += d; span += d;
+    }
+    if(!(span > 0)){
+      const d = (typeof r[0].size === 'number' ? r[0].size : 6);
+      wx += r[0].x * d; wy += r[0].y * d; w += d;
+    }
+  }
+  // Nothing with any extent at all: the old reading is as good as any.
+  if(!(w > 0)){
+    let x = 0, y = 0, n = 0;
+    for(const r of runs) for(const p of r){ x += p.x; y += p.y; n++; }
+    const px = x / Math.max(1, n), py = y / Math.max(1, n);
+    return runs.map(r => r.map(p => ({ x: p.x - px, y: p.y - py })));
+  }
+  const cx = wx / w, cy = wy / w;
   return runs.map(r => r.map(p => ({ x: p.x - cx, y: p.y - cy })));
 }
 /* Mean distance between correspondingly sampled points, taking the better of
@@ -5972,16 +6028,34 @@ function tweenCentred(runs){
    and the fixture for it is in the set above. */
 function tweenShapeCost(A, B){
   const n = TWEEN_MATCH_SAMPLES;
-  const at = (r, t) => {
-    const i = t * (r.length - 1), k = Math.floor(i), f = i - k;
-    const p = r[k], q = r[Math.min(k + 1, r.length - 1)];
+  /* ALONG THE ARC, NOT ALONG THE INDEX -- the second sampling dependency, and
+     the one that survives fixing the page centre. This read `t * (r.length -
+     1)`, a VERTEX fraction, so a stroke whose points bunch where the hand
+     slowed had its samples bunch there too: half way through the list is not
+     half way along the drawing. Measured on the fixture below, clustering
+     within a stroke was the larger of the two effects. */
+  const walk = (r) => {
+    const d = [0];
+    for(let i = 1; i < r.length; i++)
+      d.push(d[i - 1] + Math.hypot(r[i].x - r[i - 1].x, r[i].y - r[i - 1].y));
+    return d;
+  };
+  const at = (r, d, t) => {
+    const total = d[d.length - 1];
+    if(!(total > 0)) return { x: r[0].x, y: r[0].y };   // a tap, or a run that never moved
+    const target = total * t;
+    let j = 1;
+    while(j < d.length - 1 && d[j] < target) j++;
+    const seg = d[j] - d[j - 1], f = seg > 0 ? (target - d[j - 1]) / seg : 0;
+    const p = r[j - 1], q = r[j];
     return { x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f };
   };
+  const dA = walk(A), dB = walk(B);
   let fwd = 0, rev = 0;
   for(let i = 0; i < n; i++){
     const t = i / (n - 1);
-    const a = at(A, t);
-    const bf = at(B, t), br = at(B, 1 - t);
+    const a = at(A, dA, t);
+    const bf = at(B, dB, t), br = at(B, dB, 1 - t);
     fwd += Math.hypot(a.x - bf.x, a.y - bf.y);
     rev += Math.hypot(a.x - br.x, a.y - br.y);
   }
@@ -6082,7 +6156,14 @@ function tweenMatch(inkA, inkB){
   for(let i = 0; i < ca.length; i++)
     for(let j = 0; j < cb.length; j++){
       const r = tweenShapeCost(ca[i], cb[j]);
-      pairs.push({ i: i, j: j, cost: r.cost, reversed: r.reversed });
+      /* Exempt for the same reason the hard guard is: below a pen width there
+         is no length to compare, and a dot pairing with the run it becomes is
+         the case v255 went out of its way to support. */
+      const la = lenA[i], lb = lenB[j];
+      const lo = Math.min(la, lb), hi = Math.max(la, lb);
+      const skew = (lo > TWEEN_MATCH_DOT && hi > 0) ? (hi - lo) / hi : 0;
+      pairs.push({ i: i, j: j, reversed: r.reversed,
+                   cost: r.cost * (1 + TWEEN_MATCH_LENSKEW * skew) });
     }
   pairs.sort((p, q) => p.cost - q.cost);
   const out = new Array(ca.length).fill(null), taken = {};
