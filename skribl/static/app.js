@@ -4205,7 +4205,11 @@ function showPlayerError(msg, canRetry) {
   const flipMs = isFlip
     ? (_hold ? _hold.msTable(flipFrames, flipFps) : flipFrames.map(f => {
         const h = Math.round(Number(f && f.hold));
-        return (1000 / flipFps) * ((isFinite(h) && h >= 1) ? Math.min(h, 4) : 1);
+        // 8, not 4: the same ceiling holdtiming.js and validation.py carry. A
+        // subdivided document stores holds up to 8, so clamping at 4 here made
+        // every such page play half as long as the artist set it -- on the one
+        // surface that has no lib to correct it.
+        return (1000 / flipFps) * ((isFinite(h) && h >= 1) ? Math.min(h, 8) : 1);
       }))
     : null;
   const flipDurMs = isFlip

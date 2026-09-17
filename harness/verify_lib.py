@@ -52,7 +52,17 @@ with sync_playwright() as p:
     npg.on("pageerror", lambda e: nerrs.append(str(e)))
     npg.route("**/lib/audioloop.js*", lambda r: r.abort())
     npg.goto(BASE+"/flip", wait_until="load"); npg.wait_for_timeout(1200)
-    check("lib genuinely absent", npg.evaluate("() => typeof window.SkriblAudioLoop"), "undefined")
+    # COMPARED, NOT COERCED. This read
+    #     check("lib genuinely absent", npg.evaluate("() => typeof ..."), "undefined")
+    # where check(name, ok, detail) makes `ok` the typeof STRING and "undefined"
+    # the detail. Every string is truthy, so it passed whether the module was
+    # blocked or not — and it is the guard that makes the negative tests below
+    # it mean anything, so a route() that silently stopped matching would have
+    # left them proving nothing at all.
+    _absent = npg.evaluate("() => typeof window.SkriblAudioLoop")
+    check("lib genuinely absent", _absent == "undefined",
+          f"typeof window.SkriblAudioLoop = {_absent!r} — if the module loaded, "
+          f"the assertions below are measuring the lib-present path")
     npg.set_input_files("#musicInput", WAV); npg.wait_for_timeout(3000)
     thrown = npg.evaluate("""() => { try { buildLoopAudioBuffer(); return null; }
                                      catch (e) { return e.constructor.name + ': ' + e.message; } }""")

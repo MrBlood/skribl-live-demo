@@ -352,8 +352,18 @@ function writeFrames(list){
 // Owned by lib/holdtiming.js, which both this editor and the player read, so
 // the clamp cannot drift between what you preview and what a viewer gets.
 // Inline fallback for a surface that somehow loads without the lib.
+/* 8, NOT 4, and the 4 was a real 2x bug rather than a stale-looking number.
+   This is the ceiling on the STORED unit -- frameHold() clamps to it and
+   carveForInsert refuses a subdivision that would push any page past it -- and
+   subdividing a document doubles every hold, so a page the artist holds x4
+   stores as 8. holdtiming.js has said 8 since the carve landed and
+   validation.py agrees; only this fallback and app.js's were left at the
+   pre-subdivision number. On a surface that loaded without the lib, every
+   x8 page clamped to 4 and the flip played at half its length.
+   UI_MAX_HOLD below is the separate thing the BADGE cycles through, and that
+   one really is 4. */
 const MAX_HOLD = (typeof window !== 'undefined' && window.SkriblHold)
-  ? window.SkriblHold.MAX_HOLD : 4;
+  ? window.SkriblHold.MAX_HOLD : 8;
 /* What the BADGE offers, which is not what the format stores. MAX_HOLD is the
    ceiling on the stored unit and doubles when a document is subdivided; this is
    the number of steps a person cycles through, and it does not move. Reading the
@@ -439,7 +449,23 @@ function healFrame(f){
      absurd or hand-edited value lands somewhere sane instead of propagating. */
   const hold = frameHold(f);
   const strokes = Array.isArray(f.strokes) ? f.strokes : [];
-  const groups = Array.isArray(f.strokeGroups) ? f.strokeGroups.slice() : [];
+  /* STRICTLY POSITIVE, the rule skribl/validation.py states and enforces at
+     POST and this side did not. A group is a stroke's point count, and neither
+     editor can emit a zero -- Flip sets curCount=1 before pushing, the Pad only
+     pushes a non-empty stroke. But healFrame is the gate for the paths the
+     SERVER never sees: the autosave, a restored draft, a hand-edited .skribl.
+     Its only test was that the entries SUM to the point count, and [0, 10]
+     sums to 10 exactly as [10] does, so a zero rode straight through.
+     Downstream, tweenShapeCost reads r[0].x of the empty run it produces, and
+     both the In-between and Motion Smear buttons died on an uncaught TypeError
+     with no chip -- a dead button and no reason given. Reproduced on both
+     before this was written.
+     Rounded and filtered rather than rejected, because a frame arriving from
+     an old draft should be healed into something usable, which is what every
+     other line of this function does. */
+  const groups = (Array.isArray(f.strokeGroups) ? f.strokeGroups : [])
+    .map(c => Math.round(Number(c)))
+    .filter(c => isFinite(c) && c > 0);
   let n = 0;
   for(const c of groups) n += c;
   if(n === strokes.length) return { strokes: strokes, strokeGroups: groups, hold: hold };
@@ -2258,7 +2284,7 @@ function buildStrip(){
     // already follows. A page with no hold still shows nothing.
     const _h = artistHold(f);
     el.innerHTML='<div class="num">'+_numTxt+'</div>'
-      +'<button class="del" title="Delete frame">'+DEL_SVG+'</button>'
+      +'<button class="del" title="Delete page" aria-label="Delete page">'+DEL_SVG+'</button>'
       +'<button class="holdbadge'+(_h>1?'':' idle')+'" '
         +'title="Hold this page longer — tap to cycle" '
         +'aria-label="Hold page '+(i+1)+', shown '+_h+' time'+(_h===1?'':'s')+'">'
@@ -5992,15 +6018,49 @@ function tweenShapeCost(A, B){
    there is often NO box that picks out the one you mean -- measured: a box
    drawn around the arm selected the body and the leg with it. Nobody has to
    draw that box now. Aiming by hand still works and still overrides. */
+/* BOTH STROKES READ AT THE SAME PARAMETER, and over the WHOLE of it. This
+   walked `i < Math.min(a.length, b.length)` while computing its parameter as
+   `i / (a.length - 1)`, so when a was the denser of the two the loop ran out
+   long before the parameter reached 1 and the comparison saw only the LEADING
+   FRACTION of a. Measured on an arm anchored at the origin, 100px long, drawn
+   with 400 points on one page and redrawn with 4 points swung 40 degrees on
+   the next -- the tip travels 68px against a 6px brush:
+
+       tweenHeldStill(dense, sparse)   held still     (1% of the arc compared)
+       tweenHeldStill(sparse, dense)   moved
+
+   The answer depended on which page was drawn more carefully, and in the
+   dropping direction: through tweenAlign the arm went to `unpaired` and was
+   drawn once, so the one stroke that moved is the one the in-between left out.
+   That is the silent failure the note above calls the worst outcome, and it
+   needs no unusual drawing to reach -- one pose taken slowly and the next
+   taken fast is how anybody animates.
+
+   WALKING BOTH BY INDEX IS NOT THE FIX, and measuring said so. Reading each
+   stroke at the nearest VERTEX to a shared parameter makes the quantisation
+   the whole answer: on a straight 100px line held perfectly still, four
+   vertices against four hundred land up to 17px apart for no reason but the
+   count, and the same arm that used to be wrongly called still is then
+   wrongly called moved. GEOMETRY DESCRIBES THE DRAWING; SAMPLING DESCRIBES HOW
+   WE OBSERVED IT. Displacement is a question about the first.
+
+   So both runs are resampled BY ARC LENGTH to a common count -- tweenResample,
+   the same walk tweenAlign performs on the pair it is about to interpolate, so
+   the verdict is measured on exactly the representation that will be tweened.
+   Arc length is a property of the path, so two recordings of one gesture agree
+   however densely either was taken; the denser of the two sets the count, as
+   it does everywhere else here, so detail is never thrown away to ask the
+   question. Pen width is read from both runs for the same reason the positions
+   are: nothing about this measure may depend on which page was passed first. */
 function tweenHeldStill(a, b){
-  const n = Math.min(a.length, b.length);
-  if(!n) return false;
+  if(!a.length || !b.length) return false;
+  const n = Math.max(a.length, b.length);
+  const pa = tweenResample(a, n), pb = tweenResample(b, n);
+  const size = (p) => (typeof p.size === 'number' ? p.size : 6);
   let moved = 0, width = 0;
   for(let i = 0; i < n; i++){
-    const t = i / Math.max(1, a.length - 1);
-    const j = Math.round(t * (b.length - 1));
-    moved += Math.hypot(a[i].x - b[j].x, a[i].y - b[j].y);
-    width += (typeof a[i].size === 'number' ? a[i].size : 6);
+    moved += Math.hypot(pa[i].x - pb[i].x, pa[i].y - pb[i].y);
+    width += (size(pa[i]) + size(pb[i])) / 2;
   }
   return (moved / n) <= (width / n);
 }
@@ -6188,7 +6248,15 @@ function tweenVisible(f){
   for(let i = 0; i < runs.length; i++){
     const run = runs[i];
     const from = at; at += run.length;
-    if(run.length && run[0].erase){ erase.push(run); continue; }
+    // AN EMPTY RUN IS NOT INK. This function already asks `run.length` before
+    // reading run[0] for the eraser cases and then fell through to push the
+    // empty run into `ink` anyway, where everything downstream assumes a first
+    // point. healFrame now drops the zero groups that produce one; this is the
+    // same rule stated where `ink` is actually built, so a frame that reaches
+    // here by some other road still cannot hand the matcher a run with nothing
+    // in it. Contributing 0 to `at`, it leaves inkSpans aligned either way.
+    if(!run.length) continue;
+    if(run[0].erase){ erase.push(run); continue; }
     const later = [];
     for(let j = i + 1; j < runs.length; j++)
       if(runs[j].length && runs[j][0].erase) later.push(runs[j]);
@@ -6642,7 +6710,8 @@ function buildTween(a, b, want){
    page's duration at all, and then the pose can hand half of itself over. After
    the carve, pose + in-between occupy exactly what the pose occupied alone.
 
-   Returns the index to insert at, having made room before it. */
+   Returns {at, hold} -- where the page goes, and how many slots were freed for
+   it -- or null when the interval cannot be cut any finer. */
 function carveForInsert(at){
   if(frameHold(frames[at]) < 2){
     /* SUBDIVIDING HAS TO BE BOUNDED, and the first version was not. Doubling
@@ -6662,13 +6731,72 @@ function carveForInsert(at){
        self-limiting: subdiv cannot exceed 8 whatever the counter says. */
     // Doubling every hold must not push one past what holdOf() will read back,
     // or the clamp silently shortens it and the document speeds up.
-    for(const f of frames) if(frameHold(f) * 2 > MAX_HOLD) return -1;
+    for(const f of frames) if(frameHold(f) * 2 > MAX_HOLD) return null;
     // Nothing on screen changes length -- every page keeps hold/fps.
     fps *= 2; subdiv *= 2;
     for(const f of frames) f.hold = frameHold(f) * 2;
   }
-  frames[at].hold = frameHold(frames[at]) - 1;   // the slot the new page will use
-  return at + 1;
+  /* SPLIT THE INTERVAL, don't shave ONE SLOT off the end of it. This took a
+     single slot however long the pose was held, which is right at hold 2 and 3
+     and wrong at every hold above them -- and the badge offers x4 directly, so
+     a hold of 4 is one tap away on a fresh document:
+
+         pose held   was        is      at 12fps, where the midpoint lands
+              2      1:1       1:1      half way        half way
+              3      2:1       2:1      2/3 of the way  (3 slots cut no finer)
+              4      3:1       2:2      250 of 333ms -> 167 of 333ms
+              8      7:1       4:4      583 of 667ms -> 333 of 667ms
+
+     A GENERATED PAGE IS A MIDPOINT. Its geometry is the pose half way between
+     two drawings, and a midpoint that is shown for the last eighth of the
+     interval is not at the middle of anything -- it reads as the first pose
+     hanging and then a flicker before the second. That is the same complaint
+     the doubling above was written to answer, arriving by the other road: that
+     one was the interval getting LONGER, this one is it landing off centre.
+
+     The pose keeps the odd slot, because it is a drawing somebody made and the
+     other one is not. What must not change is the SUM: the pair occupies
+     exactly what the pose occupied alone, so no page after this one moves. */
+  const whole = frameHold(frames[at]);
+  // At least 2: either it already was, or the doubling above just made it so.
+  const give = Math.floor(whole / 2);
+  frames[at].hold = whole - give;
+  return { at: at + 1, hold: give };
+}
+
+/* ---------- undoing a generated page ----------------------------------------
+   A CARVE IS NOT A STROKE, AND UNDO USED TO TREAT IT AS ONE. addTween and
+   addInbetween inserted a page and cleared the redo stack but never wrote to
+   actionLog, so undoStroke fell straight through to its generic tail -- which
+   pops the last stroke GROUP off the current page. The current page, after
+   `idx++`, is the generated one. Measured on two poses: smear added ->
+   3 pages, groups 14, points 134; one Undo -> still 3 pages, groups 13, points
+   104, chip still reading "Motion smear added". The 30 points it removed were
+   the full-strength pose, so the page was left as a trail with nothing at its
+   head, and pressing Undo again ate into the artist's own stroke history. The
+   note at the head of the matcher justifies a known mispairing risk with the
+   words "undo is one tap"; it was not.
+
+   THE STATE IS RESTORED, NOT INVERTED -- the same reasoning selframe records.
+   carveForInsert may multiply fps and subdiv and rewrite every page's hold, and
+   inverting that means dividing, which does not round-trip once a hold has been
+   clamped. Snapshotting the three values and putting them back is exact. */
+function genCarveState(){
+  return { fps: fps, subdiv: subdiv, holds: frames.map(f => f.hold) };
+}
+
+function noteGenPage(at, was, page, label){
+  // `page` is kept by reference on purpose: genRecipe is a WeakMap keyed on the
+  // frame object, so holding the same object is what lets a redone page still
+  // rebuild from its recipe instead of falling back to raw strokes.
+  noteAction({ type: 'genpage', at: at, label: label, page: page,
+               before: was, after: genCarveState() });
+}
+
+function applyCarveState(s){
+  fps = s.fps; subdiv = s.subdiv;
+  for(let i = 0; i < frames.length && i < s.holds.length; i++)
+    frames[i].hold = s.holds[i];
 }
 
 /* Inserts the exposure between this page and the next. */
@@ -6689,11 +6817,14 @@ function addTween(){
   // page, and the two it was made from.
   const _r = genRecipe.get(t);
   if(_r){ _r.print = genPrint(t); _r.a = genPrint(a); _r.b = genPrint(b); }
-  const _at = carveForInsert(idx);
-  if(_at < 0){ chip('These pages are already as close together as they go'); return; }
+  const _was = genCarveState();
+  const _c = carveForInsert(idx);
+  if(!_c){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
-  t.hold = 1;
-  frames.splice(_at, 0, t); idx++;
+  // The slots carveForInsert freed, not a hard 1: see the split note there.
+  t.hold = _c.hold;
+  frames.splice(_c.at, 0, t); idx++;
+  noteGenPage(_c.at, _was, t, 'Motion smear');
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   // Say WHICH it was. A person who selected part of the drawing and got the
   // same six words as always cannot tell whether the selection was read.
@@ -6763,6 +6894,9 @@ function ibClosed(pts){
   return Math.hypot(pts[0].x - pts[pts.length-1].x,
                     pts[0].y - pts[pts.length-1].y) < len * 0.12;
 }
+/* Squared distance between correspondingly sampled points, with no fit in
+   between. Used for OPEN paths only -- see ibPhase for why asking the fit which
+   end of a stroke is its start gets the answer wrong. */
 function ibCost(pa, pb){
   let s = 0;
   for(let i = 0; i < pa.length; i++){
@@ -6773,35 +6907,93 @@ function ibCost(pa, pb){
 }
 const ibSpin = (a, k) => a.slice(k).concat(a.slice(0, k));
 
-/* The phase search, bounded. Trying every rotation of a 440-point circle at
-   full resolution is 440x440 distance sums PER STROKE, which is the kind of
-   arithmetic that shows up as a locked-up phone. Search at 24 points, then
-   refine at full resolution within one coarse step of the winner: same answer,
-   a couple of thousand operations instead of a couple of hundred thousand. */
+/* How much a turn has to EARN before the fit is allowed to claim it, as a
+   fraction of the arc a typical point would travel. See ibPhase. */
+const IB_TURN_PENALTY = 0.15;
+
+/* Which rotation of a closed path lines up with pose A -- SCORED AFTER THE
+   SIMILARITY FIT, not before it.
+
+   THIS USED TO SCORE BY RAW POINT DISTANCE and hand the winner to ibFit, which
+   is backwards: for a shape that has TURNED, the correspondence whose points
+   land nearest in page coordinates is exactly the one that explains the turn
+   away. The fit then had a wrong angle to work from, and ibApply rotated by a
+   wrong angle x t. Measured on the corpus at t = 0.5, an L rotated a half-turn
+   was fitted at 2.8 degrees carrying 44.42px of residual when 180.00 degrees
+   with 0.00px was available -- and that answer was the UNSPUN correspondence,
+   so the old scorer took a perfect pairing and spun it into a melted bean. A
+   square turning 51.6 degrees came out a rounded heptagon the same way.
+
+   RESIDUAL ALONE IS NOT ENOUGH, and this is the half that is easy to miss. A
+   straight line recorded end-to-start fits as a 180-degree rotation with
+   EXACTLY the residual of not turning at all -- both zero -- and an eye-lid arc
+   flattening to a line ties the same way. Scored on residual only, a stick
+   figure's arms swing the long way round and a gently tilting line snaps
+   vertical; both were measured, and neither is visible in the rotation cases
+   that motivated the change. So the score carries a penalty on |angle|, scaled
+   by the pose's mean radius so that it is in PIXELS, like the residual it joins.
+   Among explanations that fit equally well, the smaller motion is the one the
+   artist meant. Swept over 0, 0.05, 0.15, 0.30 and 0.60: at 0.15 three runs
+   improve and none regress, and the plateau is wide enough that the exact
+   value is not load-bearing.
+
+   WHAT IT STILL CANNOT DO, recorded rather than left to be discovered: ibFit is
+   a similarity -- rotation and UNIFORM scale. A squash is an anisotropic scale,
+   which the model cannot express, so a tall ellipse becoming a wide one is
+   explained as the same ellipse turned 90 degrees, at a residual of 5.85px
+   against 92.32px for any uniform-scale alternative. The penalty cannot close a
+   gap that size and should not try. Fixing that means fitting non-uniform
+   scale, which is a different change.
+
+   THE SEARCH IS COARSE THEN REFINED, AND SCORES AT FULL RESOLUTION THROUGHOUT.
+   Scoring the coarse pass on a 24-point resample is cheaper and loses the
+   optimum: measured, it misses the multi-object case by 1.3-2.6px at every
+   point count from 120 up. Probing full-resolution spins at a coarse STRIDE
+   instead matches an exhaustive search 25/25 at n = 120, 300 and 600, for about
+   the same cost -- the refine window dominates either way -- at roughly 8ms per
+   run at 600 points. */
 function ibPhase(pa, pb){
   const n = pa.length;
   const cands = [pb, pb.slice().reverse()];
+  let cx = 0, cy = 0;
+  for(const p of pa){ cx += p.x / n; cy += p.y / n; }
+  let rad = 0;
+  for(const p of pa) rad += Math.hypot(p.x - cx, p.y - cy) / n;
+  const score = (q) => {
+    const T = ibFit(pa, q), loc = ibUnapply(q, T);
+    let e = 0;
+    for(let i = 0; i < n; i++) e += Math.hypot(loc[i].x - pa[i].x, loc[i].y - pa[i].y);
+    return e / n + IB_TURN_PENALTY * Math.abs(T.angle) * rad;
+  };
   if(!(ibClosed(pa) && ibClosed(pb))){
-    // Open path: direction only. There is no phase to find -- the ends are the
-    // ends -- and spinning one would start the stroke in its own middle.
+    /* Open path: direction only, and judged by RAW DISTANCE rather than by the
+       score above. There is no phase to find -- the ends are the ends -- so the
+       only question is whether the stroke was drawn backwards, and proximity
+       answers it directly.
+
+       SCORING THIS BRANCH AFTER THE FIT IS WRONG, and it was tried: a limb
+       whose two poses SHARE their start point was fitted reversed, at 109
+       degrees and scale 0.786, because reversing lets a similarity transform
+       explain the shape more cheaply than the truth does. The in-between then
+       abandoned the shared start point and came out inside-out. Fitting decides
+       WHICH ROTATION of a closed loop lines up, where there is genuinely no
+       canonical first point; it must not be asked which END of an open stroke
+       is the start, because the drawing already says. */
     return ibCost(pa, cands[0]) <= ibCost(pa, cands[1]) ? cands[0] : cands[1];
   }
   const K = Math.min(n, 24);
-  const ca = tweenResample(pa, K);
-  let bestC = Infinity, bestOrient = 0, bestK = 0;
-  for(let o = 0; o < 2; o++){
-    const cb = tweenResample(cands[o], K);
-    for(let k = 0; k < K; k++){
-      const c = ibCost(ca, ibSpin(cb, k));
-      if(c < bestC){ bestC = c; bestOrient = o; bestK = k; }
+  const stride = Math.max(1, Math.floor(n / K));
+  let bc = Infinity, bestOrient = 0, bestK = 0;
+  for(let o = 0; o < 2; o++)
+    for(let k = 0; k < n; k += stride){
+      const c = score(ibSpin(cands[o], k));
+      if(c < bc){ bc = c; bestOrient = o; bestK = k; }
     }
-  }
-  const centre = Math.round(bestK * n / K), span = Math.ceil(n / K) + 1;
   const cand = cands[bestOrient];
-  let best = ibSpin(cand, ((centre % n) + n) % n), bc = ibCost(pa, best);
-  for(let d = -span; d <= span; d++){
-    const k = ((centre + d) % n + n) % n;
-    const r = ibSpin(cand, k), c = ibCost(pa, r);
+  let best = ibSpin(cand, bestK);
+  for(let d = -stride; d <= stride; d++){
+    const k = ((bestK + d) % n + n) % n;
+    const r = ibSpin(cand, k), c = score(r);
     if(c < bc){ bc = c; best = r; }
   }
   return best;
@@ -6816,15 +7008,41 @@ function ibFit(pa, pb){
   let cax = 0, cay = 0, cbx = 0, cby = 0;
   for(let i = 0; i < n; i++){ cax += pa[i].x / n; cay += pa[i].y / n;
                               cbx += pb[i].x / n; cby += pb[i].y / n; }
-  let num = 0, den = 0, norm = 0;
+  let num = 0, den = 0, norm = 0, normB = 0;
   for(let i = 0; i < n; i++){
     const ax = pa[i].x - cax, ay = pa[i].y - cay;
     const bx = pb[i].x - cbx, by = pb[i].y - cby;
-    num += ax * by - ay * bx; den += ax * bx + ay * by; norm += ax * ax + ay * ay;
+    num += ax * by - ay * bx; den += ax * bx + ay * by;
+    norm += ax * ax + ay * ay; normB += bx * bx + by * by;
   }
+  /* A RUN THAT COLLAPSES TO A POINT HAS NO ROTATION AND NO SCALE TO FIND, and
+     this guarded one of the two directions. `norm` is pa's spread about its own
+     centroid and was tested; pb's was not, and pb is the side that gets DIVIDED
+     BY -- ibUnapply carries pb back through 1 / T.scale.
+
+     `T.scale || 1` there is a guard against exactly zero, and the value it has
+     to survive is never exactly zero. A dot resampled to a run is n copies of
+     one point, so its centroid comes back as 399.99999999999994 rather than
+     400, every offset is float dust around 5e-14 instead of 0, and the fitted
+     scale is 4.1e-31 -- small enough to be meaningless, large enough to sail
+     past `|| 1`. Dividing by it put the in-between's stroke at x = 1.04e17.
+     Measured, and on the shipped tree: a line on one page and a tap on the next
+     produced a page whose ink was a hundred thousand million million pixels off
+     canvas, which reads as a page that simply came out blank.
+
+     THE MIRROR CASE ALREADY WORKED, which is why this went unseen: with the tap
+     on the FIRST page it is `norm` that collapses, and that one was tested. Same
+     two drawings, opposite order, one of them fine.
+
+     So both extents are tested, by the same floor, and a degenerate fit returns
+     the transform that is actually determined: the translation between the two
+     centroids. The shape interpolation below still carries the run into the dot
+     -- what is refused here is inventing a rotation and a scale out of dust. */
+  if(!(norm > 1e-9) || !(normB > 1e-9))
+    return { cax, cay, cbx, cby, angle: 0, scale: 1 };
   return { cax, cay, cbx, cby,
            angle: Math.atan2(num, den),
-           scale: norm > 1e-9 ? Math.hypot(den, num) / norm : 1 };
+           scale: Math.hypot(den, num) / norm };
 }
 // The fitted transform, partway. Rotation interpolates through the SHORT arc
 // because atan2 returns (-PI, PI]; a half turn is the one ambiguous case and
@@ -6875,7 +7093,37 @@ function buildInbetween(a, b, t){
        loses a stroke from the pose rather than crashing the editor. */
     if(!rb[s]) continue;
     const n = Math.max(ra[s].length, rb[s].length);
-    if(n < 2) continue;
+    /* A DOT HAS NO SHAPE, ONLY A PLACE -- and this used to `continue` on it,
+       which dropped the stroke from the generated page without a word. A tap is
+       ordinary drawing: it paints a filled disc of the pen's width (measured,
+       482 ink pixels at size 12), the matcher goes out of its way to pair one
+       against the run it becomes, and tweenResample carries a whole branch for
+       it. Every part of the machinery supports a dot except the one that emits
+       it. Two pages carrying [20, 1] produced an in-between carrying [20].
+
+       WHY THE GUARD WAS THERE, AND WHAT REPLACES IT rather than removing it: a
+       similarity fit needs two point pairs to have a rotation or a scale at
+       all, so ibFit on a single pair is not something to hand a dot to. But a
+       dot has no rotation and no scale to find -- interpolating its POSITION is
+       not an approximation of what the pipeline below would do, it is the whole
+       of what the pipeline below degenerates to. So the short case gets the
+       short answer instead of getting dropped.
+
+       n is exactly 1 here: it is the max of two run lengths, and tweenVisible
+       does not emit an empty run (v299, and verify_inbetween pins it), so both
+       runs hold their one point. */
+    if(n < 2){
+      const p = ra[s][0], q = rb[s][0];
+      const dot = Object.assign({}, p);
+      dot.x = p.x + (q.x - p.x) * t;
+      dot.y = p.y + (q.y - p.y) * t;
+      if(typeof p.size === 'number' && typeof q.size === 'number')
+        dot.size = p.size + (q.size - p.size) * t;
+      dot.start = true;
+      out.strokes.push(dot);
+      out.strokeGroups.push(1);
+      continue;
+    }
     const pa = tweenResample(ra[s], n);
     const pb = ibPhase(pa, tweenResample(rb[s], n));
     const T = ibFit(pa, pb);
@@ -6929,11 +7177,14 @@ function addInbetween(){
     });
     t.strokeGroups.push(run.length);
   }
-  const _at = carveForInsert(idx);
-  if(_at < 0){ chip('These pages are already as close together as they go'); return; }
+  const _was = genCarveState();
+  const _c = carveForInsert(idx);
+  if(!_c){ chip('These pages are already as close together as they go'); return; }
   invalidateClearUndo(); redoStack.length = 0;
-  t.hold = 1;
-  frames.splice(_at, 0, t); idx++;
+  // The slots carveForInsert freed, not a hard 1: see the split note there.
+  t.hold = _c.hold;
+  frames.splice(_c.at, 0, t); idx++;
+  noteGenPage(_c.at, _was, t, 'In-between');
   buildStrip(); render(); scheduleSave(); syncFlipDuration(); scrollStripToActive(true);
   chip('In-between added');
 }
@@ -8321,6 +8572,21 @@ function undoStroke(){
   // a move would silently leave the move in place.
   if(actionLog.length && typeof actionLog[actionLog.length-1] === 'object'){
     const m = actionLog.pop();
+    // A GENERATED PAGE IS ONE ACTION: the page and the carve that made room for
+    // it. Removing the page without restoring fps/subdiv/holds would leave the
+    // document running at the carved rate with one page missing, which is what
+    // deleting a generated page by hand still does.
+    if(m.type === 'genpage'){
+      frames.splice(m.at, 1);
+      applyCarveState(m.before);
+      // Back to the page the artist was on when they pressed the button.
+      idx = Math.max(0, Math.min(m.at - 1, frames.length - 1));
+      redoStack.push(m);
+      chip((m.label || 'Page') + ' undone');
+      buildStrip(); render(); updateToolState(); scheduleSave();
+      syncFlipDuration(); scrollStripToActive(true);
+      return;
+    }
     // A selection move touches index ranges on ONE page; a Move-mode move
     // touches whole pages. The object branch used to assume the second, so
     // undoing a selection drag would have translated the entire page.
@@ -8432,6 +8698,18 @@ function redoStroke(){
     actionLog.push(m);            // back on the history it came off
     chip(m.idxs.length > 1 ? 'Move redone on ' + m.idxs.length + ' pages' : 'Move redone');
     render(); m.idxs.forEach(i=>refreshThumb(i)); updateToolState(); scheduleSave();
+    return;
+  }
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'genpage'){
+    const m = redoStack.pop();
+    frames.splice(m.at, 0, m.page);
+    applyCarveState(m.after);
+    idx = Math.min(m.at, frames.length - 1);
+    actionLog.push(m);            // back on the history it came off
+    chip((m.label || 'Page') + ' redone');
+    buildStrip(); render(); updateToolState(); scheduleSave();
+    syncFlipDuration(); scrollStripToActive(true);
     return;
   }
   if(typeof redoStack[redoStack.length-1] === 'object'

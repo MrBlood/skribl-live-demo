@@ -395,6 +395,13 @@ try:
 finally:
     A._TRUSTED_PROXIES = _saved
 
+# IF YOU MUTATION-TEST THIS BLOCK, RESTART THE SERVER ON 5001. BASE is the
+# shared harness instance, and Flask runs it with --no-reload, so Python
+# imports skribl/security.py once at startup: editing the framing guard
+# mid-session changes nothing these requests see. Dropping the status half
+# and re-running LOOKED like the assertion below failing to discriminate,
+# when it was the old module still answering. Same shape as the Jinja
+# template cache noted in verify_a11y, one language over.
 print("\nR2#4 — framing keyed to the endpoint, not the /s/ path prefix")
 with sync_playwright() as p2:
     br2 = p2.chromium.launch(); c2 = br2.new_context()
@@ -415,6 +422,20 @@ with sync_playwright() as p2:
     unknown = c2.request.get(BASE + "/s/not-a-real-id")
     check("/s/<unknown-id> is a 404 that still carries the player shell",
           unknown.status == 404 and 'id="playerError"' in unknown.text(), str(unknown.status))
+    # AND ITS FRAMING, which this block did not check until v299 — the one
+    # route the guard exists for was the one route its own fa() helper was
+    # never pointed at. security.py:502 decides permissive framing with
+    # `endpoint == 'skribl_player' AND status == 200`, and the comment above
+    # that line says why the status half is there: a 404 raised INSIDE
+    # skribl_player still carries that endpoint. Deleting `and resp.status_code
+    # == 200` makes THIS response framable by any origin, and the mutation
+    # passed 315 assertions across this suite and verify_csp — every one of the
+    # four checks around it tests a different response.
+    check("...and an unknown /s/ id is framed restrictively",
+          fa("/s/not-a-real-id") == "frame-ancestors 'self'",
+          f"{fa('/s/not-a-real-id')!r} — a 404 that renders the player shell "
+          f"keeps the player's endpoint, so endpoint alone cannot decide this; "
+          f"without the status half it is embeddable anywhere")
     check("a genuine 404 is restrictive", fa("/definitely-not-a-route") == "frame-ancestors 'self'",
           str(fa("/definitely-not-a-route")))
     check("the API does NOT get permissive framing",

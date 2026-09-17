@@ -148,6 +148,79 @@ check("the same token is reused rather than rotated per request",
       again == token,
       "rotating per response breaks any client that cached the first one")
 
+# ------------------------------------------------------------------ v299
+# THE DESTRUCTIVE ROUTES, WHICH THE VALIDATOR DID NOT REACH UNTIL NOW.
+#
+# `bp.skribl_csrf` was consulted on POST and nowhere else, so DELETE and PATCH
+# — the two verbs that can destroy or unpublish someone's work — never called
+# it. An outside review drove the exact integration the package tells hosts to
+# build (cookie identity plus double_submit_csrf) with a cookie jar and no
+# header, and got PATCH 200 and DELETE 204 against a post it did not own.
+#
+# What protected them was the request SHAPE: a cross-origin DELETE or PATCH
+# carrying application/json is not a simple request, so the browser preflights
+# and this blueprint answers no Access-Control-Allow-* anywhere. That is real,
+# and it is not a server control — it lives in the caller's browser and three
+# ordinary deployment changes remove it. These assertions pin the server half.
+print("\nCSRF — the destructive verbs, not just POST")
+
+
+def raw_req(method, path, body=None, headers=None):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(BASE + path, method=method, data=data,
+                                 headers={"Content-Type": "application/json",
+                                          **(headers or {})})
+    try:
+        with opener.open(req, timeout=15) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+
+
+_hdr = {HEADER: token}
+_st, _body = raw_req("POST", "/api/skribls",
+                     {"frames": [{"strokes": [], "strokeGroups": [],
+                                  "background": {"color": "#101418"}}]}, _hdr)
+_made = json.loads(_body) if _st == 201 else {}
+_pid, _dtok = _made.get("id"), _made.get("deleteToken")
+check("a post to delete exists (fixture)", _st == 201 and bool(_pid), str(_st))
+
+# The cookie jar is carried on every one of these, so the ONLY thing missing is
+# the echoed header — which is exactly what a cross-origin caller cannot set.
+_st, _ = raw_req("PATCH", f"/api/skribls/{_pid}", {"visibility": "private"})
+check("PATCH without the header is refused", _st == 403,
+      f"{_st} — a third-party page could unpublish someone's Skribl; before "
+      f"v299 this answered 200")
+
+_st, _ = raw_req("DELETE", f"/api/skribls/{_pid}", {"deleteToken": _dtok})
+check("DELETE without the header is refused", _st == 403,
+      f"{_st} — before v299 this answered 204 and the post was gone")
+
+check("...and the post is still there afterwards",
+      raw_req("GET", f"/api/skribls/{_pid}")[0] == 200,
+      "a refused DELETE that still deleted would be the worst of both")
+
+# WITH the header they must still work, or the fix has simply broken the app.
+#
+# PATCH IS CHECKED AS "NOT REFUSED BY CSRF", not as 200, and the difference is
+# this instance rather than the route. It runs anonymous — no current_user_id
+# is wired — so nobody OWNS the post and the visibility route answers 404 for
+# "not yours" whatever the token says. Asserting 200 here would be asserting a
+# deployment that does not exist; asserting "no longer 403" is exactly what the
+# token is responsible for, and it is the half that would go red if the check
+# refused a well-formed request. The owned-post path is covered where identity
+# is actually wired (verify_privacy).
+_st, _ = raw_req("PATCH", f"/api/skribls/{_pid}", {"visibility": "private"}, _hdr)
+check("PATCH WITH the header gets past CSRF", _st != 403,
+      f"{_st} — 404 here is the ownership check, which is the next gate; 403 "
+      f"would mean a correct token was still being refused")
+
+_st, _ = raw_req("DELETE", f"/api/skribls/{_pid}", {"deleteToken": _dtok}, _hdr)
+check("DELETE WITH the header still works", _st == 204, str(_st))
+
+check("...and the post is gone", raw_req("GET", f"/api/skribls/{_pid}")[0] == 404,
+      "the capability still has to work when it is presented properly")
+
 # The Secure flag depends on Flask SEEING the original scheme, which behind a
 # TLS-terminating proxy is a deployment setting, not something this package can
 # know. An HTTPS site whose proxy headers are not trusted would ship this

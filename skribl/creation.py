@@ -68,7 +68,8 @@ from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
 from .deletion import hash_delete_token
 from .storage import claim_media, externalise_payload, pending_media_ready
 from .validation import (_iter_media_items, _payload_has_audio,
-                         _validate_payload_complexity, _validate_payload_media)
+                         _validate_payload_complexity, _validate_payload_extra,
+                         _validate_payload_media)
 
 
 def _installed_media_store():
@@ -239,6 +240,13 @@ def create_post(payload, *, author_id=None, media_store=None,
     media_error = _validate_payload_media(payload)
     if media_error:
         raise SkriblRejected(media_error)
+    # AND EVERYTHING NEITHER OF THEM LOOKED AT. The two checks above bound the
+    # keys the schema knows; this bounds the rest, which is what actually rides
+    # into the column. It runs AFTER them so the cheap structural refusals still
+    # come first and a hostile body is rejected before anything is serialised.
+    extra_error = _validate_payload_extra(payload)
+    if extra_error:
+        raise SkriblRejected(extra_error)
     # Frame-format Skribls carry the drawing under frames[] (a classic Skribl
     # is a 1-frame Skribl). Only a gross type check — keep unknown keys working.
     if "frames" in payload and not isinstance(payload["frames"], list):

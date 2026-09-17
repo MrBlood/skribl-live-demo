@@ -621,6 +621,89 @@ with sync_playwright() as p:
     pg.close()
     browser.close()
 
+# ------------------------------------------------------------------ v299
+# THE FALLBACK BRANCH, WHICH NOTHING HAD EVER EXECUTED.
+#
+# Every lib call site in this tree carries an inline fallback for "a surface
+# that somehow loads without the module", and the whole point of this suite is
+# that a rule with two copies and nothing forcing them to agree WILL drift. The
+# fallbacks were exempt from that: every assertion above evaluates
+# window.SkriblHold, so the lib-present path is pinned to the byte and the
+# lib-absent path was pinned by nothing at all.
+#
+# It had drifted. flip.js fell back to MAX_HOLD = 4 and app.js clamped with a
+# bare Math.min(h, 4), while holdtiming.js and validation.py both said 8. Those
+# are not the same number by a factor of two, and 4 is the PRE-SUBDIVISION
+# ceiling: carving a document doubles every hold, so a page the artist holds x4
+# stores as 8. On a surface loading without the lib, every such page clamped
+# back to 4 and the flip played at half its length -- which is, word for word,
+# the failure the block above says it exists to prevent.
+#
+# Blocking the request is the only way to reach this branch: the fallback is
+# chosen at load time by `window.SkriblHold` being absent, so nothing short of
+# the module not arriving exercises it.
+with sync_playwright() as _p2:
+    _b2 = _p2.chromium.launch()
+    _np = _b2.new_page(viewport={"width": 1000, "height": 860})
+    _np.route("**/lib/holdtiming.js*", lambda r: r.abort())
+    browsing.goto(_np, BASE, "/flip")
+    _np.wait_for_timeout(600)
+    _fb = _np.evaluate("""() => ({
+      libGone: typeof window.SkriblHold,
+      max: (typeof MAX_HOLD === 'number') ? MAX_HOLD : null,
+      uiMax: (typeof UI_MAX_HOLD === 'number') ? UI_MAX_HOLD : null,
+      // The clamp as the editor actually applies it, not the constant alone.
+      clamped: [1, 2, 4, 8, 9, 99].map(h => frameHold({ hold: h }))
+    })""")
+    check("the lib is genuinely absent for this probe",
+          _fb["libGone"] == "undefined",
+          f"typeof window.SkriblHold = {_fb['libGone']!r} — if the module still "
+          f"loaded, everything below is measuring the lib again")
+    check("the editor's fallback ceiling is the one the lib and server carry",
+          _fb["max"] == _V.MAX_HOLD,
+          f"fallback MAX_HOLD={_fb['max']}, lib and server say {_V.MAX_HOLD} — "
+          f"a subdivided page stores x8 and would clamp back to x{_fb['max']}, "
+          f"playing at half the length the artist set")
+    check("...and it clamps stored holds to that, not to the badge's range",
+          _fb["clamped"] == [1, 2, 4, _V.MAX_HOLD, _V.MAX_HOLD, _V.MAX_HOLD],
+          f"{_fb['clamped']} — x8 is a real stored value, not an absurd one")
+    # The badge is a DIFFERENT number that really is 4, and conflating the two
+    # is how the storage ceiling got written as 4 in the first place.
+    check("the badge's range is separate, and still 4",
+          _fb["uiMax"] == 4,
+          f"UI_MAX_HOLD={_fb['uiMax']} — what a person cycles through is not "
+          f"what the format stores")
+
+    # The player's own fallback, which is a second copy on a second surface.
+    # THE PAD, not Flip: app.js is the Pad's script and the player's, and it is
+    # app.js that carries the player's inline clamp. /flip loads flip.js.
+    _pp = _b2.new_page(viewport={"width": 1000, "height": 860})
+    _pp.route("**/lib/holdtiming.js*", lambda r: r.abort())
+    browsing.goto(_pp, BASE, "/")
+    _pp.wait_for_timeout(400)
+    # The URL is read off the page's own <script> tags rather than written out
+    # here, so a change to the static mount point cannot leave this silently
+    # fetching nothing. /static/skribl/app.js today, and not this check's
+    # business tomorrow.
+    _src = _pp.evaluate("""async () => {
+      const s = [...document.scripts].map(t => t.src)
+                  .find(u => /\\/app\\.js(\\?|$)/.test(u || ''));
+      if (!s) return '';
+      const r = await fetch(s);
+      return await r.text(); }""")
+    _pp.close(); _np.close(); _b2.close()
+    # Source-read, and deliberately: the player's fallback is inside a closure
+    # the page never exposes, so there is no window symbol to evaluate. Matched
+    # on the clamp EXPRESSION rather than on a bare number, so a comment
+    # mentioning 4 cannot satisfy it.
+    import re as _re
+    _m = _re.search(r"Math\.min\(h,\s*(\d+)\)", _src)
+    check("the player's inline clamp carries the same ceiling",
+          _m is not None and int(_m.group(1)) == _V.MAX_HOLD,
+          f"app.js clamps at {_m.group(1) if _m else 'no match'} against "
+          f"{_V.MAX_HOLD} — the same drift, on the surface with no lib to "
+          f"correct it")
+
 ok = sum(1 for o, _ in results if o)
 print("\n" + "=" * 62)
 print(f"{ok}/{len(results)} passed")

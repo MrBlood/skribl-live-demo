@@ -463,12 +463,12 @@ def register_routes(bp, *, index_route=False):
         # window where concurrent requests all saw room and all committed.
         # (Review round 2, #2)
 
-        # CSRF. Only enforced when the host wired a validator — an
-        # unauthenticated deployment has nothing to protect, and refusing posts
-        # from a client that was never given a token would just break it.
-        if bp.skribl_csrf and not bp.skribl_csrf[2](request):
-            return jsonify({"error": "Request could not be verified. "
-                                     "Please reload the page and try again."}), 403
+        # CSRF, through the same pair the destructive routes use. This was an
+        # inline copy of the rule until v299, when DELETE and PATCH gained the
+        # check and a second copy would have been a third place for the three
+        # to drift apart. See _csrf_ok, below, for when it is enforced at all.
+        if not _csrf_ok():
+            return _csrf_refusal()
 
         # IDEMPOTENCY (outside review, P1). A response lost in transit leaves
         # the client unable to tell "never happened" from "happened and I
@@ -902,25 +902,39 @@ def register_routes(bp, *, index_route=False):
     #
     # BE PRECISE ABOUT THE OWNED-POST CASE, because this comment used to wave
     # at it with "an authenticated deployment has already settled it" and that
-    # is not what settles it. The host's csrf verifier is consulted on POST and
-    # NOWHERE ELSE — these two routes never call it. An owned post is
-    # authorised by the session cookie, which is exactly the ambient authority
-    # CSRF exists to protect.
+    # is not what settles it. An owned post is authorised by the session
+    # cookie, which is exactly the ambient authority CSRF exists to protect.
     #
-    # What actually protects them is the request shape: DELETE and PATCH with
-    # `Content-Type: application/json` are not simple requests, so a
-    # cross-origin caller gets a CORS preflight, and this blueprint sends no
-    # Access-Control-Allow-* header anywhere (SKRIBL_EMBED_ORIGINS is CSP
-    # frame-ancestors, not CORS). The browser refuses before the real request
-    # leaves. A <form> cannot issue either verb at all.
+    # THE VALIDATOR IS NOW CONSULTED HERE TOO, and until v299 it was not: it
+    # ran on POST and nowhere else. What protected these two in the meantime
+    # was the request SHAPE — DELETE and PATCH with `Content-Type:
+    # application/json` are not simple requests, so a cross-origin caller gets
+    # a CORS preflight, and this blueprint sends no Access-Control-Allow-*
+    # header anywhere (SKRIBL_EMBED_ORIGINS is CSP frame-ancestors, not CORS).
+    # The browser refuses before the real request leaves, and a <form> cannot
+    # issue either verb at all.
     #
-    # SO THE PROTECTION IS REAL AND IT IS NOT THE ONE NAMED. Three changes
-    # would remove it without touching this file: adding CORS headers,
+    # THAT PROTECTION WAS REAL AND IT WAS NOT THE ONE NAMED, which is why it
+    # is no longer the only one. It lives outside this file and three ordinary
+    # changes remove it without touching a line here: adding CORS headers,
     # accepting the token from a query string or form encoding, or a host
-    # mounting the blueprint behind something that reflects Origin. Any of
-    # those makes enforcing bp.skribl_csrf here a prerequisite, and the clients
-    # already send the header (lib/postedui.js, lib/recoverykey.js) so that
-    # change would be one `if` on each route.
+    # mounting the blueprint behind something that reflects Origin. An outside
+    # review drove the third case end to end — cookie identity, no CSRF header
+    # — and got 200 on PATCH and 204 on DELETE against a post it did not own.
+    # The clients already send the header (lib/postedui.js, lib/recoverykey.js),
+    # so the fix cost one `if` on each route and nothing on the client.
+    #
+    # Still only enforced when the host WIRED a validator, exactly as POST does:
+    # an unauthenticated deployment has no ambient authority to abuse, and
+    # refusing a request from a client that was never given a token would break
+    # the standalone app for nothing.
+
+    def _csrf_ok():
+        return not bp.skribl_csrf or bp.skribl_csrf[2](request)
+
+    def _csrf_refusal():
+        return jsonify({"error": "Request could not be verified. "
+                                 "Please reload the page and try again."}), 403
 
     def _submitted_delete_token():
         """The capability from the body, or None.
@@ -943,6 +957,8 @@ def register_routes(bp, *, index_route=False):
         # query, exactly as GET does.
         if not _valid_public_id(public_id):
             return jsonify({"error": "Skribl not found."}), 404
+        if not _csrf_ok():
+            return _csrf_refusal()
         try:
             delete_post(public_id,
                         author_id=bp.skribl_current_user_id(),
@@ -975,6 +991,8 @@ def register_routes(bp, *, index_route=False):
         """Revoke, or re-publish. The only field a post may change."""
         if not _valid_public_id(public_id):
             return jsonify({"error": "Skribl not found."}), 404
+        if not _csrf_ok():
+            return _csrf_refusal()
         # THE SHAPE IS CHECKED BEFORE ANYTHING IS INDEXED, and the first
         # version of this route did not do that. `"visibility" in body`
         # is true for the JSON array ["visibility"] and for the JSON

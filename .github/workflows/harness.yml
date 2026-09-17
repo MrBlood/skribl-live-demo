@@ -82,6 +82,19 @@ jobs:
         run: python -m playwright install --with-deps chromium
       - name: Run the boot suite
         run: ./harness/run_harness.sh verify_boot.py
+      # Same hole as the sqlite job had, one suite wide: run_harness.sh exits 0
+      # on a skip, so a browser that failed to install would leave this job
+      # green having booted nothing. No lane is designed to skip here, so the
+      # guard is the simple one.
+      - name: Fail if the boot suite only SKIPPED
+        run: |
+          set -eu
+          if grep -qE '^  verify_boot\.py: SKIPPED' harness/LAST-RUN.txt; then
+            echo "::error::verify_boot.py skipped; this job proved nothing" >&2
+            grep -E '^  verify_boot' harness/LAST-RUN.txt >&2 || true
+            exit 1
+          fi
+          echo "the boot suite ran"
 
   sqlite:
     name: harness (sqlite)
@@ -117,6 +130,30 @@ jobs:
         run: python -m playwright install --with-deps chromium
       - name: Run the harness
         run: ./harness/run_harness.sh
+      # THE JOB THAT RUNS ALL 100 SUITES WAS THE ONE WITH NO SKIP GUARD, while
+      # the two jobs that run a single suite each had one. run_harness.sh exits
+      # 0 on a skip -- correctly, because two lanes are DESIGNED to skip here:
+      # Chromium ships no H.264 encoder, and this job has no cluster. But that
+      # makes a skip invisible to the exit code, so if the browser install had
+      # failed, every browser suite would have reported SKIPPED and this job
+      # would have gone green having demonstrated almost nothing.
+      #
+      # The guard is therefore not "no skips" -- that can never hold here --
+      # but "only the two that are supposed to". Read off the structured
+      # per-suite lines of the run record, not its prose summary.
+      - name: Fail if any suite but the two designed lanes SKIPPED
+        run: |
+          set -eu
+          unexpected=$(grep -E '^  verify_[a-z0-9_]+\.py: SKIPPED' harness/LAST-RUN.txt \
+                       | sed -E 's/^  (verify_[a-z0-9_]+\.py):.*/\1/' \
+                       | grep -vxE 'verify_mp4\.py|verify_postgres\.py' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::suites skipped that this job is supposed to run:"
+            echo "$unexpected" >&2
+            grep -E '^  verify_[a-z0-9_]+\.py: SKIPPED' harness/LAST-RUN.txt >&2 || true
+            exit 1
+          fi
+          echo "only the two designed lanes skipped"
       - name: Upload the run record
         if: always()
         uses: actions/upload-artifact@v4

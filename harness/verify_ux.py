@@ -25,6 +25,7 @@ import browsing
 BASE = "http://127.0.0.1:5001"
 import pathlib
 from assertions import make_check
+import source
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 results = []
@@ -1812,7 +1813,12 @@ with _sp204() as _p:
 
 print("\nAMENDMENT PINS — A1 wiring, A2 narrow-viewport frame")
 import re as _re
-_appjs = (ROOT / "skribl" / "static" / "app.js").read_text()
+# CODE ONLY. A mutation commented the late-decode hook out and left the
+# original line verbatim in the comment above it: the hook was never
+# defined, the feature was dead, and both pins below PASSED -- the second
+# reporting "3 references", because the comment added one. 371 assertions
+# green with the feature removed. See harness/source.py.
+_appjs = source.read_js(ROOT / "skribl" / "static" / "app.js")
 check("A1: the late-decode hook is defined",
       "_skriblLateAudio = " in _appjs or "_skriblLateAudio=(" in _appjs)
 check("A1: ...and invoked from the decode-complete path",

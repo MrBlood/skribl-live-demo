@@ -524,6 +524,440 @@ with sync_playwright() as p:
           f"shapes must come back; a changed profile is the pairing shifting "
           f"again on a page that was already generated")
 
+    # ---------------------------------------------------------------- v299
+    # UNDO ON AN IN-BETWEEN, WHICH FAILS DIFFERENTLY FROM UNDO ON A SMEAR.
+    #
+    # Both buttons carried the same defect — neither wrote to actionLog, so
+    # undoStroke fell through to its generic tail and popped the last stroke
+    # group off the page `idx` had just moved onto. But the VISIBLE outcome
+    # differs, so verify_tween's assertion does not cover this one: a smear page
+    # holds a pose plus many ghost runs, and losing one group leaves a trail
+    # with no head. An in-between page holds ONE crisp pose, so losing its only
+    # group leaves a BLANK PAGE in the middle of the flip, and pressing undo
+    # again then starts eating the artist's own drawing on the page before.
+    # That is the scenario pinned here, on the surface that can produce it.
+    # ---------------------------------------------------------------- v299
+    # A ZERO STROKE-GROUP KILLED THE BUTTON, SILENTLY.
+    #
+    # A group is a stroke's point count and must be strictly positive --
+    # skribl/validation.py says so at length and enforces it at POST, naming the
+    # editors that cannot emit one. healFrame is the gate for the paths the
+    # SERVER NEVER SEES: the autosave, a restored draft, a hand-edited .skribl.
+    # Its only test was that the entries SUM to the point count, and [0, 10]
+    # sums to 10 exactly as [10] does. Downstream, tweenShapeCost reads r[0].x
+    # of the empty run that produces, and BOTH generative buttons died on an
+    # uncaught TypeError with no chip: a dead button and no reason given.
+    #
+    # Two assertions because there are two guards, and they are reachable
+    # separately. The frame here is pushed STRAIGHT into frames, bypassing
+    # healFrame, so the button surviving is tweenVisible's doing; healFrame is
+    # measured on its own return value.
+    print("\nA ZERO GROUP — healed at the gate, and harmless past it")
+
+    _zero = page.evaluate("""() => {
+      const line = (y, n) => { const o = [];
+        for (let i = 0; i < n; i++) o.push({ x: 100 + i*15, y: y, size: 6,
+          color: '#ffffff', erase: false, t: 0, ...(i === 0 ? {start:true} : {}) });
+        return o; };
+      const mk = (y) => ({ strokes: line(y, 10), strokeGroups: [0, 10], hold: 1 });
+      const healed = healFrame(mk(200));
+      frames.length = 0; frames.push(mk(200)); frames.push(mk(320));
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length;
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = e.constructor.name + ': ' + e.message; }
+      return { healed: healed.strokeGroups, healedPts: healed.strokes.length,
+               threw: threw, made: frames.length > before,
+               chip: (document.getElementById('flipChip') || {}).textContent };
+    }""")
+    check("healFrame drops a zero group rather than carrying it",
+          _zero["healed"] == [10] and _zero["healedPts"] == 10,
+          f"{_zero['healed']} over {_zero['healedPts']} points — [0, 10] sums to "
+          f"10 exactly as [10] does, so a sum check alone lets it through")
+    check("...and a frame that still carries one does not kill the button",
+          _zero["threw"] is None and _zero["made"] is True,
+          f"threw {_zero['threw']!r}, made={_zero['made']} — the matcher read "
+          f"r[0].x of an empty run and the button died with no chip")
+    check("...and the page it makes says so",
+          bool(_zero["chip"]), f"{_zero['chip']!r}")
+
+    # ---------------------------------------------------------------- v299
+    # A SHAPE THAT TURNED IS FITTED AS TURNED.
+    #
+    # ibPhase picks which rotation of a closed path lines up with pose A. It
+    # used to score candidates by raw point distance and hand the winner to
+    # ibFit -- backwards, because for a shape that has turned, the pairing whose
+    # points land nearest in page coordinates is the one that explains the turn
+    # away. An L rotated a half-turn was fitted at 2.8 degrees carrying 44.42px
+    # of residual when 180 degrees at 0.00px was available, and the half-way
+    # pose came out a melted bean resembling neither end.
+    #
+    # ASSERT THE FITTED ANGLE, NOT THE PICTURE. Point counts and page sizes are
+    # the same either way -- that is precisely how this survived a corpus render
+    # -- so the discriminator is what the fit CONCLUDED. A half-turn must read as
+    # a half-turn and the residual must go to zero, because for a rigid rotation
+    # there is nothing left over once the turn is accounted for.
+    print("\nPHASE — the fit is scored after the rotation, not before it")
+
+    _rot = page.evaluate("""() => {
+      // An L, and the same L turned a half-turn about its own centre. A closed
+      // path, so there is a phase to get wrong.
+      const poly = (pts, per) => { const o=[];
+        for(let s=0;s<pts.length-1;s++){ const a=pts[s], b=pts[s+1];
+          for(let i=(s?1:0);i<=per;i++){ const u=i/per;
+            o.push({x:a[0]+(b[0]-a[0])*u, y:a[1]+(b[1]-a[1])*u,
+                    size:6, color:'#ffffff', erase:false, t:0}); } }
+        return o; };
+      const L = poly([[260,300],[450,300],[450,340],[300,340],[300,410],[260,410],[260,300]], 8);
+      const spin = (r, cx, cy, ang) => { const c=Math.cos(ang), s=Math.sin(ang);
+        return r.map(p => Object.assign({}, p,
+          { x: cx + (p.x-cx)*c - (p.y-cy)*s, y: cy + (p.x-cx)*s + (p.y-cy)*c })); };
+      const mk = (r) => { const f={strokes:[],strokeGroups:[],hold:1};
+        r.forEach((q,i)=>{ const c=Object.assign({},q);
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(r.length); return f; };
+      const A = mk(L), B = mk(spin(L, 353, 353, Math.PI));
+      const ra = tweenVisible(A).ink, rb = tweenVisible(B).ink;
+      const n = Math.max(ra[0].length, rb[0].length);
+      const pa = tweenResample(ra[0], n);
+      const pb = ibPhase(pa, tweenResample(rb[0], n));
+      const T = ibFit(pa, pb);
+      const loc = ibUnapply(pb, T);
+      let e = 0;
+      for(let i=0;i<n;i++) e += Math.hypot(loc[i].x-pa[i].x, loc[i].y-pa[i].y);
+      return { deg: Math.abs(T.angle) * 180 / Math.PI, scale: T.scale, resid: e/n };
+    }""")
+    check("a half-turn is fitted as a half-turn",
+          abs(_rot["deg"] - 180) < 1.0,
+          f"fitted {_rot['deg']:.2f}° — scored before the fit this reads "
+          f"2.8°, and the in-between is a melted bean")
+    check("...and a rigid turn leaves nothing to interpolate",
+          _rot["resid"] < 0.5 and abs(_rot["scale"] - 1.0) < 0.02,
+          f"residual {_rot['resid']:.2f}px, scale {_rot['scale']:.3f} — a shape "
+          f"that only turned has no residual; 44px of it is the turn being "
+          f"spent on deformation instead")
+
+    # THE OTHER HALF, and the reason residual alone is not the score. A CIRCLE
+    # is rotationally symmetric, so every spin of it fits with about the same
+    # residual -- there is no "better" correspondence for the fit to find, and
+    # scored on residual alone the winner is arbitrary. Measured: a circle whose
+    # second pose merely STARTS half a turn round is claimed as a 180-degree
+    # rotation. The circle did not spin; the pen began somewhere else on it, and
+    # that is the exact case this whole function exists to absorb.
+    #
+    # The penalty on |angle| is what breaks the tie, and this pin is what keeps
+    # it: a future simplification to "just minimise residual" looks right on the
+    # half-turn above and silently makes every symmetric shape spin.
+    _sym = page.evaluate("""() => {
+      const circle = (cx,cy,r,n,a0) => { const o=[];
+        for(let i=0;i<=n;i++){ const a=a0 + 2*Math.PI*i/n;
+          o.push({x:cx+r*Math.cos(a), y:cy+r*Math.sin(a),
+                  size:6, color:'#ffffff', erase:false, t:0}); } return o; };
+      const mk = (r) => { const f={strokes:[],strokeGroups:[],hold:1};
+        r.forEach((q,i)=>{ const c=Object.assign({},q);
+          if(i===0) c.start=true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(r.length); return f; };
+      // Same circle, same place. Only where the pen STARTED differs.
+      const A = mk(circle(300, 300, 88, 40, 0));
+      const B = mk(circle(300, 300, 88, 40, Math.PI));
+      const ra = tweenVisible(A).ink, rb = tweenVisible(B).ink;
+      const n = Math.max(ra[0].length, rb[0].length);
+      const pa = tweenResample(ra[0], n);
+      const T = ibFit(pa, ibPhase(pa, tweenResample(rb[0], n)));
+      return { deg: T.angle * 180 / Math.PI, closed: ibClosed(pa) };
+    }""")
+    check("the symmetric-shape fixture really is a closed path",
+          _sym["closed"] is True,
+          "an open path takes the direction-only branch and pins nothing here")
+    check("a circle drawn from a different start point did NOT spin",
+          abs(_sym["deg"]) < 30,
+          f"fitted {_sym['deg']:.1f}° — every spin of a circle fits equally "
+          f"well, so residual alone picks one at random and the in-between "
+          f"rotates a shape that never moved")
+
+    print("\nUNDO — an in-between is one action, and undoing it is not a blank page")
+
+    _iu = page.evaluate("""() => {
+      const pt = (x, y) => ({ x: x, y: y, size: 6, color: '#ffffff',
+                              erase: false, t: 0 });
+      const mk = (x) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        for (let i = 0; i <= 14; i++) {
+          const q = pt(x, 200 + i * 12); if (i === 0) q.start = true;
+          f.strokes.push(q); }
+        f.strokeGroups.push(15); return f; };
+      frames.length = 0; frames.push(mk(200)); frames.push(mk(400));
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length;
+      addInbetween();
+      if (frames.length === before) return { made: false };
+      const madeGroups = frames[idx].strokeGroups.length;
+      undoStroke();
+      return { made: true, madeGroups: madeGroups, pages: frames.length,
+               idx: idx, fps: fps, subdiv: subdiv,
+               holds: frames.map(f => f.hold),
+               // Every page still carries the drawing it was made with.
+               groupsPerPage: frames.map(f => f.strokeGroups.length),
+               pointsPerPage: frames.map(f => f.strokes.length) };
+    }""")
+    check("the fixture generated an in-between at all", _iu.get("made") is True,
+          str(_iu))
+    check("undo removes the in-between page rather than emptying it",
+          _iu.get("pages") == 2 and 0 not in (_iu.get("groupsPerPage") or [0]),
+          f"{_iu} — an in-between holds ONE group, so popping it left a blank "
+          f"page sitting in the middle of the flip")
+    check("...and both of the artist's own pages are untouched",
+          _iu.get("pointsPerPage") == [15, 15],
+          f"{_iu.get('pointsPerPage')} — a second undo used to start eating the "
+          f"drawing on the page before")
+    check("...and the carve is undone with it",
+          _iu.get("fps") == 12 and _iu.get("subdiv") == 1
+          and _iu.get("holds") == [1, 1], str(_iu))
+
+    # ---------------------------------------------------------------- v299
+    # ONE POSE TAKEN SLOWLY, THE NEXT TAKEN FAST.
+    #
+    # tweenHeldStill decides whether a paired stroke is interpolated or carried
+    # across from this page untouched, and it walked its loop to the SHORTER of
+    # the two runs while parameterising by the FIRST. Where the first was the
+    # denser, the parameter never reached 1 and only the leading fraction of the
+    # stroke was ever compared. An arm swung 40 degrees, drawn with 400 points
+    # and redrawn with 4, presented 0.4px of movement against a 6px brush and
+    # was declared still.
+    #
+    # WHY THIS IS NOT verify_tween's ASSERTION IN A DIFFERENT SUITE. The two
+    # buttons are two call sites into tweenAlign and they spend `unpaired`
+    # differently: the smear puts the stroke in `still` and draws it once, so
+    # what is lost there is the trail, measurable as the spread of angles it was
+    # laid down at. Here the stroke is appended to the generated page from THIS
+    # pose, so what is lost is the half-way position -- there is no trail to
+    # measure and no angles to spread. Measured on the broken tree: 0.0 degrees
+    # where 20.0 was drawn, with the strokeGroup counts IDENTICAL either way,
+    # which is why the measure has to be geometric.
+    print("\nTWO DENSITIES: a stroke is not 'still' because it was drawn carefully")
+
+    # 100px arm against a 500px body -- past the 4x the matcher's length guard
+    # allows, so the two cannot cross-pair and this stays a test of the
+    # still/moved measure rather than of the matcher.
+    page.evaluate("""() => {
+      const seg = (x0,y0,x1,y1,n) => { const pts = [];
+        for (let i = 0; i < n; i++) { const t = i/(n-1);
+          pts.push({ x: x0+(x1-x0)*t, y: y0+(y1-y0)*t, color: '#ffffff',
+                     size: 6, t: i, erase: false }); }
+        pts[0].start = true; return pts; };
+      const arm = (deg, n) => seg(300, 200,
+        300 + 100*Math.cos(deg*Math.PI/180), 200 + 100*Math.sin(deg*Math.PI/180), n);
+      const body = (dx) => seg(300+dx, 220, 300+dx, 720, 60);
+      const mk = (runs) => ({ strokes: [].concat(...runs),
+                              strokeGroups: runs.map(r => r.length), hold: 1 });
+      frames.length = 0;
+      frames.push(mk([body(0),  arm(0, 400)]));     // taken slowly
+      frames.push(mk([body(40), arm(40, 4)]));      // taken fast
+      idx = 0; buildStrip(); render();
+    }""")
+    ARM = """(f) => {
+      const fr = frames[f]; let at = 0, best = null;
+      for (const g of fr.strokeGroups) {
+        const r = fr.strokes.slice(at, at + g); at += g;
+        let L = 0;
+        for (let i = 1; i < r.length; i++) L += Math.hypot(r[i].x-r[i-1].x, r[i].y-r[i-1].y);
+        if (L >= 200) continue;                     // the body, not the arm
+        best = { deg: Math.atan2(r[r.length-1].y - r[0].y,
+                                 r[r.length-1].x - r[0].x) * 180/Math.PI, len: L };
+      }
+      return best;
+    }"""
+    _a0 = page.evaluate(ARM, 0)
+    page.evaluate("() => addInbetween()")
+    page.wait_for_timeout(300)
+    _amid = page.evaluate(ARM, 1)
+    _a2 = page.evaluate(ARM, 2)
+    check("the two poses were interpolated at all",
+          _amid is not None and page.evaluate("() => frames.length") == 3,
+          f"{_amid} — no arm on the generated page")
+    check("the arm sits half way through its swing, not where this page left it",
+          _amid is not None and abs(_amid["deg"] - 20) < 5,
+          f"{_amid['deg']:.1f}deg between the drawn {_a0['deg']:.1f} and "
+          f"{_a2['deg']:.1f} — landing on {_a0['deg']:.1f} means the arm was "
+          f"called held still and carried across from this pose untouched, "
+          f"which is the in-between quietly leaving out the thing that moved"
+          if _amid else str(_amid))
+    check("...and it kept its length getting there",
+          _amid is not None and abs(_amid["len"] - _a0["len"]) / _a0["len"] < 0.05,
+          f"{_amid['len']:.1f}px against the drawn {_a0['len']:.1f}px"
+          if _amid else str(_amid))
+
+    # ---------------------------------------------------------------- v299
+    # A TAP IS ORDINARY DRAWING, and the in-between had three separate ways of
+    # mishandling one. TWO MECHANISMS, in two functions, so they are mutated and
+    # asserted separately below -- an all-or-nothing revert shows red for one of
+    # them while the other's assertion pins nothing.
+    #
+    #   buildInbetween   `if (n < 2) continue` dropped a dot paired with a dot
+    #                    without a word; where the pages held NOTHING but dots it
+    #                    then refused the whole in-between, with a message saying
+    #                    the pages needed drawing on them.
+    #   ibFit            tested pa's spread about its centroid and not pb's, and
+    #                    pb is the side ibUnapply DIVIDES BY. A dot resampled to
+    #                    a run is n copies of one point, whose centroid comes
+    #                    back as 399.99999999999994 -- so the fitted scale is
+    #                    4.1e-31 rather than 0, sails past `T.scale || 1`, and
+    #                    1/4.1e-31 puts the stroke at x = 1.04e17.
+    #
+    # A DOT IS NOT AN EDGE CASE HERE. It paints a filled disc of the pen's width
+    # (measured: 482 ink pixels at size 12), tweenMatch exempts it from the
+    # length guard on purpose so it can pair with the run it becomes, and
+    # tweenResample carries a branch for it. Every part of the machinery supports
+    # a dot except the two that had to emit one.
+    print("\nA TAP: the in-between has to carry one, and both ways round")
+
+    DOTS = """(kind) => {
+      const pt = (x,y,s) => ({ x:x, y:y, color:'#ffffff', size:(s||6), t:0, erase:false });
+      const seg = (x0,y0,x1,y1,n) => { const o = [];
+        for (let i = 0; i < n; i++) { const t = i/(n-1);
+          o.push(pt(x0+(x1-x0)*t, y0+(y1-y0)*t)); }
+        o[0].start = true; return o; };
+      const dot = (x,y,s) => { const p = pt(x,y,s||12); p.start = true; return [p]; };
+      const mk = (runs) => ({ strokes: [].concat(...runs),
+                              strokeGroups: runs.map(r => r.length), hold: 1 });
+      const pages = {
+        // A line that plainly moves, and a tap that moves with it.
+        withLine: [[seg(100,100,300,100,20), dot(400,300)],
+                   [seg(100,200,300,200,20), dot(400,500)]],
+        // Nothing on either page BUT a tap.
+        only:     [[dot(200,200)], [dot(400,400)]],
+        // A line becoming a tap, and the same two drawings the other way round.
+        runToDot: [[seg(200,200,300,300,12)], [dot(400,400)]],
+        dotToRun: [[dot(200,200)], [seg(200,200,300,300,12)]]
+      }[kind];
+      frames.length = 0;
+      frames.push(mk(pages[0])); frames.push(mk(pages[1]));
+      idx = 0; buildStrip(); render();
+      const before = frames.length;
+      let threw = null;
+      try { addInbetween(); } catch (e) { threw = e.constructor.name + ': ' + e.message; }
+      if (frames.length <= before)
+        return { made: false, threw: threw,
+                 chip: (document.getElementById('flipChip') || {}).textContent };
+      let at = 0; const groups = [];
+      for (const n of frames[1].strokeGroups) {
+        const r = frames[1].strokes.slice(at, at + n); at += n;
+        let L = 0;
+        for (let i = 1; i < r.length; i++) L += Math.hypot(r[i].x-r[i-1].x, r[i].y-r[i-1].y);
+        groups.push({ n: n, len: L,
+                      cx: r.reduce((s,p) => s+p.x, 0)/n, cy: r.reduce((s,p) => s+p.y, 0)/n,
+                      deg: Math.atan2(r[n-1].y - r[0].y, r[n-1].x - r[0].x) * 180/Math.PI });
+      }
+      return { made: true, threw: threw, groups: groups };
+    }"""
+
+    # ---- mechanism 1: buildInbetween emits the dot instead of skipping it ----
+    _dl = page.evaluate(DOTS, "withLine")
+    _dots = [g for g in (_dl.get("groups") or []) if g["n"] == 1]
+    check("a tap paired with a tap is ON the generated page",
+          len(_dots) == 1,
+          f"{_dl} — both poses carry [20, 1] and the in-between carries what is "
+          f"listed here. A dropped tap says nothing and leaves no trace")
+    check("...and it sits half way between the two taps",
+          bool(_dots) and abs(_dots[0]["cx"] - 400) < 2 and abs(_dots[0]["cy"] - 400) < 2,
+          f"{_dots} — drawn at (400,300) and (400,500)")
+
+    _do = page.evaluate(DOTS, "only")
+    check("a page holding NOTHING but a tap still gets an in-between",
+          _do.get("made") is True,
+          f"{_do} — refusing here told the artist the pages needed drawing on "
+          f"them while they were looking at the drawing on them")
+
+    # ---- mechanism 2: ibFit refuses a fit it cannot compute ------------------
+    # CENTROID AND DIRECTION, because they fail differently and only one of them
+    # is the 1e17. With the tap on the SECOND page the stroke leaves the canvas;
+    # with the tap on the FIRST page it stays put and comes out ROTATED, because
+    # the angle is atan2 of the same dust. Same two drawings, opposite order.
+    _r2d = page.evaluate(DOTS, "runToDot")
+    _d2r = page.evaluate(DOTS, "dotToRun")
+    _g1 = (_r2d.get("groups") or [None])[0]
+    _g2 = (_d2r.get("groups") or [None])[0]
+    check("a line becoming a tap stays ON the canvas",
+          _g1 is not None and abs(_g1["cx"] - 325) < 2 and abs(_g1["cy"] - 325) < 2,
+          f"{_g1} — the two poses are centred at (250,250) and (400,400), so the "
+          f"middle of them is (325,325). A fitted scale of 4.1e-31 inverted to "
+          f"2.4e30 and put this at 1.04e17, which draws as a blank page")
+    check("...and a tap becoming a line points the way the line does",
+          _g2 is not None and abs(_g2["deg"] - 45) < 10,
+          f"{_g2} — the line it is turning into runs at 45deg. An angle fitted "
+          f"from float dust came out at -45: the right length, in the right "
+          f"place, square across the stroke it is supposed to be becoming")
+    check("...and the two orders are mirror images, as the drawings are",
+          _g1 is not None and _g2 is not None
+          and abs(_g1["len"] - _g2["len"]) < 1,
+          f"{_g1['len'] if _g1 else None} against {_g2['len'] if _g2 else None} — "
+          f"the same two drawings in the other order must spend the same ink")
+
+    # ---------------------------------------------------------------- v299
+    # WHERE IN TIME THE MIDDLE POSE LANDS.
+    #
+    # carveForInsert took ONE slot off the pose however long the pose was held.
+    # At hold 2 and 3 that is the evenest cut available; at 4 and above it is
+    # not, and the badge offers x4 directly, so it is one tap away on a fresh
+    # document. A page held x4 put its midpoint 250ms into a 333ms interval
+    # instead of 167ms; held x8, 583 of 667. The geometry was right and the
+    # timing was not, which reads as the first pose hanging and then a flicker.
+    #
+    # SWEPT, NOT SAMPLED. One fixture at one hold cannot tell "takes a slot"
+    # from "takes half", because at hold 2 and 3 the two rules agree -- and
+    # those are the holds every other fixture in this suite uses. The sweep is
+    # what separates them.
+    #
+    # THE SUM IS NOT A SECOND READING OF THE SPLIT. It is green under the old
+    # rule AND the new one -- both spend exactly what the pose held -- and it
+    # goes red on a HALF-APPLIED fix, which is the state this change passes
+    # through: measured, with carveForInsert splitting and this caller still
+    # writing a hard 1, the pair came out SHORTER than the pose had been and
+    # every page after it moved. The midpoint check catches that too; this one
+    # says which of the two things went wrong.
+    print("\nTHE CARVE: a middle pose has to land in the middle")
+
+    SWEEP = """() => {
+      const seg = (y) => { const o = [];
+        for (let i = 0; i < 10; i++)
+          o.push({ x: 100 + i*15, y: y, color: '#ffffff', size: 6, t: 0, erase: false });
+        o[0].start = true; return o; };
+      const mk = (y, h) => ({ strokes: seg(y), strokeGroups: [10], hold: h });
+      const rows = [];
+      for (let H = 1; H <= 8; H++) {
+        frames.length = 0; frames.push(mk(200, H)); frames.push(mk(420, 1));
+        idx = 0; fps = 12; subdiv = 1; selSpans = [];
+        actionLog.length = 0; redoStack.length = 0;
+        buildStrip(); render();
+        const before = frames.length;
+        addInbetween();
+        if (frames.length <= before) { rows.push({ H: H, made: false }); continue; }
+        // Post-carve the pose may have been doubled, so the interval to split
+        // is what the pair occupies now -- which is the thing that must equal
+        // what the pose occupied on its own.
+        rows.push({ H: H, made: true, pose: frames[0].hold, gen: frames[1].hold,
+                    was: H * (subdiv || 1) });
+      }
+      return rows;
+    }"""
+    _sw = page.evaluate(SWEEP)
+    _off = [r for r in _sw if not r["made"] or abs(r["pose"] - r["gen"]) > 1]
+    check("the in-between lands at the middle of the interval at EVERY hold",
+          not _off,
+          "; ".join(f"hold {r['H']} -> {r.get('pose')}:{r.get('gen')}" for r in _off)
+          + " — taking one slot off the pose centres the midpoint only while the "
+            "pose is held 2 or 3. A page held x4 is one tap away")
+    _sum = [r for r in _sw if r["made"] and r["pose"] + r["gen"] != r["was"]]
+    check("...without the pair occupying more than the pose did alone",
+          not _sum,
+          "; ".join(f"hold {r['H']} -> {r['pose']}+{r['gen']} against {r['was']}"
+                    for r in _sum)
+          + " — a longer pair moves every page after it, which is the bug the "
+            "carve exists to prevent")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

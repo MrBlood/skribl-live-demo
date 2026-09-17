@@ -35,6 +35,7 @@ import re
 import sys
 import urllib.request
 from assertions import make_check
+import source
 import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
@@ -954,7 +955,9 @@ with sync_playwright() as sp:
     # about which page is on screen at time t (see its header). A third surface
     # that re-derives that from frames and fps would be the same bug a third
     # time, and it would be invisible until somebody posted a flip with a hold.
-    src = (ROOT / "skribl" / "static" / "inlineplayer.js").read_text(encoding="utf-8")
+    # Code only: these are absence checks, and a comment explaining why a thing
+    # is absent must not read as the thing being present.
+    src = source.read_js(ROOT / "skribl" / "static" / "inlineplayer.js")
     check("the in-post player reads per-page holds from lib/holdtiming.js",
           "SkriblHold" in src,
           "the rule lives in lib/, and this is the third surface to read it")

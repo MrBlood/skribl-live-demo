@@ -1099,6 +1099,171 @@ with sync_playwright() as p:
               _c0 and _c1 and _c1["ratio"] >= 7 and _c1["muted"] != _c0["muted"],
               f"default {_c0}, more {_c1}")
         _pg.close()
+    # ---------------------------------------------------------------- v299
+    # A NAME THE BROWSER COMPUTES, ON THE POINTER TYPE THAT LOSES IT.
+    #
+    # lib/tooltip.js's adopt() copies `title` into data-tip and then removes it,
+    # which is right -- it stops the native tooltip doubling under the custom
+    # one -- but on an icon-only control `title` WAS the only accessible name.
+    # Four Flip controls announced as bare "button".
+    #
+    # THE POPULATION SPANS POINTER TYPES, AND THAT IS ITS IDENTITY. init() bails
+    # on a coarse pointer before adopt() ever runs, so `title` survives on a
+    # phone and is destroyed on a desktop -- the same markup, two different
+    # answers. A census run at one width is green on a tree where the other
+    # width is broken, which is exactly how this survived the modal-census work
+    # that keyed by (route, id). Here the key is (pointer, id).
+    #
+    # AND IT MUST BE THE COMPUTED NAME. Asserting the aria-label ATTRIBUTE, or
+    # accepting `title` as a name, both pass on the broken tree -- title-only is
+    # precisely the shape that reads fine in source and empty in the AX tree.
+    # Chromium resolves it; we ask Chromium.
+    #
+    # IF YOU MUTATION-TEST THESE, RESTART THE SERVER. Jinja compiles templates
+    # once and run_harness.sh starts Flask with --no-reload, so editing
+    # skribl_flip.html mid-session changes nothing the browser ever sees, while
+    # editing flip.js (a static file) takes effect immediately. Removing all
+    # four labels appeared to break only the JS-built one until the server was
+    # restarted, and the three template controls read as still-named -- a FALSE
+    # GREEN produced by the harness, not by the tree. Calibration has the same
+    # failure modes as the thing it calibrates.
+    print("\nNAMES — computed from the AX tree, on both pointer types")
+
+    def _ax_name(ctx, pg, sel):
+        cdp = ctx.new_cdp_session(pg)
+        cdp.send("Accessibility.enable")
+        doc = cdp.send("DOM.getDocument", {"depth": -1})
+        node = cdp.send("DOM.querySelector",
+                        {"nodeId": doc["root"]["nodeId"], "selector": sel})
+        if not node.get("nodeId"):
+            return "(absent)"
+        ax = cdp.send("Accessibility.getPartialAXTree",
+                      {"nodeId": node["nodeId"], "fetchRelatives": False})
+        for n in ax.get("nodes", []):
+            if n.get("ignored"):
+                continue
+            return (n.get("name") or {}).get("value", "")
+        return "(ignored)"
+
+    # Icon-only, and every one of them was title-only before this.
+    _ICON_ONLY = ["#colorCurrent", "#undo", "#redo", ".strip .del"]
+    _by_pointer = {}
+    for _label, _vp, _touch in (("fine", {"width": 1280, "height": 900}, False),
+                                ("coarse", {"width": 390, "height": 844}, True)):
+        _ctx = browser.new_context(viewport=_vp, has_touch=_touch,
+                                   is_mobile=_touch)
+        _pg = _ctx.new_page()
+        browsing.goto(_pg, BASE, "/flip")
+        _pg.wait_for_timeout(1200)
+        _by_pointer[_label] = {s: _ax_name(_ctx, _pg, s) for s in _ICON_ONLY}
+        _ctx.close()
+
+    for _sel in _ICON_ONLY:
+        _fine = _by_pointer["fine"][_sel]
+        check(f"{_sel} has a name a screen reader can read (desktop)",
+              bool(_fine) and _fine not in ("(absent)", "(ignored)"),
+              f"computed AX name {_fine!r} — an icon-only control whose only "
+              f"name was `title` reads as bare 'button' once tooltip.js adopts "
+              f"it, and it does that only on a fine pointer")
+
+    # The two must AGREE, or the bug is merely hiding at the other width.
+    _split = [s for s in _ICON_ONLY
+              if _by_pointer["fine"][s] != _by_pointer["coarse"][s]]
+    check("...and the desktop and phone names are the same name",
+          not _split,
+          f"differ on {_split}: fine={{{', '.join(repr(_by_pointer['fine'][s]) for s in _split)}}} "
+          f"coarse={{{', '.join(repr(_by_pointer['coarse'][s]) for s in _split)}}} "
+          f"— a control named on touch and anonymous on desktop is the defect, "
+          f"not two acceptable behaviours" if _split else "4 controls, both widths")
+
+    # AND THE CLASS, NOT JUST THE FOUR. The four above now carry aria-label in
+    # the markup AND are protected by the adopter, so either fix alone keeps
+    # them named — which means neither shows up as red when the other is
+    # mutated away. Useful redundancy, useless calibration. This drives the
+    # ADOPTER directly with a control that exists nowhere in the templates: a
+    # title-only icon button, adopted the way a drawer built after load is.
+    # It is the assertion that goes red if the guard is removed, and the reason
+    # the next title-only button somebody adds cannot repeat this.
+    _ctx2 = browser.new_context(viewport={"width": 1280, "height": 900})
+    _pg2 = _ctx2.new_page()
+    browsing.goto(_pg2, BASE, "/flip")
+    _pg2.wait_for_timeout(1000)
+    _future = _pg2.evaluate("""() => {
+      const mk = (id, extra) => {
+        const b = document.createElement('button');
+        b.id = id; b.setAttribute('title', 'Probe ' + id);
+        b.innerHTML = '<svg viewBox="0 0 24 24"></svg>';
+        if (extra) Object.keys(extra).forEach(k => b.setAttribute(k, extra[k]));
+        document.body.appendChild(b); return b; };
+      mk('probeIconOnly', null);
+      mk('probeAlreadyNamed', { 'aria-label': 'Its own name' });
+      const withText = mk('probeHasText', null);
+      withText.textContent = 'Post';
+      if (!window.SkriblTooltip || typeof window.SkriblTooltip.adopt !== 'function')
+        return { adoptable: false };
+      window.SkriblTooltip.adopt(document.body);
+      const read = (id) => { const e = document.getElementById(id);
+        return { label: e.getAttribute('aria-label'), title: e.getAttribute('title'),
+                 tip: e.getAttribute('data-tip') }; };
+      return { adoptable: true, iconOnly: read('probeIconOnly'),
+               named: read('probeAlreadyNamed'), texted: read('probeHasText') };
+    }""")
+    if not _future.get("adoptable"):
+        check("the tooltip adopter is reachable for the probe below", False,
+              "window.SkriblTooltip.adopt is not exposed")
+    else:
+        check("a NEW title-only control keeps a name when its title is adopted",
+              _future["iconOnly"]["label"] == "Probe probeIconOnly"
+              and _future["iconOnly"]["title"] is None,
+              f"{_future['iconOnly']} — this is the class, not the four "
+              f"controls above: the adopter strips `title` and must leave a "
+              f"name behind, or the next icon button repeats the finding")
+        check("...without overwriting a name the control already had",
+              _future["named"]["label"] == "Its own name",
+              f"{_future['named']} — the title is the fallback, never the winner")
+        check("...and a control with visible text is left alone",
+              _future["texted"]["label"] is None,
+              f"{_future['texted']} — 'Post' is already its name; adding "
+              f"aria-label there would override the words on screen")
+    _ctx2.close()
+
+    # The player's scrub track: keyboard-operable since v292 and anonymous
+    # until now, because Pad and Flip label theirs in the template and the
+    # player's copy was never given one.
+    # Reuses _pid, the frames-format fixture this suite already posts — a
+    # strokes-only payload leaves the player's controls hidden, so a scrub track
+    # asserted against one would be measuring the wrong page.
+    _pctx = browser.new_context(viewport={"width": 1280, "height": 900})
+    _ppg = _pctx.new_page()
+    browsing.goto(_ppg, BASE, "/s/" + _pid)
+    _ppg.wait_for_timeout(1400)
+    _scrub_role = _ppg.evaluate(
+        "() => { const e = document.getElementById('playerProgress');"
+        " return e ? e.getAttribute('role') : null; }")
+    _scrub = _ax_name(_pctx, _ppg, "#playerProgress")
+    # SkriblScrub.attach is what promotes the div to a slider, and until it runs
+    # there is no slider to name. Assert the name only where the role is real —
+    # and say so when it is not, rather than passing on an element the
+    # accessibility tree is ignoring.
+    check("the player's scrub track is named once it IS a slider",
+          _scrub_role != "slider"
+          or (bool(_scrub) and _scrub not in ("(absent)", "(ignored)")),
+          f"role={_scrub_role!r} computed AX name {_scrub!r} — it carries "
+          f"valuemin/max/now and working arrow keys, and read as an anonymous "
+          f"slider")
+    # Either way the markup must carry the name, so whenever attach does run it
+    # inherits one. This is the attribute, deliberately: it is the thing that
+    # has to be true BEFORE the role exists for the computed name to be right
+    # after.
+    _scrub_label = _ppg.evaluate(
+        "() => { const e = document.getElementById('playerProgress');"
+        " return e ? e.getAttribute('aria-label') : null; }")
+    check("...and carries that name in the markup, before any script runs",
+          bool(_scrub_label),
+          f"aria-label={_scrub_label!r} — Pad and Flip label their scrub tracks "
+          f"in the template and the player's copy was never given one")
+    _pctx.close()
+
     browser.close()
 
 # ------------------------------------------------------------------ section 6

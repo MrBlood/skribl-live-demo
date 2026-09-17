@@ -53,6 +53,15 @@
     el.setAttribute('tabindex', '0');
     if (!el.hasAttribute('aria-valuemin')) el.setAttribute('aria-valuemin', '0');
     if (!el.hasAttribute('aria-valuemax')) el.setAttribute('aria-valuemax', '100');
+    /* AND A NAME, by the same argument as the role itself. The player's track
+       carried valuemin/max/now and working arrow keys and still read as an
+       anonymous {role:'slider', name:''} in the AX tree, because the one thing
+       nothing supplied was what to call it — Pad and Flip label theirs in the
+       template and the player did not. A surface that declares the role gets a
+       name here whether it remembered one or not; the templates still say the
+       better words ("Scrub pages" on Flip), and this only fills a gap. */
+    if (!el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby'))
+      el.setAttribute('aria-label', 'Scrub');
     sync(el, typeof opts.frac === 'function' ? opts.frac() : 0);
 
     el.addEventListener('keydown', function (e) {
