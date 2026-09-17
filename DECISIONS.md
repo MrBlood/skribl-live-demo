@@ -8091,3 +8091,73 @@ in-between loses a position. Reverting only one caller of carveForInsert leaves
 the other's sweep red. And a check filed here as inert -- "the pair occupies
 what the pose did" -- turned out to catch the half-applied fix, so the note
 describing it was corrected before the commit rather than after.
+
+## V19 IS OPEN, AND v299'S RECORD DID NOT SAY SO
+
+**The top-ranked finding of the v298 audit is absent from this file.** `grep -c
+V19 DECISIONS.md` returned 0 until this entry. v299 fixed six adjacent things
+-- including a NEIGHBOURING sampling-density defect in held-still detection --
+and the headline finding left the record without a word. That is the failure
+this entry exists to correct, and it is a process failure rather than a code
+one: the tree was never claimed to have fixed it, but a reader of the decision
+log had no way to learn it was still there.
+
+An outside engineering review of the v299 packet found it, and found it the
+right way: **in the corpus this project shipped as evidence.**
+
+**WHAT IS STILL WRONG.** tweenCentred() establishes the page's reference centre
+as the mean of every recorded POINT:
+
+    for(const r of runs) for(const p of r){ x += p.x; y += p.y; n++; }
+
+A stroke recorded with 150 samples pulls that centre 150 times; an identical
+stroke recorded with 20 pulls it 20. Density is a property of pen speed --
+lib/inputsamples.js thins at MIN_DIST -- not a property of the drawing.
+
+There is a SECOND dependency the v298 finding did not name, and it survives
+fixing the first: tweenShapeCost's sampler walks `t * (r.length - 1)`, an index
+fraction, so irregular spacing WITHIN a stroke moves the points being compared
+even after the page centre is correct.
+
+**THE CORPUS SHOWED IT AND THE READING MISSED IT.** v299's re-render recorded
+correspondence for both sampling regimes in all 44 rows. Two disagree:
+
+    05 blinking-eye       uniform [0, 1, None]    hand [0, None, 1]
+    19 duplicate-shapes   uniform [0, 1, 2]       hand [1, 0, 2]
+
+Case 19's three duplicate circles are the sharp case: shape cannot tell them
+apart, so POSITION must, and position is what a density-weighted centre gets
+wrong. The visible result is two circles colliding on the left of the generated
+page instead of the middle one travelling.
+
+**AND THE REPORT'S OWN SENTENCE WAS THE PROBLEM.** v299's findings said
+"correspondence did not move in any of the 44 rows". That is true, and it is a
+REGRESSION statement wearing a correctness statement's clothes: what it
+actually says is that v299 preserved correspondence, including correspondence
+that was already wrong. The comparison run was tree-against-tree; nobody
+compared uniform against hand WITHIN the tree, which is one line of the same
+script and would have shown both rows immediately.
+
+**WHY IT WAS DEFERRED, WHICH IS THE PART WORTH KEEPING.** The obvious fix --
+centre on the mean of per-stroke centroids instead of the mean of points -- was
+built during the v299 work and NOT shipped, because it went red against
+verify_inbetween's `extraOnFirst`: a page holding a line, a hexagon and a
+circle, against a page holding only the hexagon and the circle. An unpaired
+stroke is exactly what moves a page centre, and weighting each stroke equally
+moves it further than weighting each point does. The handover sits in the
+session scratchpad rather than in the tree, which is its own small failure.
+
+So the finding is not "apply three lines". Every simple centring is a trade,
+and the one that looked obvious loses a fixture this project already had.
+
+**WHAT CLOSING IT REQUIRES.** An invariant, not a patch:
+
+    two drawings with identical geometry and completely different sampling
+    must produce the same correspondence from tweenMatch()
+
+with an adversarial fixture that is deterministic rather than fuzzed -- 5 points
+against 500, clustering, reversed direction, closed-path phase offset, stroke
+order, coordinate noise -- and the mutation discipline this project already
+uses: restore point-mean centring, the test must go red; restore index
+parametric comparison, the test must go red. Two dependencies, two mutations,
+separately.
