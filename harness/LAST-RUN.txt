@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-17T00:18:44Z
+UTC timestamp           : 2026-09-17T00:28:53Z
 Host                    : Linux x86_64
 Tree SHA-256            : 4c423808ca0f1c0f2e4ca4fb045324d40e50048c2c5a65066d6da75fab7b8aeb
-Git commit              : 53b95d4
+Git commit              : 0c52044
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
@@ -16,18 +16,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.Q506LtmUDD/harness.db)
+Database reset          : yes (fresh /tmp/tmp.3VTFs9w9oL/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_hold.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_player_isolation.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 1
-  verify_hold.py: ok — 62/62 passed
-assertions passed: 62   (skipped suites contribute 0)
+  verify_player_isolation.py: ok — 27/27 passed
+assertions passed: 27   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
