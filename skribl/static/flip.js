@@ -7148,6 +7148,54 @@ function ibUnapply(pts, T){
   });
 }
 
+/* WHAT YOU RUBBED OUT STAYS RUBBED OUT -- the in-between's half of a rule
+   buildTween has enforced since v296 and this side never got, which is the
+   same shape as v298's finding that addInbetween never got the matcher.
+
+   buildInbetween walks tweenVisible(a).ink and nothing walks .erase, so a line
+   with a rubbed-out middle came back SOLID on the generated page and the hole
+   returned on the next one. Measured on corpus case 18: the generated page
+   held one run with erase false, and the middle of the gap painted 8 dark
+   pixels where it should paint none. A hole that heals and reappears is not a
+   believable drawing, and nothing announced it.
+
+   THE SMEAR'S ANSWER IS NOT THIS ONE, deliberately. buildTween carries the
+   erasers through UNSAMPLED and at the position they were drawn, because a
+   smear is many copies of a pose and an eraser swept along the motion is a
+   hole dragged through the drawing. An in-between is ONE pose. If the erased
+   stroke moved, its hole has to move with it or it lands where the ink no
+   longer is -- so here the erasers are interpolated exactly as the ink is,
+   through the same matcher and the same arc-length resampling.
+
+   An eraser with no partner on the far page is carried as drawn, which is
+   buildTween's rule and the honest one: a hole the artist made on THIS page is
+   on the page you are inserting after. */
+function tweenErasers(ea, eb, t){
+  const copy = (r) => r.map(p => Object.assign({}, p));
+  if(!ea.length) return [];
+  if(!eb.length) return ea.map(copy);
+  const pairing = tweenMatch(ea, eb);
+  const out = [];
+  for(let s = 0; s < ea.length; s++){
+    const m = pairing[s];
+    if(!m){ out.push(copy(ea[s])); continue; }
+    const partner = m.reversed ? eb[m.j].slice().reverse() : eb[m.j];
+    const n = Math.max(ea[s].length, partner.length);
+    if(n < 1){ out.push(copy(ea[s])); continue; }
+    const pa = tweenResample(ea[s], n), pb = tweenResample(partner, n);
+    out.push(pa.map((p, i) => {
+      const q = Object.assign({}, p);
+      q.x = p.x + (pb[i].x - p.x) * t;
+      q.y = p.y + (pb[i].y - p.y) * t;
+      if(typeof p.size === 'number' && typeof pb[i].size === 'number')
+        q.size = p.size + (pb[i].size - p.size) * t;
+      q.erase = true;
+      return q;
+    }));
+  }
+  return out;
+}
+
 /* One page: the drawing at t. */
 function buildInbetween(a, b, t){
   const why = tweenMismatch(a, b);
@@ -7246,11 +7294,27 @@ function addInbetween(){
      A stroke the matcher cannot place is drawn ONCE at full strength -- the
      same answer the smear gives an unpaired stroke, and the only honest one:
      a pose has no half-way position for a stroke that exists on one page. */
+  /* CAPTURED BEFORE THE ALIGNMENT, which is the last moment this page's own
+     erasers are in hand: tweenAlign returns ink-only copies, so by the time
+     buildInbetween sees a frame there is nothing left to carry. buildTween
+     takes its erasers at the same point and for the same reason. */
+  const _erA = tweenVisible(a).erase, _erB = tweenVisible(b).erase;
   const _al = tweenAlign(a, b);
   if(!_al){ chip('An in-between needs two poses with something in common'); return; }
   const t = buildInbetween(_al.a, _al.b, 0.5);
   if(!t) return;
   for(const run of (_al.unpaired || [])){
+    run.forEach((q, i) => {
+      const c = Object.assign({}, q);
+      if(i === 0) c.start = true; else delete c.start;
+      t.strokes.push(c);
+    });
+    t.strokeGroups.push(run.length);
+  }
+  /* LAST, because destination-out only removes what is already painted. The
+     interpolated ink and the drawn-once strokes have to be down before the
+     hole is taken out of them. */
+  for(const run of tweenErasers(_erA, _erB, 0.5)){
     run.forEach((q, i) => {
       const c = Object.assign({}, q);
       if(i === 0) c.start = true; else delete c.start;

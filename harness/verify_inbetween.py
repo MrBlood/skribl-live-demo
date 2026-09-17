@@ -958,6 +958,90 @@ with sync_playwright() as p:
           + " — a longer pair moves every page after it, which is the bug the "
             "carve exists to prevent")
 
+    # ---------------------------------------------------------------- v300
+    # WHAT YOU RUBBED OUT STAYS RUBBED OUT.
+    #
+    # buildInbetween walks tweenVisible(a).ink and nothing walked .erase, so a
+    # line with a rubbed-out middle came back SOLID on the generated page and
+    # the hole returned on the next one. Measured on corpus case 18's geometry:
+    # the page held one run with erase false, and the middle of the gap painted
+    # 8 dark pixels where it should paint none.
+    #
+    # THE SMEAR'S ANSWER IS NOT THIS ONE, and the difference is the assertion.
+    # buildTween carries erasers through unsampled, at the position drawn,
+    # because a smear is many copies of one pose. An in-between is ONE pose, so
+    # if the erased stroke moved its hole must move with it -- carrying at A's
+    # position would leave the hole at y=300 while the line sits at y=365, and
+    # the line would read solid anyway. That is why the second check below is
+    # about WHERE the hole is, not merely that there is one.
+    #
+    # MEASURED OPAQUE AND DARK, not dark. The first version of this read only
+    # the red channel and reported MORE ink after the hole was restored:
+    # destination-out leaves r=0, a=0, which is indistinguishable from black
+    # unless the alpha is checked. The instrument was wrong in the direction
+    # that would have hidden the fix.
+    print("\nERASURE — a hole the artist made does not heal in the middle")
+
+    ERASE = """(only) => {
+      const L=(x0,y0,x1,y1,n,o)=>{const a=[];for(let i=0;i<=n;i++){const t=i/n;
+        a.push(Object.assign({x:x0+(x1-x0)*t, y:y0+(y1-y0)*t, color:'#141414',
+                              size:7, erase:false, t:i}, o||{}));}
+        a[0].start=true; return a;};
+      const mk=(runs)=>{const f={strokes:[],strokeGroups:[],hold:1};
+        runs.forEach(r=>{r.forEach((p,i)=>{const q=Object.assign({},p);
+          if(i===0)q.start=true; else delete q.start; f.strokes.push(q);});
+          f.strokeGroups.push(r.length);}); return f;};
+      const rub=(y)=>L(300,y,420,y,16,{erase:true,size:34});
+      // `only` drops the eraser from the SECOND page, which is the case that
+      // has no partner to move toward.
+      const A = mk([ L(120,300,600,300,40), rub(300) ]);
+      const B = only ? mk([ L(120,430,600,430,40) ])
+                     : mk([ L(120,430,600,430,40), rub(430) ]);
+      frames.length=0; frames.push(A); frames.push(B);
+      idx=0; fps=12; subdiv=1; selSpans=[];
+      actionLog.length=0; redoStack.length=0; buildStrip(); render();
+      const n0=frames.length;
+      addInbetween();
+      if(frames.length<=n0) return {made:false};
+      const g=frames[1];
+      let at=0; const runs=[];
+      for(const n of g.strokeGroups){ const r=g.strokes.slice(at,at+n); at+=n;
+        runs.push({n:n, erase:!!r[0].erase, y:Math.round(r[0].y)}); }
+      const c=document.getElementById('c')||document.querySelector('canvas');
+      const cx=c.getContext('2d');
+      cx.setTransform(1,0,0,1,0,0);
+      cx.fillStyle='#ffffff'; cx.fillRect(0,0,c.width,c.height);
+      paintStatic(cx, g.strokes);
+      const d=cx.getImageData(0,0,c.width,c.height).data;
+      const col=(x)=>{let k=0; for(let y=0;y<c.height;y++){
+        const i=(y*c.width+(x|0))*4; if(d[i+3]>128 && d[i]<128) k++; } return k;};
+      return { made:true, runs:runs, gap:col(360), left:col(200), right:col(520) };
+    }"""
+
+    _er = page.evaluate(ERASE, False)
+    check("an in-between of two rubbed-out lines keeps the hole",
+          _er.get("made") and _er["gap"] == 0,
+          f"{_er.get('gap')} opaque dark pixels through the middle of the gap "
+          f"— the artist rubbed it out on both pages and the generated one "
+          f"filled it back in")
+    check("...while the line either side of it is still there",
+          _er.get("made") and _er["left"] > 0 and _er["right"] > 0,
+          f"left {_er.get('left')} right {_er.get('right')} — a blank page "
+          f"would pass the check above for the wrong reason")
+    _rub = [r for r in (_er.get("runs") or []) if r["erase"]]
+    check("...and the hole MOVED with the line, rather than staying where it was",
+          len(_rub) == 1 and abs(_rub[0]["y"] - 365) <= 2,
+          f"{_rub} — drawn at y=300 and y=430, so the one pose between them "
+          f"holds its hole at 365. Carrying the eraser across unsampled, which "
+          f"is what the smear does, would leave it at 300 with the line at 365")
+
+    _only = page.evaluate(ERASE, True)
+    _orub = [r for r in (_only.get("runs") or []) if r["erase"]]
+    check("an eraser with no partner on the next page is carried as drawn",
+          len(_orub) == 1 and abs(_orub[0]["y"] - 300) <= 2,
+          f"{_orub} — a hole made on THIS page is on the page you are "
+          f"inserting after, so it comes through where it was put")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
