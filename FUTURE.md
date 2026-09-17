@@ -334,6 +334,63 @@ Two changes that need no gesture redesign and should be tried first:
     it. This is the discriminator the current code lacks entirely, and unlike a
     threshold it cannot be beaten by a longer drag.
 
+## 6f. Smudge cannot carry ink further than its own brush (measured, v301)
+
+The owner reported that Smudge "feels weird" on ordinary ink as well as on a
+Motion Smear. The Motion Smear half was a one-line alpha defect and is fixed.
+This half is not a defect and not a constant. It is the mechanism's ceiling,
+and it is now measured rather than suspected.
+
+**A drag pulls ink a bounded distance and then stops, however far you drag.**
+Same fixture, an O, dragged straight down off the top; depth is how far the ink
+actually moved:
+
+    brush  radius |  drag 10    20    40    70   120   200
+        3      18 |    20.8  20.8  20.8  20.8  20.8  20.8
+        7      42 |    20.8  20.8  27.1  31.7  31.7  31.7
+       14      84 |    20.8  20.8  33.3  52.8  69.0  70.2
+       28     168 |    20.8  20.8  35.3  60.1  96.5 135.9
+
+At the default brush you can drag 200px and move the ink 31.7. Everything past
+roughly the first 40px of the gesture does nothing. That is what reads as
+"vector liquify, not pigment": a real smudge comes with your finger, and this
+one pinches a notch and lets go.
+
+**The mechanism.** A point moves 0.92 of each delta, so it always lags; lagging
+puts it further from the brush centre; `SMUDGE_SHARP` 2.2 makes the weight
+collapse with that distance; once the lag reaches the radius the point gets zero
+and is abandoned. No strength below 1 avoids it, because the lag accumulates,
+and 1 exactly is the spike `LIQUIFY_STRENGTH` documents.
+
+**TWO THINGS THAT LOOK LIKE THE ANSWER AND ARE NOT.** Both were tried here.
+
+*Lower the strength.* The hypothesis was that 0.92 reproduces the convergence
+`LIQUIFY_STRENGTH`'s comment measured -- "three parallel lines, all three
+converged to one vertex". It does not. On that exact fixture the three lines
+pull 57.9 / 9.2 / 0 px and never converge, and the leading ink keeps 58% of a
+100px gesture rather than riding it. The sharper falloff already prevents the
+documented failure. Tuning the number down only shortens the carry further.
+
+*Release by pigment spent rather than by distance* -- give a point already held
+this gesture a floor weight of `1 - acc`, so it lets go when its ink is used up
+instead of when it drifts out of the brush. It doubles the carry (31.7 -> 58 at
+the default brush) and **looks worse**: the whole held band moves as a rigid
+slab, so the V notch becomes a flat-bottomed trough with two horns. Rendered
+side by side, the shipped V is the better drawing. Rejected on the picture.
+
+**What is actually left** is the outside review's own suggestion, and it is a
+prototype rather than a change: compare this vector mechanism against an
+image-space smudge on a scratch raster, to find out whether the ceiling is the
+mechanism or the tuning. Do not commit to a storage-format change before that
+prototype says it is worth one. A frame is strokes, and a raster smudge would
+need a layer the format does not have -- which is the same honest limit
+`lib/brushfield.js` already states about blur.
+
+**And do not fix this by making the notch deeper.** Nothing above says the
+current output is ugly; it says the tool ignores most of a long gesture. If a
+prototype cannot beat the shipped V on a side-by-side, the right answer is to
+leave the mechanism alone and say in the UI what it does.
+
 ## 7. The honest state
 
 The tool is good. It is better than it needs to be for a demo and not yet enough
