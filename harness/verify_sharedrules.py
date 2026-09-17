@@ -204,6 +204,47 @@ with sync_playwright() as p:
                                      "size": 5, "t": 0, "erase": False,
                                      "start": True}],
                         "strokeGroups": [1], "hold": h}]}) is None
+    # ------------------------------------------------------------ v301
+    # THE SAME SHAPE AGAIN, FOR THE DOCUMENT'S POINT BUDGET. MAX_TOTAL_POINTS
+    # is a whole-Skribl limit the server owns, and until v301 no client tracked
+    # it at all: the smear planner budgets a PAGE against the per-frame caps
+    # and nothing summed the document. So a long flipbook of Motion Smears --
+    # a generated page costs about 27x a hand-drawn one -- sailed along and was
+    # refused at POST, after the work.
+    #
+    # lib/pointbudget.js now owns the client's copy, and this pins the two
+    # together exactly as the hold ceiling above is pinned. Two independent
+    # literals in two languages with nothing tying them is the failure this
+    # whole file is about.
+    _pb = pg.evaluate("""() => {
+      const B = window.SkriblPointBudget;
+      if(!B) return null;
+      const f = (n) => ({ strokes: new Array(n).fill(0).map(() => ({x:1,y:1})),
+                          strokeGroups: [n], hold: 1 });
+      return { max: B.MAX_TOTAL_POINTS,
+               total: B.totalPoints([f(10), f(25)]),
+               // Malformed pages contribute nothing rather than throwing: this
+               // runs on the post path and must not be able to break posting.
+               safe: B.totalPoints([null, {}, f(5)]),
+               fitsExactly: B.wouldFit([f(B.MAX_TOTAL_POINTS - 1)], 1),
+               oneOver: B.wouldFit([f(B.MAX_TOTAL_POINTS)], 1),
+               overBudget: B.overBudget([f(B.MAX_TOTAL_POINTS + 1)]) };
+    }""")
+    check("the Flip editor loads lib/pointbudget.js", _pb is not None,
+          "no window.SkriblPointBudget — the budget check cannot run")
+    if _pb:
+        check("the server's document point cap is the one the client counts against",
+              _pb["max"] == _V.MAX_TOTAL_POINTS,
+              f"server refuses over {_V.MAX_TOTAL_POINTS}, client counts to "
+              f"{_pb['max']} — a limit guessed at in one language is not a limit")
+        check("...and it totals every page, skipping what it cannot read",
+              _pb["total"] == 35 and _pb["safe"] == 5,
+              f"{_pb} — a budget check that can itself throw is worse than none")
+        check("...and the boundary is inclusive, not off by one",
+              _pb["fitsExactly"] is True and _pb["oneOver"] is False
+              and _pb["overBudget"] is True,
+              f"{_pb} — exactly the cap must post; one past it must not")
+
     _cmax = clamp["max"]
     check("the server's hold ceiling is the one the clients actually obey",
           _V.MAX_HOLD == _cmax,

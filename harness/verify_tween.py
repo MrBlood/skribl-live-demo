@@ -1975,6 +1975,74 @@ with sync_playwright() as p:
           f"{_z['chip']!r} — the stroke travels 220px, so a refusal would mean "
           f"the empty run had eaten the motion rather than the button")
 
+    # ---------------------------------------------------------------- v301
+    # A SMEAR THE DOCUMENT CANNOT HOLD IS REFUSED BEFORE IT IS MADE.
+    #
+    # Every budget in this file is about ONE page against the server's per-frame
+    # ceiling. MAX_TOTAL_POINTS is about the whole Skribl, it was enforced only
+    # by the server, and it was therefore met at POST -- "Too many points
+    # overall", after the flipbook was drawn. A generated page costs about 27x a
+    # hand-drawn one (~1,755 points against ~65 on the same drawing), so the
+    # real budget is "how many smears" and nothing said so.
+    #
+    # PINNED AS BEHAVIOUR, NOT AS A NUMBER. The unit side of this -- that the
+    # client's ceiling equals the server's, and that the boundary is inclusive
+    # -- lives in verify_sharedrules.py beside the same pin for MAX_HOLD. What
+    # belongs here is that the BUTTON obeys it: a page is not generated, the
+    # frame count does not move, and the artist is told why.
+    print("\nTHE DOCUMENT'S BUDGET — a smear that cannot fit is not made")
+
+    _bud = page.evaluate("""() => {
+      const B = window.SkriblPointBudget;
+      if(!B) return { noModule: true };
+      const line = (y) => { const o = [];
+        for(let i = 0; i < 40; i++)
+          o.push({ x: 100 + i*12, y: y, size: 6, color: '#ffffff', erase: false, t: i*8 });
+        o[0].start = true; return o; };
+      const mk = (y) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        line(y).forEach((q,i) => { const c = Object.assign({}, q);
+          if(i===0) c.start = true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(40); return f; };
+      // A page already holding almost the whole budget, so the next smear
+      // cannot fit however small it is. Built as ONE fat page rather than a
+      // hundred real ones: the rule is about the document total, and a fixture
+      // that takes a minute to build is a fixture nobody runs.
+      // MINUS THE TWO POSES, or the fixture starts over the line by its own
+      // arithmetic and the last check below measures the fixture rather than
+      // the guard. Measured that way first: 200,030 before the button was
+      // touched. The headroom left here (120 points) is far less than the
+      // smallest smear this pair can produce, so the refusal is about the
+      // budget and not about a coincidence.
+      const fat = { strokes: new Array(B.MAX_TOTAL_POINTS - 200)
+                      .fill(0).map(() => ({ x: 1, y: 1, size: 1, color: '#ffffff',
+                                            erase: false, t: 0 })),
+                    strokeGroups: [B.MAX_TOTAL_POINTS - 200], hold: 1 };
+      fat.strokes[0].start = true;
+      frames.length = 0; frames.push(mk(200)); frames.push(mk(320)); frames.push(fat);
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0; buildStrip(); render();
+      const before = frames.length;
+      let said = null; const _chip = window.chip;
+      try { window.chip = (m) => { said = m; }; chip = window.chip; addTween(); }
+      finally { window.chip = _chip; chip = _chip; }
+      return { noModule: false, before: before, after: frames.length,
+               said: said, total: B.totalPoints(frames), limit: B.MAX_TOTAL_POINTS };
+    }""")
+    check("the budget module is loaded in the editor",
+          _bud.get("noModule") is False,
+          "window.SkriblPointBudget missing — the guard cannot run at all")
+    check("a smear that would not fit the document is NOT generated",
+          _bud.get("after") == _bud.get("before"),
+          f"{_bud.get('before')} pages -> {_bud.get('after')} — the page was "
+          f"made anyway, and the whole Skribl is now unpostable")
+    check("...and the artist is told, with the numbers",
+          bool(_bud.get("said")) and "%" in (_bud.get("said") or ""),
+          f"{_bud.get('said')!r} — 'too big' is not actionable; which pages are "
+          f"expensive is")
+    check("...and the document is left under the limit, not over it",
+          (_bud.get("total") or 0) <= 200000,
+          f"{_bud.get('total')} points — refusing must not itself spend budget")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 
