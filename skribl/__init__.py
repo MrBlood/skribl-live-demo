@@ -197,12 +197,17 @@ def create_blueprint(session=None, url_prefix=None,
     # deployment, and it is what the authorization rule is written against.
     bp.skribl_current_user_id = current_user_id or (lambda: None)
     # Recorded separately from the callable above, because the callable is
-    # ALWAYS present — it falls back to `lambda: None` — and "always present"
-    # is exactly the thing a destructive route must not gate on. This flag says
-    # the INTEGRATOR supplied an identity, which is a different fact from
-    # "there is a function to call", and it is what register_routes() uses to
-    # decide whether DELETE and PATCH exist at all. See the note beside them.
-    bp.skribl_has_identity = current_user_id is not None
+    # THE FLAG THAT USED TO GATE DELETE AND PATCH IS GONE, and so is the claim
+    # that it still does. It read: "it is what register_routes() uses to decide
+    # whether DELETE and PATCH exist at all" — while the note beside those very
+    # routes says REGISTERED UNCONDITIONALLY SINCE v279 and explains why. Two
+    # comments in one tree describing opposite mechanisms; this was the false
+    # one, and nothing anywhere read the flag it described.
+    #
+    # What makes those routes safe without an identity is the capability, not
+    # the absence of the route: an anonymous post carries a 256-bit secret
+    # returned once and stored only as a hash. routes.py holds that reasoning,
+    # once, where the routes are.
     # csrf is a THREE-element tuple: (prepare, issue, validate).
     #
     #   prepare()            called in before_request. Resolves the token and

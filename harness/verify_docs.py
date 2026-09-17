@@ -663,17 +663,67 @@ print("\nDOCS — the release headline cannot outrun its external evidence")
 import release_run as _rr
 
 check("a green local run with every external lane attested is a FULL RELEASE PASS",
-      _rr.release_status(True, []) == "FULL RELEASE PASS",
-      _rr.release_status(True, []))
+      _rr.release_status(True, [], "clean") == "FULL RELEASE PASS",
+      _rr.release_status(True, [], "clean"))
 # MUTATION — the case that motivated the finding. If this ever reports FULL
 # RELEASE PASS again, the headline has gone back to outrunning the evidence.
 check("MUTATION: a green local run with a PENDING lane is NOT a full release pass",
-      _rr.release_status(True, ["verify_postgres.py — claimed"])
+      _rr.release_status(True, ["verify_postgres.py — claimed"], "clean")
       == "LOCAL PASS — EXTERNAL COVERAGE PENDING",
-      _rr.release_status(True, ["x"]))
+      _rr.release_status(True, ["x"], "clean"))
 check("MUTATION: a local failure is FAIL whatever the lanes say",
-      _rr.release_status(False, []) == "FAIL"
-      and _rr.release_status(False, ["x"]) == "FAIL")
+      _rr.release_status(False, [], "clean") == "FAIL"
+      and _rr.release_status(False, ["x"], "dirty") == "FAIL")
+
+# ---------------------------------------------------------------------- v299
+# AND IT TOOK THE SOURCE STATE LAST. `state` was not a parameter of
+# release_status at all, so a run on a dirty tree rendered
+#
+#     release status   FULL RELEASE PASS
+#     source state     DIRTY, --allow-dirty used (...) — NOT A SEALABLE RUN
+#
+# two lines apart, in that order, strongest label on top. The line underneath
+# was right; nobody reads the small print first.
+check("MUTATION: a DIRTY tree cannot reach a release pass, however green",
+      _rr.release_status(True, [], "dirty").startswith("NOT SEALABLE"),
+      _rr.release_status(True, [], "dirty"))
+check("MUTATION: nor can a tree whose state could not be established",
+      _rr.release_status(True, [], "unknown").startswith("NOT SEALABLE"),
+      _rr.release_status(True, [], "unknown"))
+# GUARDING THE ACHIEVEMENT, not the defect: the mid-run attestation write is
+# the reason source_state distinguishes two kinds of dirt at all, and a seal
+# that refused it would be unable to record the H.264 result for its own tree.
+check("...but generated-only dirt is the process working, and still seals",
+      _rr.release_status(True, [], "generated-only dirty") == "FULL RELEASE PASS",
+      _rr.release_status(True, [], "generated-only dirty"))
+
+# A FILE CAN BE IN THE FROZEN HASH AND IN NO COMMIT. tree_hash() walks
+# tree_files() — `find . -type f` minus a few prefixes, so: whatever is on
+# disk. source_state() asked `git diff --name-only HEAD`, which reports only
+# what git TRACKS. An untracked file therefore entered the hash while the
+# record said `clean`, and the sealed hash could not be reproduced from the
+# commit it names.
+#
+# DRIVEN BY INJECTING A PHANTOM into the list the hash is built from, rather
+# than by writing a file into the repository: a suite that leaves a stray file
+# behind when it is interrupted would poison the next seal with the very
+# condition it is testing for. Confirmed by hand against a real untracked file
+# before this was written — it landed in tree_files() and the old rule never
+# named it.
+_real_tf = _rr.tree_files
+try:
+    _rr.tree_files = lambda: list(_real_tf()) + ["ZZZ-hashed-but-untracked.txt"]
+    _phantom_state, _phantom_paths = _rr.source_state()
+finally:
+    _rr.tree_files = _real_tf
+check("a file in the frozen hash that no commit records makes the tree DIRTY",
+      _phantom_state == "dirty"
+      and "ZZZ-hashed-but-untracked.txt" in _phantom_paths,
+      f"{_phantom_state} {_phantom_paths[:4]} — the hash covers what is on "
+      f"disk, so anything on disk that git does not track has to be named "
+      f"here or the record claims a clean tree nobody can rebuild")
+check("...and the restore left tree_files as it found it",
+      _rr.tree_files is _real_tf)
 
 # And the classifier under it: a lane is ATTESTED only on tree-bound evidence.
 _att, _pend = _rr.external_coverage("0" * 64, ["verify_postgres.py"])
@@ -792,7 +842,7 @@ check("MUTATION: a non-string state renders as a bare filename, which is the "
       "restating against the new one")
 
 check("with every mandatory lane attested, the headline can reach FULL "
-      "RELEASE PASS", _rr.release_status(True, []) == "FULL RELEASE PASS")
+      "RELEASE PASS", _rr.release_status(True, [], "clean") == "FULL RELEASE PASS")
 check("...and both mandatory lanes now have a reader, so neither is merely "
       "CLAIMED", set(_rr.SKIP_COVERAGE) == {"verify_mp4.py", "verify_postgres.py"},
       f"{sorted(_rr.SKIP_COVERAGE)} — a lane added here without an attestation "

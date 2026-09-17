@@ -14,6 +14,12 @@ directory listing. A number typed here is a number that goes stale silently.
 
 Verify before believing anything in prose, including this file:
 
+These commands are run in the UNPACKED RELEASE, not in a git checkout —
+`SHA256SUMS` is written by `harness/package.py` into the tarball and is not a
+tracked file, so in a clone the first two lines have nothing to read. From a
+checkout, `harness/RELEASE.md` and `release_run.tree_hash()` are the two that
+still answer.
+
     cd skribl-v*                                    # the name derives from SKRIBL_VERSION
     grep -Ec '^[0-9a-f]{64} ' SHA256SUMS            # N: the manifest's own entry count
     sha256sum -c SHA256SUMS | grep -c ': OK'        # must equal N
