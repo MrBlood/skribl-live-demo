@@ -8161,3 +8161,165 @@ order, coordinate noise -- and the mutation discipline this project already
 uses: restore point-mean centring, the test must go red; restore index
 parametric comparison, the test must go red. Two dependencies, two mutations,
 separately.
+
+## v300 -- correspondence stops depending on the recording, and the corpus starts judging
+
+Five commits, and the shape of them is the point: one corrects a record, three
+close defects an outside review found, and the fifth makes the instrument that
+found them capable of finding the next one on its own.
+
+**V19 IS CLOSED, AND AT THE RIGHT LAYER.** `tweenCentred` integrates position
+along the ink rather than averaging sample points, so a stroke contributes what
+it CONTAINS rather than how many pointer events happened to record it.
+`tweenShapeCost` samples by arc length for the same reason -- the v299 entry
+above names two dependencies and this is the second. A length-skew penalty in
+`tweenMatch` and its guard relaxed 4x -> 6x finish it.
+
+The fix that was tried and NOT shipped in v299 -- the mean of per-stroke
+centroids -- stays unshipped, and the entry above says why: it gives a 4px mark
+and a page-wide scrawl equal voting power, and it loses `extraOnFirst`.
+Arc-length integration is that idea with the weighting the drawing actually
+has.
+
+**THE FIRST FIXTURE WAS GREEN ON A TREE ALREADY KNOWN TO BE BROKEN**, because
+it compared a drawing to itself. Rebuilt on case 19's mechanism -- identical
+shapes, pages that differ -- it went red. Then a SECOND mutation survived the
+64-combination sweep, which is how the arc-length shape-cost change turned out
+to need its own direct pin: 58% drift against 0.05%. Two dependencies, two
+mutations, separately, as the v299 entry demanded.
+
+**WHAT YOU RUBBED OUT STAYS RUBBED OUT.** `buildInbetween` walked visible ink
+and nothing walked erasers, so a line with a rubbed-out middle came back SOLID
+on the generated page and the hole returned at the next one. A hole that heals
+and reappears is not a believable drawing and nothing announced it. Erasers are
+now paired and interpolated; unpaired ones are carried as drawn.
+
+Motion Smear's eraser behaviour was deliberately NOT reused. A smear is
+exposure over movement; an in-between is one pose. Shared geometry, different
+semantics.
+
+**AND THE INK MEASURE WAS INVERTED FIRST**, which is the more useful record. It
+counted dark pixels on the red channel alone -- and after destination-out
+compositing a transparent pixel keeps RGB that reads numerically dark. It
+reported the hole growing 8 -> 34. Read as alpha AND darkness together: 8 -> 0.
+
+**THE PHASE SEARCH HAD A SCALING CLIFF.** A fixed 48-probe coarse pass, then a
+refinement that walked every offset in a window of n/24 while each probe is
+itself O(n). Quadratic:
+
+    points per stroke     300    600   1200   2400
+    ibPhase, ms          1.28   2.67   7.93   26.7
+    the button, ms         50     84    167    353
+
+Now a bounded halving of the best THREE coarse brackets. Three, not one,
+because one lands in a local minimum 8.02% worse on the fixture that
+separates them.
+
+**GATED ON WORK, NOT ON THE CLOCK.** This project has twice had a wall-clock
+pin fail on a busy box while the same tree's CI passed. The suite counts fits,
+and separately asserts the cheap search lands where an exhaustive sweep of
+every spin lands -- 0.541 against 0.541 over 1200 spins. Two contracts: how
+much work, and whether the answer is right. A stopwatch conflates them and is
+noisy about both.
+
+Two instruments had to be rebuilt to get there. The correctness check could not
+go red at n=300 and moved to n=600. The reference sweep was COARSER than the
+thing it was checking -- `step = n/240` against ibPhase's own stride -- and
+reported a NEGATIVE 71% penalty before that was found.
+
+**THE CORPUS STOPS BEING A PHOTO ALBUM.** From v295 it rendered the same pairs
+of pages every release and a human compared this release's pictures to last
+release's. That answers "did it change?" and never "is it right?" -- a change
+wrong on both sides of the comparison sails through, and the v299 entry above
+is exactly that failure written out.
+
+Each case now carries expectations and each sheet prints its verdict. The
+expectations are COMPUTED FROM THE POSES rather than typed into the case,
+because every case renders twice -- as authored, and as a hand would have
+recorded it -- and a number written into a case could only ever be true of one
+of the two rows. It lives in `harness/tools/corpus/`, beside `refgraph.js` and
+for the same reason: it needs a served page and a browser, and a suite that
+cannot run everywhere becomes a skip.
+
+**CASE 23 WAS GREEN ON A TREE KNOWN TO BE BROKEN, TOO.** All three degenerate
+pairs went on one pair of pages, and the matcher paired the two LINES with each
+other and each tap with a tap -- an ordinary render that never touched the
+degenerate path. With `ibFit`'s guard cut back to the single extent it tested
+before v299, the corpus stayed 25/25. A tap meets a run only when it is the
+only partner there is, so each direction is its own case now.
+
+Calibrated per defect, each one a defect that actually shipped here:
+
+    ibFit testing one extent, not both        ->  23b alone
+    carveForInsert taking one slot            ->  24 alone
+    the in-between not carrying erasers       ->  18 alone
+    tweenResample walking by index            ->  22 and 25
+    ibApply dropping its centroid lerp        ->  fourteen cases
+
+Three of those are seen by exactly ONE case each, and that is the whole
+argument for those cases existing. `harness/tools/README.md` says so, and says
+that a case nothing can redden gets removed rather than kept for tidiness.
+**27/27 is not the number to grow.** Which mechanisms the cases can detect is.
+
+**TWO EXPECTATIONS WERE WRONG RATHER THAN THE TREE**, and both said so by
+failing. Case 05's eye closes both lids onto the same line, so the two pairing
+candidates are identical and which wins is float noise. Case 06's arms are
+mirror images and B's are crossed, so the matcher pairs each with the one that
+ends up nearer -- and the render is the better of the two readings: arms that
+stay on their own side rather than sweeping through the chest. Both of those
+expectations were asking for drawing ORDER back, which pairing by shape exists
+to stop doing.
+
+**A DRAWING THAT ONLY MOVED** had no gate, and now has two. Five of the six
+expectations an outside review listed were already pinned; the plainest was
+not. Two assertions because they fail separately -- where the ink landed is
+`ibApply`'s business, what the fit concluded is `ibFit`'s -- at two densities
+because that is what separates arc length from index:
+
+    as shipped              centre within 0.9px    0.00deg, scale 1.0000, 0.000px
+    centroid lerp removed   centre 90px out        unchanged, correctly
+    resampled by index      centre 9px out         38.7deg, scale 0.57, 122px
+
+## OPEN after v300, recorded so it is not rediscovered
+
+**IT HAS STILL NEVER BEEN WATCHED ANIMATING ON A REAL DEVICE.** Four renders of
+still frames is not the same thing, and this is now the largest gap in the
+evidence for the whole feature. Everything above is deterministic geometry;
+none of it answers "does it look good". The outside review of v300 puts this
+first among what remains, and it is right: ten ugly hand-drawn A/B pairs, drawn
+naturally rather than drawn for the engine, played A -> in-between -> B at real
+speed, with every bad result classified -- correspondence, rotation,
+deformation, topology, appearance, timing, intent ambiguity -- BEFORE any code
+changes.
+
+**PERCEIVED LATENCY IS NOT `ibFit` COUNTS.** The work-count gate above is the
+right regression test and it is not the user's experience. Tap-to-feedback and
+tap-to-finished-pose on real hardware are a separate measurement, and 150ms
+with immediate feedback can beat 80ms with a frozen control.
+
+**APPEARANCE AND DISAPPEARANCE ARE ASYMMETRIC, DELIBERATELY UNDECIDED.** An
+in-between walks THIS page's strokes, so an object that disappears lingers
+through the middle pose and one that appears is not there until the end. With
+no opacity in the representation there is no uniquely correct answer, and
+inventing a policy and calling it inevitable would be worse than saying so.
+Corpus cases 08 and 09 are a matched pair that state it; change one and the
+other has to move. Product decision, not a defect.
+
+**SQUASH VERSUS TURN** (corpus case 07) stays an intent ambiguity. A tall
+ellipse becoming a wide one is equally well explained by a rotation and by a
+deformation. If artists hit it repeatedly, the experiment is a minimal
+contextual hint -- `Turn | Morph` -- not a permanent control, and not another
+engine rewrite.
+
+**"CENTRE" HAS NO SINGLE MEANING AND THAT IS PART OF WHY V19 HAPPENED.**
+Geometric centroid, visible-ink centroid, bounding-box centre, per-stroke
+centroid, transform anchor, selection centre -- these are six different things
+and the code says "centre" for several of them. `tweenCentred` is now
+specifically the visible-ink centroid weighted by arc length. Naming the others
+where they are used is worth doing; it is NOT worth a refactor, and it is
+explicitly not a reason to touch this release.
+
+**AND THE GOVERNING RULE FROM HERE:** do not make the interpolation more
+sophisticated unless visual evidence proves the sophistication is necessary.
+The question stops being "can the mathematics be more impressive" and becomes
+"does it look good".
