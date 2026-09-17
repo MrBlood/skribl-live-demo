@@ -1,23 +1,18 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-17T00:53:35Z
+UTC timestamp           : 2026-09-17T19:31:40Z
 Host                    : Linux x86_64
-Tree SHA-256            : 4c423808ca0f1c0f2e4ca4fb045324d40e50048c2c5a65066d6da75fab7b8aeb
-Git commit              : b49bdaa
+Tree SHA-256            : 6990f1447731462cf85b0be78f92ddcdcd5699e47db005295b4947f09560c170
+Git commit              : c2150f6
 Source state            : generated-only dirty
-                            README.md
-                            START-HERE.md
-                            docs/HANDOFF.md
                             harness/LAST-RUN.txt
-                            harness/POSTGRES-ATTESTATION.txt
-                            harness/README.md
-SKRIBL_VERSION          : v299
+SKRIBL_VERSION          : v300
 Python                  : 3.12.3
 Flask                   : 3.1.3
 SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.msmYJ1BYN1/harness.db)
+Database reset          : yes (fresh /tmp/tmp.u4sk9NYzUf/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
@@ -70,7 +65,7 @@ suites requested : 100
   verify_hostconfig.py: ok — 55/55 passed
   verify_hostseams.py: ok — 32/32 passed
   verify_icons.py: ok — 37/37 passed
-  verify_inbetween.py: ok — 58/58 passed
+  verify_inbetween.py: ok — 67/67 passed
   verify_inline.py: ok — 79/79 passed
   verify_input.py: ok — 9/9 passed
   verify_integration.py: ok — 14/14 passed
@@ -124,11 +119,11 @@ suites requested : 100
   verify_tips.py: ok — 59/59 passed
   verify_tools.py: ok — 130/130 passed
   verify_tray.py: ok — 121/121 passed
-  verify_tween.py: ok — 128/128 passed
+  verify_tween.py: ok — 130/130 passed
   verify_txcontract.py: ok — 83/83 passed
   verify_ux.py: ok — 371/371 passed
   verify_version.py: ok — 28/28 passed
   verify_visual.py: ok — 76/76 passed
-assertions passed: 5234   (skipped suites contribute 0)
+assertions passed: 5245   (skipped suites contribute 0)
 suites skipped   : 2
 suites with problems: 0

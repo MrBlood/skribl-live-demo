@@ -1524,6 +1524,113 @@ with sync_playwright() as p:
           return tweenMatch(ia, ib).map(m => m ? { j: m.j, rev: !!m.reversed } : null);
         }""", [a, b])
 
+    # ---------------------------------------------------------------- v300
+    # THE INVARIANT, NOT A PATCH: two drawings with identical geometry and
+    # completely different sampling must produce the same correspondence.
+    #
+    # This is v298's V19, open through v299 and recorded as open in DECISIONS
+    # before it was closed. Two mechanisms, both fixed, both mutated below:
+    # tweenCentred weighted the page centre by POINT COUNT, and
+    # tweenShapeCost sampled at t * (r.length - 1), a VERTEX fraction.
+    #
+    # THE FIXTURE IS CORPUS CASE 19's GEOMETRY, because that is the case known
+    # to fail: three IDENTICAL circles with the middle one moved. Identical
+    # shapes make shape cost tie, so position is the only thing left to
+    # separate them — and position is exactly what a density-weighted centre
+    # gets wrong. Measured on the shipped v299 tree: 11 of these 64
+    # combinations returned the wrong correspondence, hand/hand among them,
+    # which is the [1, 0, 2] the corpus recorded and nobody read.
+    #
+    # EVERY COMBINATION, not a diagonal. Two pages are recorded independently
+    # in life, so a fix that only worked when both were sampled alike would
+    # pass a diagonal sweep and fail a person.
+    print("\nSAMPLING INVARIANCE — the same drawing, recorded differently")
+
+    _inv = page.evaluate("""() => {
+      const circle = (cx, cy, r) => (t) => ({ x: cx + r*Math.cos(2*Math.PI*t),
+                                              y: cy + r*Math.sin(2*Math.PI*t) });
+      const A_S = [circle(180,353,55), circle(353,353,55), circle(526,353,55)];
+      const B_S = [circle(180,353,55), circle(353,180,55), circle(526,353,55)];
+      const even = (f, n) => Array.from({length:n}, (_, i) => f(i/(n-1)));
+      // Half the points crammed into the first 15% of the arc: a pen that
+      // started slowly and then swept. This is the one the index-fraction
+      // sampler could not survive.
+      const clump = (f, n) => Array.from({length:n}, (_, i) => {
+        const u = i/(n-1); return f(u < 0.5 ? u*0.3 : 0.15 + (u-0.5)*1.7); });
+      const phase = (f, n) => Array.from({length:n}, (_, i) => f(((i/(n-1))+0.33)%1));
+      let s = 20260917;
+      const rnd = () => (s = (s*1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+      const mk = (runs) => { const f = {strokes:[], strokeGroups:[], hold:1}; let t = 0;
+        runs.forEach(r => { r.forEach((p,i) => { const q = {x:p.x, y:p.y, size:6,
+            color:'#ffffff', erase:false, t:t}; t += 16; if(i===0) q.start = true;
+            f.strokes.push(q); }); f.strokeGroups.push(r.length); });
+        return f; };
+      const recipes = {
+        even:      (S) => S.map(f => even(f, 60)),
+        lopsided:  (S) => [even(S[0], 8), even(S[1], 400), even(S[2], 8)],
+        lopsidedB: (S) => [even(S[0], 400), even(S[1], 8), even(S[2], 400)],
+        hand:      (S) => S.map(f => { const step = 3 + rnd()*15;
+                     return even(f, Math.max(4, Math.round(2*Math.PI*55/step))); }),
+        clustered: (S) => S.map((f,i) => clump(f, 30 + i*120)),
+        phased:    (S) => S.map(f => phase(f, 70)),
+        sparse:    (S) => S.map(f => even(f, 6)),
+        dense:     (S) => S.map(f => even(f, 500))
+      };
+      const names = Object.keys(recipes);
+      const wrong = [];
+      let n = 0;
+      for (const na of names) for (const nb of names) {
+        n++;
+        const A = mk(recipes[na](A_S)), B = mk(recipes[nb](B_S));
+        const p = tweenMatch(tweenVisible(A).ink, tweenVisible(B).ink)
+                    .map(m => m === null ? null : m.j);
+        if (JSON.stringify(p) !== '[0,1,2]') wrong.push(na + '/' + nb + ' -> ' + JSON.stringify(p));
+      }
+      return { total: n, wrong: wrong };
+    }""")
+    check("the same drawing recorded 64 ways pairs the same way every time",
+          _inv["wrong"] == [],
+          f"{len(_inv['wrong'])} of {_inv['total']} combinations disagree: "
+          + "; ".join(_inv["wrong"][:6])
+          + " — identical geometry, different pen speed. Density is a property "
+            "of how it was observed, not of the drawing")
+
+    # AND THE SECOND MECHANISM NEEDS ITS OWN PIN, because the sweep above does
+    # not reach it: with the page centre fixed, the 64 combinations pass even
+    # with the old vertex-index sampler restored. Measured, so this is not a
+    # guess — the mutation was run and stayed green, which is the moment a
+    # change becomes unproven rather than proven.
+    #
+    # So the property is asserted where it lives. The SAME curve, sampled
+    # evenly and sampled with half its points crammed into the first eighth of
+    # its arc, must cost the same against a fixed target: the drawing did not
+    # change, only the pen speed. Measured on this fixture:
+    #
+    #     vertex-index sampler     35.3 -> 84.9     58% drift
+    #     arc-length sampler       36.6 -> 36.6      0.05% drift
+    #
+    # A plateau three orders of magnitude wide, not a tuned edge.
+    _sc = page.evaluate("""() => {
+      const curve  = (t) => ({ x: 150 + 300*t,
+                               y: 300 + 120*Math.sin(t*Math.PI*1.6) - 90*t*t });
+      const target = (t) => ({ x: 150 + 300*t,
+                               y: 330 + 100*Math.sin(t*Math.PI*1.6) - 70*t*t });
+      const even  = (f,n) => Array.from({length:n}, (_,i) => f(i/(n-1)));
+      const clump = (f,n) => Array.from({length:n}, (_,i) => {
+        const u = i/(n-1); return f(u < 0.5 ? u*0.25 : 0.125 + (u-0.5)*1.75); });
+      const T = even(target, 60);
+      const a = tweenShapeCost(even(curve, 60), T).cost;
+      const b = tweenShapeCost(clump(curve, 60), T).cost;
+      return { even: a, clumped: b, drift: Math.abs(a-b)/Math.max(a,b) };
+    }""")
+    check("shape cost is read along the ARC, so clustering inside a stroke "
+          "does not change it",
+          _sc["drift"] < 0.02,
+          f"{_sc['even']:.1f} evenly sampled against {_sc['clumped']:.1f} "
+          f"clustered — {_sc['drift']*100:.1f}% drift on one curve that did not "
+          f"move. Half way through the point list is not half way along the "
+          f"drawing")
+
     inorder = pairing(pose(20), pose(-125))
     check("in drawing order, every stroke pairs with its own partner",
           [m and m["j"] for m in inorder] == [0, 1, 2, 3], str(inorder))

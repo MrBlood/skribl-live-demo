@@ -677,6 +677,108 @@ with sync_playwright() as p:
           f"well, so residual alone picks one at random and the in-between "
           f"rotates a shape that never moved")
 
+    # ---------------------------------------------------------------- v300
+    # THE PLAINEST THING THE FEATURE DOES, and until now the only one of the
+    # corpus's expectations with no assertion behind it: a drawing that MOVED
+    # and did nothing else. The half-turn above pins the case with a rotation in
+    # it and the circle pins the case with none; neither says where the ink
+    # lands, and "lands half way" is the whole promise of a middle pose.
+    #
+    # An outside review of v299 asked the corpus to state a per-case
+    # expectation rather than only a picture. Five of its six were already
+    # gated here -- the tap, the erased hole, the timing of the carve, the
+    # rigid turn, the density sweep -- and this was the gap.
+    #
+    # TWO READINGS, BECAUSE THEY FAIL SEPARATELY. Where the ink LANDED is
+    # ibApply's business; what the fit CONCLUDED is ibFit's. Measured, with
+    # ibApply's centroid lerp removed, the middle pose sits on top of the first
+    # one -- 90px out -- and the fit still reads a perfect translation, because
+    # nothing about the fit was touched.
+    #
+    # AND RECORDED AT TWO DENSITIES, because that is what the second reading is
+    # for. The same L, one pose taken at four times the samples along two of its
+    # arms: identical geometry, different recording. With tweenResample walking
+    # by INDEX instead of arc length the even pair is still exact -- it is
+    # uniformly sampled, so the two rules agree -- and the lopsided pair reads a
+    # 38.7 degree turn, a scale of 0.57 and 122px of residual on a drawing that
+    # only slid sideways. One fixture at one density cannot see it.
+    print("\nA DRAWING THAT ONLY MOVED lands half way, however it was recorded")
+
+    TRANS = """(lopsided) => {
+      // An L, and the same L 180 right and 90 down. Nothing else differs.
+      const seg = (a, b, per) => { const o = [];
+        for (let i = 0; i <= per; i++) { const u = i / per;
+          o.push({ x: a[0] + (b[0]-a[0])*u, y: a[1] + (b[1]-a[1])*u,
+                   size: 6, color: '#ffffff', erase: false, t: 0 }); } return o; };
+      const L = (dx, dy, lop) => {
+        const P = [[200,200],[440,200],[440,260],[300,260],[300,400],[200,400]];
+        const out = [];
+        for (let s = 0; s < P.length - 1; s++) {
+          const per = lop ? (s < 2 ? 48 : 6) : 16;
+          const r = seg([P[s][0]+dx, P[s][1]+dy], [P[s+1][0]+dx, P[s+1][1]+dy], per);
+          for (let i = (s ? 1 : 0); i < r.length; i++) out.push(r[i]);
+        }
+        return out; };
+      const mk = (r) => { const f = { strokes: [], strokeGroups: [], hold: 1 };
+        r.forEach((q, i) => { const c = Object.assign({}, q);
+          if (i === 0) c.start = true; else delete c.start; f.strokes.push(c); });
+        f.strokeGroups.push(r.length); return f; };
+      const A = mk(L(0, 0, false)), B = mk(L(180, 90, !!lopsided));
+      // The centre a person would point at: the middle of the INK, weighted by
+      // how much ink there is, not the mean of however many samples recorded it.
+      const arc = (r) => { let tot = 0, cx = 0, cy = 0;
+        for (let i = 1; i < r.length; i++) {
+          const d = Math.hypot(r[i].x - r[i-1].x, r[i].y - r[i-1].y);
+          tot += d; cx += (r[i].x + r[i-1].x) / 2 * d;
+                    cy += (r[i].y + r[i-1].y) / 2 * d; }
+        return tot > 0 ? { x: cx/tot, y: cy/tot } : { x: r[0].x, y: r[0].y }; };
+      frames.length = 0; frames.push(A); frames.push(B);
+      idx = 0; fps = 12; subdiv = 1; selSpans = [];
+      actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const n0 = frames.length;
+      addInbetween();
+      if (frames.length <= n0) return { made: false };
+      const g = frames[1];
+      const ca = arc(A.strokes), cb = arc(B.strokes), cg = arc(g.strokes);
+      // What the fit concluded, read the way the half-turn pin above reads it.
+      const ra = tweenVisible(A).ink, rb = tweenVisible(B).ink;
+      const nn = Math.max(ra[0].length, rb[0].length);
+      const pa = tweenResample(ra[0], nn);
+      const pb = ibPhase(pa, tweenResample(rb[0], nn));
+      const T = ibFit(pa, pb);
+      const loc = ibUnapply(pb, T);
+      let e = 0;
+      for (let i = 0; i < nn; i++) e += Math.hypot(loc[i].x - pa[i].x, loc[i].y - pa[i].y);
+      return { made: true, dx: cg.x - (ca.x + cb.x) / 2, dy: cg.y - (ca.y + cb.y) / 2,
+               deg: Math.abs(T.angle) * 180 / Math.PI, scale: T.scale, resid: e / nn };
+    }"""
+
+    _tr = { "even": page.evaluate(TRANS, False),
+            "lopsided": page.evaluate(TRANS, True) }
+    check("both translation fixtures produced an in-between",
+          all(v.get("made") is True for v in _tr.values()), str(_tr))
+    _far = { k: (round(v.get("dx", 999), 2), round(v.get("dy", 999), 2))
+             for k, v in _tr.items()
+             if not v.get("made") or max(abs(v["dx"]), abs(v["dy"])) > 2.0 }
+    check("a drawing that only moved is drawn half way between, to the pixel",
+          not _far,
+          f"{_far} — the middle pose belongs at the midpoint of the two "
+          f"centres. Without ibApply's centroid lerp it sits on top of the "
+          f"first pose, 90px away, which reads as the drawing not moving "
+          f"until it jumps")
+    _bent = { k: (round(v.get("deg", 999), 2), round(v.get("scale", 0), 4),
+                  round(v.get("resid", 999), 2))
+              for k, v in _tr.items()
+              if not v.get("made") or v["deg"] > 1.0
+              or abs(v["scale"] - 1.0) > 0.02 or v["resid"] > 0.5 }
+    check("...and it is fitted as a move: no turn, no scale, nothing left over",
+          not _bent,
+          f"{_bent} — a slide has no rotation and no size change in it. "
+          f"Sampled by index rather than arc length the lopsided pose fits as "
+          f"a 38.7 degree turn at 0.57 scale carrying 122px of residual, and "
+          f"the evenly-recorded pair cannot tell you so")
+
     print("\nUNDO — an in-between is one action, and undoing it is not a blank page")
 
     _iu = page.evaluate("""() => {
@@ -957,6 +1059,173 @@ with sync_playwright() as p:
                     for r in _sum)
           + " — a longer pair moves every page after it, which is the bug the "
             "carve exists to prevent")
+
+    # ---------------------------------------------------------------- v300
+    # WHAT YOU RUBBED OUT STAYS RUBBED OUT.
+    #
+    # buildInbetween walks tweenVisible(a).ink and nothing walked .erase, so a
+    # line with a rubbed-out middle came back SOLID on the generated page and
+    # the hole returned on the next one. Measured on corpus case 18's geometry:
+    # the page held one run with erase false, and the middle of the gap painted
+    # 8 dark pixels where it should paint none.
+    #
+    # THE SMEAR'S ANSWER IS NOT THIS ONE, and the difference is the assertion.
+    # buildTween carries erasers through unsampled, at the position drawn,
+    # because a smear is many copies of one pose. An in-between is ONE pose, so
+    # if the erased stroke moved its hole must move with it -- carrying at A's
+    # position would leave the hole at y=300 while the line sits at y=365, and
+    # the line would read solid anyway. That is why the second check below is
+    # about WHERE the hole is, not merely that there is one.
+    #
+    # MEASURED OPAQUE AND DARK, not dark. The first version of this read only
+    # the red channel and reported MORE ink after the hole was restored:
+    # destination-out leaves r=0, a=0, which is indistinguishable from black
+    # unless the alpha is checked. The instrument was wrong in the direction
+    # that would have hidden the fix.
+    print("\nERASURE — a hole the artist made does not heal in the middle")
+
+    ERASE = """(only) => {
+      const L=(x0,y0,x1,y1,n,o)=>{const a=[];for(let i=0;i<=n;i++){const t=i/n;
+        a.push(Object.assign({x:x0+(x1-x0)*t, y:y0+(y1-y0)*t, color:'#141414',
+                              size:7, erase:false, t:i}, o||{}));}
+        a[0].start=true; return a;};
+      const mk=(runs)=>{const f={strokes:[],strokeGroups:[],hold:1};
+        runs.forEach(r=>{r.forEach((p,i)=>{const q=Object.assign({},p);
+          if(i===0)q.start=true; else delete q.start; f.strokes.push(q);});
+          f.strokeGroups.push(r.length);}); return f;};
+      const rub=(y)=>L(300,y,420,y,16,{erase:true,size:34});
+      // `only` drops the eraser from the SECOND page, which is the case that
+      // has no partner to move toward.
+      const A = mk([ L(120,300,600,300,40), rub(300) ]);
+      const B = only ? mk([ L(120,430,600,430,40) ])
+                     : mk([ L(120,430,600,430,40), rub(430) ]);
+      frames.length=0; frames.push(A); frames.push(B);
+      idx=0; fps=12; subdiv=1; selSpans=[];
+      actionLog.length=0; redoStack.length=0; buildStrip(); render();
+      const n0=frames.length;
+      addInbetween();
+      if(frames.length<=n0) return {made:false};
+      const g=frames[1];
+      let at=0; const runs=[];
+      for(const n of g.strokeGroups){ const r=g.strokes.slice(at,at+n); at+=n;
+        runs.push({n:n, erase:!!r[0].erase, y:Math.round(r[0].y)}); }
+      const c=document.getElementById('c')||document.querySelector('canvas');
+      const cx=c.getContext('2d');
+      cx.setTransform(1,0,0,1,0,0);
+      cx.fillStyle='#ffffff'; cx.fillRect(0,0,c.width,c.height);
+      paintStatic(cx, g.strokes);
+      const d=cx.getImageData(0,0,c.width,c.height).data;
+      const col=(x)=>{let k=0; for(let y=0;y<c.height;y++){
+        const i=(y*c.width+(x|0))*4; if(d[i+3]>128 && d[i]<128) k++; } return k;};
+      return { made:true, runs:runs, gap:col(360), left:col(200), right:col(520) };
+    }"""
+
+    _er = page.evaluate(ERASE, False)
+    check("an in-between of two rubbed-out lines keeps the hole",
+          _er.get("made") and _er["gap"] == 0,
+          f"{_er.get('gap')} opaque dark pixels through the middle of the gap "
+          f"— the artist rubbed it out on both pages and the generated one "
+          f"filled it back in")
+    check("...while the line either side of it is still there",
+          _er.get("made") and _er["left"] > 0 and _er["right"] > 0,
+          f"left {_er.get('left')} right {_er.get('right')} — a blank page "
+          f"would pass the check above for the wrong reason")
+    _rub = [r for r in (_er.get("runs") or []) if r["erase"]]
+    check("...and the hole MOVED with the line, rather than staying where it was",
+          len(_rub) == 1 and abs(_rub[0]["y"] - 365) <= 2,
+          f"{_rub} — drawn at y=300 and y=430, so the one pose between them "
+          f"holds its hole at 365. Carrying the eraser across unsampled, which "
+          f"is what the smear does, would leave it at 300 with the line at 365")
+
+    _only = page.evaluate(ERASE, True)
+    _orub = [r for r in (_only.get("runs") or []) if r["erase"]]
+    check("an eraser with no partner on the next page is carried as drawn",
+          len(_orub) == 1 and abs(_orub[0]["y"] - 300) <= 2,
+          f"{_orub} — a hole made on THIS page is on the page you are "
+          f"inserting after, so it comes through where it was put")
+
+    # ---------------------------------------------------------------- v300
+    # THE PHASE SEARCH HAD A SCALING CLIFF, and this gates the work rather than
+    # the clock.
+    #
+    # ibPhase's coarse pass is 48 probes whatever the drawing holds, but the
+    # refinement walked EVERY offset in +/- stride, and stride is n/24 -- so
+    # the refinement grew with the point count while each probe is itself
+    # O(n). Quadratic. Measured on a six-stroke figure before the change:
+    #
+    #     points per stroke     300    600   1200   2400
+    #     ibPhase, ms          1.28   2.67   7.93   26.7
+    #     the button, ms         50     84    167    353
+    #
+    # NOT A STOPWATCH, DELIBERATELY. This project already learned what a
+    # wall-clock pin is worth: verify_pages' cold > warm*3 failed twice on
+    # trees whose own sqlite job passed, both times because the box was busy,
+    # and DECISIONS records that a pin which goes red when the machine is
+    # loaded reports on the machine rather than on the tree. So the assertion
+    # counts ibFit CALLS, which is the work the algorithm actually does and is
+    # identical on every machine.
+    #
+    #     ibFit calls      300    600   1200   2400
+    #     shipped           75     99    149    249      doubling: linear
+    #     now               68     72     78     84      +6: logarithmic
+    print("\nPHASE SEARCH — the work must not grow with the drawing")
+
+    _cost = page.evaluate("""() => {
+      const loop = (n, spin) => { const o = [];
+        for (let i = 0; i < n; i++) { const a = spin + i/n*2*Math.PI;
+          const r = 90 + 22*Math.sin(3*a) + 12*Math.cos(5*a);
+          o.push({ x: 353 + Math.cos(a)*r, y: 353 + Math.sin(a)*r, size: 6 }); }
+        o.push(Object.assign({}, o[0])); return o; };
+      const real = window.ibFit;
+      const count = (n) => {
+        const pa = tweenResample(loop(n, 0), n), pb = tweenResample(loop(n, 1.9), n);
+        let calls = 0;
+        window.ibFit = function(){ calls++; return real.apply(null, arguments); };
+        try { ibPhase(pa, pb); } finally { window.ibFit = real; }
+        return calls;
+      };
+      const small = count(600), large = count(2400);
+
+      /* AND THE CHEAPER SEARCH MUST STILL FIND THE ANSWER. Checked at 300
+         points, where EVERY spin can be afforded -- a truly exhaustive sweep,
+         step of one, not a coarse reference. An earlier version of this used
+         step = n/240 and reported the search beating its own oracle by 71%,
+         which meant the oracle was the weaker instrument, not that the search
+         was inspired.
+
+         AND AT 600 RATHER THAN 300, because 300 does not discriminate: with
+         IB_PHASE_BRACKETS dropped to 1 this suite stayed green there, and a
+         check that cannot go red is not evidence. 600 is the contour and
+         phase offset where refining only the BEST coarse bracket lands in a
+         local minimum. Measured on this exact fixture: 8.02% off the
+         exhaustive answer with one bracket, 0.00% with three. */
+      const n = 600;
+      const pa = tweenResample(loop(n, 0), n), pb = tweenResample(loop(n, 1.9), n);
+      const cands = [pb, pb.slice().reverse()];
+      let cx = 0, cy = 0; for (const p of pa){ cx += p.x/n; cy += p.y/n; }
+      let rad = 0; for (const p of pa) rad += Math.hypot(p.x-cx, p.y-cy)/n;
+      const score = (q) => { const T = real(pa, q), loc = ibUnapply(q, T); let e = 0;
+        for (let i = 0; i < n; i++) e += Math.hypot(loc[i].x-pa[i].x, loc[i].y-pa[i].y);
+        return e/n + IB_TURN_PENALTY*Math.abs(T.angle)*rad; };
+      let bc = Infinity;
+      for (let o = 0; o < 2; o++) for (let k = 0; k < n; k++) {
+        const c = score(ibSpin(cands[o], k)); if (c < bc) bc = c; }
+      const chosen = score(ibPhase(pa, pb));
+      return { small: small, large: large, chosen: chosen, exhaustive: bc,
+               penalty: (chosen - bc) / Math.max(bc, 1e-9) };
+    }""")
+
+    check("the phase search's work barely grows when the drawing gets four "
+          "times denser",
+          _cost["large"] < _cost["small"] * 1.5,
+          f"{_cost['small']} fits at 600 points, {_cost['large']} at 2400 — "
+          f"x{_cost['large']/max(_cost['small'],1):.1f}. Walking every offset in "
+          f"a window of n/24 made this linear, and each probe is itself O(n)")
+    check("...and it still finds what an exhaustive sweep of every spin finds",
+          _cost["penalty"] < 0.01,
+          f"{_cost['chosen']:.3f} against {_cost['exhaustive']:.3f} over all 1200 "
+          f"spins at 600 points ({_cost['penalty']*100:+.1f}%) — cheaper is only "
+          f"worth having if it lands in the same place")
 
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()

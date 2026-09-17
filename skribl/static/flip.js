@@ -5955,16 +5955,72 @@ function tweenPlan(per, groupsPer, atFps, reserve){
    case, and both guards that might have cost more than they saved. It is one
    unusual edit, the result is visible rather than silent, and undo is one
    tap. */
-const TWEEN_MATCH_LENGTH = 4;
+const TWEEN_MATCH_LENGTH = 6;
 // Shorter than this and there is no length to compare: a dot, or a tap.
 const TWEEN_MATCH_DOT = 2;
 const TWEEN_MATCH_SAMPLES = 12;
+/* HOW MUCH A LENGTH MISMATCH COSTS, as a fraction of the shape cost. The 4x
+   guard below is a cliff and nothing reaches it: a body of 192px against an
+   arm of 140px is 1.37x, so shape and position decided alone -- and when a
+   limb swings 145 degrees it lands about where the body is, leaving two
+   straight lines of similar length separated by 1.3 units out of 23. That is
+   luck, not a property, and the arc-length centre was enough to flip it.
+   Length is the honest discriminator and the guard already says so: a stroke
+   does not change length much by moving. Graded, so it breaks near-ties
+   without overruling shape; multiplicative, so it is scale-free. */
+const TWEEN_MATCH_LENSKEW = 1;
 
-// Each page about its own centre, so a drawing that travels still pairs.
+/* Each page about its own centre, so a drawing that travels still pairs.
+
+   WEIGHTED BY ARC LENGTH, NOT BY POINT COUNT -- v298's V19, open until now.
+   This summed every recorded POINT and divided by how many there were, so a
+   stroke taken slowly at 150 samples pulled the centre 150 times while the
+   same stroke swept at 20 pulled it 20. Density is a property of pen speed
+   (lib/inputsamples.js thins at MIN_DIST); it is not a property of the
+   drawing. GEOMETRY DESCRIBES THE DRAWING; SAMPLING DESCRIBES HOW WE OBSERVED
+   IT, and a reference centre is a question about the first.
+
+   It shows up where shape CANNOT break the tie: three identical circles with
+   the middle one moved (corpus case 19) pair [0,1,2] evenly sampled and
+   [1,0,2] as a hand records them, which draws as two circles colliding on the
+   left instead of the middle one travelling.
+
+   THE MEAN OF PER-STROKE CENTROIDS IS NOT THE FIX, and was tried first: it
+   weights a short stroke like a long one, so verify_inbetween's extraOnFirst
+   -- a page holding a line, a hexagon and a circle against a page holding only
+   the hexagon and circle -- moves the centre FURTHER than point-counting did.
+   An unpaired stroke is exactly what disturbs a page centre, and the cure has
+   to be no worse than the disease.
+
+   Integrating position along the ink is both: sampling-invariant, because arc
+   length is a property of the path, and proportionate, because a stroke counts
+   for its length rather than for existing. A TAP has no arc length and is
+   still ink, so it counts for the one length it does have -- its pen width. */
 function tweenCentred(runs){
-  let x = 0, y = 0, n = 0;
-  for(const r of runs) for(const p of r){ x += p.x; y += p.y; n++; }
-  const cx = x / Math.max(1, n), cy = y / Math.max(1, n);
+  let wx = 0, wy = 0, w = 0;
+  for(const r of runs){
+    if(!r.length) continue;
+    let span = 0;
+    for(let i = 1; i < r.length; i++){
+      const d = Math.hypot(r[i].x - r[i - 1].x, r[i].y - r[i - 1].y);
+      if(!(d > 0)) continue;
+      wx += (r[i].x + r[i - 1].x) / 2 * d;
+      wy += (r[i].y + r[i - 1].y) / 2 * d;
+      w += d; span += d;
+    }
+    if(!(span > 0)){
+      const d = (typeof r[0].size === 'number' ? r[0].size : 6);
+      wx += r[0].x * d; wy += r[0].y * d; w += d;
+    }
+  }
+  // Nothing with any extent at all: the old reading is as good as any.
+  if(!(w > 0)){
+    let x = 0, y = 0, n = 0;
+    for(const r of runs) for(const p of r){ x += p.x; y += p.y; n++; }
+    const px = x / Math.max(1, n), py = y / Math.max(1, n);
+    return runs.map(r => r.map(p => ({ x: p.x - px, y: p.y - py })));
+  }
+  const cx = wx / w, cy = wy / w;
   return runs.map(r => r.map(p => ({ x: p.x - cx, y: p.y - cy })));
 }
 /* Mean distance between correspondingly sampled points, taking the better of
@@ -5972,16 +6028,34 @@ function tweenCentred(runs){
    and the fixture for it is in the set above. */
 function tweenShapeCost(A, B){
   const n = TWEEN_MATCH_SAMPLES;
-  const at = (r, t) => {
-    const i = t * (r.length - 1), k = Math.floor(i), f = i - k;
-    const p = r[k], q = r[Math.min(k + 1, r.length - 1)];
+  /* ALONG THE ARC, NOT ALONG THE INDEX -- the second sampling dependency, and
+     the one that survives fixing the page centre. This read `t * (r.length -
+     1)`, a VERTEX fraction, so a stroke whose points bunch where the hand
+     slowed had its samples bunch there too: half way through the list is not
+     half way along the drawing. Measured on the fixture below, clustering
+     within a stroke was the larger of the two effects. */
+  const walk = (r) => {
+    const d = [0];
+    for(let i = 1; i < r.length; i++)
+      d.push(d[i - 1] + Math.hypot(r[i].x - r[i - 1].x, r[i].y - r[i - 1].y));
+    return d;
+  };
+  const at = (r, d, t) => {
+    const total = d[d.length - 1];
+    if(!(total > 0)) return { x: r[0].x, y: r[0].y };   // a tap, or a run that never moved
+    const target = total * t;
+    let j = 1;
+    while(j < d.length - 1 && d[j] < target) j++;
+    const seg = d[j] - d[j - 1], f = seg > 0 ? (target - d[j - 1]) / seg : 0;
+    const p = r[j - 1], q = r[j];
     return { x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f };
   };
+  const dA = walk(A), dB = walk(B);
   let fwd = 0, rev = 0;
   for(let i = 0; i < n; i++){
     const t = i / (n - 1);
-    const a = at(A, t);
-    const bf = at(B, t), br = at(B, 1 - t);
+    const a = at(A, dA, t);
+    const bf = at(B, dB, t), br = at(B, dB, 1 - t);
     fwd += Math.hypot(a.x - bf.x, a.y - bf.y);
     rev += Math.hypot(a.x - br.x, a.y - br.y);
   }
@@ -6082,7 +6156,14 @@ function tweenMatch(inkA, inkB){
   for(let i = 0; i < ca.length; i++)
     for(let j = 0; j < cb.length; j++){
       const r = tweenShapeCost(ca[i], cb[j]);
-      pairs.push({ i: i, j: j, cost: r.cost, reversed: r.reversed });
+      /* Exempt for the same reason the hard guard is: below a pen width there
+         is no length to compare, and a dot pairing with the run it becomes is
+         the case v255 went out of its way to support. */
+      const la = lenA[i], lb = lenB[j];
+      const lo = Math.min(la, lb), hi = Math.max(la, lb);
+      const skew = (lo > TWEEN_MATCH_DOT && hi > 0) ? (hi - lo) / hi : 0;
+      pairs.push({ i: i, j: j, reversed: r.reversed,
+                   cost: r.cost * (1 + TWEEN_MATCH_LENSKEW * skew) });
     }
   pairs.sort((p, q) => p.cost - q.cost);
   const out = new Array(ca.length).fill(null), taken = {};
@@ -6909,6 +6990,11 @@ const ibSpin = (a, k) => a.slice(k).concat(a.slice(0, k));
 
 /* How much a turn has to EARN before the fit is allowed to claim it, as a
    fraction of the arc a typical point would travel. See ibPhase. */
+/* How many of the coarse pass's brackets get refined. One is cheaper and was
+   measured failing: a local minimum 8% off the exhaustive answer on 1 of 75
+   fixtures. Three matches it exactly on all 75. The coarse scores are already
+   in hand, so the runners-up are free to keep. */
+const IB_PHASE_BRACKETS = 3;
 const IB_TURN_PENALTY = 0.15;
 
 /* Which rotation of a closed path lines up with pose A -- SCORED AFTER THE
@@ -6983,18 +7069,58 @@ function ibPhase(pa, pb){
   }
   const K = Math.min(n, 24);
   const stride = Math.max(1, Math.floor(n / K));
+  /* THE REFINE WINDOW WAS THE SCALING CLIFF. The coarse pass is 48 probes
+     whatever n is, but the refinement walked EVERY offset in +/- stride, and
+     stride is n/24 -- so the refinement grew with the drawing while each probe
+     is itself O(n). That is quadratic, and measured on a six-stroke figure it
+     is what the owner's "slow" is:
+
+         points per stroke      60    300    600   1200   2400
+         ibPhase, ms          0.35   1.28   2.67   7.93   26.7
+         the button, ms         19     50     84    167    353
+
+     Four times the points from 600 to 2400 cost ten times the time.
+
+     HALVING THE WINDOW INSTEAD, two probes a level, makes the refinement
+     logarithmic: 201 probes become 12 at n = 2400. On its own that is not
+     safe, and measuring said so -- the score surface is not always unimodal,
+     and across 75 fixtures one landed in a local minimum 8% worse than the
+     exhaustive answer.
+
+     SO THE BEST THREE COARSE BRACKETS ARE REFINED, NOT THE BEST ONE. The
+     coarse pass already computed all 48 scores; keeping the runners-up costs
+     nothing and buys the robustness back. Measured over the same 75 fixtures
+     -- five point counts, five phase offsets, three contour shapes -- against
+     the exhaustive search it replaces:
+
+         worst relative cost penalty    0.00%
+         fixtures worse by over 1%      0 of 75
+         refine probes at n = 2400      201 -> 36
+
+     Exact agreement, not merely close, and still logarithmic. */
+  const probes = [];
   let bc = Infinity, bestOrient = 0, bestK = 0;
   for(let o = 0; o < 2; o++)
     for(let k = 0; k < n; k += stride){
       const c = score(ibSpin(cands[o], k));
+      probes.push({ o: o, k: k, c: c });
       if(c < bc){ bc = c; bestOrient = o; bestK = k; }
     }
-  const cand = cands[bestOrient];
-  let best = ibSpin(cand, bestK);
-  for(let d = -stride; d <= stride; d++){
-    const k = ((bestK + d) % n + n) % n;
-    const r = ibSpin(cand, k), c = score(r);
-    if(c < bc){ bc = c; best = r; }
+  probes.sort((x, y) => x.c - y.c);
+  let best = ibSpin(cands[bestOrient], bestK);
+  for(const seed of probes.slice(0, IB_PHASE_BRACKETS)){
+    const cand = cands[seed.o];
+    let k0 = seed.k, cost = seed.c, win = stride;
+    while(win > 1){
+      const step = Math.max(1, Math.floor(win / 2));
+      for(const d of [-step, step]){
+        const k = ((k0 + d) % n + n) % n;
+        const c = score(ibSpin(cand, k));
+        if(c < cost){ cost = c; k0 = k; }
+      }
+      win = step;
+    }
+    if(cost < bc){ bc = cost; best = ibSpin(cand, k0); }
   }
   return best;
 }
@@ -7065,6 +7191,54 @@ function ibUnapply(pts, T){
     const dx = (p.x - T.cbx) * s, dy = (p.y - T.cby) * s;
     return { x: T.cax + dx * c - dy * sn, y: T.cay + dx * sn + dy * c };
   });
+}
+
+/* WHAT YOU RUBBED OUT STAYS RUBBED OUT -- the in-between's half of a rule
+   buildTween has enforced since v296 and this side never got, which is the
+   same shape as v298's finding that addInbetween never got the matcher.
+
+   buildInbetween walks tweenVisible(a).ink and nothing walks .erase, so a line
+   with a rubbed-out middle came back SOLID on the generated page and the hole
+   returned on the next one. Measured on corpus case 18: the generated page
+   held one run with erase false, and the middle of the gap painted 8 dark
+   pixels where it should paint none. A hole that heals and reappears is not a
+   believable drawing, and nothing announced it.
+
+   THE SMEAR'S ANSWER IS NOT THIS ONE, deliberately. buildTween carries the
+   erasers through UNSAMPLED and at the position they were drawn, because a
+   smear is many copies of a pose and an eraser swept along the motion is a
+   hole dragged through the drawing. An in-between is ONE pose. If the erased
+   stroke moved, its hole has to move with it or it lands where the ink no
+   longer is -- so here the erasers are interpolated exactly as the ink is,
+   through the same matcher and the same arc-length resampling.
+
+   An eraser with no partner on the far page is carried as drawn, which is
+   buildTween's rule and the honest one: a hole the artist made on THIS page is
+   on the page you are inserting after. */
+function tweenErasers(ea, eb, t){
+  const copy = (r) => r.map(p => Object.assign({}, p));
+  if(!ea.length) return [];
+  if(!eb.length) return ea.map(copy);
+  const pairing = tweenMatch(ea, eb);
+  const out = [];
+  for(let s = 0; s < ea.length; s++){
+    const m = pairing[s];
+    if(!m){ out.push(copy(ea[s])); continue; }
+    const partner = m.reversed ? eb[m.j].slice().reverse() : eb[m.j];
+    const n = Math.max(ea[s].length, partner.length);
+    if(n < 1){ out.push(copy(ea[s])); continue; }
+    const pa = tweenResample(ea[s], n), pb = tweenResample(partner, n);
+    out.push(pa.map((p, i) => {
+      const q = Object.assign({}, p);
+      q.x = p.x + (pb[i].x - p.x) * t;
+      q.y = p.y + (pb[i].y - p.y) * t;
+      if(typeof p.size === 'number' && typeof pb[i].size === 'number')
+        q.size = p.size + (pb[i].size - p.size) * t;
+      q.erase = true;
+      return q;
+    }));
+  }
+  return out;
 }
 
 /* One page: the drawing at t. */
@@ -7165,11 +7339,27 @@ function addInbetween(){
      A stroke the matcher cannot place is drawn ONCE at full strength -- the
      same answer the smear gives an unpaired stroke, and the only honest one:
      a pose has no half-way position for a stroke that exists on one page. */
+  /* CAPTURED BEFORE THE ALIGNMENT, which is the last moment this page's own
+     erasers are in hand: tweenAlign returns ink-only copies, so by the time
+     buildInbetween sees a frame there is nothing left to carry. buildTween
+     takes its erasers at the same point and for the same reason. */
+  const _erA = tweenVisible(a).erase, _erB = tweenVisible(b).erase;
   const _al = tweenAlign(a, b);
   if(!_al){ chip('An in-between needs two poses with something in common'); return; }
   const t = buildInbetween(_al.a, _al.b, 0.5);
   if(!t) return;
   for(const run of (_al.unpaired || [])){
+    run.forEach((q, i) => {
+      const c = Object.assign({}, q);
+      if(i === 0) c.start = true; else delete c.start;
+      t.strokes.push(c);
+    });
+    t.strokeGroups.push(run.length);
+  }
+  /* LAST, because destination-out only removes what is already painted. The
+     interpolated ink and the drawn-once strokes have to be down before the
+     hole is taken out of them. */
+  for(const run of tweenErasers(_erA, _erB, 0.5)){
     run.forEach((q, i) => {
       const c = Object.assign({}, q);
       if(i === 0) c.start = true; else delete c.start;
