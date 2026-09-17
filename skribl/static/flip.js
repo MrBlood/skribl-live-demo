@@ -4444,6 +4444,28 @@ function _shareCardDataURL(){
 async function shareSkribl(){
   if(sharing) return;
   if(nothingToShare()){ chip('Draw something to post'); return; }
+  /* BEFORE THE BUTTON, NOT AFTER IT. The server refuses a Skribl over
+     MAX_TOTAL_POINTS and says so, and the drawing is safe either way -- but it
+     said so at the END of the work, and it named the limit rather than what
+     had spent it. The editor has known every page's point count all along.
+
+     This does not replace the server's check, and must not: a client that
+     decides what is postable is a client that can be wrong in the permissive
+     direction. It turns a wall into a number, one step earlier. */
+  const _B = window.SkriblPointBudget;
+  if(_B && _B.overBudget(frames)){
+    const d = _B.describe(frames, f => !!genRecipe.get(f));
+    showShareError('This Skribl is ' + d.total.toLocaleString() + ' points and the '
+      + 'limit is ' + d.limit.toLocaleString() + '.'
+      + (d.generatedPages
+         ? ' Its ' + d.generatedPages + ' generated page'
+           + (d.generatedPages === 1 ? ' is ' : 's are ')
+           + Math.round(100 * d.generated / Math.max(1, d.total))
+           + '% of that — deleting one frees far more room than deleting a drawing.'
+         : '')
+      + ' Nothing is lost; your Skribl is still here.');
+    chip('Too big to post'); return;
+  }
   if(playing) stop();
   sharing=true; chip('Posting…');
   try{
@@ -6881,6 +6903,44 @@ function applyCarveState(s){
 }
 
 /* Inserts the exposure between this page and the next. */
+/* WOULD THIS GENERATED PAGE STILL FIT THE DOCUMENT?
+ *
+ * The answer the editors could not give until v301. Every per-frame cap in
+ * this file -- TWEEN_POINT_CAP, TWEEN_GROUP_CAP -- is about ONE page against
+ * the server's per-frame ceiling. MAX_TOTAL_POINTS is about the whole Skribl,
+ * it is enforced only by the server, and it was therefore discovered at POST:
+ * "Too many points overall", after the flipbook was drawn.
+ *
+ * The limit itself lives in lib/pointbudget.js beside the server's own value,
+ * for the reason lib/holdtiming.js exists: a limit enforced in one place and
+ * guessed at in another is not a limit. verify_sharedrules.py fails if the two
+ * ever disagree.
+ *
+ * SAID WITH THE NUMBERS, because "too big" is not actionable and the share
+ * error's version of this sentence was not either. A generated page costs
+ * about 27x a hand-drawn one, so what a person can DO about it is delete a
+ * smear -- and the message says which pages are the expensive ones.
+ */
+function budgetAllows(page, what){
+  const B = window.SkriblPointBudget;
+  // No module -> no new refusal. The server still has the last word, exactly
+  // as it did before this check existed; a missing script must not take the
+  // button away.
+  if(!B || !page || !page.strokes) return true;
+  if(B.wouldFit(frames, page.strokes.length)) return true;
+  const d = B.describe(frames, f => !!genRecipe.get(f));
+  const over = B.totalPoints(frames) + page.strokes.length - d.limit;
+  chip((what || 'That') + ' would not fit — this Skribl is at '
+       + d.pct + '% of what it can hold'
+       + (d.generatedPages
+          ? ', and ' + Math.round(100 * d.generated / Math.max(1, d.total))
+            + '% of that is its ' + d.generatedPages + ' generated page'
+            + (d.generatedPages === 1 ? '' : 's')
+          : '')
+       + '. Delete one to make room (about ' + over + ' points over).');
+  return false;
+}
+
 function addTween(){
   if(playing) return;
   if(moveMode){ chip('Finish or cancel the move first'); return; }
@@ -6894,6 +6954,13 @@ function addTween(){
   const aim = tweenAimFromSelection(a);
   const t = buildTween(a, b, aim ? { lead: 1, aim: aim } : { lead: 1 });
   if(!t) return;
+  /* THE DOCUMENT HAS A BUDGET AND THIS IS WHERE IT IS SPENT. The planner
+     inside buildTween budgets this PAGE against the server's per-frame caps
+     and knows nothing about the other 99. MAX_TOTAL_POINTS is a whole-Skribl
+     limit, a generated page costs about 27x a hand-drawn one, and so a long
+     flipbook of smears hits it -- and used to hit it at POST, after the work.
+     Refusing to make the page is the kinder half-second. */
+  if(!budgetAllows(t, 'A motion smear')) return;
   // The three fingerprints the draft checks before it trusts the recipe: this
   // page, and the two it was made from.
   const _r = genRecipe.get(t);
@@ -7348,6 +7415,9 @@ function addInbetween(){
   if(!_al){ chip('An in-between needs two poses with something in common'); return; }
   const t = buildInbetween(_al.a, _al.b, 0.5);
   if(!t) return;
+  // The same document budget the smear is checked against: an in-between is
+  // cheaper per page, and a long flipbook of them still adds up.
+  if(!budgetAllows(t, 'An in-between')) return;
   for(const run of (_al.unpaired || [])){
     run.forEach((q, i) => {
       const c = Object.assign({}, q);

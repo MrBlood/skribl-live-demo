@@ -507,11 +507,17 @@ rather than what is consuming it. A generated page costs roughly **27x a
 hand-drawn one** (~1,755 points against ~65 on the same drawing), so the real
 budget is "how many smears", and nothing says so until it is spent.
 
-Worth fixing, and cheaply: the editor already knows every frame's point count.
-A running total, and a check before the button rather than after it, would turn
-a wall at the end into a number you can watch. That is a smaller job than
-anything in 6g and it helps the exact user who hits 6g -- somebody making a
-long flipbook full of smears.
+**Done in v301.** `lib/pointbudget.js` owns the client's copy of the cap and
+sums the document; Flip checks it *before* Motion Smear and In-between run,
+declines with a chip naming the percentage spent and how much of it is
+generated, and `shareSkribl` pre-flights the same total instead of letting the
+POST discover it. The module is absent-safe on purpose -- if the script fails
+to load, `budgetAllows` returns true, because a missing file must not take the
+buttons away. The wall at the end is now a number you can watch.
+
+The budget is the DOCUMENT's, so it is summed per document and not per frame:
+the per-frame caps (`TWEEN_POINT_CAP`, `TWEEN_GROUP_CAP`) still do their own
+job and neither one can see this one.
 
 **Do not "fix" it by raising MAX_TOTAL_POINTS.** The cap exists to stop a
 payload that pins a phone, and the comment above it in `validation.py` says so.
