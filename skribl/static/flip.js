@@ -1340,16 +1340,49 @@ function paintStatic(c, strokeArr){
        one-path route and an rgba() stroke keeps the layer it already had.
        Past the ceiling it degrades to exactly today's picture rather than to a
        stall, which is the same bargain overBudget makes above. */
-    if (a >= 1 && _layered && !_fieldOver && seg.length > 1 && !seg[0].erase
-        && !_uniRunFn()(seg, strokeAlphaOf)) {
+    /* NOT WHILE THE FINGER IS DOWN. The layer is what stops the walk
+       compounding, and it costs a canvas round trip per run -- measured at
+       2.44 ms each on a 816x612 DPR-1 canvas, and a smudged smear page has 17
+       of them, so a repaint went 1.6 ms -> 43.1 ms and a live drag ran at 24
+       fps. A phone at DPR 3 carries nine times the pixels through every one of
+       those trips, which is where "it takes multiple seconds" came from.
+       During the gesture the ink is moving anyway and the compounding is a
+       transient; _fieldIdx clears inside fieldEnd, BEFORE endFieldDrag's
+       render(), so the settled page is the correct one. */
+    if (a >= 1 && _layered && !_fieldOver && _fieldIdx < 0 && seg.length > 1
+        && !seg[0].erase && !_uniRunFn()(seg, strokeAlphaOf)) {
       const _ua = _uniAlphaFn()(seg, strokeAlphaOf);
       if (_ua > 0 && _ua < 1) a = _ua;
     }
     if (a >= 1) { paintSeg(c, seg, false); }
     else {
-      tctx.clearRect(0,0,CW,CH);
-      paintSeg(tctx, seg, true);                                    // solid on the temp layer
-      c.globalAlpha = a; c.drawImage(tmpCv, 0, 0, CW, CH); c.globalAlpha = 1;
+      /* THE RUN'S BOX, NOT THE PAGE. Clearing and compositing the whole canvas
+         for a stroke that covers a corner of it is what made this per-run price
+         2.44 ms. The run cannot mark a pixel outside its own bounds padded by
+         half its widest brush, so both ends of the trip can be that box. The
+         source rect is in DEVICE pixels because tmpCv is CW*DPR wide; the
+         destination is logical, because that is the space `c` draws in. */
+      let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity, bpad = 0;
+      for (let k = 0; k < seg.length; k++) {
+        const q = seg[k];
+        if (q.x < bx0) bx0 = q.x;
+        if (q.x > bx1) bx1 = q.x;
+        if (q.y < by0) by0 = q.y;
+        if (q.y > by1) by1 = q.y;
+        const sz = (typeof q.size === 'number') ? q.size : 0;
+        if (sz > bpad) bpad = sz;
+      }
+      bpad = bpad / 2 + 2;                       // +2 for the round cap's antialias
+      bx0 = Math.max(0, Math.floor(bx0 - bpad)); by0 = Math.max(0, Math.floor(by0 - bpad));
+      bx1 = Math.min(CW, Math.ceil(bx1 + bpad)); by1 = Math.min(CH, Math.ceil(by1 + bpad));
+      const bw = bx1 - bx0, bh = by1 - by0;
+      if (bw > 0 && bh > 0) {
+        tctx.clearRect(bx0, by0, bw, bh);
+        paintSeg(tctx, seg, true);                                  // solid on the temp layer
+        c.globalAlpha = a;
+        c.drawImage(tmpCv, bx0 * DPR, by0 * DPR, bw * DPR, bh * DPR, bx0, by0, bw, bh);
+        c.globalAlpha = 1;
+      }
     }
     i = j;
   }

@@ -879,6 +879,104 @@ with sync_playwright() as p:
               f"written half at 0x20 and half at 0x60 — one layer alpha cannot "
               f"represent two, so this run must keep the walk")
 
+        # ---------------------------------------------------------- v302b
+        # AND THE LAYER MUST NOT BE PAID FOR ON EVERY MOVE OF THE DRAG.
+        #
+        # The fix above cost 2.44 ms per run and a smudged smear page has 17 of
+        # them, so a repaint went 1.6 ms -> 43.1 ms and a live drag ran at 24 fps
+        # on a 816x612 DPR-1 canvas. A phone at DPR 3 carries nine times the
+        # pixels through every one of those trips. Reported as "it takes
+        # multiple seconds", and it was this.
+        #
+        # THE COST IS THE SYNC, NOT THE PIXELS, which is why the obvious
+        # optimisation is not the fix. Measured on the same 17 runs:
+        #
+        #     all walks, then all blits (batched)       9.14 ms
+        #     walk, blit, walk, blit   (interleaved)   44.55 ms
+        #
+        # 4.9x for the ordering alone -- each blit stalls on the write to the
+        # temp canvas before it. Bounding each trip to the run's box took the
+        # per-run price only 2.44 -> 2.14 ms; fieldLayerCount is 0.38 ms and the
+        # alpha scans 0.28 ms, so neither is where the time goes.
+        #
+        # So the layer is skipped while the gesture is OPEN. During the drag the
+        # ink is moving and the compounding is a transient; _fieldIdx clears
+        # inside fieldEnd, BEFORE endFieldDrag's render(), so the page the
+        # artist is left with is the correct one -- which the ripple checks
+        # above already pin, because they run after fieldEnd.
+        #
+        # PINNED AS MECHANISM, NOT AS A CLOCK. A timing assertion here would be
+        # measuring this container's background load, which is the mistake
+        # CLAUDE.md records about verify_hold. The observable difference is that
+        # a run painted mid-gesture COMPOUNDS and the same run painted after it
+        # does not. Measured, real gesture, 40 moves: 43.13 ms per move before
+        # this, 11.12 ms after, and the settle unchanged at ~41 ms.
+        print("\nMID-DRAG — the correct picture is not worth a stalled finger")
+
+        _live = page.evaluate("""() => {
+          const ring = (cx) => { const f = { strokes: [], strokeGroups: [], hold: 2 };
+            const N = 220;
+            for(let i = 0; i < N; i++){ const a = (i/N)*Math.PI*2;
+              const p = { x: cx + Math.cos(a)*62, y: 300 + Math.sin(a)*150,
+                          size: 6, color: '#ffffff', erase: false, t: i*6 };
+              if(i===0) p.start = true; f.strokes.push(p); }
+            f.strokeGroups.push(N); return f; };
+          frames.length = 0; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+          frames.push(ring(250)); frames.push(ring(520));
+          idx = 0; fps = 12; subdiv = 1; buildStrip(); render();
+          addTween();
+          if(frames.length !== 3) return { made: false };
+          setTool('smudge');
+          const x0 = 380, y0 = 175;
+          const uniRun = _uniRunFn(), uniAlpha = _uniAlphaFn();
+          const hexA = (c) => { const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(String(c).trim());
+                                return m ? parseInt(m[1],16)/255 : null; };
+          const pick = () => { const f = frames[idx]; let at = 0;
+            for(const n of f.strokeGroups){ const seg = f.strokes.slice(at, at+n); at += n;
+              if(!uniRun(seg, strokeAlphaOf) && uniAlpha(seg, strokeAlphaOf) > 0 && n >= 20)
+                return seg; }
+            return null; };
+          const overPaint = (seg) => {
+            const g = fctx; g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);
+            g.clearRect(0,0,CW,CH); g.fillStyle = '#000000'; g.fillRect(0,0,CW,CH);
+            paintStatic(g, seg);
+            const d = g.getImageData(0,0,CW*DPR,CH*DPR).data, W = CW*DPR;
+            const lum = (x,y) => { x = Math.round(x*DPR); y = Math.round(y*DPR);
+              if(x<0||y<0||x>=W||y>=CH*DPR) return 0; return d[(y*W+x)*4]; };
+            let mS=0,mN=0;
+            for(let i=1;i<seg.length;i++){
+              mS += lum((seg[i-1].x+seg[i].x)/2, (seg[i-1].y+seg[i].y)/2); mN++; }
+            return (mS/mN) / Math.max(0.01, 255 * (hexA(seg[0].color) || 0));
+          };
+          // the gesture stays OPEN across this measurement, which is the state
+          // the skip keys off
+          fieldBegin({ x: x0, y: y0 }, 'Smudge');
+          for(let i = 1; i <= 40; i++) smudgeMove({ x: x0 + i*1.2, y: y0 + i*2.2 });
+          const segLive = pick();
+          const during = segLive ? overPaint(segLive) : null;
+          const openIdx = _fieldIdx;
+          fieldEnd(); render();
+          const segAfter = pick();
+          const after = segAfter ? overPaint(segAfter) : null;
+          return { made: true, gestureWasOpen: openIdx >= 0, closedAfter: _fieldIdx < 0,
+                   during: during, after: after };
+        }""")
+
+        check("the gesture fixture opened and closed a real drag",
+              _live.get("made") is True and _live.get("gestureWasOpen") is True
+              and _live.get("closedAfter") is True,
+              f"{_live} — if the gesture was never open, the check below is "
+              f"measuring the settled path twice and cannot fail")
+        check("mid-drag the run takes the CHEAP path, and says so by compounding",
+              (_live.get("during") or 0) > 1.2,
+              f"over-paint {_live.get('during')}x while the finger was down — at "
+              f"1.0 the layer is running on every move, which is 2.44 ms x 17 "
+              f"runs per repaint and a drag nobody can use")
+        check("...and the page the artist is LEFT with is the correct one",
+              abs((_live.get("after") or 0) - 1.0) < 0.12,
+              f"over-paint {_live.get('after')}x after fieldEnd — the skip is "
+              f"for the transient only; the settled page must not keep the mesh")
+
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
         br.close()
