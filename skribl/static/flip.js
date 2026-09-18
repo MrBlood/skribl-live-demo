@@ -1181,7 +1181,22 @@ function strokeAlphaOf(col){
   if(h) return parseInt(h[1], 16) / 255;
   return alphaOf(col);
 }
-function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
+/* SOLID MEANS SOLID IN EVERY SPELLING. The layer below paints a run at full
+   strength and composites it once, so anything left translucent here is
+   attenuated TWICE. rgba() was the only spelling that could reach this, because
+   alphaOf does not see hex-8 and so a hex-8 run was never layered -- until the
+   field-tool case below started layering exactly those. Measured when it was
+   missing: a run written at alpha 0.031 composited to 0 rather than 8, i.e. it
+   vanished. */
+function solidOf(col){
+  if(typeof col==='string'){
+    const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')';
+    const h=col.trim().match(/^#([0-9a-f]{6})[0-9a-f]{2}$/i);
+    if(h) return '#'+h[1];
+  }
+  return col;
+}
 /* Inline fallback for lib/strokelayers.js's uniformRun, as elsewhere in this
    file. The note beside it there is the reasoning. */
 function _uniformRun(seg, alphaFn){
@@ -1195,6 +1210,56 @@ function _uniformRun(seg, alphaFn){
     if(q.erase || q.color !== p.color || q.size !== p.size) return 0;
   }
   return a;
+}
+/* Inline fallback for lib/strokelayers.js's uniformAlpha, as above. The note
+   beside it there is the reasoning and the measurements. */
+function _uniformAlpha(seg, alphaFn){
+  if(!seg || seg.length < 2) return 0;
+  const p = seg[0];
+  if(p.erase) return 0;
+  const a = alphaFn(p.color);
+  if(!(a < 1)) return 0;
+  for(let i = 1; i < seg.length; i++){
+    const q = seg[i];
+    if(q.erase || alphaFn(q.color) !== a) return 0;
+  }
+  return a;
+}
+function _uniRunFn(){
+  return (typeof window !== 'undefined' && window.SkriblStrokeLayers
+          && window.SkriblStrokeLayers.uniformRun)
+    ? window.SkriblStrokeLayers.uniformRun : _uniformRun;
+}
+function _uniAlphaFn(){
+  return (typeof window !== 'undefined' && window.SkriblStrokeLayers
+          && window.SkriblStrokeLayers.uniformAlpha)
+    ? window.SkriblStrokeLayers.uniformAlpha : _uniformAlpha;
+}
+/* WHICH RUNS NEED THE LAYER THAT alphaOf CANNOT SEE.
+
+   alphaOf reads rgba() and not hex-8, on purpose: that asymmetry is what keeps
+   a generated translucent pass off LAYER_BUDGET, and the budget exists because
+   layering costs a full-canvas round trip per stroke. A generated ghost is safe
+   without one because uniformRun gives it a single path, and a single path
+   cannot composite against itself.
+
+   A field tool takes that safety away. Smudge writes per-point colour AND size,
+   so the run stops being uniform, falls to the per-segment walk, and compounds
+   at every round cap. These are the runs that need a layer and were never
+   counted for one -- so they get their own count against the same ceiling,
+   rather than riding a budget sized for a different population. */
+function fieldLayerCount(strokeArr){
+  const uniRun = _uniRunFn(), uniAlpha = _uniAlphaFn();
+  let n = 0, i = 0;
+  while(i < strokeArr.length){
+    let j = i + 1; while(j < strokeArr.length && !strokeArr[j].start) j++;
+    const seg = strokeArr.slice(i, j);
+    if(seg.length > 1 && !seg[0].erase && !(alphaOf(seg[0].color) < 1)
+       && !uniRun(seg, strokeAlphaOf) && uniAlpha(seg, strokeAlphaOf) > 0) n++;
+    if(n > LAYER_BUDGET) return n;
+    i = j;
+  }
+  return n;
 }
 function paintSeg(c, seg, solid){
   /* ONE PATH when the run can take it -- see lib/strokelayers.js. Skipped when
@@ -1257,6 +1322,7 @@ function paintStatic(c, strokeArr){
                        && window.SkriblStrokeLayers.overBudget)
     ? window.SkriblStrokeLayers.overBudget(strokeArr, alphaOf)
     : layerableCount(strokeArr) > LAYER_BUDGET;
+  const _fieldOver = fieldLayerCount(strokeArr) > LAYER_BUDGET;
   let i = 0;
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
@@ -1267,7 +1333,18 @@ function paintStatic(c, strokeArr){
     // rather than a global only a console could reach.
     const _layered = ((typeof window.SKRIBL_STROKE_LAYERS === 'undefined')
       || window.SKRIBL_STROKE_LAYERS !== false) && !_overBudget;
-    const a = (seg[0].erase || !_layered) ? 1 : alphaOf(seg[0].color);
+    let a = (seg[0].erase || !_layered) ? 1 : alphaOf(seg[0].color);
+    /* THE RUN A FIELD TOOL LEFT BEHIND. Additive to everything above: this can
+       only lower `a` for a run that was NOT already layered and that paintSeg
+       would NOT give a single path -- so an untouched ghost keeps its cheap
+       one-path route and an rgba() stroke keeps the layer it already had.
+       Past the ceiling it degrades to exactly today's picture rather than to a
+       stall, which is the same bargain overBudget makes above. */
+    if (a >= 1 && _layered && !_fieldOver && seg.length > 1 && !seg[0].erase
+        && !_uniRunFn()(seg, strokeAlphaOf)) {
+      const _ua = _uniAlphaFn()(seg, strokeAlphaOf);
+      if (_ua > 0 && _ua < 1) a = _ua;
+    }
     if (a >= 1) { paintSeg(c, seg, false); }
     else {
       tctx.clearRect(0,0,CW,CH);
