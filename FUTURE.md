@@ -491,6 +491,43 @@ not an oversight with a patch behind it. The fix that works does not scale and
 the fixes that scale do not work. Do not spend more here without a genuinely
 new idea, and whatever it is, judge it on a picture.
 
+**THE ALONG-MOTION ENGINE WAS BUILT AND IT LOSES (v302).** The idea: the
+ghosts are drawn ACROSS the motion -- N copies of the whole shape at N instants
+-- and photographic blur is streaks ALONG it, so give each source point one
+streak from where it starts to where the pose stands, as a single path at a
+single alpha, with the falloff coming from nested streaks of decreasing length.
+It is cheaper per page and it cannot ripple, because every run is uniform.
+
+Judged on pictures, on two drawings:
+
+  - AN OPEN STROKE, which is the case the effect is named for. The SHIPPED
+    engine already looks right: a bright leading edge and a soft trailing haze,
+    366 points, no pattern of any kind. Along-motion at 450 points is visibly
+    worse -- hatching in the trail and a harder edge. The shipped one wins and
+    it is not close.
+  - THE RING. Along-motion at 550 points is a venetian blind. At 1,100 it
+    smooths out and reads as a solid grey can. Even spacing by arc length
+    instead of by angle did not save it.
+
+So the topology change does not escape the trade, it ROTATES it: the artefact
+moves from ribbing across the motion to combing along it, and hiding it costs
+the same density 6g already measured. Same curve, ninety degrees round.
+
+AND THE MORE USEFUL FINDING IS WHAT THE OPEN STROKE SAYS. Motion Smear is good
+at what it was named for. The tube is specific to CLOSED shapes, where every
+ghost contributes its far side as well as its near one -- a ring swept along
+its axis genuinely fills a tube, and twenty-two outlines of it is a wireframe.
+That is geometry, not sampling, and no amount of tuning the sample count
+addresses it. If this is ever attacked again, the target is "a closed shape's
+ghosts should contribute a silhouette, not an outline", and that is a different
+and much harder problem than the one 6g describes.
+
+Opacity was measured at the same time and confirmed what was expected: the
+shipped page at 50% shows the SAME moire, dimmer. The ghost-to-gap ratio is
+what makes the pattern and scaling every ghost together does not change it. A
+control is still worth having -- artists want it -- but it is a control, not a
+fix, and must not be sold as one.
+
 **DO NOT CONFUSE THIS WITH THE MESH A SMUDGE USED TO LEAVE (fixed, v302).**
 They look alike and they are not the same thing. The stitch above is in the
 smear itself, it is the sample count, and it is still there. The mesh appeared

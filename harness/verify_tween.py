@@ -2043,6 +2043,112 @@ with sync_playwright() as p:
           (_bud.get("total") or 0) <= 200000,
           f"{_bud.get('total')} points — refusing must not itself spend budget")
 
+    # ---------------------------------------------------------------- v302
+    # SMEAR WEIGHT — a control, and honestly labelled as one.
+    #
+    # The v302 spike measured what this does NOT do: the shipped page at 50%
+    # shows the same moire as at 100%, just dimmer, because the pattern comes
+    # from the ghost-to-gap ratio and scaling every ghost together cannot touch
+    # it. So this is not the fix for how a smear looks on a closed shape (that
+    # is FUTURE.md 6g, still open). It is the thing artists asked for: a smear
+    # that sits behind the drawing, or one that carries more on purpose.
+    #
+    # TWO PROPERTIES, AND THE SECOND IS THE ONE WITH TEETH. That the control
+    # changes the picture is easy. That a page REBUILT FROM A DRAFT comes back
+    # the weight it was MADE at is what stops the control silently repainting a
+    # finished flipbook the next time it is opened — the recipe carries the
+    # weight, and buildTween reads the recipe rather than the live setting.
+    print("\nSMEAR WEIGHT — it changes the next smear, and only the next one")
+
+    _w = page.evaluate("""() => {
+      const arm = (dx, dy) => { const f = { strokes: [], strokeGroups: [], hold: 2 };
+        const N = 90;
+        for(let i = 0; i < N; i++){ const t = i/(N-1);
+          const p = { x: 300 + dx + t*180, y: 420 + dy - t*t*150,
+                      size: 7, color: '#ffffff', erase: false, t: i*6 };
+          if(i===0) p.start = true; f.strokes.push(p); }
+        f.strokeGroups.push(N); return f; };
+      const two = () => { frames.length = 0; selSpans = [];
+        actionLog.length = 0; redoStack.length = 0;
+        frames.push(arm(0,0)); frames.push(arm(150,-60));
+        idx = 0; fps = 12; subdiv = 1; buildStrip(); render(); };
+      const ink = (f) => { const g = fctx; g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);
+        g.clearRect(0,0,CW,CH); g.fillStyle='#000'; g.fillRect(0,0,CW,CH);
+        paintStatic(g, f.strokes);
+        const d = g.getImageData(0,0,CW*DPR,CH*DPR).data;
+        let sum = 0, lit = 0;
+        for(let i = 0; i < d.length; i += 4){ if(d[i] > 3){ lit++; sum += d[i]; } }
+        return { lit: lit, mean: sum/Math.max(1,lit) }; };
+      const was = smearWeightName;
+      const by = {};
+      for(const w of ['light','normal','strong']){
+        setSmearWeight(w); two(); addTween();
+        const f = frames[1];
+        by[w] = Object.assign({ alpha: (genRecipe.get(f)||{}).alpha }, ink(f));
+      }
+      // FIDELITY: made strong, control moved to light, rebuilt from the recipe.
+      setSmearWeight('strong'); two(); addTween();
+      const made = frames[1], rec = genRecipe.get(made);
+      const strongInk = ink(made);
+      setSmearWeight('light');
+      const rebuilt = buildTween(frames[0], frames[2], rec);
+      // AND AN OLD DRAFT, which has no alpha at all: it must read as 1, or
+      // every smear anyone has already saved repaints on open.
+      const bare = {}; for(const k in rec) if(k !== 'alpha') bare[k] = rec[k];
+      const old = buildTween(frames[0], frames[2], bare);
+      setSmearWeight(was);
+      // and the control is reachable, not just callable
+      const seg = document.getElementById('smearWeightSeg');
+      const btns = seg ? seg.querySelectorAll('[data-smear]') : [];
+      let clicked = null;
+      if(btns.length){ const b = seg.querySelector('[data-smear="light"]');
+        setSmearWeight('normal'); if(b) b.click(); clicked = smearWeightName;
+        setSmearWeight(was); }
+      return { by: by, storedAlpha: rec && rec.alpha,
+               strong: strongInk, rebuilt: rebuilt ? ink(rebuilt) : null,
+               old: old ? ink(old) : null, normalInk: by.normal,
+               segButtons: btns.length, clicked: clicked };
+    }""")
+
+    _by = _w.get("by") or {}
+    check("all three weights produce a page",
+          all(k in _by for k in ("light", "normal", "strong")),
+          f"{_by} — nothing below means anything on a missing page")
+    check("the weights are stored on the recipe, and differ",
+          (_by.get("light", {}).get("alpha") or 0) < (_by.get("normal", {}).get("alpha") or 0)
+          < (_by.get("strong", {}).get("alpha") or 0),
+          f"light {_by.get('light',{}).get('alpha')}, "
+          f"normal {_by.get('normal',{}).get('alpha')}, "
+          f"strong {_by.get('strong',{}).get('alpha')} — a recipe that does not "
+          f"carry the weight cannot rebuild the page it made")
+    # THE PICTURE. Measured on this fixture: mean 89.7 / 99.0 / 113.8, so light
+    # to strong is 1.27x. The floor is set well inside that and well outside the
+    # noise a render costs. It is the MEAN that matters, not the lit count: a
+    # heavier smear mostly makes the same pixels brighter.
+    _ratio = ((_by.get("strong", {}).get("mean") or 0)
+              / max(0.01, _by.get("light", {}).get("mean") or 0))
+    check("...and Strong really is heavier on the page than Light",
+          _ratio > 1.15,
+          f"strong/light mean = {_ratio:.3f} — a control the eye cannot see is "
+          f"a control that is not there")
+    # THE ONE WITH TEETH.
+    check("a page rebuilt from its recipe keeps the weight it was MADE at",
+          _w.get("rebuilt") and _w.get("strong")
+          and abs(_w["rebuilt"]["mean"] - _w["strong"]["mean"]) < 1.0,
+          f"made at Strong ({_w.get('strong')}), control then moved to Light, "
+          f"rebuilt as {_w.get('rebuilt')} — reading the live setting here "
+          f"repaints every finished smear the next time the draft is opened")
+    check("...and a draft written before this existed reads as Normal",
+          _w.get("old") and _w.get("normalInk")
+          and abs(_w["old"]["mean"] - _w["normalInk"]["mean"]) < 1.0,
+          f"a recipe with no alpha built {_w.get('old')} against Normal's "
+          f"{_w.get('normalInk')} — every smear already saved must open unchanged")
+    check("the control is a real seg, and clicking it sets the weight",
+          _w.get("segButtons") == 3 and _w.get("clicked") == "light",
+          f"{_w.get('segButtons')} buttons, a click on Light left "
+          f"{_w.get('clicked')!r} — a setting only reachable from a console is "
+          f"not a control")
+
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()
 

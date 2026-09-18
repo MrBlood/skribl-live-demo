@@ -5818,6 +5818,30 @@ const SMEAR_TRAIL_ALPHA = 0.20;  // the darkest of them
 const SMEAR_TRAIL_FALLOFF = 2;   // t^2: what is older is fainter, fast
 const SMEAR_TRAIL_COARSE = 4;    // a ghost carries a quarter of the pose's points
 
+/* HOW HEAVY A SMEAR LOOKS, and it is a CONTROL rather than a fix. Measured in
+   the v302 spike: the shipped page at 50% shows the same moire as at 100%, just
+   dimmer, because the pattern comes from the ghost-to-gap ratio and scaling
+   every ghost together does not touch it. What this does buy is the thing
+   artists actually asked for -- a smear that sits behind the drawing instead of
+   competing with it, or one that carries a heavier blur on purpose.
+
+   BOTH ALPHAS, not just the trail. A smear is an exposure (the samples between
+   the poses) plus a trail (the ghosts reaching back from the pose). Scaling one
+   and not the other does not make the effect lighter, it changes its BALANCE --
+   which is a different control, and not one anybody asked for. */
+const SMEAR_WEIGHT = { light: 0.55, normal: 1, strong: 1.7 };
+const SMEAR_WEIGHT_KEY = 'skribl.flip.smearWeight';
+let smearWeightName = 'normal';
+try {
+  const _w = localStorage.getItem(SMEAR_WEIGHT_KEY);
+  if (_w && Object.prototype.hasOwnProperty.call(SMEAR_WEIGHT, _w)) smearWeightName = _w;
+} catch (_) {}
+function smearWeight(){ return SMEAR_WEIGHT[smearWeightName] || 1; }
+function setSmearWeight(name){
+  if(!Object.prototype.hasOwnProperty.call(SMEAR_WEIGHT, name)) return;
+  smearWeightName = name;
+  try { localStorage.setItem(SMEAR_WEIGHT_KEY, name); } catch (_) {}
+}
 const TWEEN_SAMPLES = 26;
 const TWEEN_MIN_SAMPLES = 6;
 const TWEEN_POINT_CAP = 14000;
@@ -6639,6 +6663,12 @@ function buildTween(a, b, want){
      interpolated at all: they are drawn ONCE, from THIS page, exactly as they
      sit on it. */
   const aim = (want && Array.isArray(want.aim) && want.aim.length) ? want.aim : null;
+  /* FROM THE RECIPE, not from the live setting. A page rebuilt out of a draft
+     has to come back the weight it was MADE at, or changing the control would
+     silently repaint every smear already in the flipbook. Absent (every draft
+     written before this existed) reads as 1, which is exactly today's page. */
+  const smw = (want && typeof want.alpha === 'number' && isFinite(want.alpha))
+    ? Math.max(0.25, Math.min(2.5, want.alpha)) : 1;
   let still = [];
   if(aim){
     const va = tweenVisible(a);
@@ -6677,7 +6707,7 @@ function buildTween(a, b, want){
   // Enough per sample that the exposure sums to a readable figure, capped so a
   // short sample count does not come out as a stack of hard copies. Trimmed
   // when there is a halo carrying part of the weight.
-  let fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+  let fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur) * smw;
   // Shed any pass too faint to carry this drawing's colour — see
   // TWEEN_HUE_MIN. The core is always kept: it is the drawing, not the halo.
   // Coarsening the exposure instead would trade smoothness for colour on every
@@ -6689,7 +6719,7 @@ function buildTween(a, b, want){
     blur = keep;
     // Fewer passes lay down less ink, so the core is re-trimmed for the set
     // that actually survived.
-    fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+    fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur) * smw;
   }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
   /* WHAT DID NOT MOVE, drawn once and at full strength, before the exposure so
@@ -6744,7 +6774,7 @@ function buildTween(a, b, want){
          is 1/OVERLAP and the alpha comes out at exactly SMEAR_TRAIL_ALPHA, so
          the ball is the ball. It rises only where a clamp piled them up. */
       const cover = Math.max(1, Math.min(ghosts, brush / (trailLen / ghosts)));
-      const trailAlpha = SMEAR_TRAIL_ALPHA / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
+      const trailAlpha = SMEAR_TRAIL_ALPHA * smw / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
       for(let sIdx = 0; sIdx < ghosts; sIdx++){
         const frac = sIdx / ghosts;
         /* THE TRAIL REACHES BACK TO THE POSE, NOT PAST IT. The pose is at the
@@ -6796,8 +6826,8 @@ function buildTween(a, b, want){
         });
         out.strokeGroups.push(run.length);
       }
-      genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, aim: aim.slice() }
-                             : { k: 'smear', n: n, passes: 1, lead: 1 });
+      genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, alpha: smw, aim: aim.slice() }
+                             : { k: 'smear', n: n, passes: 1, lead: 1, alpha: smw });
       tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
                           anyMoved: anyMovedHere };
       return out;
@@ -6810,8 +6840,8 @@ function buildTween(a, b, want){
      the aim rebuilds an AIMED page as a whole-page smear -- a draft that comes
      back different from the one that was saved, silently, which is worse than
      not storing it at all. */
-  genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, aim: aim.slice() }
-                         : { k: 'smear', n: n, passes: blur.length });
+  genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, alpha: smw, aim: aim.slice() }
+                         : { k: 'smear', n: n, passes: blur.length, alpha: smw });
   /* WHAT IT DID, for the caller to say out loud. Reported with a picture: a
      generated page that "is just a copy of slide 1" -- which is exactly what a
      smear looks like when nothing on the two pages moved far enough to sample,
@@ -7029,7 +7059,8 @@ function addTween(){
      rather than as a grey blob. With nothing selected this is the whole page,
      exactly as before. */
   const aim = tweenAimFromSelection(a);
-  const t = buildTween(a, b, aim ? { lead: 1, aim: aim } : { lead: 1 });
+  const t = buildTween(a, b, aim ? { lead: 1, alpha: smearWeight(), aim: aim }
+                                : { lead: 1, alpha: smearWeight() });
   if(!t) return;
   /* THE DOCUMENT HAS A BUDGET AND THIS IS WHERE IT IS SPENT. The planner
      inside buildTween budgets this PAGE against the server's per-frame caps
@@ -9470,6 +9501,28 @@ function _wireGridDensity(isOnFn, repaintFn) {
   render();
   return render;
 }
+/* Smear weight — the same seg shape as grid density and mirror, because it is
+   the same kind of choice and the roving-tabindex keyboard model already knows
+   how to drive one. NO REPAINT on change: the setting applies to the NEXT
+   smear, and every page already in the flipbook keeps the weight stored in its
+   own recipe. A control that silently rewrote finished pages would be a
+   different and much less welcome feature. */
+(function(){
+  var seg = document.getElementById('smearWeightSeg');
+  if(!seg) return;
+  function render(){
+    var btns = seg.querySelectorAll('[data-smear]');
+    for(var i = 0; i < btns.length; i++)
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-smear') === smearWeightName);
+  }
+  seg.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('[data-smear]') : null;
+    if(!b || !seg.contains(b)) return;
+    setSmearWeight(b.getAttribute('data-smear'));
+    render();
+  });
+  render();
+})();
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
 const _renderFlipGridDensity = _wireGridDensity(function(){ return grid; }, function(){ syncGrid(); });
