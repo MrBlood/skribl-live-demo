@@ -522,7 +522,11 @@ function anyStrokeAlpha(c) {
 function solidStrokeColor(c) {
   if (typeof c !== 'string') return c;
   const m = c.match(/^rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*[\d.]+\s*\)$/i);
-  return m ? `rgb(${m[1]}, ${m[2]}, ${m[3]})` : c;
+  if (m) return `rgb(${m[1]}, ${m[2]}, ${m[3]})`;
+  /* Hex-8 too, now that wetRunFn puts such a run on the wet layer: left
+     translucent it is attenuated twice. flip.js solidOf carries the measurement. */
+  const h = c.trim().match(/^#([0-9a-f]{6})[0-9a-f]{2}$/i);
+  return h ? '#' + h[1] : c;
 }
 
 let _dryCanvas = null, _wetCanvas = null, _dryCtx = null, _wetCtx = null;
@@ -650,6 +654,21 @@ function makeStrokeCompositor(visCtx, visCanvas) {
       for (let i = 1; i < seg.length; i++) dctx.lineTo(seg[i].x, seg[i].y);
       dctx.stroke();
     },
+    /* A run of ONE ALPHA that is not one path: solid on the wet layer, baked
+       once, so the walk cannot compound at its caps. Reasoning and numbers in
+       lib/strokelayers.js uniformAlpha and flip.js paintStatic. */
+    wetRunFn(seg, a) {
+      if (wetActive) bakeWet();
+      wetActive = true; wetAlpha = a;
+      wctx.clearRect(0, 0, lgW, lgH);
+      const p = seg[0];
+      drawDotOn(wctx, p.x, p.y, solidStrokeColor(p.color), p.size);
+      for (let i = 1; i < seg.length; i++) {
+        const q = seg[i], v = seg[i - 1];
+        drawLineOn(wctx, v.x, v.y, q.x, q.y, solidStrokeColor(q.color), q.size);
+      }
+      bakeWet();
+    },
     present() {
       visCtx.save();
       visCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -681,7 +700,8 @@ function paintStrokesStatic(strokeArr) {
      the overBudget call above treats an absent lib as "not over budget" rather
      than carrying a second copy. Absent, a run paints as it did before. */
   const _uni = _sl && _sl.uniformRun;
-  let i = 0;
+  const _uniA = _sl && _sl.uniformAlpha;
+  let i = 0, _ra = 0;
   while (i < strokeArr.length) {
     let j = i + 1;
     while (j < strokeArr.length && !strokeArr[j].start) j++;
@@ -696,6 +716,8 @@ function paintStrokesStatic(strokeArr) {
         for (let k = 1; k < seg.length; k++) ctx.lineTo(seg[k].x, seg[k].y);
         ctx.stroke();
       }
+    } else if (comp && _uniA && (_ra = _uniA(seg, anyStrokeAlpha)) > 0) {
+      comp.wetRunFn(seg, _ra);
     } else for (let k = i; k < j; k++) {
       const p = strokeArr[k], prev = strokeArr[k - 1];
       if (p.start || k === 0) {

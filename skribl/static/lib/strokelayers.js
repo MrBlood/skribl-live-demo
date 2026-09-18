@@ -110,27 +110,13 @@
     return a;
   }
 
-  /* THE OTHER QUESTION, AND IT IS NOT THE SAME ONE. uniformRun above asks "can
-   * this be ONE path?" -- which needs one colour and one width. Compositing
-   * asks something narrower: "is there ONE alpha?" A run can fail the first
-   * and pass the second, and that gap is where a smudged generated page lives.
-   *
-   * Measured on a smeared ring after a 60-step smudge: the touched runs carry
-   * 3 to 5 distinct colours and 11 to 17 distinct SIZES -- SMUDGE_SPREAD_MAX
-   * widens every point by its own accumulator -- while alphaMin and alphaMax
-   * are equal to four decimals in every one of them. mix() preserves the
-   * hex-8 alpha, so the drag moves pigment and width and never opacity.
-   *
-   * It matters because the fallback walk draws each segment separately, and
-   * translucent round caps COMPOUND where they meet. Same fixture, a run
-   * written at alpha 0.0314 -- a single path would paint 8:
-   *
-   *     midpoint between vertices   11.2     (1.4x, caps overlapping along the run)
-   *     at the vertices             15.1     (1.9x, two caps on one point)
-   *
-   * That 35% ripple at the vertex spacing IS the mesh a smudge leaves on a
-   * Motion Smear. A uniform alpha is exactly the licence to draw the run
-   * solid on a layer and composite it once, which cannot compound at all. */
+  /* ONE ALPHA, WHICH IS NOT THE SAME QUESTION AS ONE PATH. uniformRun above
+   * needs one colour and one width; compositing needs only one alpha, and a
+   * run can fail the first and pass the second -- which is where a smudged
+   * generated page lives. A uniform alpha is the licence to draw the run solid
+   * on a layer and composite it once, so the caps cannot compound. flip.js
+   * paintStatic carries the reasoning and the measurements; this file is in two
+   * byte budgets and that one is in none. */
   function uniformAlpha(seg, alphaFn) {
     var p, a, i, q;
     if (!seg || seg.length < 2) return 0;

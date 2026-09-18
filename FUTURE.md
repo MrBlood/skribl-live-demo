@@ -491,6 +491,19 @@ not an oversight with a patch behind it. The fix that works does not scale and
 the fixes that scale do not work. Do not spend more here without a genuinely
 new idea, and whatever it is, judge it on a picture.
 
+**DO NOT CONFUSE THIS WITH THE MESH A SMUDGE USED TO LEAVE (fixed, v302).**
+They look alike and they are not the same thing. The stitch above is in the
+smear itself, it is the sample count, and it is still there. The mesh appeared
+only after a field tool touched a generated page: smudge writes per-point
+colour and size, so `uniformRun` stopped giving the ghost a single path, the
+per-segment walk took over, and translucent round caps compound where they
+meet. A run written at alpha 0.0314 painted 11.2 between vertices and 15.1 at
+them, against the 8 a single path gives -- a 35% ripple at the ghost's own
+point spacing. `uniformAlpha` and the wet-layer route closed it on both
+surfaces. If a stitch-like pattern is ever reported again, the first question
+is whether a field tool touched the page: one of these is a design limit and
+the other was a renderer bug.
+
 ## 6h. Nothing tells you the document budget until you post (v301)
 
 Found while measuring 6g, and it is the more actionable of the two.
