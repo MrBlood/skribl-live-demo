@@ -1181,7 +1181,22 @@ function strokeAlphaOf(col){
   if(h) return parseInt(h[1], 16) / 255;
   return alphaOf(col);
 }
-function solidOf(col){ if(typeof col==='string'){ const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i); if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')'; } return col; }
+/* SOLID MEANS SOLID IN EVERY SPELLING. The layer below paints a run at full
+   strength and composites it once, so anything left translucent here is
+   attenuated TWICE. rgba() was the only spelling that could reach this, because
+   alphaOf does not see hex-8 and so a hex-8 run was never layered -- until the
+   field-tool case below started layering exactly those. Measured when it was
+   missing: a run written at alpha 0.031 composited to 0 rather than 8, i.e. it
+   vanished. */
+function solidOf(col){
+  if(typeof col==='string'){
+    const m=col.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if(m) return 'rgb('+m[1]+', '+m[2]+', '+m[3]+')';
+    const h=col.trim().match(/^#([0-9a-f]{6})[0-9a-f]{2}$/i);
+    if(h) return '#'+h[1];
+  }
+  return col;
+}
 /* Inline fallback for lib/strokelayers.js's uniformRun, as elsewhere in this
    file. The note beside it there is the reasoning. */
 function _uniformRun(seg, alphaFn){
@@ -1195,6 +1210,56 @@ function _uniformRun(seg, alphaFn){
     if(q.erase || q.color !== p.color || q.size !== p.size) return 0;
   }
   return a;
+}
+/* Inline fallback for lib/strokelayers.js's uniformAlpha, as above. The note
+   beside it there is the reasoning and the measurements. */
+function _uniformAlpha(seg, alphaFn){
+  if(!seg || seg.length < 2) return 0;
+  const p = seg[0];
+  if(p.erase) return 0;
+  const a = alphaFn(p.color);
+  if(!(a < 1)) return 0;
+  for(let i = 1; i < seg.length; i++){
+    const q = seg[i];
+    if(q.erase || alphaFn(q.color) !== a) return 0;
+  }
+  return a;
+}
+function _uniRunFn(){
+  return (typeof window !== 'undefined' && window.SkriblStrokeLayers
+          && window.SkriblStrokeLayers.uniformRun)
+    ? window.SkriblStrokeLayers.uniformRun : _uniformRun;
+}
+function _uniAlphaFn(){
+  return (typeof window !== 'undefined' && window.SkriblStrokeLayers
+          && window.SkriblStrokeLayers.uniformAlpha)
+    ? window.SkriblStrokeLayers.uniformAlpha : _uniformAlpha;
+}
+/* WHICH RUNS NEED THE LAYER THAT alphaOf CANNOT SEE.
+
+   alphaOf reads rgba() and not hex-8, on purpose: that asymmetry is what keeps
+   a generated translucent pass off LAYER_BUDGET, and the budget exists because
+   layering costs a full-canvas round trip per stroke. A generated ghost is safe
+   without one because uniformRun gives it a single path, and a single path
+   cannot composite against itself.
+
+   A field tool takes that safety away. Smudge writes per-point colour AND size,
+   so the run stops being uniform, falls to the per-segment walk, and compounds
+   at every round cap. These are the runs that need a layer and were never
+   counted for one -- so they get their own count against the same ceiling,
+   rather than riding a budget sized for a different population. */
+function fieldLayerCount(strokeArr){
+  const uniRun = _uniRunFn(), uniAlpha = _uniAlphaFn();
+  let n = 0, i = 0;
+  while(i < strokeArr.length){
+    let j = i + 1; while(j < strokeArr.length && !strokeArr[j].start) j++;
+    const seg = strokeArr.slice(i, j);
+    if(seg.length > 1 && !seg[0].erase && !(alphaOf(seg[0].color) < 1)
+       && !uniRun(seg, strokeAlphaOf) && uniAlpha(seg, strokeAlphaOf) > 0) n++;
+    if(n > LAYER_BUDGET) return n;
+    i = j;
+  }
+  return n;
 }
 function paintSeg(c, seg, solid){
   /* ONE PATH when the run can take it -- see lib/strokelayers.js. Skipped when
@@ -1257,6 +1322,7 @@ function paintStatic(c, strokeArr){
                        && window.SkriblStrokeLayers.overBudget)
     ? window.SkriblStrokeLayers.overBudget(strokeArr, alphaOf)
     : layerableCount(strokeArr) > LAYER_BUDGET;
+  const _fieldOver = fieldLayerCount(strokeArr) > LAYER_BUDGET;
   let i = 0;
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
@@ -1267,7 +1333,18 @@ function paintStatic(c, strokeArr){
     // rather than a global only a console could reach.
     const _layered = ((typeof window.SKRIBL_STROKE_LAYERS === 'undefined')
       || window.SKRIBL_STROKE_LAYERS !== false) && !_overBudget;
-    const a = (seg[0].erase || !_layered) ? 1 : alphaOf(seg[0].color);
+    let a = (seg[0].erase || !_layered) ? 1 : alphaOf(seg[0].color);
+    /* THE RUN A FIELD TOOL LEFT BEHIND. Additive to everything above: this can
+       only lower `a` for a run that was NOT already layered and that paintSeg
+       would NOT give a single path -- so an untouched ghost keeps its cheap
+       one-path route and an rgba() stroke keeps the layer it already had.
+       Past the ceiling it degrades to exactly today's picture rather than to a
+       stall, which is the same bargain overBudget makes above. */
+    if (a >= 1 && _layered && !_fieldOver && seg.length > 1 && !seg[0].erase
+        && !_uniRunFn()(seg, strokeAlphaOf)) {
+      const _ua = _uniAlphaFn()(seg, strokeAlphaOf);
+      if (_ua > 0 && _ua < 1) a = _ua;
+    }
     if (a >= 1) { paintSeg(c, seg, false); }
     else {
       tctx.clearRect(0,0,CW,CH);
@@ -5741,6 +5818,30 @@ const SMEAR_TRAIL_ALPHA = 0.20;  // the darkest of them
 const SMEAR_TRAIL_FALLOFF = 2;   // t^2: what is older is fainter, fast
 const SMEAR_TRAIL_COARSE = 4;    // a ghost carries a quarter of the pose's points
 
+/* HOW HEAVY A SMEAR LOOKS, and it is a CONTROL rather than a fix. Measured in
+   the v302 spike: the shipped page at 50% shows the same moire as at 100%, just
+   dimmer, because the pattern comes from the ghost-to-gap ratio and scaling
+   every ghost together does not touch it. What this does buy is the thing
+   artists actually asked for -- a smear that sits behind the drawing instead of
+   competing with it, or one that carries a heavier blur on purpose.
+
+   BOTH ALPHAS, not just the trail. A smear is an exposure (the samples between
+   the poses) plus a trail (the ghosts reaching back from the pose). Scaling one
+   and not the other does not make the effect lighter, it changes its BALANCE --
+   which is a different control, and not one anybody asked for. */
+const SMEAR_WEIGHT = { light: 0.55, normal: 1, strong: 1.7 };
+const SMEAR_WEIGHT_KEY = 'skribl.flip.smearWeight';
+let smearWeightName = 'normal';
+try {
+  const _w = localStorage.getItem(SMEAR_WEIGHT_KEY);
+  if (_w && Object.prototype.hasOwnProperty.call(SMEAR_WEIGHT, _w)) smearWeightName = _w;
+} catch (_) {}
+function smearWeight(){ return SMEAR_WEIGHT[smearWeightName] || 1; }
+function setSmearWeight(name){
+  if(!Object.prototype.hasOwnProperty.call(SMEAR_WEIGHT, name)) return;
+  smearWeightName = name;
+  try { localStorage.setItem(SMEAR_WEIGHT_KEY, name); } catch (_) {}
+}
 const TWEEN_SAMPLES = 26;
 const TWEEN_MIN_SAMPLES = 6;
 const TWEEN_POINT_CAP = 14000;
@@ -6562,6 +6663,12 @@ function buildTween(a, b, want){
      interpolated at all: they are drawn ONCE, from THIS page, exactly as they
      sit on it. */
   const aim = (want && Array.isArray(want.aim) && want.aim.length) ? want.aim : null;
+  /* FROM THE RECIPE, not from the live setting. A page rebuilt out of a draft
+     has to come back the weight it was MADE at, or changing the control would
+     silently repaint every smear already in the flipbook. Absent (every draft
+     written before this existed) reads as 1, which is exactly today's page. */
+  const smw = (want && typeof want.alpha === 'number' && isFinite(want.alpha))
+    ? Math.max(0.25, Math.min(2.5, want.alpha)) : 1;
   let still = [];
   if(aim){
     const va = tweenVisible(a);
@@ -6600,7 +6707,7 @@ function buildTween(a, b, want){
   // Enough per sample that the exposure sums to a readable figure, capped so a
   // short sample count does not come out as a stack of hard copies. Trimmed
   // when there is a halo carrying part of the weight.
-  let fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+  let fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur) * smw;
   // Shed any pass too faint to carry this drawing's colour — see
   // TWEEN_HUE_MIN. The core is always kept: it is the drawing, not the halo.
   // Coarsening the exposure instead would trade smoothness for colour on every
@@ -6612,7 +6719,7 @@ function buildTween(a, b, want){
     blur = keep;
     // Fewer passes lay down less ink, so the core is re-trimmed for the set
     // that actually survived.
-    fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur);
+    fade = Math.min(0.30, Math.max(0.06, 2.6 / n)) * tweenTrim(blur) * smw;
   }
   const out = { strokes: [], strokeGroups: [], hold: 1 };
   /* WHAT DID NOT MOVE, drawn once and at full strength, before the exposure so
@@ -6667,7 +6774,7 @@ function buildTween(a, b, want){
          is 1/OVERLAP and the alpha comes out at exactly SMEAR_TRAIL_ALPHA, so
          the ball is the ball. It rises only where a clamp piled them up. */
       const cover = Math.max(1, Math.min(ghosts, brush / (trailLen / ghosts)));
-      const trailAlpha = SMEAR_TRAIL_ALPHA / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
+      const trailAlpha = SMEAR_TRAIL_ALPHA * smw / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
       for(let sIdx = 0; sIdx < ghosts; sIdx++){
         const frac = sIdx / ghosts;
         /* THE TRAIL REACHES BACK TO THE POSE, NOT PAST IT. The pose is at the
@@ -6719,8 +6826,8 @@ function buildTween(a, b, want){
         });
         out.strokeGroups.push(run.length);
       }
-      genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, aim: aim.slice() }
-                             : { k: 'smear', n: n, passes: 1, lead: 1 });
+      genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, alpha: smw, aim: aim.slice() }
+                             : { k: 'smear', n: n, passes: 1, lead: 1, alpha: smw });
       tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
                           anyMoved: anyMovedHere };
       return out;
@@ -6733,8 +6840,8 @@ function buildTween(a, b, want){
      the aim rebuilds an AIMED page as a whole-page smear -- a draft that comes
      back different from the one that was saved, silently, which is worse than
      not storing it at all. */
-  genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, aim: aim.slice() }
-                         : { k: 'smear', n: n, passes: blur.length });
+  genRecipe.set(out, aim ? { k: 'smear', n: n, passes: blur.length, alpha: smw, aim: aim.slice() }
+                         : { k: 'smear', n: n, passes: blur.length, alpha: smw });
   /* WHAT IT DID, for the caller to say out loud. Reported with a picture: a
      generated page that "is just a copy of slide 1" -- which is exactly what a
      smear looks like when nothing on the two pages moved far enough to sample,
@@ -6952,7 +7059,8 @@ function addTween(){
      rather than as a grey blob. With nothing selected this is the whole page,
      exactly as before. */
   const aim = tweenAimFromSelection(a);
-  const t = buildTween(a, b, aim ? { lead: 1, aim: aim } : { lead: 1 });
+  const t = buildTween(a, b, aim ? { lead: 1, alpha: smearWeight(), aim: aim }
+                                : { lead: 1, alpha: smearWeight() });
   if(!t) return;
   /* THE DOCUMENT HAS A BUDGET AND THIS IS WHERE IT IS SPENT. The planner
      inside buildTween budgets this PAGE against the server's per-frame caps
@@ -9393,6 +9501,28 @@ function _wireGridDensity(isOnFn, repaintFn) {
   render();
   return render;
 }
+/* Smear weight — the same seg shape as grid density and mirror, because it is
+   the same kind of choice and the roving-tabindex keyboard model already knows
+   how to drive one. NO REPAINT on change: the setting applies to the NEXT
+   smear, and every page already in the flipbook keeps the weight stored in its
+   own recipe. A control that silently rewrote finished pages would be a
+   different and much less welcome feature. */
+(function(){
+  var seg = document.getElementById('smearWeightSeg');
+  if(!seg) return;
+  function render(){
+    var btns = seg.querySelectorAll('[data-smear]');
+    for(var i = 0; i < btns.length; i++)
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-smear') === smearWeightName);
+  }
+  seg.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('[data-smear]') : null;
+    if(!b || !seg.contains(b)) return;
+    setSmearWeight(b.getAttribute('data-smear'));
+    render();
+  });
+  render();
+})();
 const gridEl=document.getElementById('flipGrid'), gridBtn=document.getElementById('gridBtn');
 let grid=false;
 const _renderFlipGridDensity = _wireGridDensity(function(){ return grid; }, function(){ syncGrid(); });

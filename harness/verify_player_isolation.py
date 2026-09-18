@@ -914,7 +914,38 @@ with sync_playwright() as sp:
     # a run simply paints the way it did before. The prose lives in
     # lib/strokelayers.js and flip.js; jsstrip means comments here are free
     # anyway, which the previous raise recorded after believing otherwise.
-    BYTES_RATCHET, BYTES_TARGET = 151_500, 151_500
+    #
+    # 151,500 -> 153,800, measured 153,227, v302: uniformAlpha, and the wet-layer
+    # route for the runs it identifies. uniformRun above asks "can this be ONE
+    # path?" -- one colour, one width. Compositing asks something narrower: "is
+    # there ONE alpha?" A smudge writes per-point colour AND size, so a generated
+    # ghost fails the first question while still passing the second, falls to the
+    # per-segment walk, and compounds at its own translucent round caps.
+    #
+    # Measured in Flip on a smeared ring after a 60-step smudge, one run written
+    # at alpha 0.0314 where a single path paints 8:
+    #
+    #     midpoint between vertices   11.2    1.4x
+    #     at the vertices             15.1    1.9x, a 35% ripple
+    #     after the change             8.0    1.0x, ripple 0%
+    #
+    # The ripple sits at the ghost's own point spacing, which is what makes it a
+    # visible mesh rather than a haze. THIS SURFACE HAS THE SAME DEFECT AND IT IS
+    # THE ONE STRANGERS SEE: paintStrokesStatic is where a share link renders a
+    # Flip document, parseStrokeAlpha reads rgba() and not hex-8 by the same
+    # deliberate asymmetry, and a fix only the author can see is half a fix.
+    #
+    # Compacted before asking, per this file's own precedent. The prose for
+    # uniformAlpha lives in flip.js paintStatic, which is in no byte budget;
+    # lib/strokelayers.js keeps seven lines and a pointer, which is what its
+    # uniformRun note already says to do (-804 B measured). app.js carries no
+    # inline fallback for it, as it carries none for uniformRun.
+    #
+    # It is still a bigger raise than the two before it (100 B and 900 B), and it
+    # was put to the owner as such rather than absorbed. Pinned at the
+    # measurement plus the same 540 B allowance the ceiling has always carried,
+    # so the next addition argues for itself as this one did.
+    BYTES_RATCHET, BYTES_TARGET = 153_800, 153_800
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —

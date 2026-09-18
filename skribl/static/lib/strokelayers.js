@@ -110,8 +110,28 @@
     return a;
   }
 
+  /* ONE ALPHA, WHICH IS NOT THE SAME QUESTION AS ONE PATH. uniformRun above
+   * needs one colour and one width; compositing needs only one alpha, and a
+   * run can fail the first and pass the second -- which is where a smudged
+   * generated page lives. A uniform alpha is the licence to draw the run solid
+   * on a layer and composite it once, so the caps cannot compound. flip.js
+   * paintStatic carries the reasoning and the measurements; this file is in two
+   * byte budgets and that one is in none. */
+  function uniformAlpha(seg, alphaFn) {
+    var p, a, i, q;
+    if (!seg || seg.length < 2) return 0;
+    p = seg[0];
+    if (p.erase) return 0;
+    a = alphaFn(p.color);
+    if (!(a < 1)) return 0;
+    for (i = 1; i < seg.length; i++) { q = seg[i];
+      if (q.erase || alphaFn(q.color) !== a) return 0; }
+    return a;
+  }
+
   var api = { enabled: enabled, setEnabled: setEnabled, create: create,
-              BUDGET: BUDGET, overBudget: overBudget, uniformRun: uniformRun };
+              BUDGET: BUDGET, overBudget: overBudget, uniformRun: uniformRun,
+              uniformAlpha: uniformAlpha };
   if (typeof window !== 'undefined') window.SkriblStrokeLayers = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

@@ -272,6 +272,79 @@ with sync_playwright() as p:
               f"raw {_ap and _ap['raw']['lit']} lit, layers-on "
               f"{_ap and _ap['on']['lit']}, layers-off {_ap and _ap['off']['lit']}")
 
+        # ---------------------------------------------------------------- v302
+        # AND THE RUN A FIELD TOOL LEFT BEHIND, WHICH IS A DIFFERENT POPULATION.
+        # Everything above is a UNIFORM run: one colour, one width, so uniformRun
+        # gives it a single path and a single path cannot stack against itself.
+        # Smudge writes per-point colour AND size, so that route closes and the
+        # walk takes over -- and the walk is what stacks. Measured in Flip on a
+        # smeared ring: 3-5 distinct colours, 11-17 distinct sizes, and alphaMin
+        # equal to alphaMax in every touched run, because mix() preserves the
+        # hex-8 alpha. That equality is the whole licence for wetRunFn.
+        #
+        # PINNED DIFFERENTLY FROM THE FLIP SIDE ON PURPOSE. flip.js is asserted
+        # on the vertex-to-midpoint ripple, because there the mesh is what the
+        # artist sees. Here the reachable claim is the ceiling: this surface
+        # renders a posted document, and what matters is that a stranger's copy
+        # is not brighter than the ink the author wrote.
+        _fp = page.evaluate("""() => {
+          const seg = [];
+          for (let k = 0; k < 24; k++)
+            seg.push({ x: 80 + k * 11, y: 120 + (k % 3) * 7,
+                       // same alpha throughout, everything else moving -- which
+                       // is exactly the shape a smudge leaves
+                       color: (k % 2 ? '#ffffff2e' : '#e8e8e82e'),
+                       size: 9 + (k % 5), t: k, erase: false, start: k === 0 });
+          const read = () => {
+            const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let lit = 0, max = 0;
+            for (let i = 3; i < d.length; i += 4) {
+              if (d[i] <= 8) continue; lit++; if (d[i] > max) max = d[i]; }
+            return { lit, max };
+          };
+          const sl = window.SkriblStrokeLayers;
+          const notOnePath = sl && !sl.uniformRun(seg, anyStrokeAlpha);
+          const oneAlpha = sl && sl.uniformAlpha(seg, anyStrokeAlpha);
+          window.SKRIBL_STROKE_LAYERS = true;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          paintStrokesStatic(seg);
+          const on = read();
+          // the pre-fix emission for THIS run, run on purpose
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < seg.length; i++) {
+            const q = seg[i];
+            if (i === 0) drawDot(q.x, q.y, q.color, q.size, false);
+            else { const v = seg[i-1];
+                   drawLine(v.x, v.y, q.x, q.y, q.color, q.size, false); }
+          }
+          const raw = read();
+          return { written: 0x2e, notOnePath: !!notOnePath, oneAlpha: oneAlpha,
+                   on: on, raw: raw };
+        }""")
+        check("a field-tool run is NOT one path, yet is one alpha",
+              _fp and _fp["notOnePath"] and 0 < (_fp["oneAlpha"] or 0) < 1,
+              f"uniformRun says one-path={not (_fp and _fp['notOnePath'])}, "
+              f"uniformAlpha={_fp and _fp['oneAlpha']} — if this run took the "
+              f"path route the checks below would pass without the fix")
+        check("the pre-fix painter DOES stack this one above its own alpha",
+              _fp and _fp["raw"]["max"] > _fp["written"] + 12,
+              f"written {_fp and _fp['written']}, raw painter reached "
+              f"{_fp and _fp['raw']['max']} — this check is not exercising it")
+        check("...and paintStrokesStatic holds it AT that alpha, layers ON",
+              _fp and _fp["on"]["max"] <= _fp["written"] + 4,
+              f"written {_fp and _fp['written']}, painted "
+              f"{_fp and _fp['on']['max']} — a posted Skribl must not show a "
+              f"stranger brighter ink than its author wrote")
+        # LAYERS OFF IS NOT FIXED HERE AND MUST NOT CLAIM TO BE. A run of one
+        # colour is a single path either way; a run of many needs a layer to be
+        # composited once, and turning layers off is the setting that says paint
+        # direct and let it compound. Recorded rather than asserted green.
+        check("...covering the same ground as the walk did",
+              _fp and abs(_fp["on"]["lit"] - _fp["raw"]["lit"])
+                      <= _fp["raw"]["lit"] * 0.02,
+              f"raw {_fp and _fp['raw']['lit']} lit, layers-on "
+              f"{_fp and _fp['on']['lit']} — compositing must not shrink the ink")
+
         # ------------------------------------------------------------------
         print("\nTHE SMEAR'S GHOSTS — the same beading, in the one path "
               "neither compositor reaches")

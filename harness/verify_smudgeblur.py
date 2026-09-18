@@ -756,6 +756,129 @@ with sync_playwright() as p:
               f"names the mechanism where the pixel count names the symptom: "
               f"one of them going red alone is the more useful signal")
 
+        # ---------------------------------------------------------- v302
+        # A SMUDGE ON A MOTION SMEAR LEFT A MESH, AND IT WAS THE RENDERER.
+        #
+        # The reported picture: smudge a generated page and its tube turns into
+        # regular bright dots, like a crochet stitch. The first reading here was
+        # "the dabs stop touching" -- measured gaps of 1.03 brush widths, 770 of
+        # 1480 over a full width -- AND THAT READING HAD THE SIGN BACKWARDS. The
+        # dots are brighter than the line between them, not darker: it is
+        # over-paint, not a gap.
+        #
+        # The chain, each link measured rather than reasoned:
+        #   1. a ghost is written '#rrggbbaa', and alphaOf does not read hex-8,
+        #      so it never counts against LAYER_BUDGET -- deliberate, v301.
+        #   2. its safety net is uniformRun giving it ONE path, and a single
+        #      path cannot composite against itself.
+        #   3. smudge writes per-point colour AND size (SMUDGE_SPREAD_MAX), so
+        #      uniformRun fails: 3-5 distinct colours, 11-17 distinct sizes.
+        #   4. the fallback walk strokes each segment separately, and
+        #      translucent round caps compound where they meet.
+        #   5. the ghost is coarse (SMEAR_TRAIL_COARSE), so caps meet only at
+        #      vertices -- which makes the compounding PERIODIC, and visible.
+        #
+        # The licence for the fix is in step 3's measurement: alphaMin equals
+        # alphaMax in every touched run, because mix() preserves the hex-8 alpha.
+        # Uniform alpha is exactly what lets a run be drawn solid on a layer and
+        # composited once, which cannot compound at all.
+        print("\nA SMUDGED GHOST — the walk must not compound at its own caps")
+
+        _mesh = page.evaluate("""() => {
+          const ring = (cx) => { const f = { strokes: [], strokeGroups: [], hold: 2 };
+            const N = 220;
+            for(let i = 0; i < N; i++){ const a = (i/N)*Math.PI*2;
+              const p = { x: cx + Math.cos(a)*62, y: 300 + Math.sin(a)*150,
+                          size: 6, color: '#ffffff', erase: false, t: i*6 };
+              if(i===0) p.start = true; f.strokes.push(p); }
+            f.strokeGroups.push(N); return f; };
+          frames.length = 0; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+          frames.push(ring(250)); frames.push(ring(520));
+          idx = 0; fps = 12; subdiv = 1; buildStrip(); render();
+          addTween();
+          if(frames.length !== 3) return { made: false };
+          setTool('smudge');
+          const x0 = 380, y0 = 175;
+          fieldBegin({ x: x0, y: y0 }, 'Smudge');
+          for(let i = 1; i <= 60; i++) smudgeMove({ x: x0 + i*1.2, y: y0 + i*2.2 });
+          fieldEnd(); render();
+          const f = frames[idx];
+          const uniRun = _uniRunFn(), uniAlpha = _uniAlphaFn();
+          const hexA = (c) => { const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(String(c).trim());
+                                return m ? parseInt(m[1],16)/255 : null; };
+          // the population this is about: runs the walk would take, whose alpha
+          // is nonetheless one value
+          let at = 0, target = null, spread = null, nonUni = 0;
+          for(const n of f.strokeGroups){
+            const seg = f.strokes.slice(at, at+n); at += n;
+            if(uniRun(seg, strokeAlphaOf)) continue;
+            nonUni++;
+            if(!spread){
+              const al = seg.map(q => hexA(q.color)).filter(v => v !== null);
+              if(al.length) spread = { colors: new Set(seg.map(q => q.color)).size,
+                                       sizes: new Set(seg.map(q => q.size)).size,
+                                       alphaMin: Math.min.apply(null, al),
+                                       alphaMax: Math.max.apply(null, al) };
+            }
+            if(!target && uniAlpha(seg, strokeAlphaOf) > 0 && n >= 20) target = seg;
+          }
+          if(!target) return { made: true, target: false, nonUni: nonUni };
+          const g = fctx; g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);
+          g.clearRect(0,0,CW,CH); g.fillStyle = '#000000'; g.fillRect(0,0,CW,CH);
+          paintStatic(g, target);            // the whole decision, not one branch
+          const d = g.getImageData(0,0,CW*DPR,CH*DPR).data, W = CW*DPR;
+          const lum = (x,y) => { x = Math.round(x*DPR); y = Math.round(y*DPR);
+            if(x<0||y<0||x>=W||y>=CH*DPR) return 0; return d[(y*W+x)*4]; };
+          let vS=0,vN=0,mS=0,mN=0;
+          for(let i=1;i<target.length;i++){
+            vS += lum(target[i].x, target[i].y); vN++;
+            mS += lum((target[i-1].x+target[i].x)/2, (target[i-1].y+target[i].y)/2); mN++; }
+          const v = vS/vN, m = mS/mN, want = 255 * (hexA(target[0].color) || 0);
+          // A run whose alpha genuinely VARIES must not be swept into this: the
+          // layer paints one alpha for the whole run, so flattening a real ramp
+          // would silently redraw the artist's ink. Built by hand, because a
+          // smudge does not produce one.
+          const mixed = target.map((q,i) => Object.assign({}, q,
+            { color: i % 2 ? '#ffffff20' : '#ffffff60' }));
+          mixed[0].start = true;
+          return { made: true, target: true, nonUni: nonUni, spread: spread,
+                   pts: target.length, want: want, vertex: v, mid: m,
+                   ripple: 100*(v-m)/Math.max(0.01,m),
+                   overPaint: m/Math.max(0.01,want),
+                   mixedLayered: uniAlpha(mixed, strokeAlphaOf),
+                   counted: fieldLayerCount(target) };
+        }""")
+
+        check("the smear and the smudge both landed", _mesh.get("target") is True,
+              f"{_mesh} — no non-uniform run of 20+ points to measure, so "
+              f"everything below would pass on an empty population")
+        _sp = _mesh.get("spread") or {}
+        check("a smudge breaks uniformRun on colour AND size, but not on alpha",
+              (_sp.get("colors", 0) > 1 or _sp.get("sizes", 0) > 1)
+              and _sp.get("alphaMin") == _sp.get("alphaMax"),
+              f"{_sp} — the fix rests on the alpha being one value while the "
+              f"rest varies. If alpha ever varies here, layering the run would "
+              f"repaint the artist's ink at the wrong opacity")
+        # THE PICTURE ASSERTION. Broken: vertex 15.1, mid 11.2 against a written
+        # 8 -- 1.4x everywhere and a 35% ripple at the vertex spacing. Fixed:
+        # 8 and 8. The tolerance is well inside that gap and well outside the
+        # rounding a composite costs.
+        check("a smudged ghost paints at the alpha it was written at",
+              abs(_mesh.get("overPaint", 0) - 1.0) < 0.12,
+              f"{_mesh.get('mid')} against a written {_mesh.get('want')} "
+              f"({_mesh.get('overPaint')}x) — the per-segment walk compounds at "
+              f"its own round caps, so the whole run comes out too bright")
+        check("...and evenly, with no bright bead at every vertex",
+              abs(_mesh.get("ripple", 99)) < 8,
+              f"{_mesh.get('ripple')}% brighter at the vertices than between "
+              f"them — periodic over-paint at the ghost's own point spacing IS "
+              f"the mesh the artist sees")
+        check("...while a run of genuinely MIXED alpha is left alone",
+              _mesh.get("mixedLayered") == 0,
+              f"uniformAlpha returned {_mesh.get('mixedLayered')} for a run "
+              f"written half at 0x20 and half at 0x60 — one layer alpha cannot "
+              f"represent two, so this run must keep the walk")
+
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:
         br.close()
