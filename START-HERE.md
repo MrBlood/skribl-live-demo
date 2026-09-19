@@ -681,7 +681,7 @@ rather than a shared rule.
 | `photofit.js` | Pad+Flip | Photo fit geometry — the part both editors and the player must agree on. |
 | `pillfit.js` | Pad+Flip | The autosave pill yields to the controls it would sit on. |
 | `pinchgesture.js` | Pad+Flip | Pinch contact tracking — the two editors only, never the player. |
-| `pointbudget.js` | Flip | The DOCUMENT's point budget — the one number the editors were spending without being able to see it. |
+| `pointbudget.js` | Flip | The DOCUMENT's budget — the numbers the editors were spending without being able to see them. |
 | `pointwrite.js` | Pad+Flip | How a point is WRITTEN — the shared rule for both editors' serializers. |
 | `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
 | `posted.js` | Pad+Flip | Your Skribls — a local record of what you have posted. |

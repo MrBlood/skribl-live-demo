@@ -569,6 +569,27 @@ The budget is the DOCUMENT's, so it is summed per document and not per frame:
 the per-frame caps (`TWEEN_POINT_CAP`, `TWEEN_GROUP_CAP`) still do their own
 job and neither one can see this one.
 
+**AND THE OTHER CEILING WAS THE ONE THAT BOUND FIRST (closed in v302).** Found
+while measuring this one. `MAX_FRAMES` is 200, it was enforced only at POST, and
+a Motion Smear costs **two** pages -- the pose you draw and the page it
+generates -- so 200 arrives at about **99 smears**. Measured across drawing
+weights, only a very dense drawing reaches the point budget before the page one:
+
+    pose weight   cost per smear   smears to the point chip   pages by then
+    ~64 pts             272                ~735                   1,470
+    ~160                680                ~293                     586
+    ~400              1,700                ~117                     234
+    ~640              2,720                 ~73                     146
+
+On a ring pair the document passed 201 pages at 84,160 points -- **42% of the
+point budget** -- saying "Motion smear added" each time, and went on to 261.
+So the guard shipped in v301 was watching the ceiling that arrives second.
+
+Both doors are guarded now: `budgetAllows` for the generative buttons and
+`addFrame` for Duplicate and Blank, plus the post pre-flight. The message names
+PAGES rather than size, because the remedies differ -- over on points you delete
+a GENERATED page and free 27 drawings' worth, over on pages any page will do.
+
 **Do not "fix" it by raising MAX_TOTAL_POINTS.** The cap exists to stop a
 payload that pins a phone, and the comment above it in `validation.py` says so.
 The problem is that the client spends a budget it cannot see.

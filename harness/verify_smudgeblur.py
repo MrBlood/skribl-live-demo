@@ -888,16 +888,34 @@ with sync_playwright() as p:
         # pixels through every one of those trips. Reported as "it takes
         # multiple seconds", and it was this.
         #
-        # THE COST IS THE SYNC, NOT THE PIXELS, which is why the obvious
-        # optimisation is not the fix. Measured on the same 17 runs:
+        # THE PER-RUN TRIP IS THE COST, AND IT IS NOT THE PIXELS. Bounding each
+        # trip to the run's box took the per-run price only 2.44 -> 2.14 ms;
+        # fieldLayerCount is 0.38 ms and the alpha scans 0.28 ms. None of those
+        # is where the time goes -- it is the read-after-write on the temp
+        # canvas, once per run.
         #
-        #     all walks, then all blits (batched)       9.14 ms
-        #     walk, blit, walk, blit   (interleaved)   44.55 ms
+        # AND THE FIRST NUMBER PUBLISHED FOR THAT WAS WRONG, WHICH IS RECORDED
+        # HERE BECAUSE IT WAS ALSO PUBLISHED IN A MERGED COMMIT (#161). It
+        # claimed "all walks then all blits" cost 9.14 ms against 44.55 --
+        # 4.9x, and named batching as the lead for anyone who wanted the settle
+        # faster. That measurement reused ONE temp canvas, so every run
+        # accumulated onto the same layer and the last state was composited 17
+        # times. Fast, and a different picture. Caught by comparing PIXELS
+        # rather than clocks, which is the only thing that separates them:
         #
-        # 4.9x for the ordering alone -- each blit stalls on the write to the
-        # temp canvas before it. Bounding each trip to the run's box took the
-        # per-run price only 2.44 -> 2.14 ms; fieldLayerCount is 0.38 ms and the
-        # alpha scans 0.28 ms, so neither is where the time goes.
+        #     correct      34.2 ms   mean luminance 164.8
+        #     degenerate    8.1 ms   mean luminance 248.6   (blown out)
+        #
+        # Rebuilt honestly, with real separate buffers and draw order kept, the
+        # ordering is worth far less than that:
+        #
+        #     one buffer, interleaved            34 - 43 ms
+        #     buffers rotated (2 / 4)            35.0 / 33.9 ms
+        #     chunked, write K then blit K (3/4) 29.0 / 27.3 ms
+        #
+        # So ~1.2-1.5x, not ~5x, and nowhere near enough to make the layer
+        # affordable on every move of a drag. THERE IS NO CHEAP BATCHING LEAD
+        # HERE; do not spend a day chasing the retracted one.
         #
         # So the layer is skipped while the gesture is OPEN. During the drag the
         # ink is moving and the compounding is a transient; _fieldIdx clears

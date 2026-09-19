@@ -2044,6 +2044,116 @@ with sync_playwright() as p:
           f"{_bud.get('total')} points — refusing must not itself spend budget")
 
     # ---------------------------------------------------------------- v302
+    # THE PAGE CEILING, WHICH IS THE ONE A LONG FLIPBOOK MEETS FIRST.
+    #
+    # v301 gave the client the DOCUMENT's point budget. Measuring it turned up
+    # the other half: MAX_FRAMES is 200 and had no client-side check anywhere.
+    # A Motion Smear costs TWO pages -- the pose you draw and the page it
+    # generates -- so 200 arrives at about 99 smears, and on every drawing
+    # weight measured that is well before the points run out:
+    #
+    #     pose weight   cost per smear   smears to the point chip   pages by then
+    #     ~64 pts             272                ~735                   1,470
+    #     ~160                680                ~293                     586
+    #     ~400              1,700                ~117                     234
+    #     ~640              2,720                 ~73                     146
+    #
+    # Only the last row reaches the points first. For the rest the page ceiling
+    # lands at ~99 smears and said nothing: measured on a ring pair, 201 pages
+    # at 84,160 points -- 42% of the point budget -- with a cheerful "Motion
+    # smear added" each time, and it kept going to 261.
+    #
+    # BOTH CALLERS, because there are two ways to spend a page and they were
+    # both silent. The generative buttons go through budgetAllows; Duplicate and
+    # Blank go through addFrame. A guard on one is a guard on neither.
+    #
+    # AND THE MESSAGE MUST NAME PAGES, NOT POINTS. Over on points you delete a
+    # GENERATED page and free 27 drawings' worth; over on pages any page will
+    # do. Saying "too big" for both sends a person hunting for an expensive page
+    # when what they have is simply too many, which is the failure the v301 chip
+    # was written to avoid in the first place.
+    print("\nTHE PAGE CEILING — a smear that would make page 201 is not made")
+
+    _pc = page.evaluate("""() => {
+      const B = window.SkriblPointBudget;
+      if(!B || !B.MAX_FRAMES) return { noModule: true };
+      const line = (y) => { const f = { strokes: [], strokeGroups: [], hold: 2 };
+        for(let i = 0; i < 12; i++){
+          const p = { x: 100 + i*20, y: y, size: 6, color: '#ffffff',
+                      erase: false, t: i*8 };
+          if(i === 0) p.start = true; f.strokes.push(p); }
+        f.strokeGroups.push(12); return f; };
+      const fill = (n) => { frames.length = 0;
+        for(let i = 0; i < n; i++) frames.push(line(200 + (i % 2) * 40));
+        idx = 0; fps = 12; subdiv = 1; selSpans = [];
+        actionLog.length = 0; redoStack.length = 0; buildStrip(); render(); };
+      let said = null; const _chip = window.chip;
+      const catching = (fn) => { said = null;
+        window.chip = (m) => { said = m; }; chip = window.chip;
+        try { fn(); } finally { window.chip = _chip; chip = _chip; }
+        return said; };
+
+      // ONE UNDER the cap: everything must still work, or the checks below
+      // would pass on a guard that simply refuses always.
+      fill(B.MAX_FRAMES - 1);
+      const underBefore = frames.length;
+      const underSaid = catching(() => addTween());
+      const under = { made: frames.length > underBefore, said: underSaid };
+
+      // AT the cap: the smear button
+      fill(B.MAX_FRAMES);
+      const atBefore = frames.length;
+      const smearSaid = catching(() => addTween());
+      const smear = { pages: frames.length, held: frames.length === atBefore,
+                      said: smearSaid };
+
+      // AT the cap: Duplicate, which is the other way to spend a page
+      fill(B.MAX_FRAMES);
+      const dupBefore = frames.length;
+      const dupSaid = catching(() => addFrame(true));
+      const dup = { pages: frames.length, held: frames.length === dupBefore,
+                    said: dupSaid };
+
+      // OVER the cap: the post pre-flight must name pages, not size
+      frames.push(line(200));
+      let shareSaid = null, shareErr = null;
+      const _se = window.showShareError;
+      window.showShareError = (m) => { shareErr = m; };
+      shareSaid = catching(() => { try { shareSkribl(); } catch (_) {} });
+      window.showShareError = _se;
+      return { noModule: false, cap: B.MAX_FRAMES, under: under, smear: smear,
+               dup: dup, shareChip: shareSaid, shareErr: shareErr };
+    }""")
+
+    check("the page ceiling is reachable from the editor at all",
+          _pc.get("noModule") is False,
+          f"{_pc} — no MAX_FRAMES on the client, so nothing below is guarded")
+    check("one page under the cap, a smear is still made",
+          _pc.get("under", {}).get("made") is True,
+          f"{_pc.get('under')} — a guard that refuses at 199 pages is not a "
+          f"ceiling, it is a bug, and every check below would pass on it")
+    check("AT the cap the smear is refused, and the page count does not move",
+          _pc.get("smear", {}).get("held") is True
+          and _pc.get("smear", {}).get("pages") == _pc.get("cap"),
+          f"{_pc.get('smear')} — the page was made anyway and the whole Skribl "
+          f"is now unpostable, which is the failure this exists to stop")
+    check("...and Duplicate is refused too, being the other way to spend one",
+          _pc.get("dup", {}).get("held") is True,
+          f"{_pc.get('dup')} — budgetAllows guards the generative buttons only; "
+          f"addFrame is the other door and was left open")
+    check("...and both say PAGES, not size",
+          "page" in (_pc.get("smear", {}).get("said") or "").lower()
+          and "page" in (_pc.get("dup", {}).get("said") or "").lower(),
+          f"smear said {_pc.get('smear', {}).get('said')!r}, duplicate said "
+          f"{_pc.get('dup', {}).get('said')!r} — over on points you delete a "
+          f"generated page; over on pages any page will do")
+    check("...and over the cap, Post says so before the server has to",
+          "page" in (_pc.get("shareErr") or "").lower()
+          and "point" not in (_pc.get("shareErr") or "").lower(),
+          f"{_pc.get('shareErr')!r} / chip {_pc.get('shareChip')!r} — a person "
+          f"over on pages must not be sent hunting for an expensive page")
+
+    # ---------------------------------------------------------------- v302
     # SMEAR WEIGHT — a control, and honestly labelled as one.
     #
     # The v302 spike measured what this does NOT do: the shipped page at 50%

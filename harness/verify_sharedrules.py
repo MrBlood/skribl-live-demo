@@ -228,7 +228,16 @@ with sync_playwright() as p:
                safe: B.totalPoints([null, {}, f(5)]),
                fitsExactly: B.wouldFit([f(B.MAX_TOTAL_POINTS - 1)], 1),
                oneOver: B.wouldFit([f(B.MAX_TOTAL_POINTS)], 1),
-               overBudget: B.overBudget([f(B.MAX_TOTAL_POINTS + 1)]) };
+               overBudget: B.overBudget([f(B.MAX_TOTAL_POINTS + 1)]),
+               // THE OTHER CEILING, and the one that arrives first. A Motion
+               // Smear costs TWO pages -- the pose and the page it generates --
+               // so 200 pages lands at about 99 smears, which on every drawing
+               // weight measured is well before the points run out.
+               maxFrames: B.MAX_FRAMES,
+               pagesFitExactly: B.pagesWouldFit(new Array(B.MAX_FRAMES - 1), 1),
+               pagesOneOver: B.pagesWouldFit(new Array(B.MAX_FRAMES), 1),
+               overPages: B.overPages(new Array(B.MAX_FRAMES + 1)),
+               notOverAtCap: B.overPages(new Array(B.MAX_FRAMES)) };
     }""")
     check("the Flip editor loads lib/pointbudget.js", _pb is not None,
           "no window.SkriblPointBudget — the budget check cannot run")
@@ -244,6 +253,22 @@ with sync_playwright() as p:
               _pb["fitsExactly"] is True and _pb["oneOver"] is False
               and _pb["overBudget"] is True,
               f"{_pb} — exactly the cap must post; one past it must not")
+        # THE PAGE CEILING, PINNED THE SAME WAY AND FOR A SHARPER REASON. It had
+        # no client-side check at all until v302, and it is the ceiling a long
+        # flipbook meets FIRST: measured on a ring pair, 201 pages at 84,160
+        # points -- 42% of the point budget -- with nothing said, and it went on
+        # to 261. Two caps in one module, so this pin has to name both or the
+        # newer one drifts exactly as the older one could have.
+        check("the server's page cap is the one the client counts against",
+              _pb["maxFrames"] == _V.MAX_FRAMES,
+              f"server refuses over {_V.MAX_FRAMES} frames, client counts to "
+              f"{_pb['maxFrames']} — the cap that binds first is the worst one "
+              f"to guess at")
+        check("...and its boundary is inclusive too",
+              _pb["pagesFitExactly"] is True and _pb["pagesOneOver"] is False
+              and _pb["overPages"] is True and _pb["notOverAtCap"] is False,
+              f"{_pb} — a document of exactly {_V.MAX_FRAMES} pages must post, "
+              f"and the {_V.MAX_FRAMES + 1}st must not be offered")
 
     _cmax = clamp["max"]
     check("the server's hold ceiling is the one the clients actually obey",
