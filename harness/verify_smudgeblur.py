@@ -846,7 +846,7 @@ with sync_playwright() as p:
                    ripple: 100*(v-m)/Math.max(0.01,m),
                    overPaint: m/Math.max(0.01,want),
                    mixedLayered: uniAlpha(mixed, strokeAlphaOf),
-                   counted: fieldLayerCount(target) };
+                   counted: layerableCount(target, strokeAlphaOf) };
         }""")
 
         check("the smear and the smudge both landed", _mesh.get("target") is True,
@@ -994,6 +994,83 @@ with sync_playwright() as p:
               abs((_live.get("after") or 0) - 1.0) < 0.12,
               f"over-paint {_live.get('after')}x after fieldEnd — the skip is "
               f"for the transient only; the settled page must not keep the mesh")
+
+        # ---------------------------------------------------------- v302c
+        # TWO THINGS A BUG CHECK FOUND IN THE LAYERED COMPOSITE, after the first
+        # v302 seal had already been cut. Both are pinned because both were
+        # green before the fix -- nothing on this tree exercised them.
+        #
+        # THE MIRROR PAINTS OUTSIDE THE BOX. The v302 composite bounds each
+        # round trip to the run's own box. With a mirror live paintSeg's walk
+        # goes through drawLine, which lays the reflections on tctx wherever
+        # the mode sends them -- outside that box -- and the box-limited
+        # drawImage dropped them: direct-painted runs on the page kept their
+        # reflections and layered ones lost theirs. Pinned as ink on the far
+        # side of the axis.
+        #
+        # ONE LAYER BUDGET, NOT TWO. The first v302 gave the field runs their
+        # own count of 24 beside the rgba() count of 24 -- which is a frame of
+        # 48 composites, double the ceiling the budget was measured at. Now one
+        # predicate in lib/strokelayers.js counts both populations against one
+        # BUDGET. Pinned at the boundary from both sides, because a budget that
+        # simply always refuses would pass the over-side check on its own.
+        print("\nTHE LAYER'S BOX AND ITS BUDGET — two review findings, pinned")
+
+        _rv = page.evaluate("""() => {
+          const M = window.SkriblMirror;
+          const line = (x0, y, n, color, size) => { const o = [];
+            for(let i = 0; i < n; i++) o.push({ x: x0 + i*4, y: y, size: size, color: color,
+                                                 erase: false, t: i*8, start: i === 0 });
+            return o; };
+          const paintOn = (arr) => { const g = fctx; g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);
+            g.clearRect(0,0,CW,CH); g.fillStyle = '#000000'; g.fillRect(0,0,CW,CH);
+            paintStatic(g, arr);
+            return g.getImageData(0,0,CW*DPR,CH*DPR).data; };
+          const litIn = (d, x0, x1) => { let n = 0; const W = CW*DPR;
+            for(let y = 0; y < CH*DPR; y++) for(let x = Math.round(x0*DPR); x < Math.round(x1*DPR); x++)
+              if(d[(y*W+x)*4] > 8) n++;
+            return n; };
+          let mirror = null;
+          if(M){
+            const was = M.mode();
+            M.setMode('vertical');
+            const d = paintOn(line(40, 200, 30, 'rgba(255,255,255,0.5)', 9));
+            mirror = { left: litIn(d, 0, CW/2), right: litIn(d, CW/2, CW) };
+            M.setMode(was);
+          }
+          const hexA = (c) => { const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(String(c));
+                                return m ? parseInt(m[1],16)/255 : null; };
+          // a field-shaped run: one hex-8 alpha, sizes varying, so not one path
+          const field = (y) => line(100, y, 40, '#ffffff40', 7).map((p, i) =>
+            Object.assign(p, { size: 7 + (i % 3) }));
+          const rgbas = (k) => { const out = []; for(let s = 0; s < k; s++)
+            out.push.apply(out, line(100, 40 + s*10, 10, 'rgba(255,255,255,0.5)', 5)); return out; };
+          const ripple = (arr, seg) => { const d = paintOn(arr); const W = CW*DPR;
+            const lum = (x,y) => d[(Math.round(y*DPR)*W + Math.round(x*DPR))*4];
+            let mS = 0, mN = 0;
+            for(let i = 1; i < seg.length; i++){ mS += lum((seg[i-1].x+seg[i].x)/2, seg[i].y); mN++; }
+            return (mS/mN) / (255 * hexA(seg[0].color)); };
+          const seg = field(520);
+          return { mirror: mirror, budget: LAYER_BUDGET,
+                   over: ripple(rgbas(24).concat(seg), seg),    // 24 + 1 = 25, over
+                   under: ripple(rgbas(23).concat(seg), seg) }; // 23 + 1 = 24, fits
+        }""")
+
+        _m = _rv.get("mirror") or {}
+        check("with a mirror live, a LAYERED stroke's reflection survives the composite",
+              bool(_m) and _m.get("right", 0) > 0
+              and _m.get("right", 0) > _m.get("left", 0) * 0.5,
+              f"left half {_m.get('left')} lit, right half {_m.get('right')} — the "
+              f"reflection was painted on the temp layer and then not composited, "
+              f"because the box only knew where the ORIGINAL points were")
+        check("24 rgba() strokes plus one field run is OVER the one budget: it paints direct",
+              _rv.get("over", 0) > 1.2,
+              f"over-paint {_rv.get('over')}x — under two separate counts this "
+              f"frame layered 25 runs, one past a ceiling measured at 24")
+        check("...and 23 plus one is under it: the field run still gets its layer",
+              abs(_rv.get("under", 0) - 1.0) < 0.12,
+              f"over-paint {_rv.get('under')}x at exactly the budget — a count that "
+              f"refuses everything would pass the check above on its own")
 
         check("no page error through any of it", not errs, "; ".join(errs[:2]))
     finally:

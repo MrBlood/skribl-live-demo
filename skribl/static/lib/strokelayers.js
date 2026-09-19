@@ -77,14 +77,28 @@
    * actually be layered. */
   var BUDGET = 24;
 
-  function overBudget(strokeArr, alphaFn) {
+  /* ONE COUNT, ONE CEILING, BOTH SURFACES. `alphaFn` reads rgba() only, on
+   * purpose, so a generated hex-8 pass stays off the budget while uniformRun
+   * gives it one path. `anyAlphaFn` reads hex-8 too: with it, a run that is
+   * NOT one path but IS one alpha -- a smudged ghost -- counts as well, because
+   * it is about to cost the same round trip. v302 first gave those runs a
+   * second count against the same ceiling; review pointed out that two counts
+   * of 24 is a frame of 48 composites, and that the player had no count for
+   * them at all. The budget is round trips per frame, whoever spends them. */
+  function overBudget(strokeArr, alphaFn, anyAlphaFn) {
     if (!strokeArr || !strokeArr.length) return false;
-    var n = 0, i = 0, j, p;
+    var n = 0, i = 0, j, p, seg;
     while (i < strokeArr.length) {
       j = i + 1;
       while (j < strokeArr.length && !strokeArr[j].start) j++;
       p = strokeArr[i];
-      if (p && !p.erase && alphaFn(p.color) < 1) n++;
+      if (p && !p.erase) {
+        if (alphaFn(p.color) < 1) n++;
+        else if (anyAlphaFn && j - i > 1) {
+          seg = strokeArr.slice(i, j);
+          if (!uniformRun(seg, anyAlphaFn) && uniformAlpha(seg, anyAlphaFn) > 0) n++;
+        }
+      }
       if (n > BUDGET) return true;
       i = j;
     }

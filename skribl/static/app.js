@@ -658,9 +658,8 @@ function makeStrokeCompositor(visCtx, visCanvas) {
        once, so the walk cannot compound at its caps. Reasoning and numbers in
        lib/strokelayers.js uniformAlpha and flip.js paintStatic. */
     wetRunFn(seg, a) {
-      if (wetActive) bakeWet();
+      if (wetActive) bakeWet();            // ...which leaves the wet layer clear
       wetActive = true; wetAlpha = a;
-      wctx.clearRect(0, 0, lgW, lgH);
       const p = seg[0];
       drawDotOn(wctx, p.x, p.y, solidStrokeColor(p.color), p.size);
       for (let i = 1; i < seg.length; i++) {
@@ -692,7 +691,7 @@ function paintStrokesStatic(strokeArr) {
   // this path never did, so a frame full of see-through strokes played fine
   // while authoring and stalled for the viewer. Same ceiling, same module.
   const _sl = (typeof window !== 'undefined') ? window.SkriblStrokeLayers : null;
-  const _over = !!(_sl && _sl.overBudget && _sl.overBudget(strokeArr, parseStrokeAlpha));
+  const _over = !!(_sl && _sl.overBudget && _sl.overBudget(strokeArr, parseStrokeAlpha, anyStrokeAlpha));
   const comp = (strokeLayersOn() && !_over) ? makeStrokeCompositor(ctx, canvas) : null;
   /* A see-through run of one colour and one width is ONE PATH, not a dot plus a
      line per segment: lib/strokelayers.js carries the reasoning. */

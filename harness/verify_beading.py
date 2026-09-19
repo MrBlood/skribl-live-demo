@@ -345,6 +345,46 @@ with sync_playwright() as p:
               f"raw {_fp and _fp['raw']['lit']} lit, layers-on "
               f"{_fp and _fp['on']['lit']} — compositing must not shrink the ink")
 
+        # ---------------------------------------------------------------- v302b
+        # AND THIS SURFACE COUNTS THOSE RUNS AGAINST THE BUDGET TOO. The first
+        # v302 taught wetRunFn to layer a field run and taught nothing to count
+        # it: `_over` read rgba() only, so a page of forty smudged ghosts put
+        # forty full-canvas bakes on every frame -- and on the hold-reveal path
+        # that is every animation tick. The stall the shared budget was
+        # introduced to close, reopened by the fix for the mesh. Found by review
+        # after the seal. Pinned at the boundary from both sides.
+        _pb = page.evaluate("""() => {
+          const run = (y) => { const seg = [];
+            for(let i = 0; i < 24; i++)
+              seg.push({ x: 80 + i*11, y: y, color: (i % 2 ? '#ffffff2e' : '#e8e8e82e'),
+                         size: 9 + (i % 5), t: i, erase: false, start: i === 0 });
+            return seg; };
+          // runs 20 px apart so none overlaps its neighbour: the max alpha read
+          // below is then one run's own, not two composited
+          const doc = (k) => { const out = [];
+            for(let s = 0; s < k; s++) out.push.apply(out, run(30 + s*20)); return out; };
+          const read = () => { const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let max = 0; for(let i = 3; i < d.length; i += 4) if(d[i] > max) max = d[i]; return max; };
+          const paint = (arr) => { window.SKRIBL_STROKE_LAYERS = true;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); paintStrokesStatic(arr); return read(); };
+          const sl = window.SkriblStrokeLayers;
+          return { written: 0x2e, budget: sl.BUDGET,
+                   over25: sl.overBudget(doc(25), parseStrokeAlpha, anyStrokeAlpha),
+                   over24: sl.overBudget(doc(24), parseStrokeAlpha, anyStrokeAlpha),
+                   max25: paint(doc(25)), max24: paint(doc(24)) };
+        }""")
+        check("the shared predicate counts a field run: 25 is over, 24 is not",
+              _pb and _pb["over25"] is True and _pb["over24"] is False,
+              f"{_pb} — with anyAlphaFn ignored, no number of field runs is ever over")
+        check("...so at 25 the player paints direct rather than baking 25 layers",
+              _pb and _pb["max25"] > _pb["written"] + 12,
+              f"written {_pb and _pb['written']}, painted {_pb and _pb['max25']} — "
+              f"still layering past the budget, which is the stall on a share link")
+        check("...and at 24 it still holds each run at its alpha",
+              _pb and _pb["max24"] <= _pb["written"] + 4,
+              f"written {_pb and _pb['written']}, painted {_pb and _pb['max24']} — "
+              f"a budget that refuses everything would pass the check above alone")
+
         # ------------------------------------------------------------------
         print("\nTHE SMEAR'S GHOSTS — the same beading, in the one path "
               "neither compositor reaches")
