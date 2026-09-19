@@ -2043,6 +2043,53 @@ with sync_playwright() as p:
           (_bud.get("total") or 0) <= 200000,
           f"{_bud.get('total')} points — refusing must not itself spend budget")
 
+    # THE IN-BETWEEN COUNTS WHAT IT CARRIES, found by review after the first
+    # v302 seal. budgetAllows ran where buildInbetween returned -- before the
+    # unpaired runs and the erasers were pushed onto the page -- so it counted
+    # the interpolated ink only. Two poses, one stroke paired and one carried:
+    # the interpolated 40 fit with 20 to spare, the carried 40 then landed on
+    # top, and the server refused at POST. The check now runs on the finished
+    # page. Fixture arithmetic: fat MAX-180, poses 80 + 40, so the document is
+    # MAX-60; the in-between is 40 interpolated + 40 carried = 80 -> MAX+20.
+    print("\nTHE IN-BETWEEN IS BUDGETED AFTER IT IS BUILT")
+    _ib = page.evaluate("""() => {
+      const B = window.SkriblPointBudget;
+      const line = (x, y, n) => { const o = [];
+        for(let i = 0; i < n; i++) o.push({ x: x + i*12, y: y, size: 6, color: '#ffffff',
+                                             erase: false, t: i*8, start: i === 0 });
+        return o; };
+      const pose = (y, extra) => { const f = { strokes: [], strokeGroups: [], hold: 2 };
+        line(100, y, 40).forEach(p => f.strokes.push(p)); f.strokeGroups.push(40);
+        if(extra){ line(100, y + 90, 40).forEach(p => f.strokes.push(p)); f.strokeGroups.push(40); }
+        return f; };
+      const a = pose(200, true), b = pose(320, false);
+      const fat = { strokes: new Array(B.MAX_TOTAL_POINTS - 180).fill(0).map(() =>
+                      ({ x: 1, y: 1, size: 1, color: '#ffffff', erase: false, t: 0 })),
+                    strokeGroups: [B.MAX_TOTAL_POINTS - 180], hold: 1 };
+      fat.strokes[0].start = true;
+      frames.length = 0; frames.push(a); frames.push(b); frames.push(fat);
+      idx = 0; fps = 12; subdiv = 1; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+      buildStrip(); render();
+      const before = frames.length, total0 = B.totalPoints(frames);
+      let said = null; const _chip = window.chip;
+      try { window.chip = (m) => { said = m; }; chip = window.chip; addInbetween(); }
+      finally { window.chip = _chip; chip = _chip; }
+      return { before: before, after: frames.length, total0: total0,
+               total: B.totalPoints(frames), limit: B.MAX_TOTAL_POINTS, said: said };
+    }""")
+    check("the fixture starts under the limit with room for the interpolated ink alone",
+          0 < _ib.get("limit", 0) - _ib.get("total0", 0) < 80,
+          f"{_ib} — the case only means something if the interpolated part fits "
+          f"and the carried part does not")
+    check("an in-between whose CARRIED runs push the document over is not made",
+          _ib.get("after") == _ib.get("before"),
+          f"{_ib} — budgeted before the unpaired and eraser runs were on the page, "
+          f"so it counted the interpolated ink and let the rest through")
+    check("...and the document is left under the limit",
+          (_ib.get("total") or 0) <= (_ib.get("limit") or 0),
+          f"{_ib.get('total')} against {_ib.get('limit')} — the late refusal at "
+          f"POST is exactly what the early check exists to prevent")
+
     # ---------------------------------------------------------------- v302
     # THE PAGE CEILING, WHICH IS THE ONE A LONG FLIPBOOK MEETS FIRST.
     #
@@ -2152,6 +2199,56 @@ with sync_playwright() as p:
           and "point" not in (_pc.get("shareErr") or "").lower(),
           f"{_pc.get('shareErr')!r} / chip {_pc.get('shareChip')!r} — a person "
           f"over on pages must not be sent hunting for an expensive page")
+
+    # THE THIRD DOOR, found by review after the first v302 seal: Duplicate,
+    # Blank, In-between and Motion Smear had all learned to refuse and Paste
+    # still put a whole clip in with nothing said. It adds N pages at once and
+    # can add N generated pages' worth of points at once, so it is checked
+    # against BOTH ceilings, and pinned under as well as over.
+    _ps = page.evaluate("""() => {
+      const B = window.SkriblPointBudget;
+      const line = (y) => { const f = { strokes: [], strokeGroups: [], hold: 2 };
+        for(let i = 0; i < 12; i++) f.strokes.push({ x: 100 + i*20, y: y, size: 6,
+          color: '#ffffff', erase: false, t: i*8, start: i === 0 });
+        f.strokeGroups.push(12); return f; };
+      const fill = (n) => { frames.length = 0;
+        for(let i = 0; i < n; i++) frames.push(line(200 + (i % 2) * 40));
+        idx = 0; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+        buildStrip(); render(); };
+      let said = null; const _chip = window.chip;
+      const catching = (fn) => { said = null;
+        window.chip = (m) => { said = m; }; chip = window.chip;
+        try { fn(); } finally { window.chip = _chip; chip = _chip; }
+        return said; };
+      fill(10); pageClip = [line(100), line(140)];
+      catching(() => spanPaste()); const under = frames.length;
+      fill(B.MAX_FRAMES - 1); pageClip = [line(100), line(140)];
+      const overSaid = catching(() => spanPaste()); const over = frames.length;
+      const fat = { strokes: new Array(B.MAX_TOTAL_POINTS - 100).fill(0).map(() =>
+                      ({ x: 1, y: 1, size: 1, color: '#ffffff', erase: false, t: 0 })),
+                    strokeGroups: [B.MAX_TOTAL_POINTS - 100], hold: 1 };
+      fat.strokes[0].start = true;
+      frames.length = 0; frames.push(line(200)); frames.push(fat);
+      idx = 0; selSpans = []; buildStrip(); render();
+      pageClip = [100,140,180,220,260,300,340,380,420].map(line);   // 108 points
+      const ptsSaid = catching(() => spanPaste()); const ptsPages = frames.length;
+      pageClip = null;
+      return { under: under, over: over, cap: B.MAX_FRAMES, overSaid: overSaid,
+               ptsPages: ptsPages, ptsSaid: ptsSaid };
+    }""")
+    check("a paste that fits, lands",
+          _ps.get("under") == 12,
+          f"{_ps.get('under')} pages after pasting 2 into 10 — a guard that "
+          f"refuses always would pass every check below")
+    check("a paste that would pass the page cap is refused, and says pages",
+          _ps.get("over") == _ps.get("cap", 0) - 1
+          and "page" in (_ps.get("overSaid") or "").lower(),
+          f"{_ps.get('over')} pages after pasting 2 into {_ps.get('cap', 0) - 1}, "
+          f"said {_ps.get('overSaid')!r} — the third door was open")
+    check("...and a paste that would pass the POINT cap is refused, with the share",
+          _ps.get("ptsPages") == 2 and "%" in (_ps.get("ptsSaid") or ""),
+          f"{_ps.get('ptsPages')} pages, said {_ps.get('ptsSaid')!r} — nine pages "
+          f"of 12 points into a document 88 short of the cap")
 
     # ---------------------------------------------------------------- v302
     # SMEAR WEIGHT — a control, and honestly labelled as one.

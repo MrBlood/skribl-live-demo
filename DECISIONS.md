@@ -8434,3 +8434,44 @@ phone; the measured ceiling for shortening it is ~25-35%, not removal. The
 Motion Smear's trail reaches about 75% of the half-gap it is allowed, because
 the faintest ghosts are culled below 3/255 -- the owner noticed, and the fix
 (rescale the ramp rather than cull the tail) is specified and unbuilt.
+
+**THE FIRST SEAL OF THIS VERSION WAS VOIDED BY ITS OWN BUG CHECK, AND THAT IS
+THE RIGHT ORDER OF EVENTS.** Tree 656ac32b was sealed FULL RELEASE PASS with
+both lanes attested, and then the owner asked for a proofread, a staleness
+check and a bug check before landing. The bug check found eight things in the
+product diff since v300. Five were real and are fixed here, all in code this
+version had just written:
+
+  - the player learned to layer a field run and learned nothing to count it,
+    so a page of forty smudged ghosts baked forty full-canvas layers on every
+    frame -- the stall the shared budget exists to close, reopened by the fix
+    for the mesh. And Flip's own count of those runs sat BESIDE the rgba()
+    count rather than in it, which is a frame of 48 composites past a ceiling
+    measured at 24. One predicate in the shared module now counts both
+    populations against one BUDGET, on both surfaces.
+  - the in-between was budgeted where `buildInbetween` returned, before its
+    unpaired and eraser runs were pushed onto the page, so it counted the
+    interpolated ink only and let the rest through to the server's refusal.
+  - Paste inserts N pages at once and had no check at all, while the other
+    four doors had all just learned to refuse. The module's own rule -- a
+    caller that adds N must say N -- applied to the one caller that adds N.
+  - the box-limited composite dropped a layered stroke's REFLECTIONS when a
+    mirror was live: drawLine lays them on the temp layer outside the run's
+    own box, and only the box was carried across. Direct-painted runs on the
+    same page kept theirs. The whole canvas again when the mirror is on.
+  - `wetRunFn` cleared the wet layer that `bakeWet` had just cleared.
+
+Every one of them was green on the sealed tree, because nothing on that tree
+exercised it. Each is now pinned from both sides of its boundary, so a guard
+that simply refuses everything cannot pass. The staleness check added the
+seven v302 invariants to START-HERE's table, which carried none of them.
+
+Three findings were declined: an early-out and a cached predicate that would
+save a fraction of a millisecond the measurements above do not need, and a
+refactor folding three run-walks into one, which is worth doing and is not
+worth voiding a seal for. Recorded here so the next person does not re-find
+them.
+
+The re-seal is a second ~50-minute run and both attestations carried in again.
+That is cheaper than the alternative, which was a sealed record that said FULL
+RELEASE PASS above a player that stalls on a smudged smear.

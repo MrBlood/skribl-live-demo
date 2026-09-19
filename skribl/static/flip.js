@@ -1235,32 +1235,6 @@ function _uniAlphaFn(){
           && window.SkriblStrokeLayers.uniformAlpha)
     ? window.SkriblStrokeLayers.uniformAlpha : _uniformAlpha;
 }
-/* WHICH RUNS NEED THE LAYER THAT alphaOf CANNOT SEE.
-
-   alphaOf reads rgba() and not hex-8, on purpose: that asymmetry is what keeps
-   a generated translucent pass off LAYER_BUDGET, and the budget exists because
-   layering costs a full-canvas round trip per stroke. A generated ghost is safe
-   without one because uniformRun gives it a single path, and a single path
-   cannot composite against itself.
-
-   A field tool takes that safety away. Smudge writes per-point colour AND size,
-   so the run stops being uniform, falls to the per-segment walk, and compounds
-   at every round cap. These are the runs that need a layer and were never
-   counted for one -- so they get their own count against the same ceiling,
-   rather than riding a budget sized for a different population. */
-function fieldLayerCount(strokeArr){
-  const uniRun = _uniRunFn(), uniAlpha = _uniAlphaFn();
-  let n = 0, i = 0;
-  while(i < strokeArr.length){
-    let j = i + 1; while(j < strokeArr.length && !strokeArr[j].start) j++;
-    const seg = strokeArr.slice(i, j);
-    if(seg.length > 1 && !seg[0].erase && !(alphaOf(seg[0].color) < 1)
-       && !uniRun(seg, strokeAlphaOf) && uniAlpha(seg, strokeAlphaOf) > 0) n++;
-    if(n > LAYER_BUDGET) return n;
-    i = j;
-  }
-  return n;
-}
 function paintSeg(c, seg, solid){
   /* ONE PATH when the run can take it -- see lib/strokelayers.js. Skipped when
      `solid` is set, because that is the layer already doing this job and the
@@ -1303,12 +1277,20 @@ function paintSeg(c, seg, solid){
    dozen separate see-through strokes to reach it, and at that point the frame
    is compositing more than it is drawing. */
 const LAYER_BUDGET = 24;
-function layerableCount(strokeArr){
+function layerableCount(strokeArr, anyAlphaFn){
+  // Inline fallback for lib/strokelayers.js overBudget, same two predicates:
+  // rgba() below 1, or a run that is one alpha without being one path.
   let n = 0, i = 0;
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;
     const p = strokeArr[i];
-    if (p && !p.erase && alphaOf(p.color) < 1) n++;
+    if (p && !p.erase) {
+      if (alphaOf(p.color) < 1) n++;
+      else if (anyAlphaFn && j - i > 1) {
+        const seg = strokeArr.slice(i, j);
+        if (!_uniformRun(seg, anyAlphaFn) && _uniformAlpha(seg, anyAlphaFn) > 0) n++;
+      }
+    }
     if (n > LAYER_BUDGET) return n;      // no need to count the rest
     i = j;
   }
@@ -1320,9 +1302,13 @@ function paintStatic(c, strokeArr){
   // so the player applies the same one. Inline fallback as elsewhere.
   const _overBudget = (typeof window !== 'undefined' && window.SkriblStrokeLayers
                        && window.SkriblStrokeLayers.overBudget)
-    ? window.SkriblStrokeLayers.overBudget(strokeArr, alphaOf)
-    : layerableCount(strokeArr) > LAYER_BUDGET;
-  const _fieldOver = fieldLayerCount(strokeArr) > LAYER_BUDGET;
+    ? window.SkriblStrokeLayers.overBudget(strokeArr, alphaOf, strokeAlphaOf)
+    : layerableCount(strokeArr, strokeAlphaOf) > LAYER_BUDGET;
+  /* strokeAlphaOf as the second predicate: a run a field tool has made
+     non-uniform is about to cost the same round trip as an rgba() stroke, so
+     it is counted against the SAME ceiling. v302 first gave those runs their
+     own count of 24 -- which is a frame of 48 composites -- and the player no
+     count at all. One count, one number, both surfaces. */
   let i = 0;
   while (i < strokeArr.length) {
     let j = i + 1; while (j < strokeArr.length && !strokeArr[j].start) j++;   // one stroke = start .. next start
@@ -1349,7 +1335,7 @@ function paintStatic(c, strokeArr){
        During the gesture the ink is moving anyway and the compounding is a
        transient; _fieldIdx clears inside fieldEnd, BEFORE endFieldDrag's
        render(), so the settled page is the correct one. */
-    if (a >= 1 && _layered && !_fieldOver && _fieldIdx < 0 && seg.length > 1
+    if (a >= 1 && _layered && _fieldIdx < 0 && seg.length > 1
         && !seg[0].erase && !_uniRunFn()(seg, strokeAlphaOf)) {
       const _ua = _uniAlphaFn()(seg, strokeAlphaOf);
       if (_ua > 0 && _ua < 1) a = _ua;
@@ -1375,6 +1361,13 @@ function paintStatic(c, strokeArr){
       bpad = bpad / 2 + 2;                       // +2 for the round cap's antialias
       bx0 = Math.max(0, Math.floor(bx0 - bpad)); by0 = Math.max(0, Math.floor(by0 - bpad));
       bx1 = Math.min(CW, Math.ceil(bx1 + bpad)); by1 = Math.min(CH, Math.ceil(by1 + bpad));
+      /* THE MIRROR PAINTS OUTSIDE THE BOX. With a mirror live paintSeg's walk
+         goes through drawLine, which lays the reflections on tctx wherever
+         the mode sends them -- outside this run's own bounds. A box-limited
+         composite dropped them (review of v302): direct-painted runs on the
+         same page kept their reflections and layered ones lost theirs. The
+         whole canvas, then, which is what the trip cost before the box. */
+      if (window.SkriblMirror && SkriblMirror.active()) { bx0 = 0; by0 = 0; bx1 = CW; by1 = CH; }
       const bw = bx1 - bx0, bh = by1 - by0;
       if (bw > 0 && bh > 0) {
         tctx.clearRect(bx0, by0, bw, bh);
@@ -3089,6 +3082,25 @@ function spanMove(dir){
 }
 function spanPaste(){
   if(playing || moveMode || !pageClip || !pageClip.length) return;
+  /* THE OTHER DOOR THAT ADDS PAGES, and it adds N at once. Review of v302:
+     addFrame, addTween and addInbetween had all learned to refuse past the
+     ceilings and this one still pasted a ten-page clip into a 195-page Skribl
+     with nothing said. pointbudget.js's own rule -- a caller that adds N must
+     say N. Both ceilings, pages first because it arrives first. */
+  const _B = window.SkriblPointBudget;
+  if(_B && _B.pagesWouldFit && !_B.pagesWouldFit(frames, pageClip.length)){
+    chip('Pasting ' + pageClip.length + ' page' + (pageClip.length === 1 ? '' : 's')
+         + ' would make ' + (frames.length + pageClip.length) + ', and a Skribl holds '
+         + _B.MAX_FRAMES + '. Delete some to make room.');
+    return;
+  }
+  const _pts = pageClip.reduce((n, f) => n + ((f && f.strokes) ? f.strokes.length : 0), 0);
+  if(_B && !_B.wouldFit(frames, _pts)){
+    const d = _B.describe(frames, f => !!genRecipe.get(f));
+    chip('Pasting these pages would not fit \u2014 this Skribl is at ' + d.pct
+         + '% of what it can hold. Delete a page to make room.');
+    return;
+  }
   invalidateClearUndo(); redoStack.length = 0;
   const pages = pageClip.map(deepCopy);
   frames = SkriblPageSpan.insert(frames, idx + 1, pages);
@@ -7588,9 +7600,6 @@ function addInbetween(){
   if(!_al){ chip('An in-between needs two poses with something in common'); return; }
   const t = buildInbetween(_al.a, _al.b, 0.5);
   if(!t) return;
-  // The same document budget the smear is checked against: an in-between is
-  // cheaper per page, and a long flipbook of them still adds up.
-  if(!budgetAllows(t, 'An in-between')) return;
   for(const run of (_al.unpaired || [])){
     run.forEach((q, i) => {
       const c = Object.assign({}, q);
@@ -7610,6 +7619,13 @@ function addInbetween(){
     });
     t.strokeGroups.push(run.length);
   }
+  /* BUDGETED HERE, after the unpaired and eraser runs are on the page, and
+     not where buildInbetween returned. Checked early it counted only the
+     interpolated ink (review of v302): 40 points passed at 199,990, the two
+     loops above then appended 50 more, and the server refused at POST -- the
+     late refusal the check exists to prevent. The same document budget the
+     smear is checked against; cheaper per page, and it still adds up. */
+  if(!budgetAllows(t, 'An in-between')) return;
   const _was = genCarveState();
   const _c = carveForInsert(idx);
   if(!_c){ chip('These pages are already as close together as they go'); return; }
