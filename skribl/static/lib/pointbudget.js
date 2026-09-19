@@ -1,5 +1,13 @@
-/* The DOCUMENT's point budget — the one number the editors were spending
- * without being able to see it.
+/* The DOCUMENT's budget — the numbers the editors were spending without being
+ * able to see them.
+ *
+ * TWO CEILINGS, AND THE SECOND ONE BINDS FIRST. This module began as the point
+ * budget alone. Measuring it turned up the other half: MAX_FRAMES is 200 and
+ * had no client-side check at all, and a Motion Smear costs TWO pages -- the
+ * pose you draw and the page it generates -- so the page ceiling arrives after
+ * about 99 smears, which on every drawing weight measured is well before the
+ * points run out. Measured on a ring pair: 201 pages at 84,160 points, 42% of
+ * the point budget, with nothing said, and it kept going to 261.
  *
  * The server refuses a payload over MAX_TOTAL_POINTS (200,000) across every
  * frame. Nothing client-side tracked that. The smear planner budgets per
@@ -33,6 +41,8 @@
   // moves the server's value moves this one in the same change; the harness
   // fails if they part company.
   var MAX_TOTAL_POINTS = 200000;
+  // Mirrors SKRIBL_MAX_FRAMES in skribl/validation.py, pinned the same way.
+  var MAX_FRAMES = 200;
 
   /* Every point on every page. Frames that are missing or malformed contribute
      nothing rather than throwing: this runs on the post path, and a budget
@@ -75,14 +85,38 @@
         if (f && f.strokes && isGenerated(f, i)) { gen += f.strokes.length; genPages++; }
       }
     }
+    var pages = (frames || []).length;
     return { total: total, limit: MAX_TOTAL_POINTS,
              pct: Math.round(total / MAX_TOTAL_POINTS * 100),
              generated: gen, generatedPages: genPages,
-             over: total > MAX_TOTAL_POINTS };
+             over: total > MAX_TOTAL_POINTS,
+             pages: pages, pageLimit: MAX_FRAMES,
+             pagePct: Math.round(pages / MAX_FRAMES * 100),
+             overPages: pages > MAX_FRAMES };
+  }
+
+  /* THE PAGE CEILING, asked the same way and for the same reason. `extra` is
+     how many pages the action is about to add -- one for Duplicate, Blank, an
+     in-between or a smear. Counted rather than assumed: a caller that adds two
+     must say two. */
+  function pagesLeft(frames) {
+    return Math.max(0, MAX_FRAMES - ((frames && frames.length) || 0));
+  }
+
+  function pagesWouldFit(frames, extra) {
+    return ((frames && frames.length) || 0) + Math.max(0, extra || 0) <= MAX_FRAMES;
+  }
+
+  function overPages(frames) {
+    return ((frames && frames.length) || 0) > MAX_FRAMES;
   }
 
   var api = {
     MAX_TOTAL_POINTS: MAX_TOTAL_POINTS,
+    MAX_FRAMES: MAX_FRAMES,
+    pagesLeft: pagesLeft,
+    pagesWouldFit: pagesWouldFit,
+    overPages: overPages,
     totalPoints: totalPoints,
     remaining: remaining,
     wouldFit: wouldFit,

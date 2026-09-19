@@ -3117,7 +3117,16 @@ function scrollStripToActive(smooth){
   try{ el.scrollIntoView({behavior: smooth?'smooth':'auto', inline:'center', block:'nearest'}); }
   catch(_){ el.scrollIntoView(); }
 }
-function addFrame(copy){ if(moveMode) return; disarmAll(); invalidateClearUndo(); redoStack.length=0; clearSpan(true); const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
+function addFrame(copy){ if(moveMode) return;
+  /* Duplicate and Blank reach the page ceiling too, and used to reach it
+     silently -- the server refused the POST at the end of the work. Absent
+     module -> no new refusal, the same rule budgetAllows states. */
+  const _B = window.SkriblPointBudget;
+  if(_B && _B.pagesWouldFit && !_B.pagesWouldFit(frames, 1)){
+    chip('A Skribl holds ' + _B.MAX_FRAMES + ' pages. Delete one to make room.');
+    return;
+  }
+  disarmAll(); invalidateClearUndo(); redoStack.length=0; clearSpan(true); const f=copy?deepCopy(frame()):newFrame(); frames.splice(idx+1,0,f); idx++; buildStrip(); render(); scheduleSave();
   scrollStripToActive(true); }
 function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.length=0;
   // A range is a pair of INDICES, so any page count change that this function
@@ -4563,6 +4572,17 @@ async function shareSkribl(){
      decides what is postable is a client that can be wrong in the permissive
      direction. It turns a wall into a number, one step earlier. */
   const _B = window.SkriblPointBudget;
+  /* The page ceiling gets its own sentence, because it is a different problem
+     with a different remedy: over on points you delete a GENERATED page and
+     free 27 drawings' worth, over on pages any page will do. Saying "too big"
+     for both would send a person hunting for the expensive page when what they
+     have is simply too many. */
+  if(_B && _B.overPages && _B.overPages(frames)){
+    showShareError('This Skribl is ' + frames.length + ' pages and the limit is '
+      + _B.MAX_FRAMES + '. Delete ' + (frames.length - _B.MAX_FRAMES)
+      + ' to post it. Nothing is lost; your Skribl is still here.');
+    chip('Too many pages'); return;
+  }
   if(_B && _B.overBudget(frames)){
     const d = _B.describe(frames, f => !!genRecipe.get(f));
     showShareError('This Skribl is ' + d.total.toLocaleString() + ' points and the '
@@ -7067,6 +7087,18 @@ function budgetAllows(page, what){
   // as it did before this check existed; a missing script must not take the
   // button away.
   if(!B || !page || !page.strokes) return true;
+  /* THE PAGE CEILING FIRST, because it is the one that arrives first. A smear
+     costs two pages -- the pose and the generated page -- so 200 pages lands
+     at about 99 smears, and on every drawing weight measured that is well
+     before the points run out: 201 pages at 42% of the point budget on the
+     fixture this was found with. Checked for ONE page, which is what every
+     caller here adds. */
+  if(B.pagesWouldFit && !B.pagesWouldFit(frames, 1)){
+    chip((what || 'That') + ' would make page ' + (frames.length + 1)
+         + ', and a Skribl holds ' + B.MAX_FRAMES
+         + '. Delete a page to make room.');
+    return false;
+  }
   if(B.wouldFit(frames, page.strokes.length)) return true;
   const d = B.describe(frames, f => !!genRecipe.get(f));
   const over = B.totalPoints(frames) + page.strokes.length - d.limit;
