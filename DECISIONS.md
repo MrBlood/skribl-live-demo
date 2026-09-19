@@ -8323,3 +8323,114 @@ explicitly not a reason to touch this release.
 sophisticated unless visual evidence proves the sophistication is necessary.
 The question stops being "can the mathematics be more impressive" and becomes
 "does it look good".
+
+## v302 -- the smudge stops fighting the smear, and both of the document's ceilings become visible
+
+**THERE IS NO v301, AND THAT IS WHAT HAPPENED RATHER THAN A NUMBERING CHOICE.**
+Five merges accumulated on main after the v300 seal (#158, #159, #160, #161,
+#162) and none of them was sealed as it landed. Prose written during the work
+forward-labels itself "v301" and "v302" -- FUTURE.md 6f, 6g, 6h and several
+suite comments -- because that is this tree's habit, and the label records when
+a thing was measured. The version that exists is this one. A reader who finds
+"v301" in a comment is reading the honest date of a measurement, not a release
+that was cut and lost.
+
+**SMUDGE-GEN-01: A ONE-LINE ALPHA SPELLING.** `mix()` in lib/brushfield.js
+preserved the alpha of `rgba()` and dropped it for hex, and every translucent
+thing Flip generates is written as an 8-digit hex, because `alphaOf` recognises
+`rgba()` and not hex-8 and that asymmetry is how a translucent pass stays off
+LAYER_BUDGET. A ghost at `#ffffff37` came back `rgb(185, 185, 185)`: 22% opacity
+in, fully opaque out, which is the white scalloped cap a 3px Smudge put on a
+generated page. Near-opaque pixels on a smear at n=8/18/40 went 2238/3455/3839
+before and 178/117/56 after, and the residue now FALLS with sample count instead
+of rising. Blur was measured rather than assumed: 0 -> 0 at every count, because
+it has not called `mix()` since v256.
+
+**AND THEN THE MESH, WHICH IS THE SAME CLASS AND NOT THE SAME BUG.** A smudged
+Motion Smear came back as a regular bright lattice. The first reading here was
+backwards -- measured gaps of 1.03 brush widths, called "the dabs stop touching"
+-- and the dots are BRIGHTER than the line between them. `uniformRun` asks "can
+this be ONE path?", which needs one colour and one width; compositing asks
+something narrower, "is there ONE alpha?". Smudge writes per-point colour AND
+size (3-5 colours, 11-17 sizes measured) so the first question fails, the
+per-segment walk takes over, and translucent round caps compound where they
+meet -- periodically, at the ghost's own point spacing, which is what makes a
+pattern rather than a haze. A run written at alpha 0.0314 painted 11.2 between
+vertices and 15.1 at them against the 8 a single path gives.
+
+`uniformAlpha` is the second question, and the licence for it is that alphaMin
+equals alphaMax in every touched run -- `mix()` preserves the hex-8 alpha, so a
+drag moves pigment and width and never opacity. Fixed on BOTH surfaces, because
+`paintStrokesStatic` is where a share link renders a Flip document and had the
+identical asymmetry: a fix only the author can see is half a fix. Pinned
+differently on each -- Flip on the vertex-to-midpoint ripple, because there the
+mesh is what the artist sees; the player on the ceiling, because a stranger's
+copy must not be brighter than the ink its author wrote.
+
+**THE FIX THEN COST THE FINGER, AND THAT WAS REPORTED FROM A REAL DEVICE.** The
+layer costs a canvas round trip per run and a smudged smear page has 17, so a
+repaint went 1.6 -> 43.1 ms and a drag ran at 24 fps on a DPR-1 canvas; a phone
+at DPR 3 carries nine times the pixels through every trip. The layer is now
+skipped while the gesture is OPEN -- during a drag the ink is moving and the
+compounding is a transient, and `_fieldIdx` clears inside `fieldEnd` before the
+settling repaint. 43.13 -> 11.12 ms per move, measured on a real 40-move
+gesture. What remains is not ours and is recorded as such: ~10 ms is what
+drawing a 1,742-point generated page costs, and it predates all of this.
+
+**AND THE MEASUREMENT THAT EXPLAINED THE COST WAS ITSELF WRONG, WHICH IS THE
+ENTRY'S REAL LESSON.** It claimed batching the canvas writes cost 9.14 ms
+against 44.55 interleaved and named that as the lead for anyone wanting the
+settle faster. It reused ONE temp canvas, so every run accumulated onto the same
+layer and the last state was composited 17 times: fast, and a different picture
+(mean luminance 248.6 against the correct 164.8). Rebuilt with real separate
+buffers the ordering is worth ~1.2-1.5x, not ~5x. It was already merged when it
+was caught, so the retraction is in the suite comment where the claim lives.
+FOURTH time in this arc that a green number was wrong about a picture, and the
+third time the remedy was to render both and look.
+
+**BOTH OF THE DOCUMENT'S CEILINGS ARE NOW VISIBLE BEFORE THE BUTTON.**
+MAX_TOTAL_POINTS (200,000) was enforced only at POST; so was MAX_FRAMES (200).
+A generated page costs about 27x a hand-drawn one, so the real budget is "how
+many smears" -- and a smear costs TWO pages, the pose and the page it generates,
+so the PAGE ceiling arrives at about 99 smears and on every drawing weight
+measured but the densest it arrives FIRST. Measured: 201 pages at 84,160 points,
+42% of the point budget, with nothing said, running on to 261. lib/pointbudget.js
+owns both caps, verify_sharedrules pins each against validation.py, and the
+messages are deliberately different -- over on points you delete a GENERATED
+page and free 27 drawings' worth, over on pages any page will do.
+
+**MOTION SMEAR'S LOOK: ONE IDEA BUILT, JUDGED ON PICTURES, AND REJECTED.** The
+ghosts are drawn ACROSS the motion and photographic blur is streaks ALONG it, so
+the along-motion engine was built: one streak per source point, single path,
+single alpha, falloff from nested lengths. On an OPEN stroke -- the case the
+effect is named for -- the shipped engine already looks right and the prototype
+is worse. On a closed ring it is a venetian blind at 550 points and a solid grey
+can at 1,100. The topology change does not escape the density trade, it ROTATES
+it. The useful finding is that the tube is specific to CLOSED shapes, where
+every ghost contributes its far side as well as its near one: geometry, not
+sampling, and no sample count addresses it.
+
+Opacity was measured in the same spike and does NOT fix it -- the shipped page
+at 50% shows the same moire, dimmer, because the pattern comes from the
+ghost-to-gap ratio. Smear weight shipped anyway, as a CONTROL and labelled as
+one: Light 0.55 / Normal 1 / Strong 1.7, scaling both the exposure and the
+trail. The weight rides on the RECIPE and `buildTween` reads it from there
+rather than from the live setting, so a page rebuilt from a draft comes back the
+weight it was MADE at; a recipe with no alpha opens byte-identical.
+
+**WHAT THIS RELEASE SPENT AND WHY.** The player's JS ratchet went 151,500 ->
+153,800 (measured 153,227), put to the owner rather than absorbed, and compacted
+first: uniformAlpha's prose lives in flip.js, which is in no byte budget, and
+lib/strokelayers.js keeps seven lines and a pointer. The seam's reachable-line
+ceiling was NOT raised -- it landed 2 over and one comment cut to a pointer
+brought it to 1760 against 1760, which is a pass with NOUGHT headroom and is
+flagged as the next edit's problem rather than quietly left.
+
+**STILL OPEN, BY NAME.** The crochet stitch on a closed shape (FUTURE.md 6g) is
+a known limit with a price nobody wants to pay, and the one new idea tried
+against it lost; do not spend more without a genuinely new one, and judge it on
+a picture. The settle after a smudge is ~41 ms and visible as a flash on a
+phone; the measured ceiling for shortening it is ~25-35%, not removal. The
+Motion Smear's trail reaches about 75% of the half-gap it is allowed, because
+the faintest ghosts are culled below 3/255 -- the owner noticed, and the fix
+(rescale the ramp rather than cull the tail) is specified and unbuilt.
