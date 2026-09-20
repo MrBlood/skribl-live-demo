@@ -186,6 +186,55 @@ check("a second anonymous client reusing the key gets its OWN post",
 st4, b4 = post({"frames": [frame]}, headers={"Idempotency-Key": "x" * 300})
 check("an oversized key is ignored, not stored", st4 == 201, f"{st4}")
 
+print("\nIDEMPOTENCY — a client capability scopes an anonymous replay (SK-AUD-001)")
+# Acquisition audit of v302: the F2 rule above left an anonymous lost-response
+# retry duplicating the post, and the lost response also carried the ONLY copy
+# of the revocation key. Two client-minted secrets close both halves without
+# reopening F2: X-Skribl-Client is the identity the namespace was missing (a
+# random secret only that browser holds), and X-Skribl-Delete-Token is the key
+# the client holds BEFORE the answer, so the answer can be lost. Both sides of
+# every boundary: the same client replays, a different client does not, a
+# malformed client id gets no namespace, a well-formed token is honoured, a
+# malformed one is ignored and the server mints.
+import secrets as _secrets
+C1 = {"X-Skribl-Client": _secrets.token_urlsafe(32)}
+C2 = {"X-Skribl-Client": _secrets.token_urlsafe(32)}
+K2 = {"Idempotency-Key": str(uuid.uuid4())}
+T1 = _secrets.token_urlsafe(32)
+body_a = {"frames": [frame], "title": "client capability"}
+st1, b1 = post(body_a, headers={**K2, **C1, "X-Skribl-Delete-Token": T1})
+check("an anonymous POST with a client id and a key creates (201)", st1 == 201, f"{st1} {b1}")
+check("...and the deleteToken it returns is the one the client minted",
+      b1.get("deleteToken") == T1, f"{str(b1.get('deleteToken'))[:12]}… vs {T1[:12]}…")
+st2, b2 = post(body_a, headers={**K2, **C1})
+check("the SAME client retrying the SAME body replays to the SAME post (200)",
+      st2 == 200 and b2.get("idempotentReplay") is True and b2.get("id") == b1.get("id"),
+      f"{st2} {b2.get('id')} vs {b1.get('id')} replay={b2.get('idempotentReplay')}")
+st3, b3 = post(body_a, headers={**K2, **C2})
+check("a DIFFERENT client reusing the key gets its OWN post (F2 holds)",
+      st3 == 201 and b3.get("id") != b1.get("id") and not b3.get("idempotentReplay"),
+      f"{st3} {b3.get('id')} vs {b1.get('id')}")
+st5, b5 = post(body_a, headers={**K2, "X-Skribl-Client": "short"})
+check("a malformed client id gets no namespace: a fresh post, no replay",
+      st5 == 201 and b5.get("id") not in (b1.get("id"), b3.get("id")), f"{st5} {b5.get('id')}")
+st6, b6 = post({"frames": [frame]}, headers={"X-Skribl-Delete-Token": "too-short"})
+check("a malformed client token is ignored and the server mints its own",
+      st6 == 201 and b6.get("deleteToken") and b6.get("deleteToken") != "too-short"
+      and len(b6.get("deleteToken", "")) >= 32, f"{st6} {str(b6.get('deleteToken'))[:16]}")
+# The client-minted key is a real key: it takes the post down.
+_dreq = urllib.request.Request(f"{BASE}/api/skribls/{b1.get('id')}", method="DELETE",
+                               data=json.dumps({"deleteToken": T1}).encode(),
+                               headers={"Content-Type": "application/json"})
+try:
+    with urllib.request.urlopen(_dreq) as _dr:
+        _dst = _dr.status
+except urllib.error.HTTPError as _e:
+    _dst = _e.code
+check("...and the client-minted key deletes the post it was created under",
+      _dst in (200, 204), f"DELETE -> {_dst}")
+_gst, _ = get(f"/api/skribls/{b1.get('id')}")
+check("...which is then gone", _gst == 404, f"GET -> {_gst}")
+
 # --- what the schema does NOT know ------------------------------------------
 # The media caps bound four slots and the complexity check bounds points,
 # frames, groups, hold and canvasSize. EVERY OTHER KEY used to ride into

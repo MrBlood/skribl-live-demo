@@ -53,7 +53,7 @@
 
     if (apiBase) {
       // Serialize once so the size-check and the request send the exact same bytes.
-      const body = JSON.stringify(payload);
+      let body = JSON.stringify(payload);
 
       // IDEMPOTENCY. One key per POSTING ATTEMPT of one piece of work, held
       // until the server confirms success. If the response is lost in transit
@@ -67,9 +67,24 @@
       // with a different body, so an edit between an ambiguous failure and
       // the retry mints a fresh key. An unchanged body keeps its key — that
       // is the retry the whole mechanism exists for.
-      if (sendSkribl._idemBody !== body) {
+      // "UNCHANGED" IS JUDGED WITH THE TIMESTAMPS TAKEN OUT (SK-AUD-001).
+      // serializeSkribl() stamps draftId, createdAt and updatedAt at the
+      // moment of serialising, so two submits of the same drawing were never
+      // the same bytes, this branch minted a fresh key every time, and from
+      // v200 until the audit's lost-response pin in verify_posted no Pad retry
+      // had ever replayed — for an author with an account either. The server
+      // reads none of the three (it stamps its own createdAt), so the retry
+      // resends the FIRST attempt's exact bytes, which is what the server's
+      // fingerprint (F4) requires of a replay and also the truer timestamp.
+      const work = JSON.stringify(payload, (k, v) =>
+        (k === 'draftId' || k === 'createdAt' || k === 'updatedAt') ? undefined : v);
+      if (sendSkribl._idemWork !== work) {
         sendSkribl._idemKey = null;
+        sendSkribl._idemTok = null;
+        sendSkribl._idemWork = work;
         sendSkribl._idemBody = body;
+      } else {
+        body = sendSkribl._idemBody;
       }
       if (!sendSkribl._idemKey) {
         sendSkribl._idemKey = (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -78,6 +93,19 @@
       }
       const baseHeaders = skriblPostHeaders();
       baseHeaders['Idempotency-Key'] = sendSkribl._idemKey;
+      // THE TWO CLIENT CAPABILITIES (SK-AUD-001; lib/posted.js explains both).
+      // The client id is what lets the server honour the key for an anonymous
+      // author at all; the delete token, minted here and held for exactly as
+      // long as the key, is what survives the response being lost — the
+      // server's own would have been handed over once, in the answer that
+      // never arrived. Both ride the retry, so a replayed post ends with this
+      // browser holding the key that deletes it.
+      if (window.SkriblPosted) {
+        const cid = window.SkriblPosted.clientId();
+        if (cid) baseHeaders['X-Skribl-Client'] = cid;
+        if (!sendSkribl._idemTok) sendSkribl._idemTok = window.SkriblPosted.mintSecret();
+        baseHeaders['X-Skribl-Delete-Token'] = sendSkribl._idemTok;
+      }
 
       // Client-side size guard: the server caps the request body at
       // MAX_CONTENT_LENGTH (25 MB via a Render env var) and raises a 413 that the
@@ -122,8 +150,18 @@
         // with idempotentReplay:true is the same post found again after a
         // lost response; identical shape, treated identically.)
         if (data && data.id && data.url) {
+          // THE KEY THE AUTHOR HOLDS. The server's, when the answer carried one
+          // (a fresh create); the one this client minted, when it did not (a
+          // replay after a lost response answers with the id alone, and the
+          // token it was created under is the one we sent). Until SK-AUD-001
+          // this object carried no token at all, so Pad's Your Skribls entries
+          // never held their revocation key — the "Delete" and "Copy key"
+          // affordances lib/postedui.js shows only where a key is held had been
+          // absent from every Pad post since they were built. Flip's had them.
+          const tok = data.deleteToken || sendSkribl._idemTok || null;
           sendSkribl._idemKey = null;   // confirmed: the next post is new work
-          return { id: data.id, url: data.url, local: false };
+          sendSkribl._idemTok = null;
+          return { id: data.id, url: data.url, local: false, deleteToken: tok };
         }
         throw new Error('The server returned an unexpected response.');
       }

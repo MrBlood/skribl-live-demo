@@ -266,8 +266,55 @@
     return /^https?:/i.test(url) ? url : (global.location.origin + url);
   }
 
+  /* THE CLIENT'S OWN CAPABILITIES (SK-AUD-001). Two random secrets the browser
+     mints for itself, both 32 bytes of getRandomValues as urlsafe base64, the
+     shape secrets.token_urlsafe(32) produces on the server:
+
+       clientId()    minted once and kept under its own key. Sent as
+                     X-Skribl-Client, it is what scopes an anonymous
+                     Idempotency-Key: the server had refused anonymous replay
+                     because two strangers reusing a key must never see each
+                     other's post, and a secret only this browser holds is the
+                     identity that makes the scope safe. Nothing reads it back.
+       mintSecret()  a fresh one per call. Sent as X-Skribl-Delete-Token, it is
+                     the revocation key the server would otherwise mint and
+                     return exactly once — minted HERE so that a response lost
+                     in transit leaves the author holding the key anyway, and
+                     the retry, which the server replays to the same post,
+                     ends with that key in this list.
+
+     Both fall back to Math.random only where crypto is absent, and clientId()
+     returns null where storage refuses, in which case the header is simply
+     not sent and the server behaves as it always did. */
+  var CLIENT_KEY = 'skribl_client_v1';
+  var CAP_RE = /^[A-Za-z0-9_-]{32,128}$/;
+
+  function mintSecret() {
+    var bytes = new Uint8Array(32);
+    if (global.crypto && global.crypto.getRandomValues) global.crypto.getRandomValues(bytes);
+    else for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    var s = '';
+    for (var j = 0; j < bytes.length; j++) s += String.fromCharCode(bytes[j]);
+    return global.btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function clientId() {
+    try {
+      var v = global.localStorage.getItem(CLIENT_KEY);
+      if (v && CAP_RE.test(v)) return v;
+      v = mintSecret();
+      global.localStorage.setItem(CLIENT_KEY, v);
+      return v;
+    } catch (e) {
+      return null;
+    }
+  }
+
   global.SkriblPosted = {
     KEY: KEY,
+    CLIENT_KEY: CLIENT_KEY,
+    clientId: clientId,
+    mintSecret: mintSecret,
     list: read,
     add: add,
     capped: capped,

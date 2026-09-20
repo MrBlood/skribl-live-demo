@@ -4599,6 +4599,9 @@ function _shareCardDataURL(){
     return null;
   }
 }
+/* One posting attempt's key and client-minted delete token, keyed by the body
+   they were minted for; cleared on a confirmed success. See shareSkribl. */
+let _shareIdem = null;
 async function shareSkribl(){
   if(sharing) return;
   if(nothingToShare()){ chip('Draw something to post'); return; }
@@ -4643,9 +4646,28 @@ async function shareSkribl(){
     // v211 (v210 review F2): decode is part of post readiness — see Pad's submit().
     if(window._skriblDecodePending){ try{ await window._skriblDecodePending; }catch(_){} }
     const _body=JSON.stringify(buildSharePayload());
+    // IDEMPOTENCY, AND THE TWO CLIENT CAPABILITIES (SK-AUD-001). Flip never
+    // sent an Idempotency-Key at all, so a response lost in transit and a
+    // retry was a duplicate post here as surely as on the Pad — and the Pad's
+    // rules apply unchanged: one key and one client-minted delete token per
+    // posting attempt of one body, held until the server confirms, so the
+    // retry replays to the same post and this browser ends up holding the key
+    // that deletes it. See editor_post.js's sendSkribl and lib/posted.js.
+    const _h=skriblPostHeaders();
+    if(window.SkriblPosted){
+      if(!_shareIdem || _shareIdem.body!==_body){
+        _shareIdem={ body:_body,
+          key:(crypto.randomUUID ? crypto.randomUUID() : window.SkriblPosted.mintSecret()),
+          tok:window.SkriblPosted.mintSecret() };
+      }
+      const _cid=window.SkriblPosted.clientId();
+      if(_cid) _h['X-Skribl-Client']=_cid;
+      _h['Idempotency-Key']=_shareIdem.key;
+      _h['X-Skribl-Delete-Token']=_shareIdem.tok;
+    }
     const _p=(typeof skriblPackBody==='function')
-      ? await skriblPackBody(_body, skriblPostHeaders())
-      : { body:_body, headers:skriblPostHeaders() };
+      ? await skriblPackBody(_body, _h)
+      : { body:_body, headers:_h };
     const res=await fetch(window.SKRIBL_API_BASE,{ method:'POST', headers:_p.headers, body:_p.body });
     let data={}; try{ data=await res.json(); }catch(_){}
     if(!res.ok){
@@ -4665,8 +4687,10 @@ async function shareSkribl(){
       const _t=document.getElementById('flipShareTitle');
       const kept=window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
         pages:frames.length, title:(_t?_t.value:'').trim(),
-        // Revocation capability, returned once — see lib/posted.js.
-        tok: data.deleteToken || null });
+        // Revocation capability: the server's when the answer carried one, the
+        // one this client minted when it did not (a replay) — see lib/posted.js.
+        tok: data.deleteToken || (_shareIdem && _shareIdem.tok) || null });
+      _shareIdem=null;   // confirmed: the next post is new work
       if(window._skriblPostedUI) window._skriblPostedUI.render();
       // Checked since v280, for the reason editor_post.js states at the same
       // point: a discarded write result meant an irrevocable post reported as
