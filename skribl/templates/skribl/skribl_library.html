@@ -150,7 +150,13 @@
     .tbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
     .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #0b0616; box-shadow: 0 5px 18px var(--accent-glow); }
     .tbtn.on { color: var(--accent-tint); border-color: #3a336a; background: rgba(124,92,255,.14); }
-    .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* Six buttons and a clock do not fit one row at phone width (the full-
+       screen button, v304, made it six): the clock takes its own row. */
+    @media (max-width: 420px) {
+      .transport { flex-wrap: wrap; }
+      .transport .telapsed { width: 100%; text-align: right; margin-top: -2px; }
+    }
   
     /* ---- library ---------------------------------------------------------- */
     .libhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
