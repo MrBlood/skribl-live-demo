@@ -106,7 +106,13 @@ print("\nHOT 1 — a view is one per client per post per day, and the total foll
 a = post(TAG + " alpha wolf", "howls at night")
 b = post(TAG + " beta fish", "swims at 100% and under_scores")
 c = post(TAG + " gamma ray", "shines")
-check("fixtures posted public", all((a, b, c)), f"{a} {b} {c}")
+# THE DECOYS for the search's escaping (section 4). A wildcard matches the
+# literal it stands for, so "100%" and "_scores" alone cannot tell an
+# escaped LIKE from a raw one -- the first calibration stayed green. These
+# match the RAW reading only: "%100%%" finds "100 percent" and "%_scores%"
+# finds "underscores", and an escaped query finds neither.
+d = post(TAG + " delta decoy", "100 percent, no sign, and underscores plain")
+check("fixtures posted public", all((a, b, c, d)), f"{a} {b} {c} {d}")
 st, before = listing(q=TAG, limit=10)
 check("the listing carries a views count", all("views" in i for i in before.get("items", [])), str(before)[:200])
 check("...zero before anybody fetched a payload", all(i["views"] == 0 for i in before.get("items", [])),
@@ -127,13 +133,13 @@ print("\nHOT 2 — sort=hot ranks by plays in the last seven days, newest id bre
 st, hot = listing(q=TAG, sort="hot", limit=10)
 ht = titles(hot)
 check("the played post is first under Hot", ht and ht[0].endswith("alpha wolf"), str(ht))
-check("the unplayed ones follow, newest first", ht[1:] == [TAG + " gamma ray", TAG + " beta fish"], str(ht))
+check("the unplayed ones follow, newest first", ht[1:] == [TAG + " delta decoy", TAG + " gamma ray", TAG + " beta fish"], str(ht))
 check("Hot carries the seven-day count beside the total",
       all("views_recent" in i for i in hot.get("items", [])) and hot["items"][0]["views_recent"] == 1,
       str([(i["title"], i.get("views"), i.get("views_recent")) for i in hot.get("items", [])]))
 st, new = listing(q=TAG, sort="new", limit=10)
 check("sort=new is the listing as it always was: newest first regardless of plays",
-      titles(new) == [TAG + " gamma ray", TAG + " beta fish", TAG + " alpha wolf"], str(titles(new)))
+      titles(new) == [TAG + " delta decoy", TAG + " gamma ray", TAG + " beta fish", TAG + " alpha wolf"], str(titles(new)))
 st, bad = listing(sort="sideways")
 check("an unknown sort is refused with 400", st == 400, str(st))
 if have_db:
@@ -158,7 +164,7 @@ cur = p1.get("next_cursor")
 check("a first Hot page of one comes back with a cursor", len(p1.get("items", [])) == 1 and bool(cur), str(cur))
 st, p2 = listing(q=TAG, sort="hot", limit=5, cursor=cur)
 check("the next Hot page continues without repeating",
-      st == 200 and titles(p1)[0] not in titles(p2) and len(titles(p2)) == 2, f"{titles(p1)} then {titles(p2)}")
+      st == 200 and titles(p1)[0] not in titles(p2) and len(titles(p2)) == 3, f"{titles(p1)} then {titles(p2)}")
 st, mixed = listing(q=TAG, sort="new", cursor=cur)
 check("a Hot cursor handed to New is refused with 400", st == 400, str(st))
 st, n1 = listing(q=TAG, limit=1)
@@ -172,15 +178,15 @@ check("a title matches case-folded", [t for t in titles(r) if t.startswith(TAG)]
 st, r = listing(q="howls")
 check("a caption matches too", [t for t in titles(r) if t.startswith(TAG)] == [TAG + " alpha wolf"], str(titles(r)))
 st, r = listing(q="100%")
-check("a % typed by a person is a percent sign, not a wildcard",
+check("a % typed by a person is a percent sign, not a wildcard: the decoy with '100 percent' does not match",
       [t for t in titles(r) if t.startswith(TAG)] == [TAG + " beta fish"], str(titles(r)))
 st, r = listing(q="_scores")
-check("an _ typed by a person is an underscore, not a wildcard",
+check("an _ typed by a person is an underscore, not a wildcard: the decoy with 'underscores' does not match",
       [t for t in titles(r) if t.startswith(TAG)] == [TAG + " beta fish"], str(titles(r)))
 st, r = listing(q="x" * 81)
 check("a query past 80 characters is refused with 400", st == 400, str(st))
 st, r = listing(q="   ")
-check("a blank query is the plain listing", st == 200 and len(r.get("items", [])) >= 3, str(st))
+check("a blank query is the plain listing", st == 200 and len(r.get("items", [])) >= 4, str(st))
 
 # ------------------------------------------------------------------ section 5
 print("\nHOT 5 — the gallery: two tabs and a box, and nothing of its own")
