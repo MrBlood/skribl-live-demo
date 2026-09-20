@@ -954,17 +954,29 @@ with sync_playwright() as p:
               if(!uniRun(seg, strokeAlphaOf) && uniAlpha(seg, strokeAlphaOf) > 0 && n >= 20)
                 return seg; }
             return null; };
+          // THE MECHANISM, counted: a layer is a round trip through the temp
+          // canvas, and it lands on the page through ONE call -- drawImage of
+          // tmpCv onto the frame context. Counting those while the run paints
+          // is what "took the cheap path" means, whatever the picture looks
+          // like. (The first version of this pin read the cheap path off its
+          // side effect -- the compounding at the caps -- and went red the
+          // moment SK-AUD-007 matched the live brightness to the settled one.
+          // A pin on the side effect is a pin against the fix.)
           const overPaint = (seg) => {
             const g = fctx; g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);
             g.clearRect(0,0,CW,CH); g.fillStyle = '#000000'; g.fillRect(0,0,CW,CH);
-            paintStatic(g, seg);
+            const drawImage = g.drawImage; let trips = 0;
+            g.drawImage = function(){ trips++; return drawImage.apply(g, arguments); };
+            try { paintStatic(g, seg); } finally { g.drawImage = drawImage; }
             const d = g.getImageData(0,0,CW*DPR,CH*DPR).data, W = CW*DPR;
             const lum = (x,y) => { x = Math.round(x*DPR); y = Math.round(y*DPR);
               if(x<0||y<0||x>=W||y>=CH*DPR) return 0; return d[(y*W+x)*4]; };
-            let mS=0,mN=0;
+            let mS=0,mN=0, sum=0, lit=0;
             for(let i=1;i<seg.length;i++){
               mS += lum((seg[i-1].x+seg[i].x)/2, (seg[i-1].y+seg[i].y)/2); mN++; }
-            return (mS/mN) / Math.max(0.01, 255 * (hexA(seg[0].color) || 0));
+            for(let i=0;i<d.length;i+=4){ if(d[i] > 2){ lit++; sum += d[i]; } }
+            return { mid: (mS/mN) / Math.max(0.01, 255 * (hexA(seg[0].color) || 0)),
+                     mean: sum/Math.max(1,lit), lit: lit, trips: trips };
           };
           // the gesture stays OPEN across this measurement, which is the state
           // the skip keys off
@@ -985,15 +997,32 @@ with sync_playwright() as p:
               and _live.get("closedAfter") is True,
               f"{_live} — if the gesture was never open, the check below is "
               f"measuring the settled path twice and cannot fail")
-        check("mid-drag the run takes the CHEAP path, and says so by compounding",
-              (_live.get("during") or 0) > 1.2,
-              f"over-paint {_live.get('during')}x while the finger was down — at "
-              f"1.0 the layer is running on every move, which is 2.44 ms x 17 "
-              f"runs per repaint and a drag nobody can use")
+        _d, _a = _live.get("during") or {}, _live.get("after") or {}
+        check("mid-drag the run takes the CHEAP path: no layer round trip while the finger is down",
+              _live.get("made") and _d.get("trips") == 0,
+              f"{_d.get('trips')} composite(s) while the finger was down — one per "
+              f"run per move is 2.44 ms x 17 runs per repaint and a drag nobody can use")
         check("...and the page the artist is LEFT with is the correct one",
-              abs((_live.get("after") or 0) - 1.0) < 0.12,
-              f"over-paint {_live.get('after')}x after fieldEnd — the skip is "
-              f"for the transient only; the settled page must not keep the mesh")
+              abs((_a.get("mid") or 0) - 1.0) < 0.12 and (_a.get("trips") or 0) >= 1,
+              f"over-paint {_a.get('mid')}x after fieldEnd through {_a.get('trips')} "
+              f"composite(s) — the skip is for the transient only; the settled page "
+              f"must not keep the mesh")
+        # THE SETTLE IS BRIGHTNESS-MATCHED (SK-AUD-007; acquisition audit of
+        # v302). The cheap path used to walk the run at its own alpha, so every
+        # joint's cap compounded on its neighbour's and the live frame came out
+        # 26% brighter than the layer then settled it to -- the ~41 ms settle
+        # the v302 record calls "visible as a flash on a phone". The walk now
+        # paints at the alpha whose compounding lands where the layer will
+        # (SMUDGE_LIVE_OVERLAP in flip.js has the measurement), so the settle
+        # changes the beads, not the brightness. Whole-run mean, live against
+        # settled: 1.26 on the old tree, 0.95-1.05 on this one. The beads are
+        # still there (mid-segment over-paint stays above 1), which is the
+        # mechanism pin above saying the cheap path is still the cheap path.
+        _ratio = (_d.get("mean") or 0) / max(0.01, _a.get("mean") or 0)
+        check("...and the live frame is as bright as the settled one, not a flash brighter",
+              _live.get("made") and abs(_ratio - 1.0) < 0.12,
+              f"live/settled mean {_ratio:.3f} over {_d.get('lit')} lit pixels — 1.26 is "
+              f"the old walk at full alpha, and the step down at the settle is the flash")
 
         # ---------------------------------------------------------- v302c
         # TWO THINGS A BUG CHECK FOUND IN THE LAYERED COMPOSITE, after the first
