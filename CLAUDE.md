@@ -10,7 +10,10 @@
    Version headings REPEAT (the numbering restarted twice), so the LAST
    occurrence of a number is the current one; see the note at the head of
    its version log. Entries are true as written and not maintained after.
-3. **`FUTURE.md`** for direction, **`docs/INTEGRATION.md`** to mount Skribl
+3. **`docs/SESSION-CONTEXT.md`** — how a fresh session checks the ground and
+   gets to a running server (`harness/bootstrap.sh`), the seal as it is
+   actually executed, how the owner works, and where the project came from.
+4. **`FUTURE.md`** for direction, **`docs/INTEGRATION.md`** to mount Skribl
    into another Flask app.
 
 Conversations are not the memory — these files are. Prefer a fresh session
@@ -191,6 +194,14 @@ carried across by hand, while the run is still going:
 Get it wrong and the choice is a re-run (~42 minutes) or a sealed record whose
 mp4 line contradicts evidence already in hand. The second is an evidence gap,
 so it is a re-run.
+
+The `postgres` job's attestation (`harness/POSTGRES-ATTESTATION.txt`) is
+carried on the same terms, and its `cat` is that job's LAST step because the
+service container's teardown pushes anything earlier past what the log reader
+returns. To hold the run before its final render, run it in `--budget` slices
+or `kill -STOP` it from a separate script — a `pgrep -f` pattern typed on the
+same command line matches its own shell. `docs/SESSION-CONTEXT.md` §4 has the
+sequence end to end.
 
 If the environment's egress proxy refuses GitHub's artifact blob storage (403
 on CONNECT, which is the normal case here), the job's own `cat` step puts the

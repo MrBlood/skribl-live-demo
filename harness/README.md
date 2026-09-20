@@ -27,6 +27,13 @@ The interpreter must be the one `.python-version` pins. `verify_docs.py` fails
 the whole run when it is not — deliberately, because evidence produced on a
 different interpreter from the deployed one describes nothing.
 
+In a fresh container, `harness/bootstrap.sh` does all of the above the way CI
+does it — the pinned interpreter, the hash-locked lock, then this directory's
+requirements — creates the tables on a fresh sqlite database, raises the
+posting rate limit the way `run_harness.sh` does, and leaves a server on port
+5001 for suites driven directly. It writes no run record.
+`docs/SESSION-CONTEXT.md` covers the rest of the environment.
+
 ## Running
 
     ./harness/run_harness.sh verify_move.py verify_pages.py   # name them

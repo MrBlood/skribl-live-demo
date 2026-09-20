@@ -39,6 +39,12 @@ BEGIN, END = "<!-- HARNESS-COUNTS -->", "<!-- /HARNESS-COUNTS -->"
 # guard.
 DOCS = [ROOT / "README.md", ROOT / "harness" / "README.md",
         ROOT / "docs" / "HANDOFF.md", ROOT / "START-HERE.md"]
+# The session primer is a current-facing document a new session reads before
+# it touches anything, so it gets every check README.md gets — file names,
+# suite names, hashes, counts, stale claims — EXCEPT the stanza, which it does
+# not carry: it points at the generated records instead of restating them.
+# Hence beside DOCS rather than in it.
+SESSION = ROOT / "docs" / "SESSION-CONTEXT.md"
 
 def _py_sources():
     """Every Python file that can register a route or read a knob."""
@@ -70,7 +76,7 @@ print("\nDOCS — every file this documentation names actually exists")
 # The stanza promised a verify_docs.py that did not exist. Any harness file
 # referenced by name in prose must be real.
 named = set()
-for doc in DOCS + [ROOT / "ARCHIVE-README.md", ROOT / "harness" / "stamp_docs.py"]:
+for doc in DOCS + [ROOT / "ARCHIVE-README.md", SESSION, ROOT / "harness" / "stamp_docs.py"]:
     if doc.is_file():
         named |= set(re.findall(r"\b(verify_[a-z0-9_]+\.py)\b",
                                 doc.read_text(encoding="utf-8")))
@@ -137,7 +143,7 @@ check("every shared module in lib/ is named in at least one .md",
 # you how to deploy by applying a patch, and names a patch that is not in the
 # tree, is worse than one that says nothing.
 paths = set()
-for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
+for doc in DOCS + [ROOT / "ARCHIVE-README.md", SESSION]:
     if doc.is_file():
         body = doc.read_text(encoding="utf-8")
         # Lookbehind, not \b: the docs name `static/skribl/gifenc.min.js`,
@@ -292,7 +298,7 @@ print("\nDOCS — no volatile release fact is typed by hand")
 # The stamped stanza already carries the tree; docs must point at it.
 _HEXY = re.compile(r"\b[0-9a-f]{32,}\b")
 typed = []
-for doc in DOCS + [ROOT / "ARCHIVE-README.md"]:
+for doc in DOCS + [ROOT / "ARCHIVE-README.md", SESSION]:
     if not doc.is_file():
         continue
     body = doc.read_text(encoding="utf-8")
@@ -380,7 +386,8 @@ claims = []
 _current = [ROOT / "README.md", ROOT / "harness" / "README.md",
             ROOT / "ARCHIVE-README.md", ROOT / "START-HERE.md",
             ROOT / "docs" / "INTEGRATION.md", ROOT / "FUTURE.md",
-            ROOT / "DESIGN-DIRECTION.md", ROOT / "examples" / "README.md"]
+            ROOT / "DESIGN-DIRECTION.md", ROOT / "examples" / "README.md",
+            SESSION]
 for doc in _current:
     if not doc.is_file():
         continue
@@ -1145,7 +1152,8 @@ print("\nDOCS — a shipped capability may not be described as unshipped")
 # stale); the list names what exists, not what used to.
 CURRENT_DOCS = ["START-HERE.md", "DESIGN-DIRECTION.md",
                 "README.md", "ARCHIVE-README.md",
-                "FUTURE.md", "docs/INTEGRATION.md"]
+                "FUTURE.md", "docs/INTEGRATION.md",
+                "docs/SESSION-CONTEXT.md"]
 # Never scanned: a changelog SHOULD say "before v222 the bytes were lost", and a
 # review response should record what was true at the time. Their whole job is to
 # state a superseded fact accurately.
