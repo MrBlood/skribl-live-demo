@@ -4681,14 +4681,19 @@ async function shareSkribl(){
     const _h=skriblPostHeaders();
     if(window.SkriblPosted){
       if(!_shareIdem || _shareIdem.body!==_body){
+        // The key is not a capability (the client id is what scopes it), so
+        // it may fall back to a clock-and-random string as the Pad's does;
+        // the token IS one, and is null without Web Crypto (RE-AUD-001),
+        // in which case it is not sent and the server mints the key.
         _shareIdem={ body:_body,
-          key:(crypto.randomUUID ? crypto.randomUUID() : window.SkriblPosted.mintSecret()),
+          key:(crypto.randomUUID ? crypto.randomUUID()
+               : 'k' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12)),
           tok:window.SkriblPosted.mintSecret() };
       }
       const _cid=window.SkriblPosted.clientId();
       if(_cid) _h['X-Skribl-Client']=_cid;
       _h['Idempotency-Key']=_shareIdem.key;
-      _h['X-Skribl-Delete-Token']=_shareIdem.tok;
+      if(_shareIdem.tok) _h['X-Skribl-Delete-Token']=_shareIdem.tok;
     }
     const _p=(typeof skriblPackBody==='function')
       ? await skriblPackBody(_body, _h)

@@ -283,16 +283,21 @@
                      the retry, which the server replays to the same post,
                      ends with that key in this list.
 
-     Both fall back to Math.random only where crypto is absent, and clientId()
-     returns null where storage refuses, in which case the header is simply
-     not sent and the server behaves as it always did. */
+     MINTED FROM WEB CRYPTO OR NOT AT ALL (RE-AUD-001; re-audit of the
+     remediation tier). The first version fell back to Math.random where
+     getRandomValues was absent, which would have minted a guessable
+     revocation key and called it a capability. A capability fails closed:
+     mintSecret() returns null without Web Crypto, clientId() then returns
+     null and stores nothing, and the two callers send no header -- so the
+     server mints the strong key and returns it exactly as it did before this
+     module existed. Null where storage refuses, for the same reason. */
   var CLIENT_KEY = 'skribl_client_v1';
   var CAP_RE = /^[A-Za-z0-9_-]{32,128}$/;
 
   function mintSecret() {
+    if (!(global.crypto && typeof global.crypto.getRandomValues === 'function')) return null;
     var bytes = new Uint8Array(32);
-    if (global.crypto && global.crypto.getRandomValues) global.crypto.getRandomValues(bytes);
-    else for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    try { global.crypto.getRandomValues(bytes); } catch (e) { return null; }
     var s = '';
     for (var j = 0; j < bytes.length; j++) s += String.fromCharCode(bytes[j]);
     return global.btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -303,6 +308,7 @@
       var v = global.localStorage.getItem(CLIENT_KEY);
       if (v && CAP_RE.test(v)) return v;
       v = mintSecret();
+      if (!v) return null;                 // no Web Crypto: no identity, no header
       global.localStorage.setItem(CLIENT_KEY, v);
       return v;
     } catch (e) {

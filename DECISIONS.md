@@ -8638,6 +8638,24 @@ now, the shape `skribl_media_store` already had.
 witness it describes and is not maintained after; this note is where a reader
 should learn the disarm remains.
 
+**THE RE-AUDIT ACCEPTED THE TIER AND FOUND ONE MORE THING (RE-AUD-001).**
+The auditor's re-audit of tree 0033390 closed eleven findings as reported,
+called 005 mostly closed (the 40px band below 360 stands as the recorded
+exception), 008 open render-side and mitigated, and 011 its own false
+positive; it could not rerun the harness itself, because the repository pins
+Python 3.12 and its environment had 3.13, and said so rather than claiming a
+rerun. Its one new finding is real: `mintSecret()` fell back to `Math.random`
+where `getRandomValues` was absent, which would have minted a guessable
+revocation key and called it a capability. A capability fails closed now:
+without Web Crypto the library mints nothing and stores nothing, neither
+editor sends either header, and the server mints the strong key and returns
+it, exactly as it did before the client could. Pinned on the wire and on the
+outcome, on both surfaces, with Web Crypto removed at the prototype -- and
+the Idempotency-Key still rides, because it is not a capability. The
+re-audit's pre-seal checklist otherwise names what a seal already does, two
+physical-device smokes this container cannot run, and the seal itself, which
+is the owner's call.
+
 **WHAT AN ASSISTANT SHOULD CARRY FORWARD FROM THIS TIER.** Three instruments
 were built wrong before they were built right, and each was caught only because
 the mutation was run: a pin at DOMContentLoaded that could not see a deferred

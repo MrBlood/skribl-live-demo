@@ -428,7 +428,10 @@ lets an anonymous client mint its own revocation key, in the same shape, so
 that the key is held before the answer arrives rather than handed over exactly
 once in an answer that may never arrive; the server stores its hash and
 returns it as `deleteToken` like one it minted itself. A malformed value on
-either header is ignored, not refused. `create_post()` takes the same key as
+either header is ignored, not refused. Skribl's own editors mint both from
+Web Crypto or not at all: without `getRandomValues` neither header is sent
+and the server mints the key, so a client never downgrades a capability's
+entropy to `Math.random` (RE-AUD-001). `create_post()` takes the same key as
 `delete_token=`; it is ignored for an owned post, which is authorised by its
 owner and gets no capability.
 
