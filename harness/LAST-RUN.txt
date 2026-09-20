@@ -1,8 +1,8 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-20T14:41:18Z
+UTC timestamp           : 2026-09-20T15:06:06Z
 Host                    : Linux x86_64
 Tree SHA-256            : a6faf4d4958484412db0aa46a09efa37d879800fe43dd2f1edb559be3e6562c5
-Git commit              : b447148
+Git commit              : 0fdc9aa
 Source state            : generated-only dirty
                             README.md
                             START-HERE.md
@@ -16,21 +16,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.nySs0f3Hx3/harness.db)
+Database reset          : yes (fresh /tmp/tmp.R3HLqTE9BM/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_exportui.py verify_exopts.py verify_dots.py verify_fix.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_inbetween.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
-suites requested : 4
-  verify_exportui.py: ok — 60/60 passed
-  verify_exopts.py: ok — 26/26 passed
-  verify_dots.py: ok — 11/11 passed
-  verify_fix.py: ok — 18/18 passed
-assertions passed: 115   (skipped suites contribute 0)
+suites requested : 1
+  verify_inbetween.py: ok — 67/67 passed
+assertions passed: 67   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
