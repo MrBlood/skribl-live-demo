@@ -2317,11 +2317,16 @@ function syncPagebar(){
   const sp = pageSpan();
   const cnt = sp ? SkriblPageSpan.count(sp) : 1;
   const these = sp ? 'these ' + cnt + ' pages' : 'this page';
+  const say = sp ? 'Pages ' + (sp.from+1) + ' to ' + (sp.to+1) + ' of ' + n
+                 : 'Page ' + (idx+1) + (n>1 ? ' of ' + n : '');
+  // The canvas's accessible name carries the page too (SK-AUD-004): the
+  // counter above the strip is hidden on the compact size class, and the
+  // canvas is the object a screen reader lands on.
+  const cv = document.getElementById('pad');
+  if(cv) cv.setAttribute('aria-label', 'Drawing canvas, ' + say.charAt(0).toLowerCase() + say.slice(1));
   if(pbWho){
     pbWho.textContent = sp ? SkriblPageSpan.label(sp) + '/' + n
                            : (idx+1) + (n>1 ? '/' + n : '');
-    const say = sp ? 'Pages ' + (sp.from+1) + ' to ' + (sp.to+1) + ' of ' + n
-                   : 'Page ' + (idx+1) + (n>1 ? ' of ' + n : '');
     pbWho.setAttribute('aria-label', say);
     pbWho.title = say + (sp ? ' selected — Esc to drop the range' : '');
     pbWho.classList.toggle('span', !!sp);

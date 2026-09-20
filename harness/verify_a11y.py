@@ -732,6 +732,48 @@ with sync_playwright() as p:
         check(f"{_name}: exactly one main region", _t["mains"] == 1, f"{_t['mains']} main regions")
         _pg.close()
 
+    # ------------------------------------------------------------ section 7b
+    print("\nA11Y 7b — the authoring canvases and the player's have a name")
+    # SK-AUD-004 (acquisition audit of v302): both principal editing surfaces
+    # were bare <canvas> elements, the primary object on the page with nothing
+    # in the tree to say what the tools around it were FOR; the census above
+    # inspects controls and never looked at the canvas. Each now has a role, a
+    # name and — on the editors — a description that says what the surface
+    # does and, honestly, what it does not: drawing is not reachable from the
+    # keyboard, everything else is. Flip's name tracks the page, because the
+    # page counter is hidden on the compact size class.
+    CANVAS = """(sel) => { const el = document.querySelector(sel); if (!el) return null;
+        const d = el.getAttribute('aria-describedby');
+        const desc = d && document.getElementById(d);
+        return { role: el.getAttribute('role'), name: el.getAttribute('aria-label') || '',
+                 rd: el.getAttribute('aria-roledescription') || '',
+                 desc: desc ? (desc.textContent || '').trim() : '' }; }"""
+    for _path, _sel, _name in (("/", "#canvas", "Pad"), ("/flip", "#pad", "Flip")):
+        _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(_pg, BASE, _path)
+        _c = _pg.evaluate(CANVAS, _sel)
+        check(f"{_name}: the canvas is a named drawing surface",
+              _c is not None and _c["role"] == "img" and _c["rd"] == "drawing canvas"
+              and "canvas" in _c["name"].lower(), str(_c))
+        check(f"{_name}: ...whose description says how to draw and what the keyboard cannot do",
+              _c is not None and "finger" in _c["desc"].lower()
+              and "keyboard" in _c["desc"].lower(), (_c or {}).get("desc", "")[:80])
+        if _name == "Flip":
+            _pg.evaluate("() => { addFrame(false); addFrame(false); go(1); }")
+            _pg.wait_for_timeout(150)
+            _c = _pg.evaluate(CANVAS, _sel)
+            check("Flip: ...and the name follows the page",
+                  "page 2 of 3" in _c["name"].lower(), _c["name"])
+        _pg.close()
+    _pg = browser.new_page(viewport={"width": 1280, "height": 900})
+    _pg.goto(BASE + "/s/" + _pid, wait_until="load")
+    _pg.wait_for_timeout(1200)
+    _c = _pg.evaluate(CANVAS, "#canvas")
+    check("the player's canvas is an image named after the post",
+          _c is not None and _c["role"] == "img" and "heading fixture" in _c["name"].lower(),
+          str(_c))
+    _pg.close()
+
     # ------------------------------------------------------------ section 8
     print("\nA11Y 8 — every Tab stop looks focused")
     # Nine `outline: none` declarations across the stylesheets. Most hand off
