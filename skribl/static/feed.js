@@ -232,18 +232,31 @@
 
   syncPostBtn();
 
-  fetch(api + '?limit=12', { credentials: 'same-origin' })
-    .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function (body) {
-      var items = (body && body.items) || [];
-      if (!items.length) { empty.hidden = false; return; }
-      for (var i = 0; i < items.length; i++) list.appendChild(row(items[i]));
-      window.SkriblInline.mount(list);
-    })
-    .catch(function () { errEl.hidden = false; });
+  /* THE LISTING, AS A FUNCTION, so the error state's Retry can call it
+     (SK-AUD-012): "Couldn't load the listing." was a sentence with nothing to
+     press, on the one page where a tester on a bad connection is most likely
+     to land. A retry starts from a clean list -- a half-populated one from a
+     response that failed mid-way would otherwise double every row. */
+  function load() {
+    errEl.hidden = true;
+    empty.hidden = true;
+    while (list.firstChild) list.removeChild(list.firstChild);
+    return fetch(api + '?limit=12', { credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (body) {
+        var items = (body && body.items) || [];
+        if (!items.length) { empty.hidden = false; return; }
+        for (var i = 0; i < items.length; i++) list.appendChild(row(items[i]));
+        window.SkriblInline.mount(list);
+      })
+      .catch(function () { errEl.hidden = false; });
+  }
+  var retry = document.getElementById('feedRetry');
+  if (retry) retry.addEventListener('click', function () { load(); });
+  load();
 })();
 
 /* THE BOOT FLAG, and it must stay last. app.js and flip.js have set one since
