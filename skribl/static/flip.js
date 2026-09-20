@@ -5464,10 +5464,9 @@ musicRemove.addEventListener('click',(e)=>{ e.stopPropagation(); removeMusic(); 
 
 // overflow menu (save/load/export)
 const moreScrim=document.getElementById('moreScrim');
-// Shared with Pad via lib/postedui.js — neither editor carries a copy.
-window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : null;
-{ const _mi=document.getElementById('miPosted');
-  if(_mi) _mi.addEventListener('click', ()=>{ closeMenu(); if(window._skriblPostedUI) window._skriblPostedUI.open(); }); }
+// Your Skribls is the profile page since v304 (/library); the menu row is a
+// link. The post-time record and the recovery-key panel stay here.
+window._skriblPostedUI = null;
 function openMenu(){ if(window._skriblSyncHintToggle) window._skriblSyncHintToggle();
   if(window._skriblSyncThemeToggle) window._skriblSyncThemeToggle();
   moreMenu.hidden=false; if(moreScrim) moreScrim.hidden=false; moreBtn.classList.add('on'); moreBtn.setAttribute('aria-expanded','true');

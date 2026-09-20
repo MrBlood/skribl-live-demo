@@ -1,57 +1,35 @@
-{# Your Skribls — the local record of what this browser has posted.
-   Shared by Pad and Flip; the list lives in lib/posted.js and the rendering in
-   lib/postedui.js, so neither editor carries a copy.
+{# Your Skribls -- the list this browser kept of what it posted.
 
-   NOTE: this is a Jinja comment, not an HTML one. An HTML comment does NOT stop
-   Jinja evaluating tags inside it, so writing the usage example between <!-- -->
-   made this partial include ITSELF, 973 times, before Jinja gave up.
-   Usage: include 'skribl/_skribl_posted.html' from each editor template. #}
-<div id="postedDrawer" class="posted-drawer" role="dialog" aria-modal="true" aria-label="Your Skribls" hidden>
-  <div class="posted-backdrop" id="postedBackdrop"></div>
-  <div class="posted-inner">
-    <div class="posted-head">
-      <span>Your Skribls</span>
-      <button type="button" id="postedClose" class="posted-close" aria-label="Close">&#x2715;</button>
-    </div>
+   A SECTION OF THE PROFILE PAGE since v304, not a drawer in the editors: the
+   profile (/library) is where somebody's Skribls live, and the menu's "Your
+   Skribls" row opens it. The ids here are the contract lib/postedui.js reads
+   (postedList, postedSearch, postedCount, postedClear, postedRecover,
+   postedStatus, postedPanel); the module renders rows into #postedList and
+   owns every action on them. The recovery-key overlays (lib/recoverykey.js)
+   are built at runtime and attach to <body>.
 
-    <div class="help-search posted-search">
-      <span class="help-search-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </span>
-      <input type="search" id="postedSearch" class="help-search-input" autocomplete="off"
-             placeholder="Search your Skribls" aria-label="Search your Skribls">
-    </div>
-    <div class="help-search-count" id="postedCount" aria-live="polite"></div>
-
-    <div class="posted-foot posted-foot-top">
-      <span>Saved in this browser only &middot; clearing site data removes them,
-        and the key that can delete them &middot; a Skribl saved on this device
-        because posting failed is removed, oldest first, only when this
-        browser's storage is full and a drawing would otherwise be lost</span>
-      {# The other half of the recovery key. Until v281 the product could show
-         a key and never accept one back, so a user who did as they were told
-         — save it, then lose the browser — held the credential and had no way
-         to spend it. Sits beside Clear list because this is where somebody
-         goes when the list is not what they expected. #}
-      <button type="button" id="postedRecover" class="posted-clearbtn">Use a recovery key</button>
-      <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
-    </div>
-
-    <div class="posted-list" id="postedList"></div>
-
-    {# Deletion succeeds or fails asynchronously and the row simply vanishes on
-       success, which tells a screen-reader user nothing. #}
-    <div class="vis-hidden" id="postedStatus" role="status" aria-live="polite"
-         aria-atomic="true"></div>
-
-    {# Stated, not implied. Someone who reads this as an account will clear
-       their site data, lose everything, and be right to blame the app.
-       Since v279 that sentence carries more weight than it used to: the key
-       that can DELETE a Skribl lives here too, so clearing site data loses
-       this browser's copy of every one of them.
-       It no longer forfeits the ABILITY to withdraw, which is what this note
-       said until v281 — a key the author copied out can be handed back below.
-       It forfeits the copies kept here, which for anyone who exported nothing
-       is the same thing. #}
+   Included by skribl_library.html; loads with posted.css. #}
+<section id="postedPanel" class="posted-panel" aria-label="Your Skribls">
+  {# The count the module writes: "3 Skribls", or "1 of 3" while searching. #}
+  <div class="help-search-count posted-count" id="postedCount" aria-live="polite"></div>
+  <div class="posted-foot posted-foot-top">
+    <span>Saved in this browser only &middot; clearing site data removes them,
+      and the key that can delete them &middot; a Skribl saved on this device
+      because posting failed is removed, oldest first, only when this
+      browser's storage is full and a drawing would otherwise be lost</span>
+    {# The other half of the recovery key. Until v281 the product could show
+       a key and never accept one back, so a user who did as they were told
+       -- save it, then lose the browser -- held the credential and had no way
+       to spend it. Sits beside Clear list because this is where somebody
+       goes when the list is not what they expected. #}
+    <button type="button" id="postedRecover" class="posted-clearbtn">Use a recovery key</button>
+    <button type="button" id="postedClear" class="posted-clearbtn">Clear list</button>
   </div>
-</div>
+
+  <div class="posted-list" id="postedList"></div>
+
+  {# Deletion succeeds or fails asynchronously and the row simply vanishes on
+     success, which tells a screen-reader user nothing. #}
+  <div class="vis-hidden" id="postedStatus" role="status" aria-live="polite"
+       aria-atomic="true"></div>
+</section>

@@ -92,7 +92,9 @@ CONTROLS = [
     ("undo a clear",       "#clearUndoBtn",    "#clearUndo",      ""),
     ("help drawer",        "#helpDrawer",      "#helpDrawer",     ""),
     ("report a problem",   "#reportSheet",     "#reportSheet",    ""),
-    ("your skribls",       "#postedDrawer",    "#postedDrawer",   ""),
+    # Your Skribls left both editors in v304: it is the profile page (/library),
+    # reached from a menu row on each. Same row on both, so parity holds.
+    ("your skribls",       "#postedItem",      "#miPosted",       ""),
     # --- declared differences ---------------------------------------------
     ("page filmstrip",     None,               "#strip",
      "Flip only: pages are what make it an animation tool."),

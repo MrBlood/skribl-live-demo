@@ -83,6 +83,9 @@
       white-space: nowrap;
     }
     .make:hover { filter: brightness(1.08); }
+    .yours { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 999px;
+      text-decoration: none; color: var(--text-2); font-weight: 600; font-size: 14px; border: 1px solid var(--hairline); }
+    .yours:hover { color: var(--text); background: var(--control); }
 
     /* ---- the heading, and the three states --------------------------- */
     h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; }
@@ -161,6 +164,8 @@
       <span class="tag">gallery</span>
     </a>
     <span class="spacer"></span>
+    {# The profile, beside the feed: the two point at each other (v304). #}
+    <a href="{{ url_for('.skribl_library') }}" class="yours" id="galleryYours">Yours</a>
     <a href="{{ url_for('.skribl_editor') }}" class="make" id="galleryMake">Make one</a>
   </header>
 

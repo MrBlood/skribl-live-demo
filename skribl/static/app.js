@@ -5372,19 +5372,11 @@ window.addEventListener('touchcancel', _pinchEnd);
   sync();
 })();
 
-/* Your Skribls — shared with Flip via lib/postedui.js. */
-window._skriblPostedUI = window.SkriblPostedUI ? window.SkriblPostedUI.init() : null;
-{
-  const item = document.getElementById('postedItem');
-  if (item) item.addEventListener('click', () => {
-    if (typeof closeMenu === 'function') closeMenu();
-    else {
-      const o = document.getElementById('menuOverlay');
-      if (o) { o.classList.remove('open'); o.hidden = true; }
-    }
-    if (window._skriblPostedUI) window._skriblPostedUI.open();
-  });
-}
+/* Your Skribls is the profile page since v304 (/library, lib/postedui.js
+   renders there). The menu row is a link; nothing to wire here. The
+   post-time record (lib/posted.js) and the recovery-key panel
+   (lib/recoverykey.js) stay in this editor. */
+window._skriblPostedUI = null;
 
 // Report sheet — shared via lib/report.js so the two editors collect the same
 // context. Null-safe: without the lib the menu item simply does nothing.
