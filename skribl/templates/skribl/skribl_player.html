@@ -24,6 +24,7 @@
   {# The theme boot, so an embedding host's ?theme=light lands before first
      paint. The light ramp itself reaches player.css through css_live.json
      (":root[data-theme=\"light\"]" is listed as live for the player). #}
+  {% include 'skribl/_skribl_app_identity.html' %}
   {% include 'skribl/_skribl_theme_boot.html' %}
   <!-- player.css, NOT styles.css: a derived strict subset of the rules a
        player page can actually match. styles.css dwarfs what a shared link can

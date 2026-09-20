@@ -71,6 +71,14 @@
     if (!root) return mode;
     if (mode === LIGHT) root.setAttribute('data-theme', LIGHT);
     else root.removeAttribute('data-theme');
+    /* The browser's own chrome follows the page (SK-AUD-013): the theme-color
+       meta carries both grounds as data- attributes (_skribl_app_identity.html),
+       so this holds no colour of its own. A page without the meta is a host's. */
+    var meta = global.document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      var want = meta.getAttribute(mode === LIGHT ? 'data-light' : 'data-dark');
+      if (want) meta.setAttribute('content', want);
+    }
     return mode;
   }
 
