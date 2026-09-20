@@ -329,7 +329,10 @@
      nothing change unless the new label is also spoken. Every arm writes its
      label here (v292; outside review of v291, SK-AUD-018). #}
     <div class="vis-hidden" id="confirmStatus" role="status" aria-live="polite" aria-atomic="true"></div>
-    <div class="flip-chip" id="flipChip"></div>
+    {# The chip is how Flip answers a blocked action, a copy, an export, a
+       delete — and it was visual only (SK-AUD-006). A polite live region: the
+       message is read after whatever is being spoken, never stealing focus. #}
+    <div class="flip-chip" id="flipChip" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- "More" menu: the Pad's overflow actions — save/load draft + export. -->
     {# A real element, not a ::before on the menu: clicks on a pseudo-element
