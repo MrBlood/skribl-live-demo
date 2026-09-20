@@ -281,6 +281,10 @@ def create_blueprint(session=None, url_prefix=None,
     # adds skribl_asset as an app-wide global so the in-post player's macros
     # work in a host's template; this context processor still wins here, so
     # these pages are unchanged.
+    # The same helper, reachable from a ROUTE (the manifest's icon URLs): routes
+    # cannot import this module, which imports them.
+    bp.skribl_asset_url = lambda filename: asset_url(bp, filename)
+
     @bp.context_processor
     def _expose_asset_helper():
         # skribl_limits so the editors' maxlength attributes render from the

@@ -22,7 +22,7 @@ import sqlalchemy as sa
 
 from .core import (MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
-                   _og_meta, _valid_public_id)
+                   THEME_GROUND, _og_meta, _valid_public_id)
 from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict)
@@ -296,8 +296,11 @@ def register_routes(bp, *, index_route=False):
         # follow the blueprint's mount point, and only url_for knows that. The
         # scope is the mount point itself, so the installed app owns Flip, the
         # library and every shared link as well as the Pad it opens on.
-        from . import asset_url          # lazy: __init__ imports this module
-        from .core import THEME_GROUND
+        # The icons go through the blueprint's cache-busting asset helper,
+        # reached as bp.skribl_asset_url: asset_url lives in __init__, which
+        # imports this module, so it is handed across on the blueprint like
+        # skribl_media_store rather than imported (verify_seam resolves every
+        # name at module level, and a function-local import is invisible to it).
         start = url_for(".skribl_editor")
         body = {
             "name": "Skribl",
@@ -309,9 +312,9 @@ def register_routes(bp, *, index_route=False):
             "background_color": THEME_GROUND["dark"],
             "theme_color": THEME_GROUND["dark"],
             "icons": [
-                {"src": asset_url(bp, "icon-192.png"), "sizes": "192x192",
+                {"src": bp.skribl_asset_url("icon-192.png"), "sizes": "192x192",
                  "type": "image/png"},
-                {"src": asset_url(bp, "icon-512.png"), "sizes": "512x512",
+                {"src": bp.skribl_asset_url("icon-512.png"), "sizes": "512x512",
                  "type": "image/png"},
             ],
         }
