@@ -66,7 +66,9 @@
 
     /* ---- top bar: the brand lockup, and the way to make one ------------- */
     .top { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; }
-    .brand { display: flex; align-items: center; gap: 6px; }
+    /* min-height 44: the lockup is a link, and a 24px mark is not a tap
+       target (verify_a11y's hit-box census; the header is 44 tall anyway). */
+    .brand { display: flex; align-items: center; gap: 6px; min-height: 44px; }
     .brand .brand-mark { height: 24px; width: auto; display: block; overflow: visible; color: var(--text); }
     /* The mark's ink: the gradient stops _skribl_brand_mark.html carries, as
        the library colours them. Without these the signature paints black. */
