@@ -8665,3 +8665,50 @@ the mutation was run: a pin at DOMContentLoaded that could not see a deferred
 script had already run; a pin on a side effect that the fix removed; a pin on
 the visible box that could not see a band. And one mutation was itself wrong.
 The rule in CLAUDE.md is not decoration.
+
+## Unsealed, on top of v303 -- the final acquisition review, and the seal's margin
+
+**THIS HEADING CARRIES NO NUMBER ON PURPOSE**, as the v278 note explains; it
+takes one at the next seal.
+
+**THE FINAL REVIEW ACCEPTED v303.** The auditor's final acquisition review of
+the sealed packet independently recomputed the frozen tree hash from the
+packaged source, matched it against `RELEASE.md` and both attestations,
+summed the suite ledger to the stated assertions, and returned the verdict
+"near acquisition-quality": the v302 blockers closed, the Library finding
+withdrawn as the audit's own error, the remediation-tier finding closed, and
+the seal "internally coherent." What it left open it called bounded quality
+debt, in three product items and one process item:
+
+  - the closed-shape Motion Smear artefact (FUTURE.md 6g) -- detected and
+    said, not rendered away;
+  - Flip's 40px band below 360 -- the recorded product decision on the phone
+    row;
+  - the smudge settle's texture transient -- the brightness step is gone, the
+    beads are the walk;
+  - the seal's attestation margin -- the last batch rendered two minutes
+    after the PostgreSQL attestation was carried in.
+
+The owner's direction on the three product items stands: leave them until
+someone has a genuinely new idea for the first, or the toolbar call is made
+for the second; the third is polish. The process item is fixed here.
+
+**THE SEAL HOLDS BY DESIGN NOW.** `release_run.py --hold-lanes SECONDS` holds
+after the last batch and before the render, re-reading both attestations
+every 30 seconds until each verifies the frozen tree or the hold expires --
+and an expired hold renders exactly what a run without one would, LOCAL PASS
+with the lanes named as pending, so nothing is fabricated by waiting. The
+v303 seal had paused the run at a `--budget` slice boundary, and the last
+slice ran the final fourteen batches and the render without returning to the
+pause: a slice boundary is not the render. `hold_for_lanes()` takes its clock
+and its sleep as parameters so `verify_docs` drives it without waiting, from
+both sides -- it holds while a lane is stale and returns at once when both
+verify -- and the seal sequence in `docs/SESSION-CONTEXT.md` now names the
+flag in step 4.
+
+**THE DEVICE SMOKES ARE THE OWNER'S EVIDENCE, and the record will carry them.**
+The review asked that the physical iPhone and VoiceOver/NVDA smokes be
+durable release evidence rather than owner-only knowledge. They were run in
+parallel with the seal; their outcome is recorded in this entry when the
+owner reports it, which is the same place every other outcome the harness
+cannot reach has been recorded since v278's "Music works".

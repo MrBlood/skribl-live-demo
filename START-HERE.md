@@ -124,6 +124,7 @@ here is the rule you can break tomorrow.
 | A closed shape is counted and named when it is smeared; an open arc is not. | `verify_tween.py` |
 | A live smudge frame is as bright as the settled one, and the cheap path takes no layer round trip. | `verify_smudgeblur.py` |
 | A client capability is minted from Web Crypto or not at all: without it neither editor sends a client header and the server mints the key. | `verify_posted.py` |
+| The seal holds before its final render until every external lane attests the frozen tree, or its hold expires and the record says which lane is pending. | `verify_docs.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`

@@ -182,20 +182,26 @@ satisfied it, with the mechanics the rule leaves out.
 3. Dispatch `harness.yml` on the branch carrying the exact tree being sealed.
    Actions is free here (public repository, standard runners; CLAUDE.md says
    why and how to check).
-4. Start `python3 harness/release_run.py` in the background, or in `--budget`
-   slices. Every resume re-verifies the frozen hash and refuses a changed tree.
-5. **Before the final render, carry both attestations into the tree.** The
-   `mp4` and `postgres` jobs each write a file naming the tree they tested;
-   artifact download is blocked, so transcribe each from the job's own `cat`
-   step (the postgres job prints its attestation last, because its service
-   container's teardown pushes anything earlier out of the log reader's reach).
-   Write them to `harness/MP4-ATTESTATION.txt` and
-   `harness/POSTGRES-ATTESTATION.txt`. Both are in `release_run.GENERATED`, so
-   writing them does not move the frozen hash — confirm with
-   `release_run.tree_hash()`, then confirm `release_run.mp4_attestation(frozen)`
-   and `release_run.postgres_attestation(frozen)` both say `verified`, not
-   STALE. Pause the run for this with `--budget` slicing, or `kill -STOP` it
-   from a script whose command line the pattern cannot match.
+4. Start `python3 harness/release_run.py --hold-lanes 3600` in the background,
+   or in `--budget` slices with the same flag on every invocation. Every resume
+   re-verifies the frozen hash and refuses a changed tree. The flag is the
+   seal's engineered margin: after the last batch and before the render, the
+   run re-reads both attestations every 30 seconds until they verify or the
+   hold expires, and says which lane it is waiting for. (v303 sealed without
+   it and the last batch rendered two minutes after the PostgreSQL attestation
+   landed — a valid record on a lucky margin. Pausing with `--budget` slicing
+   or `kill -STOP` is the fallback, and the slice boundary is not the render.)
+5. **While it holds, carry both attestations into the tree.** The `mp4` and
+   `postgres` jobs each write a file naming the tree they tested; artifact
+   download is blocked, so transcribe each from the job's own `cat` step (the
+   postgres job prints its attestation last, because its service container's
+   teardown pushes anything earlier out of the log reader's reach). Write them
+   to `harness/MP4-ATTESTATION.txt` and `harness/POSTGRES-ATTESTATION.txt`.
+   Both are in `release_run.GENERATED`, so writing them does not move the
+   frozen hash — confirm with `release_run.tree_hash()`, then confirm
+   `release_run.mp4_attestation(frozen)` and
+   `release_run.postgres_attestation(frozen)` both say `verified`, not STALE.
+   The hold releases itself on the next recheck.
 6. The run writes `harness/RELEASE.md` and `harness/LAST-RUN.txt` and stamps
    the documents. Commit the generated set by name; `release_run.GENERATED` is
    the list, read it rather than retype it. Check with

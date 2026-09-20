@@ -1477,6 +1477,51 @@ check("docs/INTEGRATION.md names every seam a host can pass",
       f"all {len(_seams)} seams, read from the signature rather than a list")
 
 
+# THE SEAL HOLDS FOR ITS EXTERNAL LANES, FROM BOTH SIDES (V303-PROC-001; the
+# final acquisition review of v303). release_run.hold_for_lanes() sits between
+# the last batch and the render and re-reads the attestations until each
+# verifies the frozen tree or the hold expires. Driven here with a fake clock
+# and a fake sleep so nothing waits: a tree nothing attests must hold and
+# recheck, then expire INTO pending -- never into a verified lane; the tree the
+# committed attestations actually name must return at once, without sleeping;
+# and no hold asked for must not hold. A hold that returned immediately, or
+# that reported a lane verified on expiry, is the v303 margin back, or worse.
+print("\nDOCS — the seal holds before its final render until every external lane attests")
+_lanes = ["verify_mp4.py", "verify_postgres.py"]
+_slept, _said, _t = [], [], [0.0]
+
+def _sleep(n):
+    _slept.append(n)
+
+def _clock():
+    _t[0] += 31.0
+    return _t[0]
+
+_pend = _rr.hold_for_lanes("0" * 64, _lanes, 100, sleep=_sleep, clock=_clock, say=_said.append)
+check("with no lane attesting the tree, the hold waits and rechecks",
+      len(_slept) >= 2 and any(m.startswith("holding") for m in _said),
+      f"slept {len(_slept)}x; said {[m[:40] for m in _said]}")
+check("...and an expired hold renders the lanes as PENDING, never as verified",
+      len(_pend) == 2 and any(m.startswith("HOLD EXPIRED") for m in _said),
+      f"pending={_pend}")
+_slept.clear(); _said.clear()
+_pend0 = _rr.hold_for_lanes("0" * 64, _lanes, 0, sleep=_sleep, clock=_clock, say=_said.append)
+check("no hold asked for is no hold: the pending lanes are returned at once",
+      len(_pend0) == 2 and not _slept, f"slept {len(_slept)}x, pending={_pend0}")
+_named = []
+for _f in ("harness/MP4-ATTESTATION.txt", "harness/POSTGRES-ATTESTATION.txt"):
+    _m = re.search(r"^tree:\s*([0-9a-f]{64})", (ROOT / _f).read_text(encoding="utf-8"), re.M) \
+        if (ROOT / _f).is_file() else None
+    _named.append(_m.group(1) if _m else None)
+if _named[0] and _named[0] == _named[1]:
+    _slept.clear(); _said.clear()
+    _done = _rr.hold_for_lanes(_named[0], _lanes, 100, sleep=_sleep, clock=_clock, say=_said.append)
+    check("the tree both committed attestations name is not held for at all",
+          _done == [] and not _slept, f"pending={_done}, slept {len(_slept)}x")
+else:
+    _not_applicable.append("the two committed attestations name different trees "
+                           "(a seal is in progress), so the no-hold side is not driven")
+
 bad = [r for r in results if not r[0]]
 # The leading "N/M passed" token is a contract run_harness.sh parses with a
 # LEADING-anchored regex, so trailing text is safe — that is how the FAILURES
