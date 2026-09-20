@@ -99,12 +99,14 @@
       // long as the key, is what survives the response being lost — the
       // server's own would have been handed over once, in the answer that
       // never arrived. Both ride the retry, so a replayed post ends with this
-      // browser holding the key that deletes it.
+      // browser holding the key that deletes it. Either is null without Web
+      // Crypto (RE-AUD-001), and a null is not sent: the server then mints
+      // the key, as it always did.
       if (window.SkriblPosted) {
         const cid = window.SkriblPosted.clientId();
         if (cid) baseHeaders['X-Skribl-Client'] = cid;
         if (!sendSkribl._idemTok) sendSkribl._idemTok = window.SkriblPosted.mintSecret();
-        baseHeaders['X-Skribl-Delete-Token'] = sendSkribl._idemTok;
+        if (sendSkribl._idemTok) baseHeaders['X-Skribl-Delete-Token'] = sendSkribl._idemTok;
       }
 
       // Client-side size guard: the server caps the request body at

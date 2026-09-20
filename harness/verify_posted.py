@@ -397,6 +397,95 @@ with sync_playwright() as p:
     lf.context.close()
 
     # -----------------------------------------------------------------------
+    print("\nYOUR SKRIBLS — without Web Crypto no capability is minted, and none is sent (RE-AUD-001)")
+    #
+    # The re-audit of the remediation tier read mintSecret() and found a
+    # Math.random fallback where getRandomValues was absent -- a guessable
+    # revocation key called a capability. A capability fails closed: with Web
+    # Crypto gone the library mints nothing, stores nothing, both editors send
+    # neither header, and the SERVER mints the key and returns it, exactly as
+    # it did before the client could. Pinned on the wire (the headers the POST
+    # actually carried) and on the outcome (the entry holds a key the server
+    # honours), on both surfaces, with Web Crypto removed at the prototype so
+    # no code path can find it. The Idempotency-Key is not a capability and
+    # still rides.
+    NO_CRYPTO = """(() => {
+      try { Object.defineProperty(Crypto.prototype, 'getRandomValues',
+                                  { value: undefined, configurable: true }); } catch (e) {}
+      try { localStorage.removeItem('skribl_client_v1'); } catch (e) {}
+    })();"""
+    CAPS = "(() => ({ tok: window.SkriblPosted.mintSecret(), cid: window.SkriblPosted.clientId(), " \
+           "stored: localStorage.getItem('skribl_client_v1'), " \
+           "grv: typeof crypto.getRandomValues }))()"
+
+    def nocrypto_page(path):
+        ctx = b.new_context()
+        ctx.add_init_script(NO_CRYPTO)
+        page = ctx.new_page()
+        sent = []
+        page.on("request", lambda r: sent.append(dict(r.headers))
+                if r.method == "POST" and r.url.startswith(API) else None)
+        page.goto(f"{BASE}{path}", wait_until="load")
+        page.wait_for_timeout(1200)
+        return page, sent
+
+    def cap_pins(label, page, sent, entry):
+        caps = page.evaluate(CAPS)
+        check(f"{label}: the fixture really removed Web Crypto",
+              caps["grv"] == "undefined", f"typeof crypto.getRandomValues = {caps['grv']}")
+        check(f"{label}: mintSecret() is null, not a Math.random string",
+              caps["tok"] is None, repr(caps["tok"]))
+        check(f"{label}: clientId() is null and nothing was stored",
+              caps["cid"] is None and caps["stored"] is None,
+              f"cid={caps['cid']!r} stored={caps['stored']!r}")
+        hdrs = sent[-1] if sent else {}
+        check(f"{label}: the POST carried NEITHER client capability header",
+              bool(sent) and "x-skribl-client" not in hdrs and "x-skribl-delete-token" not in hdrs,
+              str({k: v[:12] for k, v in hdrs.items() if k.startswith("x-skribl")}) if sent else "no POST seen")
+        check(f"{label}: ...but still an Idempotency-Key, which is not a capability",
+              bool(sent) and bool(hdrs.get("idempotency-key")), "no key on the wire")
+        tok = (entry or {}).get("tok")
+        check(f"{label}: the entry holds the SERVER's key, and it takes the post down",
+              bool(entry) and bool(tok) and len(tok) >= 32 and delete_with(entry.get("id"), tok) == 204,
+              f"entry={str(entry)[:80]}")
+
+    # THE PAD.
+    np_, sent = nocrypto_page("/skribl-pad")
+    nbox = np_.locator("#canvas").bounding_box()
+    np_.mouse.move(nbox["x"] + 60, nbox["y"] + 60)
+    np_.mouse.down()
+    np_.mouse.move(nbox["x"] + 160, nbox["y"] + 130, steps=8)
+    np_.mouse.up()
+    np_.wait_for_timeout(400)
+    np_.click("#recordBtn")
+    np_.wait_for_timeout(600)
+    np_.click("#postBtn")
+    np_.wait_for_timeout(500)
+    np_.fill("#postTitleInput", "No Web Crypto, Pad")
+    np_.click("#postSubmitBtn")
+    np_.wait_for_timeout(2500)
+    nentries = [e for e in np_.evaluate(READ) if not e.get("local")]
+    cap_pins("Pad", np_, sent, nentries[0] if nentries else None)
+    np_.context.close()
+
+    # FLIP.
+    nf, sent2 = nocrypto_page("/flip")
+    fbox2 = nf.locator("#pad").bounding_box()
+    nf.mouse.move(fbox2["x"] + 60, fbox2["y"] + 60)
+    nf.mouse.down()
+    nf.mouse.move(fbox2["x"] + 150, fbox2["y"] + 130, steps=8)
+    nf.mouse.up()
+    nf.wait_for_timeout(250)
+    nf.click("#postBtn")
+    nf.wait_for_timeout(400)
+    nf.fill("#flipShareTitle", "No Web Crypto, Flip")
+    nf.click("#flipShareSubmit")
+    nf.wait_for_timeout(2500)
+    fentries = nf.evaluate(READ)
+    cap_pins("Flip", nf, sent2, fentries[0] if fentries else None)
+    nf.context.close()
+
+    # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — a local-only save IS listed, on this device, and survives the sweep")
     #
     # Pad falls back to a local save when the server is unreachable — exactly
