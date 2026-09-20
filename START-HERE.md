@@ -128,6 +128,7 @@ here is the rule you can break tomorrow.
 | The public gallery is opt-in: a post carries `visibility: "public"` only when its author ticked "Show in the public gallery" on the Pad or Flip sheet, the key is omitted otherwise, compose mode renders no such box, and `/gallery` shows exactly the posts that carried it. | `verify_gallery.py` |
 | A report is a row in an operator's queue, never an action: `POST /api/skribls/<id>/report` writes one row per (post, reporter), a duplicate writes nothing, an unreadable post 404s, the post's visibility is untouched, and `takedown --reports` lists it. | `verify_tilereport.py`, `verify_takedown.py` |
 | `/library` is the profile's tab and a profile is somebody's: with no host identity it shows what this browser posted (unlisted included, from the same list "Your Skribls" keeps), with one it reads the listing's author filter, and in neither case the public listing. Its stage goes full screen and comes back. | `verify_library.py` |
+| "Your Skribls" is the profile page, not a drawer: both editors' menu row links to `/library`, the list renders there through the same module with the same custody rules, and a row's gallery switch changes the post's visibility on the server and in the record. | `verify_posted.py`, `verify_library.py`, `verify_a11y.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`
@@ -694,7 +695,7 @@ rather than a shared rule.
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
-| `modalfocus.js` | Pad+Flip+gallery | Focus for surfaces that declare aria-modal="true". |
+| `modalfocus.js` | Pad+Flip+library+gallery | Focus for surfaces that declare aria-modal="true". |
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |
@@ -707,10 +708,10 @@ rather than a shared rule.
 | `posted.js` | Pad+Flip+library | Your Skribls — a local record of what you have posted. |
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
 | `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
-| `postedui.js` | Pad+Flip | Your Skribls — rendering. |
+| `postedui.js` | library | Your Skribls — rendering. |
 | `pressure.js` | Pad+Flip | Stylus pressure — the curve, the floor, and the on/off, shared by both editors. |
 | `recentcolors.js` | Pad+Flip | Recent colours — the first controller shared by both editors. |
-| `recoverykey.js` | Pad+Flip | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
+| `recoverykey.js` | Pad+Flip+library | Both ends of an anonymous author's revocation key: showing one, taking one back, and standing between a bulk clear and the keys it would discard. |
 | `report.js` | Pad+Flip | "Report a problem" — the context, collected once, for both editors. |
 | `scrubkeys.js` | Pad+Flip+player | Keyboard operation and live value for the three playback scrubbers. |
 | `segslider.js` | Pad+Flip | Keeps a .seg-slider pill aligned to the selected button in a .seg group. |

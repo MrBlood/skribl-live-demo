@@ -8861,3 +8861,40 @@ sees none of them, a host identity switches the page to the author filter
 stage enters and leaves full screen. Calibrated per component; the log is in
 the PR.
 
+## Unsealed, on top of v303 -- Your Skribls is the profile page (v304 when sealed)
+
+The owner, thinking about what the product should logically have: a drafts
+folder, a profile library, a public gallery. Drafts are "Save a backup" and
+"Open a backup", and nothing new is built there. The profile and the gallery
+existed by then; what was wrong was that "Your Skribls" -- a drawer inside
+each editor, with the links, the keys, the armed deletes -- and the profile
+page were two surfaces for one list, and nothing linked to the page at all.
+
+**THE DRAWER MOVED, ITS ENGINE DID NOT.** lib/postedui.js renders on the
+profile now, into the same partial with the same ids, with three things a
+row could not do in a drawer: its picture is the poster, its title puts the
+Skribl on the stage, and it carries a gallery switch (PATCH visibility with
+the key the browser holds, or the host's author; the record follows) and,
+where the system has a share sheet, Share. Every rule the tray earned --
+the armed second tap (SK-AUD-014), the 404 that stays ambiguous, the key
+offered only where one exists, the local save's own row -- is the same
+code, and verify_posted drives it on the profile page now. The editors'
+menu row is a link. Their post-time work (the record, the key shown when
+the browser cannot keep it) stays where it was.
+
+**THE STYLESHEET FOLLOWED.** The tray's and the recovery panel's rules
+moved from styles.css to posted.css, loaded by the editors (for the panel)
+and the profile (for both); the profile maps their token vocabulary onto
+its own palette in both ramps. Moved, not copied: styles.css keeps a note
+where each block was, and the player subset was re-emitted.
+
+**THE FILTER IS TWO CHIPS AND ALL**, because a post of yours is in the
+gallery or link only, and nothing else. Bluesky's tabs exist for replies,
+media and likes; Skribl has none, and empty tabs would be a promise.
+
+Pinned by `verify_library.py` (the actions, the switch on the wire and in
+the listing, Delete armed then done, the filter, Share exactly where
+navigator.share is) and `verify_posted.py` re-pointed at the profile; the
+recovery-key dialogs joined verify_a11y's modal census on `/library`.
+Calibrated per component; the log is in the PR.
+

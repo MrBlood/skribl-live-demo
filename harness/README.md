@@ -113,7 +113,9 @@ A green check is not evidence until it has been shown to go red.
   invocation, or use `run_harness.sh`.
 ### v200 review-response suites
 
-- `verify_posted.py` — "Your Skribls", the local record of what this browser
+- `verify_posted.py` — (since v304 the list renders on the profile page,
+  `/library`, and the editors' menu row links there; the suite drives it
+  there) — "Your Skribls", the local record of what this browser
   posted, which since v279 also holds the revocation key. Pins the cap that
   never evicts a key, a failed write being reported rather than assumed,
   hostile storage (throws, quota, unavailable), the tray's Delete and Copy key
@@ -260,7 +262,10 @@ A green check is not evidence until it has been shown to go red.
   — the card is the idle cost of every post in a feed, and it was 451,824 B
   until the encoder stopped choosing PNG on a rule that had gone wrong.
 
-- `verify_library.py` — the PROFILE'S SKRIBLS TAB (`/library`), whose it is
+- `verify_library.py` — the PROFILE'S SKRIBLS TAB (`/library`), the rows'
+  actions (the gallery switch PATCHes and the record follows; Delete arms
+  then takes the post down; Share only where the system has a sheet) and
+  the all / in the gallery / link only filter (v304), whose it is
   (since v304: what this browser posted, unlisted included, or the host's
   signed-in user through the listing's author filter; never the public
   listing, which is the gallery's), its full-screen stage, and what it

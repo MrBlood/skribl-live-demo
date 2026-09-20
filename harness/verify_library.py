@@ -302,6 +302,75 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(1200)
     check("...and the other is unlisted", pg.inner_text("#pStats").strip() == "unlisted", pg.inner_text("#pStats"))
 
+    # ---- the actions on a row, and the filter (v304) -----------------------
+    print("\nLIBRARY — a row can do what the tray could, and more")
+    acts = pg.evaluate("""(id) => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        return { buttons: [...r.querySelectorAll('.posted-actions button')].map(b => b.className.split(' ')[0]),
+                 share: !!r.querySelector('.posted-share'), canShare: !!navigator.share,
+                 poster: !!r.querySelector('.posted-poster'), badge: !!r.querySelector('.posted-thumb svg'),
+                 gallery: (r.querySelector('.posted-gallery') || {}).textContent,
+                 pressed: (r.querySelector('.posted-gallery') || {getAttribute: () => null}).getAttribute('aria-pressed') }; }""", ids[0])
+    check("a keyed row offers Copy link, the gallery switch, Delete and Copy key",
+          {"posted-copy", "posted-gallery", "posted-delete", "posted-key"} <= set(acts["buttons"]), str(acts["buttons"]))
+    check("Share is offered exactly where the system has a share sheet", acts["share"] == acts["canShare"],
+          f"share button={acts['share']} navigator.share={acts['canShare']}")
+    check("the row's picture is the poster, with the kind's icon as a badge", acts["poster"] and acts["badge"], str(acts))
+    check("the unlisted post's switch reads link only, unpressed",
+          acts["gallery"] == "Link only" and acts["pressed"] == "false", str(acts))
+
+    # THE FILTER: chips narrow to the two states a post of yours can be in.
+    pg.click('.chips .chip[data-filter="public"]')
+    pg.wait_for_timeout(300)
+    shown_pub = pg.evaluate("() => [...document.querySelectorAll('#postedList .posted-row')].map(r => r.getAttribute('data-id'))")
+    pg.click('.chips .chip[data-filter="unlisted"]')
+    pg.wait_for_timeout(300)
+    shown_unl = pg.evaluate("() => [...document.querySelectorAll('#postedList .posted-row')].map(r => r.getAttribute('data-id'))")
+    pg.click('.chips .chip[data-filter="all"]')
+    pg.wait_for_timeout(300)
+    check("'In the gallery' shows the ticked post and not the other", shown_pub == [ids[1]], str(shown_pub))
+    check("'Link only' shows the other and not the ticked one", shown_unl == [ids[0]], str(shown_unl))
+
+    # THE GALLERY SWITCH: PATCH visibility with the key, and the record follows.
+    patched = []
+    pg.on("request", lambda r: patched.append(r.url) if r.method == "PATCH" else None)
+    pg.click(f'.posted-row[data-id="{ids[0]}"] .posted-gallery')
+    pg.wait_for_timeout(1500)
+    after = pg.evaluate("""(id) => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        const e = JSON.parse(localStorage.getItem('skribl_posted_v1')).find(x => x.id === id);
+        return { text: r.querySelector('.posted-gallery').textContent, pressed: r.querySelector('.posted-gallery').getAttribute('aria-pressed'),
+                 stored: e && e.visibility, live: document.getElementById('postedStatus').textContent }; }""", ids[0])
+    listed_ids_after = []
+    _cur = None
+    for _ in range(50):
+        _u = urllib.request.urlopen(BASE + "/api/skribls?limit=100" + (f"&cursor={_cur}" if _cur else ""), timeout=20)
+        _body = json.loads(_u.read().decode())
+        listed_ids_after += [i["id"] for i in _body.get("items", [])]
+        _cur = _body.get("next_cursor")
+        if not _cur:
+            break
+    check("the switch PATCHes that post's visibility", any(f"/api/skribls/{ids[0]}" in u for u in patched), str(patched))
+    check("...the post is in the public listing now", ids[0] in listed_ids_after)
+    check("...the row and the record say in the gallery",
+          after["text"] == "In gallery" and after["pressed"] == "true" and after["stored"] == "public" and "gallery" in after["live"].lower(),
+          str(after))
+
+    # DELETE, armed then done: the post is gone for everyone, the row with it.
+    pg.click(f'.posted-row[data-id="{ids[1]}"] .posted-delete')
+    pg.wait_for_timeout(300)
+    armed = pg.evaluate("(id) => !!document.querySelector('.posted-row[data-id=\"' + id + '\"]') && "
+                        "document.querySelector('.posted-row[data-id=\"' + id + '\"] .posted-delete').classList.contains('armed')", ids[1])
+    check("the first tap on Delete arms it and removes nothing", armed)
+    pg.click(f'.posted-row[data-id="{ids[1]}"] .posted-delete')
+    pg.wait_for_timeout(1500)
+    try:
+        st_gone = urllib.request.urlopen(BASE + f"/api/skribls/{ids[1]}", timeout=20).status
+    except urllib.error.HTTPError as e:
+        st_gone = e.code
+    check("the second tap deletes it for everyone (404 now) and the row is gone",
+          st_gone == 404 and not pg.evaluate("(id) => !!document.querySelector('.posted-row[data-id=\"' + id + '\"]')", ids[1]),
+          f"GET {st_gone}")
+    ids_left = [ids[0]]
+
     # ---- full screen -------------------------------------------------------
     fs_enabled = pg.evaluate("() => !!document.fullscreenEnabled")
     fs_btn = pg.evaluate("() => !document.getElementById('btnFull').hidden")
