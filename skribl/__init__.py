@@ -287,10 +287,13 @@ def create_blueprint(session=None, url_prefix=None,
         # same constants the API enforces and the columns hold, rather than
         # being typed into the HTML and drifting (they had, to 60/280 against
         # an 80/300 column — outside review, low severity).
-        from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS
+        from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS, THEME_GROUND
         return {"skribl_asset": lambda filename: asset_url(bp, filename),
                 "skribl_limits": {"title": MAX_TITLE_CHARS,
-                                  "caption": MAX_CAPTION_CHARS}}
+                                  "caption": MAX_CAPTION_CHARS},
+                # The two grounds _skribl_app_identity.html stamps on its
+                # theme-color meta (SK-AUD-013).
+                "skribl_theme_ground": THEME_GROUND}
     register_routes(bp, index_route=index_route)
     register_security(bp, SKRIBL_VERSION, player_target=player_target)
     return bp

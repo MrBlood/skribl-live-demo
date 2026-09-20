@@ -289,6 +289,36 @@ def register_routes(bp, *, index_route=False):
         # database, so leaving it unlinked is enough if you do not want it.
         return render_template("skribl/skribl_feed.html")
 
+    @bp.get("/manifest.webmanifest")
+    def skribl_manifest():
+        """The web app manifest a Home Screen install reads: name, icons, colours and where it opens."""
+        # A route, not a static file (SK-AUD-013): every URL in it has to
+        # follow the blueprint's mount point, and only url_for knows that. The
+        # scope is the mount point itself, so the installed app owns Flip, the
+        # library and every shared link as well as the Pad it opens on.
+        from . import asset_url          # lazy: __init__ imports this module
+        from .core import THEME_GROUND
+        start = url_for(".skribl_editor")
+        body = {
+            "name": "Skribl",
+            "short_name": "Skribl",
+            "description": "Draw a post that plays.",
+            "start_url": start,
+            "scope": start.rsplit("/", 1)[0] + "/",
+            "display": "standalone",
+            "background_color": THEME_GROUND["dark"],
+            "theme_color": THEME_GROUND["dark"],
+            "icons": [
+                {"src": asset_url(bp, "icon-192.png"), "sizes": "192x192",
+                 "type": "image/png"},
+                {"src": asset_url(bp, "icon-512.png"), "sizes": "512x512",
+                 "type": "image/png"},
+            ],
+        }
+        resp = jsonify(body)
+        resp.mimetype = "application/manifest+json"
+        return resp
+
     @bp.get("/s/<public_id>")
     def skribl_player(public_id):
         """The public player a shared link opens."""

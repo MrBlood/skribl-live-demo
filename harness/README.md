@@ -386,6 +386,17 @@ A green check is not evidence until it has been shown to go red.
 - Drawing before adding music triggers `setLoopToDrawingLength()`, so the loop
   will be the drawing's length, not 20s. That's intended; don't read it as a bug.
 
+### Unsealed, on top of v302 — the acquisition audit
+
+- `verify_identity.py` — the app's identity to a browser and a Home Screen
+  (SK-AUD-013): `/manifest.webmanifest` is served and every icon it names is
+  fetched and decoded as the PNG of the size it declares; the Pad, Flip, the
+  player and the library carry the manifest link, a theme-color and a touch
+  icon, and the feed (a host's page) carries none; the two grounds in
+  `skribl.core.THEME_GROUND` equal the stylesheet's `--surface-base` in each
+  ramp; and the theme-color follows the page's theme before first paint and
+  on a switch.
+
 ## Where a suite's rationale lives
 
 **In the suite's own docstring, next to the assertions it explains.**

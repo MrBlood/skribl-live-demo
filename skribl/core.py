@@ -63,6 +63,15 @@ def _valid_public_id(public_id):
 # templates render maxlength from the same numbers through the blueprint's
 # context processor. Nothing types a length beside them any more.
 MAX_TITLE_CHARS = 80
+
+# THE PAGE'S GROUND, for the browser's own chrome (SK-AUD-013). The web app
+# manifest's theme_color/background_color and every principal page's
+# <meta name="theme-color"> are rendered from here, so the address bar and the
+# Home Screen splash wear the same dark the page does, and the light ground
+# when the theme is light. The stylesheet is the source of truth for the
+# colours themselves (--surface-base in each ramp); verify_identity.py pins
+# these two against it, which is what keeps a second copy from drifting.
+THEME_GROUND = {"dark": "#0b0d12", "light": "#fbfcfd"}
 MAX_CAPTION_CHARS = 300
 
 

@@ -1,0 +1,24 @@
+{# THE APP'S IDENTITY TO A BROWSER AND A HOME SCREEN (SK-AUD-013; acquisition
+   audit of v302). Until this partial the principal pages carried no manifest,
+   no icon and no theme colour, so a Skribl added to a phone's Home Screen got
+   a screenshot for an icon and browser-default chrome around it. One include,
+   four pages -- Pad, Flip, the player, the library -- and NOT the feed, which
+   is a host's page that is not Skribl and must not claim to be.
+
+   The manifest is a ROUTE rather than a static file so its URLs follow the
+   blueprint's mount point through url_for, like every other path Skribl emits.
+   The icons are the brand mark (_skribl_brand_mark.html) rendered on the dark
+   ground; regenerate them from the mark rather than editing the PNGs.
+
+   The theme colour is the dark ground here, and the two grounds ride on the
+   tag as data- attributes so the theme boot (before first paint) and
+   lib/theme.js (on a switch) can re-stamp it without holding a colour of
+   their own: the browser's chrome follows the PAGE's theme, not the OS's
+   alone. skribl.core.THEME_GROUND is the one place the two values live in
+   Python, and verify_identity.py pins them against the stylesheet's own
+   --surface-base in both ramps. Include this BEFORE _skribl_theme_boot.html,
+   which looks the meta up as it runs. #}
+<link rel="manifest" href="{{ url_for('.skribl_manifest') }}">
+<meta name="theme-color" content="{{ skribl_theme_ground.dark }}" data-dark="{{ skribl_theme_ground.dark }}" data-light="{{ skribl_theme_ground.light }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ skribl_asset('icon-192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ skribl_asset('apple-touch-icon.png') }}">

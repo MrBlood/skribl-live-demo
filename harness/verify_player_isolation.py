@@ -977,7 +977,12 @@ with sync_playwright() as sp:
     # app.js is on the JS ratchet and its reachable lines sit at their ceiling.
     # ~90 B; the player's one canvas was the only thing on the page with no
     # name. Measured 11,418 against the old ceiling of 11,400.
-    HTML_RATCHET = 11_500
+    # 11,500 -> 12,000 for the app's identity (SK-AUD-013): a manifest link,
+    # a theme-color meta carrying both grounds, an icon and a touch icon
+    # (_skribl_app_identity.html, ~360 B) and the boot's re-stamp of that
+    # meta for a light page (~80 B). Without them a shared link added to a
+    # Home Screen wore a screenshot for an icon. Measured 11,859.
+    HTML_RATCHET = 12_000
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
