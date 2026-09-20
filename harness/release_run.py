@@ -139,6 +139,9 @@ BATCHES = [
     # unticked, one ticked, per surface) and reads the listing back, so it
     # stays out of verify_deletion_foundation's batch.
     ["verify_gallery.py", "verify_tilereport.py"],   # v304: the public gallery, opt-in; Report on every tile
+    # store: posts public fixtures, fetches payloads to count plays, and
+    # plants old views straight into the shared database.
+    ["verify_hot.py"],                     # v304: search, and Hot by counted plays
     ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],                  # measures
     ["verify_flipmotion.py"],              # measures

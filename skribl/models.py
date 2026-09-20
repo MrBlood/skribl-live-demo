@@ -406,6 +406,11 @@ class SkriblPost(SkriblBase):
     caption = Column(String(MAX_CAPTION_CHARS), nullable=True)
     payload_json = Column(JSON, nullable=False)
     has_audio = Column(Boolean, default=False, nullable=False)
+    # PLAYS, COUNTED (v304). One per client per post per day -- the rows in
+    # skribl_views are the record and this is their running total, kept on
+    # the post so a listing can show it without a join. server_default so
+    # the migration can add it NOT NULL to a populated table.
+    views_total = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime(timezone=True),
                         default=lambda: datetime.now(timezone.utc), nullable=False)
 
@@ -538,6 +543,7 @@ class SkriblPost(SkriblBase):
             "title": self.title,
             "caption": self.caption,
             "has_audio": bool(self.has_audio),
+            "views": int(self.views_total or 0),
             "user_id": self.user_id,
             "visibility": self.visibility,
             "created_at": (as_utc(self.created_at).isoformat()
@@ -623,6 +629,34 @@ class SkriblPostMedia(SkriblBase):
         ForeignKeyConstraint(["post_id"], ["skribl_posts.id"],
                              name="fk_post_media_post", ondelete="CASCADE"),
     )
+
+class SkriblView(SkriblBase):
+    """A counted play (v304): this client watched this post today.
+
+    THE GALLERY LISTS HOT SKRIBLS, and "hot" has to mean something that
+    cannot be gamed by holding refresh. A view is recorded when a payload is
+    fetched to be played (GET /api/skribls/<id>, the one thing every player
+    does), keyed by the rate limiter's salted hash of the client and the UTC
+    day, and (post, client, day) is unique: a second fetch the same day is
+    the same view. No address is stored, as with rate events and reports.
+    Hot is the count of these in the last seven days; New is unchanged.
+    """
+    __tablename__ = "skribl_views"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, nullable=False, index=True)
+    viewer_hash = Column(String(64), nullable=False)
+    day = Column(String(10), nullable=False)          # UTC, YYYY-MM-DD
+    created_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("ix_view_unique", "post_id", "viewer_hash", "day", unique=True),
+        Index("ix_skribl_views_created", "created_at"),
+        ForeignKeyConstraint(["post_id"], ["skribl_posts.id"],
+                             name="fk_view_post", ondelete="CASCADE"),
+    )
+
 
 class SkriblReport(SkriblBase):
     """Somebody said a public Skribl should not be there (v304).

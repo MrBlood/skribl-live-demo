@@ -24,6 +24,10 @@
   var PAGE = 24;
   var cursor = null;       /* the keyset cursor for the next page, or null */
   var loading = false;
+  var sort = 'new';        /* new | hot -- the server's orders */
+  var query = '';          /* the search box's words, sent as q */
+  var noneEl = document.getElementById('galleryNone');
+  var subEl = document.getElementById('gallerySub');
 
   function when(iso) {
     if (!iso) return '';
@@ -51,6 +55,15 @@
     tm.className = 'tm';
     tm.textContent = when(item.created_at);
     head.appendChild(tm);
+    /* PLAYS, as counted (v304): the seven-day count under Hot, the total
+       otherwise. Zero says nothing rather than "0 plays". */
+    var n = sort === 'hot' ? (item.views_recent || 0) : (item.views || 0);
+    if (n > 0) {
+      var pl = document.createElement('span');
+      pl.className = 'plays';
+      pl.textContent = n + (n === 1 ? ' play' : ' plays');
+      head.appendChild(pl);
+    }
     /* REPORT, ON EVERY TILE. The button carries the post's id; the sheet is
        one, shared, and opened with it. */
     var rep = document.createElement('button');
@@ -98,7 +111,10 @@
       cursor = null;
       while (list.firstChild) list.removeChild(list.firstChild);
     }
-    var url = api + '?limit=' + PAGE + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
+    var url = api + '?limit=' + PAGE + '&sort=' + sort
+            + (query ? '&q=' + encodeURIComponent(query) : '')
+            + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
+    if (noneEl) noneEl.hidden = true;
     return fetch(url, { credentials: 'same-origin' })
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -110,7 +126,10 @@
         if (items.length) window.SkriblInline.mount(list);
         cursor = (body && body.next_cursor) || null;
         more.hidden = !cursor;
-        empty.hidden = list.children.length > 0;
+        /* Two empty states: nothing in the gallery at all, and nothing that
+           matches what was typed. */
+        empty.hidden = list.children.length > 0 || !!query;
+        if (noneEl) noneEl.hidden = list.children.length > 0 || !query;
       })
       .catch(function () {
         errEl.hidden = false;
@@ -202,6 +221,36 @@
       send.disabled = false;
     });
   });
+
+  /* ---- New / Hot, and the search box --------------------------------- */
+  var tabs = document.querySelectorAll('.tabs .tab[data-sort]');
+  Array.prototype.forEach.call(tabs, function (tab) {
+    tab.addEventListener('click', function () {
+      var want = tab.getAttribute('data-sort') === 'hot' ? 'hot' : 'new';
+      if (want === sort) return;
+      sort = want;
+      Array.prototype.forEach.call(tabs, function (t) {
+        var on = t === tab;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-pressed', String(on));
+      });
+      if (subEl) subEl.textContent = sort === 'hot'
+        ? 'Most played in the last seven days. Tap one to watch it draw itself.'
+        : 'Skribls people chose to show. Tap one to watch it draw itself.';
+      load(true);
+    });
+  });
+  var find = document.getElementById('galleryFind');
+  var qEl = document.getElementById('galleryQ');
+  var qTimer = null;
+  function search() {
+    var words = (qEl.value || '').trim().slice(0, 80);
+    if (words === query) return;
+    query = words;
+    load(true);
+  }
+  find.addEventListener('submit', function (e) { e.preventDefault(); clearTimeout(qTimer); search(); });
+  qEl.addEventListener('input', function () { clearTimeout(qTimer); qTimer = setTimeout(search, 350); });
 
   document.getElementById('galleryRetry').addEventListener('click', function () { load(true); });
   more.addEventListener('click', function () { load(false); });

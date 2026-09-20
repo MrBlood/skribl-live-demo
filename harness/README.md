@@ -404,6 +404,14 @@ A green check is not evidence until it has been shown to go red.
   the in-post macro, paged by the listing's own cursor, with an error state
   that retries and an empty state that names the tick. Posts through both
   sheets, so it has a release batch to itself.
+- `verify_hot.py` — the gallery's search and Hot: a view is one row per
+  (post, client hash, UTC day) written when a payload is fetched to play, so
+  two fetches today are one view and the total follows; `sort=hot` ranks by
+  plays in the last seven days (planted old views raise the total and not
+  Hot), pages by its own cursor, and the two cursor shapes do not mix; `q`
+  matches title and caption case-folded with the person's `%` and `_` kept
+  as letters; the gallery's two tabs and box send the server's parameters
+  and add nothing of their own; a view stores a hash, never an address.
 - `verify_tilereport.py` — Report on every gallery tile: the sheet opens with
   the tile's id and the API's own reasons, `POST /api/skribls/<id>/report`
   writes one row per (post, reporter) and answers a duplicate without writing,

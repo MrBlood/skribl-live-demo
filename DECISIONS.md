@@ -8898,3 +8898,44 @@ navigator.share is) and `verify_posted.py` re-pointed at the profile; the
 recovery-key dialogs joined verify_a11y's modal census on `/library`.
 Calibrated per component; the log is in the PR.
 
+## Unsealed, on top of v303 -- the gallery searches, and lists Hot by plays (v304 when sealed)
+
+The owner: "a public gallery that is searchable and lists HOT skribls based
+on views". The two constraints that shaped it: there are no accounts, so a
+view must count strangers without knowing who they are; and "hot" has to
+mean something a person cannot game by holding refresh.
+
+**A VIEW IS A ROW, ONCE PER CLIENT PER POST PER DAY.** It is written where
+a play is honest: the payload fetch every player makes (`GET
+/api/skribls/<id>` -- the in-post player on a tap, the /s/<id> page on
+load, a host's feed without changing a line). Keyed by the rate limiter's
+salted hash of the client and the UTC day, unique, inside a savepoint so a
+lost race is a duplicate and not a poisoned transaction; the post's running
+total moves only when a row is new. No address is stored, as with rate
+events and reports. The host owns the commit, as on every write in
+routes.py; a host that does not commit on GET simply does not count plays,
+and INTEGRATION.md says so.
+
+**HOT IS THE LAST SEVEN DAYS OF THOSE ROWS**, most first, newest id breaking
+ties -- computed from the rows, never from the total, so an old post with a
+big total does not sit on top forever. Its cursor is its own shape
+(`hot|score|id`) and a cursor from one order handed to the other is a 400,
+the same answer a mangled one gets. New is the listing as it always was and
+stays the default.
+
+**SEARCH IS THE LISTING'S `q`**, a case-folded substring of title or
+caption, bounded at 80 characters, with the person's own `%` and `_`
+escaped so they are letters; paged by the same cursor as the listing. The
+gallery's box sends it and the Hot tab sends `sort=hot`; the page adds no
+filtering or ranking of its own, and a played tile says its plays.
+
+Not a recommendation engine: the gallery still contains only opted-in
+posts, and a post out of the gallery accrues nothing anyone can see.
+
+Pinned by `verify_hot.py`: the dedupe and the total, the order and the
+seven-day window (old views planted into the server's database raise the
+total and not Hot), the two cursor shapes, the search's letters, the
+gallery's tabs and box against the server's own answer, and the hash in the
+row. Migration `d8e1f4a2b7c3` on `c4d9e2f7a1b6`, digests pinned.
+Calibrated per component; the log is in the PR.
+
