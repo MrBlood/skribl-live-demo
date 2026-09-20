@@ -34,6 +34,7 @@ import browsing
 
 BASE = os.environ.get("SKRIBL_BASE", "http://127.0.0.1:5001")
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))          # the server-side seam check imports skribl
 
 try:
     from playwright.sync_api import sync_playwright
@@ -48,20 +49,19 @@ results = []
 check = make_check(results)
 
 
-POST_PUBLIC = """async (title) => {
-  const p = serializeSkribl();
-  p.title = title;
-  p.visibility = 'public';
-  const r = await fetch(window.SKRIBL_API_BASE, {
-    method: 'POST', headers: skriblPostHeaders(), body: JSON.stringify(p) });
-  return r.ok ? await r.json() : { error: r.status };
-}"""
-
-
-def post_one(b, title, turns=4):
-    pg = b.new_page(viewport={"width": 1280, "height": 900})
+# THROUGH THE SHEET, IN ONE BROWSER CONTEXT (v304). The fixtures used to be
+# posted with a fetch() evaluated in the Pad's page, marked public, and the
+# library read the public listing. A profile is somebody's now: with no host
+# identity, /library shows what THIS BROWSER posted, from the record
+# lib/posted.js writes when the sheet's post succeeds. So the fixtures go
+# through the real sheet, and every page in this suite shares one context —
+# a fresh Playwright page is a fresh localStorage, which is exactly the
+# "another browser" case, pinned separately below.
+def post_one(ctx, title, turns=4, tick=False):
+    pg = ctx.new_page()
+    pg.set_viewport_size({"width": 1280, "height": 900})
     browsing.goto(pg, BASE, "/skribl-pad")
-    pg.evaluate("() => localStorage.clear()")
+    pg.evaluate("() => { localStorage.removeItem('skribl_draft_v2'); if (window.SkriblHints) window.SkriblHints.hide(); }")
     box = pg.locator("#canvas").bounding_box()
     cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
     pg.mouse.move(cx, cy)
@@ -74,11 +74,24 @@ def post_one(b, title, turns=4):
             pg.wait_for_timeout(90)
     pg.mouse.up()
     pg.wait_for_timeout(400)
-    pg.click("#recordBtn")
+    if pg.is_visible("#recordBtn"):
+        pg.click("#recordBtn")
+        pg.wait_for_timeout(400)
+    pg.click("#postBtn")
     pg.wait_for_timeout(400)
-    res = pg.evaluate(POST_PUBLIC, title)
+    pg.fill("#postTitleInput", title)
+    if tick:
+        pg.click(".post-check")
+    got = {}
+    pg.on("response", lambda r: got.update(r.json()) if (r.request.method == "POST"
+          and r.url.split("?")[0].endswith("/api/skribls") and r.ok) else None)
+    pg.click("#postSubmitBtn")
+    for _ in range(100):
+        pg.wait_for_timeout(100)
+        if "id" in got and not pg.evaluate("() => document.getElementById('postResult').hidden"):
+            break
     pg.close()
-    return (res or {}).get("id")
+    return got.get("id")
 
 
 with sync_playwright() as sp:
@@ -91,14 +104,17 @@ with sync_playwright() as sp:
     # Exactly the cross-suite state START-HERE.md warns passes the seal and
     # fails CI. A token nothing else can produce makes the query this suite's.
     tag = "lib" + os.urandom(4).hex()
-    ids = [post_one(b, tag + " alpha", 4), post_one(b, tag + " beta", 2)]
+    ctx = b.new_context()
+    # alpha stays unlisted (the box at its default); beta is ticked public.
+    ids = [post_one(ctx, tag + " alpha", 4), post_one(ctx, tag + " beta", 2, tick=True)]
     if not all(ids):
-        check("two public skribls posted (fixture)", False, str(ids))
+        check("two skribls posted through the sheet (fixture)", False, str(ids))
         print("\n" + "=" * 62 + "\n0/1 passed")
         sys.exit(1)
-    check("two public skribls posted (fixture)", True, ", ".join(ids))
+    check("two skribls posted through the sheet (fixture)", True, ", ".join(ids))
 
-    pg = b.new_page(viewport={"width": 1280, "height": 1000})
+    pg = ctx.new_page()
+    pg.set_viewport_size({"width": 1280, "height": 1000})
     errs = []
     payload_reqs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -107,7 +123,7 @@ with sync_playwright() as sp:
     browsing.goto(pg, BASE, "/library")
 
     tiles = pg.evaluate("() => document.getElementById('grid').children.length")
-    check("the grid is built from GET /api/skribls, not from demo motifs",
+    check("the grid is built from real posts, not from demo motifs",
           tiles >= 2, f"{tiles} tiles")
     check("no page errors", not errs, "; ".join(errs[:2]))
 
@@ -241,10 +257,13 @@ with sync_playwright() as sp:
     foot = pg.inner_text("#libFoot")
     check("the search filters the grid", filtered == 1,
           f"{filtered} tiles for {typed!r}")
-    check("and says it is filtering only what has been LOADED",
-          "loaded" in foot.lower(),
-          f"{foot!r} — the listing is keyset-paginated and the API has no "
-          f"search, so a box that looked like it searched everything would lie")
+    # The footer names WHAT is being filtered: "your N" for a browser's list
+    # (all of it is on the page), "the N loaded so far" for a host's paged
+    # listing. A box that looked like it searched everything would lie.
+    check("and says what it is filtering, with the count",
+          re.search(r"Filtering (your|the) \d+", foot) is not None,
+          f"{foot!r} — the API has no search, so the footer must say what "
+          f"population the box filters")
     # The unfiltered footer read "Newest first, from GET /api/skribls." and the
     # bio spoke of "the transport a post does not get". A visitor is not the
     # reader of a route table: no method-plus-path token in the page's visible
@@ -256,7 +275,106 @@ with sync_playwright() as sp:
           not re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible),
           (re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/\S*", _visible) or [""])[0]
           if re.search(r"\b(GET|POST|PUT|PATCH|DELETE)\s+/", _visible) else "")
+
+    # ---- WHOSE skribls these are (v304) -------------------------------------
+    print("\nLIBRARY — a profile is somebody's")
+    on_page = pg.evaluate("() => [...document.querySelectorAll('.card')].map(c => c.getAttribute('data-id'))")
+    listed = []
+    _cur = None
+    for _ in range(50):
+        _u = urllib.request.urlopen(BASE + "/api/skribls?limit=100" + (f"&cursor={_cur}" if _cur else ""), timeout=20)
+        _body = json.loads(_u.read().decode())
+        listed += [i["id"] for i in _body.get("items", [])]
+        _cur = _body.get("next_cursor")
+        if not _cur:
+            break
+    check("newest first: the post made last is the first tile", on_page[:1] == [ids[1]], str(on_page))
+    check("the unlisted post is on this browser's profile", ids[0] in on_page, str(on_page))
+    check("...and NOT in the public listing the gallery reads", ids[0] not in listed)
+    check("the ticked post is on the profile and in the listing", ids[1] in on_page and ids[1] in listed)
+    check("nothing on the profile is a post this browser did not make",
+          set(on_page) <= set(ids), f"extra: {sorted(set(on_page) - set(ids))}")
+    pg.evaluate("() => document.querySelector('.card[data-id=\"%s\"]').click()" % ids[1])
+    pg.wait_for_timeout(1200)
+    check("the stage says the ticked one is in the gallery",
+          "gallery" in pg.inner_text("#pStats").lower(), pg.inner_text("#pStats"))
+    pg.evaluate("() => document.querySelector('.card[data-id=\"%s\"]').click()" % ids[0])
+    pg.wait_for_timeout(1200)
+    check("...and the other is unlisted", pg.inner_text("#pStats").strip() == "unlisted", pg.inner_text("#pStats"))
+
+    # ---- full screen -------------------------------------------------------
+    fs_enabled = pg.evaluate("() => !!document.fullscreenEnabled")
+    fs_btn = pg.evaluate("() => !document.getElementById('btnFull').hidden")
+    check("the full-screen button is shown exactly where the API exists", fs_btn == fs_enabled,
+          f"enabled={fs_enabled} shown={fs_btn}")
+    if fs_enabled:
+        pg.click("#btnFull")
+        pg.wait_for_timeout(600)
+        fs = pg.evaluate("""() => ({ el: document.fullscreenElement ? document.fullscreenElement.className : null,
+            pressed: document.getElementById('btnFull').getAttribute('aria-pressed'),
+            exitShown: getComputedStyle(document.getElementById('fullExit')).display !== 'none' })""")
+        check("the stage wrap goes full screen, the button says pressed, and the way out is inside",
+              fs["el"] == "stageCanvasWrap" and fs["pressed"] == "true" and fs["exitShown"], str(fs))
+        pg.click("#fullExit")
+        pg.wait_for_timeout(600)
+        fs2 = pg.evaluate("""() => ({ el: document.fullscreenElement,
+            pressed: document.getElementById('btnFull').getAttribute('aria-pressed'),
+            exitShown: getComputedStyle(document.getElementById('fullExit')).display !== 'none' })""")
+        check("the in-frame control leaves full screen and the button follows the document",
+              fs2["el"] is None and fs2["pressed"] == "false" and not fs2["exitShown"], str(fs2))
     pg.close()
+
+    # ANOTHER BROWSER: a fresh context is a fresh localStorage, and a profile
+    # that showed this one's posts to it would be the public listing again.
+    other = b.new_page(viewport={"width": 1280, "height": 1000})
+    browsing.goto(other, BASE, "/library")
+    o_tiles = other.evaluate("() => document.getElementById('grid').children.length")
+    o_empty = other.evaluate("""() => { const e = document.getElementById('libEmpty');
+        return { shown: !e.hidden && getComputedStyle(e).display !== 'none', words: e.innerText }; }""")
+    check("another browser sees none of them", o_tiles == 0, f"{o_tiles} tiles")
+    check("...and the empty state says what this list is",
+          o_empty["shown"] and "in this browser only" in o_empty["words"] and "not an account" in o_empty["words"],
+          str(o_empty))
+    other.close()
+
+    # A HOST WITH ACCOUNTS: data-skribl-me set means the listing's author
+    # filter, and the browser's list is ignored. The attribute is what the
+    # server renders from create_blueprint(current_user_id=...) — pinned on
+    # the server side below — and here it is stamped onto the body before the
+    # page's script runs, so the branch is driven on the real page.
+    host = ctx.new_page()
+    host.set_viewport_size({"width": 1280, "height": 1000})
+    # The page as the server would render it for that user: the attribute the
+    # seam below proves the server emits, swapped into the real response so
+    # the page's own script takes the host branch.
+    def _as_host(route):
+        r = route.fetch()
+        route.fulfill(response=r, body=r.text().replace('data-skribl-me=""', 'data-skribl-me="host-user-42"', 1))
+    host.route(re.compile(r"/library$"), _as_host)
+    listing_reqs = []
+    host.on("request", lambda r: listing_reqs.append(r.url) if re.search(r"/api/skribls\?", r.url) else None)
+    browsing.goto(host, BASE, "/library")
+    host.wait_for_timeout(800)
+    h_tiles = host.evaluate("() => [...document.querySelectorAll('.card')].map(c => c.getAttribute('data-id'))")
+    check("with a host identity the page asks the listing for that author",
+          any("user_id=host-user-42" in u for u in listing_reqs), str(listing_reqs))
+    check("...and the browser's own list is not shown",
+          not (set(h_tiles) & set(ids)), f"{h_tiles}")
+    host.close()
+    ctx.close()
+
+    # THE SERVER SIDE OF THE SEAM: the attribute comes from the blueprint's
+    # current_user_id, and is empty when there is none.
+    from flask import Flask
+    import skribl
+    for _uid, _want in ((lambda: "u-1", 'data-skribl-me="u-1"'), (None, 'data-skribl-me=""')):
+        _a = Flask(__name__)
+        _a.config["SECRET_KEY"] = "harness-library"
+        _bp = skribl.create_blueprint(session=False, current_user_id=_uid, csrf=False)
+        _a.register_blueprint(_bp)
+        _html = _a.test_client().get("/library").get_data(as_text=True)
+        check(f"/library renders {_want} for current_user_id={'set' if _uid else 'none'}",
+              _want in _html)
 
     # ---- the source gates --------------------------------------------------
     src = (ROOT / "skribl" / "static" / "library.js").read_text(encoding="utf-8")

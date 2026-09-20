@@ -8816,3 +8816,48 @@ not the newest file by name, which is how the first draft was chained and
 what `verify_migrations` caught -- and its digests are pinned in
 `RELEASED.txt`. Calibrated per component; the log is in the PR.
 
+## Unsealed, on top of v303 -- the library is the profile's, and a profile is somebody's (v304 when sealed)
+
+The owner, the day after the gallery landed: "The library looks different."
+It was not -- the page was byte-identical to v303 at phone width, and the
+desktop difference was a blinking caret -- but its CONTENTS were. `/library`
+read the public listing and called it "Your skribls", which had been true
+only because nothing posted from the editors was ever public, so the page was
+empty. The gallery made that false the day somebody ticked the box, and the
+profile filled with strangers' work. The direction that followed: the gallery
+is the feed, "and when you go to profile it should be like library so you can
+search title and there's a player that can go full screen."
+
+**A PROFILE IS SOMEBODY'S.** Two answers, one per deployment, both on the
+page in the same script. With a host's signed-in user
+(`create_blueprint(current_user_id=...)`, rendered as `data-skribl-me`) it
+is `GET /api/skribls?user_id=<me>`, the listing's own author filter, paged
+by its cursor -- the server decides what an author sees of their own. With
+no accounts, the standalone app, it is the list this browser kept of what it
+posted (lib/posted.js, the same record the menu's "Your Skribls" shows),
+unlisted posts included because they are yours, local-only fallbacks left
+out because they are not on the server. Nothing is fetched to build the
+grid; the tile is the poster as before, and one payload is fetched when a
+tile is picked. The empty state says what puts something here and that the
+list is this browser's, not an account. Each posted-list entry now records
+the visibility the sheet chose, so the stage can say "in the gallery" without
+asking the server. The route's sentence that called the public listing
+"yours" is gone from INTEGRATION.md, and the empty footer that named two
+routes is gone with the population it described.
+
+**THE STAGE GOES FULL SCREEN.** One transport button, through the Fullscreen
+API, shown only where the API exists (iPhone Safari has it for video alone;
+a button that did nothing there would be worse than none). The way out is
+INSIDE the element that is full screen, because the transport is not on the
+display then and Escape is the browser's; headless Chromium ignores Escape,
+which is how the in-frame control earned its place. The player keeps its own
+aspect and is fitted to the shorter side on a black ground.
+
+Pinned by `verify_library.py`, rewritten around one browser context: the
+fixtures go through the real sheets so lib/posted.js records them, an
+unlisted post is on the profile and not in the gallery, a second browser
+sees none of them, a host identity switches the page to the author filter
+(the request carries `user_id` and the browser list is ignored), and the
+stage enters and leaves full screen. Calibrated per component; the log is in
+the PR.
+

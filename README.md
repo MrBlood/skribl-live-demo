@@ -110,7 +110,7 @@ harness/                   Browser test suites (Playwright) + release tooling
 | `/feed` | The demo host page: the in-post player and composer over the real listing. |
 | `/flip` | Flip — the frame-by-frame animator. |
 | `/gallery` | The public gallery: every Skribl its author chose to show, newest first. |
-| `/library` | The profile's Skribls tab: the listing, with a full transport. |
+| `/library` | The profile's Skribls tab: what you posted, with a full transport that goes full screen. |
 | `/manifest.webmanifest` | The web app manifest a Home Screen install reads: name, icons, colours and where it opens. |
 | `GET /media/<key>` | Serve a content-addressed blob. |
 | `/s/<id>` | The public player a shared link opens. |

@@ -128,6 +128,11 @@
       title: (entry.title || '').slice(0, 80),
       kind: entry.kind === 'flip' ? 'flip' : 'pad',
       pages: Math.max(1, parseInt(entry.pages, 10) || 1),
+      /* WHICH WAY IT WAS POSTED (v304): the gallery box's answer, so the
+         profile (/library) can say "in the gallery" without asking the
+         server. Only the two values the sheet can produce; anything else is
+         unknown and left out. */
+      visibility: (entry.visibility === 'public' || entry.visibility === 'unlisted') ? entry.visibility : null,
       /* THE REVOCATION CAPABILITY. The server returns it once in the create
          response and stores only its SHA-256; there is no endpoint that can
          reissue it.

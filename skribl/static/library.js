@@ -50,6 +50,13 @@
 
   var api = document.body.getAttribute('data-skribl-api');
   var playerBase = document.body.getAttribute('data-skribl-player') || '';
+  /* WHOSE PROFILE (v304). `me` is the host's signed-in user, or '' when there
+   * are no accounts — the standalone app. See whose() below. */
+  var me = document.body.getAttribute('data-skribl-me') || '';
+  var libEmpty = document.getElementById('libEmpty');
+  var libEmptyLocal = document.getElementById('libEmptyLocal');
+  var whoBio = document.getElementById('whoBio');
+  var btnFull = document.getElementById('btnFull');
 
   var grid = document.getElementById('grid');
   var moreWrap = document.getElementById('moreWrap');
@@ -59,6 +66,7 @@
   var search = document.getElementById('search');
 
   var stageBox = document.getElementById('stageBox');
+  var stageWrap = stageBox.closest('.stageCanvasWrap');
   var pTitle = document.getElementById('pTitle');
   var pKind = document.getElementById('pKind');
   var pMeta = document.getElementById('pMeta');
@@ -108,7 +116,9 @@
     pTitle.textContent = item.title || 'Untitled Skribl';
     pMeta.textContent = when(item.created_at);
     pKind.textContent = item.has_audio ? 'with sound' : 'silent';
-    pStats.textContent = item.visibility === 'public' ? 'listed' : item.visibility;
+    /* A browser-kept entry may not know its visibility; say nothing rather
+       than guess. */
+    pStats.textContent = !item.visibility ? '' : (item.visibility === 'public' ? 'in the gallery' : item.visibility);
     scrubFill.style.width = '0%';
     tElapsed.textContent = '0:00 / 0:00';
     setPlayIcon(false);
@@ -194,6 +204,40 @@
     } else { done(); }
   });
 
+  /* ---- full screen -------------------------------------------------------
+     The stage wrap on the whole display, through the Fullscreen API. The
+     button exists only where the API does: iPhone Safari has it for <video>
+     alone, and a button that did nothing there would be worse than none.
+     Escape leaves through the browser; the button leaves too, and its
+     pressed state follows the document, not a flag of its own. */
+  var fsEl = function () { return document.fullscreenElement || document.webkitFullscreenElement || null; };
+  var fsOn = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled)
+             && stageWrap && (stageWrap.requestFullscreen || stageWrap.webkitRequestFullscreen);
+  if (btnFull && fsOn) {
+    btnFull.hidden = false;
+    btnFull.addEventListener('click', function () {
+      if (fsEl() === stageWrap) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      } else {
+        var req = stageWrap.requestFullscreen || stageWrap.webkitRequestFullscreen;
+        try { var p = req.call(stageWrap); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+      }
+    });
+    var syncFull = function () {
+      var on = fsEl() === stageWrap;
+      btnFull.classList.toggle('on', on);
+      btnFull.setAttribute('aria-pressed', String(on));
+      btnFull.title = on ? 'Leave full screen' : 'Full screen';
+      btnFull.setAttribute('aria-label', btnFull.title);
+    };
+    var fullExit = document.getElementById('fullExit');
+    if (fullExit) fullExit.addEventListener('click', function () {
+      if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    });
+    document.addEventListener('fullscreenchange', syncFull);
+    document.addEventListener('webkitfullscreenchange', syncFull);
+  }
+
   scrub.addEventListener('click', function (e) {
     if (!player) return;
     var r = e.currentTarget.getBoundingClientRect();
@@ -270,12 +314,59 @@
      * looking like it searched everything is the kind of half-truth that gets
      * believed. */
     foot.textContent = !items.length ? ''
-      : (q ? 'Filtering the ' + items.length + ' loaded so far. Load more to search further.'
+      : (q ? (me ? 'Filtering the ' + items.length + ' loaded so far. Load more to search further.'
+                 : 'Filtering your ' + items.length + '.')
            : 'Newest first. Pick one to play it.');
+    if (libEmpty) libEmpty.hidden = items.length > 0;
+  }
+
+  /* ======================================================================
+     WHOSE SKRIBLS THESE ARE
+     ======================================================================
+
+     Until the gallery this page read the public listing and called it "Your
+     skribls" — true only because nothing posted from the editors was ever
+     public, so the page was empty. The gallery made that false the day
+     somebody ticked the box: the profile filled with strangers' work.
+
+     A profile is somebody's. Two answers, one per deployment:
+
+       HOST WITH ACCOUNTS  data-skribl-me is set -> GET /api/skribls?user_id=me,
+                           the listing's own author filter, paged by its
+                           cursor. The server decides what an author sees of
+                           their own (public and private; unlisted stays out of
+                           every listing by definition).
+       NO ACCOUNTS         the list this browser kept — lib/posted.js, the same
+                           record the menu's "Your Skribls" shows. Unlisted
+                           posts included: they are yours. Local-only fallbacks
+                           (ids starting local_) are not on the server and are
+                           left out. Nothing is fetched to build the grid: the
+                           tile is the poster, as before, and one payload is
+                           fetched when a tile is picked.
+
+     The gallery is the public page. This one never was. */
+  function mine() {
+    var list = (window.SkriblPosted && window.SkriblPosted.list) ? window.SkriblPosted.list() : [];
+    return list.filter(function (e) { return e && e.id && String(e.id).indexOf('local_') !== 0; })
+      .sort(function (a, b) { return (b.at || 0) - (a.at || 0); })
+      .map(function (e) {
+        return { id: e.id, title: e.title || '', caption: '',
+                 created_at: e.at ? new Date(e.at).toISOString() : null,
+                 has_audio: false, visibility: e.visibility || '' };
+      });
   }
 
   function loadPage() {
-    var url = api + '?limit=24' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
+    if (!me) {
+      items = mine();
+      cursor = null;
+      renderGrid();
+      moreWrap.innerHTML = '';
+      if (items.length) select(items[0]);
+      return Promise.resolve();
+    }
+    var url = api + '?limit=24&user_id=' + encodeURIComponent(me)
+            + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
     moreWrap.innerHTML = '<span class="more-status">Loading…</span>';
     return fetch(url, { credentials: 'same-origin' })
       .then(function (r) {
@@ -300,12 +391,9 @@
           moreWrap.appendChild(more);
         }
         if (!current && items.length) select(items[0]);
-        if (!items.length) {
-          foot.innerHTML = '<b>Nothing listed.</b> POST /api/skribls defaults to '
-            + '<code>visibility: "unlisted"</code>, so nothing posted from the Pad '
-            + 'appears here — a host feed’s composer is what sends '
-            + '<code>"visibility": "public"</code>.';
-        }
+        /* An empty profile is the empty state above the footer (renderGrid
+           hides and shows it); the route-naming sentence that used to sit
+           here is gone with the population it described. */
       })
       .catch(function () {
         moreWrap.innerHTML = '';

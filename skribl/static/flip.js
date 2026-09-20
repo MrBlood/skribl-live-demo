@@ -4720,8 +4720,10 @@ async function shareSkribl(){
     // post, and closing the tab used to lose it permanently.
     if(window.SkriblPosted){
       const _t=document.getElementById('flipShareTitle');
+      const _pubBox=document.getElementById('flipSharePublic');
       const kept=window.SkriblPosted.add({ id:data.id, url:data.url, kind:'flip',
         pages:frames.length, title:(_t?_t.value:'').trim(),
+        visibility:(_pubBox && _pubBox.checked) ? 'public' : 'unlisted',
         // Revocation capability: the server's when the answer carried one, the
         // one this client minted when it did not (a replay) — see lib/posted.js.
         tok: data.deleteToken || (_shareIdem && _shareIdem.tok) || null });
