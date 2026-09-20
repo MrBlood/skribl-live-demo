@@ -5931,6 +5931,7 @@ const SMEAR_TRAIL_MAX = 28;       // bounds the cost of a hairline crossing the 
    alpha at which a pass can carry the ink's colour and a higher cap lifts
    one of them back over it: 300 points at 0.09, 342 at 0.14 and above. */
 const SMEAR_TRAIL_ALPHA = 0.20;  // the darkest of them
+const SMEAR_TRAIL_FLOOR = 3 / 255;  // the faintest a pass can carry; the ramp starts here (SK-AUD-009)
 const SMEAR_TRAIL_FALLOFF = 2;   // t^2: what is older is fainter, fast
 const SMEAR_TRAIL_COARSE = 4;    // a ghost carries a quarter of the pose's points
 
@@ -6891,6 +6892,19 @@ function buildTween(a, b, want){
          the ball is the ball. It rises only where a clamp piled them up. */
       const cover = Math.max(1, Math.min(ghosts, brush / (trailLen / ghosts)));
       const trailAlpha = SMEAR_TRAIL_ALPHA * smw / Math.max(1, cover * SMEAR_TRAIL_OVERLAP);
+      /* THE RAMP IS RESCALED SO ITS FAINT END IS STILL VISIBLE (SK-AUD-009).
+         A pass cannot carry the ink's colour below SMEAR_TRAIL_FLOOR, and the
+         ramp used to run from ZERO, so every ghost under the floor was culled
+         -- and those are the ones at the far end of the trail. At the shipped
+         cap that cut the first quarter of the ramp (t^2 < 3/51 for t < 0.24),
+         so the visible trail reached ~75% of the half-gap it was allowed and
+         the owner saw it stop short. The ramp now runs from the floor to the
+         cap: the farthest ghost is the faintest one that can be painted, and
+         it sits where the object came from. The cull stays as a guard for a
+         cap that is itself under the floor (a very light weight over a pile),
+         where nothing at any position could be painted. */
+      const floorT = trailAlpha > SMEAR_TRAIL_FLOOR
+        ? Math.pow(SMEAR_TRAIL_FLOOR / trailAlpha, 1 / SMEAR_TRAIL_FALLOFF) : 1;
       for(let sIdx = 0; sIdx < ghosts; sIdx++){
         const frac = sIdx / ghosts;
         /* THE TRAIL REACHES BACK TO THE POSE, NOT PAST IT. The pose is at the
@@ -6899,7 +6913,7 @@ function buildTween(a, b, want){
            a trail pointing the wrong way. `frac` still runs 0..1 for the alpha
            ramp -- it is the POSITION that is halved. */
         const pos = frac * 0.5;
-        const av = trailAlpha * Math.pow(frac, SMEAR_TRAIL_FALLOFF);
+        const av = trailAlpha * Math.pow(floorT + (1 - floorT) * frac, SMEAR_TRAIL_FALLOFF);
         if(av * 255 < 3) continue;   // below this a pass cannot carry the ink's colour
         let at2 = 0;
         for(let g = 0; g < a.strokeGroups.length; g++){

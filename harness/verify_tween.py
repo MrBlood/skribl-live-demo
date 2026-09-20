@@ -378,6 +378,42 @@ with sync_playwright() as p:
           f"at x={_dir and _dir['leadMax']} — a trail that does not reach back "
           f"is not a trail")
 
+    # HOW FAR BACK, MEASURED ON PIXELS (SK-AUD-009; acquisition audit of v302).
+    # The trail is allowed the half-gap -- from where the object WAS to the
+    # pose at the midpoint -- and the check above only asked that it reach
+    # back at all. It reached about 75%: the alpha ramp ran from zero, a pass
+    # cannot carry the ink's colour below 3/255, and every ghost under that
+    # was culled -- which is the FAR end of the trail, where the object came
+    # from. The owner saw it stop short. The ramp now starts at the floor, so
+    # the farthest ghost is the faintest one that can be painted and sits at
+    # the start. Pinned on the RENDER, not the samples: the faintest ghost is
+    # 3/255 over black, so the threshold is a pixel value above 1, and the
+    # fixture is the same +300 travel as above (object at x=100, pose at
+    # x=250): ink must start within a brush of x=100. Red on the old ramp,
+    # where the first lit pixel sat near x=135.
+    _reach = page.evaluate("""() => {
+      const f = frames[1]; if (!f) return null;
+      const g = fctx; g.setTransform(1,0,0,1,0,0); g.scale(DPR,DPR);
+      g.clearRect(0,0,CW,CH); g.fillStyle='#000'; g.fillRect(0,0,CW,CH);
+      paintStatic(g, f.strokes);
+      const W = CW*DPR, H = CH*DPR, d = g.getImageData(0,0,W,H).data;
+      let minX = Infinity, far = 0, near = 0;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const v = d[(y*W + x)*4];
+        if (v > 1) { const lx = x / DPR; if (lx < minX) minX = lx;
+          if (lx >= 100 && lx < 140) far += v; else if (lx >= 200 && lx < 240) near += v; }
+      }
+      render();
+      return { minX, far, near }; }""")
+    check("the rendered trail reaches back to where the object came from, not three quarters of the way",
+          _reach and _reach["minX"] <= 100 + 6,
+          f"first lit pixel at x={_reach and round(_reach['minX'], 1)} for an object "
+          f"that started at x=100 — the far quarter of the ramp is being culled again")
+    check("...and it is fainter at the far end than near the pose",
+          _reach and 0 < _reach["far"] < _reach["near"],
+          f"ink far {_reach and _reach['far']} vs near {_reach and _reach['near']} — "
+          f"a rescaled ramp still has to fade")
+
     # HOW FAR APART THE GHOSTS LAND IS THE WHOLE EFFECT, and until v297 it was
     # a constant 6 of them however wide the brush. On a ball drawn that way the
     # 6 landed inside the ball's own silhouette and read as one smear; on the
