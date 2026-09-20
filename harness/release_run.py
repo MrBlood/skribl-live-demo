@@ -299,6 +299,46 @@ def read_attestation(path, frozen, where, advice):
             f"{fields.get('generated', 'time unknown')}")
 
 
+def hold_for_lanes(frozen, skipped, seconds, *, sleep=time.sleep, clock=time.monotonic,
+                   say=print):
+    """Wait, before the final render, until every external lane attests THIS tree.
+
+    THE SEAL'S MARGIN IS ENGINEERED HERE, NOT LUCKY (V303-PROC-001; the final
+    acquisition review of v303). The two lane attestations are written by CI
+    on the runner and carried into harness/ by hand while the run is going;
+    the v303 seal's last batch rendered two minutes after the PostgreSQL one
+    landed, because the run had been paused at a --budget slice boundary and
+    the last slice ran straight through. The record was sound -- the file was
+    in the tree first -- but the margin was timing, not design.
+
+    This is the design: called once, after the last batch and before the
+    render reads the attestations, it re-reads them every 30 seconds until
+    none is pending or `seconds` have passed, saying which lanes it is waiting
+    for and where to put them. It never fabricates: an expired hold renders
+    exactly what a run without one would -- LOCAL PASS with the lanes named as
+    pending -- and says that the hold expired. Returns the lanes still pending.
+    `seconds` of 0 is no hold, which is what a run nobody dispatched CI for
+    wants. `sleep` and `clock` are parameters so verify_docs can drive this
+    without waiting.
+    """
+    if not seconds:
+        return external_coverage(frozen, skipped)[1]
+    deadline = clock() + seconds
+    while True:
+        pending = external_coverage(frozen, skipped)[1]
+        if not pending:
+            say("every external lane attests this tree; rendering")
+            return []
+        if clock() >= deadline:
+            say(f"HOLD EXPIRED after {seconds:.0f}s with lanes still pending: "
+                + "; ".join(pending) + " -- rendering as pending, which the record says")
+            return pending
+        say("holding before the final render for: " + "; ".join(pending)
+            + "\n  write each lane's attestation into harness/ from its CI job's own "
+              "cat step (docs/SESSION-CONTEXT.md section 4); rechecking in 30 s")
+        sleep(30)
+
+
 def external_coverage(frozen, skipped):
     """Which mandatory EXTERNAL lanes have tree-bound evidence in hand.
 
@@ -489,6 +529,10 @@ def main():
     # not. Both use this script, so the refusal has an escape rather than a
     # workflow that has to be abandoned — and RELEASE.md records which was used,
     # so "development run" cannot be mistaken for a seal after the fact.
+    ap.add_argument("--hold-lanes", type=float, default=0.0,
+                    help="seconds to hold before the final render until every "
+                         "external lane attests this tree (0 = no hold); the "
+                         "seal's engineered margin, see hold_for_lanes()")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="proceed with uncommitted source changes (development "
                          "runs only; RELEASE.md records that it was used)")
@@ -654,6 +698,9 @@ def main():
     seen = {r[0] for r in rows}
     never = [s for s in on_disk if s not in seen]
     ok = not failed and not never
+    # The hold, if asked for: the attestations are read for the record only
+    # after it returns, so what the record says is what was in the tree.
+    hold_for_lanes(frozen, skipped, args.hold_lanes)
     _attested, _pending = external_coverage(frozen, skipped)
 
     lines = [
