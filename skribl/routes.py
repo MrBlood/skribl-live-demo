@@ -30,8 +30,8 @@ from .storage import KEY_RE, LocalDiskStore
 from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
 from .validation import _decode_data_url_image
-from .creation import (SkriblIdempotencyRace, SkriblRejected, SkriblUnavailable,
-                       create_post)
+from .creation import (CLIENT_TOKEN_RE, SkriblIdempotencyRace, SkriblRejected,
+                       SkriblUnavailable, create_post)
 from .deletion import (SkriblNotFound, SkriblRefused, delete_post,
                        set_post_visibility)
 
@@ -81,10 +81,11 @@ def _decode_cursor(cursor):
         return None
 
 
-def _idempotency_hash(raw_key, viewer_id):
-    """sha256('<author>|<key>'), or None when the header is absent/unusable.
+def _idempotency_hash(raw_key, viewer_id, client_id=None):
+    """sha256('<scope>|<key>'), or None when the header is absent/unusable.
 
-    Author-scoped so one client's key can never resolve to another's post.
+    Scoped so one client's key can never resolve to another's post: by the
+    author when there is one, by the client's own capability when there is not.
     Keys are bounded (1-200 chars) — an unbounded header would otherwise be a
     free write amplifier into an indexed column.
     """
@@ -94,18 +95,42 @@ def _idempotency_hash(raw_key, viewer_id):
     if not raw_key or len(raw_key) > 200:
         return None
     if viewer_id is None:
-        # ANONYMOUS CALLERS GET NO IDEMPOTENCY (v200 follow-up review, F2).
-        # v200 scoped them all to one literal namespace, which made the header
-        # a shared capability: any two anonymous clients sending the same key
-        # resolved to the SAME post — the second caller receiving the first's
-        # id and share URL, a disclosure for unlisted posts. The property
-        # "one client's key can never resolve to another's post" needs a
-        # client identity to scope by, and an anonymous request has none the
-        # server can trust. A host that authenticates gets replay protection
-        # from the author scope; anonymous lost-response retries fall back to
-        # v199 behaviour (a duplicate post), which is an annoyance, not a leak.
-        return None
+        # AN ANONYMOUS CALLER IS SCOPED BY A CLIENT CAPABILITY, OR NOT AT ALL.
+        # v200 scoped every anonymous client to one literal namespace, which
+        # made the header a shared capability: two strangers sending the same
+        # key resolved to the SAME post, the second receiving the first's id
+        # and share URL — a disclosure for unlisted posts (v200 follow-up
+        # review, F2). "One client's key can never resolve to another's post"
+        # needs an identity to scope by, and for a while the answer was that an
+        # anonymous request has none, so a lost-response retry duplicated the
+        # post: "an annoyance, not a leak". The acquisition audit of v302 named
+        # what that comment missed (SK-AUD-001): the lost response also carried
+        # the ONLY copy of the revocation key, so the first post was left live
+        # with nobody able to withdraw it.
+        # The identity is X-Skribl-Client: a random secret the browser minted
+        # once and keeps (lib/posted.js). It is a capability, not a claim —
+        # nobody can guess another client's — so scoping by it restores exactly
+        # the property F2 demanded, and a request without one, or with a
+        # malformed one, gets no namespace and behaves as before.
+        cid = _client_capability(client_id)
+        if cid is None:
+            return None
+        return hashlib.sha256(f"c{cid}|{raw_key}".encode()).hexdigest()
     return hashlib.sha256(f"u{viewer_id}|{raw_key}".encode()).hexdigest()
+
+
+def _client_capability(raw):
+    """A client-minted secret from a header, or None when absent/malformed.
+
+    Shared by the idempotency scope (X-Skribl-Client) and the client-minted
+    revocation key (X-Skribl-Delete-Token): 32-128 urlsafe-base64 characters,
+    the shape secrets.token_urlsafe and getRandomValues both produce. Bounded
+    so a header cannot be a write amplifier into an indexed column.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    raw = raw.strip()
+    return raw if CLIENT_TOKEN_RE.match(raw) else None
 
 
 def _idempotent_replay(idem_hash, fingerprint):
@@ -481,7 +506,8 @@ def register_routes(bp, *, index_route=False):
         # exactly as before.
         author_id = bp.skribl_current_user_id()
         idem_hash = _idempotency_hash(request.headers.get("Idempotency-Key"),
-                                      author_id)
+                                      author_id,
+                                      request.headers.get("X-Skribl-Client"))
         idem_fp = None
         if idem_hash is not None:
             # The fingerprint binds the key to THIS body (v201 review, F4):
@@ -527,7 +553,12 @@ def register_routes(bp, *, index_route=False):
                                author_id=author_id,
                                media_store=bp.skribl_media_store,
                                idempotency=((idem_hash, idem_fp)
-                                            if idem_hash is not None else None))
+                                            if idem_hash is not None else None),
+                               # The client's own revocation key, if it minted
+                               # one (SK-AUD-001; see create_post). Anonymous
+                               # only; create_post ignores it for an owner.
+                               delete_token=_client_capability(
+                                   request.headers.get("X-Skribl-Delete-Token")))
         except SkriblIdempotencyRace:
             # A concurrent request committed first under this key. Resolve to
             # the winner — same fingerprint rule as the fast path, so a

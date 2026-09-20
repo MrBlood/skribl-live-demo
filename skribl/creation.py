@@ -56,6 +56,7 @@ in its own SAVEPOINT (`begin_nested`), so a public_id collision discards that
 attempt's rows and nothing the host had pending. The host commits, and its
 feed row commits with the Skribl or neither does.
 """
+import re
 import secrets
 
 from flask import current_app
@@ -184,8 +185,15 @@ class CreatedPost:
         self.delete_token = delete_token
 
 
+# A capability the CLIENT minted and holds: 32-128 urlsafe-base64 characters,
+# which is what secrets.token_urlsafe(32) and the browser's getRandomValues
+# both produce. Anything else is ignored and the server mints as before, so a
+# careless client is never worse off than one that sent nothing.
+CLIENT_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
+
+
 def create_post(payload, *, author_id=None, media_store=None,
-                idempotency=None):
+                idempotency=None, delete_token=None):
     """Validate `payload` and insert a Skribl post on the host's session.
 
     payload       the client's JSON object (see serializeSkribl). Visibility,
@@ -204,6 +212,12 @@ def create_post(payload, *, author_id=None, media_store=None,
     idempotency   optional (key_hash, request_fingerprint) pair. The endpoint
                   derives these from its header; a host that has its own
                   double-submit guard passes None and no row is written.
+    delete_token  optional revocation capability the CLIENT minted (SK-AUD-001).
+                  Anonymous only, and only when it matches CLIENT_TOKEN_RE;
+                  otherwise the server mints one as before. The point is a
+                  lost response: a token the client already holds survives
+                  the answer never arriving, where one the server minted and
+                  returned exactly once does not. Stored as a hash either way.
 
     Returns CreatedPost. Raises SkriblRejected for anything the caller can fix,
     SkriblIdempotencyRace when a concurrent request won the key, and
@@ -340,11 +354,21 @@ def create_post(payload, *, author_id=None, media_store=None,
     # authorisation for a destructive operation, so it is sized like a secret
     # rather than like the 8-byte public id, which only has to be unguessable
     # enough not to be enumerated.
-    delete_token = None
+    # THE CLIENT MAY MINT IT (SK-AUD-001). The create response is the one
+    # moment the raw secret is handed over, and a response lost in transit
+    # left an unlisted post live with nobody holding its key. A token the
+    # client minted, sent with the request and kept until the server confirms
+    # is held BEFORE the answer, so the answer can be lost and the retry (which
+    # replays to the same post) still ends with the author holding the key that
+    # deletes it. Same entropy, same hash-only storage, same constant-time
+    # comparison; the only change is who rolled the dice.
     delete_token_hash = None
     if author_id is None:
-        delete_token = secrets.token_urlsafe(32)
+        if not (isinstance(delete_token, str) and CLIENT_TOKEN_RE.match(delete_token)):
+            delete_token = secrets.token_urlsafe(32)
         delete_token_hash = hash_delete_token(delete_token)
+    else:
+        delete_token = None
 
     for _attempt in range(5):
         candidate = secrets.token_urlsafe(8)

@@ -414,6 +414,24 @@ Neither is optional. A stranger with only a public id gets 404, so does a wrong
 token, and so does a token minted for a different post. `PATCH` takes
 `visibility` and optionally `deleteToken`, nothing else.
 
+**Three request headers a client may send on `POST /api/skribls`, all
+optional.** `Idempotency-Key` makes a retry after a lost response resolve to
+the post the first request created (a `200` with `idempotentReplay: true`
+instead of a duplicate `201`), and is scoped so one client's key can never
+resolve to another's post: by the author when your `current_user_id` supplies
+one, otherwise by `X-Skribl-Client`, a random secret the browser mints once and
+keeps (32–128 urlsafe-base64 characters; `lib/posted.js` does this for Skribl's
+own editors). An anonymous request with a key and no client header gets no
+replay namespace at all, deliberately — the alternative was two strangers
+reusing a key and seeing each other's unlisted post. `X-Skribl-Delete-Token`
+lets an anonymous client mint its own revocation key, in the same shape, so
+that the key is held before the answer arrives rather than handed over exactly
+once in an answer that may never arrive; the server stores its hash and
+returns it as `deleteToken` like one it minted itself. A malformed value on
+either header is ignored, not refused. `create_post()` takes the same key as
+`delete_token=`; it is ignored for an owned post, which is authorised by its
+owner and gets no capability.
+
 **IF YOU BUILD YOUR OWN DELETE UI, DO NOT TREAT 404 AS CONFIRMED DELETION.**
 The ambiguity above is deliberate and it cuts both ways: the same 404 answers
 "no such post" and "your token is wrong". A client that reads it as success

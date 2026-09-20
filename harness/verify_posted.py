@@ -38,6 +38,7 @@ What this suite pins, in order of how badly each would fail a user:
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from assertions import make_check
 
@@ -64,6 +65,18 @@ except ImportError:
     summarise_and_exit()
 
 READ = "() => JSON.parse(localStorage.getItem('skribl_posted_v1') || '[]')"
+
+
+def delete_with(pid, tok):
+    """DELETE /api/skribls/<pid> with the revocation key; the status code."""
+    req = urllib.request.Request(f"{API}/{pid}", method="DELETE",
+                                 data=json.dumps({"deleteToken": tok}).encode(),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req) as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        return e.code
 
 with sync_playwright() as p:
     b = p.chromium.launch()
@@ -225,6 +238,163 @@ with sync_playwright() as p:
         check("with the title the user typed",
               pad_saved[0].get("title") == PAD_TITLE,
               repr(pad_saved[0].get("title")))
+        # THE ENTRY HOLDS ITS REVOCATION KEY (SK-AUD-001). sendSkribl's success
+        # object carried no deleteToken until that fix, so every Pad entry ever
+        # written here had tok: null and the tray showed no Delete or Copy key
+        # for it — Flip's entries had them all along. Pinned by SPENDING the
+        # key rather than by its presence: a key the server does not honour is
+        # a string in localStorage, not a capability.
+        pad_tok = pad_saved[0].get("tok")
+        check("...and the revocation key the server honours",
+              bool(pad_tok) and delete_with(pad_saved[0].get("id"), pad_tok) == 204,
+              f"tok={str(pad_tok)[:10]!r}… (a Pad entry without a key is the pre-SK-AUD-001 tree)")
+
+    # -----------------------------------------------------------------------
+    print("\nYOUR SKRIBLS — a LOST RESPONSE, retried, is the same post and its key is in hand (SK-AUD-001)")
+    #
+    # The acquisition audit of v302 read the F2 rule ("anonymous callers get no
+    # idempotency") to its end: a response lost in transit left an unlisted
+    # post live on the server, the retry made a second one, and the lost
+    # response had carried the ONLY copy of the first post's revocation key.
+    # The fix is two client-minted capabilities (lib/posted.js): a client id
+    # that scopes the anonymous Idempotency-Key without reopening F2, and a
+    # delete token the browser mints BEFORE the request, so the answer can be
+    # lost. Run as the journey: the server commits, the browser never hears,
+    # the Pad falls back to a local save, the author presses Post again.
+    lost = {}
+
+    def swallow(route):
+        # The request reaches the server and is answered; the answer is
+        # dropped on the floor. Exactly a lost response, not a refused request.
+        if route.request.method != "POST":
+            return route.continue_()
+        try:
+            r = route.fetch()
+            lost.update(r.json())
+            lost["_status"] = r.status
+        except Exception as e:                       # noqa: BLE001
+            lost["_err"] = str(e)
+        route.abort()
+
+    lp = b.new_context().new_page()
+    lp.goto(f"{BASE}/skribl-pad", wait_until="load")
+    lp.wait_for_timeout(1200)
+    lp.route(f"{API}**", swallow)
+    lbox = lp.locator("#canvas").bounding_box()
+    lp.mouse.move(lbox["x"] + 70, lbox["y"] + 70)
+    lp.mouse.down()
+    lp.mouse.move(lbox["x"] + 170, lbox["y"] + 140, steps=8)
+    lp.mouse.up()
+    lp.wait_for_timeout(400)
+    lp.click("#recordBtn")
+    lp.wait_for_timeout(600)
+    lp.click("#postBtn")
+    lp.wait_for_timeout(500)
+    lp.fill("#postTitleInput", "Lost in transit")
+    lp.click("#postSubmitBtn")
+    lp.wait_for_timeout(2500)
+    lp.unroute(f"{API}**")
+    check("the server created the post the browser never heard about",
+          lost.get("_status") == 201 and bool(lost.get("id")), str(lost)[:120])
+    after_loss = lp.evaluate(READ)
+    check("the Pad fell back to a local save",
+          len(after_loss) == 1 and str(after_loss[0].get("id", "")).startswith("local_"),
+          str(after_loss)[:120])
+    # THE RETRY: same drawing, same title, the sheet reopened, Post pressed again.
+    lp.keyboard.press("Escape")
+    lp.wait_for_timeout(500)
+    lp.click("#postBtn")
+    lp.wait_for_timeout(500)
+    replays = []
+    lp.on("response", lambda r: replays.append(r) if r.request.method == "POST"
+          and r.url.startswith(API) else None)
+    lp.click("#postSubmitBtn")
+    lp.wait_for_timeout(2500)
+    rep = None
+    for r in replays:
+        try:
+            rep = (r.status, r.json())
+        except Exception:                            # noqa: BLE001
+            rep = (r.status, {})
+    posted = [e for e in lp.evaluate(READ) if not e.get("local")]
+    check("the retry REPLAYED to the same post (200, idempotentReplay) rather than making a second",
+          rep is not None and rep[0] == 200 and rep[1].get("idempotentReplay") is True
+          and rep[1].get("id") == lost.get("id"),
+          f"{rep!r} vs first id {lost.get('id')} — under the mutation that drops the "
+          "client scope this is a 201 with a new id: the duplicate the audit named")
+    check("...and Your Skribls lists that ONE post, by the first request's id",
+          len(posted) == 1 and posted[0].get("id") == lost.get("id"),
+          str(posted)[:120])
+    # THE KEY. A replay answers with the id alone; the key that deletes the post
+    # is the one this browser minted and sent with both requests. Spent, again.
+    rtok = posted[0].get("tok") if posted else None
+    check("...holding the key that takes it down, though no answer ever carried one",
+          bool(rtok) and delete_with(lost.get("id"), rtok) == 204,
+          f"tok={str(rtok)[:10]!r}… DELETE with it must be 204 — under the mutation that "
+          "stops the client minting its token, the server's copy went down with the answer")
+    lp.context.close()
+
+    # FLIP, SEPARATELY. Same fix, different surface, and a different failure
+    # mode: Flip sent NO Idempotency-Key at all before SK-AUD-001, so its retry
+    # was a duplicate by construction, not by a reset key. Flip keeps the sheet
+    # open on a network error, so the retry is the same button pressed again.
+    lost2 = {}
+
+    def swallow2(route):
+        if route.request.method != "POST":
+            return route.continue_()
+        try:
+            r = route.fetch()
+            lost2.update(r.json())
+            lost2["_status"] = r.status
+        except Exception as e:                       # noqa: BLE001
+            lost2["_err"] = str(e)
+        route.abort()
+
+    lf = b.new_context().new_page()
+    lf.goto(f"{BASE}/flip", wait_until="load")
+    lf.wait_for_timeout(1400)
+    lf.route(f"{API}**", swallow2)
+    fbox = lf.locator("#pad").bounding_box()
+    lf.mouse.move(fbox["x"] + 60, fbox["y"] + 60)
+    lf.mouse.down()
+    lf.mouse.move(fbox["x"] + 150, fbox["y"] + 130, steps=8)
+    lf.mouse.up()
+    lf.wait_for_timeout(250)
+    lf.click("#postBtn")
+    lf.wait_for_timeout(400)
+    lf.fill("#flipShareTitle", "Lost in transit, Flip")
+    lf.click("#flipShareSubmit")
+    lf.wait_for_timeout(2500)
+    lf.unroute(f"{API}**")
+    check("Flip: the server created the post the browser never heard about",
+          lost2.get("_status") == 201 and bool(lost2.get("id")), str(lost2)[:120])
+    check("Flip: the sheet says the server could not be reached, and stays for the retry",
+          lf.is_visible("#flipShareError") and lf.is_visible("#flipShareSubmit"),
+          lf.inner_text("#flipShareError") if lf.is_visible("#flipShareError") else "no error shown")
+    freplays = []
+    lf.on("response", lambda r: freplays.append(r) if r.request.method == "POST"
+          and r.url.startswith(API) else None)
+    lf.click("#flipShareSubmit")
+    lf.wait_for_timeout(2500)
+    frep = None
+    for r in freplays:
+        try:
+            frep = (r.status, r.json())
+        except Exception:                            # noqa: BLE001
+            frep = (r.status, {})
+    fposted = lf.evaluate(READ)
+    check("Flip: the retry REPLAYED to the same post (200, idempotentReplay)",
+          frep is not None and frep[0] == 200 and frep[1].get("idempotentReplay") is True
+          and frep[1].get("id") == lost2.get("id"),
+          f"{frep!r} vs first id {lost2.get('id')} — Flip sent no key at all before SK-AUD-001")
+    check("Flip: ...and Your Skribls lists that ONE post, by the first request's id",
+          len(fposted) == 1 and fposted[0].get("id") == lost2.get("id"), str(fposted)[:120])
+    ftok = fposted[0].get("tok") if fposted else None
+    check("Flip: ...holding the key that takes it down, though no answer ever carried one",
+          bool(ftok) and delete_with(lost2.get("id"), ftok) == 204,
+          f"tok={str(ftok)[:10]!r}… DELETE with it must be 204")
+    lf.context.close()
 
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — a local-only save IS listed, on this device, and survives the sweep")
