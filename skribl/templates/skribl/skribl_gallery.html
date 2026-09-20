@@ -114,7 +114,7 @@
 
     /* ---- the grid ------------------------------------------------------ */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-    @media (max-width: 400px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 400px) { .grid { grid-template-columns: minmax(0, 1fr); } }   /* not a bare 1fr: see the profile's note */
     .tile {
       background: var(--panel); border: 1px solid var(--hairline); border-radius: 14px;
       padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0;
