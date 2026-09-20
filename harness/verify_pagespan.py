@@ -55,13 +55,19 @@ def fresh(page, n=6):
                       strokeGroups: [1], hold: 1 });
       }
       idx = 0; spanAnchor = null; pageClip = null;
-      redoStack.length = 0; buildStrip(); render();
+      // The undo log too: a stale entry from an earlier section is what a
+      // later undoStroke() would pop, and applying an old move to these pages
+      // crashed the run instead of failing the pin that depended on it.
+      redoStack.length = 0; actionLog.length = 0; buildStrip(); render();
     }""", n)
 
 
 def order(page):
-    """The page order, read from the artwork."""
-    return page.evaluate("() => frames.map(f => f.strokes[0].x)")
+    """The page numbers, read off the artwork. A page with no stroke reads as
+    None rather than throwing: under a mutation that drops the deletion log,
+    undoStroke() falls through to undoing the current page's last stroke, and a
+    helper that cannot describe that state turns a red pin into a crash."""
+    return page.evaluate("() => frames.map(f => f.strokes[0] ? f.strokes[0].x : null)")
 
 
 with sync_playwright() as p:
@@ -285,6 +291,40 @@ with sync_playwright() as p:
               str(order(page)))
         check("...and drops the range with it",
               page.evaluate("() => pageSpan()") is None)
+        # UNDOABLE (SK-AUD-002; acquisition audit of v302). A span took many
+        # pages in one activation and autosaved the loss in the same tick, with
+        # no arm and no way back — the one destructive act in Flip with neither.
+        # The pages come back where they were, and redo takes them again.
+        page.evaluate("() => undoStroke()")
+        page.wait_for_timeout(100)
+        check("Undo restores every page of the deleted run, in place",
+              order(page) == [0, 1, 2, 3, 4, 5], str(order(page)))
+        check("...and lands on the page the artist was on",
+              page.evaluate("() => idx") == 2, str(page.evaluate("() => idx")))
+        page.evaluate("() => redoStroke()")
+        page.wait_for_timeout(100)
+        check("Redo deletes the run again", order(page) == [3, 4, 5], str(order(page)))
+        # The single-page doors — the tile ×, the page bar with no range, the
+        # per-page menu — all funnel into delFrame, so one pin covers the three.
+        fresh(page)
+        page.evaluate("() => { idx = 4; delFrame(2); }")
+        page.wait_for_timeout(100)
+        check("deleting one page removes it", order(page) == [0, 1, 3, 4, 5], str(order(page)))
+        page.evaluate("() => undoStroke()")
+        page.wait_for_timeout(100)
+        check("Undo puts the single page back", order(page) == [0, 1, 2, 3, 4, 5],
+              str(order(page)))
+        # The one-page case REPLACES rather than removes (a pageless flipbook is
+        # refused), and undo has to know that to put the drawing back.
+        fresh(page, 1)
+        page.evaluate("() => delFrame(0)")
+        page.wait_for_timeout(100)
+        check("deleting the only page leaves a blank one",
+              page.evaluate("() => frames.length === 1 && frames[0].strokes.length === 0"))
+        page.evaluate("() => undoStroke()")
+        page.wait_for_timeout(100)
+        check("...and Undo brings the drawing back onto it",
+              order(page) == [0], str(order(page)))
         fresh(page)
         page.evaluate("() => { spanAnchor = 0; idx = frames.length - 1; buildStrip(); }")
         check("deleting EVERY page is refused rather than emptying the flipbook",
