@@ -302,6 +302,20 @@ let moveOrigin = null, moveDragging = false, moveStart = null;
    and would take the whole file down with it. */
 let liquifying = false, liquifyPointerId = null;
 let fieldActive = false, fieldPointerId = null;   // smudge / blur
+/* HOW MANY TIMES THE CHEAP PATH PAINTS ONE PIXEL (SK-AUD-007). While a field
+   tool's finger is down a see-through run skips its layer (paintStatic says
+   why) and is walked segment by segment, so every joint's round cap lands on
+   the neighbour's: the run comes out brighter than the layer will settle it
+   to, and the settle read as a flash on a phone. Measured on the mesh fixture
+   in verify_smudgeblur: the live frame was 26% brighter than the settled one,
+   with 29% of its lit pixels off by more than 24/255. Each segment is
+   therefore painted at the alpha whose k-fold compounding equals the run's
+   own -- 1 - (1 - a)^(1/k) -- and k is the overlap the smudge's subdivision
+   produces, measured rather than derived: 1.6 brings the live frame to 5%
+   of the settled one with 3% of pixels off. The beads stay (they are the
+   walk); the brightness step is what went. Up here because paintStatic can
+   run before the smudge constants below are reached. */
+const SMUDGE_LIVE_OVERLAP = 1.6;
 let liquifyLast = null, liquifyIdx = -1;
 /* A WHOLE-FRAME snapshot, not a map of touched indices, because subdividing
    INSERTS points and every index after an insertion shifts. The index-keyed
@@ -1334,13 +1348,24 @@ function paintStatic(c, strokeArr){
        those trips, which is where "it takes multiple seconds" came from.
        During the gesture the ink is moving anyway and the compounding is a
        transient; _fieldIdx clears inside fieldEnd, BEFORE endFieldDrag's
-       render(), so the settled page is the correct one. */
-    if (a >= 1 && _layered && _fieldIdx < 0 && seg.length > 1
+       render(), so the settled page is the correct one.
+       BUT BRIGHTNESS-MATCHED (SK-AUD-007): the live walk paints at the alpha
+       whose compounding lands where the layer will -- SMUDGE_LIVE_OVERLAP has
+       the measurement -- so what changes at the settle is the beads, not the
+       brightness. Same cost as before: no round trip, one globalAlpha. */
+    let _liveGA = 1;
+    if (a >= 1 && _layered && seg.length > 1
         && !seg[0].erase && !_uniRunFn()(seg, strokeAlphaOf)) {
       const _ua = _uniAlphaFn()(seg, strokeAlphaOf);
-      if (_ua > 0 && _ua < 1) a = _ua;
+      if (_ua > 0 && _ua < 1) {
+        if (_fieldIdx < 0) a = _ua;
+        else _liveGA = (1 - Math.pow(1 - _ua, 1 / SMUDGE_LIVE_OVERLAP)) / _ua;
+      }
     }
-    if (a >= 1) { paintSeg(c, seg, false); }
+    if (a >= 1) {
+      if (_liveGA < 1) { c.globalAlpha = _liveGA; paintSeg(c, seg, false); c.globalAlpha = 1; }
+      else paintSeg(c, seg, false);
+    }
     else {
       /* THE RUN'S BOX, NOT THE PAGE. Clearing and compositing the whole canvas
          for a stroke that covers a corner of it is what made this per-run price
