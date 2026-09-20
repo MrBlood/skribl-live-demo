@@ -5,7 +5,7 @@
  * WHAT THIS REPLACED, AND WHY THAT MATTERED
  * ===========================================================================
  *
- * Until now this file was a MOCK. It carried its own tiny replay engine and a
+ * Until v275 this file was a MOCK. It carried its own tiny replay engine and a
  * table of hand-drawn motifs — a bolt, a cassette, a smiley — and rendered
  * those. Nothing on the page had ever been posted by anyone. It was registered
  * as a real route the whole time, so a host mounting Skribl got it in their own

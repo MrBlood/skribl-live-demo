@@ -239,10 +239,11 @@ def register_routes(bp, *, index_route=False):
     @bp.get("/library")
     def skribl_library():
         """The profile's Skribls tab: the listing, with a full transport."""
-        # CONCEPT PREVIEW — a per-user library with an inline player that replays
-        # each skribl. Served as a real route so it can be seen live and the
-        # player iterated on; the tiles are self-contained demo drawings, not yet
-        # backed by GET /api/skribls. Not part of the sealed feature set.
+        # Real posts from GET /api/skribls, one payload at a time, played by the
+        # shared in-post player -- verify_library.py pins all three. It was a
+        # mock until v275, and this comment went on calling it a concept preview
+        # of demo drawings for twenty releases after; an outside audit read the
+        # comment as current and graded the product on it (SK-AUD-011).
         return render_template("skribl/skribl_library.html")
 
     @bp.get("/feed")
