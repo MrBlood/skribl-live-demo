@@ -168,7 +168,8 @@ BATCHES = [
     ["verify_tween.py"],                   # measures
     ["verify_inbetween.py"],               # measures — geometry through the middle
     ["verify_liquify.py"],                 # measures
-    ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py"],
+    ["verify_sharedrules.py", "verify_theme.py", "verify_boot.py",
+     "verify_identity.py"],                # v303: the manifest, icons and theme-color
     ["verify_nametab.py"],                 # unrecorded
     ["verify_tray.py", "verify_select.py", "verify_pillfit.py",
      "verify_flipdraft.py", "verify_fuzz.py"],
