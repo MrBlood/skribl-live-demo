@@ -21,6 +21,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Pad</title>
   <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
+{# posted.css: the recovery-key panel (lib/recoverykey.js), shown at post
+   time when the browser could not keep the key; the tray it also styles
+   lives on the profile page since v304. #}
+<link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
   {% include 'skribl/_skribl_app_identity.html' %}
   {% include 'skribl/_skribl_theme_boot.html' %}
 </head>

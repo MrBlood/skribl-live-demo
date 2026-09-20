@@ -1,0 +1,251 @@
+/* posted.css -- Your Skribls, and the recovery-key panel.
+ *
+ * MOVED OUT OF styles.css IN v304, when "Your Skribls" stopped being a drawer
+ * inside the editors and became the profile page (/library). That page does
+ * not load styles.css -- it is a page about drawings, not a tool, and it
+ * carries its own handful of tokens -- so the rules the tray and the
+ * recovery-key panel need travel in this file, loaded by:
+ *
+ *   the profile page   for the list (lib/postedui.js) and the recovery
+ *                      overlays it can open (lib/recoverykey.js);
+ *   both editors       for the recovery-key panel alone, shown at post time
+ *                      when the browser could not keep an anonymous post's key.
+ *
+ * TOKENS. These rules speak styles.css's vocabulary (--surface-control,
+ * --text-secondary, --danger, --line-strong ...). The editors define all of
+ * it; the profile page maps that vocabulary onto its own palette in both
+ * ramps (skribl_library.html), so one rule set renders on every page that
+ * loads it. Add a token here and the profile's map needs it too --
+ * verify_library reads the computed styles of a row on the profile. */
+
+/* ---- Your Skribls tray ----------------------------------------------------
+   Reuses .help-search / .help-search-count so the two drawers share one field
+   treatment rather than growing a second one that drifts. */
+.posted-drawer { position: fixed; inset: 0; z-index: 320; display: flex;
+  align-items: center; justify-content: center; }
+.posted-drawer[hidden] { display: none; }
+.posted-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.posted-inner { position: relative; width: min(440px, calc(100vw - 32px));
+  max-height: min(560px, calc(100dvh - 64px)); display: flex; flex-direction: column;
+  background: var(--surface-panel); border: 1px solid var(--hairline-strong);
+  border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.55); }
+.posted-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px; font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.posted-close { background: none; border: 0; color: var(--text-secondary);
+  font-size: 15px; cursor: pointer; padding: 2px 4px; }
+.posted-search { margin-bottom: 6px; }
+.posted-list { flex: 1 1 auto; overflow-y: auto; padding: 4px 12px 12px; }
+.posted-row { display: flex; align-items: center; gap: 10px; padding: 9px;
+  border-radius: 12px; background: var(--surface-control);
+  border: 1px solid var(--hairline); margin-bottom: 7px; }
+.posted-row:hover { background: var(--surface-control-hover); }
+.posted-thumb { width: 42px; height: 34px; border-radius: 8px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--accent-tint-2); background: rgba(124,92,255,0.18); }
+/* THE BASE IS THE FLIP COLOUR and .posted-thumb-flip deliberately has no rule
+   of its own — the class is emitted so the markup names what it is, and Pad
+   is the one that overrides. Said out loud because a class with no rule is
+   what verify_exportui.py exists to catch, and the next person editing
+   .posted-thumb above needs to know its background is load-bearing for Flip
+   rather than a neutral default. */
+/* SVG now, not a font glyph: the two characters rendered at whatever weight and
+   baseline the system font chose, so they sat unevenly beside each other. */
+.posted-thumb svg { width: 17px; height: 17px; display: block; }
+.posted-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column;
+  gap: 2px; text-decoration: none; color: inherit; }
+.posted-title { font-size: 13px; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ONE LINE, always (v293): the meta is "4 pages · 41 min ago", and on a
+   phone the row that holds three actions used to squeeze it to a word per
+   line. The actions yield (they stack, below) — the words never do. */
+.posted-sub { font-size: 11px; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.posted-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+/* On a phone, a row with three actions puts them on their own line under
+   the title, indented past the thumb so they read as the row's; the × keeps
+   the title line's right edge. A one-action row is unchanged. A width query
+   rather than the size class: the drawer is shared and the Pad does not load
+   lib/sizeclass.js — this sheet's own compact tier is max-width 640. */
+@media (max-width: 640px) {
+  .posted-row-keyed { flex-wrap: wrap; }
+  .posted-row-keyed .posted-actions { order: 2; flex: 1 1 100%; justify-content: flex-start; padding-left: 52px; }
+  .posted-row-keyed .posted-del { order: 1; }
+}
+/* The destructive sibling of .posted-copy. Danger-toned so it does not read
+   as another neutral utility beside "Copy link", and only rendered at all when
+   this browser holds the post's revocation key. */
+.posted-delete {
+  flex: 0 0 auto; padding: 5px 10px; border-radius: 8px;
+  background: rgba(244, 50, 111, 0.12); border: 1px solid rgba(244, 50, 111, 0.35);
+  color: var(--danger-soft); font-size: 12px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+}
+.posted-delete:hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); }
+.posted-delete:disabled { opacity: .6; cursor: default; }
+/* Armed by a first tap (SK-AUD-014): the second tap deletes for everyone, so
+   the button turns solid danger for the seconds it is live. */
+.posted-delete.armed { background: var(--danger); color: #fff; }
+
+.posted-copy { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+  border: 1px solid var(--hairline-strong); color: var(--text-secondary);
+  padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+.posted-copy:hover { color: var(--text-primary); }
+.posted-copy.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
+/* Copy key — the same chrome as Copy link because it is the same kind of act,
+   and deliberately NOT danger-toned like .posted-delete beside it: copying a
+   recovery key destroys nothing. It sits between the two so the destructive
+   button is not the only thing a worried person sees. */
+.posted-key { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+  border: 1px solid var(--hairline-strong); color: var(--text-secondary);
+  padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+.posted-key:hover { color: var(--text-primary); }
+.posted-key.done { color: var(--ui-hi); border-color: rgba(124,92,255,0.4); }
+.posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
+  font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.posted-del:hover { color: var(--danger, var(--danger)); }
+/* A LOCAL save's × arms before it deletes (SK-AUD-010): the armed tap reads
+   as the danger it is, like every other armed control here. */
+.posted-del.armed { color: var(--danger); }
+.posted-empty { text-align: center; padding: 34px 16px; }
+.posted-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 5px; }
+.posted-empty-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+/* Above the list since v292 (outside review of v291, SK-AUD-020): the
+   browser-local truth is read BEFORE the list reads as a library. */
+.posted-foot-top { border-top: 0; border-bottom: 1px solid var(--hairline); }
+.posted-foot { border-top: 1px solid var(--hairline); padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 11px; color: var(--text-secondary); }
+.posted-clearbtn { background: none; border: 0; color: var(--text-secondary);
+  font: inherit; font-size: 11px; cursor: pointer; text-decoration: underline;
+  padding: 0; flex: 0 0 auto; }
+.posted-clearbtn[hidden] { display: none; }
+
+
+/* --- the recovery-key panel (lib/recoverykey.js) --------------------------
+   Shown only when the browser could not keep an anonymous post's revocation
+   key, so it is the last place that secret exists. It is styled to be read
+   rather than dismissed: full-bleed scrim, the key in a monospace well large
+   enough to transcribe by hand off a phone, and no close affordance except the
+   button that says the user has saved it.
+
+   Deliberately not sharing .post-sheet: that sheet's job is to be got through
+   quickly and this one's is to stop somebody. Borrowing its chrome would have
+   made them look interchangeable at the one moment they must not. */
+.reckey-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;                 /* above the eyedropper loupe, the previous
+                                     ceiling: nothing may cover this */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  /* Pure black, like .menu-overlay::before, and NOT a hand-mixed dark grey:
+     verify_surfaces refuses an untokenised neutral because it cannot follow
+     a light theme. rgba(6,7,10,.82) was exactly that and the ratchet caught
+     it. Heavier than the menu's 0.4 on purpose — this panel has to be read,
+     not glanced past. */
+  background: rgba(0, 0, 0, 0.62);
+}
+.reckey-sheet {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-sheet);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+.reckey-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: var(--text-strong);
+}
+.reckey-why, .reckey-note {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.reckey-note { margin-bottom: 16px; }
+/* 16px minimum: _ZOOM_EXEMPT is empty and this is a field a user may focus to
+   select from, so anything smaller zooms the page on iOS. */
+.reckey-value {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-well);
+  color: var(--text-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  line-height: 1.4;
+  word-break: break-all;
+  user-select: all;
+}
+.reckey-actions { display: flex; gap: 8px; }
+.reckey-copy, .reckey-done {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.reckey-copy {
+  border: 1px solid var(--line-strong);
+  background: var(--surface-control);
+  color: var(--text-strong);
+}
+.reckey-copy:hover { background: var(--surface-control-hover); }
+.reckey-done {
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--text-strong);
+}
+.reckey-said {
+  margin: 10px 0 0;
+  min-height: 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+/* The pre-post volatility notice, inserted by recoverykey.warnIfVolatile()
+   into whichever sheet is about to create server state. Warning colours, not
+   error colours: nothing has gone wrong yet and posting is still allowed. */
+.reckey-warn {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-well);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+/* Recovery-key inputs (lib/recoverykey.js). 16px minimum: _ZOOM_EXEMPT is
+   empty, and a field the user must paste into is the last place to make iOS
+   zoom the page out from under them. */
+.reckey-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.reckey-input {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-well);
+  color: var(--text-strong);
+  font-size: 16px;
+  font-family: inherit;
+}
+.reckey-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.reckey-done[disabled] { opacity: 0.45; cursor: not-allowed; }
+
