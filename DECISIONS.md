@@ -8898,6 +8898,25 @@ navigator.share is) and `verify_posted.py` re-pointed at the profile; the
 recovery-key dialogs joined verify_a11y's modal census on `/library`.
 Calibrated per component; the log is in the PR.
 
+**FROM THE OWNER'S PHONE, THE DAY AFTER: the page ran over the right
+margin.** Two things, found by measuring under mobile emulation. The
+stage-and-list grid's one column at phone width was a bare `1fr`, which is
+`minmax(auto, 1fr)`: its minimum is its content's minimum, so one row that
+would not shrink -- a title beside its actions -- widened the column, the
+card and the page. It is `minmax(0, 1fr)` now, on the gallery's phone
+column too. And on a phone every row carries Share (the system has a
+sheet), so a row with more than one action wraps them under the title,
+where a keyed row always did, and the strip itself wraps. Pinned three
+ways at 320 and 390 -- with a share sheet and without, since headless
+Chromium has none even under mobile emulation and a phone does: nothing
+past the edge, the actions under the title, the title keeping its room.
+The first pin stayed green under the column mutation because the wrap
+alone covered the case it measured; the no-sheet case is what the column
+governs, and the title's room is what the wrap governs. Two mutations,
+each red on its own pin. The stat under the profile's name reads "posted"
+now, not "loaded"; the count is what this browser posted, not a page of a
+listing.
+
 ## Unsealed, on top of v303 -- the gallery searches, and lists Hot by plays (v304 when sealed)
 
 The owner: "a public gallery that is searchable and lists HOT skribls based
