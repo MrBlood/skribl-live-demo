@@ -6348,6 +6348,22 @@ body.playing .flip-grid { display: none; }
 }
 /* Record, Play and Post come down to meet them. */
 .header .actions .btn { height: 36px; padding: 0 16px; }
+/* THE HEADER PILLS GET THE SAME 44px BAND AS THE TOOLBAR (SK-AUD-005;
+   acquisition audit of v302). Record and Post are 36px tall, the most-pressed
+   controls on the page, and were the only bar controls with no --tap-grow
+   band: measured, every toolbar control answered a tap 44-45px tall while
+   Post answered 37. Vertical only -- the sides are 0 -- so the band never
+   reaches a neighbour in the row; the header's 12px padding above and below
+   the pill holds the 5px overhang (5, not 4: a 4px band measured 43 through
+   elementFromPoint, the same border-box rounding the toolbar's bands absorb
+   with an extra pixel), so it takes nothing from the canvas. verify_layout
+   measures the EFFECTIVE box, through elementFromPoint, on every bar and
+   header control. */
+.header .actions .btn { position: relative; z-index: 1; --tap-grow: 5px; }
+.header .actions .btn::before {
+  content: ""; position: absolute; inset: calc(-1 * var(--tap-grow)) 0;
+  background: transparent; border-radius: inherit;
+}
 .header .actions .btn.play { height: 36px; }
 
 /* Flip's back arrow left the header in v293 — the way back to the Pad is a
