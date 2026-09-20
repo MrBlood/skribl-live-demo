@@ -202,12 +202,12 @@ with sync_playwright() as sp:
     st, srv = listing(sort="hot", limit=1)
     check("...and shows the server's order, not one of its own", first == titles(srv)[0], f"page {first!r} vs server {titles(srv)[:1]}")
     plays = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile')].slice(0, 3).map(t => (t.querySelector('.plays') || {}).textContent || '')")
-    check("a played tile says its plays; an unplayed one says nothing", any(re.match(r"\\d+ plays?$", p) for p in plays), str(plays))
+    check("a played tile says its plays; an unplayed one says nothing", any(re.match(r"\d+ plays?$", p) for p in plays), str(plays))
     pg.fill("#galleryQ", "beta fish")
     pg.wait_for_timeout(1200)
     shown = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile .tt')].map(t => t.textContent)")
     check("the box sends q and the page shows what came back",
-          any("q=beta" in u for u in reqs) and all("beta fish" in t for t in shown) and shown, f"{reqs[-1:]} -> {shown}")
+          any("q=beta" in u for u in reqs) and all("beta fish" in t.lower() for t in shown) and shown, f"{reqs[-1:]} -> {shown}")
     pg.fill("#galleryQ", "zzzz-nothing-" + TAG)
     pg.wait_for_timeout(1200)
     none = pg.evaluate("() => ({ none: !document.getElementById('galleryNone').hidden, empty: !document.getElementById('galleryEmpty').hidden, tiles: document.querySelectorAll('#galleryList .tile').length })")
@@ -226,7 +226,7 @@ if have_db:
         check("the viewer column is a 64-hex hash, not an address",
               bool(row) and re.fullmatch(r"[0-9a-f]{64}", row.viewer_hash or "") is not None
               and "127.0.0.1" not in (row.viewer_hash or ""), str(row.viewer_hash)[:20])
-        check("the day is a UTC date", bool(row) and re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", row.day or "") is not None, str(row.day))
+        check("the day is a UTC date", bool(row) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", row.day or "") is not None, str(row.day))
 
 passed = sum(1 for r in results if r[0])
 print("\n" + "=" * 62 + f"\n{passed}/{len(results)} passed")
