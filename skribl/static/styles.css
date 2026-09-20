@@ -5338,6 +5338,9 @@ body.player-mode #canvas {
 }
 .posted-delete:hover:not(:disabled) { background: rgba(244, 50, 111, 0.2); }
 .posted-delete:disabled { opacity: .6; cursor: default; }
+/* Armed by a first tap (SK-AUD-014): the second tap deletes for everyone, so
+   the button turns solid danger for the seconds it is live. */
+.posted-delete.armed { background: var(--danger); color: #fff; }
 
 .posted-copy { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
   border: 1px solid var(--hairline-strong); color: var(--text-secondary);

@@ -138,28 +138,43 @@ with sync_playwright() as p:
     print("\nYOUR SKRIBLS — removing an entry does not delete the Skribl")
     pid = entry.get("id")
 
-    # THE ✕ NOW ASKS FIRST WHEN THERE IS SOMETHING TO LOSE, and that is a v279
-    # behaviour change this assertion had to be taught. An audit of v278 pointed
-    # out that ✕ removed the local record while the Skribl stayed live — and
-    # since v279 that record also holds the only key that can delete it, so
-    # discarding it silently forfeits revocation. It confirms; a token-less
-    # entry still goes without friction.
+    # THE ✕ ASKS FIRST WHEN THERE IS SOMETHING TO LOSE (v279): an audit of v278
+    # pointed out that ✕ removed the local record while the Skribl stayed live,
+    # and since v279 that record also holds the only key that can delete it, so
+    # discarding it silently forfeits revocation. A token-less entry still goes
+    # without friction.
     #
-    # Playwright dismisses dialogs by default, so an unhandled confirm reads as
-    # "cancelled" and this section failed on the real, intended behaviour. The
-    # handler is what makes the assertion measure the removal rather than the
-    # dialog.
+    # IT ARMS RATHER THAN confirm()s (SK-AUD-014; acquisition audit of v302):
+    # the browser-painted dialog was the one destructive confirmation in the
+    # product that did not use the armed second tap everything else does. So
+    # the first tap must NOT remove, must say what the second will do — in the
+    # button's own name and through the drawer's live region — and the second
+    # tap removes. (The old version accepted a dialog; Playwright dismisses
+    # dialogs by default, and a dialog that appears now is itself a failure.)
     _asked = []
-    pg.on("dialog", lambda d: (_asked.append(d.message), d.accept()))
+    pg.on("dialog", lambda d: (_asked.append(d.message), d.dismiss()))
 
     _has_tok = pg.evaluate("() => !!(window.SkriblPosted.list()[0]||{}).tok")
     pg.click("#postedList .posted-del")
-    pg.wait_for_timeout(400)
+    pg.wait_for_timeout(300)
     if _has_tok:
-        check("removing an entry that holds the delete key warns first",
-              any("key" in m.lower() for m in _asked),
-              f"{_asked} — throwing the key away without saying so is what the "
-              "audit called out as making recovery worse")
+        _armed = len(pg.evaluate(READ)) == 1
+        check("the first tap on a keyed row's ✕ arms rather than removes",
+              _armed, str(pg.evaluate(READ)))
+        # Read only while the row exists: under the mutation that removes on
+        # the first tap the button is gone, and waiting for it wedges the run.
+        _name = (pg.get_attribute("#postedList .posted-del", "aria-label") or "") if _armed else ""
+        _live = pg.inner_text("#postedStatus")
+        check("...and says the key goes with the entry, in its name and aloud",
+              "key" in _name.lower() and "key" in _live.lower(),
+              f"name {_name!r}; live {_live!r}")
+        check("...with no browser dialog", not _asked, str(_asked))
+        # Only while the row is still there: under the mutation that removes
+        # on the first tap there is nothing left to click, and a click on a
+        # missing row would wedge the run instead of failing the pin above.
+        if pg.evaluate(READ):
+            pg.click("#postedList .posted-del")
+            pg.wait_for_timeout(400)
     check("the entry is gone from the list", pg.evaluate(READ) == [])
     with urllib.request.urlopen(f"{API}/{pid}", timeout=15) as r:
         still = json.loads(r.read())
@@ -308,7 +323,7 @@ with sync_playwright() as p:
         pd.wait_for_timeout(200)
     check("one tap on the local row's × arms rather than deletes",
           nrows == 1 and len(pd.evaluate(READ)) == 1 and pd.evaluate(HAS_BLOB, lid))
-    if nrows == 1:
+    if nrows == 1 and pd.evaluate(READ):     # still there to tap (not under the arm mutation)
         pd.click("#postedList .posted-row-local .posted-del")
         pd.wait_for_timeout(300)
     check("the second tap deletes the entry AND its bytes",
@@ -482,9 +497,8 @@ with sync_playwright() as p:
         return seen;
       }""")
     if hdrs is None:
-        # No test seam on the module; drive the real button instead, accepting
-        # the confirm() that guards it.
-        pd.once("dialog", lambda d: d.accept())
+        # No test seam on the module; drive the real button instead. It ARMS
+        # on the first tap and acts on the second (SK-AUD-014), so two clicks.
         hdrs = pd.evaluate("""() => {
             window.SKRIBL_CSRF_TOKEN = 'csrf-probe-value';
             let seen = null;
@@ -492,7 +506,7 @@ with sync_playwright() as p:
             window.fetch = (u, o) => { seen = (o && o.headers) || {};
                 return Promise.resolve({ ok: true, status: 200 }); };
             const b = document.querySelector('.posted-row[data-id="csrfrow"] .posted-delete');
-            if (b) b.click();
+            if (b) { b.click(); b.click(); }
             window.fetch = real;
             return seen; }""")
     check("the tray's DELETE carries X-Skribl-CSRF when the host issued one",
@@ -694,18 +708,28 @@ with sync_playwright() as p:
     # Delete with the recovery overlay still covering it and timed out on
     # an element that was present and NOT VISIBLE — a test-setup failure
     # that reads exactly like a product one.
-    # ACCEPT THE CONFIRM, or this section measures nothing. The row's
-    # Delete asks `confirm()` first, and Playwright auto-DISMISSES dialogs,
-    # so the first version of this test clicked Delete, had the confirm
-    # silently refused, never reached destroy(), and then asserted that the
-    # entry was still present — which it was, for the wrong reason. It
-    # passed with the 404-as-success bug fully restored. Caught by mutating
-    # the code it was written for; nothing else would have shown it.
-    pd.on("dialog", lambda d: d.accept())
+    # TAP TWICE, or this section measures nothing. Delete ARMS on the first
+    # tap (SK-AUD-014; it used to ask confirm(), and Playwright auto-DISMISSES
+    # dialogs, so the first version of this test clicked once, had the confirm
+    # silently refused, never reached destroy(), and asserted the entry was
+    # still present — which it was, for the wrong reason; it passed with the
+    # 404-as-success bug fully restored). The armed state is asserted on the
+    # way, and a dialog appearing now is itself a failure.
+    _dlg = []
+    pd.on("dialog", lambda d: (_dlg.append(d.message), d.dismiss()))
     pd.evaluate("() => window.SkriblRecoveryKey.closeRecover()")
     pd.evaluate("() => window._skriblPostedUI && window._skriblPostedUI.open()")
     pd.wait_for_timeout(500)
     pd.click(f'.posted-row[data-id="{kept}"] .posted-delete')
+    pd.wait_for_timeout(300)
+    check("the first tap on Delete arms it and says what the second does",
+          "cannot be undone" in (pd.get_attribute(
+              f'.posted-row[data-id="{kept}"] .posted-delete', "aria-label") or "").lower()
+          and "cannot be undone" in pd.inner_text("#postedStatus").lower()
+          and not _dlg,
+          f"dialogs {_dlg}; live {pd.inner_text('#postedStatus')!r}")
+    if pd.locator(f'.posted-row[data-id="{kept}"] .posted-delete:not([disabled])').count():
+        pd.click(f'.posted-row[data-id="{kept}"] .posted-delete')
     pd.wait_for_timeout(1500)
     still = pd.evaluate("() => window.SkriblPosted.list()")
     check("a wrong key does NOT remove the local entry",
