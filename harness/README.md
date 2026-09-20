@@ -386,7 +386,7 @@ A green check is not evidence until it has been shown to go red.
 - Drawing before adding music triggers `setLoopToDrawingLength()`, so the loop
   will be the drawing's length, not 20s. That's intended; don't read it as a bug.
 
-### Unsealed, on top of v302 — the acquisition audit
+### v303 — the acquisition audit
 
 - `verify_identity.py` — the app's identity to a browser and a Home Screen
   (SK-AUD-013): `/manifest.webmanifest` is served and every icon it names is

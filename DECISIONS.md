@@ -8476,11 +8476,13 @@ The re-seal is a second ~50-minute run and both attestations carried in again.
 That is cheaper than the alternative, which was a sealed record that said FULL
 RELEASE PASS above a player that stalls on a smudged smear.
 
-## Unsealed, on top of v302 -- the acquisition audit, and what fixing everything found
+## v303 -- the acquisition audit, and what fixing everything found
 
-**THIS HEADING CARRIES NO NUMBER ON PURPOSE.** The v278 note explains the
-practice: a numbered heading claims a sealed tree, and nothing here has been
-through `release_run.py`. The number goes on at the seal.
+**THIS ENTRY WAS WRITTEN UNSEALED AND NUMBERED AT THE SEAL,** in the v278
+manner: while the work was in the tree it sat under "Unsealed, on top of
+v302", because a numbered heading claims a sealed tree, and the number went
+on when `release_run.py` froze this tree and passed. Everything below was
+true as written before the seal and is true after it.
 
 **WHERE THIS CAME FROM.** The session opened on the v302 handoff and landed the
 evergreen session primer (`docs/SESSION-CONTEXT.md`) and `harness/bootstrap.sh`
@@ -8653,8 +8655,9 @@ it, exactly as it did before the client could. Pinned on the wire and on the
 outcome, on both surfaces, with Web Crypto removed at the prototype -- and
 the Idempotency-Key still rides, because it is not a capability. The
 re-audit's pre-seal checklist otherwise names what a seal already does, two
-physical-device smokes this container cannot run, and the seal itself, which
-is the owner's call.
+physical-device smokes this container cannot run -- the owner runs those in
+parallel with this seal -- and the seal itself, which is this heading's
+number.
 
 **WHAT AN ASSISTANT SHOULD CARRY FORWARD FROM THIS TIER.** Three instruments
 were built wrong before they were built right, and each was caught only because
