@@ -238,6 +238,13 @@
     .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 14px; height: 14px; padding: 3px;
       border-radius: 6px; background: rgba(6,7,10,.7); color: #dfe6f2; }
     .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+    /* Tap targets on this page (verify_a11y's census): the foot's two text
+       buttons and the filter chips are small by design, so each carries a
+       44px band -- the chips through the ::before the editors' pills use,
+       the foot buttons by height, since an underlined word can grow. */
+    .posted-clearbtn { min-height: 44px; padding: 0 6px; }
+    .chip { position: relative; z-index: 1; }
+    .chip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
     .posted-title { font-size: 14px; font-weight: 600; }
     .posted-sub { font-family: var(--font-mono); }
     .posted-actions button { min-height: 32px; }
