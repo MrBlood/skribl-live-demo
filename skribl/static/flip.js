@@ -3037,11 +3037,15 @@ function spanDelete(){
   }
   invalidateClearUndo(); redoStack.length = 0;
   const n = SkriblPageSpan.count(s);
+  // Logged before the remove, as the frame objects themselves (see delFrame):
+  // a span can take many pages in one activation and used to autosave the loss
+  // in the same tick with no way back (SK-AUD-002).
+  noteDelPages(s.from, frames.slice(s.from, s.from + n), idx, false, n + ' pages');
   frames = SkriblPageSpan.remove(frames, s);
   idx = Math.max(0, Math.min(frames.length - 1, s.from));
   clearSpan(true);
-  buildStrip(); render(); scheduleSave(); scrollStripToActive(true);
-  chip(n + ' pages deleted');
+  buildStrip(); render(); updateToolState(); scheduleSave(); scrollStripToActive(true);
+  chip(n + ' pages deleted · Undo restores them');
 }
 /* Cycle the hold on ONE tile — or on the whole run, if that tile is part of a
    selected one. Scoping it to what the tile belongs to is the same rule every
@@ -3146,9 +3150,27 @@ function delFrame(i){ if(moveMode) return; invalidateClearUndo(); redoStack.leng
   // deliberate: the same reasoning the stroke selection uses when you change
   // page — a stale range would operate on artwork the user never picked.
   clearSpan(true);
-  if(frames.length===1){ frames[0]=newFrame(); idx=0; }
+  // DELETING A PAGE IS UNDOABLE (SK-AUD-002). Every other destructive act in
+  // Flip either arms first or keeps a backup, and this one did neither once
+  // reached from the page bar or the per-page menu; the tile's × arms, the
+  // other two doors did not, and none of the three could be taken back. The
+  // removed page is logged BY REFERENCE, like a generated page's undo entry,
+  // so its recipe (a WeakMap keyed on the frame object) survives the round
+  // trip. The one-page case replaces rather than removes, and says so.
+  const one = frames.length===1;
+  noteDelPages(one ? 0 : i, [frames[one ? 0 : i]], idx, one, 'Page');
+  if(one){ frames[0]=newFrame(); idx=0; }
   else { frames.splice(i,1); if(idx>=frames.length) idx=frames.length-1; else if(i<idx) idx--; }
-  buildStrip(); render(); scheduleSave(); scrollStripToActive(true); }
+  buildStrip(); render(); updateToolState(); scheduleSave(); scrollStripToActive(true);
+  chip('Page deleted · Undo restores it'); }
+
+/* The undo entry for a deletion. `pages` are the frame objects themselves, not
+   copies, for the reason noteGenPage gives; `replaced` marks the one-page case,
+   where delFrame swaps in a blank rather than leaving a pageless flipbook. */
+function noteDelPages(at, pages, idxBefore, replaced, label){
+  noteAction({ type: 'delpages', at: at, pages: pages, idxBefore: idxBefore,
+               replaced: !!replaced, label: label });
+}
 function go(i){ if(moveMode) return;
   // A selection is a set of INDEX RANGES into one page's strokes array. Carrying
   // it to another page would point those ranges at different artwork — the
@@ -9036,6 +9058,20 @@ function undoStroke(){
       syncFlipDuration(); scrollStripToActive(true);
       return;
     }
+    // A DELETION IS ONE ACTION, however many pages it took (SK-AUD-002). The
+    // pages go back where they were, by reference, and the artist lands on
+    // the page they were on when they deleted.
+    if(m.type === 'delpages'){
+      if(m.replaced) frames.splice(0, 1, ...m.pages);
+      else frames.splice(m.at, 0, ...m.pages);
+      idx = Math.max(0, Math.min(m.idxBefore, frames.length - 1));
+      clearSpan(true);
+      redoStack.push(m);
+      chip((m.label || 'Page') + ' restored');
+      buildStrip(); render(); updateToolState(); scheduleSave();
+      syncFlipDuration(); scrollStripToActive(true);
+      return;
+    }
     // A selection move touches index ranges on ONE page; a Move-mode move
     // touches whole pages. The object branch used to assume the second, so
     // undoing a selection drag would have translated the entire page.
@@ -9157,6 +9193,19 @@ function redoStroke(){
     idx = Math.min(m.at, frames.length - 1);
     actionLog.push(m);            // back on the history it came off
     chip((m.label || 'Page') + ' redone');
+    buildStrip(); render(); updateToolState(); scheduleSave();
+    syncFlipDuration(); scrollStripToActive(true);
+    return;
+  }
+  if(typeof redoStack[redoStack.length-1] === 'object'
+     && redoStack[redoStack.length-1].type === 'delpages'){
+    const m = redoStack.pop();
+    if(m.replaced) frames.splice(0, 1, newFrame());
+    else frames.splice(m.at, m.pages.length);
+    idx = Math.max(0, Math.min(m.at, frames.length - 1));
+    clearSpan(true);
+    actionLog.push(m);
+    chip((m.label || 'Page') + ' deleted again');
     buildStrip(); render(); updateToolState(); scheduleSave();
     syncFlipDuration(); scrollStripToActive(true);
     return;
