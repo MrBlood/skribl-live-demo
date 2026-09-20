@@ -87,6 +87,13 @@ seal and CI, suites that discard their servers' stderr, and PostgreSQL are in
   run posting suites one at a time.
 - **Jinja caches templates when debug is off.** Restart the server after a
   template edit or the suite tests the old markup.
+- **An in-process suite reads `DATABASE_URL`, not `SKRIBL_BASE`.**
+  `verify_delivery.py` imports `app` and posts through a test client of its
+  own; with nothing exported it opens the app's default sqlite file, which the
+  bootstrap never created, and two upload checks fail with "no such table"
+  under a traceback that looks like a server bug. Export the bootstrap's
+  (`DATABASE_URL=sqlite:////tmp/skribl-fresh-<stamp>.db`, printed as `db:` at
+  start) and it passes; `run_harness.sh` does this for every suite.
 - **Stop a server by port, never by a pattern typed on the same line.**
   `fuser -k 5001/tcp` or `kill $(lsof -ti :5001)`. `ss` and `netstat` are not
   installed in the remote container, and `pgrep -f <pattern>` matches the shell
