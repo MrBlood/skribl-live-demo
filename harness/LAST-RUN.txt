@@ -1,5 +1,5 @@
 ================ RUN CONTEXT ================
-UTC timestamp           : 2026-09-20T14:31:24Z
+UTC timestamp           : 2026-09-20T14:34:37Z
 Host                    : Linux x86_64
 Tree SHA-256            : a6faf4d4958484412db0aa46a09efa37d879800fe43dd2f1edb559be3e6562c5
 Git commit              : 6a5fd5c
@@ -16,18 +16,18 @@ SQLAlchemy              : 2.0.51
 Playwright              : 1.56.0
 Chromium                : 141.0.7390.37
 DATABASE_URL class      : sqlite
-Database reset          : yes (fresh /tmp/tmp.WMqSFtDZFF/harness.db)
+Database reset          : yes (fresh /tmp/tmp.5HOOR6Tf5C/harness.db)
 SKRIBL_RATE_MAX_POSTS   : 100000
 SKRIBL_RATE_MAX_ATTEMPTS: (default)
 SKRIBL_TRUSTED_PROXIES  : (default 0)
 SKRIBL_EMBED_ORIGINS    : (unset)
 SKRIBL_CSP              : (default on)
-Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_a11y.py
+Command                 : /home/user/skribl-live-demo/harness/run_harness.sh verify_tools.py
 ============================================
 
 ================ AGGREGATE (machine-generated) ================
 suites requested : 1
-  verify_a11y.py: ok — 260/260 passed
-assertions passed: 260   (skipped suites contribute 0)
+  verify_tools.py: ok — 130/130 passed
+assertions passed: 130   (skipped suites contribute 0)
 suites skipped   : 0
 suites with problems: 0
