@@ -72,7 +72,7 @@ import skribl
 import skribl.models
 from skribl import (SkriblNotFound, SkriblRefused, create_post, delete_post,
                     set_post_visibility)
-from skribl.models import SkriblPost, SkriblPostMedia
+from skribl.models import SkriblPost, SkriblPostMedia, SkriblReport
 
 _tmp = tempfile.mkdtemp()
 _url = f"sqlite:///{_tmp}/deletion.db"
@@ -302,6 +302,15 @@ with direct.app_context():
     _pid = _row.id
     check("the fixture has an association to lose",
           db3.session.query(SkriblPostMedia).filter_by(post_id=_pid).count() == 1)
+    # ...and a report (v304): the same explicit cleanup, for the same reason.
+    # Its first calibration ran under verify_takedown, whose app has the
+    # pragma on, and stayed green with the explicit delete removed — the
+    # cascade supplied it. This is the connection where it cannot.
+    db3.session.add(SkriblReport(post_id=_pid, reason="spam", reporter_hash="h1",
+                                 state="open"))
+    db3.session.commit()
+    check("...and a report to lose",
+          db3.session.query(SkriblReport).filter_by(post_id=_pid).count() == 1)
 
     delete_post(_made.public_id, author_id=7)
     db3.session.commit()
@@ -312,6 +321,11 @@ with direct.app_context():
           "nothing, but it makes sweep_orphans count the media as still "
           "referenced, so the bytes are never collected: a takedown that "
           "leaves the image on disk forever")
+    _left_r = db3.session.query(SkriblReport).filter_by(post_id=_pid).count()
+    check("delete_post removes the post's reports itself, with no cascade to help it",
+          _left_r == 0,
+          f"{_left_r} left — a report row pointing at a post that is gone is "
+          "an orphan the operator's queue would list as nothing")
 
 
 # ---------------------------------------------------------------------- 6

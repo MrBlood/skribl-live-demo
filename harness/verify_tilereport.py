@@ -108,8 +108,9 @@ def queue_count(out, pid):
 # ------------------------------------------------------------------ section 1
 print("\nREPORT 1 — the endpoint: one row per reporter, nothing taken down")
 target = post_public(TAG + " target")
+third = post_public(TAG + " third")      # the MIDDLE tile on the page, below
 other = post_public(TAG + " other")
-check("fixtures posted public", bool(target) and bool(other), f"{target} {other}")
+check("fixtures posted public", bool(target) and bool(third) and bool(other), f"{target} {third} {other}")
 before = queue()
 have_db = before is not None
 if not have_db:
@@ -144,15 +145,34 @@ st, body = call("/api/skribls/zzzzzzzzzzz/report", {"reason": "spam"})
 check("an unknown id answers 404", st == 404, str(st))
 st, body = call("/api/skribls/not%20an%20id!/report", {"reason": "spam"})
 check("a malformed id answers 404, the same answer", st == 404, str(st))
-# A post the reporter cannot read: an unlisted one IS readable by anybody
-# with the link (and so reportable); a private one is not, and the standalone
-# app cannot make one without an author. The rule is post.visible_to(), the
-# same call GET makes; pin that the two agree on an unlisted post.
+# A post the reporter cannot read. An unlisted one IS readable by anybody
+# with the link, and so reportable. A private one is readable by its author
+# only, and the standalone app cannot create one through the API (a private
+# post needs a signed-in author), so the NEGATIVE half is planted straight
+# into the server's database: a private post with an author, reported by
+# this anonymous client. The rule is post.visible_to(), the same call GET
+# makes, and the two must agree both ways.
 unl = post_public(TAG + " unlisted", visibility="unlisted")
 st_get, _ = call(f"/api/skribls/{unl}")
 st_rep, _ = call(f"/api/skribls/{unl}/report", {"reason": "other"})
 check("an unlisted post — readable by its link — is reportable, as GET and report agree",
       st_get == 200 and st_rep == 202, f"GET {st_get}, report {st_rep}")
+if have_db:
+    from app import create_app                                  # noqa: E402
+    from skribl.models import SkriblPost, session               # noqa: E402
+    _app = create_app()
+    priv = TAG + "priv"
+    with _app.app_context():
+        _s = session()
+        _s.add(SkriblPost(public_id=priv, title=TAG + " private", user_id="owner-1",
+                          payload_json={"frames": [{"strokes": [], "strokeGroups": []}]},
+                          visibility="private"))
+        _s.commit()
+    st_get, _ = call(f"/api/skribls/{priv}")
+    st_rep, body = call(f"/api/skribls/{priv}/report", {"reason": "spam"})
+    check("a private post — unreadable to this client — cannot be reported: 404, as GET answers",
+          st_get == 404 and st_rep == 404, f"GET {st_get}, report {st_rep} {body}")
+    check("...and no row was written for it", queue_count(queue(), priv) == 0)
 
 # ------------------------------------------------------------------ section 2
 print("\nREPORT 2 — the sheet, through the page")
@@ -192,7 +212,12 @@ with sync_playwright() as sp:
     words = pg.evaluate("() => document.querySelector('#reportSheet p').textContent")
     check("it says nothing is taken down automatically", "nothing is taken down automatically" in words.lower(), words)
 
-    pg.click(f'button.report[data-report="{other}"]')
+    # THE MIDDLE TILE, on purpose: a sheet that sent the first tile's id — or
+    # the last's — would pass a test that reported either end.
+    order = pg.evaluate("() => [...document.querySelectorAll('#galleryList .tile')].map(t => t.getAttribute('data-id'))")
+    check("the reported tile is neither first nor last on the page",
+          third in order and 0 < order.index(third) < len(order) - 1, f"{order.index(third) if third in order else '?'} of {len(order)}")
+    pg.click(f'button.report[data-report="{third}"]')
     pg.wait_for_timeout(450)
     check("opening moves focus into the sheet",
           pg.evaluate("() => document.getElementById('reportSheet').contains(document.activeElement)"))
@@ -201,11 +226,11 @@ with sync_playwright() as sp:
     pg.click("#reportSend")
     pg.wait_for_timeout(900)
     check("the request went to that tile's post, with the reason and note shown",
-          sent.get("url", "").endswith(f"/api/skribls/{other}/report")
+          sent.get("url", "").endswith(f"/api/skribls/{third}/report")
           and (sent.get("body") or {}).get("reason") == "copyright"
           and (sent.get("body") or {}).get("note") == "traced from a poster", str(sent))
     st_text = pg.evaluate("() => document.getElementById('reportStatus').textContent")
-    btn = pg.evaluate(f"""() => {{ const b = document.querySelector('button.report[data-report="{other}"]');
+    btn = pg.evaluate(f"""() => {{ const b = document.querySelector('button.report[data-report="{third}"]');
         return {{ text: b.textContent.trim(), reported: b.getAttribute('data-reported'), disabled: b.disabled }}; }}""")
     check("the sheet thanks the reader", "thanks" in st_text.lower(), st_text)
     check("the tile's button becomes the record and stays pressable",
@@ -213,8 +238,8 @@ with sync_playwright() as sp:
     pg.keyboard.press("Escape")
     pg.wait_for_timeout(500)
     landed = pg.evaluate("() => { const a = document.activeElement; return a === document.body ? '(body)' : (a.getAttribute('data-report') || a.id || a.tagName); }")
-    check("Escape closes it and focus returns to the button that opened it", landed == other, f"focus on {landed!r}")
-    pg.click(f'button.report[data-report="{other}"]')
+    check("Escape closes it and focus returns to the button that opened it", landed == third, f"focus on {landed!r}")
+    pg.click(f'button.report[data-report="{third}"]')
     pg.wait_for_timeout(400)
     again = pg.evaluate("""() => ({ open: !document.getElementById('reportSheet').hidden,
         send: document.getElementById('reportSend').disabled,
@@ -245,7 +270,7 @@ with sync_playwright() as sp:
 if have_db:
     final = queue()
     check("the report sent through the page is in the operator's queue with its reason",
-          queue_count(final, other) == 1 and "copyright x1" in final and "traced from a poster" in final,
+          queue_count(final, third) == 1 and "copyright x1" in final and "traced from a poster" in final,
           (final or "")[:400])
 
 passed = sum(1 for r in results if r[0])

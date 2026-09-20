@@ -8789,9 +8789,14 @@ every other write in routes.py.
 --reports` lists the posts with open reports, most-reported first, with
 counts, reasons, notes and the three answers: `--visibility private`,
 `--delete`, or the new `<public-id> --resolve`, which closes that post's
-rows without touching the post. Deleting a post takes its reports with it,
-done explicitly in deletion.py as the media rows are, because SQLite does
-not enforce the cascade the FK declares. The takedown tool is the one door
+rows without touching the post. Deleting a post takes its reports with it:
+the FK cascades, and deletion.py also deletes them explicitly as it does the
+media rows, for the same reason that note gives -- a connection without the
+SQLite pragma has no cascade, and `verify_deletion` section 3 runs deletion
+that way and pins a report row gone with its post. (The first calibration
+of that explicit delete stayed green under `verify_takedown`, whose app has
+the pragma on: the cascade supplied it. The pin moved to the surface that
+can fail.) The takedown tool is the one door
 that acts on a post an operator did not make, so the queue belongs there
 rather than in a second tool.
 

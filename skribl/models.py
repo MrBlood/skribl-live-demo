@@ -638,8 +638,9 @@ class SkriblReport(SkriblBase):
     table with --reports and closes a post's rows with --resolve.
 
     state: 'open' until an operator resolves it; 'closed' after. Reports on a
-    post that is deleted go with it (deletion.py deletes them explicitly, as
-    it does the media rows -- SQLite does not enforce the cascade).
+    post that is deleted go with it: the FK cascades, and deletion.py also
+    deletes them explicitly, as it does the media rows, for the connection
+    that has no pragma (its note says why).
     """
     __tablename__ = "skribl_reports"
 
