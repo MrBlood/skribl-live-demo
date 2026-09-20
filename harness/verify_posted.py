@@ -873,7 +873,6 @@ with sync_playwright() as p:
         window.SkriblPosted.add({ id: 'plainrow', title: 'Tttt', kind: 'pad' });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
       }""")
-    pm.click("#menuBtn"); pm.wait_for_timeout(300)
     pm.wait_for_timeout(300)
     _rows = pm.evaluate("""() => {
         const out = {};

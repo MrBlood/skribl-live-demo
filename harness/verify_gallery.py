@@ -367,9 +367,17 @@ with sync_playwright() as sp:
     browsing.goto(pg, BASE, "/skribl-pad")
     pad_label = pg.evaluate("() => document.querySelector('.post-check-text').firstChild.textContent.trim()")
     pad_href = pg.evaluate("() => document.getElementById('galleryItem').getAttribute('href')")
+    # YOUR SKRIBLS IS THE PROFILE PAGE (v304): the menu row beside this one
+    # is a link there, on both editors.
+    pad_mine = pg.evaluate("() => { const a = document.getElementById('postedItem'); return [a.tagName, a.getAttribute('href')]; }")
+    check("the Pad's Your Skribls row is a link to the profile",
+          pad_mine[0] == "A" and (pad_mine[1] or "").endswith("/library"), str(pad_mine))
     browsing.goto(pg, BASE, "/flip")
     flip_label = pg.evaluate("() => document.querySelector('.flip-share-check .post-check-text').firstChild.textContent.trim()")
     flip_href = pg.evaluate("() => document.getElementById('miGallery').getAttribute('href')")
+    flip_mine = pg.evaluate("() => { const a = document.getElementById('miPosted'); return [a.tagName, a.getAttribute('href')]; }")
+    check("Flip's Your Skribls row is a link to the profile",
+          flip_mine[0] == "A" and (flip_mine[1] or "").endswith("/library"), str(flip_mine))
     check("Pad and Flip label the box with the same words", pad_label == flip_label and bool(pad_label),
           f"{pad_label!r} vs {flip_label!r}")
     check("the empty state names that box by those words", pad_label in empty["names"],
