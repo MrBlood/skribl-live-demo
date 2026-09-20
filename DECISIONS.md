@@ -8475,3 +8475,172 @@ them.
 The re-seal is a second ~50-minute run and both attestations carried in again.
 That is cheaper than the alternative, which was a sealed record that said FULL
 RELEASE PASS above a player that stalls on a smudged smear.
+
+## Unsealed, on top of v302 -- the acquisition audit, and what fixing everything found
+
+**THIS HEADING CARRIES NO NUMBER ON PURPOSE.** The v278 note explains the
+practice: a numbered heading claims a sealed tree, and nothing here has been
+through `release_run.py`. The number goes on at the seal.
+
+**WHERE THIS CAME FROM.** The session opened on the v302 handoff and landed the
+evergreen session primer (`docs/SESSION-CONTEXT.md`) and `harness/bootstrap.sh`
+first, because the handoff's own bootstrap passed the boot suite and answered
+500 to every post -- it never created the tables. Then the owner handed over an
+outside acquisition audit: fourteen findings, SK-AUD-001 to SK-AUD-014, with a
+remediation plan. Every one was checked against the tree before anything was
+built. Seven were real defects (002, 003, 004, 006, 010, 013, 014). Five were
+real and ALREADY WRITTEN DOWN as accepted limits in this file (001, 005, 007,
+008, 009) -- the audit's contribution was to decline to accept them. One
+(011) had a wrong premise built on comments that were stale: the library has
+been real posts since v275 and its own comments still called it a mock. One
+(012) was partly right and partly a product call. The owner's instruction was
+two words -- fix everything -- and that is what follows: one squash-merged
+pull request per finding on the session's branch (#164 to #178, and this
+record's own after them), each calibrated
+per component before it was believed, in the v292 manner.
+
+**THE AUDIT WAS RIGHT ABOUT F2, AND THE FIX WAS NOT THE ONE F2 RULED OUT
+(SK-AUD-001).** v200's follow-up review refused anonymous idempotency because
+two strangers reusing a key must never see each other's post, and left a lost
+response duplicating the post -- "an annoyance, not a leak". The audit read
+that sentence to its end: the lost response also carried the ONLY copy of the
+revocation key, so the first post was left live with nobody able to withdraw
+it. The property F2 demanded was an identity to scope by, and an anonymous
+browser can mint one: `X-Skribl-Client`, a random secret it keeps
+(`lib/posted.js`), scopes its keys and nobody can guess another's. The same
+move closes the other half: `X-Skribl-Delete-Token`, minted by the client
+BEFORE the request, is the key the server would otherwise have handed over
+exactly once in an answer that may never arrive. Same entropy, same
+hash-only storage, same constant-time comparison; only who rolled the dice
+changed. `docs/INTEGRATION.md` documents both headers.
+
+Pinning the JOURNEY rather than the mechanism -- the server commits, the
+browser never hears, the person presses Post again -- found two defects the
+audit had not named and that no suite had ever exercised:
+
+  - The Pad's `Idempotency-Key` had NEVER replayed, for anyone, since v200.
+    `serializeSkribl()` stamps `draftId`, `createdAt` and `updatedAt` at
+    serialise time, so two submits of one drawing were never the same bytes
+    and the key-per-body rule minted a fresh key every time. "Unchanged" is
+    judged with the three stamps taken out now, and the retry resends the
+    first attempt's exact bytes, which is what the server's fingerprint
+    requires of a replay and the truer timestamp besides.
+  - `sendSkribl`'s success object carried no `deleteToken`, so every Pad
+    entry in Your Skribls had held `tok: null` since the tray was built and
+    offered no Delete or Copy key. Flip's entries had them all along.
+
+Flip sent no key at all; it sends the same three headers now.
+
+**TWO SURFACES, TWO FIXES FOR ONE DELETE (SK-AUD-002).** A Flip page deletion
+was final and a span deletion was final; Undo restores both now, and the chip
+says so. The pin that mattered was the one-page replacement case, where the
+deleted page is replaced by a blank rather than removed, because it is the case
+where "undo puts the page back" has to mean something different.
+
+**AUTOSAVE FAILURE AND THE FLIP CHIP HAVE LIVE REGIONS (SK-AUD-003, -006), AND
+A DEDUPED ANNOUNCER.** Storage-full and failed were visible states only. The
+pill announces its failure states through an assertive status node, once per
+distinct message, and a recovery to Saved is announced only after a failure was.
+Flip's chip is a polite status region.
+
+**THE CANVASES HAVE NAMES (SK-AUD-004).** Pad, Flip and the player each had
+the one thing on the page with no accessible name. Flip's name carries the
+page number and follows it. The player's is server-rendered because `app.js`
+is on the JS ratchet at its ceiling.
+
+**THE TOUCH FLOOR WAS TWO NUMBERS BEING READ AS ONE (SK-AUD-005).** The audit
+quoted `verify_layout`'s comment -- "34 because that is what ships today, not
+because 34 is defensible" -- as the product's touch-target policy. It was the
+VISIBLE pill. The tree already extended every toolbar control to a 44px band
+through `--tap-grow` pseudo-elements and `verify_a11y` already walked them; what
+was missing was the measurement that could see a band (elementFromPoint, not
+getBoundingClientRect) in the suite that owned the floor, and one population
+with no band at all: the header pills. Record and Post, the most-pressed
+controls on the page, answered 37px tall. They have the toolbar's band now, and
+`verify_layout` measures the effective box on every live bar and header
+control at every width, 320 included, where the Pad's wrapped row sits inside
+its neighbours' bands and the floor is the narrow tier's 40. The visible floor
+stays at 34 and its comment now says what it is.
+
+One mutation in that calibration did not take: zeroing the phone-tier
+`--tap-grow` on `.toolbar .tool-open` left every pin green, because another
+rule supplies the same band. That is a wrong mutation, not a wrong instrument
+-- the one that removed the base band's `content` went red on Flip's More
+button at every width, the one control whose band comes from that rule alone,
+and the one that removed the header band went red on Record and Post on both
+surfaces -- but it is recorded because a green mutation is a question, not an
+answer, and the question has to be asked of the mechanism.
+
+**THE SETTLE FLASH WAS BRIGHTNESS, NOT TIME (SK-AUD-007).** v302 recorded the
+~41 ms settle after a smudge as "visible as a flash on a phone" with a ceiling
+of 25-35% on shortening it. Measured on the mesh fixture, the flash was not the
+41 ms: the live walk painted a see-through run at its own alpha, every joint's
+cap compounded on its neighbour's, and the live frame was 26% brighter than the
+layer then settled it to, with 29% of its lit pixels off by more than 24/255.
+The walk now paints each segment at the alpha whose k-fold compounding equals
+the run's own (`SMUDGE_LIVE_OVERLAP`, k = 1.6, measured rather than derived),
+which brings the live frame to 5% of the settled one with 3% of pixels off, at
+no cost -- one globalAlpha, no round trip. What still changes at the settle is
+the beads, which are the walk. Judged on pictures first: the compensated live
+frame and the settled one read as the same brightness with a different texture.
+The 41 ms is unchanged and no longer the thing anyone sees.
+
+`verify_smudgeblur`'s mid-drag pin used to read the cheap path off its side
+effect -- "and says so by compounding" -- and went red the moment the
+brightness matched. A pin on the side effect is a pin against the fix; it
+counts layer round trips now, which is what "cheap" means.
+
+**THE CLOSED SHAPE IS NAMED, NOT FIXED (SK-AUD-008).** The audit's own
+recommendation had two halves, detect-and-alter or detect-and-communicate, and
+this file already records why the first half has no known move: the tube is
+geometry, the along-motion engine rotated the artefact rather than removing it,
+and the fix that works does not scale. So the second half ships: `buildTween`
+counts the closed runs among the aligned strokes -- ends within two brush widths
+or 8% of the run's extent -- the chip names it with the one thing that helps
+(aim with Select), and the Help says the same. Pinned from both sides: a ring
+is counted and said, the same circle with a quarter cut out is not. FUTURE.md
+6g stands as the open problem.
+
+**THE TRAIL REACHES BACK (SK-AUD-009).** v302 left this "specified and
+unbuilt"; it is built. The ramp starts at the floor a pass can carry instead
+of at zero, so the farthest ghost is the faintest paintable one and sits where
+the object came from. Pinned on the render -- the first lit pixel -- not on
+the samples, because the samples were never the thing that stopped short.
+
+**A LOCAL SAVE IS LISTED (SK-AUD-010).** The orphan sweep deleted the one
+thing storage pressure could reach: the unlisted local fallback, under a
+message that said it was saved. Listed now, flagged, with nothing to send;
+the sweep keeps it and eviction takes the oldest local save entry-and-bytes
+together, which is the policy the tray's footer now states.
+
+**THE LIBRARY'S COMMENTS STOPPED CALLING IT A MOCK (SK-AUD-011).** The finding
+was wrong about the page and right about the words around it.
+
+**THE FEED SAYS WHAT IT IS (SK-AUD-012).** A developer demo, labelled as one on
+the page, with its consumer states in the page's language and a Retry where
+there was a dead sentence; the routes moved under a "For developers" heading
+written without the method-plus-path tokens the existing pin forbids.
+
+**THE APP HAS AN IDENTITY (SK-AUD-013).** A manifest route, three icons rendered
+from the brand mark, one partial on the four principal pages and not the feed,
+and a theme-color that follows the page's theme before first paint and on a
+switch. The pin for "before first paint" first read the meta at
+DOMContentLoaded, which fires AFTER deferred scripts, and stayed green with the
+boot's re-stamp deleted; it reads the meta the moment `<body>` appears now. The
+manifest route's two function-local imports were invisible to `verify_seam`,
+which went red on main for one pull request; the helpers ride on the blueprint
+now, the shape `skribl_media_store` already had.
+
+**THE LAST TWO BROWSER CONFIRMS ARE ARMED TAPS (SK-AUD-014).**
+
+**A STALE SENTENCE, LEFT AND NAMED.** v295 says the scroll witness is gone;
+`flip.js` still disarms on `scrollLeft`. The entry is true as written for the
+witness it describes and is not maintained after; this note is where a reader
+should learn the disarm remains.
+
+**WHAT AN ASSISTANT SHOULD CARRY FORWARD FROM THIS TIER.** Three instruments
+were built wrong before they were built right, and each was caught only because
+the mutation was run: a pin at DOMContentLoaded that could not see a deferred
+script had already run; a pin on a side effect that the fix removed; a pin on
+the visible box that could not see a band. And one mutation was itself wrong.
+The rule in CLAUDE.md is not decoration.

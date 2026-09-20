@@ -115,6 +115,14 @@ here is the rule you can break tomorrow.
 | A run whose suite names begin with `_` is a scratch probe and must never be published as the project's result. | `stamp_docs.py` refuses it |
 | Hiding a control is only safe when nothing reachable ONLY through it becomes unreachable. | **no enforcer** — found by looking; `beginPinch` revealing the zoom HUD is what made hiding Magnify safe |
 | A colour ratchet cannot see a mark that is white ON PURPOSE — five vanished in light mode and were found by eye. | **no enforcer** — `#fff` is exempt because it is nearly always text on a coloured fill |
+| An anonymous retry replays to the post the first request made, scoped by a client capability, and the key that deletes it was minted before the answer could be lost. | `verify_apiedges.py`, `verify_posted.py` |
+| The Pad's idempotency key is judged on the drawing, not on serialise-time stamps; a Pad entry in Your Skribls holds its revocation key. | `verify_posted.py` |
+| The Pad, Flip, the player and the library carry the app's identity (manifest, theme-color, icons); the feed, a host's page, carries none. | `verify_identity.py` |
+| The feed says it is a developer demo; its consumer states carry no code, and its error state can retry. | `verify_inline.py` |
+| Every live bar and header control answers a tap 44px tall (40 at the 320 safety net); the visible pill is a different floor. | `verify_layout.py`, `verify_a11y.py` |
+| The Motion Smear's trail reaches back to where the object came from, measured on the render. | `verify_tween.py` |
+| A closed shape is counted and named when it is smeared; an open arc is not. | `verify_tween.py` |
+| A live smudge frame is as bright as the settled one, and the cheap path takes no layer round trip. | `verify_smudgeblur.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`
