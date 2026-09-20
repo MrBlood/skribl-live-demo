@@ -7,15 +7,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Library</title>
-  {# Concept preview of a per-user library + inline player. Wired as a real
-     route so it can be seen live and the player iterated on; not yet backed by
-     GET /api/skribls (the tiles are self-contained demo drawings). CSP-safe:
-     inline <style> is allowed but inline <script> is not, so the logic lives in
-     the self-hosted library.js. Google Fonts is blocked by font-src 'self', so
-     the CSS font stacks fall back to system faces on purpose. #}
+  {# The profile's Skribls tab: real posts from GET /api/skribls on the shared
+     in-post player, since v275 (verify_library.py). This comment called it a
+     concept preview of demo drawings until SK-AUD-011 read it as current.
+     CSP-safe: inline <style> is allowed but inline <script> is not, so the
+     logic lives in the self-hosted library.js. Google Fonts is blocked by
+     font-src 'self', so the CSS font stacks fall back to system faces on
+     purpose. #}
   <style>
     /* Skribl is a dark-committed product (styles.css sets color-scheme:dark), so
-       this mock commits to dark too and paints every ground and colour explicitly
+       this page commits to dark too and paints every ground and colour explicitly
        so it holds on any host. Chrome tokens are lifted from the app's styles.css;
        the Riso ink palette is the DRAWING palette (lib/palette.js) and is used
        only inside the artwork, which never follows the chrome theme. */
