@@ -264,13 +264,25 @@ def register_routes(bp, *, index_route=False):
 
     @bp.get("/library")
     def skribl_library():
-        """The profile's Skribls tab: the listing, with a full transport."""
-        # Real posts from GET /api/skribls, one payload at a time, played by the
-        # shared in-post player -- verify_library.py pins all three. It was a
-        # mock until v275, and this comment went on calling it a concept preview
-        # of demo drawings for twenty releases after; an outside audit read the
-        # comment as current and graded the product on it (SK-AUD-011).
-        return render_template("skribl/skribl_library.html")
+        """The profile's Skribls tab: what you posted, with a full transport that goes full screen."""
+        # Real posts, one payload at a time, played by the shared in-post
+        # player -- verify_library.py pins all three. It was a mock until v275,
+        # and this comment went on calling it a concept preview of demo drawings
+        # for twenty releases after; an outside audit read the comment as
+        # current and graded the product on it (SK-AUD-011).
+        #
+        # WHOSE (v304). Until the gallery, this page read the public listing
+        # and called it "Your skribls" -- true only because nothing posted from
+        # the editors was ever public, so the page was empty. The gallery made
+        # that false the day somebody ticked the box. It is the PROFILE's tab
+        # now, and a profile is somebody's: with a host's signed-in user it is
+        # GET /api/skribls?user_id=<me> (the listing's own author filter); with
+        # no accounts, which is the standalone app, it is what this browser
+        # posted -- the same list "Your Skribls" in the menu keeps
+        # (lib/posted.js), unlisted posts included, because they are yours.
+        # The gallery is the public page; this one never was.
+        return render_template("skribl/skribl_library.html",
+                               library_user_id=bp.skribl_current_user_id())
 
     @bp.get("/gallery")
     def skribl_gallery():

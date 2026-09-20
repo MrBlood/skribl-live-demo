@@ -150,7 +150,13 @@
     .tbtn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
     .tbtn.play { width: 46px; height: 46px; background: linear-gradient(150deg, var(--accent-bright), var(--accent)); border-color: transparent; color: #0b0616; box-shadow: 0 5px 18px var(--accent-glow); }
     .tbtn.on { color: var(--accent-tint); border-color: #3a336a; background: rgba(124,92,255,.14); }
-    .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .transport .telapsed { margin-left: auto; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* Six buttons and a clock do not fit one row at phone width (the full-
+       screen button, v304, made it six): the clock takes its own row. */
+    @media (max-width: 420px) {
+      .transport { flex-wrap: wrap; }
+      .transport .telapsed { width: 100%; text-align: right; margin-top: -2px; }
+    }
   
     /* ---- library ---------------------------------------------------------- */
     .libhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -205,6 +211,20 @@
     .pstats .like { color: #ff7fb2; }
   
     .empty { grid-column: 1 / -1; text-align: center; color: var(--text-3); font-family: var(--font-mono); font-size: 13px; padding: 40px 0; }
+    .state { text-align: center; color: var(--text-3); font-size: 14px; line-height: 1.7; padding: 36px 0; margin: 0; }
+    .state b { color: var(--text-2); font-weight: 600; }
+    .state a { color: var(--accent-tint); }
+    .state[hidden] { display: none; }
+    /* FULL SCREEN: the stage wrap owns the display; the player keeps its own
+       aspect (inlineplayer.css sets it from the payload) and is fitted to the
+       shorter side. Black ground, as a cinema is. */
+    .stageCanvasWrap:fullscreen { margin: 0; border: 0; border-radius: 0; background: #000;
+      display: grid; place-items: center; }
+    .stageCanvasWrap:fullscreen .skribl-inline { width: min(100vw, calc(100vh * 16 / 9)); max-height: 100vh; }
+    .stageCanvasWrap:fullscreen .skribl-inline canvas { max-height: 100vh; width: auto; margin: 0 auto; }
+    .full-exit { display: none; position: absolute; top: 14px; right: 14px; z-index: 3; width: 44px; height: 44px;
+      background: rgba(6,7,10,.72); border-color: rgba(255,255,255,.18); color: #eef; }
+    .stageCanvasWrap:fullscreen .full-exit { display: grid; }
     .more-wrap { display: flex; justify-content: center; margin-top: 16px; }
     .more { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .04em; color: var(--text); background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 10px 20px; cursor: pointer; transition: background .15s, border-color .15s; }
     .more:hover { background: var(--control-hi); border-color: #3a4658; }
@@ -215,8 +235,13 @@
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
+{# WHOSE PROFILE. data-skribl-me is the host's signed-in user when there is
+   one (create_blueprint(current_user_id=...)); empty, and library.js reads
+   the list this browser kept instead (lib/posted.js). See the route. #}
 <body data-skribl-api="{{ url_for('.list_skribls') }}"
-      data-skribl-player="{{ skribl_player_base }}">
+      data-skribl-player="{{ skribl_player_base }}"
+      data-skribl-me="{{ library_user_id if library_user_id is not none else '' }}"
+      data-skribl-pad="{{ url_for('.skribl_editor') }}">
 <div class="wrap">
   <div class="top">
     <div class="brand" role="img" aria-label="Skribl player">
@@ -237,8 +262,8 @@
     <div class="who">
       <h1 class="name" id="whoName">Skribls</h1>
       <div class="handle" id="whoHandle"></div>
-      <div class="bio">Every Skribl here, newest first, with the full playback
-        controls a post keeps out of the way.</div>
+      <div class="bio" id="whoBio">Everything you have posted, newest first, with
+        the full playback controls a post keeps out of the way.</div>
     </div>
     <div class="stats">
       <div class="stat"><b id="statCount">—</b><span>loaded</span></div>
@@ -261,6 +286,10 @@
             by the gate in verify_inline.py. The hidden mute button they carried
             was dead weight: inlineplayer.js null-guards both controls. #}
         {{ skribl_inline_draft('stageBox', controls=false) }}
+        {# The way out of full screen, INSIDE the element that is full screen:
+           the transport is not on the display then, and Escape is the
+           browser's, not this page's. Shown by CSS only under :fullscreen. #}
+        <button type="button" class="tbtn full-exit" id="fullExit" title="Leave full screen" aria-label="Leave full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </div>
       <div class="pmeta">
         <div class="ptitle" id="pTitle">—</div>
@@ -276,6 +305,11 @@
         <button class="tbtn play" id="btnPlay" title="Play" aria-label="Play"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
         <button class="tbtn on" id="btnLoop" title="Loop" aria-label="Loop" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
         <button class="tbtn" id="btnMute" title="Mute" aria-label="Mute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg></button>
+        {# FULL SCREEN (v304): the stage, on the whole display, through the
+           Fullscreen API. Shown only where the browser allows it (iPhone
+           Safari allows it for <video> alone), hidden otherwise rather than
+           dead. Escape and the same button both leave. #}
+        <button class="tbtn" id="btnFull" title="Full screen" aria-label="Full screen" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
         <button class="tbtn" id="btnShare" title="Copy link" aria-label="Copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></button>
         <span class="telapsed" id="tElapsed">0:00 / 0:00</span>
       </div>
@@ -296,6 +330,15 @@
         </label>
       </div>
       <div class="grid" id="grid"></div>
+      {# THE EMPTY STATE says what puts something here and what this list is,
+         in the words the menu's "Your Skribls" uses: kept in this browser,
+         not an account. Hidden while there is anything to show. #}
+      <p class="state" id="libEmpty" hidden>
+        <b>Nothing here yet.</b><br>
+        Post a Skribl from the <a href="{{ url_for('.skribl_editor') }}">Pad</a> or Flip
+        and it appears here.<span id="libEmptyLocal"> This list is kept
+        <b>in this browser only</b> &mdash; it is not an account.</span>
+      </p>
       <div class="more-wrap" id="moreWrap"></div>
       <div class="foot" id="libFoot"></div>
     </section>
@@ -312,6 +355,9 @@
      than the requirement. Removed in v281; verify_library.py passes without
      it. #}
   <script src="{{ skribl_asset('inlineplayer.js') }}" defer></script>
+  {# lib/posted.js: the list this browser kept of what it posted -- the
+     profile's population when there are no accounts (v304; see the route). #}
+  <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 </body>
 </html>

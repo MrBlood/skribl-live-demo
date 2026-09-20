@@ -127,6 +127,7 @@ here is the rule you can break tomorrow.
 | The seal holds before its final render until every external lane attests the frozen tree, or its hold expires and the record says which lane is pending. | `verify_docs.py` |
 | The public gallery is opt-in: a post carries `visibility: "public"` only when its author ticked "Show in the public gallery" on the Pad or Flip sheet, the key is omitted otherwise, compose mode renders no such box, and `/gallery` shows exactly the posts that carried it. | `verify_gallery.py` |
 | A report is a row in an operator's queue, never an action: `POST /api/skribls/<id>/report` writes one row per (post, reporter), a duplicate writes nothing, an unreadable post 404s, the post's visibility is untouched, and `takedown --reports` lists it. | `verify_tilereport.py`, `verify_takedown.py` |
+| `/library` is the profile's tab and a profile is somebody's: with no host identity it shows what this browser posted (unlisted included, from the same list "Your Skribls" keeps), with one it reads the listing's author filter, and in neither case the public listing. Its stage goes full screen and comes back. | `verify_library.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`
@@ -703,7 +704,7 @@ rather than a shared rule.
 | `pointbudget.js` | Flip | The DOCUMENT's budget — the numbers the editors were spending without being able to see them. |
 | `pointwrite.js` | Pad+Flip | How a point is WRITTEN — the shared rule for both editors' serializers. |
 | `popdrag.js` | Pad+Flip | Draggable tool popovers — one grip, both editors. |
-| `posted.js` | Pad+Flip | Your Skribls — a local record of what you have posted. |
+| `posted.js` | Pad+Flip+library | Your Skribls — a local record of what you have posted. |
 | `postedaudio.js` | Pad+Flip | What a POST stores, which is deliberately not what an EXPORT downloads. |
 | `postedcard.js` | Pad+Flip | Compositing /s/<id>/card.png — the post-time half of lib/sharecard.js. |
 | `postedui.js` | Pad+Flip | Your Skribls — rendering. |

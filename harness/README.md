@@ -260,7 +260,10 @@ A green check is not evidence until it has been shown to go red.
   — the card is the idle cost of every post in a feed, and it was 451,824 B
   until the encoder stopped choosing PNG on a rule that had gone wrong.
 
-- `verify_library.py` — the PROFILE'S SKRIBLS TAB (`/library`), and what it
+- `verify_library.py` — the PROFILE'S SKRIBLS TAB (`/library`), whose it is
+  (since v304: what this browser posted, unlisted included, or the host's
+  signed-in user through the listing's author filter; never the public
+  listing, which is the gallery's), its full-screen stage, and what it
   replaced. That page was a mock: its own replay engine and a table of
   hand-drawn motifs, rendered as if posted, on a route a host got in their own
   URL space. A page that draws its own content cannot say whether the thing it

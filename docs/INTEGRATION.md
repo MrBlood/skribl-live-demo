@@ -55,23 +55,25 @@ That is the whole integration. You now have:
     POST /skribl/api/skribls/<id>/report  report a post: one reason from a closed set, into an operator's queue
 
 **`/library` is registered by the blueprint whether you want it or not**, like
-`/feed`. It is the profile's Skribls tab: your listing, with a full transport —
-play, restart, scrub, loop, mute, copy link — around one stage, and a grid of
-share cards beside it. The stage is the same in-post player driven through its
-exposed handle, so the profile cannot disagree with the feed or with `/s/<id>`
-about how a drawing replays, and it fetches ONE payload at a time.
+`/feed`. It is the profile's Skribls tab: what you posted, searchable by title,
+with a full transport — play, restart, scrub, loop, mute, full screen, copy
+link — around one stage, and a grid of share cards beside it. The stage is the
+same in-post player driven through its exposed handle, so the profile cannot
+disagree with the feed or with `/s/<id>` about how a drawing replays, and it
+fetches ONE payload at a time. It reaches no database of its own, so leaving it
+unlinked is enough if you do not want it. Until v275 it drew its own invented
+tiles; `harness/verify_library.py` is what replaced the warning that used to be
+here.
 
-It reads `GET /api/skribls` and nothing else, so it shows whatever this
-deployment has, under the same visibility rules every other reader gets. It
-takes no arguments and reaches no database of its own, so leaving it unlinked is
-enough if you do not want it. Until recently it drew its own invented tiles;
-`harness/verify_library.py` is what replaced the warning that used to be here.
-
-**It shows the listing, not "your" listing.** `GET /api/skribls?user_id=<id>`
-is the per-author filter, and Skribl has no identity of its own to fill it in
-with — `create_blueprint(current_user_id=...)` is where yours arrives. A real
-profile tab passes the author being viewed; this page passes nothing, and so
-shows the public listing.
+**Whose Skribls it shows.** When you supply `create_blueprint(current_user_id=
+...)`, the page reads `GET /api/skribls?user_id=<that id>` — the listing's own
+author filter, which shows an author their public and private posts and keeps
+unlisted ones out of every listing. With no identity supplied (the standalone
+app), it shows the list the browser kept of what it posted — the same record
+the ••• menu's "Your Skribls" shows, unlisted posts included — and says on the
+page that this is a browser's list, not an account. `/gallery` is the public
+page; `/library` never was, and until the gallery existed the difference was
+invisible because nothing posted from the editors was public.
 
 `url_for("skribl.skribl_player", public_id=...)` builds links. Skribl builds its
 own share URLs the same way, so they are correct under any prefix.
