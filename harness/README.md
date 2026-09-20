@@ -396,6 +396,12 @@ A green check is not evidence until it has been shown to go red.
   the in-post macro, paged by the listing's own cursor, with an error state
   that retries and an empty state that names the tick. Posts through both
   sheets, so it has a release batch to itself.
+- `verify_tilereport.py` — Report on every gallery tile: the sheet opens with
+  the tile's id and the API's own reasons, `POST /api/skribls/<id>/report`
+  writes one row per (post, reporter) and answers a duplicate without writing,
+  refuses an unknown reason, 404s an unreadable post, takes nothing down, and
+  the row reaches `python -m skribl.takedown --reports`. Shares the gallery's
+  batch (it posts too).
   (SK-AUD-013): `/manifest.webmanifest` is served and every icon it names is
   fetched and decoded as the PNG of the size it declares; the Pad, Flip, the
   player and the library carry the manifest link, a theme-color and a touch

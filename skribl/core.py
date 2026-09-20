@@ -45,6 +45,14 @@ _DATA_URL_IMAGE_RE = re.compile(r"^data:image/(png|jpeg);base64,(.+)$", re.DOTAL
 _PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 
 
+# REPORTING A POST (v304). The reasons are a closed set the API enforces and
+# the gallery's sheet renders from this same tuple (routes.py passes it to the
+# template), so the sheet cannot offer a reason the server refuses. The note
+# width is the column's, like the title and caption widths above it.
+REPORT_REASONS = ("spam", "abuse", "copyright", "other")
+MAX_REPORT_NOTE_CHARS = 300
+
+
 def _valid_public_id(public_id):
     return isinstance(public_id, str) and bool(_PUBLIC_ID_RE.match(public_id))
 

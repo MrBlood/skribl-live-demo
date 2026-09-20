@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 
 from flask import current_app
 
-from .core import MAX_CAPTION_CHARS, MAX_TITLE_CHARS
+from .core import MAX_CAPTION_CHARS, MAX_REPORT_NOTE_CHARS, MAX_TITLE_CHARS
 from sqlalchemy import (Boolean, CheckConstraint, Column, DateTime,
                         ForeignKey, ForeignKeyConstraint, Index, Integer, JSON,
                         String)
@@ -623,6 +623,42 @@ class SkriblPostMedia(SkriblBase):
         ForeignKeyConstraint(["post_id"], ["skribl_posts.id"],
                              name="fk_post_media_post", ondelete="CASCADE"),
     )
+
+class SkriblReport(SkriblBase):
+    """Somebody said a public Skribl should not be there (v304).
+
+    THE GALLERY IS THE FIRST PLACE STRANGERS MEET EACH OTHER'S WORK, and the
+    owner's direction for it was "opt-in, with Report on every tile". A
+    report is a row: which post, one reason from a closed set, an optional
+    note, when, and a salted hash of who -- the same hash the rate limiter
+    keeps (ratelimit._rate_key), so no address is stored and the same reader
+    reporting the same post twice is one row (ix_report_unique). It is a
+    QUEUE for an operator, not an action: nothing here hides a post, and the
+    one door that does is `python -m skribl.takedown`, which now lists this
+    table with --reports and closes a post's rows with --resolve.
+
+    state: 'open' until an operator resolves it; 'closed' after. Reports on a
+    post that is deleted go with it (deletion.py deletes them explicitly, as
+    it does the media rows -- SQLite does not enforce the cascade).
+    """
+    __tablename__ = "skribl_reports"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, nullable=False, index=True)
+    reason = Column(String(24), nullable=False)
+    note = Column(String(MAX_REPORT_NOTE_CHARS), nullable=True)
+    reporter_hash = Column(String(64), nullable=False)
+    state = Column(String(16), default="open", nullable=False)
+    created_at = Column(DateTime(timezone=True),
+                        default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("ix_report_unique", "post_id", "reporter_hash", unique=True),
+        Index("ix_skribl_reports_state_created", "state", "created_at"),
+        ForeignKeyConstraint(["post_id"], ["skribl_posts.id"],
+                             name="fk_report_post", ondelete="CASCADE"),
+    )
+
 
 class SkriblPendingMedia(SkriblBase):
     """A short-lived, COMMITTED claim on a media object during a post.

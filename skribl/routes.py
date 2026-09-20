@@ -20,14 +20,15 @@ import hashlib
 
 import sqlalchemy as sa
 
-from .core import (MAX_CARD_BYTES,
+from .core import (MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
+                   MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    THEME_GROUND, _og_meta, _valid_public_id)
-from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia,
+from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport,
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict)
 from .storage import KEY_RE, LocalDiskStore
-from .ratelimit import (_client_ip, _rate_commit_post, _rate_limited,
+from .ratelimit import (_client_ip, _rate_commit_post, _rate_key, _rate_limited,
                         _rate_release_post, _rate_reserve_post)
 from .validation import _decode_data_url_image
 from .creation import (CLIENT_TOKEN_RE, SkriblIdempotencyRace, SkriblRejected,
@@ -282,7 +283,11 @@ def register_routes(bp, *, index_route=False):
         # rendered on the in-post player, with nothing of its own to filter or
         # invent: what it shows is what people chose. verify_gallery.py drives
         # the choice from both sheets and reads the page.
-        return render_template("skribl/skribl_gallery.html")
+        # The report sheet's reasons are the API's closed set, rendered from
+        # the same tuple, so the sheet cannot offer one the server refuses.
+        return render_template("skribl/skribl_gallery.html",
+                               report_reasons=REPORT_REASONS,
+                               report_note_max=MAX_REPORT_NOTE_CHARS)
 
     @bp.get("/feed")
     def skribl_feed():
@@ -955,6 +960,65 @@ def register_routes(bp, *, index_route=False):
             "author": author_dict(post.user_id),
             "skribl": payload
         })
+
+    @bp.post("/api/skribls/<public_id>/report")
+    def report_skribl(public_id):
+        """Report a post: one reason from a closed set, into the operator's queue."""
+        # REPORT ON EVERY TILE (v304), and what a report IS: a row in a queue
+        # an operator reads (`python -m skribl.takedown --reports`), never an
+        # action on the post. Nothing here hides anything, so a flood of
+        # reports cannot take a drawing down; it can only fill a queue, and
+        # the attempts bucket bounds even that.
+        #
+        # 404 for a malformed id, an unknown id AND a post the reporter may
+        # not read -- the same rule as GET, for the same reason: a 403 would
+        # confirm the id exists. You can only report what you could see.
+        if not _valid_public_id(public_id):
+            return jsonify({"error": "Skribl not found."}), 404
+        client_ip = _client_ip()
+        if _rate_limited(client_ip, "attempts"):
+            return jsonify({"error": "Too many requests. Try again later."}), 429
+        if not _csrf_ok():
+            return _csrf_refusal()
+        post = session().query(SkriblPost).filter_by(public_id=public_id).first()
+        if post is None or not post.visible_to(bp.skribl_current_user_id()):
+            return jsonify({"error": "Skribl not found."}), 404
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            return jsonify({"error": "Send a JSON object."}), 400
+        reason = body.get("reason")
+        if reason not in REPORT_REASONS:
+            return jsonify({"error": "reason must be one of: "
+                                     + ", ".join(REPORT_REASONS) + "."}), 400
+        note = body.get("note")
+        if note is not None and not isinstance(note, str):
+            return jsonify({"error": "note must be text."}), 400
+        note = (note or "").strip()[:MAX_REPORT_NOTE_CHARS] or None
+        # WHO, without knowing who: the rate limiter's salted hash of the
+        # client, the one identity this package already keeps. One reporter,
+        # one post, one row -- a second report from the same hash is answered
+        # exactly like the first and writes nothing (ix_report_unique backs
+        # the read below against a race, inside a savepoint so a lost race
+        # cannot poison the host's transaction).
+        who = _rate_key(client_ip)
+        s = session()
+        existing = (s.query(SkriblReport)
+                    .filter(SkriblReport.post_id == post.id,
+                            SkriblReport.reporter_hash == who)
+                    .first())
+        created = False
+        if existing is None:
+            try:
+                with s.begin_nested():
+                    s.add(SkriblReport(post_id=post.id, reason=reason, note=note,
+                                       reporter_hash=who, state="open"))
+                    s.flush()
+                created = True
+            except sa.exc.IntegrityError:
+                created = False
+        # NO COMMIT HERE, as on every other write in this file: the host owns
+        # the per-request commit (verify_txcontract.py).
+        return jsonify({"status": "received", "new": created}), 202
 
     # ---- taking one back ---------------------------------------------------
     # REGISTERED UNCONDITIONALLY SINCE v279, and the reasoning changed rather

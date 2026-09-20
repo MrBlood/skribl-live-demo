@@ -138,7 +138,7 @@ BATCHES = [
     # store: posts through both editors' sheets to the shared server (one
     # unticked, one ticked, per surface) and reads the listing back, so it
     # stays out of verify_deletion_foundation's batch.
-    ["verify_gallery.py"],                 # v304: the public gallery, opt-in
+    ["verify_gallery.py", "verify_tilereport.py"],   # v304: the public gallery, opt-in; Report on every tile
     ["verify_player_photo.py", "verify_sharecard.py"],
     ["verify_visual.py"],                  # measures
     ["verify_flipmotion.py"],              # measures

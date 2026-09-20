@@ -1,8 +1,10 @@
 """Withdraw a Skribl nobody else can: the operational path for a lost key.
 
     python -m skribl.takedown --list-orphans
+    python -m skribl.takedown --reports
     python -m skribl.takedown <public-id> --delete
     python -m skribl.takedown <public-id> --visibility private
+    python -m skribl.takedown <public-id> --resolve
 
 WHY THIS EXISTS. v279 gave anonymous posts a revocation capability, and an
 audit of it asked the question the migration had answered honestly and the
@@ -24,6 +26,13 @@ long as it exists, is documented, and is reachable. Before v280 `require_author
 =False` existed in the Python API with nothing to invoke it: a capability with
 no operational path is a capability the person answering the support mail does
 not have.
+
+THE REPORT QUEUE LANDS HERE TOO (v304). The public gallery puts Report on
+every tile, and a report is a row in skribl_reports, not an action. --reports
+lists the open ones grouped by post, most-reported first, with the two wet
+flags above as the next step; <public-id> --resolve closes that post's rows
+without touching the post, for the reports that turn out to be nothing.
+Deleting a post takes its reports with it.
 
 IT IS NOT ONLY FOR LEGACY ROWS. The same door is the one for a post-v279 author
 who cleared their site data, a moderation decision, and a legal takedown. Those
@@ -50,7 +59,8 @@ import argparse
 import sys
 
 from .deletion import delete_post, set_post_visibility
-from .models import SkriblPost, session as resolve_session, visibility_values
+from .models import (SkriblPost, SkriblReport, session as resolve_session,
+                     visibility_values)
 from .sweep import _load_app, EXIT_CANNOT_RUN
 
 EXIT_OK = 0
@@ -93,6 +103,13 @@ def build_parser():
                    help="count and list posts with no owner and no revocation "
                         "capability — the pre-v279 anonymous back-catalogue. "
                         "Read-only; ignores every other flag.")
+    p.add_argument("--reports", action="store_true",
+                   help="list open reports from the public gallery, grouped "
+                        "by post, most-reported first. Read-only; ignores "
+                        "every other flag.")
+    p.add_argument("--resolve", action="store_true",
+                   help="close every open report on the post without "
+                        "touching the post -- for reports that were nothing")
     p.add_argument("--delete", action="store_true",
                    help="actually delete the post. Bytes are left to "
                         "skribl.sweep, which is the only thing that can tell "
@@ -102,12 +119,30 @@ def build_parser():
     return p
 
 
+def open_reports():
+    """Every post with open reports, most-reported first, newest report first
+    within each: [(post, [reports...]), ...]."""
+    s = resolve_session()
+    rows = (s.query(SkriblReport)
+            .filter(SkriblReport.state == "open")
+            .order_by(SkriblReport.created_at.desc(), SkriblReport.id.desc())
+            .all())
+    by_post = {}
+    for r in rows:
+        by_post.setdefault(r.post_id, []).append(r)
+    posts = {p.id: p for p in s.query(SkriblPost)
+             .filter(SkriblPost.id.in_(list(by_post))).all()} if by_post else {}
+    groups = [(posts[pid], rs) for pid, rs in by_post.items() if pid in posts]
+    groups.sort(key=lambda g: (-len(g[1]), g[0].public_id))
+    return groups
+
+
 def main(argv=None, out=sys.stdout):
     args = build_parser().parse_args(argv)
-    if args.delete and args.visibility:
-        _die("--delete and --visibility ask for different outcomes; pick one.")
-    if not args.list_orphans and not args.public_id:
-        _die("a public id is required unless you passed --list-orphans.")
+    if sum(bool(f) for f in (args.delete, args.visibility, args.resolve)) > 1:
+        _die("--delete, --visibility and --resolve ask for different outcomes; pick one.")
+    if not args.list_orphans and not args.reports and not args.public_id:
+        _die("a public id is required unless you passed --list-orphans or --reports.")
 
     app = _load_app(args.app)
     with app.app_context():
@@ -132,6 +167,28 @@ def main(argv=None, out=sys.stdout):
                       file=out)
             return EXIT_OK
 
+        if args.reports:
+            groups = open_reports()
+            print(f"{len(groups)} post(s) with open reports.", file=out)
+            for post, rows in groups:
+                reasons = {}
+                for r in rows:
+                    reasons[r.reason] = reasons.get(r.reason, 0) + 1
+                why = ", ".join(f"{k} x{v}" for k, v in sorted(reasons.items()))
+                print(f"  {post.public_id}  {post.visibility}  "
+                      f"{len(rows)} report(s)  {why}  latest {rows[0].created_at}\n"
+                      f"    title : {post.title or '(untitled)'}", file=out)
+                for r in rows:
+                    if r.note:
+                        print(f"    note  : {r.note}", file=out)
+            if groups:
+                print("\nAct on one with:\n"
+                      "  python -m skribl.takedown <public-id> --visibility private\n"
+                      "  python -m skribl.takedown <public-id> --delete\n"
+                      "  python -m skribl.takedown <public-id> --resolve   (it was nothing)",
+                      file=out)
+            return EXIT_OK
+
         post = (resolve_session().query(SkriblPost)
                 .filter(SkriblPost.public_id == args.public_id)
                 .one_or_none())
@@ -150,9 +207,23 @@ def main(argv=None, out=sys.stdout):
               f"  key    : {'held by its author' if post.delete_token_hash else 'none — this post is why this tool exists'}",
               file=out)
 
-        if not args.delete and not args.visibility:
-            print("\nDRY RUN — nothing changed. Add --delete, or "
-                  "--visibility private, to act.", file=out)
+        n_open = (resolve_session().query(SkriblReport)
+                  .filter(SkriblReport.post_id == post.id,
+                          SkriblReport.state == "open").count())
+        print(f"  reports: {n_open} open", file=out)
+
+        if not args.delete and not args.visibility and not args.resolve:
+            print("\nDRY RUN — nothing changed. Add --delete, "
+                  "--visibility private, or --resolve, to act.", file=out)
+            return EXIT_OK
+
+        if args.resolve:
+            (resolve_session().query(SkriblReport)
+             .filter(SkriblReport.post_id == post.id,
+                     SkriblReport.state == "open")
+             .update({"state": "closed"}, synchronize_session=False))
+            resolve_session().commit()
+            print(f"\n{n_open} report(s) closed. The post is untouched.", file=out)
             return EXIT_OK
 
         if args.visibility:

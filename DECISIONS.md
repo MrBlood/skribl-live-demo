@@ -8763,3 +8763,51 @@ identity check in `verify_identity.py`; `harness/browsing.py` waits on its
 boot flag. Calibrated per component: each mutation red only on its own pins
 (the calibration log is in the PR).
 
+## Unsealed, on top of v303 -- Report on every tile (v304 when sealed)
+
+The second half of "Build the public gallery, opt-in, with Report on every
+tile." The gallery is the first place strangers meet each other's work, and
+a page that lists what people chose to show needs a way for a reader to say
+that something should not be there.
+
+**A REPORT IS A ROW, NEVER AN ACTION.** `POST /api/skribls/<id>/report`
+takes one reason from a closed set (`skribl.core.REPORT_REASONS`, which the
+sheet renders from the same tuple so it cannot offer one the server refuses)
+and an optional note, and writes a row into `skribl_reports`: the post, the
+reason, the note, when, and the rate limiter's salted hash of the client --
+the one identity this package already keeps, never an address. One reporter,
+one post, one row: a second report from the same hash is answered exactly
+like the first and writes nothing, backed by a unique index inside a
+savepoint so a lost race cannot poison the host's transaction. Nothing here
+hides a post. A flood of reports cannot take a drawing down; it can fill a
+queue, and the attempts bucket bounds even that. 404 for a malformed id, an
+unknown id and a post the reporter may not read, the same rule as GET: you
+can only report what you could see. No commit -- the host owns it, as on
+every other write in routes.py.
+
+**THE QUEUE LANDS AT THE OPERATOR'S DOOR.** `python -m skribl.takedown
+--reports` lists the posts with open reports, most-reported first, with
+counts, reasons, notes and the three answers: `--visibility private`,
+`--delete`, or the new `<public-id> --resolve`, which closes that post's
+rows without touching the post. Deleting a post takes its reports with it,
+done explicitly in deletion.py as the media rows are, because SQLite does
+not enforce the cascade the FK declares. The takedown tool is the one door
+that acts on a post an operator did not make, so the queue belongs there
+rather than in a second tool.
+
+**THE SHEET SAYS WHAT THE PRODUCT DOES.** One dialog for the page, opened
+from any tile's Report with that tile's id; `role="dialog" aria-modal`, and
+lib/modalfocus.js owns focus, so it joined verify_a11y's modal census on its
+own route. Its words: reports go to the people who run this site; nothing is
+taken down automatically. After a send the button reads "Reported" and stays
+focusable (focus returns to it on close; a disabled button cannot take it),
+and opens the sheet as the record rather than a second form.
+
+Pinned by `verify_tilereport.py` (the endpoint's answers, the sheet through
+the page, the row in the table, the post untouched) and by the new cases in
+`verify_takedown.py` (`--reports`, `--resolve`, the refusal, the cascade).
+The migration `c4d9e2f7a1b6` is chained on `b7d240ac91e3` -- the real head,
+not the newest file by name, which is how the first draft was chained and
+what `verify_migrations` caught -- and its digests are pinned in
+`RELEASED.txt`. Calibrated per component; the log is in the PR.
+
