@@ -219,9 +219,10 @@
        the listing again (feed.js). Neither state carries a <code> element,
        and verify_inline pins that as the mechanism. #}
     <p class="state" id="feedEmpty" hidden>
-      <b>Nothing here yet.</b> Posts made from this page appear here.
-      A Skribl posted from the <a href="{{ url_for('.skribl_editor') }}">Pad</a>
-      is shared by its link and stays out of the feed.
+      <b>Nothing here yet.</b> Posts made from this page appear here, and so
+      does a Skribl posted from the <a href="{{ url_for('.skribl_editor') }}">Pad</a>
+      with <b>Show in the public gallery</b> ticked. Left off, it is shared by
+      its link and stays out of the feed.
     </p>
     <p class="state" id="feedError" hidden>
       <b>Couldn't load the feed.</b> Check your connection and try again.<br>
@@ -234,14 +235,15 @@
       Skribl showing posts that are: the composer above is a stand-in for
       yours, and everything listed comes from the real listing endpoint.
       Nothing posted here is a fixture.</p>
-      <p><b>Why the feed is usually empty.</b> A created post defaults to
+      <p><b>Why the feed is often empty.</b> A created post defaults to
       <code>visibility: "unlisted"</code> — reachable by link, deliberately
-      not listed — and the Pad's composer has no visibility control, so
-      everything posted from it stays out of the listing. A host feed's
-      composer is what sends <code>"visibility": "public"</code>; this
-      page's does. The in-post player itself does not care: it plays any
-      Skribl the viewer is allowed to read. The routes are in
-      docs/INTEGRATION.md.</p>
+      not listed — and the Pad's and Flip's post sheets send
+      <code>"visibility": "public"</code> only when the author ticks
+      <b>Show in the public gallery</b>, so everything posted without the
+      tick stays out of the listing. A host feed's composer sends it
+      whenever the host means the post to be listed; this page's does. The
+      in-post player itself does not care: it plays any Skribl the viewer
+      is allowed to read. The routes are in docs/INTEGRATION.md.</p>
       <p><b>This is the in-post player.</b> Tap a Skribl to play it: the drawing
       redraws itself, a hairline runs along the bottom edge, and the nib shows
       where the pen is. Two controls, bottom-left: <b>sound</b>, off until you

@@ -76,6 +76,7 @@ def _scripts(path):
 # is the one module only a host loads.
 SURFACES = [("Pad", "skribl_editor.html"), ("Flip", "skribl_flip.html"),
             ("player", "skribl_player.html"), ("library", "skribl_library.html"),
+            ("gallery", "skribl_gallery.html"),
             ("in-post", "_skribl_inline_player.html"), ("HOST", "skribl_feed.html")]
 
 

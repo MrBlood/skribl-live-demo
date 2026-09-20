@@ -30,7 +30,7 @@ marker is the end of all work.
 
 BOOT_MARKER = {
     "/": "pad", "/skribl-pad": "pad", "/flip": "flip",
-    "/library": "library", "/feed": "feed",
+    "/library": "library", "/feed": "feed", "/gallery": "gallery",
 }
 
 # The PLAYER runs app.js, so it raises the same flag Pad does — verified in a

@@ -149,6 +149,12 @@ feature you ship once.
 
 **A, then B, and treat C as a thing you back into rather than aim at.**
 
+*(v304: the first step toward C was taken, deliberately small. `/gallery`
+lists every Skribl whose author ticked "Show in the public gallery" on the
+post sheet — opt-in, default unlisted, nothing recommended, nothing ranked. It
+is the listing a host feed already reads, rendered by Skribl itself. What it
+is not: an account, a follow, a like. Those are still C, and still backed into.)*
+
 There is a fourth option worth more than it sounds: **join a network instead of
 building one.** Every Skribl is already a public URL with OG meta and a share
 card, so a link posted to Bluesky, Mastodon or Discord already produces a rich

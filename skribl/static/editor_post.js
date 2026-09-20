@@ -23,6 +23,7 @@
   const previewImg = document.getElementById('postPreviewImg');
   const previewFrame = document.getElementById('postPreview');
   const submitBtn = document.getElementById('postSubmitBtn');
+  const publicInput = document.getElementById('postPublicInput');   // absent in compose mode
   const submitLabel = document.getElementById('postSubmitLabel');
   const soundMark = document.getElementById('postSound');
   const soundDot = document.getElementById('postSoundDot');
@@ -294,6 +295,7 @@
       body.style.opacity = '';
       titleInput.disabled = false;
       captionInput.disabled = false;
+      if (publicInput) publicInput.disabled = false;
       submitBtn.disabled = false;
       submitBtn.hidden = false;
       submitLabel.textContent = IDLE_LABEL;
@@ -306,6 +308,7 @@
       body.style.opacity = '0.5';
       titleInput.disabled = true;
       captionInput.disabled = true;
+      if (publicInput) publicInput.disabled = true;
       submitBtn.disabled = true;
     } else if (state === 'success') {
       posting = false;
@@ -325,6 +328,7 @@
       body.style.opacity = '';
       titleInput.disabled = false;
       captionInput.disabled = false;
+      if (publicInput) publicInput.disabled = false;
       submitBtn.disabled = false;
       submitBtn.hidden = false;
       submitLabel.textContent = 'Try again';
@@ -454,6 +458,15 @@
     const payload = serializeSkribl();
     payload.title = (titleInput.value || '').trim() || 'Untitled Skribl';
     payload.caption = (captionInput.value || '').trim();
+    // THE PUBLIC CHOICE (v304). Sent only when the author ticked it and only
+    // when this Pad is posting for itself: in compose mode the checkbox is not
+    // rendered and the HOST's composer sets visibility on the body it posts.
+    // Unticked, the key is left out — the server's "unlisted" default is the
+    // one statement of what an unmarked post is, and repeating it here would
+    // be a second copy to drift.
+    if (publicInput && publicInput.checked && window.SKRIBL_MODE !== 'compose') {
+      payload.visibility = 'public';
+    }
     // Per-Skribl share card for link unfurls. Post-only (kept out of
     // serializeSkribl so drafts stay lean); the server serves it at
     // /s/<id>/card.png and drops it from the player GET envelope. Best-effort —

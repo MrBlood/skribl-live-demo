@@ -8712,3 +8712,54 @@ durable release evidence rather than owner-only knowledge. They were run in
 parallel with the seal; their outcome is recorded in this entry when the
 owner reports it, which is the same place every other outcome the harness
 cannot reach has been recorded since v278's "Music works".
+
+## Unsealed, on top of v303 -- the public gallery, opt-in (v304 when sealed)
+
+The owner's product question, in two halves: "Should there be a library
+button in the ... menu and the library contains all my skribls?" and "Should
+it be a link like when you're in Skribls.net that has all skribls from
+everyone?" The first is what "Your Skribls" already is (lib/posted.js, this
+browser's list); the second did not exist. The direction: "Build the public
+gallery, opt-in, with Report on every tile." This entry is the first half.
+Report is the next PR.
+
+**OPT-IN, AND THE KEY IS OMITTED OTHERWISE.** `POST /api/skribls` has
+defaulted to `unlisted` since the listing was written, for the reason
+routes.py gives -- a link-sharing product should default to sharing by link
+-- and nothing the two editors posted ever carried a visibility at all. They
+still do not, unless the author ticks "Show in the public gallery": the
+Pad's post sheet and Flip's share sheet each grew one checkbox row
+(`.post-check`, one rule set in styles.css, worn by both), and
+`buildPostPayload` / `buildSharePayload` set `visibility: "public"` only when
+it is checked. Unchecked, the key is left out rather than sent as
+`"unlisted"`, so the server's default stays the one statement of what an
+unmarked post is. The Pad in compose mode renders no box: there the HOST's
+composer decides, and a second control would be a second answer.
+
+**THE PAGE IS THE LISTING A HOST READS, RENDERED BY SKRIBL.** `/gallery` is
+feed.js's recipe without the composer: fetch `GET /api/skribls`, clone the
+`skribl_inline()` macro per item, mount, and page with the listing's own
+`next_cursor`. Nothing on it filters or ranks; what it shows is what people
+chose. It is a Skribl page, so it carries the app identity partial and the
+theme boot and follows the app's theme, with its own handful of tokens in
+both ramps rather than the editor's stylesheet. Both editors' menus link to
+it beside "Your Skribls", the player links to it beside Copy link (the
+player's HTML ratchet has room for four words and no icon), and the gallery
+links back to the Pad with "Make one". The feed's and INTEGRATION.md's prose
+saying the Pad "has no visibility control" was true and is not now; both
+say what is true now.
+
+**FUTURE.md's option C, backed into.** The recommendation was "A, then B, and
+treat C as a thing you back into rather than aim at." This is the smallest
+step in C's direction that exists: a page of what people chose to show. Not
+an account, not a follow, not a like.
+
+Pinned by `verify_gallery.py`, which posts through both sheets with the box
+at its default and with it ticked, reads the bodies the browser sent and the
+listing back, opens compose mode and finds no box, drives the page's paging,
+error and empty states through the real macro, and reads the nav links from
+each surface. The gallery joined every census in `verify_a11y.py` and the
+identity check in `verify_identity.py`; `harness/browsing.py` waits on its
+boot flag. Calibrated per component: each mutation red only on its own pins
+(the calibration log is in the PR).
+

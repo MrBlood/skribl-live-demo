@@ -389,6 +389,13 @@ A green check is not evidence until it has been shown to go red.
 ### v303 — the acquisition audit
 
 - `verify_identity.py` — the app's identity to a browser and a Home Screen
+- `verify_gallery.py` — the public gallery is opt-in: the Pad's and Flip's post
+  sheets send `visibility: "public"` only when "Show in the public gallery" is
+  ticked and omit the key otherwise, the Pad in compose mode renders no such
+  box, and `/gallery` shows exactly the posts that carried it — cloned from
+  the in-post macro, paged by the listing's own cursor, with an error state
+  that retries and an empty state that names the tick. Posts through both
+  sheets, so it has a release batch to itself.
   (SK-AUD-013): `/manifest.webmanifest` is served and every icon it names is
   fetched and decoded as the PNG of the size it declares; the Pad, Flip, the
   player and the library carry the manifest link, a theme-color and a touch

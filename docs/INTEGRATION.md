@@ -51,6 +51,7 @@ That is the whole integration. You now have:
     GET  /skribl/media/<key>              stored media, authorised per post
     GET  /skribl/feed                     PREVIEW of the in-post player — below
     GET  /skribl/library                  the profile's Skribls tab — below
+    GET  /skribl/gallery                  the public gallery: every post whose author opted in
 
 **`/library` is registered by the blueprint whether you want it or not**, like
 `/feed`. It is the profile's Skribls tab: your listing, with a full transport —
@@ -133,9 +134,12 @@ settles it. A post whose payload will not load says so rather than sitting dead.
 *Your composer decides visibility, and the default is not public.* `POST
 /api/skribls` defaults to `"visibility": "unlisted"` — reachable by link, listed
 nowhere — because that is what a link-sharing product should default to. Skribl's
-own Pad composer has no visibility control, so nothing posted from it ever
-appears in `GET /api/skribls`. If your feed is meant to list posts, your composer
-sends `"visibility": "public"`.
+own post sheets (the Pad's and Flip's) send `"visibility": "public"` only when
+the author ticks "Show in the public gallery", and omit the key otherwise, so a
+post made without the tick never appears in `GET /api/skribls`. In compose mode
+(`?compose=1`) the Pad renders no such control at all: your composer decides,
+and if your feed is meant to list posts, it sends `"visibility": "public"`.
+`/gallery` is that listing rendered by Skribl itself, on the in-post player.
 
 *The macros need one name in your Jinja environment.* `init_skribl()` adds
 `skribl_asset` as an app-wide template global — the only name Skribl puts in your

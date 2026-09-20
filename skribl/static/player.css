@@ -1006,6 +1006,11 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   justify-content: center;
 }
 .btn.play.btn-icon .btn-label { display: none; }
+@media (forced-colors: active) {
+  .post-check-box { border-color: ButtonText; forced-color-adjust: none; }
+  .post-check-input:checked + .post-check-box { background: Highlight; border-color: Highlight; }
+  .post-check-input:checked + .post-check-box::after { border-color: HighlightText; }
+}
 
 /* Border-only pulse: brighten the border + a soft edge glow, then back. Only the
    50% keyframe is defined, so the implicit 0%/100% use the element's own base
