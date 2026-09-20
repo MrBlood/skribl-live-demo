@@ -9,9 +9,13 @@ excusable, because the client already knew every id it posted.
 What this suite pins, in order of how badly each would fail a user:
 
   1. A real post is recorded, on BOTH surfaces, with its own title.
-  2. A LOCAL-ONLY save is NOT recorded. Pad falls back to a local save when the
-     server is unreachable; that Skribl is not shareable, so listing it under
-     links you can send would be a lie.
+  2. A LOCAL-ONLY save IS recorded, flagged, and drawn as "on this device" with
+     nothing to send. Until the acquisition audit of v302 (SK-AUD-010) this
+     said the opposite — a local save has no link, so listing it would be a
+     lie — and the lie ran the other way: lib/posted.js's orphan sweep deletes
+     any unindexed 'skribl_post_*' blob the next time the store is full, so an
+     unlisted local save was bytes the "saved on this device" message could
+     not vouch for. Listed, it survives reclaim; its × arms before it deletes.
   3. No payload is stored. Payloads run to hundreds of kilobytes and
      localStorage is a ~5MB budget shared with crash recovery, which matters
      more than this list does.
@@ -208,20 +212,133 @@ with sync_playwright() as p:
               repr(pad_saved[0].get("title")))
 
     # -----------------------------------------------------------------------
-    print("\nYOUR SKRIBLS — a local-only save is NOT listed as shareable")
+    print("\nYOUR SKRIBLS — a local-only save IS listed, on this device, and survives the sweep")
     #
-    # Pad falls back to a local save when the server is unreachable. That
-    # Skribl has no link, so listing it among links you can send would be a
-    # lie — and the fallback path is exactly where a tester on a bad
-    # connection ends up.
+    # Pad falls back to a local save when the server is unreachable — exactly
+    # where a tester on a bad connection ends up — and tells them it is saved
+    # on this device. This section used to pin that such a save is NOT listed,
+    # because it has no link to send. SK-AUD-010 (acquisition audit of v302):
+    # lib/posted.js's sweepOrphans() deletes every 'skribl_post_*' blob with no
+    # index entry the next time the store is full, so the unlisted save was the
+    # one thing storage pressure could remove, under a success message. It is
+    # listed now, flagged, with nothing to send; the mutation that removes the
+    # indexing makes the sweep delete the blob again and reddens the pin below.
     pd.evaluate("() => localStorage.setItem('skribl_posted_v1', '[]')")
     before = len(pd.evaluate(READ))
     pd.evaluate("""() => {
       if (window.SkriblPosted) window.SkriblPosted.add({ id: '', kind: 'pad' });
     }""")
-    check("an entry with no id is refused by the store",
-          len(pd.evaluate(READ)) == before,
-          "a local-only save has no id and must not appear")
+    check("an entry with no id is still refused by the store",
+          len(pd.evaluate(READ)) == before)
+
+    HAS_BLOB = "(id) => !!localStorage.getItem('skribl_post_' + id)"
+
+    def local_post(title):
+        """A fresh Pad in a NEW CONTEXT, one stroke, and every POST to the API
+        dying on the wire, so the composer takes its local fallback.
+        A new context rather than a reload: a reload restores the previous
+        page's drawing with its take finished, and a finished take LOCKS the
+        canvas, so the stroke would draw nothing and Record never appear (the
+        v240 fixture lesson, again)."""
+        page = b.new_context().new_page()
+        page.goto(f"{BASE}/skribl-pad", wait_until="load")
+        page.wait_for_timeout(1200)
+        page.route(f"{API}**", lambda route: route.abort()
+                   if route.request.method == "POST" else route.continue_())
+        box = page.locator("#canvas").bounding_box()
+        page.mouse.move(box["x"] + 60, box["y"] + 60)
+        page.mouse.down()
+        page.mouse.move(box["x"] + 160, box["y"] + 130, steps=8)
+        page.mouse.up()
+        page.wait_for_timeout(400)
+        page.click("#recordBtn")
+        page.wait_for_timeout(600)
+        page.click("#postBtn")
+        page.wait_for_timeout(500)
+        page.fill("#postTitleInput", title)
+        page.click("#postSubmitBtn")
+        page.wait_for_timeout(2500)
+        page.unroute(f"{API}**")
+        return page
+
+    pd.close()
+    pd = local_post("Kept on this phone")
+    loc = pd.evaluate(READ)
+    lid = str((loc[0] if loc else {}).get("id", ""))
+    check("the local save is recorded", len(loc) == 1 and lid.startswith("local_"),
+          str(loc)[:120])
+    check("...flagged as local", bool(loc) and loc[0].get("local") is True,
+          str((loc[0] if loc else {}).get("local")))
+    check("...and its bytes are under the blob key", pd.evaluate(HAS_BLOB, lid),
+          "no entry, so no id to look under" if not lid else "")
+    check("the status says on this device only",
+          "this device" in pd.inner_text("#postStatusLabel").lower(),
+          pd.inner_text("#postStatusLabel"))
+
+    pd.evaluate("() => window._skriblPostedUI.open()")
+    pd.wait_for_timeout(300)
+    # Counted before it is read: a missing row must FAIL by name here, not wedge
+    # the run on a locator that never resolves (the v287 rule).
+    rows = pd.locator("#postedList .posted-row-local")
+    nrows = rows.count()
+    row = rows.first.inner_text() if nrows else ""
+    check("the tray shows it as a local row that says on this device only",
+          nrows == 1 and "on this device" in row.lower(),
+          f"{nrows} local rows; text {row[:60]!r}")
+    check("...and offers nothing to send",
+          nrows == 1 and pd.evaluate(
+              "() => document.querySelectorAll('#postedList .posted-row-local "
+              ".posted-copy, #postedList .posted-row-local .posted-delete, "
+              "#postedList .posted-row-local .posted-key').length") == 0)
+    check("...its link is the on-device player",
+          nrows == 1 and "#skribl=" in (pd.get_attribute(
+              "#postedList .posted-row-local a", "href") or ""))
+
+    # THE ORPHAN SWEEP is the mechanism that used to delete it: an unindexed
+    # 'skribl_post_*' blob is, by its definition, unreachable. Listed, it is not.
+    freed = pd.evaluate("() => window.SkriblPosted.sweepOrphans()")
+    check("the orphan sweep does not delete a listed local save",
+          bool(lid) and pd.evaluate(HAS_BLOB, lid) and len(pd.evaluate(READ)) == 1,
+          f"sweepOrphans freed {freed} bytes — under the mutation that stops "
+          "indexing local saves, this is where the blob goes")
+
+    # The × destroys the only copy, so it arms first, like the tile delete.
+    if nrows == 1:
+        pd.click("#postedList .posted-row-local .posted-del")
+        pd.wait_for_timeout(200)
+    check("one tap on the local row's × arms rather than deletes",
+          nrows == 1 and len(pd.evaluate(READ)) == 1 and pd.evaluate(HAS_BLOB, lid))
+    if nrows == 1:
+        pd.click("#postedList .posted-row-local .posted-del")
+        pd.wait_for_timeout(300)
+    check("the second tap deletes the entry AND its bytes",
+          nrows == 1 and len(pd.evaluate(READ)) == 0 and not pd.evaluate(HAS_BLOB, lid))
+    pd.evaluate("() => window._skriblPostedUI.close()")
+    pd.wait_for_timeout(200)
+
+    # EVICTION IS THE DISCLOSED POLICY, and it is a different thing from the
+    # sweep: when the store is genuinely full, reclaim() drops the OLDEST local
+    # save, entry and bytes together, so a drawing in front of the user is not
+    # lost for want of room. Until local saves were indexed, evictOldest()
+    # matched nothing and was dead code — the sweep was doing the evicting,
+    # silently and oldest-last. Pinned from the other side: an eviction never
+    # strands a blob, and the tray says the policy where the saves are listed.
+    pd2 = local_post("Second local save")
+    loc2 = pd2.evaluate(READ)
+    lid2 = str((loc2[0] if loc2 else {}).get("id", ""))
+    check("a second local save is recorded", len(loc2) == 1 and lid2.startswith("local_"))
+    freed = pd2.evaluate("() => window.SkriblPosted.reclaim(1)")
+    check("a full store evicts the oldest local save, entry and bytes TOGETHER",
+          bool(lid2) and freed > 0 and len(pd2.evaluate(READ)) == 0
+          and not pd2.evaluate(HAS_BLOB, lid2),
+          f"freed {freed}; entries {len(pd2.evaluate(READ))}; "
+          f"blob {pd2.evaluate(HAS_BLOB, lid2) if lid2 else 'n/a'}")
+    pd2.evaluate("() => window._skriblPostedUI.open()")
+    pd2.wait_for_timeout(200)
+    foot = pd2.inner_text("#postedDrawer .posted-foot-top").lower()
+    check("...and the tray states that policy where the saves are listed",
+          "oldest" in foot and "full" in foot, foot[:120])
+    pd2.close()
 
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — the store survives a hostile localStorage")

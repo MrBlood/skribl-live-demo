@@ -211,7 +211,14 @@
       }
 
       listEl.innerHTML = hits.map(function (e) {
-        var sub = (e.kind === 'flip'
+        /* A LOCAL SAVE (SK-AUD-010): Pad's fallback when the server could not
+           be reached. Listed so the orphan sweep in lib/posted.js keeps its
+           bytes, and drawn as what it is \u2014 on this device, nothing to send:
+           no Copy link, no Share, no Delete-for-everyone, and the \u00d7 deletes
+           the save itself rather than a list entry, so it arms first. */
+        var isLocal = !!e.local;
+        var sub = (isLocal ? 'on this device only'
+          : e.kind === 'flip'
           ? (e.pages + (e.pages === 1 ? ' page' : ' pages'))
           : 'replay') + ' \u00b7 ' + store.ago(e.at);
         // NO route literal. A '/s/' fallback here is exactly what v132 removed
@@ -225,6 +232,21 @@
         // they stack under the title (v293 — the meta line wrapped a word per
         // line beside them on a phone). The actions share one wrapper so the
         // stylesheet can move them as a group; the × stays on the title line.
+        if (isLocal) {
+          return '<div class="posted-row posted-row-local" data-id="' + esc(e.id) + '">' +
+            '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
+              (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
+            /* Same document, a hash the Pad reads at boot: the click handler
+               reloads into it, because a hash change alone boots nothing. */
+            '<a class="posted-main" data-local="1" href="' + esc(url) + '">' +
+              '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
+              '<span class="posted-sub">' + esc(sub) + '</span>' +
+            '</a>' +
+            '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" data-local="1" ' +
+              'aria-label="Delete this save from this device">' +
+              '✕</button>' +
+          '</div>';
+        }
         return '<div class="posted-row' + (e.tok ? ' posted-row-keyed' : '') + '" data-id="' + esc(e.id) + '">' +
           '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
             (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
@@ -278,6 +300,21 @@
     listEl.addEventListener('click', function (ev) {
       var c = ev.target.closest('.posted-copy');
       if (c) { copy(c.dataset.url, c); return; }
+      var lm = ev.target.closest('.posted-main[data-local]');
+      if (lm) {
+        /* The Pad boots its #skribl=<id> player from the hash at LOAD, so a
+           same-page hash change has to be followed by a reload; from Flip the
+           href already points at the Pad's path and a plain navigation does
+           the same job. editor_post.js's Watch button takes the same route. */
+        ev.preventDefault();
+        var u = new URL(lm.getAttribute('href'), global.location.href);
+        if (u.pathname === global.location.pathname) {
+          global.location.hash = u.hash; global.location.reload();
+        } else {
+          global.location.href = u.href;
+        }
+        return;
+      }
       var k = ev.target.closest('.posted-key');
       if (k) {
         var kent = byId(k.dataset.key);
@@ -285,6 +322,29 @@
         return;
       }
       var d = ev.target.closest('.posted-del');
+      if (d && d.dataset.local) {
+        /* For a LOCAL save the × destroys the only copy, so it arms first —
+           the same two-tap contract Flip's tile delete and this drawer's own
+           Clear list use, and spoken through the drawer's live region rather
+           than a browser confirm. */
+        if (d.dataset.armed !== '1') {
+          d.dataset.armed = '1';
+          d.classList.add('armed');
+          d.setAttribute('aria-label', 'Tap again to delete this save from this device');
+          announce('Tap again to delete this save from this device');
+          clearTimeout(d._arm);
+          d._arm = setTimeout(function () {
+            d.dataset.armed = ''; d.classList.remove('armed');
+            d.setAttribute('aria-label', 'Delete this save from this device');
+          }, 3000);
+          return;
+        }
+        clearTimeout(d._arm);
+        store.remove(d.dataset.del);
+        announce('Deleted from this device');
+        render();
+        return;
+      }
       if (d) {
         // Removes the entry, NOT the Skribl. The link keeps working, which is
         // why this is not a confirm dialog — nothing is destroyed.

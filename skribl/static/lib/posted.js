@@ -141,6 +141,17 @@
          Absent for a post made under a host that authenticated its author —
          that one is revoked by ownership. */
       tok: typeof entry.tok === 'string' && entry.tok ? entry.tok : null,
+      /* A LOCAL SAVE IS LISTED (SK-AUD-010). Pad falls back to saving the
+         whole Skribl under 'skribl_post_<id>' when the server cannot be
+         reached, tells the user it is saved on this device, and until this
+         flag existed refused to list it here — "a local save is not
+         shareable, so listing it under links you can send would be a lie".
+         The lie ran the other way: sweepOrphans() below defines an unindexed
+         'skribl_post_*' blob as unreachable and DELETES it the next time the
+         store is full, so the success message described bytes that storage
+         pressure could remove. Listed, the blob is live; the row says "on
+         this device" and offers no link to send. */
+      local: !!entry.local,
       at: Date.now()
     });
     /* THE RETURN SHAPE IS THE FINDING. `add()` used to return the list and
@@ -205,6 +216,12 @@
   // full and a drawing is about to be lost for want of room -- an old saved
   // copy is worth less than the work in front of the user. Returns bytes freed,
   // or 0 when there is nothing left to give.
+  //
+  // Until local saves were indexed this filter matched nothing -- a 'local_'
+  // id was never in the list -- so the function was dead and sweepOrphans()
+  // was doing the evicting, silently and without the "oldest first" rule.
+  // The tray's footer states this policy, which is what makes it an eviction
+  // rather than a loss.
   function evictOldest() {
     var list = read();
     var locals = list.filter(function (e) { return String(e.id).indexOf('local_') === 0; });

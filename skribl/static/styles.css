@@ -5356,6 +5356,9 @@ body.player-mode #canvas {
 .posted-del { flex: 0 0 auto; background: none; border: 0; color: var(--text-secondary);
   font-size: 12px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
 .posted-del:hover { color: var(--danger, var(--danger)); }
+/* A LOCAL save's × arms before it deletes (SK-AUD-010): the armed tap reads
+   as the danger it is, like every other armed control here. */
+.posted-del.armed { color: var(--danger); }
 .posted-empty { text-align: center; padding: 34px 16px; }
 .posted-empty-title { font-size: 13.5px; color: var(--text-primary); margin-bottom: 5px; }
 .posted-empty-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }

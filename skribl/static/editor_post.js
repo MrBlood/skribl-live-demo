@@ -484,8 +484,22 @@
       lastPostUrl = (res && res.url) || null;
       lastPostTitle = payload.title || '';   // what was posted, with the default applied; Share hands it on
       const localOnly = !!(res && res.local);
-      // Record it locally, but ONLY a real post. A local fallback is not
-      // shareable, so listing it under links you can send would be a lie.
+      // A LOCAL SAVE IS RECORDED TOO (SK-AUD-010), flagged so the tray shows it
+      // as "on this device" with nothing to send. This used to record only a
+      // real post, on the argument that a local save is not shareable — and an
+      // unlisted 'skribl_post_*' blob is what lib/posted.js's orphan sweep
+      // deletes under storage pressure, so "Saved on this device only" was
+      // describing bytes the next full store would remove. The url stored is
+      // the Pad's own path plus the hash, so the row opens from Flip's tray as
+      // well as this one.
+      if (localOnly && res && res.id && window.SkriblPosted) {
+        window.SkriblPosted.add({
+          id: res.id, kind: 'pad', pages: 1, local: true,
+          url: location.pathname + location.search + res.url,
+          title: (titleInput.value || '').trim()
+        });
+        if (window._skriblPostedUI) window._skriblPostedUI.render();
+      }
       if (!localOnly && res && res.id && window.SkriblPosted) {
         const kept = window.SkriblPosted.add({
           id: res.id, url: res.url, kind: 'pad', pages: 1,
