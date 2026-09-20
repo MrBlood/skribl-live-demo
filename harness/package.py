@@ -194,7 +194,7 @@ def verify_runtime(pkg_dir):
             fails.append("server never answered on /skribl-pad")
             return fails
 
-        for path in ("/skribl-pad", "/flip", "/library", "/feed"):
+        for path in ("/skribl-pad", "/flip", "/library", "/feed", "/gallery"):
             try:
                 code = urllib.request.urlopen(base + path, timeout=10).status
                 if code != 200:

@@ -271,6 +271,19 @@ def register_routes(bp, *, index_route=False):
         # comment as current and graded the product on it (SK-AUD-011).
         return render_template("skribl/skribl_library.html")
 
+    @bp.get("/gallery")
+    def skribl_gallery():
+        """The public gallery: every Skribl its author chose to show, newest first."""
+        # Opt-in, and only opt-in (v304). GET /api/skribls lists posts whose
+        # visibility is "public", and the two editors' post sheets send that
+        # value only when the author ticks "Show in the public gallery" — a
+        # post made without the tick stays unlisted, reachable by its link and
+        # listed nowhere. So this page is the listing every host feed reads,
+        # rendered on the in-post player, with nothing of its own to filter or
+        # invent: what it shows is what people chose. verify_gallery.py drives
+        # the choice from both sheets and reads the page.
+        return render_template("skribl/skribl_gallery.html")
+
     @bp.get("/feed")
     def skribl_feed():
         """The demo host page: the in-post player and composer over the real listing."""

@@ -90,7 +90,8 @@ with sync_playwright() as p:
     # so this is an accessibility assertion and not only an HTML-validity one:
     # a label pointing at the first of two ids describes the wrong control.
     for _path, _name in (("/", "Pad"), ("/flip", "Flip"),
-                         ("/library", "Library"), ("/feed", "the host feed")):
+                         ("/library", "Library"), ("/feed", "the host feed"),
+                         ("/gallery", "the gallery")):
         _pg = browser.new_page(viewport={"width": 1280, "height": 900})
         _pg.goto(BASE + _path, wait_until="load")
         _pg.wait_for_timeout(900)
@@ -722,7 +723,8 @@ with sync_playwright() as p:
       const mains = [...document.querySelectorAll('main, [role="main"]')].filter(live);
       return { h1: h1.map(h => (h.textContent || '').trim()), mains: mains.length }; }"""
     for _path, _name in (("/", "Pad"), ("/flip", "Flip"), ("/s/" + _pid, "the player"),
-                         ("/library", "the library"), ("/feed", "the host feed")):
+                         ("/library", "the library"), ("/feed", "the host feed"),
+                         ("/gallery", "the gallery")):
         _pg = browser.new_page(viewport={"width": 1280, "height": 900})
         _pg.goto(BASE + _path, wait_until="load")
         _pg.wait_for_timeout(1200)
@@ -805,7 +807,8 @@ with sync_playwright() as p:
       return { k, changed: window.__a11ySnap[k] === undefined ? null
                           : window.__a11ySnap[k] !== window.__a11yStyle(el) }; }"""
     for _path, _name in (("/", "Pad"), ("/flip", "Flip"),
-                         ("/library", "the library"), ("/feed", "the host feed")):
+                         ("/library", "the library"), ("/feed", "the host feed"),
+                         ("/gallery", "the gallery")):
         _pg = browser.new_page(viewport={"width": 1280, "height": 900})
         _pg.goto(BASE + _path, wait_until="load")
         _pg.wait_for_timeout(1200)
@@ -926,6 +929,7 @@ with sync_playwright() as p:
     _states = (("/", "Pad", None), ("/", "Pad, tune drawer open", "#tuneBtn"),
                ("/flip", "Flip", None), ("/flip", "Flip, tune drawer open", "#tuneBtn"),
                ("/library", "the library", None), ("/feed", "the host feed", None),
+               ("/gallery", "the gallery", None),
                ("/s/" + _pid, "the player", None))
     for _path, _name, _open in _states:
         # 360 and 320 too (v291): the header tiers in flip.css shrink their
@@ -964,7 +968,8 @@ with sync_playwright() as p:
     for _path, _name, _primary in (("/", "Pad", "#postBtn"), ("/flip", "Flip", "#postBtn"),
                                    ("/s/" + _pid, "the player", "#playerPlayBtn"),
                                    ("/library", "the library", "#btnRestart"),
-                                   ("/feed", "the host feed", "#postBtn")):
+                                   ("/feed", "the host feed", "#postBtn"),
+                                   ("/gallery", "the gallery", "#galleryMake")):
         _pg = browser.new_page(viewport={"width": 1280, "height": 900})
         _pg.goto(BASE + _path, wait_until="load")
         _pg.wait_for_timeout(600)

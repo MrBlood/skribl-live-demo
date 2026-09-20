@@ -144,7 +144,8 @@ TAG_TOUCH = re.compile(r'<link[^>]+rel="apple-touch-icon"[^>]+href="([^"]+)"')
 TAG_ICON = re.compile(r'<link[^>]+rel="icon"[^>]+href="([^"]+)"')
 
 for path, label in (("/skribl-pad", "Pad"), ("/flip", "Flip"),
-                    (f"/s/{_pid}", "the player"), ("/library", "the library")):
+                    (f"/s/{_pid}", "the player"), ("/library", "the library"),
+                    ("/gallery", "the gallery")):
     st_p, _, html = get(path)
     html = html.decode("utf-8", "replace")
     m_man, m_thm = TAG_MANIFEST.search(html), TAG_THEME.search(html)

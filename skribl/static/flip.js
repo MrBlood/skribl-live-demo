@@ -4584,6 +4584,11 @@ function buildSharePayload(){
   const _c=document.getElementById('flipShareCaption');
   const _payload = { version:2, schemaVersion:2, playbackMode: frames.length>1?'flip':'replay', fps:fps, ...(subdiv > 1 ? {subdiv:subdiv} : {}), frames:writeFrames(outFrames), canvasSize:{cssWidth:CW,cssHeight:CH,dpr:1},
            title: (_t ? _t.value : '').trim(), caption: (_c ? _c.value : '').trim() };
+  // THE PUBLIC CHOICE (v304), the Pad's rule: the key travels only when the
+  // author ticked it; unticked, it is omitted and the server's "unlisted"
+  // default is the one statement of what an unmarked post is.
+  const _pub=document.getElementById('flipSharePublic');
+  if(_pub && _pub.checked) _payload.visibility='public';
   // THE SHARE CARD. Flip never built one: this payload had no `thumbnail`, so
   // /s/<id>/card.png fell through to the static branded og-card for every Flip
   // post ever made — on its unfurl, as the in-post player's idle poster in a

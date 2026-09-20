@@ -125,10 +125,12 @@ def scribble(pg, box, n=110):
 #
 # `POST /api/skribls` defaults to visibility "unlisted" (skribl/routes.py: "that
 # is exactly what a link-sharing product should default to") and the Pad's
-# composer has no visibility control, so EVERY post the composer makes is
-# invisible to GET /api/skribls. A fixture built by clicking #postSubmitBtn
-# therefore produces a feed page with nothing on it, and this suite would be
-# asserting against an empty list — which is how it first ran.
+# composer sends "public" only when its "Show in the public gallery" box is
+# ticked (v304; verify_gallery.py drives that box), so a post the composer
+# makes with the box at its default is invisible to GET /api/skribls. A
+# fixture built by clicking #postSubmitBtn therefore produced a feed page with
+# nothing on it, and this suite was asserting against an empty list — which
+# is how it first ran.
 #
 # So the recording is real — a genuine take in Pad, with real per-point
 # timestamps, which is the whole reason the two players can be compared on

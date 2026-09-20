@@ -146,6 +146,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         <span>Your Skribls</span>
       </button>
+      {# The gallery: everyone's public Skribls (v304). An <a href> like the
+         Flip Mode row, so open-in-new-tab works and nothing here has to know
+         where the blueprint is mounted. #}
+      <a href="{{ url_for('.skribl_gallery') }}" id="galleryItem" class="menu-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="menu-item-text">Public gallery<span class="menu-item-sub">Skribls people chose to show</span></span>
+      </a>
       <button type="button" class="menu-item" id="helpItem">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg>
         How it works
@@ -233,6 +240,21 @@
             <textarea id="postCaptionInput" class="post-input post-textarea" maxlength="{{ skribl_limits.caption }}" rows="3" placeholder="Say something about it…"></textarea>
             <span class="post-char-count" id="postCharCount">0 / {{ skribl_limits.caption }}</span>
           </label>
+          {# THE PUBLIC CHOICE, OPT-IN (v304). A post is unlisted unless the
+             author ticks this: reachable by its link, listed nowhere. Ticked,
+             the payload carries visibility "public" and the post appears in
+             /gallery for everyone. Unticked, the key is OMITTED rather than
+             sent as "unlisted", so the server's default stays the one
+             authority on what an unmarked post is. Not rendered in compose
+             mode: there the HOST's composer decides visibility, and a control
+             here would be a second answer. verify_gallery.py pins all three. #}
+          {% if not compose %}
+          <label class="post-check">
+            <input type="checkbox" id="postPublicInput" class="post-check-input">
+            <span class="post-check-box" aria-hidden="true"></span>
+            <span class="post-check-text">Show in the public gallery<span class="post-check-sub">Off, it is shared by its link only</span></span>
+          </label>
+          {% endif %}
         </div>
       </div>
       <button type="button" class="post-submit" id="postSubmitBtn">

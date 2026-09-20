@@ -3638,6 +3638,73 @@ body.player-mode #canvasEmptyHint { display: none !important; }
   font-weight: 500;
 }
 
+/* THE PUBLIC CHOICE (v304): one checkbox row, shared by the Pad's post sheet
+   and Flip's share sheet (flip.css does not restyle it). The native box is
+   visually replaced by .post-check-box so it reads in both ramps and under
+   forced colours; the input stays in the tree, focusable and labelled by the
+   wrapping <label>, and :focus-visible on it lights the drawn box. The row is
+   44px tall on its own — a checkbox has no ::before to grow a tap band with. */
+.post-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 2px;
+  cursor: pointer;
+  position: relative;
+  text-align: left;
+}
+.post-check-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.post-check-box {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--hairline-strong);
+  background: rgba(var(--wash-rgb), 0.03);
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.post-check-box::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+  opacity: 0;
+}
+.post-check-input:checked + .post-check-box { background: var(--accent); border-color: var(--accent); }
+.post-check-input:checked + .post-check-box::after { opacity: 1; }
+.post-check-input:focus-visible + .post-check-box { outline: 2px solid var(--accent); outline-offset: 2px; }
+.post-check-input:disabled ~ * { opacity: 0.5; }
+.post-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.post-check-sub { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+@media (forced-colors: active) {
+  .post-check-box { border-color: ButtonText; forced-color-adjust: none; }
+  .post-check-input:checked + .post-check-box { background: Highlight; border-color: Highlight; }
+  .post-check-input:checked + .post-check-box::after { border-color: HighlightText; }
+}
+
 .post-input {
   width: 100%;
   background: rgba(var(--wash-rgb), 0.03);
