@@ -63,10 +63,34 @@ BASE = "http://127.0.0.1:5001"
 # One row, measured. A wrapped bar is a taller bar.
 ONE_ROW_MAX_PX = 80
 
-# The decided minimum touch target. This is the ONLY place the number lives.
-# It is 34 because that is what ships today, not because 34 is defensible —
-# raising it is a deliberate edit here, which is the point of pinning it.
+# TWO FLOORS, AND THEY ARE DIFFERENT NUMBERS ON PURPOSE (SK-AUD-005; the
+# acquisition audit of v302 read the sentence that used to sit here -- "34
+# because that is what ships today, not because 34 is defensible" -- as the
+# product's touch-target policy, and it was never that. It was the VISIBLE box.)
+#
+#   MIN_TOUCH_PX  is the visible box: the glyph's own pill. 34 is the packing
+#                 floor -- eight controls plus their gaps in a 360px row -- and
+#                 the hit-region note in styles.css has the arithmetic for why
+#                 widening the pills would make neighbouring targets ambiguous.
+#   HIT_TOUCH_PX  is the box a finger actually gets: the pill plus its
+#                 --tap-grow band (styles.css "Hit regions, separated from glyph
+#                 size"), measured through elementFromPoint, which is the only
+#                 thing that can see a band. 44 is Apple's number and it is
+#                 what every bar and header control answers, at every width
+#                 including 320, for the height. The width is the visible pill
+#                 plus whatever is free beside it -- in a packed row the sides
+#                 belong to the neighbours, so a mis-tap lands on a control,
+#                 never on nothing; verify_a11y's census holds that half.
+#
+# Section 3 measures both. A control that shrinks its band is caught by the
+# second even when its pill still clears the first.
 MIN_TOUCH_PX = 34
+HIT_TOUCH_PX = 44
+# The 320 safety net degrades here too: the Pad's row wraps, and the second
+# row sits inside the first row's band, so a tap 21px below a top-row control
+# lands on the control beneath it -- a neighbour, never nothing. 40 is the
+# same narrow-tier box verify_a11y's census records for Flip's bar below 360.
+HIT_TOUCH_NARROW_PX = 40
 
 # THE WIDTH POLICY, pinned here so it cannot drift back into folklore.
 #
@@ -109,6 +133,32 @@ GEOMETRY = """() => {
     controls,
     smallest: controls.length ? Math.min(...controls.map(c => c.w)) : 0
   };
+}"""
+
+# THE EFFECTIVE BOX, per control: how far from its centre a tap still lands on
+# it, walked in half-pixel steps through elementFromPoint. A band is a
+# pseudo-element and has no box of its own, so this is the only measurement
+# that reads it; getBoundingClientRect reads the pill. Disabled controls are
+# skipped: they compute pointer-events: none and answer nothing at their own
+# centre, which the hit-region note in styles.css records as a false alarm
+# that has already cost one revert.
+HIT_GEOMETRY = """() => {
+  const bar = document.querySelector('.toolbar, .flip-tools');
+  const hdr = document.querySelector('.header');
+  const sel = '.tool-btn, .tool-open, .undo-btn, .t-btn, .icon-btn, .actions .btn';
+  const pick = (root) => root ? [...root.querySelectorAll(sel)] : [];
+  const els = [...pick(bar), ...pick(hdr)]
+    .filter(e => e.offsetParent !== null && !e.disabled && e.getBoundingClientRect().width > 0);
+  const own = (el, x, y) => { const t = document.elementFromPoint(x, y); return !!(t && (t === el || el.contains(t))); };
+  return els.map(el => {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let up = 0, down = 0;
+    while (up < 40 && own(el, cx, cy - up - 0.5)) up++;
+    while (down < 40 && own(el, cx, cy + down + 0.5)) down++;
+    return { id: el.id || el.className.toString().slice(0, 24),
+             visH: +r.height.toFixed(1), hitH: up + down };
+  });
 }"""
 
 HEADER_GEOMETRY = """() => {
@@ -280,6 +330,39 @@ with sync_playwright() as p:
             check(f"{surface} @{w}px every control >= {MIN_TOUCH_PX}px",
                   g["smallest"] >= MIN_TOUCH_PX,
                   f"smallest is {worst['id'] or '(unnamed)'} at {worst['w']}px")
+
+    # THE BOX A FINGER GETS (SK-AUD-005). Every bar and header control, at the
+    # design widths AND the 320 safety net: a tap HIT_TOUCH_PX tall, centred on
+    # the control, lands on it. Measured on the page as it is used -- after a
+    # stroke, so Undo is enabled and the Post pill is live -- because the
+    # controls that only wake up then are exactly the ones a fresh page hides.
+    # Red on the tree that gave the header pills no band (Post answered 37px).
+    for surface, path, canvas in (("Pad", "/", "#canvas"), ("Flip", "/flip", "#pad")):
+        for w in sorted(set(DEGRADE_WIDTHS + [360, 375, 393, 430])):
+            page = ctx.new_page()
+            page.set_viewport_size({"width": w, "height": 900})
+            # The same clean slate measure() gives itself: the stroke below
+            # leaves a draft, and a restored draft is a finished take with a
+            # locked canvas, on which the next width's stroke would draw nothing.
+            page.add_init_script("try { localStorage.removeItem('skribl_autosave_v1'); } catch (e) {}")
+            browsing.goto(page, BASE, path)
+            box = page.locator(canvas).bounding_box()
+            page.mouse.move(box["x"] + 50, box["y"] + 50)
+            page.mouse.down()
+            page.mouse.move(box["x"] + 120, box["y"] + 90, steps=6)
+            page.mouse.up()
+            page.wait_for_timeout(250)
+            hits = page.evaluate(HIT_GEOMETRY)
+            page.close()
+            if not hits:
+                check(f"{surface} @{w}px — found live controls to hit-test", False)
+                continue
+            floor = HIT_TOUCH_PX if w >= 360 else HIT_TOUCH_NARROW_PX
+            short = [h for h in hits if h["hitH"] < floor]
+            check(f"{surface} @{w}px every live bar and header control answers a tap {floor}px tall",
+                  not short,
+                  ", ".join(f"{h['id']} {h['hitH']}px (pill {h['visH']}px)" for h in short[:4])
+                  or f"{len(hits)} controls, shortest {min(h['hitH'] for h in hits)}px")
 
     # ------------------------------------------------------------ section 4
     print("\nLAYOUT 4 — leaving Pad cannot silently discard work")
