@@ -110,13 +110,50 @@
     .tile .tt { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .tile .tm { margin-left: auto; flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     .tile .tc { font-size: 13.5px; color: var(--text-2); overflow-wrap: anywhere; margin: 0; }
+    /* ---- Report, on every tile, and the one sheet they share ---------- */
+    .tile .report {
+      margin-left: 6px; flex: none; min-height: 44px; min-width: 44px; padding: 0 10px;
+      background: none; border: 0; border-radius: 8px; color: var(--text-3);
+      font: inherit; font-size: 12.5px; cursor: pointer;
+    }
+    .tile .report:hover { color: var(--text); background: var(--control); }
+    .tile .report[data-reported] { color: var(--text-3); }
+    .tile .thead { align-items: center; }
+    .sheet {
+      position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.5); padding: 16px;
+    }
+    .sheet[hidden] { display: none; }
+    .sheet-card {
+      width: min(360px, 100%); background: var(--panel); border: 1px solid var(--hairline);
+      border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .sheet-card h2 { margin: 0; font-size: 16px; }
+    .sheet-card p { margin: 0; color: var(--text-2); font-size: 13.5px; }
+    .reasons { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; border: 0; }
+    .reasons legend { font-size: 12px; font-weight: 600; color: var(--text-2); padding: 0 0 4px; }
+    .reason { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; font-size: 14px; }
+    .reason input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+    .note {
+      width: 100%; min-height: 64px; resize: vertical; font: inherit; font-size: 16px;
+      color: var(--text); background: var(--control); border: 1px solid var(--hairline);
+      border-radius: 10px; padding: 9px 11px;
+    }
+    .sheet-actions { display: flex; gap: 8px; }
+    .sheet-actions .btn { flex: 1 1 0; }
+    .btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
+    .sheet-status { font-size: 13px; color: var(--text-2); min-height: 1.2em; }
+    .sheet-status.error { color: #ff8fae; }
+    .sheet-status[hidden] { display: none; }
     .more-wrap { display: flex; justify-content: center; margin-top: 22px; }
     .foot { margin-top: 34px; text-align: center; color: var(--text-3); font-size: 12.5px; }
     .foot a { color: var(--text-2); }
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
-<body data-skribl-api="{{ url_for('.list_skribls') }}">
+<body data-skribl-api="{{ url_for('.list_skribls') }}"
+      data-skribl-csrf="{{ skribl_csrf_token }}">
 <div class="wrap">
   <header class="top">
     <a class="brand" href="{{ url_for('.skribl_editor') }}" aria-label="Skribl">
@@ -153,10 +190,43 @@
   </main>
 </div>
 
+{# REPORT ON EVERY TILE (v304): one sheet, opened by any tile's Report button
+   with that tile's id. A DIALOG that says so -- role + aria-modal are what
+   verify_a11y's census counts and what a screen reader announces -- and
+   lib/modalfocus.js keeps Tab inside and hands focus back to the button that
+   opened it. The reasons are the API's closed set, rendered from the same
+   tuple (skribl.core.REPORT_REASONS), so this sheet cannot offer one the
+   server refuses. A report is a row in an operator's queue, and the sheet
+   says so: nothing is promised that the product does not do. #}
+<div class="sheet" id="reportSheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" hidden>
+  <form class="sheet-card" id="reportForm">
+    <h2 id="reportTitle">Report this Skribl</h2>
+    <p>Tell us what is wrong with it. Reports go to the people who run this site; nothing is taken down automatically.</p>
+    <fieldset class="reasons">
+      <legend>Reason</legend>
+      {% for r in report_reasons %}
+      <label class="reason"><input type="radio" name="reason" value="{{ r }}"{% if loop.first %} checked{% endif %}> {{ {'spam': 'Spam or misleading', 'abuse': 'Abusive or hateful', 'copyright': 'Copies someone else\'s work', 'other': 'Something else'}[r] }}</label>
+      {% endfor %}
+    </fieldset>
+    <label>
+      <span class="sheet-status">Anything else? <span style="color: var(--text-3)">optional</span></span>
+      <textarea class="note" id="reportNote" maxlength="{{ report_note_max }}" rows="2" placeholder="What should we know?"></textarea>
+    </label>
+    <p class="sheet-status" id="reportStatus" role="status" hidden></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn" id="reportCancel">Cancel</button>
+      <button type="submit" class="btn primary" id="reportSend">Send report</button>
+    </div>
+  </form>
+</div>
+
 {# The macro's own output with the id left as a placeholder; gallery.js clones
    it per item, as feed.js does, so this page can never render markup the
    macro does not produce. <template> content is inert. #}
 <template id="skriblTileTpl">{{ skribl_inline('__ID__') }}</template>
+{# lib/modalfocus.js: the report sheet's focus management -- the same module
+   every aria-modal surface on the editors uses. #}
+<script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
 <script src="{{ skribl_asset('gallery.js') }}" defer></script>
 </body>
 </html>

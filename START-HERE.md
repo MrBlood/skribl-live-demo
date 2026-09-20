@@ -126,6 +126,7 @@ here is the rule you can break tomorrow.
 | A client capability is minted from Web Crypto or not at all: without it neither editor sends a client header and the server mints the key. | `verify_posted.py` |
 | The seal holds before its final render until every external lane attests the frozen tree, or its hold expires and the record says which lane is pending. | `verify_docs.py` |
 | The public gallery is opt-in: a post carries `visibility: "public"` only when its author ticked "Show in the public gallery" on the Pad or Flip sheet, the key is omitted otherwise, compose mode renders no such box, and `/gallery` shows exactly the posts that carried it. | `verify_gallery.py` |
+| A report is a row in an operator's queue, never an action: `POST /api/skribls/<id>/report` writes one row per (post, reporter), a duplicate writes nothing, an unreadable post 404s, the post's visibility is untouched, and `takedown --reports` lists it. | `verify_tilereport.py`, `verify_takedown.py` |
 
 **One from v179 did NOT survive, and is recorded here rather than quietly
 dropped.** "Segmented controls state a height" was true when written; `flip.css`
@@ -692,7 +693,7 @@ rather than a shared rule.
 | `looptrim.js` | Pad+Flip+player | Loop trim clamping — the rule both editors apply six times between them. |
 | `media_validation.js` | Pad+Flip | media_validation.js — one owner for media format policy and byte verification. |
 | `mirror.js` | Pad+Flip | Mirror drawing — reflect each point across the canvas centre, shared by both. |
-| `modalfocus.js` | Pad+Flip | Focus for surfaces that declare aria-modal="true". |
+| `modalfocus.js` | Pad+Flip+gallery | Focus for surfaces that declare aria-modal="true". |
 | `nametab.js` | Pad+Flip | The skribl NAME drawer — a title for the drawing, shared by Pad and Flip. |
 | `pagespan.js` | Flip | Page spans — a contiguous run of Flip pages, and the operations on it. |
 | `palette.js` | Pad+Flip | The pen palette — one list, both editors. |

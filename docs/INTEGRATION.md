@@ -52,6 +52,7 @@ That is the whole integration. You now have:
     GET  /skribl/feed                     PREVIEW of the in-post player — below
     GET  /skribl/library                  the profile's Skribls tab — below
     GET  /skribl/gallery                  the public gallery: every post whose author opted in
+    POST /skribl/api/skribls/<id>/report  report a post: one reason from a closed set, into an operator's queue
 
 **`/library` is registered by the blueprint whether you want it or not**, like
 `/feed`. It is the profile's Skribls tab: your listing, with a full transport —
@@ -139,7 +140,12 @@ the author ticks "Show in the public gallery", and omit the key otherwise, so a
 post made without the tick never appears in `GET /api/skribls`. In compose mode
 (`?compose=1`) the Pad renders no such control at all: your composer decides,
 and if your feed is meant to list posts, it sends `"visibility": "public"`.
-`/gallery` is that listing rendered by Skribl itself, on the in-post player.
+`/gallery` is that listing rendered by Skribl itself, on the in-post player,
+with Report on every tile: `POST /api/skribls/<id>/report` takes a reason from
+`skribl.core.REPORT_REASONS` and an optional note, writes one row per
+(post, reporter) into `skribl_reports`, and takes nothing down. The queue is
+read with `python -m skribl.takedown --reports`; the same tool's `--visibility
+private`, `--delete` and `--resolve` are the operator's three answers.
 
 *The macros need one name in your Jinja environment.* `init_skribl()` adds
 `skribl_asset` as an app-wide template global — the only name Skribl puts in your
@@ -804,9 +810,9 @@ such a host is not wrong).
 
 ## Database and migrations
 
-Skribl ships Alembic migrations for its own five tables (`skribl_posts`,
+Skribl ships Alembic migrations for its own six tables (`skribl_posts`,
 `skribl_post_media`, `skribl_rate_events`, `skribl_idempotency`,
-`skribl_pending_media`). Two supported approaches:
+`skribl_pending_media`, `skribl_reports`). Two supported approaches:
 
 * **You own migrations.** Call `attach_to_metadata(db.metadata)` and let your
   Alembic autogenerate pick the tables up with everything else.

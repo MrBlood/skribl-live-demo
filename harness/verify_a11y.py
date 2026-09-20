@@ -330,6 +330,11 @@ with sync_playwright() as p:
         ("/flip", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
         ("/flip", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear("
                                        "[{id:'x',tok:'k'}], function () {})", None),
+        # THE GALLERY'S REPORT SHEET (v304): one dialog for the page, opened
+        # from any tile's Report button. The census posts a public fixture
+        # first so there is a tile to open it from; Escape closes it and
+        # focus goes back to the button (unnamed, so: not <body>).
+        ("/gallery", "reportSheet"): ("click:.tile .report", None),
     }
 
     def _draw_on_pad(pg):
@@ -375,7 +380,17 @@ with sync_playwright() as p:
     # Flip alone (its post sheet) could declare modal semantics — or fail to —
     # and never be counted (v290).
     found = set()
-    for _surface in ("/", "/flip"):
+    # A public post, so the gallery has a tile whose Report opens the sheet.
+    import urllib.request as _ur0
+    _req0 = _ur0.Request(BASE + "/api/skribls", method="POST",
+                         data=json.dumps({"frames": [{"strokes": [], "strokeGroups": [],
+                                                      "background": {"color": "#101418"}}],
+                                          "title": "Modal census fixture",
+                                          "visibility": "public"}).encode(),
+                         headers={"Content-Type": "application/json"})
+    with _ur0.urlopen(_req0, timeout=15) as _r0:
+        json.loads(_r0.read())
+    for _surface in ("/", "/flip", "/gallery"):
         pg = browser.new_page(viewport={"width": 1280, "height": 900})
         browsing.goto(pg, BASE, _surface)
         # Prime the runtime-built dialog so the census can see it (see above).

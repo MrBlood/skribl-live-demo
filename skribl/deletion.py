@@ -102,7 +102,7 @@ shape as the two byte ratchets that disagreed about `audiosession.js`.
 import hashlib
 import hmac
 
-from .models import (SkriblPost, SkriblPostMedia, normalise_user_id,
+from .models import (SkriblPost, SkriblPostMedia, SkriblReport, normalise_user_id,
                      session, visibility_values)
 
 
@@ -251,6 +251,12 @@ def delete_post(public_id, *, author_id=None, require_author=True,
     # pragma explicitly OFF.
     (s.query(SkriblPostMedia)
      .filter(SkriblPostMedia.post_id == post.id)
+     .delete(synchronize_session=False))
+    # The reports on it go too (v304): the FK says CASCADE, and the note above
+    # says why that is not relied on -- verify_deletion.py section 3 runs this
+    # with the pragma OFF and pins a report row gone with its post.
+    (s.query(SkriblReport)
+     .filter(SkriblReport.post_id == post.id)
      .delete(synchronize_session=False))
     s.delete(post)
     s.flush()

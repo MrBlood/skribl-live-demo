@@ -25,9 +25,10 @@ What the host does NOT need to give up: its own CSP (Skribl's is attached to the
 blueprint, not the app), its own error handlers, its own template namespace
 (everything lives under templates/skribl/), or its own static route.
 
-Tables: `skribl.models.SkriblBase.metadata` covers exactly Skribl's five
-tables (posts, rate events, post-media associations, idempotency keys, and
-pending-media claims), so the host can migrate them with its own Alembic setup.
+Tables: `skribl.models.SkriblBase.metadata` covers exactly Skribl's six
+tables (posts, rate events, post-media associations, idempotency keys,
+pending-media claims, and reports), so the host can migrate them with its own
+Alembic setup.
 """
 import hashlib
 import os

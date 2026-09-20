@@ -489,9 +489,10 @@ if src:
         # deliberately source-only so it runs anywhere.
         models_src = (ROOT / "skribl" / "models.py").read_text(encoding="utf-8")
         n_tables = len(re.findall(r"^\s*__tablename__\s*=", models_src, re.M))
-        words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+        words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+                 "six": 6, "seven": 7, "eight": 8}
         claimed = [words[w] for w in re.findall(
-            r"Skribl's (one|two|three|four|five)\s*\n?\s*tables",
+            r"Skribl's (one|two|three|four|five|six|seven|eight)\s*\n?\s*tables",
             init.read_text(encoding="utf-8"))]
         check("the documented model-table count matches the metadata",
               all(c == n_tables for c in claimed),

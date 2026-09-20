@@ -51,6 +51,16 @@
     tm.className = 'tm';
     tm.textContent = when(item.created_at);
     head.appendChild(tm);
+    /* REPORT, ON EVERY TILE. The button carries the post's id; the sheet is
+       one, shared, and opened with it. */
+    var rep = document.createElement('button');
+    rep.type = 'button';
+    rep.className = 'report';
+    rep.setAttribute('data-report', item.id);
+    rep.setAttribute('aria-label', 'Report ' + (item.title || 'this Skribl'));
+    rep.textContent = 'Report';
+    rep.addEventListener('click', function () { openReport(item.id, rep); });
+    head.appendChild(rep);
     art.appendChild(head);
 
     /* The macro rendered the poster URL with the placeholder in it, so the
@@ -111,6 +121,87 @@
         more.disabled = false;
       });
   }
+
+  /* ---- the report sheet ------------------------------------------------
+     A report is a row in the operator's queue (POST /api/skribls/<id>/report),
+     never an action on the post, and the sheet's words say so. One sheet for
+     the page, opened per tile; lib/modalfocus.js owns focus. 429 and any
+     other refusal are said in the sheet, which stays open for another try. */
+  var sheet = document.getElementById('reportSheet');
+  var form = document.getElementById('reportForm');
+  var note = document.getElementById('reportNote');
+  var status = document.getElementById('reportStatus');
+  var send = document.getElementById('reportSend');
+  var csrf = document.body.getAttribute('data-skribl-csrf');
+  var reporting = null;       /* { id, button } while the sheet is open */
+
+  function say(msg, bad) {
+    status.textContent = msg || '';
+    status.hidden = !msg;
+    status.classList.toggle('error', !!bad);
+  }
+
+  function openReport(id, button) {
+    reporting = { id: id, button: button };
+    form.reset();
+    /* Already reported from this page: the sheet opens as the record of
+       that, with nothing to send. The button stays focusable (it is where
+       focus returns on close — a disabled button cannot take it). */
+    var done = button.getAttribute('data-reported') === '1';
+    say(done ? 'You already reported this one. Thanks.' : '');
+    send.disabled = done;
+    sheet.hidden = false;
+    if (window.SkriblModal) window.SkriblModal.open(sheet, button);
+  }
+
+  function closeReport() {
+    if (sheet.hidden) return;
+    sheet.hidden = true;
+    if (window.SkriblModal) window.SkriblModal.close(sheet);
+    reporting = null;
+  }
+
+  document.getElementById('reportCancel').addEventListener('click', closeReport);
+  sheet.addEventListener('click', function (e) { if (e.target === sheet) closeReport(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !sheet.hidden) { e.preventDefault(); closeReport(); }
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!reporting || send.disabled) return;
+    var reason = (form.querySelector('input[name=reason]:checked') || {}).value;
+    if (!reason) { say('Pick a reason.', true); return; }
+    var target = reporting;
+    var headers = { 'Content-Type': 'application/json' };
+    if (csrf) headers['X-Skribl-CSRF'] = csrf;
+    send.disabled = true;
+    say('Sending…');
+    /* The route is the listing's URL plus the id, exactly as the poster URL
+       is built from the macro's: no path assembled from a literal, so a
+       url_prefix is honoured. */
+    fetch(api + '/' + encodeURIComponent(target.id) + '/report', {
+      method: 'POST', headers: headers, credentials: 'same-origin',
+      body: JSON.stringify({ reason: reason, note: note.value.trim() })
+    }).then(function (r) {
+      if (r.status === 429) throw new Error('Too many reports from here right now. Try again later.');
+      if (!r.ok) return r.json().catch(function () { return {}; })
+        .then(function (j) { throw new Error(j.error || ('Could not send (HTTP ' + r.status + ').')); });
+      return r.json();
+    }).then(function () {
+      /* SAID ON THE TILE: the button becomes the record that this reader
+         reported this post, and cannot be pressed again this page-load. The
+         server would answer a second one the same way and write nothing. */
+      target.button.textContent = 'Reported';
+      target.button.setAttribute('aria-pressed', 'true');
+      target.button.setAttribute('data-reported', '1');
+      say('Thanks. The people who run this site will look at it.');
+      send.disabled = true;
+    }).catch(function (err) {
+      say(err.message || 'Could not send the report.', true);
+      send.disabled = false;
+    });
+  });
 
   document.getElementById('galleryRetry').addEventListener('click', function () { load(true); });
   more.addEventListener('click', function () { load(false); });
