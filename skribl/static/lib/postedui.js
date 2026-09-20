@@ -109,6 +109,39 @@
     });
   }
 
+  /* ARMED, NOT confirm() (SK-AUD-014). The two destructive controls here --
+     the × on a keyed row, which throws away this browser's copy of the
+     revocation key, and Delete, which takes the Skribl down for everyone --
+     asked with window.confirm(): the one browser-painted dialog left in a
+     product whose every other destructive act is an armed second tap (Flip's
+     tile delete and Clear, this drawer's own Clear list, the local row's ×).
+     Same contract now: the first tap arms the button, says what the second
+     will do in its accessible name and through the drawer's live region, and
+     disarms itself after a few seconds; the second tap does it. The
+     consequence wording is kept whole, because the presentation was the
+     defect and the words were not. Returns true when the tap is the second. */
+  function arm(btn, warning, restLabel, armedText) {
+    if (btn.dataset.armed === '1') {
+      clearTimeout(btn._arm);
+      btn.dataset.armed = '';
+      btn.classList.remove('armed');
+      return true;
+    }
+    btn.dataset.armed = '1';
+    btn.classList.add('armed');
+    if (armedText) { btn.dataset.label = btn.textContent; btn.textContent = armedText; }
+    btn.setAttribute('aria-label', warning);
+    announce(warning);
+    clearTimeout(btn._arm);
+    btn._arm = setTimeout(function () {
+      btn.dataset.armed = '';
+      btn.classList.remove('armed');
+      if (armedText && btn.dataset.label) btn.textContent = btn.dataset.label;
+      btn.setAttribute('aria-label', restLabel);
+    }, 4000);
+    return false;
+  }
+
   function init(opts) {
     opts = opts || {};
     var store = global.SkriblPosted;
@@ -327,19 +360,8 @@
            the same two-tap contract Flip's tile delete and this drawer's own
            Clear list use, and spoken through the drawer's live region rather
            than a browser confirm. */
-        if (d.dataset.armed !== '1') {
-          d.dataset.armed = '1';
-          d.classList.add('armed');
-          d.setAttribute('aria-label', 'Tap again to delete this save from this device');
-          announce('Tap again to delete this save from this device');
-          clearTimeout(d._arm);
-          d._arm = setTimeout(function () {
-            d.dataset.armed = ''; d.classList.remove('armed');
-            d.setAttribute('aria-label', 'Delete this save from this device');
-          }, 3000);
-          return;
-        }
-        clearTimeout(d._arm);
+        if (!arm(d, 'Tap again to delete this save from this device',
+                 'Delete this save from this device')) return;
         store.remove(d.dataset.del);
         announce('Deleted from this device');
         render();
@@ -352,12 +374,10 @@
         // It DOES throw away the revocation capability, though, so it is worth
         // saying once. Only asked when there is something to lose.
         var ent = byId(d.dataset.del);
-        if (ent && ent.tok && !global.confirm(
-              'Remove this from your list?\n\n' +
-              'The Skribl stays online and the link keeps working — but this ' +
-              "browser's copy of the key is the only one Skribl knows about, " +
-              'and removing ' +
-              'the entry throws that key away.')) return;
+        if (ent && ent.tok && !arm(d,
+              'Tap again to remove — the Skribl stays online, but this ' +
+              "browser's copy of the key goes with the entry",
+              'Remove from this list, keeping the Skribl online')) return;
         store.remove(d.dataset.del);
         render();
         return;
@@ -367,10 +387,10 @@
       if (del) {
         var entry = byId(del.dataset.delete);
         if (!entry || !entry.tok) return;
-        if (!global.confirm(
-              'Delete this Skribl for everyone?\n\n' +
-              'The link stops working immediately and this cannot be undone.'))
-          return;
+        if (!arm(del,
+              'Tap again to delete this Skribl for everyone — the link ' +
+              'stops working at once and this cannot be undone',
+              'Delete this Skribl for everyone', 'Tap again to delete')) return;
         del.disabled = true;
         var was = del.textContent;
         del.textContent = 'Deleting…';
