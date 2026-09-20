@@ -650,10 +650,14 @@ with sync_playwright() as p:
     # behavioural to press.
     pg = browser.new_page(viewport={"width": 1280, "height": 900})
     browsing.goto(pg, BASE, "/")
-    for _id, why in (("toast", "autosave, copy, and the Undo affordance"),
-                     ("postStatus", "posting started / succeeded / failed"),
-                     ("postedStatus", "server-side deletion from Your Skribls")):
-        r = pg.evaluate("""(id) => {
+    # Your Skribls' region lives on the profile page since v304 (the list
+    # moved there), so it is read on its own page rather than on the Pad.
+    _lib = browser.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_lib, BASE, "/library")
+    for _id, why, _on in (("toast", "autosave, copy, and the Undo affordance", pg),
+                          ("postStatus", "posting started / succeeded / failed", pg),
+                          ("postedStatus", "server-side deletion from Your Skribls", _lib)):
+        r = _on.evaluate("""(id) => {
             const el = document.getElementById(id);
             if (!el) return null;
             return { role: el.getAttribute('role'),
@@ -667,6 +671,7 @@ with sync_playwright() as p:
               r is not None and r["atomic"] == "true",
               f"{r} — without it a node whose children change announces only "
               "the fragment, which for the toast is the bare Undo button")
+    _lib.close()
 
     # A DRAFT DURABILITY FAILURE IS ANNOUNCED, ONCE (SK-AUD-003; acquisition
     # audit of v302). The pill is visual and stays up; nothing spoke it. The
