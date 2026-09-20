@@ -371,6 +371,54 @@ with sync_playwright() as sp:
           f"GET {st_gone}")
     ids_left = [ids[0]]
 
+    # ---- a phone: Share on every row, and nothing runs past the edge -------
+    # Owner, from an iPhone: the page ran over the right margin. The grid's
+    # one column was a bare 1fr, whose minimum is its content's minimum, so a
+    # row that would not shrink (a title beside its actions) widened the
+    # column, the card and the page. minmax(0, 1fr) holds the column at the
+    # viewport; and on a phone every row also carries Share, so a row with
+    # more than one action wraps them under the title. Measured as the
+    # document's scroll width, under mobile emulation with a share sheet.
+    # TWO PHONES: one with a share sheet (every row wraps its actions, which
+    # is the case a phone shows) and one without (a plain row keeps its one
+    # action beside the title, which is the case that widened the column).
+    # Both must hold; they are red under different mutations.
+    for _vw, _sheet in ((320, True), (390, True), (320, False)):
+        _mctx = b.new_context(viewport={"width": _vw, "height": 844}, device_scale_factor=2,
+                              is_mobile=True, has_touch=True)
+        _mp = _mctx.new_page()
+        # Headless Chromium has no share sheet even under mobile emulation; a
+        # phone does. The module reads navigator.share, so it is given one.
+        if _sheet:
+            _mp.add_init_script("navigator.share = () => Promise.resolve();")
+        browsing.goto(_mp, BASE, "/library")
+        _mp.evaluate("""() => { localStorage.setItem('skribl_posted_v1', '[]');
+            window.SkriblPosted.add({ id: 'keyedrow', url: '/s/keyedrow', title: 'Y yuh t g cc h b b', kind: 'pad', pages: 1, tok: 'k', visibility: 'public' });
+            window.SkriblPosted.add({ id: 'plainrow', url: '/s/plainrow', title: 'Tttt', kind: 'flip', pages: 4 });
+            if (window._skriblPostedUI) window._skriblPostedUI.render(); }""")
+        _mp.wait_for_timeout(500)
+        _m = _mp.evaluate("""() => ({ share: !!navigator.share,
+            shares: document.querySelectorAll('#postedList .posted-share').length,
+            vw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth,
+            wide: [...document.querySelectorAll('.wrap *')].filter(e => e.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+                    .slice(0, 3).map(e => e.className) })""")
+        _lab = f"at {_vw} on a phone {'with' if _sheet else 'without'} a share sheet"
+        check(f"{_lab}: Share is on every row exactly when the system has a sheet",
+              _m["share"] == _sheet and _m["shares"] == (2 if _sheet else 0), str(_m))
+        check(f"{_lab}: nothing runs past the right edge",
+              _m["sw"] <= _m["vw"], f"scrollWidth {_m['sw']} > viewport {_m['vw']}: {_m['wide']}")
+        if _sheet:
+            # A held column stops the overflow; a row that still did not wrap
+            # would pay for it by squeezing its title to nothing. So on a phone
+            # with a sheet, a plain row's two actions sit under the title, and
+            # the title keeps its room.
+            _pr = _mp.evaluate("""() => { const r = document.querySelector('.posted-row[data-id=plainrow]');
+                const t = r.querySelector('.posted-main').getBoundingClientRect(), a = r.querySelector('.posted-actions').getBoundingClientRect();
+                return { titleW: Math.round(t.width), below: a.top >= t.bottom - 1, actions: r.querySelectorAll('.posted-actions button').length }; }""")
+            check(f"{_lab}: a plain row's two actions sit under its title, which keeps its room",
+                  _pr["actions"] == 2 and _pr["below"] and _pr["titleW"] >= 120, str(_pr))
+        _mctx.close()
+
     # ---- full screen -------------------------------------------------------
     fs_enabled = pg.evaluate("() => !!document.fullscreenEnabled")
     fs_btn = pg.evaluate("() => !document.getElementById('btnFull').hidden")

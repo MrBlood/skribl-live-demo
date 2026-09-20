@@ -303,7 +303,12 @@
            is the author (a host's signed-in user, authorised server-side). */
         var may = !!(e.tok || e.owned);
         var inGallery = e.visibility === 'public';
-        return '<div class="posted-row' + (may ? ' posted-row-keyed' : '') + '" data-id="' + esc(e.id) + '">' +
+        /* MORE THAN ONE ACTION puts the actions under the title on a phone
+           (posted.css). Keyed rows always have more than one; a plain row
+           does where the system has a share sheet -- which is every phone,
+           and was the row that ran off the right edge of one. */
+        var many = may || !!(global.navigator && global.navigator.share);
+        return '<div class="posted-row' + (may ? ' posted-row-keyed' : '') + (many ? ' posted-row-many' : '') + '" data-id="' + esc(e.id) + '">' +
           /* The poster where the page can build one (the profile), and the
              kind's icon always -- as a badge over the poster, because a Flip
              is marked with the book everywhere else in the app. */

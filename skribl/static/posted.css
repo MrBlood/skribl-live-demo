@@ -62,15 +62,22 @@
 .posted-sub { font-size: 11px; color: var(--text-secondary);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .posted-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-/* On a phone, a row with three actions puts them on their own line under
-   the title, indented past the thumb so they read as the row's; the × keeps
-   the title line's right edge. A one-action row is unchanged. A width query
+/* On a phone, a row with more than one action (.posted-row-many: every
+   keyed row, and every row where the system has a share sheet) puts them
+   on their own line under the title, indented past the thumb so they read
+   as the row's; the × keeps the title line's right edge. A one-action row
+   is unchanged. A width query
    rather than the size class: the drawer is shared and the Pad does not load
    lib/sizeclass.js — this sheet's own compact tier is max-width 640. */
 @media (max-width: 640px) {
-  .posted-row-keyed { flex-wrap: wrap; }
-  .posted-row-keyed .posted-actions { order: 2; flex: 1 1 100%; justify-content: flex-start; padding-left: 52px; }
-  .posted-row-keyed .posted-del { order: 1; }
+  .posted-row-keyed, .posted-row-many { flex-wrap: wrap; }
+  .posted-row-keyed .posted-actions, .posted-row-many .posted-actions {
+    order: 2; flex: 1 1 100%; justify-content: flex-start; padding-left: 52px;
+    /* ...and the strip wraps too, with a min-width of 0, so a phone with Share
+       on every row cannot widen the row, the column, and the page with it
+       (owner, from an iPhone, v304). */
+    flex-wrap: wrap; min-width: 0; }
+  .posted-row-keyed .posted-del, .posted-row-many .posted-del { order: 1; }
 }
 /* The destructive sibling of .posted-copy. Danger-toned so it does not read
    as another neutral utility beside "Copy link", and only rendered at all when
