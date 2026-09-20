@@ -44,6 +44,17 @@
     .fhead h1 { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; margin: 0; }
     .fhead .sub { font-size: 12.5px; color: #6f7686;
       font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+    .fhead .demo-tag { margin-left: auto; font-size: 11.5px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase; color: #b7a8ff;
+      border: 1px solid rgba(183,168,255,0.45); border-radius: 999px;
+      padding: 2px 9px; white-space: nowrap; }
+    .state button { font: inherit; font-weight: 600; color: #e8eaef;
+      background: #1b1f28; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px; padding: 8px 18px; margin-top: 10px; min-height: 44px;
+      cursor: pointer; }
+    .state button:hover { background: #232838; }
+    .note h2 { font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;
+      color: #6f7686; margin: 0 0 6px; }
     .post { padding: 15px 18px; border-bottom: 1px solid rgba(255,255,255,0.075); }
     .phead { display: flex; align-items: center; gap: 8px; font-size: 15px; }
     .phead .dn { font-weight: 700; letter-spacing: -0.01em; }
@@ -147,6 +158,12 @@
     <header class="fhead">
       <h1>Feed</h1>
       <span class="sub">Latest Skribls</span>
+      {# SAID ON THE PAGE, NOT ONLY IN THIS COMMENT (SK-AUD-012; acquisition
+         audit of v302). The audit reviewed this route as a consumer feed and
+         found it teaching API routes. It is a host-integration demo, and a
+         page that is one has to say so where a reviewer, or a tester handed
+         the link, will read it. verify_inline pins the label. #}
+      <span class="demo-tag" title="A host page that is not Skribl, showing posts that are">Developer demo</span>
     </header>
 
     {# THE COMPOSER. This is the host's, not Skribl's — the point of the page is
@@ -193,19 +210,38 @@
 
     <div id="feedList"></div>
 
+    {# THE TWO STATES A PERSON SEES, IN THE LANGUAGE OF THE PAGE (SK-AUD-012).
+       The empty state used to explain the visibility default in terms of
+       POST and GET routes and a JSON field; that explanation is still on the
+       page, under "For developers" below, where somebody mounting the player
+       into their own feed goes looking for it. The error state was a dead
+       end -- one sentence and nothing to press -- and has a Retry that fetches
+       the listing again (feed.js). Neither state carries a <code> element,
+       and verify_inline pins that as the mechanism. #}
     <p class="state" id="feedEmpty" hidden>
-      <b>Nothing public to list.</b> This is almost certainly not a bug:
-      <code>POST /api/skribls</code> defaults to <code>visibility: "unlisted"</code>
-      — reachable by link, deliberately not listed — and the
-      <a href="{{ url_for('.skribl_editor') }}">Pad</a>'s composer has no
-      visibility control, so everything posted from it stays out of
-      <code>GET /api/skribls</code>. A host feed's composer is what sends
-      <code>"visibility": "public"</code>. The in-post player itself does not
-      care: it plays any Skribl the viewer is allowed to read.
+      <b>Nothing here yet.</b> Posts made from this page appear here.
+      A Skribl posted from the <a href="{{ url_for('.skribl_editor') }}">Pad</a>
+      is shared by its link and stays out of the feed.
     </p>
-    <p class="state" id="feedError" hidden>Couldn't load the listing.</p>
+    <p class="state" id="feedError" hidden>
+      <b>Couldn't load the feed.</b> Check your connection and try again.<br>
+      <button type="button" id="feedRetry">Retry</button>
+    </p>
 
     <div class="note">
+      <h2>For developers</h2>
+      <p><b>This page is a demo host.</b> It is the smallest page that is not
+      Skribl showing posts that are: the composer above is a stand-in for
+      yours, and everything listed comes from the real listing endpoint.
+      Nothing posted here is a fixture.</p>
+      <p><b>Why the feed is usually empty.</b> A created post defaults to
+      <code>visibility: "unlisted"</code> — reachable by link, deliberately
+      not listed — and the Pad's composer has no visibility control, so
+      everything posted from it stays out of the listing. A host feed's
+      composer is what sends <code>"visibility": "public"</code>; this
+      page's does. The in-post player itself does not care: it plays any
+      Skribl the viewer is allowed to read. The routes are in
+      docs/INTEGRATION.md.</p>
       <p><b>This is the in-post player.</b> Tap a Skribl to play it: the drawing
       redraws itself, a hairline runs along the bottom edge, and the nib shows
       where the pen is. Two controls, bottom-left: <b>sound</b>, off until you

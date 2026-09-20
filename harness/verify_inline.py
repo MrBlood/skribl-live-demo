@@ -550,6 +550,65 @@ with sync_playwright() as sp:
           json.dumps(bad_state))
     pg.close()
 
+    # ---- THE PAGE SAYS WHAT IT IS, AND ITS STATES SPEAK THE PAGE'S LANGUAGE --
+    # SK-AUD-012 (acquisition audit of v302) reviewed /feed as a consumer feed
+    # and found its empty state teaching POST routes and JSON fields, and its
+    # error state a dead end with nothing to press. The page IS a developer
+    # demo; it now says so on the page, its two states carry no <code>, the
+    # technical explanation lives under a "For developers" heading, and the
+    # error state has a Retry that fetches the listing again. Mechanism, not
+    # words: the label is an element, the states are counted for <code>
+    # children, and Retry is driven with the listing failing and then not.
+    dp = b.new_page(viewport={"width": 620, "height": 900})
+    derrs = []
+    dp.on("pageerror", lambda e: derrs.append(str(e)))
+    browsing.goto(dp, BASE, "/feed")
+    _tag = dp.evaluate("""() => {
+      const t = document.querySelector('.fhead .demo-tag');
+      return t ? t.textContent.trim() : null; }""")
+    check("the feed page labels itself a developer demo, in its header",
+          _tag is not None and "demo" in _tag.lower(), repr(_tag))
+    _dev = dp.evaluate("""() => {
+      const h = document.querySelector('.note h2');
+      return h ? h.textContent.trim() : null; }""")
+    check("...and the technical notes sit under a 'For developers' heading",
+          _dev is not None and "developer" in _dev.lower(), repr(_dev))
+    _codes = dp.evaluate(
+        "() => document.querySelectorAll('#feedEmpty code, #feedError code').length")
+    check("the empty and error states carry no <code> element",
+          _codes == 0, f"{_codes} code element(s) in the two consumer states")
+    dp.close()
+
+    # THE ERROR STATE, WITH A WAY OUT. The listing fails on the wire, the page
+    # says so with a Retry; the wire recovers, Retry is pressed, the feed loads.
+    ep = b.new_page(viewport={"width": 620, "height": 900})
+    eerrs = []
+    ep.on("pageerror", lambda e: eerrs.append(str(e)))
+    ep.route(re.compile(r"/api/skribls\?limit="), lambda route: route.abort())
+    browsing.goto(ep, BASE, "/feed")
+    ep.wait_for_timeout(600)
+    _err = ep.evaluate("""() => {
+      const e = document.getElementById('feedError'), r = document.getElementById('feedRetry');
+      return { shown: !!e && !e.hidden, retry: !!r && r.offsetParent !== null,
+               text: e ? e.textContent.trim() : '' }; }""")
+    check("when the listing cannot be fetched the page says so",
+          _err["shown"], json.dumps(_err))
+    check("...and offers a Retry, not a dead end",
+          _err["shown"] and _err["retry"], json.dumps(_err))
+    ep.unroute(re.compile(r"/api/skribls\?limit="))
+    if _err["retry"]:
+        ep.click("#feedRetry")
+        ep.wait_for_timeout(1500)
+    _after = ep.evaluate("""() => ({
+      err: !document.getElementById('feedError').hidden,
+      empty: !document.getElementById('feedEmpty').hidden,
+      mounted: window.SkriblInline ? window.SkriblInline.players().length : -1 })""")
+    check("Retry fetches the listing again and the feed loads",
+          _err["retry"] and not _after["err"] and (_after["mounted"] >= 1 or _after["empty"]),
+          json.dumps(_after))
+    check("no page errors through the failure and the retry", not eerrs, "; ".join(eerrs[:2]))
+    ep.close()
+
     # ---- AGREEMENT WITH THE SEALED PLAYER ----------------------------------
     # The whole reason this suite exists. Both surfaces play the same posted
     # drawing from a standing start; sampled at the same elapsed wall-clock
