@@ -101,6 +101,7 @@ attribute is a contract the PLAYER would have to honour too, which is the same
 trap the `pressure` note in flip.js records. A decision to make on purpose, not
 a default to slide in.
 """
+import json
 import os
 import re
 import sys
@@ -2391,6 +2392,60 @@ with sync_playwright() as p:
           f"{_w.get('segButtons')} buttons, a click on Light left "
           f"{_w.get('clicked')!r} — a setting only reachable from a console is "
           f"not a control")
+
+    print("\nMOTION SMEAR — a closed shape is named when it is smeared (SK-AUD-008)")
+    # THE LIMIT, SAID WHERE IT SHOWS. A ring swept along its axis fills a tube,
+    # and N outlines of it read as a wireframe -- FUTURE.md 6g measured the
+    # stitch, v302 built the along-motion engine against it and lost, and the
+    # acquisition audit named it again. It is geometry, not sampling, so what
+    # ships is the honest half of the audit's recommendation: detect a closed
+    # run among the strokes about to be smeared, count it in the report, name
+    # it in the chip with the one thing that helps (aim with Select), and say
+    # the same in the Help. BOTH SIDES: a ring must be counted and said, and
+    # the same ring with a quarter cut out must not -- a detector that fires
+    # on every stroke would pass the ring alone.
+    _closed = page.evaluate("""() => {
+      const shape = (cx, cy, r, n, keep) => {
+        const f = { strokes: [], strokeGroups: [], hold: 1 };
+        for (let i = 0; i < keep; i++) {
+          const th = (i / n) * Math.PI * 2;
+          const p = { x: cx + r * Math.cos(th), y: cy + r * Math.sin(th),
+                      color: '#ffffff', size: 6, t: i * 5, erase: false };
+          if (i === 0) p.start = true;
+          f.strokes.push(p);
+        }
+        f.strokeGroups.push(keep); return f; };
+      const run = (keep) => {
+        frames.length = 0; selSpans = []; actionLog.length = 0; redoStack.length = 0;
+        frames.push(shape(150, 300, 40, 40, keep)); frames.push(shape(350, 300, 40, 40, keep));
+        idx = 0; fps = 12; subdiv = 1; buildStrip(); render();
+        const before = frames.length;
+        addTween();
+        const chip = (document.getElementById('flipChip') || {}).textContent || '';
+        return { made: frames.length === before + 1,
+                 closed: tweenLastReport ? tweenLastReport.closed : null,
+                 chip: chip };
+      };
+      const ring = run(40);      // the 40th point sits 9 degrees from the first: closed
+      const arc = run(30);       // three quarters of it: open
+      const tips = [...document.querySelectorAll('.help-tip')];
+      const t = tips.find(e => (e.querySelector('.help-pill')||{}).textContent === 'Motion Smear');
+      return { ring, arc, help: t ? t.textContent.replace(/\\s+/g, ' ') : null }; }""")
+    _ring, _arc = _closed["ring"], _closed["arc"]
+    check("a ring smears (the limit is said, not enforced)", _ring["made"], json.dumps(_ring))
+    check("...and is COUNTED as a closed shape in the report",
+          _ring["closed"] == 1, f"closed={_ring['closed']}")
+    check("...and the chip names it, with the aim as the remedy",
+          "closed shape" in _ring["chip"].lower() and "select" in _ring["chip"].lower(),
+          repr(_ring["chip"]))
+    check("an open arc of the same circle smears too", _arc["made"], json.dumps(_arc))
+    check("...and is NOT counted as closed", _arc["closed"] == 0, f"closed={_arc['closed']}")
+    check("...and its chip says nothing about closed shapes",
+          "closed" not in _arc["chip"].lower(), repr(_arc["chip"]))
+    check("the Help says a closed shape smears as a band, and how to aim around it",
+          _closed["help"] and "closed" in _closed["help"].lower()
+          and "band" in _closed["help"].lower() and "select" in _closed["help"].lower(),
+          (_closed["help"] or "")[-220:])
 
     check("no uncaught error across the whole session", not errs, "; ".join(errs[:3]))
     browser.close()

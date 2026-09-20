@@ -5992,6 +5992,26 @@ const TWEEN_BLUR = [ { d: 1.00, a: 0.10 }, { d: 0.66, a: 0.18 }, { d: 0.38, a: 0
    with the brush so a hairline does not get a disproportionate halo, and is
    bounded at both ends so a big ball gets a soft EDGE rather than a cloud. */
 function tweenSoftEdge(size){ return Math.max(4, Math.min(14, size * 0.5)); }
+/* How many of a page's runs are closed shapes -- see buildTween (SK-AUD-008). */
+function tweenClosedRuns(f){
+  let n = 0, at = 0;
+  for(const cnt of f.strokeGroups){
+    if(cnt >= 8){
+      const p0 = f.strokes[at], p1 = f.strokes[at + cnt - 1];
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, sz = 0;
+      for(let k = 0; k < cnt; k++){
+        const q = f.strokes[at + k];
+        if(q.x < x0) x0 = q.x; if(q.x > x1) x1 = q.x;
+        if(q.y < y0) y0 = q.y; if(q.y > y1) y1 = q.y;
+        sz += (typeof q.size === 'number') ? q.size : 6;
+      }
+      const diag = Math.hypot(x1 - x0, y1 - y0), brush = sz / cnt;
+      if(diag >= 20 && Math.hypot(p1.x - p0.x, p1.y - p0.y) <= Math.max(2 * brush, 0.08 * diag)) n++;
+    }
+    at += cnt;
+  }
+  return n;
+}
 /* Concentric passes lay more ink down than a single one, so the core is pulled
    back to keep an in-between the same weight it was before it was blurred.
    Derived by MEASURING mean ink over the lit area at two pass counts and
@@ -6804,6 +6824,19 @@ function buildTween(a, b, want){
   const anyMovedHere = !!aligned.anyMoved;
   a = aligned.a; b = aligned.b;
   const per = a.strokes.length;
+  /* CLOSED SHAPES ARE COUNTED, AND SAID (SK-AUD-008; acquisition audit of
+     v302). A ring swept along its axis genuinely fills a tube, and N outlines
+     of it read as a wireframe -- the crochet stitch FUTURE.md 6g measured and
+     the along-motion engine of v302 could not escape. That is geometry, not
+     sampling: the effect's known limit, with a price nobody wants to pay. What
+     CAN be done is to tell the person, at the moment they see it, that the
+     band is the closed shape and not their drawing going wrong, and that
+     aiming the smear at the part that moves (Select) keeps the outline sharp.
+     A run is closed when its ends meet -- within two brush widths, or 8% of
+     its own extent, whichever is larger -- and it is big enough to be a
+     shape rather than a dot. Measured on the aligned strokes, which are
+     exactly the ones about to be smeared. */
+  const closedRuns = tweenClosedRuns(a);
   // A REBUILT PAGE HAS TO COME BACK THE SAME. The plan depends on the frame
   // rate through tweenRenderCap, so regenerating a stored smear at a different
   // Tune setting would quietly produce a coarser or finer page than the one the
@@ -6959,7 +6992,7 @@ function buildTween(a, b, want){
       genRecipe.set(out, aim ? { k: 'smear', n: n, passes: 1, lead: 1, alpha: smw, aim: aim.slice() }
                              : { k: 'smear', n: n, passes: 1, lead: 1, alpha: smw });
       tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
-                          anyMoved: anyMovedHere };
+                          anyMoved: anyMovedHere, closed: closedRuns };
       return out;
     }
   }
@@ -6978,7 +7011,7 @@ function buildTween(a, b, want){
      and the chip said "Motion smear added" either way. A person cannot tell
      "it worked and the motion is small" from "it found nothing to smear", and
      neither could I from the screenshot. The page says so now. */
-  tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length,
+  tweenLastReport = { sampled: a.strokeGroups.length, carried: still.length, closed: closedRuns,
                       anyMoved: anyMovedHere };
   for(let s = 0; s <= n; s++){
     const t = s / n;
@@ -7233,12 +7266,18 @@ function addTween(){
      a trail, and the old message said "Motion smear added" regardless -- so
      there was no way to tell a working smear of a small motion from a page
      with nothing to smear. Now the page says which. */
+  /* A CLOSED SHAPE IS NAMED WHEN IT IS SMEARED (SK-AUD-008; see buildTween):
+     the band of copies it makes is the effect's limit, not a mistake, and the
+     one thing that helps -- aiming at the part that moves -- is said here,
+     where the band is on screen. */
+  const closedNote = (rep && rep.closed)
+    ? ' \u2014 a closed shape smears as a band; Select the part that moves to aim it' : '';
   chip(!rep ? 'Motion smear added'
     : !rep.anyMoved
       ? 'These two pages look the same \u2014 nothing moved far enough to smear'
-    : rep.carried === 0 ? 'Motion smear added'
+    : rep.carried === 0 ? 'Motion smear added' + closedNote
     : ('Motion smear \u2014 ' + nOf(rep.sampled) + ' moved, '
-       + rep.carried + ' drawn once'));
+       + rep.carried + ' drawn once' + closedNote));
 }
 
 /* ---------- v295: the in-between, for real ----------------------------------
