@@ -108,6 +108,39 @@
     });
   }
 
+  /* A DURABILITY FAILURE IS ANNOUNCED (SK-AUD-003). The pill is visual: it
+     changes its text to "Autosave failed" or "Storage full — not saved" and
+     stays up, and a screen-reader user kept drawing without being told the
+     draft had stopped being durable. Making the pill itself a live region
+     would announce every "Saving…" and "Saved" -- the chatter the pill's own
+     fade exists to avoid -- so the announcer is a separate hidden node, written
+     only on the transitions worth hearing: into a failure state, and out of
+     one (the first "Saved" after a failure, so the recovery is heard too).
+     Identical consecutive announcements are dropped: a save that keeps
+     failing says so once, not on every debounced attempt. Assertive, because
+     the person is mid-stroke and the news is that their work is not being
+     kept. `data-announced` counts the writes, which is how the suite tells
+     "announced once" from "announced every time". */
+  var FAILURE = { failed: 1, full: 1, 'saved-no-media': 1 };
+  var lastAnnounced = null;
+  function announce(pill, msg) {
+    if (msg === lastAnnounced) return;
+    lastAnnounced = msg;
+    var el = document.getElementById('autosaveAnnounce');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'autosaveAnnounce';
+      el.className = 'vis-hidden';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'assertive');
+      el.setAttribute('aria-atomic', 'true');
+      pill.parentNode.insertBefore(el, pill.nextSibling);
+    }
+    el.textContent = '';
+    el.textContent = msg;
+    el.dataset.announced = String((parseInt(el.dataset.announced, 10) || 0) + 1);
+  }
+
   function show(state) {
     var pill = document.getElementById('autosaveStatus');
     var txt = document.getElementById('autosaveStatusText');
@@ -138,6 +171,8 @@
       txt.textContent = pending ? 'Media missing — tap to re-add' : 'Saved without media';
     }
     else { txt.textContent = 'Saved'; }
+    if (FAILURE[state]) announce(pill, txt.textContent);
+    else if (state === 'saved' && lastAnnounced !== null && lastAnnounced !== 'Saved') announce(pill, 'Saved');
     setActionable(pill, txt, pending, state === 'saved-no-media');
     cancelAnimationFrame(pill._showRaf);
     pill._showRaf = requestAnimationFrame(function () { pill.classList.add('show'); });

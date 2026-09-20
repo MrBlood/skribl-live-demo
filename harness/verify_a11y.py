@@ -647,6 +647,54 @@ with sync_playwright() as p:
               r is not None and r["atomic"] == "true",
               f"{r} — without it a node whose children change announces only "
               "the fragment, which for the toast is the bare Undo button")
+
+    # A DRAFT DURABILITY FAILURE IS ANNOUNCED, ONCE (SK-AUD-003; acquisition
+    # audit of v302). The pill is visual and stays up; nothing spoke it. The
+    # announcer is a separate node lib/autosavepill.js creates on the first
+    # failure, so it is driven here rather than read cold: a failure announces,
+    # the same failure again does not, the recovery announces once, routine
+    # saves after that say nothing. Behaviour, not just attributes.
+    LIVE = """(id) => { const el = document.getElementById(id); if (!el) return null;
+        return { role: el.getAttribute('role'), live: el.getAttribute('aria-live'),
+                 atomic: el.getAttribute('aria-atomic'), text: el.textContent,
+                 n: el.dataset.announced || '0' }; }"""
+    pg.evaluate("() => SkriblAutosavePill.show('full')")
+    r = pg.evaluate(LIVE, "autosaveAnnounce")
+    check("a storage-full autosave is announced through a live region",
+          r is not None and r["role"] == "status" and r["live"] in ("assertive", "polite")
+          and r["atomic"] == "true" and "not saved" in (r["text"] or "").lower(),
+          str(r))
+    pg.evaluate("() => SkriblAutosavePill.show('full')")
+    check("...the same failure again is NOT re-announced",
+          (pg.evaluate(LIVE, "autosaveAnnounce") or {}).get("n") == "1",
+          str(pg.evaluate(LIVE, "autosaveAnnounce")))
+    pg.evaluate("() => SkriblAutosavePill.show('saved')")
+    r = pg.evaluate(LIVE, "autosaveAnnounce")
+    check("...the recovery is announced once", r and r["n"] == "2" and r["text"] == "Saved", str(r))
+    pg.evaluate("() => SkriblAutosavePill.show('saved')")
+    pg.evaluate("() => SkriblAutosavePill.show('saving')")
+    check("...and routine saves after it say nothing",
+          (pg.evaluate(LIVE, "autosaveAnnounce") or {}).get("n") == "2",
+          str(pg.evaluate(LIVE, "autosaveAnnounce")))
+    pg.evaluate("() => SkriblAutosavePill.show('failed')")
+    check("...while a new failure speaks again",
+          (pg.evaluate(LIVE, "autosaveAnnounce") or {}).get("n") == "3",
+          str(pg.evaluate(LIVE, "autosaveAnnounce")))
+    pg.close()
+
+    # FLIP'S CHIP IS A LIVE REGION (SK-AUD-006). Blocked actions, copy and
+    # export feedback and deletions all speak through it, and it was visual
+    # only; the persistent post error was already an alert, so this is the
+    # generic path. Polite: it never steals focus.
+    pg = browser.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(pg, BASE, "/flip")
+    r = pg.evaluate(LIVE, "flipChip")
+    check("#flipChip is a polite, atomic live region",
+          r is not None and r["role"] == "status" and r["live"] == "polite"
+          and r["atomic"] == "true", str(r))
+    pg.evaluate("() => chip('Nothing to copy yet')")
+    check("...and a chip's text lands in it",
+          (pg.evaluate(LIVE, "flipChip") or {}).get("text") == "Nothing to copy yet")
     pg.close()
 
     # ------------------------------------------------------------ section 7
