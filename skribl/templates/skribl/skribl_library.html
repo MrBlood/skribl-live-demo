@@ -63,6 +63,12 @@
     }
   
     * { box-sizing: border-box; }
+    /* hidden means hidden, whatever a class rule says about display: the
+       recovery-key overlays (posted.css) are display:flex by class and
+       hidden by attribute, and styles.css carries this rule for the
+       editors; this page must too, or a closed overlay keeps covering the
+       rows (verify_posted found it: an invisible dialog intercepting taps). */
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       background:

@@ -206,7 +206,14 @@ with sync_playwright() as sp:
     pg.wait_for_timeout(1200)
     pg.click("#postSubmitBtn")
     pg.wait_for_timeout(8000)
+    # THE RECORD, not the DOM: the drawer whose row used to carry the URL
+    # left the editor in v304 (Your Skribls is the profile page), so the
+    # link is read from what the product keeps, lib/posted.js's entry --
+    # which is where a person finds it again too.
     link = pg.evaluate("""() => {
+        const kept = (window.SkriblPosted && window.SkriblPosted.list) ? window.SkriblPosted.list() : [];
+        const rec = kept.map(e => e && e.url).find(u => typeof u === 'string' && u.includes('/s/'));
+        if (rec) return rec;
         const v = [...document.querySelectorAll('*')]
           .map(e => e.value || e.href || '')
           .find(v => typeof v === 'string' && v.includes('/s/'));
@@ -220,6 +227,8 @@ with sync_playwright() as sp:
               f"no /s/ URL in the post sheet; editor errors: {ed_errs[:2]}")
         print("\n" + "=" * 62 + "\n0/1 passed")
         sys.exit(1)
+    if link.startswith("/"):            # the record keeps the server's path; the browser needs the origin
+        link = BASE + link
     print(f"authored {link}")
     print(f"editor rendered {editor['ink']} inked pixels at {editor['bitmap']}, "
           f"audio attached: {has_audio}, loop {loop_len}s\n")
