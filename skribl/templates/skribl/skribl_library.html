@@ -8,6 +8,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Skribl Library</title>
   {% include 'skribl/_skribl_app_identity.html' %}
+  {# posted.css: Your Skribls' rows and the recovery-key overlays, in
+     styles.css's token vocabulary; the map below speaks it in this page's
+     palette, both ramps. #}
+  <link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
   {# The profile's Skribls tab: real posts from GET /api/skribls on the shared
      in-post player, since v275 (verify_library.py). This comment called it a
      concept preview of demo drawings until SK-AUD-011 read it as current.
@@ -50,9 +54,21 @@
       --r-sm: 9px;
       --font-ui: 'Archivo', system-ui, -apple-system, sans-serif;
       --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+      /* posted.css's vocabulary (styles.css's names), on this palette. */
+      --surface-panel: var(--panel); --surface-control: var(--control); --surface-control-hover: var(--control-hi);
+      --surface-sheet: var(--panel); --surface-well: var(--control); --surface-tint: rgba(124,92,255,0.08); --surface-tint-lit: rgba(124,92,255,0.14);
+      --hairline-strong: #2e3542; --line-strong: #3a4658; --line-mid: var(--hairline); --ui-line: var(--accent); --ui-hi: var(--accent-bright);
+      --text-primary: var(--text); --text-secondary: var(--text-2); --text-strong: var(--text); --text-muted: var(--text-2); --text-tool-3: var(--text-3);
+      --accent-tint-2: var(--accent-tint); --danger: #f4326f; --danger-soft: #ff8fae;
     }
   
     * { box-sizing: border-box; }
+    /* hidden means hidden, whatever a class rule says about display: the
+       recovery-key overlays (posted.css) are display:flex by class and
+       hidden by attribute, and styles.css carries this rule for the
+       editors; this page must too, or a closed overlay keeps covering the
+       rows (verify_posted found it: an invisible dialog intercepting taps). */
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       background:
@@ -210,6 +226,35 @@
     .pstats svg { width: 15px; height: 15px; }
     .pstats .like { color: #ff7fb2; }
   
+    /* The rows on this page: a list with a poster, not a tray in a drawer. */
+    .posted-panel { display: flex; flex-direction: column; }
+    .posted-list { padding: 0; overflow: visible; }
+    .posted-row { padding: 10px; }
+    .posted-row.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .posted-thumb { width: 84px; height: 63px; border-radius: 8px; overflow: hidden; background: #0b0d12; position: relative; }
+    .posted-thumb .posted-poster { position: absolute; left: 50%; transform: translateX(-50%); top: -5.4878%; height: 128.0488%; width: auto; max-width: none; }
+    /* The kind's icon as a badge over the poster: a Flip is marked with the
+       book here as everywhere else. */
+    .posted-thumb svg { position: absolute; left: 4px; bottom: 4px; width: 14px; height: 14px; padding: 3px;
+      border-radius: 6px; background: rgba(6,7,10,.7); color: #dfe6f2; }
+    .posted-count { margin: 0 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+    /* Tap targets on this page (verify_a11y's census): the foot's two text
+       buttons and the filter chips are small by design, so each carries a
+       44px band -- the chips through the ::before the editors' pills use,
+       the foot buttons by height, since an underlined word can grow. */
+    .posted-clearbtn { min-height: 44px; padding: 0 6px; }
+    .chip { position: relative; z-index: 1; }
+    .chip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+    .posted-title { font-size: 14px; font-weight: 600; }
+    .posted-sub { font-family: var(--font-mono); }
+    .posted-actions button { min-height: 32px; }
+    .posted-gallery { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+      border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+    .posted-gallery.on { color: var(--accent-tint); border-color: rgba(124,92,255,0.5); background: rgba(124,92,255,0.12); }
+    .posted-share { flex: 0 0 auto; background: transparent; font: inherit; font-size: 11.5px;
+      border: 1px solid var(--hairline-strong); color: var(--text-secondary); padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+    .posted-foot-top { border-bottom: 1px solid var(--hairline); margin-bottom: 12px; padding: 0 0 10px; }
+    @media (max-width: 640px) { .posted-row-keyed .posted-actions { padding-left: 94px; flex-wrap: wrap; } }
     .empty { grid-column: 1 / -1; text-align: center; color: var(--text-3); font-family: var(--font-mono); font-size: 13px; padding: 40px 0; }
     .state { text-align: center; color: var(--text-3); font-size: 14px; line-height: 1.7; padding: 36px 0; margin: 0; }
     .state b { color: var(--text-2); font-weight: 600; }
@@ -319,17 +364,23 @@
     <section aria-label="Library">
       <div class="libhead">
         <h2>Your skribls</h2>
-        <span class="cnt" id="libCnt"></span>
-        {# No Pad/Flip filter. GET /api/skribls is metadata only and does not
-           say which a post is — that lives in the payload, which the listing
-           defers on purpose. Chips that filtered on a guess would be a control
-           that quietly did nothing. #}
+        {# THE FILTER (v304): the two states a post of yours can be in, plus
+           all. Not Pad/Flip — the listing does not say which a post is. #}
+        <div class="chips" role="group" aria-label="Show">
+          <button type="button" class="chip active" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="chip" data-filter="public" aria-pressed="false">In the gallery</button>
+          <button type="button" class="chip" data-filter="unlisted" aria-pressed="false">Link only</button>
+        </div>
         <label class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-          <input id="search" type="search" placeholder="title…" aria-label="Search your skribls">
+          <input id="postedSearch" type="search" placeholder="title…" aria-label="Search your skribls" autocomplete="off">
         </label>
       </div>
-      <div class="grid" id="grid"></div>
+      {# THE LIST IS YOUR SKRIBLS (v304): the same rows, the same actions, the
+         same custody rules the editors' drawer had, rendered here by
+         lib/postedui.js with the poster as each row's picture and the title
+         putting the Skribl on the stage. #}
+      {% include 'skribl/_skribl_posted.html' %}
       {# THE EMPTY STATE says what puts something here and what this list is,
          in the words the menu's "Your Skribls" uses: kept in this browser,
          not an account. Hidden while there is anything to show. #}
@@ -358,6 +409,19 @@
   {# lib/posted.js: the list this browser kept of what it posted -- the
      profile's population when there are no accounts (v304; see the route). #}
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
+  {# lib/postedui.js renders Your Skribls here; lib/recoverykey.js is the
+     recovery-key entry and the Clear-list guard it opens; lib/modalfocus.js
+     owns focus in those overlays. The globals the modules read are the same
+     ones the editors inject (no route literal anywhere in the modules). #}
+  <script nonce="{{ csp_nonce }}">
+    window.SKRIBL_API_BASE = {{ url_for('.list_skribls') | tojson }};
+    window.SKRIBL_PLAYER_BASE = {{ skribl_player_base | tojson }};
+    window.SKRIBL_PLAYER_TARGET = {{ skribl_player_target | tojson }};
+    window.SKRIBL_CSRF_TOKEN = {{ skribl_csrf_token | tojson }};
+  </script>
+  <script src="{{ skribl_asset('lib/modalfocus.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/recoverykey.js') }}" defer></script>
+  <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('library.js') }}" defer></script>
 </body>
 </html>

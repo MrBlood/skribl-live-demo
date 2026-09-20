@@ -58,12 +58,13 @@
   var whoBio = document.getElementById('whoBio');
   var btnFull = document.getElementById('btnFull');
 
-  var grid = document.getElementById('grid');
+  var listEl = document.getElementById('postedList');
   var moreWrap = document.getElementById('moreWrap');
   var foot = document.getElementById('libFoot');
-  var libCnt = document.getElementById('libCnt');
   var statCount = document.getElementById('statCount');
-  var search = document.getElementById('search');
+  var search = document.getElementById('postedSearch');
+  var chips = document.querySelectorAll('.chips .chip[data-filter]');
+  var showing = 'all';        /* the filter chip: all | public | unlisted */
 
   var stageBox = document.getElementById('stageBox');
   var stageWrap = stageBox.closest('.stageCanvasWrap');
@@ -122,7 +123,7 @@
     scrubFill.style.width = '0%';
     tElapsed.textContent = '0:00 / 0:00';
     setPlayIcon(false);
-    Array.prototype.forEach.call(grid.children, function (c) {
+    Array.prototype.forEach.call(listEl.querySelectorAll('.posted-row'), function (c) {
       c.classList.toggle('active', c.getAttribute('data-id') === item.id);
     });
 
@@ -246,79 +247,53 @@
     refresh();
   });
 
-  /* ---- the grid ----------------------------------------------------------- */
+  /* ---- the list ----------------------------------------------------------
+     RENDERED BY lib/postedui.js — the same rows, actions and custody rules
+     the editors' drawer had until v304 — with this page's poster as each
+     row's picture and the title putting the Skribl on the stage. What this
+     file owns is the POPULATION (whose Skribls; see below), the filter chip
+     and the words around the list. */
+  var ui = null;
 
-  function tile(item) {
-    var el = document.createElement('button');
-    el.type = 'button';
-    el.className = 'card';
-    el.setAttribute('data-id', item.id);
-
-    /* The tile's picture is the poster, cropped by the same rule the feed
-     * poster uses — sharecard.js's geometry, expressed as literals in this
-     * page's own CSS. The module itself is NOT loaded here (v281 removed it);
-     * verify_inline.py is what holds the literals to band(). One cached image
-     * per tile, and no payload until the tile is picked. */
-    var art = document.createElement('div');
-    art.className = 'art';
-    var img = document.createElement('img');
-    img.src = posterUrl(item.id);
-    img.alt = item.title || 'A Skribl';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    art.appendChild(img);
-    el.appendChild(art);
-
-    var body = document.createElement('div');
-    body.className = 'body';
-    var t = document.createElement('div');
-    t.className = 'ct';
-    t.textContent = item.title || 'Untitled Skribl';
-    var cm = document.createElement('div');
-    cm.className = 'cm';
-    var w = document.createElement('span');
-    w.textContent = when(item.created_at);
-    cm.appendChild(w);
-    if (item.has_audio) {
-      var snd = document.createElement('span');
-      snd.className = 'dur';
-      snd.textContent = 'sound';
-      cm.appendChild(snd);
-    }
-    body.appendChild(t);
-    body.appendChild(cm);
-    el.appendChild(body);
-
-    el.addEventListener('click', function () { select(item); });
-    return el;
+  function asItem(e) {
+    return { id: e.id, title: e.title || '', caption: '',
+             created_at: e.at ? new Date(e.at).toISOString() : (e.created_at || null),
+             has_audio: !!e.has_audio, visibility: e.visibility || '' };
   }
 
-  function renderGrid() {
-    var q = (search.value || '').trim().toLowerCase();
-    var shown = items.filter(function (i) {
-      return !q || (i.title || '').toLowerCase().indexOf(q) !== -1
-                || (i.caption || '').toLowerCase().indexOf(q) !== -1;
-    });
-    grid.innerHTML = '';
-    shown.forEach(function (i) { grid.appendChild(tile(i)); });
-    libCnt.textContent = shown.length + (q ? ' matching' : '');
-    statCount.textContent = items.length;
+  function passes(e) {
+    if (showing === 'all') return true;
+    return (e.visibility || '') === showing;
+  }
+
+  function words(all, hits) {
+    var q = (search && search.value.trim()) || '';
+    statCount.textContent = all.length;
+    if (libEmpty) libEmpty.hidden = all.length > 0;
+    foot.textContent = !all.length ? ''
+      : (q ? (me ? 'Filtering the ' + all.length + ' loaded so far. Load more to search further.'
+                 : 'Filtering your ' + all.length + '.')
+           : 'Newest first. Pick one to play it.');
     if (current) {
-      Array.prototype.forEach.call(grid.children, function (c) {
+      Array.prototype.forEach.call(listEl.querySelectorAll('.posted-row'), function (c) {
         c.classList.toggle('active', c.getAttribute('data-id') === current.id);
       });
     }
-    /* SAYS WHAT IT IS SHOWING. The search filters what has been LOADED, not the
-     * table — the listing is keyset-paginated and a server-side search is a
-     * query this API does not have. A box that silently searched one page while
-     * looking like it searched everything is the kind of half-truth that gets
-     * believed. */
-    foot.textContent = !items.length ? ''
-      : (q ? (me ? 'Filtering the ' + items.length + ' loaded so far. Load more to search further.'
-                 : 'Filtering your ' + items.length + '.')
-           : 'Newest first. Pick one to play it.');
-    if (libEmpty) libEmpty.hidden = items.length > 0;
   }
+
+  function renderGrid() { if (ui) ui.render(); }
+
+  Array.prototype.forEach.call(chips, function (chip) {
+    chip.addEventListener('click', function () {
+      showing = chip.getAttribute('data-filter') || 'all';
+      Array.prototype.forEach.call(chips, function (c) {
+        var on = c === chip;
+        c.classList.toggle('active', on);
+        c.setAttribute('aria-pressed', String(on));
+      });
+      renderGrid();
+    });
+  });
 
   /* ======================================================================
      WHOSE SKRIBLS THESE ARE
@@ -335,36 +310,41 @@
                            the listing's own author filter, paged by its
                            cursor. The server decides what an author sees of
                            their own (public and private; unlisted stays out of
-                           every listing by definition).
+                           every listing by definition). Rows are marked
+                           `owned`, so Delete and the gallery switch appear:
+                           the server authorises them by author.
        NO ACCOUNTS         the list this browser kept — lib/posted.js, the same
-                           record the menu's "Your Skribls" shows. Unlisted
+                           record "Your Skribls" has always been. Unlisted
                            posts included: they are yours. Local-only fallbacks
-                           (ids starting local_) are not on the server and are
-                           left out. Nothing is fetched to build the grid: the
-                           tile is the poster, as before, and one payload is
-                           fetched when a tile is picked.
+                           (ids starting local_) stay listed as what they are,
+                           on this device.
 
-     The gallery is the public page. This one never was. */
-  function mine() {
-    var list = (window.SkriblPosted && window.SkriblPosted.list) ? window.SkriblPosted.list() : [];
-    return list.filter(function (e) { return e && e.id && String(e.id).indexOf('local_') !== 0; })
-      .sort(function (a, b) { return (b.at || 0) - (a.at || 0); })
-      .map(function (e) {
-        return { id: e.id, title: e.title || '', caption: '',
-                 created_at: e.at ? new Date(e.at).toISOString() : null,
-                 has_audio: false, visibility: e.visibility || '' };
-      });
+     Nothing is fetched to build the list: the row's picture is the poster,
+     and one payload is fetched when a title is picked. The gallery is the
+     public page. This one never was. */
+  var hostRows = [];       /* the host branch's entries, in listing order */
+
+  function hostSource() { return hostRows; }
+
+  function boot() {
+    ui = window.SkriblPostedUI && window.SkriblPostedUI.init({
+      poster: posterUrl,
+      onSelect: function (e) { select(asItem(e)); },
+      filter: passes,
+      onRender: words,
+      source: me ? hostSource : null,
+      onRemoved: function (id) { hostRows = hostRows.filter(function (e) { return e.id !== id; }); }
+    });
+    window._skriblPostedUI = ui;
+    if (!ui) return;
+    if (!me) {
+      var first = window.SkriblPosted.list().filter(function (e) { return e && e.id && !e.local; })[0];
+      if (first) select(asItem(first));
+    }
   }
 
   function loadPage() {
-    if (!me) {
-      items = mine();
-      cursor = null;
-      renderGrid();
-      moreWrap.innerHTML = '';
-      if (items.length) select(items[0]);
-      return Promise.resolve();
-    }
+    if (!me) { renderGrid(); moreWrap.innerHTML = ''; return Promise.resolve(); }
     var url = api + '?limit=24&user_id=' + encodeURIComponent(me)
             + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
     moreWrap.innerHTML = '<span class="more-status">Loading…</span>';
@@ -374,7 +354,12 @@
         return r.json();
       })
       .then(function (body) {
-        items = items.concat(body.items || []);
+        (body.items || []).forEach(function (i) {
+          hostRows.push({ id: i.id, url: playerBase + '/' + encodeURIComponent(i.id), title: i.title || '',
+                          kind: 'pad', pages: 1, at: i.created_at ? Date.parse(i.created_at) : 0,
+                          visibility: i.visibility || '', has_audio: !!i.has_audio, owned: true, tok: null });
+        });
+        items = hostRows.map(asItem);
         cursor = body.next_cursor || null;
         renderGrid();
         moreWrap.innerHTML = '';
@@ -401,7 +386,7 @@
       });
   }
 
-  search.addEventListener('input', renderGrid);
+  boot();
   loadPage();
 })();
 

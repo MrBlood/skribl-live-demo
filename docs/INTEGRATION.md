@@ -57,7 +57,12 @@ That is the whole integration. You now have:
 **`/library` is registered by the blueprint whether you want it or not**, like
 `/feed`. It is the profile's Skribls tab: what you posted, searchable by title,
 with a full transport — play, restart, scrub, loop, mute, full screen, copy
-link — around one stage, and a grid of share cards beside it. The stage is the
+link — around one stage, and beside it the list, one row per post with its
+poster and everything you can do to it: copy or share the link, switch it in
+or out of the public gallery (`PATCH /api/skribls/<id>`), delete it, copy its
+recovery key, filter by all / in the gallery / link only. This list was a
+drawer inside both editors until v304 ("Your Skribls"); the editors' menu row
+now links here. The stage is the
 same in-post player driven through its exposed handle, so the profile cannot
 disagree with the feed or with `/s/<id>` about how a drawing replays, and it
 fetches ONE payload at a time. It reaches no database of its own, so leaving it

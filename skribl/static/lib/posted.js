@@ -177,6 +177,19 @@
     try { global.localStorage.removeItem(BLOB + id); } catch (e) {}
   }
 
+  /* PATCH one entry in place (v304): the gallery switch on the profile
+     flips visibility server-side and the record follows, so the row can say
+     "in the gallery" without asking again. Only fields the entry already
+     has a meaning for; unknown keys are ignored. */
+  function update(id, patch) {
+    var list = read(), hit = null;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) { hit = list[i]; break; }
+    if (!hit) return false;
+    if (patch && (patch.visibility === 'public' || patch.visibility === 'unlisted')) hit.visibility = patch.visibility;
+    if (patch && typeof patch.title === 'string') hit.title = patch.title.slice(0, 80);
+    return write(list);
+  }
+
   function remove(id) {
     var list = read().filter(function (e) { return e.id !== id; });
     write(list);
@@ -331,6 +344,7 @@
     capped: capped,
     canPersist: canPersist,
     remove: remove,
+    update: update,
     clear: clear,
     sweepOrphans: sweepOrphans,
     evictOldest: evictOldest,

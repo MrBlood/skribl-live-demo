@@ -1,12 +1,23 @@
 /* Your Skribls — rendering. The store is lib/posted.js; this draws it.
  *
- * SHARED because the alternative is two copies. app.js and flip.js already
- * duplicate their accordion handlers and their drawer controllers, and that
- * duplication is the project's largest known-open. Both surfaces call
- * SkriblPostedUI.init() and get identical behaviour from one implementation.
+ * ON THE PROFILE PAGE SINCE v304, not in the editors. It was a drawer both
+ * editors opened from their menu; the profile (/library) is where somebody's
+ * Skribls live now, and the menu row links there. The engine is unchanged —
+ * the armed deletes, the 404 rule, the key custody — because every line of
+ * it was earned (SK-AUD-014, RE-AUD-001, the v279 audit) and verify_posted
+ * pins it; what changed is where it renders and what a row can do:
  *
- * Degrades to nothing if the partial is absent: init() returns and the editor
- * is unaffected.
+ *   opts.poster(id)   -> a URL; the row's thumb becomes the poster image
+ *   opts.onSelect(e)  -> the title puts the Skribl on the page's stage
+ *                        instead of opening the player in a new tab
+ *   opts.filter(e)    -> which entries render (the profile's chips)
+ *   opts.source()     -> entries from somewhere other than the store (a
+ *                        host's author listing); actions that need a key
+ *                        appear only where `tok` or `owned` says they may
+ *   opts.patchBase    -> the API base for PATCH visibility (the gallery
+ *                        switch) and DELETE; SKRIBL_API_BASE when absent
+ *
+ * Degrades to nothing if the partial is absent: init() returns null.
  */
 (function (global) {
   'use strict';
@@ -71,7 +82,7 @@
           if (global.SKRIBL_CSRF_TOKEN) { h['X-Skribl-CSRF'] = global.SKRIBL_CSRF_TOKEN; }
           return h;
         })(),
-        body: JSON.stringify({ deleteToken: entry.tok })
+        body: JSON.stringify(entry.tok ? { deleteToken: entry.tok } : {})
       });
     } catch (e) { done(false, 'Could not reach the server.'); return; }
     req.then(function (r) {
@@ -145,9 +156,14 @@
   function init(opts) {
     opts = opts || {};
     var store = global.SkriblPosted;
-    var drawer = document.getElementById('postedDrawer');
+    var drawer = document.getElementById('postedDrawer') || document.getElementById('postedPanel');
     if (!store || !drawer) return null;
 
+    var isDialog = drawer.getAttribute('role') === 'dialog';
+    var source = typeof opts.source === 'function' ? opts.source : null;
+    var poster = typeof opts.poster === 'function' ? opts.poster : null;
+    var onSelect = typeof opts.onSelect === 'function' ? opts.onSelect : null;
+    var filter = typeof opts.filter === 'function' ? opts.filter : null;
     var listEl = document.getElementById('postedList');
     var countEl = document.getElementById('postedCount');
     var searchEl = document.getElementById('postedSearch');
@@ -157,6 +173,7 @@
     var recoverEl = document.getElementById('postedRecover');
 
     function open() {
+      if (!isDialog) { render(); return; }
       drawer.hidden = false;
       drawer.classList.add('open');
       render();
@@ -171,6 +188,7 @@
     }
 
     function close() {
+      if (!isDialog) return;
       drawer.classList.remove('open');
       drawer.hidden = true;
       if (searchEl) searchEl.value = '';
@@ -213,11 +231,12 @@
     }
 
     function render() {
-      var all = store.list();
+      var all = source ? source() : store.list();
       var q = (searchEl && searchEl.value.trim().toLowerCase()) || '';
       var hits = all.filter(function (e) {
-        return !q || (e.title || '').toLowerCase().indexOf(q) >= 0;
+        return (!q || (e.title || '').toLowerCase().indexOf(q) >= 0) && (!filter || filter(e));
       });
+      if (opts.onRender) opts.onRender(all, hits);
 
       if (countEl) {
         countEl.textContent = !all.length ? ''
@@ -238,8 +257,8 @@
       if (!hits.length) {
         listEl.innerHTML =
           '<div class="posted-empty">' +
-          '<div class="posted-empty-title">Nothing matches that</div>' +
-          '<div class="posted-empty-sub">Try part of a title.</div></div>';
+          '<div class="posted-empty-title">' + (q ? 'Nothing matches that' : 'Nothing here') + '</div>' +
+          '<div class="posted-empty-sub">' + (q ? 'Try part of a title.' : 'Nothing of yours is in this view.') + '</div></div>';
         return;
       }
 
@@ -280,8 +299,16 @@
               '✕</button>' +
           '</div>';
         }
-        return '<div class="posted-row' + (e.tok ? ' posted-row-keyed' : '') + '" data-id="' + esc(e.id) + '">' +
+        /* MAY ACT: this browser holds the key, or the page says the viewer
+           is the author (a host's signed-in user, authorised server-side). */
+        var may = !!(e.tok || e.owned);
+        var inGallery = e.visibility === 'public';
+        return '<div class="posted-row' + (may ? ' posted-row-keyed' : '') + '" data-id="' + esc(e.id) + '">' +
+          /* The poster where the page can build one (the profile), and the
+             kind's icon always -- as a badge over the poster, because a Flip
+             is marked with the book everywhere else in the app. */
           '<span class="posted-thumb posted-thumb-' + esc(e.kind) + '" aria-hidden="true">' +
+            (poster ? '<img class="posted-poster" src="' + esc(poster(e.id)) + '" alt="" loading="lazy" decoding="async">' : '') +
             (e.kind === 'flip' ? ICON_FLIP : ICON_PAD) + '</span>' +
           /* HONOURS player_target, which it did not until v281. __init__.py
              names this link as one of the three "watch it" paths and says
@@ -293,12 +320,28 @@
              server-rendered, which is the same seam the docstring says caused
              the original drift. */
           '<a class="posted-main" href="' + esc(url) + '" target="' +
-            esc(global.SKRIBL_PLAYER_TARGET || '_blank') + '" rel="noopener">' +
+            esc(global.SKRIBL_PLAYER_TARGET || '_blank') + '" rel="noopener"' +
+            (onSelect ? ' data-select="' + esc(e.id) + '"' : '') + '>' +
             '<span class="posted-title">' + esc(e.title || 'Untitled Skribl') + '</span>' +
-            '<span class="posted-sub">' + esc(sub) + '</span>' +
+            '<span class="posted-sub">' + esc(sub) +
+              (e.visibility ? ' \u00b7 ' + (inGallery ? 'in the gallery' : 'link only') : '') + '</span>' +
           '</a>' +
           '<span class="posted-actions">' +
           '<button type="button" class="posted-copy" data-url="' + esc(url) + '">Copy link</button>' +
+          /* SHARE, where the system has a sheet (v304): the same rule the
+             post sheets follow — shown only where navigator.share exists. */
+          (global.navigator && global.navigator.share
+            ? '<button type="button" class="posted-share" data-url="' + esc(url) + '" data-title="' + esc(e.title || 'A Skribl') + '">Share</button>'
+            : '') +
+          /* THE GALLERY SWITCH (v304): in or out of the public gallery, the
+             same choice the post sheet offered, changeable after the fact by
+             whoever may act on the post. PATCH visibility; the record follows. */
+          (may && e.visibility
+            ? '<button type="button" class="posted-gallery' + (inGallery ? ' on' : '') + '" data-gallery="' + esc(e.id) +
+                '" aria-pressed="' + (inGallery ? 'true' : 'false') + '" aria-label="' +
+                (inGallery ? 'In the public gallery. Tap to make it link only' : 'Link only. Tap to show it in the public gallery') + '">' +
+                (inGallery ? 'In gallery' : 'Link only') + '</button>'
+            : '') +
           /* TWO DIFFERENT ACTIONS, AND THEY USED TO BE ONE BUTTON. The \u2715
              removed the local entry and nothing else — the Skribl stayed live
              and the link kept working — which an audit of v278 called out as
@@ -307,7 +350,7 @@
              "Delete" appears only when this browser holds the revocation
              capability for the post (see lib/posted.js). Without it there is
              nothing honest to offer, so nothing is offered. */
-          (e.tok
+          (may
             ? '<button type="button" class="posted-delete" data-delete="' +
                 esc(e.id) + '" aria-label="Delete this Skribl for everyone">' +
                 'Delete</button>' +
@@ -318,9 +361,9 @@
                  origin all end it, and no endpoint can reissue the key. This
                  is the one affordance that outlives the browser. Shown only
                  where a key exists, for the same reason Delete is. */
-              '<button type="button" class="posted-key" data-key="' +
+              (e.tok ? '<button type="button" class="posted-key" data-key="' +
                 esc(e.id) + '" aria-label="Copy the recovery key for this ' +
-                'Skribl">Copy key</button>'
+                'Skribl">Copy key</button>' : '')
             : '') +
           '</span>' +
           '<button type="button" class="posted-del" data-del="' + esc(e.id) + '" ' +
@@ -330,9 +373,56 @@
       }).join('');
     }
 
+    /* The gallery switch: PATCH visibility with whatever authorises this
+       browser (the key, or the host's signed-in author), then the record. */
+    function setGallery(entry, on, btn) {
+      var base = opts.patchBase || global.SKRIBL_API_BASE;
+      if (!base) { announce('This Skribl is not wired up.'); return; }
+      var want = on ? 'public' : 'unlisted';
+      var body = { visibility: want };
+      if (entry.tok) body.deleteToken = entry.tok;
+      var h = { 'Content-Type': 'application/json' };
+      if (global.SKRIBL_CSRF_TOKEN) h['X-Skribl-CSRF'] = global.SKRIBL_CSRF_TOKEN;
+      btn.disabled = true;
+      global.fetch(base + '/' + encodeURIComponent(entry.id), {
+        method: 'PATCH', headers: h, credentials: 'same-origin', body: JSON.stringify(body)
+      }).then(function (r) {
+        if (!r.ok) throw new Error(r.status === 404
+          ? 'Could not change it — the key may not match this Skribl.'
+          : 'Could not change it — try again.');
+        return r.json();
+      }).then(function (res) {
+        var vis = (res && res.visibility) || want;
+        if (!source) store.update(entry.id, { visibility: vis }); else entry.visibility = vis;
+        announce(vis === 'public' ? 'Now in the public gallery' : 'Now link only');
+        render();
+      }).catch(function (err) {
+        btn.disabled = false;
+        announce(err.message || 'Could not change it — try again.');
+      });
+    }
+
     listEl.addEventListener('click', function (ev) {
+      var sel = onSelect && ev.target.closest('.posted-main[data-select]');
+      if (sel) {
+        ev.preventDefault();
+        var sent = byId(sel.dataset.select) || (source ? source().filter(function (e) { return e.id === sel.dataset.select; })[0] : null);
+        if (sent) onSelect(sent);
+        return;
+      }
       var c = ev.target.closest('.posted-copy');
       if (c) { copy(c.dataset.url, c); return; }
+      var sh = ev.target.closest('.posted-share');
+      if (sh) {
+        try { global.navigator.share({ title: sh.dataset.title, url: sh.dataset.url }).catch(function () {}); } catch (e) {}
+        return;
+      }
+      var g = ev.target.closest('.posted-gallery');
+      if (g) {
+        var gent = byId(g.dataset.gallery) || (source ? source().filter(function (e) { return e.id === g.dataset.gallery; })[0] : null);
+        if (gent) setGallery(gent, gent.visibility !== 'public', g);
+        return;
+      }
       var lm = ev.target.closest('.posted-main[data-local]');
       if (lm) {
         /* The Pad boots its #skribl=<id> player from the hash at LOAD, so a
@@ -385,8 +475,8 @@
 
       var del = ev.target.closest('.posted-delete');
       if (del) {
-        var entry = byId(del.dataset.delete);
-        if (!entry || !entry.tok) return;
+        var entry = byId(del.dataset.delete) || (source ? source().filter(function (e) { return e.id === del.dataset.delete; })[0] : null);
+        if (!entry || !(entry.tok || entry.owned)) return;
         if (!arm(del,
               'Tap again to delete this Skribl for everyone — the link ' +
               'stops working at once and this cannot be undone',
@@ -395,7 +485,10 @@
         var was = del.textContent;
         del.textContent = 'Deleting…';
         destroy(entry, function (ok, msg) {
-          if (ok) { store.remove(entry.id); render(); return; }
+          if (ok) {
+            if (source) { if (opts.onRemoved) opts.onRemoved(entry.id); } else store.remove(entry.id);
+            render(); return;
+          }
           del.disabled = false;
           del.textContent = was;
           announce(msg || 'Could not delete — try again.');
@@ -445,7 +538,7 @@
       }
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !drawer.hidden && (!searchEl || !searchEl.value)) close();
+      if (isDialog && e.key === 'Escape' && !drawer.hidden && (!searchEl || !searchEl.value)) close();
     });
 
     render();

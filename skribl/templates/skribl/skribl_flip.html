@@ -10,6 +10,10 @@
 <title>Skribl · Flip</title>
 <!-- Same design system as the editor: real tokens, .header/.btn/.icon-btn/.slider/.seg-slider. -->
 <link rel="stylesheet" href="{{ skribl_asset('styles.css') }}">
+{# posted.css: the recovery-key panel (lib/recoverykey.js), shown at post
+   time when the browser could not keep the key; the tray it also styles
+   lives on the profile page since v304. #}
+<link rel="stylesheet" href="{{ skribl_asset('posted.css') }}">
 <link rel="stylesheet" href="{{ skribl_asset('flip.css') }}">
 {% include 'skribl/_skribl_app_identity.html' %}
 {% include 'skribl/_skribl_theme_boot.html' %}
@@ -366,10 +370,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
         <span class="menu-item-text">Skribl Pad<span class="menu-item-sub">Replay a drawing as it was drawn &mdash; a separate draft from this one</span></span>
       </a>
+      {# Your Skribls is the profile page (v304): a link, as on the Pad. #}
+      <a href="{{ url_for('.skribl_library') }}" id="miPosted" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="menu-item-text">Your Skribls<span class="menu-item-sub">Everything you posted, with the player</span></span></a>
       {# The gallery: everyone's public Skribls (v304); the Pad's row, in the
          same slot. #}
       <a href="{{ url_for('.skribl_gallery') }}" id="miGallery" class="menu-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="menu-item-text">Public gallery<span class="menu-item-sub">Skribls people chose to show</span></span></a>
-      <button type="button" class="menu-item" id="miPosted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Your Skribls</span></button>
       <button type="button" class="menu-item" id="miInfo"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="13" fill="currentColor">i</text></svg><span>How it works</span></button>
       <button type="button" class="menu-item" id="miReport" data-skribl-report><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L4 20l1.1-4.3A8.4 8.4 0 1 1 21 11.5z"/><path d="M12 8v4M12 15.5v.01"/></svg><span>Report a problem</span></button>
       <div class="menu-divider"></div>
@@ -408,7 +413,8 @@
     <input type="file" id="musicInput" aria-label="Choose an audio file" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/opus,audio/flac,audio/webm,.mp3,.m4a,.mp4,.wav,.ogg,.opus,.aac,.flac,.webm" class="vis-hidden">
     <input type="file" id="draftInput" aria-label="Open a saved .skribl file" accept=".skribl,application/json,text/plain,application/octet-stream,text/*" class="vis-hidden">
     {% with kind='flip' %}{% include 'skribl/_skribl_help.html' %}
-{% include 'skribl/_skribl_posted.html' %}{% endwith %}
+{% endwith %}
+{# Your Skribls moved to the profile page (/library) in v304; the drawer is not included here. #}
 {% include 'skribl/_skribl_report.html' %}
     {% with kind='flip' %}{% include 'skribl/_skribl_export.html' %}{% endwith %}
 
@@ -590,7 +596,6 @@
      for sound. #}
   <script src="{{ skribl_asset('lib/audiosession.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/posted.js') }}" defer></script>
-  <script src="{{ skribl_asset('lib/postedui.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/helpsearch.js') }}" defer></script>
   <script src="{{ skribl_asset('lib/draftstore.js') }}" defer></script>
   <script src="{{ skribl_asset('flip.js') }}" defer></script>

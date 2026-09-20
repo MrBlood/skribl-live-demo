@@ -122,7 +122,7 @@ with sync_playwright() as sp:
           if re.search(r"/api/skribls/[A-Za-z0-9_-]+$", r.url) else None)
     browsing.goto(pg, BASE, "/library")
 
-    tiles = pg.evaluate("() => document.getElementById('grid').children.length")
+    tiles = pg.evaluate("() => document.querySelectorAll('#postedList .posted-row').length")
     check("the grid is built from real posts, not from demo motifs",
           tiles >= 2, f"{tiles} tiles")
     check("no page errors", not errs, "; ".join(errs[:2]))
@@ -133,7 +133,7 @@ with sync_playwright() as sp:
           f"{len(payload_reqs)} payload fetch(es) for {tiles} tiles: "
           f"{payload_reqs}")
     check("every tile's picture is the poster, which is one cached image",
-          pg.evaluate("""() => [...document.querySelectorAll('.card .art img')]
+          pg.evaluate("""() => [...document.querySelectorAll('#postedList .posted-poster')]
              .every(i => /\\/s\\/[^/]+\\/poster$/.test(i.getAttribute('src')))"""))
     # FOLLOWED, not read. These fixtures are posted through serializeSkribl()
     # and carry no thumbnail, so whatever the tile's src is, the bytes that
@@ -142,7 +142,7 @@ with sync_playwright() as sp:
     # "ibl Pad / that replay in time with music" (v287 audit SK-BUG-006). fetch()
     # exposes the URL a redirect landed on; an <img> does not.
     _landed = pg.evaluate("""async () => {
-        const img = document.querySelector('.card .art img');
+        const img = document.querySelector('#postedList .posted-poster');
         const r = await fetch(img.getAttribute('src'));
         return r.url; }""")
     check("a tile with no thumbnail does NOT land on the branded share card",
@@ -232,7 +232,7 @@ with sync_playwright() as sp:
 
     # ---- picking another one -----------------------------------------------
     before = len(payload_reqs)
-    pg.evaluate("() => document.getElementById('grid').children[1].click()")
+    pg.evaluate("() => document.querySelectorAll('#postedList .posted-row .posted-main')[1].click()")
     pg.wait_for_timeout(2500)
     title1 = pg.inner_text("#pTitle")
     check("picking a tile puts that Skribl on the stage",
@@ -242,18 +242,18 @@ with sync_playwright() as sp:
           f"{len(payload_reqs) - before} fetch(es)")
 
     # ---- search says what it is doing --------------------------------------
-    pg.fill("#search", tag + " alpha")
+    pg.fill("#postedSearch", tag + " alpha")
     # WAIT FOR THE FILTER, do not sleep at it. The grid re-renders on `input`,
     # and a fixed pause raced it: this read 2 tiles on one run and 1 on the next
     # with the same code, which is a flaky assertion rather than a finding.
     try:
         pg.wait_for_function(
-            "() => document.getElementById('grid').children.length === 1",
+            "() => document.querySelectorAll('#postedList .posted-row').length === 1",
             timeout=4000)
     except Exception:
         pass
-    filtered = pg.evaluate("() => document.getElementById('grid').children.length")
-    typed = pg.evaluate("() => document.getElementById('search').value")
+    filtered = pg.evaluate("() => document.querySelectorAll('#postedList .posted-row').length")
+    typed = pg.evaluate("() => document.getElementById('postedSearch').value")
     foot = pg.inner_text("#libFoot")
     check("the search filters the grid", filtered == 1,
           f"{filtered} tiles for {typed!r}")
@@ -268,7 +268,7 @@ with sync_playwright() as sp:
     # bio spoke of "the transport a post does not get". A visitor is not the
     # reader of a route table: no method-plus-path token in the page's visible
     # text, in either footer state. Red on v287.
-    pg.fill("#search", "")
+    pg.fill("#postedSearch", "")
     pg.wait_for_timeout(300)
     _visible = pg.evaluate("() => document.body.innerText")
     check("the library's visible text names no endpoint",
@@ -278,7 +278,7 @@ with sync_playwright() as sp:
 
     # ---- WHOSE skribls these are (v304) -------------------------------------
     print("\nLIBRARY — a profile is somebody's")
-    on_page = pg.evaluate("() => [...document.querySelectorAll('.card')].map(c => c.getAttribute('data-id'))")
+    on_page = pg.evaluate("() => [...document.querySelectorAll('#postedList .posted-row')].map(c => c.getAttribute('data-id'))")
     listed = []
     _cur = None
     for _ in range(50):
@@ -294,13 +294,82 @@ with sync_playwright() as sp:
     check("the ticked post is on the profile and in the listing", ids[1] in on_page and ids[1] in listed)
     check("nothing on the profile is a post this browser did not make",
           set(on_page) <= set(ids), f"extra: {sorted(set(on_page) - set(ids))}")
-    pg.evaluate("() => document.querySelector('.card[data-id=\"%s\"]').click()" % ids[1])
+    pg.evaluate("() => document.querySelector('.posted-row[data-id=\"%s\"] .posted-main').click()" % ids[1])
     pg.wait_for_timeout(1200)
     check("the stage says the ticked one is in the gallery",
           "gallery" in pg.inner_text("#pStats").lower(), pg.inner_text("#pStats"))
-    pg.evaluate("() => document.querySelector('.card[data-id=\"%s\"]').click()" % ids[0])
+    pg.evaluate("() => document.querySelector('.posted-row[data-id=\"%s\"] .posted-main').click()" % ids[0])
     pg.wait_for_timeout(1200)
     check("...and the other is unlisted", pg.inner_text("#pStats").strip() == "unlisted", pg.inner_text("#pStats"))
+
+    # ---- the actions on a row, and the filter (v304) -----------------------
+    print("\nLIBRARY — a row can do what the tray could, and more")
+    acts = pg.evaluate("""(id) => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        return { buttons: [...r.querySelectorAll('.posted-actions button')].map(b => b.className.split(' ')[0]),
+                 share: !!r.querySelector('.posted-share'), canShare: !!navigator.share,
+                 poster: !!r.querySelector('.posted-poster'), badge: !!r.querySelector('.posted-thumb svg'),
+                 gallery: (r.querySelector('.posted-gallery') || {}).textContent,
+                 pressed: (r.querySelector('.posted-gallery') || {getAttribute: () => null}).getAttribute('aria-pressed') }; }""", ids[0])
+    check("a keyed row offers Copy link, the gallery switch, Delete and Copy key",
+          {"posted-copy", "posted-gallery", "posted-delete", "posted-key"} <= set(acts["buttons"]), str(acts["buttons"]))
+    check("Share is offered exactly where the system has a share sheet", acts["share"] == acts["canShare"],
+          f"share button={acts['share']} navigator.share={acts['canShare']}")
+    check("the row's picture is the poster, with the kind's icon as a badge", acts["poster"] and acts["badge"], str(acts))
+    check("the unlisted post's switch reads link only, unpressed",
+          acts["gallery"] == "Link only" and acts["pressed"] == "false", str(acts))
+
+    # THE FILTER: chips narrow to the two states a post of yours can be in.
+    pg.click('.chips .chip[data-filter="public"]')
+    pg.wait_for_timeout(300)
+    shown_pub = pg.evaluate("() => [...document.querySelectorAll('#postedList .posted-row')].map(r => r.getAttribute('data-id'))")
+    pg.click('.chips .chip[data-filter="unlisted"]')
+    pg.wait_for_timeout(300)
+    shown_unl = pg.evaluate("() => [...document.querySelectorAll('#postedList .posted-row')].map(r => r.getAttribute('data-id'))")
+    pg.click('.chips .chip[data-filter="all"]')
+    pg.wait_for_timeout(300)
+    check("'In the gallery' shows the ticked post and not the other", shown_pub == [ids[1]], str(shown_pub))
+    check("'Link only' shows the other and not the ticked one", shown_unl == [ids[0]], str(shown_unl))
+
+    # THE GALLERY SWITCH: PATCH visibility with the key, and the record follows.
+    patched = []
+    pg.on("request", lambda r: patched.append(r.url) if r.method == "PATCH" else None)
+    pg.click(f'.posted-row[data-id="{ids[0]}"] .posted-gallery')
+    pg.wait_for_timeout(1500)
+    after = pg.evaluate("""(id) => { const r = document.querySelector('.posted-row[data-id="' + id + '"]');
+        const e = JSON.parse(localStorage.getItem('skribl_posted_v1')).find(x => x.id === id);
+        return { text: r.querySelector('.posted-gallery').textContent, pressed: r.querySelector('.posted-gallery').getAttribute('aria-pressed'),
+                 stored: e && e.visibility, live: document.getElementById('postedStatus').textContent }; }""", ids[0])
+    listed_ids_after = []
+    _cur = None
+    for _ in range(50):
+        _u = urllib.request.urlopen(BASE + "/api/skribls?limit=100" + (f"&cursor={_cur}" if _cur else ""), timeout=20)
+        _body = json.loads(_u.read().decode())
+        listed_ids_after += [i["id"] for i in _body.get("items", [])]
+        _cur = _body.get("next_cursor")
+        if not _cur:
+            break
+    check("the switch PATCHes that post's visibility", any(f"/api/skribls/{ids[0]}" in u for u in patched), str(patched))
+    check("...the post is in the public listing now", ids[0] in listed_ids_after)
+    check("...the row and the record say in the gallery",
+          after["text"] == "In gallery" and after["pressed"] == "true" and after["stored"] == "public" and "gallery" in after["live"].lower(),
+          str(after))
+
+    # DELETE, armed then done: the post is gone for everyone, the row with it.
+    pg.click(f'.posted-row[data-id="{ids[1]}"] .posted-delete')
+    pg.wait_for_timeout(300)
+    armed = pg.evaluate("(id) => !!document.querySelector('.posted-row[data-id=\"' + id + '\"]') && "
+                        "document.querySelector('.posted-row[data-id=\"' + id + '\"] .posted-delete').classList.contains('armed')", ids[1])
+    check("the first tap on Delete arms it and removes nothing", armed)
+    pg.click(f'.posted-row[data-id="{ids[1]}"] .posted-delete')
+    pg.wait_for_timeout(1500)
+    try:
+        st_gone = urllib.request.urlopen(BASE + f"/api/skribls/{ids[1]}", timeout=20).status
+    except urllib.error.HTTPError as e:
+        st_gone = e.code
+    check("the second tap deletes it for everyone (404 now) and the row is gone",
+          st_gone == 404 and not pg.evaluate("(id) => !!document.querySelector('.posted-row[data-id=\"' + id + '\"]')", ids[1]),
+          f"GET {st_gone}")
+    ids_left = [ids[0]]
 
     # ---- full screen -------------------------------------------------------
     fs_enabled = pg.evaluate("() => !!document.fullscreenEnabled")
@@ -328,7 +397,7 @@ with sync_playwright() as sp:
     # that showed this one's posts to it would be the public listing again.
     other = b.new_page(viewport={"width": 1280, "height": 1000})
     browsing.goto(other, BASE, "/library")
-    o_tiles = other.evaluate("() => document.getElementById('grid').children.length")
+    o_tiles = other.evaluate("() => document.querySelectorAll('#postedList .posted-row').length")
     o_empty = other.evaluate("""() => { const e = document.getElementById('libEmpty');
         return { shown: !e.hidden && getComputedStyle(e).display !== 'none', words: e.innerText }; }""")
     check("another browser sees none of them", o_tiles == 0, f"{o_tiles} tiles")
@@ -355,7 +424,7 @@ with sync_playwright() as sp:
     host.on("request", lambda r: listing_reqs.append(r.url) if re.search(r"/api/skribls\?", r.url) else None)
     browsing.goto(host, BASE, "/library")
     host.wait_for_timeout(800)
-    h_tiles = host.evaluate("() => [...document.querySelectorAll('.card')].map(c => c.getAttribute('data-id'))")
+    h_tiles = host.evaluate("() => [...document.querySelectorAll('#postedList .posted-row')].map(c => c.getAttribute('data-id'))")
     check("with a host identity the page asks the listing for that author",
           any("user_id=host-user-42" in u for u in listing_reqs), str(listing_reqs))
     check("...and the browser's own list is not shown",

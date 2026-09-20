@@ -90,20 +90,26 @@ with sync_playwright() as p:
     pg.wait_for_timeout(1400)
     check("Flip loads with no JS errors", not errs, "; ".join(errs[:2]))
     check("the store is published", pg.evaluate("() => !!window.SkriblPosted"))
-    check("the tray UI is published", pg.evaluate("() => !!window.SkriblPostedUI"))
-
-    pg.evaluate("() => window._skriblPostedUI.open()")
-    pg.wait_for_timeout(300)
+    # YOUR SKRIBLS IS THE PROFILE PAGE since v304: the list, its actions and
+    # its custody rules render at /library (lib/postedui.js), and the editors'
+    # menu row is a link there. Same page object, so the same localStorage.
+    pg.goto(f"{BASE}/library", wait_until="load")
+    pg.wait_for_timeout(900)
+    check("the list UI is published on the profile", pg.evaluate("() => !!window.SkriblPostedUI"))
     empty = pg.inner_text("#postedList")
     check("the empty state invites rather than apologises",
           "nothing posted yet" in empty.lower() and "post" in empty.lower(),
           repr(empty[:80]))
     check("the footer says this is browser-only, not an account",
-          "browser" in pg.inner_text("#postedDrawer").lower(),
+          "browser" in pg.inner_text("#postedPanel").lower(),
           "someone who reads this as an account will clear site data and lose it")
     check("no clear button while the list is empty",
           not pg.is_visible("#postedClear"))
-    pg.evaluate("() => window._skriblPostedUI.close()")
+    pg.goto(f"{BASE}/flip", wait_until="load")
+    pg.wait_for_timeout(1200)
+    check("Flip's menu row is a link to the profile",
+          (pg.get_attribute("#miPosted", "href") or "").endswith("/library"),
+          str(pg.get_attribute("#miPosted", "href")))
 
     # -----------------------------------------------------------------------
     print("\nYOUR SKRIBLS — a real Flip post is recorded")
@@ -137,9 +143,9 @@ with sync_playwright() as p:
           "strokes" not in blob and "data:" not in blob and len(blob) < 400,
           f"{len(blob)} bytes — localStorage is shared with crash recovery")
 
-    pg.evaluate("() => window._skriblPostedUI.open()")
-    pg.wait_for_timeout(300)
-    check("the tray lists it", TITLE in pg.inner_text("#postedList"),
+    pg.goto(f"{BASE}/library", wait_until="load")
+    pg.wait_for_timeout(900)
+    check("the profile lists it", TITLE in pg.inner_text("#postedList"),
           pg.inner_text("#postedList")[:80])
     check("the count reads as one Skribl",
           "1 skribl" in pg.inner_text("#postedCount").lower(),
@@ -549,8 +555,8 @@ with sync_playwright() as p:
           "this device" in pd.inner_text("#postStatusLabel").lower(),
           pd.inner_text("#postStatusLabel"))
 
-    pd.evaluate("() => window._skriblPostedUI.open()")
-    pd.wait_for_timeout(300)
+    pd.goto(f"{BASE}/library", wait_until="load")
+    pd.wait_for_timeout(900)
     # Counted before it is read: a missing row must FAIL by name here, not wedge
     # the run on a locator that never resolves (the v287 rule).
     rows = pd.locator("#postedList .posted-row-local")
@@ -587,8 +593,6 @@ with sync_playwright() as p:
         pd.wait_for_timeout(300)
     check("the second tap deletes the entry AND its bytes",
           nrows == 1 and len(pd.evaluate(READ)) == 0 and not pd.evaluate(HAS_BLOB, lid))
-    pd.evaluate("() => window._skriblPostedUI.close()")
-    pd.wait_for_timeout(200)
 
     # EVICTION IS THE DISCLOSED POLICY, and it is a different thing from the
     # sweep: when the store is genuinely full, reclaim() drops the OLDEST local
@@ -607,9 +611,9 @@ with sync_playwright() as p:
           and not pd2.evaluate(HAS_BLOB, lid2),
           f"freed {freed}; entries {len(pd2.evaluate(READ))}; "
           f"blob {pd2.evaluate(HAS_BLOB, lid2) if lid2 else 'n/a'}")
-    pd2.evaluate("() => window._skriblPostedUI.open()")
-    pd2.wait_for_timeout(200)
-    foot = pd2.inner_text("#postedDrawer .posted-foot-top").lower()
+    pd2.goto(f"{BASE}/library", wait_until="load")
+    pd2.wait_for_timeout(900)
+    foot = pd2.inner_text("#postedPanel .posted-foot-top").lower()
     check("...and the tray states that policy where the saves are listed",
           "oldest" in foot and "full" in foot, foot[:120])
     pd2.close()
@@ -861,16 +865,15 @@ with sync_playwright() as p:
     # under the title instead of beside it. Measured at 390 with a keyed row
     # and a plain one seeded side by side.
     pm = b.new_page(viewport={"width": 390, "height": 844})
-    pm.goto(BASE + "/", wait_until="load")
-    pm.wait_for_timeout(700)
+    pm.goto(BASE + "/library", wait_until="load")
+    pm.wait_for_timeout(900)
     pm.evaluate("""() => {
         localStorage.setItem('skribl_posted_v1', '[]');
         window.SkriblPosted.add({ id: 'keyedrow', title: 'F.', kind: 'flip', pages: 4, tok: 'k' });
         window.SkriblPosted.add({ id: 'plainrow', title: 'Tttt', kind: 'pad' });
         if (window._skriblPostedUI) window._skriblPostedUI.render();
       }""")
-    pm.click("#menuBtn"); pm.wait_for_timeout(300)
-    pm.click("#postedItem"); pm.wait_for_timeout(500)
+    pm.wait_for_timeout(300)
     _rows = pm.evaluate("""() => {
         const out = {};
         for (const id of ['keyedrow', 'plainrow']) {
@@ -977,7 +980,7 @@ with sync_playwright() as p:
     _dlg = []
     pd.on("dialog", lambda d: (_dlg.append(d.message), d.dismiss()))
     pd.evaluate("() => window.SkriblRecoveryKey.closeRecover()")
-    pd.evaluate("() => window._skriblPostedUI && window._skriblPostedUI.open()")
+    pd.evaluate("() => window._skriblPostedUI && window._skriblPostedUI.render()")
     pd.wait_for_timeout(500)
     pd.click(f'.posted-row[data-id="{kept}"] .posted-delete')
     pd.wait_for_timeout(300)
@@ -1067,13 +1070,11 @@ print("\nTRAY ICONS — a Flip is marked with the icon that means Flip")
 with sync_playwright() as _p:
     _b = _p.chromium.launch()
     _pg = _b.new_page()
-    _pg.goto(f"{BASE}/flip", wait_until="load")
+    _pg.goto(f"{BASE}/library", wait_until="load")
     _pg.wait_for_timeout(1300)
     _pg.evaluate("""() => {
       window.SkriblPosted.add({id:'ic1', url:'/s/ic1', kind:'flip', pages:9, title:'A flip'});
       window.SkriblPosted.add({id:'ic2', url:'/s/ic2', kind:'pad', pages:1, title:'A pad'});
-      const d = document.getElementById('postedDrawer');
-      d.hidden = false; d.classList.add('open');
       if (window._skriblPostedUI) window._skriblPostedUI.render();
     }""")
     _pg.wait_for_timeout(400)

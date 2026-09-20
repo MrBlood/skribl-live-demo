@@ -1748,6 +1748,9 @@ body.player-mode #canvas {
 
 }
 
+/* --- the recovery-key panel: moved to posted.css (v304) --------------------
+   Loaded by both editors and by the profile page; see skribl/static/posted.css. */
+
 /* ---------- Increased contrast and forced colours (v292) ----------
    Outside review of v291, SK-AUD-015: the sheet handled reduced motion and
    two colour ramps, and nothing else the platform can ask for.

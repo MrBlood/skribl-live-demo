@@ -274,7 +274,6 @@ with sync_playwright() as p:
         # (route, id)          (how to open, expected focus-return target)
         ("/", "menuSheet"):    ("click:#menuBtn",                "menuBtn"),
         ("/", "helpDrawer"):   ("click:#menuBtn|click:#helpItem", None),
-        ("/", "postedDrawer"): ("click:#menuBtn|click:#postedItem", None),
         ("/", "exportSheet"):  ("click:#menuBtn|click:#exportItem", None),
         ("/", "reportSheet"):  ("click:#menuBtn|click:#reportItem", None),
         # Post is gated on a FINISHED take, not on ink: drawing auto-starts
@@ -323,11 +322,16 @@ with sync_playwright() as p:
         # ...and the rest of what the honest sweep found on Flip the moment it
         # kept the route: the posted list, the report sheet, and the three
         # recovery-key dialogs, all shared modules, all counted once before.
-        ("/flip", "postedDrawer"): ("click:#moreBtn|click:#miPosted", None),
         ("/flip", "reportSheet"):  ("click:#moreBtn|click:#miReport", None),
         ("/flip", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present("
                                     "{key:'test-recovery-key-abc123'})", None),
         ("/flip", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
+        # THE PROFILE PAGE (v304): Your Skribls moved from a drawer in the
+        # editors to /library, and the recovery-key dialogs it opens (a key
+        # shown, a key entered, the Clear-list guard) are built there too.
+        ("/library", "reckeyOverlay"): ("js:window.SkriblRecoveryKey.present({key:'test-recovery-key-abc123'})", None),
+        ("/library", "recoverOverlay"): ("js:window.SkriblRecoveryKey.openRecover()", None),
+        ("/library", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear([{id:'x',tok:'k'}], function () {})", None),
         ("/flip", "clearKeysOverlay"): ("js:window.SkriblRecoveryKey.confirmClear("
                                        "[{id:'x',tok:'k'}], function () {})", None),
         # THE GALLERY'S REPORT SHEET (v304): one dialog for the page, opened
@@ -390,7 +394,7 @@ with sync_playwright() as p:
                          headers={"Content-Type": "application/json"})
     with _ur0.urlopen(_req0, timeout=15) as _r0:
         json.loads(_r0.read())
-    for _surface in ("/", "/flip", "/gallery"):
+    for _surface in ("/", "/flip", "/gallery", "/library"):
         pg = browser.new_page(viewport={"width": 1280, "height": 900})
         browsing.goto(pg, BASE, _surface)
         # Prime the runtime-built dialog so the census can see it (see above).
@@ -646,10 +650,14 @@ with sync_playwright() as p:
     # behavioural to press.
     pg = browser.new_page(viewport={"width": 1280, "height": 900})
     browsing.goto(pg, BASE, "/")
-    for _id, why in (("toast", "autosave, copy, and the Undo affordance"),
-                     ("postStatus", "posting started / succeeded / failed"),
-                     ("postedStatus", "server-side deletion from Your Skribls")):
-        r = pg.evaluate("""(id) => {
+    # Your Skribls' region lives on the profile page since v304 (the list
+    # moved there), so it is read on its own page rather than on the Pad.
+    _lib = browser.new_page(viewport={"width": 1280, "height": 900})
+    browsing.goto(_lib, BASE, "/library")
+    for _id, why, _on in (("toast", "autosave, copy, and the Undo affordance", pg),
+                          ("postStatus", "posting started / succeeded / failed", pg),
+                          ("postedStatus", "server-side deletion from Your Skribls", _lib)):
+        r = _on.evaluate("""(id) => {
             const el = document.getElementById(id);
             if (!el) return null;
             return { role: el.getAttribute('role'),
@@ -663,6 +671,7 @@ with sync_playwright() as p:
               r is not None and r["atomic"] == "true",
               f"{r} — without it a node whose children change announces only "
               "the fragment, which for the toast is the bare Undo button")
+    _lib.close()
 
     # A DRAFT DURABILITY FAILURE IS ANNOUNCED, ONCE (SK-AUD-003; acquisition
     # audit of v302). The pill is visual and stays up; nothing spoke it. The
