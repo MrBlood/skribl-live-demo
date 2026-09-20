@@ -972,7 +972,12 @@ with sync_playwright() as sp:
     # prefers-color-scheme before first paint (~150 B, a storage that throws
     # falling through to the OS included), so a bare page follows the OS
     # without a flash. Measured 11,327.
-    HTML_RATCHET = 11_400
+    # 11,400 -> 11,500 for the canvas's accessible name (SK-AUD-004): role=img
+    # and an aria-label carrying the post's title, server-rendered because
+    # app.js is on the JS ratchet and its reachable lines sit at their ceiling.
+    # ~90 B; the player's one canvas was the only thing on the page with no
+    # name. Measured 11,418 against the old ceiling of 11,400.
+    HTML_RATCHET = 11_500
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",

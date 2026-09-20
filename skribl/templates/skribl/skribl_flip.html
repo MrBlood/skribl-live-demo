@@ -81,7 +81,9 @@
     <div class="flip-stage" role="main">
       <div class="flip-wrap">
         <span class="flip-live">▶ FLIPPING</span>
-        <div class="zoom-layer" id="zoomLayer"><canvas id="pad"></canvas><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas>
+        {# THE CANVAS HAS A NAME (SK-AUD-004), and flip.js keeps the page in it
+           ("Drawing canvas, page 3 of 12") where it writes the page counter. #}
+        <div class="zoom-layer" id="zoomLayer"><canvas id="pad" role="img" aria-roledescription="drawing canvas" aria-label="Drawing canvas, page 1" aria-describedby="flipCanvasDesc"></canvas><p id="flipCanvasDesc" class="vis-hidden">Draw this page with a finger, mouse or stylus; the pages play back in order. Drawing itself is not available from the keyboard; every tool, page action and setting is.</p><canvas class="flip-grid" id="flipGrid" aria-hidden="true"></canvas>
           {# Same whisper Pad's blank canvas carries — Flip's was a silent dark
              rectangle. Hidden the moment the document has any content. #}
           <div id="flipEmptyHint" class="canvas-empty-hint">
