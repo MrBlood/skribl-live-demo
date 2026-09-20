@@ -12,7 +12,7 @@ route by literal path any more — see the context processor in __init__.py.
 import base64
 import binascii
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from flask import (abort, current_app, g, jsonify, redirect, render_template,
                    request, url_for)
@@ -24,7 +24,7 @@ from .core import (MAX_REPORT_NOTE_CHARS, REPORT_REASONS,
                    MAX_CARD_BYTES,
                    OG_DEFAULT_DESCRIPTION, OG_DEFAULT_TITLE, SKRIBL_VERSION,
                    THEME_GROUND, _og_meta, _valid_public_id)
-from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport,
+from .models import (SkriblIdempotency, SkriblPost, SkriblPostMedia, SkriblReport, SkriblView,
                      _visibility_policy, as_utc, normalise_user_id,
                      session, feed_filter, author_dict)
 from .storage import KEY_RE, LocalDiskStore
@@ -80,6 +80,37 @@ def _decode_cursor(cursor):
         return datetime.fromisoformat(created), int(ident)
     except (ValueError, TypeError, binascii.Error, UnicodeDecodeError):
         return None
+
+
+# HOT'S CURSOR (v304) is its own shape -- "hot|<score>|<id>" -- because the
+# keyset it pages by is (seven-day plays, id), not (created_at, id). A cursor
+# from one sort handed to the other decodes as unusable, which is a 400, the
+# same answer a mangled cursor gets.
+HOT_DAYS = 7
+MAX_QUERY_CHARS = 80
+
+
+def _encode_hot_cursor(score, post_id):
+    raw = f"hot|{int(score)}|{int(post_id)}".encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _decode_hot_cursor(cursor):
+    """-> (score, id), or None."""
+    try:
+        pad = "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(cursor + pad).decode("utf-8")
+        tag, score, ident = raw.split("|")
+        if tag != "hot":
+            return None
+        return int(score), int(ident)
+    except (ValueError, TypeError, binascii.Error, UnicodeDecodeError):
+        return None
+
+
+def _like_escape(text):
+    """A LIKE pattern from what a person typed: their % and _ are letters."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _idempotency_hash(raw_key, viewer_id, client_id=None):
@@ -897,8 +928,44 @@ def register_routes(bp, *, index_route=False):
         else:
             q = q.filter(SkriblPost.visibility == "public")
 
+        # SEARCH (v304): a substring of the title or caption, case-folded,
+        # bounded, with the person's own % and _ escaped so they are letters.
+        # The keyset is unchanged, so a search pages exactly as the listing
+        # does; the gallery's box sends it.
+        needle = (request.args.get("q") or "").strip()
+        if len(needle) > MAX_QUERY_CHARS:
+            return jsonify({"error": f"q is longer than {MAX_QUERY_CHARS} characters."}), 400
+        if needle:
+            pat = "%" + _like_escape(needle) + "%"
+            q = q.filter(sa.or_(SkriblPost.title.ilike(pat, escape="\\"),
+                                SkriblPost.caption.ilike(pat, escape="\\")))
+
+        # HOT (v304): plays in the last seven days, most first, newest id
+        # breaking ties -- computed from skribl_views, never from the
+        # running total, so an old post with a big total does not sit on
+        # top forever. The default stays New.
+        sort = request.args.get("sort", "new")
+        if sort not in ("new", "hot"):
+            return jsonify({"error": "sort must be new or hot."}), 400
+        score = None
+        if sort == "hot":
+            since = datetime.now(timezone.utc) - timedelta(days=HOT_DAYS)
+            recent = (session().query(SkriblView.post_id.label("pid"),
+                                      sa.func.count(SkriblView.id).label("n"))
+                      .filter(SkriblView.created_at >= since)
+                      .group_by(SkriblView.post_id).subquery())
+            q = q.outerjoin(recent, recent.c.pid == SkriblPost.id)
+            score = sa.func.coalesce(recent.c.n, 0)
+
         cursor = request.args.get("cursor")
-        if cursor:
+        if cursor and sort == "hot":
+            parsed = _decode_hot_cursor(cursor)
+            if parsed is None:
+                return jsonify({"error": "Invalid cursor."}), 400
+            c_score, c_id = parsed
+            q = q.filter(sa.or_(score < c_score,
+                                sa.and_(score == c_score, SkriblPost.id < c_id)))
+        elif cursor:
             parsed = _decode_cursor(cursor)
             if parsed is None:
                 return jsonify({"error": "Invalid cursor."}), 400
@@ -920,18 +987,49 @@ def register_routes(bp, *, index_route=False):
         if _ff is not None:
             q = _ff(q, viewer)
 
-        q = q.order_by(SkriblPost.created_at.desc(), SkriblPost.id.desc())
+        if score is not None:
+            q = q.add_columns(score.label("hot")).order_by(score.desc(), SkriblPost.id.desc())
+        else:
+            q = q.order_by(SkriblPost.created_at.desc(), SkriblPost.id.desc())
 
         # Over-fetch by one to learn whether another page exists, without a
         # second COUNT query over the whole filtered set.
-        rows = q.limit(limit + 1).all()
-        has_more = len(rows) > limit
-        rows = rows[:limit]
+        fetched = q.limit(limit + 1).all()
+        has_more = len(fetched) > limit
+        fetched = fetched[:limit]
+        if score is not None:
+            rows = [r[0] for r in fetched]
+            scores = [int(r[1] or 0) for r in fetched]
+            items = []
+            for post, n in zip(rows, scores):
+                d = post.feed_dict()
+                d["views_recent"] = n
+                items.append(d)
+            nxt = _encode_hot_cursor(scores[-1], rows[-1].id) if (rows and has_more) else None
+        else:
+            rows = fetched
+            items = [r.feed_dict() for r in rows]
+            nxt = _encode_cursor(rows[-1]) if (rows and has_more) else None
 
-        return jsonify({
-            "items": [r.feed_dict() for r in rows],
-            "next_cursor": (_encode_cursor(rows[-1]) if (rows and has_more) else None),
-        })
+        return jsonify({"items": items, "next_cursor": nxt})
+
+    def _count_view(post):
+        who = _rate_key(_client_ip())
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        s = session()
+        seen = (s.query(SkriblView.id)
+                .filter(SkriblView.post_id == post.id, SkriblView.viewer_hash == who,
+                        SkriblView.day == day).first())
+        if seen is not None:
+            return False
+        try:
+            with s.begin_nested():
+                s.add(SkriblView(post_id=post.id, viewer_hash=who, day=day))
+                s.flush()
+        except sa.exc.IntegrityError:
+            return False
+        post.views_total = (post.views_total or 0) + 1
+        return True
 
     @bp.get("/api/skribls/<public_id>")
     def get_skribl(public_id):
@@ -949,6 +1047,16 @@ def register_routes(bp, *, index_route=False):
         # that was never issued.
         if not post.visible_to(bp.skribl_current_user_id()):
             abort(404)
+
+        # A PLAY, COUNTED (v304). This is the fetch every player makes to
+        # play a post -- the in-post player on a tap, the /s/<id> page on
+        # load -- so it is where a view is honest. One row per (post, client
+        # hash, UTC day), unique, inside a savepoint so a lost race is a
+        # duplicate and not a poisoned transaction; the post's running total
+        # moves only when a row is new. No address is stored. The host owns
+        # the commit, as on every write here; a host that does not commit on
+        # GET simply does not count plays.
+        _count_view(post)
 
         # Shallow-copy so we don't mutate the SQLAlchemy-tracked JSON column
         # (which could otherwise be flushed back to the DB on this GET).

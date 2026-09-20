@@ -90,6 +90,16 @@
     /* ---- the heading, and the three states --------------------------- */
     h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 4px; }
     .sub { margin: 0 0 20px; color: var(--text-2); font-size: 14px; }
+    .bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 18px; }
+    .tabs { display: flex; gap: 6px; }
+    .tab { font: inherit; font-weight: 600; font-size: 14px; color: var(--text-2); background: transparent;
+      border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; min-height: 44px; cursor: pointer; }
+    .tab.active { background: var(--accent); border-color: transparent; color: #fff; }
+    .find { flex: 1 1 220px; }
+    .find input { width: 100%; min-height: 44px; font: inherit; font-size: 16px; color: var(--text);
+      background: var(--control); border: 1px solid var(--hairline); border-radius: 999px; padding: 0 16px; }
+    .find input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .tile .plays { flex: none; color: var(--text-3); font-size: 12px; font-family: var(--font-mono); }
     .state { text-align: center; color: var(--text-3); font-size: 14px; padding: 40px 0; line-height: 1.7; }
     .state b { color: var(--text-2); font-weight: 600; }
     .state[hidden] { display: none; }
@@ -171,7 +181,21 @@
 
   <main>
     <h1>Public gallery</h1>
-    <p class="sub">Skribls people chose to show. Newest first. Tap one to watch it draw itself.</p>
+    <p class="sub" id="gallerySub">Skribls people chose to show. Tap one to watch it draw itself.</p>
+    {# NEW / HOT AND SEARCH (v304). New is the listing as it always was; Hot is
+       plays in the last seven days, most first (GET /api/skribls?sort=hot,
+       counted once per client per post per day). Search is the listing's own
+       q, title and caption. Both are the server's: this page adds no
+       filtering or ranking of its own. #}
+    <div class="bar">
+      <div class="tabs" role="group" aria-label="Order">
+        <button type="button" class="tab active" data-sort="new" aria-pressed="true">New</button>
+        <button type="button" class="tab" data-sort="hot" aria-pressed="false">Hot</button>
+      </div>
+      <form class="find" id="galleryFind" role="search">
+        <input type="search" id="galleryQ" placeholder="Search titles…" aria-label="Search the gallery" autocomplete="off" maxlength="80">
+      </form>
+    </div>
 
     <div class="grid" id="galleryList"></div>
 
@@ -182,6 +206,9 @@
       <b>Nothing here yet.</b><br>
       Skribls appear here when their author ticks
       <b>Show in the public gallery</b> before posting.
+    </p>
+    <p class="state" id="galleryNone" hidden>
+      <b>Nothing matches that.</b> Try part of a title.
     </p>
     <p class="state" id="galleryError" hidden>
       <b>Couldn't load the gallery.</b> Check your connection and try again.<br>
