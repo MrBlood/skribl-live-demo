@@ -44,6 +44,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+import weakref
 import xml.etree.ElementTree as ET
 from urllib.parse import quote, urlsplit
 
@@ -428,11 +429,30 @@ from .models import SkriblPost, SkriblPostMedia, SkriblPendingMedia  # noqa: E40
 import sqlalchemy as _sa  # noqa: E402
 
 
-_pending_media_ready = None
+class MediaClaimError(RuntimeError):
+    """A media reservation was attempted and did not land.
+
+    Distinct from "no reservation was needed": claim_media() returns 0 for the
+    designed no-ops and raises this for everything else, so a caller can tell
+    the two apart. It could not, before EXT-P0-1.
+    """
+
+
+# PER ENGINE, NOT PER PROCESS (EXT-P0-3). This was one module-global bool, set
+# by whichever engine asked first and then returned to every other engine in
+# the process — while the function took an `engine` argument and ignored it.
+# Both directions are wrong and both are reachable: an unmigrated database
+# answering first pins False, so a migrated one silently stops writing claims
+# and loses the sweep-race guard entirely; a migrated one answering first pins
+# True, so an unmigrated one attempts the insert this cache exists to prevent.
+# A host serving two databases from one process (and the harness itself builds
+# several engines in one interpreter) gets whichever it happened to ask with
+# first. Keyed weakly so a disposed engine does not pin its entry.
+_pending_media_ready = weakref.WeakKeyDictionary()
 
 
 def pending_media_ready(engine):
-    """Whether the skribl_pending_media table exists, cached for the process.
+    """Whether the skribl_pending_media table exists, cached PER ENGINE.
 
     The claim path (v266) writes and deletes rows in this table. On a database
     where the v203 migration has NOT been applied it does not exist, and on
@@ -443,13 +463,22 @@ def pending_media_ready(engine):
     which every deploy performs; a database that gains the table mid-process
     picks it up on the next deploy.
     """
-    global _pending_media_ready
-    if _pending_media_ready is None:
+    if engine is None:
+        return False
+    try:
+        hit = _pending_media_ready.get(engine)
+    except TypeError:                                    # unhashable/no weakref
+        hit = None
+    if hit is None:
         try:
-            _pending_media_ready = _sa.inspect(engine).has_table("skribl_pending_media")
+            hit = _sa.inspect(engine).has_table("skribl_pending_media")
         except Exception:
-            _pending_media_ready = False
-    return bool(_pending_media_ready)
+            hit = False
+        try:
+            _pending_media_ready[engine] = hit
+        except TypeError:
+            pass
+    return bool(hit)
 
 
 def claim_media(engine, keys, ttl_seconds):
@@ -470,8 +499,28 @@ def claim_media(engine, keys, ttl_seconds):
     A claim is never updated or deleted here: duplicates are harmless (the
     sweeper only asks 'is there an unexpired claim?') and expiry prunes them, so
     the write path stays a plain insert with no read-modify-write.
+
+    RAISES MediaClaimError WHEN IT TRIED AND FAILED (EXT-P0-1), and this is the
+    whole point of the function's contract. It used to end `except Exception:
+    return 0`, which made "there was nothing to reserve" and "the reservation
+    did not happen" the same answer — so creation.py's `try/except` around this
+    call, written under a comment insisting THIS FAILS THE POST RATHER THAN
+    DEGRADING, could never fire, and its return value was discarded. v278's
+    audit removed an `except Exception: pass` from the caller; the swallow had
+    simply moved one function down, and the defect it was meant to end was
+    still live. Returning 0 now means only the DESIGNED no-ops below.
+
+    The SQLite busy give-up raises too, rather than being tolerated silently.
+    Docstring policy does not get to differ from the caller's: a post published
+    against deleted media is permanent user-visible damage, an unreferenced
+    object is collected by the next sweep, and the caller's 503 asks for a
+    retry that is expected to succeed.
     """
     keys = [k for k in dict.fromkeys(keys or []) if k]
+    # THE DESIGNED NO-OPS, and the only paths that may return 0. Nothing to
+    # reserve, nowhere to reserve it, or a schema on which no sweeper consults
+    # claims at all (the v203 migration is absent, so the v264 age re-check is
+    # the only guard there ever was and this call cannot change that).
     if not keys or engine is None or not pending_media_ready(engine):
         return 0
     exp = (datetime.datetime.now(datetime.timezone.utc)
@@ -486,9 +535,10 @@ def claim_media(engine, keys, ttl_seconds):
             conn.execute(_sa.insert(SkriblPendingMedia.__table__),
                          [{"media_key": k, "expires_at": exp} for k in keys])
             conn.commit()
-        return len(keys)
-    except Exception:
-        return 0
+    except Exception as exc:
+        raise MediaClaimError(
+            f"could not reserve {len(keys)} media key(s): {exc}") from exc
+    return len(keys)
 
 
 def backfill_media(store, session, iter_media, batch=100, after_id=0,
@@ -699,6 +749,7 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
     errors = []
     stats = {"listed": 0, "skipped_foreign": 0, "skipped_young": 0,
              "skipped_referenced": 0, "skipped_reused": 0, "skipped_claimed": 0,
+             "skipped_unverified": 0,
              "chunks": 0}
     chunk = []
 
@@ -715,20 +766,32 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
         isolated per transaction), so querying through the session could miss a
         claim that is already durably committed — the exact race this closes.
         A new connection reads the latest committed state on both backends. A
-        store/session without the table (older schema) simply reports none."""
+        store/session without the table (older schema) simply reports none.
+
+        RAISES RATHER THAN REPORTING NONE WHEN THE QUERY ITSELF FAILS
+        (EXT-P0-2). This ended `except Exception: return set()`, which gave one
+        answer to two questions -- "there are no claims" and "I could not find
+        out whether there are claims" -- on the one path in this file that
+        DELETES. Uncertainty is not permission to delete: a dropped connection
+        or a transaction error mid-sweep reported every key unclaimed and took
+        the objects with it. The designed case is asked explicitly below and
+        still reports none; everything else is the caller's to refuse, which
+        flush_chunk does by skipping the chunk."""
         keys = list(keys)
         if not keys:
             return set()
-        try:
-            tbl = SkriblPendingMedia.__table__
-            with session.get_bind().connect() as conn:
-                rows = conn.execute(
-                    _sa.select(tbl.c.media_key).where(
-                        tbl.c.media_key.in_(keys),
-                        tbl.c.expires_at > _now_utc())).fetchall()
-            return {r[0] for r in rows}
-        except Exception:
+        # THE DESIGNED CASE, asked instead of inferred from a swallowed error:
+        # no table means no sweeper ever consulted claims on this schema, so
+        # "none" is the true answer rather than a guess.
+        if not pending_media_ready(session.get_bind()):
             return set()
+        tbl = SkriblPendingMedia.__table__
+        with session.get_bind().connect() as conn:
+            rows = conn.execute(
+                _sa.select(tbl.c.media_key).where(
+                    tbl.c.media_key.in_(keys),
+                    tbl.c.expires_at > _now_utc())).fetchall()
+        return {r[0] for r in rows}
 
     def flush_chunk():
         if not chunk:
@@ -737,7 +800,16 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
         referenced = {row[0] for row in
                       session.query(SkriblPostMedia.media_key)
                       .filter(SkriblPostMedia.media_key.in_(chunk)).all()}
-        claimed = _claimed(chunk)
+        # FAIL CLOSED (EXT-P0-2): if the claim query cannot answer, nothing in
+        # this chunk is deleted. Counted, so the outcome is visible in the
+        # stats rather than looking like a quiet successful sweep -- an
+        # operator watching `deleted` alone would otherwise see a healthy run.
+        try:
+            claimed = _claimed(chunk)
+        except Exception:
+            stats["skipped_unverified"] += len(chunk)
+            chunk.clear()
+            return
         for key in chunk:
             if key in referenced:
                 stats["skipped_referenced"] += 1
@@ -765,7 +837,21 @@ def sweep_orphans_report(store, session, older_than_seconds=86400, dry_run=True)
             # (exactly the reviewer's ordering: sweeper lists old, poster claims
             # + reuses, sweeper reaches the delete). Re-reading the single key's
             # claim here catches that. Cheap: one indexed equality lookup.
-            if _claimed((key,)):
+            # FAIL CLOSED HERE TOO (EXT-P0-2). This is the LAST question asked
+            # before an irreversible delete, so it is the last place that may
+            # answer "no claim" when it means "I could not tell". Guarded
+            # separately from the batch read above rather than relying on it:
+            # the batch can succeed and this can fail (it is a different
+            # statement on a different connection, up to 500 keys later), and
+            # an unguarded raise here took the whole sweep down with it --
+            # which the first draft of the fix hid, because skipping the chunk
+            # earlier meant this line was never reached in the test.
+            try:
+                _is_claimed = _claimed((key,))
+            except Exception:
+                stats["skipped_unverified"] += 1
+                continue
+            if _is_claimed:
                 stats["skipped_claimed"] += 1
                 continue
             if dry_run:

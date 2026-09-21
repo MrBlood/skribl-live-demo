@@ -496,7 +496,7 @@ import sqlalchemy as _sa_probe                                    # noqa: E402
 with app.app_context():
     session().query(SkriblPendingMedia).delete(); session().commit()
     SkriblPendingMedia.__table__.drop(_app_module.db.engine)
-    storage._pending_media_ready = None      # force the gate to re-inspect
+    storage._pending_media_ready.clear()      # force the gate to re-inspect
     _absent = not _sa_probe.inspect(_app_module.db.engine).has_table("skribl_pending_media")
 check("precondition: the table is really gone", _absent)
 with app.app_context():
@@ -529,6 +529,100 @@ check("a POST carrying a photo returns 201, not 500, with the table absent",
 _s2 = _post_media("audio/wav", music={"data": _durl("audio/wav"), "trimStart": 0, "trimEnd": 8})
 check("a second media POST also commits (the transaction was never poisoned)",
       _s2 == 201, f"status={_s2}")
+
+
+# ---------------------------------------------------------------------------
+# EXT-P0: the media-lifecycle cluster from the external audit of v305.
+#
+# WHY THESE DRIVE THE REAL FUNCTIONS. The pre-existing pin for the reservation
+# contract lives in verify_createpost.py and monkeypatches claim_media with a
+# stub that RAISES. It proved the caller handles a raising function -- and the
+# real one could not raise, because it ended `except Exception: return 0`. The
+# mock's failure mode was not the implementation's, so a green assertion sat on
+# top of the live defect for a full release. Everything below therefore breaks
+# the DATABASE and calls the shipped function.
+#
+# The break is the same in each: the table is dropped while the readiness cache
+# still says it is there, which is exactly the state a mid-flight schema change
+# or a lost connection produces -- the gate says go, the statement fails.
+print("\nEXT-P0 — the reservation contract, and the sweep that must not guess")
+
+with app.app_context():
+    _eng = _app_module.db.engine
+    if not _sa_probe.inspect(_eng).has_table("skribl_pending_media"):
+        SkriblPendingMedia.__table__.create(_eng)
+    storage._pending_media_ready.clear()
+    check("precondition: the gate sees the table",
+          storage.pending_media_ready(_eng) is True)
+    # Cache now says ready. Drop the table WITHOUT clearing it.
+    SkriblPendingMedia.__table__.drop(_eng)
+    check("precondition: the table is gone but the gate still says ready",
+          storage.pending_media_ready(_eng) is True
+          and not _sa_probe.inspect(_eng).has_table("skribl_pending_media"))
+
+    # EXT-P0-1. The shipped helper, a real failing INSERT.
+    try:
+        _n = storage.claim_media(_eng, [key("p0a"), key("p0b")], 120)
+        _claim_outcome = f"returned {_n}"
+    except storage.MediaClaimError:
+        _claim_outcome = "MediaClaimError"
+    except Exception as _e:
+        _claim_outcome = type(_e).__name__
+    check("EXT-P0-1: the REAL claim_media raises when the reservation fails",
+          _claim_outcome == "MediaClaimError",
+          f"{_claim_outcome} — `return 0` here is what made creation.py's "
+          f"handler unreachable and its return value meaningless")
+
+    # EXT-P0-2. The shipped sweeper, the same broken table. The object is
+    # old, unreferenced and unclaimed-as-far-as-anyone-can-tell: under the
+    # swallow it was deleted. It must survive, and say why.
+    storage._pending_media_ready.clear()
+    storage._pending_media_ready[_eng] = True          # gate says go; table is gone
+# A REAL KEY, OR THE OBJECT NEVER REACHES THE CLAIM CHECK AT ALL. The first
+# draft named this file "p0-unverifiable.bin"; the sweeper counts anything that
+# is not a sha256+ext key as skipped_foreign and returns before flush_chunk, so
+# "the object survived" was true of a run that had not exercised one line of
+# the fix. The companion assertion on skipped_unverified is what caught it.
+_unver = plant(key("p0unver"), age_seconds=3 * DAY)
+with app.app_context(), app.test_request_context():
+    _rep = storage.sweep_orphans_report(
+        storage.LocalDiskStore(MEDIA_ROOT, lambda k: "/m/" + k),
+        session(), older_than_seconds=DAY, dry_run=False)
+check("EXT-P0-2: an object is NOT deleted while claims cannot be determined",
+      os.path.exists(_unver),
+      "uncertainty is not permission to delete on a destructive path")
+check("EXT-P0-2: ...and the sweep reports it rather than looking healthy",
+      _rep.get("skipped_unverified", 0) >= 1,
+      f"skipped_unverified={_rep.get('skipped_unverified')} — an operator "
+      f"watching `removed` alone would have seen a clean run")
+
+# EXT-P0-3. Two engines, one process, different schemas. The cache was a single
+# module-global bool set by whichever asked first, so one of these two answers
+# was always wrong -- in the False-first direction a migrated database silently
+# stops writing claims and loses the guard entirely.
+_p0dir = tempfile.mkdtemp()
+_eng_yes = _sa_probe.create_engine("sqlite:///" + os.path.join(_p0dir, "yes.db"))
+_eng_no = _sa_probe.create_engine("sqlite:///" + os.path.join(_p0dir, "no.db"))
+SkriblPendingMedia.__table__.create(_eng_yes)          # migrated
+with _eng_no.connect() as _c:                          # exists, never migrated
+    _c.exec_driver_sql("CREATE TABLE placeholder (id INTEGER PRIMARY KEY)")
+    _c.commit()
+storage._pending_media_ready.clear()
+_no_first = storage.pending_media_ready(_eng_no)       # unmigrated asks FIRST
+_yes_after = storage.pending_media_ready(_eng_yes)
+storage._pending_media_ready.clear()
+_yes_first = storage.pending_media_ready(_eng_yes)     # and the other order
+_no_after = storage.pending_media_ready(_eng_no)
+check("EXT-P0-3: an unmigrated engine asking first does not pin False on a "
+      "migrated one",
+      _no_first is False and _yes_after is True,
+      f"unmigrated={_no_first} migrated-after={_yes_after}")
+check("EXT-P0-3: a migrated engine asking first does not pin True on an "
+      "unmigrated one",
+      _yes_first is True and _no_after is False,
+      f"migrated={_yes_first} unmigrated-after={_no_after}")
+_eng_yes.dispose(); _eng_no.dispose()
+shutil.rmtree(_p0dir, ignore_errors=True)
 
 shutil.rmtree(DB_DIR, ignore_errors=True)
 shutil.rmtree(MEDIA_ROOT, ignore_errors=True)

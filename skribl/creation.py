@@ -340,13 +340,33 @@ def create_post(payload, *, author_id=None, media_store=None,
     # missing media is permanent, user-visible damage that no later job
     # repairs. 503 rather than 400 because nothing is wrong with the payload —
     # the same request is expected to succeed on retry.
+    #
+    # AND THE COUNT IS CHECKED, NOT JUST THE EXCEPTION (EXT-P0-1). The
+    # try/except above this line was written to enforce all of the above and
+    # enforced nothing: storage.claim_media ended `except Exception: return 0`,
+    # so it could not raise and this handler was unreachable, while the return
+    # value went unread. An external audit of v305 found it. The swallow v278
+    # removed from here had moved one function down, which is why the rule is
+    # now stated as an assertion about the RESULT rather than as trust in a
+    # helper's failure mode: claim_media raises on a real failure, returns 0
+    # only for its designed no-ops, and a short count is refused here whatever
+    # the reason for it.
     if media_keys:
+        bind = session().get_bind()
+        wanted = len(dict.fromkeys(k for k in media_keys if k))
         try:
-            claim_media(session().get_bind(), media_keys, MEDIA_CLAIM_TTL)
+            claimed = claim_media(bind, media_keys, MEDIA_CLAIM_TTL)
         except Exception as exc:
             raise SkriblUnavailable(
                 "Media could not be reserved for this post; please retry."
             ) from exc
+        # 0 is legitimate ONLY where no sweeper consults claims: the table is
+        # absent, so there is nothing to race with this post's commit. Anywhere
+        # the table exists, a short count means the reservation this post
+        # depends on is not there.
+        if claimed != wanted and pending_media_ready(bind):
+            raise SkriblUnavailable(
+                "Media could not be reserved for this post; please retry.")
 
     # MINTED ONLY FOR A POST NOBODY OWNS. An owned post is authorised by its
     # owner; issuing a capability alongside that would be a second credential

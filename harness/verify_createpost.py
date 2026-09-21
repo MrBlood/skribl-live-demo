@@ -406,6 +406,60 @@ check("...and no post row survived the refusal",
       _after_ids == _before_ids,
       f"{sorted(_after_ids - _before_ids)} left behind")
 
+# EXT-P0-1: THE SAME REFUSAL, WITH NOTHING MOCKED. Everything above this line
+# replaced claim_media with _broken_claim, which raises. An external audit of
+# v305 pointed out what that could and could not prove: it shows the CALLER
+# handles a raising helper, and the shipped helper ended `except Exception:
+# return 0`, so it never raised and this suite stayed green over a live defect
+# for a full release. The mock's failure mode was not the implementation's.
+#
+# So the reservation is broken in the DATABASE instead and the real function is
+# called: the claim table is dropped while the readiness cache still says it is
+# there — a mid-flight schema change, or any failing statement — and the post
+# must still be refused. If claim_media ever goes back to swallowing, this goes
+# red where the mock above cannot.
+import sqlalchemy as _sa_p0                                        # noqa: E402
+from skribl import storage as _storage_p0                          # noqa: E402
+from skribl.models import SkriblPendingMedia as _SPM_p0            # noqa: E402
+
+# A TRIGGER, NOT A DROPPED TABLE, and the difference is the whole scenario.
+# Dropping the table breaks everything that touches it, so the post dies of
+# some later error and "refused" proves nothing about THIS guard. The audit's
+# actual case is narrower and worse: the claim INSERT fails while the table is
+# present and readable, so nothing else notices and the post sails on to a
+# successful, durable commit pointing at media the sweeper is free to delete.
+# A BEFORE INSERT trigger that ABORTs reproduces exactly that -- a real failing
+# write from the database itself, with every other statement healthy.
+with host.app_context():
+    _eng_p0 = db.session.get_bind()
+    if not _sa_p0.inspect(_eng_p0).has_table("skribl_pending_media"):
+        _SPM_p0.__table__.create(_eng_p0)
+    _storage_p0._pending_media_ready.clear()
+    _ready_before = _storage_p0.pending_media_ready(_eng_p0)
+    with _eng_p0.connect() as _c:
+        _c.exec_driver_sql(
+            "CREATE TRIGGER _p0_block BEFORE INSERT ON skribl_pending_media "
+            "BEGIN SELECT RAISE(ABORT, 'simulated claim-write failure'); END")
+        _c.commit()
+    try:
+        skribl.create_post(_media_payload(), author_id=1, media_store=_store)
+        _real_outcome = "ACCEPTED"
+    except Exception as exc:                                       # noqa: BLE001
+        _real_outcome = type(exc).__name__
+    db.session.rollback()
+    with _eng_p0.connect() as _c:                  # leave the schema as found
+        _c.exec_driver_sql("DROP TRIGGER _p0_block")
+        _c.commit()
+
+check("EXT-P0-1 precondition: the gate said the claim table was there",
+      _ready_before is True,
+      "without this the refusal below could be the designed no-op path")
+check("EXT-P0-1: the REAL claim path refusing also refuses the post",
+      _real_outcome == "SkriblUnavailable",
+      f"{_real_outcome} — this is the assertion the mocked one only looked "
+      f"like; a swallowed reservation failure publishes a post whose media a "
+      f"concurrent sweep may already have deleted")
+
 # The ordinary path still works — a guard that fails everything is not a fix.
 with host.app_context():
     _ok = skribl.create_post(_media_payload(), author_id=1,
