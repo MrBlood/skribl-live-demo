@@ -48,6 +48,16 @@
    disagree about a drawing's shape or about which page of a Flip is on screen —
    see the header of inlineplayer.js. #}
 <script src="{{ skribl_asset('lib/canvassizes.js') }}" defer></script>
+{# lib/photofit.js: WHERE A BACKGROUND PHOTO LANDS, and the sixth asset a host
+   pays for. It is here because the in-post player used to hard-code a centred
+   cover and throw the authored fit away, so a photo composed with Fit was
+   letterboxed in the editor and on /s/<id> and cropped in every feed box and
+   on the profile stage. The module has owned this geometry since Pad, Flip and
+   the player each kept their own copy and one could not read what another
+   wrote; writing a seventh copy in inlineplayer.js to save the bytes would be
+   re-making exactly that mistake. 1,155 B served — the cost is stated at the
+   ratchet in verify_inline.py, which is where it is argued. #}
+<script src="{{ skribl_asset('lib/photofit.js') }}" defer></script>
 {# lib/sharecard.js IS NOT LOADED HERE, and that is the point of this note.
    The idle poster is /s/<id>/poster — the share card's drawing with the brand strip cropped off, or a blank canvas — and
    the crop is literals in inlineplayer.css. Nothing on this page ever reads

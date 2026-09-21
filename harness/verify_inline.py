@@ -1354,7 +1354,26 @@ with sync_playwright() as sp:
     # (-101 B measured) and every word of the reasoning lives in flip.js, which
     # is in no byte budget, rather than here -- though jsstrip means comments in
     # THIS file were never the cost. What remains, 906 B, is the code.
-    EMBED_RATCHET = 33_500
+    # RAISED 33,500 -> 35,200, and the argument belongs here rather than in a
+    # commit message. MEASURED, not estimated: lib/photofit.js is 1,155 B
+    # served and inlineplayer.js grows 464 B (18,738 -> 19,202) for the fit
+    # capture and the call. 33,483 -> 35,102, which is 4.8%.
+    #
+    # WHAT THE BYTES BUY: the in-post player hard-coded a centred cover and
+    # discarded the fit the author chose, so a photo composed with Fit was
+    # letterboxed in the editor and on /s/<id> and CROPPED on the profile
+    # stage, in the feed, and in every host embed. Measured on an 800x600
+    # canvas with a 1000x250 photo authored `contain`: /s/ reported
+    # object-fit:contain while the in-post canvas came back solid photo at 6%,
+    # 50% and 94% of its height -- cover, two thirds of the image cropped away.
+    #
+    # WHY NOT SPEND AGAINST IT INSTEAD: the only way to keep the number was to
+    # write the rect maths a second time inside inlineplayer.js. lib/photofit.js
+    # exists BECAUSE Pad, Flip and the player each had their own copy and one
+    # could not read the vocabulary another wrote (its header has the story), so
+    # the cheap-looking option is the one that re-makes the original defect. The
+    # embed grows 3.4% and every surface agrees about where a photo goes.
+    EMBED_RATCHET = 35_200
     # THE RATCHET MEASURES DISPLAY, NOT COMPOSE, and the two are separate costs
     # paid by separate pages. Excluded here and measured on its own below:
     #   feed.js          the PREVIEW PAGE's own script (fetch the listing, clone
@@ -1381,8 +1400,8 @@ with sync_playwright() as sp:
     # raises on a 404. Named for the count it checks — it used to be called
     # "every asset the embed macro names is one the server serves", which is
     # the loop's job and not this line's.
-    check("the embed macro names exactly the five assets a host pays for",
-          len(embed_urls) == 5, str(embed_urls))
+    check("the embed macro names exactly the six assets a host pays for",
+          len(embed_urls) == 6, str(embed_urls))
     check(f"the in-post player costs a host no more than {EMBED_RATCHET:,} bytes "
           f"of CSS and JavaScript",
           total <= EMBED_RATCHET,
@@ -1455,6 +1474,104 @@ with sync_playwright() as sp:
             check(f"{_label} at {_vw}px: ...and it fits inside the box",
                   _m and _m["w"] <= _m["bw"] + 1 and _m["h"] <= _m["bh"] + 1,
                   f"{_m['w']}x{_m['h']} in {_m['bw']}x{_m['bh']}" if _m else "no canvas")
+
+    # ---------------------------------------------------------------------------
+    # THE AUTHORED PHOTO FIT REACHES THE FEED BOX.
+    #
+    # The in-post player hard-coded a centred cover and discarded photo.fit, so a
+    # photo composed with Fit was letterboxed in the editor and on /s/<id> and
+    # CROPPED here. Owner, from the profile stage: "the pug in the background FIT
+    # the screen on the editor and the original player. now he is cut off."
+    #
+    # ASSERTED ON PIXELS, NOT ON THE ARGUMENT PASSED TO drawImage. A spy on the
+    # call would pass just as happily if the module returned nonsense, and a
+    # substring search for "SkriblPhotoFit" in the source would pass on this very
+    # comment. The fixture is a SOLID-COLOUR photo four times wider than it is
+    # tall on a 4:3 canvas, so the two modes are not subtly different pictures:
+    # contain paints a band and leaves the top and bottom showing the background,
+    # cover paints every pixel. Sampling three rows tells them apart with no
+    # appeal to how the code is written.
+    print("\nPHOTO FIT — a feed box shows the shape the author composed")
+    import base64 as _b64, io as _io                                    # noqa: E402
+
+    def _solid_photo(w, h, rgb):
+        try:
+            from PIL import Image                                       # noqa: E402
+        except ImportError:
+            return None
+        _buf = _io.BytesIO()
+        Image.new("RGB", (w, h), rgb).save(_buf, format="PNG")
+        return "data:image/png;base64," + _b64.b64encode(_buf.getvalue()).decode()
+
+
+    _PHOTO = _solid_photo(1000, 250, (0, 200, 120))
+    if _PHOTO is None:
+        print("  (Pillow missing: the photo-fit pins cannot build a fixture)")
+    else:
+        def _post_with_fit(pg, fit):
+            return pg.evaluate("""async ([photo, fit]) => {
+                const r = await fetch('/api/skribls', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        title: 'fit ' + fit, visibility: 'public',
+                        playbackMode: 'replay',
+                        canvasSize: {cssWidth: 800, cssHeight: 600},
+                        frames: [{
+                            strokes: [{x: 100, y: 100, color: '#ff48b0', size: 8, t: 0, start: true},
+                                      {x: 700, y: 500, color: '#ff48b0', size: 8, t: 200}],
+                            strokeGroups: [2],
+                            background: {color: '#101418'},
+                            photo: {data: photo, fit: fit, offset: {x: 0.5, y: 0.5},
+                                    zoom: 1, opacity: 1, blur: 0}}]})});
+                return (await r.json()).id; }""", [_PHOTO, fit])
+
+        _fp = b.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(_fp, BASE, "/skribl-pad")
+        _id_contain = _post_with_fit(_fp, "contain")
+        _id_cover = _post_with_fit(_fp, "cover")
+        _fp.close()
+
+        _rp = b.new_page(viewport={"width": 1280, "height": 900})
+        browsing.goto(_rp, BASE, "/feed")
+
+        def _rows(sid):
+            """Play the box through the module's own API, then sample it."""
+            _rp.evaluate("(id) => { const p = window.SkriblInline.find(id);"
+                         " if (p) p.play(); }", sid)
+            _rp.wait_for_timeout(1200)
+            return _rp.evaluate("""(id) => {
+                const c = document.querySelector('[data-skribl-id="' + id + '"] .skribl-inline-canvas');
+                if (!c || c.width <= 300) return null;
+                const x = c.getContext('2d');
+                const at = (fy) => { const d = x.getImageData(Math.round(c.width * 0.5),
+                                                              Math.round(c.height * fy), 1, 1).data;
+                                     return [d[0], d[1], d[2]]; };
+                return {size: [c.width, c.height], top: at(0.06), mid: at(0.5), bot: at(0.94)};
+            }""", sid)
+
+        def _is_photo(px):
+            return px and abs(px[0]) < 60 and abs(px[1] - 200) < 60 and abs(px[2] - 120) < 60
+
+        _c = _rows(_id_contain)
+        check("the probe is real: the contain box adopted a payload and painted",
+              _c is not None and _c["size"][0] > 300 and _is_photo(_c["mid"]),
+              f"{_c} — without the photo on screen at all, the rows below say nothing")
+        if _c:
+            check("a photo authored CONTAIN is letterboxed in the feed box, not cropped",
+                  not _is_photo(_c["top"]) and _is_photo(_c["mid"]) and not _is_photo(_c["bot"]),
+                  f"top={_c['top']} mid={_c['mid']} bot={_c['bot']} — photo at every "
+                  f"row is cover, which is the authored fit being discarded")
+
+        _v = _rows(_id_cover)
+        check("the probe is real: the cover box adopted a payload and painted",
+              _v is not None and _v["size"][0] > 300, str(_v))
+        if _v:
+            # THE OTHER ARM, so the assertion above cannot be satisfied by a player
+            # that simply letterboxes everything it is given.
+            check("...and a photo authored COVER still fills it",
+                  _is_photo(_v["top"]) and _is_photo(_v["mid"]) and _is_photo(_v["bot"]),
+                  f"top={_v['top']} mid={_v['mid']} bot={_v['bot']}")
+        _rp.close()
 
     b.close()
 

@@ -9457,3 +9457,57 @@ sealed. EXT-P1-8 (physical iPhone, VoiceOver, NVDA results) cannot be produced
 from this container at all -- it needs the owner's hands on real devices, and
 recording anything else would be inventing evidence, which is the one thing
 this tree's whole apparatus exists to prevent.
+
+## Unsealed, on top of v305 -- the feed box cropped what the author fitted
+
+Owner, from the profile stage: "the pug in the background FIT the screen on
+the editor and the original player. now he is cut off?"
+
+A background photo's fit is authoring state and it travels in the payload
+(`photo.fit`, with offset and zoom). The editor honours it. `/s/<id>` honours
+it -- it maps the value onto a DOM layer's CSS `object-fit`. The in-post
+player hard-coded a centred cover and discarded it, so a photo composed with
+Fit was letterboxed on two surfaces and CROPPED on the third: the profile
+stage, the feed, and every host embed.
+
+**Measured before anything was theorised, and the theory would have been
+wrong.** The obvious suspect was v305's letterbox fix, which had just changed
+this canvas's geometry. It is not: with a 1000x250 photo authored `contain` on
+an 800x600 canvas, `/s/` reported `object-fit: contain` while the in-post
+canvas came back solid photo at 6%, 50% and 94% of its height. That is cover,
+two thirds of the image cropped away, and it is older than the letterbox work.
+What v305 changed is how the crop LOOKS -- the canvas used to be stretched, so
+the same defect read as general distortion rather than as cropping.
+
+**The comment above that line argued for it, and the argument was wrong on its
+own terms.** It read that the fit/opacity/blur controls are "authoring state
+the editor applies through CSS on its own <img>, and reproducing that stack in
+a feed box is not worth a second implementation of it. Cover is the fit a feed
+wants and the editor's default." Cover is the editor's DEFAULT; it is not what
+the author chose once they touched the control. And there was no second
+implementation to write: `lib/photofit.js` has owned this geometry since Pad,
+Flip and the player each kept their own copy and one could not read the
+vocabulary another wrote -- its header carries that story. The hard-coded
+`Math.max` WAS the second implementation.
+
+**The ratchet moved, and the argument is written at the ratchet.** The embed
+had 17 bytes of headroom. Loading the module costs 1,155 B served and the fit
+capture costs 464 B in inlineplayer.js: 33,483 -> 35,102, or 4.8%, and
+EMBED_RATCHET goes to 35,200. The only way to hold the old number was to write
+the rect maths a second time inside the player, which is re-making the exact
+defect the module exists to prevent. Spending against a ratchet is the rule;
+this is the case where the cheap option is the wrong one.
+
+**Pinned on pixels, both ways.** A spy on `drawImage` would pass just as
+happily if the module returned nonsense, and a substring search for the
+module's name would pass on the comment explaining it. The fixture is a solid
+photo four times wider than tall on a 4:3 canvas, so the modes are not subtly
+different pictures: contain leaves the background showing at top and bottom
+(16,20,24), cover paints every row. Both arms are asserted, so a player that
+simply letterboxed everything would fail the second. Calibrated: forcing the
+module reference to null reddens the contain pin alone, 102/103.
+
+**Still not reproduced in a feed box: opacity and blur.** A photo authored at
+40% paints opaque there. That is a canvas filter rather than geometry, and it
+is recorded here as a known gap rather than quietly left in the comment that
+used to cover for all three.
