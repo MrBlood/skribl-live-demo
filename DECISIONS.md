@@ -9511,3 +9511,52 @@ module reference to null reddens the contain pin alone, 102/103.
 40% paints opaque there. That is a canvas filter rather than geometry, and it
 is recorded here as a known gap rather than quietly left in the comment that
 used to cover for all three.
+
+## Unsealed, on top of v305 -- the link people share gets full screen too
+
+Owner, holding the copied link beside the profile stage: "shouldn't there be a
+full screen on this player too? why do the players not share the same
+functions?"
+
+**The answer to the second question is yes, they are different code, and no,
+that was never a reason for this.** `/s/<id>` runs app.js in player-mode -- the
+editor's own engine. The profile stage, the feed and every host embed run
+inlineplayer.js, a separate small implementation built to a host's byte budget.
+That split is deliberate and it is about CODE. Nothing about it says which
+buttons a viewer gets, and the drift ran the wrong way: the stage gained full
+screen in v304 and the page a person actually SENDS somebody did not.
+
+Fixed, with the stage's own glyph character for character so the two surfaces
+read as one product.
+
+**The harness found the hole that mattered, not review.** Only the fullscreened
+subtree renders, so the transport row -- including the button that got you
+there -- is off screen. The first version had no way out but Escape: a key not
+every device has and not everybody knows. The assertion that leaves full screen
+TIMED OUT clicking a button that no longer existed on screen, which is the
+product telling the truth through the instrument. `#playerFullExit` lives
+inside the fullscreened element now, exactly as the stage's `#fullExit` does.
+
+**And the first shape of that assertion was wrong twice.** Pressing Escape went
+red because Escape belongs to the browser's fullscreen chrome, which a headless
+run does not have -- the page never sees it. Then clicking the transport button
+again CRASHED the suite on a 30-second timeout instead of failing, so a
+mutation removing the exit control read as a broken harness rather than as the
+defect. It asks whether the exit is on screen BEFORE using it now, so its
+absence is one named red line. **A mutation that crashes instead of failing is
+telling you the assertion is the wrong shape** -- the second time that rule has
+earned itself in this release.
+
+**Three ratchets moved and each argument is written at the ratchet**: HTML
+12,000 -> 12,750 (measured 12,647: 409 B of button, 238 B of exit control), JS
+153,800 -> 154,000 (measured 153,911), CSS unchanged with room to spare. The JS
+TARGET stays 153,800 on purpose: a ratchet moving to admit a missing control is
+not a target being given up on, and the two numbers disagreeing is the honest
+record of that.
+
+**Also noted, not changed:** the stage's fullscreen rule hard-codes
+`calc(100vh * 16 / 9)`, which assumes every drawing is 16:9. It is currently
+harmless only because the canvas keeps its own ratio inside that box. The
+player's new rule sets no aspect at all and lets max bounds letterbox it --
+which is the lesson the in-post player's stretch bug taught, applied rather
+than repeated.

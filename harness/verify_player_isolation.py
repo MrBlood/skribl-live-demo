@@ -954,7 +954,13 @@ with sync_playwright() as sp:
     # was put to the owner as such rather than absorbed. Pinned at the
     # measurement plus the same 540 B allowance the ceiling has always carried,
     # so the next addition argues for itself as this one did.
-    BYTES_RATCHET, BYTES_TARGET = 153_800, 153_800
+    # RAISED 153,800 -> 154,000 for the full screen wiring, measured 153,911
+    # (app.js 136,279 -> 136,510). The TARGET stays 153,800: this is a ratchet
+    # moving to admit a control the surface was missing, not a target being
+    # given up on, and the two numbers disagreeing is the honest record of
+    # that. The player's JS budget is the tightest in the tree and the next
+    # person to spend it should have to argue as well.
+    BYTES_RATCHET, BYTES_TARGET = 154_000, 153_800
     # Re-pinned 9,000 -> 10,500 at v269, deliberately: the brand became the
     # one-stroke skribl signature, INLINE in the page (~1.4KB of paths + a
     # ~0.9KB nonce'd draw-on script). Inline is load-bearing, not laziness —
@@ -991,7 +997,30 @@ with sync_playwright() as sp:
     # (_skribl_app_identity.html, ~360 B) and the boot's re-stamp of that
     # meta for a light page (~80 B). Without them a shared link added to a
     # Home Screen wore a screenshot for an icon. Measured 11,859.
-    HTML_RATCHET = 12_000
+    # RAISED 12,000 -> 12,750 FOR FULL SCREEN, measured 12,647: the transport
+    # button (409 B) and the exit control inside the fullscreened subtree
+    # (238 B), which is not optional -- see below.
+    #
+    # Owner, holding the copied link beside the profile stage: "shouldn't there
+    # be a full screen on this player too? why do the players not share the
+    # same functions?" The stage has had full screen since v304 and /s/<id> --
+    # the page a person actually SENDS somebody -- did not. The two players are
+    # separate implementations for a real reason (this one is the editor's
+    # engine; the in-post one is built to a host's byte budget), but that is an
+    # argument about CODE, not about which buttons a viewer gets, and nothing
+    # made the canonical share surface the poorer of the two on purpose.
+    #
+    # 409 B of button and glyph on a page whose whole HTML is 12 KB. The glyph
+    # is the stage's, character for character, so the two surfaces stay
+    # recognisably one product rather than two takes on the same idea.
+    #
+    # THE EXIT CONTROL IS NOT DECORATION. Only the fullscreened subtree
+    # renders, so the transport row -- including the button that got you there
+    # -- is off screen, and without an exit inside that subtree the only way
+    # out is Escape: a key not every device has and not every person knows.
+    # The harness found this rather than review: the assertion that leaves
+    # full screen timed out clicking a button that was no longer on screen.
+    HTML_RATCHET = 12_750
 
     present = pg.evaluate(
         "(names) => names.filter(n => typeof window[n] !== 'undefined')",
@@ -1085,6 +1114,99 @@ with sync_playwright() as sp:
           f"{total_js + total_html + total_css:,} B; on the wire (gzip) "
           f"{_wire:,} B — quote the second only as 'downloaded', never as "
           f"'the player's JavaScript'")
+
+    # ------------------------------------------------------------------
+    # FULL SCREEN ON THE SHARED LINK, and the parity question behind it.
+    #
+    # Owner: "shouldn't there be a full screen on this player too? why do the
+    # players not share the same functions?" The profile stage has had it since
+    # v304; /s/<id>, the page somebody is actually SENT, had not.
+    #
+    # DRIVEN, NOT READ. The markup being present proves nothing -- the control
+    # is hidden until app.js confirms the API exists, so a button that renders
+    # and does nothing would satisfy any assertion about the DOM. Headless
+    # Chromium does honour requestFullscreen from a click (checked before this
+    # was written), so the state is asserted from document.fullscreenElement.
+    print("\nFULL SCREEN — the link people share has the control the stage has")
+    _fp = b.new_page(viewport={"width": 1200, "height": 900})
+    _fp.goto(link, wait_until="load")
+    _fp.wait_for_timeout(1200)
+
+    _api = _fp.evaluate("() => !!document.fullscreenEnabled")
+    check("precondition: this browser offers the Fullscreen API at all",
+          _api, "without it the control is correctly hidden and the rows below "
+                "would be asserting the wrong thing")
+    _shown = _fp.evaluate("() => { const b = document.getElementById('playerFullBtn');"
+                          " return b ? !b.hidden : 'NO BUTTON'; }")
+    check("the player offers a full screen control when the API is there",
+          _shown is True, str(_shown))
+    if _shown is True:
+        _fp.click("#playerFullBtn")
+        _fp.wait_for_timeout(700)
+        _on = _fp.evaluate("""() => ({
+            wrap: document.fullscreenElement === document.querySelector('.canvas-wrap'),
+            pressed: document.getElementById('playerFullBtn').getAttribute('aria-pressed'),
+            label: document.getElementById('playerFullBtn').getAttribute('aria-label')})""")
+        check("...and pressing it puts the DRAWING full screen, not the page",
+              _on["wrap"],
+              f"{_on} — the canvas wrapper is the element that should fill the "
+              f"screen; fullscreening the document would bring the chrome too")
+        check("...and the control says so, for a screen reader too",
+              _on["pressed"] == "true" and _on["label"] == "Leave full screen",
+              str(_on))
+        # THE EXIT IS ASSERTED BEFORE IT IS USED, because a missing one must
+        # FAIL and not CRASH. Clicking it straight away made the suite die on a
+        # 30s Playwright timeout with no summary at all -- a mutation that
+        # removes the control could then be read as a broken harness rather
+        # than as the defect it is. Asking whether it is on screen first turns
+        # that into one named red line.
+        _exit_seen = _fp.evaluate("""() => {
+            const e = document.getElementById('playerFullExit');
+            if (!e) return 'ABSENT';
+            const r = e.getBoundingClientRect();
+            return (r.width > 0 && r.height > 0) ? 'VISIBLE' : 'HIDDEN';
+        }""")
+        check("...and a way OUT is on screen while full screen, not just Escape",
+              _exit_seen == "VISIBLE",
+              f"{_exit_seen} — only the fullscreened subtree renders, so the "
+              f"transport row is gone; without a control inside it the only "
+              f"exit is a key some devices do not have")
+
+        # EXITED THROUGH THAT CONTROL, and
+        # getting here took two wrong turns worth recording. Escape first:
+        # that is handled by the BROWSER's fullscreen chrome, which a headless
+        # run does not have, so the page never saw it. Then the transport
+        # button again -- which TIMED OUT, and the timeout was the product
+        # telling the truth: only the fullscreened subtree renders, so the
+        # whole control row, including the button that got you here, is off
+        # screen. There was no way out but a key. That is what #playerFullExit
+        # is for, and this line is what would have caught its absence.
+        if _exit_seen == "VISIBLE":
+            _fp.click("#playerFullExit")
+        else:                      # fall back so the REST of the run survives
+            _fp.evaluate("() => document.exitFullscreen && document.exitFullscreen()")
+        _fp.wait_for_timeout(700)
+        _off = _fp.evaluate("""() => ({
+            fs: !!document.fullscreenElement,
+            pressed: document.getElementById('playerFullBtn').getAttribute('aria-pressed')})""")
+        check("...and leaving it returns the control to its resting state",
+              not _off["fs"] and _off["pressed"] == "false", str(_off))
+    _fp.close()
+
+    # THE PARITY CLAIM ITSELF, keyed by (surface, control). The two players are
+    # separate implementations on purpose, so nothing but a check like this
+    # stops one of them quietly gaining a control the other never gets -- which
+    # is exactly how full screen came to exist on the stage alone.
+    _stage_html = (ROOT / "skribl" / "templates" / "skribl" / "skribl_library.html").read_text(encoding="utf-8")
+    _player_html = (ROOT / "skribl" / "templates" / "skribl"
+                    / "_skribl_player_controls.html").read_text(encoding="utf-8")
+    _pairs = [("stage", 'id="btnFull"', _stage_html),
+              ("player", 'id="playerFullBtn"', _player_html)]
+    _missing = [surface for surface, token, html in _pairs if token not in html]
+    check("both playback surfaces carry a full screen control",
+          not _missing,
+          f"missing on: {_missing or 'neither'} — the stage and the shared link "
+          f"are one product to the person using them")
 
     pg.close()
     b.close()
