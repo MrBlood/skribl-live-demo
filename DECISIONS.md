@@ -9554,6 +9554,16 @@ TARGET stays 153,800 on purpose: a ratchet moving to admit a missing control is
 not a target being given up on, and the two numbers disagreeing is the honest
 record of that.
 
+**The token gates caught the copy-paste, which is what they are for.** The
+first draft of the player's rule carried the stage's literals with it --
+`background: #000`, `rgba(6,7,10,.72)`, `color: #eef` -- and `verify_theme`
+and `verify_surfaces` both went red naming them. The stage gets away with
+those because its rule lives in a TEMPLATE; these lines are in the stylesheet,
+where every neutral has to be a token or the chrome cannot follow a light
+theme. `--surface-deep` is #06070a, so the fix was the same ink by its name.
+Worth recording because the literals arrived by copying a working rule, which
+is the way this particular mistake always arrives.
+
 **Also noted, not changed:** the stage's fullscreen rule hard-codes
 `calc(100vh * 16 / 9)`, which assumes every drawing is 16:9. It is currently
 harmless only because the canvas keeps its own ratio inside that box. The
